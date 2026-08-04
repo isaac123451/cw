@@ -1,0 +1,307 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ============================================================
+   THEME
+============================================================ */
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --font-sans: var(--font-geist);
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-geist);
+
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+
+  --color-destructive: var(--destructive);
+
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+
+  --radius-sm: calc(var(--radius) * .60);
+  --radius-md: calc(var(--radius) * .80);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.40);
+  --radius-2xl: calc(var(--radius) * 1.80);
+  --radius-3xl: calc(var(--radius) * 2.20);
+  --radius-4xl: calc(var(--radius) * 2.60);
+}
+
+/* ============================================================
+   LIGHT THEME
+============================================================ */
+
+:root {
+
+  /* Background */
+
+  --background: #F6F7FB;
+  --foreground: #1F2937;
+
+  /* Cards */
+
+  --card: #FFFFFF;
+  --card-foreground: #111827;
+
+  /* Popover */
+
+  --popover: #FFFFFF;
+  --popover-foreground: #111827;
+
+  /* Brand */
+
+  --primary: #6F42C1;
+  --primary-foreground: #FFFFFF;
+
+  --secondary: #F3F4F6;
+  --secondary-foreground: #1F2937;
+
+  --accent: #F3E8FF;
+  --accent-foreground: #6F42C1;
+
+  --muted: #F8FAFC;
+  --muted-foreground: #6B7280;
+
+  --destructive: #EF4444;
+
+  --border: #E5E7EB;
+
+  --input: #E5E7EB;
+
+  --ring: #6F42C1;
+
+  /* Charts */
+
+  --chart-1: #6F42C1;
+  --chart-2: #8B5CF6;
+  --chart-3: #22C55E;
+  --chart-4: #F59E0B;
+  --chart-5: #EF4444;
+
+  --radius: 1rem;
+
+  /* Sidebar */
+
+  --sidebar: #FFFFFF;
+
+  --sidebar-foreground: #374151;
+
+  --sidebar-primary: #6F42C1;
+
+  --sidebar-primary-foreground: #FFFFFF;
+
+  --sidebar-accent: #F3E8FF;
+
+  --sidebar-accent-foreground: #6F42C1;
+
+  --sidebar-border: #ECECEC;
+
+  --sidebar-ring: #6F42C1;
+
+}
+
+/* ============================================================
+   DARK MODE
+============================================================ */
+
+.dark {
+
+  --background: #09090B;
+
+  --foreground: #FAFAFA;
+
+  --card: #18181B;
+
+  --card-foreground: #FAFAFA;
+
+  --popover: #18181B;
+
+  --popover-foreground: #FAFAFA;
+
+  --primary: #8B5CF6;
+
+  --primary-foreground: #FFFFFF;
+
+  --secondary: #27272A;
+
+  --secondary-foreground: #FAFAFA;
+
+  --accent: #27272A;
+
+  --accent-foreground: #FAFAFA;
+
+  --muted: #27272A;
+
+  --muted-foreground: #A1A1AA;
+
+  --destructive: #EF4444;
+
+  --border: rgba(255,255,255,.08);
+
+  --input: rgba(255,255,255,.08);
+
+  --ring: #8B5CF6;
+
+  --chart-1: #8B5CF6;
+  --chart-2: #22C55E;
+  --chart-3: #F59E0B;
+  --chart-4: #EF4444;
+  --chart-5: #FFFFFF;
+
+  --sidebar: #111111;
+
+  --sidebar-foreground: #FAFAFA;
+
+  --sidebar-primary: #8B5CF6;
+
+  --sidebar-primary-foreground: #FFFFFF;
+
+  --sidebar-accent: #1F1F23;
+
+  --sidebar-accent-foreground: #FFFFFF;
+
+  --sidebar-border: rgba(255,255,255,.08);
+
+  --sidebar-ring: #8B5CF6;
+
+}
+
+/* ============================================================
+   BASE
+============================================================ */
+
+@layer base {
+
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+
+    scroll-behavior: smooth;
+
+    font-family: var(--font-geist);
+
+  }
+
+  body {
+
+    @apply bg-background text-foreground antialiased;
+
+    text-rendering: optimizeLegibility;
+
+    -webkit-font-smoothing: antialiased;
+
+    -moz-osx-font-smoothing: grayscale;
+
+    font-feature-settings:
+      "rlig" 1,
+      "calt" 1;
+
+  }
+
+  h1 {
+
+    font-size: 2.4rem;
+
+    font-weight: 700;
+
+    letter-spacing: -.04em;
+
+    line-height: 1.1;
+
+  }
+
+  h2 {
+
+    font-size: 1.8rem;
+
+    font-weight: 600;
+
+    letter-spacing: -.03em;
+
+  }
+
+  h3 {
+
+    font-size: 1.25rem;
+
+    font-weight: 600;
+
+  }
+
+  button {
+
+    cursor: pointer;
+
+  }
+
+}
+
+/* ============================================================
+   DESIGN TOKENS
+============================================================ */
+
+:root {
+
+  --cw-primary: #6F42C1;
+  --cw-primary-light: #F3E8FF;
+
+  --cw-success: #22C55E;
+
+  --cw-warning: #F59E0B;
+
+  --cw-danger: #EF4444;
+
+  --cw-background: #F6F7FB;
+
+  --cw-card: #FFFFFF;
+
+  --cw-text: #111827;
+
+  --cw-text-muted: #6B7280;
+
+  --cw-radius: 20px;
+
+  --cw-shadow:
+    0 2px 10px rgba(15,23,42,.04),
+    0 10px 35px rgba(15,23,42,.06);
+
+}

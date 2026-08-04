@@ -1,0 +1,15 @@
+export const categories = [
+  "Fiscal",
+  "Financeiro",
+  "Sistema",
+  "Marketplace",
+  "Implantação",
+  "Cadastro",
+  "Pagamento",
+  "Aplicativo",
+  "Entrega",
+  "Atendimento",
+  "Comercial",
+  "Cancelamento",
+  "Outros",
+];
