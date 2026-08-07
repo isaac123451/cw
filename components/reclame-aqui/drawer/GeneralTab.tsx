@@ -219,15 +219,7 @@ export default function GeneralTab({
 
               <span
                 key={tag}
-                className="
-                  rounded-full
-                  bg-violet-100
-                  px-3
-                  py-1
-                  text-xs
-                  font-medium
-                  text-violet-700
-                "
+                className="rounded-full bg-violet-100 px-3 py-1 text-xs font-medium text-violet-700"
               >
 
                 {tag}
@@ -256,15 +248,7 @@ export default function GeneralTab({
 
 
         <div
-          className="
-            rounded-2xl
-            border
-            border-zinc-200
-            bg-white
-            p-5
-            text-sm
-            leading-relaxed
-          "
+          className="rounded-2xl border border-zinc-200 bg-white p-5 text-sm leading-relaxed"
         >
 
           {data.description}
@@ -294,13 +278,7 @@ function InfoCard({
   return (
 
     <div
-      className="
-        rounded-xl
-        border
-        border-zinc-200
-        bg-white
-        p-4
-      "
+      className="rounded-xl border border-zinc-200 bg-white p-4"
     >
 
       <p className="text-xs uppercase text-zinc-500">
@@ -335,16 +313,7 @@ function Metric({
   return (
 
     <div
-      className="
-        flex
-        items-center
-        gap-3
-        rounded-xl
-        border
-        border-zinc-200
-        bg-white
-        p-4
-      "
+      className="flex items-center gap-3 rounded-xl border border-zinc-200 bg-white p-4"
     >
 
       <div className="rounded-xl bg-zinc-100 p-2">

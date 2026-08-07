@@ -1,210 +1,153 @@
 "use client";
 
+import Link from "next/link";
+
+import { useState } from "react";
+
 import {
-  Building2,
   Clock3,
+  GripVertical,
   MapPin,
   Star,
-  User,
-  BadgeCheck,
-  BadgeX,
+  TriangleAlert,
 } from "lucide-react";
 
 import { Case } from "@/lib/models/case";
+import { TagChips } from "@/components/shared/TagPicker";
 
 interface Props {
   item: Case;
+  onDragStart: (id: string) => void;
+  onDragEnd: () => void;
 }
+
+const priorityTone: Record<string, string> = {
+  Crítica: "bg-rose-50 text-rose-700 ring-rose-100",
+  Alta: "bg-orange-50 text-orange-700 ring-orange-100",
+  Média: "bg-amber-50 text-amber-700 ring-amber-100",
+  Baixa: "bg-zinc-100 text-zinc-600 ring-zinc-200",
+};
 
 export default function KanbanCard({
   item,
+  onDragStart,
+  onDragEnd,
 }: Props) {
+
+  const [dragging, setDragging] = useState(false);
+
   return (
-    <div className="cursor-pointer rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-violet-400 hover:shadow-lg">
+    <Link
+      href={`/reclame-aqui/${item.id}`}
+      draggable
+      onDragStart={(event) => {
+        event.dataTransfer.setData("text/plain", item.id);
+        event.dataTransfer.effectAllowed = "move";
+        setDragging(true);
+        onDragStart(item.id);
+      }}
+      onDragEnd={() => {
+        setDragging(false);
+        onDragEnd();
+      }}
+      className={`group block cursor-grab rounded-xl border border-zinc-200 bg-white p-3.5 shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-all duration-200 active:cursor-grabbing hover:-translate-y-0.5 hover:border-violet-300 hover:shadow-[0_8px_20px_-8px_rgba(91,42,134,0.35)] ${
+        dragging ? "opacity-40" : ""
+      }`}
+    >
 
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between gap-2">
 
-        <div>
+        <span className="font-mono text-[10px] uppercase tracking-wide text-zinc-400">
+          {item.protocol}
+        </span>
 
-          <span className="text-[11px] uppercase tracking-wide text-zinc-400">
+        <div className="flex shrink-0 items-center gap-1">
 
-            {item.protocol}
-
+          <span
+            className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ring-inset ${
+              priorityTone[item.priority] ??
+              "bg-zinc-100 text-zinc-600 ring-zinc-200"
+            }`}
+          >
+            {item.priority}
           </span>
 
-          <h3 className="mt-1 line-clamp-2 font-semibold">
-
-            {item.title}
-
-          </h3>
+          <GripVertical
+            size={13}
+            className="text-zinc-300 opacity-0 transition-opacity group-hover:opacity-100"
+          />
 
         </div>
 
-        <span
-          className={`rounded-full px-2 py-1 text-[11px] font-semibold
-          ${
-            item.priority === "Crítica"
-              ? "bg-red-100 text-red-700"
-              : item.priority === "Alta"
-              ? "bg-orange-100 text-orange-700"
-              : item.priority === "Média"
-              ? "bg-yellow-100 text-yellow-700"
-              : "bg-zinc-100 text-zinc-700"
-          }`}
-        >
-          {item.priority}
+      </div>
+
+      <h3 className="mt-1.5 line-clamp-2 text-sm font-semibold leading-snug text-zinc-900">
+        {item.title}
+      </h3>
+
+      <p className="mt-1.5 truncate text-xs text-zinc-500">
+        {item.company} · {item.customer}
+      </p>
+
+      <div className="mt-2 flex items-center gap-3 text-[11px] text-zinc-400">
+
+        <span className="flex items-center gap-1">
+          <MapPin size={11} />
+          {item.city}/{item.state}
+        </span>
+
+        <span className="flex items-center gap-1">
+          <Clock3 size={11} />
+          {item.sla}
+        </span>
+
+        <span className="flex items-center gap-1">
+          <Star
+            size={11}
+            className="fill-amber-400 text-amber-400"
+          />
+          {item.score ?? "-"}
         </span>
 
       </div>
 
-      <div className="mt-4 space-y-2 text-sm">
-
-        <div className="flex items-center gap-2">
-
-          <Building2 size={15} />
-
-          {item.company}
-
+      {item.tags && item.tags.length > 0 && (
+        <div className="mt-2.5">
+          <TagChips tags={item.tags} />
         </div>
+      )}
 
-        <div className="flex items-center gap-2">
+      <div className="mt-3 flex items-center justify-between border-t border-zinc-100 pt-2.5">
 
-          <User size={15} />
+        <span className="flex items-center gap-1.5 text-[11px] text-zinc-500">
 
-          {item.customer}
-
-        </div>
-
-        <div className="flex items-center gap-2">
-
-          <MapPin size={15} />
-
-          {item.city}/{item.state}
-
-        </div>
-
-      </div>
-
-      <div className="mt-4 flex flex-wrap gap-2">
-
-        {item.tags?.map((tag) => (
-
-          <span
-            key={tag}
-            className="rounded-full bg-violet-100 px-2 py-1 text-[11px] text-violet-700"
-          >
-
-            {tag}
-
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-zinc-100 text-[9px] font-semibold text-zinc-600">
+            {(item.owner ?? "?").slice(0, 1).toUpperCase()}
           </span>
 
-        ))}
+          {item.owner ?? "Sem responsável"}
 
-      </div>
+        </span>
 
-      <div className="mt-5 grid grid-cols-2 gap-3 rounded-xl bg-zinc-50 p-3">
-
-        <div>
-
-          <p className="text-[11px] text-zinc-500">
-
-            Nota
-
-          </p>
-
-          <div className="mt-1 flex items-center gap-1">
-
-            <Star
-              size={14}
-              className="fill-yellow-400 text-yellow-400"
-            />
-
-            <span className="font-medium">
-
-              {item.score ?? "-"}
-
-            </span>
-
-          </div>
-
-        </div>
-
-        <div>
-
-          <p className="text-[11px] text-zinc-500">
-
-            SLA
-
-          </p>
-
-          <div className="mt-1 flex items-center gap-1">
-
-            <Clock3 size={14} />
-
-            <span className="font-medium">
-
-              {item.sla}
-
-            </span>
-
-          </div>
-
-        </div>
-
-      </div>
-
-      <div className="mt-4 flex items-center justify-between border-t pt-4">
-
-        <div className="text-xs">
-
-          <span className="text-zinc-500">
-
-            Responsável
-
+        {item.churnRisk ? (
+          <span className="flex items-center gap-1 text-[10px] font-semibold text-rose-600">
+            <TriangleAlert size={11} />
+            Churn
           </span>
-
-          <p className="font-semibold">
-
-            {item.owner}
-
-          </p>
-
-        </div>
-
-        <div className="flex gap-3">
-
-          {item.resolved ? (
-
-            <BadgeCheck
-              className="text-green-600"
-              size={18}
-            />
-
-          ) : (
-
-            <BadgeX
-              className="text-red-500"
-              size={18}
-            />
-
-          )}
-
+        ) : (
           <span
-            className={`text-xs font-semibold ${
-              item.wouldDoBusiness
-                ? "text-green-600"
-                : "text-red-600"
+            className={`text-[10px] font-semibold ${
+              item.resolved
+                ? "text-emerald-600"
+                : "text-zinc-400"
             }`}
           >
-            {item.wouldDoBusiness
-              ? "Voltaria"
-              : "Não voltaria"}
+            {item.resolved ? "Resolvido" : "Em aberto"}
           </span>
-
-        </div>
+        )}
 
       </div>
 
-    </div>
+    </Link>
   );
 }

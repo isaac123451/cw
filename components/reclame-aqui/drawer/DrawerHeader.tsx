@@ -35,16 +35,7 @@ export default function DrawerHeader({
   return (
 
     <div
-      className="
-        flex
-        items-start
-        justify-between
-        border-b
-        border-zinc-200
-        bg-white
-        px-6
-        py-5
-      "
+      className="flex items-start justify-between border-b border-zinc-200 bg-white px-6 py-5"
     >
 
 
@@ -55,13 +46,7 @@ export default function DrawerHeader({
 
 
           <p
-            className="
-              text-xs
-              font-semibold
-              uppercase
-              tracking-wide
-              text-zinc-500
-            "
+            className="text-xs font-semibold uppercase tracking-wide text-zinc-500"
           >
 
             {protocol}
@@ -73,18 +58,7 @@ export default function DrawerHeader({
           {resolved ? (
 
             <span
-              className="
-                flex
-                items-center
-                gap-1
-                rounded-full
-                bg-green-100
-                px-3
-                py-1
-                text-xs
-                font-semibold
-                text-green-700
-              "
+              className="flex items-center gap-1 rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700"
             >
 
               <CheckCircle2 size={14}/>
@@ -97,18 +71,7 @@ export default function DrawerHeader({
           ) : (
 
             <span
-              className="
-                flex
-                items-center
-                gap-1
-                rounded-full
-                bg-yellow-100
-                px-3
-                py-1
-                text-xs
-                font-semibold
-                text-yellow-700
-              "
+              className="flex items-center gap-1 rounded-full bg-yellow-100 px-3 py-1 text-xs font-semibold text-yellow-700"
             >
 
               <AlertCircle size={14}/>
@@ -126,12 +89,7 @@ export default function DrawerHeader({
 
 
         <h2
-          className="
-            mt-2
-            text-xl
-            font-bold
-            text-zinc-900
-          "
+          className="mt-2 text-xl font-bold text-zinc-900"
         >
 
           {company}
@@ -144,13 +102,7 @@ export default function DrawerHeader({
         {title && (
 
           <p
-            className="
-              mt-1
-              max-w-[500px]
-              truncate
-              text-sm
-              text-zinc-500
-            "
+            className="mt-1 max-w-[500px] truncate text-sm text-zinc-500"
           >
 
             {title}
@@ -169,15 +121,7 @@ export default function DrawerHeader({
           {status && (
 
             <span
-              className="
-                rounded-full
-                bg-violet-100
-                px-3
-                py-1
-                text-xs
-                font-medium
-                text-violet-700
-              "
+              className="rounded-full bg-violet-100 px-3 py-1 text-xs font-medium text-violet-700"
             >
 
               {status}
@@ -191,15 +135,7 @@ export default function DrawerHeader({
           {priority && (
 
             <span
-              className="
-                rounded-full
-                bg-red-100
-                px-3
-                py-1
-                text-xs
-                font-medium
-                text-red-700
-              "
+              className="rounded-full bg-red-100 px-3 py-1 text-xs font-medium text-red-700"
             >
 
               {priority}
@@ -213,18 +149,7 @@ export default function DrawerHeader({
           {score !== undefined && (
 
             <span
-              className="
-                flex
-                items-center
-                gap-1
-                rounded-full
-                bg-yellow-100
-                px-3
-                py-1
-                text-xs
-                font-medium
-                text-yellow-700
-              "
+              className="flex items-center gap-1 rounded-full bg-yellow-100 px-3 py-1 text-xs font-medium text-yellow-700"
             >
 
               <Star
@@ -252,12 +177,7 @@ export default function DrawerHeader({
 
         onClick={onClose}
 
-        className="
-          rounded-xl
-          p-2
-          transition
-          hover:bg-zinc-100
-        "
+        className="rounded-xl p-2 transition hover:bg-zinc-100"
 
       >
 

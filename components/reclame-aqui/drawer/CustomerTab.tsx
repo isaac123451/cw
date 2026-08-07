@@ -29,31 +29,14 @@ export default function CustomerTab({
       {/* Perfil */}
 
       <div
-        className="
-          rounded-2xl
-          border
-          border-zinc-200
-          bg-white
-          p-6
-        "
+        className="rounded-2xl border border-zinc-200 bg-white p-6"
       >
 
         <div className="flex items-center gap-4">
 
 
           <div
-            className="
-              flex
-              h-14
-              w-14
-              items-center
-              justify-center
-              rounded-full
-              bg-violet-100
-              text-xl
-              font-bold
-              text-violet-700
-            "
+            className="flex h-14 w-14 items-center justify-center rounded-full bg-violet-100 text-xl font-bold text-violet-700"
           >
 
             {data.customer
@@ -179,13 +162,7 @@ export default function CustomerTab({
       {/* Histórico futuro */}
 
       <div
-        className="
-          rounded-2xl
-          border
-          border-zinc-200
-          bg-zinc-50
-          p-5
-        "
+        className="rounded-2xl border border-zinc-200 bg-zinc-50 p-5"
       >
 
         <div className="flex items-center gap-3">
@@ -235,13 +212,7 @@ function InfoCard({
   return (
 
     <div
-      className="
-        rounded-xl
-        border
-        border-zinc-200
-        bg-white
-        p-4
-      "
+      className="rounded-xl border border-zinc-200 bg-white p-4"
     >
 
       <div className="flex items-center gap-3">
@@ -293,16 +264,7 @@ function Indicator({
   return (
 
     <div
-      className="
-        flex
-        items-center
-        justify-between
-        rounded-xl
-        border
-        border-zinc-200
-        bg-white
-        p-4
-      "
+      className="flex items-center justify-between rounded-xl border border-zinc-200 bg-white p-4"
     >
 
       <div>

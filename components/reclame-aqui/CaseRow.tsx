@@ -35,7 +35,7 @@ export default function CaseRow({
 
       <td>{data.company}</td>
 
-      <td>{data.client}</td>
+      <td>{data.customer}</td>
 
       <td>{data.city}</td>
 
@@ -57,19 +57,19 @@ export default function CaseRow({
 
       <td>
 
-        ⭐ {data.rating}
+        ⭐ {data.score ?? 0}
 
       </td>
 
       <td>
 
-        {data.solved ? "Sim" : "Não"}
+        {data.resolved ? "Sim" : "Não"}
 
       </td>
 
       <td>
 
-        {data.wouldDoBusinessAgain ? "Sim" : "Não"}
+        {data.wouldDoBusiness ? "Sim" : "Não"}
 
       </td>
 

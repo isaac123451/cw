@@ -16,8 +16,6 @@ export default function CaseInfo({ data }: Props) {
 
         <Item label="Empresa" value={data.company} />
 
-        <Item label="Portal" value={data.portal} />
-
         <Item label="Origem" value={data.source} />
 
         <Item label="Categoria" value={data.category} />

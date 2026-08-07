@@ -7,6 +7,12 @@ export interface Case {
 
   cnpj?: string;
 
+  /**
+   * Estabelecimento vinculado. O export do Reclame Aqui não traz essa
+   * informação, então o vínculo é feito na tela — ver lib/models/establishment.ts.
+   */
+  establishmentId?: string;
+
   customer: string;
 
   email?: string;
@@ -29,6 +35,12 @@ export interface Case {
 
   owner?: string;
 
+  department?: string;
+
+  request?: string;
+
+  churnRisk?: boolean;
+
   title: string;
 
   description: string;
@@ -36,6 +48,9 @@ export interface Case {
   publicResponse?: string;
 
   score?: number;
+
+  /** Consumidor avaliou o atendimento no Reclame Aqui. */
+  evaluated?: boolean;
 
   resolved: boolean;
 

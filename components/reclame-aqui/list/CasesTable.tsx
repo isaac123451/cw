@@ -14,51 +14,51 @@ export default function CasesTable({
   onSelect,
 }: Props) {
   return (
-    <div className="overflow-auto">
+    <div className="flex-1 overflow-auto">
 
       <table className="min-w-full">
 
-        <thead className="sticky top-0 bg-zinc-50">
+        <thead className="sticky top-0 z-10 bg-zinc-50/95 backdrop-blur">
 
           <tr className="border-b border-zinc-200">
 
-            <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
+            <th className="whitespace-nowrap px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-zinc-500">
               Protocolo
             </th>
 
-            <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
+            <th className="whitespace-nowrap px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-zinc-500">
               Empresa
             </th>
 
-            <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
+            <th className="whitespace-nowrap px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-zinc-500">
               Cliente
             </th>
 
-            <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
+            <th className="whitespace-nowrap px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-zinc-500">
               Categoria
             </th>
 
-            <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
+            <th className="whitespace-nowrap px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-zinc-500">
               Nota
             </th>
 
-            <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
+            <th className="whitespace-nowrap px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-zinc-500">
               Resolvido
             </th>
 
-            <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
+            <th className="whitespace-nowrap px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-zinc-500">
               Voltaria
             </th>
 
-            <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
+            <th className="whitespace-nowrap px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-zinc-500">
               Status
             </th>
 
-            <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
+            <th className="whitespace-nowrap px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-zinc-500">
               SLA
             </th>
 
-            <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
+            <th className="whitespace-nowrap px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-zinc-500">
               Responsável
             </th>
 

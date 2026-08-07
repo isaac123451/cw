@@ -9,7 +9,7 @@ export default function MainLayout({
   children,
 }: Props) {
   return (
-    <div className="flex h-screen bg-zinc-100">
+    <div className="flex h-screen bg-[#F6F7FB]">
 
       <Sidebar />
 
@@ -17,9 +17,13 @@ export default function MainLayout({
 
         <TopBar />
 
-        <main className="flex-1 overflow-auto p-6">
+        <main className="flex-1 overflow-auto px-6 py-6 lg:px-8">
 
-          {children}
+          <div className="mx-auto min-h-full w-full max-w-[1600px]">
+
+            {children}
+
+          </div>
 
         </main>
 

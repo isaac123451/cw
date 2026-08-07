@@ -36,13 +36,7 @@ export default function NotesTab() {
       {/* Novo comentário */}
 
       <div
-        className="
-          rounded-2xl
-          border
-          border-zinc-200
-          bg-white
-          p-5
-        "
+        className="rounded-2xl border border-zinc-200 bg-white p-5"
       >
 
         <div className="mb-4 flex items-center gap-2">
@@ -60,38 +54,14 @@ export default function NotesTab() {
         <textarea
           rows={5}
           placeholder="Digite uma observação interna para o time..."
-          className="
-            w-full
-            resize-none
-            rounded-xl
-            border
-            border-zinc-200
-            p-4
-            text-sm
-            outline-none
-            transition
-            focus:border-violet-500
-          "
+          className="w-full resize-none rounded-xl border border-zinc-200 p-4 text-sm outline-none transition focus:border-violet-500"
         />
 
 
         <div className="mt-4 flex justify-end">
 
           <button
-            className="
-              flex
-              items-center
-              gap-2
-              rounded-xl
-              bg-violet-600
-              px-5
-              py-3
-              text-sm
-              font-medium
-              text-white
-              transition
-              hover:bg-violet-700
-            "
+            className="flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-violet-700"
           >
 
             <Send size={16}/>
@@ -127,21 +97,11 @@ export default function NotesTab() {
 
             <div
               key={note.id}
-              className="
-                rounded-2xl
-                border
-                border-zinc-200
-                bg-white
-                p-5
-              "
+              className="rounded-2xl border border-zinc-200 bg-white p-5"
             >
 
               <div
-                className="
-                  flex
-                  items-center
-                  justify-between
-                "
+                className="flex items-center justify-between"
               >
 
                 <div>

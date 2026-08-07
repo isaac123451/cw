@@ -73,14 +73,7 @@ export default function TimelineTab() {
         {/* linha vertical */}
 
         <div
-          className="
-            absolute
-            left-5
-            top-5
-            h-[calc(100%-40px)]
-            w-px
-            bg-zinc-200
-          "
+          className="absolute left-5 top-5 h-[calc(100%-40px)] w-px bg-zinc-200"
         />
 
 
@@ -103,18 +96,7 @@ export default function TimelineTab() {
 
 
                 <div
-                  className="
-                    z-10
-                    flex
-                    h-10
-                    w-10
-                    shrink-0
-                    items-center
-                    justify-center
-                    rounded-full
-                    bg-violet-100
-                    text-violet-700
-                  "
+                  className="z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-700"
                 >
 
                   <Icon size={18}/>
@@ -124,14 +106,7 @@ export default function TimelineTab() {
 
 
                 <div
-                  className="
-                    flex-1
-                    rounded-2xl
-                    border
-                    border-zinc-200
-                    bg-white
-                    p-4
-                  "
+                  className="flex-1 rounded-2xl border border-zinc-200 bg-white p-4"
                 >
 
                   <div className="flex items-start justify-between">

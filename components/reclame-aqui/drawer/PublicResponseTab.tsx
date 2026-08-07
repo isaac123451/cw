@@ -46,13 +46,7 @@ export default function PublicResponseTab({
       {/* Editor */}
 
       <div
-        className="
-          rounded-2xl
-          border
-          border-zinc-200
-          bg-white
-          p-5
-        "
+        className="rounded-2xl border border-zinc-200 bg-white p-5"
       >
 
         <div className="mb-4 flex items-center gap-2">
@@ -77,31 +71,14 @@ export default function PublicResponseTab({
 
           placeholder="Digite a resposta que será publicada no Reclame Aqui..."
 
-          className="
-            w-full
-            resize-none
-            rounded-xl
-            border
-            border-zinc-200
-            p-4
-            text-sm
-            outline-none
-            focus:border-violet-500
-          "
+          className="w-full resize-none rounded-xl border border-zinc-200 p-4 text-sm outline-none focus:border-violet-500"
 
         />
 
 
 
         <div
-          className="
-            mt-3
-            flex
-            items-center
-            justify-between
-            text-xs
-            text-zinc-500
-          "
+          className="mt-3 flex items-center justify-between text-xs text-zinc-500"
         >
 
           <span>
@@ -119,27 +96,11 @@ export default function PublicResponseTab({
 
 
         <div
-          className="
-            mt-5
-            flex
-            justify-end
-            gap-3
-          "
+          className="mt-5 flex justify-end gap-3"
         >
 
           <button
-            className="
-              flex
-              items-center
-              gap-2
-              rounded-xl
-              border
-              border-zinc-300
-              px-5
-              py-3
-              text-sm
-              font-medium
-            "
+            className="flex items-center gap-2 rounded-xl border border-zinc-300 px-5 py-3 text-sm font-medium"
           >
 
             <Save size={16}/>
@@ -151,19 +112,7 @@ export default function PublicResponseTab({
 
 
           <button
-            className="
-              flex
-              items-center
-              gap-2
-              rounded-xl
-              bg-violet-600
-              px-5
-              py-3
-              text-sm
-              font-medium
-              text-white
-              hover:bg-violet-700
-            "
+            className="flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-3 text-sm font-medium text-white hover:bg-violet-700"
           >
 
             <Send size={16}/>
@@ -199,14 +148,7 @@ export default function PublicResponseTab({
           {responseHistory.length === 0 ? (
 
             <div
-              className="
-                rounded-xl
-                border
-                border-zinc-200
-                p-5
-                text-sm
-                text-zinc-500
-              "
+              className="rounded-xl border border-zinc-200 p-5 text-sm text-zinc-500"
             >
 
               Nenhuma resposta publicada.
@@ -220,20 +162,11 @@ export default function PublicResponseTab({
 
               <div
                 key={item.id}
-                className="
-                  rounded-2xl
-                  border
-                  border-zinc-200
-                  bg-white
-                  p-5
-                "
+                className="rounded-2xl border border-zinc-200 bg-white p-5"
               >
 
                 <div
-                  className="
-                    flex
-                    justify-between
-                  "
+                  className="flex justify-between"
                 >
 
                   <p className="font-semibold">

@@ -1,5 +1,5 @@
 import MainLayout from "@/components/layout/MainLayout";
-import PageHeader from "@/components/design-system/PageHeader";
+import PageHeading from "@/components/shared/PageHeading";
 
 import NewCaseForm from "@/components/forms/NewCaseForm";
 
@@ -7,12 +7,17 @@ export default function NovoCasoPage() {
   return (
     <MainLayout>
 
-      <PageHeader
-        title="Novo Caso"
-        description="Cadastrar um novo atendimento."
-      />
+      <div className="space-y-6">
 
-      <NewCaseForm />
+        <PageHeading
+          eyebrow="Reclame Aqui"
+          title="Nova reclamação"
+          description="Cadastre manualmente um atendimento recebido."
+        />
+
+        <NewCaseForm />
+
+      </div>
 
     </MainLayout>
   );

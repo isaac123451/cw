@@ -82,30 +82,12 @@ export default function AttachmentsTab() {
       {/* Upload */}
 
       <div
-        className="
-          rounded-2xl
-          border-2
-          border-dashed
-          border-zinc-300
-          bg-zinc-50
-          p-8
-          text-center
-        "
+        className="rounded-2xl border-2 border-dashed border-zinc-300 bg-zinc-50 p-8 text-center"
       >
 
 
         <div
-          className="
-            mx-auto
-            flex
-            h-16
-            w-16
-            items-center
-            justify-center
-            rounded-full
-            bg-violet-100
-            text-violet-600
-          "
+          className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-violet-100 text-violet-600"
         >
 
           <Upload size={30}/>
@@ -132,17 +114,7 @@ export default function AttachmentsTab() {
 
 
         <button
-          className="
-            mt-5
-            rounded-xl
-            bg-violet-600
-            px-6
-            py-3
-            text-sm
-            font-medium
-            text-white
-            hover:bg-violet-700
-          "
+          className="mt-5 rounded-xl bg-violet-600 px-6 py-3 text-sm font-medium text-white hover:bg-violet-700"
         >
 
           Selecionar arquivos
@@ -164,12 +136,7 @@ export default function AttachmentsTab() {
 
 
         <div
-          className="
-            mb-4
-            flex
-            items-center
-            justify-between
-          "
+          className="mb-4 flex items-center justify-between"
         >
 
 
@@ -190,14 +157,7 @@ export default function AttachmentsTab() {
 
 
           <span
-            className="
-              rounded-full
-              bg-zinc-100
-              px-3
-              py-1
-              text-xs
-              font-medium
-            "
+            className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium"
           >
 
             {attachments.length} arquivos
@@ -217,14 +177,7 @@ export default function AttachmentsTab() {
           {attachments.length === 0 ? (
 
             <div
-              className="
-                rounded-xl
-                border
-                border-zinc-200
-                p-5
-                text-sm
-                text-zinc-500
-              "
+              className="rounded-xl border border-zinc-200 p-5 text-sm text-zinc-500"
             >
 
               Nenhum arquivo anexado.
@@ -239,16 +192,7 @@ export default function AttachmentsTab() {
 
               <div
                 key={file.id}
-                className="
-                  flex
-                  items-center
-                  justify-between
-                  rounded-2xl
-                  border
-                  border-zinc-200
-                  bg-white
-                  p-4
-                "
+                className="flex items-center justify-between rounded-2xl border border-zinc-200 bg-white p-4"
               >
 
 
@@ -257,12 +201,7 @@ export default function AttachmentsTab() {
 
 
                   <div
-                    className="
-                      rounded-xl
-                      bg-violet-100
-                      p-3
-                      text-violet-600
-                    "
+                    className="rounded-xl bg-violet-100 p-3 text-violet-600"
                   >
 
                     {file.type === "image" ? (
@@ -310,11 +249,7 @@ export default function AttachmentsTab() {
 
 
                   <button
-                    className="
-                      rounded-lg
-                      p-2
-                      hover:bg-zinc-100
-                    "
+                    className="rounded-lg p-2 hover:bg-zinc-100"
                   >
 
                     <Eye size={18}/>
@@ -324,11 +259,7 @@ export default function AttachmentsTab() {
 
 
                   <button
-                    className="
-                      rounded-lg
-                      p-2
-                      hover:bg-zinc-100
-                    "
+                    className="rounded-lg p-2 hover:bg-zinc-100"
                   >
 
                     <Download size={18}/>
@@ -344,12 +275,7 @@ export default function AttachmentsTab() {
                       removeAttachment(file.id)
                     }
 
-                    className="
-                      rounded-lg
-                      p-2
-                      text-red-500
-                      hover:bg-red-50
-                    "
+                    className="rounded-lg p-2 text-red-500 hover:bg-red-50"
 
                   >
 

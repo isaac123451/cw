@@ -18,17 +18,17 @@ export default function ReclameAquiInformation({
 
         <Info
           title="Nota"
-          value={`⭐ ${caseData.rating}`}
+          value={`⭐ ${caseData.score ?? 0}`}
         />
 
         <Info
           title="Resolvido"
-          value={caseData.solved ? "Sim" : "Não"}
+          value={caseData.resolved ? "Sim" : "Não"}
         />
 
         <Info
           title="Voltaria"
-          value={caseData.wouldDoBusinessAgain ? "Sim" : "Não"}
+          value={caseData.wouldDoBusiness ? "Sim" : "Não"}
         />
 
       </div>

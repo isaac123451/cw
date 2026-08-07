@@ -28,29 +28,14 @@ export default function CompanyTab({
       {/* Cabeçalho empresa */}
 
       <div
-        className="
-          rounded-2xl
-          border
-          border-zinc-200
-          bg-white
-          p-6
-        "
+        className="rounded-2xl border border-zinc-200 bg-white p-6"
       >
 
         <div className="flex items-center gap-4">
 
 
           <div
-            className="
-              flex
-              h-14
-              w-14
-              items-center
-              justify-center
-              rounded-xl
-              bg-violet-100
-              text-violet-700
-            "
+            className="flex h-14 w-14 items-center justify-center rounded-xl bg-violet-100 text-violet-700"
           >
 
             <Building2 size={28}/>
@@ -166,13 +151,7 @@ export default function CompanyTab({
       {/* Área preparada para indicadores */}
 
       <div
-        className="
-          rounded-2xl
-          border
-          border-zinc-200
-          bg-zinc-50
-          p-5
-        "
+        className="rounded-2xl border border-zinc-200 bg-zinc-50 p-5"
       >
 
         <h3 className="font-semibold">
@@ -210,24 +189,14 @@ function InfoCard({
   return (
 
     <div
-      className="
-        rounded-xl
-        border
-        border-zinc-200
-        bg-white
-        p-4
-      "
+      className="rounded-xl border border-zinc-200 bg-white p-4"
     >
 
       <div className="flex items-center gap-3">
 
 
         <div
-          className="
-            rounded-lg
-            bg-zinc-100
-            p-2
-          "
+          className="rounded-lg bg-zinc-100 p-2"
         >
 
           {icon}

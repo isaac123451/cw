@@ -74,12 +74,7 @@ export default function CaseDrawer({
 
       <div
         onClick={onClose}
-        className="
-          fixed
-          inset-0
-          z-40
-          bg-black/40
-        "
+        className="fixed inset-0 z-40 bg-black/40"
       />
 
 
@@ -89,19 +84,7 @@ export default function CaseDrawer({
       {/* Drawer */}
 
       <aside
-        className="
-          fixed
-          right-0
-          top-0
-          z-50
-          flex
-          h-screen
-          w-[760px]
-          max-w-full
-          flex-col
-          bg-white
-          shadow-2xl
-        "
+        className="fixed right-0 top-0 z-50 flex h-screen w-[760px] max-w-full flex-col bg-white shadow-2xl"
       >
 
 
@@ -151,11 +134,7 @@ export default function CaseDrawer({
         {/* Conteúdo */}
 
         <div
-          className="
-            flex-1
-            overflow-y-auto
-            p-6
-          "
+          className="flex-1 overflow-y-auto p-6"
         >
 
 
@@ -266,16 +245,7 @@ export default function CaseDrawer({
         {/* Footer */}
 
         <div
-          className="
-            flex
-            items-center
-            justify-between
-            border-t
-            border-zinc-200
-            bg-white
-            px-6
-            py-4
-          "
+          className="flex items-center justify-between border-t border-zinc-200 bg-white px-6 py-4"
         >
 
 
@@ -284,16 +254,7 @@ export default function CaseDrawer({
 
             onClick={onClose}
 
-            className="
-              rounded-xl
-              border
-              border-zinc-300
-              px-5
-              py-3
-              text-sm
-              font-medium
-              hover:bg-zinc-50
-            "
+            className="rounded-xl border border-zinc-300 px-5 py-3 text-sm font-medium hover:bg-zinc-50"
 
           >
 
@@ -308,16 +269,7 @@ export default function CaseDrawer({
 
           <button
 
-            className="
-              rounded-xl
-              bg-violet-600
-              px-6
-              py-3
-              text-sm
-              font-medium
-              text-white
-              hover:bg-violet-700
-            "
+            className="rounded-xl bg-violet-600 px-6 py-3 text-sm font-medium text-white hover:bg-violet-700"
 
           >
 

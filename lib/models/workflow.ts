@@ -10,4 +10,6 @@ export interface WorkflowStatus {
   active: boolean;
 
   limit?: number;
+
+  createdAt?: string;
 }

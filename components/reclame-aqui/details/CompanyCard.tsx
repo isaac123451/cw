@@ -47,7 +47,7 @@ function Info({
   value,
 }: {
   title: string;
-  value: string;
+  value?: string;
 }) {
   return (
     <div>
@@ -56,7 +56,7 @@ function Info({
         {title}
       </p>
 
-      <strong>{value}</strong>
+      <strong>{value || "-"}</strong>
 
     </div>
   );

@@ -47,14 +47,14 @@ function Info({
   value,
 }: {
   title: string;
-  value: string;
+  value?: string;
 }) {
   return (
     <div className="flex justify-between">
 
       <span>{title}</span>
 
-      <strong>{value}</strong>
+      <strong>{value || "-"}</strong>
 
     </div>
   );

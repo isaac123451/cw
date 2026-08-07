@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ComponentType } from "react";
 
 import {
   X,
@@ -47,12 +47,29 @@ export default function CreateCaseModal({
 
   const protocol = useMemo(() => {
 
-    const number =
-      cases.length + 1;
+    const year = new Date().getFullYear();
 
-    return `RA-${new Date().getFullYear()}${String(
-      number
-    ).padStart(5, "0")}`;
+    const prefix = `RA-${year}`;
+
+    // Deriva do maior sequencial já usado no ano, e não da quantidade de casos:
+    // excluir uma reclamação não pode reciclar um protocolo já emitido.
+    const lastNumber = cases.reduce((max, item) => {
+
+      if (!item.protocol.startsWith(prefix)) return max;
+
+      const sequence = Number(
+        item.protocol.slice(prefix.length)
+      );
+
+      return Number.isNaN(sequence)
+        ? max
+        : Math.max(max, sequence);
+
+    }, 0);
+
+    return `${prefix}${String(
+      lastNumber + 1
+    ).padStart(4, "0")}`;
 
   }, [cases]);
 
@@ -135,9 +152,6 @@ export default function CreateCaseModal({
 
     createCase({
       ...form,
-
-      id: crypto.randomUUID(),
-
       protocol,
     });
 
@@ -155,18 +169,7 @@ export default function CreateCaseModal({
       />
 
       <aside
-        className="
-          fixed
-          right-0
-          top-0
-          z-50
-          flex
-          h-screen
-          w-[850px]
-          flex-col
-          bg-white
-          shadow-2xl
-        "
+        className="fixed right-0 top-0 z-50 flex h-screen w-[850px] flex-col bg-white shadow-2xl"
       >
 
         <header className="flex items-center justify-between border-b border-zinc-200 px-8 py-6">
@@ -288,3 +291,150 @@ export default function CreateCaseModal({
                 update("owner", v)
               }
             />
+
+            <div>
+
+              <label className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-zinc-600">
+
+                <AlertTriangle size={14} />
+
+                Prioridade
+
+              </label>
+
+              <select
+                value={form.priority}
+                onChange={(e) =>
+                  update(
+                    "priority",
+                    e.target
+                      .value as Case["priority"]
+                  )
+                }
+                className="h-10 w-full rounded-lg border border-zinc-200 px-3 text-sm outline-none focus:border-zinc-400"
+              >
+
+                {priorities.map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
+
+              </select>
+
+            </div>
+
+            <div>
+
+              <label className="mb-1.5 block text-xs font-medium text-zinc-600">
+
+                Status
+
+              </label>
+
+              <select
+                value={form.status}
+                onChange={(e) =>
+                  update("status", e.target.value)
+                }
+                className="h-10 w-full rounded-lg border border-zinc-200 px-3 text-sm outline-none focus:border-zinc-400"
+              >
+
+                {statusOptions.map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
+
+              </select>
+
+            </div>
+
+          </div>
+
+          <div className="mt-5">
+
+            <label className="mb-1.5 block text-xs font-medium text-zinc-600">
+
+              Descrição
+
+            </label>
+
+            <textarea
+              value={form.description}
+              onChange={(e) =>
+                update(
+                  "description",
+                  e.target.value
+                )
+              }
+              rows={5}
+              className="w-full resize-none rounded-lg border border-zinc-200 p-3 text-sm outline-none focus:border-zinc-400"
+              placeholder="Descreva a reclamação..."
+            />
+
+          </div>
+
+        </div>
+
+        <footer className="flex items-center justify-end gap-3 border-t border-zinc-200 px-8 py-5">
+
+          <button
+            onClick={onClose}
+            className="rounded-xl px-4 py-2.5 text-sm font-medium text-zinc-600 hover:bg-zinc-100"
+          >
+
+            Cancelar
+
+          </button>
+
+          <button
+            onClick={save}
+            className="flex items-center gap-2 rounded-xl bg-zinc-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-zinc-800"
+          >
+
+            <Save size={16} />
+
+            Salvar Reclamação
+
+          </button>
+
+        </footer>
+
+      </aside>
+    </>
+  );
+}
+
+function Input({
+  icon: Icon,
+  label,
+  value,
+  onChange,
+}: {
+  icon?: ComponentType<{ size?: number }>;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+
+  return (
+    <div>
+
+      <label className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-zinc-600">
+
+        {Icon && <Icon size={14} />}
+
+        {label}
+
+      </label>
+
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="h-10 w-full rounded-lg border border-zinc-200 px-3 text-sm outline-none focus:border-zinc-400"
+      />
+
+    </div>
+  );
+}

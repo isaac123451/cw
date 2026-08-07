@@ -71,24 +71,13 @@ export default function ChecklistTab() {
       {/* Cabeçalho */}
 
       <div
-        className="
-          rounded-2xl
-          border
-          border-zinc-200
-          bg-white
-          p-5
-        "
+        className="rounded-2xl border border-zinc-200 bg-white p-5"
       >
 
         <div className="flex items-center gap-3">
 
           <div
-            className="
-              rounded-xl
-              bg-violet-100
-              p-3
-              text-violet-700
-            "
+            className="rounded-xl bg-violet-100 p-3 text-violet-700"
           >
 
             <ListChecks size={22}/>
@@ -135,20 +124,11 @@ export default function ChecklistTab() {
 
 
           <div
-            className="
-              h-2
-              overflow-hidden
-              rounded-full
-              bg-zinc-200
-            "
+            className="h-2 overflow-hidden rounded-full bg-zinc-200"
           >
 
             <div
-              className="
-                h-full
-                rounded-full
-                bg-violet-600
-              "
+              className="h-full rounded-full bg-violet-600"
               style={{
                 width:`${percentage}%`
               }}
@@ -176,27 +156,12 @@ export default function ChecklistTab() {
 
           <div
             key={item.id}
-            className="
-              flex
-              items-center
-              gap-4
-              rounded-2xl
-              border
-              border-zinc-200
-              bg-white
-              p-4
-            "
+            className="flex items-center gap-4 rounded-2xl border border-zinc-200 bg-white p-4"
           >
 
 
             <button
-              className="
-                flex
-                h-8
-                w-8
-                items-center
-                justify-center
-              "
+              className="flex h-8 w-8 items-center justify-center"
             >
 
               {item.done ? (

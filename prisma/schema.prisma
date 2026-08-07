@@ -2,35 +2,342 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// Prisma 7: a URL de conexão vive em prisma.config.ts (CLI) e no
+// adapter passado ao PrismaClient (runtime).
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+}
+
+/// ============================================================
+/// ACESSO
+/// ============================================================
+
+enum Role {
+  ADMIN
+  AGENTE
+  LEITURA
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         Role     @default(AGENTE)
+  active       Boolean  @default(true)
+  teamId       String?
+  team         Team?    @relation(fields: [teamId], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  ownedCases   Case[]        @relation("CaseOwner")
+  comments     CaseComment[]
+  tasks        AgendaTask[]
+  savedFilters SavedFilter[]
+
+  @@index([email])
+}
+
+/// E-mails liberados para se cadastrar. O domínio @cardapioweb.com é
+/// exigido pela aplicação; esta lista controla quem, dentro dele, entra.
+model AllowedEmail {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  note      String?
+  createdAt DateTime @default(now())
+}
+
+/// ============================================================
+/// ESTRUTURA OPERACIONAL
+/// ============================================================
+
+model Team {
+  id         String  @id @default(cuid())
+  name       String  @unique
+  legacyName String?
+  department String?
+  leader     String?
+  active     Boolean @default(true)
+  order      Int     @default(0)
+
+  members User[]
+  cases   Case[]
+}
+
+model WorkflowStatus {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  color     String   @default("#7C3AED")
+  order     Int      @default(0)
+  active    Boolean  @default(true)
+  wipLimit  Int?
+  createdAt DateTime @default(now())
+}
+
+model Category {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  description String?
+  order       Int     @default(0)
+  active      Boolean @default(true)
+
+  subcategories Subcategory[]
+  cases         Case[]
+}
+
+model Subcategory {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  order       Int     @default(0)
+  active      Boolean @default(true)
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  cases Case[]
+
+  @@unique([categoryId, name])
+}
+
+/// Etiqueta operacional aplicável a um caso — ex.: "favorável a avaliação".
+model Tag {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  color       String  @default("#7C3AED")
+  description String?
+  order       Int     @default(0)
+  active      Boolean @default(true)
+
+  cases CaseTag[]
+}
+
+model ChecklistItem {
+  id       String  @id @default(cuid())
+  label    String
+  key      String  @unique
+  required Boolean @default(false)
+  order    Int     @default(0)
+  active   Boolean @default(true)
+
+  marks CaseChecklistMark[]
+}
+
+/// ============================================================
+/// CASOS
+/// ============================================================
+
+enum Channel {
+  RECLAME_AQUI
+  INSTAGRAM
+  FACEBOOK
+  WHATSAPP
+  MANYCHAT
+  OUTRO
+}
+
+enum Priority {
+  CRITICA
+  ALTA
+  MEDIA
+  BAIXA
+}
+
+model Company {
+  id         String  @id @default(cuid())
+  name       String  @unique
+  cnpj       String?
+  city       String?
+  state      String?
+  plan       String?
+  active     Boolean @default(true)
+  externalId String?
+
+  cases Case[]
 }
 
 model Case {
-  id           String   @id @default(cuid())
+  id       String @id @default(cuid())
+  protocol String @unique
 
-  protocol     String?
+  channel Channel @default(RECLAME_AQUI)
 
-  company      String
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id])
 
-  cnpj         String?
+  /// Preservado da planilha quando a empresa ainda não existe na base.
+  companyName String
 
-  source       String
+  customer String
+  email    String?
+  phone    String?
+  city     String?
+  state    String?
 
-  category     String
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id])
 
-  subcategory  String?
+  subcategoryId String?
+  subcategory   Subcategory? @relation(fields: [subcategoryId], references: [id])
 
-  priority     String
+  teamId String?
+  team   Team?   @relation(fields: [teamId], references: [id])
 
-  status       String
+  ownerId String?
+  owner   User?   @relation("CaseOwner", fields: [ownerId], references: [id])
 
-  owner        String?
+  priority Priority @default(MEDIA)
+  status   String
 
-  description  String?
+  title       String
+  description String?
 
-  createdAt    DateTime @default(now())
+  publicResponse   String?
+  publicResponseAt DateTime?
 
-  updatedAt    DateTime @updatedAt
+  /// Consumidor avaliou o atendimento no portal.
+  evaluated       Boolean   @default(false)
+  score           Int?
+  resolved        Boolean   @default(false)
+  wouldDoBusiness Boolean   @default(false)
+  evaluatedAt     DateTime?
+
+  churnRisk Boolean @default(false)
+  request   String?
+
+  responseMinutes Int?
+  solutionMinutes Int?
+  slaTarget       String?
+
+  externalUrl String?
+  externalId  String?
+
+  /// Data de publicação no portal — base de todo cálculo por período.
+  publishedAt DateTime
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+
+  tags     CaseTag[]
+  comments CaseComment[]
+  events   CaseEvent[]
+  marks    CaseChecklistMark[]
+  impacts  ImpactRecord[]
+  tasks    AgendaTask[]
+
+  @@index([channel, publishedAt])
+  @@index([status])
+  @@index([companyName])
+}
+
+model CaseTag {
+  caseId String
+  case   Case   @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  tagId String
+  tag   Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@id([caseId, tagId])
+}
+
+model CaseComment {
+  id     String @id @default(cuid())
+  caseId String
+  case   Case   @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  authorId String?
+  author   User?   @relation(fields: [authorId], references: [id])
+
+  body      String
+  createdAt DateTime @default(now())
+}
+
+/// Linha do tempo: alimenta a rastreabilidade do caso.
+model CaseEvent {
+  id     String @id @default(cuid())
+  caseId String
+  case   Case   @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  kind      String
+  detail    String?
+  actor     String?
+  createdAt DateTime @default(now())
+
+  @@index([caseId, createdAt])
+}
+
+model CaseChecklistMark {
+  caseId String
+  case   Case   @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  itemId String
+  item   ChecklistItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  done   Boolean   @default(false)
+  doneBy String?
+  doneAt DateTime?
+
+  @@id([caseId, itemId])
+}
+
+/// ============================================================
+/// GESTÃO
+/// ============================================================
+
+model ImpactRecord {
+  id          String   @id @default(cuid())
+  type        String
+  companyName String
+  description String?
+  /// Centavos, para não sofrer com ponto flutuante.
+  amountCents Int
+  owner       String?
+  date        DateTime
+
+  caseId String?
+  case   Case?   @relation(fields: [caseId], references: [id])
+}
+
+model AgendaTask {
+  id       String   @id @default(cuid())
+  title    String
+  type     String
+  priority String   @default("Média")
+  done     Boolean  @default(false)
+  dueDate  DateTime
+  time     String?
+
+  ownerId String?
+  owner   User?   @relation(fields: [ownerId], references: [id])
+
+  caseId String?
+  case   Case?   @relation(fields: [caseId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+/// Filtro salvo pelo usuário (ou pré-definido pela operação).
+model SavedFilter {
+  id   String @id @default(cuid())
+  name String
+  /// Critérios serializados — evita uma tabela por tipo de filtro.
+  criteria Json
+  shared   Boolean @default(false)
+  builtIn  Boolean @default(false)
+  order    Int     @default(0)
+
+  ownerId String?
+  owner   User?   @relation(fields: [ownerId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+/// Meta definida manualmente para um indicador de reputação.
+model ReputationGoal {
+  id        String   @id @default(cuid())
+  /// resposta | consumidor | solucao | novos-negocios | nota
+  indicator String   @unique
+  target    Float
+  updatedAt DateTime @updatedAt
 }

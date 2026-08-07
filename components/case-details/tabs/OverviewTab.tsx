@@ -12,7 +12,7 @@ export default function OverviewTab({ data }: Props) {
 
       <Field title="Cliente" value={data.customer} />
 
-      <Field title="Portal" value={data.portal} />
+      <Field title="Origem" value={data.source} />
 
       <Field title="Categoria" value={data.category} />
 

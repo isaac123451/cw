@@ -1,85 +1,143 @@
 "use client";
 
+import Link from "next/link";
+
+import { useMemo } from "react";
+
 import {
-  CircleAlert,
-  Clock3,
   CheckCircle2,
+  CircleAlert,
+  Inbox,
   Star,
-  Building2,
+  Timer,
 } from "lucide-react";
 
-const metrics = [
-  {
-    title: "Reclamações",
-    value: "134",
-    icon: CircleAlert,
-    color: "bg-red-100 text-red-600",
-  },
-  {
-    title: "Dentro do SLA",
-    value: "119",
-    icon: Clock3,
-    color: "bg-blue-100 text-blue-600",
-  },
-  {
-    title: "Resolvidas",
-    value: "92%",
-    icon: CheckCircle2,
-    color: "bg-green-100 text-green-600",
-  },
-  {
-    title: "Nota Média",
-    value: "8.4",
-    icon: Star,
-    color: "bg-yellow-100 text-yellow-600",
-  },
-  {
-    title: "Empresas",
-    value: "18",
-    icon: Building2,
-    color: "bg-violet-100 text-violet-600",
-  },
-];
+import { useScopedCases } from "@/lib/context/useScopedCases";
+import { isOpen } from "@/lib/services/case.service";
+
+import StatTile from "@/components/shared/StatTile";
+
+import {
+  displayBand,
+  formatElapsed,
+  formatRange,
+  getRange,
+  getReputation,
+  inRange,
+  ptBR,
+} from "@/lib/services/reputation.service";
 
 export default function MetricsBar() {
+
+  const { cases } = useScopedCases("reclame-aqui");
+
+  /** Janela oficial de 6 meses — a mesma que define a nota pública. */
+  const range = useMemo(() => getRange("6m"), []);
+
+  const noPeriodo = useMemo(
+    () =>
+      cases.filter((item) =>
+        inRange(item, range.start, range.end)
+      ),
+    [cases, range]
+  );
+
+  const reputacao = useMemo(
+    () => getReputation(noPeriodo),
+    [noPeriodo]
+  );
+
+  const band = displayBand(reputacao);
+
+  const abertos = cases.filter(isOpen).length;
+
   return (
-    <div className="grid grid-cols-5 gap-4">
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
 
-      {metrics.map((metric) => {
+      {/* Nota de reputação em destaque */}
 
-        const Icon = metric.icon;
+      <Link
+        href="/reclame-aqui/analytics"
+        title={`Nota calculada sobre ${formatRange(
+          range.start,
+          range.end
+        )} — clique para ver o detalhamento.`}
+        className="group relative overflow-hidden rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_28px_-14px_rgba(16,24,40,0.25)]"
+      >
 
-        return (
-          <div
-            key={metric.title}
-            className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"
+        <span
+          aria-hidden
+          className="absolute inset-x-0 top-0 h-1"
+          style={{ background: band.color }}
+        />
+
+        <div className="flex items-start justify-between gap-3">
+
+          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-400">
+            Reputação
+          </p>
+
+          <span
+            className="rounded-full px-2 py-0.5 text-[10px] font-semibold text-white"
+            style={{ background: band.color }}
           >
+            {band.label}
+          </span>
 
-            <div className="flex items-center justify-between">
+        </div>
 
-              <div>
+        <p className="mt-3 text-3xl font-semibold tracking-tight tabular-nums text-zinc-900">
+          {ptBR(reputacao.raScore)}
+          <span className="ml-1 text-base font-normal text-zinc-400">
+            /10
+          </span>
+        </p>
 
-                <p className="text-xs uppercase tracking-wide text-zinc-500">
-                  {metric.title}
-                </p>
+        <p className="mt-2 text-xs text-zinc-400">
+          últimos 6 meses fechados
+        </p>
 
-                <h2 className="mt-2 text-3xl font-bold">
-                  {metric.value}
-                </h2>
+      </Link>
 
-              </div>
+      <StatTile
+        label="Reclamações"
+        description="Total recebido na janela de 6 meses que define a nota pública."
+        value={reputacao.received}
+        hint={`${reputacao.unanswered} sem resposta`}
+        icon={CircleAlert}
+        tone="danger"
+      />
 
-              <div className={`rounded-xl p-3 ${metric.color}`}>
+      <StatTile
+        label="Índice de resposta"
+        description="Percentual respondido publicamente. É o item de maior peso na nota."
+        value={`${ptBR(reputacao.responseIndex)}%`}
+        hint="meta de 90%"
+        icon={CheckCircle2}
+        tone={
+          reputacao.responseIndex >= 90
+            ? "success"
+            : "warning"
+        }
+      />
 
-                <Icon size={22} />
+      <StatTile
+        label="Tempo de resposta"
+        description="Média entre a reclamação e a primeira resposta pública."
+        value={formatElapsed(reputacao.responseMinutes)}
+        hint="média do período"
+        icon={Timer}
+        tone="info"
+      />
 
-              </div>
-
-            </div>
-
-          </div>
-        );
-      })}
+      <StatTile
+        label="Na fila"
+        description="Casos que ainda dependem de ação da operação, de qualquer período."
+        value={abertos}
+        hint={`de ${cases.length} no total`}
+        icon={Inbox}
+        tone="primary"
+      />
 
     </div>
   );

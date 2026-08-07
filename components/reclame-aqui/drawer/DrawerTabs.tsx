@@ -80,20 +80,11 @@ export default function DrawerTabs({
   return (
 
     <div
-      className="
-        border-b
-        border-zinc-200
-        bg-white
-      "
+      className="border-b border-zinc-200 bg-white"
     >
 
       <div
-        className="
-          flex
-          overflow-x-auto
-          px-6
-          scrollbar-thin
-        "
+        className="flex overflow-x-auto px-6 scrollbar-thin"
       >
 
 
@@ -136,15 +127,7 @@ export default function DrawerTabs({
 
               <span
 
-                className="
-                  absolute
-                  bottom-0
-                  left-2
-                  right-2
-                  h-0.5
-                  rounded-full
-                  bg-violet-600
-                "
+                className="absolute bottom-0 left-2 right-2 h-0.5 rounded-full bg-violet-600"
 
               />
 
