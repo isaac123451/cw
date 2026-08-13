@@ -1,4 +1,8 @@
-"use server";
+﻿"use server";
+
+import { unstable_cache } from "next/cache";
+
+import { WORKSPACE_TAG } from "@/lib/actions/tags";
 
 import { getPrisma } from "@/lib/prisma";
 
@@ -126,11 +130,32 @@ function dia(value?: Date | null) {
     : undefined;
 }
 
+/**
+ * Carga dos cadastros, com cache no servidor.
+ *
+ * São dezessete consultas ao Supabase. Mesmo em paralelo, a ida e volta
+ * até São Paulo domina o tempo de abertura da aplicação — e estes dados
+ * mudam pouco: fluxo, categorias, times e regras de prazo passam dias
+ * iguais. A etiqueta é invalidada em cada gravação de cadastro.
+ */
+const lerWorkspace = unstable_cache(
+  async () => carregarDoBanco(),
+  ["workspace-carga"],
+  { tags: [WORKSPACE_TAG], revalidate: 120 }
+);
+
 export async function loadWorkspace(): Promise<Workspace> {
+
+  if (!getPrisma()) return DEMONSTRACAO;
+
+  return (await lerWorkspace()) ?? DEMONSTRACAO;
+}
+
+async function carregarDoBanco(): Promise<Workspace | null> {
 
   const prisma = getPrisma();
 
-  if (!prisma) return DEMONSTRACAO;
+  if (!prisma) return null;
 
   const [
     workflow,

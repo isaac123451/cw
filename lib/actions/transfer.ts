@@ -1,8 +1,12 @@
-"use server";
+﻿"use server";
 
 import * as XLSX from "xlsx";
 
+import { updateTag } from "next/cache";
+
 import { getPrisma } from "@/lib/prisma";
+import { CASES_TAG } from "@/lib/actions/tags";
+import { WORKSPACE_TAG } from "@/lib/actions/tags";
 import { getSession } from "@/lib/auth/session";
 
 import {
@@ -117,6 +121,11 @@ export async function importCases(
 
   const { gravadas, novas, inalteradas } =
     await importCasesBulk(prisma, lidas.cases);
+
+  // A importação cria categorias e etiquetas além dos casos, então as
+  // duas cargas precisam ser relidas.
+  updateTag(CASES_TAG);
+  updateTag(WORKSPACE_TAG);
 
   return {
     lidas: lidas.cases.length,

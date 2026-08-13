@@ -1,4 +1,7 @@
-"use server";
+﻿"use server";
+
+import { updateTag } from "next/cache";
+import { WORKSPACE_TAG } from "@/lib/actions/tags";
 
 import { getPrisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth/session";
@@ -84,6 +87,8 @@ export async function saveWorkflowStatus(
     update: dados,
     create: { id: item.id, ...dados },
   });
+
+  updateTag(WORKSPACE_TAG);
 }
 
 export async function removeWorkflowStatus(id: string) {
@@ -91,6 +96,8 @@ export async function removeWorkflowStatus(id: string) {
   if (!prisma) return;
 
   await prisma.workflowStatus.delete({ where: { id } });
+
+  updateTag(WORKSPACE_TAG);
 }
 
 export async function saveCategory(
@@ -112,6 +119,8 @@ export async function saveCategory(
     update: dados,
     create: { id: item.id, ...dados },
   });
+
+  updateTag(WORKSPACE_TAG);
 }
 
 export async function removeCategory(id: string) {
@@ -119,6 +128,8 @@ export async function removeCategory(id: string) {
   if (!prisma) return;
 
   await prisma.category.delete({ where: { id } });
+
+  updateTag(WORKSPACE_TAG);
 }
 
 export async function saveSubcategory(
@@ -151,6 +162,8 @@ export async function saveSubcategory(
     update: dados,
     create: { id: item.id, ...dados },
   });
+
+  updateTag(WORKSPACE_TAG);
 }
 
 export async function removeSubcategory(id: string) {
@@ -158,6 +171,8 @@ export async function removeSubcategory(id: string) {
   if (!prisma) return;
 
   await prisma.subcategory.delete({ where: { id } });
+
+  updateTag(WORKSPACE_TAG);
 }
 
 export async function saveTag(item: CaseTag) {
@@ -177,6 +192,8 @@ export async function saveTag(item: CaseTag) {
     update: dados,
     create: { id: item.id, ...dados },
   });
+
+  updateTag(WORKSPACE_TAG);
 }
 
 export async function removeTag(id: string) {
@@ -184,6 +201,8 @@ export async function removeTag(id: string) {
   if (!prisma) return;
 
   await prisma.tag.delete({ where: { id } });
+
+  updateTag(WORKSPACE_TAG);
 }
 
 export async function saveChecklistItem(
@@ -205,6 +224,8 @@ export async function saveChecklistItem(
     update: dados,
     create: { id: item.id, ...dados },
   });
+
+  updateTag(WORKSPACE_TAG);
 }
 
 export async function removeChecklistItem(id: string) {
@@ -212,6 +233,8 @@ export async function removeChecklistItem(id: string) {
   if (!prisma) return;
 
   await prisma.checklistItem.delete({ where: { id } });
+
+  updateTag(WORKSPACE_TAG);
 }
 
 /* ============================================================
@@ -237,6 +260,8 @@ export async function saveSlaRule(item: SlaRule) {
     update: dados,
     create: { id: item.id, ...dados },
   });
+
+  updateTag(WORKSPACE_TAG);
 }
 
 export async function removeSlaRule(id: string) {
@@ -244,6 +269,8 @@ export async function removeSlaRule(id: string) {
   if (!prisma) return;
 
   await prisma.slaRule.delete({ where: { id } });
+
+  updateTag(WORKSPACE_TAG);
 }
 
 export async function saveMovementRule(
@@ -264,6 +291,8 @@ export async function saveMovementRule(
     update: dados,
     create: { id: item.id, ...dados },
   });
+
+  updateTag(WORKSPACE_TAG);
 }
 
 export async function removeMovementRule(id: string) {
@@ -271,6 +300,8 @@ export async function removeMovementRule(id: string) {
   if (!prisma) return;
 
   await prisma.movementRule.delete({ where: { id } });
+
+  updateTag(WORKSPACE_TAG);
 }
 
 export async function saveMovement(item: CaseMovement) {
@@ -308,6 +339,8 @@ export async function saveMovement(item: CaseMovement) {
     update: dados,
     create: { id: item.id, ...dados },
   });
+
+  updateTag(WORKSPACE_TAG);
 }
 
 export async function removeMovement(id: string) {
@@ -315,6 +348,8 @@ export async function removeMovement(id: string) {
   if (!prisma) return;
 
   await prisma.caseMovement.delete({ where: { id } });
+
+  updateTag(WORKSPACE_TAG);
 }
 
 /* ============================================================
@@ -352,6 +387,8 @@ export async function saveEstablishment(
     update: dados,
     create: { id: item.id, ...dados },
   });
+
+  updateTag(WORKSPACE_TAG);
 }
 
 export async function removeEstablishment(id: string) {
@@ -359,6 +396,8 @@ export async function removeEstablishment(id: string) {
   if (!prisma) return;
 
   await prisma.establishment.delete({ where: { id } });
+
+  updateTag(WORKSPACE_TAG);
 }
 
 export async function saveProject(item: Project) {
@@ -380,6 +419,8 @@ export async function saveProject(item: Project) {
     update: dados,
     create: { id: item.id, ...dados },
   });
+
+  updateTag(WORKSPACE_TAG);
 }
 
 export async function removeProject(id: string) {
@@ -387,6 +428,8 @@ export async function removeProject(id: string) {
   if (!prisma) return;
 
   await prisma.project.delete({ where: { id } });
+
+  updateTag(WORKSPACE_TAG);
 }
 
 export async function saveMacro(item: Macro) {
@@ -407,6 +450,8 @@ export async function saveMacro(item: Macro) {
     update: dados,
     create: { id: item.id, ...dados },
   });
+
+  updateTag(WORKSPACE_TAG);
 }
 
 export async function removeMacro(id: string) {
@@ -414,6 +459,8 @@ export async function removeMacro(id: string) {
   if (!prisma) return;
 
   await prisma.macro.delete({ where: { id } });
+
+  updateTag(WORKSPACE_TAG);
 }
 
 export async function savePlaybook(item: Playbook) {
@@ -437,6 +484,8 @@ export async function savePlaybook(item: Playbook) {
     update: dados,
     create: { id: item.id, ...dados },
   });
+
+  updateTag(WORKSPACE_TAG);
 }
 
 export async function removePlaybook(id: string) {
@@ -444,6 +493,8 @@ export async function removePlaybook(id: string) {
   if (!prisma) return;
 
   await prisma.playbook.delete({ where: { id } });
+
+  updateTag(WORKSPACE_TAG);
 }
 
 /* ============================================================
@@ -485,6 +536,8 @@ export async function saveAgendaTask(item: AgendaTask) {
     update: dados,
     create: { id: item.id, ...dados },
   });
+
+  updateTag(WORKSPACE_TAG);
 }
 
 export async function removeAgendaTask(id: string) {
@@ -492,6 +545,8 @@ export async function removeAgendaTask(id: string) {
   if (!prisma) return;
 
   await prisma.agendaTask.delete({ where: { id } });
+
+  updateTag(WORKSPACE_TAG);
 }
 
 export async function saveImpactRecord(
@@ -525,6 +580,8 @@ export async function saveImpactRecord(
     update: dados,
     create: { id: item.id, ...dados },
   });
+
+  updateTag(WORKSPACE_TAG);
 }
 
 export async function removeImpactRecord(id: string) {
@@ -532,6 +589,8 @@ export async function removeImpactRecord(id: string) {
   if (!prisma) return;
 
   await prisma.impactRecord.delete({ where: { id } });
+
+  updateTag(WORKSPACE_TAG);
 }
 
 export async function saveImpactType(
@@ -553,6 +612,8 @@ export async function saveImpactType(
     update: dados,
     create: { id: item.id, ...dados },
   });
+
+  updateTag(WORKSPACE_TAG);
 }
 
 /**
@@ -565,6 +626,8 @@ export async function removeImpactType(id: string) {
   if (!prisma) return;
 
   await prisma.impactType.delete({ where: { id } });
+
+  updateTag(WORKSPACE_TAG);
 }
 
 /* ============================================================
@@ -588,6 +651,8 @@ export async function saveTeam(item: Team) {
     update: dados,
     create: { id: item.id, ...dados },
   });
+
+  updateTag(WORKSPACE_TAG);
 }
 
 export async function removeTeamRecord(id: string) {
@@ -602,6 +667,8 @@ export async function removeTeamRecord(id: string) {
   });
 
   await prisma.team.delete({ where: { id } });
+
+  updateTag(WORKSPACE_TAG);
 }
 
 /**
@@ -637,6 +704,8 @@ export async function assignTeamMember(
       teamId,
     },
   });
+
+  updateTag(WORKSPACE_TAG);
 }
 
 export async function unassignTeamMember(
@@ -649,6 +718,8 @@ export async function unassignTeamMember(
     where: { email: email.toLowerCase() },
     data: { teamId: null },
   });
+
+  updateTag(WORKSPACE_TAG);
 }
 
 /* ============================================================
@@ -674,6 +745,8 @@ export async function saveJourneyStage(
     update: dados,
     create: { id: item.id, ...dados },
   });
+
+  updateTag(WORKSPACE_TAG);
 }
 
 export async function removeJourneyStage(id: string) {
@@ -681,6 +754,8 @@ export async function removeJourneyStage(id: string) {
   if (!prisma) return;
 
   await prisma.journeyStage.delete({ where: { id } });
+
+  updateTag(WORKSPACE_TAG);
 }
 
 export async function saveJourneyTopic(
@@ -701,6 +776,8 @@ export async function saveJourneyTopic(
     update: dados,
     create: { id: item.id, ...dados },
   });
+
+  updateTag(WORKSPACE_TAG);
 }
 
 export async function removeJourneyTopic(id: string) {
@@ -708,6 +785,8 @@ export async function removeJourneyTopic(id: string) {
   if (!prisma) return;
 
   await prisma.journeyTopic.delete({ where: { id } });
+
+  updateTag(WORKSPACE_TAG);
 }
 
 export async function saveJourneyEntry(
@@ -728,6 +807,8 @@ export async function saveJourneyEntry(
     update: dados,
     create: { id: item.id, ...dados },
   });
+
+  updateTag(WORKSPACE_TAG);
 }
 
 export async function removeJourneyEntry(id: string) {
@@ -735,4 +816,6 @@ export async function removeJourneyEntry(id: string) {
   if (!prisma) return;
 
   await prisma.journeyEntry.delete({ where: { id } });
+
+  updateTag(WORKSPACE_TAG);
 }

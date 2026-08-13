@@ -1,4 +1,8 @@
-"use server";
+﻿"use server";
+
+import { unstable_cache, updateTag } from "next/cache";
+
+import { CASES_TAG } from "@/lib/actions/tags";
 
 import { Case } from "@/lib/models/case";
 import { mockCases } from "@/lib/data/mockCases";
@@ -41,14 +45,37 @@ async function autorizado() {
   return prisma;
 }
 
+/**
+ * Leitura das reclamações, com cache no servidor.
+ *
+ * A consulta custa 650 ms morna e 2,2 s fria contra o Supabase em São
+ * Paulo — e roda a cada abertura da aplicação, porque é o contexto que
+ * alimenta todas as telas. O cálculo das telas, em comparação, leva
+ * menos de 3 ms: a espera era toda ida e volta de rede.
+ *
+ * O cache é invalidado por etiqueta em cada gravação, então ninguém vê
+ * dado velho depois de editar. O tempo de vida existe só para o caso de
+ * outra pessoa alterar algo por outra sessão.
+ */
+const lerDoBanco = unstable_cache(
+  async () => {
+
+    const prisma = getPrisma();
+
+    if (!prisma) return null;
+
+    return fetchCases(prisma);
+  },
+  ["casos-lista"],
+  { tags: [CASES_TAG], revalidate: 60 }
+);
+
 export async function listCases(): Promise<Case[]> {
 
-  const prisma = getPrisma();
-
   // Modo demonstração: o dataset do repositório continua servindo.
-  if (!prisma) return mockCases;
+  if (!getPrisma()) return mockCases;
 
-  return fetchCases(prisma);
+  return (await lerDoBanco()) ?? mockCases;
 }
 
 /**
@@ -83,6 +110,10 @@ export async function saveCase(
   if (!prisma) return;
 
   await persistCase(prisma, item, options);
+
+  // `updateTag` e não `revalidateTag`: garante que a própria sessão que
+  // gravou leia o valor novo na sequência, sem esperar o cache expirar.
+  updateTag(CASES_TAG);
 }
 
 export async function deleteCase(protocol: string) {
@@ -92,4 +123,8 @@ export async function deleteCase(protocol: string) {
   if (!prisma) return;
 
   await removeCaseByProtocol(prisma, protocol);
+
+  // `updateTag` e não `revalidateTag`: garante que a própria sessão que
+  // gravou leia o valor novo na sequência, sem esperar o cache expirar.
+  updateTag(CASES_TAG);
 }
