@@ -96,7 +96,24 @@ export default function MultiLineChart({
 
   const ticks = [0, 0.25, 0.5, 0.75, 1];
 
-  const labelStride = labels.length > 16 ? 3 : 1;
+  /**
+   * Rótulos proporcionais, não a cada 3.
+   *
+   * O passo fixo funcionava até ~48 pontos; com uma série diária longa
+   * desenhava dezenas de datas sobrepostas, virando um borrão cinza.
+   * Aqui o eixo mostra no máximo doze, independentemente do tamanho.
+   */
+  const labelStride = Math.max(
+    1,
+    Math.ceil(labels.length / 12)
+  );
+
+  /**
+   * Com muitos pontos os círculos viram ruído — e são um nó de SVG por
+   * ponto por série. Acima de quarenta, só a linha; o ponto sob o cursor
+   * continua aparecendo.
+   */
+  const showDots = labels.length <= 40;
 
   /** Converte a posição do mouse no índice mais próximo do eixo X. */
   function track(clientX: number) {
@@ -234,23 +251,25 @@ export default function MultiLineChart({
             ))}
 
             {series.map((item) =>
-              item.values.map((value, index) => (
+              item.values.map((value, index) =>
+                showDots || hover === index ? (
 
-                <circle
-                  key={`${item.key}-${index}`}
-                  cx={toX(index)}
-                  cy={toY(value)}
-                  r={hover === index ? 5 : 3}
-                  fill={
-                    hover === index
-                      ? item.color
-                      : "#FFFFFF"
-                  }
-                  stroke={item.color}
-                  strokeWidth={2}
-                />
+                  <circle
+                    key={`${item.key}-${index}`}
+                    cx={toX(index)}
+                    cy={toY(value)}
+                    r={hover === index ? 5 : 3}
+                    fill={
+                      hover === index
+                        ? item.color
+                        : "#FFFFFF"
+                    }
+                    stroke={item.color}
+                    strokeWidth={2}
+                  />
 
-              ))
+                ) : null
+              )
             )}
 
             {showValues &&

@@ -16,8 +16,14 @@ import {
 
 import { useScopedCases } from "@/lib/context/useScopedCases";
 import { useSettings } from "@/lib/context/SettingsContext";
+import { useTeams } from "@/lib/context/TeamsContext";
+
+import { countCriteria } from "@/lib/models/savedFilter";
 
 import CreateCaseModal from "@/components/reclame-aqui/modals/CreateCaseModal";
+import TransferModal from "@/components/reclame-aqui/toolbar/TransferModal";
+import SavedFilters from "@/components/reclame-aqui/toolbar/SavedFilters";
+import SearchSelect from "@/components/shared/SearchSelect";
 
 interface Props {
   view: "kanban" | "list";
@@ -36,10 +42,12 @@ export default function Toolbar({
     filteredCases,
     filters,
     setFilter,
+    applyFilters,
     clearFilters,
   } = useScopedCases("reclame-aqui");
 
   const { tags } = useSettings();
+  const { people } = useTeams();
 
   const companies = useMemo(
     () =>
@@ -59,14 +67,35 @@ export default function Toolbar({
     [cases]
   );
 
-  const [createOpen, setCreateOpen] = useState(false);
+  /**
+   * Quem pode receber um caso: o cadastro de Times manda, mas casos
+   * importados trazem responsáveis que ainda não estão lá — sem a união
+   * o filtro esconderia justamente esses.
+   */
+  const owners = useMemo(() => {
 
-  const hasFilters =
-    filters.search !== "" ||
-    filters.company !== "" ||
-    filters.status !== "" ||
-    filters.category !== "" ||
-    filters.tag !== "";
+    const nomes = new Set<string>();
+
+    for (const item of cases) {
+      if (item.owner) nomes.add(item.owner);
+    }
+
+    for (const pessoa of people) {
+      nomes.add(pessoa.name);
+    }
+
+    return [...nomes].sort((a, b) =>
+      a.localeCompare(b)
+    );
+
+  }, [cases, people]);
+
+  const [createOpen, setCreateOpen] = useState(false);
+  const [transferOpen, setTransferOpen] = useState(false);
+
+  // Conta todos os campos, inclusive os que não têm select aqui
+  // (estabelecimento vem da tela do estabelecimento).
+  const hasFilters = countCriteria(filters) > 0;
 
   return (
     <div className="rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
@@ -93,21 +122,15 @@ export default function Toolbar({
 
           </div>
 
-          <select
+          <SearchSelect
             value={filters.company}
-            onChange={(e) =>
-              setFilter("company", e.target.value)
+            onChange={(value) =>
+              setFilter("company", value)
             }
-            className={selectClass}
-          >
-            <option value="">Todos os clientes</option>
-
-            {companies.map((item) => (
-              <option key={item} value={item}>
-                {item}
-              </option>
-            ))}
-          </select>
+            options={companies}
+            allLabel="Todos os clientes"
+            title="Filtrar por cliente que registrou a reclamação"
+          />
 
           <select
             value={filters.status}
@@ -160,6 +183,28 @@ export default function Toolbar({
               ))}
           </select>
 
+          <select
+            value={filters.owner}
+            onChange={(e) =>
+              setFilter("owner", e.target.value)
+            }
+            title="Filtrar por responsável pelo atendimento"
+            className={selectClass}
+          >
+            <option value="">Todos Responsáveis</option>
+
+            {owners.map((item) => (
+              <option key={item} value={item}>
+                {item}
+              </option>
+            ))}
+          </select>
+
+          <SavedFilters
+            criteria={filters}
+            onApply={applyFilters}
+          />
+
           {hasFilters && (
             <button
               onClick={clearFilters}
@@ -202,7 +247,11 @@ export default function Toolbar({
 
           </div>
 
-          <button className="flex h-10 items-center gap-2 rounded-xl border border-zinc-200 px-3.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50">
+          <button
+            onClick={() => setTransferOpen(true)}
+            title="Importar a planilha do Reclame Aqui ou exportar a base atual"
+            className="flex h-10 items-center gap-2 rounded-xl border border-zinc-200 px-3.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
+          >
             <Upload size={16} />
             <span className="hidden lg:inline">Importar</span>
           </button>
@@ -248,6 +297,11 @@ export default function Toolbar({
       <CreateCaseModal
         open={createOpen}
         onClose={() => setCreateOpen(false)}
+      />
+
+      <TransferModal
+        open={transferOpen}
+        onClose={() => setTransferOpen(false)}
       />
 
     </div>

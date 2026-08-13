@@ -86,6 +86,13 @@ export default function CategoriesSettings() {
                 Descrição
               </th>
 
+              <th
+                title="Meta para a média do tempo de resposta desta categoria. Em branco, a categoria não é cobrada."
+                className="whitespace-nowrap px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-zinc-500"
+              >
+                Teto do tempo médio (h)
+              </th>
+
               <th className="whitespace-nowrap px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
                 Ativa
               </th>
@@ -131,6 +138,29 @@ export default function CategoriesSettings() {
                     }
                     placeholder="Ex.: problemas relacionados ao atendimento."
                     className="h-10 w-full min-w-[260px] rounded-xl border border-zinc-200 px-3 text-sm outline-none transition-colors placeholder:text-zinc-400 focus:border-violet-400"
+                  />
+
+                </td>
+
+                <td className="px-5 py-3">
+
+                  <input
+                    type="number"
+                    min={1}
+                    value={item.ceilingHours ?? ""}
+                    onChange={(e) =>
+                      saveCategory({
+                        ...item,
+                        // Campo vazio significa "sem teto", não zero.
+                        ceilingHours:
+                          e.target.value === ""
+                            ? undefined
+                            : Number(e.target.value),
+                      })
+                    }
+                    placeholder="sem teto"
+                    title="Meta para a média do tempo de resposta desta categoria."
+                    className="h-10 w-28 rounded-xl border border-zinc-200 px-3 text-sm outline-none transition-colors placeholder:text-zinc-400 focus:border-violet-400"
                   />
 
                 </td>

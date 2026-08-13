@@ -15,15 +15,26 @@ import {
 } from "@/lib/models/journey";
 
 import {
-  mockJourneyEntries,
-  mockJourneyStages,
-  mockJourneyTopics,
-} from "@/lib/data/mockJourney";
+  removeJourneyEntry,
+  removeJourneyStage,
+  removeJourneyTopic,
+  saveJourneyEntry,
+  saveJourneyStage,
+  saveJourneyTopic,
+} from "@/lib/actions/registry";
+
+import { useWorkspaceSlice } from "@/lib/context/useWorkspace";
+import { sincronizar } from "@/lib/context/sync";
+
+import { REFERENCE_DATE } from "@/lib/services/reputation.service";
 
 interface JourneyContextType {
   stages: JourneyStage[];
   topics: JourneyTopic[];
   entries: JourneyEntry[];
+
+  /** Carga inicial ainda em andamento. */
+  loading: boolean;
 
   /** Etapa atual de cada cliente. Sem registro = primeira etapa. */
   placement: Record<string, string>;
@@ -69,16 +80,19 @@ export function JourneyProvider({
   children: ReactNode;
 }) {
 
-  const [stages, setStages] = useState(
-    mockJourneyStages
+  const [stages, setStages, loading] = useWorkspaceSlice(
+    (dados) => dados.journeyStages,
+    [] as JourneyStage[]
   );
 
-  const [topics, setTopics] = useState(
-    mockJourneyTopics
+  const [topics, setTopics] = useWorkspaceSlice(
+    (dados) => dados.journeyTopics,
+    [] as JourneyTopic[]
   );
 
-  const [entries, setEntries] = useState(
-    mockJourneyEntries
+  const [entries, setEntries] = useWorkspaceSlice(
+    (dados) => dados.journeyEntries,
+    [] as JourneyEntry[]
   );
 
   const [placement, setPlacement] = useState<
@@ -91,60 +105,100 @@ export function JourneyProvider({
       topics,
       entries,
       placement,
+      loading,
 
+      /**
+       * Em qual etapa cada cliente está.
+       *
+       * Fica só na sessão: a etapa é leitura do momento, e o vínculo
+       * duradouro é o do caso. Persistir isso pede uma tabela própria —
+       * está anotado no ROADMAP.
+       */
       moveCompany: (company, stageId) =>
         setPlacement((prev) => ({
           ...prev,
           [company]: stageId,
         })),
 
-      saveStage: (data) =>
-        setStages((prev) => upsert(prev, data)),
+      saveStage: (data) => {
+        setStages((prev) => upsert(prev, data));
+        sincronizar(() => saveJourneyStage(data));
+      },
 
-      removeStage: (id) =>
+      removeStage: (id) => {
         setStages((prev) =>
           prev.filter((item) => item.id !== id)
-        ),
+        );
+        sincronizar(() => removeJourneyStage(id));
+      },
 
-      saveTopic: (data) =>
-        setTopics((prev) => upsert(prev, data)),
+      saveTopic: (data) => {
+        setTopics((prev) => upsert(prev, data));
+        sincronizar(() => saveJourneyTopic(data));
+      },
 
       removeTopic: (id) => {
         setTopics((prev) =>
           prev.filter((item) => item.id !== id)
         );
 
-        // Sem o tópico os registros ficariam órfãos.
+        // Sem o tópico os registros ficariam órfãos. No banco a
+        // exclusão em cascata cuida disso.
         setEntries((prev) =>
           prev.filter((item) => item.topicId !== id)
         );
+
+        sincronizar(() => removeJourneyTopic(id));
       },
 
-      addEntry: (data) =>
-        setEntries((prev) => [
-          {
-            ...data,
-            id: crypto.randomUUID(),
-            createdAt: new Date()
-              .toISOString()
-              .slice(0, 10),
-          },
-          ...prev,
-        ]),
+      addEntry: (data) => {
 
-      updateEntry: (id, text) =>
+        const nova: JourneyEntry = {
+          ...data,
+          id: crypto.randomUUID(),
+          createdAt: REFERENCE_DATE,
+        };
+
+        setEntries((prev) => [nova, ...prev]);
+        sincronizar(() => saveJourneyEntry(nova));
+      },
+
+      updateEntry: (id, text) => {
+
+        const atual = entries.find(
+          (item) => item.id === id
+        );
+
+        if (!atual) return;
+
+        const alterada = { ...atual, text };
+
         setEntries((prev) =>
           prev.map((item) =>
-            item.id === id ? { ...item, text } : item
+            item.id === id ? alterada : item
           )
-        ),
+        );
 
-      removeEntry: (id) =>
+        sincronizar(() => saveJourneyEntry(alterada));
+      },
+
+      removeEntry: (id) => {
         setEntries((prev) =>
           prev.filter((item) => item.id !== id)
-        ),
+        );
+        sincronizar(() => removeJourneyEntry(id));
+      },
     }),
-    [stages, topics, entries, placement]
+    [
+      stages,
+      topics,
+      entries,
+      placement,
+      loading,
+      setStages,
+      setTopics,
+      setEntries,
+    ]
   );
 
   return (

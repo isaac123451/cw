@@ -25,6 +25,7 @@ import BarList from "@/components/shared/BarList";
 import { ConfirmDelete } from "@/components/shared/Modal";
 
 import ImpactForm from "@/components/impacto/ImpactForm";
+import ImpactTypesCard from "@/components/impacto/ImpactTypesCard";
 
 import {
   ImpactDraft,
@@ -306,6 +307,8 @@ export default function ImpactoPage() {
           </SurfaceCard>
 
         </div>
+
+        <ImpactTypesCard />
 
         <SurfaceCard
           title="Registros de impacto"

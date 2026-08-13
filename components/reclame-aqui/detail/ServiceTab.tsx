@@ -9,6 +9,7 @@ import {
 import { Case } from "@/lib/models/case";
 
 import SurfaceCard from "@/components/shared/SurfaceCard";
+import MovementPanel from "./MovementPanel";
 
 interface Props {
   data: Case;
@@ -20,6 +21,8 @@ export default function ServiceTab({ data }: Props) {
 
   return (
     <div className="space-y-5">
+
+      <MovementPanel data={data} />
 
       <SurfaceCard
         title="Canais de atendimento"

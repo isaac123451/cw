@@ -1,296 +1,90 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
-import { Case } from "@/lib/models/case";
+import { X } from "lucide-react";
 
-import DrawerHeader from "./DrawerHeader";
-import DrawerTabs from "./DrawerTabs";
+import { useCases } from "@/lib/context/CaseContext";
 
-import GeneralTab from "./GeneralTab";
-import CustomerTab from "./CustomerTab";
-import CompanyTab from "./CompanyTab";
-import TimelineTab from "./TimelineTab";
-import ChecklistTab from "./ChecklistTab";
-import NotesTab from "./NotesTab";
-import AttachmentsTab from "./AttachmentsTab";
-import PublicResponseTab from "./PublicResponseTab";
-
+import CaseDetail from "@/components/reclame-aqui/detail/CaseDetail";
 
 interface Props {
   open: boolean;
-  data?: Case;
+  /** Id do caso — não o objeto, para o painel refletir as edições. */
+  caseId?: string;
   onClose: () => void;
 }
 
-
-type Tab =
-  | "general"
-  | "customer"
-  | "company"
-  | "timeline"
-  | "checklist"
-  | "notes"
-  | "attachments"
-  | "response";
-
-
-
+/**
+ * Prévia lateral aberta pela lista.
+ *
+ * Renderiza exatamente o mesmo CaseDetail da tela cheia: antes existiam
+ * duas implementações diferentes e a do drawer era só maquete — as abas
+ * de histórico, checklist, notas e anexos não recebiam o caso e mostravam
+ * conteúdo fixo para todo mundo.
+ */
 export default function CaseDrawer({
   open,
-  data,
+  caseId,
   onClose,
 }: Props) {
 
+  const { cases } = useCases();
 
-  const [activeTab, setActiveTab] =
-    useState<Tab>("general");
-
-
+  const data = cases.find((item) => item.id === caseId);
 
   useEffect(() => {
 
-    if(open){
-      setActiveTab("general");
+    if (!open) return;
+
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose();
     }
 
-  }, [open, data]);
+    document.addEventListener("keydown", onKey);
+    document.body.style.overflow = "hidden";
 
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = "";
+    };
 
+  }, [open, onClose]);
 
-
-  if(!open || !data){
-    return null;
-  }
-
-
-
+  if (!open || !data) return null;
 
   return (
-
     <>
-
-      {/* Overlay */}
-
       <div
         onClick={onClose}
         className="fixed inset-0 z-40 bg-black/40"
       />
 
+      <aside className="fixed right-0 top-0 z-50 flex h-screen w-[860px] max-w-full flex-col bg-white shadow-2xl">
 
+        <div className="flex items-center justify-between border-b border-zinc-200/80 px-6 py-3">
 
-
-
-      {/* Drawer */}
-
-      <aside
-        className="fixed right-0 top-0 z-50 flex h-screen w-[760px] max-w-full flex-col bg-white shadow-2xl"
-      >
-
-
-
-
-        {/* Header */}
-
-        <DrawerHeader
-
-          protocol={data.protocol}
-
-          company={data.company}
-
-          title={data.title}
-
-          status={data.status}
-
-          priority={data.priority}
-
-          score={data.score}
-
-          resolved={data.resolved}
-
-          onClose={onClose}
-
-        />
-
-
-
-
-
-        {/* Navegação */}
-
-        <DrawerTabs
-
-          active={activeTab}
-
-          onChange={setActiveTab}
-
-        />
-
-
-
-
-
-
-        {/* Conteúdo */}
-
-        <div
-          className="flex-1 overflow-y-auto p-6"
-        >
-
-
-
-          {activeTab === "general" && (
-
-            <GeneralTab
-              data={data}
-            />
-
-          )}
-
-
-
-
-
-
-          {activeTab === "customer" && (
-
-            <CustomerTab
-              data={data}
-            />
-
-          )}
-
-
-
-
-
-
-          {activeTab === "company" && (
-
-            <CompanyTab
-              data={data}
-            />
-
-          )}
-
-
-
-
-
-
-          {activeTab === "timeline" && (
-
-            <TimelineTab />
-
-          )}
-
-
-
-
-
-
-          {activeTab === "checklist" && (
-
-            <ChecklistTab />
-
-          )}
-
-
-
-
-
-
-          {activeTab === "notes" && (
-
-            <NotesTab />
-
-          )}
-
-
-
-
-
-
-          {activeTab === "attachments" && (
-
-            <AttachmentsTab />
-
-          )}
-
-
-
-
-
-
-          {activeTab === "response" && (
-
-            <PublicResponseTab
-              data={data}
-            />
-
-          )}
-
-
-
-
-
-
-        </div>
-
-
-
-
-
-
-        {/* Footer */}
-
-        <div
-          className="flex items-center justify-between border-t border-zinc-200 bg-white px-6 py-4"
-        >
-
-
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+            Prévia da reclamação
+          </p>
 
           <button
-
             onClick={onClose}
-
-            className="rounded-xl border border-zinc-300 px-5 py-3 text-sm font-medium hover:bg-zinc-50"
-
+            title="Fechar (Esc)"
+            className="rounded-lg p-2 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700"
           >
-
-            Fechar
-
+            <X size={17} />
           </button>
-
-
-
-
-
-
-          <button
-
-            className="rounded-xl bg-violet-600 px-6 py-3 text-sm font-medium text-white hover:bg-violet-700"
-
-          >
-
-            Salvar Alterações
-
-          </button>
-
-
-
-
 
         </div>
 
+        <div className="flex-1 overflow-y-auto">
 
+          <CaseDetail data={data} variant="drawer" />
 
-
+        </div>
 
       </aside>
-
-
     </>
-
   );
 }

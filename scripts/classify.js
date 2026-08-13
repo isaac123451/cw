@@ -112,6 +112,74 @@ const REGRAS = [
   },
 ];
 
+/**
+ * Categoria a partir do "Problema RA" — a classificação do próprio
+ * portal, que o export completo passou a trazer.
+ *
+ * A ordem importa: "Falha na parametrização fiscal" tem que cair em
+ * Fiscal antes de bater em "falha" e virar Sistema, e "Assistência
+ * técnica indisponível" é Atendimento, não indisponibilidade de sistema.
+ */
+const PROBLEMA_CATEGORIA = [
+  { categoria: "Cancelamento", re: /cancel/i },
+  {
+    categoria: "Fiscal",
+    re: /fiscal|nota fiscal|sped/i,
+  },
+  {
+    categoria: "Financeiro",
+    re: /estorno|reembols|cobran|valores|valor pago|pagamento|financ|divergência/i,
+  },
+  {
+    categoria: "Implantação",
+    re: /cadastro|reativa|implanta|migra|ativa[cç][aã]o/i,
+  },
+  {
+    categoria: "Comercial",
+    re: /propaganda|promessa|enganos|venda casada/i,
+  },
+  {
+    categoria: "Atendimento",
+    re: /atendimento|sac\b|suporte|assist[eê]ncia|prestador|qualidade|demora/i,
+  },
+  {
+    categoria: "Sistema",
+    re: /sistema|falha|bug|defeito|funcionalidade|privacidade|reparo|indisponi|instabil/i,
+  },
+  {
+    categoria: "Cardápio e pedidos",
+    re: /pedido|card[aá]pio|entrega|produto/i,
+  },
+];
+
+/**
+ * Classificação preferindo o dado real do portal.
+ *
+ * `Problema RA` vira a subcategoria como veio — é vocabulário do próprio
+ * Reclame Aqui, melhor que qualquer chute nosso. A categoria agrupa esse
+ * problema na taxonomia da operação. Sem problema informado, cai no
+ * classificador por título.
+ */
+function classificarPorProblema(problemaRa, titulo) {
+
+  const problema = String(problemaRa || "").trim();
+
+  if (problema === "" || /^outro problema$/i.test(problema)) {
+    return classificar(titulo);
+  }
+
+  const regra = PROBLEMA_CATEGORIA.find((item) =>
+    item.re.test(problema)
+  );
+
+  return {
+    categoria: regra
+      ? regra.categoria
+      : classificar(titulo).categoria,
+    subcategoria: problema,
+  };
+}
+
 /** Devolve { categoria, subcategoria } a partir do título. */
 function classificar(titulo) {
 
@@ -136,4 +204,8 @@ function classificar(titulo) {
   };
 }
 
-module.exports = { classificar, REGRAS };
+module.exports = {
+  classificar,
+  classificarPorProblema,
+  REGRAS,
+};

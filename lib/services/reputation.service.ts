@@ -5,15 +5,33 @@ import { Case } from "@/lib/models/case";
  * render faria o servidor e o cliente calcularem períodos diferentes,
  * quebrando a hidratação.
  */
-export const REFERENCE_DATE = "2026-08-05";
+export const REFERENCE_DATE = "2026-08-10";
 
-export type PeriodKey = "30d" | "6m" | "12m";
+export type PeriodKey =
+  | "30d"
+  | "3m"
+  | "6m"
+  | "12m"
+  | "custom";
 
 export const periodLabels: Record<PeriodKey, string> = {
   "30d": "30 dias",
+  "3m": "3 meses",
   "6m": "6 meses",
   "12m": "12 meses",
+  custom: "Personalizado",
 };
+
+/**
+ * Só 6m e 12m são janelas oficiais do Reclame Aqui — são elas que
+ * reproduzem a nota do painel. As demais servem para análise interna.
+ */
+export const OFFICIAL_PERIODS: PeriodKey[] = ["6m", "12m"];
+
+export interface CustomRange {
+  start: string;
+  end: string;
+}
 
 /**
  * `vigente` = janela que o Reclame Aqui considera hoje (meses fechados).
@@ -29,8 +47,10 @@ export const periodModeLabels: Record<PeriodMode, string> = {
 
 const periodMonths: Record<PeriodKey, number> = {
   "30d": 1,
+  "3m": 3,
   "6m": 6,
   "12m": 12,
+  custom: 0,
 };
 
 function shift(date: string, days: number) {
@@ -69,8 +89,39 @@ export interface PeriodRange {
  */
 export function getRange(
   period: PeriodKey,
-  mode: PeriodMode = "vigente"
+  mode: PeriodMode = "vigente",
+  custom?: CustomRange
 ): PeriodRange {
+
+  // Intervalo livre: a comparação é a janela de mesma duração
+  // imediatamente anterior, para o delta continuar fazendo sentido.
+  if (period === "custom") {
+
+    // `||` e não `??`: o input de data devolve string vazia quando é
+    // limpo, e "" passaria pelo `??` até virar Invalid Date no shift().
+    const start = custom?.start || REFERENCE_DATE;
+    const end = custom?.end || REFERENCE_DATE;
+
+    const dias =
+      Math.round(
+        (Date.parse(`${end}T00:00:00Z`) -
+          Date.parse(`${start}T00:00:00Z`)) /
+          86400000
+      ) + 1;
+
+    const previousEnd = shift(start, -1);
+
+    return {
+      start,
+      end,
+      previousStart: shift(
+        previousEnd,
+        -Math.max(dias - 1, 0)
+      ),
+      previousEnd,
+      partial: end >= REFERENCE_DATE,
+    };
+  }
 
   const months = periodMonths[period];
 
@@ -359,13 +410,23 @@ export function formatElapsed(minutes: number) {
       }`;
 }
 
+/**
+ * Avaliação que entra no cálculo da nota.
+ *
+ * A marcada como desconsiderada fica de fora — é o que o próprio
+ * Reclame Aqui faz com as avaliações que invalida, e contá-la faria a
+ * nota daqui divergir do painel. O caso segue visível na tela, com a
+ * nota e o aviso: sai do cálculo, não da vista.
+ */
+function contaParaNota(item: Case) {
+  return Boolean(item.evaluated) && !item.scoreDisregarded;
+}
+
 export function getRawCounts(
   cases: Case[]
 ): ReputationRaw {
 
-  const evaluatedCases = cases.filter(
-    (item) => item.evaluated
-  );
+  const evaluatedCases = cases.filter(contaParaNota);
 
   const tempos = cases
     .map((item) => parseElapsed(item.responseTime))

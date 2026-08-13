@@ -52,6 +52,12 @@ interface Props {
   editing?: AgendaTask;
   /** Data pré-selecionada ao criar a partir de um dia do quadro. */
   presetDate?: string;
+  /** Reclamação já vinculada, ao criar a partir do detalhe do caso. */
+  presetCase?: {
+    protocol: string;
+    company: string;
+    title: string;
+  };
   onClose: () => void;
   onSave: (data: TaskDraft | AgendaTask) => void;
 }
@@ -60,6 +66,7 @@ export default function TaskForm({
   open,
   editing,
   presetDate,
+  presetCase,
   onClose,
   onSave,
 }: Props) {
@@ -94,16 +101,20 @@ export default function TaskForm({
       return;
     }
 
-    setTitle("");
+    setTitle(
+      presetCase
+        ? `Follow-up: ${presetCase.title}`
+        : ""
+    );
     setType("Follow-up");
     setPriority("Média");
     setDueDate(presetDate ?? "");
     setTime("");
     setOwner(session?.name ?? "Operação");
-    setCaseProtocol("");
-    setCompany("");
+    setCaseProtocol(presetCase?.protocol ?? "");
+    setCompany(presetCase?.company ?? "");
     setCaseSearch("");
-  }, [open, editing, presetDate, session]);
+  }, [open, editing, presetDate, presetCase, session]);
 
   const responsaveis = useMemo(
     () =>

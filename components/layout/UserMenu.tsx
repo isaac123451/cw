@@ -1,8 +1,18 @@
 "use client";
 
+import Link from "next/link";
+
 import { useState } from "react";
 
-import { ChevronDown, LogOut, User } from "lucide-react";
+import {
+  Bell,
+  ChevronDown,
+  KeyRound,
+  LogOut,
+  ShieldCheck,
+  User,
+  UserRound,
+} from "lucide-react";
 
 import { signOut } from "@/lib/auth/actions";
 
@@ -10,7 +20,29 @@ interface Props {
   name: string;
   email: string;
   authenticated: boolean;
+  admin?: boolean;
 }
+
+const atalhos = [
+  {
+    href: "/conta?aba=perfil",
+    label: "Meu perfil",
+    icon: UserRound,
+    hint: "Nome exibido nos casos e registros que você criar.",
+  },
+  {
+    href: "/conta?aba=senha",
+    label: "Alterar senha",
+    icon: KeyRound,
+    hint: "Trocar a senha de acesso à plataforma.",
+  },
+  {
+    href: "/conta?aba=notificacoes",
+    label: "Notificações",
+    icon: Bell,
+    hint: "Escolher quais alertas aparecem no sino.",
+  },
+];
 
 function initials(name: string) {
   return name
@@ -25,6 +57,7 @@ export default function UserMenu({
   name,
   email,
   authenticated,
+  admin = false,
 }: Props) {
 
   const [open, setOpen] = useState(false);
@@ -77,9 +110,52 @@ export default function UserMenu({
 
             </div>
 
+            <div className="p-1.5">
+
+              {atalhos.map((item) => {
+
+                const Icon = item.icon;
+
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setOpen(false)}
+                    title={item.hint}
+                    className="flex items-center gap-2.5 rounded-xl px-2.5 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100"
+                  >
+                    <Icon
+                      size={15}
+                      className="text-zinc-400"
+                    />
+                    {item.label}
+                  </Link>
+                );
+              })}
+
+              {admin && (
+                <Link
+                  href="/conta?aba=acessos"
+                  onClick={() => setOpen(false)}
+                  title="Liberar e-mails e administrar contas da plataforma."
+                  className="flex items-center gap-2.5 rounded-xl px-2.5 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100"
+                >
+                  <ShieldCheck
+                    size={15}
+                    className="text-zinc-400"
+                  />
+                  Administrar acessos
+                </Link>
+              )}
+
+            </div>
+
             {authenticated ? (
 
-              <form action={signOut}>
+              <form
+                action={signOut}
+                className="border-t border-zinc-100"
+              >
                 <button
                   type="submit"
                   className="flex w-full items-center gap-2.5 px-4 py-3 text-sm font-medium text-rose-600 transition-colors hover:bg-rose-50"
@@ -91,7 +167,7 @@ export default function UserMenu({
 
             ) : (
 
-              <p className="flex items-start gap-2 px-4 py-3 text-xs leading-relaxed text-zinc-500">
+              <p className="flex items-start gap-2 border-t border-zinc-100 px-4 py-3 text-xs leading-relaxed text-zinc-500">
                 <User size={13} className="mt-0.5 shrink-0" />
                 Modo demonstração — configure o banco para
                 habilitar o login.

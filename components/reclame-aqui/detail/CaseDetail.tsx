@@ -6,48 +6,94 @@ import { useMemo, useState } from "react";
 
 import {
   ChevronLeft,
-  History,
+  ExternalLink,
+  Maximize2,
   MessageCircle,
   Star,
+  Timer,
 } from "lucide-react";
 
 import { Case } from "@/lib/models/case";
 
 import { useCases } from "@/lib/context/CaseContext";
+import { useMovements } from "@/lib/context/MovementsContext";
 
-import SurfaceCard from "@/components/shared/SurfaceCard";
+import {
+  movementStatus,
+  openMovementOf,
+} from "@/lib/services/movement.service";
+
+import { toneOfSla } from "@/lib/services/sla.service";
+
 import TagPicker, { TagChips } from "@/components/shared/TagPicker";
+import StatusPicker from "@/components/reclame-aqui/shared/StatusPicker";
+import CaseActions from "./CaseActions";
 
 import OverviewTab from "./OverviewTab";
 import InvestigationTab from "./InvestigationTab";
 import ServiceTab from "./ServiceTab";
 import EvaluationTab from "./EvaluationTab";
 import CaseSidebar from "./CaseSidebar";
+import CaseTimeline from "./CaseTimeline";
 
 type Tab =
   | "visao-geral"
   | "investigacao"
   | "atendimento"
   | "avaliacao"
+  | "dados"
   | "historico";
 
-const tabs: { id: Tab; label: string }[] = [
-  { id: "visao-geral", label: "Visão geral" },
-  { id: "investigacao", label: "Investigação" },
-  { id: "atendimento", label: "Atendimento" },
-  { id: "avaliacao", label: "Avaliação RA" },
-  { id: "historico", label: "Histórico" },
-];
+const tabs: { id: Tab; label: string; drawerOnly?: boolean }[] =
+  [
+    { id: "visao-geral", label: "Visão geral" },
+    { id: "investigacao", label: "Investigação" },
+    { id: "atendimento", label: "Atendimento" },
+    { id: "avaliacao", label: "Avaliação RA" },
+    // No drawer não cabe a coluna lateral: ela vira uma aba.
+    { id: "dados", label: "Dados do caso", drawerOnly: true },
+    { id: "historico", label: "Histórico" },
+  ];
 
 interface Props {
   data: Case;
+  /**
+   * "page" é a tela cheia em /reclame-aqui/[id].
+   * "drawer" é a prévia lateral aberta pela lista — mesmo conteúdo,
+   * só empilhado para caber na largura menor.
+   */
+  variant?: "page" | "drawer";
 }
 
-export default function CaseDetail({ data }: Props) {
+function br(date?: string) {
+  if (!date) return "—";
+  return date.split("-").reverse().join("/");
+}
 
-  const { cases, updateCase, toggleTag } = useCases();
+export default function CaseDetail({
+  data,
+  variant = "page",
+}: Props) {
+
+  const { cases, updateCase, toggleTag, moveCase } =
+    useCases();
+
+  const { movements } = useMovements();
 
   const [tab, setTab] = useState<Tab>("visao-geral");
+
+  /**
+   * Movimentação em aberto aparece já no cabeçalho: sem isso, um caso
+   * parado há dias com uma área interna só se descobria abrindo a aba
+   * Atendimento.
+   */
+  const movimentacao = openMovementOf(data.id, movements);
+
+  const movimentacaoStatus = movimentacao
+    ? movementStatus(movimentacao)
+    : undefined;
+
+  const drawer = variant === "drawer";
 
   const owners = useMemo(
     () =>
@@ -65,55 +111,90 @@ export default function CaseDetail({ data }: Props) {
     updateCase({ ...data, ...changes });
   }
 
-  const whatsapp = (data.phone ?? "").replace(/\D/g, "");
+  // Só oferece WhatsApp quando existe telefone de verdade. O import
+  // mascara os dígitos do meio, então número mascarado não vira link.
+  const digits = (data.phone ?? "").replace(/\D/g, "");
+
+  const whatsapp =
+    digits.length >= 10 && !(data.phone ?? "").includes("•")
+      ? digits
+      : null;
+
+  const visibleTabs = tabs.filter(
+    (item) => !item.drawerOnly || drawer
+  );
 
   return (
     <div className="space-y-5">
 
       {/* Cabeçalho */}
 
-      <div className="rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+      <div
+        className={`border-zinc-200/80 bg-white ${
+          drawer
+            ? "border-b px-6 pb-5 pt-4"
+            : "rounded-2xl border p-6 shadow-[0_1px_2px_rgba(16,24,40,0.04)]"
+        }`}
+      >
 
-        <Link
-          href="/reclame-aqui"
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-zinc-500 transition-colors hover:text-violet-700"
-        >
-          <ChevronLeft size={16} />
-          Voltar para Reclame Aqui
-        </Link>
+        {drawer ? (
+
+          <Link
+            href={`/reclame-aqui/${data.id}`}
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-zinc-500 transition-colors hover:text-violet-700"
+          >
+            <Maximize2 size={14} />
+            Abrir em tela cheia
+          </Link>
+
+        ) : (
+
+          <Link
+            href="/reclame-aqui"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-zinc-500 transition-colors hover:text-violet-700"
+          >
+            <ChevronLeft size={16} />
+            Voltar para Reclame Aqui
+          </Link>
+
+        )}
 
         <div className="mt-4 flex flex-wrap items-start justify-between gap-5">
 
           <div className="min-w-0 flex-1">
 
-            <h1 className="text-2xl font-semibold leading-snug tracking-tight text-zinc-900">
+            <h1
+              className={`font-semibold leading-snug tracking-tight text-zinc-900 ${
+                drawer ? "text-lg" : "text-2xl"
+              }`}
+            >
               {data.title}
             </h1>
 
             <p className="mt-2 text-sm text-zinc-500">
-              {data.company} · {data.customer} ·{" "}
+              {data.customer} ·{" "}
               <span className="font-mono">
                 {data.protocol}
-              </span>
+              </span>{" "}
+              · {br(data.createdAt)}
             </p>
 
-            <div className="mt-3 flex flex-wrap gap-2">
+            <div className="mt-3 flex flex-wrap items-center gap-2">
 
-              <span
-                className={`rounded-full px-3 py-1 text-xs font-medium ring-1 ring-inset ${
-                  data.evaluated
-                    ? "bg-emerald-50 text-emerald-700 ring-emerald-100"
-                    : "bg-zinc-100 text-zinc-600 ring-zinc-200"
-                }`}
-              >
-                {data.evaluated
-                  ? "Reclamação avaliada"
-                  : "Sem avaliação"}
-              </span>
+              <StatusPicker
+                value={data.status}
+                onChange={(status) =>
+                  moveCase(data.id, status)
+                }
+              />
 
               <span className="flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-100">
-                <Star size={11} className="fill-amber-400 text-amber-400" />
-                Nota {data.evaluated ? data.score ?? 0 : "—"}
+                <Star
+                  size={11}
+                  className="fill-amber-400 text-amber-400"
+                />
+                Nota{" "}
+                {data.evaluated ? data.score ?? 0 : "—"}
               </span>
 
               <span
@@ -123,13 +204,25 @@ export default function CaseDetail({ data }: Props) {
                     : "bg-rose-50 text-rose-700 ring-rose-100"
                 }`}
               >
-                Voltaria: {data.wouldDoBusiness ? "Sim" : "Não"}
+                Voltaria:{" "}
+                {data.wouldDoBusiness ? "Sim" : "Não"}
               </span>
 
               {data.churnRisk && (
                 <span className="rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700 ring-1 ring-inset ring-rose-100">
                   Risco de cancelamento
                 </span>
+              )}
+
+              {movimentacao && movimentacaoStatus && (
+                <button
+                  onClick={() => setTab("atendimento")}
+                  title={`${movimentacaoStatus.label}. Clique para ver a movimentação.`}
+                  className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ring-1 ring-inset transition-colors hover:brightness-95 ${toneOfSla(movimentacaoStatus.situation)}`}
+                >
+                  <Timer size={11} />
+                  Com {movimentacao.destination}
+                </button>
               )}
 
             </div>
@@ -140,28 +233,45 @@ export default function CaseDetail({ data }: Props) {
               </div>
             )}
 
+            {/* Atalhos para impacto, agenda, cliente e estabelecimento. */}
+            <div className="mt-4">
+              <CaseActions data={data} />
+            </div>
+
           </div>
 
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
 
             <TagPicker
               selected={data.tags ?? []}
               onToggle={(tag) => toggleTag(data.id, tag)}
             />
 
-            <a
-              href={
-                whatsapp
-                  ? `https://wa.me/55${whatsapp}`
-                  : undefined
-              }
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 rounded-xl bg-violet-800 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-violet-900"
-            >
-              <MessageCircle size={16} />
-              Abrir WhatsApp
-            </a>
+            {data.raUrl && (
+              <a
+                href={data.raUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Abrir esta reclamação no portal"
+                className="flex items-center gap-2 rounded-xl border border-violet-200 px-4 py-2.5 text-sm font-medium text-violet-700 transition-colors hover:bg-violet-50"
+              >
+                <ExternalLink size={15} />
+                Reclame Aqui
+              </a>
+            )}
+
+            {whatsapp && (
+              <a
+                href={`https://wa.me/55${whatsapp}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={`Conversar com ${data.customer}`}
+                className="flex items-center gap-2 rounded-xl bg-violet-800 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-violet-900"
+              >
+                <MessageCircle size={16} />
+                WhatsApp
+              </a>
+            )}
 
           </div>
 
@@ -169,22 +279,36 @@ export default function CaseDetail({ data }: Props) {
 
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
+      <div
+        className={
+          drawer
+            ? "px-6 pb-6"
+            : "grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]"
+        }
+      >
 
         <div className="min-w-0 space-y-5">
 
           {/* Abas */}
 
-          <div className="overflow-x-auto rounded-2xl border border-zinc-200/80 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+          <div
+            className={`overflow-x-auto bg-white ${
+              drawer
+                ? "-mx-6 border-b border-zinc-200/80 px-6"
+                : "rounded-2xl border border-zinc-200/80 shadow-[0_1px_2px_rgba(16,24,40,0.04)]"
+            }`}
+          >
 
             <div className="flex min-w-max">
 
-              {tabs.map((item) => (
+              {visibleTabs.map((item) => (
 
                 <button
                   key={item.id}
                   onClick={() => setTab(item.id)}
-                  className={`relative px-6 py-4 text-sm font-medium transition-colors ${
+                  className={`relative text-sm font-medium transition-colors ${
+                    drawer ? "px-4 py-3.5" : "px-6 py-4"
+                  } ${
                     tab === item.id
                       ? "text-violet-800"
                       : "text-zinc-500 hover:text-zinc-800"
@@ -194,7 +318,7 @@ export default function CaseDetail({ data }: Props) {
                   {item.label}
 
                   {tab === item.id && (
-                    <span className="absolute inset-x-4 bottom-0 h-0.5 rounded-full bg-violet-800" />
+                    <span className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-violet-800" />
                   )}
 
                 </button>
@@ -210,123 +334,39 @@ export default function CaseDetail({ data }: Props) {
           )}
 
           {tab === "investigacao" && (
-            <InvestigationTab data={data} onChange={patch} />
+            <InvestigationTab
+              data={data}
+              onChange={patch}
+            />
           )}
 
-          {tab === "atendimento" && (
-            <ServiceTab data={data} />
-          )}
+          {tab === "atendimento" && <ServiceTab data={data} />}
 
           {tab === "avaliacao" && (
             <EvaluationTab data={data} onChange={patch} />
           )}
 
+          {tab === "dados" && (
+            <CaseSidebar
+              data={data}
+              owners={owners}
+              onChange={patch}
+            />
+          )}
+
           {tab === "historico" && (
-
-            <SurfaceCard
-              title="Histórico da reclamação"
-              description="Linha do tempo completa das mudanças registradas."
-            >
-
-              <ol className="relative space-y-5 before:absolute before:left-[5px] before:top-2 before:h-[calc(100%-1rem)] before:w-px before:bg-zinc-200 before:content-['']">
-
-                {[
-                  {
-                    titulo: "Reclamação registrada",
-                    quando: data.createdAt,
-                    detalhe: `Recebida via ${data.source}`,
-                    cor: "bg-violet-500",
-                  },
-                  {
-                    titulo: "Responsável definido",
-                    quando: data.createdAt,
-                    detalhe: data.owner ?? "Sem responsável",
-                    cor: "bg-sky-500",
-                  },
-                  {
-                    titulo: "Classificada",
-                    quando: data.createdAt,
-                    detalhe: `${data.category}${
-                      data.subcategory
-                        ? ` · ${data.subcategory}`
-                        : ""
-                    }`,
-                    cor: "bg-amber-500",
-                  },
-                  ...((data.publicResponse ?? "").trim() !== ""
-                    ? [
-                        {
-                          titulo: "Resposta pública publicada",
-                          quando: data.updatedAt ?? data.createdAt,
-                          detalhe: `Retorno em ${data.responseTime}`,
-                          cor: "bg-emerald-500",
-                        },
-                      ]
-                    : []),
-                  ...(data.evaluated
-                    ? [
-                        {
-                          titulo: "Cliente avaliou",
-                          quando: data.updatedAt ?? data.createdAt,
-                          detalhe: `Nota ${data.score ?? 0} · voltaria: ${
-                            data.wouldDoBusiness ? "sim" : "não"
-                          }`,
-                          cor: "bg-violet-500",
-                        },
-                      ]
-                    : []),
-                  ...(data.resolved
-                    ? [
-                        {
-                          titulo: "Caso encerrado",
-                          quando: data.updatedAt ?? data.createdAt,
-                          detalhe: `Solução em ${data.solutionTime}`,
-                          cor: "bg-emerald-600",
-                        },
-                      ]
-                    : []),
-                ].map((item, index) => (
-
-                  <li
-                    key={`${item.titulo}-${index}`}
-                    className="relative pl-6"
-                  >
-
-                    <span
-                      className={`absolute left-0 top-1.5 h-2.5 w-2.5 rounded-full ring-4 ring-white ${item.cor}`}
-                    />
-
-                    <p className="text-sm font-medium text-zinc-800">
-                      {item.titulo}
-                    </p>
-
-                    <p className="mt-0.5 text-xs text-zinc-500">
-                      {item.quando} · {item.detalhe}
-                    </p>
-
-                  </li>
-
-                ))}
-
-              </ol>
-
-              <p className="mt-5 flex items-center gap-2 border-t border-zinc-100 pt-4 text-xs text-zinc-400">
-                <History size={13} />
-                Rastreabilidade completa: origem, classificação,
-                resposta, avaliação e encerramento.
-              </p>
-
-            </SurfaceCard>
-
+            <CaseTimeline data={data} />
           )}
 
         </div>
 
-        <CaseSidebar
-          data={data}
-          owners={owners}
-          onChange={patch}
-        />
+        {!drawer && (
+          <CaseSidebar
+            data={data}
+            owners={owners}
+            onChange={patch}
+          />
+        )}
 
       </div>
 

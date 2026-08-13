@@ -10,9 +10,14 @@ import ListView from "@/components/reclame-aqui/list/ListView";
 
 import MainLayout from "@/components/layout/MainLayout";
 import PageHeading from "@/components/shared/PageHeading";
+import LoadingPanel from "@/components/shared/LoadingPanel";
+
+import { useCases } from "@/lib/context/CaseContext";
 
 export default function ReclameAquiPage() {
   const [view, setView] = useState<"kanban" | "list">("kanban");
+
+  const { loading } = useCases();
 
   return (
     <MainLayout>
@@ -35,7 +40,9 @@ export default function ReclameAquiPage() {
             a página inteira em vez de rolarem por dentro. */}
         <div className="h-[calc(100vh-330px)] min-h-[460px]">
 
-          {view === "kanban" ? (
+          {loading ? (
+            <LoadingPanel />
+          ) : view === "kanban" ? (
             <KanbanView />
           ) : (
             <ListView />

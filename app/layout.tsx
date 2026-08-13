@@ -18,8 +18,14 @@ import { DocsProvider } from "@/lib/context/DocsContext";
 import { TeamsProvider } from "@/lib/context/TeamsContext";
 import { EstablishmentsProvider } from "@/lib/context/EstablishmentsContext";
 import { ClientsProvider } from "@/lib/context/ClientsContext";
+import { PreferencesProvider } from "@/lib/context/PreferencesContext";
+import { SavedFiltersProvider } from "@/lib/context/SavedFiltersContext";
+import { SlaProvider } from "@/lib/context/SlaContext";
+import { MovementsProvider } from "@/lib/context/MovementsContext";
+import { MacrosProvider } from "@/lib/context/MacrosContext";
 
 import { getSession } from "@/lib/auth/session";
+import { hasDatabase } from "@/lib/prisma";
 
 export const metadata: Metadata = {
   title: "CW Reputação",
@@ -27,6 +33,10 @@ export const metadata: Metadata = {
     "Plataforma de Gestão da Experiência do Cliente da Cardápio Web.",
 };
 
+/**
+ * A ordem importa: ClientsProvider deriva os clientes dos casos, então
+ * precisa ficar dentro de CaseProvider. O resto é independente.
+ */
 export default async function RootLayout({
   children,
 }: {
@@ -44,57 +54,43 @@ export default async function RootLayout({
       <body>
 
         <SessionProvider value={session}>
+          <PreferencesProvider>
+            <SavedFiltersProvider>
+            <WorkflowProvider>
+              <SettingsProvider>
+                <CaseProvider hasDatabase={hasDatabase()}>
+                  <SlaProvider>
+                  <MovementsProvider>
+                  <MacrosProvider>
+                  <EstablishmentsProvider>
+                    <ClientsProvider>
+                      <JourneyProvider>
+                        <GoalsProvider>
+                          <ImpactProvider>
+                            <AgendaProvider>
+                              <ProjectsProvider>
+                                <TeamsProvider>
+                                  <DocsProvider>
 
-          <WorkflowProvider>
+                                    {children}
 
-            <SettingsProvider>
-
-              <CaseProvider>
-
-                <EstablishmentsProvider>
-
-                <ClientsProvider>
-
-                <JourneyProvider>
-
-                  <GoalsProvider>
-
-                    <ImpactProvider>
-
-                      <AgendaProvider>
-
-                        <ProjectsProvider>
-
-                          <TeamsProvider>
-
-                          <DocsProvider>
-
-                            {children}
-
-                          </DocsProvider>
-
-                          </TeamsProvider>
-
-                        </ProjectsProvider>
-
-                      </AgendaProvider>
-
-                    </ImpactProvider>
-
-                  </GoalsProvider>
-
-                </JourneyProvider>
-
-                </ClientsProvider>
-
-                </EstablishmentsProvider>
-
-              </CaseProvider>
-
-            </SettingsProvider>
-
-          </WorkflowProvider>
-
+                                  </DocsProvider>
+                                </TeamsProvider>
+                              </ProjectsProvider>
+                            </AgendaProvider>
+                          </ImpactProvider>
+                        </GoalsProvider>
+                      </JourneyProvider>
+                    </ClientsProvider>
+                  </EstablishmentsProvider>
+                  </MacrosProvider>
+                  </MovementsProvider>
+                  </SlaProvider>
+                </CaseProvider>
+              </SettingsProvider>
+            </WorkflowProvider>
+            </SavedFiltersProvider>
+          </PreferencesProvider>
         </SessionProvider>
 
       </body>

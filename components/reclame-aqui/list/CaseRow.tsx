@@ -2,30 +2,45 @@
 
 import {
   CheckCircle2,
+  ExternalLink,
+  MessageCircle,
   Star,
   XCircle,
 } from "lucide-react";
 
 import { Case } from "@/lib/models/case";
+
 import { TagChips } from "@/components/shared/TagPicker";
+import StatusPicker from "@/components/reclame-aqui/shared/StatusPicker";
+
+import { useCases } from "@/lib/context/CaseContext";
+import { useEstablishments } from "@/lib/context/EstablishmentsContext";
 
 interface Props {
   data: Case;
   onClick: () => void;
 }
 
-const statusTone: Record<string, string> = {
-  Novo: "bg-indigo-50 text-indigo-700 ring-indigo-100",
-  "Em Atendimento": "bg-amber-50 text-amber-700 ring-amber-100",
-  "Aguardando Cliente": "bg-sky-50 text-sky-700 ring-sky-100",
-  Resolvido: "bg-emerald-50 text-emerald-700 ring-emerald-100",
-  Fechado: "bg-zinc-100 text-zinc-600 ring-zinc-200",
-};
-
 export default function CaseRow({
   data,
   onClick,
 }: Props) {
+
+  const { moveCase } = useCases();
+  const { findEstablishment } = useEstablishments();
+
+  const estabelecimento = data.establishmentId
+    ? findEstablishment(data.establishmentId)
+    : undefined;
+
+  // Telefone mascarado na importação não vira link de WhatsApp.
+  const digits = (data.phone ?? "").replace(/\D/g, "");
+
+  const whatsapp =
+    digits.length >= 10 && !(data.phone ?? "").includes("•")
+      ? digits
+      : null;
+
   return (
     <tr
       onClick={onClick}
@@ -51,7 +66,16 @@ export default function CaseRow({
       </td>
 
       <td className="px-5 text-zinc-700">
-        {data.company}
+        {estabelecimento ? (
+          estabelecimento.name
+        ) : (
+          <span
+            className="text-zinc-300"
+            title="Reclamação ainda não vinculada a um estabelecimento."
+          >
+            —
+          </span>
+        )}
       </td>
 
       <td className="px-5 text-zinc-700">
@@ -68,10 +92,14 @@ export default function CaseRow({
 
           <Star
             size={13}
-            className="fill-amber-400 text-amber-400"
+            className={
+              data.evaluated
+                ? "fill-amber-400 text-amber-400"
+                : "text-zinc-300"
+            }
           />
 
-          {data.score ?? "-"}
+          {data.evaluated ? data.score ?? 0 : "—"}
 
         </div>
 
@@ -85,10 +113,7 @@ export default function CaseRow({
             className="text-emerald-600"
           />
         ) : (
-          <XCircle
-            size={17}
-            className="text-zinc-300"
-          />
+          <XCircle size={17} className="text-zinc-300" />
         )}
 
       </td>
@@ -99,14 +124,11 @@ export default function CaseRow({
 
       <td className="px-5">
 
-        <span
-          className={`inline-block whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-medium ring-1 ring-inset ${
-            statusTone[data.status] ??
-            "bg-zinc-100 text-zinc-600 ring-zinc-200"
-          }`}
-        >
-          {data.status}
-        </span>
+        <StatusPicker
+          value={data.status}
+          size="compact"
+          onChange={(status) => moveCase(data.id, status)}
+        />
 
       </td>
 
@@ -116,6 +138,45 @@ export default function CaseRow({
 
       <td className="px-5 text-zinc-600">
         {data.owner ?? "—"}
+      </td>
+
+      <td className="px-5">
+
+        {/* Só aparece o que existe de verdade neste caso. */}
+        <div className="flex items-center gap-1">
+
+          {whatsapp && (
+            <a
+              href={`https://wa.me/55${whatsapp}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(event) => event.stopPropagation()}
+              title={`Conversar com ${data.customer} no WhatsApp`}
+              className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-emerald-50 hover:text-emerald-600"
+            >
+              <MessageCircle size={15} />
+            </a>
+          )}
+
+          {data.raUrl && (
+            <a
+              href={data.raUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(event) => event.stopPropagation()}
+              title="Abrir esta reclamação no Reclame Aqui"
+              className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-violet-50 hover:text-violet-700"
+            >
+              <ExternalLink size={15} />
+            </a>
+          )}
+
+          {!whatsapp && !data.raUrl && (
+            <span className="text-zinc-300">—</span>
+          )}
+
+        </div>
+
       </td>
 
     </tr>

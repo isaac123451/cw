@@ -38,6 +38,17 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
+  /**
+   * A API tem autenticação própria, por token (`lib/api/auth.ts`).
+   *
+   * Sem esta saída, quem consome a API — o CW Engine, por exemplo —
+   * recebia um redirecionamento HTML para /login em vez de JSON, porque
+   * um sistema não carrega cookie de sessão de navegador.
+   */
+  if (pathname.startsWith("/api/")) {
+    return NextResponse.next();
+  }
+
   const isPublic = PUBLIC_PATHS.some(
     (path) =>
       pathname === path || pathname.startsWith(`${path}/`)

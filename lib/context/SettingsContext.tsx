@@ -4,7 +4,6 @@ import {
   createContext,
   useContext,
   useMemo,
-  useState,
   ReactNode,
 } from "react";
 
@@ -15,14 +14,22 @@ import {
   TeamOption,
 } from "@/lib/models/settings";
 
-import { CaseTag, mockTags } from "@/lib/data/mockTags";
+// Só o tipo: os dados vêm do banco pela carga compartilhada.
+import type { CaseTag } from "@/lib/data/mockTags";
 
 import {
-  mockCategories,
-  mockChecklist,
-  mockSubcategories,
-  mockTeamOptions,
-} from "@/lib/data/mockSettings";
+  removeCategory as apagarCategoria,
+  removeChecklistItem as apagarChecklist,
+  removeSubcategory as apagarSubcategoria,
+  removeTag as apagarTag,
+  saveCategory as gravarCategoria,
+  saveChecklistItem as gravarChecklist,
+  saveSubcategory as gravarSubcategoria,
+  saveTag as gravarTag,
+} from "@/lib/actions/registry";
+
+import { useWorkspaceSlice } from "@/lib/context/useWorkspace";
+import { sincronizar } from "@/lib/context/sync";
 
 interface SettingsContextType {
   categories: CategoryOption[];
@@ -30,6 +37,9 @@ interface SettingsContextType {
   teams: TeamOption[];
   checklist: ChecklistItem[];
   tags: CaseTag[];
+
+  /** Carga inicial ainda em andamento. */
+  loading: boolean;
 
   saveCategory: (data: CategoryOption) => void;
   removeCategory: (id: string) => void;
@@ -73,21 +83,33 @@ export function SettingsProvider({
 }: {
   children: ReactNode;
 }) {
-  const [categories, setCategories] = useState(
-    mockCategories
+
+  const [categories, setCategories, loading] =
+    useWorkspaceSlice(
+      (dados) => dados.categories,
+      [] as CategoryOption[]
+    );
+
+  const [subcategories, setSubcategories] =
+    useWorkspaceSlice(
+      (dados) => dados.subcategories,
+      [] as SubcategoryOption[]
+    );
+
+  const [teams, setTeams] = useWorkspaceSlice(
+    (dados) => dados.teamOptions,
+    [] as TeamOption[]
   );
 
-  const [subcategories, setSubcategories] = useState(
-    mockSubcategories
+  const [checklist, setChecklist] = useWorkspaceSlice(
+    (dados) => dados.checklist,
+    [] as ChecklistItem[]
   );
 
-  const [teams, setTeams] = useState(mockTeamOptions);
-
-  const [checklist, setChecklist] = useState(
-    mockChecklist
+  const [tags, setTags] = useWorkspaceSlice(
+    (dados) => dados.tags,
+    [] as CaseTag[]
   );
-
-  const [tags, setTags] = useState(mockTags);
 
   const value = useMemo<SettingsContextType>(
     () => ({
@@ -96,23 +118,37 @@ export function SettingsProvider({
       teams,
       checklist,
       tags,
+      loading,
 
-      saveCategory: (data) =>
-        setCategories((prev) => upsert(prev, data)),
+      saveCategory: (data) => {
+        setCategories((prev) => upsert(prev, data));
+        sincronizar(() => gravarCategoria(data));
+      },
 
-      removeCategory: (id) =>
+      removeCategory: (id) => {
         setCategories((prev) =>
           prev.filter((item) => item.id !== id)
-        ),
+        );
+        sincronizar(() => apagarCategoria(id));
+      },
 
-      saveSubcategory: (data) =>
-        setSubcategories((prev) => upsert(prev, data)),
+      saveSubcategory: (data) => {
+        setSubcategories((prev) => upsert(prev, data));
+        sincronizar(() => gravarSubcategoria(data));
+      },
 
-      removeSubcategory: (id) =>
+      removeSubcategory: (id) => {
         setSubcategories((prev) =>
           prev.filter((item) => item.id !== id)
-        ),
+        );
+        sincronizar(() => apagarSubcategoria(id));
+      },
 
+      /**
+       * Time aqui é só o rótulo usado nos seletores. O cadastro real de
+       * pessoas vive em `TeamsContext`, que grava na tabela `Team`;
+       * duplicar a gravação criaria dois donos do mesmo registro.
+       */
       saveTeam: (data) =>
         setTeams((prev) => upsert(prev, data)),
 
@@ -121,23 +157,43 @@ export function SettingsProvider({
           prev.filter((item) => item.id !== id)
         ),
 
-      saveChecklistItem: (data) =>
-        setChecklist((prev) => upsert(prev, data)),
+      saveChecklistItem: (data) => {
+        setChecklist((prev) => upsert(prev, data));
+        sincronizar(() => gravarChecklist(data));
+      },
 
-      removeChecklistItem: (id) =>
+      removeChecklistItem: (id) => {
         setChecklist((prev) =>
           prev.filter((item) => item.id !== id)
-        ),
+        );
+        sincronizar(() => apagarChecklist(id));
+      },
 
-      saveTag: (data) =>
-        setTags((prev) => upsert(prev, data)),
+      saveTag: (data) => {
+        setTags((prev) => upsert(prev, data));
+        sincronizar(() => gravarTag(data));
+      },
 
-      removeTag: (id) =>
+      removeTag: (id) => {
         setTags((prev) =>
           prev.filter((item) => item.id !== id)
-        ),
+        );
+        sincronizar(() => apagarTag(id));
+      },
     }),
-    [categories, subcategories, teams, checklist, tags]
+    [
+      categories,
+      subcategories,
+      teams,
+      checklist,
+      tags,
+      loading,
+      setCategories,
+      setSubcategories,
+      setTeams,
+      setChecklist,
+      setTags,
+    ]
   );
 
   return (

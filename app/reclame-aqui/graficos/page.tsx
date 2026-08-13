@@ -2,28 +2,29 @@
 
 import { useMemo, useState } from "react";
 
-import { Info } from "lucide-react";
-
 import MainLayout from "@/components/layout/MainLayout";
 
 import PageHeading from "@/components/shared/PageHeading";
 import SurfaceCard from "@/components/shared/SurfaceCard";
 import MultiLineChart from "@/components/shared/MultiLineChart";
+import PeriodPicker from "@/components/shared/PeriodPicker";
 
 import ModuleNav from "@/components/reclame-aqui/ModuleNav";
 
 import { useScopedCases } from "@/lib/context/useScopedCases";
 
 import {
-  ChartPeriod,
-  chartPeriodLabels,
   getDailySeries,
   getMonthlyIndices,
   getRollingIndices,
 } from "@/lib/services/charts.service";
 
 import {
+  CustomRange,
+  getRange,
+  PeriodKey,
   ptBR,
+  REFERENCE_DATE,
   scoreBands,
 } from "@/lib/services/reputation.service";
 
@@ -45,18 +46,37 @@ export default function GraficosPage() {
 
   const { cases } = useScopedCases("reclame-aqui");
 
-  const [period, setPeriod] = useState<ChartPeriod>("12m");
+  const [period, setPeriod] = useState<PeriodKey>("12m");
+
+  const [custom, setCustom] = useState<CustomRange>({
+    start: `${REFERENCE_DATE.slice(0, 4)}-01-01`,
+    end: REFERENCE_DATE,
+  });
+
+  const range = useMemo(
+    () => getRange(period, "vigente", custom),
+    [period, custom]
+  );
 
   const monthly = useMemo(
-    () => getMonthlyIndices(cases, period),
-    [cases, period]
+    () => getMonthlyIndices(cases, period, custom),
+    [cases, period, custom]
   );
 
   const rolling = useMemo(
-    () => getRollingIndices(cases, period),
-    [cases, period]
+    () => getRollingIndices(cases, period, 12, custom),
+    [cases, period, custom]
   );
 
+  /**
+   * Série diária dos últimos 30 dias — sempre 30, sem seguir o seletor.
+   *
+   * Passando o `range` aqui, o cartão mostrava a janela inteira do
+   * período: com 12 meses selecionados eram 180 dias desenhados sob um
+   * título que prometia 30. Este cartão existe para cobrir o mês
+   * corrente, que os gráficos mensais deixam de fora por só contarem
+   * meses fechados; a leitura longa é o papel deles.
+   */
   const daily = useMemo(
     () => getDailySeries(cases),
     [cases]
@@ -79,37 +99,18 @@ export default function GraficosPage() {
 
         <SurfaceCard bodyClassName="p-4">
 
-          <div className="flex flex-wrap items-center gap-3">
-
-            <div className="flex items-center rounded-xl border border-zinc-200 p-1">
-
-              {(
-                Object.keys(chartPeriodLabels) as ChartPeriod[]
-              ).map((key) => (
-
-                <button
-                  key={key}
-                  onClick={() => setPeriod(key)}
-                  className={`rounded-lg px-3.5 py-1.5 text-sm font-medium transition-colors ${
-                    period === key
-                      ? "bg-violet-700 text-white"
-                      : "text-zinc-600 hover:bg-zinc-100"
-                  }`}
-                >
-                  {chartPeriodLabels[key]}
-                </button>
-
-              ))}
-
-            </div>
-
-            <p className="flex items-center gap-2 text-xs text-zinc-500">
-              <Info size={13} className="text-zinc-400" />
-              Meses fechados. O mês corrente entra apenas na
-              série diária.
-            </p>
-
-          </div>
+          <PeriodPicker
+            period={period}
+            onPeriodChange={setPeriod}
+            range={range}
+            custom={custom}
+            onCustomChange={setCustom}
+            note={
+              period === "custom"
+                ? "Meses tocados pelo intervalo escolhido."
+                : "Meses fechados. O mês corrente entra apenas na série diária."
+            }
+          />
 
         </SurfaceCard>
 
@@ -118,6 +119,7 @@ export default function GraficosPage() {
         <SurfaceCard
           title="Índices por mês"
           description="Faixa de reputação calculada para cada mês isoladamente."
+          hint="Cada barra recalcula a fórmula oficial usando só as reclamações daquele mês. Serve para ver a variação, não a nota pública — que sempre olha 6 ou 12 meses."
         >
 
           <div className="mb-4 flex flex-wrap gap-1.5">
@@ -196,6 +198,7 @@ export default function GraficosPage() {
         <SurfaceCard
           title="Nota final da reputação"
           description="Nota RA de cada mês, na escala de 0 a 10."
+          hint="Mesma apuração da barra acima, em linha, para enxergar tendência. Meses sem reclamação aparecem como zero."
         >
 
           <MultiLineChart
@@ -221,6 +224,7 @@ export default function GraficosPage() {
         <SurfaceCard
           title="Índices por mês (porcentagem)"
           description="Resposta, solução, intenção de retorno e nota do consumidor."
+          hint="Os quatro indicadores que compõem a nota, com pesos 20%, 30%, 30% e 20%. A nota do consumidor é multiplicada por 10 para caber na mesma escala."
         >
 
           <MultiLineChart
@@ -270,6 +274,7 @@ export default function GraficosPage() {
         <SurfaceCard
           title="Índices por mês (quantidade)"
           description="Volumes absolutos de cada etapa da tratativa."
+          hint="Contagem bruta por mês. A diferença entre reclamações e respostas é o que derruba o índice de resposta."
         >
 
           <MultiLineChart
@@ -341,6 +346,7 @@ export default function GraficosPage() {
         <SurfaceCard
           title="Tempo de resposta"
           description="Média de dias entre o registro e a primeira resposta, por mês."
+          hint="Só entram reclamações que já foram respondidas. Não afeta a nota diretamente, mas atrasos costumam virar réplica e nota baixa."
         >
 
           <MultiLineChart
@@ -366,6 +372,7 @@ export default function GraficosPage() {
         <SurfaceCard
           title="Evolução dos índices em 12 meses (porcentagem)"
           description="Cada ponto acumula os 12 meses anteriores — é assim que a reputação vigente é apurada."
+          hint="É a leitura que mais se aproxima do painel do Reclame Aqui: cada ponto é a nota que estaria valendo naquele mês."
         >
 
           <MultiLineChart
@@ -413,6 +420,7 @@ export default function GraficosPage() {
         <SurfaceCard
           title="Evolução dos índices em 12 meses (quantidade)"
           description="Volume acumulado da janela móvel de 12 meses."
+          hint="Mesma janela móvel, em quantidade. Útil para ver se o volume está crescendo mais rápido que a capacidade de resposta."
         >
 
           <MultiLineChart
@@ -466,6 +474,7 @@ export default function GraficosPage() {
         <SurfaceCard
           title="Tempo de resposta acumulado"
           description="Média da janela móvel de 12 meses."
+          hint="Suaviza picos de um mês isolado e mostra a tendência real do tempo de atendimento."
         >
 
           <MultiLineChart
@@ -490,7 +499,8 @@ export default function GraficosPage() {
 
         <SurfaceCard
           title="Reclamações nos últimos 30 dias"
-          description="Série diária, incluindo o mês corrente."
+          description="Série diária até hoje, incluindo o mês corrente. Não acompanha o período selecionado acima."
+          hint="Acompanha o período selecionado acima, incluindo o mês corrente ainda aberto. Limitada a 180 dias para o eixo continuar legível."
         >
 
           <MultiLineChart

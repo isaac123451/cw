@@ -8,7 +8,6 @@ import {
   CheckCircle2,
   CircleAlert,
   Inbox,
-  Star,
   Timer,
 } from "lucide-react";
 

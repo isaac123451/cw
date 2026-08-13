@@ -52,6 +52,25 @@ export interface Case {
   /** Consumidor avaliou o atendimento no Reclame Aqui. */
   evaluated?: boolean;
 
+  /**
+   * Avaliação sinalizada como desconsiderada.
+   *
+   * Vem marcada assim no export quando o próprio Reclame Aqui invalida a
+   * avaliação, e pode ser ligada/desligada na tela do caso. É **apenas
+   * sinalização**: a nota continua contando nos indicadores e as telas
+   * mostram um aviso — descontar do cálculo é decisão da operação.
+   */
+  scoreDisregarded?: boolean;
+
+  /**
+   * Data da avaliação, em ISO (YYYY-MM-DD). Só data: o Reclame Aqui
+   * mostra o dia da avaliação, não a hora.
+   */
+  evaluatedAt?: string;
+
+  /** Link público da reclamação no portal. Só existe se for preenchido. */
+  raUrl?: string;
+
   resolved: boolean;
 
   wouldDoBusiness: boolean;

@@ -16,6 +16,16 @@ interface Props {
   onDropCase: (id: string, status: string) => void;
 }
 
+/**
+ * Cards montados de uma vez por coluna.
+ *
+ * Com a base real (327 casos) o quadro chegava a 11 mil nós no DOM e
+ * cada tecla digitada na busca custava ~120 ms, porque todo card
+ * re-renderizava. Vinte e cinco cobre a rolagem inicial de qualquer
+ * coluna; o resto entra sob demanda.
+ */
+const LOTE = 25;
+
 export default function KanbanColumn({
   workflow,
   items,
@@ -26,10 +36,15 @@ export default function KanbanColumn({
 }: Props) {
 
   const [isOver, setIsOver] = useState(false);
+  const [visiveis, setVisiveis] = useState(LOTE);
 
   const overLimit =
     typeof workflow.limit === "number" &&
     items.length > workflow.limit;
+
+  const mostrados = items.slice(0, visiveis);
+
+  const restantes = items.length - mostrados.length;
 
   return (
     <div
@@ -105,7 +120,7 @@ export default function KanbanColumn({
 
           <div className="space-y-2.5">
 
-            {items.map((item) => (
+            {mostrados.map((item) => (
               <KanbanCard
                 key={item.id}
                 item={item}
@@ -113,6 +128,18 @@ export default function KanbanColumn({
                 onDragEnd={onDragEndCase}
               />
             ))}
+
+            {restantes > 0 && (
+              <button
+                onClick={() =>
+                  setVisiveis((valor) => valor + LOTE)
+                }
+                className="w-full rounded-xl border border-dashed border-zinc-300 py-2.5 text-xs font-medium text-zinc-500 transition-colors hover:border-violet-300 hover:bg-white hover:text-violet-700"
+              >
+                Mostrar mais {Math.min(restantes, LOTE)} de{" "}
+                {restantes}
+              </button>
+            )}
 
           </div>
 

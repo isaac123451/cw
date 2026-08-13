@@ -1,9 +1,50 @@
-export type ImpactType =
-  | "Cancelamento evitado"
-  | "Módulo contratado"
-  | "Cliente recuperado"
-  | "Oferta concedida"
-  | "Valor recuperado";
+/**
+ * Tipo de impacto.
+ *
+ * Texto livre, e não união fechada: a operação cria e edita os tipos na
+ * própria tela. Os cinco de partida ficam abaixo como semente.
+ */
+export type ImpactType = string;
+
+/**
+ * Como o valor do tipo entra na conta.
+ *
+ * "receita" soma ao que foi preservado ou gerado; "custo" é dinheiro que
+ * a operação concedeu para resolver — desconto, cortesia, estorno. Sem a
+ * distinção, uma oferta concedida inflaria o impacto positivo.
+ */
+export type ImpactDirection = "receita" | "custo";
+
+export interface ImpactTypeOption {
+  id: string;
+
+  name: string;
+
+  direction: ImpactDirection;
+
+  description?: string;
+
+  order: number;
+
+  active: boolean;
+}
+
+export const IMPACT_DIRECTIONS: {
+  value: ImpactDirection;
+  label: string;
+  hint: string;
+}[] = [
+  {
+    value: "receita",
+    label: "Receita",
+    hint: "Soma ao impacto: valor preservado ou gerado.",
+  },
+  {
+    value: "custo",
+    label: "Custo",
+    hint: "Subtrai: valor concedido para resolver o caso.",
+  },
+];
 
 export interface ImpactRecord {
   id: string;

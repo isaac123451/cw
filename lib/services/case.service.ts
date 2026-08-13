@@ -20,16 +20,21 @@ export interface CaseMetrics {
 }
 
 /**
- * Estados que ainda dependem de ação da operação. "Aguardando avaliação"
- * fica de fora: já foi respondido, a bola está com o consumidor.
+ * Estados que **não** dependem mais de ação da operação.
+ *
+ * A lista é de exclusão, e não de inclusão, de propósito: o fluxo é
+ * configurável em "Configurar fluxo", e com lista de inclusão qualquer
+ * etapa nova criada pela operação deixaria de contar como aberta — o
+ * caso sumiria silenciosamente do indicador "na fila".
+ *
+ * "Aguardando avaliação" entra aqui porque já foi respondido: a bola
+ * está com o consumidor. "Resolvido" e "Não resolvido" são os dois
+ * estados terminais do ciclo real do Reclame Aqui.
  */
-const OPEN_STATUS = [
-  "Novo",
-  "Triagem",
-  "Em Atendimento",
-  "Aguardando Cliente",
-  "Aguardando Interno",
-  "Aguardando nossa réplica",
+const CLOSED_STATUS = [
+  "Aguardando avaliação",
+  "Resolvido",
+  "Não resolvido",
 ];
 
 export const RECLAME_AQUI = "Reclame Aqui";
@@ -67,7 +72,7 @@ export function byChannel(
 }
 
 export function isOpen(item: Case) {
-  return OPEN_STATUS.includes(item.status);
+  return !CLOSED_STATUS.includes(item.status);
 }
 
 function rate(part: number, total: number) {

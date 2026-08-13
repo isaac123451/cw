@@ -12,6 +12,7 @@ export const mockCategories: CategoryOption[] = [
     description: "Problemas relacionados ao atendimento.",
     order: 1,
     active: true,
+    ceilingHours: 48,
   },
   {
     id: "cat-2",
@@ -19,6 +20,7 @@ export const mockCategories: CategoryOption[] = [
     description: "Instabilidade, lentidão e bugs da plataforma.",
     order: 2,
     active: true,
+    ceilingHours: 24,
   },
   {
     id: "cat-3",
@@ -26,6 +28,7 @@ export const mockCategories: CategoryOption[] = [
     description: "Cobrança, reajuste, boleto e estorno.",
     order: 3,
     active: true,
+    ceilingHours: 24,
   },
   {
     id: "cat-4",
@@ -33,6 +36,7 @@ export const mockCategories: CategoryOption[] = [
     description: "Nota fiscal, SPED e obrigações acessórias.",
     order: 4,
     active: true,
+    ceilingHours: 72,
   },
   {
     id: "cat-5",

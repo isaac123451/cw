@@ -4,17 +4,37 @@ import {
   createContext,
   useContext,
   useMemo,
-  useState,
   ReactNode,
 } from "react";
 
-import { ImpactRecord } from "@/lib/models/impact";
-import { mockImpact } from "@/lib/data/mockImpact";
+import {
+  ImpactRecord,
+  ImpactTypeOption,
+} from "@/lib/models/impact";
+
+import {
+  removeImpactRecord,
+  removeImpactType,
+  saveImpactRecord,
+  saveImpactType,
+} from "@/lib/actions/registry";
+
+import { useWorkspaceSlice } from "@/lib/context/useWorkspace";
+import { sincronizar } from "@/lib/context/sync";
 
 export type ImpactDraft = Omit<ImpactRecord, "id">;
 
 interface ImpactContextType {
   records: ImpactRecord[];
+
+  /** Tipos administrados pela operação. */
+  types: ImpactTypeOption[];
+
+  /** Carga inicial ainda em andamento. */
+  loading: boolean;
+
+  saveType: (data: ImpactTypeOption) => void;
+  removeType: (id: string) => void;
   createRecord: (data: ImpactDraft) => void;
   updateRecord: (data: ImpactRecord) => void;
   removeRecord: (id: string) => void;
@@ -29,28 +49,70 @@ export function ImpactProvider({
   children: ReactNode;
 }) {
 
-  const [records, setRecords] = useState<ImpactRecord[]>(
-    // Mais recentes primeiro, que é como a tela lista.
-    [...mockImpact].sort((a, b) =>
-      b.date.localeCompare(a.date)
-    )
+  const [records, setRecords, loading] =
+    useWorkspaceSlice(
+      // Mais recentes primeiro, que é como a tela lista.
+      (dados) =>
+        [...dados.impact].sort((a, b) =>
+          b.date.localeCompare(a.date)
+        ),
+      [] as ImpactRecord[]
+    );
+
+  const [types, setTypes] = useWorkspaceSlice(
+    (dados) => dados.impactTypes,
+    [] as ImpactTypeOption[]
   );
 
   const value = useMemo<ImpactContextType>(
     () => ({
       records,
+      types,
+      loading,
 
-      createRecord: (data) =>
+      saveType: (data) => {
+        setTypes((prev) => {
+
+          const existe = prev.some(
+            (item) => item.id === data.id
+          );
+
+          return (
+            existe
+              ? prev.map((item) =>
+                  item.id === data.id ? data : item
+                )
+              : [...prev, data]
+          ).sort((a, b) => a.order - b.order);
+        });
+
+        sincronizar(() => saveImpactType(data));
+      },
+
+      removeType: (id) => {
+        setTypes((prev) =>
+          prev.filter((item) => item.id !== id)
+        );
+        sincronizar(() => removeImpactType(id));
+      },
+
+      createRecord: (data) => {
+
+        const novo: ImpactRecord = {
+          ...data,
+          id: crypto.randomUUID(),
+        };
+
         setRecords((prev) =>
-          [
-            { ...data, id: crypto.randomUUID() },
-            ...prev,
-          ].sort((a, b) =>
+          [novo, ...prev].sort((a, b) =>
             b.date.localeCompare(a.date)
           )
-        ),
+        );
 
-      updateRecord: (data) =>
+        sincronizar(() => saveImpactRecord(novo));
+      },
+
+      updateRecord: (data) => {
         setRecords((prev) =>
           prev
             .map((item) =>
@@ -59,14 +121,18 @@ export function ImpactProvider({
             .sort((a, b) =>
               b.date.localeCompare(a.date)
             )
-        ),
+        );
+        sincronizar(() => saveImpactRecord(data));
+      },
 
-      removeRecord: (id) =>
+      removeRecord: (id) => {
         setRecords((prev) =>
           prev.filter((item) => item.id !== id)
-        ),
+        );
+        sincronizar(() => removeImpactRecord(id));
+      },
     }),
-    [records]
+    [records, types, loading, setRecords, setTypes]
   );
 
   return (

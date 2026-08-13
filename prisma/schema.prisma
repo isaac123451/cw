@@ -24,6 +24,9 @@ model User {
   name         String
   passwordHash String
   role         Role     @default(AGENTE)
+  /// Cargo exibido no cadastro de Times ("Analista de Reputação").
+  /// Diferente de `role`, que é o nível de acesso.
+  jobTitle     String?
   active       Boolean  @default(true)
   teamId       String?
   team         Team?    @relation(fields: [teamId], references: [id])
@@ -52,13 +55,14 @@ model AllowedEmail {
 /// ============================================================
 
 model Team {
-  id         String  @id @default(cuid())
-  name       String  @unique
-  legacyName String?
-  department String?
-  leader     String?
-  active     Boolean @default(true)
-  order      Int     @default(0)
+  id          String  @id @default(cuid())
+  name        String  @unique
+  legacyName  String?
+  description String?
+  department  String?
+  leader      String?
+  active      Boolean @default(true)
+  order       Int     @default(0)
 
   members User[]
   cases   Case[]
@@ -80,6 +84,10 @@ model Category {
   description String?
   order       Int     @default(0)
   active      Boolean @default(true)
+
+  /// Teto do tempo médio de resposta da categoria, em horas.
+  /// Sem teto, a categoria não é cobrada no indicador.
+  ceilingHours Int?
 
   subcategories Subcategory[]
   cases         Case[]
@@ -202,6 +210,10 @@ model Case {
   wouldDoBusiness Boolean   @default(false)
   evaluatedAt     DateTime?
 
+  /// Avaliação sinalizada como desconsiderada pelo Reclame Aqui.
+  /// É só aviso: a nota continua contando nos indicadores.
+  scoreDisregarded Boolean @default(false)
+
   churnRisk Boolean @default(false)
   request   String?
 
@@ -217,12 +229,13 @@ model Case {
   updatedAt   DateTime @updatedAt
   createdAt   DateTime @default(now())
 
-  tags     CaseTag[]
-  comments CaseComment[]
-  events   CaseEvent[]
-  marks    CaseChecklistMark[]
-  impacts  ImpactRecord[]
-  tasks    AgendaTask[]
+  tags      CaseTag[]
+  comments  CaseComment[]
+  events    CaseEvent[]
+  marks     CaseChecklistMark[]
+  impacts   ImpactRecord[]
+  tasks     AgendaTask[]
+  movements CaseMovement[]
 
   @@index([channel, publishedAt])
   @@index([status])
@@ -285,6 +298,17 @@ model CaseChecklistMark {
 /// GESTÃO
 /// ============================================================
 
+/// Tipo de impacto, administrado pela própria operação.
+model ImpactType {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  /// receita soma ao impacto; custo subtrai (valor concedido).
+  direction   String  @default("receita")
+  description String?
+  order       Int     @default(0)
+  active      Boolean @default(true)
+}
+
 model ImpactRecord {
   id          String   @id @default(cuid())
   type        String
@@ -294,6 +318,10 @@ model ImpactRecord {
   amountCents Int
   owner       String?
   date        DateTime
+
+  /// Vínculos opcionais com os cadastros, quando a origem é conhecida.
+  establishmentId String?
+  clientSlug      String?
 
   caseId String?
   case   Case?   @relation(fields: [caseId], references: [id])
@@ -339,5 +367,159 @@ model ReputationGoal {
   /// resposta | consumidor | solucao | novos-negocios | nota
   indicator String   @unique
   target    Float
+  updatedAt DateTime @updatedAt
+}
+
+/// ============================================================
+/// PRAZOS
+/// ============================================================
+
+/// Prazo de resposta e solução por tipo de caso.
+model SlaRule {
+  id            String  @id @default(cuid())
+  /// Nome da categoria; `*` vale como regra padrão.
+  category      String
+  /// Refina a regra para uma prioridade específica.
+  priority      String?
+  responseHours Int
+  solutionHours Int
+  team          String?
+  note          String?
+  active        Boolean @default(true)
+
+  @@index([category])
+}
+
+/// Prazo padrão de retorno por destino de movimentação.
+model MovementRule {
+  id          String  @id @default(cuid())
+  destination String  @unique
+  hours       Int
+  note        String?
+  active      Boolean @default(true)
+}
+
+/// Passagem de bastão dentro da tratativa, com relógio próprio.
+model CaseMovement {
+  id String @id @default(cuid())
+
+  caseId String
+  case   Case   @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  /// Área interna ou o próprio cliente.
+  destination String
+  reason      String
+  actor       String
+  startedAt   DateTime
+  /// Congelado no encaminhamento: editar a regra não reescreve histórico.
+  dueHours    Int
+  returnedAt  DateTime?
+  outcome     String?
+
+  createdAt DateTime @default(now())
+
+  @@index([caseId, startedAt])
+}
+
+/// ============================================================
+/// CADASTROS DA OPERAÇÃO
+/// ============================================================
+
+/// Restaurante que contrata a Cardápio Web. Não confundir com Cliente.
+model Establishment {
+  id        String    @id @default(cuid())
+  slug      String    @unique
+  name      String
+  cnpj      String?
+  segment   String?
+  city      String?
+  state     String?
+  plan      String
+  status    String
+  /// Receita mensal recorrente, em centavos.
+  mrrCents  Int?
+  owner     String?
+  startedAt DateTime?
+  phone     String?
+  email     String?
+  notes     String?
+}
+
+/// Etapa do ciclo de vida do cliente — colunas do quadro da Jornada.
+model JourneyStage {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  color       String  @default("#7C3AED")
+  description String  @default("")
+  order       Int     @default(0)
+  active      Boolean @default(true)
+}
+
+/// Agrupador livre da jornada — "Pontos críticos", "Combinados".
+model JourneyTopic {
+  id    String @id @default(cuid())
+  name  String @unique
+  icon  String @default("Sparkles")
+  color String @default("#7C3AED")
+  order Int    @default(0)
+
+  entries JourneyEntry[]
+}
+
+/// Registro dentro de um tópico, sempre amarrado a um cliente.
+model JourneyEntry {
+  id String @id @default(cuid())
+
+  topicId String
+  topic   JourneyTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  /// Nome da empresa — o vínculo é por texto, como nas telas.
+  company   String
+  text      String
+  author    String
+  createdAt DateTime @default(now())
+
+  @@index([company])
+}
+
+/// Iniciativa de melhoria acompanhada pela operação.
+model Project {
+  id          String   @id @default(cuid())
+  title       String
+  description String   @default("")
+  stage       String
+  owner       String
+  impact      String
+  progress    Int      @default(0)
+  tags        String[] @default([])
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+}
+
+/// Passo a passo operacional documentado.
+model Playbook {
+  id            String   @id @default(cuid())
+  slug          String   @unique
+  title         String
+  summary       String   @default("")
+  scope         String   @default("")
+  owner         String
+  version       String   @default("1.0")
+  /// Passos e regras variam de tamanho; JSON evita uma tabela por lista.
+  steps         Json     @default("[]")
+  rules         String[] @default([])
+  confluenceUrl String?
+  updatedAt     DateTime @updatedAt
+}
+
+/// Resposta pronta inserida na réplica pública.
+model Macro {
+  id        String   @id @default(cuid())
+  title     String
+  body      String
+  category  String
+  owner     String
+  tags      String[] @default([])
+  uses      Int      @default(0)
   updatedAt DateTime @updatedAt
 }

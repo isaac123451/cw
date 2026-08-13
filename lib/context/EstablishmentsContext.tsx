@@ -4,13 +4,19 @@ import {
   createContext,
   useContext,
   useMemo,
-  useState,
   ReactNode,
 } from "react";
 
 import { Establishment } from "@/lib/models/establishment";
-import { mockEstablishments } from "@/lib/data/mockEstablishments";
 import { slugify } from "@/lib/services/slug";
+
+import {
+  removeEstablishment,
+  saveEstablishment,
+} from "@/lib/actions/registry";
+
+import { useWorkspaceSlice } from "@/lib/context/useWorkspace";
+import { sincronizar } from "@/lib/context/sync";
 
 export type EstablishmentDraft = Omit<
   Establishment,
@@ -19,6 +25,9 @@ export type EstablishmentDraft = Omit<
 
 interface EstablishmentsContextType {
   establishments: Establishment[];
+
+  /** Carga inicial ainda em andamento. */
+  loading: boolean;
 
   createEstablishment: (
     data: EstablishmentDraft
@@ -43,17 +52,19 @@ export function EstablishmentsProvider({
   children: ReactNode;
 }) {
 
-  const [establishments, setEstablishments] = useState<
-    Establishment[]
-  >(
-    [...mockEstablishments].sort((a, b) =>
-      a.name.localeCompare(b.name)
-    )
-  );
+  const [establishments, setEstablishments, loading] =
+    useWorkspaceSlice(
+      (dados) =>
+        [...dados.establishments].sort((a, b) =>
+          a.name.localeCompare(b.name)
+        ),
+      [] as Establishment[]
+    );
 
   const value = useMemo<EstablishmentsContextType>(
     () => ({
       establishments,
+      loading,
 
       createEstablishment: (data) => {
 
@@ -85,10 +96,12 @@ export function EstablishmentsProvider({
           )
         );
 
+        sincronizar(() => saveEstablishment(created));
+
         return created;
       },
 
-      updateEstablishment: (data) =>
+      updateEstablishment: (data) => {
         setEstablishments((prev) =>
           prev
             .map((item) =>
@@ -97,19 +110,23 @@ export function EstablishmentsProvider({
             .sort((a, b) =>
               a.name.localeCompare(b.name)
             )
-        ),
+        );
+        sincronizar(() => saveEstablishment(data));
+      },
 
-      removeEstablishment: (id) =>
+      removeEstablishment: (id) => {
         setEstablishments((prev) =>
           prev.filter((item) => item.id !== id)
-        ),
+        );
+        sincronizar(() => removeEstablishment(id));
+      },
 
       findEstablishment: (key) =>
         establishments.find(
           (item) => item.id === key || item.slug === key
         ),
     }),
-    [establishments]
+    [establishments, loading, setEstablishments]
   );
 
   return (

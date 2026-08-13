@@ -18,52 +18,21 @@ import { useEstablishments } from "@/lib/context/EstablishmentsContext";
 import { useClients } from "@/lib/context/ClientsContext";
 
 import { ImpactRecord, ImpactType } from "@/lib/models/impact";
-import { ImpactDraft } from "@/lib/context/ImpactContext";
+import {
+  ImpactDraft,
+  useImpact,
+} from "@/lib/context/ImpactContext";
 import { slugify } from "@/lib/services/slug";
 
-const TIPOS: {
-  id: ImpactType;
-  label: string;
-  hint: string;
-  sinal: 1 | -1;
-}[] = [
-  {
-    id: "Cancelamento evitado",
-    label: "Cancelamento evitado",
-    hint: "Receita preservada ao reverter um pedido de cancelamento.",
-    sinal: 1,
-  },
-  {
-    id: "Cliente recuperado",
-    label: "Cliente recuperado",
-    hint: "Cliente que voltou a usar a plataforma após a tratativa.",
-    sinal: 1,
-  },
-  {
-    id: "Módulo contratado",
-    label: "Módulo contratado",
-    hint: "Receita nova gerada a partir do atendimento.",
-    sinal: 1,
-  },
-  {
-    id: "Valor recuperado",
-    label: "Valor recuperado",
-    hint: "Cobrança indevida reconciliada.",
-    sinal: 1,
-  },
-  {
-    id: "Oferta concedida",
-    label: "Oferta concedida",
-    hint: "Desconto ou isenção dada para reter o cliente — entra como custo.",
-    sinal: -1,
-  },
-];
+// Os tipos vêm do cadastro (Impacto → Tipos de impacto), não daqui.
 
 interface Props {
   open: boolean;
   editing?: ImpactRecord;
   /** Pré-vincula a um caso, quando aberto de dentro da reclamação. */
   presetCaseId?: string;
+  /** Pré-vincula a um estabelecimento, quando aberto da conta. */
+  presetEstablishmentId?: string;
   onClose: () => void;
   onSave: (data: ImpactDraft | ImpactRecord) => void;
 }
@@ -72,6 +41,7 @@ export default function ImpactForm({
   open,
   editing,
   presetCaseId,
+  presetEstablishmentId,
   onClose,
   onSave,
 }: Props) {
@@ -80,10 +50,12 @@ export default function ImpactForm({
   const session = useSession();
   const { establishments } = useEstablishments();
   const { clients } = useClients();
+  const { types } = useImpact();
 
-  const [type, setType] = useState<ImpactType>(
-    "Cancelamento evitado"
-  );
+  /** Só os ativos entram na escolha; os inativos seguem no histórico. */
+  const tipos = types.filter((item) => item.active);
+
+  const [type, setType] = useState<ImpactType>("");
   const [company, setCompany] = useState("");
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
@@ -117,22 +89,44 @@ export default function ImpactForm({
       ? cases.find((item) => item.id === presetCaseId)
       : undefined;
 
+    // Abrindo a partir do estabelecimento, o nome dele já preenche o campo.
+    const estab = presetEstablishmentId
+      ? establishments.find(
+          (item) => item.id === presetEstablishmentId
+        )
+      : undefined;
+
     setType("Cancelamento evitado");
-    setCompany(preset?.company ?? "");
+    setCompany(preset?.company ?? estab?.name ?? "");
     setDescription("");
     setAmount("");
     setDate(preset?.createdAt ?? "");
     setCaseId(preset?.protocol ?? "");
     setCaseSearch("");
-    setEstablishmentId(preset?.establishmentId ?? "");
+    setEstablishmentId(
+      preset?.establishmentId ??
+        presetEstablishmentId ??
+        ""
+    );
     setClientSlug(
       preset ? slugify(preset.customer) : ""
     );
     setClientName("");
-  }, [open, editing, presetCaseId, cases]);
+  }, [
+    open,
+    editing,
+    presetCaseId,
+    presetEstablishmentId,
+    cases,
+    establishments,
+  ]);
 
+  // Custo entra negativo na conta; receita, positivo.
   const sinal =
-    TIPOS.find((item) => item.id === type)?.sinal ?? 1;
+    tipos.find((item) => item.name === type)
+      ?.direction === "custo"
+      ? -1
+      : 1;
 
   const resultados = useMemo(() => {
 
@@ -216,14 +210,14 @@ export default function ImpactForm({
 
           <div className="grid gap-2 sm:grid-cols-2">
 
-            {TIPOS.map((item) => (
+            {tipos.map((item) => (
 
               <button
                 key={item.id}
-                onClick={() => setType(item.id)}
-                title={item.hint}
+                onClick={() => setType(item.name)}
+                title={item.description}
                 className={`rounded-xl px-3.5 py-2.5 text-left text-sm font-medium transition-colors ring-1 ring-inset ${
-                  type === item.id
+                  type === item.name
                     ? "bg-violet-50 text-violet-800 ring-violet-300"
                     : "text-zinc-600 ring-zinc-200 hover:bg-zinc-50"
                 }`}
@@ -231,22 +225,24 @@ export default function ImpactForm({
 
                 <span className="flex items-center justify-between gap-2">
 
-                  {item.label}
+                  {item.name}
 
                   <span
                     className={`text-[10px] font-semibold ${
-                      item.sinal > 0
+                      item.direction === "receita"
                         ? "text-emerald-600"
                         : "text-rose-600"
                     }`}
                   >
-                    {item.sinal > 0 ? "entrada" : "custo"}
+                    {item.direction === "receita"
+                      ? "entrada"
+                      : "custo"}
                   </span>
 
                 </span>
 
                 <span className="mt-1 block text-[11px] font-normal leading-snug text-zinc-500">
-                  {item.hint}
+                  {item.description}
                 </span>
 
               </button>

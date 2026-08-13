@@ -7,6 +7,14 @@ import { ArrowUpRight, ExternalLink, Pencil } from "lucide-react";
 import { Case } from "@/lib/models/case";
 import { useTeams } from "@/lib/context/TeamsContext";
 import { useEstablishments } from "@/lib/context/EstablishmentsContext";
+import { useSla } from "@/lib/context/SlaContext";
+
+import {
+  slaStatus,
+  toneOfSla,
+} from "@/lib/services/sla.service";
+
+import { formatHours } from "@/lib/models/sla";
 
 interface Props {
   data: Case;
@@ -49,6 +57,9 @@ export default function CaseSidebar({
 }: Props) {
 
   const { people } = useTeams();
+  const { rules } = useSla();
+
+  const sla = slaStatus(data, rules);
   const { establishments } = useEstablishments();
 
   // Pessoas cadastradas em Times + quem já aparece nos casos.
@@ -178,25 +189,137 @@ export default function CaseSidebar({
 
       </Block>
 
+      <Block title="SLA">
+
+        {/* Prazo vem da regra por categoria, não mais de um texto fixo. */}
+        <span
+          className={`inline-block rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${toneOfSla(
+            sla.situation
+          )}`}
+        >
+          {sla.label}
+        </span>
+
+        {sla.rule ? (
+
+          <>
+            <p className="mt-3 text-sm leading-relaxed text-zinc-500">
+              {sla.situation === "estourado"
+                ? `Passou ${Math.abs(
+                    Math.round(sla.remainingHours)
+                  )}h do prazo.`
+                : sla.situation === "concluido"
+                ? "Caso encerrado — o relógio parou."
+                : `Restam ${Math.round(
+                    sla.remainingHours
+                  )}h no prazo.`}
+            </p>
+
+            <dl className="mt-3 space-y-2 border-t border-zinc-100 pt-3">
+
+              {[
+                [
+                  "Resposta",
+                  formatHours(sla.rule.responseHours),
+                ],
+                [
+                  "Solução",
+                  formatHours(sla.rule.solutionHours),
+                ],
+                ["Time", sla.rule.team ?? "—"],
+              ].map(([label, value]) => (
+
+                <div
+                  key={label}
+                  className="flex items-center justify-between"
+                >
+
+                  <dt className="text-xs text-zinc-500">
+                    {label}
+                  </dt>
+
+                  <dd className="text-xs font-medium text-zinc-800">
+                    {value}
+                  </dd>
+
+                </div>
+
+              ))}
+
+            </dl>
+
+            <Link
+              href="/processos"
+              className="mt-3 block text-xs font-medium text-violet-700 hover:underline"
+            >
+              Ver regra em Processos
+            </Link>
+          </>
+
+        ) : (
+
+          <p className="mt-3 text-sm leading-relaxed text-zinc-500">
+            Nenhuma regra de SLA cobre esta categoria.{" "}
+            <Link
+              href="/processos"
+              className="font-medium text-violet-700 hover:underline"
+            >
+              Cadastrar regra
+            </Link>
+          </p>
+
+        )}
+
+      </Block>
+
       <Block title="Reclame Aqui">
 
         <p className="text-sm text-zinc-500">
-          Publicado em {data.createdAt}
+          Publicado em{" "}
+          {data.createdAt
+            .split("-")
+            .reverse()
+            .join("/")}
         </p>
 
         <p className="mt-0.5 text-sm text-zinc-500">
           Protocolo {data.protocol}
         </p>
 
-        <a
-          href="https://www.reclameaqui.com.br/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-3 flex items-center justify-center gap-2 rounded-xl border border-violet-200 px-4 py-2.5 text-sm font-medium text-violet-700 transition-colors hover:bg-violet-50"
-        >
-          <ExternalLink size={15} />
-          Abrir no Reclame Aqui
-        </a>
+        {data.evaluatedAt && (
+          <p className="mt-0.5 text-sm text-zinc-500">
+            Avaliado em{" "}
+            {data.evaluatedAt
+              .split("-")
+              .reverse()
+              .join("/")}
+          </p>
+        )}
+
+        <input
+          value={data.raUrl ?? ""}
+          onChange={(e) =>
+            onChange({
+              raUrl: e.target.value.trim() || undefined,
+            })
+          }
+          placeholder="Cole o link da reclamação no portal"
+          className="mt-3 h-11 w-full rounded-xl border border-zinc-200 px-3 text-sm outline-none transition-colors focus:border-violet-400"
+        />
+
+        {/* O export do HugMe não traz a URL — o botão só aparece
+            depois que alguém colar o link do caso. */}
+        {data.raUrl && (
+          <a
+            href={data.raUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-2 flex items-center justify-center gap-2 rounded-xl border border-violet-200 px-4 py-2.5 text-sm font-medium text-violet-700 transition-colors hover:bg-violet-50"
+          >
+            <ExternalLink size={15} />
+            Abrir no Reclame Aqui
+          </a>
+        )}
 
       </Block>
 

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { Check, Plus, Tag as TagIcon } from "lucide-react";
+import { Check, Tag as TagIcon } from "lucide-react";
 
 import { useSettings } from "@/lib/context/SettingsContext";
 

@@ -27,7 +27,7 @@ export default function CasesTable({
             </th>
 
             <th className="whitespace-nowrap px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-zinc-500">
-              Empresa
+              Estabelecimento
             </th>
 
             <th className="whitespace-nowrap px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-zinc-500">
@@ -60,6 +60,10 @@ export default function CasesTable({
 
             <th className="whitespace-nowrap px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-zinc-500">
               Responsável
+            </th>
+
+            <th className="whitespace-nowrap px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-zinc-500">
+              Contato
             </th>
 
           </tr>

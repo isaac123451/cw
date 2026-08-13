@@ -9,11 +9,18 @@ import {
 interface Props {
   buckets: RatingBucket[];
   summary: ReputationSummary;
+
+  /** Quando informado, cada faixa vira filtro da tela. */
+  onSelect?: (label: string) => void;
+
+  active?: string;
 }
 
 export default function RatingHistogram({
   buckets,
   summary,
+  onSelect,
+  active,
 }: Props) {
 
   const max = Math.max(
@@ -25,6 +32,7 @@ export default function RatingHistogram({
     <SurfaceCard
       title="Distribuição das avaliações"
       description="Histograma das notas recebidas no período."
+      hint="Só entram reclamações já avaliadas pelo consumidor. Notas de 7 a 10 contam como promotor no cálculo da reputação."
     >
 
       <div className="flex flex-col gap-6 sm:flex-row">
@@ -35,17 +43,32 @@ export default function RatingHistogram({
 
             {buckets.map((bucket) => (
 
-              <div
+              <button
                 key={bucket.label}
-                className="flex flex-1 flex-col items-center justify-end"
+                onClick={() => onSelect?.(bucket.label)}
+                disabled={!onSelect}
+                title={
+                  onSelect
+                    ? active === bucket.label
+                      ? `Remover o filtro de nota ${bucket.label}`
+                      : `Filtrar a tela pelas notas ${bucket.label}`
+                    : undefined
+                }
+                className={`flex flex-1 flex-col items-center justify-end rounded-lg pt-1 transition-colors ${
+                  onSelect ? "hover:bg-violet-50/60" : ""
+                } ${
+                  active === bucket.label
+                    ? "bg-violet-50 ring-1 ring-inset ring-violet-200"
+                    : ""
+                }`}
               >
 
                 <span className="mb-1.5 text-sm font-semibold tabular-nums text-zinc-700">
                   {bucket.value}
                 </span>
 
-                <div
-                  className="w-full rounded-t-lg transition-[height] duration-500"
+                <span
+                  className="block w-full rounded-t-lg transition-[height] duration-500"
                   style={{
                     height: `${Math.max(
                       (bucket.value / max) * 100,
@@ -55,7 +78,7 @@ export default function RatingHistogram({
                   }}
                 />
 
-              </div>
+              </button>
 
             ))}
 

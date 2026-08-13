@@ -92,13 +92,13 @@ export const menuItems: MenuItem[] = [
     group: "Conhecimento",
   },
   {
-    title: "Base de Conhecimento",
+    title: "Respostas prontas",
     href: "/base-conhecimento",
     icon: LibraryBig,
     group: "Conhecimento",
   },
   {
-    title: "Gestão de Processos",
+    title: "Processos e SLA",
     href: "/processos",
     icon: Workflow,
     group: "Conhecimento",

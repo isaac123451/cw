@@ -1,13 +1,19 @@
 "use client";
 
+import Link from "next/link";
+
 import { useMemo, useState } from "react";
 
 import {
-  BookOpen,
-  Eye,
-  FileText,
+  BookOpenCheck,
+  Check,
+  Copy,
+  MessageSquareQuote,
+  Pencil,
+  Plus,
   Search,
   Sparkles,
+  Trash2,
 } from "lucide-react";
 
 import MainLayout from "@/components/layout/MainLayout";
@@ -15,53 +21,92 @@ import MainLayout from "@/components/layout/MainLayout";
 import PageHeading from "@/components/shared/PageHeading";
 import StatTile from "@/components/shared/StatTile";
 import SurfaceCard from "@/components/shared/SurfaceCard";
+import { ConfirmDelete } from "@/components/shared/Modal";
 
-import { mockArticles } from "@/lib/data/mockKnowledge";
+import MacroForm from "@/components/base-conhecimento/MacroForm";
 
-const typeTone: Record<string, string> = {
-  Procedimento: "bg-violet-50 text-violet-700 ring-violet-100",
-  Macro: "bg-sky-50 text-sky-700 ring-sky-100",
-  FAQ: "bg-amber-50 text-amber-700 ring-amber-100",
-  Checklist: "bg-emerald-50 text-emerald-700 ring-emerald-100",
-  Fluxograma: "bg-rose-50 text-rose-700 ring-rose-100",
-  Documentação: "bg-zinc-100 text-zinc-600 ring-zinc-200",
-};
+import {
+  MacroDraft,
+  useMacros,
+} from "@/lib/context/MacrosContext";
+
+import { Macro } from "@/lib/models/macro";
 
 export default function BaseConhecimentoPage() {
 
-  const [search, setSearch] = useState("");
-  const [type, setType] = useState("");
+  const {
+    macros,
+    createMacro,
+    updateMacro,
+    removeMacro,
+  } = useMacros();
 
-  const types = [
-    ...new Set(mockArticles.map((item) => item.type)),
-  ];
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("");
+
+  const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState<Macro>();
+  const [deleting, setDeleting] = useState<Macro>();
+
+  const [copied, setCopied] = useState<string>();
+
+  const categorias = useMemo(
+    () =>
+      [
+        ...new Set(macros.map((item) => item.category)),
+      ].sort(),
+    [macros]
+  );
 
   const visible = useMemo(() => {
 
-    const term = search.trim().toLowerCase();
+    const termo = search.trim().toLowerCase();
 
-    return mockArticles.filter((item) => {
+    return macros.filter((item) => {
 
-      if (type && item.type !== type) return false;
+      if (category && item.category !== category) {
+        return false;
+      }
 
-      if (!term) return true;
+      if (!termo) return true;
 
       return [
         item.title,
-        item.summary,
+        item.body,
         item.category,
         ...item.tags,
-      ].some((field) =>
-        field.toLowerCase().includes(term)
+      ].some((campo) =>
+        campo.toLowerCase().includes(termo)
       );
     });
 
-  }, [search, type]);
+  }, [macros, search, category]);
 
-  const totalViews = mockArticles.reduce(
-    (sum, item) => sum + item.views,
-    0
+  const maisUsada = useMemo(
+    () =>
+      [...macros].sort((a, b) => b.uses - a.uses)[0],
+    [macros]
   );
+
+  async function copiar(item: Macro) {
+
+    try {
+      await navigator.clipboard.writeText(item.body);
+      setCopied(item.id);
+      window.setTimeout(() => setCopied(undefined), 1600);
+    } catch {
+      // Área de transferência bloqueada — o texto segue visível na tela.
+    }
+  }
+
+  function salvar(data: MacroDraft | Macro) {
+
+    if ("id" in data) updateMacro(data);
+    else createMacro(data);
+
+    setFormOpen(false);
+    setEditing(undefined);
+  }
 
   return (
     <MainLayout>
@@ -70,48 +115,88 @@ export default function BaseConhecimentoPage() {
 
         <PageHeading
           eyebrow="Conhecimento"
-          title="Base de Conhecimento"
-          description="Procedimentos, macros, checklists e documentações da operação."
-        />
+          title="Respostas prontas"
+          description="Textos aprovados para responder no Reclame Aqui sem reescrever do zero."
+        >
+          <button
+            onClick={() => {
+              setEditing(undefined);
+              setFormOpen(true);
+            }}
+            className="flex items-center gap-2 rounded-xl bg-violet-700 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-violet-800"
+          >
+            <Plus size={16} />
+            Nova resposta
+          </button>
+        </PageHeading>
 
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
 
           <StatTile
-            label="Documentos"
-            description="Materiais publicados na base de conhecimento."
-            value={mockArticles.length}
-            hint="publicados"
-            icon={FileText}
+            label="Respostas prontas"
+            description="Textos aprovados disponíveis para a operação."
+            value={macros.length}
+            hint="disponíveis"
+            icon={MessageSquareQuote}
             tone="primary"
           />
 
           <StatTile
-            label="Tipos de conteúdo"
-            value={types.length}
-            hint="formatos disponíveis"
-            icon={BookOpen}
+            label="Categorias cobertas"
+            description="Tipos de caso que já têm resposta padrão."
+            value={categorias.length}
+            hint="com texto padrão"
+            icon={BookOpenCheck}
             tone="info"
           />
 
           <StatTile
-            label="Visualizações"
-            value={totalViews}
-            hint="acessos acumulados"
-            icon={Eye}
+            label="Inserções"
+            description="Quantas vezes as respostas foram usadas em um caso."
+            value={macros.reduce(
+              (sum, item) => sum + item.uses,
+              0
+            )}
+            hint="usos registrados"
+            icon={Copy}
             tone="success"
           />
 
           <StatTile
-            label="Mais acessado"
-            value={
-              [...mockArticles].sort(
-                (a, b) => b.views - a.views
-              )[0]?.views ?? 0
-            }
-            hint="roteiro de retenção"
+            label="Mais usada"
+            description="Resposta que a operação mais aproveita."
+            value={maisUsada?.uses ?? 0}
+            hint={maisUsada?.title ?? "—"}
             icon={Sparkles}
             tone="warning"
           />
+
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-zinc-200/80 bg-white px-5 py-4">
+
+          <MessageSquareQuote
+            size={17}
+            className="shrink-0 text-zinc-400"
+          />
+
+          <p className="flex-1 text-sm leading-relaxed text-zinc-600">
+            Estas respostas aparecem dentro da reclamação,
+            na aba{" "}
+            <strong className="font-medium text-zinc-800">
+              Avaliação RA
+            </strong>
+            , já com o nome do cliente e o protocolo
+            preenchidos. Os procedimentos completos ficam em
+            Documentação.
+          </p>
+
+          <Link
+            href="/documentacao"
+            className="shrink-0 rounded-xl border border-violet-200 px-3.5 py-2 text-sm font-medium text-violet-700 transition-colors hover:bg-violet-50"
+          >
+            Ver documentação
+          </Link>
 
         </div>
 
@@ -129,20 +214,22 @@ export default function BaseConhecimentoPage() {
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Pesquisar procedimento, macro, assunto..."
+                placeholder="Buscar por título, texto ou etiqueta..."
                 className="h-11 w-full rounded-xl border border-zinc-200 pl-10 pr-3 text-sm outline-none transition-colors focus:border-violet-400"
               />
 
             </div>
 
             <select
-              value={type}
-              onChange={(e) => setType(e.target.value)}
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
               className="h-11 rounded-xl border border-zinc-200 px-3 text-sm text-zinc-700 outline-none transition-colors focus:border-violet-400"
             >
-              <option value="">Todos os tipos</option>
+              <option value="">
+                Todas as categorias
+              </option>
 
-              {types.map((item) => (
+              {categorias.map((item) => (
                 <option key={item} value={item}>
                   {item}
                 </option>
@@ -153,79 +240,153 @@ export default function BaseConhecimentoPage() {
 
         </SurfaceCard>
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {visible.length === 0 ? (
 
-          {visible.map((item) => (
+          <SurfaceCard>
 
-            <article
-              key={item.id}
-              className="group flex flex-col rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-all hover:-translate-y-0.5 hover:border-violet-200 hover:shadow-[0_10px_24px_-14px_rgba(111,66,193,0.4)]"
-            >
+            <div className="py-12 text-center">
 
-              <div className="flex items-center justify-between gap-2">
+              <MessageSquareQuote
+                size={28}
+                className="mx-auto text-zinc-300"
+              />
 
-                <span
-                  className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ring-1 ring-inset ${
-                    typeTone[item.type] ??
-                    "bg-zinc-100 text-zinc-600 ring-zinc-200"
-                  }`}
-                >
-                  {item.type}
-                </span>
-
-                <span className="flex items-center gap-1 text-[11px] text-zinc-400">
-                  <Eye size={11} />
-                  {item.views}
-                </span>
-
-              </div>
-
-              <h3 className="mt-3 text-sm font-semibold leading-snug text-zinc-900">
-                {item.title}
-              </h3>
-
-              <p className="mt-2 flex-1 text-sm leading-relaxed text-zinc-500">
-                {item.summary}
+              <p className="mt-3 text-sm text-zinc-500">
+                {macros.length === 0
+                  ? "Nenhuma resposta pronta cadastrada."
+                  : "Nenhuma resposta encontrada para essa busca."}
               </p>
 
-              <div className="mt-3 flex flex-wrap gap-1.5">
+            </div>
 
-                {item.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded-md bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-600"
-                  >
-                    {tag}
-                  </span>
-                ))}
-
-              </div>
-
-              <div className="mt-4 flex items-center justify-between border-t border-zinc-100 pt-3 text-[11px] text-zinc-400">
-
-                <span>
-                  {item.owner} · v{item.version}
-                </span>
-
-                <span>{item.updatedAt}</span>
-
-              </div>
-
-            </article>
-
-          ))}
-
-        </div>
-
-        {visible.length === 0 && (
-          <SurfaceCard>
-            <p className="py-10 text-center text-sm text-zinc-400">
-              Nenhum documento encontrado para essa busca.
-            </p>
           </SurfaceCard>
+
+        ) : (
+
+          <div className="grid gap-4 md:grid-cols-2">
+
+            {visible.map((item) => (
+
+              <article
+                key={item.id}
+                className="group flex flex-col rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-all hover:border-violet-200"
+              >
+
+                <div className="flex items-start justify-between gap-3">
+
+                  <div className="min-w-0">
+
+                    <span className="rounded-full bg-violet-50 px-2.5 py-1 text-[10px] font-semibold text-violet-700 ring-1 ring-inset ring-violet-100">
+                      {item.category}
+                    </span>
+
+                    <h3 className="mt-2.5 text-sm font-semibold leading-snug text-zinc-900">
+                      {item.title}
+                    </h3>
+
+                  </div>
+
+                  <div className="flex shrink-0 gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+
+                    <button
+                      onClick={() => {
+                        setEditing(item);
+                        setFormOpen(true);
+                      }}
+                      title="Editar resposta"
+                      className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-violet-50 hover:text-violet-700"
+                    >
+                      <Pencil size={13} />
+                    </button>
+
+                    <button
+                      onClick={() => setDeleting(item)}
+                      title="Excluir resposta"
+                      className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-rose-50 hover:text-rose-600"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+
+                  </div>
+
+                </div>
+
+                <p className="mt-3 flex-1 whitespace-pre-line rounded-xl bg-zinc-50 p-3.5 text-xs leading-relaxed text-zinc-600">
+                  {item.body}
+                </p>
+
+                <div className="mt-3 flex flex-wrap gap-1.5">
+
+                  {item.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="rounded-md bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-600"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+
+                </div>
+
+                <div className="mt-4 flex items-center justify-between border-t border-zinc-100 pt-3">
+
+                  <span className="text-[11px] text-zinc-400">
+                    {item.owner} · usada {item.uses}x
+                  </span>
+
+                  <button
+                    onClick={() => copiar(item)}
+                    title="Copiar o texto para a área de transferência"
+                    className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                      copied === item.id
+                        ? "bg-emerald-50 text-emerald-700"
+                        : "text-violet-700 hover:bg-violet-50"
+                    }`}
+                  >
+                    {copied === item.id ? (
+                      <>
+                        <Check size={13} />
+                        Copiado
+                      </>
+                    ) : (
+                      <>
+                        <Copy size={13} />
+                        Copiar
+                      </>
+                    )}
+                  </button>
+
+                </div>
+
+              </article>
+
+            ))}
+
+          </div>
+
         )}
 
       </div>
+
+      <MacroForm
+        open={formOpen}
+        editing={editing}
+        onClose={() => {
+          setFormOpen(false);
+          setEditing(undefined);
+        }}
+        onSave={salvar}
+      />
+
+      <ConfirmDelete
+        open={Boolean(deleting)}
+        label={deleting?.title ?? ""}
+        onCancel={() => setDeleting(undefined)}
+        onConfirm={() => {
+          if (deleting) removeMacro(deleting.id);
+          setDeleting(undefined);
+        }}
+      />
 
     </MainLayout>
   );

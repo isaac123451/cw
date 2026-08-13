@@ -1,8 +1,13 @@
 "use client";
 
+import { BadgeAlert, BadgeCheck } from "lucide-react";
+
 import { Case } from "@/lib/models/case";
 
+import { REFERENCE_DATE } from "@/lib/services/reputation.service";
+
 import SurfaceCard from "@/components/shared/SurfaceCard";
+import MacroPicker from "@/components/reclame-aqui/detail/MacroPicker";
 
 interface Props {
   data: Case;
@@ -54,6 +59,20 @@ export default function EvaluationTab({
       <SurfaceCard
         title="Resposta pública"
         description="Texto publicado no Reclame Aqui para esta reclamação."
+        action={
+          <MacroPicker
+            data={data}
+            onInsert={(text) =>
+              onChange({
+                // Acrescenta ao que já existe em vez de sobrescrever.
+                publicResponse:
+                  (data.publicResponse ?? "").trim() === ""
+                    ? text
+                    : `${data.publicResponse}\n\n${text}`,
+              })
+            }
+          />
+        }
       >
 
         <textarea
@@ -87,7 +106,12 @@ export default function EvaluationTab({
             onSelect={(next) =>
               onChange({
                 resolved: next,
-                status: next ? "Resolvido" : "Em Atendimento",
+                // "Não resolvido" é o estado real do portal — "Em
+                // Atendimento" não existe no fluxo e deixava o caso sem
+                // coluna no Kanban.
+                status: next
+                  ? "Resolvido"
+                  : "Não resolvido",
                 sla: next ? "Concluído" : data.sla,
               })
             }
@@ -128,6 +152,10 @@ export default function EvaluationTab({
                     evaluated: true,
                     score,
                     wouldDoBusiness: score >= 7,
+                    // Ao marcar a nota sem data registrada, assume hoje —
+                    // pode ser corrigido no campo abaixo.
+                    evaluatedAt:
+                      data.evaluatedAt ?? REFERENCE_DATE,
                   })
                 }
                 className={`h-10 w-10 rounded-xl text-sm font-medium tabular-nums transition-colors ring-1 ring-inset ${
@@ -146,6 +174,36 @@ export default function EvaluationTab({
           <div className="mt-5">
 
             <label className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+              Data da avaliação
+            </label>
+
+            <input
+              type="date"
+              value={data.evaluatedAt ?? ""}
+              disabled={!data.evaluated}
+              onChange={(e) =>
+                onChange({
+                  evaluatedAt: e.target.value || undefined,
+                })
+              }
+              className={`mt-1.5 h-11 w-full rounded-xl border border-zinc-200 px-3 text-sm outline-none transition-colors focus:border-violet-400 ${
+                data.evaluated
+                  ? ""
+                  : "cursor-not-allowed bg-zinc-50 text-zinc-400"
+              }`}
+            />
+
+            <p className="mt-1.5 text-xs leading-relaxed text-zinc-400">
+              {data.evaluated
+                ? "O portal registra apenas o dia da avaliação, sem horário."
+                : "Disponível depois que o consumidor avaliar."}
+            </p>
+
+          </div>
+
+          <div className="mt-5">
+
+            <label className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
               Voltaria a fazer negócio?
             </label>
 
@@ -157,6 +215,49 @@ export default function EvaluationTab({
             />
 
           </div>
+
+          {data.evaluated && (
+
+            <div className="mt-5 border-t border-zinc-100 pt-4">
+
+              <button
+                onClick={() =>
+                  onChange({
+                    scoreDisregarded:
+                      !data.scoreDisregarded,
+                  })
+                }
+                title="Tira esta avaliação do cálculo da nota, como o Reclame Aqui faz com as que invalida."
+                className={`flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-medium transition-colors ring-1 ring-inset ${data.scoreDisregarded ? "bg-amber-50 text-amber-800 ring-amber-200 hover:bg-amber-100" : "text-zinc-600 ring-zinc-200 hover:bg-zinc-50"}`}
+              >
+
+                {data.scoreDisregarded ? (
+                  <BadgeAlert size={15} />
+                ) : (
+                  <BadgeCheck size={15} />
+                )}
+
+                {data.scoreDisregarded
+                  ? "Nota desconsiderada"
+                  : "Desconsiderar nota"}
+
+              </button>
+
+              {data.scoreDisregarded && (
+                <p className="mt-2.5 rounded-xl bg-amber-50 px-3 py-2.5 text-xs leading-relaxed text-amber-800 ring-1 ring-inset ring-amber-100">
+                  Avaliação desconsiderada:{" "}
+                  <strong className="font-semibold">
+                    fica fora do cálculo da nota
+                  </strong>
+                  , como o Reclame Aqui faz com as que
+                  invalida. O caso continua na lista, com a
+                  nota registrada.
+                </p>
+              )}
+
+            </div>
+
+          )}
 
           <p className="mt-4 border-t border-zinc-100 pt-3 text-xs leading-relaxed text-zinc-400">
             Notas de 7 a 10 contam como promotor no cálculo da

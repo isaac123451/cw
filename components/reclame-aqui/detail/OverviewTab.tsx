@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Mail, Phone, Send, User } from "lucide-react";
 
 import { Case } from "@/lib/models/case";
+
+import { loadCaseDescription } from "@/lib/actions/cases";
 
 import SurfaceCard from "@/components/shared/SurfaceCard";
 
@@ -29,6 +31,53 @@ export default function OverviewTab({
   >([]);
 
   const [draft, setDraft] = useState("");
+
+  const [carregandoRelato, setCarregandoRelato] =
+    useState(false);
+
+  /** Evita repetir a busca a cada re-render do mesmo caso. */
+  const buscado = useRef<string | null>(null);
+
+  /**
+   * O relato não vem na listagem — é metade do payload e só esta tela
+   * o mostra. Busca ao abrir o caso, se ainda não veio.
+   */
+  useEffect(() => {
+
+    if (
+      data.description ||
+      buscado.current === data.protocol
+    ) {
+      return;
+    }
+
+    buscado.current = data.protocol;
+
+    let ativo = true;
+
+    setCarregandoRelato(true);
+
+    loadCaseDescription(data.protocol)
+      .then((texto) => {
+        if (ativo && texto) {
+          onChange({ description: texto });
+        }
+      })
+      .catch((error: unknown) => {
+        console.error(
+          "[caso] relato não carregou",
+          error
+        );
+      })
+      .finally(() => {
+        if (ativo) setCarregandoRelato(false);
+      });
+
+    return () => {
+      ativo = false;
+    };
+
+  }, [data.protocol, data.description, onChange]);
 
   function publish() {
     if (draft.trim() === "") return;
@@ -139,7 +188,12 @@ export default function OverviewTab({
                 onChange({ description: e.target.value })
               }
               rows={5}
-              className="mt-1.5 w-full resize-y rounded-xl border border-zinc-200 p-3 text-sm leading-relaxed outline-none transition-colors focus:border-violet-400"
+              placeholder={
+                carregandoRelato
+                  ? "Carregando o relato..."
+                  : undefined
+              }
+              className="mt-1.5 w-full resize-y rounded-xl border border-zinc-200 p-3 text-sm leading-relaxed outline-none transition-colors placeholder:italic placeholder:text-zinc-400 focus:border-violet-400"
             />
           </div>
 

@@ -18,6 +18,7 @@ import SurfaceCard from "@/components/shared/SurfaceCard";
 import Tooltip from "@/components/shared/Tooltip";
 
 import ModuleNav from "@/components/reclame-aqui/ModuleNav";
+import DisregardedNotice from "@/components/reclame-aqui/DisregardedNotice";
 import PeriodPicker from "@/components/reclame-aqui/calculadora/PeriodPicker";
 import ScoreScale from "@/components/reclame-aqui/calculadora/ScoreScale";
 
@@ -47,11 +48,6 @@ const periodLabels: Record<string, string> = {
 
 type Kind = "simplificada" | "avancada";
 
-type AdvancedMode =
-  | "adicionar"
-  | "remover"
-  | "atuais";
-
 const numberField =
   "h-11 w-full rounded-xl border border-zinc-200 px-3 text-sm tabular-nums outline-none transition-colors focus:border-violet-400";
 
@@ -64,9 +60,6 @@ export default function CalculadoraPage() {
 
   const [kind, setKind] = useState<Kind>("simplificada");
 
-  const [advanced, setAdvanced] =
-    useState<AdvancedMode>("adicionar");
-
   const [input, setInput] =
     useState<SimulationInput>(emptySimulation);
 
@@ -77,14 +70,17 @@ export default function CalculadoraPage() {
     [period, mode]
   );
 
-  const base = useMemo(
+  const doPeriodo = useMemo(
     () =>
-      getRawCounts(
-        cases.filter((item) =>
-          inRange(item, range.start, range.end)
-        )
+      cases.filter((item) =>
+        inRange(item, range.start, range.end)
       ),
     [cases, range]
+  );
+
+  const base = useMemo(
+    () => getRawCounts(doPeriodo),
+    [doPeriodo]
   );
 
   const current = useMemo(
@@ -92,15 +88,18 @@ export default function CalculadoraPage() {
     [base]
   );
 
-  const simulated = useMemo(() => {
-
-    if (kind === "avancada" && advanced === "atuais") {
-      return current;
-    }
-
-    return scoreFrom(simulate(base, input));
-
-  }, [base, input, kind, advanced, current]);
+  /**
+   * O cenário sempre parte da base real do período.
+   *
+   * Antes havia um modo "utilizar dados atuais" que escondia todos os
+   * campos — dava para ver a nota atual **ou** montar um cenário, nunca
+   * os dois. Agora os dados atuais são o ponto de partida e o que se
+   * digita entra por cima; com tudo zerado, o resultado é a nota atual.
+   */
+  const simulated = useMemo(
+    () => scoreFrom(simulate(base, input)),
+    [base, input]
+  );
 
   /** RA1000 aparece como objetivo, embora não seja faixa de nota. */
   const objetivos = useMemo(
@@ -177,6 +176,8 @@ export default function CalculadoraPage() {
           onPeriod={setPeriod}
           onMode={setMode}
         />
+
+        <DisregardedNotice cases={doPeriodo} />
 
         <div className="grid gap-5 xl:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
 
@@ -256,110 +257,43 @@ export default function CalculadoraPage() {
 
               <>
                 <SurfaceCard
-                  title="1. Tipo de simulação"
-                  description="Como o cenário será montado."
+                  title="1. Ponto de partida"
+                  description="O cenário começa nos dados reais do período. Com tudo zerado, o resultado é a nota atual."
                 >
 
-                  <div className="space-y-2">
+                  <dl className="grid grid-cols-3 gap-3">
 
-                    {(
-                      [
-                        [
-                          "adicionar",
-                          "Adicionar avaliações",
-                          "Projeta a nota com reclamações e avaliações a mais.",
-                        ],
-                        [
-                          "remover",
-                          "Remover reclamações",
-                          "Simula a saída de reclamações moderadas ou excluídas.",
-                        ],
-                        [
-                          "atuais",
-                          "Utilizar dados atuais",
-                          "Mostra a nota do período sem nenhuma projeção.",
-                        ],
-                      ] as [AdvancedMode, string, string][]
-                    ).map(([id, label, hint]) => (
+                    {[
+                      ["Reclamações", base.received],
+                      ["Respondidas", base.answered],
+                      ["Avaliadas", base.evaluated],
+                    ].map(([label, value]) => (
 
-                      <button
-                        key={id}
-                        onClick={() => setAdvanced(id)}
-                        className={`flex w-full items-start gap-3 rounded-xl p-3 text-left transition-colors ring-1 ring-inset ${
-                          advanced === id
-                            ? "bg-violet-50/60 ring-violet-300"
-                            : "ring-zinc-200 hover:bg-zinc-50"
-                        }`}
+                      <div
+                        key={label}
+                        className="rounded-xl bg-zinc-50 px-3 py-2.5"
                       >
 
-                        <span
-                          className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 ${
-                            advanced === id
-                              ? "border-violet-700"
-                              : "border-zinc-300"
-                          }`}
-                        >
-                          {advanced === id && (
-                            <span className="h-1.5 w-1.5 rounded-full bg-violet-700" />
-                          )}
-                        </span>
+                        <dt className="text-[10px] font-semibold uppercase tracking-wide text-zinc-400">
+                          {label}
+                        </dt>
 
-                        <span>
+                        <dd className="mt-0.5 text-lg font-semibold tabular-nums text-zinc-900">
+                          {value}
+                        </dd>
 
-                          <span className="block text-sm font-medium text-zinc-800">
-                            {label}
-                          </span>
-
-                          <span className="mt-0.5 block text-xs text-zinc-500">
-                            {hint}
-                          </span>
-
-                        </span>
-
-                      </button>
+                      </div>
 
                     ))}
 
-                  </div>
+                  </dl>
 
                 </SurfaceCard>
 
-                {advanced === "remover" && (
-
-                  <SurfaceCard
-                    title="2. Reclamações removidas"
-                    description="Quantidade que sairia da base do período."
-                  >
-
-                    <input
-                      type="number"
-                      min={0}
-                      max={base.received}
-                      value={input.removeComplaints}
-                      onChange={(e) =>
-                        setField(
-                          "removeComplaints",
-                          Number(e.target.value)
-                        )
-                      }
-                      className={numberField}
-                    />
-
-                    <p className="mt-2 text-xs text-zinc-400">
-                      Base atual: {base.received} reclamações.
-                    </p>
-
-                  </SurfaceCard>
-
-                )}
-
-                {advanced === "adicionar" && (
-
-                  <>
-                    <SurfaceCard
-                      title="2. Reclamações a mais"
-                      description="Distribua entre respondidas e não respondidas."
-                    >
+                <SurfaceCard
+                  title="2. Reclamações a mais"
+                  description="Distribua entre respondidas e não respondidas."
+                >
 
                       <div className="grid grid-cols-2 gap-3">
 
@@ -553,9 +487,31 @@ export default function CalculadoraPage() {
                       </div>
 
                     </SurfaceCard>
-                  </>
 
-                )}
+                <SurfaceCard
+                  title="5. Reclamações removidas"
+                  description="Moderadas ou excluídas pelo portal — saem da base do período."
+                >
+
+                  <input
+                    type="number"
+                    min={0}
+                    max={base.received}
+                    value={input.removeComplaints}
+                    onChange={(e) =>
+                      setField(
+                        "removeComplaints",
+                        Number(e.target.value)
+                      )
+                    }
+                    className={numberField}
+                  />
+
+                  <p className="mt-2 text-xs text-zinc-400">
+                    Base do período: {base.received} reclamações.
+                  </p>
+
+                </SurfaceCard>
 
                 <button
                   onClick={() => setInput(emptySimulation)}

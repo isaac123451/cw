@@ -1,10 +1,17 @@
 import { ReactNode } from "react";
 
+import { Info } from "lucide-react";
+
 import { cn } from "@/lib/utils";
 
 interface Props {
   title?: string;
   description?: string;
+  /**
+   * Explicação mais longa, mostrada ao passar o mouse no ícone ao lado
+   * do título — para dizer como o número é apurado sem poluir a tela.
+   */
+  hint?: string;
   action?: ReactNode;
   children: ReactNode;
   className?: string;
@@ -18,6 +25,7 @@ interface Props {
 export default function SurfaceCard({
   title,
   description,
+  hint,
   action,
   children,
   className,
@@ -38,9 +46,22 @@ export default function SurfaceCard({
           <div className="min-w-0">
 
             {title && (
-              <h2 className="text-base font-semibold tracking-tight text-zinc-900">
+
+              <h2 className="flex items-center gap-1.5 text-base font-semibold tracking-tight text-zinc-900">
+
                 {title}
+
+                {hint && (
+                  <span
+                    title={hint}
+                    className="cursor-help text-zinc-300 transition-colors hover:text-violet-600"
+                  >
+                    <Info size={14} />
+                  </span>
+                )}
+
               </h2>
+
             )}
 
             {description && (

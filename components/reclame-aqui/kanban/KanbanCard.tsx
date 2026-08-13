@@ -91,10 +91,14 @@ export default function KanbanCard({
 
       <div className="mt-2 flex items-center gap-3 text-[11px] text-zinc-400">
 
-        <span className="flex items-center gap-1">
-          <MapPin size={11} />
-          {item.city}/{item.state}
-        </span>
+        {(item.city || item.state) && (
+          <span className="flex items-center gap-1">
+            <MapPin size={11} />
+            {[item.city, item.state]
+              .filter(Boolean)
+              .join("/")}
+          </span>
+        )}
 
         <span className="flex items-center gap-1">
           <Clock3 size={11} />

@@ -1,440 +1,397 @@
 "use client";
 
-import { useMemo, useState, type ComponentType } from "react";
+import { useMemo, useState } from "react";
 
-import {
-  X,
-  Save,
-  Building2,
-  User,
-  Mail,
-  Phone,
-  MapPin,
-  Tag,
-  FileText,
-  AlertTriangle,
-} from "lucide-react";
+import { Save } from "lucide-react";
+
+import Modal, {
+  Field,
+  GhostButton,
+  PrimaryButton,
+  inputClass,
+  textareaClass,
+} from "@/components/shared/Modal";
 
 import { Case } from "@/lib/models/case";
+
 import { useCases } from "@/lib/context/CaseContext";
+import { useSettings } from "@/lib/context/SettingsContext";
+import { useWorkflow } from "@/lib/context/WorkflowContext";
+import { useTeams } from "@/lib/context/TeamsContext";
+import { useSession } from "@/lib/context/SessionContext";
+
+import { REFERENCE_DATE } from "@/lib/services/reputation.service";
 
 interface Props {
   open: boolean;
   onClose: () => void;
 }
 
-const priorities: Case["priority"][] = [
+const PRIORIDADES: Case["priority"][] = [
   "Crítica",
   "Alta",
   "Média",
   "Baixa",
 ];
 
-const statusOptions = [
-  "Novo",
-  "Em Atendimento",
-  "Aguardando Cliente",
-  "Resolvido",
-];
+/** Lista ordenada, sem repetição e sem vazios. */
+function uniao(...listas: (string | undefined)[][]) {
+  const set = new Set<string>();
 
+  for (const lista of listas) {
+    for (const item of lista) {
+      const valor = (item ?? "").trim();
+      if (valor) set.add(valor);
+    }
+  }
+
+  return [...set].sort((a, b) => a.localeCompare(b));
+}
+
+/**
+ * Cadastro manual de reclamação.
+ *
+ * As opções saem do que a operação já usa — cadastro de Configurar
+ * fluxo **unido ao que existe na base** —, e não de listas fixas. A
+ * versão anterior oferecia status inventados ("Em Atendimento",
+ * "Aguardando Cliente") que não existem no fluxo real: o caso nascia
+ * fora de qualquer coluna do Kanban e sumia do quadro.
+ */
 export default function CreateCaseModal({
   open,
   onClose,
 }: Props) {
 
-  const { cases, createCase } =
-    useCases();
+  const { cases, createCase } = useCases();
+  const { categories, subcategories } = useSettings();
+  const { workflow } = useWorkflow();
+  const { people } = useTeams();
+  const session = useSession();
 
+  const etapas = useMemo(
+    () =>
+      workflow
+        .filter((item) => item.active)
+        .sort((a, b) => a.order - b.order),
+    [workflow]
+  );
+
+  const opcoesCategoria = useMemo(
+    () =>
+      uniao(
+        categories
+          .filter((item) => item.active)
+          .map((item) => item.name),
+        cases.map((item) => item.category)
+      ),
+    [categories, cases]
+  );
+
+  const opcoesResponsavel = useMemo(
+    () =>
+      uniao(
+        people.map((item) => item.name),
+        cases.map((item) => item.owner)
+      ),
+    [people, cases]
+  );
+
+  /**
+   * Protocolo próprio para o que nasce aqui.
+   *
+   * Os importados usam o id do HugMe (`RA-101491955`); continuar aquela
+   * sequência arriscaria colidir com um id que o portal ainda vai emitir.
+   */
   const protocol = useMemo(() => {
 
-    const year = new Date().getFullYear();
+    const maior = cases.reduce((max, item) => {
 
-    const prefix = `RA-${year}`;
+      if (!item.protocol.startsWith("MAN-")) return max;
 
-    // Deriva do maior sequencial já usado no ano, e não da quantidade de casos:
-    // excluir uma reclamação não pode reciclar um protocolo já emitido.
-    const lastNumber = cases.reduce((max, item) => {
+      const seq = Number(item.protocol.slice(4));
 
-      if (!item.protocol.startsWith(prefix)) return max;
-
-      const sequence = Number(
-        item.protocol.slice(prefix.length)
-      );
-
-      return Number.isNaN(sequence)
-        ? max
-        : Math.max(max, sequence);
+      return Number.isNaN(seq) ? max : Math.max(max, seq);
 
     }, 0);
 
-    return `${prefix}${String(
-      lastNumber + 1
-    ).padStart(4, "0")}`;
+    return `MAN-${String(maior + 1).padStart(4, "0")}`;
 
   }, [cases]);
 
-  const [form, setForm] =
-    useState<Case>({
+  const [title, setTitle] = useState("");
+  const [customer, setCustomer] = useState("");
+  const [company, setCompany] = useState("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
+  const [category, setCategory] = useState("");
+  const [subcategory, setSubcategory] = useState("");
+  const [priority, setPriority] =
+    useState<Case["priority"]>("Média");
+  const [status, setStatus] = useState("");
+  const [owner, setOwner] = useState(
+    session?.name ?? ""
+  );
+  const [createdAt, setCreatedAt] =
+    useState(REFERENCE_DATE);
+  const [description, setDescription] = useState("");
+
+  const subsDaCategoria = useMemo(
+    () =>
+      uniao(
+        subcategories
+          .filter(
+            (item) =>
+              item.active && item.category === category
+          )
+          .map((item) => item.name),
+        cases
+          .filter((item) => item.category === category)
+          .map((item) => item.subcategory)
+      ),
+    [subcategories, cases, category]
+  );
+
+  const valido =
+    title.trim() !== "" &&
+    customer.trim() !== "" &&
+    createdAt !== "";
+
+  function salvar() {
+    if (!valido) return;
+
+    createCase({
       id: crypto.randomUUID(),
-
       protocol,
-
-      company: "",
-
-      cnpj: "",
-
-      customer: "",
-
-      email: "",
-
-      phone: "",
-
-      city: "",
-
-      state: "",
-
+      company: company.trim() || customer.trim(),
+      customer: customer.trim(),
+      city: city.trim() || undefined,
+      state: state.trim() || undefined,
       source: "Reclame Aqui",
-
-      category: "",
-
-      subcategory: "",
-
-      priority: "Média",
-
-      status: "Novo",
-
-      owner: "",
-
-      title: "",
-
-      description: "",
-
+      category: category || "Outros",
+      subcategory: subcategory || undefined,
+      priority,
+      status: status || etapas[0]?.name || "Novo",
+      owner: owner || undefined,
+      title: title.trim(),
+      description: description.trim(),
+      // Nasce sem resposta e sem avaliação: nota só existe depois que o
+      // consumidor avalia no portal. Gravar 0 aqui contaria como uma
+      // avaliação nota zero e derrubaria a reputação.
       publicResponse: "",
-
-      score: 0,
-
+      evaluated: false,
       resolved: false,
-
       wouldDoBusiness: false,
-
       responseTime: "-",
-
       solutionTime: "-",
-
-      sla: "2h",
-
-      createdAt: new Date()
-        .toISOString()
-        .substring(0, 10),
-
-      updatedAt: new Date()
-        .toISOString()
-        .substring(0, 10),
-
-      lastInteraction: "Agora",
-
+      sla: "48h",
+      createdAt,
+      updatedAt: createdAt,
       tags: [],
     });
 
-  function update<K extends keyof Case>(
-    field: K,
-    value: Case[K]
-  ) {
-
-    setForm((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-
-  }
-
-  function save() {
-
-    createCase({
-      ...form,
-      protocol,
-    });
-
     onClose();
-
   }
 
   if (!open) return null;
 
   return (
-    <>
-      <div
-        onClick={onClose}
-        className="fixed inset-0 z-40 bg-black/40"
-      />
+    <Modal
+      open
+      size="wide"
+      title="Nova reclamação"
+      description={`Cadastro manual. Protocolo ${protocol}.`}
+      onClose={onClose}
+      footer={
+        <>
+          <GhostButton onClick={onClose}>
+            Cancelar
+          </GhostButton>
 
-      <aside
-        className="fixed right-0 top-0 z-50 flex h-screen w-[850px] flex-col bg-white shadow-2xl"
-      >
-
-        <header className="flex items-center justify-between border-b border-zinc-200 px-8 py-6">
-
-          <div>
-
-            <p className="text-xs uppercase tracking-wide text-zinc-500">
-
-              Nova Reclamação
-
-            </p>
-
-            <h2 className="mt-1 text-2xl font-bold">
-
-              Criar Reclamação
-
-            </h2>
-
-          </div>
-
-          <button
-            onClick={onClose}
-            className="rounded-xl p-2 hover:bg-zinc-100"
+          <PrimaryButton
+            onClick={salvar}
+            disabled={!valido}
           >
+            <Save size={16} />
+            Salvar reclamação
+          </PrimaryButton>
+        </>
+      }
+    >
 
-            <X size={20} />
+      <div className="space-y-4">
 
-          </button>
+        <Field label="Título da reclamação">
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Resumo do que o consumidor relatou"
+            className={inputClass}
+          />
+        </Field>
 
-        </header>
+        <div className="grid gap-4 sm:grid-cols-2">
 
-        <div className="flex-1 overflow-y-auto px-8 py-6">
-
-          <div className="grid grid-cols-2 gap-5">
-
-            <Input
-              icon={Building2}
-              label="Empresa"
-              value={form.company}
-              onChange={(v) =>
-                update("company", v)
-              }
+          <Field label="Consumidor">
+            <input
+              value={customer}
+              onChange={(e) => setCustomer(e.target.value)}
+              placeholder="Quem registrou a reclamação"
+              className={inputClass}
             />
+          </Field>
 
-            <Input
-              icon={User}
-              label="Consumidor"
-              value={form.customer}
-              onChange={(v) =>
-                update("customer", v)
-              }
+          <Field
+            label="Estabelecimento"
+            hint="Em branco, repete o consumidor — como nos casos importados."
+          >
+            <input
+              value={company}
+              onChange={(e) => setCompany(e.target.value)}
+              className={inputClass}
             />
+          </Field>
 
-            <Input
-              icon={Mail}
-              label="Email"
-              value={form.email ?? ""}
-              onChange={(v) =>
-                update("email", v)
-              }
+          <Field label="Cidade">
+            <input
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              className={inputClass}
             />
+          </Field>
 
-            <Input
-              icon={Phone}
-              label="Telefone"
-              value={form.phone ?? ""}
-              onChange={(v) =>
-                update("phone", v)
-              }
+          <Field label="Estado">
+            <input
+              value={state}
+              onChange={(e) => setState(e.target.value)}
+              maxLength={2}
+              placeholder="UF"
+              className={inputClass}
             />
+          </Field>
 
-            <Input
-              icon={MapPin}
-              label="Cidade"
-              value={form.city ?? ""}
-              onChange={(v) =>
-                update("city", v)
-              }
-            />
+          <Field
+            label="Categoria"
+            hint="Do cadastro e das que já existem na base."
+          >
+            <select
+              value={category}
+              onChange={(e) => {
+                setCategory(e.target.value);
+                setSubcategory("");
+              }}
+              className={inputClass}
+            >
+              <option value="">Não classificado</option>
 
-            <Input
-              label="Estado"
-              value={form.state ?? ""}
-              onChange={(v) =>
-                update("state", v)
-              }
-            />
+              {opcoesCategoria.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+          </Field>
 
-            <Input
-              icon={Tag}
-              label="Categoria"
-              value={form.category}
-              onChange={(v) =>
-                update("category", v)
-              }
-            />
-
-            <Input
-              label="Subcategoria"
-              value={form.subcategory ?? ""}
-              onChange={(v) =>
-                update("subcategory", v)
-              }
-            />
-
-            <Input
-              icon={FileText}
-              label="Título"
-              value={form.title}
-              onChange={(v) =>
-                update("title", v)
-              }
-            />
-
-            <Input
-              label="Responsável"
-              value={form.owner ?? ""}
-              onChange={(v) =>
-                update("owner", v)
-              }
-            />
-
-            <div>
-
-              <label className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-zinc-600">
-
-                <AlertTriangle size={14} />
-
-                Prioridade
-
-              </label>
-
-              <select
-                value={form.priority}
-                onChange={(e) =>
-                  update(
-                    "priority",
-                    e.target
-                      .value as Case["priority"]
-                  )
-                }
-                className="h-10 w-full rounded-lg border border-zinc-200 px-3 text-sm outline-none focus:border-zinc-400"
-              >
-
-                {priorities.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
-
-              </select>
-
-            </div>
-
-            <div>
-
-              <label className="mb-1.5 block text-xs font-medium text-zinc-600">
-
-                Status
-
-              </label>
-
-              <select
-                value={form.status}
-                onChange={(e) =>
-                  update("status", e.target.value)
-                }
-                className="h-10 w-full rounded-lg border border-zinc-200 px-3 text-sm outline-none focus:border-zinc-400"
-              >
-
-                {statusOptions.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
-
-              </select>
-
-            </div>
-
-          </div>
-
-          <div className="mt-5">
-
-            <label className="mb-1.5 block text-xs font-medium text-zinc-600">
-
-              Descrição
-
-            </label>
-
-            <textarea
-              value={form.description}
+          <Field label="Subcategoria">
+            <select
+              value={subcategory}
               onChange={(e) =>
-                update(
-                  "description",
-                  e.target.value
+                setSubcategory(e.target.value)
+              }
+              disabled={subsDaCategoria.length === 0}
+              className={`${inputClass} disabled:bg-zinc-50 disabled:text-zinc-400`}
+            >
+              <option value="">
+                {subsDaCategoria.length === 0
+                  ? "Escolha uma categoria primeiro"
+                  : "Sem subcategoria"}
+              </option>
+
+              {subsDaCategoria.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+          </Field>
+
+          <Field label="Prioridade">
+            <select
+              value={priority}
+              onChange={(e) =>
+                setPriority(
+                  e.target.value as Case["priority"]
                 )
               }
-              rows={5}
-              className="w-full resize-none rounded-lg border border-zinc-200 p-3 text-sm outline-none focus:border-zinc-400"
-              placeholder="Descreva a reclamação..."
-            />
+              className={inputClass}
+            >
+              {PRIORIDADES.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+          </Field>
 
-          </div>
+          <Field
+            label="Status"
+            hint="Etapas do fluxo configurado."
+          >
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              className={inputClass}
+            >
+              {etapas.map((item) => (
+                <option key={item.id} value={item.name}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+
+          <Field label="Responsável">
+            <select
+              value={owner}
+              onChange={(e) => setOwner(e.target.value)}
+              className={inputClass}
+            >
+              <option value="">Sem responsável</option>
+
+              {opcoesResponsavel.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+          </Field>
+
+          <Field label="Data da reclamação">
+            <input
+              type="date"
+              value={createdAt}
+              onChange={(e) =>
+                setCreatedAt(e.target.value)
+              }
+              className={inputClass}
+            />
+          </Field>
 
         </div>
 
-        <footer className="flex items-center justify-end gap-3 border-t border-zinc-200 px-8 py-5">
+        <Field label="Relato do consumidor">
+          <textarea
+            value={description}
+            onChange={(e) =>
+              setDescription(e.target.value)
+            }
+            rows={5}
+            placeholder="Cole aqui o texto da reclamação."
+            className={textareaClass}
+          />
+        </Field>
 
-          <button
-            onClick={onClose}
-            className="rounded-xl px-4 py-2.5 text-sm font-medium text-zinc-600 hover:bg-zinc-100"
-          >
+      </div>
 
-            Cancelar
-
-          </button>
-
-          <button
-            onClick={save}
-            className="flex items-center gap-2 rounded-xl bg-zinc-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-zinc-800"
-          >
-
-            <Save size={16} />
-
-            Salvar Reclamação
-
-          </button>
-
-        </footer>
-
-      </aside>
-    </>
-  );
-}
-
-function Input({
-  icon: Icon,
-  label,
-  value,
-  onChange,
-}: {
-  icon?: ComponentType<{ size?: number }>;
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-}) {
-
-  return (
-    <div>
-
-      <label className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-zinc-600">
-
-        {Icon && <Icon size={14} />}
-
-        {label}
-
-      </label>
-
-      <input
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="h-10 w-full rounded-lg border border-zinc-200 px-3 text-sm outline-none focus:border-zinc-400"
-      />
-
-    </div>
+    </Modal>
   );
 }

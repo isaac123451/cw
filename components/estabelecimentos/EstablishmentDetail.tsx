@@ -13,6 +13,7 @@ import {
   MessagesSquare,
   Pencil,
   Phone,
+  Plus,
   Search,
   Star,
   Trash2,
@@ -26,6 +27,7 @@ import SurfaceCard from "@/components/shared/SurfaceCard";
 import { ConfirmDelete } from "@/components/shared/Modal";
 
 import EstablishmentForm from "@/components/estabelecimentos/EstablishmentForm";
+import ImpactForm from "@/components/impacto/ImpactForm";
 
 import { useCases } from "@/lib/context/CaseContext";
 import { useClients } from "@/lib/context/ClientsContext";
@@ -70,7 +72,7 @@ export default function EstablishmentDetail({
 
   const { cases, updateCase } = useCases();
   const { clients } = useClients();
-  const { records } = useImpact();
+  const { records, createRecord } = useImpact();
 
   const {
     findEstablishment,
@@ -81,6 +83,7 @@ export default function EstablishmentDetail({
   const [formOpen, setFormOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [caseSearch, setCaseSearch] = useState("");
+  const [impactOpen, setImpactOpen] = useState(false);
 
   const establishment = findEstablishment(slug);
 
@@ -582,12 +585,14 @@ export default function EstablishmentDetail({
             title="Impacto no negócio"
             description="Resultado financeiro registrado nesta conta."
             action={
-              <Link
-                href="/impacto"
-                className="shrink-0 rounded-xl border border-violet-200 px-3 py-1.5 text-xs font-medium text-violet-700 transition-colors hover:bg-violet-50"
+              <button
+                onClick={() => setImpactOpen(true)}
+                title="Registrar um resultado financeiro já vinculado a este estabelecimento"
+                className="flex shrink-0 items-center gap-1.5 rounded-xl border border-violet-200 px-3 py-1.5 text-xs font-medium text-violet-700 transition-colors hover:bg-violet-50"
               >
+                <Plus size={13} />
                 Registrar impacto
-              </Link>
+              </button>
             }
           >
 
@@ -653,6 +658,16 @@ export default function EstablishmentDetail({
         editing={establishment}
         onClose={() => setFormOpen(false)}
         onSave={salvar}
+      />
+
+      <ImpactForm
+        open={impactOpen}
+        presetEstablishmentId={establishment.id}
+        onClose={() => setImpactOpen(false)}
+        onSave={(item) => {
+          if (!("id" in item)) createRecord(item);
+          setImpactOpen(false);
+        }}
       />
 
       <ConfirmDelete

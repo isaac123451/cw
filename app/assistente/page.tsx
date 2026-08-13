@@ -1,16 +1,24 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import Link from "next/link";
 
 import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+
+import {
+  ArrowRight,
   Bot,
-  FileSearch,
-  Gauge,
-  LucideIcon,
+  Database,
+  Eraser,
+  Loader2,
   Send,
   Sparkles,
-  Tags,
-  Wand2,
+  TriangleAlert,
+  UserRound,
 } from "lucide-react";
 
 import MainLayout from "@/components/layout/MainLayout";
@@ -19,100 +27,230 @@ import PageHeading from "@/components/shared/PageHeading";
 import SurfaceCard from "@/components/shared/SurfaceCard";
 
 import { useCases } from "@/lib/context/CaseContext";
-import { getCriticalCases } from "@/lib/services/case.service";
+import { useAgenda } from "@/lib/context/AgendaContext";
+import { useImpact } from "@/lib/context/ImpactContext";
+import { useSla } from "@/lib/context/SlaContext";
+import { useEstablishments } from "@/lib/context/EstablishmentsContext";
 
-interface Skill {
-  title: string;
-  description: string;
-  icon: LucideIcon;
-  prompt: string;
+import {
+  ask,
+  AssistantAnswer,
+  suggestions,
+} from "@/lib/services/assistant.service";
+
+import { buildOperationSnapshot } from "@/lib/services/assistant.context";
+
+interface Turn {
+  id: string;
+  question: string;
+  /** Texto vindo do modelo, preenchido conforme o stream chega. */
+  answer: string;
+  /** Resposta determinística, usada no modo local. */
+  local?: AssistantAnswer;
+  streaming: boolean;
+  error?: string;
 }
-
-const skills: Skill[] = [
-  {
-    title: "Sugerir resposta",
-    description:
-      "Gera uma resposta pública a partir do histórico e do tom aprovado.",
-    icon: Wand2,
-    prompt:
-      "Sugira uma resposta pública para a reclamação mais crítica em aberto.",
-  },
-  {
-    title: "Resumir caso",
-    description:
-      "Condensa a tratativa completa em um parágrafo objetivo.",
-    icon: FileSearch,
-    prompt:
-      "Resuma o caso RA-20260009 destacando causa raiz e ações tomadas.",
-  },
-  {
-    title: "Classificar automaticamente",
-    description:
-      "Sugere categoria, subcategoria e prioridade a partir do texto.",
-    icon: Tags,
-    prompt:
-      "Classifique as reclamações sem categoria definida.",
-  },
-  {
-    title: "Analisar sentimento",
-    description:
-      "Identifica risco de churn e insatisfação na base ativa.",
-    icon: Gauge,
-    prompt:
-      "Quais clientes demonstram maior risco de cancelamento hoje?",
-  },
-];
 
 export default function AssistentePage() {
 
   const { cases } = useCases();
+  const { tasks } = useAgenda();
+  const { records } = useImpact();
+  const { rules } = useSla();
+  const { establishments } = useEstablishments();
 
   const [message, setMessage] = useState("");
+  const [turns, setTurns] = useState<Turn[]>([]);
+  const [busy, setBusy] = useState(false);
 
-  const insights = useMemo(() => {
+  /** null enquanto ainda não sabemos se a chave existe. */
+  const [aiEnabled, setAiEnabled] = useState<
+    boolean | null
+  >(null);
 
-    const critical = getCriticalCases(cases);
+  const fimRef = useRef<HTMLDivElement>(null);
 
-    const unanswered = cases.filter(
-      (item) =>
-        (item.publicResponse ?? "").trim() === ""
-    );
+  useEffect(() => {
+    fetch("/api/assistente")
+      .then((response) => response.json())
+      .then((data) => setAiEnabled(Boolean(data.enabled)))
+      .catch(() => setAiEnabled(false));
+  }, []);
 
-    const topCategory = [...cases]
-      .reduce<Map<string, number>>((map, item) => {
-        map.set(
-          item.category,
-          (map.get(item.category) ?? 0) + 1
+  useEffect(() => {
+    if (turns.length === 0) return;
+    fimRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "end",
+    });
+  }, [turns]);
+
+  const localInput = useMemo(
+    () => ({ cases, tasks, impacts: records, rules }),
+    [cases, tasks, records, rules]
+  );
+
+  async function perguntar(texto: string) {
+
+    const pergunta = texto.trim();
+
+    if (pergunta === "" || busy) return;
+
+    const id = crypto.randomUUID();
+
+    setMessage("");
+
+    // Sem chave configurada, responde pelas rotinas determinísticas.
+    if (!aiEnabled) {
+      setTurns((prev) => [
+        ...prev,
+        {
+          id,
+          question: pergunta,
+          answer: "",
+          local: ask(pergunta, localInput),
+          streaming: false,
+        },
+      ]);
+      return;
+    }
+
+    setTurns((prev) => [
+      ...prev,
+      {
+        id,
+        question: pergunta,
+        answer: "",
+        streaming: true,
+      },
+    ]);
+
+    setBusy(true);
+
+    try {
+
+      const historico = turns
+        .filter((item) => !item.error && item.answer)
+        .flatMap((item) => [
+          { role: "user" as const, content: item.question },
+          {
+            role: "assistant" as const,
+            content: item.answer,
+          },
+        ]);
+
+      const response = await fetch("/api/assistente", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          snapshot: buildOperationSnapshot({
+            cases,
+            tasks,
+            impacts: records,
+            rules,
+            establishments,
+          }),
+          messages: [
+            ...historico,
+            { role: "user", content: pergunta },
+          ],
+        }),
+      });
+
+      if (!response.ok || !response.body) {
+        const detalhe = await response
+          .json()
+          .catch(() => ({}));
+
+        throw new Error(
+          detalhe.error ?? "Falha na requisição."
         );
-        return map;
-      }, new Map())
-      .entries();
+      }
 
-    const ranked = [...topCategory].sort(
-      (a, b) => b[1] - a[1]
-    );
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
 
-    return [
-      {
-        title: "Prioridade do dia",
-        text:
-          critical.length > 0
-            ? `${critical.length} casos críticos ou com risco de churn em aberto. O mais urgente é "${critical[0].title}" (${critical[0].company}).`
-            : "Nenhum caso crítico em aberto no momento.",
-      },
-      {
-        title: "Impacto na nota",
-        text: `${unanswered.length} reclamações ainda sem resposta pública. Responder é o fator de maior peso no índice de resposta.`,
-      },
-      {
-        title: "Causa raiz recorrente",
-        text: ranked[0]
-          ? `"${ranked[0][0]}" concentra ${ranked[0][1]} ocorrências. Vale revisar o processo dessa área.`
-          : "Sem volume suficiente para apontar causa raiz.",
-      },
-    ];
+      let buffer = "";
 
-  }, [cases]);
+      // Lê o SSE linha a linha; um chunk pode cortar um evento no meio.
+      while (true) {
+
+        const { done, value } = await reader.read();
+
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+
+        const partes = buffer.split("\n\n");
+        buffer = partes.pop() ?? "";
+
+        for (const parte of partes) {
+
+          const linha = parte
+            .split("\n")
+            .find((item) => item.startsWith("data: "));
+
+          if (!linha) continue;
+
+          const evento = JSON.parse(linha.slice(6));
+
+          if (evento.type === "delta") {
+            setTurns((prev) =>
+              prev.map((item) =>
+                item.id === id
+                  ? {
+                      ...item,
+                      answer: item.answer + evento.text,
+                    }
+                  : item
+              )
+            );
+          }
+
+          if (evento.type === "error") {
+            setTurns((prev) =>
+              prev.map((item) =>
+                item.id === id
+                  ? {
+                      ...item,
+                      error: evento.message,
+                      streaming: false,
+                    }
+                  : item
+              )
+            );
+          }
+        }
+      }
+
+    } catch (error) {
+
+      const detalhe =
+        error instanceof Error
+          ? error.message
+          : "Falha ao consultar o assistente.";
+
+      setTurns((prev) =>
+        prev.map((item) =>
+          item.id === id
+            ? { ...item, error: detalhe, streaming: false }
+            : item
+        )
+      );
+
+    } finally {
+
+      setTurns((prev) =>
+        prev.map((item) =>
+          item.id === id
+            ? { ...item, streaming: false }
+            : item
+        )
+      );
+
+      setBusy(false);
+    }
+  }
 
   return (
     <MainLayout>
@@ -121,138 +259,276 @@ export default function AssistentePage() {
 
         <PageHeading
           eyebrow="Inteligência"
-          title="Assistente Inteligente"
-          description="Apoio de IA para resposta, classificação, resumo e diagnóstico da operação."
-        />
-
-        <div className="grid gap-6 lg:grid-cols-3">
-
-          <div className="lg:col-span-2 space-y-6">
-
-            <SurfaceCard
-              title="Converse com o assistente"
-              description="Descreva o que precisa ou escolha uma habilidade sugerida."
+          title="Assistente"
+          description="Conversa sobre a operação usando os números reais da base."
+        >
+          {turns.length > 0 && (
+            <button
+              onClick={() => setTurns([])}
+              className="flex items-center gap-2 rounded-xl border border-zinc-200 px-4 py-2.5 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-50"
             >
+              <Eraser size={15} />
+              Limpar conversa
+            </button>
+          )}
+        </PageHeading>
 
-              <div className="rounded-2xl bg-gradient-to-br from-violet-50 via-white to-sky-50/60 p-5 ring-1 ring-inset ring-violet-100">
+        {aiEnabled === false && (
 
-                <div className="flex items-start gap-3">
+          <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-amber-200/70 bg-amber-50/60 px-5 py-4">
 
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-600 text-white">
-                    <Bot size={18} />
-                  </span>
+            <Database
+              size={17}
+              className="shrink-0 text-amber-600"
+            />
 
-                  <div className="min-w-0">
+            <p className="flex-1 text-sm leading-relaxed text-amber-900">
+              Sem{" "}
+              <code className="rounded bg-amber-100 px-1 py-0.5 text-[12px]">
+                ANTHROPIC_API_KEY
+              </code>{" "}
+              configurada, o assistente responde em{" "}
+              <strong className="font-semibold">
+                modo local
+              </strong>
+              : consultas prontas sobre nota, fila, SLA,
+              churn, causa raiz, impacto e agenda. Com a
+              chave, ele passa a conversar de verdade sobre
+              os mesmos dados.
+            </p>
 
-                    <p className="text-sm font-semibold text-zinc-900">
-                      Assistente CW
-                    </p>
+          </div>
 
-                    <p className="mt-1.5 text-sm leading-relaxed text-zinc-600">
-                      Posso sugerir respostas públicas, resumir
-                      tratativas, classificar reclamações e apontar
-                      a causa raiz mais provável. Selecione uma
-                      habilidade abaixo para começar.
-                    </p>
+        )}
+
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
+
+          <SurfaceCard
+            title="Conversa"
+            description={
+              aiEnabled
+                ? "Claude Opus 5 lendo o retrato atual da operação."
+                : "Consultas locais sobre os dados da base."
+            }
+            hint="O modelo recebe os indicadores já apurados pelos serviços — nota, fila, SLA, agenda e impacto — em vez das reclamações cruas, para não recontar por conta própria o que a plataforma já calcula."
+          >
+
+            <div className="max-h-[520px] space-y-4 overflow-y-auto pr-1">
+
+              {turns.length === 0 ? (
+
+                <div className="rounded-2xl bg-gradient-to-br from-violet-50 via-white to-sky-50/60 p-5 ring-1 ring-inset ring-violet-100">
+
+                  <div className="flex items-start gap-3">
+
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-600 text-white">
+                      <Bot size={18} />
+                    </span>
+
+                    <div className="min-w-0">
+
+                      <p className="text-sm font-semibold text-zinc-900">
+                        Assistente CW
+                      </p>
+
+                      <p className="mt-1.5 text-sm leading-relaxed text-zinc-600">
+                        Pergunte sobre a nota, a fila sem
+                        resposta, prazos estourados, risco de
+                        cancelamento, causa raiz, impacto
+                        financeiro ou a agenda — e também o
+                        que fazer a respeito.
+                      </p>
+
+                    </div>
 
                   </div>
 
                 </div>
 
-              </div>
+              ) : (
 
-              <div className="mt-4 flex items-end gap-2">
+                turns.map((turn) => (
 
-                <textarea
-                  value={message}
-                  onChange={(e) =>
-                    setMessage(e.target.value)
-                  }
-                  rows={3}
-                  placeholder="Ex.: escreva uma resposta pública para a reclamação de cobrança duplicada..."
-                  className="flex-1 resize-none rounded-xl border border-zinc-200 p-3 text-sm outline-none transition-colors placeholder:text-zinc-400 focus:border-violet-400"
-                />
+                  <div key={turn.id} className="space-y-3">
 
-                <button
-                  disabled={message.trim() === ""}
-                  className="flex h-11 items-center gap-2 rounded-xl bg-violet-600 px-4 text-sm font-medium text-white transition-colors hover:bg-violet-700 disabled:cursor-not-allowed disabled:bg-zinc-200 disabled:text-zinc-400"
-                >
-                  <Send size={15} />
-                  Enviar
-                </button>
+                    <div className="flex justify-end">
 
-              </div>
+                      <p className="flex max-w-[80%] items-start gap-2.5 rounded-2xl rounded-tr-md bg-violet-700 px-4 py-2.5 text-sm text-white">
+                        {turn.question}
+                        <UserRound
+                          size={14}
+                          className="mt-0.5 shrink-0 opacity-70"
+                        />
+                      </p>
 
-              <p className="mt-2 text-xs text-zinc-400">
-                A geração por IA ainda não está conectada. A
-                interface já está pronta para receber o modelo.
-              </p>
+                    </div>
 
-            </SurfaceCard>
+                    <div className="flex gap-2.5">
 
-            <div className="grid gap-4 sm:grid-cols-2">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-violet-600 text-white">
+                        <Bot size={16} />
+                      </span>
 
-              {skills.map((skill) => {
+                      <div className="min-w-0 flex-1 rounded-2xl rounded-tl-md border border-zinc-200/80 bg-white p-4">
 
-                const Icon = skill.icon;
+                        {turn.error ? (
 
-                return (
-                  <button
-                    key={skill.title}
-                    onClick={() =>
-                      setMessage(skill.prompt)
-                    }
-                    className="group rounded-2xl border border-zinc-200/80 bg-white p-5 text-left shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-all hover:-translate-y-0.5 hover:border-violet-200 hover:shadow-[0_10px_24px_-14px_rgba(111,66,193,0.4)]"
-                  >
+                          <p className="flex items-start gap-2 text-sm text-rose-700">
+                            <TriangleAlert
+                              size={15}
+                              className="mt-0.5 shrink-0"
+                            />
+                            {turn.error}
+                          </p>
 
-                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50 text-violet-600 ring-1 ring-inset ring-violet-100">
-                      <Icon size={18} />
-                    </span>
+                        ) : turn.local ? (
 
-                    <h3 className="mt-3 text-sm font-semibold text-zinc-900">
-                      {skill.title}
-                    </h3>
+                          <>
+                            {turn.local.paragraphs.map(
+                              (texto, index) => (
+                                <p
+                                  key={index}
+                                  className="mb-2 text-sm leading-relaxed text-zinc-700 last:mb-0"
+                                >
+                                  {texto}
+                                </p>
+                              )
+                            )}
 
-                    <p className="mt-1.5 text-sm leading-relaxed text-zinc-500">
-                      {skill.description}
-                    </p>
+                            {turn.local.links.length > 0 && (
 
-                  </button>
-                );
-              })}
+                              <div className="mt-3 flex flex-wrap gap-2 border-t border-zinc-100 pt-3">
+
+                                {turn.local.links.map(
+                                  (link) => (
+                                    <Link
+                                      key={
+                                        link.href +
+                                        link.label
+                                      }
+                                      href={link.href}
+                                      className="flex items-center gap-1.5 rounded-lg bg-violet-50 px-2.5 py-1.5 text-xs font-medium text-violet-700 transition-colors hover:bg-violet-100"
+                                    >
+                                      {link.label}
+                                      <ArrowRight size={12} />
+                                    </Link>
+                                  )
+                                )}
+
+                              </div>
+
+                            )}
+                          </>
+
+                        ) : (
+
+                          <>
+                            <p className="whitespace-pre-wrap text-sm leading-relaxed text-zinc-700">
+                              {turn.answer}
+                            </p>
+
+                            {turn.streaming &&
+                              turn.answer === "" && (
+                                <p className="flex items-center gap-2 text-sm text-zinc-400">
+                                  <Loader2
+                                    size={14}
+                                    className="animate-spin"
+                                  />
+                                  Analisando a operação...
+                                </p>
+                              )}
+                          </>
+
+                        )}
+
+                      </div>
+
+                    </div>
+
+                  </div>
+
+                ))
+
+              )}
+
+              <div ref={fimRef} />
 
             </div>
 
-          </div>
+            <div className="mt-4 flex items-end gap-2 border-t border-zinc-100 pt-4">
+
+              <textarea
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                onKeyDown={(e) => {
+                  if (
+                    e.key === "Enter" &&
+                    !e.shiftKey
+                  ) {
+                    e.preventDefault();
+                    perguntar(message);
+                  }
+                }}
+                rows={2}
+                disabled={busy}
+                placeholder="Ex.: o que devo priorizar para subir a nota?"
+                className="flex-1 resize-none rounded-xl border border-zinc-200 p-3 text-sm outline-none transition-colors placeholder:text-zinc-400 focus:border-violet-400 disabled:bg-zinc-50"
+              />
+
+              <button
+                onClick={() => perguntar(message)}
+                disabled={message.trim() === "" || busy}
+                className="flex h-11 items-center gap-2 rounded-xl bg-violet-700 px-4 text-sm font-medium text-white transition-colors hover:bg-violet-800 disabled:cursor-not-allowed disabled:bg-zinc-200 disabled:text-zinc-400"
+              >
+                {busy ? (
+                  <Loader2
+                    size={15}
+                    className="animate-spin"
+                  />
+                ) : (
+                  <Send size={15} />
+                )}
+                Enviar
+              </button>
+
+            </div>
+
+          </SurfaceCard>
 
           <SurfaceCard
-            title="Leitura da operação"
-            description="Diagnóstico gerado a partir dos dados atuais."
+            title="Perguntas frequentes"
+            description="Clique para perguntar."
           >
 
-            <ul className="space-y-4">
+            <ul className="space-y-2">
 
-              {insights.map((insight) => (
+              {suggestions.map((item) => (
 
-                <li
-                  key={insight.title}
-                  className="rounded-xl border border-zinc-100 p-4"
-                >
+                <li key={item}>
 
-                  <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-violet-600">
-                    <Sparkles size={12} />
-                    {insight.title}
-                  </p>
-
-                  <p className="mt-2 text-sm leading-relaxed text-zinc-600">
-                    {insight.text}
-                  </p>
+                  <button
+                    onClick={() => perguntar(item)}
+                    disabled={busy}
+                    className="flex w-full items-start gap-2 rounded-xl border border-zinc-200/80 px-3.5 py-2.5 text-left text-sm text-zinc-700 transition-colors hover:border-violet-200 hover:bg-violet-50/60 hover:text-violet-800 disabled:opacity-50"
+                  >
+                    <Sparkles
+                      size={13}
+                      className="mt-0.5 shrink-0 text-violet-500"
+                    />
+                    {item}
+                  </button>
 
                 </li>
 
               ))}
 
             </ul>
+
+            <p className="mt-4 border-t border-zinc-100 pt-3 text-xs leading-relaxed text-zinc-400">
+              {aiEnabled
+                ? "O modelo só enxerga os indicadores já apurados pela plataforma, então os números que ele cita são os mesmos das telas de Analytics e Processos."
+                : "Modo local: as respostas saem direto das mesmas consultas que alimentam o Analytics."}
+            </p>
 
           </SurfaceCard>
 

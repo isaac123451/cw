@@ -4,18 +4,29 @@ import {
   createContext,
   useContext,
   useMemo,
-  useState,
   ReactNode,
 } from "react";
 
 import { Team, TeamMember } from "@/lib/models/team";
-import { mockTeams } from "@/lib/data/mockTeams";
+
+import {
+  assignTeamMember,
+  removeTeamRecord,
+  saveTeam,
+  unassignTeamMember,
+} from "@/lib/actions/registry";
+
+import { useWorkspaceSlice } from "@/lib/context/useWorkspace";
+import { sincronizar } from "@/lib/context/sync";
 
 export type TeamDraft = Omit<Team, "id" | "members">;
 export type MemberDraft = Omit<TeamMember, "id">;
 
 interface TeamsContextType {
   teams: Team[];
+
+  /** Carga inicial ainda em andamento. */
+  loading: boolean;
 
   /** Todas as pessoas, de todos os times — alimenta os seletores de responsável. */
   people: TeamMember[];
@@ -47,7 +58,10 @@ export function TeamsProvider({
   children: ReactNode;
 }) {
 
-  const [teams, setTeams] = useState<Team[]>(mockTeams);
+  const [teams, setTeams, loading] = useWorkspaceSlice(
+    (dados) => dados.teams,
+    [] as Team[]
+  );
 
   const people = useMemo(() => {
 
@@ -70,45 +84,70 @@ export function TeamsProvider({
     () => ({
       teams,
       people,
+      loading,
 
-      createTeam: (data) =>
-        setTeams((prev) => [
-          ...prev,
-          {
-            ...data,
-            id: crypto.randomUUID(),
-            members: [],
-          },
-        ]),
+      createTeam: (data) => {
 
-      updateTeam: (id, data) =>
+        const novo: Team = {
+          ...data,
+          id: crypto.randomUUID(),
+          members: [],
+        };
+
+        setTeams((prev) => [...prev, novo]);
+        sincronizar(() => saveTeam(novo));
+      },
+
+      updateTeam: (id, data) => {
+
+        const atual = teams.find(
+          (team) => team.id === id
+        );
+
+        if (!atual) return;
+
+        const alterado = { ...atual, ...data };
+
         setTeams((prev) =>
           prev.map((team) =>
-            team.id === id ? { ...team, ...data } : team
+            team.id === id ? alterado : team
           )
-        ),
+        );
 
-      removeTeam: (id) =>
+        sincronizar(() => saveTeam(alterado));
+      },
+
+      removeTeam: (id) => {
         setTeams((prev) =>
           prev.filter((team) => team.id !== id)
-        ),
+        );
+        sincronizar(() => removeTeamRecord(id));
+      },
 
-      addMember: (teamId, data) =>
+      addMember: (teamId, data) => {
+
+        const membro: TeamMember = {
+          ...data,
+          id: crypto.randomUUID(),
+        };
+
         setTeams((prev) =>
           prev.map((team) =>
             team.id === teamId
               ? {
                   ...team,
-                  members: [
-                    ...team.members,
-                    { ...data, id: crypto.randomUUID() },
-                  ],
+                  members: [...team.members, membro],
                 }
               : team
           )
-        ),
+        );
 
-      updateMember: (teamId, member) =>
+        sincronizar(() =>
+          assignTeamMember(teamId, membro)
+        );
+      },
+
+      updateMember: (teamId, member) => {
         setTeams((prev) =>
           prev.map((team) =>
             team.id === teamId
@@ -120,9 +159,21 @@ export function TeamsProvider({
                 }
               : team
           )
-        ),
+        );
 
-      removeMember: (teamId, memberId) =>
+        sincronizar(() =>
+          assignTeamMember(teamId, member)
+        );
+      },
+
+      removeMember: (teamId, memberId) => {
+
+        const pessoa = teams
+          .find((team) => team.id === teamId)
+          ?.members.find(
+            (item) => item.id === memberId
+          );
+
         setTeams((prev) =>
           prev.map((team) =>
             team.id === teamId
@@ -134,24 +185,29 @@ export function TeamsProvider({
                 }
               : team
           )
-        ),
+        );
 
-      moveMember: (fromTeamId, toTeamId, memberId) =>
-        setTeams((prev) => {
-
-          const origem = prev.find(
-            (team) => team.id === fromTeamId
+        if (pessoa) {
+          sincronizar(() =>
+            unassignTeamMember(pessoa.email)
           );
+        }
+      },
 
-          const pessoa = origem?.members.find(
-            (item) => item.id === memberId
-          );
+      moveMember: (fromTeamId, toTeamId, memberId) => {
 
-          if (!pessoa || fromTeamId === toTeamId) {
-            return prev;
-          }
+        const origem = teams.find(
+          (team) => team.id === fromTeamId
+        );
 
-          return prev.map((team) => {
+        const pessoa = origem?.members.find(
+          (item) => item.id === memberId
+        );
+
+        if (!pessoa || fromTeamId === toTeamId) return;
+
+        setTeams((prev) =>
+          prev.map((team) => {
 
             if (team.id === fromTeamId) {
               return {
@@ -170,10 +226,16 @@ export function TeamsProvider({
             }
 
             return team;
-          });
-        }),
+          })
+        );
+
+        // Trocar de time é reatribuir a pessoa ao novo time.
+        sincronizar(() =>
+          assignTeamMember(toTeamId, pessoa)
+        );
+      },
     }),
-    [teams, people]
+    [teams, people, loading, setTeams]
   );
 
   return (

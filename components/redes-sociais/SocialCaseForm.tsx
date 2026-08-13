@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Camera, Save } from "lucide-react";
 
@@ -61,9 +61,15 @@ export default function SocialCaseForm({
   const [createdAt, setCreatedAt] = useState("");
   const [description, setDescription] = useState("");
 
-  const etapas = workflow
-    .filter((item) => item.active)
-    .sort((a, b) => a.order - b.order);
+  // Memoizado para o efeito abaixo poder depender da lista pronta sem
+  // recalcular (e reexecutar) a cada render.
+  const etapas = useMemo(
+    () =>
+      workflow
+        .filter((item) => item.active)
+        .sort((a, b) => a.order - b.order),
+    [workflow]
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -98,7 +104,7 @@ export default function SocialCaseForm({
     setStatus(etapas[0]?.name ?? "Novo");
     setCreatedAt(REFERENCE_DATE);
     setDescription("");
-  }, [open, editing, categories, workflow]);
+  }, [open, editing, categories, etapas]);
 
   const subsDaCategoria = subcategories.filter(
     (item) => item.category === category

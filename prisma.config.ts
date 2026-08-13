@@ -9,6 +9,19 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    /**
+     * Migração e seed usam `DIRECT_URL` quando ela existe.
+     *
+     * No Supabase a aplicação fala com o pooler em modo transação
+     * (porta 6543), que não sustenta DDL nem os locks que a migração
+     * precisa. `DIRECT_URL` aponta para uma conexão de sessão — é ela
+     * que roda `db:push`, `migrate` e `db:seed`.
+     *
+     * Sem a variável, cai na mesma URL da aplicação, que é o suficiente
+     * em bancos sem pooler.
+     */
+    url:
+      process.env["DIRECT_URL"] ||
+      process.env["DATABASE_URL"],
   },
 });

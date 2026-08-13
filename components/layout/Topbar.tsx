@@ -2,10 +2,11 @@
 
 import { usePathname } from "next/navigation";
 
-import { Bell, Search } from "lucide-react";
+import { Search } from "lucide-react";
 
 import { menuItems } from "@/core/navigation/menu";
 import UserMenu from "./UserMenu";
+import NotificationsMenu from "./NotificationsMenu";
 import { useSession } from "@/lib/context/SessionContext";
 
 export default function Topbar() {
@@ -51,22 +52,13 @@ export default function Topbar() {
 
         </div>
 
-        <button
-          type="button"
-          aria-label="Notificações"
-          className="relative rounded-xl border border-zinc-200 p-2.5 text-zinc-600 transition-colors hover:bg-zinc-50"
-        >
-
-          <Bell size={17} />
-
-          <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-rose-500" />
-
-        </button>
+        <NotificationsMenu />
 
         <UserMenu
           name={user?.name ?? "Visitante"}
           email={user?.email ?? "modo demonstração"}
           authenticated={Boolean(user)}
+          admin={user?.role === "ADMIN"}
         />
 
       </div>

@@ -6,16 +6,20 @@ import { useMemo, useState } from "react";
 
 import {
   ArrowLeft,
-  CalendarDays,
+  Filter,
   MessageSquare,
   Star,
   Timer,
+  X,
 } from "lucide-react";
+
+import { Case } from "@/lib/models/case";
 
 import MainLayout from "@/components/layout/MainLayout";
 
 import PageHeading from "@/components/shared/PageHeading";
 import SurfaceCard from "@/components/shared/SurfaceCard";
+import PeriodPicker from "@/components/shared/PeriodPicker";
 
 import ReputationTrend from "@/components/reclame-aqui/analytics/ReputationTrend";
 import ScoreComposition from "@/components/reclame-aqui/analytics/ScoreComposition";
@@ -23,15 +27,17 @@ import ReputationFunnel from "@/components/reclame-aqui/analytics/ReputationFunn
 import ReputationRuler from "@/components/reclame-aqui/analytics/ReputationRuler";
 import RatingHistogram from "@/components/reclame-aqui/analytics/RatingHistogram";
 import RankingCard from "@/components/reclame-aqui/analytics/RankingCard";
+import ResponseCeiling from "@/components/reclame-aqui/analytics/ResponseCeiling";
+import DisregardedNotice from "@/components/reclame-aqui/DisregardedNotice";
 import GoalEditor from "@/components/reclame-aqui/analytics/GoalEditor";
 import ModuleNav from "@/components/reclame-aqui/ModuleNav";
 
 import { useScopedCases } from "@/lib/context/useScopedCases";
 
 import {
+  CustomRange,
   displayBand,
   formatElapsed,
-  formatRange,
   getBacklog,
   getRange,
   getRanking,
@@ -40,10 +46,9 @@ import {
   getReputationTrend,
   inRange,
   PeriodKey,
-  periodLabels,
   PeriodMode,
-  periodModeLabels,
   ptBR,
+  REFERENCE_DATE,
 } from "@/lib/services/reputation.service";
 
 const backlogTone: Record<string, string> = {
@@ -51,6 +56,39 @@ const backlogTone: Record<string, string> = {
   warning: "bg-amber-50 text-amber-700 ring-amber-100",
   info: "bg-sky-50 text-sky-700 ring-sky-100",
 };
+
+/** Filtro aplicado ao clicar em um item dos gráficos. */
+type Drill = {
+  field: "category" | "subcategory" | "score";
+  value: string;
+};
+
+const drillFieldLabel: Record<Drill["field"], string> = {
+  category: "Categoria",
+  subcategory: "Subcategoria",
+  score: "Faixa de nota",
+};
+
+function matchesDrill(item: Case, drill: Drill | null) {
+
+  if (!drill) return true;
+
+  if (drill.field === "category") {
+    return item.category === drill.value;
+  }
+
+  if (drill.field === "subcategory") {
+    return (item.subcategory ?? "") === drill.value;
+  }
+
+  // Faixa de nota vem como "7-8" no histograma.
+  if (!item.evaluated) return false;
+
+  const [min, max] = drill.value.split("-").map(Number);
+  const score = item.score ?? 0;
+
+  return score >= min && score <= max;
+}
 
 export default function ReclameAquiAnalyticsPage() {
 
@@ -60,12 +98,20 @@ export default function ReclameAquiAnalyticsPage() {
 
   const [mode, setMode] = useState<PeriodMode>("vigente");
 
+  const [custom, setCustom] = useState<CustomRange>({
+    start: `${REFERENCE_DATE.slice(0, 4)}-01-01`,
+    end: REFERENCE_DATE,
+  });
+
   const range = useMemo(
-    () => getRange(period, mode),
-    [period, mode]
+    () => getRange(period, mode, custom),
+    [period, mode, custom]
   );
 
-  const current = useMemo(
+  const [drill, setDrill] = useState<Drill | null>(null);
+
+  /** Sem o drill: base do ranking, para as opções não sumirem ao filtrar. */
+  const periodCases = useMemo(
     () =>
       cases.filter((item) =>
         inRange(item, range.start, range.end)
@@ -73,7 +119,15 @@ export default function ReclameAquiAnalyticsPage() {
     [cases, range]
   );
 
-  const previous = useMemo(
+  const current = useMemo(
+    () =>
+      periodCases.filter((item) =>
+        matchesDrill(item, drill)
+      ),
+    [periodCases, drill]
+  );
+
+  const previousPeriodCases = useMemo(
     () =>
       cases.filter((item) =>
         inRange(
@@ -84,6 +138,26 @@ export default function ReclameAquiAnalyticsPage() {
       ),
     [cases, range]
   );
+
+  const previous = useMemo(
+    () =>
+      previousPeriodCases.filter((item) =>
+        matchesDrill(item, drill)
+      ),
+    [previousPeriodCases, drill]
+  );
+
+  /** Clicar de novo no mesmo item remove o filtro. */
+  function toggleDrill(
+    field: Drill["field"],
+    value: string
+  ) {
+    setDrill((prev) =>
+      prev && prev.field === field && prev.value === value
+        ? null
+        : { field, value }
+    );
+  }
 
   const summary = useMemo(
     () => getReputation(current),
@@ -100,9 +174,33 @@ export default function ReclameAquiAnalyticsPage() {
     [current]
   );
 
+  /**
+   * Cada gráfico ignora o filtro do próprio campo — senão, ao clicar em
+   * uma categoria as outras sumiriam e não daria para trocar de filtro.
+   */
+  const without = useMemo(
+    () => (field: Drill["field"]) =>
+      drill && drill.field === field
+        ? periodCases
+        : current,
+    [drill, periodCases, current]
+  );
+
+  /**
+   * A comparação precisa ignorar o mesmo campo que o gráfico ignora,
+   * senão a variação das outras categorias viraria "Sem base".
+   */
+  const previousWithout = useMemo(
+    () => (field: Drill["field"]) =>
+      drill && drill.field === field
+        ? previousPeriodCases
+        : previous,
+    [drill, previousPeriodCases, previous]
+  );
+
   const buckets = useMemo(
-    () => getRatingDistribution(current),
-    [current]
+    () => getRatingDistribution(without("score")),
+    [without]
   );
 
   const backlog = useMemo(
@@ -111,13 +209,23 @@ export default function ReclameAquiAnalyticsPage() {
   );
 
   const byCategory = useMemo(
-    () => getRanking(current, previous, "category"),
-    [current, previous]
+    () =>
+      getRanking(
+        without("category"),
+        previousWithout("category"),
+        "category"
+      ),
+    [without, previousWithout]
   );
 
   const bySubcategory = useMemo(
-    () => getRanking(current, previous, "subcategory"),
-    [current, previous]
+    () =>
+      getRanking(
+        without("subcategory"),
+        previousWithout("subcategory"),
+        "subcategory"
+      ),
+    [without, previousWithout]
   );
 
   const band = displayBand(summary);
@@ -153,89 +261,49 @@ export default function ReclameAquiAnalyticsPage() {
 
         <SurfaceCard bodyClassName="p-4">
 
-          <div className="flex flex-wrap items-center gap-3">
-
-            <div className="flex flex-wrap items-center gap-2">
-
-              {(
-                Object.keys(periodLabels) as PeriodKey[]
-              ).map((key) => (
-
-                <button
-                  key={key}
-                  onClick={() => setPeriod(key)}
-                  className={`rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
-                    period === key
-                      ? "bg-violet-50 text-violet-700 ring-1 ring-inset ring-violet-200"
-                      : "text-zinc-600 ring-1 ring-inset ring-zinc-200 hover:bg-zinc-50"
-                  }`}
-                >
-                  {periodLabels[key]}
-                </button>
-
-              ))}
-
-            </div>
-
-            <div className="flex items-center rounded-xl border border-zinc-200 p-1">
-
-              {(
-                Object.keys(periodModeLabels) as PeriodMode[]
-              ).map((key) => (
-
-                <button
-                  key={key}
-                  onClick={() => setMode(key)}
-                  title={
-                    key === "vigente"
-                      ? "Janela de meses fechados que o Reclame Aqui considera hoje"
-                      : "A mesma janela deslocada um mês, quando o mês atual fechar"
-                  }
-                  className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
-                    mode === key
-                      ? "bg-violet-700 text-white"
-                      : "text-zinc-600 hover:bg-zinc-100"
-                  }`}
-                >
-                  {periodModeLabels[key]}
-                </button>
-
-              ))}
-
-            </div>
-
-          </div>
-
-          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-zinc-100 pt-3 text-xs text-zinc-500">
-
-            <span className="flex items-center gap-2">
-
-              <CalendarDays size={14} className="text-zinc-400" />
-
-              Período:{" "}
-              <strong className="font-semibold text-zinc-700">
-                {formatRange(range.start, range.end)}
-              </strong>
-
-            </span>
-
-            <span>
-              Comparação:{" "}
-              {formatRange(
-                range.previousStart,
-                range.previousEnd
-              )}
-            </span>
-
-            {range.partial && (
-              <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-700 ring-1 ring-inset ring-amber-100">
-                Mês corrente ainda aberto — parcial
-              </span>
-            )}
-
-          </div>
+          <PeriodPicker
+            period={period}
+            onPeriodChange={setPeriod}
+            range={range}
+            custom={custom}
+            onCustomChange={setCustom}
+            mode={mode}
+            onModeChange={setMode}
+            warnUnofficial
+          />
 
         </SurfaceCard>
+
+        {drill && (
+
+          <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-violet-200/70 bg-violet-50/60 px-5 py-3.5">
+
+            <Filter
+              size={16}
+              className="shrink-0 text-violet-600"
+            />
+
+            <p className="flex-1 text-sm text-violet-900">
+              Filtrando por{" "}
+              <strong className="font-semibold">
+                {drillFieldLabel[drill.field]}:{" "}
+                {drill.value}
+              </strong>{" "}
+              — {current.length} de {periodCases.length}{" "}
+              reclamações do período.
+            </p>
+
+            <button
+              onClick={() => setDrill(null)}
+              className="flex shrink-0 items-center gap-1.5 rounded-xl border border-violet-300 bg-white px-3 py-1.5 text-xs font-medium text-violet-800 transition-colors hover:bg-violet-100"
+            >
+              <X size={13} />
+              Limpar filtro
+            </button>
+
+          </div>
+
+        )}
 
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
 
@@ -433,22 +501,52 @@ export default function ReclameAquiAnalyticsPage() {
           <RatingHistogram
             buckets={buckets}
             summary={summary}
+            onSelect={(value) =>
+              toggleDrill("score", value)
+            }
+            active={
+              drill?.field === "score"
+                ? drill.value
+                : undefined
+            }
           />
 
         </div>
+
+        <DisregardedNotice cases={current} />
+
+        <ResponseCeiling cases={current} />
 
         <div className="grid gap-6 xl:grid-cols-2">
 
           <RankingCard
             title="Reclamações por categoria"
-            description="Ranking de categorias com peso relativo no período."
+            description="Clique em uma categoria para filtrar toda a tela."
+            hint="A variação compara com o mesmo intervalo imediatamente anterior. Vermelho significa que a categoria cresceu."
             rows={byCategory}
+            onSelect={(value) =>
+              toggleDrill("category", value)
+            }
+            active={
+              drill?.field === "category"
+                ? drill.value
+                : undefined
+            }
           />
 
           <RankingCard
             title="Reclamações por subcategoria"
-            description="Subcategorias mais recorrentes para aprofundar o diagnóstico."
+            description="Clique para aprofundar o diagnóstico em um assunto."
+            hint="Ao filtrar por categoria, esta lista passa a mostrar só as subcategorias dela."
             rows={bySubcategory}
+            onSelect={(value) =>
+              toggleDrill("subcategory", value)
+            }
+            active={
+              drill?.field === "subcategory"
+                ? drill.value
+                : undefined
+            }
           />
 
         </div>

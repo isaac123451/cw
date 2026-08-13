@@ -4,7 +4,6 @@ import {
   Upload,
   UserCog,
   MessageCircle,
-  CheckCircle2,
   Clock3,
 } from "lucide-react";
 

@@ -2,18 +2,31 @@
 
 import { useState } from "react";
 
-import { Case } from "@/lib/models/case";
-
 import { useScopedCases } from "@/lib/context/useScopedCases";
 
 import CasesTable from "./CasesTable";
 import CaseDrawer from "../drawer/CaseDrawer";
 
+/** Mesmo lote do Kanban: cobre a rolagem inicial sem montar a base toda. */
+const LOTE = 50;
+
 export default function ListView() {
   const { filteredCases } = useScopedCases("reclame-aqui");
 
-  const [selectedCase, setSelectedCase] =
-    useState<Case | null>(null);
+  /**
+   * Guarda o id, não o objeto: guardando o objeto o painel congelava
+   * numa cópia e não refletia as edições feitas dentro dele.
+   */
+  const [selectedId, setSelectedId] = useState<
+    string | null
+  >(null);
+
+  const [visiveis, setVisiveis] = useState(LOTE);
+
+  const mostrados = filteredCases.slice(0, visiveis);
+
+  const restantes =
+    filteredCases.length - mostrados.length;
 
   return (
     <>
@@ -50,21 +63,39 @@ export default function ListView() {
 
         ) : (
 
-          <CasesTable
-            cases={filteredCases}
-            onSelect={setSelectedCase}
-          />
+          <>
+            <CasesTable
+              cases={mostrados}
+              onSelect={(item) => setSelectedId(item.id)}
+            />
+
+            {restantes > 0 && (
+
+              <div className="border-t border-zinc-100 p-3">
+
+                <button
+                  onClick={() =>
+                    setVisiveis((valor) => valor + LOTE)
+                  }
+                  className="w-full rounded-xl border border-dashed border-zinc-300 py-2.5 text-xs font-medium text-zinc-500 transition-colors hover:border-violet-300 hover:bg-violet-50/40 hover:text-violet-700"
+                >
+                  Mostrar mais {Math.min(restantes, LOTE)}{" "}
+                  de {restantes}
+                </button>
+
+              </div>
+
+            )}
+          </>
 
         )}
 
       </div>
 
       <CaseDrawer
-        open={selectedCase !== null}
-        data={selectedCase ?? undefined}
-        onClose={() =>
-          setSelectedCase(null)
-        }
+        open={selectedId !== null}
+        caseId={selectedId ?? undefined}
+        onClose={() => setSelectedId(null)}
       />
     </>
   );

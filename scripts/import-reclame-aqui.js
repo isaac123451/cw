@@ -10,7 +10,9 @@
 const fs = require("fs");
 const path = require("path");
 const XLSX = require("xlsx");
-const { classificar } = require("./classify");
+const {
+  classificarPorProblema,
+} = require("./classify");
 
 const [, , file, ...flags] = process.argv;
 
@@ -143,6 +145,19 @@ const cases = rows.map((row, index) => {
   const evaluatedAt = toDate(row[col("Data Avaliacao")]);
 
   const rawScore = row[col("Nota")];
+
+  /**
+   * Avaliação que o Reclame Aqui marcou como desconsiderada.
+   *
+   * Fica só como sinalização: a nota continua contando normalmente nos
+   * indicadores, e as telas mostram um aviso. Descontar do cálculo é
+   * decisão da operação, caso a caso, pelo botão no detalhe.
+   */
+  const scoreDisregarded =
+    String(row[col("Avaliações desconsideradas RA")] || "")
+      .trim()
+      .toLowerCase() === "sim";
+
   const score =
     rawScore === null || rawScore === ""
       ? null
@@ -160,11 +175,27 @@ const cases = rows.map((row, index) => {
   const statusRa = row[col("Status RA")];
   const status = mapStatus(statusRa);
 
-  const { categoria, subcategoria } = classificar(
+  const { categoria, subcategoria } = classificarPorProblema(
+    row[col("Problema RA")],
     row[col("Título")]
   );
 
   const name = String(row[col("Nome")] || "").trim();
+
+  /**
+   * Texto real da reclamação, como publicado no portal.
+   *
+   * O export antigo não trazia, e a descrição era uma frase sintética —
+   * inútil para quem precisa entender o caso. Estes textos são públicos
+   * no Reclame Aqui; e-mail, telefone e CPF continuam fora daqui.
+   */
+  const texto = String(row[col("Texto da Reclamação")] || "")
+    .replace(/\r/g, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+  const description =
+    texto || "Reclamação registrada no Reclame Aqui.";
 
   return {
     id: String(row[col("Id HugMe")] || index + 1),
@@ -177,7 +208,8 @@ const cases = rows.map((row, index) => {
     city: row[col("Cidade")] || null,
     state: row[col("Estado")] || null,
     source: "Reclame Aqui",
-    // O export vem sem classificação: derivada do título por palavra-chave.
+    // Classificação do próprio portal ("Problema RA"); sem ela, derivada
+    // do título por palavra-chave.
     category: categoria,
     subcategory: subcategoria,
     priority: priorityOf({
@@ -191,14 +223,13 @@ const cases = rows.map((row, index) => {
     department: null,
     title:
       String(row[col("Título")] || "Sem título").trim(),
-    description: `Reclamação registrada no Reclame Aqui em ${toIso(
-      row[col("Data Reclamação")]
-    )}. Status no portal: ${statusRa || "—"}.`,
+    description,
     publicResponse: answered
       ? "Resposta pública registrada no portal."
       : "",
     score,
     evaluated,
+    scoreDisregarded,
     resolved,
     wouldDoBusiness,
     responseTime: elapsed(created, answeredAt),
@@ -277,6 +308,9 @@ function serialize(item) {
   push("publicResponse", item.publicResponse);
   if (item.score !== null) push("score", item.score);
   push("evaluated", item.evaluated);
+  if (item.scoreDisregarded) {
+    push("scoreDisregarded", true);
+  }
   push("resolved", item.resolved);
   push("wouldDoBusiness", item.wouldDoBusiness);
   push("responseTime", item.responseTime);
@@ -305,8 +339,9 @@ const output = `import { Case } from "@/lib/models/case";
      : "\n * E-mail e telefone estão mascarados e o CPF foi descartado:\n * este arquivo é versionado no git."
  }
  *
- * O export não traz classificação nem estabelecimento — categoria fica
- * como "Não classificado" e o reclamante é tratado como o cliente.
+ * A classificação vem de "Problema RA", o campo do próprio portal.
+ * O export não traz o estabelecimento: o reclamante é tratado como
+ * o cliente.
  */
 export const mockCases: Case[] = [
 ${cases.map(serialize).join("\n")}

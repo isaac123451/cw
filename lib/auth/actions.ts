@@ -7,6 +7,11 @@ import bcrypt from "bcryptjs";
 import { getPrisma, hasDatabase } from "@/lib/prisma";
 
 import {
+  HASH_CORROMPIDO,
+  isBcryptHash,
+} from "@/lib/auth/hash";
+
+import {
   BOOTSTRAP_EMAILS,
   checkSignupAccess,
   hasAllowedDomain,
@@ -145,6 +150,16 @@ export async function signIn(
   const invalid = { error: "E-mail ou senha inválidos." };
 
   if (!user) return invalid;
+
+  /**
+   * Hash inválido recusaria toda senha silenciosamente, e a pessoa
+   * ficaria tentando adivinhar a própria. Melhor dizer o que houve —
+   * quem chega aqui já provou conhecer o e-mail, e a mensagem não
+   * revela nada sobre a senha.
+   */
+  if (!isBcryptHash(user.passwordHash)) {
+    return { error: HASH_CORROMPIDO };
+  }
 
   const ok = await bcrypt.compare(
     password,

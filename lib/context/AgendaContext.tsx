@@ -4,17 +4,27 @@ import {
   createContext,
   useContext,
   useMemo,
-  useState,
   ReactNode,
 } from "react";
 
 import { AgendaTask } from "@/lib/models/agenda";
-import { mockAgenda } from "@/lib/data/mockAgenda";
+
+import {
+  removeAgendaTask,
+  saveAgendaTask,
+} from "@/lib/actions/registry";
+
+import { useWorkspaceSlice } from "@/lib/context/useWorkspace";
+import { sincronizar } from "@/lib/context/sync";
 
 export type TaskDraft = Omit<AgendaTask, "id">;
 
 interface AgendaContextType {
   tasks: AgendaTask[];
+
+  /** Carga inicial ainda em andamento. */
+  loading: boolean;
+
   createTask: (data: TaskDraft) => void;
   updateTask: (data: AgendaTask) => void;
   removeTask: (id: string) => void;
@@ -40,57 +50,86 @@ export function AgendaProvider({
   children: ReactNode;
 }) {
 
-  const [tasks, setTasks] = useState<AgendaTask[]>(
-    ordenar(mockAgenda)
+  const [tasks, setTasks, loading] = useWorkspaceSlice(
+    (dados) => ordenar(dados.agenda),
+    [] as AgendaTask[]
   );
 
   const value = useMemo<AgendaContextType>(
     () => ({
       tasks,
+      loading,
 
-      createTask: (data) =>
-        setTasks((prev) =>
-          ordenar([
-            { ...data, id: crypto.randomUUID() },
-            ...prev,
-          ])
-        ),
+      createTask: (data) => {
 
-      updateTask: (data) =>
+        const nova: AgendaTask = {
+          ...data,
+          id: crypto.randomUUID(),
+        };
+
+        setTasks((prev) => ordenar([nova, ...prev]));
+        sincronizar(() => saveAgendaTask(nova));
+      },
+
+      updateTask: (data) => {
         setTasks((prev) =>
           ordenar(
             prev.map((item) =>
               item.id === data.id ? data : item
             )
           )
-        ),
+        );
+        sincronizar(() => saveAgendaTask(data));
+      },
 
-      removeTask: (id) =>
+      removeTask: (id) => {
         setTasks((prev) =>
           prev.filter((item) => item.id !== id)
-        ),
+        );
+        sincronizar(() => removeAgendaTask(id));
+      },
 
-      toggleTask: (id) =>
+      toggleTask: (id) => {
+
+        const atual = tasks.find(
+          (item) => item.id === id
+        );
+
+        if (!atual) return;
+
+        const alterada = { ...atual, done: !atual.done };
+
         setTasks((prev) =>
           prev.map((item) =>
-            item.id === id
-              ? { ...item, done: !item.done }
-              : item
+            item.id === id ? alterada : item
           )
-        ),
+        );
 
-      moveTask: (id, dueDate) =>
+        sincronizar(() => saveAgendaTask(alterada));
+      },
+
+      moveTask: (id, dueDate) => {
+
+        const atual = tasks.find(
+          (item) => item.id === id
+        );
+
+        if (!atual) return;
+
+        const movida = { ...atual, dueDate };
+
         setTasks((prev) =>
           ordenar(
             prev.map((item) =>
-              item.id === id
-                ? { ...item, dueDate }
-                : item
+              item.id === id ? movida : item
             )
           )
-        ),
+        );
+
+        sincronizar(() => saveAgendaTask(movida));
+      },
     }),
-    [tasks]
+    [tasks, loading, setTasks]
   );
 
   return (
