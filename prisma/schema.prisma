@@ -37,8 +37,51 @@ model User {
   comments     CaseComment[]
   tasks        AgendaTask[]
   savedFilters SavedFilter[]
+  googleAccount GoogleAccount?
+  preferences   UserPreference?
+  npsResponses  NpsResponse[]   @relation("NpsOwner")
 
   @@index([email])
+}
+
+/// Preferências da pessoa: avisos e o recorte "somente minhas".
+///
+/// Seguem a conta e não o navegador — antes viviam no `localStorage`, e
+/// quem configurava no desktop reencontrava tudo no padrão no notebook.
+model UserPreference {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Um booleano por tipo de aviso; JSON evita migração a cada aviso novo.
+  notifications Json
+  somenteMinhas Boolean @default(false)
+
+  updatedAt DateTime @updatedAt
+}
+
+/// Conta do Google conectada por um usuário, para a agenda.
+///
+/// Um registro por usuário: cada pessoa conecta a **própria** agenda, e
+/// os tokens nunca saem do servidor. Guardados como o Google entrega —
+/// mesmo critério do segredo do webhook e do `API_TOKEN`; quem chega ao
+/// banco já teria as reclamações inteiras.
+model GoogleAccount {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Conta autorizada, exibida na tela para a pessoa conferir qual é.
+  email String
+
+  accessToken String
+  /// Só vem no primeiro consentimento; por isso nunca sobrescrever com vazio.
+  refreshToken String
+  /// Quando o access token expira — antes disso não precisa renovar.
+  expiresAt DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 /// E-mails liberados para se cadastrar. O domínio @cardapioweb.com é
@@ -443,6 +486,8 @@ model Establishment {
   phone     String?
   email     String?
   notes     String?
+
+  npsResponses NpsResponse[]
 }
 
 /// Etapa do ciclo de vida do cliente — colunas do quadro da Jornada.
@@ -453,6 +498,8 @@ model JourneyStage {
   description String  @default("")
   order       Int     @default(0)
   active      Boolean @default(true)
+
+  placements JourneyPlacement[]
 }
 
 /// Agrupador livre da jornada — "Pontos críticos", "Combinados".
@@ -480,6 +527,23 @@ model JourneyEntry {
   createdAt DateTime @default(now())
 
   @@index([company])
+}
+
+/// Etapa em que cada cliente está na jornada.
+///
+/// Tabela própria, e não uma coluna em Company, porque o vínculo aqui é
+/// **por nome de empresa** — mesmo critério de `JourneyEntry` — e nem
+/// toda empresa que aparece na jornada tem cadastro em Company.
+model JourneyPlacement {
+  id String @id @default(cuid())
+
+  /// Nome da empresa; um registro por empresa.
+  company String @unique
+
+  stageId String
+  stage   JourneyStage @relation(fields: [stageId], references: [id], onDelete: Cascade)
+
+  updatedAt DateTime @updatedAt
 }
 
 /// Iniciativa de melhoria acompanhada pela operação.
@@ -522,4 +586,127 @@ model Macro {
   tags      String[] @default([])
   uses      Int      @default(0)
   updatedAt DateTime @updatedAt
+}
+
+/// ============================================================
+/// NPS — ENCERRAMENTO DO CICLO DE FEEDBACK
+/// ============================================================
+
+/// Resposta da pesquisa de NPS e a tratativa que fecha o ciclo.
+///
+/// **Não confundir com Reclame Aqui.** A pesquisa é nossa, dentro do
+/// portal, e traz o contato do cliente — é o que permite ligar de volta
+/// antes de virar cancelamento ou reclamação pública.
+model NpsResponse {
+  id String @id @default(cuid())
+
+  /// 0 a 10, como o cliente respondeu.
+  score Int
+  /// Comentário livre da pesquisa. É daqui que sai a causa raiz.
+  comment     String   @default("")
+  respondedAt DateTime
+
+  /// Cliente por nome, como no resto da aplicação.
+  customer String
+  email    String?
+  phone    String?
+
+  /// Estabelecimento, quando dá para vincular.
+  company         String?
+  establishmentId String?
+  establishment   Establishment? @relation(fields: [establishmentId], references: [id])
+
+  /// Um dos sete tipos do processo. Nulo enquanto ninguém classificou.
+  kind String?
+
+  /// Causa raiz padronizada — serve para ver tendência, não para texto livre.
+  rootCause String?
+
+  status String @default("Novo")
+
+  ownerId String?
+  owner   User?   @relation("NpsOwner", fields: [ownerId], references: [id])
+
+  /// Prazo do primeiro contato, **congelado** no registro: mudar o SLA
+  /// depois não pode reescrever o que já foi prometido.
+  firstContactDueAt DateTime
+  firstContactAt    DateTime?
+
+  /// Confirmação do cliente de que resolveu — exigida para encerrar
+  /// Reclamação e Erro no Sistema como resolvidos.
+  confirmedAt DateTime?
+
+  closedAt DateTime?
+  /// Rótulo final: "[Encerrado] Resolvido", "[Encerrado] Sem Retorno"...
+  outcome String?
+
+  /// Marcações do pós-elogio (review pública, depoimento, indicação).
+  reviewAsked      Boolean @default(false)
+  testimonialAsked Boolean @default(false)
+  referralAsked    Boolean @default(false)
+
+  attempts NpsAttempt[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([respondedAt])
+  @@index([status])
+}
+
+/// Cada tentativa de contato, para sustentar a regra das três em 7 dias.
+model NpsAttempt {
+  id String @id @default(cuid())
+
+  responseId String
+  response   NpsResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
+
+  /// e-mail, telefone, whatsapp.
+  channel String
+  note    String  @default("")
+  actor   String
+
+  createdAt DateTime @default(now())
+
+  @@index([responseId, createdAt])
+}
+
+/// ============================================================
+/// INTEGRAÇÕES
+/// ============================================================
+
+/// Webhook para o CW Engine (ou outro destino) ser avisado por evento,
+/// em vez de só puxar via GET /api. Um registro só: a aplicação atende
+/// um tenant (Cardápio Web), não é multiempresa.
+model WebhookConfig {
+  id     String  @id @default(cuid())
+  url    String
+  /// Chave HMAC em texto puro — é segredo compartilhado com quem
+  /// recebe, como o `API_TOKEN` do `.env`, não senha de pessoa.
+  secret String
+  active Boolean @default(true)
+  /// Nomes de evento assinados (`caso.criado`, `caso.avaliado`).
+  events String[] @default([])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  deliveries WebhookDelivery[]
+}
+
+/// Histórico de tentativas de entrega — o que dá pra diagnosticar direto
+/// na tela, sem log de servidor. Só as últimas por webhook: é rastro
+/// operacional, não auditoria.
+model WebhookDelivery {
+  id          String        @id @default(cuid())
+  webhookId   String
+  webhook     WebhookConfig @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+  event       String
+  caseProtocol String?
+  ok          Boolean
+  statusCode  Int?
+  error       String?
+  createdAt   DateTime      @default(now())
+
+  @@index([webhookId, createdAt])
 }

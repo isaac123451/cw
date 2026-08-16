@@ -2,6 +2,7 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -17,6 +18,12 @@ import {
   emptyCriteria,
   SavedFilter,
 } from "@/lib/models/savedFilter";
+
+import {
+  deleteSavedFilter,
+  listSavedFilters,
+  saveSavedFilter,
+} from "@/lib/actions/savedFilters";
 
 const STORAGE_KEY = "cw:filtros-salvos";
 
@@ -36,15 +43,41 @@ interface SavedFiltersContextType {
 const SavedFiltersContext =
   createContext<SavedFiltersContextType | null>(null);
 
+/** Completa critério antigo que não tem os campos mais novos. */
+function normalizar(
+  item: Pick<SavedFilter, "id" | "name" | "order"> & {
+    criteria: Partial<CaseFilters>;
+  }
+): SavedFilter {
+  return {
+    id: item.id,
+    name: item.name,
+    order: item.order,
+    criteria: { ...emptyCriteria, ...item.criteria },
+    builtIn: false,
+  };
+}
+
 /**
- * Os filtros do usuário ficam no localStorage, como as preferências:
- * são de quem está na máquina, e assim sobrevivem ao reload antes de o
- * banco existir (o modelo SavedFilter já está no schema do Prisma).
+ * Filtros salvos do usuário.
+ *
+ * **Com banco, vão para o Postgres** e seguem a conta: quem salvou um
+ * recorte no desktop encontra no notebook. Antes viviam só no
+ * `localStorage` e eram por dispositivo.
+ *
+ * Sem banco (modo demonstração) o `localStorage` continua valendo, para
+ * a tela não perder o que foi criado no reload.
  */
 export function SavedFiltersProvider({
   children,
+  hasDatabase = false,
 }: {
   children: ReactNode;
+  /**
+   * Vem do layout, como no `CaseProvider`: este provider fica **fora**
+   * do `CaseProvider`, então não dá para ler pelo `useCases()`.
+   */
+  hasDatabase?: boolean;
 }) {
 
   const [mine, setMine] = useState<SavedFilter[]>([]);
@@ -52,6 +85,26 @@ export function SavedFiltersProvider({
   // Só depois da montagem: no servidor não existe localStorage e ler no
   // primeiro render causaria divergência de hidratação.
   useEffect(() => {
+
+    let ativo = true;
+
+    if (hasDatabase) {
+
+      listSavedFilters()
+        .then((linhas) => {
+          if (ativo) setMine(linhas.map(normalizar));
+        })
+        .catch((erro: unknown) => {
+          console.error(
+            "[filtros] carga falhou",
+            erro
+          );
+        });
+
+      return () => {
+        ativo = false;
+      };
+    }
 
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -61,35 +114,52 @@ export function SavedFiltersProvider({
 
       if (!Array.isArray(parsed)) return;
 
-      setMine(
-        parsed.map((item) => ({
-          ...item,
-          // Critério antigo pode não ter os campos mais novos.
-          criteria: {
-            ...emptyCriteria,
-            ...item.criteria,
-          },
-          builtIn: false,
-        }))
-      );
+      setMine(parsed.map(normalizar));
     } catch {
       // Filtro corrompido não pode derrubar a aplicação.
     }
 
-  }, []);
+    return () => {
+      ativo = false;
+    };
 
-  function persist(next: SavedFilter[]) {
-    setMine(next);
+  }, [hasDatabase]);
 
-    try {
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(next)
-      );
-    } catch {
-      // Modo privado pode bloquear a escrita — segue em memória.
-    }
-  }
+  /**
+   * Atualiza a tela na hora e manda para o destino certo.
+   *
+   * A gravação não bloqueia a interface: o critério já está montado, e
+   * esperar a ida ao banco para o filtro aparecer na lista deixaria o
+   * clique lento sem motivo.
+   */
+  const persist = useCallback(
+    (
+      next: SavedFilter[],
+      gravar?: () => Promise<unknown>
+    ) => {
+      setMine(next);
+
+      if (hasDatabase) {
+        gravar?.().catch((erro: unknown) => {
+          console.error(
+            "[filtros] gravação falhou",
+            erro
+          );
+        });
+        return;
+      }
+
+      try {
+        localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify(next)
+        );
+      } catch {
+        // Modo privado pode bloquear a escrita — segue em memória.
+      }
+    },
+    [hasDatabase]
+  );
 
   const value = useMemo<SavedFiltersContextType>(
     () => ({
@@ -117,27 +187,57 @@ export function SavedFiltersProvider({
               item.id === existente.id
                 ? { ...item, criteria }
                 : item
-            )
+            ),
+            () => saveSavedFilter({ name: nome, criteria })
           );
           return;
         }
 
-        persist([
-          ...mine,
-          {
-            id: crypto.randomUUID(),
-            name: nome,
-            criteria,
-            builtIn: false,
-            order: mine.length,
-          },
-        ]);
+        /**
+         * Id provisório: o banco devolve o definitivo, e trocar depois
+         * evita que excluir logo após criar mande um id que não existe
+         * lá.
+         */
+        const provisorio = crypto.randomUUID();
+
+        persist(
+          [
+            ...mine,
+            {
+              id: provisorio,
+              name: nome,
+              criteria,
+              builtIn: false,
+              order: mine.length,
+            },
+          ],
+          async () => {
+
+            const id = await saveSavedFilter({
+              name: nome,
+              criteria,
+            });
+
+            if (id) {
+              setMine((atual) =>
+                atual.map((item) =>
+                  item.id === provisorio
+                    ? { ...item, id }
+                    : item
+                )
+              );
+            }
+          }
+        );
       },
 
       removeFilter: (id) =>
-        persist(mine.filter((item) => item.id !== id)),
+        persist(
+          mine.filter((item) => item.id !== id),
+          () => deleteSavedFilter(id)
+        ),
     }),
-    [mine]
+    [mine, persist]
   );
 
   return (

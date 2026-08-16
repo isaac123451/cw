@@ -49,12 +49,14 @@ const settings: SettingLink[] = [
     title: "Categorias e assuntos",
     description:
       "Taxonomia usada para classificar reclamações e causas raiz.",
+    href: "/reclame-aqui/configuracoes?tab=categorias",
     icon: Tags,
   },
   {
     title: "Usuários e times",
     description:
       "Agentes da operação, áreas responsáveis e distribuição de carga.",
+    href: "/times",
     icon: Users,
   },
   {
@@ -66,7 +68,8 @@ const settings: SettingLink[] = [
   {
     title: "Integrações",
     description:
-      "Importação de planilhas do Reclame Aqui e canais de rede social.",
+      "Webhook por evento para o CW Engine, com assinatura e histórico de entregas.",
+    href: "/configuracoes/integracoes",
     icon: GitBranch,
   },
 ];

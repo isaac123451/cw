@@ -94,6 +94,8 @@ export interface Workspace {
   journeyStages: JourneyStage[];
   journeyTopics: JourneyTopic[];
   journeyEntries: JourneyEntry[];
+  /** Etapa atual por empresa. Sem registro = primeira etapa. */
+  journeyPlacements: Record<string, string>;
   agenda: AgendaTask[];
   impact: ImpactRecord[];
   playbooks: Playbook[];
@@ -117,6 +119,7 @@ const DEMONSTRACAO: Workspace = {
   journeyStages: mockJourneyStages,
   journeyTopics: mockJourneyTopics,
   journeyEntries: mockJourneyEntries,
+  journeyPlacements: {},
   agenda: mockAgenda,
   impact: mockImpact,
   playbooks: mockPlaybooks,
@@ -177,6 +180,7 @@ async function carregarDoBanco(): Promise<Workspace | null> {
     impact,
     playbooks,
     impactTypes,
+    journeyPlacements,
   ] = await Promise.all([
     prisma.workflowStatus.findMany({
       orderBy: { order: "asc" },
@@ -248,6 +252,7 @@ async function carregarDoBanco(): Promise<Workspace | null> {
     prisma.impactType.findMany({
       orderBy: { order: "asc" },
     }),
+    prisma.journeyPlacement.findMany(),
   ]);
 
   return {
@@ -406,6 +411,13 @@ async function carregarDoBanco(): Promise<Workspace | null> {
       author: r.author,
       createdAt: dia(r.createdAt) as string,
     })),
+
+    journeyPlacements: Object.fromEntries(
+      journeyPlacements.map((r) => [
+        r.company,
+        r.stageId,
+      ])
+    ),
 
     agenda: agenda.map((r) => ({
       id: r.id,

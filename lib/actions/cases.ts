@@ -1,5 +1,6 @@
 ﻿"use server";
 
+import { after } from "next/server";
 import { unstable_cache, updateTag } from "next/cache";
 
 import { CASES_TAG } from "@/lib/actions/tags";
@@ -8,7 +9,7 @@ import { Case } from "@/lib/models/case";
 import { mockCases } from "@/lib/data/mockCases";
 
 import { getPrisma } from "@/lib/prisma";
-import { getSession } from "@/lib/auth/session";
+import { requireRole } from "@/lib/auth/guard";
 
 import {
   fetchCaseDescription,
@@ -16,6 +17,9 @@ import {
   persistCase,
   removeCaseByProtocol,
 } from "@/lib/services/case.repository";
+
+import { toPublicCase } from "@/lib/api/source";
+import { dispatchWebhookEvent } from "@/lib/services/webhook.service";
 
 /**
  * Gravação das reclamações, chamada direto pelas telas.
@@ -29,20 +33,18 @@ import {
  * autorização.
  */
 
-/** Sem banco a aplicação roda aberta, em demonstração: nada a exigir. */
+/**
+ * Sem banco a aplicação roda aberta, em demonstração: nada a exigir.
+ *
+ * Com banco, gravar reclamação exige **pelo menos AGENTE** — conta de
+ * leitura não altera a operação. A checagem mora aqui e não na tela:
+ * esconder o botão não impede a chamada direta da server action.
+ */
 async function autorizado() {
 
-  const prisma = getPrisma();
+  const ctx = await requireRole("AGENTE");
 
-  if (!prisma) return null;
-
-  const session = await getSession();
-
-  if (!session) {
-    throw new Error("Sessão expirada. Entre novamente.");
-  }
-
-  return prisma;
+  return ctx?.prisma ?? null;
 }
 
 /**
@@ -109,11 +111,42 @@ export async function saveCase(
 
   if (!prisma) return;
 
+  /**
+   * Lido antes de gravar só para saber se o caso é novo e se acabou de
+   * ganhar avaliação — é o que distingue `caso.criado` de
+   * `caso.avaliado` para quem escuta o webhook. Uma movimentação no
+   * Kanban (`syncTags: false`) não bate em nenhum dos dois casos, então
+   * não dispara nada extra no caminho mais frequente do quadro.
+   */
+  const anterior = await prisma.case.findUnique({
+    where: { protocol: item.protocol },
+    select: { evaluated: true },
+  });
+
   await persistCase(prisma, item, options);
 
   // `updateTag` e não `revalidateTag`: garante que a própria sessão que
   // gravou leia o valor novo na sequência, sem esperar o cache expirar.
   updateTag(CASES_TAG);
+
+  const evento = !anterior
+    ? ("caso.criado" as const)
+    : !anterior.evaluated && item.evaluated
+    ? ("caso.avaliado" as const)
+    : null;
+
+  if (evento) {
+    // `after`: dispara sem atrasar a resposta da gravação, mas sem
+    // arriscar a função serverless encerrar antes do fetch terminar.
+    after(() =>
+      dispatchWebhookEvent(
+        prisma,
+        evento,
+        toPublicCase(item),
+        item.protocol
+      )
+    );
+  }
 }
 
 export async function deleteCase(protocol: string) {

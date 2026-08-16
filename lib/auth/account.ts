@@ -16,6 +16,8 @@ import {
   normalizeEmail,
 } from "@/lib/auth/access";
 
+import { currentRole } from "@/lib/auth/guard";
+
 import {
   createSession,
   getSession,
@@ -132,13 +134,20 @@ export async function changePassword(
   return { success: "Senha alterada." };
 }
 
-/** Só ADMIN administra acessos. */
+/**
+ * Só ADMIN administra acessos.
+ *
+ * O papel vem do **banco**, não do cookie: a sessão dura 8 horas, então
+ * confiar nela deixaria quem acabou de ser rebaixado seguir
+ * administrando o resto do dia — inclusive se promovendo de volta.
+ */
 async function requireAdmin() {
 
   const session = await getSession();
 
   if (!session) return null;
-  if (session.role !== "ADMIN") return null;
+
+  if ((await currentRole()) !== "ADMIN") return null;
 
   return session;
 }

@@ -42,6 +42,8 @@ No painel da Vercel (Settings → Environment Variables) e no `.env` local:
 | `AUTH_SECRET` | sim | Assina o cookie de sessão. |
 | `API_TOKEN` | só se for usar a API | Libera `/api/reputacao` e `/api/casos`. Sem ela a API responde 503 e fica **desligada, nunca aberta**. Ver `API.md`. |
 | `ANTHROPIC_API_KEY` | não | Assistente com IA. Sem ela a tela responde em modo local. |
+| `NEXT_PUBLIC_APP_URL` | só com Google Agenda | Endereço público da aplicação, para montar a URL de retorno do OAuth. Sem ela assume `http://localhost:3000`. |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | não | Google Agenda. Sem elas a integração fica desligada e a tela de Agenda mostra o que falta. Ver a seção abaixo. |
 
 ```bash
 openssl rand -base64 32   # AUTH_SECRET
@@ -143,20 +145,62 @@ banco.
   seed libera o administrador inicial; os demais entram por lá.
 - O primeiro usuário criado na base recebe o papel `ADMIN`.
 
+## Google Agenda
+
+Opcional. Cada pessoa conecta a **própria** conta pela tela de Agenda;
+estas credenciais são do aplicativo, criadas uma vez só.
+
+**1. Criar o projeto e as credenciais** em
+[console.cloud.google.com](https://console.cloud.google.com):
+
+1. Crie um projeto (ou use um existente).
+2. **APIs e serviços → Biblioteca** → ative a **Google Calendar API**.
+3. **Tela de permissão OAuth** → tipo **Interno** (só contas
+   @cardapioweb.com; não passa por revisão do Google). Preencha nome do
+   app e e-mail de suporte.
+4. **Credenciais → Criar credenciais → ID do cliente OAuth** → tipo
+   **Aplicativo da Web**.
+5. Em **URIs de redirecionamento autorizados**, adicione — precisa bater
+   **exatamente**, incluindo protocolo e porta:
+
+   ```
+   http://localhost:3000/api/google/callback
+   https://SEU-DOMINIO/api/google/callback
+   ```
+
+**2. Colar no `.env`** (e nas variáveis da Vercel):
+
+```
+NEXT_PUBLIC_APP_URL="https://SEU-DOMINIO"
+GOOGLE_CLIENT_ID="....apps.googleusercontent.com"
+GOOGLE_CLIENT_SECRET="GOCSPX-..."
+```
+
+**3. Reiniciar** e abrir `/agenda` → "Conectar".
+
+**Permissões pedidas:** ver e criar eventos (`calendar.events`) e o
+e-mail da conta, só para a tela mostrar qual foi conectada. Não pede
+contatos, não apaga agenda.
+
+**Se a conexão falhar com "o Google não enviou o token de renovação":**
+a conta já tinha autorizado antes. Remova o acesso em
+[myaccount.google.com/permissions](https://myaccount.google.com/permissions)
+e conecte de novo.
+
 ## Rodando sem banco
 
 Sem `DATABASE_URL` a aplicação sobe normalmente com o dataset do
 repositório e **sem exigir login** — útil para desenvolvimento de
 interface. O middleware só protege as rotas quando a variável existe.
 
-## O que ainda não persiste
+## Persistência
 
-A API lê do banco quando `DATABASE_URL` existe. **As telas ainda não**:
-os contextos da interface trabalham em memória, então editar um caso,
-mover no Kanban ou registrar uma movimentação vale para a sessão e se
-perde no reload.
+As telas **gravam no Postgres** por server actions (`lib/actions/`):
+tudo o que se edita sobrevive ao reload, incluindo etapa da jornada,
+filtros salvos e preferências de aviso — os três seguem a **conta**, não
+o dispositivo.
 
-Na prática, o que sobe agora é: dados reais em tela, login e controle de
-acesso funcionando, API servindo do banco — e edição ainda volátil.
+O `localStorage` só entra no modo demonstração (sem `DATABASE_URL`),
+para a tela não perder o que foi criado.
 Migrar os contextos para o Prisma é o próximo passo, e está no
 `ROADMAP.md`.

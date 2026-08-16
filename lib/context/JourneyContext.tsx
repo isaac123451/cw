@@ -4,7 +4,6 @@ import {
   createContext,
   useContext,
   useMemo,
-  useState,
   ReactNode,
 } from "react";
 
@@ -19,6 +18,7 @@ import {
   removeJourneyStage,
   removeJourneyTopic,
   saveJourneyEntry,
+  saveJourneyPlacement,
   saveJourneyStage,
   saveJourneyTopic,
 } from "@/lib/actions/registry";
@@ -95,9 +95,10 @@ export function JourneyProvider({
     [] as JourneyEntry[]
   );
 
-  const [placement, setPlacement] = useState<
-    Record<string, string>
-  >({});
+  const [placement, setPlacement] = useWorkspaceSlice(
+    (dados) => dados.journeyPlacements,
+    {} as Record<string, string>
+  );
 
   const value = useMemo<JourneyContextType>(
     () => ({
@@ -108,17 +109,19 @@ export function JourneyProvider({
       loading,
 
       /**
-       * Em qual etapa cada cliente está.
-       *
-       * Fica só na sessão: a etapa é leitura do momento, e o vínculo
-       * duradouro é o do caso. Persistir isso pede uma tabela própria —
-       * está anotado no ROADMAP.
+       * Em qual etapa cada cliente está. Vai para o banco
+       * (`JourneyPlacement`): antes se perdia no reload.
        */
-      moveCompany: (company, stageId) =>
+      moveCompany: (company, stageId) => {
         setPlacement((prev) => ({
           ...prev,
           [company]: stageId,
-        })),
+        }));
+
+        sincronizar(() =>
+          saveJourneyPlacement(company, stageId)
+        );
+      },
 
       saveStage: (data) => {
         setStages((prev) => upsert(prev, data));
@@ -198,6 +201,7 @@ export function JourneyProvider({
       setStages,
       setTopics,
       setEntries,
+      setPlacement,
     ]
   );
 

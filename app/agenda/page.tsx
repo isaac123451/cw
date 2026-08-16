@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 
 import {
   CalendarClock,
+  CalendarPlus,
   CheckCircle2,
   CircleAlert,
   ListTodo,
@@ -20,11 +21,14 @@ import SurfaceCard from "@/components/shared/SurfaceCard";
 import { ConfirmDelete } from "@/components/shared/Modal";
 
 import TaskForm from "@/components/agenda/TaskForm";
+import GoogleCalendarCard from "@/components/agenda/GoogleCalendarCard";
 
 import {
   TaskDraft,
   useAgenda,
 } from "@/lib/context/AgendaContext";
+
+import { pushTaskToGoogle } from "@/lib/actions/google";
 
 import { AgendaTask } from "@/lib/models/agenda";
 import { REFERENCE_DATE } from "@/lib/services/reputation.service";
@@ -92,6 +96,14 @@ export default function AgendaPage() {
     null
   );
 
+  /** Id da tarefa em envio, para travar o botão sem travar a lista. */
+  const [enviando, setEnviando] = useState<string>();
+
+  const [aviso, setAviso] = useState<{
+    ok: boolean;
+    texto: string;
+  }>();
+
   const visible = useMemo(
     () =>
       showDone
@@ -141,6 +153,41 @@ export default function AgendaPage() {
     setEditing(undefined);
     setPresetDate(date);
     setFormOpen(true);
+  }
+
+  async function enviarAoGoogle(item: AgendaTask) {
+
+    setEnviando(item.id);
+    setAviso(undefined);
+
+    const partes = [
+      item.type,
+      item.relatedCompany,
+      item.relatedCase,
+    ].filter(Boolean);
+
+    const resultado = await pushTaskToGoogle({
+      title: item.title,
+      date: item.dueDate,
+      time: item.time,
+      description: `CW Reputação — ${partes.join(" · ")}`,
+    });
+
+    setEnviando(undefined);
+
+    setAviso(
+      resultado.ok
+        ? {
+            ok: true,
+            texto: `"${item.title}" foi para a sua agenda do Google.`,
+          }
+        : {
+            ok: false,
+            texto:
+              resultado.error ??
+              "Não foi possível criar o evento.",
+          }
+    );
   }
 
   return (
@@ -218,6 +265,16 @@ export default function AgendaPage() {
           />
 
         </div>
+
+        {aviso && (
+          <p
+            className={`rounded-xl px-4 py-3 text-sm ring-1 ring-inset ${aviso.ok ? "bg-emerald-50 text-emerald-800 ring-emerald-100" : "bg-rose-50 text-rose-700 ring-rose-100"}`}
+          >
+            {aviso.texto}
+          </p>
+        )}
+
+        <GoogleCalendarCard />
 
         <div className="space-y-5">
 
@@ -368,6 +425,15 @@ export default function AgendaPage() {
                         </span>
 
                         <div className="flex opacity-0 transition-opacity group-hover:opacity-100">
+
+                          <button
+                            onClick={() => enviarAoGoogle(item)}
+                            disabled={enviando === item.id}
+                            title="Enviar para o Google Agenda"
+                            className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-sky-50 hover:text-sky-600 disabled:opacity-40"
+                          >
+                            <CalendarPlus size={14} />
+                          </button>
 
                           <button
                             onClick={() => {

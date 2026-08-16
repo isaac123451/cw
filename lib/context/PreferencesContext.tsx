@@ -2,6 +2,7 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -13,6 +14,11 @@ import {
   defaultPrefs,
   NotificationPrefs,
 } from "@/lib/services/notifications.service";
+
+import {
+  getPreferences,
+  savePreferences,
+} from "@/lib/actions/preferences";
 
 const STORAGE_KEY = "cw:preferencias";
 
@@ -42,13 +48,21 @@ const PreferencesContext =
   createContext<PreferencesContextType | null>(null);
 
 /**
- * Preferências ficam no localStorage porque são do dispositivo, não da
- * conta — e assim sobrevivem ao reload mesmo antes do banco existir.
+ * Preferências da pessoa.
+ *
+ * **Com banco, vão para o Postgres** e seguem a conta: quem desliga um
+ * aviso no desktop encontra desligado no notebook. Antes viviam só no
+ * `localStorage` e eram por dispositivo.
+ *
+ * Sem banco (modo demonstração) o `localStorage` continua valendo.
  */
 export function PreferencesProvider({
   children,
+  hasDatabase = false,
 }: {
   children: ReactNode;
+  /** Vem do layout: este provider não enxerga o `CaseProvider`. */
+  hasDatabase?: boolean;
 }) {
 
   const [prefs, setPrefs] =
@@ -57,6 +71,27 @@ export function PreferencesProvider({
   // Só depois da montagem: no servidor não existe localStorage e ler
   // no primeiro render causaria divergência de hidratação.
   useEffect(() => {
+
+    let ativo = true;
+
+    if (hasDatabase) {
+
+      getPreferences()
+        .then((guardadas) => {
+          // `null` = nunca salvou nada; o padrão já está no estado.
+          if (ativo && guardadas) setPrefs(guardadas);
+        })
+        .catch((erro: unknown) => {
+          console.error(
+            "[preferências] carga falhou",
+            erro
+          );
+        });
+
+      return () => {
+        ativo = false;
+      };
+    }
 
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -77,20 +112,41 @@ export function PreferencesProvider({
       // Preferência corrompida não pode derrubar a aplicação.
     }
 
-  }, []);
+    return () => {
+      ativo = false;
+    };
 
-  function persist(next: Preferences) {
-    setPrefs(next);
+  }, [hasDatabase]);
 
-    try {
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(next)
-      );
-    } catch {
-      // Modo privado pode bloquear a escrita — segue em memória.
-    }
-  }
+  /**
+   * A gravação não bloqueia a tela: marcar uma caixa precisa responder
+   * na hora, e a ida ao banco pode esperar.
+   */
+  const persist = useCallback(
+    (next: Preferences) => {
+      setPrefs(next);
+
+      if (hasDatabase) {
+        savePreferences(next).catch((erro: unknown) => {
+          console.error(
+            "[preferências] gravação falhou",
+            erro
+          );
+        });
+        return;
+      }
+
+      try {
+        localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify(next)
+        );
+      } catch {
+        // Modo privado pode bloquear a escrita — segue em memória.
+      }
+    },
+    [hasDatabase]
+  );
 
   const value = useMemo<PreferencesContextType>(
     () => ({
@@ -110,7 +166,7 @@ export function PreferencesProvider({
 
       reset: () => persist(defaults),
     }),
-    [prefs]
+    [prefs, persist]
   );
 
   return (

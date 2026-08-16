@@ -2,6 +2,9 @@ import Anthropic from "@anthropic-ai/sdk";
 
 import { ASSISTANT_SYSTEM } from "@/lib/services/assistant.context";
 
+import { getSession } from "@/lib/auth/session";
+import { hasDatabase } from "@/lib/prisma";
+
 /** Streaming precisa do runtime Node — o edge corta a conexão longa. */
 export const runtime = "nodejs";
 
@@ -35,12 +38,45 @@ export function hasAssistant() {
   return chave.startsWith("sk-ant-");
 }
 
+/**
+ * Esta rota gasta dinheiro a cada chamada.
+ *
+ * O middleware deixa `/api` passar (a API pública tem token próprio), e
+ * esta aqui não tinha checagem nenhuma: qualquer pessoa na internet
+ * podia apontar para `/api/assistente` e consumir a cota da Anthropic
+ * da empresa, sem login e sem limite.
+ *
+ * Diferente de `/api/casos`, o consumidor é a **própria tela**, então o
+ * critério certo é a sessão do navegador — não o `API_TOKEN`, que é
+ * para outro sistema.
+ */
+async function exigirSessao() {
+
+  if (!hasDatabase()) return null;
+
+  const session = await getSession();
+
+  if (session) return null;
+
+  return Response.json(
+    { error: "Não autorizado." },
+    { status: 401 }
+  );
+}
+
 export async function GET() {
+
+  const barrado = await exigirSessao();
+  if (barrado) return barrado;
+
   // A tela consulta isto para saber se mostra a IA ou o modo local.
   return Response.json({ enabled: hasAssistant() });
 }
 
 export async function POST(request: Request) {
+
+  const barrado = await exigirSessao();
+  if (barrado) return barrado;
 
   if (!hasAssistant()) {
     return Response.json(

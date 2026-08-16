@@ -53,6 +53,9 @@ const periodMonths: Record<PeriodKey, number> = {
   custom: 0,
 };
 
+/** Dias corridos de "30 dias" — não é janela de mês fechado. */
+const ROLLING_DAYS = 30;
+
 function shift(date: string, days: number) {
   const base = new Date(`${date}T00:00:00`);
   base.setDate(base.getDate() + days);
@@ -120,6 +123,36 @@ export function getRange(
       ),
       previousEnd,
       partial: end >= REFERENCE_DATE,
+    };
+  }
+
+  /**
+   * "30 dias" é janela de dias corridos, terminando hoje — e não o mês
+   * fechado anterior.
+   *
+   * Tratá-la como 1 mês fechado escondia o mês corrente inteiro: em
+   * 10/08/2026 a tela mostrava 01/07–31/07 (15 reclamações, nota 8,6)
+   * enquanto os 30 dias reais eram 12/07–10/08 (17 reclamações, nota
+   * 7,4). Meses fechados são a regra de apuração do Reclame Aqui, que
+   * vale para 6m e 12m; "30 dias" é leitura operacional interna, e aí o
+   * que importa é o que aconteceu agora.
+   */
+  if (period === "30d") {
+
+    const end = REFERENCE_DATE;
+    const start = shift(end, -(ROLLING_DAYS - 1));
+
+    const previousEnd = shift(start, -1);
+
+    return {
+      start,
+      end,
+      previousStart: shift(
+        previousEnd,
+        -(ROLLING_DAYS - 1)
+      ),
+      previousEnd,
+      partial: true,
     };
   }
 
@@ -605,36 +638,87 @@ export function scoreFrom(
    CALCULADORA DE REPUTAÇÃO
 ============================================================ */
 
+/**
+ * Uma avaliação do Reclame Aqui é sempre uma unidade com três respostas:
+ * a nota (0–10), se o consumidor voltaria a fazer negócio e se considera
+ * o caso resolvido. O cenário reproduz as três — derivar tudo da nota
+ * amarraria indicadores que, na prática, andam separados.
+ */
 export interface SimulationInput {
-  /** Novas reclamações que serão respondidas. */
+  /**
+   * Reclamações que **já estão na base** sem resposta e passam a ser
+   * respondidas. Não altera o total recebido — só move de "sem resposta"
+   * para "respondida". Responder todas as pendentes leva o índice de
+   * resposta a 100%.
+   */
+  answerPending: number;
+
+  /** Reclamações **novas** que já nascem respondidas. */
   addAnswered: number;
 
-  /** Novas reclamações que ficarão sem resposta. */
+  /** Reclamações **novas** que ficarão sem resposta. */
   addUnanswered: number;
 
   /** Quantidade de novas avaliações por nota (0 a 10). */
   ratings: Record<number, number>;
 
-  wouldReturn: number;
-  wouldNotReturn: number;
+  /**
+   * Quantas das novas avaliações contam como resolvidas.
+   * `null` acompanha as notas (≥ 7); um número fixa o valor à mão.
+   */
+  resolved: number | null;
 
-  resolved: number;
-  notResolved: number;
+  /** Mesma regra do `resolved`, para "voltaria a fazer negócio". */
+  wouldReturn: number | null;
 
-  /** Reclamações removidas da base (moderadas/excluídas). */
-  removeComplaints: number;
+  /** Reclamações moderadas/excluídas pelo portal, uma a uma. */
+  removed: RemovedComplaint[];
+}
+
+/**
+ * Reclamação retirada da base, descrita pelo que ela carregava.
+ *
+ * Contar só "quantas foram removidas" não serve: uma reclamação leva
+ * embora a resposta, a avaliação, a nota e os dois indicadores. Remover
+ * uma nota 1 tem que melhorar a nota do consumidor — que é justamente o
+ * motivo de pedir moderação —, e um contador simples não sabe fazer
+ * isso.
+ */
+export interface RemovedComplaint {
+  id: string;
+  answered: boolean;
+  evaluated: boolean;
+  /** Só vale quando `evaluated`. */
+  score: number;
+  resolved: boolean;
+  wouldReturn: boolean;
+}
+
+export function emptyRemoval(id: string): RemovedComplaint {
+  return {
+    id,
+    answered: true,
+    evaluated: true,
+    score: 1,
+    resolved: false,
+    wouldReturn: false,
+  };
 }
 
 export const emptySimulation: SimulationInput = {
+  answerPending: 0,
   addAnswered: 0,
   addUnanswered: 0,
   ratings: {},
-  wouldReturn: 0,
-  wouldNotReturn: 0,
-  resolved: 0,
-  notResolved: 0,
-  removeComplaints: 0,
+  resolved: null,
+  wouldReturn: null,
+  removed: [],
 };
+
+/** Quantas reclamações da base ainda não têm resposta pública. */
+export function pendingAnswers(base: ReputationRaw) {
+  return Math.max(base.received - base.answered, 0);
+}
 
 export function totalRatings(
   ratings: Record<number, number>
@@ -643,6 +727,46 @@ export function totalRatings(
     (sum, value) => sum + (value || 0),
     0
   );
+}
+
+/**
+ * Nota a partir da qual o consumidor entra como promotor. Serve de
+ * palpite inicial para "resolvidas" e "voltariam" quando o cenário não
+ * define os dois à mão.
+ */
+export const PROMOTER_SCORE = 7;
+
+export function positiveRatings(
+  ratings: Record<number, number>
+) {
+  return Object.entries(ratings).reduce(
+    (sum, [nota, qtd]) =>
+      sum +
+      (Number(nota) >= PROMOTER_SCORE ? qtd || 0 : 0),
+    0
+  );
+}
+
+/**
+ * Resolve os dois indicadores do cenário: o valor definido à mão, ou o
+ * palpite pelas notas. Nunca passa do total de avaliações — mais
+ * resolvidas do que avaliações jogaria o índice acima de 100%.
+ */
+export function resolveIndicators(
+  input: SimulationInput
+) {
+
+  const total = totalRatings(input.ratings);
+  const positivas = positiveRatings(input.ratings);
+
+  const limitar = (valor: number | null) =>
+    Math.min(Math.max(valor ?? positivas, 0), total);
+
+  return {
+    total,
+    resolved: limitar(input.resolved),
+    wouldReturn: limitar(input.wouldReturn),
+  };
 }
 
 /**
@@ -663,32 +787,95 @@ export function simulate(
     0
   );
 
-  // Remoção não pode levar a base abaixo de zero.
-  const removidas = Math.min(
-    input.removeComplaints,
+  const indicadores = resolveIndicators(input);
+
+  // Cada remoção leva embora tudo o que aquela reclamação sustentava.
+  const removidas = input.removed.slice(
+    0,
     base.received
   );
 
-  return {
-    received:
-      base.received +
+  const conta = (
+    filtro: (item: RemovedComplaint) => boolean
+  ) => removidas.filter(filtro).length;
+
+  const removidasAvaliadas = removidas.filter(
+    (item) => item.evaluated
+  );
+
+  const notasRemovidas = removidasAvaliadas.reduce(
+    (sum, item) => sum + item.score,
+    0
+  );
+
+  // Não dá para responder mais do que o que está pendente.
+  const respondidasAgora = Math.min(
+    Math.max(input.answerPending, 0),
+    pendingAnswers(base)
+  );
+
+  /** Nenhuma contagem pode ficar negativa se o cenário exagerar. */
+  const naoNegativo = (valor: number) =>
+    Math.max(valor, 0);
+
+  const received = naoNegativo(
+    base.received +
       input.addAnswered +
       input.addUnanswered -
-      removidas,
+      removidas.length
+  );
+
+  const evaluated = naoNegativo(
+    base.evaluated +
+      novasAvaliacoes -
+      removidasAvaliadas.length
+  );
+
+  return {
+    received,
 
     // O cenário não altera o tempo de resposta já apurado.
     responseMinutesSum: base.responseMinutesSum,
     responseSamples: base.responseSamples,
 
-    answered: base.answered + input.addAnswered,
+    answered: Math.min(
+      naoNegativo(
+        base.answered +
+          respondidasAgora +
+          input.addAnswered -
+          conta((item) => item.answered)
+      ),
+      received
+    ),
 
-    evaluated: base.evaluated + novasAvaliacoes,
+    evaluated,
 
-    scoreSum: base.scoreSum + somaNotas,
+    scoreSum: naoNegativo(
+      base.scoreSum + somaNotas - notasRemovidas
+    ),
 
-    resolved: base.resolved + input.resolved,
+    resolved: Math.min(
+      naoNegativo(
+        base.resolved +
+          indicadores.resolved -
+          conta(
+            (item) => item.evaluated && item.resolved
+          )
+      ),
+      evaluated
+    ),
 
-    wouldReturn: base.wouldReturn + input.wouldReturn,
+    wouldReturn: Math.min(
+      naoNegativo(
+        base.wouldReturn +
+          indicadores.wouldReturn -
+          conta(
+            (item) =>
+              item.evaluated && item.wouldReturn
+          )
+      ),
+      evaluated
+    ),
   };
 }
 

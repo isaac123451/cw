@@ -3,8 +3,7 @@
 import { updateTag } from "next/cache";
 import { WORKSPACE_TAG } from "@/lib/actions/tags";
 
-import { getPrisma } from "@/lib/prisma";
-import { getSession } from "@/lib/auth/session";
+import { requireRole, Role } from "@/lib/auth/guard";
 
 import {
   CategoryOption,
@@ -45,19 +44,21 @@ import type { Playbook } from "@/lib/data/mockPlaybooks";
  * logo abaixo. A separação que existe em `case.repository` não se
  * justificou aqui: são gravações diretas, sem regra de negócio.
  */
-async function autorizado() {
+/**
+ * Sessão **e** papel mínimo.
+ *
+ * Antes só exigia sessão: quem estivesse logado como "somente leitura"
+ * podia chamar qualquer gravação daqui direto, porque esconder o botão
+ * na tela não impede ninguém de invocar a server action.
+ *
+ * Padrão AGENTE (opera a rotina); os cadastros que definem como a
+ * operação funciona pedem ADMIN.
+ */
+async function autorizado(minimo: Role = "AGENTE") {
 
-  const prisma = getPrisma();
+  const ctx = await requireRole(minimo);
 
-  if (!prisma) return null;
-
-  const session = await getSession();
-
-  if (!session) {
-    throw new Error("Sessão expirada. Entre novamente.");
-  }
-
-  return prisma;
+  return ctx?.prisma ?? null;
 }
 
 function dia(value?: string | null) {
@@ -71,7 +72,7 @@ function dia(value?: string | null) {
 export async function saveWorkflowStatus(
   item: WorkflowStatus
 ) {
-  const prisma = await autorizado();
+  const prisma = await autorizado("ADMIN");
   if (!prisma) return;
 
   const dados = {
@@ -92,7 +93,7 @@ export async function saveWorkflowStatus(
 }
 
 export async function removeWorkflowStatus(id: string) {
-  const prisma = await autorizado();
+  const prisma = await autorizado("ADMIN");
   if (!prisma) return;
 
   await prisma.workflowStatus.delete({ where: { id } });
@@ -103,7 +104,7 @@ export async function removeWorkflowStatus(id: string) {
 export async function saveCategory(
   item: CategoryOption
 ) {
-  const prisma = await autorizado();
+  const prisma = await autorizado("ADMIN");
   if (!prisma) return;
 
   const dados = {
@@ -124,7 +125,7 @@ export async function saveCategory(
 }
 
 export async function removeCategory(id: string) {
-  const prisma = await autorizado();
+  const prisma = await autorizado("ADMIN");
   if (!prisma) return;
 
   await prisma.category.delete({ where: { id } });
@@ -135,7 +136,7 @@ export async function removeCategory(id: string) {
 export async function saveSubcategory(
   item: SubcategoryOption
 ) {
-  const prisma = await autorizado();
+  const prisma = await autorizado("ADMIN");
   if (!prisma) return;
 
   const categoria = await prisma.category.findUnique({
@@ -167,7 +168,7 @@ export async function saveSubcategory(
 }
 
 export async function removeSubcategory(id: string) {
-  const prisma = await autorizado();
+  const prisma = await autorizado("ADMIN");
   if (!prisma) return;
 
   await prisma.subcategory.delete({ where: { id } });
@@ -176,7 +177,7 @@ export async function removeSubcategory(id: string) {
 }
 
 export async function saveTag(item: CaseTag) {
-  const prisma = await autorizado();
+  const prisma = await autorizado("ADMIN");
   if (!prisma) return;
 
   const dados = {
@@ -197,7 +198,7 @@ export async function saveTag(item: CaseTag) {
 }
 
 export async function removeTag(id: string) {
-  const prisma = await autorizado();
+  const prisma = await autorizado("ADMIN");
   if (!prisma) return;
 
   await prisma.tag.delete({ where: { id } });
@@ -208,7 +209,7 @@ export async function removeTag(id: string) {
 export async function saveChecklistItem(
   item: ChecklistItem
 ) {
-  const prisma = await autorizado();
+  const prisma = await autorizado("ADMIN");
   if (!prisma) return;
 
   const dados = {
@@ -229,7 +230,7 @@ export async function saveChecklistItem(
 }
 
 export async function removeChecklistItem(id: string) {
-  const prisma = await autorizado();
+  const prisma = await autorizado("ADMIN");
   if (!prisma) return;
 
   await prisma.checklistItem.delete({ where: { id } });
@@ -242,7 +243,7 @@ export async function removeChecklistItem(id: string) {
 ============================================================ */
 
 export async function saveSlaRule(item: SlaRule) {
-  const prisma = await autorizado();
+  const prisma = await autorizado("ADMIN");
   if (!prisma) return;
 
   const dados = {
@@ -265,7 +266,7 @@ export async function saveSlaRule(item: SlaRule) {
 }
 
 export async function removeSlaRule(id: string) {
-  const prisma = await autorizado();
+  const prisma = await autorizado("ADMIN");
   if (!prisma) return;
 
   await prisma.slaRule.delete({ where: { id } });
@@ -276,7 +277,7 @@ export async function removeSlaRule(id: string) {
 export async function saveMovementRule(
   item: MovementRule
 ) {
-  const prisma = await autorizado();
+  const prisma = await autorizado("ADMIN");
   if (!prisma) return;
 
   const dados = {
@@ -296,7 +297,7 @@ export async function saveMovementRule(
 }
 
 export async function removeMovementRule(id: string) {
-  const prisma = await autorizado();
+  const prisma = await autorizado("ADMIN");
   if (!prisma) return;
 
   await prisma.movementRule.delete({ where: { id } });
@@ -596,7 +597,7 @@ export async function removeImpactRecord(id: string) {
 export async function saveImpactType(
   item: ImpactTypeOption
 ) {
-  const prisma = await autorizado();
+  const prisma = await autorizado("ADMIN");
   if (!prisma) return;
 
   const dados = {
@@ -622,7 +623,7 @@ export async function saveImpactType(
  * sem o tipo no cadastro.
  */
 export async function removeImpactType(id: string) {
-  const prisma = await autorizado();
+  const prisma = await autorizado("ADMIN");
   if (!prisma) return;
 
   await prisma.impactType.delete({ where: { id } });
@@ -635,7 +636,7 @@ export async function removeImpactType(id: string) {
 ============================================================ */
 
 export async function saveTeam(item: Team) {
-  const prisma = await autorizado();
+  const prisma = await autorizado("ADMIN");
   if (!prisma) return;
 
   const dados = {
@@ -656,7 +657,7 @@ export async function saveTeam(item: Team) {
 }
 
 export async function removeTeamRecord(id: string) {
-  const prisma = await autorizado();
+  const prisma = await autorizado("ADMIN");
   if (!prisma) return;
 
   // Integrantes não são apagados junto: a pessoa continua existindo,
@@ -682,7 +683,7 @@ export async function assignTeamMember(
   teamId: string,
   member: TeamMember
 ) {
-  const prisma = await autorizado();
+  const prisma = await autorizado("ADMIN");
   if (!prisma) return;
 
   const existente = await prisma.user.findUnique({
@@ -711,7 +712,7 @@ export async function assignTeamMember(
 export async function unassignTeamMember(
   email: string
 ) {
-  const prisma = await autorizado();
+  const prisma = await autorizado("ADMIN");
   if (!prisma) return;
 
   await prisma.user.updateMany({
@@ -729,7 +730,7 @@ export async function unassignTeamMember(
 export async function saveJourneyStage(
   item: JourneyStage
 ) {
-  const prisma = await autorizado();
+  const prisma = await autorizado("ADMIN");
   if (!prisma) return;
 
   const dados = {
@@ -750,7 +751,7 @@ export async function saveJourneyStage(
 }
 
 export async function removeJourneyStage(id: string) {
-  const prisma = await autorizado();
+  const prisma = await autorizado("ADMIN");
   if (!prisma) return;
 
   await prisma.journeyStage.delete({ where: { id } });
@@ -761,7 +762,7 @@ export async function removeJourneyStage(id: string) {
 export async function saveJourneyTopic(
   item: JourneyTopic
 ) {
-  const prisma = await autorizado();
+  const prisma = await autorizado("ADMIN");
   if (!prisma) return;
 
   const dados = {
@@ -781,7 +782,7 @@ export async function saveJourneyTopic(
 }
 
 export async function removeJourneyTopic(id: string) {
-  const prisma = await autorizado();
+  const prisma = await autorizado("ADMIN");
   if (!prisma) return;
 
   await prisma.journeyTopic.delete({ where: { id } });
@@ -816,6 +817,29 @@ export async function removeJourneyEntry(id: string) {
   if (!prisma) return;
 
   await prisma.journeyEntry.delete({ where: { id } });
+
+  updateTag(WORKSPACE_TAG);
+}
+
+/**
+ * Etapa da jornada de um cliente.
+ *
+ * Antes vivia só na sessão: arrastar a empresa para outra etapa se
+ * perdia no reload. A chave é o nome da empresa, como em
+ * `JourneyEntry`.
+ */
+export async function saveJourneyPlacement(
+  company: string,
+  stageId: string
+) {
+  const prisma = await autorizado();
+  if (!prisma) return;
+
+  await prisma.journeyPlacement.upsert({
+    where: { company },
+    update: { stageId },
+    create: { company, stageId },
+  });
 
   updateTag(WORKSPACE_TAG);
 }

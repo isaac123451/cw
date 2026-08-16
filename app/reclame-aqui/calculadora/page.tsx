@@ -8,14 +8,15 @@ import {
   Calculator,
   Eraser,
   Info,
+  Plus,
   Target,
+  Trash2,
 } from "lucide-react";
 
 import MainLayout from "@/components/layout/MainLayout";
 
 import PageHeading from "@/components/shared/PageHeading";
 import SurfaceCard from "@/components/shared/SurfaceCard";
-import Tooltip from "@/components/shared/Tooltip";
 
 import ModuleNav from "@/components/reclame-aqui/ModuleNav";
 import DisregardedNotice from "@/components/reclame-aqui/DisregardedNotice";
@@ -25,6 +26,7 @@ import ScoreScale from "@/components/reclame-aqui/calculadora/ScoreScale";
 import { useScopedCases } from "@/lib/context/useScopedCases";
 
 import {
+  emptyRemoval,
   emptySimulation,
   evaluationsToReach,
   getRange,
@@ -32,8 +34,13 @@ import {
   inRange,
   PeriodKey,
   PeriodMode,
+  pendingAnswers,
+  PROMOTER_SCORE,
   ptBR,
   RA1000_BAND,
+  RemovedComplaint,
+  resolveIndicators,
+  ScoreComponent,
   scoreBands,
   scoreFrom,
   simulate,
@@ -48,6 +55,12 @@ const periodLabels: Record<string, string> = {
 
 type Kind = "simplificada" | "avancada";
 
+/**
+ * O modo avançado é uma frente de cada vez, não um formulário longo com
+ * tudo junto — o Isaac pediu para o foco voltar a "adicionar avaliações".
+ */
+type AdvancedMode = "avaliacoes" | "reclamacoes" | "remocao";
+
 const numberField =
   "h-11 w-full rounded-xl border border-zinc-200 px-3 text-sm tabular-nums outline-none transition-colors focus:border-violet-400";
 
@@ -59,6 +72,9 @@ export default function CalculadoraPage() {
   const [mode, setMode] = useState<PeriodMode>("vigente");
 
   const [kind, setKind] = useState<Kind>("simplificada");
+
+  const [advMode, setAdvMode] =
+    useState<AdvancedMode>("avaliacoes");
 
   const [input, setInput] =
     useState<SimulationInput>(emptySimulation);
@@ -124,13 +140,69 @@ export default function CalculadoraPage() {
       (simulated.raScore - current.raScore) * 10
     ) / 10;
 
+  function formatComponent(
+    item?: ScoreComponent
+  ) {
+    if (!item || item.base === 0) return "—";
+    return item.unit === "%"
+      ? `${ptBR(item.value)}%`
+      : ptBR(item.value, 2);
+  }
+
   function setField(
-    field: keyof SimulationInput,
+    field:
+      | "answerPending"
+      | "addAnswered"
+      | "addUnanswered"
+      | "removeComplaints",
     value: number
   ) {
     setInput((prev) => ({
       ...prev,
       [field]: Math.max(0, value || 0),
+    }));
+  }
+
+  function addRemoval() {
+    setInput((prev) => ({
+      ...prev,
+      removed: [
+        ...prev.removed,
+        emptyRemoval(crypto.randomUUID()),
+      ],
+    }));
+  }
+
+  function removeRemoval(id: string) {
+    setInput((prev) => ({
+      ...prev,
+      removed: prev.removed.filter(
+        (item) => item.id !== id
+      ),
+    }));
+  }
+
+  function patchRemoval(
+    id: string,
+    patch: Partial<RemovedComplaint>
+  ) {
+    setInput((prev) => ({
+      ...prev,
+      removed: prev.removed.map((item) =>
+        item.id === id ? { ...item, ...patch } : item
+      ),
+    }));
+  }
+
+  /** `null` devolve o campo ao palpite pelas notas. */
+  function setIndicator(
+    field: "resolved" | "wouldReturn",
+    value: number | null
+  ) {
+    setInput((prev) => ({
+      ...prev,
+      [field]:
+        value === null ? null : Math.max(0, value || 0),
     }));
   }
 
@@ -148,11 +220,9 @@ export default function CalculadoraPage() {
     input.ratings
   );
 
-  const indicadoresOk =
-    input.wouldReturn + input.wouldNotReturn ===
-      avaliacoesDistribuidas &&
-    input.resolved + input.notResolved ===
-      avaliacoesDistribuidas;
+  const indicadores = resolveIndicators(input);
+
+  const pendentes = pendingAnswers(base);
 
   return (
     <MainLayout>
@@ -261,24 +331,25 @@ export default function CalculadoraPage() {
                   description="O cenário começa nos dados reais do período. Com tudo zerado, o resultado é a nota atual."
                 >
 
-                  <dl className="grid grid-cols-3 gap-3">
+                  <dl className="grid grid-cols-4 gap-2.5">
 
                     {[
-                      ["Reclamações", base.received],
-                      ["Respondidas", base.answered],
-                      ["Avaliadas", base.evaluated],
-                    ].map(([label, value]) => (
+                      ["Reclamações", base.received, false],
+                      ["Respondidas", base.answered, false],
+                      ["Sem resposta", pendentes, pendentes > 0],
+                      ["Avaliadas", base.evaluated, false],
+                    ].map(([label, value, alerta]) => (
 
                       <div
-                        key={label}
-                        className="rounded-xl bg-zinc-50 px-3 py-2.5"
+                        key={String(label)}
+                        className={`rounded-xl px-3 py-2.5 ${alerta ? "bg-amber-50 ring-1 ring-inset ring-amber-100" : "bg-zinc-50"}`}
                       >
 
-                        <dt className="text-[10px] font-semibold uppercase tracking-wide text-zinc-400">
+                        <dt className={`text-[10px] font-semibold uppercase tracking-wide ${alerta ? "text-amber-600" : "text-zinc-400"}`}>
                           {label}
                         </dt>
 
-                        <dd className="mt-0.5 text-lg font-semibold tabular-nums text-zinc-900">
+                        <dd className={`mt-0.5 text-lg font-semibold tabular-nums ${alerta ? "text-amber-700" : "text-zinc-900"}`}>
                           {value}
                         </dd>
 
@@ -291,9 +362,232 @@ export default function CalculadoraPage() {
                 </SurfaceCard>
 
                 <SurfaceCard
-                  title="2. Reclamações a mais"
-                  description="Distribua entre respondidas e não respondidas."
+                  title="2. O que simular"
+                  description="Uma frente por vez — cada uma soma sobre o ponto de partida."
                 >
+
+                  <div className="flex items-center rounded-xl border border-zinc-200 p-1">
+
+                    {(
+                      [
+                        ["avaliacoes", "Avaliações"],
+                        ["reclamacoes", "Reclamações"],
+                        ["remocao", "Remoção"],
+                      ] as [AdvancedMode, string][]
+                    ).map(([id, label]) => (
+
+                      <button
+                        key={id}
+                        onClick={() => setAdvMode(id)}
+                        className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                          advMode === id
+                            ? "bg-violet-700 text-white"
+                            : "text-zinc-600 hover:bg-zinc-100"
+                        }`}
+                      >
+                        {label}
+                      </button>
+
+                    ))}
+
+                  </div>
+
+                </SurfaceCard>
+
+                {advMode === "avaliacoes" && (
+
+                  <SurfaceCard
+                    title="3. Notas de avaliação"
+                    description="Quantas novas avaliações por nota. Nota 7 ou mais conta como resolvida e favorável — mesmo critério de promotor."
+                    action={
+                      <span className="shrink-0 rounded-xl bg-zinc-50 px-3 py-1.5 text-xs font-medium text-zinc-600">
+                        Total: {avaliacoesDistribuidas}
+                      </span>
+                    }
+                  >
+
+                    <div className="grid grid-cols-4 gap-2">
+
+                      {Array.from({ length: 11 }, (_, i) => i).map(
+                        (score) => (
+
+                          <div key={score}>
+
+                            <label className="text-[10px] font-semibold uppercase tracking-wide text-zinc-400">
+                              Nota {score}
+                            </label>
+
+                            <input
+                              type="number"
+                              min={0}
+                              value={input.ratings[score] ?? 0}
+                              onChange={(e) =>
+                                setRating(
+                                  score,
+                                  Number(e.target.value)
+                                )
+                              }
+                              className={`mt-1 h-10 w-full rounded-lg border px-2 text-sm tabular-nums outline-none transition-colors focus:border-violet-400 ${score >= 7 ? "border-emerald-200" : "border-zinc-200"}`}
+                            />
+
+                          </div>
+
+                        )
+                      )}
+
+                    </div>
+
+                    {avaliacoesDistribuidas > 0 && (
+
+                      <div className="mt-5 space-y-4 border-t border-zinc-100 pt-4">
+
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+                          Destas {avaliacoesDistribuidas} avaliações
+                        </p>
+
+                        {(
+                          [
+                            ["resolved", "Índice de solução", "resolvidas"],
+                            ["wouldReturn", "Voltaria a fazer negócio", "voltariam"],
+                          ] as [
+                            "resolved" | "wouldReturn",
+                            string,
+                            string
+                          ][]
+                        ).map(([field, label, sufixo]) => {
+
+                          const valor = indicadores[field];
+
+                          const automatico = input[field] === null;
+
+                          return (
+                            <div key={field}>
+
+                              <div className="flex items-center justify-between gap-2">
+
+                                <label className="text-xs font-medium text-zinc-600">
+                                  {label}
+                                </label>
+
+                                {!automatico && (
+                                  <button
+                                    onClick={() => setIndicator(field, null)}
+                                    className="text-[11px] font-medium text-violet-600 hover:underline"
+                                  >
+                                    Usar as notas
+                                  </button>
+                                )}
+
+                              </div>
+
+                              <div className="mt-1.5 flex items-center gap-2.5">
+
+                                <input
+                                  type="number"
+                                  min={0}
+                                  max={avaliacoesDistribuidas}
+                                  value={valor}
+                                  onChange={(e) =>
+                                    setIndicator(
+                                      field,
+                                      Number(e.target.value)
+                                    )
+                                  }
+                                  className={`${numberField} max-w-[110px]`}
+                                />
+
+                                <span className="text-xs text-zinc-500">
+                                  {sufixo} · {avaliacoesDistribuidas - valor} não
+                                </span>
+
+                                {automatico && (
+                                  <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
+                                    pelas notas
+                                  </span>
+                                )}
+
+                              </div>
+
+                            </div>
+                          );
+                        })}
+
+                        <p className="flex items-start gap-2 text-xs leading-relaxed text-zinc-400">
+                          <Info size={13} className="mt-0.5 shrink-0" />
+                          Sem mexer, nota {PROMOTER_SCORE} ou mais entra como resolvida e favorável. Editar um dos campos fixa o valor.
+                        </p>
+
+                      </div>
+
+                    )}
+
+                  </SurfaceCard>
+
+                )}
+
+                {advMode === "reclamacoes" && (
+
+                  <>
+                    <SurfaceCard
+                      title="3. Responder as pendentes"
+                      description="Reclamações que já estão na base sem resposta pública. Responder todas leva o índice de resposta a 100%."
+                    >
+
+                      {pendentes === 0 ? (
+
+                        <p className="rounded-xl bg-emerald-50 px-4 py-3.5 text-sm font-medium text-emerald-800 ring-1 ring-inset ring-emerald-100">
+                          Nenhuma reclamação sem resposta neste período.
+                        </p>
+
+                      ) : (
+
+                        <>
+                          <div className="flex items-center gap-3">
+
+                            <input
+                              type="number"
+                              min={0}
+                              max={pendentes}
+                              value={input.answerPending}
+                              onChange={(e) =>
+                                setField(
+                                  "answerPending",
+                                  Math.min(
+                                    Number(e.target.value),
+                                    pendentes
+                                  )
+                                )
+                              }
+                              className={`${numberField} max-w-[120px]`}
+                            />
+
+                            <button
+                              onClick={() =>
+                                setField(
+                                  "answerPending",
+                                  pendentes
+                                )
+                              }
+                              className="rounded-xl border border-violet-200 px-3.5 py-2 text-sm font-medium text-violet-700 transition-colors hover:bg-violet-50"
+                            >
+                              Responder todas ({pendentes})
+                            </button>
+
+                          </div>
+
+                          <p className="mt-2.5 text-xs text-zinc-500">
+                            {pendentes} sem resposta hoje · índice atual {ptBR(current.responseIndex)}% → simulado {ptBR(simulated.responseIndex)}%
+                          </p>
+                        </>
+
+                      )}
+
+                    </SurfaceCard>
+
+                    <SurfaceCard
+                      title="4. Reclamações novas"
+                      description="Reclamações que ainda vão chegar. Entram somando na base."
+                    >
 
                       <div className="grid grid-cols-2 gap-3">
 
@@ -338,180 +632,166 @@ export default function CalculadoraPage() {
                       </div>
 
                     </SurfaceCard>
+                  </>
 
-                    <SurfaceCard
-                      title="3. Notas de avaliação"
-                      description="Quantas novas avaliações por nota."
-                      action={
-                        <span className="shrink-0 rounded-xl bg-zinc-50 px-3 py-1.5 text-xs font-medium text-zinc-600">
-                          Total: {avaliacoesDistribuidas}
-                        </span>
-                      }
-                    >
+                )}
 
-                      <div className="grid grid-cols-4 gap-2">
+                {advMode === "remocao" && (
 
-                        {Array.from({ length: 11 }, (_, i) => i).map(
-                          (score) => (
+                  <SurfaceCard
+                    title="3. Reclamações removidas"
+                    description="Moderadas ou excluídas pelo portal. Descreva cada uma — a remoção leva embora a resposta, a avaliação e a nota junto."
+                    action={
+                      <button
+                        onClick={addRemoval}
+                        className="flex shrink-0 items-center gap-2 rounded-xl border border-violet-200 px-3.5 py-2 text-sm font-medium text-violet-700 transition-colors hover:bg-violet-50"
+                      >
+                        <Plus size={15} />
+                        Adicionar
+                      </button>
+                    }
+                  >
 
-                            <div key={score}>
+                    {input.removed.length === 0 ? (
 
-                              <label className="text-[10px] font-semibold uppercase tracking-wide text-zinc-400">
-                                Nota {score}
-                              </label>
+                      <p className="py-6 text-center text-sm text-zinc-400">
+                        Nenhuma remoção no cenário. Base do período: {base.received} reclamações.
+                      </p>
 
-                              <input
-                                type="number"
-                                min={0}
-                                value={input.ratings[score] ?? 0}
-                                onChange={(e) =>
-                                  setRating(
-                                    score,
-                                    Number(e.target.value)
-                                  )
-                                }
-                                className="mt-1 h-10 w-full rounded-lg border border-zinc-200 px-2 text-sm tabular-nums outline-none transition-colors focus:border-violet-400"
-                              />
+                    ) : (
+
+                      <div className="space-y-3">
+
+                        {input.removed.map((item, index) => (
+
+                          <div
+                            key={item.id}
+                            className="rounded-xl border border-zinc-200 p-3.5"
+                          >
+
+                            <div className="flex items-center justify-between gap-2">
+
+                              <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                                Reclamação {index + 1}
+                              </span>
+
+                              <button
+                                onClick={() => removeRemoval(item.id)}
+                                aria-label="Tirar do cenário"
+                                className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-rose-50 hover:text-rose-600"
+                              >
+                                <Trash2 size={15} />
+                              </button>
 
                             </div>
 
-                          )
-                        )}
+                            <div className="mt-3 space-y-2.5">
 
-                      </div>
+                              <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-700">
+                                <input
+                                  type="checkbox"
+                                  checked={item.answered}
+                                  onChange={(e) =>
+                                    patchRemoval(item.id, {
+                                      answered: e.target.checked,
+                                    })
+                                  }
+                                  className="h-4 w-4 accent-violet-600"
+                                />
+                                Estava respondida
+                              </label>
 
-                    </SurfaceCard>
+                              <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-700">
+                                <input
+                                  type="checkbox"
+                                  checked={item.evaluated}
+                                  onChange={(e) =>
+                                    patchRemoval(item.id, {
+                                      evaluated: e.target.checked,
+                                    })
+                                  }
+                                  className="h-4 w-4 accent-violet-600"
+                                />
+                                Tinha avaliação do consumidor
+                              </label>
 
-                    <SurfaceCard
-                      title="4. Indicadores de reputação"
-                      description="Distribua exatamente o total de avaliações informado."
-                    >
+                              {item.evaluated && (
 
-                      <div className="space-y-4">
+                                <div className="space-y-2.5 border-l-2 border-zinc-100 pl-3.5">
 
-                        <div>
+                                  <div className="flex items-center gap-2.5">
 
-                          <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-zinc-400">
-                            Voltaria a fazer negócio
-                            <Tooltip label="A soma precisa bater com o total de avaliações.">
-                              <Info size={11} className="text-zinc-300" />
-                            </Tooltip>
-                          </p>
+                                    <label className="text-sm text-zinc-600">
+                                      Nota
+                                    </label>
 
-                          <div className="grid grid-cols-2 gap-3">
+                                    <select
+                                      value={item.score}
+                                      onChange={(e) =>
+                                        patchRemoval(item.id, {
+                                          score: Number(e.target.value),
+                                        })
+                                      }
+                                      className="h-10 rounded-xl border border-zinc-200 px-3 text-sm tabular-nums outline-none transition-colors focus:border-violet-400"
+                                    >
+                                      {Array.from({ length: 11 }, (_, i) => i).map((n) => (
+                                        <option key={n} value={n}>
+                                          {n}
+                                        </option>
+                                      ))}
+                                    </select>
 
-                            <input
-                              type="number"
-                              min={0}
-                              value={input.wouldReturn}
-                              onChange={(e) =>
-                                setField(
-                                  "wouldReturn",
-                                  Number(e.target.value)
-                                )
-                              }
-                              placeholder="Voltariam"
-                              className={numberField}
-                            />
+                                  </div>
 
-                            <input
-                              type="number"
-                              min={0}
-                              value={input.wouldNotReturn}
-                              onChange={(e) =>
-                                setField(
-                                  "wouldNotReturn",
-                                  Number(e.target.value)
-                                )
-                              }
-                              placeholder="Não voltariam"
-                              className={numberField}
-                            />
+                                  <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-700">
+                                    <input
+                                      type="checkbox"
+                                      checked={item.resolved}
+                                      onChange={(e) =>
+                                        patchRemoval(item.id, {
+                                          resolved: e.target.checked,
+                                        })
+                                      }
+                                      className="h-4 w-4 accent-violet-600"
+                                    />
+                                    Contava como resolvida
+                                  </label>
+
+                                  <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-700">
+                                    <input
+                                      type="checkbox"
+                                      checked={item.wouldReturn}
+                                      onChange={(e) =>
+                                        patchRemoval(item.id, {
+                                          wouldReturn: e.target.checked,
+                                        })
+                                      }
+                                      className="h-4 w-4 accent-violet-600"
+                                    />
+                                    Voltaria a fazer negócio
+                                  </label>
+
+                                </div>
+
+                              )}
+
+                            </div>
 
                           </div>
 
-                        </div>
+                        ))}
 
-                        <div>
-
-                          <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-zinc-400">
-                            Índice de solução
-                          </p>
-
-                          <div className="grid grid-cols-2 gap-3">
-
-                            <input
-                              type="number"
-                              min={0}
-                              value={input.resolved}
-                              onChange={(e) =>
-                                setField(
-                                  "resolved",
-                                  Number(e.target.value)
-                                )
-                              }
-                              placeholder="Resolvidas"
-                              className={numberField}
-                            />
-
-                            <input
-                              type="number"
-                              min={0}
-                              value={input.notResolved}
-                              onChange={(e) =>
-                                setField(
-                                  "notResolved",
-                                  Number(e.target.value)
-                                )
-                              }
-                              placeholder="Não resolvidas"
-                              className={numberField}
-                            />
-
-                          </div>
-
-                        </div>
-
-                        {avaliacoesDistribuidas > 0 &&
-                          !indicadoresOk && (
-
-                            <p className="rounded-xl bg-amber-50 px-3 py-2.5 text-xs text-amber-700 ring-1 ring-inset ring-amber-100">
-                              A distribuição precisa somar{" "}
-                              {avaliacoesDistribuidas} em cada
-                              indicador para o cenário ficar
-                              consistente.
-                            </p>
-
-                          )}
+                        <p className="text-xs text-zinc-400">
+                          {input.removed.length} de {base.received} reclamações do período.
+                        </p>
 
                       </div>
 
-                    </SurfaceCard>
+                    )}
 
-                <SurfaceCard
-                  title="5. Reclamações removidas"
-                  description="Moderadas ou excluídas pelo portal — saem da base do período."
-                >
+                  </SurfaceCard>
 
-                  <input
-                    type="number"
-                    min={0}
-                    max={base.received}
-                    value={input.removeComplaints}
-                    onChange={(e) =>
-                      setField(
-                        "removeComplaints",
-                        Number(e.target.value)
-                      )
-                    }
-                    className={numberField}
-                  />
-
-                  <p className="mt-2 text-xs text-zinc-400">
-                    Base do período: {base.received} reclamações.
-                  </p>
-
-                </SurfaceCard>
+                )}
 
                 <button
                   onClick={() => setInput(emptySimulation)}
@@ -670,13 +950,15 @@ export default function CalculadoraPage() {
 
                 {simulated.breakdown.map((item) => {
 
-                  const antes =
-                    current.breakdown.find(
-                      (b) => b.key === item.key
-                    )?.value ?? 0;
+                  const antes = current.breakdown.find(
+                    (b) => b.key === item.key
+                  );
 
-                  const diff =
-                    Math.round((item.value - antes) * 10) / 10;
+                  const diff = antes
+                    ? Math.round(
+                        (item.value - antes.value) * 10
+                      ) / 10
+                    : 0;
 
                   return (
                     <div
@@ -688,17 +970,21 @@ export default function CalculadoraPage() {
                         {item.label}
                       </span>
 
-                      <span className="flex shrink-0 items-center gap-3">
+                      <span className="flex shrink-0 items-center gap-2.5">
 
-                        <span className="text-sm tabular-nums text-zinc-500">
-                          {item.base === 0
-                            ? "—"
-                            : item.unit === "%"
-                            ? `${ptBR(item.value)}%`
-                            : ptBR(item.value, 2)}
+                        <span className="text-sm tabular-nums text-zinc-400">
+                          {formatComponent(antes)}
                         </span>
 
-                        {Math.abs(diff) > 0.05 && (
+                        <span className="text-xs text-zinc-300">
+                          →
+                        </span>
+
+                        <span className="text-sm font-semibold tabular-nums text-zinc-800">
+                          {formatComponent(item)}
+                        </span>
+
+                        {diff !== 0 && (
                           <span
                             className={`flex items-center gap-0.5 text-xs font-semibold tabular-nums ${
                               diff > 0

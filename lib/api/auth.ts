@@ -1,3 +1,8 @@
+import {
+  createHash,
+  timingSafeEqual,
+} from "node:crypto";
+
 /**
  * Autenticação da API pública por token.
  *
@@ -10,6 +15,24 @@
  */
 export function hasApi() {
   return (process.env.API_TOKEN ?? "").trim().length >= 16;
+}
+
+/**
+ * Comparação de tempo constante.
+ *
+ * `a !== b` sai no primeiro caractere diferente, e a diferença de tempo
+ * entre "errou no 1º" e "errou no 20º" permite descobrir o token
+ * caractere a caractere. O hash iguala o tamanho dos dois lados, que é
+ * o que `timingSafeEqual` exige.
+ */
+function mesmoToken(recebido: string, esperado: string) {
+
+  if (esperado === "") return false;
+
+  const a = createHash("sha256").update(recebido).digest();
+  const b = createHash("sha256").update(esperado).digest();
+
+  return timingSafeEqual(a, b);
 }
 
 /**
@@ -34,7 +57,7 @@ export function checkToken(request: Request) {
     ? header.slice(7).trim()
     : "";
 
-  if (token !== process.env.API_TOKEN) {
+  if (!mesmoToken(token, process.env.API_TOKEN ?? "")) {
     return Response.json(
       { error: "Token inválido ou ausente." },
       {

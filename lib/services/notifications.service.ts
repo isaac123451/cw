@@ -1,6 +1,7 @@
 import { Case } from "@/lib/models/case";
 import { AgendaTask } from "@/lib/models/agenda";
 import { CaseMovement } from "@/lib/models/movement";
+import { GoogleEvent } from "@/lib/models/google";
 
 import { REFERENCE_DATE } from "@/lib/services/reputation.service";
 import { lateMovements } from "@/lib/services/movement.service";
@@ -83,7 +84,8 @@ export function buildNotifications(
   tasks: AgendaTask[],
   prefs: NotificationPrefs = defaultPrefs,
   owner?: string,
-  movements: CaseMovement[] = []
+  movements: CaseMovement[] = [],
+  googleEvents: GoogleEvent[] = []
 ): Notification[] {
 
   const list: Notification[] = [];
@@ -226,6 +228,43 @@ export function buildNotifications(
         detail: "Programadas para a data de hoje.",
         href: "/agenda",
         count: paraHoje.length,
+      });
+    }
+
+    /**
+     * Compromissos do Google de hoje.
+     *
+     * Entram junto das atividades por escolha: para quem abre o sino, o
+     * dia é um só — separar em duas listas obrigaria a olhar dois
+     * lugares para saber o que vem pela frente.
+     *
+     * Usa o dia real do navegador, não `REFERENCE_DATE`: o evento vem
+     * da agenda de verdade, e comparar com a data fixa da operação
+     * esconderia tudo.
+     */
+    const hojeReal = new Date()
+      .toISOString()
+      .slice(0, 10);
+
+    const eventosHoje = googleEvents.filter(
+      (item) => item.date === hojeReal
+    );
+
+    if (eventosHoje.length > 0) {
+
+      const comHora = eventosHoje.find(
+        (item) => !item.allDay
+      );
+
+      list.push({
+        id: "google-hoje",
+        tone: "info",
+        title: `${eventosHoje.length} compromisso(s) hoje na sua agenda`,
+        detail: comHora
+          ? `O próximo é "${comHora.title}", às ${comHora.time}.`
+          : eventosHoje[0].title,
+        href: "/agenda",
+        count: eventosHoje.length,
       });
     }
   }

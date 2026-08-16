@@ -16,6 +16,7 @@ import { useAgenda } from "@/lib/context/AgendaContext";
 import { useMovements } from "@/lib/context/MovementsContext";
 import { useSession } from "@/lib/context/SessionContext";
 import { usePreferences } from "@/lib/context/PreferencesContext";
+import { useGoogleEvents } from "@/lib/context/GoogleEventsContext";
 
 import {
   buildNotifications,
@@ -47,6 +48,7 @@ export default function NotificationsMenu() {
   const { movements } = useMovements();
   const session = useSession();
   const { prefs } = usePreferences();
+  const { events: googleEvents } = useGoogleEvents();
 
   const [open, setOpen] = useState(false);
 
@@ -59,9 +61,17 @@ export default function NotificationsMenu() {
         prefs.somenteMinhas
           ? session?.name
           : undefined,
-        movements
+        movements,
+        googleEvents
       ),
-    [cases, tasks, prefs, session, movements]
+    [
+      cases,
+      tasks,
+      prefs,
+      session,
+      movements,
+      googleEvents,
+    ]
   );
 
   const criticos = items.filter(

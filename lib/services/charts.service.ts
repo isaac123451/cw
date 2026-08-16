@@ -2,7 +2,9 @@ import { Case } from "@/lib/models/case";
 
 import {
   bandOf,
+  getRange,
   getRawCounts,
+  inRange,
   PeriodKey,
   REFERENCE_DATE,
   scoreFrom,
@@ -15,13 +17,6 @@ import {
 export type ChartPeriod = PeriodKey;
 
 export { periodLabels as chartPeriodLabels } from "@/lib/services/reputation.service";
-
-const chartPeriodMonths: Record<string, number> = {
-  "30d": 1,
-  "3m": 3,
-  "6m": 6,
-  "12m": 12,
-};
 
 function addDays(date: string, days: number) {
   const base = new Date(`${date}T00:00:00Z`);
@@ -54,62 +49,41 @@ function monthLabel(key: string) {
 }
 
 /**
- * Lista de meses que compõem o período.
+ * Meses tocados pelo período.
  *
- * Nas faixas fixas termina no último mês fechado, que é como o Reclame
- * Aqui apura. No intervalo personalizado percorre os meses tocados pelas
- * datas escolhidas.
+ * Derivado do mesmo `getRange` que calcula a nota, de propósito: havia
+ * duas contas de período em paralelo aqui e em `reputation.service`, e
+ * elas divergiam — "30 dias" desenhava o mês fechado anterior enquanto a
+ * nota passou a considerar os 30 dias corridos. Uma fonte só evita a
+ * volta desse tipo de divergência em qualquer filtro.
  */
 export function monthsIn(
   period: ChartPeriod,
   custom?: { start: string; end: string }
 ): string[] {
 
+  const range = getRange(period, "vigente", custom);
+
   const keys: string[] = [];
 
-  if (period === "custom") {
+  const [sy, sm] = range.start.split("-").map(Number);
+  const endKey = range.end.slice(0, 7);
 
-    if (!custom) return keys;
+  let cursor = new Date(Date.UTC(sy, sm - 1, 1));
 
-    // O input de data devolve string vazia quando é limpo. Sem esta
-    // defesa, "".split("-") viraria Date.UTC(NaN) e o toISOString abaixo
-    // derrubava a tela inteira. Mesmo fallback do getRange.
-    const start = custom.start || REFERENCE_DATE;
-    const end = custom.end || REFERENCE_DATE;
-
-    const [sy, sm] = start.split("-").map(Number);
-    const endKey = end.slice(0, 7);
-
-    let cursor = new Date(Date.UTC(sy, sm - 1, 1));
-
-    // Trava de segurança: intervalos absurdos não travam a tela.
-    while (
-      cursor.toISOString().slice(0, 7) <= endKey &&
-      keys.length < 120
-    ) {
-      keys.push(cursor.toISOString().slice(0, 7));
-      cursor = new Date(
-        Date.UTC(
-          cursor.getUTCFullYear(),
-          cursor.getUTCMonth() + 1,
-          1
-        )
-      );
-    }
-
-    return keys;
-  }
-
-  const count = chartPeriodMonths[period] ?? 12;
-
-  const [year, month] = REFERENCE_DATE.split("-").map(
-    Number
-  );
-
-  // Termina no último mês fechado.
-  for (let i = count; i >= 1; i--) {
-    const d = new Date(Date.UTC(year, month - 1 - i, 1));
-    keys.push(d.toISOString().slice(0, 7));
+  // Trava de segurança: intervalos absurdos não travam a tela.
+  while (
+    cursor.toISOString().slice(0, 7) <= endKey &&
+    keys.length < 120
+  ) {
+    keys.push(cursor.toISOString().slice(0, 7));
+    cursor = new Date(
+      Date.UTC(
+        cursor.getUTCFullYear(),
+        cursor.getUTCMonth() + 1,
+        1
+      )
+    );
   }
 
   return keys;
@@ -231,11 +205,22 @@ export function getMonthlyIndices(
   custom?: { start: string; end: string }
 ): MonthlyIndices[] {
 
+  const range = getRange(period, "vigente", custom);
+
+  /**
+   * Recorta pelo intervalo, não só pelo mês.
+   *
+   * Em janela que começa ou termina no meio do mês — "30 dias" e o
+   * intervalo personalizado —, contar o mês inteiro somaria dias fora do
+   * período e o gráfico deixaria de bater com a nota da tela.
+   */
   return monthsIn(period, custom).map((key) =>
     indicesOf(
       key,
       cases.filter(
-        (item) => monthKey(item.createdAt) === key
+        (item) =>
+          monthKey(item.createdAt) === key &&
+          inRange(item, range.start, range.end)
       )
     )
   );
@@ -298,47 +283,129 @@ export interface DailyPoint {
   resolved: number;
 }
 
+export type Granularity = "dia" | "semana" | "mes";
+
+/** Masculino: acompanham "Movimento" no título do cartão. */
+export const granularityLabels: Record<
+  Granularity,
+  string
+> = {
+  dia: "diário",
+  semana: "semanal",
+  mes: "mensal",
+};
+
 /**
- * Série diária da janela informada.
+ * O passo do eixo muda com o tamanho da janela.
  *
- * Sem `range`, usa os últimos 30 dias a partir da data de referência —
- * era o comportamento fixo anterior, que ignorava o período escolhido
- * na tela.
+ * Desenhar 365 pontos diários num gráfico dessa largura não é leitura, é
+ * ruído: as linhas viram serrilha e o eixo fica ilegível. Agrupar mantém
+ * a forma da curva com um número de pontos que cabe na tela.
  */
-export function getDailySeries(
+function granularityFor(days: number): Granularity {
+  if (days <= 60) return "dia";
+  if (days <= 210) return "semana";
+  return "mes";
+}
+
+function daysBetween(start: string, end: string) {
+  return (
+    Math.round(
+      (Date.parse(`${end}T00:00:00Z`) -
+        Date.parse(`${start}T00:00:00Z`)) /
+        86400000
+    ) + 1
+  );
+}
+
+export interface TimeSeries {
+  granularity: Granularity;
+  points: DailyPoint[];
+}
+
+/**
+ * Série temporal da janela escolhida, agrupada por dia, semana ou mês
+ * conforme o tamanho dela.
+ *
+ * Diferente dos gráficos mensais, inclui o mês corrente ainda aberto —
+ * é a leitura que mostra o que está acontecendo agora.
+ */
+export function getTimeSeries(
   cases: Case[],
-  range?: { start: string; end: string }
-): DailyPoint[] {
+  range: { start: string; end: string }
+): TimeSeries {
 
-  const end = range?.end ?? REFERENCE_DATE;
+  const start = range.start || REFERENCE_DATE;
+  const end = range.end || REFERENCE_DATE;
 
-  const days = range
-    ? Math.min(
-        Math.round(
-          (Date.parse(`${range.end}T00:00:00Z`) -
-            Date.parse(`${range.start}T00:00:00Z`)) /
-            86400000
-        ) + 1,
-        // Acima disso a leitura diária vira ruído — e o eixo fica ilegível.
-        180
-      )
-    : 30;
+  const total = Math.max(daysBetween(start, end), 1);
 
-  const points: DailyPoint[] = [];
+  const granularity = granularityFor(total);
 
-  for (let i = Math.max(days, 1) - 1; i >= 0; i--) {
+  const passo =
+    granularity === "dia"
+      ? 1
+      : granularity === "semana"
+      ? 7
+      : 0;
 
-    const date = addDays(end, -i);
+  /** Início de cada balde, do mais antigo ao mais recente. */
+  const inicios: string[] = [];
+
+  if (granularity === "mes") {
+
+    const [ey, em] = end.split("-").map(Number);
+    const [sy, sm] = start.split("-").map(Number);
+
+    let cursor = new Date(Date.UTC(sy, sm - 1, 1));
+    const limite = new Date(Date.UTC(ey, em - 1, 1));
+
+    while (cursor <= limite && inicios.length < 120) {
+      inicios.push(
+        cursor.toISOString().slice(0, 10)
+      );
+      cursor = new Date(
+        Date.UTC(
+          cursor.getUTCFullYear(),
+          cursor.getUTCMonth() + 1,
+          1
+        )
+      );
+    }
+
+  } else {
+
+    // Ancorado no fim: o último balde termina hoje, sem sobra parcial.
+    for (let i = total - 1; i >= 0; i -= passo) {
+      inicios.push(addDays(end, -i));
+    }
+  }
+
+  const points = inicios.map((inicio, index) => {
+
+    const proximo = inicios[index + 1];
+
+    const fim = proximo
+      ? addDays(proximo, -1)
+      : end;
 
     const items = cases.filter(
-      (item) => item.createdAt === date
+      (item) =>
+        item.createdAt >= inicio &&
+        item.createdAt <= fim &&
+        item.createdAt >= start
     );
 
-    const [, month, day] = date.split("-");
+    const [ano, mes, dia] = inicio.split("-");
 
-    points.push({
-      date,
-      label: `${day}/${MONTHS[Number(month) - 1]}`,
+    const label =
+      granularity === "mes"
+        ? `${MONTHS[Number(mes) - 1]}/${ano.slice(2)}`
+        : `${dia}/${MONTHS[Number(mes) - 1]}`;
+
+    return {
+      date: inicio,
+      label,
       received: items.length,
       answered: items.filter(
         (item) =>
@@ -348,8 +415,8 @@ export function getDailySeries(
         .length,
       resolved: items.filter((item) => item.resolved)
         .length,
-    });
-  }
+    };
+  });
 
-  return points;
+  return { granularity, points };
 }

@@ -1,36 +1,98 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CW Reputação
 
-## Getting Started
+Central de Experiência do Cliente da **Cardápio Web**: reclamações do
+Reclame Aqui, pesquisa de NPS, agenda operacional, jornada do cliente e
+o impacto disso tudo no negócio — em um lugar só.
 
-First, run the development server:
+Next.js 15 (App Router) · React 19 · TypeScript · TailwindCSS · Prisma ·
+PostgreSQL (Supabase).
+
+## Rodar
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abre em [localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+**Sem `DATABASE_URL` a aplicação sobe assim mesmo**, com o dataset do
+repositório e **sem exigir login** — é o modo demonstração, útil para
+mexer em interface sem infraestrutura. Com a variável definida, o login
+passa a valer e tudo grava no Postgres.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Para rodar com banco, copie `.env.example` para `.env` e preencha. O
+passo a passo completo (Supabase, RLS, seed, Vercel, Google Agenda) está
+no **`DEPLOY.md`**.
 
-## Learn More
+## Módulos
 
-To learn more about Next.js, take a look at the following resources:
+| Módulo | O que faz |
+| ------ | --------- |
+| **Reclame Aqui** | Kanban e lista das reclamações, tratativa, réplicas, movimentações entre áreas, importação da planilha do HugMe |
+| **Calculadora** | Simula o efeito de novas avaliações sobre a nota, inclusive no período que ainda vai começar |
+| **NPS** | Pesquisa do portal e o ciclo de feedback até o encerramento — segmentos, SLA por segmento, sete tipos de tratativa |
+| **Agenda** | Atividades da rotina, com Google Agenda de cada pessoa integrada |
+| **Jornada** | Ciclo de vida do cliente, por etapa |
+| **Impacto** | Receita preservada e gerada pela operação |
+| **Analytics / Gráficos** | Nota, indicadores e tendência |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Comandos
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Comando | Para quê |
+| ------- | -------- |
+| `npm run dev` | Servidor de desenvolvimento |
+| `npm run build` | Build de produção (**sobrescreve o `.next` e derruba o dev server**) |
+| `npm run lint` | ESLint — fecha com 0 erros e 16 avisos conhecidos |
+| `npm run db:check` | Testa a conexão e lista tabelas, contagens e RLS |
+| `npm run db:push` | Aplica o schema no banco |
+| `npm run db:generate` | Regenera o Prisma client (**`db:push` não faz isso**) |
+| `npm run db:seed` | Carrega base e cadastros; idempotente |
+| `npm run db:rls` | Liga RLS em todas as tabelas |
+| `npm run db:password -- <e-mail>` | Redefine senha com hash bcrypt correto |
 
-## Deploy on Vercel
+## Acesso
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Só e-mails **@cardapioweb.com** que estejam na tabela `AllowedEmail`.
+Todo autocadastro nasce **somente leitura** — promover é ato explícito
+de um administrador, em `/conta` → Acessos. O administrador inicial vem
+do `db:seed`.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Três níveis: `LEITURA` (lê, e mexe só no que é seu), `AGENTE` (a
+rotina), `ADMIN` (configuração e integrações). A regra vive em
+`lib/auth/guard.ts` e é aplicada **no servidor** — esconder botão na
+tela não protege nada.
+
+## Onde está o quê
+
+```
+app/            rotas (App Router)
+components/     interface, por módulo
+lib/
+  actions/      server actions — toda gravação passa por aqui
+  auth/         sessão, papéis, controle de acesso
+  context/      estado do cliente
+  models/       tipos e regras de negócio em dados
+  services/     cálculo (nota do RA, NPS, SLA, gráficos)
+prisma/         schema e seed
+scripts/        utilitários de banco e importação
+```
+
+## Documentos
+
+- **`ROADMAP.md`** — a fila, as decisões tomadas e as armadilhas
+  conhecidas. **Leia antes de mexer:** economiza redescobrir por que
+  algo é do jeito que é.
+- **`DEPLOY.md`** — colocar no ar, do banco às variáveis.
+- **`API.md`** — a API de dados e o webhook, para o CW Engine consumir.
+
+## Convenções
+
+- TailwindCSS apenas, sem CSS externo. **Cada `className` numa linha
+  só**: CRLF dentro de `className` multilinha quebra a hidratação.
+- Nunca chamar `new Date()` durante o render — servidor e cliente
+  calculariam períodos diferentes. Use `REFERENCE_DATE` de
+  `reputation.service.ts`.
+- Módulo `server-only` não pode ser importado por client component:
+  derruba a rota em runtime, com `tsc` e `lint` limpos. Constante que a
+  tela precisa vai para `lib/models/`.

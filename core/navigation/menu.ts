@@ -4,6 +4,7 @@ import {
   Building2,
   CalendarClock,
   FolderKanban,
+  Gauge,
   LayoutDashboard,
   BookOpenCheck,
   LibraryBig,
@@ -41,6 +42,12 @@ export const menuItems: MenuItem[] = [
     title: "Redes Sociais",
     href: "/redes-sociais",
     icon: MessagesSquare,
+    group: "Operação",
+  },
+  {
+    title: "NPS",
+    href: "/nps",
+    icon: Gauge,
     group: "Operação",
   },
   {

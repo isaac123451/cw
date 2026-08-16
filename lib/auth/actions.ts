@@ -23,6 +23,12 @@ import {
   destroySession,
 } from "@/lib/auth/session";
 
+import {
+  checarBloqueio,
+  limparFalhas,
+  registrarFalha,
+} from "@/lib/auth/throttle";
+
 export interface FormState {
   error?: string;
   success?: string;
@@ -93,16 +99,24 @@ export async function signUp(
     };
   }
 
+  /**
+   * Toda conta criada por autocadastro nasce **somente leitura**.
+   *
+   * Antes o primeiro usuário da base virava ADMIN sozinho: quem
+   * chegasse primeiro a uma instalação nova — ou a uma base recriada —
+   * ganhava a administração inteira sem ninguém autorizar. E os demais
+   * nasciam AGENTE, com poder de gravar em toda a operação.
+   *
+   * O administrador inicial vem do `db:seed`, que roda com acesso ao
+   * banco. Promover alguém é ato explícito de um ADMIN, em
+   * `/conta` → Acessos.
+   */
   const user = await prisma.user.create({
     data: {
       name,
       email,
       passwordHash: await bcrypt.hash(password, 10),
-      // Primeiro usuário da base assume a administração.
-      role:
-        (await prisma.user.count()) === 0
-          ? "ADMIN"
-          : "AGENTE",
+      role: "LEITURA",
     },
   });
 
@@ -142,6 +156,20 @@ export async function signIn(
     };
   }
 
+  /**
+   * Freio antes de tocar no banco.
+   *
+   * A chave é o e-mail: protege a conta alvo mesmo quando as tentativas
+   * vêm de IPs diferentes, que é o caso do ataque distribuído.
+   */
+  const trava = checarBloqueio(email);
+
+  if (trava.bloqueado) {
+    return {
+      error: `Muitas tentativas. Tente de novo em ${trava.minutos} minuto(s).`,
+    };
+  }
+
   const user = await prisma.user.findUnique({
     where: { email },
   });
@@ -149,7 +177,10 @@ export async function signIn(
   // Mensagem única: não revela se o e-mail existe na base.
   const invalid = { error: "E-mail ou senha inválidos." };
 
-  if (!user) return invalid;
+  if (!user) {
+    registrarFalha(email);
+    return invalid;
+  }
 
   /**
    * Hash inválido recusaria toda senha silenciosamente, e a pessoa
@@ -166,13 +197,23 @@ export async function signIn(
     user.passwordHash
   );
 
-  if (!ok) return invalid;
+  if (!ok) {
+    registrarFalha(email);
+    return invalid;
+  }
 
+  /**
+   * Conta desativada só é revelada **depois** de a senha bater. Antes
+   * disso a resposta seria um oráculo: quem chutasse e-mails saberia
+   * quais existem na base sem precisar acertar a senha.
+   */
   if (!user.active) {
     return {
       error: "Esta conta está desativada.",
     };
   }
+
+  limparFalhas(email);
 
   await createSession({
     id: user.id,

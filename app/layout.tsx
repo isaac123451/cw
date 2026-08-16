@@ -24,8 +24,14 @@ import { SlaProvider } from "@/lib/context/SlaContext";
 import { MovementsProvider } from "@/lib/context/MovementsContext";
 import { MacrosProvider } from "@/lib/context/MacrosContext";
 
+import { ToastProvider } from "@/lib/context/ToastContext";
+import { GoogleEventsProvider } from "@/lib/context/GoogleEventsContext";
+import { NpsProvider } from "@/lib/context/NpsContext";
+import ToastHost from "@/components/shared/ToastHost";
+
 import { getSession } from "@/lib/auth/session";
 import { hasDatabase } from "@/lib/prisma";
+import { hasGoogle } from "@/lib/services/google.service";
 
 export const metadata: Metadata = {
   title: "CW Reputação",
@@ -54,8 +60,9 @@ export default async function RootLayout({
       <body>
 
         <SessionProvider value={session}>
-          <PreferencesProvider>
-            <SavedFiltersProvider>
+          <ToastProvider>
+          <PreferencesProvider hasDatabase={hasDatabase()}>
+            <SavedFiltersProvider hasDatabase={hasDatabase()}>
             <WorkflowProvider>
               <SettingsProvider>
                 <CaseProvider hasDatabase={hasDatabase()}>
@@ -71,9 +78,15 @@ export default async function RootLayout({
                               <ProjectsProvider>
                                 <TeamsProvider>
                                   <DocsProvider>
+                                  <GoogleEventsProvider
+                                    enabled={hasDatabase() && hasGoogle()}
+                                  >
+                                  <NpsProvider enabled={hasDatabase()}>
 
                                     {children}
 
+                                  </NpsProvider>
+                                  </GoogleEventsProvider>
                                   </DocsProvider>
                                 </TeamsProvider>
                               </ProjectsProvider>
@@ -91,6 +104,9 @@ export default async function RootLayout({
             </WorkflowProvider>
             </SavedFiltersProvider>
           </PreferencesProvider>
+
+          <ToastHost />
+          </ToastProvider>
         </SessionProvider>
 
       </body>

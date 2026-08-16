@@ -14,13 +14,15 @@ import ModuleNav from "@/components/reclame-aqui/ModuleNav";
 import { useScopedCases } from "@/lib/context/useScopedCases";
 
 import {
-  getDailySeries,
   getMonthlyIndices,
   getRollingIndices,
+  getTimeSeries,
+  granularityLabels,
 } from "@/lib/services/charts.service";
 
 import {
   CustomRange,
+  formatRange,
   getRange,
   PeriodKey,
   ptBR,
@@ -69,17 +71,16 @@ export default function GraficosPage() {
   );
 
   /**
-   * Série diária dos últimos 30 dias — sempre 30, sem seguir o seletor.
+   * Série temporal do período escolhido, incluindo o mês corrente —
+   * que os gráficos mensais deixam de fora por só contarem meses
+   * fechados.
    *
-   * Passando o `range` aqui, o cartão mostrava a janela inteira do
-   * período: com 12 meses selecionados eram 180 dias desenhados sob um
-   * título que prometia 30. Este cartão existe para cobrir o mês
-   * corrente, que os gráficos mensais deixam de fora por só contarem
-   * meses fechados; a leitura longa é o papel deles.
+   * O passo se ajusta à janela (dia, semana ou mês): 365 pontos diários
+   * num gráfico dessa largura seriam ilegíveis.
    */
   const daily = useMemo(
-    () => getDailySeries(cases),
-    [cases]
+    () => getTimeSeries(cases, range),
+    [cases, range]
   );
 
   const labels = monthly.map((item) => item.label);
@@ -498,20 +499,20 @@ export default function GraficosPage() {
         {/* Diário */}
 
         <SurfaceCard
-          title="Reclamações nos últimos 30 dias"
-          description="Série diária até hoje, incluindo o mês corrente. Não acompanha o período selecionado acima."
-          hint="Acompanha o período selecionado acima, incluindo o mês corrente ainda aberto. Limitada a 180 dias para o eixo continuar legível."
+          title={`Movimento ${granularityLabels[daily.granularity]}`}
+          description={`${formatRange(range.start, range.end)} — segue o período selecionado acima e inclui o mês corrente.`}
+          hint="Diferente dos gráficos mensais, esta série entra no mês corrente ainda aberto. O passo do eixo acompanha o tamanho da janela: por dia até 60 dias, por semana até 7 meses, por mês acima disso — 365 pontos diários seriam ilegíveis."
         >
 
           <MultiLineChart
-            labels={daily.map((item) => item.label)}
+            labels={daily.points.map((item) => item.label)}
             height={240}
             series={[
               {
                 key: "d-reclamacoes",
                 label: "Reclamações",
                 color: COLORS.reclamacoes,
-                values: daily.map(
+                values: daily.points.map(
                   (item) => item.received
                 ),
               },
@@ -519,7 +520,7 @@ export default function GraficosPage() {
                 key: "d-respostas",
                 label: "Respostas",
                 color: COLORS.respostas,
-                values: daily.map(
+                values: daily.points.map(
                   (item) => item.answered
                 ),
               },
@@ -527,7 +528,7 @@ export default function GraficosPage() {
                 key: "d-avaliacoes",
                 label: "Avaliações",
                 color: COLORS.avaliacoes,
-                values: daily.map(
+                values: daily.points.map(
                   (item) => item.evaluated
                 ),
               },
@@ -535,7 +536,7 @@ export default function GraficosPage() {
                 key: "d-resolvidas",
                 label: "Resolvidas",
                 color: COLORS.resolvidas,
-                values: daily.map(
+                values: daily.points.map(
                   (item) => item.resolved
                 ),
               },

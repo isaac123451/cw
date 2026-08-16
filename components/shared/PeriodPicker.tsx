@@ -14,7 +14,7 @@ import {
 } from "@/lib/services/reputation.service";
 
 const hints: Record<PeriodKey, string> = {
-  "30d": "Último mês fechado — leitura de curto prazo.",
+  "30d": "Últimos 30 dias corridos, até hoje — inclui o mês corrente.",
   "3m": "Trimestre fechado, para ver tendência sem ruído de um mês isolado.",
   "6m": "Janela oficial que define a nota pública do Reclame Aqui.",
   "12m": "Janela oficial de 12 meses, usada na nota anual.",
@@ -93,8 +93,16 @@ export default function PeriodPicker({
 
         </div>
 
-        {/* Vigente/próximo só existe em janela de meses fechados. */}
-        {mode && onModeChange && period !== "custom" && (
+        {/*
+          Vigente/próximo só existe em janela de meses fechados. "30
+          dias" é de dias corridos e termina hoje, então não tem "próximo
+          período" — mostrar o toggle ali era um botão que não mudava
+          nada.
+        */}
+        {mode &&
+          onModeChange &&
+          period !== "custom" &&
+          period !== "30d" && (
 
           <div className="flex items-center rounded-xl border border-zinc-200 p-1">
 

@@ -6,6 +6,9 @@ consome lê os indicadores e as reclamações daqui, não escreve.
 
 Nada a ver com a API do Reclame Aqui, que não existe publicamente.
 
+Duas formas de consumir: puxar (`GET`, abaixo) ou receber por evento
+(webhook, no fim deste documento).
+
 ## Autenticação
 
 Token no cabeçalho, em todas as rotas:
@@ -130,3 +133,54 @@ Uma ressalva honesta enquanto os contextos da interface não migram para o
 Prisma: **edições feitas nas telas não chegam à API**, porque ainda vivem
 em memória. O que a API serve é o que está no banco (o seed carrega as
 327 reclamações). Ver `ROADMAP.md`.
+
+## Webhook (empurrar, em vez de puxar)
+
+Configurado na tela **Integrações**
+(`/configuracoes/integracoes`) — sem interface por
+código: cada instalação tem um destino diferente, e o segredo não deve
+viver em `.env` compartilhado como o `API_TOKEN`.
+
+**Eventos disponíveis hoje:**
+
+| Evento | Quando dispara |
+| ------ | --------------- |
+| `caso.criado` | Reclamação nova é gravada pela primeira vez |
+| `caso.avaliado` | Reclamação recebe avaliação do consumidor pela primeira vez |
+
+`movimentacao.atrasada` **ainda não existe** — precisaria de um job
+agendado (cron) rodando sem ninguém com a tela aberta, e a aplicação não
+tem isso hoje. Ver `ROADMAP.md`.
+
+**Requisição:**
+
+```
+POST <url cadastrada>
+Content-Type: application/json
+X-CW-Event: caso.criado
+X-CW-Signature: t=<timestamp>,v1=<hmac>
+```
+
+```json
+{
+  "evento": "caso.criado",
+  "criadoEm": "2026-08-13T14:32:00.000Z",
+  "dados": { "...": "mesmo formato de um item de casos em GET /api/casos" }
+}
+```
+
+**Verificando a assinatura:** `v1` é HMAC-SHA256 de
+`"{timestamp}.{corpo bruto}"`, usando o segredo mostrado na tela de
+Integrações como chave. Recusar se o `timestamp` estiver muito no
+passado evita repetição de uma chamada capturada.
+
+```js
+const esperado = crypto
+  .createHmac("sha256", segredo)
+  .update(`${timestamp}.${corpoBruto}`)
+  .digest("hex");
+```
+
+Timeout de 10 s por tentativa; sem novo envio automático em caso de
+falha hoje — a tela de Integrações mostra as últimas 50 tentativas
+(sucesso, código HTTP e erro) para diagnosticar.

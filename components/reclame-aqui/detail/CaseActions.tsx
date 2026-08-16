@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import { useState } from "react";
 
@@ -17,6 +18,8 @@ import TaskForm from "@/components/agenda/TaskForm";
 import { useImpact } from "@/lib/context/ImpactContext";
 import { useAgenda } from "@/lib/context/AgendaContext";
 import { useEstablishments } from "@/lib/context/EstablishmentsContext";
+
+import { useToast } from "@/lib/context/ToastContext";
 
 import { slugify } from "@/lib/services/slug";
 
@@ -38,6 +41,9 @@ export default function CaseActions({
   const { records, createRecord } = useImpact();
   const { tasks, createTask } = useAgenda();
   const { findEstablishment } = useEstablishments();
+
+  const { notify } = useToast();
+  const router = useRouter();
 
   const [impactOpen, setImpactOpen] = useState(false);
   const [taskOpen, setTaskOpen] = useState(false);
@@ -146,8 +152,20 @@ export default function CaseActions({
         }}
         onClose={() => setTaskOpen(false)}
         onSave={(item) => {
+
           if (!("id" in item)) createTask(item);
+
           setTaskOpen(false);
+
+          notify({
+            tone: "success",
+            title: "Atividade criada.",
+            detail: item.title,
+          });
+
+          // Levar para a agenda: a atividade nasce aqui, mas é lá que a
+          // pessoa acompanha e reagenda.
+          router.push("/agenda");
         }}
       />
     </>
