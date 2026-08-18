@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-
+import { SpeedInsights } from "@vercel/speed-insights/next"
 import { useMemo } from "react";
 
 import {
