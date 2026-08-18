@@ -13,7 +13,7 @@ import Modal, {
 import {
   KINDS,
   NpsResponseView,
-  ROOT_CAUSES,
+  RootCauseOption,
   segmentOf,
 } from "@/lib/models/nps";
 
@@ -25,8 +25,11 @@ interface Props {
   open: boolean;
   editing?: NpsResponseView;
   saving: boolean;
+  /** Vem do cadastro (`NpsRootCause`), não mais de uma lista fixa. */
+  rootCauses: RootCauseOption[];
   onClose: () => void;
   onSave: (data: NpsDraft) => void;
+  onManageCauses?: () => void;
 }
 
 function hojeIso() {
@@ -43,8 +46,10 @@ export default function NpsForm({
   open,
   editing,
   saving,
+  rootCauses,
   onClose,
   onSave,
+  onManageCauses,
 }: Props) {
 
   const [score, setScore] = useState<number>(
@@ -266,20 +271,47 @@ export default function NpsForm({
           label="Causa raiz"
           hint="Obrigatória para encerrar Reclamação, Erro no Sistema e Erro Processual."
         >
-          <select
-            value={rootCause}
-            onChange={(e) =>
-              setRootCause(e.target.value)
-            }
-            className={inputClass}
-          >
-            <option value="">Não definida</option>
-            {ROOT_CAUSES.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
+          <div className="flex gap-2">
+
+            <select
+              value={rootCause}
+              onChange={(e) =>
+                setRootCause(e.target.value)
+              }
+              className={inputClass}
+            >
+              <option value="">Não definida</option>
+
+              {rootCauses
+                .filter(
+                  (c) =>
+                    /**
+                     * Causa desativada some da lista, mas continua
+                     * aparecendo no registro que já a usava — senão
+                     * abrir uma ficha antiga apagaria a causa dela sem
+                     * ninguém pedir.
+                     */
+                    c.active || c.name === rootCause
+                )
+                .map((c) => (
+                  <option key={c.id} value={c.name}>
+                    {c.name}
+                    {c.active ? "" : " (desativada)"}
+                  </option>
+                ))}
+            </select>
+
+            {onManageCauses && (
+              <button
+                type="button"
+                onClick={onManageCauses}
+                className="shrink-0 rounded-xl border border-zinc-200 px-3 text-xs font-medium text-zinc-600 transition-colors hover:border-violet-300 hover:text-violet-700"
+              >
+                Gerenciar
+              </button>
+            )}
+
+          </div>
         </Field>
 
         <Field label="Comentário do cliente">

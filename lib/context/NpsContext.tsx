@@ -12,21 +12,42 @@ import {
 
 import {
   listNpsResponses,
+  listNpsRootCauses,
   NpsDraft,
 } from "@/lib/actions/nps";
 
-import { NpsResponseView } from "@/lib/models/nps";
+import {
+  NpsResponseView,
+  ROOT_CAUSES,
+  RootCauseOption,
+} from "@/lib/models/nps";
 
 interface NpsContextType {
   responses: NpsResponseView[];
+  /**
+   * Causas raiz cadastradas. Vêm junto das respostas — é a mesma tela, e
+   * duas consultas separadas na montagem custam duas conexões ao pooler.
+   */
+  rootCauses: RootCauseOption[];
   loading: boolean;
   recarregar: () => Promise<void>;
+  recarregarCausas: () => Promise<void>;
   /** Aplica na tela sem esperar o banco. */
   aplicarLocal: (
     id: string,
     mudanca: Partial<NpsResponseView>
   ) => void;
 }
+
+/** Usado enquanto a carga não volta, e no modo demonstração. */
+const CAUSAS_PADRAO: RootCauseOption[] = ROOT_CAUSES.map(
+  (name, i) => ({
+    id: `padrao-${i}`,
+    name,
+    order: i,
+    active: true,
+  })
+);
 
 const NpsContext = createContext<NpsContextType | null>(
   null
@@ -52,6 +73,10 @@ export function NpsProvider({
     NpsResponseView[]
   >([]);
 
+  const [rootCauses, setRootCauses] = useState<
+    RootCauseOption[]
+  >(CAUSAS_PADRAO);
+
   const [loading, setLoading] = useState(enabled);
 
   const recarregar = useCallback(async () => {
@@ -67,15 +92,31 @@ export function NpsProvider({
     }
   }, [enabled]);
 
+  const recarregarCausas = useCallback(async () => {
+
+    if (!enabled) return;
+
+    try {
+      setRootCauses(await listNpsRootCauses());
+    } catch (erro) {
+      console.error("[nps] causas falharam", erro);
+    }
+  }, [enabled]);
+
   useEffect(() => {
 
     let ativo = true;
 
     if (!enabled) return;
 
-    listNpsResponses()
-      .then((lista) => {
-        if (ativo) setResponses(lista);
+    Promise.all([
+      listNpsResponses(),
+      listNpsRootCauses(),
+    ])
+      .then(([lista, causas]) => {
+        if (!ativo) return;
+        setResponses(lista);
+        setRootCauses(causas);
       })
       .catch((erro: unknown) => {
         console.error("[nps] carga falhou", erro);
@@ -106,11 +147,20 @@ export function NpsProvider({
   const value = useMemo(
     () => ({
       responses,
+      rootCauses,
       loading,
       recarregar,
+      recarregarCausas,
       aplicarLocal,
     }),
-    [responses, loading, recarregar, aplicarLocal]
+    [
+      responses,
+      rootCauses,
+      loading,
+      recarregar,
+      recarregarCausas,
+      aplicarLocal,
+    ]
   );
 
   return (

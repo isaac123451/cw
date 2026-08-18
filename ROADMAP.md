@@ -29,6 +29,8 @@ aplicação e **de sessão (5432)** em `DIRECT_URL`, usada por `db:push`,
 | `npm run db:rls` | Liga RLS em todas as tabelas; descobre a lista no próprio banco |
 | `npm run db:password -- <e-mail>` | Redefine a senha com hash bcrypt correto |
 | `npm run db:seed` | Idempotente: recarrega base e cadastros sem duplicar |
+| `npm run check:contato` | Prova o casamento telefone→reclamação contra o banco real |
+| `npm run extensao:icones` | Regera os PNGs do ícone da extensão |
 
 ---
 
@@ -125,6 +127,43 @@ no banco. Ver "Tudo persiste" em Entregue.)*
 ---
 
 ## Entregue
+
+### Extensão de navegador — painel de contexto (17/08/2026)
+
+A Peça A do `EXTENSAO.md`. Gaveta lateral sobre **WhatsApp Web**,
+**Hugme/Reclame Aqui** e **ManyChat**, mais popup com a nota e os
+alertas do dia. Instalação em `extensao/LEIA-ME.md`.
+
+**Somente leitura.** A única ação é abrir link na aplicação e copiar
+macro — decisão registrada na proposta: base com consumidor real, painel
+que só mostra tem superfície de erro muito menor.
+
+**Endpoints novos, não a API pública.** `/api/reputacao` e `/api/casos`
+escondem telefone e e-mail de propósito (`API.md`), que é justamente o
+que a extensão precisa. Então `/api/extensao/{sessao,contexto,resumo}`
+autenticam **como você**: o service worker lê o cookie `cw_session`
+(`httpOnly`, só `chrome.cookies` alcança) e o manda no cabeçalho
+`X-CW-Sessao`. Cabeçalho em vez de cookie solto resolve o `SameSite` de
+uma origem `chrome-extension://` e fecha CSRF de uma vez. Papel lido do
+banco a cada chamada, como em `lib/auth/guard.ts`.
+
+**O telefone da base está mascarado** — `(27)•••••-4053`, seis dígitos
+visíveis, 100% dos 334 registros. Não existe número inteiro para
+comparar, então a chave é **DDD + quatro finais**, e ela foi medida, não
+suposta (`npm run check:contato`): reencontra a própria reclamação em
+334/334, apontando para um único cliente em 332. Duas caem numa chave
+ambígua (`27-6862`). Por isso o painel rotula a confiança —
+**confirmado / provável / ambíguo** — em vez de afirmar que achou.
+Reimportar com `--pii` faz virar exato sozinho.
+
+**Contador no ícone a cada 30 min** e um aviso por dia: é a versão
+possível do resumo diário enquanto não há cron, e **só funciona com o
+navegador aberto** — não substitui a Peça B.
+
+**Pendência que isso expôs:** o vínculo cliente → estabelecimento não
+persiste (`ClientsContext` guarda o enriquecimento em memória e `Case`
+não tem coluna de estabelecimento no banco), então plano, status e MRR
+quase nunca aparecem no painel. Persistir esse vínculo é o que destrava.
 
 ### NPS — encerramento do ciclo de feedback (13/08/2026)
 

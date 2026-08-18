@@ -1,0 +1,76 @@
+{
+  "manifest_version": 3,
+  "name": "CW Reputação — painel de contexto",
+  "version": "0.1.0",
+  "description": "Mostra o cliente do CW Reputação ao lado do WhatsApp Web, do Hugme/Reclame Aqui e do ManyChat. Somente leitura.",
+
+  "icons": {
+    "16": "icones/icone-16.png",
+    "32": "icones/icone-32.png",
+    "48": "icones/icone-48.png",
+    "128": "icones/icone-128.png"
+  },
+
+  "action": {
+    "default_title": "CW Reputação",
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icones/icone-16.png",
+      "32": "icones/icone-32.png",
+      "48": "icones/icone-48.png",
+      "128": "icones/icone-128.png"
+    }
+  },
+
+  "background": {
+    "service_worker": "fundo/service-worker.js",
+    "type": "module"
+  },
+
+  "options_ui": {
+    "page": "opcoes/opcoes.html",
+    "open_in_tab": true
+  },
+
+  "permissions": ["storage", "cookies", "alarms", "notifications"],
+
+  "host_permissions": ["http://localhost:3000/*"],
+
+  "optional_host_permissions": ["https://*/*", "http://*/*"],
+
+  "content_scripts": [
+    {
+      "matches": ["https://web.whatsapp.com/*"],
+      "js": [
+        "conteudo/nucleo.js",
+        "conteudo/estilo.js",
+        "conteudo/painel.js",
+        "conteudo/whatsapp.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://*.hugme.com.br/*",
+        "https://*.reclameaqui.com.br/*"
+      ],
+      "js": [
+        "conteudo/nucleo.js",
+        "conteudo/estilo.js",
+        "conteudo/painel.js",
+        "conteudo/hugme.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://*.manychat.com/*"],
+      "js": [
+        "conteudo/nucleo.js",
+        "conteudo/estilo.js",
+        "conteudo/painel.js",
+        "conteudo/manychat.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}

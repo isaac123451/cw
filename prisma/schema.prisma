@@ -645,6 +645,38 @@ model NpsResponse {
   testimonialAsked Boolean @default(false)
   referralAsked    Boolean @default(false)
 
+  /// De onde a resposta veio: "Manual" ou "Wootric".
+  source String @default("Manual")
+
+  /// Id da resposta no Wootric. É a chave da sincronização: reimportar
+  /// a mesma janela atualiza em vez de duplicar. Nulo no registro manual.
+  externalId String? @unique
+
+  /// `properties.company_id` do Wootric — o id do estabelecimento no
+  /// sistema da própria Cardápio Web. Guardado mesmo sem ter onde casar
+  /// ainda: é a chave que vai ligar NPS a estabelecimento no dia em que
+  /// o cadastro carregar esse id.
+  externalCompanyId String?
+
+  /// ============================================================
+  /// PÓS-CONTATO
+  ///
+  /// A nota do NPS é de **antes**: mede como o cliente estava quando
+  /// respondeu a pesquisa, e não pode ser reescrita — é ela que compõe
+  /// o indicador. O que faltava era o depois: como a pessoa ficou
+  /// depois de falar com a gente, e se a situação foi resolvida.
+  /// ============================================================
+
+  /// Régua de humor após o contato, 1 (irritado) a 5 (encantado).
+  moodAfter Int?
+
+  /// A situação foi resolvida? Nulo enquanto ninguém registrou.
+  resolvedAfter Boolean?
+
+  postContactNote String?
+  postContactAt   DateTime?
+  postContactBy   String?
+
   attempts NpsAttempt[]
 
   createdAt DateTime @default(now())
@@ -652,6 +684,23 @@ model NpsResponse {
 
   @@index([respondedAt])
   @@index([status])
+}
+
+/// Causa raiz do NPS, administrada pela própria operação.
+///
+/// Era uma lista fixa no código (`ROOT_CAUSES`). Virou cadastro porque
+/// a operação precisa acrescentar causa nova sem esperar deploy — mas
+/// continua sendo **lista fechada**, e não texto livre: causa raiz
+/// existe para ver tendência, e "cobrança"/"Cobrança"/"cobranca" num
+/// campo aberto viram três problemas diferentes no mesmo gráfico.
+model NpsRootCause {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  description String?
+  order       Int     @default(0)
+  active      Boolean @default(true)
+
+  createdAt DateTime @default(now())
 }
 
 /// Cada tentativa de contato, para sustentar a regra das três em 7 dias.

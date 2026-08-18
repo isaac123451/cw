@@ -84,6 +84,18 @@ export const STATUS_EM_TRATATIVA = "Em tratativa";
 export const STATUS_AGUARDANDO =
   "[Aguardando Resposta]";
 
+/**
+ * Promotor calado — nota 9 ou 10, sem uma palavra escrita.
+ *
+ * Entra na base (o NPS precisa dele para estar certo) mas não abre
+ * ciclo: são ~790 respostas por mês vindas do Wootric, e abrir tratativa
+ * individual para cada nota 10 muda enterraria os detratores no meio da
+ * fila. O rótulo diz exatamente isso, em vez de fingir um encerramento
+ * que ninguém trabalhou.
+ */
+export const STATUS_SEM_TRATATIVA =
+  "[Encerrado] Sem tratativa";
+
 export interface KindRule {
   label: NpsKind;
   emoji: string;
@@ -184,6 +196,7 @@ export const ALL_STATUS = [
   "[Encerrado] Elogio",
   "[Encerrado] Engano",
   "[Encerrado] Sem Retorno",
+  STATUS_SEM_TRATATIVA,
 ];
 
 export function isEncerrado(status: string) {
@@ -194,10 +207,25 @@ export function isEncerrado(status: string) {
    CAUSA RAIZ
 ============================================================ */
 
+export interface RootCauseOption {
+  id: string;
+  name: string;
+  description?: string;
+  order: number;
+  active: boolean;
+}
+
 /**
- * Lista fechada, e não texto livre: causa raiz existe para ver
- * tendência, e "cobrança"/"Cobrança"/"cobranca" viram três problemas
- * diferentes num campo aberto.
+ * Os valores de partida.
+ *
+ * A lista virou cadastro (`NpsRootCause`) para a operação acrescentar
+ * causa sem esperar deploy. Estes nomes continuam aqui como semente do
+ * banco vazio e como resposta do modo demonstração — mas a tela lê do
+ * cadastro, não daqui.
+ *
+ * Continua sendo **lista fechada**, e não texto livre: causa raiz existe
+ * para ver tendência, e "cobrança"/"Cobrança"/"cobranca" viram três
+ * problemas diferentes num campo aberto.
  */
 export const ROOT_CAUSES = [
   "Bug",
@@ -210,6 +238,73 @@ export const ROOT_CAUSES = [
   "Preço",
   "Outro",
 ];
+
+/* ============================================================
+   RÉGUA DE HUMOR — O DEPOIS
+============================================================ */
+
+/**
+ * Como o cliente ficou **depois** do contato.
+ *
+ * A nota do NPS é de antes: mede o estado em que a pessoa respondeu a
+ * pesquisa, e não pode ser reescrita — é ela que compõe o indicador.
+ * Sobrescrevê-la depois de uma ligação bem-sucedida maquiaria o NPS.
+ *
+ * A régua mede outra coisa: se o atendimento moveu a agulha. Um
+ * Detrator que continua nota 3 mas sai da conversa em 4 na régua é uma
+ * recuperação; um que sai em 1 é um cancelamento a caminho. É a
+ * diferença entre saber *que* o cliente estava insatisfeito e saber se
+ * a operação conseguiu fazer alguma coisa a respeito.
+ */
+export interface MoodStep {
+  value: number;
+  emoji: string;
+  label: string;
+  color: string;
+  hint: string;
+}
+
+export const MOODS: MoodStep[] = [
+  {
+    value: 1,
+    emoji: "😡",
+    label: "Irritado",
+    color: "#DC2626",
+    hint: "Saiu do contato pior do que entrou. Escalar.",
+  },
+  {
+    value: 2,
+    emoji: "🙁",
+    label: "Insatisfeito",
+    color: "#F97316",
+    hint: "Ouviu, mas não comprou a solução.",
+  },
+  {
+    value: 3,
+    emoji: "😐",
+    label: "Neutro",
+    color: "#A1A1AA",
+    hint: "Resolveu sem encantar. Não vira defensor.",
+  },
+  {
+    value: 4,
+    emoji: "🙂",
+    label: "Satisfeito",
+    color: "#22C55E",
+    hint: "Recuperado. Vale pedir a reavaliação.",
+  },
+  {
+    value: 5,
+    emoji: "🤩",
+    label: "Encantado",
+    color: "#7B3FBF",
+    hint: "Virou promotor no contato — pedir review e indicação.",
+  },
+];
+
+export function moodOf(value?: number | null) {
+  return MOODS.find((m) => m.value === value);
+}
 
 /* ============================================================
    REGRAS DE PRAZO E ABANDONO
@@ -250,6 +345,17 @@ export interface NpsResponseView {
   reviewAsked: boolean;
   testimonialAsked: boolean;
   referralAsked: boolean;
+
+  /** "Manual" ou "Wootric". */
+  source: string;
+  externalId?: string;
+
+  /** Pós-contato: ver MOODS acima. */
+  moodAfter?: number;
+  resolvedAfter?: boolean;
+  postContactNote?: string;
+  postContactAt?: string;
+  postContactBy?: string;
 
   attempts: NpsAttemptView[];
 }

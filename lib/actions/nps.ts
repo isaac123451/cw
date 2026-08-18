@@ -1,5 +1,7 @@
 "use server";
 
+import * as XLSX from "xlsx";
+
 import { updateTag } from "next/cache";
 
 import { PrismaClient } from "@prisma/client";
@@ -7,10 +9,25 @@ import { PrismaClient } from "@prisma/client";
 import { requireRole, tryRole } from "@/lib/auth/guard";
 import { WORKSPACE_TAG } from "@/lib/actions/tags";
 
-import { NpsResponseView } from "@/lib/models/nps";
+import {
+  isEncerrado,
+  NpsResponseView,
+  moodOf,
+  ROOT_CAUSES,
+  RootCauseOption,
+  segmentOf,
+  STATUS_SEM_TRATATIVA,
+} from "@/lib/models/nps";
 import { ProjectStage } from "@/lib/models/project";
 
 import { prazoPrimeiroContato } from "@/lib/services/nps.service";
+
+import {
+  listarRespostas,
+  RespostaImportada,
+  temWootric,
+  traduzir,
+} from "@/lib/services/wootric.service";
 
 /**
  * Registro e tratativa do NPS.
@@ -79,6 +96,13 @@ export async function listNpsResponses(): Promise<
     reviewAsked: r.reviewAsked,
     testimonialAsked: r.testimonialAsked,
     referralAsked: r.referralAsked,
+    source: r.source,
+    externalId: r.externalId ?? undefined,
+    moodAfter: r.moodAfter ?? undefined,
+    resolvedAfter: r.resolvedAfter ?? undefined,
+    postContactNote: r.postContactNote ?? undefined,
+    postContactAt: dia(r.postContactAt),
+    postContactBy: r.postContactBy ?? undefined,
     attempts: r.attempts.map((a) => ({
       id: a.id,
       channel: a.channel,
@@ -87,6 +111,184 @@ export async function listNpsResponses(): Promise<
       createdAt: a.createdAt.toISOString(),
     })),
   }));
+}
+
+/* ============================================================
+   CAUSA RAIZ — CADASTRO
+============================================================ */
+
+/**
+ * Lista as causas cadastradas.
+ *
+ * Banco vazio devolve os valores de partida de `ROOT_CAUSES`, com id
+ * derivado do nome: assim a tela funciona antes de qualquer cadastro e
+ * antes do seed, sem um caso especial dentro do formulário.
+ */
+export async function listNpsRootCauses(): Promise<
+  RootCauseOption[]
+> {
+
+  const ctx = await tryRole("LEITURA");
+
+  if (!ctx) {
+    return ROOT_CAUSES.map((name, i) => ({
+      id: `padrao-${i}`,
+      name,
+      order: i,
+      active: true,
+    }));
+  }
+
+  const linhas = await ctx.prisma.npsRootCause.findMany({
+    orderBy: [{ order: "asc" }, { name: "asc" }],
+  });
+
+  if (linhas.length === 0) {
+    return ROOT_CAUSES.map((name, i) => ({
+      id: `padrao-${i}`,
+      name,
+      order: i,
+      active: true,
+    }));
+  }
+
+  return linhas.map((r) => ({
+    id: r.id,
+    name: r.name,
+    description: r.description ?? undefined,
+    order: r.order,
+    active: r.active,
+  }));
+}
+
+export async function saveNpsRootCause(
+  input: RootCauseOption
+) {
+
+  const ctx = await requireRole("AGENTE");
+
+  if (!ctx) return null;
+
+  const nome = input.name.trim();
+
+  if (nome === "") return null;
+
+  const dados = {
+    name: nome,
+    description: input.description?.trim() || null,
+    order: input.order,
+    active: input.active,
+  };
+
+  /**
+   * Id que começa com "padrao-" é um valor de partida que nunca foi
+   * gravado: editar um deles cria o registro, em vez de falhar tentando
+   * atualizar uma linha que não existe.
+   */
+  const novo =
+    !input.id || input.id.startsWith("padrao-");
+
+  if (novo) {
+    const criado = await ctx.prisma.npsRootCause.create({
+      data: dados,
+      select: { id: true },
+    });
+
+    await semearRestantes(ctx.prisma, nome);
+
+    updateTag(WORKSPACE_TAG);
+
+    return criado.id;
+  }
+
+  const anterior =
+    await ctx.prisma.npsRootCause.findUnique({
+      where: { id: input.id },
+      select: { name: true },
+    });
+
+  await ctx.prisma.npsRootCause.update({
+    where: { id: input.id },
+    data: dados,
+  });
+
+  /**
+   * Renomear a causa tem de arrastar os registros junto: a resposta
+   * guarda o **nome**, e sem isto o gráfico de tendência passaria a
+   * mostrar a causa antiga e a nova como coisas diferentes.
+   */
+  if (anterior && anterior.name !== nome) {
+    await ctx.prisma.npsResponse.updateMany({
+      where: { rootCause: anterior.name },
+      data: { rootCause: nome },
+    });
+  }
+
+  updateTag(WORKSPACE_TAG);
+
+  return input.id;
+}
+
+/**
+ * Ao gravar a primeira causa, materializa as de partida.
+ *
+ * Sem isto, criar uma causa nova faria as nove originais sumirem da
+ * tela de uma vez — porque a listagem deixa de cair no padrão assim que
+ * existe qualquer linha no banco.
+ */
+async function semearRestantes(
+  prisma: PrismaClient,
+  exceto: string
+) {
+
+  const total = await prisma.npsRootCause.count();
+
+  if (total > 1) return;
+
+  await prisma.npsRootCause.createMany({
+    data: ROOT_CAUSES.filter(
+      (name) => name !== exceto
+    ).map((name, i) => ({ name, order: i })),
+    skipDuplicates: true,
+  });
+}
+
+export async function removeNpsRootCause(id: string) {
+
+  const ctx = await requireRole("AGENTE");
+
+  if (!ctx || id.startsWith("padrao-")) return;
+
+  const alvo = await ctx.prisma.npsRootCause.findUnique({
+    where: { id },
+    select: { name: true },
+  });
+
+  if (!alvo) return;
+
+  const emUso = await ctx.prisma.npsResponse.count({
+    where: { rootCause: alvo.name },
+  });
+
+  /**
+   * Causa já usada é **desativada**, não apagada. Apagar reescreveria o
+   * passado: as respostas que apontam para ela ficariam sem causa, e a
+   * série histórica mudaria sozinha.
+   */
+  if (emUso > 0) {
+    await ctx.prisma.npsRootCause.update({
+      where: { id },
+      data: { active: false },
+    });
+  } else {
+    await ctx.prisma.npsRootCause.delete({
+      where: { id },
+    });
+  }
+
+  updateTag(WORKSPACE_TAG);
+
+  return emUso;
 }
 
 export async function saveNpsResponse(
@@ -258,6 +460,78 @@ export async function setNpsStatus(
   updateTag(WORKSPACE_TAG);
 }
 
+/**
+ * Pós-contato: a régua de humor e o "resolveu ou não".
+ *
+ * **Por que não mexe na nota do NPS.** A nota é de antes: mede como o
+ * cliente estava quando respondeu a pesquisa, e é ela que compõe o
+ * indicador. Reescrevê-la depois de uma ligação bem-sucedida maquiaria
+ * o NPS — o número subiria sem nenhum cliente ter mudado de opinião na
+ * pesquisa. A régua mede outra coisa: se o **contato** moveu a agulha.
+ *
+ * `resolvedAfter` também alimenta `confirmedAt`, que é o item do
+ * checklist do guia. São o mesmo fato dito de dois jeitos — o registro
+ * é feito logo depois de falar com a pessoa, então "resolvido: sim" é a
+ * confirmação dela. Manter dois botões para isso só criaria a dúvida de
+ * qual marcar.
+ */
+export async function registerPostContact(input: {
+  id: string;
+  mood?: number | null;
+  resolved?: boolean | null;
+  note?: string;
+  actor?: string;
+}) {
+
+  const ctx = await requireRole("AGENTE");
+
+  if (!ctx) return;
+
+  const humor =
+    typeof input.mood === "number" &&
+    input.mood >= 1 &&
+    input.mood <= 5
+      ? input.mood
+      : null;
+
+  const agora = new Date();
+
+  const atual = await ctx.prisma.npsResponse.findUnique({
+    where: { id: input.id },
+    select: { firstContactAt: true, status: true },
+  });
+
+  await ctx.prisma.npsResponse.update({
+    where: { id: input.id },
+    data: {
+      moodAfter: humor,
+      resolvedAfter: input.resolved ?? null,
+      postContactNote: input.note?.trim() || null,
+      postContactAt: agora,
+      postContactBy: input.actor || null,
+
+      confirmedAt:
+        input.resolved === true ? agora : null,
+
+      /**
+       * Registrar o pós-contato **é** ter falado com o cliente. Sem
+       * isto o SLA de primeiro contato ficaria estourado para sempre
+       * em quem já foi atendido — mesmo problema que
+       * `registerNpsAttempt` resolve para as tentativas.
+       */
+      firstContactAt:
+        atual?.firstContactAt ?? agora,
+
+      status:
+        atual && isEncerrado(atual.status)
+          ? atual.status
+          : "Em tratativa",
+    },
+  });
+
+  updateTag(WORKSPACE_TAG);
+}
+
 /** Registra a confirmação do cliente de que a questão foi resolvida. */
 export async function confirmNpsResolution(
   id: string,
@@ -315,6 +589,243 @@ export async function deleteNpsResponse(id: string) {
   updateTag(WORKSPACE_TAG);
 }
 
+/* ============================================================
+   IMPORTAÇÃO DO WOOTRIC
+============================================================ */
+
+export interface ResultadoImportacao {
+  erro?: string;
+  lidas: number;
+  novas: number;
+  atualizadas: number;
+  semTratativa: number;
+  desde: string;
+  ate?: string;
+}
+
+/**
+ * Grava um lote no banco.
+ *
+ * Cinco por vez, e não todas de uma vez: é o mesmo teto que
+ * `case.repository.ts` já usa: o pooler do Supabase no plano gratuito
+ * derruba a conexão com paralelismo maior.
+ *
+ * O que a importação **não** sobrescreve: status, tipo, causa raiz,
+ * responsável, tentativas e todo o pós-contato. Isso é trabalho da
+ * operação — reimportar a mesma janela não pode desfazer uma tratativa.
+ */
+async function gravarLote(
+  prisma: PrismaClient,
+  itens: RespostaImportada[]
+) {
+
+  let novas = 0;
+  let atualizadas = 0;
+  let semTratativa = 0;
+
+  const existentes = new Set(
+    (
+      await prisma.npsResponse.findMany({
+        where: {
+          externalId: {
+            in: itens.map((i) => i.externalId),
+          },
+        },
+        select: { externalId: true },
+      })
+    ).map((r) => r.externalId as string)
+  );
+
+  for (let i = 0; i < itens.length; i += 5) {
+
+    const lote = itens.slice(i, i + 5);
+
+    await Promise.all(
+      lote.map(async (item) => {
+
+        const jaExiste = existentes.has(item.externalId);
+
+        const doWootric = {
+          score: item.score,
+          comment: item.comment,
+          respondedAt: item.respondedAt,
+          customer: item.customer,
+          email: item.email || null,
+          phone: item.phone || null,
+          company: item.company || null,
+          externalCompanyId:
+            item.externalCompanyId || null,
+          source: "Wootric",
+        };
+
+        if (jaExiste) {
+          await prisma.npsResponse.update({
+            where: { externalId: item.externalId },
+            data: doWootric,
+          });
+
+          atualizadas += 1;
+          return;
+        }
+
+        await prisma.npsResponse.create({
+          data: {
+            ...doWootric,
+            externalId: item.externalId,
+
+            firstContactDueAt: prazoPrimeiroContato(
+              item.respondedAt,
+              item.score,
+              null
+            ),
+
+            status: item.exigeTratativa
+              ? "Novo"
+              : STATUS_SEM_TRATATIVA,
+
+            /**
+             * Promotor calado nasce fechado, com a data da própria
+             * resposta: deixar `closedAt` nulo faria a tela mostrar um
+             * encerramento sem quando.
+             */
+            closedAt: item.exigeTratativa
+              ? null
+              : item.respondedAt,
+
+            outcome: item.exigeTratativa
+              ? null
+              : STATUS_SEM_TRATATIVA,
+          },
+        });
+
+        novas += 1;
+
+        if (!item.exigeTratativa) semTratativa += 1;
+      })
+    );
+  }
+
+  return { novas, atualizadas, semTratativa };
+}
+
+/**
+ * Puxa as respostas do Wootric.
+ *
+ * **De onde parte.** Sem `dias`, continua de onde parou: a resposta mais
+ * nova já importada, com uma hora de recuo para pegar quem chegou
+ * atrasado. Com `dias`, refaz a janela inteira — é o caminho do
+ * backfill, e reimportar não duplica porque a chave é o `externalId`.
+ *
+ * **Por que a janela padrão é curta.** São ~790 respostas por mês. Uma
+ * janela de 90 dias são mais de 2.000 registros, e uma server action
+ * chamada pelo botão da tela não tem tempo de vida para isso na Vercel.
+ * Janela grande é trabalho de script: `npm run nps:wootric -- --dias=365`.
+ */
+export async function importWootric(input?: {
+  dias?: number;
+  /**
+   * Fim da janela, também em dias atrás. É o que permite fatiar: a tela
+   * pede "de 90 a 60 dias atrás", depois "de 60 a 30", e assim por
+   * diante. Cada chamada termina dentro do tempo de vida de uma server
+   * action, e um ano inteiro (~9.500 respostas) deixa de ser uma
+   * requisição que a Vercel corta no meio.
+   */
+  ateDias?: number;
+}): Promise<ResultadoImportacao> {
+
+  const ctx = await requireRole("AGENTE");
+
+  const vazio = {
+    lidas: 0,
+    novas: 0,
+    atualizadas: 0,
+    semTratativa: 0,
+    desde: "",
+  };
+
+  if (!ctx) {
+    return {
+      ...vazio,
+      erro: "Sem banco configurado — a importação precisa de onde gravar.",
+    };
+  }
+
+  if (!temWootric()) {
+    return {
+      ...vazio,
+      erro: "Wootric não configurado. Defina WOOTRIC_CLIENT_ID e WOOTRIC_CLIENT_SECRET.",
+    };
+  }
+
+  let desde: Date;
+
+  if (input?.dias) {
+    desde = new Date(
+      Date.now() - input.dias * 86400000
+    );
+  } else {
+
+    const ultima = await ctx.prisma.npsResponse.findFirst({
+      where: { source: "Wootric" },
+      orderBy: { respondedAt: "desc" },
+      select: { respondedAt: true },
+    });
+
+    desde = ultima
+      ? new Date(ultima.respondedAt.getTime() - 3600000)
+      : new Date(Date.now() - 7 * 86400000);
+  }
+
+  const ate = input?.ateDias
+    ? new Date(Date.now() - input.ateDias * 86400000)
+    : undefined;
+
+  try {
+
+    const brutas = await listarRespostas(
+      desde,
+      undefined,
+      ate
+    );
+
+    const itens = brutas
+      .map(traduzir)
+      .filter(
+        (item): item is RespostaImportada =>
+          item !== null
+      );
+
+    const contas = await gravarLote(ctx.prisma, itens);
+
+    updateTag(WORKSPACE_TAG);
+
+    const datas = itens
+      .map((i) => i.respondedAt.getTime())
+      .sort((a, b) => a - b);
+
+    return {
+      ...contas,
+      lidas: itens.length,
+      desde: desde.toISOString(),
+      ate: datas.length
+        ? new Date(
+            datas[datas.length - 1]
+          ).toISOString()
+        : undefined,
+    };
+
+  } catch (erro) {
+    return {
+      ...vazio,
+      desde: desde.toISOString(),
+      erro:
+        erro instanceof Error
+          ? erro.message
+          : "Falha ao falar com o Wootric.",
+    };
+  }
+}
+
 /** Aplica o encerramento automático por falta de retorno. */
 export async function closeAbandonedNps(ids: string[]) {
 
@@ -334,4 +845,128 @@ export async function closeAbandonedNps(ids: string[]) {
   updateTag(WORKSPACE_TAG);
 
   return r.count;
+}
+
+/* ============================================================
+   EXPORTAÇÃO
+============================================================ */
+
+/**
+ * Exporta as respostas para .xlsx.
+ *
+ * Devolve base64: server action não transporta binário puro, então a
+ * tela remonta o arquivo e dispara o download — o mesmo caminho que a
+ * exportação do Reclame Aqui já usa em `lib/actions/transfer.ts`.
+ *
+ * Exporta **o recorte que está na tela**, não a base inteira: quem
+ * filtrou por "fora do prazo" e clicou em exportar quer aqueles, não os
+ * 789. Sem `ids`, exporta tudo.
+ */
+export async function exportNps(ids?: string[]): Promise<{
+  erro?: string;
+  arquivo?: string;
+  nome?: string;
+  total?: number;
+}> {
+
+  const ctx = await tryRole("LEITURA");
+
+  if (!ctx) {
+    return {
+      erro: "Sem banco configurado — não há o que exportar.",
+    };
+  }
+
+  const linhas = await ctx.prisma.npsResponse.findMany({
+    where:
+      ids && ids.length > 0
+        ? { id: { in: ids } }
+        : undefined,
+    include: {
+      owner: { select: { name: true } },
+      attempts: { orderBy: { createdAt: "asc" } },
+    },
+    orderBy: { respondedAt: "desc" },
+  });
+
+  const quando = (v?: Date | null) =>
+    v ? v.toISOString().slice(0, 16).replace("T", " ") : "";
+
+  const planilha = linhas.map((r) => ({
+    Nota: r.score,
+    Segmento: segmentOf(r.score).label,
+    Cliente: r.customer,
+    "E-mail": r.email ?? "",
+    Telefone: r.phone ?? "",
+    Estabelecimento: r.company ?? "",
+    "Id do estabelecimento (origem)":
+      r.externalCompanyId ?? "",
+    "Comentário": r.comment,
+    "Respondido em": quando(r.respondedAt),
+    Tipo: r.kind ?? "",
+    "Causa raiz": r.rootCause ?? "",
+    Status: r.status,
+    "Responsável": r.owner?.name ?? "",
+    "Prazo 1o contato": quando(r.firstContactDueAt),
+    "1o contato em": quando(r.firstContactAt),
+    Tentativas: r.attempts.length,
+    "Última tentativa": quando(
+      r.attempts[r.attempts.length - 1]?.createdAt
+    ),
+    "Humor após contato": r.moodAfter
+      ? `${r.moodAfter} — ${moodOf(r.moodAfter)?.label ?? ""}`
+      : "",
+    "Situação resolvida":
+      r.resolvedAfter === null
+        ? ""
+        : r.resolvedAfter
+          ? "Sim"
+          : "Não",
+    "Nota do pós-contato": r.postContactNote ?? "",
+    "Pós-contato em": quando(r.postContactAt),
+    "Pós-contato por": r.postContactBy ?? "",
+    "Cliente confirmou": quando(r.confirmedAt),
+    "Encerrado em": quando(r.closedAt),
+    Desfecho: r.outcome ?? "",
+    "Review pedida": r.reviewAsked ? "Sim" : "Não",
+    "Depoimento pedido": r.testimonialAsked ? "Sim" : "Não",
+    "Indicação": r.referralAsked ? "Sim" : "Não",
+    Origem: r.source,
+    "Id na origem": r.externalId ?? "",
+  }));
+
+  const sheet = XLSX.utils.json_to_sheet(planilha);
+
+  /**
+   * Larguras fixas: sem elas o Excel abre tudo em oito caracteres e a
+   * planilha chega ilegível — que é metade do motivo de exportar.
+   */
+  sheet["!cols"] = Object.keys(planilha[0] ?? {}).map(
+    (chave) => ({
+      wch:
+        chave === "Comentário"
+          ? 60
+          : chave === "Nota do pós-contato"
+            ? 40
+            : Math.max(chave.length + 2, 14),
+    })
+  );
+
+  // Cabeçalho congelado: 789 linhas sem isso rolam sem referência.
+  sheet["!freeze"] = { xSplit: 0, ySplit: 1 };
+
+  const book = XLSX.utils.book_new();
+
+  XLSX.utils.book_append_sheet(book, sheet, "NPS");
+
+  const buffer = XLSX.write(book, {
+    type: "buffer",
+    bookType: "xlsx",
+  }) as Buffer;
+
+  return {
+    arquivo: buffer.toString("base64"),
+    nome: `cw-nps-${new Date().toISOString().slice(0, 10)}.xlsx`,
+    total: linhas.length,
+  };
 }

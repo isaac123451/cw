@@ -21,6 +21,8 @@ import {
   CHANNELS,
   isEncerrado,
   kindRule,
+  moodOf,
+  MOODS,
   NpsResponseView,
   segmentOf,
 } from "@/lib/models/nps";
@@ -45,6 +47,11 @@ interface Props {
     campo: "review" | "testimonial" | "referral",
     valor: boolean
   ) => Promise<void>;
+  onPostContact: (dados: {
+    mood?: number | null;
+    resolved?: boolean | null;
+    note?: string;
+  }) => Promise<void>;
 }
 
 function quando(iso?: string) {
@@ -73,11 +80,45 @@ export default function NpsDrawer({
   onConfirm,
   onStatus,
   onAdvocacy,
+  onPostContact,
 }: Props) {
 
   const [channel, setChannel] = useState(CHANNELS[0]);
   const [note, setNote] = useState("");
   const [salvando, setSalvando] = useState(false);
+
+  /** Rascunho do pós-contato — só vai ao banco quando registrar. */
+  const [humor, setHumor] = useState<number | undefined>(
+    item.moodAfter
+  );
+
+  const [resolveu, setResolveu] = useState<
+    boolean | undefined
+  >(item.resolvedAfter);
+
+  const [notaContato, setNotaContato] = useState(
+    item.postContactNote ?? ""
+  );
+
+  const [gravandoPos, setGravandoPos] = useState(false);
+
+  const posAlterado =
+    humor !== item.moodAfter ||
+    resolveu !== item.resolvedAfter ||
+    notaContato !== (item.postContactNote ?? "");
+
+  async function registrarPosContato() {
+
+    setGravandoPos(true);
+
+    await onPostContact({
+      mood: humor ?? null,
+      resolved: resolveu ?? null,
+      note: notaContato,
+    });
+
+    setGravandoPos(false);
+  }
 
   const segmento = segmentOf(item.score);
   const regra = kindRule(item.kind);
@@ -103,7 +144,18 @@ export default function NpsDrawer({
     <Modal
       open
       title={item.customer}
-      description={`Nota ${item.score} · ${segmento.label}${item.company ? ` · ${item.company}` : ""}`}
+      description={[
+        `Nota ${item.score}`,
+        segmento.label,
+        item.company,
+        // O humor entra no cabeçalho porque é o dado que responde
+        // "como está esse cliente agora", que é o motivo de abrir a ficha.
+        moodOf(item.moodAfter) &&
+          `${moodOf(item.moodAfter)?.emoji} ${moodOf(item.moodAfter)?.label} após contato`,
+        item.source === "Wootric" && "via Wootric",
+      ]
+        .filter(Boolean)
+        .join(" · ")}
       size="wide"
       onClose={onClose}
       footer={<GhostButton onClick={onClose}>Fechar</GhostButton>}
@@ -275,6 +327,119 @@ export default function NpsDrawer({
 
             </div>
           )}
+
+        </div>
+
+        {/* Régua de humor — o depois */}
+        <div className="rounded-xl border border-zinc-200 p-3.5">
+
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+            Depois do contato
+          </p>
+
+          <p className="mt-1 text-xs leading-relaxed text-zinc-500">
+            A nota {item.score} é de <strong className="font-semibold">antes</strong> — mede como o cliente estava ao responder a pesquisa, e não muda, porque é ela que compõe o NPS. A régua abaixo mede outra coisa: se o contato moveu a agulha.
+          </p>
+
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {MOODS.map((m) => {
+
+              const ativo = humor === m.value;
+
+              return (
+                <button
+                  key={m.value}
+                  type="button"
+                  title={m.hint}
+                  onClick={() =>
+                    setHumor(ativo ? undefined : m.value)
+                  }
+                  style={
+                    ativo
+                      ? {
+                          borderColor: m.color,
+                          background: `${m.color}14`,
+                          color: m.color,
+                        }
+                      : undefined
+                  }
+                  className={`flex flex-1 min-w-[86px] flex-col items-center gap-0.5 rounded-xl border px-2 py-2 transition-colors ${ativo ? "font-semibold" : "border-zinc-200 text-zinc-500 hover:border-zinc-300 hover:bg-zinc-50"}`}
+                >
+                  <span className="text-lg leading-none">
+                    {m.emoji}
+                  </span>
+                  <span className="text-[10.5px] leading-tight">
+                    {m.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+
+            <span className="text-xs font-medium text-zinc-600">
+              A situação foi resolvida?
+            </span>
+
+            {(
+              [
+                [true, "Sim", "emerald"],
+                [false, "Não", "rose"],
+              ] as const
+            ).map(([valor, label, cor]) => {
+
+              const ativo = resolveu === valor;
+
+              return (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() =>
+                    setResolveu(ativo ? undefined : valor)
+                  }
+                  className={`rounded-lg border px-3 py-1 text-xs font-medium transition-colors ${ativo ? (cor === "emerald" ? "border-emerald-300 bg-emerald-50 text-emerald-700" : "border-rose-300 bg-rose-50 text-rose-700") : "border-zinc-200 text-zinc-600 hover:bg-zinc-50"}`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+
+            {resolveu === true && (
+              <span className="text-[11px] text-zinc-400">
+                marca também a confirmação do checklist
+              </span>
+            )}
+
+          </div>
+
+          <input
+            value={notaContato}
+            onChange={(e) =>
+              setNotaContato(e.target.value)
+            }
+            placeholder="O que ficou combinado (opcional)"
+            className={`${inputClass} mt-3`}
+          />
+
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+
+            <p className="text-[11px] text-zinc-400">
+              {item.postContactAt
+                ? `Registrado em ${quando(item.postContactAt)}${item.postContactBy ? ` por ${item.postContactBy}` : ""}.`
+                : "Ainda não registrado."}
+            </p>
+
+            <PrimaryButton
+              onClick={registrarPosContato}
+              disabled={gravandoPos || !posAlterado}
+            >
+              {item.postContactAt
+                ? "Atualizar"
+                : "Registrar"}
+            </PrimaryButton>
+
+          </div>
 
         </div>
 

@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <title>CW Reputação — opções</title>
+    <style>
+      :root {
+        --roxo: #5b2a86;
+        --violeta: #7b3fbf;
+        --laranja: #f9a11b;
+        --fundo: #ffffff;
+        --superficie: #fafafa;
+        --borda: #e4e4e7;
+        --texto: #18181b;
+        --fraco: #71717a;
+        --perigo: #dc2626;
+        --ok: #15803d;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --fundo: #17181c;
+          --superficie: #1f2026;
+          --borda: #303138;
+          --texto: #ececf1;
+          --fraco: #a1a1aa;
+          --perigo: #f87171;
+          --ok: #4ade80;
+        }
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        padding: 0 20px 60px;
+        background: var(--fundo);
+        color: var(--texto);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+          Helvetica, Arial, sans-serif;
+        font-size: 14px;
+        line-height: 1.55;
+      }
+
+      .folha { max-width: 620px; margin: 0 auto; }
+
+      header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin: 28px 0 22px;
+      }
+
+      header svg { width: 34px; height: 34px; color: var(--roxo); }
+      header h1 { font-size: 19px; margin: 0; }
+      header p { margin: 2px 0 0; color: var(--fraco); font-size: 12.5px; }
+
+      section {
+        border: 1px solid var(--borda);
+        border-radius: 12px;
+        padding: 16px 18px;
+        background: var(--superficie);
+        margin-bottom: 16px;
+      }
+
+      h2 {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: .8px;
+        color: var(--fraco);
+        margin: 0 0 10px;
+      }
+
+      label { display: block; font-weight: 600; margin-bottom: 4px; }
+
+      .ajuda {
+        color: var(--fraco);
+        font-size: 12.5px;
+        margin: 0 0 10px;
+      }
+
+      input[type="text"] {
+        width: 100%;
+        padding: 9px 11px;
+        border: 1px solid var(--borda);
+        border-radius: 9px;
+        background: var(--fundo);
+        color: var(--texto);
+        font-size: 13.5px;
+        font-family: inherit;
+      }
+
+      input[type="text"]:focus {
+        outline: 2px solid var(--violeta);
+        outline-offset: -1px;
+      }
+
+      .linha { display: flex; gap: 8px; margin-top: 10px; }
+
+      button {
+        border: none;
+        border-radius: 9px;
+        padding: 9px 16px;
+        background: var(--roxo);
+        color: #fff;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        font-family: inherit;
+      }
+
+      button.secundario {
+        background: transparent;
+        color: var(--texto);
+        border: 1px solid var(--borda);
+      }
+
+      .aviso {
+        margin-top: 12px;
+        border-radius: 9px;
+        padding: 9px 11px;
+        font-size: 12.5px;
+        display: none;
+      }
+
+      .aviso.mostrar { display: block; }
+      .aviso.ok {
+        background: rgba(21, 128, 61, .12);
+        color: var(--ok);
+      }
+      .aviso.erro {
+        background: rgba(220, 38, 38, .12);
+        color: var(--perigo);
+      }
+
+      .opcao {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        padding: 9px 0;
+        border-top: 1px solid var(--borda);
+      }
+
+      .opcao:first-of-type { border-top: none; padding-top: 0; }
+      .opcao input { margin-top: 3px; }
+      .opcao label { margin: 0; }
+      .opcao .ajuda { margin: 0; }
+
+      ul { margin: 6px 0 0; padding-left: 18px; color: var(--fraco); }
+      li { margin-bottom: 4px; font-size: 12.5px; }
+      code {
+        background: rgba(123, 63, 191, .12);
+        color: var(--violeta);
+        padding: 1px 5px;
+        border-radius: 5px;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="folha">
+      <header>
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <rect x="2.5" y="2.5" width="19" height="19" rx="5.5"
+                stroke="currentColor" stroke-width="2" />
+          <circle cx="12" cy="10.8" r="3.5" fill="#F9A11B" />
+          <path d="M7.4 16.5c1.2 1.3 2.8 2 4.6 2s3.4-.7 4.6-2"
+                stroke="currentColor" stroke-width="1.8"
+                stroke-linecap="round" />
+        </svg>
+        <span>
+          <h1>CW Reputação — painel de contexto</h1>
+          <p>Somente leitura. O painel mostra; quem age é você.</p>
+        </span>
+      </header>
+
+      <section>
+        <h2>Endereço da aplicação</h2>
+
+        <label for="base">Onde o CW Reputação está no ar</label>
+
+        <p class="ajuda">
+          O endereço que você usa no navegador — por exemplo
+          <code>https://cw-reputacao.vercel.app</code>. Em
+          desenvolvimento, <code>http://localhost:3000</code>.
+          Ao salvar, o navegador vai pedir sua autorização para a
+          extensão acessar esse endereço.
+        </p>
+
+        <input id="base" type="text" spellcheck="false"
+               placeholder="https://..." />
+
+        <div class="linha">
+          <button id="salvar" type="button">
+            Salvar e conectar
+          </button>
+          <button id="testar" class="secundario" type="button">
+            Testar conexão
+          </button>
+        </div>
+
+        <div id="aviso" class="aviso"></div>
+      </section>
+
+      <section>
+        <h2>Comportamento</h2>
+
+        <div class="opcao">
+          <input id="autoAbrir" type="checkbox" />
+          <span>
+            <label for="autoAbrir">Abrir o painel sozinho</label>
+            <p class="ajuda">
+              Ao entrar numa conversa reconhecida, a gaveta abre sem
+              clique. Desligado, só o contador no botão avisa que existe
+              algo daquele contato.
+            </p>
+          </span>
+        </div>
+
+        <div class="opcao">
+          <input id="contador" type="checkbox" />
+          <span>
+            <label for="contador">Contador no ícone</label>
+            <p class="ajuda">
+              Número de pendências graves no ícone da extensão,
+              atualizado a cada 30 minutos.
+            </p>
+          </span>
+        </div>
+
+        <div class="opcao">
+          <input id="aviso-diario" type="checkbox" />
+          <span>
+            <label for="aviso-diario">Aviso diário</label>
+            <p class="ajuda">
+              Uma notificação por dia, a partir das 8h, quando houver
+              alerta grave. Só funciona com o navegador aberto — o
+              resumo que chega sem depender disso é a rotina agendada
+              descrita em <code>EXTENSAO.md</code>.
+            </p>
+          </span>
+        </div>
+      </section>
+
+      <section>
+        <h2>O que a extensão faz e o que não faz</h2>
+
+        <ul>
+          <li>
+            Lê o telefone e o nome da conversa aberta no WhatsApp Web —
+            e nada mais. Mensagem, histórico e mídia não são lidos.
+          </li>
+          <li>
+            No Hugme e no Reclame Aqui, lê o identificador da reclamação
+            do endereço da página.
+          </li>
+          <li>
+            Nunca envia mensagem, nunca responde reclamação, nunca grava
+            nada. O risco de bloqueio no WhatsApp está ligado a
+            comportamento de envio, não a leitura de tela.
+          </li>
+          <li>
+            A consulta vai só para o seu CW Reputação, autenticada com a
+            sua própria sessão — a mesma que as telas usam.
+          </li>
+        </ul>
+      </section>
+    </div>
+
+    <script type="module" src="opcoes.js"></script>
+  </body>
+</html>

@@ -4,8 +4,12 @@ import { useMemo, useState, useTransition } from "react";
 
 import {
   CircleAlert,
+  Download,
   Gauge,
+  LayoutGrid,
+  List,
   Plus,
+  SlidersHorizontal,
   Star,
   ThumbsDown,
 } from "lucide-react";
@@ -21,6 +25,9 @@ import { ConfirmDelete } from "@/components/shared/Modal";
 import NpsForm from "@/components/nps/NpsForm";
 import NpsDrawer from "@/components/nps/NpsDrawer";
 import NpsList from "@/components/nps/NpsList";
+import NpsKanban from "@/components/nps/NpsKanban";
+import RootCauseManager from "@/components/nps/RootCauseManager";
+import WootricImport from "@/components/nps/WootricImport";
 
 import { useNps } from "@/lib/context/NpsContext";
 import { invalidarWorkspace } from "@/lib/context/useWorkspace";
@@ -30,9 +37,13 @@ import { useSession } from "@/lib/context/SessionContext";
 import {
   confirmNpsResolution,
   deleteNpsResponse,
+  exportNps,
   NpsDraft,
   registerNpsAttempt,
+  registerPostContact,
+  removeNpsRootCause,
   saveNpsResponse,
+  saveNpsRootCause,
   setNpsAdvocacy,
   setNpsStatus,
 } from "@/lib/actions/nps";
@@ -41,6 +52,9 @@ import {
   isEncerrado,
   KINDS,
   NpsResponseView,
+  RootCauseOption,
+  STATUS_EM_TRATATIVA,
+  STATUS_SEM_TRATATIVA,
 } from "@/lib/models/nps";
 
 import {
@@ -50,24 +64,43 @@ import {
   summarize,
 } from "@/lib/services/nps.service";
 
-type Filtro = "abertos" | "todos" | "estourados";
+type Filtro =
+  | "abertos"
+  | "todos"
+  | "estourados"
+  | "sem-tratativa";
 
 export default function NpsPage() {
 
-  const { responses, loading, recarregar, aplicarLocal } =
-    useNps();
+  const {
+    responses,
+    rootCauses,
+    loading,
+    recarregar,
+    recarregarCausas,
+    aplicarLocal,
+  } = useNps();
 
   const { notify } = useToast();
   const session = useSession();
 
   const [filtro, setFiltro] = useState<Filtro>("abertos");
   const [kindFiltro, setKindFiltro] = useState("");
+  const [visao, setVisao] = useState<"kanban" | "lista">(
+    "kanban"
+  );
 
   const [formOpen, setFormOpen] = useState(false);
   const [editando, setEditando] =
     useState<NpsResponseView>();
   const [aberto, setAberto] = useState<string>();
   const [salvando, setSalvando] = useState(false);
+
+  const [exportando, setExportando] = useState(false);
+
+  const [causasOpen, setCausasOpen] = useState(false);
+  const [salvandoCausa, setSalvandoCausa] =
+    useState(false);
 
   const [excluindo, setExcluindo] =
     useState<NpsResponseView>();
@@ -108,10 +141,38 @@ export default function NpsPage() {
         return slaState(item) === "estourado";
       }
 
+      if (filtro === "sem-tratativa") {
+        return item.status === STATUS_SEM_TRATATIVA;
+      }
+
       return true;
     });
 
   }, [responses, filtro, kindFiltro]);
+
+  /**
+   * Quantos casos cada recorte tem.
+   *
+   * Existe porque a importação do Wootric trouxe 789 respostas e o
+   * recorte padrão mostra ~210: os promotores calados entram na base
+   * sem abrir ciclo, e sem o número na aba parecia que a importação
+   * tinha perdido o resto.
+   */
+  const contagens = useMemo(
+    () => ({
+      abertos: responses.filter(
+        (item) => !isEncerrado(item.status)
+      ).length,
+      estourados: responses.filter(
+        (item) => slaState(item) === "estourado"
+      ).length,
+      "sem-tratativa": responses.filter(
+        (item) => item.status === STATUS_SEM_TRATATIVA
+      ).length,
+      todos: responses.length,
+    }),
+    [responses]
+  );
 
   /** O item aberto vem da lista, para refletir a última gravação. */
   const selecionado = responses.find(
@@ -164,6 +225,114 @@ export default function NpsPage() {
     }
   }
 
+  /**
+   * Exporta o recorte que está na tela.
+   *
+   * Manda os ids do que está visível em vez de exportar a base inteira:
+   * quem filtrou por "fora do prazo" e clicou aqui quer aqueles.
+   */
+  async function exportar() {
+
+    setExportando(true);
+
+    try {
+
+      const saida = await exportNps(
+        visiveis.map((item) => item.id)
+      );
+
+      if (saida.erro || !saida.arquivo) {
+        notify({
+          tone: "error",
+          title: "Não deu para exportar.",
+          detail: saida.erro ?? "Arquivo vazio.",
+        });
+        return;
+      }
+
+      // base64 -> bytes -> download, sem passar por servidor de arquivo.
+      const bytes = Uint8Array.from(
+        atob(saida.arquivo),
+        (c) => c.charCodeAt(0)
+      );
+
+      const url = URL.createObjectURL(
+        new Blob([bytes], {
+          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        })
+      );
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = saida.nome ?? "cw-nps.xlsx";
+      link.click();
+
+      URL.revokeObjectURL(url);
+
+      notify({
+        tone: "success",
+        title: `${saida.total} resposta(s) exportada(s).`,
+        detail: saida.nome,
+      });
+
+    } catch (erro) {
+      notify({
+        tone: "error",
+        title: "Falha ao exportar.",
+        detail:
+          erro instanceof Error
+            ? erro.message
+            : "Erro desconhecido.",
+      });
+    } finally {
+      setExportando(false);
+    }
+  }
+
+  async function salvarCausa(causa: RootCauseOption) {
+
+    setSalvandoCausa(true);
+
+    try {
+      await saveNpsRootCause(causa);
+      await recarregarCausas();
+    } catch (erro) {
+      notify({
+        tone: "error",
+        title: "Não foi possível salvar a causa.",
+        detail:
+          erro instanceof Error
+            ? erro.message
+            : "Nome já usado, talvez.",
+      });
+    } finally {
+      setSalvandoCausa(false);
+    }
+  }
+
+  async function excluirCausa(causa: RootCauseOption) {
+
+    setSalvandoCausa(true);
+
+    try {
+
+      const emUso = await removeNpsRootCause(causa.id);
+
+      await recarregarCausas();
+
+      if (emUso && emUso > 0) {
+        notify({
+          tone: "info",
+          title: "Causa desativada, não excluída.",
+          detail: `${emUso} resposta(s) já usam "${causa.name}" — apagar mudaria a série histórica.`,
+        });
+      }
+
+    } finally {
+      setSalvandoCausa(false);
+    }
+  }
+
   return (
     <MainLayout>
 
@@ -174,16 +343,55 @@ export default function NpsPage() {
           title="NPS"
           description="Pesquisa do portal e o ciclo de feedback até o encerramento — reter quem está insatisfeito e aproveitar quem está satisfeito."
         >
-          <button
-            onClick={() => {
-              setEditando(undefined);
-              setFormOpen(true);
-            }}
-            className="flex items-center gap-2 rounded-xl bg-violet-700 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-violet-800"
-          >
-            <Plus size={16} />
-            Registrar resposta
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+
+            <button
+              onClick={() => setCausasOpen(true)}
+              className="flex items-center gap-2 rounded-xl border border-zinc-200 px-3.5 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:border-violet-300 hover:text-violet-700"
+            >
+              <SlidersHorizontal size={15} />
+              Causa raiz
+            </button>
+
+            <button
+              onClick={exportar}
+              disabled={exportando || visiveis.length === 0}
+              title="Gera um .xlsx com o recorte que está na tela."
+              className="flex items-center gap-2 rounded-xl border border-zinc-200 px-3.5 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:border-violet-300 hover:text-violet-700 disabled:opacity-50"
+            >
+              <Download size={15} />
+              {exportando
+                ? "Exportando..."
+                : `Exportar (${visiveis.length})`}
+            </button>
+
+            <WootricImport
+              onDone={async (resumo, houveErro) => {
+
+                if (!houveErro) await recarregar();
+
+                notify({
+                  tone: houveErro ? "error" : "success",
+                  title: houveErro
+                    ? "Importação não concluída."
+                    : "Wootric importado.",
+                  detail: resumo,
+                });
+              }}
+            />
+
+            <button
+              onClick={() => {
+                setEditando(undefined);
+                setFormOpen(true);
+              }}
+              className="flex items-center gap-2 rounded-xl bg-violet-700 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-violet-800"
+            >
+              <Plus size={16} />
+              Registrar resposta
+            </button>
+
+          </div>
         </PageHeading>
 
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -306,19 +514,46 @@ export default function NpsPage() {
           action={
             <div className="flex shrink-0 flex-wrap items-center gap-1.5">
 
+              <div className="mr-1 flex items-center gap-0.5 rounded-lg bg-zinc-100 p-0.5">
+                {(
+                  [
+                    ["kanban", LayoutGrid, "Quadro"],
+                    ["lista", List, "Lista"],
+                  ] as const
+                ).map(([id, Icone, titulo]) => (
+                  <button
+                    key={id}
+                    onClick={() => setVisao(id)}
+                    title={titulo}
+                    className={`rounded-md p-1.5 transition-colors ${visao === id ? "bg-white text-violet-700 shadow-sm" : "text-zinc-500 hover:text-zinc-700"}`}
+                  >
+                    <Icone size={14} />
+                  </button>
+                ))}
+              </div>
+
               {(
                 [
                   ["abertos", "Em aberto"],
                   ["estourados", "Fora do prazo"],
+                  ["sem-tratativa", "Sem tratativa"],
                   ["todos", "Todas"],
                 ] as [Filtro, string][]
               ).map(([id, label]) => (
                 <button
                   key={id}
                   onClick={() => setFiltro(id)}
+                  title={
+                    id === "sem-tratativa"
+                      ? "Promotores sem comentário: entram na conta do NPS, não abrem ciclo."
+                      : undefined
+                  }
                   className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ring-1 ring-inset ${filtro === id ? "bg-violet-50 text-violet-700 ring-violet-200" : "text-zinc-600 ring-zinc-200 hover:bg-zinc-50"}`}
                 >
                   {label}
+                  <span className="ml-1.5 tabular-nums opacity-60">
+                    {contagens[id]}
+                  </span>
                 </button>
               ))}
 
@@ -347,6 +582,26 @@ export default function NpsPage() {
               Carregando...
             </p>
 
+          ) : visao === "kanban" ? (
+
+            <div className="p-3">
+              <NpsKanban
+                itens={visiveis}
+                onOpen={(item) => setAberto(item.id)}
+                onMove={async (item, status) => {
+
+                  // Otimista: o cartão muda de coluna na hora do solto.
+                  aplicarLocal(item.id, { status });
+
+                  await setNpsStatus(item.id, status);
+
+                  startTransition(() => {
+                    recarregar();
+                  });
+                }}
+              />
+            </div>
+
           ) : (
 
             <NpsList
@@ -372,11 +627,23 @@ export default function NpsPage() {
           open={formOpen}
           editing={editando}
           saving={salvando}
+          rootCauses={rootCauses}
           onClose={() => {
             setFormOpen(false);
             setEditando(undefined);
           }}
           onSave={salvar}
+          onManageCauses={() => setCausasOpen(true)}
+        />
+      )}
+
+      {causasOpen && (
+        <RootCauseManager
+          causas={rootCauses}
+          salvando={salvandoCausa}
+          onClose={() => setCausasOpen(false)}
+          onSave={salvarCausa}
+          onRemove={excluirCausa}
         />
       )}
 
@@ -455,6 +722,52 @@ export default function NpsPage() {
               campo,
               valor
             );
+          }}
+          onPostContact={async (dados) => {
+
+            const agora = new Date().toISOString();
+
+            aplicarLocal(selecionado.id, {
+              moodAfter: dados.mood ?? undefined,
+              resolvedAfter:
+                dados.resolved ?? undefined,
+              postContactNote: dados.note,
+              postContactAt: agora,
+              postContactBy: session?.name,
+              // Registrar o pós-contato é ter falado com o cliente.
+              firstContactAt:
+                selecionado.firstContactAt ?? agora,
+              status: isEncerrado(selecionado.status)
+                ? selecionado.status
+                : STATUS_EM_TRATATIVA,
+              confirmedAt:
+                dados.resolved === true
+                  ? agora
+                  : undefined,
+            });
+
+            await registerPostContact({
+              id: selecionado.id,
+              mood: dados.mood,
+              resolved: dados.resolved,
+              note: dados.note,
+              actor: session?.name ?? "",
+            });
+
+            startTransition(() => {
+              recarregar();
+            });
+
+            notify({
+              tone: "success",
+              title: "Pós-contato registrado.",
+              detail:
+                dados.resolved === true
+                  ? "Marcado como resolvido — o checklist já conta a confirmação."
+                  : dados.resolved === false
+                    ? "Marcado como não resolvido."
+                    : selecionado.customer,
+            });
           }}
         />
       )}

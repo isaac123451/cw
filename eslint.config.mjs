@@ -31,8 +31,13 @@ const eslintConfig = defineConfig([
     },
   },
   {
-    // Scripts de linha de comando rodam em Node puro, fora do bundle.
-    files: ["scripts/**/*.js"],
+    /**
+     * Scripts de linha de comando rodam em Node puro, fora do bundle.
+     * O gerador de ícones da extensão é um deles — mora junto do que
+     * ele produz, e não em `scripts/`, para a pasta `extensao/`
+     * continuar sendo carregável no navegador por si só.
+     */
+    files: ["scripts/**/*.js", "extensao/icones/*.js"],
     rules: {
       "@typescript-eslint/no-require-imports": "off",
     },
