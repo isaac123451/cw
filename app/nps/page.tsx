@@ -12,6 +12,7 @@ import {
   SlidersHorizontal,
   Star,
   ThumbsDown,
+  Users,
 } from "lucide-react";
 
 import MainLayout from "@/components/layout/MainLayout";
@@ -54,6 +55,9 @@ import {
   NpsResponseView,
   RootCauseOption,
   STATUS_EM_TRATATIVA,
+  NpsSegment,
+  segmentOf,
+  SEGMENTS,
   STATUS_SEM_TRATATIVA,
 } from "@/lib/models/nps";
 
@@ -86,6 +90,22 @@ export default function NpsPage() {
 
   const [filtro, setFiltro] = useState<Filtro>("abertos");
   const [kindFiltro, setKindFiltro] = useState("");
+
+  /** Recorte por segmento — o que os três indicadores do topo acionam. */
+  const [segmento, setSegmento] = useState<NpsSegment | "">(
+    ""
+  );
+
+  /**
+   * Recorte por comentário, no vocabulário do Wootric.
+   *
+   * A pesquisa vem com 89% de respostas sem uma palavra escrita, e é no
+   * comentário que mora a causa raiz — separar os dois é o filtro mais
+   * usado lá, e faltava aqui.
+   */
+  const [comentario, setComentario] = useState<
+    "" | "com" | "sem" | "com-sem-causa" | "com-sem-tipo"
+  >("");
   const [visao, setVisao] = useState<"kanban" | "lista">(
     "kanban"
   );
@@ -133,6 +153,32 @@ export default function NpsPage() {
         return false;
       }
 
+      if (
+        segmento &&
+        segmentOf(item.score).label !== segmento
+      ) {
+        return false;
+      }
+
+      const temComentario = item.comment.trim() !== "";
+
+      if (comentario === "com" && !temComentario) return false;
+      if (comentario === "sem" && temComentario) return false;
+
+      if (
+        comentario === "com-sem-causa" &&
+        (!temComentario || item.rootCause)
+      ) {
+        return false;
+      }
+
+      if (
+        comentario === "com-sem-tipo" &&
+        (!temComentario || item.kind)
+      ) {
+        return false;
+      }
+
       if (filtro === "abertos") {
         return !isEncerrado(item.status);
       }
@@ -148,7 +194,7 @@ export default function NpsPage() {
       return true;
     });
 
-  }, [responses, filtro, kindFiltro]);
+  }, [responses, filtro, kindFiltro, segmento, comentario]);
 
   /**
    * Quantos casos cada recorte tem.
@@ -173,6 +219,33 @@ export default function NpsPage() {
     }),
     [responses]
   );
+
+  /**
+   * Quantos comentários cada segmento trouxe.
+   *
+   * É o número que o Wootric mostra embaixo de cada segmento, e é a
+   * leitura que importa: 650 promotores com 61 comentários significa
+   * que 589 não disseram nada — e é sobre os 61 que dá para trabalhar.
+   */
+  const porSegmento = useMemo(() => {
+
+    const mapa = {} as Record<
+      NpsSegment,
+      { total: number; comentarios: number }
+    >;
+
+    for (const s of SEGMENTS) {
+      mapa[s.label] = { total: 0, comentarios: 0 };
+    }
+
+    for (const item of responses) {
+      const alvo = mapa[segmentOf(item.score).label];
+      alvo.total += 1;
+      if (item.comment.trim() !== "") alvo.comentarios += 1;
+    }
+
+    return mapa;
+  }, [responses]);
 
   /** O item aberto vem da lista, para refletir a última gravação. */
   const selecionado = responses.find(
@@ -394,7 +467,7 @@ export default function NpsPage() {
           </div>
         </PageHeading>
 
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
 
           <StatTile
             label="NPS"
@@ -407,20 +480,47 @@ export default function NpsPage() {
 
           <StatTile
             label="Promotores"
-            description="Notas 9 e 10 — base para review, depoimento e indicação."
-            value={resumo.promotores}
-            hint={`de ${resumo.total}`}
+            description="Notas 9 e 10 — base para review, depoimento e indicação. Clique para ver só estes."
+            value={porSegmento.Promotor.total}
+            hint={`${porSegmento.Promotor.comentarios} com comentário`}
             icon={Star}
             tone="success"
+            ativo={segmento === "Promotor"}
+            onClick={() =>
+              setSegmento(
+                segmento === "Promotor" ? "" : "Promotor"
+              )
+            }
+          />
+
+          <StatTile
+            label="Passivos"
+            description="Notas 7 e 8 — satisfeitos sem entusiasmo. Costuma ser onde mora a sugestão útil. Clique para ver só estes."
+            value={porSegmento.Passivo.total}
+            hint={`${porSegmento.Passivo.comentarios} com comentário`}
+            icon={Users}
+            tone="warning"
+            ativo={segmento === "Passivo"}
+            onClick={() =>
+              setSegmento(
+                segmento === "Passivo" ? "" : "Passivo"
+              )
+            }
           />
 
           <StatTile
             label="Detratores"
-            description="Notas 0 a 6 — risco de cancelamento."
-            value={resumo.detratores}
-            hint="socorrer primeiro"
+            description="Notas 0 a 6 — risco de cancelamento. Clique para ver só estes."
+            value={porSegmento.Detrator.total}
+            hint={`${porSegmento.Detrator.comentarios} com comentário`}
             icon={ThumbsDown}
             tone="danger"
+            ativo={segmento === "Detrator"}
+            onClick={() =>
+              setSegmento(
+                segmento === "Detrator" ? "" : "Detrator"
+              )
+            }
           />
 
           <StatTile
@@ -430,6 +530,12 @@ export default function NpsPage() {
             hint={`${resumo.abertos} em aberto`}
             icon={CircleAlert}
             tone="warning"
+            ativo={filtro === "estourados"}
+            onClick={() =>
+              setFiltro(
+                filtro === "estourados" ? "abertos" : "estourados"
+              )
+            }
           />
 
         </div>
@@ -556,6 +662,27 @@ export default function NpsPage() {
                   </span>
                 </button>
               ))}
+
+              <select
+                value={comentario}
+                onChange={(e) =>
+                  setComentario(
+                    e.target.value as typeof comentario
+                  )
+                }
+                title="Mesmos recortes do Wootric: o que importa é separar quem escreveu de quem só deu nota."
+                className="h-7 rounded-lg border border-zinc-200 px-2 text-xs outline-none focus:border-violet-400"
+              >
+                <option value="">Todos os comentários</option>
+                <option value="com">Com comentário</option>
+                <option value="sem">Sem comentário</option>
+                <option value="com-sem-causa">
+                  Com comentário, sem causa raiz
+                </option>
+                <option value="com-sem-tipo">
+                  Com comentário, sem tipo
+                </option>
+              </select>
 
               <select
                 value={kindFiltro}

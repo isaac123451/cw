@@ -5,8 +5,10 @@ import { useState } from "react";
 import { Plus, Search, Trash2 } from "lucide-react";
 
 import { useSettings } from "@/lib/context/SettingsContext";
+import { useRascunho } from "@/lib/hooks/useRascunho";
 
 import SurfaceCard from "@/components/shared/SurfaceCard";
+import BarraDeSalvar from "@/components/shared/BarraDeSalvar";
 
 export default function CategoriesSettings() {
 
@@ -16,20 +18,45 @@ export default function CategoriesSettings() {
     removeCategory,
   } = useSettings();
 
+  /**
+   * Editar não grava; o botão Salvar grava.
+   *
+   * Antes cada tecla digitada ia ao banco: o nome pela metade virava
+   * uma gravação, e nunca havia um momento em que dissesse "salvo".
+   * Ver `lib/hooks/useRascunho.ts`.
+   */
+  const rascunho = useRascunho(categories, saveCategory);
+
+  /**
+   * Apagar continua imediato — não precisa de Salvar. A trava é outra:
+   * item que só existe no rascunho nunca chegou ao banco, e mandar
+   * apagar um id inexistente devolveria erro do servidor.
+   */
+  function apagar(id: string) {
+
+    const existeNoBanco = categories.some(
+      (item) => item.id === id
+    );
+
+    rascunho.esquecer(id);
+
+    if (existeNoBanco) removeCategory(id);
+  }
+
   const [search, setSearch] = useState("");
 
-  const visible = categories.filter((item) =>
+  const visible = rascunho.itens.filter((item) =>
     item.name
       .toLowerCase()
       .includes(search.trim().toLowerCase())
   );
 
   function addCategory() {
-    saveCategory({
+    rascunho.adicionar({
       id: crypto.randomUUID(),
       name: "Nova categoria",
       description: "",
-      order: categories.length + 1,
+      order: rascunho.itens.length + 1,
       active: true,
     });
   }
@@ -116,8 +143,7 @@ export default function CategoriesSettings() {
                   <input
                     value={item.name}
                     onChange={(e) =>
-                      saveCategory({
-                        ...item,
+                      rascunho.alterar(item.id, {
                         name: e.target.value,
                       })
                     }
@@ -131,8 +157,7 @@ export default function CategoriesSettings() {
                   <input
                     value={item.description}
                     onChange={(e) =>
-                      saveCategory({
-                        ...item,
+                      rascunho.alterar(item.id, {
                         description: e.target.value,
                       })
                     }
@@ -149,8 +174,7 @@ export default function CategoriesSettings() {
                     min={1}
                     value={item.ceilingHours ?? ""}
                     onChange={(e) =>
-                      saveCategory({
-                        ...item,
+                      rascunho.alterar(item.id, {
                         // Campo vazio significa "sem teto", não zero.
                         ceilingHours:
                           e.target.value === ""
@@ -173,8 +197,7 @@ export default function CategoriesSettings() {
                       type="checkbox"
                       checked={item.active}
                       onChange={(e) =>
-                        saveCategory({
-                          ...item,
+                        rascunho.alterar(item.id, {
                           active: e.target.checked,
                         })
                       }
@@ -190,7 +213,7 @@ export default function CategoriesSettings() {
                 <td className="px-5 py-3 text-right">
 
                   <button
-                    onClick={() => removeCategory(item.id)}
+                    onClick={() => apagar(item.id)}
                     aria-label={`Excluir ${item.name}`}
                     className="rounded-lg p-2 text-zinc-400 transition-colors hover:bg-rose-50 hover:text-rose-600"
                   >
@@ -214,6 +237,17 @@ export default function CategoriesSettings() {
         )}
 
       </div>
+
+      <BarraDeSalvar
+
+        rascunho={rascunho}
+
+        nome="categorias"
+
+        genero="f"
+
+      />
+
 
     </SurfaceCard>
   );

@@ -43,7 +43,12 @@ export const RECLAME_AQUI = "Reclame Aqui";
  * Canais que alimentam o módulo Redes Sociais. Hoje só o Instagram
  * recebe demanda; outros canais entram aqui quando forem ativados.
  */
-export const SOCIAL_SOURCES = ["Instagram"];
+export const SOCIAL_SOURCES = [
+  "Instagram",
+  "Facebook",
+  "WhatsApp",
+  "ManyChat",
+];
 
 export type Channel = "reclame-aqui" | "social" | "all";
 

@@ -5,8 +5,10 @@ import { useState } from "react";
 import { Plus, Search, Trash2 } from "lucide-react";
 
 import { useSettings } from "@/lib/context/SettingsContext";
+import { useRascunho } from "@/lib/hooks/useRascunho";
 
 import SurfaceCard from "@/components/shared/SurfaceCard";
+import BarraDeSalvar from "@/components/shared/BarraDeSalvar";
 
 export default function ChecklistSettings() {
 
@@ -16,21 +18,46 @@ export default function ChecklistSettings() {
     removeChecklistItem,
   } = useSettings();
 
+  /**
+   * Editar não grava; o botão Salvar grava.
+   *
+   * Antes cada tecla digitada ia ao banco: o nome pela metade virava
+   * uma gravação, e nunca havia um momento em que dissesse "salvo".
+   * Ver `lib/hooks/useRascunho.ts`.
+   */
+  const rascunho = useRascunho(checklist, saveChecklistItem);
+
+  /**
+   * Apagar continua imediato — não precisa de Salvar. A trava é outra:
+   * item que só existe no rascunho nunca chegou ao banco, e mandar
+   * apagar um id inexistente devolveria erro do servidor.
+   */
+  function apagar(id: string) {
+
+    const existeNoBanco = checklist.some(
+      (item) => item.id === id
+    );
+
+    rascunho.esquecer(id);
+
+    if (existeNoBanco) removeChecklistItem(id);
+  }
+
   const [search, setSearch] = useState("");
 
-  const visible = checklist.filter((item) =>
+  const visible = rascunho.itens.filter((item) =>
     item.label
       .toLowerCase()
       .includes(search.trim().toLowerCase())
   );
 
   function addItem() {
-    saveChecklistItem({
+    rascunho.adicionar({
       id: crypto.randomUUID(),
       label: "Novo item",
       key: "novo_item",
       required: false,
-      order: checklist.length + 1,
+      order: rascunho.itens.length + 1,
       active: true,
     });
   }
@@ -114,8 +141,7 @@ export default function ChecklistSettings() {
                   <input
                     value={item.label}
                     onChange={(e) =>
-                      saveChecklistItem({
-                        ...item,
+                      rascunho.alterar(item.id, {
                         label: e.target.value,
                       })
                     }
@@ -129,8 +155,7 @@ export default function ChecklistSettings() {
                   <input
                     value={item.key}
                     onChange={(e) =>
-                      saveChecklistItem({
-                        ...item,
+                      rascunho.alterar(item.id, {
                         key: e.target.value,
                       })
                     }
@@ -147,8 +172,7 @@ export default function ChecklistSettings() {
                       type="checkbox"
                       checked={item.required}
                       onChange={(e) =>
-                        saveChecklistItem({
-                          ...item,
+                        rascunho.alterar(item.id, {
                           required: e.target.checked,
                         })
                       }
@@ -169,8 +193,7 @@ export default function ChecklistSettings() {
                       type="checkbox"
                       checked={item.active}
                       onChange={(e) =>
-                        saveChecklistItem({
-                          ...item,
+                        rascunho.alterar(item.id, {
                           active: e.target.checked,
                         })
                       }
@@ -187,7 +210,7 @@ export default function ChecklistSettings() {
 
                   <button
                     onClick={() =>
-                      removeChecklistItem(item.id)
+                      apagar(item.id)
                     }
                     aria-label={`Excluir ${item.label}`}
                     className="rounded-lg p-2 text-zinc-400 transition-colors hover:bg-rose-50 hover:text-rose-600"
@@ -212,6 +235,17 @@ export default function ChecklistSettings() {
         )}
 
       </div>
+
+      <BarraDeSalvar
+
+        rascunho={rascunho}
+
+        nome="itens do checklist"
+
+        genero="m"
+
+      />
+
 
     </SurfaceCard>
   );

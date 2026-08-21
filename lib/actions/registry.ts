@@ -9,6 +9,7 @@ import {
   CategoryOption,
   ChecklistItem,
   SubcategoryOption,
+  TeamOption,
 } from "@/lib/models/settings";
 import { WorkflowStatus } from "@/lib/models/workflow";
 import { CaseTag } from "@/lib/data/mockTags";
@@ -31,6 +32,10 @@ import {
   ImpactTypeOption,
 } from "@/lib/models/impact";
 import { Team, TeamMember } from "@/lib/models/team";
+import {
+  ClientEnrichment,
+  ManualClient,
+} from "@/lib/models/client";
 import type { Playbook } from "@/lib/data/mockPlaybooks";
 
 /**
@@ -81,6 +86,7 @@ export async function saveWorkflowStatus(
     order: item.order,
     active: item.active,
     wipLimit: item.limit ?? null,
+    reminderMinutes: item.reminderMinutes ?? null,
   };
 
   await prisma.workflowStatus.upsert({
@@ -652,6 +658,187 @@ export async function saveTeam(item: Team) {
     update: dados,
     create: { id: item.id, ...dados },
   });
+
+  updateTag(WORKSPACE_TAG);
+}
+
+/**
+ * O time como **rótulo** — a aba Times do módulo Reclame Aqui.
+ *
+ * Mesma linha do banco que `saveTeam` grava, campos diferentes: aquela
+ * tela cadastra descrição, departamento, líder e integrantes; esta
+ * cadastra o nome que aparece nos seletores, o nome legado das
+ * planilhas antigas, a ordem e se está ativo.
+ *
+ * **Por que existem duas.** Uma só teria de receber o registro inteiro,
+ * e cada tela só conhece a metade que edita — a que gravasse por último
+ * apagaria a metade da outra. Este `update` toca exclusivamente nos
+ * quatro campos desta aba.
+ *
+ * Até 21/08/2026 esta função não existia: a aba Times aplicava a
+ * mudança na tela e não gravava nada. O que se cadastrava ali sumia no
+ * recarregamento.
+ */
+export async function saveTeamOption(item: TeamOption) {
+  const prisma = await autorizado("ADMIN");
+  if (!prisma) return;
+
+  const dados = {
+    name: item.name,
+    legacyName: item.legacyValue || null,
+    order: item.order,
+    active: item.active,
+  };
+
+  await prisma.team.upsert({
+    where: { id: item.id },
+    update: dados,
+    create: { id: item.id, ...dados },
+  });
+
+  updateTag(WORKSPACE_TAG);
+}
+
+/* ============================================================
+   CLIENTES
+============================================================ */
+
+/** Campos comuns ao enriquecimento e ao cadastro manual. */
+function camposDeCliente(
+  item: ClientEnrichment
+) {
+  return {
+    kind: item.kind ?? null,
+    establishmentId: item.establishmentId || null,
+    document: item.document || null,
+    notes: item.notes || null,
+    tags: item.tags ?? [],
+  };
+}
+
+/**
+ * O que a operação preenche por cima de um cliente vindo do export.
+ *
+ * O cliente derivado **não tem linha** até alguém enriquecê-lo — a
+ * identidade dele é a reclamação. Este upsert cria a linha na primeira
+ * edição e atualiza depois, sempre com `manual` falso: o registro existe
+ * para complementar a reclamação, não para substituí-la.
+ *
+ * `AGENTE` e não `ADMIN`: preencher o tipo de relação ou uma nota sobre
+ * o cliente é rotina de quem atende, não configuração da ferramenta.
+ */
+export async function saveClientEnrichment(
+  slug: string,
+  patch: ClientEnrichment
+) {
+  const prisma = await autorizado("AGENTE");
+  if (!prisma) return;
+
+  const dados = camposDeCliente(patch);
+
+  await prisma.clientProfile.upsert({
+    where: { slug },
+    update: dados,
+    create: { slug, manual: false, ...dados },
+  });
+
+  updateTag(WORKSPACE_TAG);
+}
+
+/** Cliente cadastrado à mão, sem reclamação de origem. */
+export async function saveManualClient(
+  item: ManualClient
+) {
+  const prisma = await autorizado("AGENTE");
+  if (!prisma) return;
+
+  const dados = {
+    ...camposDeCliente(item),
+    manual: true,
+    name: item.name,
+    email: item.email || null,
+    phone: item.phone || null,
+    city: item.city || null,
+    state: item.state || null,
+  };
+
+  await prisma.clientProfile.upsert({
+    where: { slug: item.slug },
+    update: dados,
+    create: { slug: item.slug, ...dados },
+  });
+
+  updateTag(WORKSPACE_TAG);
+}
+
+/**
+ * Apaga um cadastro manual.
+ *
+ * `manual: true` no filtro é a trava: um cliente que veio de uma
+ * reclamação real não some da base — a reclamação existe, e apagar a
+ * linha de enriquecimento por engano perderia o vínculo com o
+ * estabelecimento sem tirar ninguém da lista.
+ */
+export async function removeManualClient(slug: string) {
+  const prisma = await autorizado("AGENTE");
+  if (!prisma) return;
+
+  await prisma.clientProfile.deleteMany({
+    where: { slug, manual: true },
+  });
+
+  updateTag(WORKSPACE_TAG);
+}
+
+/* ============================================================
+   METAS DOS INDICADORES
+============================================================ */
+
+/**
+ * Meta de um indicador da reputação.
+ *
+ * As metas nascem nos critérios públicos do RA1000 (90 % de resposta,
+ * nota 7, 90 % de solução, 70 % de novos negócios) e a operação pode
+ * apertá-las. Só grava o que **difere** do padrão: uma linha por
+ * indicador ajustado, e nenhuma para quem está no valor de fábrica.
+ *
+ * Isso importa na leitura: se o Reclame Aqui mudar um critério público,
+ * quem nunca mexeu passa a seguir o critério novo, em vez de ficar
+ * preso a uma cópia congelada do antigo.
+ *
+ * A tabela `ReputationGoal` existia no schema desde o começo e nunca
+ * era escrita — as metas viviam em memória e voltavam ao padrão em todo
+ * recarregamento.
+ */
+export async function saveReputationGoal(
+  indicator: string,
+  target: number,
+  padrao: number
+) {
+  const prisma = await autorizado("ADMIN");
+  if (!prisma) return;
+
+  if (target === padrao) {
+    await prisma.reputationGoal.deleteMany({
+      where: { indicator },
+    });
+  } else {
+    await prisma.reputationGoal.upsert({
+      where: { indicator },
+      update: { target },
+      create: { indicator, target },
+    });
+  }
+
+  updateTag(WORKSPACE_TAG);
+}
+
+/** Devolve todos os indicadores aos critérios do RA1000. */
+export async function resetReputationGoals() {
+  const prisma = await autorizado("ADMIN");
+  if (!prisma) return;
+
+  await prisma.reputationGoal.deleteMany({});
 
   updateTag(WORKSPACE_TAG);
 }

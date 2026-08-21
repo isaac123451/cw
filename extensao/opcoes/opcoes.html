@@ -4,6 +4,14 @@
     <meta charset="utf-8" />
     <title>CW Reputação — opções</title>
     <style>
+      /* A mesma fonte da aplicação, empacotada com a extensão. */
+      @font-face {
+        font-family: "CW Geist";
+        src: url("../fontes/Geist-Variable.woff2") format("woff2");
+        font-weight: 100 900;
+        font-display: swap;
+      }
+
       :root {
         --roxo: #5b2a86;
         --violeta: #7b3fbf;
@@ -17,16 +25,33 @@
         --ok: #15803d;
       }
 
+      /*
+        Escuro em dois lugares: uma vez seguindo o sistema (só quando o
+        tema está no automático) e outra na escolha explícita. Sem essa
+        separação, "claro" num sistema escuro não teria efeito.
+      */
       @media (prefers-color-scheme: dark) {
-        :root {
-          --fundo: #17181c;
-          --superficie: #1f2026;
-          --borda: #303138;
-          --texto: #ececf1;
-          --fraco: #a1a1aa;
+        :root:not([data-tema="claro"]) {
+          --fundo: #16171b;
+          --superficie: #1e1f25;
+          --borda: #31333c;
+          --texto: #f1f1f4;
+          --fraco: #9a9ba5;
           --perigo: #f87171;
           --ok: #4ade80;
+          --violeta: #a97bea;
         }
+      }
+
+      :root[data-tema="escuro"] {
+        --fundo: #16171b;
+        --superficie: #1e1f25;
+        --borda: #31333c;
+        --texto: #f1f1f4;
+        --fraco: #9a9ba5;
+        --perigo: #f87171;
+        --ok: #4ade80;
+        --violeta: #a97bea;
       }
 
       * { box-sizing: border-box; }
@@ -36,10 +61,29 @@
         padding: 0 20px 60px;
         background: var(--fundo);
         color: var(--texto);
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
-          Helvetica, Arial, sans-serif;
+        font-family: "CW Geist", ui-sans-serif, -apple-system,
+          BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
         font-size: 14px;
         line-height: 1.55;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      .temas { display: flex; gap: 6px; }
+
+      .temas button {
+        flex: 1;
+        background: var(--fundo);
+        color: var(--texto);
+        border: 1px solid var(--borda);
+        font-weight: 500;
+      }
+
+      .temas button[aria-pressed="true"] {
+        border-color: var(--violeta);
+        color: var(--violeta);
+        background: color-mix(in srgb, var(--violeta) 10%, transparent);
+        font-weight: 600;
       }
 
       .folha { max-width: 620px; margin: 0 auto; }
@@ -171,7 +215,7 @@
         </svg>
         <span>
           <h1>CW Reputação — painel de contexto</h1>
-          <p>Somente leitura. O painel mostra; quem age é você.</p>
+          <p>Lê e mostra. Só grava reclamação quando você confirma.</p>
         </span>
       </header>
 
@@ -204,6 +248,25 @@
       </section>
 
       <section>
+        <h2>Aparência</h2>
+
+        <label>Tema do painel</label>
+
+        <p class="ajuda">
+          Vale para o painel injetado nos sites, para esta tela e para o
+          popup do ícone. No automático, segue o tema do sistema — que é
+          o que a maioria quer até o dia em que o WhatsApp está escuro e
+          o Hugme claro.
+        </p>
+
+        <div class="temas">
+          <button type="button" data-tema="auto">Automático</button>
+          <button type="button" data-tema="claro">Claro</button>
+          <button type="button" data-tema="escuro">Escuro</button>
+        </div>
+      </section>
+
+      <section>
         <h2>Comportamento</h2>
 
         <div class="opcao">
@@ -225,6 +288,20 @@
             <p class="ajuda">
               Número de pendências graves no ícone da extensão,
               atualizado a cada 30 minutos.
+            </p>
+          </span>
+        </div>
+
+        <div class="opcao">
+          <input id="lembretes" type="checkbox" />
+          <span>
+            <label for="lembretes">Cobrança das etapas do fluxo</label>
+            <p class="ajuda">
+              Avisa sobre casos parados numa etapa marcada para cobrar —
+              &quot;Em atendimento&quot;, &quot;Em contato&quot; — e para
+              sozinho quando o caso sai dali. Quem define o intervalo é
+              cada etapa, em <strong>Configurar fluxo</strong>; isto aqui
+              é só o interruptor geral.
             </p>
           </span>
         </div>
@@ -252,12 +329,15 @@
             e nada mais. Mensagem, histórico e mídia não são lidos.
           </li>
           <li>
-            No Hugme e no Reclame Aqui, lê o identificador da reclamação
-            do endereço da página.
+            No Hugme e no Reclame Aqui, lê o identificador, o título e o
+            relato da reclamação aberta — e oferece adicioná-la ao
+            Kanban. <strong>Nada é gravado sem você conferir a prévia e
+            confirmar</strong>, e reclamação que já existe nunca é
+            sobrescrita.
           </li>
           <li>
-            Nunca envia mensagem, nunca responde reclamação, nunca grava
-            nada. O risco de bloqueio no WhatsApp está ligado a
+            Nunca envia mensagem e nunca responde reclamação em nome da
+            empresa. O risco de bloqueio no WhatsApp está ligado a
             comportamento de envio, não a leitura de tela.
           </li>
           <li>

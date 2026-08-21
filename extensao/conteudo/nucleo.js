@@ -55,6 +55,54 @@
       }
     });
 
+  /* ---------- fonte ---------- */
+
+  /**
+   * Registra a Geist no documento da página.
+   *
+   * Tem de ser aqui, e não no CSS do painel: `@font-face` declarado
+   * dentro de um Shadow DOM é ignorado pelo Chrome — a regra precisa
+   * existir no documento, mesmo que só o shadow vá usá-la. A API
+   * `FontFace` faz isso sem injetar `<style>` na página alheia.
+   *
+   * O nome "CW Geist" é proposital: registrar como "Geist" poderia
+   * colidir com uma fonte que o site já tenha carregado com esse nome,
+   * e aí quem quebraria seria a página, não a extensão.
+   */
+  CW.registrarFonte = () => {
+
+    if (CW.fonteRegistrada) return;
+
+    CW.fonteRegistrada = true;
+
+    try {
+
+      const fonte = new FontFace(
+        "CW Geist",
+        `url(${chrome.runtime.getURL(
+          "fontes/Geist-Variable.woff2"
+        )}) format("woff2")`,
+        { weight: "100 900", style: "normal", display: "swap" }
+      );
+
+      fonte
+        .load()
+        .then((carregada) => {
+          document.fonts.add(carregada);
+        })
+        .catch(() => {
+          /**
+           * Falhou o carregamento — a pilha de fontes do sistema no CSS
+           * assume. Vale um painel com fonte pior, não um painel sem
+           * texto.
+           */
+        });
+
+    } catch {
+      // `chrome.runtime` morto após recarregar a extensão.
+    }
+  };
+
   /* ---------- utilidades ---------- */
 
   CW.escapar = (valor) =>

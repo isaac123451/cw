@@ -1,4 +1,5 @@
 import {
+  gravarConfig,
   lerConfig,
   normalizarBase,
   padraoDeOrigem,
@@ -23,6 +24,10 @@ const CAMINHOS = {
   sessao: "/api/extensao/sessao",
   contexto: "/api/extensao/contexto",
   resumo: "/api/extensao/resumo",
+  caso: "/api/extensao/caso",
+  lembretes: "/api/extensao/lembretes",
+  conversa: "/api/extensao/conversa",
+  nps: "/api/extensao/nps",
 };
 
 /**
@@ -66,7 +71,15 @@ class FalhaNaChamada extends Error {
   }
 }
 
-async function chamar(caminho, parametros = {}) {
+/**
+ * `corpo` transforma a chamada em POST.
+ *
+ * Três rotas escrevem: a que cria reclamação a partir do que a extensão
+ * leu no portal, a que registra a tratativa de NPS, e a que pede o
+ * resumo da conversa (que grava nada, mas manda texto e por isso não
+ * cabe numa query string). Todas as outras seguem sendo GET.
+ */
+async function chamar(caminho, parametros = {}, corpo) {
 
   const config = await lerConfig();
 
@@ -127,12 +140,20 @@ async function chamar(caminho, parametros = {}) {
     cabecalhos["X-CW-Sessao"] = cookie.value;
   }
 
+  if (corpo !== undefined) {
+    cabecalhos["Content-Type"] = "application/json";
+  }
+
   let resposta;
 
   try {
     resposta = await fetch(url.toString(), {
-      method: "GET",
+      method: corpo === undefined ? "GET" : "POST",
       headers: cabecalhos,
+      body:
+        corpo === undefined
+          ? undefined
+          : JSON.stringify(corpo),
       credentials: "omit",
       cache: "no-store",
     });
@@ -171,7 +192,43 @@ async function chamar(caminho, parametros = {}) {
     );
   }
 
-  return resposta.json();
+  /**
+   * Resposta 200 que não é JSON.
+   *
+   * Acontece de verdade, e o sintoma era péssimo: um
+   * `Unexpected token '<', "<!DOCTYPE "...` cru chegava à tela, sem
+   * dizer o que fazer. As causas são todas de endereço — apontar para
+   * um servidor que não é o CW Reputação, para um proxy com página de
+   * login, ou para uma aplicação de uma versão anterior à rota que a
+   * extensão está chamando. Todas se resolvem em Opções, e é isso que
+   * a mensagem precisa dizer.
+   */
+  const tipo =
+    resposta.headers.get("content-type") ?? "";
+
+  if (!tipo.includes("json")) {
+
+    const inicio = (await resposta.text())
+      .slice(0, 120)
+      .replace(/\s+/g, " ")
+      .trim();
+
+    throw new FalhaNaChamada(
+      "resposta",
+      `${base} respondeu uma página, não dados. Confira o endereço do CW Reputação nas Opções — e se a aplicação no ar já tem esta versão.`,
+      { base, inicio }
+    );
+  }
+
+  try {
+    return await resposta.json();
+  } catch {
+    throw new FalhaNaChamada(
+      "resposta",
+      `${base} respondeu algo que não dá para ler. Confira o endereço nas Opções.`,
+      { base }
+    );
+  }
 }
 
 /* ============================================================
@@ -219,6 +276,79 @@ async function tratar(mensagem) {
     const dados = await chamar(CAMINHOS.resumo);
 
     await aplicarContador(dados);
+
+    return { ok: true, dados };
+  }
+
+  /**
+   * Preferência gravada pelo próprio painel — tema e largura.
+   *
+   * Fica aqui e não no script de conteúdo porque `chrome.storage` não
+   * existe do lado de lá com a mesma garantia, e porque o popup e a
+   * tela de opções precisam ler o mesmo valor.
+   */
+  if (mensagem?.tipo === "salvar") {
+    const config = await gravarConfig(
+      mensagem.parcial ?? {}
+    );
+    return { ok: true, dados: config };
+  }
+
+  /**
+   * Cria (ou atualiza) uma reclamação a partir do que a extensão leu
+   * no portal. É a única escrita da extensão, e ela é explícita: só
+   * acontece quando alguém clica em "Adicionar ao Kanban".
+   */
+  if (mensagem?.tipo === "criarCaso") {
+
+    const dados = await chamar(
+      CAMINHOS.caso,
+      {},
+      mensagem.caso ?? {}
+    );
+
+    // A base mudou: o retrato guardado envelheceu na hora.
+    cache.clear();
+
+    return { ok: true, dados };
+  }
+
+  /**
+   * Registra a tratativa de NPS — uma tentativa de contato ou o
+   * pós-contato (régua de humor e "resolveu ou não").
+   *
+   * Limpa o cache pelo mesmo motivo de `criarCaso`: o retrato guardado
+   * ainda diz "0 tentativas" e "ainda não registrado", e é exatamente
+   * isso que o painel vai redesenhar em seguida.
+   */
+  if (mensagem?.tipo === "registrarNps") {
+
+    const dados = await chamar(
+      CAMINHOS.nps,
+      {},
+      mensagem.registro ?? {}
+    );
+
+    cache.clear();
+
+    return { ok: true, dados };
+  }
+
+  /**
+   * Resumo da conversa.
+   *
+   * É a única mensagem que carrega texto de conversa, e ela só existe
+   * porque alguém clicou em "Resumir" — o painel nunca manda isso
+   * sozinho. Sem cache: um resumo de dez minutos atrás descreve outra
+   * conversa.
+   */
+  if (mensagem?.tipo === "resumirConversa") {
+
+    const dados = await chamar(
+      CAMINHOS.conversa,
+      {},
+      mensagem.conversa ?? {}
+    );
 
     return { ok: true, dados };
   }
@@ -349,6 +479,106 @@ async function avisar(resumo, graves, config) {
 }
 
 /* ============================================================
+   COBRANÇA DAS ETAPAS DO FLUXO
+============================================================ */
+
+const ALARME_LEMBRETE = "cw-lembretes";
+
+/**
+ * De quanto em quanto tempo o alarme acorda.
+ *
+ * Cinco minutos, e não dez: o intervalo de verdade é o da etapa, e
+ * acordar na metade dele garante que uma cobrança de dez minutos saia
+ * aos dez, não aos vinte. Quando não há nada parado, o ciclo é uma
+ * requisição e nada mais.
+ */
+const CICLO_LEMBRETE_MIN = 5;
+
+/**
+ * Agrupa por etapa, e não por caso.
+ *
+ * Oito casos parados virariam oito notificações a cada dez minutos —
+ * que é o caminho mais curto para alguém desligar o aviso e perder os
+ * oito. Uma por etapa diz o mesmo e continua sendo lida na terceira
+ * semana.
+ */
+async function cobrarEtapas() {
+
+  const config = await lerConfig();
+
+  if (!config.lembretes) return;
+
+  let dados;
+
+  try {
+    dados = await chamar(CAMINHOS.lembretes);
+  } catch {
+    // Sem sessão ou fora do ar: a cobrança não é o lugar de reclamar.
+    return;
+  }
+
+  const guardado = await chrome.storage.local.get(
+    "cobrancas"
+  );
+
+  const ultima = guardado.cobrancas ?? {};
+  const agora = Date.now();
+  const proximas = {};
+
+  for (const etapa of dados?.etapas ?? []) {
+
+    if (!etapa.parados) continue;
+
+    const intervalo =
+      Math.max(Number(etapa.minutos) || 10, 1) * 60000;
+
+    const quando = ultima[etapa.nome] ?? 0;
+
+    // Ainda não deu a hora desta etapa: mantém o relógio como está.
+    if (agora - quando < intervalo) {
+      proximas[etapa.nome] = quando;
+      continue;
+    }
+
+    proximas[etapa.nome] = agora;
+
+    const daEtapa = (dados.casos ?? []).filter(
+      (caso) => caso.status === etapa.nome
+    );
+
+    const primeiro = daEtapa[0];
+
+    chrome.notifications.create(
+      `cw-etapa-${etapa.nome}-${agora}`,
+      {
+        type: "basic",
+        iconUrl: chrome.runtime.getURL(
+          "icones/icone-128.png"
+        ),
+        title: `${etapa.parados} caso(s) em "${etapa.nome}"`,
+        message: primeiro
+          ? `${primeiro.cliente} — ${primeiro.titulo}`.slice(
+              0,
+              160
+            )
+          : "Casos parados nesta etapa.",
+        contextMessage: `Cobrando a cada ${etapa.minutos} min até sair da etapa`,
+        priority: 1,
+      }
+    );
+  }
+
+  /**
+   * Etapa que esvaziou perde o relógio.
+   *
+   * Sem isto, um caso que volta para a etapa três dias depois seria
+   * cobrado no mesmo instante, porque o intervalo já teria "vencido"
+   * há muito tempo.
+   */
+  await chrome.storage.local.set({ cobrancas: proximas });
+}
+
+/* ============================================================
    ROTINA
 ============================================================ */
 
@@ -369,27 +599,42 @@ async function atualizarEmSilencio() {
   }
 }
 
-chrome.runtime.onInstalled.addListener(() => {
+function agendar() {
+
   chrome.alarms.create(ALARME, {
     delayInMinutes: 1,
     periodInMinutes: 30,
   });
+
+  chrome.alarms.create(ALARME_LEMBRETE, {
+    delayInMinutes: 1,
+    periodInMinutes: CICLO_LEMBRETE_MIN,
+  });
+}
+
+chrome.runtime.onInstalled.addListener(() => {
+  agendar();
   atualizarEmSilencio();
 });
 
-chrome.runtime.onStartup.addListener(() => {
-  chrome.alarms.create(ALARME, {
-    delayInMinutes: 1,
-    periodInMinutes: 30,
-  });
-});
+chrome.runtime.onStartup.addListener(agendar);
 
 chrome.alarms.onAlarm.addListener((alarme) => {
   if (alarme.name === ALARME) atualizarEmSilencio();
+  if (alarme.name === ALARME_LEMBRETE) cobrarEtapas();
 });
 
-chrome.notifications.onClicked.addListener(async () => {
+chrome.notifications.onClicked.addListener(async (id) => {
+
   const config = await lerConfig();
   const base = normalizarBase(config.base);
-  if (base) chrome.tabs.create({ url: `${base}/dashboard` });
+
+  if (!base) return;
+
+  // Cobrança de etapa leva ao quadro; o resto, ao painel do dia.
+  chrome.tabs.create({
+    url: id.startsWith("cw-etapa-")
+      ? `${base}/reclame-aqui`
+      : `${base}/dashboard`,
+  });
 });

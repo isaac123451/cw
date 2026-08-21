@@ -22,14 +22,19 @@ import {
   removeChecklistItem as apagarChecklist,
   removeSubcategory as apagarSubcategoria,
   removeTag as apagarTag,
+  removeTeamRecord as apagarTime,
   saveCategory as gravarCategoria,
   saveChecklistItem as gravarChecklist,
   saveSubcategory as gravarSubcategoria,
   saveTag as gravarTag,
+  saveTeamOption as gravarTime,
 } from "@/lib/actions/registry";
 
 import { useWorkspaceSlice } from "@/lib/context/useWorkspace";
-import { sincronizar } from "@/lib/context/sync";
+import {
+  type Gravacao,
+  sincronizar,
+} from "@/lib/context/sync";
 
 interface SettingsContextType {
   categories: CategoryOption[];
@@ -41,20 +46,31 @@ interface SettingsContextType {
   /** Carga inicial ainda em andamento. */
   loading: boolean;
 
-  saveCategory: (data: CategoryOption) => void;
-  removeCategory: (id: string) => void;
+  /**
+   * Gravar devolve o resultado.
+   *
+   * As telas com botão **Salvar** precisam saber se deu certo antes de
+   * dizer "salvo" — ver `lib/hooks/useRascunho.ts`. Quem chama sem
+   * esperar continua funcionando como antes.
+   */
+  saveCategory: (data: CategoryOption) => Promise<Gravacao>;
+  removeCategory: (id: string) => Promise<Gravacao>;
 
-  saveSubcategory: (data: SubcategoryOption) => void;
-  removeSubcategory: (id: string) => void;
+  saveSubcategory: (
+    data: SubcategoryOption
+  ) => Promise<Gravacao>;
+  removeSubcategory: (id: string) => Promise<Gravacao>;
 
-  saveTeam: (data: TeamOption) => void;
-  removeTeam: (id: string) => void;
+  saveTeam: (data: TeamOption) => Promise<Gravacao>;
+  removeTeam: (id: string) => Promise<Gravacao>;
 
-  saveChecklistItem: (data: ChecklistItem) => void;
-  removeChecklistItem: (id: string) => void;
+  saveChecklistItem: (
+    data: ChecklistItem
+  ) => Promise<Gravacao>;
+  removeChecklistItem: (id: string) => Promise<Gravacao>;
 
-  saveTag: (data: CaseTag) => void;
-  removeTag: (id: string) => void;
+  saveTag: (data: CaseTag) => Promise<Gravacao>;
+  removeTag: (id: string) => Promise<Gravacao>;
 }
 
 const SettingsContext =
@@ -122,63 +138,72 @@ export function SettingsProvider({
 
       saveCategory: (data) => {
         setCategories((prev) => upsert(prev, data));
-        sincronizar(() => gravarCategoria(data));
+        return sincronizar(() => gravarCategoria(data));
       },
 
       removeCategory: (id) => {
         setCategories((prev) =>
           prev.filter((item) => item.id !== id)
         );
-        sincronizar(() => apagarCategoria(id));
+        return sincronizar(() => apagarCategoria(id));
       },
 
       saveSubcategory: (data) => {
         setSubcategories((prev) => upsert(prev, data));
-        sincronizar(() => gravarSubcategoria(data));
+        return sincronizar(() => gravarSubcategoria(data));
       },
 
       removeSubcategory: (id) => {
         setSubcategories((prev) =>
           prev.filter((item) => item.id !== id)
         );
-        sincronizar(() => apagarSubcategoria(id));
+        return sincronizar(() => apagarSubcategoria(id));
       },
 
       /**
-       * Time aqui é só o rótulo usado nos seletores. O cadastro real de
-       * pessoas vive em `TeamsContext`, que grava na tabela `Team`;
-       * duplicar a gravação criaria dois donos do mesmo registro.
+       * Time aqui é o **rótulo** usado nos seletores; o cadastro de
+       * pessoas vive em `TeamsContext`. São a mesma linha do banco, e
+       * cada tela grava só os campos que edita — `saveTeamOption` toca
+       * em nome, nome legado, ordem e ativo, e em mais nada.
+       *
+       * Antes esta aba não gravava coisa nenhuma, por medo de "dois
+       * donos do mesmo registro". O efeito era pior do que o problema
+       * que evitava: o que se cadastrava em Times sumia no reload.
        */
-      saveTeam: (data) =>
-        setTeams((prev) => upsert(prev, data)),
+      saveTeam: (data) => {
+        setTeams((prev) => upsert(prev, data));
+        return sincronizar(() => gravarTime(data));
+      },
 
-      removeTeam: (id) =>
+      removeTeam: (id) => {
         setTeams((prev) =>
           prev.filter((item) => item.id !== id)
-        ),
+        );
+        return sincronizar(() => apagarTime(id));
+      },
 
       saveChecklistItem: (data) => {
         setChecklist((prev) => upsert(prev, data));
-        sincronizar(() => gravarChecklist(data));
+        return sincronizar(() => gravarChecklist(data));
       },
 
       removeChecklistItem: (id) => {
         setChecklist((prev) =>
           prev.filter((item) => item.id !== id)
         );
-        sincronizar(() => apagarChecklist(id));
+        return sincronizar(() => apagarChecklist(id));
       },
 
       saveTag: (data) => {
         setTags((prev) => upsert(prev, data));
-        sincronizar(() => gravarTag(data));
+        return sincronizar(() => gravarTag(data));
       },
 
       removeTag: (id) => {
         setTags((prev) =>
           prev.filter((item) => item.id !== id)
         );
-        sincronizar(() => apagarTag(id));
+        return sincronizar(() => apagarTag(id));
       },
     }),
     [

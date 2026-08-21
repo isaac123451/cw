@@ -385,6 +385,17 @@ function mudouNaPlanilha(novo: Case, atual: Case) {
     novo.priority !== atual.priority ||
     novo.customer !== atual.customer ||
     novo.company !== atual.company ||
+    /**
+     * Contato entra na comparação.
+     *
+     * Ficava de fora, e isso escondia duas coisas: um consumidor que
+     * troca de telefone entre um export e outro nunca era atualizado, e
+     * — o caso que apareceu de verdade — uma base gravada com telefone
+     * mascarado continuava mascarada mesmo reimportando o arquivo com o
+     * número inteiro, porque todo o resto da linha estava igual.
+     */
+    (novo.email ?? "") !== (atual.email ?? "") ||
+    (novo.phone ?? "") !== (atual.phone ?? "") ||
     (novo.city ?? "") !== (atual.city ?? "") ||
     (novo.state ?? "") !== (atual.state ?? "") ||
     Boolean(novo.evaluated) !==

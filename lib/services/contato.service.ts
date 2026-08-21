@@ -101,10 +101,17 @@ export function compararTelefone(
 
   if (!a || !b) return null;
 
-  if (a.completo && b.completo) {
-    return a.digitos === b.digitos ? "exata" : null;
-  }
+  if (a.digitos === b.digitos) return "exata";
 
+  /**
+   * Dois números inteiros e diferentes ainda podem ser a mesma linha.
+   *
+   * O nono dígito dos celulares foi acrescentado por região ao longo de
+   * anos, e a mesma pessoa aparece como `2198765-4321` num cadastro
+   * antigo e `21998765-4321` no WhatsApp. Cair fora aqui — que é o que
+   * acontecia — descartava justamente os casos que a comparação por
+   * DDD e quatro finais resolveria.
+   */
   if (!a.ultimos4 || a.ultimos4 !== b.ultimos4) {
     return null;
   }

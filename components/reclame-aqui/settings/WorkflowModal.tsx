@@ -35,6 +35,16 @@ export default function WorkflowModal({
   const [limit, setLimit] = useState<number | "">("");
   const [active, setActive] = useState(true);
 
+  /**
+   * Lembrete enquanto o caso ficar nesta etapa.
+   *
+   * Dois campos e não um: a caixa liga a cobrança, o número diz de
+   * quanto em quanto tempo. Guardar só o número faria "0" e "vazio"
+   * significarem coisas diferentes num campo onde ninguém espera isso.
+   */
+  const [lembrar, setLembrar] = useState(false);
+  const [minutos, setMinutos] = useState(10);
+
   useEffect(() => {
     if (initialData) {
       setName(initialData.name);
@@ -42,12 +52,16 @@ export default function WorkflowModal({
       setOrder(initialData.order);
       setLimit(initialData.limit ?? "");
       setActive(initialData.active);
+      setLembrar(Boolean(initialData.reminderMinutes));
+      setMinutos(initialData.reminderMinutes ?? 10);
     } else {
       setName("");
       setColor(COLORS[0]);
       setOrder(1);
       setLimit("");
       setActive(true);
+      setLembrar(false);
+      setMinutos(10);
     }
   }, [initialData, open]);
 
@@ -71,6 +85,11 @@ export default function WorkflowModal({
         limit === ""
           ? undefined
           : Number(limit),
+
+      // Caixa desligada apaga o intervalo: etapa sem lembrete é silenciosa.
+      reminderMinutes: lembrar
+        ? Math.max(Number(minutos) || 10, 1)
+        : undefined,
 
       createdAt:
         initialData?.createdAt ??
@@ -225,6 +244,61 @@ export default function WorkflowModal({
               />
 
             </div>
+
+          </div>
+
+          {/* Lembrete da extensão */}
+          <div className="rounded-xl border border-zinc-200 p-4">
+
+            <label className="flex cursor-pointer items-start gap-3">
+
+              <input
+                type="checkbox"
+                checked={lembrar}
+                onChange={(e) => setLembrar(e.target.checked)}
+                className="mt-0.5 h-4 w-4 accent-violet-600"
+              />
+
+              <span>
+                <span className="text-sm font-medium">
+                  Cobrar enquanto o caso ficar nesta etapa
+                </span>
+                <span className="mt-1 block text-xs leading-relaxed text-zinc-500">
+                  A extensão avisa de tempos em tempos sobre os casos parados aqui, e só para quando o caso sair da etapa. É para as etapas de meio de caminho — &quot;Em atendimento&quot;, &quot;Em contato&quot; — onde o caso está com alguém e some da vista.
+                </span>
+              </span>
+
+            </label>
+
+            {lembrar && (
+
+              <div className="mt-3 flex items-center gap-2 pl-7">
+
+                <span className="text-sm text-zinc-600">
+                  A cada
+                </span>
+
+                <input
+                  type="number"
+                  min={1}
+                  value={minutos}
+                  onChange={(e) =>
+                    setMinutos(Number(e.target.value))
+                  }
+                  className="w-20 rounded-lg border border-zinc-200 px-3 py-1.5 text-sm outline-none focus:border-violet-500"
+                />
+
+                <span className="text-sm text-zinc-600">
+                  minutos
+                </span>
+
+              </div>
+
+            )}
+
+            <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700 ring-1 ring-inset ring-amber-100">
+              Não ligue numa etapa final: a cobrança só termina quando o caso sai daqui, e de uma etapa final ele não sai.
+            </p>
 
           </div>
 

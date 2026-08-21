@@ -175,7 +175,7 @@ export function cabecalhos(request: Request) {
   return {
     ...base,
     "Access-Control-Allow-Origin": origem,
-    "Access-Control-Allow-Methods": "GET, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers":
       "X-CW-Sessao, Content-Type",
     "Access-Control-Max-Age": "600",

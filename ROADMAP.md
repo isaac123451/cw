@@ -4,14 +4,20 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 13/08/2026.
+Atualizado em 21/08/2026. Aplicação **0.3.0**, extensão **0.3.0**.
+
+> **Versão sobe junto com a mudança.** `package.json` e
+> `extensao/manifest.json` andam no mesmo número: sem isso não dá para
+> saber, olhando um navegador com a extensão instalada, se ele está
+> falando com uma aplicação que já tem a rota que ele chama.
 
 ---
 
 ## Estado atual
 
-**Banco: Supabase, no ar.** 36 tabelas, RLS ligado em todas, 334
-reclamações carregadas. **Nada da interface vive fora do banco** — o que
+**Banco: Supabase, no ar.** 38 tabelas, RLS ligado em todas, 334
+reclamações **com telefone e e-mail completos** (não mais mascarados) e
+789 respostas de NPS vindas do Wootric. **Nada da interface vive fora do banco** — o que
 se edita sobrevive ao reload e segue a conta, não o dispositivo. Connection string **pooled (6543)** para a
 aplicação e **de sessão (5432)** em `DIRECT_URL`, usada por `db:push`,
 `db:seed` e pelos scripts.
@@ -30,11 +36,69 @@ aplicação e **de sessão (5432)** em `DIRECT_URL`, usada por `db:push`,
 | `npm run db:password -- <e-mail>` | Redefine a senha com hash bcrypt correto |
 | `npm run db:seed` | Idempotente: recarrega base e cadastros sem duplicar |
 | `npm run check:contato` | Prova o casamento telefone→reclamação contra o banco real |
+| `npm run check:nps` | Compara o NPS daqui com o do Wootric na mesma janela |
+| `npm run nps:wootric -- --dias=90` | Importa o NPS do Wootric (`--seco` para simular) |
+| `npm run ra:importar -- <arquivo.xlsx>` | Grava o export do RA no banco **com contato completo** |
+| `npm run check:ra` | Prova os leitores da página do Reclame Aqui contra o texto de uma reclamação real |
+| `npm run check:cadastros` | Prova que Times, Metas e Clientes sobrevivem ao recarregamento |
 | `npm run extensao:icones` | Regera os PNGs do ícone da extensão |
 
 ---
 
 ## A fazer
+
+### 0. Fila da extensão e do NPS (aberta em 20/08/2026)
+
+> **Feito em 21/08:** o item 1 (registrar NPS pela extensão) e a leitura
+> da página do Reclame Aqui. Ver Entregue.
+
+O contexto inteiro está em `extensao/LEIA-ME.md` e no fim de
+`EXTENSAO.md`. O que ficou pendente, na ordem em que eu pegaria:
+
+1. ~~**Registrar NPS pela extensão.**~~ Feito em 21/08 —
+   `app/api/extensao/nps/route.ts` e o formulário no painel.
+2. ~~**Notas e gráficos pela extensão.**~~ Os dados já vêm em
+   `/api/extensao/resumo` (`tendencia` e `nps`). Falta **só desenhar**
+   o SVG pequeno dentro do `popup/popup.js`.
+3. **Anotações pela extensão** — do caso, do dia e da agenda. As tabelas
+   existem (`CaseComment`, `AgendaTask`); falta a rota de escrita e o
+   formulário no painel.
+4. **Telas por segmento e análise do NPS.** Os três indicadores do topo
+   já filtram a lista ao clique. Falta a tela dedicada, no espírito de
+   `/reclame-aqui/analytics`: tendência do NPS, causa raiz, distribuição
+   da régua de humor, e o recorte por segmento com página própria.
+5. **ManyChat.** Bloqueado: a planilha compartilhada
+   (`1-pCxjB4Rrw3drlDFGNRYMFceMVWSJe34PBLVR6Vfz4o`) tem **uma aba só**,
+   "Métricas do Reclame Aqui" — não há aba de ManyChat nela. Sem o
+   arquivo certo não dá para desenhar o importador, e chutar o formato
+   seria inventar. O canal já está pronto do outro lado: `Channel` no
+   Prisma tem `MANYCHAT`, `SOCIAL_SOURCES` já o inclui, e a extensão já
+   cria caso com origem ManyChat.
+6. **Vínculo cliente → estabelecimento.** É o que destrava plano, status
+   e MRR no painel, e hoje quase nunca aparece. Três quartos do caminho
+   já andaram:
+   - o Wootric manda `properties.company_id`, gravado em
+     `NpsResponse.externalCompanyId`;
+   - o enriquecimento **agora persiste** (`ClientProfile`, com a coluna
+     `establishmentId`) — antes vivia em memória;
+   - o **RA Forms** da reclamação traz o CNPJ de cadastro no portal, o
+     e-mail de acesso e o nome do proprietário, e a extensão já lê e
+     mostra os três na prévia.
+
+   Falta a decisão: **onde** cada um desses campos entra. `Case` não tem
+   coluna de estabelecimento, e `Case.cnpj` existe mas ninguém preenche.
+   Casar por CNPJ é o caminho óbvio; o que não dá é gravar antes de
+   decidir, porque erra em três tabelas de uma vez. **Aguardando o
+   Isaac** — foi ele quem pediu para levar o RA Forms para análise em
+   vez de sair gravando.
+7. ~~**Limpeza.**~~ Feito em 21/08 — o caso `IG-58097161` saiu da base.
+8. **Botão Salvar no resto das telas.** As cinco abas de
+   `/reclame-aqui/configuracoes` já usam o rascunho
+   (`lib/hooks/useRascunho.ts` + `BarraDeSalvar`). Continuam gravando a
+   cada tecla: Prazos (SLA), Movimentações, Tipos de impacto, Causa raiz
+   do NPS, Estabelecimentos, Jornada, Projetos, Macros e Times
+   (pessoas). O gancho é genérico — converter cada uma é repetir o mesmo
+   passo, sem decisão nova pela frente.
 
 ### 1. Webhook: reenvio e evento de atraso
 
@@ -122,11 +186,194 @@ no banco. Ver "Tudo persiste" em Entregue.)*
 - **Tipos de impacto têm direção** (receita ou custo): sem isso, um tipo
   novo entraria somando e inflaria o resultado.
 - **A importação grava PII** (e-mail e telefone reais) porque o destino é
-  o banco. O dataset do repositório continua mascarado.
+  o banco. O dataset do repositório (`lib/data/mockCases.ts`) continua
+  mascarado — ele está no git.
+- **A extensão escreve, mas só sob confirmação.** Nasceu somente leitura;
+  hoje cria caso a partir do que leu no portal ou de uma conversa,
+  sempre depois de a pessoa conferir a prévia. Mensagem ela não envia em
+  site nenhum, e isso não muda.
+- **Promotor calado não abre ciclo de NPS.** Entra na base (o indicador
+  precisa dele) com `[Encerrado] Sem tratativa`. São ~790 respostas por
+  mês; abrir tratativa para cada nota 10 enterraria os detratores.
 
 ---
 
 ## Entregue
+
+### Ler a reclamação na Área da Empresa — a segunda rodada (21/08/2026)
+
+A primeira versão não leu nada na página real. Quatro defeitos, todos
+descobertos pelo Isaac abrindo uma reclamação de verdade:
+
+- **A chave da leitura era só o endereço.** A Área da Empresa é um SPA:
+  o endereço não muda entre a lista e a reclamação aberta, e o conteúdo
+  chega **depois** do primeiro ciclo do detector. Ele lia a página ainda
+  vazia, guardava "nenhuma reclamação aberta nesta aba" e nunca mais
+  tentava. A chave passou a ser endereço **+ número da reclamação**.
+- **O título era o `<h1>`**, que nesta tela é "Responder reclamação" —
+  o cabeçalho da própria ferramenta. Agora vem da posição: a linha logo
+  acima da fileira de etiquetas, abaixo do selo de situação.
+- **A UF não existe na página.** Duas deduções, nesta ordem: as 156
+  cidades que já têm UF na base (todas inequívocas — conferido), e o
+  **DDD do telefone**, que não envelhece porque nenhum código de área
+  brasileiro atravessa dois estados. A prévia diz de onde o valor veio.
+- **Um `Unexpected token '<'` cru chegava à tela.** O service worker
+  chamava `resposta.json()` sem conferir o `content-type`, então uma
+  resposta HTML — endereço errado, proxy com login, aplicação de versão
+  anterior à rota chamada — virava erro de sintaxe. Agora diz o que
+  fazer, e o cabeçalho do painel distingue "endereço não configurado",
+  "sem permissão", "aplicação fora do ar" e "sessão expirada" em vez de
+  um "não conectado" para tudo.
+
+Mais uma armadilha medida: **o `innerText` decide a quebra de linha
+pelo layout**, não pela marcação. As quatro etiquetas do cabeçalho podem
+chegar em quatro linhas ou em uma só, e o mesmo vale para o nome com a
+etiqueta "Nome social" ao lado. `npm run check:ra` roda os dois layouts
+— 45 conferências.
+
+E, para o caso de ainda faltar alguma: a prévia ganhou **"copiar o texto
+lido da página"** quando não acha nada. Consertar leitor de página sem
+ver o texto que o navegador produziu é adivinhação, e adivinhação já
+custou sete defeitos aqui.
+
+### Popup: tendência e NPS (21/08/2026)
+
+Item 2 da fila. `/api/extensao/resumo` passou a devolver a série dos
+doze meses fechados (`getReputationTrend`, a mesma do gráfico de
+`/reclame-aqui/analytics`) e o NPS dos últimos 30 dias (`summarize`, a
+mesma da tela do `/nps`). Nenhuma conta nova: duas contas em paralelo
+já divergiram nesta base uma vez, e o sintoma foi um número plausível e
+errado.
+
+### Limpeza (21/08/2026)
+
+O caso de teste `IG-58097161` (título "a", cliente "a", sem
+comentários, eventos, etiquetas nem avaliação) saiu da base. 334 → 333,
+com as contagens que compõem a nota conferidas antes e depois: 333
+reclamações do Reclame Aqui e 209 avaliações, iguais nas duas pontas.
+
+
+### Cadastros que não gravavam (21/08/2026)
+
+O Isaac reportou que **Times** não ficava salvo no módulo Reclame Aqui.
+A auditoria dos vinte contextos achou mais dois buracos do mesmo tipo —
+mutação que atualiza a tela e não chama `sincronizar`. Nenhum dos três
+dava erro: o valor aparecia, e sumia no recarregamento seguinte.
+
+| O que | Por que não gravava | Correção |
+| ----- | ------------------- | -------- |
+| **Times** (aba do RA) | `SettingsContext.saveTeam` só mexia no estado. O comentário no código dizia que era de propósito, para não ter "dois donos do mesmo registro" que `TeamsContext` já grava | `saveTeamOption` grava **só** nome, nome legado, ordem e ativo — os quatro campos desta aba. Descrição, departamento e líder continuam sendo da outra tela, na mesma linha da tabela `Team` |
+| **Metas dos indicadores** | `GoalsContext` vivia num `useState`. A tabela `ReputationGoal` existia no schema desde o começo e **nunca era escrita** | Entra na carga compartilhada. Grava só o que **difere** do RA1000 — sem linha, o indicador segue o critério público, então uma mudança futura do Reclame Aqui chega sozinha |
+| **Clientes** | `ClientsContext` guardava enriquecimento e cadastro manual em memória. Não havia tabela | Tabela `ClientProfile` nova (38ª, com RLS). Uma só para as duas coisas: a chave é o `slug` nos dois casos, e a coluna `manual` separa |
+
+`npm run check:cadastros` prova os três contra o banco de verdade —
+escreve o que a tela escreveria, lê de volta, confere campo a campo e
+limpa o que criou. Vinte e quatro conferências, incluindo as travas que
+importam: gravar pela aba Times não apaga a descrição da outra tela, e
+um cliente vindo de reclamação resiste ao clique de exclusão.
+
+### Salvar por botão, com confirmação (21/08/2026)
+
+Os cadastros gravavam a cada tecla digitada. Dois problemas: **tudo**
+virava alteração — inclusive o nome pela metade enquanto se digita — e
+nunca aparecia confirmação de que salvou, porque não existia um momento
+em que salvar acontecesse.
+
+Agora a edição vive num rascunho (`lib/hooks/useRascunho.ts`) e o botão
+**Salvar** grava. As cinco abas de `/reclame-aqui/configuracoes` já
+usam: Status é modal e já tinha salvar próprio; Categorias,
+Subcategorias, Times, Etiquetas e Checklist foram convertidas.
+
+- **Grava só o que mudou.** Uma aba com doze categorias em que se
+  corrigiu uma letra manda uma gravação, não doze — e é isso que permite
+  a confirmação dizer "1 alterado" em vez de um "pronto" genérico.
+- **A confirmação é verdadeira.** `sincronizar` passou a devolver o
+  resultado (`{ ok, erro? }`), então o aviso só aparece depois da
+  resposta do servidor. Confirmação disparada no clique confirmaria o
+  clique, não a gravação.
+- **Falhou alguma? O rascunho fica.** Limpar apagaria da tela justamente
+  o que não foi gravado, e a pessoa sairia achando que salvou.
+- **Barra de pendências** no rodapé do cartão, com a contagem
+  ("2 alterações não salvas — 1 novo · 1 alterado"), Descartar e Salvar,
+  mais o aviso do navegador ao fechar a aba com edição pendente.
+- **Exclusão continua imediata**, como o Isaac pediu. A trava nova é
+  outra: item que só existe no rascunho nunca chegou ao banco, e mandar
+  apagar um id inexistente devolveria erro do servidor.
+
+### Extensão: registrar o NPS sem sair da conversa (21/08/2026)
+
+O item 1 da fila. O painel já *mostrava* o ciclo — nota, status,
+tentativas e prazo. Faltava a outra metade: quem acabou de ligar estava
+no WhatsApp e tinha de abrir a aplicação noutra aba para registrar.
+Registro que exige troca de contexto é registro que não acontece.
+
+`app/api/extensao/nps/route.ts` faz **duas** escritas e só estas duas:
+a tentativa de contato (liguei, não atenderam) e o pós-contato (a régua
+de humor e o "resolveu ou não"). Não encerra o ciclo, não classifica
+causa raiz e **não toca na nota do NPS** — a nota é de antes, mede o
+estado em que o cliente respondeu a pesquisa, e é ela que compõe o
+indicador.
+
+A regra saiu para `lib/services/nps.repository.ts`, compartilhada com as
+server actions da tela: o que a extensão grava e o que a gaveta do
+`/nps` grava são, literalmente, o mesmo código. A rota autentica pelo
+cabeçalho `X-CW-Sessao` e por isso não pode chamar server action — sem
+essa camada a regra existiria em duas cópias, que divergem na primeira
+correção.
+
+Detalhe que custou uma leitura da fonte do Next: em rota, `updateTag`
+lança — só vale dentro de server action. O certo ali é
+`revalidateTag(tag, "max")`.
+
+### Extensão: ler a reclamação dentro do Reclame Aqui (21/08/2026)
+
+A primeira versão do detector foi escrita contra o portal **público**,
+que esconde quase tudo. A página que a operação realmente usa mostra o
+consumidor inteiro — e três leitores estavam errados para ela:
+
+- **O ano vem com dois dígitos.** A página escreve "20/08/26 às 11h21" e
+  o leitor exigia quatro. Não casava nada, e a reclamação nascia com a
+  data de hoje — movendo a janela da nota.
+- **A cidade vem sem UF.** Só "Campo Bom", numa etiqueta entre o ID e a
+  data. O leitor procurava "Cidade - UF" e, numa página real, atravessou
+  parágrafos e devolveu "Não respondida Cardápio Web ... Fortaleza" como
+  nome de cidade.
+- **O nome do consumidor existe aqui.** Fica na linha logo acima da
+  etiqueta "Nome social"; o de registro vem rotulado.
+
+Mais duas armadilhas medidas, e as duas gravariam dado errado em
+silêncio:
+
+- **Há dois e-mails na página, de pessoas diferentes.** O do cadastro do
+  consumidor e o que o RA Forms pergunta — "qual o e-mail utilizado para
+  acessar o portal?", que é o do estabelecimento. Busca solta pegaria o
+  primeiro que aparecesse.
+- **O CNPJ do formulário são catorze dígitos seguidos, e um padrão de
+  telefone casa dentro dele.** As âncoras `(?<!\d)`/`(?!\d)` fecham
+  isso; procurar telefone só dentro do bloco rotulado fecha o resto.
+
+Os leitores viraram funções puras sobre o texto da página
+(`extensao/conteudo/ra-campos.js`) exatamente para poderem ser provados:
+`npm run check:ra` roda as vinte e quatro conferências contra o texto de
+uma reclamação real, sem abrir navegador. **A estrutura do texto de
+teste é a da página; os dados pessoais são inventados** — o arquivo está
+no git.
+
+**O RA Forms é mostrado e não é gravado.** É o bloco mais valioso da
+página: traz o CNPJ de cadastro no portal, o e-mail de acesso e o nome
+do proprietário — ou seja, o vínculo cliente ↔ estabelecimento que falta
+na base (item 6 da fila). Onde cada campo deve ser gravado é decisão do
+Isaac, e escrever antes de decidir criaria dado torto em três tabelas.
+A prévia mostra tudo, com botão de copiar.
+
+**Categoria vem do cadastro, não da página.** O Reclame Aqui não
+classifica a reclamação, e o que parecia rótulo de categoria era
+pergunta de formulário. `/api/extensao/contexto` passou a devolver
+`cadastros`, e a prévia oferece as categorias e subcategorias
+registradas na ferramenta. Campo aberto ali produziria "Financeiro",
+"financeiro" e "Finaceiro" na mesma base, e o ranking por categoria
+passaria a contar três problemas onde há um.
+
 
 ### Extensão de navegador — painel de contexto (17/08/2026)
 

@@ -4,7 +4,6 @@ import {
   createContext,
   useContext,
   useMemo,
-  useState,
   ReactNode,
 } from "react";
 
@@ -21,6 +20,15 @@ import {
 } from "@/lib/services/client.service";
 
 import { slugify } from "@/lib/services/slug";
+
+import {
+  removeManualClient as apagarManual,
+  saveClientEnrichment as gravarEnriquecimento,
+  saveManualClient as gravarManual,
+} from "@/lib/actions/registry";
+
+import { useWorkspaceSlice } from "@/lib/context/useWorkspace";
+import { sincronizar } from "@/lib/context/sync";
 
 export type ManualClientDraft = Omit<
   ManualClient,
@@ -68,11 +76,23 @@ export function ClientsProvider({
 
   const { cases } = useCases();
 
-  const [enrichment, setEnrichment] = useState<
-    Record<string, ClientEnrichment>
-  >({});
+  /**
+   * Enriquecimento e cadastro manual saem da carga compartilhada.
+   *
+   * Até 21/08/2026 os dois viviam em `useState` e nada mais: cadastrar
+   * um cliente à mão, vinculá-lo a um estabelecimento ou escrever uma
+   * nota funcionava na tela e desaparecia no recarregamento — sem erro
+   * nenhum, o que é a pior forma de perder dado.
+   */
+  const [enrichment, setEnrichment] = useWorkspaceSlice(
+    (dados) => dados.clientEnrichment,
+    {} as Record<string, ClientEnrichment>
+  );
 
-  const [manual, setManual] = useState<ManualClient[]>([]);
+  const [manual, setManual] = useWorkspaceSlice(
+    (dados) => dados.manualClients,
+    [] as ManualClient[]
+  );
 
   const clients = useMemo(
     () => buildClients(cases, enrichment, manual),
@@ -88,19 +108,47 @@ export function ClientsProvider({
 
       enrich: (slug, patch) => {
 
+        const completo = {
+          ...enrichment[slug],
+          ...patch,
+        };
+
         setEnrichment((prev) => ({
           ...prev,
-          [slug]: { ...prev[slug], ...patch },
+          [slug]: completo,
         }));
 
         // Quem foi cadastrado à mão guarda os campos no próprio
         // registro, senão a edição se perderia ao recarregar a lista.
-        setManual((prev) =>
-          prev.map((item) =>
-            item.slug === slug
-              ? { ...item, ...patch }
-              : item
-          )
+        const doCadastro = manual.find(
+          (item) => item.slug === slug
+        );
+
+        if (doCadastro) {
+
+          const atualizado = {
+            ...doCadastro,
+            ...patch,
+          };
+
+          setManual((prev) =>
+            prev.map((item) =>
+              item.slug === slug ? atualizado : item
+            )
+          );
+
+          /**
+           * Cadastro manual grava pelo caminho do cadastro, não pelo do
+           * enriquecimento: a linha é a mesma, mas só `saveManualClient`
+           * escreve nome e contato — o outro os deixaria intactos e o
+           * registro voltaria como "manual: false" na próxima carga.
+           */
+          sincronizar(() => gravarManual(atualizado));
+          return;
+        }
+
+        sincronizar(() =>
+          gravarEnriquecimento(slug, completo)
         );
       },
 
@@ -131,27 +179,41 @@ export function ClientsProvider({
 
         setManual((prev) => [created, ...prev]);
 
+        sincronizar(() => gravarManual(created));
+
         return created;
       },
 
-      updateManual: (slug, data) =>
+      updateManual: (slug, data) => {
+
+        const atual = manual.find(
+          (item) => item.slug === slug
+        );
+
+        if (!atual) return;
+
+        const atualizado = { ...atual, ...data };
+
         setManual((prev) =>
           prev.map((item) =>
-            item.slug === slug
-              ? { ...item, ...data }
-              : item
+            item.slug === slug ? atualizado : item
           )
-        ),
+        );
 
-      removeClient: (slug) =>
+        sincronizar(() => gravarManual(atualizado));
+      },
+
+      removeClient: (slug) => {
         setManual((prev) =>
           prev.filter((item) => item.slug !== slug)
-        ),
+        );
+        sincronizar(() => apagarManual(slug));
+      },
 
       isManual: (slug) =>
         manual.some((item) => item.slug === slug),
     }),
-    [clients, manual]
+    [clients, manual, enrichment, setManual, setEnrichment]
   );
 
   return (

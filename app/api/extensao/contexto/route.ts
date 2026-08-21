@@ -20,6 +20,10 @@ import {
 } from "@/lib/services/movement.service";
 import { slugify } from "@/lib/services/slug";
 import { REFERENCE_DATE } from "@/lib/services/reputation.service";
+import {
+  retratoNps,
+  SELECAO_NPS,
+} from "@/lib/services/nps.repository";
 
 import {
   chaveTelefone,
@@ -216,7 +220,103 @@ export async function GET(request: Request) {
     sugestoes: sugerir(encontro.casos, resumos, nps),
 
     macros: macrosDe(encontro.casos, workspace, origem),
+
+    cadastros: cadastrosDe(workspace, casos),
   });
+}
+
+/**
+ * O que a prévia de captura oferece em lista, em vez de pedir digitado.
+ *
+ * A página do Reclame Aqui **não classifica** a reclamação — o que
+ * parecia rótulo de categoria era pergunta de formulário, e ler dali só
+ * produzia lixo. Quem tem a lista certa é a própria ferramenta, então a
+ * extensão pergunta por ela.
+ *
+ * Isso não é só conveniência: categoria digitada à mão vira
+ * "Financeiro", "financeiro" e "Finaceiro" na mesma base, e o ranking
+ * por categoria — que é uma das telas do módulo — passa a contar três
+ * problemas onde há um.
+ */
+function cadastrosDe(
+  workspace: Workspace,
+  casos: Case[]
+) {
+
+  const porOrdem = <T extends { order: number }>(
+    a: T,
+    b: T
+  ) => a.order - b.order;
+
+  return {
+    ufPorCidade: ufPorCidade(casos),
+
+    categorias: workspace.categories
+      .filter((item) => item.active)
+      .sort(porOrdem)
+      .map((item) => item.name),
+
+    /**
+     * A subcategoria carrega a categoria a que pertence: a prévia
+     * filtra a lista ao escolher a categoria, e sem esse par ela
+     * ofereceria "Cobrança indevida" dentro de "Entrega".
+     */
+    subcategorias: workspace.subcategories
+      .filter((item) => item.active)
+      .sort(porOrdem)
+      .map((item) => ({
+        categoria: item.category,
+        nome: item.name,
+      })),
+  };
+}
+
+/**
+ * De que estado é cada cidade, segundo a própria base.
+ *
+ * **Por que existe.** A página da reclamação mostra só a cidade —
+ * "Campo Bom", sem UF nenhuma. O campo chegava vazio na prévia e alguém
+ * tinha de saber de cabeça, ou deixar em branco.
+ *
+ * **Por que não é um chute.** Não vem de tabela de municípios: vem das
+ * 333 reclamações que já estão na base, que trazem cidade **e** estado.
+ * Cidade que aparece com dois estados diferentes fica **de fora** — há
+ * dezenas de "Bom Jesus" e "Santa Luzia" pelo país, e preencher a UF
+ * errada é pior do que deixar em branco, porque ninguém confere um
+ * campo que já veio preenchido.
+ *
+ * A prévia continua editável: isto sugere, não decide.
+ */
+function ufPorCidade(casos: Case[]) {
+
+  const vistos = new Map<string, Set<string>>();
+
+  for (const item of casos) {
+
+    const cidade = (item.city ?? "").trim();
+    const estado = (item.state ?? "").trim().toUpperCase();
+
+    if (cidade === "" || !/^[A-Z]{2}$/.test(estado)) {
+      continue;
+    }
+
+    const chave = cidade.toLowerCase();
+
+    vistos.set(
+      chave,
+      (vistos.get(chave) ?? new Set()).add(estado)
+    );
+  }
+
+  const mapa: Record<string, string> = {};
+
+  for (const [cidade, estados] of vistos) {
+    if (estados.size === 1) {
+      mapa[cidade] = [...estados][0];
+    }
+  }
+
+  return mapa;
 }
 
 export function OPTIONS(request: Request) {
@@ -689,20 +789,7 @@ async function buscarNps(alvo: Alvo) {
   if (!prisma) return null;
 
   const linhas = await prisma.npsResponse.findMany({
-    select: {
-      id: true,
-      score: true,
-      status: true,
-      kind: true,
-      customer: true,
-      phone: true,
-      email: true,
-      establishmentId: true,
-      respondedAt: true,
-      firstContactDueAt: true,
-      firstContactAt: true,
-      _count: { select: { attempts: true } },
-    },
+    select: SELECAO_NPS,
     orderBy: { respondedAt: "desc" },
     take: 500,
   });
@@ -734,22 +821,7 @@ async function buscarNps(alvo: Alvo) {
 
   if (!achado) return null;
 
-  const dia = (valor: Date | null) =>
-    valor ? valor.toISOString().slice(0, 10) : undefined;
-
-  return {
-    id: achado.id,
-    nota: achado.score,
-    status: achado.status,
-    tipo: achado.kind ?? undefined,
-    cliente: achado.customer,
-    respondidoEm: dia(achado.respondedAt),
-    prazoPrimeiroContato: dia(achado.firstContactDueAt),
-    primeiroContatoEm: dia(achado.firstContactAt),
-    tentativas: achado._count.attempts,
-    establishmentId: achado.establishmentId,
-    encerrado: achado.status.startsWith("[Encerrado]"),
-  };
+  return retratoNps(achado);
 }
 
 /* ============================================================

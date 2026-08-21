@@ -221,7 +221,7 @@ export function statusSemConfirmacao(kind?: string | null) {
 export interface NpsSummary {
   total: number;
   promotores: number;
-  neutros: number;
+  passivos: number;
   detratores: number;
   /** −100 a 100. */
   score: number;
@@ -245,7 +245,7 @@ export function summarize(
     ).length;
 
   const promotores = conta("Promotor");
-  const neutros = conta("Neutro");
+  const passivos = conta("Passivo");
   const detratores = conta("Detrator");
 
   /**
@@ -272,7 +272,7 @@ export function summarize(
   return {
     total,
     promotores,
-    neutros,
+    passivos,
     detratores,
     score,
     media,

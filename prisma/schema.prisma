@@ -118,6 +118,16 @@ model WorkflowStatus {
   order     Int      @default(0)
   active    Boolean  @default(true)
   wipLimit  Int?
+
+  /// Minutos entre lembretes enquanto um caso estiver parado nesta etapa.
+  ///
+  /// Nulo = etapa silenciosa, que é o padrão. Existe para as etapas de
+  /// meio de caminho — "Em atendimento", "Em contato" — onde o caso está
+  /// com alguém e some da vista: a extensão cobra de tempos em tempos
+  /// até ele sair dali. Etapa final não deve ter lembrete, senão a
+  /// cobrança nunca para.
+  reminderMinutes Int?
+
   createdAt DateTime @default(now())
 }
 
@@ -488,6 +498,44 @@ model Establishment {
   notes     String?
 
   npsResponses NpsResponse[]
+}
+
+/// Cliente — a pessoa que reclamou.
+///
+/// Diferente de `Establishment`, que é o restaurante. A base real nasce
+/// das reclamações: cada reclamante vira um cliente **derivado**, e para
+/// esse não existe linha aqui. Esta tabela guarda só as duas coisas que
+/// o export do Reclame Aqui não traz:
+///
+/// - o **enriquecimento** de um cliente derivado — tipo de relação,
+///   estabelecimento, documento, notas e etiquetas — com `manual` falso;
+/// - o cliente **cadastrado à mão**, que não tem reclamação de origem,
+///   com `manual` verdadeiro e o contato preenchido.
+///
+/// Uma tabela e não duas: a chave é a mesma (`slug`) e os campos
+/// preenchidos são os mesmos. Separadas, toda carga teria de consultar
+/// as duas e costurar o resultado.
+model ClientProfile {
+  id     String  @id @default(cuid())
+  slug   String  @unique
+  manual Boolean @default(false)
+
+  /// Só o cadastro manual preenche — o derivado tira da reclamação.
+  name  String?
+  email String?
+  phone String?
+  city  String?
+  state String?
+
+  /// Consumidor | Proprietário | Operador | Parceiro
+  kind            String?
+  establishmentId String?
+  document        String?
+  notes           String?
+  tags            String[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 /// Etapa do ciclo de vida do cliente — colunas do quadro da Jornada.

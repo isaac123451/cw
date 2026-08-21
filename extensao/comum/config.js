@@ -20,11 +20,51 @@ export const PADROES = {
   /** Abrir o painel sozinho ao entrar numa conversa reconhecida. */
   autoAbrir: false,
 
+  /**
+   * Tema: "auto", "claro" ou "escuro".
+   *
+   * Três estados, e não um interruptor: quem trabalha o dia inteiro no
+   * WhatsApp Web escuro quer o painel escuro junto, mas quem alterna
+   * entre telas claras e escuras quer poder fixar. "auto" segue o
+   * sistema.
+   */
+  tema: "auto",
+
+  /** Largura da gaveta em pixels, ajustável arrastando a borda. */
+  largura: 380,
+
+  /**
+   * Manter o painel aberto.
+   *
+   * O WhatsApp Web reescreve a árvore da página em algumas navegações,
+   * e o painel precisa se remontar quando isso acontece — remontado, ele
+   * nascia fechado, o que parecia uma minimização espontânea. Com isto
+   * ligado, ele volta aberto, do jeito que estava.
+   */
+  fixado: false,
+
+  /**
+   * Posição da janela quando solta do canto, em pixels.
+   *
+   * `null` significa ancorada à direita, que é o padrão. Vira
+   * `{ x, y }` no momento em que alguém arrasta o cabeçalho.
+   */
+  posicao: null,
+
   /** Contador de pendências no ícone da extensão. */
   contador: true,
 
   /** Aviso de área de trabalho, no máximo uma vez por dia. */
   aviso: true,
+
+  /**
+   * Cobrança das etapas do fluxo.
+   *
+   * Quem define o intervalo é cada etapa, na tela de fluxo. Isto aqui é
+   * só o interruptor geral — para quem quer silêncio numa tarde sem
+   * precisar desconfigurar o quadro inteiro.
+   */
+  lembretes: true,
 };
 
 export const CHAVE = "cw-reputacao-config";

@@ -12,7 +12,7 @@
 
 export type NpsSegment =
   | "Detrator"
-  | "Neutro"
+  | "Passivo"
   | "Promotor";
 
 export interface SegmentRule {
@@ -41,7 +41,7 @@ export const SEGMENTS: SegmentRule[] = [
     hint: "Risco de cancelamento e de falar mal no mercado. Socorrer primeiro.",
   },
   {
-    label: "Neutro",
+    label: "Passivo",
     min: 7,
     max: 8,
     slaHoursUteis: 48,

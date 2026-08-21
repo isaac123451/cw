@@ -19,6 +19,11 @@ import {
   MovementRule,
 } from "@/lib/models/movement";
 import { Establishment } from "@/lib/models/establishment";
+import {
+  ClientEnrichment,
+  ClientKind,
+  ManualClient,
+} from "@/lib/models/client";
 import { Project } from "@/lib/models/project";
 import { Macro } from "@/lib/models/macro";
 import {
@@ -101,6 +106,26 @@ export interface Workspace {
   playbooks: Playbook[];
   teams: Team[];
   impactTypes: ImpactTypeOption[];
+
+  /**
+   * Metas dos indicadores que **diferem** do RA1000.
+   *
+   * Só o que foi ajustado: indicador ausente aqui segue o critério
+   * público. Guardar os quatro sempre congelaria uma cópia do critério
+   * de hoje, e quem nunca mexeu deixaria de acompanhar uma mudança do
+   * Reclame Aqui.
+   */
+  reputationGoals: Record<string, number>;
+
+  /**
+   * O que a operação preencheu por cima do cliente vindo do export —
+   * tipo de relação, estabelecimento, documento, notas, etiquetas.
+   * Cliente sem nada preenchido não aparece aqui.
+   */
+  clientEnrichment: Record<string, ClientEnrichment>;
+
+  /** Clientes cadastrados à mão, sem reclamação de origem. */
+  manualClients: ManualClient[];
 }
 
 const DEMONSTRACAO: Workspace = {
@@ -125,6 +150,9 @@ const DEMONSTRACAO: Workspace = {
   playbooks: mockPlaybooks,
   teams: mockTeams,
   impactTypes: mockImpactTypes,
+  reputationGoals: {},
+  clientEnrichment: {},
+  manualClients: [],
 };
 
 function dia(value?: Date | null) {
@@ -181,6 +209,8 @@ async function carregarDoBanco(): Promise<Workspace | null> {
     playbooks,
     impactTypes,
     journeyPlacements,
+    reputationGoals,
+    clientProfiles,
   ] = await Promise.all([
     prisma.workflowStatus.findMany({
       orderBy: { order: "asc" },
@@ -253,6 +283,10 @@ async function carregarDoBanco(): Promise<Workspace | null> {
       orderBy: { order: "asc" },
     }),
     prisma.journeyPlacement.findMany(),
+    prisma.reputationGoal.findMany(),
+    prisma.clientProfile.findMany({
+      orderBy: { createdAt: "desc" },
+    }),
   ]);
 
   return {
@@ -263,6 +297,7 @@ async function carregarDoBanco(): Promise<Workspace | null> {
       order: r.order,
       active: r.active,
       limit: r.wipLimit ?? undefined,
+      reminderMinutes: r.reminderMinutes ?? undefined,
       createdAt: dia(r.createdAt),
     })),
 
@@ -418,6 +453,50 @@ async function carregarDoBanco(): Promise<Workspace | null> {
         r.stageId,
       ])
     ),
+
+    reputationGoals: Object.fromEntries(
+      reputationGoals.map((r) => [r.indicator, r.target])
+    ),
+
+    /**
+     * As duas metades saem da mesma tabela.
+     *
+     * `ClientProfile` guarda enriquecimento e cadastro manual na mesma
+     * linha, separados pela coluna `manual` — a chave é a mesma (o
+     * slug) e os campos preenchidos também. A separação acontece aqui,
+     * uma vez, em vez de a tela consultar duas tabelas e costurar.
+     */
+    clientEnrichment: Object.fromEntries(
+      clientProfiles.map((r) => [
+        r.slug,
+        {
+          kind: (r.kind as ClientKind) ?? undefined,
+          establishmentId:
+            r.establishmentId ?? undefined,
+          document: r.document ?? undefined,
+          notes: r.notes ?? undefined,
+          tags: r.tags,
+        } satisfies ClientEnrichment,
+      ])
+    ),
+
+    manualClients: clientProfiles
+      .filter((r) => r.manual)
+      .map((r) => ({
+        id: r.id,
+        slug: r.slug,
+        name: r.name ?? r.slug,
+        email: r.email ?? undefined,
+        phone: r.phone ?? undefined,
+        city: r.city ?? undefined,
+        state: r.state ?? undefined,
+        kind: (r.kind as ClientKind) ?? undefined,
+        establishmentId: r.establishmentId ?? undefined,
+        document: r.document ?? undefined,
+        notes: r.notes ?? undefined,
+        tags: r.tags,
+        createdAt: dia(r.createdAt) as string,
+      })) satisfies ManualClient[],
 
     agenda: agenda.map((r) => ({
       id: r.id,

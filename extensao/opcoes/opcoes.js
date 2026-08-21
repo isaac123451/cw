@@ -22,11 +22,49 @@ const caixas = {
   autoAbrir: document.getElementById("autoAbrir"),
   contador: document.getElementById("contador"),
   aviso: document.getElementById("aviso-diario"),
+  lembretes: document.getElementById("lembretes"),
 };
 
 function mostrar(texto, tipo = "ok") {
   aviso.textContent = texto;
   aviso.className = `aviso mostrar ${tipo}`;
+}
+
+/* ---------- tema ---------- */
+
+const botoesTema = [
+  ...document.querySelectorAll("[data-tema]"),
+];
+
+/**
+ * O atributo vive no `<html>`, não no `<body>`.
+ *
+ * É o que a folha de estilo consulta, e é o mesmo lugar onde o popup e
+ * o painel guardam a escolha — três superfícies lendo a mesma chave em
+ * vez de cada uma inventando a sua.
+ */
+function aplicarTema(tema) {
+
+  const valor = ["auto", "claro", "escuro"].includes(tema)
+    ? tema
+    : "auto";
+
+  document.documentElement.dataset.tema = valor;
+
+  for (const botao of botoesTema) {
+    botao.setAttribute(
+      "aria-pressed",
+      String(botao.dataset.tema === valor)
+    );
+  }
+}
+
+for (const botao of botoesTema) {
+  botao.addEventListener("click", async () => {
+    aplicarTema(botao.dataset.tema);
+    await gravarConfig({ tema: botao.dataset.tema });
+    mostrar("Tema salvo.", "ok");
+  });
 }
 
 async function carregar() {
@@ -38,6 +76,9 @@ async function carregar() {
   caixas.autoAbrir.checked = Boolean(config.autoAbrir);
   caixas.contador.checked = Boolean(config.contador);
   caixas.aviso.checked = Boolean(config.aviso);
+  caixas.lembretes.checked = Boolean(config.lembretes);
+
+  aplicarTema(config.tema);
 }
 
 for (const [chave, caixa] of Object.entries(caixas)) {

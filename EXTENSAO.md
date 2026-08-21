@@ -5,7 +5,8 @@ Hugme/Reclame Aqui, e os momentos em que ninguém está com a aplicação
 aberta. Complementa o `ROADMAP.md` — é fila de decisão, não código
 pronto.
 
-**Estado (17/08/2026): a Peça A está construída e verificada.** As
+**Estado (20/08/2026): a Peça A está construída, e passou de só-leitura
+a leitura-com-escrita-confirmada.** As
 Peças B e C continuam como proposta. O que foi feito, e o que a
 construção respondeu das perguntas abertas, está no fim deste documento,
 em "O que foi construído". A instalação é o `extensao/LEIA-ME.md`.
@@ -184,8 +185,18 @@ trata `SameSite` numa requisição vinda de `chrome-extension://`, e fecha
 CSRF. O papel continua vindo do banco a cada chamada, como em
 `lib/auth/guard.ts`.
 
-**Só mostrar, como recomendado.** A única ação do painel é abrir links
-na aplicação e copiar texto de macro.
+**Só mostrar — até 20/08.** A recomendação inicial foi cumprida, e
+depois revista pelo Isaac: o painel agora também **captura** a reclamação
+aberta no portal e a cria no Kanban. A trava não é mais "não escrever", e
+sim "não escrever sem confirmação": prévia com todos os campos
+editáveis, exige AGENTE, e duas checagens de duplicata — por protocolo e
+por título+data, porque o Reclame Aqui público e o Hugme numeram a mesma
+reclamação de formas diferentes. Mensagem a extensão continua não
+enviando, em site nenhum.
+
+Também virou o caminho de entrada de casos de conversa (WhatsApp,
+ManyChat, Instagram, Facebook), com protocolo gerado quando não existe
+número de portal.
 
 ### Decisões que continuam suas
 

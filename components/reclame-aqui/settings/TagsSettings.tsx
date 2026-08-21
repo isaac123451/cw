@@ -5,9 +5,11 @@ import { useState } from "react";
 import { Plus, Search, Trash2 } from "lucide-react";
 
 import { useSettings } from "@/lib/context/SettingsContext";
+import { useRascunho } from "@/lib/hooks/useRascunho";
 import { useScopedCases } from "@/lib/context/useScopedCases";
 
 import SurfaceCard from "@/components/shared/SurfaceCard";
+import BarraDeSalvar from "@/components/shared/BarraDeSalvar";
 
 const PALETTE = [
   "#22C55E",
@@ -24,11 +26,36 @@ export default function TagsSettings() {
 
   const { tags, saveTag, removeTag } = useSettings();
 
+  /**
+   * Editar não grava; o botão Salvar grava.
+   *
+   * Antes cada tecla digitada ia ao banco: o nome pela metade virava
+   * uma gravação, e nunca havia um momento em que dissesse "salvo".
+   * Ver `lib/hooks/useRascunho.ts`.
+   */
+  const rascunho = useRascunho(tags, saveTag);
+
+  /**
+   * Apagar continua imediato — não precisa de Salvar. A trava é outra:
+   * item que só existe no rascunho nunca chegou ao banco, e mandar
+   * apagar um id inexistente devolveria erro do servidor.
+   */
+  function apagar(id: string) {
+
+    const existeNoBanco = tags.some(
+      (item) => item.id === id
+    );
+
+    rascunho.esquecer(id);
+
+    if (existeNoBanco) removeTag(id);
+  }
+
   const { cases } = useScopedCases("reclame-aqui");
 
   const [search, setSearch] = useState("");
 
-  const visible = tags.filter((item) =>
+  const visible = rascunho.itens.filter((item) =>
     item.name
       .toLowerCase()
       .includes(search.trim().toLowerCase())
@@ -42,12 +69,12 @@ export default function TagsSettings() {
   }
 
   function addTag() {
-    saveTag({
+    rascunho.adicionar({
       id: crypto.randomUUID(),
       name: "Nova etiqueta",
       color: PALETTE[tags.length % PALETTE.length],
       description: "",
-      order: tags.length + 1,
+      order: rascunho.itens.length + 1,
       active: true,
     });
   }
@@ -141,7 +168,7 @@ export default function TagsSettings() {
                         <button
                           key={color}
                           onClick={() =>
-                            saveTag({ ...item, color })
+                            rascunho.alterar(item.id, { color })
                           }
                           aria-label={`Cor ${color}`}
                           title={color}
@@ -163,8 +190,7 @@ export default function TagsSettings() {
                     <input
                       value={item.name}
                       onChange={(e) =>
-                        saveTag({
-                          ...item,
+                        rascunho.alterar(item.id, {
                           name: e.target.value,
                         })
                       }
@@ -178,8 +204,7 @@ export default function TagsSettings() {
                     <input
                       value={item.description}
                       onChange={(e) =>
-                        saveTag({
-                          ...item,
+                        rascunho.alterar(item.id, {
                           description: e.target.value,
                         })
                       }
@@ -211,8 +236,7 @@ export default function TagsSettings() {
                         type="checkbox"
                         checked={item.active}
                         onChange={(e) =>
-                          saveTag({
-                            ...item,
+                          rascunho.alterar(item.id, {
                             active: e.target.checked,
                           })
                         }
@@ -228,7 +252,7 @@ export default function TagsSettings() {
                   <td className="px-5 py-3 text-right">
 
                     <button
-                      onClick={() => removeTag(item.id)}
+                      onClick={() => apagar(item.id)}
                       aria-label={`Excluir ${item.name}`}
                       title={
                         count > 0
@@ -257,6 +281,17 @@ export default function TagsSettings() {
         )}
 
       </div>
+
+      <BarraDeSalvar
+
+        rascunho={rascunho}
+
+        nome="etiquetas"
+
+        genero="f"
+
+      />
+
 
     </SurfaceCard>
   );

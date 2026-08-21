@@ -21,6 +21,16 @@ interface Props {
     value: string;
     positive?: boolean;
   };
+  /**
+   * Torna o indicador clicável — vira `<button>` em vez de `<div>`.
+   *
+   * Existe porque um número numa tela de operação quase sempre é uma
+   * pergunta ("quais são esses 84?"), e a resposta estava a dois passos
+   * de distância. Sem `onClick`, o componente segue exatamente como era.
+   */
+  onClick?: () => void;
+  /** Realce de quem está filtrando a lista agora. */
+  ativo?: boolean;
 }
 
 const tones: Record<Tone, string> = {
@@ -39,11 +49,25 @@ export default function StatTile({
   tone = "primary",
   description,
   trend,
+  onClick,
+  ativo,
 }: Props) {
+
+  const Elemento = onClick ? "button" : "div";
+
   return (
-    <div
+    <Elemento
       title={description}
-      className="group relative rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-shadow hover:shadow-[0_1px_2px_rgba(16,24,40,0.04),0_12px_28px_-14px_rgba(16,24,40,0.18)]"
+      onClick={onClick}
+      type={onClick ? "button" : undefined}
+      aria-pressed={onClick ? Boolean(ativo) : undefined}
+      className={cn(
+        "group relative rounded-2xl border bg-white p-5 text-left shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-shadow hover:shadow-[0_1px_2px_rgba(16,24,40,0.04),0_12px_28px_-14px_rgba(16,24,40,0.18)]",
+        ativo
+          ? "border-violet-300 ring-2 ring-violet-200"
+          : "border-zinc-200/80",
+        onClick && "cursor-pointer w-full"
+      )}
     >
 
       <div className="flex items-start justify-between gap-3">
@@ -106,6 +130,6 @@ export default function StatTile({
 
       )}
 
-    </div>
+    </Elemento>
   );
 }

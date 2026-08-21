@@ -10,7 +10,6 @@ import { requireRole, tryRole } from "@/lib/auth/guard";
 import { WORKSPACE_TAG } from "@/lib/actions/tags";
 
 import {
-  isEncerrado,
   NpsResponseView,
   moodOf,
   ROOT_CAUSES,
@@ -21,6 +20,10 @@ import {
 import { ProjectStage } from "@/lib/models/project";
 
 import { prazoPrimeiroContato } from "@/lib/services/nps.service";
+import {
+  aplicarPosContato,
+  registrarTentativa,
+} from "@/lib/services/nps.repository";
 
 import {
   listarRespostas,
@@ -409,29 +412,7 @@ export async function registerNpsAttempt(input: {
 
   if (!ctx) return;
 
-  await ctx.prisma.npsAttempt.create({
-    data: {
-      responseId: input.responseId,
-      channel: input.channel,
-      note: input.note,
-      actor: input.actor,
-    },
-  });
-
-  /**
-   * A primeira tentativa **é** o primeiro contato: sem isso o SLA
-   * ficaria estourado para sempre mesmo com a operação tendo ligado.
-   */
-  await ctx.prisma.npsResponse.updateMany({
-    where: {
-      id: input.responseId,
-      firstContactAt: null,
-    },
-    data: {
-      firstContactAt: new Date(),
-      status: "Em tratativa",
-    },
-  });
+  await registrarTentativa(ctx.prisma, input);
 
   updateTag(WORKSPACE_TAG);
 }
@@ -463,17 +444,10 @@ export async function setNpsStatus(
 /**
  * Pós-contato: a régua de humor e o "resolveu ou não".
  *
- * **Por que não mexe na nota do NPS.** A nota é de antes: mede como o
- * cliente estava quando respondeu a pesquisa, e é ela que compõe o
- * indicador. Reescrevê-la depois de uma ligação bem-sucedida maquiaria
- * o NPS — o número subiria sem nenhum cliente ter mudado de opinião na
- * pesquisa. A régua mede outra coisa: se o **contato** moveu a agulha.
- *
- * `resolvedAfter` também alimenta `confirmedAt`, que é o item do
- * checklist do guia. São o mesmo fato dito de dois jeitos — o registro
- * é feito logo depois de falar com a pessoa, então "resolvido: sim" é a
- * confirmação dela. Manter dois botões para isso só criaria a dúvida de
- * qual marcar.
+ * A regra mora em `lib/services/nps.repository.ts`, e não aqui, porque
+ * a extensão de navegador registra o mesmo pós-contato por uma rota
+ * (`/api/extensao/nps`) que autentica pelo cabeçalho e não pode chamar
+ * server action. Aqui ficam só sessão, papel e invalidação de cache.
  */
 export async function registerPostContact(input: {
   id: string;
@@ -487,47 +461,7 @@ export async function registerPostContact(input: {
 
   if (!ctx) return;
 
-  const humor =
-    typeof input.mood === "number" &&
-    input.mood >= 1 &&
-    input.mood <= 5
-      ? input.mood
-      : null;
-
-  const agora = new Date();
-
-  const atual = await ctx.prisma.npsResponse.findUnique({
-    where: { id: input.id },
-    select: { firstContactAt: true, status: true },
-  });
-
-  await ctx.prisma.npsResponse.update({
-    where: { id: input.id },
-    data: {
-      moodAfter: humor,
-      resolvedAfter: input.resolved ?? null,
-      postContactNote: input.note?.trim() || null,
-      postContactAt: agora,
-      postContactBy: input.actor || null,
-
-      confirmedAt:
-        input.resolved === true ? agora : null,
-
-      /**
-       * Registrar o pós-contato **é** ter falado com o cliente. Sem
-       * isto o SLA de primeiro contato ficaria estourado para sempre
-       * em quem já foi atendido — mesmo problema que
-       * `registerNpsAttempt` resolve para as tentativas.
-       */
-      firstContactAt:
-        atual?.firstContactAt ?? agora,
-
-      status:
-        atual && isEncerrado(atual.status)
-          ? atual.status
-          : "Em tratativa",
-    },
-  });
+  await aplicarPosContato(ctx.prisma, input);
 
   updateTag(WORKSPACE_TAG);
 }

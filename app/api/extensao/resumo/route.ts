@@ -17,11 +17,71 @@ import {
   displayBand,
   getRange,
   getReputation,
+  getReputationTrend,
   hasRA1000,
   inRange,
 } from "@/lib/services/reputation.service";
 
 import { isOpen } from "@/lib/services/case.service";
+
+import { getPrisma } from "@/lib/prisma";
+import { NpsResponseView } from "@/lib/models/nps";
+import { summarize } from "@/lib/services/nps.service";
+
+/**
+ * O NPS do mês corrido, para o popup.
+ *
+ * Consulta o Prisma direto pelo mesmo motivo de `contexto/route.ts`: a
+ * server action lê a sessão por `next/headers`, e a extensão manda o
+ * token no cabeçalho.
+ *
+ * **A conta não é refeita aqui.** `summarize` é a mesma função da tela
+ * do `/nps`, e recebe só os campos de que precisa — nota, status e as
+ * duas datas do SLA. Recalcular o NPS por fora seria a segunda conta em
+ * paralelo, que é como duas telas passam a mostrar números diferentes.
+ */
+async function resumoDoNps(desde: Date) {
+
+  const prisma = getPrisma();
+
+  if (!prisma) return null;
+
+  const linhas = await prisma.npsResponse.findMany({
+    where: { respondedAt: { gte: desde } },
+    select: {
+      score: true,
+      status: true,
+      firstContactAt: true,
+      firstContactDueAt: true,
+    },
+  });
+
+  const vistas = linhas.map(
+    (r) =>
+      ({
+        score: r.score,
+        status: r.status,
+        firstContactAt:
+          r.firstContactAt?.toISOString(),
+        firstContactDueAt:
+          r.firstContactDueAt.toISOString(),
+      }) as NpsResponseView
+  );
+
+  const s = summarize(vistas);
+
+  return {
+    nota: s.score,
+    media: s.media,
+    total: s.total,
+    promotores: s.promotores,
+    passivos: s.passivos,
+    detratores: s.detratores,
+    abertos: s.abertos,
+    estourados: s.estourados,
+    desde: desde.toISOString().slice(0, 10),
+  };
+}
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -75,6 +135,24 @@ export async function GET(request: Request) {
   const reputacao = getReputation(doPeriodo);
   const faixa = displayBand(reputacao);
 
+  /**
+   * Tendência: os doze meses fechados, do mais antigo ao mais recente.
+   *
+   * Vem de `getReputationTrend`, a mesma função do gráfico de
+   * `/reclame-aqui/analytics`. Duas contas de tendência em paralelo já
+   * divergiram uma vez nesta base — a do gráfico e a da nota — e o
+   * sintoma foi um número plausível e errado.
+   */
+  const tendencia = getReputationTrend(
+    casos.filter(
+      (item) => item.source === "Reclame Aqui"
+    )
+  ).slice(-12);
+
+  const nps = await resumoDoNps(
+    new Date(Date.now() - 30 * 86400000)
+  );
+
   const origem = new URL(request.url).origin;
 
   return responder(request, {
@@ -94,6 +172,14 @@ export async function GET(request: Request) {
       inicio: janela.start,
       fim: janela.end,
     },
+
+    tendencia: tendencia.map((mes) => ({
+      rotulo: mes.label,
+      nota: mes.score,
+      recebidas: mes.received,
+    })),
+
+    nps,
 
     contagens: {
       abertos: casos.filter(isOpen).length,

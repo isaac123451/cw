@@ -5,8 +5,10 @@ import { useState } from "react";
 import { Plus, Search, Trash2 } from "lucide-react";
 
 import { useSettings } from "@/lib/context/SettingsContext";
+import { useRascunho } from "@/lib/hooks/useRascunho";
 
 import SurfaceCard from "@/components/shared/SurfaceCard";
+import BarraDeSalvar from "@/components/shared/BarraDeSalvar";
 
 export default function SubcategoriesSettings() {
 
@@ -17,10 +19,35 @@ export default function SubcategoriesSettings() {
     removeSubcategory,
   } = useSettings();
 
+  /**
+   * Editar não grava; o botão Salvar grava.
+   *
+   * Antes cada tecla digitada ia ao banco: o nome pela metade virava
+   * uma gravação, e nunca havia um momento em que dissesse "salvo".
+   * Ver `lib/hooks/useRascunho.ts`.
+   */
+  const rascunho = useRascunho(subcategories, saveSubcategory);
+
+  /**
+   * Apagar continua imediato — não precisa de Salvar. A trava é outra:
+   * item que só existe no rascunho nunca chegou ao banco, e mandar
+   * apagar um id inexistente devolveria erro do servidor.
+   */
+  function apagar(id: string) {
+
+    const existeNoBanco = subcategories.some(
+      (item) => item.id === id
+    );
+
+    rascunho.esquecer(id);
+
+    if (existeNoBanco) removeSubcategory(id);
+  }
+
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("");
 
-  const visible = subcategories.filter((item) => {
+  const visible = rascunho.itens.filter((item) => {
 
     if (filter && item.category !== filter) {
       return false;
@@ -32,12 +59,12 @@ export default function SubcategoriesSettings() {
   });
 
   function addSubcategory() {
-    saveSubcategory({
+    rascunho.adicionar({
       id: crypto.randomUUID(),
       category: categories[0]?.name ?? "",
       name: "Nova subcategoria",
       description: "",
-      order: subcategories.length + 1,
+      order: rascunho.itens.length + 1,
       active: true,
     });
   }
@@ -135,8 +162,7 @@ export default function SubcategoriesSettings() {
                   <select
                     value={item.category}
                     onChange={(e) =>
-                      saveSubcategory({
-                        ...item,
+                      rascunho.alterar(item.id, {
                         category: e.target.value,
                       })
                     }
@@ -159,8 +185,7 @@ export default function SubcategoriesSettings() {
                   <input
                     value={item.name}
                     onChange={(e) =>
-                      saveSubcategory({
-                        ...item,
+                      rascunho.alterar(item.id, {
                         name: e.target.value,
                       })
                     }
@@ -174,8 +199,7 @@ export default function SubcategoriesSettings() {
                   <input
                     value={item.description}
                     onChange={(e) =>
-                      saveSubcategory({
-                        ...item,
+                      rascunho.alterar(item.id, {
                         description: e.target.value,
                       })
                     }
@@ -193,8 +217,7 @@ export default function SubcategoriesSettings() {
                       type="checkbox"
                       checked={item.active}
                       onChange={(e) =>
-                        saveSubcategory({
-                          ...item,
+                        rascunho.alterar(item.id, {
                           active: e.target.checked,
                         })
                       }
@@ -211,7 +234,7 @@ export default function SubcategoriesSettings() {
 
                   <button
                     onClick={() =>
-                      removeSubcategory(item.id)
+                      apagar(item.id)
                     }
                     aria-label={`Excluir ${item.name}`}
                     className="rounded-lg p-2 text-zinc-400 transition-colors hover:bg-rose-50 hover:text-rose-600"
@@ -236,6 +259,17 @@ export default function SubcategoriesSettings() {
         )}
 
       </div>
+
+      <BarraDeSalvar
+
+        rascunho={rascunho}
+
+        nome="subcategorias"
+
+        genero="f"
+
+      />
+
 
     </SurfaceCard>
   );

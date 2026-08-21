@@ -4,6 +4,14 @@
     <meta charset="utf-8" />
     <title>CW Reputação</title>
     <style>
+      /* A mesma fonte da aplicação, empacotada com a extensão. */
+      @font-face {
+        font-family: "CW Geist";
+        src: url("../fontes/Geist-Variable.woff2") format("woff2");
+        font-weight: 100 900;
+        font-display: swap;
+      }
+
       :root {
         --roxo: #5b2a86;
         --violeta: #7b3fbf;
@@ -18,17 +26,34 @@
         --ok: #15803d;
       }
 
+      /*
+        Escuro duas vezes: seguindo o sistema quando o tema está no
+        automático, e na escolha explícita. Ver `comum/config.js`.
+      */
       @media (prefers-color-scheme: dark) {
-        :root {
-          --fundo: #17181c;
-          --superficie: #1f2026;
-          --borda: #303138;
-          --texto: #ececf1;
-          --fraco: #a1a1aa;
+        :root:not([data-tema="claro"]) {
+          --fundo: #16171b;
+          --superficie: #1e1f25;
+          --borda: #31333c;
+          --texto: #f1f1f4;
+          --fraco: #9a9ba5;
           --perigo: #f87171;
           --atencao: #fbbf24;
           --ok: #4ade80;
+          --violeta: #a97bea;
         }
+      }
+
+      :root[data-tema="escuro"] {
+        --fundo: #16171b;
+        --superficie: #1e1f25;
+        --borda: #31333c;
+        --texto: #f1f1f4;
+        --fraco: #9a9ba5;
+        --perigo: #f87171;
+        --atencao: #fbbf24;
+        --ok: #4ade80;
+        --violeta: #a97bea;
       }
 
       * { box-sizing: border-box; }
@@ -36,13 +61,19 @@
       body {
         margin: 0;
         width: 360px;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
-          Helvetica, Arial, sans-serif;
-        font-size: 13px;
-        line-height: 1.45;
+        font-family: "CW Geist", ui-sans-serif, -apple-system,
+          BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+        font-size: 13.5px;
+        line-height: 1.5;
         color: var(--texto);
         background: var(--fundo);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
       }
+
+      b, .titulo, .faixa, .numero b { letter-spacing: -.015em; }
+
+      .numero b, .nota b, .sub { font-variant-numeric: tabular-nums; }
 
       header {
         display: flex;

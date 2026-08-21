@@ -281,4 +281,21 @@ document
     chrome.runtime.openOptionsPage()
   );
 
-carregar();
+/**
+ * Tema antes da carga.
+ *
+ * O popup abre e fecha em um piscar; esperar a resposta do resumo para
+ * então pintar produziria um lampejo branco em quem usa tema escuro.
+ * Por isso o tema vem primeiro, do storage, e o conteúdo depois.
+ */
+(async () => {
+
+  const config = await enviar({ tipo: "config" });
+
+  document.documentElement.dataset.tema =
+    config.ok && config.dados?.tema
+      ? config.dados.tema
+      : "auto";
+
+  carregar();
+})();
