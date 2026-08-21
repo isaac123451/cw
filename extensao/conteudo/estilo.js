@@ -690,7 +690,7 @@
  */
 .canais {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   border-top: 1px solid var(--borda);
   background: var(--superficie);
 }
@@ -760,6 +760,25 @@
   color: var(--fraco);
   cursor: default;
   text-align: center;
+}
+
+/**
+ * Mover para qualquer etapa.
+ *
+ * Fica abaixo dos dois botões de passo, discreto: pular etapa é o caso
+ * menos frequente, e um seletor do tamanho dos botões competiria com
+ * eles pela atenção.
+ */
+.etapa-direta {
+  margin-top: 6px;
+  padding: 4px 8px;
+  font-size: 11px;
+  color: var(--fraco);
+}
+
+.etapa-direta:hover {
+  border-color: var(--violeta);
+  color: var(--violeta);
 }
 
 /* ---------- recado passageiro ---------- */

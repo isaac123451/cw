@@ -223,6 +223,7 @@
     if (!lida.id && !lida.cliente) {
       CW.painel.definirCaptura(null);
       CW.painel.definirContexto({
+        canalDaPagina: "Reclame Aqui",
         rotulo: "nenhuma reclamação aberta nesta aba",
       });
       return;
@@ -231,6 +232,7 @@
     CW.painel.definirCaptura(lida);
 
     CW.painel.definirContexto({
+      canalDaPagina: "Reclame Aqui",
       protocolo: lida.id,
       nome: lida.cliente,
       telefone: lida.telefone,

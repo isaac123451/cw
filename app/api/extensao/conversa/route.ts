@@ -1,5 +1,3 @@
-import Anthropic from "@anthropic-ai/sdk";
-
 import {
   autenticar,
   responder,
@@ -7,7 +5,10 @@ import {
   semSessao,
 } from "@/lib/api/extensao";
 
-import { hasAssistant } from "@/app/api/assistente/route";
+import {
+  pedirEstruturado,
+  provedorDeIA,
+} from "@/lib/services/ia.service";
 import { MOODS } from "@/lib/models/nps";
 
 export const runtime = "nodejs";
@@ -126,7 +127,8 @@ export async function GET(request: Request) {
 
   // O painel consulta isto para decidir se mostra o botão de resumir.
   return responder(request, {
-    disponivel: hasAssistant(),
+    disponivel: Boolean(provedorDeIA()),
+    provedor: provedorDeIA(),
     humores: MOODS.map((m) => ({
       valor: m.value,
       emoji: m.emoji,
@@ -144,11 +146,11 @@ export async function POST(request: Request) {
     return semSessao(request);
   }
 
-  if (!hasAssistant()) {
+  if (!provedorDeIA()) {
     return responder(
       request,
       {
-        erro: "ANTHROPIC_API_KEY não configurada — o resumo precisa dela.",
+        erro: "Nenhuma IA configurada. Defina ANTHROPIC_API_KEY ou GEMINI_API_KEY (a do Gemini tem camada gratuita).",
       },
       503
     );
@@ -203,96 +205,38 @@ export async function POST(request: Request) {
     .filter(Boolean)
     .join("\n\n");
 
-  const client = new Anthropic();
+  const resultado = await pedirEstruturado({
+    sistema: SISTEMA,
+    prompt: `${cabecalho ? `${cabecalho}
 
-  try {
+` : ""}Conversa:
 
-    /**
-     * Não é streaming: a resposta é curta e estruturada, e o painel
-     * precisa dela inteira para desenhar os campos. Streaming aqui só
-     * acrescentaria complexidade de reconstrução do JSON parcial.
-     *
-     * `effort: "low"` porque a tarefa é leitura e síntese de um texto
-     * curto — não é o tipo de problema que melhora com mais deliberação,
-     * e o painel é uma interação de segundos.
-     */
-    const resposta = await client.messages.create({
-      model: "claude-opus-5",
-      /**
-       * O limite cobre raciocínio **e** texto juntos. Na Opus 5 o
-       * raciocínio vem ligado por padrão, então um teto apertado
-       * truncaria a resposta no meio — daí a folga.
-       */
-      max_tokens: 8000,
-      system: SISTEMA,
-      output_config: {
-        effort: "low",
-        format: {
-          type: "json_schema",
-          schema: ESQUEMA,
-        },
-      },
-      messages: [
-        {
-          role: "user",
-          content: `${cabecalho ? `${cabecalho}\n\n` : ""}Conversa:\n\n${transcricao}`,
-        },
-      ],
-    });
+${transcricao}`,
+    esquema: ESQUEMA,
+  });
 
-    /**
-     * Recusa vem com HTTP 200 e conteúdo vazio — ler `content[0]` sem
-     * checar antes quebra justamente no caso em que a pessoa mais
-     * precisa de uma mensagem clara.
-     */
-    if (resposta.stop_reason === "refusal") {
-      return responder(
-        request,
-        {
-          erro: "O modelo recusou resumir esta conversa.",
-          categoria: resposta.stop_details?.category,
-        },
-        422
-      );
-    }
-
-    if (resposta.stop_reason === "max_tokens") {
-      return responder(
-        request,
-        {
-          erro: "A conversa é longa demais para um resumo em uma passada.",
-        },
-        422
-      );
-    }
-
-    const texto = resposta.content
-      .filter((bloco) => bloco.type === "text")
-      .map((bloco) => bloco.text)
-      .join("");
-
-    return responder(request, {
-      ...JSON.parse(texto),
-      mensagensLidas: mensagens.length,
-      custo: {
-        entrada: resposta.usage.input_tokens,
-        saida: resposta.usage.output_tokens,
-      },
-    });
-
-  } catch (erro) {
-
-    const mensagem =
-      erro instanceof Anthropic.RateLimitError
-        ? "Limite de requisições atingido. Tente de novo em instantes."
-        : erro instanceof Anthropic.AuthenticationError
-          ? "Chave da API inválida."
-          : erro instanceof Anthropic.APIError
-            ? `Erro da API (${erro.status}).`
-            : "Falha ao resumir a conversa.";
-
-    return responder(request, { erro: mensagem }, 502);
+  if (resultado.erro || !resultado.dados) {
+    return responder(
+      request,
+      { erro: resultado.erro, provedor: resultado.provedor },
+      resultado.status ?? 502
+    );
   }
+
+  return responder(request, {
+    ...resultado.dados,
+    mensagensLidas: mensagens.length,
+
+    /**
+     * Qual provedor respondeu vai junto.
+     *
+     * O texto muda de modelo para modelo, e sem saber quem respondeu
+     * fica impossível dizer se um resumo ruim é a conversa ou o
+     * provedor que está configurado.
+     */
+    provedor: resultado.provedor,
+    custo: resultado.uso,
+  });
 }
 
 export function OPTIONS(request: Request) {

@@ -57,13 +57,37 @@
     ultimaChave = telefone;
 
     if (!telefone) {
+      CW.painel.definirCaptura(null);
       CW.painel.definirContexto({
+        canalDaPagina: "ManyChat",
         rotulo: "nenhum telefone visível nesta tela",
       });
       return;
     }
 
+    /**
+     * O contato já vira rascunho de caso.
+     *
+     * Guardado, não enviado: é o que permite ao painel oferecer
+     * "cadastrar neste canal" no mesmo instante em que descobre que
+     * aquele telefone só tem caso no Reclame Aqui — sem pedir para
+     * redigitar o que já está na tela.
+     */
+    CW.painel.definirCaptura({
+      id: "",
+      cliente: "",
+      telefone,
+      titulo: "",
+      texto: "",
+      criadoEm: "",
+      categoria: "",
+      prioridade: "Alta",
+      origem: "ManyChat",
+      url: location.href,
+    });
+
     CW.painel.definirContexto({
+      canalDaPagina: "ManyChat",
       telefone,
       rotulo: telefone,
     });

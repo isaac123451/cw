@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 21/08/2026. Aplicação **0.4.0**, extensão **0.4.0**.
+Atualizado em 21/08/2026. Aplicação **0.5.0**, extensão **0.5.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -49,20 +49,19 @@ aplicação e **de sessão (5432)** em `DIRECT_URL`, usada por `db:push`,
 
 ### 0. Fila da extensão e do NPS (aberta em 20/08/2026)
 
-> **Feito em 21/08:** o item 1 (registrar NPS pela extensão) e a leitura
-> da página do Reclame Aqui. Ver Entregue.
+> **Feito em 21/08:** itens 1, 2 e 7, a leitura da página do Reclame
+> Aqui, o rodapé de canais com avançar/voltar etapa e o responsável no
+> Kanban. Ver Entregue.
 
 O contexto inteiro está em `extensao/LEIA-ME.md` e no fim de
 `EXTENSAO.md`. O que ficou pendente, na ordem em que eu pegaria:
 
 1. ~~**Registrar NPS pela extensão.**~~ Feito em 21/08 —
    `app/api/extensao/nps/route.ts` e o formulário no painel.
-2. ~~**Notas e gráficos pela extensão.**~~ Os dados já vêm em
-   `/api/extensao/resumo` (`tendencia` e `nps`). Falta **só desenhar**
-   o SVG pequeno dentro do `popup/popup.js`.
-3. **Anotações pela extensão** — do caso, do dia e da agenda. As tabelas
-   existem (`CaseComment`, `AgendaTask`); falta a rota de escrita e o
-   formulário no painel.
+2. ~~**Notas e gráficos pela extensão.**~~ Feito em 21/08 — tendência
+   mês a mês em SVG e o NPS dos 30 dias, no popup.
+3. ~~**Anotações pela extensão.**~~ Feito em 21/08 —
+   `app/api/extensao/anotar/` e o formulário no painel.
 4. **Telas por segmento e análise do NPS.** Os três indicadores do topo
    já filtram a lista ao clique. Falta a tela dedicada, no espírito de
    `/reclame-aqui/analytics`: tendência do NPS, causa raiz, distribuição
@@ -199,6 +198,64 @@ no banco. Ver "Tudo persiste" em Entregue.)*
 ---
 
 ## Entregue
+
+### Filas por canal, anotações e escolha de IA (21/08/2026)
+
+**Os três botões de canal davam o mesmo resultado**, e a culpa era de uma
+decisão minha: eles só reescopavam a busca do contato aberto, e como
+quase todo cliente tem caso num canal só, os três chegavam na mesma
+lista. O botão prometia canal e entregava filtro.
+
+Agora cada um abre a **fila do canal** — "o que está aberto aqui
+agora?", ordenada por urgência (`/api/extensao/fila`), sem depender de
+haver conversa nenhuma na tela. Um quarto botão, **Painel**, mostra
+nota, contadores e alertas do dia. Clicar no que já está aberto volta
+para o contato.
+
+**Mover ganhou destino livre.** Além dos dois passos vizinhos, um
+seletor leva para qualquer etapa ativa: um caso costuma pular colunas —
+quem respondeu e já resolveu não passa por "Em atendimento" só para
+chegar em "Resolvido".
+
+**Anotações** (`/api/extensao/anotar`): anotação no caso, que entra na
+mesma linha do tempo da gaveta, e tarefa na agenda, que é a que a
+extensão já cobra por notificação. Nada disso vai para o consumidor — a
+extensão segue sem mandar mensagem em site nenhum.
+
+**"Cadastrar neste canal?"** Quando o telefone já existe em outro canal,
+o painel diz onde e oferece registrar a passagem por este. Cada detector
+informa em que canal está; a ficha do cliente ganhou o bloco **Canais**,
+que lista por onde a pessoa passou, quando, e quantos casos em cada um.
+
+**Responsável no Kanban** e **filtros de segmento no NPS** (Detratores /
+Passivos / Promotores, com contagem, na barra de filtros — antes só dava
+para filtrar clicando nos indicadores do topo, onde ninguém procura
+filtro).
+
+`npm run check:mover` prova contra o banco a regra com consequência
+silenciosa: voltar um caso de "Resolvido" **apaga a avaliação**, senão
+ela seguiria pesando na reputação de um caso que o próprio quadro diz
+que não foi avaliado. Dezenove conferências, num caso descartável que o
+script cria e apaga.
+
+### A IA virou configuração (21/08/2026)
+
+Estava presa à Anthropic, e a chave nunca tinha sido preenchida — então
+o recurso não existia e ninguém sabia por quê. Agora
+`lib/services/ia.service.ts` escolhe o provedor pela chave que estiver
+definida: **Anthropic** ou **Gemini**, que tem camada gratuita. A rota
+não sabe qual é, e `IA_PROVEDOR` inverte a preferência.
+
+**O aviso que importa está no `.env.example`, onde a decisão é tomada:**
+o que passa por ali é conversa real de consumidor, e camada gratuita
+costuma permitir que o conteúdo seja usado para treinar o modelo. É
+decisão de privacidade, não só de custo.
+
+Detalhe que custaria uma tarde: o `responseSchema` do Gemini é um
+subconjunto do JSON Schema e **recusa a requisição inteira** diante de
+`additionalProperties`. O serviço poda o esquema, o que permite manter
+um só para os dois provedores.
+
 
 ### Responsável no Kanban, e canais na extensão (21/08/2026)
 

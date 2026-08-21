@@ -29,6 +29,8 @@ const CAMINHOS = {
   conversa: "/api/extensao/conversa",
   nps: "/api/extensao/nps",
   mover: "/api/extensao/mover",
+  fila: "/api/extensao/fila",
+  anotar: "/api/extensao/anotar",
 };
 
 /**
@@ -327,9 +329,45 @@ async function tratar(mensagem) {
     const dados = await chamar(CAMINHOS.mover, {}, {
       protocolo: mensagem.protocolo,
       direcao: mensagem.direcao,
+      para: mensagem.para,
     });
 
     cache.clear();
+
+    return { ok: true, dados };
+  }
+
+  /**
+   * A fila aberta de um canal, sem depender de contato.
+   *
+   * Sem cache, ao contrário do contexto: esta é a lista de
+   * trabalho, e uma fila de 45 segundos atrás já não descreve o que
+   * está aberto agora.
+   */
+  /**
+   * Anotação de caso ou tarefa de agenda.
+   *
+   * Limpa o cache porque a anotação entra na linha do tempo que o
+   * painel mostra logo abaixo dela.
+   */
+  if (mensagem?.tipo === "anotar") {
+
+    const dados = await chamar(
+      CAMINHOS.anotar,
+      {},
+      mensagem.anotacao ?? {}
+    );
+
+    cache.clear();
+
+    return { ok: true, dados };
+  }
+
+  if (mensagem?.tipo === "fila") {
+
+    const dados = await chamar(CAMINHOS.fila, {
+      canal: mensagem.canal,
+    });
 
     return { ok: true, dados };
   }

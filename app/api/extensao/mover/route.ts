@@ -46,6 +46,15 @@ interface Entrada {
   /** Protocolo do caso — `RA-101491955`, `WA-...`. */
   protocolo?: string;
   direcao?: string;
+  /**
+   * Etapa de destino, pelo nome.
+   *
+   * Ganha de `direcao` quando vem. Existe porque um caso costuma pular
+   * etapas: quem respondeu e já resolveu não passa por "Em atendimento"
+   * só para chegar em "Resolvido", e obrigar dois cliques para isso
+   * fazia o botão atrapalhar em vez de ajudar.
+   */
+  para?: string;
 }
 
 export async function POST(request: Request) {
@@ -130,7 +139,37 @@ export async function POST(request: Request) {
     .sort((a, b) => a.order - b.order)
     .map((item) => item.name);
 
-  const alvo = etapaVizinha(etapas, caso.status, direcao);
+  /**
+   * Destino explícito passa pela mesma porta.
+   *
+   * A etapa pedida tem de ser uma das **ativas** — aceitar qualquer
+   * texto deixaria a extensão inventar coluna, e um caso com status que
+   * o quadro não conhece some da vista sem sumir da base.
+   */
+  const pedida = (entrada.para ?? "").trim();
+
+  if (pedida && !etapas.includes(pedida)) {
+    return responder(
+      request,
+      {
+        erro: `"${pedida}" não é uma etapa ativa do quadro.`,
+      },
+      400
+    );
+  }
+
+  if (pedida && pedida === caso.status) {
+    return responder(request, {
+      movido: false,
+      protocolo,
+      status: caso.status,
+      aviso: `${protocolo} já está em "${caso.status}".`,
+    });
+  }
+
+  const alvo =
+    pedida ||
+    etapaVizinha(etapas, caso.status, direcao);
 
   if (!alvo) {
 

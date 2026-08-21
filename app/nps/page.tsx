@@ -68,6 +68,18 @@ import {
   summarize,
 } from "@/lib/services/nps.service";
 
+/**
+ * "Detrator" vira "Detratores"; "Passivo" vira "Passivos".
+ *
+ * Terminado em consoante pede "es", terminado em vogal pede "s" —
+ * concatenar "es" em tudo produzia "Passivoes".
+ */
+function plural(palavra: string) {
+  return /[aeiou]$/i.test(palavra)
+    ? `${palavra}s`
+    : `${palavra}es`;
+}
+
 type Filtro =
   | "abertos"
   | "todos"
@@ -662,6 +674,50 @@ export default function NpsPage() {
                   </span>
                 </button>
               ))}
+
+              {/*
+                Os três segmentos, na barra de filtros.
+
+                Já dava para filtrar clicando nos indicadores do topo,
+                mas ali eles são leitura — ninguém procura filtro num
+                cartão de número, e o recorte ficava escondido. Aqui
+                estão junto dos outros filtros, com a contagem e a cor
+                de cada faixa, e são o mesmo estado: clicar num dos dois
+                lugares acende o outro.
+              */}
+              {SEGMENTS.map((s) => {
+
+                const ativo = segmento === s.label;
+
+                return (
+                  <button
+                    key={s.label}
+                    onClick={() =>
+                      setSegmento(ativo ? "" : s.label)
+                    }
+                    title={s.hint}
+                    style={
+                      ativo
+                        ? {
+                            color: s.color,
+                            borderColor: s.color,
+                            background: `${s.color}14`,
+                          }
+                        : undefined
+                    }
+                    className={`rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors ${ativo ? "font-semibold" : "border-zinc-200 text-zinc-600 hover:bg-zinc-50"}`}
+                  >
+                    <span
+                      className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full align-middle"
+                      style={{ background: s.color }}
+                    />
+                    {plural(s.label)}
+                    <span className="ml-1.5 tabular-nums opacity-60">
+                      {porSegmento[s.label]?.total ?? 0}
+                    </span>
+                  </button>
+                );
+              })}
 
               <select
                 value={comentario}

@@ -40,6 +40,7 @@ import { useEstablishments } from "@/lib/context/EstablishmentsContext";
 import { useImpact } from "@/lib/context/ImpactContext";
 
 import { ptBR } from "@/lib/services/reputation.service";
+import { isOpen } from "@/lib/services/case.service";
 
 import { kindTone } from "@/lib/models/client";
 
@@ -99,6 +100,58 @@ export default function ClientDetail({
         : [],
     [records, client]
   );
+
+  /**
+   * Um resumo por canal, do mais recente para o mais antigo.
+   *
+   * Sai dos próprios casos (`Case.source`) em vez de uma tabela nova: o
+   * canal já está em cada reclamação, e uma segunda fonte para o mesmo
+   * fato divergiria assim que alguém corrigisse a origem de um caso.
+   */
+  const canais = useMemo(() => {
+
+    const mapa = new Map<
+      string,
+      {
+        nome: string;
+        total: number;
+        abertos: number;
+        primeiro: string;
+        ultimo: string;
+      }
+    >();
+
+    for (const caso of client?.cases ?? []) {
+
+      const nome = caso.source || "Sem canal";
+
+      const atual = mapa.get(nome) ?? {
+        nome,
+        total: 0,
+        abertos: 0,
+        primeiro: caso.createdAt,
+        ultimo: caso.createdAt,
+      };
+
+      atual.total += 1;
+      if (isOpen(caso)) atual.abertos += 1;
+
+      if (caso.createdAt < atual.primeiro) {
+        atual.primeiro = caso.createdAt;
+      }
+
+      if (caso.createdAt > atual.ultimo) {
+        atual.ultimo = caso.createdAt;
+      }
+
+      mapa.set(nome, atual);
+    }
+
+    return [...mapa.values()].sort((a, b) =>
+      b.ultimo.localeCompare(a.ultimo)
+    );
+
+  }, [client]);
 
   const estabelecimento = client?.establishmentId
     ? findEstablishment(client.establishmentId)
@@ -354,6 +407,67 @@ export default function ClientDetail({
               ))}
 
             </dl>
+
+          </SurfaceCard>
+
+          {/*
+            Por onde esta pessoa já falou com a gente.
+
+            A mesma pessoa reclama no Reclame Aqui, chama no WhatsApp e
+            responde a pesquisa de NPS — e cada um desses é uma porta
+            diferente, com número diferente. Sem esta lista, "3 casos"
+            não dizia se foram três reclamações públicas ou uma pública
+            e duas conversas, que pedem tratativas opostas.
+          */}
+          <SurfaceCard
+            title="Canais"
+            description="Por onde esta pessoa já passou, e quando."
+          >
+
+            {canais.length === 0 ? (
+
+              <p className="text-sm text-zinc-400">
+                Ainda sem passagem registrada.
+              </p>
+
+            ) : (
+
+              <ul className="space-y-2.5">
+
+                {canais.map((canal) => (
+
+                  <li
+                    key={canal.nome}
+                    className="flex items-baseline justify-between gap-3 rounded-xl border border-zinc-100 px-3 py-2"
+                  >
+
+                    <span className="min-w-0">
+
+                      <span className="block text-sm font-medium text-zinc-800">
+                        {canal.nome}
+                      </span>
+
+                      <span className="text-[11px] text-zinc-400">
+                        {canal.primeiro === canal.ultimo
+                          ? br(canal.ultimo)
+                          : `${br(canal.primeiro)} → ${br(canal.ultimo)}`}
+                        {canal.abertos > 0 &&
+                          ` · ${canal.abertos} em aberto`}
+                      </span>
+
+                    </span>
+
+                    <span className="shrink-0 text-sm font-semibold tabular-nums text-zinc-700">
+                      {canal.total}
+                    </span>
+
+                  </li>
+
+                ))}
+
+              </ul>
+
+            )}
 
           </SurfaceCard>
 

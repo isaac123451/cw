@@ -111,6 +111,15 @@
    */
   let canal = "todos";
 
+  /**
+   * O que o corpo está mostrando: "contato", "fila" ou "painel".
+   *
+   * Sem isto, `consultar()` do detector de página sobrescreveria a fila
+   * que a pessoa acabou de abrir — o WhatsApp troca de conversa sozinho
+   * e o painel voltaria ao contato no meio da leitura.
+   */
+  let vista = "contato";
+
   /* ============================================================
      MONTAGEM
   ============================================================ */
@@ -208,6 +217,8 @@
                   aria-pressed="false">NPS</button>
           <button type="button" data-acao="canal" data-canal="social"
                   aria-pressed="false">Redes Sociais</button>
+          <button type="button" data-acao="canal" data-canal="painel"
+                  aria-pressed="false" title="Nota, contadores e alertas do dia">Painel</button>
         </nav>
 
         <footer class="rodape-painel">
@@ -248,6 +259,9 @@
       if (acao === "fixar") alternarFixado();
       if (acao === "ancorar") ancorar();
       if (acao === "capturar") abrirCaptura();
+      if (acao === "cadastrar-canal") cadastrarNesteCanal();
+      if (acao === "anotar-caso") anotarCaso(alvo);
+      if (acao === "anotar-tarefa") anotarTarefa(alvo);
       if (acao === "cancelar-captura") {
         captura = null;
         consultar(false);
@@ -306,6 +320,25 @@
      * dentro de "Entrega".
      */
     raiz.addEventListener("change", (evento) => {
+
+      /**
+       * Mover para uma etapa qualquer é `change`, não `click`: escolher
+       * num `<select>` pelo teclado não gera clique nenhum.
+       */
+      if (
+        evento.target?.dataset?.acao === "mover-para"
+      ) {
+        const destino = evento.target.value;
+
+        // Volta ao rótulo para o seletor não ficar preso no destino.
+        evento.target.selectedIndex = 0;
+
+        if (destino) {
+          moverCaso(evento.target, destino);
+        }
+
+        return;
+      }
 
       if (evento.target?.id !== "cap-categoria") return;
 
@@ -749,6 +782,9 @@
     aberto = true;
     gaveta?.classList.add("aberta");
 
+    // Fila ou painel já desenhados continuam onde estão.
+    if (vista !== "contato") return;
+
     /**
      * Com o painel fechado a consulta já aconteceu — é ela que acende o
      * contador no botão. Sem redesenhar aqui, abrir a gaveta mostrava
@@ -797,6 +833,7 @@
       nome: novo?.nome ?? "",
       protocolo: novo?.protocolo ?? "",
       email: novo?.email ?? "",
+      canalDaPagina: novo?.canalDaPagina ?? "",
     });
 
     if (chave === chaveConsulta) return;
@@ -834,6 +871,92 @@
     consultarEmSilencio();
   }
 
+  /**
+   * O canal do site em que o painel está.
+   *
+   * "Reclame Aqui" no portal, "WhatsApp" no WhatsApp Web, "ManyChat" no
+   * ManyChat. Cada detector informa o seu — é o que permite perguntar
+   * "este cliente já passou por aqui?" em vez de só "este cliente
+   * existe?".
+   */
+  function canalDaPagina() {
+    return consulta?.canalDaPagina ?? captura?.origem ?? "";
+  }
+
+  /**
+   * O cliente existe, mas **não neste canal**.
+   *
+   * Um consumidor que reclamou no Reclame Aqui e agora chama no
+   * WhatsApp é a mesma pessoa numa jornada diferente, e o painel dizia
+   * só "já tem 2 casos" — sem oferecer registrar a passagem por aqui.
+   * O histórico por canal é o que a ficha do cliente mostra depois.
+   */
+  function blocoOutroCanal(dados) {
+
+    const daPagina = canalDaPagina();
+
+    if (!daPagina || !dados?.cliente) return "";
+
+    const casos = dados.casos ?? [];
+
+    if (casos.length === 0) return "";
+
+    const jaAqui = casos.some(
+      (caso) => caso.canal === daPagina
+    );
+
+    if (jaAqui) return "";
+
+    const outros = [
+      ...new Set(casos.map((caso) => caso.canal)),
+    ].filter(Boolean);
+
+    return [
+      '<div class="bloco">',
+      '  <div class="aviso">',
+      `    Este cliente já está em <strong>${CW.escapar(outros.join(", "))}</strong>, mas ainda não em <strong>${CW.escapar(daPagina)}</strong>.`,
+      '  </div>',
+      `  <button class="acao" data-acao="cadastrar-canal" style="width:100%;margin-top:0">Cadastrar neste canal (${CW.escapar(daPagina)})</button>`,
+      '</div>',
+    ].join("");
+  }
+
+  /**
+   * Abre a prévia já apontada para o canal desta página.
+   *
+   * Reaproveita o que a consulta sabe do cliente — nome e telefone — em
+   * vez de pedir para redigitar o que já está na tela.
+   */
+  function cadastrarNesteCanal() {
+
+    const daPagina = canalDaPagina();
+
+    const cliente = ultimoDado?.cliente;
+
+    captura = {
+      ...(captura ?? {}),
+      origem: daPagina,
+      id: "",
+      cliente:
+        captura?.cliente || cliente?.nome || "",
+      telefone:
+        captura?.telefone ||
+        consulta?.telefone ||
+        "",
+      email: captura?.email || consulta?.email || "",
+      titulo: "",
+      texto: "",
+      criadoEm: "",
+      categoria: "",
+      subcategoria: "",
+      prioridade: "Alta",
+      formulario: [],
+      formularioRecolhido: false,
+    };
+
+    abrirCaptura();
+  }
+
   function parametros() {
     return {
       telefone: consulta?.telefone ?? "",
@@ -846,31 +969,64 @@
   }
 
   /**
-   * Troca a aba do rodapé e refaz a consulta.
+   * O botão de canal abre a **fila** do canal, não um filtro da busca.
    *
-   * Clicar na aba já ativa volta para "todos" — é o caminho de saída
-   * sem precisar de um quarto botão só para isso.
+   * A primeira versão só reescopava a consulta do contato aberto — e
+   * como quase todo cliente tem caso num canal só, os três botões
+   * davam o mesmo resultado. O botão prometia canal e entregava filtro.
+   *
+   * Agora cada um responde "o que está aberto aqui agora?", que é uma
+   * pergunta que não depende de haver conversa nenhuma na tela. Clicar
+   * no que já está aberto volta para o contato.
    */
   function trocarCanal(alvo) {
 
     const pedido = alvo.dataset.canal;
 
-    canal = canal === pedido ? "todos" : pedido;
+    if (pedido === "painel") {
+      if (vista === "painel") return voltarAoContato();
+      vista = "painel";
+      canal = "todos";
+      refletirCanal();
+      carregarPainel();
+      return;
+    }
+
+    if (vista === "fila" && canal === pedido) {
+      return voltarAoContato();
+    }
+
+    canal = pedido;
+    vista = "fila";
+
+    refletirCanal();
+    carregarFila();
+  }
+
+  function voltarAoContato() {
+
+    vista = "contato";
+    canal = "todos";
 
     refletirCanal();
 
-    ultimoDado = null;
-
-    if (temOndeProcurar()) consultar(true);
+    if (ultimoDado) render(ultimoDado);
+    else consultar(false);
   }
 
   function refletirCanal() {
+
+    const ativo = vista === "painel" ? "painel" : canal;
+
     for (const botao of raiz.querySelectorAll(
       '[data-acao="canal"]'
     )) {
       botao.setAttribute(
         "aria-pressed",
-        botao.dataset.canal === canal ? "true" : "false"
+        botao.dataset.canal === ativo &&
+          vista !== "contato"
+          ? "true"
+          : "false"
       );
     }
   }
@@ -887,6 +1043,16 @@
   }
 
   async function consultar(forcar) {
+
+    /**
+     * A fila e o painel não são sobrescritos pelo detector.
+     *
+     * O WhatsApp troca de conversa sozinho e o Reclame Aqui redesenha a
+     * página; os dois chamam `definirContexto`, que chama isto. Sem a
+     * trava, a fila que a pessoa acabou de abrir sumia no meio da
+     * leitura e voltava o contato.
+     */
+    if (vista !== "contato") return;
 
     if (!consulta || !temOndeProcurar()) {
       vazio(
@@ -1083,6 +1249,7 @@
     partes.push(blocoResumo());
 
     // Depois, o atalho de capturar a reclamação que está na tela.
+    partes.push(blocoOutroCanal(dados));
     partes.push(blocoCaptura(dados));
 
     /* ---- cliente ---- */
@@ -1246,6 +1413,8 @@
             .join("")}
         </div>`);
     }
+
+    partes.push(blocoAnotar(dados));
 
     corpo.innerHTML = partes.join("");
     corpo.scrollTop = 0;
@@ -1774,6 +1943,386 @@
   }
 
   /* ============================================================
+     ANOTAR
+  ============================================================ */
+
+  /**
+   * Anotar no caso e marcar na agenda, sem abrir a aplicação.
+   *
+   * As duas coisas que se escreve no meio de um atendimento. A
+   * anotação vai para a mesma linha do tempo que a gaveta do caso
+   * mostra; a tarefa, para a agenda que a própria extensão cobra por
+   * notificação.
+   *
+   * **Não é resposta ao consumidor.** É registro interno — a extensão
+   * segue sem mandar mensagem em site nenhum.
+   */
+  function blocoAnotar(dados) {
+
+    if (!podeEscrever(dados)) return "";
+
+    const casos = dados?.casos ?? [];
+
+    if (casos.length === 0) return "";
+
+    return [
+      '<div class="bloco">',
+      '  <div class="rotulo">Anotar</div>',
+      '  <div class="cartao">',
+      '    <label class="rotulo" for="anota-caso">No caso</label>',
+      '    <select class="campo" id="anota-caso" style="margin-top:0">',
+      ...casos.map(
+        (caso) =>
+          `      <option value="${CW.escapar(caso.protocolo)}">${CW.escapar(caso.protocolo)} — ${CW.escapar(caso.titulo.slice(0, 46))}</option>`
+      ),
+      '    </select>',
+      '    <textarea class="campo" id="anota-texto" rows="3" placeholder="O que aconteceu neste atendimento"></textarea>',
+      '    <div class="linha" style="margin-top:9px;align-items:center">',
+      '      <span class="sub">Entra na linha do tempo do caso.</span>',
+      '      <button class="acao" style="margin-top:0" data-acao="anotar-caso">Anotar</button>',
+      '    </div>',
+      '    <p class="sub falha" id="anota-erro"></p>',
+      '  </div>',
+
+      '  <div class="cartao" style="margin-top:7px">',
+      '    <label class="rotulo" for="anota-tarefa">Lembrar depois</label>',
+      '    <input class="campo" id="anota-tarefa" type="text" style="margin-top:0" placeholder="Ex.: cobrar retorno do time de pagamentos" />',
+      '    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">',
+      '      <input class="campo" id="anota-quando" type="date" />',
+      '      <select class="campo" id="anota-tipo">',
+      '        <option value="Follow-up">Follow-up</option>',
+      '        <option value="Cobrança interna">Cobrança interna</option>',
+      '        <option value="Solicitação de avaliação">Solicitação de avaliação</option>',
+      '        <option value="Pendência">Pendência</option>',
+      '      </select>',
+      '    </div>',
+      '    <div class="linha" style="margin-top:9px;align-items:center">',
+      '      <span class="sub">Vai para a agenda, com o caso vinculado.</span>',
+      '      <button class="acao" style="margin-top:0" data-acao="anotar-tarefa">Marcar</button>',
+      '    </div>',
+      '    <p class="sub falha" id="tarefa-erro"></p>',
+      '  </div>',
+      '</div>',
+    ].join("");
+  }
+
+  async function anotarCaso(botao) {
+
+    const erro = corpo.querySelector("#anota-erro");
+
+    const texto = (
+      corpo.querySelector("#anota-texto")?.value ?? ""
+    ).trim();
+
+    if (erro) erro.textContent = "";
+
+    if (!texto) {
+      if (erro) {
+        erro.textContent = "Escreva a anotação antes.";
+      }
+      return;
+    }
+
+    const rotulo = botao.textContent;
+
+    botao.disabled = true;
+    botao.textContent = "Anotando...";
+
+    const resposta = await CW.enviar({
+      tipo: "anotar",
+      anotacao: {
+        tipo: "caso",
+        protocolo:
+          corpo.querySelector("#anota-caso")?.value,
+        texto,
+      },
+    });
+
+    botao.disabled = false;
+    botao.textContent = rotulo;
+
+    if (!resposta.ok || resposta.dados?.erro) {
+      if (erro) {
+        erro.textContent =
+          resposta.dados?.erro ??
+          resposta.erro ??
+          "Falha ao anotar.";
+      }
+      return;
+    }
+
+    avisar(
+      `Anotação gravada em ${resposta.dados.protocolo}.`,
+      "ok"
+    );
+
+    const campo = corpo.querySelector("#anota-texto");
+
+    if (campo) campo.value = "";
+  }
+
+  async function anotarTarefa(botao) {
+
+    const erro = corpo.querySelector("#tarefa-erro");
+
+    const titulo = (
+      corpo.querySelector("#anota-tarefa")?.value ?? ""
+    ).trim();
+
+    if (erro) erro.textContent = "";
+
+    if (!titulo) {
+      if (erro) {
+        erro.textContent = "A tarefa precisa de um título.";
+      }
+      return;
+    }
+
+    const rotulo = botao.textContent;
+
+    botao.disabled = true;
+    botao.textContent = "Marcando...";
+
+    const resposta = await CW.enviar({
+      tipo: "anotar",
+      anotacao: {
+        tipo: "agenda",
+        titulo,
+        quando:
+          corpo.querySelector("#anota-quando")?.value,
+        tipoDeTarefa:
+          corpo.querySelector("#anota-tipo")?.value,
+        protocolo:
+          corpo.querySelector("#anota-caso")?.value,
+      },
+    });
+
+    botao.disabled = false;
+    botao.textContent = rotulo;
+
+    if (!resposta.ok || resposta.dados?.erro) {
+      if (erro) {
+        erro.textContent =
+          resposta.dados?.erro ??
+          resposta.erro ??
+          "Falha ao marcar.";
+      }
+      return;
+    }
+
+    avisar(
+      `Marcado na agenda para ${CW.data(resposta.dados.quando)}.`,
+      "ok"
+    );
+
+    const campo = corpo.querySelector("#anota-tarefa");
+
+    if (campo) campo.value = "";
+  }
+
+  /* ============================================================
+     FILA DO CANAL
+  ============================================================ */
+
+  const NOME_DO_CANAL = {
+    "reclame-aqui": "Reclame Aqui",
+    nps: "NPS",
+    social: "Redes Sociais",
+  };
+
+  async function carregarFila() {
+
+    corpo.innerHTML = `<div class="carregando">Carregando a fila de ${CW.escapar(
+      NOME_DO_CANAL[canal] ?? canal
+    )}…</div>`;
+
+    const resposta = await CW.enviar({
+      tipo: "fila",
+      canal,
+    });
+
+    if (!resposta.ok) {
+      renderFalha(resposta);
+      return;
+    }
+
+    if (resposta.dados?.erro) {
+      vazio("Não deu para carregar", resposta.dados.erro);
+      return;
+    }
+
+    filaAtual = resposta.dados;
+
+    desenharFila(resposta.dados);
+  }
+
+  /** Última fila carregada — as etapas dela rotulam os botões. */
+  let filaAtual = null;
+
+  function desenharFila(dados) {
+
+    const itens = dados.itens ?? [];
+
+    if (itens.length === 0) {
+      vazio(
+        `Nada aberto em ${NOME_DO_CANAL[dados.canal] ?? dados.canal}`,
+        "A fila deste canal está limpa."
+      );
+      return;
+    }
+
+    const cabecalho = `
+      <div class="bloco">
+        <div class="rotulo">
+          ${CW.escapar(NOME_DO_CANAL[dados.canal] ?? dados.canal)} ·
+          ${dados.total} em aberto
+        </div>
+        <p class="sub" style="margin-bottom:9px">
+          ${
+            dados.canal === "nps"
+              ? "Ciclos que ainda pedem ação, do prazo mais apertado para o mais folgado."
+              : "Fora do prazo primeiro, depois quem vence antes."
+          }${
+            dados.total > itens.length
+              ? ` Mostrando ${itens.length}.`
+              : ""
+          }
+        </p>
+      </div>`;
+
+    corpo.innerHTML =
+      cabecalho +
+      itens
+        .map(
+          dados.canal === "nps"
+            ? (item) => blocoNps(item, podeEscrever(ultimoDado), true)
+            : desenharDaFila
+        )
+        .join("");
+
+    corpo.scrollTop = 0;
+  }
+
+  /**
+   * Um caso na fila.
+   *
+   * Traz o cliente no lugar da etiqueta de canal: na fila de um canal
+   * só, dizer o canal em cada linha é ruído — quem é a pessoa, não.
+   */
+  function desenharDaFila(caso) {
+
+    const grave = caso.sla.situacao === "estourado";
+
+    return `
+      <div class="caso ${grave ? "grave" : ""}" data-acao="abrir"
+           data-url="${CW.escapar(caso.url)}">
+        <div class="linha">
+          <span class="sub">${CW.escapar(caso.protocolo)}</span>
+          <span class="tag ${
+            grave
+              ? "perigo"
+              : caso.sla.situacao === "atencao"
+                ? "atencao"
+                : "neutro"
+          }">${CW.escapar(caso.sla.rotulo)}</span>
+        </div>
+        <div class="titulo-caso">${CW.escapar(caso.titulo)}</div>
+        <div class="sub" style="margin-top:3px">
+          ${CW.escapar(caso.cliente)} ·
+          ${CW.escapar(caso.status)}${
+            caso.responsavel
+              ? ` · ${CW.escapar(caso.responsavel)}`
+              : " · sem responsável"
+          }
+        </div>
+        ${botoesDeEtapa(caso)}
+      </div>`;
+  }
+
+  /* ============================================================
+     PAINEL DO DIA
+  ============================================================ */
+
+  async function carregarPainel() {
+
+    corpo.innerHTML = `<div class="carregando">Carregando o painel…</div>`;
+
+    const resposta = await CW.enviar({ tipo: "resumo" });
+
+    if (!resposta.ok) {
+      renderFalha(resposta);
+      return;
+    }
+
+    const dados = resposta.dados;
+    const rep = dados.reputacao ?? {};
+
+    const partes = [
+      '<div class="bloco">',
+      '  <div class="rotulo">Nota do Reclame Aqui</div>',
+      '  <div class="cartao">',
+      '    <div class="linha">',
+      `      <span class="nome" style="font-size:22px">${
+        rep.indisponivel ? "—" : CW.escapar(rep.nota)
+      }</span>`,
+      `      <span class="tag ${rep.ra1000 ? "laranja" : "marca"}">${CW.escapar(
+        rep.ra1000 ? "RA1000" : (rep.faixa ?? "")
+      )}</span>`,
+      '    </div>',
+      `    <div class="sub">${CW.data(rep.inicio)} a ${CW.data(rep.fim)}</div>`,
+      '  </div>',
+      '  <div class="numeros">',
+      `    <div class="numero"><b>${dados.contagens?.abertos ?? 0}</b><span>abertos</span></div>`,
+      `    <div class="numero"><b>${dados.contagens?.semResposta ?? 0}</b><span>s/ resposta</span></div>`,
+      `    <div class="numero"><b>${dados.contagens?.replicas ?? 0}</b><span>réplicas</span></div>`,
+      `    <div class="numero"><b>${dados.contagens?.risco ?? 0}</b><span>risco</span></div>`,
+      '  </div>',
+      '</div>',
+    ];
+
+    if (dados.nps && dados.nps.total > 0) {
+      partes.push(
+        '<div class="bloco">',
+        '  <div class="rotulo">NPS · últimos 30 dias</div>',
+        '  <div class="cartao">',
+        '    <div class="linha">',
+        `      <span class="nome">${dados.nps.nota}</span>`,
+        `      <span class="sub">média ${String(dados.nps.media).replace(".", ",")} · ${dados.nps.total} resposta(s)</span>`,
+        '    </div>',
+        `    <div class="sub" style="margin-top:4px">${dados.nps.detratores} detrator(es) · ${dados.nps.passivos} passivo(s) · ${dados.nps.promotores} promotor(es)</div>`,
+        `    <div class="sub" style="margin-top:4px">${dados.nps.abertos} em aberto${
+          dados.nps.estourados > 0
+            ? ` · <strong style="color:var(--perigo)">${dados.nps.estourados} fora do prazo</strong>`
+            : ""
+        }</div>`,
+        '  </div>',
+        '</div>'
+      );
+    }
+
+    if ((dados.alertas ?? []).length > 0) {
+      partes.push(
+        '<div class="bloco">',
+        '  <div class="rotulo">Alertas</div>',
+        ...dados.alertas.map(
+          (item) => `
+        <div class="sugestao ${item.tom}" data-acao="abrir" data-url="${CW.escapar(item.url)}" style="cursor:pointer">
+          <span class="marca-tom"></span>
+          <span>
+            <strong style="font-size:12.5px">${CW.escapar(item.titulo)}</strong><br />
+            <span class="sub">${CW.escapar(item.detalhe)}</span>
+          </span>
+        </div>`
+        ),
+        '</div>'
+      );
+    }
+
+    corpo.innerHTML = partes.join("");
+    corpo.scrollTop = 0;
+  }
+
+  /* ============================================================
      AVANÇAR E VOLTAR ETAPA
   ============================================================ */
 
@@ -1786,9 +2335,18 @@
    * lista serve para o botão dizer "→ Em atendimento" em vez de um
    * "avançar" que não diz para onde.
    */
+  /** As etapas do quadro, venham do contato ou da fila. */
+  function etapasDoQuadro() {
+    return (
+      filaAtual?.etapas ??
+      ultimoDado?.etapas ??
+      []
+    );
+  }
+
   function vizinha(status, direcao) {
 
-    const etapas = ultimoDado?.etapas ?? [];
+    const etapas = etapasDoQuadro();
 
     const i = etapas.indexOf(status);
 
@@ -1801,15 +2359,39 @@
       : "";
   }
 
-  /** Os dois botões de etapa de um caso. */
+  /**
+   * Quem pode gravar, na vista que estiver aberta.
+   *
+   * Na fila não há resposta de contexto — o papel vem do que a última
+   * consulta trouxe, e na falta dela o painel oferece: o servidor
+   * recusa `LEITURA` de qualquer jeito, e esconder o botão por falta de
+   * informação seria pior do que mostrá-lo e receber a recusa.
+   */
+  function podeMover() {
+    return (
+      !ultimoDado?.usuario ||
+      ultimoDado.usuario.papel !== "LEITURA"
+    );
+  }
+
+  /**
+   * Os controles de etapa de um caso.
+   *
+   * Dois botões para o passo vizinho **e** um seletor para qualquer
+   * etapa: um caso costuma pular colunas — quem respondeu e já resolveu
+   * não passa por "Em atendimento" só para chegar em "Resolvido", e
+   * obrigar dois cliques para isso fazia o botão atrapalhar.
+   */
   function botoesDeEtapa(caso) {
 
-    if (!podeEscrever(ultimoDado)) return "";
+    if (!podeMover()) return "";
+
+    const etapas = etapasDoQuadro();
+
+    if (etapas.length === 0) return "";
 
     const antes = vizinha(caso.status, "voltar");
     const depois = vizinha(caso.status, "avancar");
-
-    if (!antes && !depois) return "";
 
     return [
       '<div class="etapas">',
@@ -1820,24 +2402,38 @@
         ? `<button class="passo" data-acao="mover" data-protocolo="${CW.escapar(caso.protocolo)}" data-direcao="avancar" title="Avançar para ${CW.escapar(depois)}">${CW.escapar(depois)} &rarr;</button>`
         : '<span class="passo vazio">fim do fluxo</span>',
       '</div>',
+      `<select class="campo etapa-direta" data-acao="mover-para" data-protocolo="${CW.escapar(caso.protocolo)}" title="Mover para qualquer etapa">`,
+      `  <option value="">mover para…</option>`,
+      ...etapas
+        .filter((nome) => nome !== caso.status)
+        .map(
+          (nome) =>
+            `  <option value="${CW.escapar(nome)}">${CW.escapar(nome)}</option>`
+        ),
+      '</select>',
     ].join("");
   }
 
-  async function moverCaso(botao) {
+  async function moverCaso(botao, para) {
 
     const rotulo = botao.textContent;
 
-    botao.disabled = true;
-    botao.textContent = "...";
+    if (!para) {
+      botao.disabled = true;
+      botao.textContent = "...";
+    }
 
     const resposta = await CW.enviar({
       tipo: "moverCaso",
       protocolo: botao.dataset.protocolo,
       direcao: botao.dataset.direcao,
+      para,
     });
 
-    botao.disabled = false;
-    botao.textContent = rotulo;
+    if (!para) {
+      botao.disabled = false;
+      botao.textContent = rotulo;
+    }
 
     const r = resposta.dados;
 
@@ -1865,7 +2461,14 @@
       r.notaRemovida ? "atencao" : "ok"
     );
 
-    consultar(true);
+    recarregarVista();
+  }
+
+  /** Recarrega o que está na tela, e não sempre o contato. */
+  function recarregarVista() {
+    if (vista === "fila") carregarFila();
+    else if (vista === "painel") carregarPainel();
+    else consultar(true);
   }
 
   async function moverNps(botao) {
@@ -1901,7 +2504,7 @@
 
     avisar(`NPS: ${r.de} → ${r.status}.`, "ok");
 
-    consultar(true);
+    recarregarVista();
   }
 
   /**

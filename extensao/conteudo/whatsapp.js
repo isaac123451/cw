@@ -189,6 +189,7 @@
     if (conversa.grupo) {
       CW.painel.definirCaptura(null);
       CW.painel.definirContexto({
+        canalDaPagina: "WhatsApp",
         rotulo: "conversa em grupo",
       });
       return;
@@ -212,6 +213,7 @@
     });
 
     CW.painel.definirContexto({
+      canalDaPagina: "WhatsApp",
       telefone: conversa.telefone,
       nome: conversa.nome,
       rotulo: conversa.nome || conversa.telefone,
