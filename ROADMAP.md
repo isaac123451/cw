@@ -86,7 +86,51 @@ o canal da página. Falta **só** o importador, e ele depende do arquivo.
 
 ### 2. Aberto, sem decisão pela frente — é só trabalho
 
-**a) Botão Salvar nas telas restantes.** O Isaac pediu "em tudo que for
+**a) Etapas do Kanban do NPS viram cadastro.** *(pedido em 21/08)* Hoje
+as quatro colunas são **fixas no código**: `FLUXO_EM_ANDAMENTO` em
+`lib/models/nps.ts` (Novo, Em tratativa, [Aguardando Resposta]) mais os
+finais de `ALL_STATUS`. O Isaac quer poder criar etapas, como já dá no
+quadro do Reclame Aqui.
+
+O caminho já existe e é o mesmo do `WorkflowStatus`: tabela nova
+(`NpsStage`: nome, cor, ordem, ativo, e um marcador de "é final"), a
+listagem entrando na carga do workspace, e `NpsKanban` lendo dela em vez
+da constante. Três cuidados registrados:
+
+- **Etapa final não é igual às outras.** O que define encerramento hoje
+  é o prefixo `[Encerrado]` (`isEncerrado`), e é ele que tira o ciclo da
+  fila, alimenta `closedAt` e sustenta o checklist de `podeEncerrar`.
+  Uma etapa nova precisa dizer se encerra ou não — senão o indicador de
+  resolução passa a contar coisa que ninguém fechou.
+- **Os sete tipos amarram os finais.** `KINDS[].finais` lista quais
+  status cada tipo aceita. Etapa nova sem entrar nessa lista fica
+  inalcançável pelo fluxo.
+- **A extensão avança pela mesma escada** (`acao: "status"` em
+  `app/api/extensao/nps/route.ts`), que hoje lê `FLUXO_EM_ANDAMENTO`.
+  Passa a ler o cadastro junto, ou os dois divergem.
+
+**b) Aba de Atividades, vinculada à agenda.** *(pedido em 21/08)* Uma
+aba própria na extensão para o que está marcado — não só criar tarefa
+(que já existe em `/api/extensao/anotar` com `tipo: "agenda"`) e não só
+listar o dia (que já existe em `/api/extensao/agenda`, com o atrasado
+vindo junto e o botão de dar baixa), mas a **visão de atividades** ligada
+à agenda da aplicação: o que é de hoje, o que ficou para trás, o que
+está vinculado a qual caso.
+
+O que já está pronto do lado do servidor:
+- `GET /api/extensao/agenda` — hoje + atrasado, com `protocolo` e
+  título do caso vinculado, ordenado por vencimento;
+- `POST /api/extensao/agenda` — dar baixa e desfazer;
+- `POST /api/extensao/anotar` com `tipo: "agenda"` — cria a tarefa já
+  vinculada ao caso, com tipo e data.
+
+Falta **a aba no painel** (`extensao/conteudo/painel.js`): mais um botão
+no rodapé de canais, no mesmo padrão de "Painel", com a lista, o filtro
+de hoje/atrasado e o clique que leva ao caso vinculado. A agenda também
+deve aparecer dentro da aba Painel, junto das anotações do dia — foi
+assim que o Isaac descreveu.
+
+**c) Botão Salvar nas telas restantes.** O Isaac pediu "em tudo que for
 adicionar ou alterar". Cinco telas já usam o rascunho
 (`lib/hooks/useRascunho.ts` + `components/shared/BarraDeSalvar.tsx`): as
 cinco abas de `/reclame-aqui/configuracoes`. **Faltam nove**, e todas
@@ -102,18 +146,18 @@ gravam a cada tecla:
 - `components/agenda/GoogleCalendarCard.tsx`
 - `components/nps/RootCauseManager.tsx`
 
-O passo é mecânico e está documentado no commit `2dbea29`: trocar a
-lista pelo `rascunho.itens`, `saveX({...item, campo})` por
+O passo é mecânico e está no commit `2dbea29`: trocar a lista pelo
+`rascunho.itens`, `saveX({...item, campo})` por
 `rascunho.alterar(item.id, {campo})`, acrescentar `<BarraDeSalvar>` e
 proteger a exclusão com a trava do "item que só existe no rascunho".
 
-**b) Tela de análise do NPS.** Os filtros por segmento já existem na
+**d) Tela de análise do NPS.** Os filtros por segmento já existem na
 barra do `/nps` e na fila da extensão. Falta a tela dedicada, no
 espírito de `/reclame-aqui/analytics`: tendência do NPS, causa raiz e
 distribuição da régua de humor. `summarize`, `bySegment` e `byRootCause`
 já calculam tudo em `lib/services/nps.service.ts`.
 
-**c) O cron — destrava três coisas de uma vez.** A aplicação não tem job
+**e) O cron — destrava três coisas de uma vez.** A aplicação não tem job
 agendado, e por isso:
 - o **encerramento automático dos 30 dias** do NPS só roda quando
   alguém abre a tela;
@@ -123,13 +167,13 @@ agendado, e por isso:
 
 Uma peça só (cron da Vercel) resolve as três.
 
-**d) Importar NPS em lote**, como o Reclame Aqui faz com a planilha do
+**f) Importar NPS em lote**, como o Reclame Aqui faz com a planilha do
 HugMe. O parser compartilhado (`raImport.service.ts`) é o modelo.
 
-**e) Tipos e causa raiz do NPS como cadastro.** Hoje os sete tipos são
-fixos em `lib/models/nps.ts`. A causa raiz já virou cadastro
-(`NpsRootCause`) — os tipos seguem o mesmo caminho. A ressalva: lista
-fechada existe para a análise de tendência não virar texto livre.
+**g) Tipos do NPS como cadastro.** Os sete tipos são fixos em
+`lib/models/nps.ts`. A causa raiz já virou cadastro (`NpsRootCause`) —
+os tipos seguem o mesmo caminho. A ressalva: lista fechada existe para a
+análise de tendência não virar texto livre.
 
 ---
 
@@ -239,6 +283,43 @@ no banco. Ver "Tudo persiste" em Entregue.)*
 ---
 
 ## Entregue
+
+### Anotações são uma lista só (21/08/2026)
+
+A tela do caso chamava de "Comentários internos" e guardava tudo num
+`useState([])` — **não gravava nada**. O que se escrevia ali sumia no
+recarregamento, e o que a extensão gravava nunca aparecia. Eram dois
+históricos paralelos do mesmo atendimento, e nenhum contava a história
+inteira. Mesma família de defeito de Times, Metas e Clientes: o valor
+aparece na tela e não existe no banco.
+
+Agora as duas pontas leem e escrevem `CaseComment`
+(`lib/actions/notes.ts` e `app/api/extensao/anotar/`), e o nome na tela
+é **Anotações**. O autor vem da sessão nos dois lados — otimismo local
+mostraria "Operação" no lugar de quem realmente anotou.
+
+### Criar responsável (21/08/2026)
+
+Não existia, e a causa era estrutural: `Case.ownerId` é relação com
+`User`, então **quem não tinha conta era descartado em silêncio** — e
+`assignTeamMember` recusava com "a pessoa precisa se cadastrar antes de
+entrar no time". Quem cuida da operação nem sempre é quem usa a
+ferramenta.
+
+A pessoa passa a nascer **sem senha**. `passwordHash` vazio não é senha
+em branco: o login exige hash bcrypt válido (`isBcryptHash`) e recusa
+qualquer outra coisa. Ela existe para receber caso e tarefa e não entra
+até se cadastrar — e quando o fizer, o autocadastro **adota a mesma
+linha**, preservando tudo que já estava no nome dela.
+
+### A versão exibida saiu do papel (21/08/2026)
+
+Estava escrita à mão como "1.0.0" na barra lateral e em Configurações,
+enquanto o `package.json` já ia em 0.7.0. Número de versão que não
+acompanha o que está no ar é pior do que nenhum — alguém olha, acredita
+e conclui a coisa errada sobre o que a instalação tem. Agora sai do
+`package.json` via `NEXT_PUBLIC_VERSAO`, definido no `next.config.ts`.
+
 
 ### Triagem por IA, e a IA como configuração (21/08/2026)
 
