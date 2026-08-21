@@ -1,5 +1,3 @@
-import "server-only";
-
 import Anthropic from "@anthropic-ai/sdk";
 
 /**
@@ -16,6 +14,12 @@ import Anthropic from "@anthropic-ai/sdk";
  * ser usado para treinar o modelo; camada paga, não. Quem decide é o
  * Isaac, e por isso as duas portas existem — mas o aviso fica escrito
  * onde a decisão é tomada, e não escondido num README.
+ *
+ * **Sem `server-only`, de propósito.** Aquele marcador impediria
+ * `npm run check:ia` de exercitar este arquivo — e um provedor que só
+ * dá para testar abrindo a extensão é um provedor que ninguém testa. O
+ * risco que ele cobriria é baixo aqui: não há segredo embutido, só
+ * leitura de `process.env`, que no navegador vem vazio.
  */
 
 export type Provedor = "anthropic" | "gemini";
@@ -207,14 +211,38 @@ async function pelaAnthropic(
 ============================================================ */
 
 /**
- * O modelo do Gemini, configurável.
+ * O modelo do Gemini — apelido por padrão, e isso é deliberado.
  *
- * Fica em variável porque a família muda de nome com frequência, e um
- * nome fixo aqui vira 404 sem aviso alguns meses depois.
+ * O primeiro palpite aqui foi `gemini-2.0-flash`, e ele durou até a
+ * primeira chamada: `404 — This model is no longer available`. A
+ * família se renova rápido, e um nome fixo transforma o recurso em
+ * defeito silencioso alguns meses depois de escrito.
+ *
+ * `gemini-flash-latest` aponta sempre para o flash corrente. O preço é
+ * o comportamento poder mudar sozinho — mas para resumir conversa isso
+ * significa a redação sair um pouco diferente, enquanto um 404 significa
+ * o botão parar de funcionar. Quem quiser previsibilidade fixa a versão
+ * em `GEMINI_MODELO` (`npm run check:ia` lista o que a conta enxerga).
  */
 const MODELO_GEMINI =
   process.env.GEMINI_MODELO?.trim() ||
-  "gemini-2.0-flash";
+  "gemini-flash-latest";
+
+/**
+ * A reserva, para quando o apelido estiver em fila.
+ *
+ * Medido na primeira integração: `gemini-flash-latest` respondeu
+ * `503 — high demand` enquanto `gemini-3.6-flash` respondia normalmente
+ * no mesmo minuto. O apelido concentra a demanda de todo mundo que não
+ * fixou versão, então é o mais sujeito a congestionar.
+ *
+ * Uma segunda tentativa, só em falha transitória, resolve sem custo no
+ * caminho feliz — e mantém a vantagem do apelido, que é nunca virar 404
+ * quando a família se renova.
+ */
+const RESERVA_GEMINI =
+  process.env.GEMINI_MODELO_RESERVA?.trim() ||
+  "gemini-3.6-flash";
 
 /**
  * O `responseSchema` do Gemini é um subconjunto do JSON Schema.
@@ -270,6 +298,38 @@ function paraGemini(
     saida[chaveDoCampo] = valor;
   }
 
+  /**
+   * O `enum` do Gemini **só aceita texto**.
+   *
+   * Medido: um campo inteiro com `enum: [1,2,3,4,5]` faz a requisição
+   * inteira voltar 400 —
+   * `Invalid value at '...enum[0]' (TYPE_STRING), 1`. E é justamente a
+   * forma da régua de humor, que o resumo de conversa usa.
+   *
+   * Trocar o campo para texto mudaria o contrato para os dois
+   * provedores. Então o enum sai do esquema e entra na **descrição**: o
+   * modelo continua sabendo quais valores valem, e o tipo continua
+   * inteiro dos dois lados. Se ele responder fora da lista, quem
+   * reclama é a tela — não o provedor —, o que é melhor do que não
+   * conseguir chamar.
+   */
+  if (
+    Array.isArray(saida.enum) &&
+    saida.type !== "string"
+  ) {
+
+    const valores = (saida.enum as unknown[]).join(", ");
+
+    delete saida.enum;
+
+    saida.description = [
+      saida.description,
+      `Valores aceitos: ${valores}.`,
+    ]
+      .filter(Boolean)
+      .join(" ");
+  }
+
   return saida;
 }
 
@@ -283,7 +343,38 @@ async function peloGemini(
   pedido: PedidoDeIA
 ): Promise<RespostaDeIA> {
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODELO_GEMINI}:generateContent`;
+  const primeira = await chamarGemini(
+    pedido,
+    MODELO_GEMINI
+  );
+
+  /**
+   * Só falha transitória tenta de novo, e só uma vez.
+   *
+   * Cota estourada (429) e esquema inválido (400) não melhoram com
+   * repetição — repetir ali só gastaria a cota que já acabou.
+   */
+  if (
+    primeira.status !== 503 ||
+    RESERVA_GEMINI === MODELO_GEMINI
+  ) {
+    return primeira;
+  }
+
+  const segunda = await chamarGemini(
+    pedido,
+    RESERVA_GEMINI
+  );
+
+  return segunda.erro ? primeira : segunda;
+}
+
+async function chamarGemini(
+  pedido: PedidoDeIA,
+  modelo: string
+): Promise<RespostaDeIA> {
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent`;
 
   try {
 
@@ -314,13 +405,35 @@ async function peloGemini(
 
       const detalhe = await resposta.text();
 
+      /**
+       * Três falhas com causas e respostas diferentes.
+       *
+       * O 503 é o mais comum na camada gratuita e o mais confundível:
+       * é fila, não erro de configuração. Dizer "erro do Gemini" ali
+       * manda a pessoa conferir a chave à toa — a resposta certa é
+       * clicar de novo em alguns segundos.
+       *
+       * O 404 acontece quando o modelo fixado em `GEMINI_MODELO` é
+       * aposentado; foi assim que `gemini-2.0-flash` saiu do ar.
+       */
+      const transitorio =
+        resposta.status === 503 ||
+        resposta.status === 500;
+
       return {
         provedor: "gemini",
-        status: resposta.status === 429 ? 429 : 502,
-        erro:
-          resposta.status === 429
+        status: transitorio
+          ? 503
+          : resposta.status === 429
+            ? 429
+            : 502,
+        erro: transitorio
+          ? "O Gemini está congestionado neste momento. Tente de novo em alguns segundos."
+          : resposta.status === 429
             ? "Cota do Gemini esgotada. A camada gratuita tem limite por minuto e por dia."
-            : `O Gemini respondeu ${resposta.status}. ${detalhe.slice(0, 160)}`,
+            : resposta.status === 404
+              ? `O modelo "${modelo}" não existe mais. Rode "npm run check:ia" para ver os disponíveis e ajuste GEMINI_MODELO.`
+              : `O Gemini respondeu ${resposta.status}. ${detalhe.slice(0, 160)}`,
       };
     }
 
