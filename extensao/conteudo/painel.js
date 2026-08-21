@@ -120,6 +120,23 @@
    */
   let vista = "contato";
 
+  /**
+   * Na aba de um canal, mostrar só os casos deste cliente.
+   *
+   * Ligado por padrão quando há contato identificado: quem abre a aba
+   * do Reclame Aqui **com uma conversa na tela** quer o histórico
+   * daquela pessoa naquele canal, não a fila da operação inteira. Sem
+   * contato, não há o que restringir e a fila aparece cheia.
+   */
+  let soDoCliente = true;
+
+  /** Filtros da fila: etapa (casos) e segmento (NPS). */
+  let etapaFiltro = "";
+  let segmentoFiltro = "";
+
+  /** Caso aberto para leitura dentro do painel. */
+  let detalhe = null;
+
   /* ============================================================
      MONTAGEM
   ============================================================ */
@@ -269,6 +286,27 @@
       if (acao === "criar-caso") criarCaso(alvo);
       if (acao === "reler") reler();
       if (acao === "canal") trocarCanal(alvo);
+      if (acao === "ver") abrirDetalhe(alvo.dataset.protocolo);
+      if (acao === "voltar-da-vista") voltarDaVista();
+      if (acao === "anotar-detalhe") anotarNoDetalhe(alvo);
+      if (acao === "anotar-dia") anotarODia(alvo);
+      if (acao === "concluir") concluirTarefa(alvo);
+      if (acao === "nps-contato") gravarContatoDoNps(alvo);
+
+      if (acao === "escopo") {
+        soDoCliente = alvo.dataset.valor === "cliente";
+        carregarFila();
+      }
+
+      if (acao === "etapa") {
+        etapaFiltro = alvo.dataset.valor;
+        carregarFila();
+      }
+
+      if (acao === "segmento") {
+        segmentoFiltro = alvo.dataset.valor;
+        carregarFila();
+      }
 
       // Avançar e voltar etapa, nos três canais.
       if (acao === "mover") moverCaso(alvo);
@@ -501,6 +539,9 @@
 
     config.posicao = null;
     aplicarPosicao(null);
+
+    // Ancorou: volta a empurrar, se a gaveta estiver aberta.
+    empurrarPagina(aberto);
 
     CW.enviar({
       tipo: "salvar",
@@ -777,10 +818,47 @@
      ABRIR E FECHAR
   ============================================================ */
 
+  /**
+   * Empurra a página para o lado enquanto a gaveta está aberta.
+   *
+   * Ancorada, a gaveta fica **por cima** da conversa — e no WhatsApp Web
+   * é justamente a coluna das mensagens que ela cobre. Um `margin-right`
+   * no elemento raiz faz o site se redesenhar mais estreito, que é o que
+   * qualquer barra lateral de navegador faz.
+   *
+   * Só vale para a gaveta ancorada: solta, ela já é uma janela flutuante
+   * e o empurrão só encolheria a página sem motivo. E é preferência —
+   * quem prefere a sobreposição desliga nas Opções.
+   */
+  function empurrarPagina(ligar) {
+
+    const raizDoSite = document.documentElement;
+
+    if (!raizDoSite) return;
+
+    const deveEmpurrar =
+      ligar &&
+      config.empurrar !== false &&
+      !config.posicao;
+
+    if (!deveEmpurrar) {
+      raizDoSite.style.marginRight = "";
+      raizDoSite.style.transition = "";
+      return;
+    }
+
+    raizDoSite.style.transition =
+      "margin-right .22s cubic-bezier(.32,.72,0,1)";
+
+    raizDoSite.style.marginRight = `${config.largura || 380}px`;
+  }
+
   function abrir() {
 
     aberto = true;
     gaveta?.classList.add("aberta");
+
+    empurrarPagina(true);
 
     // Fila ou painel já desenhados continuam onde estão.
     if (vista !== "contato") return;
@@ -802,6 +880,8 @@
 
     aberto = false;
     gaveta?.classList.remove("aberta");
+
+    empurrarPagina(false);
 
     // Fechar na mão vale como decisão: não reabre até o contato mudar.
     if (naMao) fechadoNaMao = true;
@@ -992,13 +1072,45 @@
       return;
     }
 
-    if (vista === "fila" && canal === pedido) {
+    if (vista !== "contato" && canal === pedido) {
       return voltarAoContato();
     }
 
     canal = pedido;
     vista = "fila";
 
+    // Filtro é do canal que estava aberto; trocar de aba zera.
+    etapaFiltro = "";
+    segmentoFiltro = "";
+
+    /**
+     * Com contato na tela, a aba abre **naquele cliente**.
+     *
+     * É o que o Isaac pediu: abrir a aba do Reclame Aqui com uma
+     * conversa aberta tem de mostrar o que aquela pessoa já reclamou
+     * ali, não a fila geral. O chip "toda a fila" desfaz num clique.
+     */
+    soDoCliente = temOndeProcurar();
+
+    refletirCanal();
+    carregarFila();
+  }
+
+  /**
+   * Volta um passo: do caso para a lista de onde ele veio.
+   *
+   * Sem isto, ler um caso a partir da fila e fechar o detalhe jogava a
+   * pessoa de volta no contato — perdendo o filtro e a rolagem da fila.
+   */
+  function voltarDaVista() {
+
+    if (vista !== "caso") return voltarAoContato();
+
+    detalhe = null;
+
+    if (canal === "todos") return voltarAoContato();
+
+    vista = "fila";
     refletirCanal();
     carregarFila();
   }
@@ -1485,8 +1597,8 @@
      * que estes botões existem para evitar.
      */
     return `
-      <div class="caso ${classe}" data-acao="abrir"
-           data-url="${CW.escapar(caso.url)}">
+      <div class="caso ${classe}" data-acao="ver"
+           data-protocolo="${CW.escapar(caso.protocolo)}">
         <div class="linha">
           <span class="sub">${CW.escapar(caso.protocolo)}</span>
           <span class="sub">${CW.data(caso.criadoEm)}</span>
@@ -1772,6 +1884,26 @@
     "[Aguardando Resposta]",
   ];
 
+  /**
+   * O contato que falta, para digitar ali mesmo.
+   *
+   * Só aparece quando o ciclo não tem telefone nem e-mail — que é
+   * exatamente quando ele não casa com nenhuma conversa e desaparece do
+   * painel de quem está atendendo a pessoa.
+   */
+  function campoDeContatoDoNps(nps) {
+
+    if (nps.temContato) return "";
+
+    return [
+      '    <div class="etapas" style="border-top-style:solid">',
+      `      <input class="campo" id="nps-contato-${CW.escapar(nps.id)}" type="text" style="margin-top:0;flex:1" placeholder="Telefone ou e-mail deste cliente" />`,
+      `      <button class="passo" style="flex:0 0 auto" data-acao="nps-contato" data-id="${CW.escapar(nps.id)}">gravar</button>`,
+      '    </div>',
+      '    <p class="sub" style="margin-top:5px">A pesquisa não trouxe contato para este ciclo — sem ele, o painel não o encontra pela conversa.</p>',
+    ].join("");
+  }
+
   function passosDoNps(nps) {
 
     if (nps.encerrado) {
@@ -1875,6 +2007,7 @@
         ? `    <div class="sub" style="margin-top:6px;color:var(--suave)">${CW.escapar(registrado)}</div>`
         : "",
       escrever ? passosDoNps(nps) : "",
+      escrever ? campoDeContatoDoNps(nps) : "",
       '  </div>',
     ];
 
@@ -2132,14 +2265,30 @@
 
   async function carregarFila() {
 
-    corpo.innerHTML = `<div class="carregando">Carregando a fila de ${CW.escapar(
+    corpo.innerHTML = `<div class="carregando">Carregando ${CW.escapar(
       NOME_DO_CANAL[canal] ?? canal
     )}…</div>`;
 
-    const resposta = await CW.enviar({
-      tipo: "fila",
-      canal,
-    });
+    /**
+     * Duas fontes para a mesma aba, e a diferença é a pergunta.
+     *
+     * "Só deste cliente" é `contexto`, que casa telefone, nome e
+     * e-mail. A fila é `fila`, que ordena por urgência e não conhece
+     * contato nenhum. Tentar servir as duas com uma rota só faria uma
+     * delas trabalhar contra a própria definição.
+     */
+    const resposta = soDoCliente
+      ? await CW.enviar({
+          tipo: "contexto",
+          consulta: { ...parametros(), canal },
+          forcar: true,
+        })
+      : await CW.enviar({
+          tipo: "fila",
+          canal,
+          etapa: etapaFiltro,
+          segmento: segmentoFiltro,
+        });
 
     if (!resposta.ok) {
       renderFalha(resposta);
@@ -2151,9 +2300,80 @@
       return;
     }
 
+    if (soDoCliente) {
+      ultimoDado = resposta.dados;
+      filaAtual = { etapas: resposta.dados.etapas };
+      desenharFilaDoCliente(resposta.dados);
+      return;
+    }
+
     filaAtual = resposta.dados;
 
     desenharFila(resposta.dados);
+  }
+
+  /** O chip que alterna entre o cliente da tela e a fila inteira. */
+  function chipsDeEscopo() {
+
+    if (!temOndeProcurar()) return "";
+
+    return [
+      '<div class="chips">',
+      `  <button class="chip" data-acao="escopo" data-valor="cliente" aria-pressed="${soDoCliente}">Só deste cliente</button>`,
+      `  <button class="chip" data-acao="escopo" data-valor="fila" aria-pressed="${!soDoCliente}">Toda a fila</button>`,
+      '</div>',
+    ].join("");
+  }
+
+  /**
+   * Os casos daquele cliente, no canal escolhido.
+   *
+   * Reaproveita o desenho do cartão da vista de contato — é o mesmo
+   * objeto, com os mesmos botões de etapa e o mesmo "abrir".
+   */
+  function desenharFilaDoCliente(dados) {
+
+    const casos = dados.casos ?? [];
+
+    const nome = dados.cliente?.nome;
+
+    if (canal === "nps") {
+      return desenharNpsDoCliente(dados);
+    }
+
+    corpo.innerHTML = [
+      '<div class="bloco">',
+      `  <div class="rotulo">${CW.escapar(NOME_DO_CANAL[canal] ?? canal)}${nome ? ` · ${CW.escapar(nome)}` : ""}</div>`,
+      chipsDeEscopo(),
+      casos.length === 0
+        ? `  <p class="sub" style="margin-top:9px">Este cliente não tem caso em ${CW.escapar(NOME_DO_CANAL[canal] ?? canal)}.</p>`
+        : casos.map(desenharCaso).join(""),
+      '</div>',
+    ].join("");
+
+    corpo.scrollTop = 0;
+  }
+
+  /** Os ciclos de NPS daquele cliente, com o contato editável. */
+  function desenharNpsDoCliente(dados) {
+
+    const ciclos = dados.npsLista ?? [];
+
+    corpo.innerHTML = [
+      '<div class="bloco">',
+      `  <div class="rotulo">NPS${dados.cliente?.nome ? ` · ${CW.escapar(dados.cliente.nome)}` : ""}</div>`,
+      chipsDeEscopo(),
+      '</div>',
+      ciclos.length === 0
+        ? '<div class="bloco"><p class="sub">Nenhum ciclo de NPS para este contato. O WhatsApp da pesquisa é outro número — se souber que é a mesma pessoa, abra o ciclo pela fila e grave o telefone ali.</p></div>'
+        : ciclos
+            .map((ciclo) =>
+              blocoNps(ciclo, podeEscrever(dados), true)
+            )
+            .join(""),
+    ].join("");
+
+    corpo.scrollTop = 0;
   }
 
   /** Última fila carregada — as etapas dela rotulam os botões. */
@@ -2171,36 +2391,251 @@
       return;
     }
 
-    const cabecalho = `
-      <div class="bloco">
-        <div class="rotulo">
-          ${CW.escapar(NOME_DO_CANAL[dados.canal] ?? dados.canal)} ·
-          ${dados.total} em aberto
-        </div>
-        <p class="sub" style="margin-bottom:9px">
-          ${
-            dados.canal === "nps"
-              ? "Ciclos que ainda pedem ação, do prazo mais apertado para o mais folgado."
-              : "Fora do prazo primeiro, depois quem vence antes."
-          }${
-            dados.total > itens.length
-              ? ` Mostrando ${itens.length}.`
-              : ""
-          }
-        </p>
-      </div>`;
-
-    corpo.innerHTML =
-      cabecalho +
+    corpo.innerHTML = [
+      '<div class="bloco">',
+      `  <div class="rotulo">${CW.escapar(NOME_DO_CANAL[dados.canal] ?? dados.canal)} · ${dados.total} em aberto</div>`,
+      chipsDeEscopo(),
+      filtrosDaFila(dados),
+      `  <p class="sub" style="margin-bottom:9px">${
+        dados.canal === "nps"
+          ? "Ciclos que ainda pedem ação, do prazo mais apertado para o mais folgado."
+          : "Fora do prazo primeiro, depois quem vence antes."
+      }${
+        dados.total > itens.length
+          ? ` Mostrando ${itens.length}.`
+          : ""
+      }</p>`,
+      '</div>',
       itens
         .map(
           dados.canal === "nps"
-            ? (item) => blocoNps(item, podeEscrever(ultimoDado), true)
+            ? (item) =>
+                blocoNps(item, podeMover(), true)
             : desenharDaFila
         )
-        .join("");
+        .join(""),
+    ].join("");
 
     corpo.scrollTop = 0;
+  }
+
+  /**
+   * "Em qual etapa cada canal está" — em chips, com a contagem.
+   *
+   * A contagem vem da fila **inteira**, não do recorte: se ela mudasse
+   * junto com o filtro, escolher "Novo" mostraria "0" em todas as
+   * outras e a barra deixaria de servir para navegar.
+   */
+  function filtrosDaFila(dados) {
+
+    if (dados.canal === "nps") {
+
+      const contagem = dados.porSegmento ?? {};
+
+      return [
+        '<div class="chips">',
+        `  <button class="chip" data-acao="segmento" data-valor="" aria-pressed="${!segmentoFiltro}">Todos ${dados.totalGeral ?? 0}</button>`,
+        ...["Detrator", "Passivo", "Promotor"].map(
+          (nome) =>
+            `  <button class="chip" data-acao="segmento" data-valor="${nome}" aria-pressed="${segmentoFiltro === nome}">${nome}es ${contagem[nome] ?? 0}</button>`
+        ),
+        '</div>',
+      ]
+        .join("")
+        .replace("Passivoes", "Passivos");
+    }
+
+    const contagem = dados.porEtapa ?? {};
+
+    const etapas = (dados.etapas ?? []).filter(
+      (nome) => (contagem[nome] ?? 0) > 0
+    );
+
+    if (etapas.length === 0) return "";
+
+    return [
+      '<div class="chips">',
+      `  <button class="chip" data-acao="etapa" data-valor="" aria-pressed="${!etapaFiltro}">Todas ${dados.totalGeral ?? 0}</button>`,
+      ...etapas.map(
+        (nome) =>
+          `  <button class="chip" data-acao="etapa" data-valor="${CW.escapar(nome)}" aria-pressed="${etapaFiltro === nome}">${CW.escapar(nome)} ${contagem[nome]}</button>`
+      ),
+      '</div>',
+    ].join("");
+  }
+
+  /* ============================================================
+     O CASO, LIDO DENTRO DO PAINEL
+  ============================================================ */
+
+  /**
+   * Abrir o caso sem sair da conversa.
+   *
+   * O painel mostrava o cartão e, para ler o relato, mandava abrir a
+   * aplicação noutra aba — o que derrota metade do propósito da
+   * extensão. O relato do consumidor é justamente o que se precisa ler
+   * antes de responder.
+   */
+  async function abrirDetalhe(protocolo) {
+
+    vista = "caso";
+
+    refletirCanal();
+
+    corpo.innerHTML = `<div class="carregando">Abrindo ${CW.escapar(protocolo)}…</div>`;
+
+    const resposta = await CW.enviar({
+      tipo: "detalhe",
+      protocolo,
+    });
+
+    if (!resposta.ok) {
+      renderFalha(resposta);
+      return;
+    }
+
+    if (resposta.dados?.erro) {
+      vazio("Não deu para abrir", resposta.dados.erro);
+      return;
+    }
+
+    detalhe = resposta.dados;
+
+    desenharDetalhe(detalhe);
+  }
+
+  function desenharDetalhe(d) {
+
+    const partes = [
+      '<div class="bloco">',
+      '  <button class="copiar" data-acao="voltar-da-vista" style="margin-bottom:10px">&larr; voltar</button>',
+      '  <div class="cartao">',
+      '    <div class="linha">',
+      `      <span class="sub">${CW.escapar(d.protocolo)}</span>`,
+      `      <span class="tag ${
+        d.sla.situacao === "estourado"
+          ? "perigo"
+          : d.sla.situacao === "atencao"
+            ? "atencao"
+            : "neutro"
+      }">${CW.escapar(d.sla.rotulo)}</span>`,
+      '    </div>',
+      `    <div class="nome" style="font-size:13.5px;margin-top:4px">${CW.escapar(d.titulo)}</div>`,
+      `    <div class="sub" style="margin-top:5px">${CW.escapar(d.cliente)} · ${CW.escapar(d.status)}${d.responsavel ? ` · ${CW.escapar(d.responsavel)}` : " · sem responsável"}</div>`,
+      `    <div class="sub" style="margin-top:3px">${CW.escapar(d.canal)} · ${CW.escapar(d.categoria)}${d.subcategoria ? ` / ${CW.escapar(d.subcategoria)}` : ""} · ${CW.data(d.criadoEm)}</div>`,
+      d.avaliado
+        ? `    <div class="sub" style="margin-top:3px">Avaliado: nota ${d.nota ?? "—"} · ${d.resolvido ? "resolvido" : "não resolvido"} · ${d.voltaria ? "voltaria a fazer negócio" : "não voltaria"}</div>`
+        : '    <div class="sub" style="margin-top:3px">Ainda sem avaliação do consumidor.</div>',
+      botoesDeEtapa({
+        protocolo: d.protocolo,
+        status: d.status,
+      }),
+      '  </div>',
+      '</div>',
+    ];
+
+    if (d.relato) {
+      partes.push(
+        '<div class="bloco">',
+        '  <div class="rotulo">Relato do consumidor</div>',
+        `  <div class="macro"><pre style="max-height:none">${CW.escapar(d.relato)}</pre></div>`,
+        '</div>'
+      );
+    }
+
+    if (d.respostaPublica) {
+      partes.push(
+        '<div class="bloco">',
+        '  <div class="rotulo">Nossa resposta pública</div>',
+        `  <div class="macro"><pre style="max-height:none">${CW.escapar(d.respostaPublica)}</pre></div>`,
+        '</div>'
+      );
+    }
+
+    /* ---- anotações do caso ---- */
+
+    partes.push(
+      '<div class="bloco">',
+      `  <div class="rotulo">Anotações (${(d.anotacoes ?? []).length})</div>`,
+      ...(d.anotacoes ?? []).map(
+        (nota) => `
+      <div class="cartao" style="margin-bottom:6px">
+        <div class="sub" style="color:var(--texto)">${CW.escapar(nota.texto)}</div>
+        <div class="sub" style="margin-top:4px">${CW.escapar(nota.autor)} · ${CW.data(nota.quando)}</div>
+      </div>`
+      ),
+      podeMover()
+        ? [
+            '  <div class="cartao">',
+            `    <textarea class="campo" id="detalhe-nota" rows="3" style="margin-top:0" placeholder="O que aconteceu neste atendimento"></textarea>`,
+            '    <div class="linha" style="margin-top:9px;align-items:center">',
+            '      <span class="sub">Entra na linha do tempo do caso.</span>',
+            `      <button class="acao" style="margin-top:0" data-acao="anotar-detalhe" data-protocolo="${CW.escapar(d.protocolo)}">Anotar</button>`,
+            '    </div>',
+            '    <p class="sub falha" id="detalhe-erro"></p>',
+            '  </div>',
+          ].join("")
+        : "",
+      '</div>'
+    );
+
+    partes.push(
+      '<div class="bloco">',
+      `  <button class="acao" data-acao="abrir" data-url="${CW.escapar(d.url)}" style="width:100%;margin-top:0">Abrir na aplicação</button>`,
+      d.urlPortal
+        ? `  <button class="copiar" data-acao="abrir" data-url="${CW.escapar(d.urlPortal)}" style="width:100%;margin-top:7px;padding:8px">Ver no portal</button>`
+        : "",
+      '</div>'
+    );
+
+    corpo.innerHTML = partes.filter(Boolean).join("");
+    corpo.scrollTop = 0;
+  }
+
+  async function anotarNoDetalhe(botao) {
+
+    const erro = corpo.querySelector("#detalhe-erro");
+
+    const texto = (
+      corpo.querySelector("#detalhe-nota")?.value ?? ""
+    ).trim();
+
+    if (erro) erro.textContent = "";
+
+    if (!texto) {
+      if (erro) erro.textContent = "Escreva a anotação antes.";
+      return;
+    }
+
+    const rotulo = botao.textContent;
+
+    botao.disabled = true;
+    botao.textContent = "Anotando...";
+
+    const resposta = await CW.enviar({
+      tipo: "anotar",
+      anotacao: {
+        tipo: "caso",
+        protocolo: botao.dataset.protocolo,
+        texto,
+      },
+    });
+
+    botao.disabled = false;
+    botao.textContent = rotulo;
+
+    if (!resposta.ok || resposta.dados?.erro) {
+      if (erro) {
+        erro.textContent =
+          resposta.dados?.erro ??
+          resposta.erro ??
+          "Falha ao anotar.";
+      }
+      return;
+    }
+
+    // Recarrega para a anotação aparecer na linha do tempo acima.
+    abrirDetalhe(botao.dataset.protocolo);
   }
 
   /**
@@ -2214,8 +2649,8 @@
     const grave = caso.sla.situacao === "estourado";
 
     return `
-      <div class="caso ${grave ? "grave" : ""}" data-acao="abrir"
-           data-url="${CW.escapar(caso.url)}">
+      <div class="caso ${grave ? "grave" : ""}" data-acao="ver"
+           data-protocolo="${CW.escapar(caso.protocolo)}">
         <div class="linha">
           <span class="sub">${CW.escapar(caso.protocolo)}</span>
           <span class="tag ${
@@ -2318,8 +2753,240 @@
       );
     }
 
-    corpo.innerHTML = partes.join("");
+    /* ---- agenda do dia ---- */
+
+    const agenda = await CW.enviar({ tipo: "agenda" });
+
+    const tarefas = agenda.ok
+      ? (agenda.dados?.itens ?? [])
+      : [];
+
+    partes.push(
+      '<div class="bloco">',
+      `  <div class="rotulo">Agenda${tarefas.length ? ` · ${tarefas.length}` : ""}</div>`,
+      tarefas.length === 0
+        ? '  <p class="sub">Nada em aberto para hoje.</p>'
+        : tarefas
+            .map(
+              (t) => `
+      <div class="cartao" style="margin-bottom:6px">
+        <div class="linha">
+          <span class="sub" style="color:var(--texto);font-weight:600">${CW.escapar(t.titulo)}</span>
+          ${
+            t.atrasada
+              ? `<span class="tag perigo">${CW.data(t.quando)}</span>`
+              : `<span class="tag neutro">hoje</span>`
+          }
+        </div>
+        <div class="sub" style="margin-top:3px">
+          ${CW.escapar(t.tipo)}${t.protocolo ? ` · ${CW.escapar(t.protocolo)}` : ""}${t.responsavel ? ` · ${CW.escapar(t.responsavel)}` : ""}
+        </div>
+        <div class="etapas">
+          <button class="passo" data-acao="concluir" data-id="${CW.escapar(t.id)}">concluir</button>
+          ${
+            t.protocolo
+              ? `<button class="passo" data-acao="ver" data-protocolo="${CW.escapar(t.protocolo)}">abrir o caso</button>`
+              : '<span class="passo vazio">sem caso ligado</span>'
+          }
+        </div>
+      </div>`
+            )
+            .join(""),
+      '</div>'
+    );
+
+    /* ---- anotação do dia ---- */
+
+    if (podeMover()) {
+      partes.push(
+        '<div class="bloco">',
+        '  <div class="rotulo">Anotar o dia</div>',
+        '  <div class="cartao">',
+        '    <input class="campo" id="dia-tarefa" type="text" style="margin-top:0" placeholder="Ex.: cobrar o time de pagamentos sobre o caso do pixel" />',
+        '    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">',
+        '      <input class="campo" id="dia-quando" type="date" />',
+        '      <select class="campo" id="dia-tipo">',
+        '        <option value="Pendência">Pendência</option>',
+        '        <option value="Follow-up">Follow-up</option>',
+        '        <option value="Cobrança interna">Cobrança interna</option>',
+        '        <option value="Solicitação de avaliação">Solicitação de avaliação</option>',
+        '      </select>',
+        '    </div>',
+        '    <div class="linha" style="margin-top:9px;align-items:center">',
+        '      <span class="sub">Vai para a agenda, sem caso ligado.</span>',
+        '      <button class="acao" style="margin-top:0" data-acao="anotar-dia">Marcar</button>',
+        '    </div>',
+        '    <p class="sub falha" id="dia-erro"></p>',
+        '  </div>',
+        '</div>'
+      );
+    }
+
+    /* ---- resumo da conversa, quando o site oferece ---- */
+
+    if (lerConversa) {
+      partes.push(blocoResumo());
+    }
+
+    corpo.innerHTML = partes.filter(Boolean).join("");
     corpo.scrollTop = 0;
+  }
+
+  /** A anotação do dia — tarefa de agenda sem caso ligado. */
+  async function anotarODia(botao) {
+
+    const erro = corpo.querySelector("#dia-erro");
+
+    const titulo = (
+      corpo.querySelector("#dia-tarefa")?.value ?? ""
+    ).trim();
+
+    if (erro) erro.textContent = "";
+
+    if (!titulo) {
+      if (erro) {
+        erro.textContent = "A tarefa precisa de um título.";
+      }
+      return;
+    }
+
+    const rotulo = botao.textContent;
+
+    botao.disabled = true;
+    botao.textContent = "Marcando...";
+
+    const resposta = await CW.enviar({
+      tipo: "anotar",
+      anotacao: {
+        tipo: "agenda",
+        titulo,
+        quando: corpo.querySelector("#dia-quando")?.value,
+        tipoDeTarefa:
+          corpo.querySelector("#dia-tipo")?.value,
+      },
+    });
+
+    botao.disabled = false;
+    botao.textContent = rotulo;
+
+    if (!resposta.ok || resposta.dados?.erro) {
+      if (erro) {
+        erro.textContent =
+          resposta.dados?.erro ??
+          resposta.erro ??
+          "Falha ao marcar.";
+      }
+      return;
+    }
+
+    avisar(
+      `Marcado para ${CW.data(resposta.dados.quando)}.`,
+      "ok"
+    );
+
+    carregarPainel();
+  }
+
+  /* ============================================================
+     AGENDA
+  ============================================================ */
+
+  async function concluirTarefa(botao) {
+
+    const rotulo = botao.textContent;
+
+    botao.disabled = true;
+    botao.textContent = "...";
+
+    const resposta = await CW.enviar({
+      tipo: "concluirTarefa",
+      id: botao.dataset.id,
+      concluida: true,
+    });
+
+    botao.disabled = false;
+    botao.textContent = rotulo;
+
+    if (!resposta.ok || resposta.dados?.erro) {
+      avisar(
+        resposta.dados?.erro ??
+          resposta.erro ??
+          "Falha ao concluir.",
+        "perigo"
+      );
+      return;
+    }
+
+    avisar("Tarefa concluída.", "ok");
+
+    carregarPainel();
+  }
+
+  /**
+   * Grava o telefone que a pesquisa não trouxe.
+   *
+   * O Wootric só manda o número quando o cliente o cadastrou no portal,
+   * e em boa parte das respostas ele vem vazio. Sem número, o ciclo não
+   * casa com conversa nenhuma do WhatsApp e some do painel justamente
+   * quando alguém está falando com a pessoa.
+   */
+  async function gravarContatoDoNps(botao) {
+
+    const id = botao.dataset.id;
+
+    const campo = corpo.querySelector(
+      `#nps-contato-${CSS.escape(id)}`
+    );
+
+    const valor = (campo?.value ?? "").trim();
+
+    if (!valor) {
+      avisar(
+        "Digite o telefone ou o e-mail antes.",
+        "atencao"
+      );
+      return;
+    }
+
+    const rotulo = botao.textContent;
+
+    botao.disabled = true;
+    botao.textContent = "...";
+
+    /**
+     * Um campo só para os dois: ter arroba é a diferença. Dois campos
+     * numa gaveta de 380 px seria pedir escolha que o texto já entrega.
+     */
+    const resposta = await CW.enviar({
+      tipo: "registrarNps",
+      registro: {
+        id,
+        acao: "contato",
+        ...(valor.includes("@")
+          ? { email: valor }
+          : { telefone: valor }),
+      },
+    });
+
+    botao.disabled = false;
+    botao.textContent = rotulo;
+
+    if (!resposta.ok || resposta.dados?.erro) {
+      avisar(
+        resposta.dados?.erro ??
+          resposta.erro ??
+          "Falha ao gravar o contato.",
+        "perigo"
+      );
+      return;
+    }
+
+    avisar(
+      "Contato gravado — agora este ciclo casa com a conversa.",
+      "ok"
+    );
+
+    recarregarVista();
   }
 
   /* ============================================================

@@ -93,7 +93,23 @@
     });
   }
 
-  setInterval(verificar, INTERVALO);
+  /**
+   * O laço nunca deixa a página quebrar a ferramenta.
+   *
+   * Detector lê DOM alheio, e DOM alheio muda. Uma exceção aqui, sem a
+   * proteção, derrubava a primeira execução e com ela o próprio
+   * `setInterval` — o painel ficava montado e mudo, sem nada no
+   * console da nossa origem.
+   */
+  function verificarComRede() {
+    try {
+      verificar();
+    } catch (erro) {
+      console.warn("[CW] detector falhou nesta volta", erro);
+    }
+  }
 
-  verificar();
+  setInterval(verificarComRede, INTERVALO);
+
+  verificarComRede();
 })();

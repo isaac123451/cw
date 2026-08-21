@@ -57,6 +57,9 @@ export const dynamic = "force-dynamic";
 
 interface Entrada {
   id?: string;
+  /** Para `acao: "contato"` — telefone e e-mail do cliente. */
+  telefone?: string;
+  email?: string;
   /** "pos-contato" (padrão), "tentativa" ou "status". */
   acao?: string;
   /** Para `acao: "status"` — "avancar" ou "voltar". */
@@ -158,11 +161,59 @@ export async function POST(request: Request) {
    */
   const autor = usuario?.nome ?? "Extensão";
 
-  const acao =
-    entrada.acao === "tentativa" ||
-    entrada.acao === "status"
-      ? entrada.acao
-      : "pos-contato";
+  const acao = [
+    "tentativa",
+    "status",
+    "contato",
+  ].includes(entrada.acao ?? "")
+    ? (entrada.acao as string)
+    : "pos-contato";
+
+  /**
+   * Preencher o contato que a pesquisa não trouxe.
+   *
+   * O Wootric manda o telefone quando o cliente o cadastrou no portal —
+   * e em boa parte das respostas ele vem vazio. Sem número, o ciclo não
+   * casa com nenhuma conversa do WhatsApp e some do painel justamente
+   * quando alguém está falando com a pessoa. Digitar ali resolve, e é o
+   * único caminho: a pesquisa não pergunta telefone.
+   */
+  if (acao === "contato") {
+
+    const telefone = limpo(entrada.telefone, 40);
+    const email = limpo(entrada.email, 160);
+
+    if (!telefone && !email) {
+      return responder(
+        request,
+        {
+          erro: "Informe um telefone ou um e-mail para gravar.",
+        },
+        400
+      );
+    }
+
+    await prisma.npsResponse.update({
+      where: { id },
+      data: {
+        ...(telefone ? { phone: telefone } : {}),
+        ...(email ? { email } : {}),
+      },
+    });
+
+    revalidateTag(WORKSPACE_TAG, "max");
+
+    const comContato =
+      await prisma.npsResponse.findUnique({
+        where: { id },
+        select: SELECAO_NPS,
+      });
+
+    return responder(request, {
+      gravado: true,
+      nps: comContato ? retratoNps(comContato) : null,
+    });
+  }
 
   if (acao === "status") {
 

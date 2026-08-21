@@ -58,6 +58,8 @@ interface LinhaNps {
   status: string;
   kind: string | null;
   customer: string;
+  phone?: string | null;
+  email?: string | null;
   establishmentId: string | null;
   respondedAt: Date;
   firstContactDueAt: Date;
@@ -82,6 +84,17 @@ export interface RetratoNps {
   tentativas: number;
   establishmentId: string | null;
   encerrado: boolean;
+
+  /**
+   * Tem telefone ou e-mail?
+   *
+   * O valor em si **não** sai daqui: o painel só precisa saber se dá
+   * para achar este ciclo por uma conversa. Mandar o número junto
+   * exporia contato de consumidor numa resposta que a extensão guarda
+   * em cache, sem nenhum uso na tela.
+   */
+  temContato: boolean;
+
   humor?: number;
   resolvido?: boolean;
   notaPosContato?: string;
@@ -106,6 +119,11 @@ export function retratoNps(linha: LinhaNps): RetratoNps {
     tentativas: linha._count.attempts,
     establishmentId: linha.establishmentId,
     encerrado: isEncerrado(linha.status),
+
+    temContato: Boolean(
+      (linha.phone ?? "").trim() ||
+        (linha.email ?? "").trim()
+    ),
 
     humor: linha.moodAfter ?? undefined,
 

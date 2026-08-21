@@ -20,9 +20,35 @@
 (() => {
   const CW = window.CWReputacao;
 
-  if (!CW?.painel || !CW.ra) return;
+  if (!CW?.painel) return;
 
+  /**
+   * Monta **antes** de qualquer dependência.
+   *
+   * Isto custou um defeito com sintoma péssimo: "a extensão não abre
+   * mais, só reinstalando". A guarda aqui era
+   * `if (!CW?.painel || !CW.ra) return;`, e `ra-campos.js` é arquivo
+   * novo no manifesto — recarregar uma extensão descompactada nem
+   * sempre relê a lista de scripts de conteúdo, então `CW.ra` vinha
+   * indefinido, o detector desistia **antes de montar**, e o painel
+   * simplesmente não existia na página. Reinstalar relia o manifesto e
+   * "consertava", o que escondia a causa.
+   *
+   * A regra que fica: falta de dependência vira aviso na tela, nunca o
+   * desaparecimento da ferramenta.
+   */
   CW.painel.montar();
+
+  if (!CW.ra) {
+
+    CW.painel.definirContexto({
+      canalDaPagina: "Reclame Aqui",
+      rotulo:
+        "recarregue a extensão — falta um arquivo novo (ra-campos.js)",
+    });
+
+    return;
+  }
 
   const INTERVALO = 1500;
 
@@ -262,7 +288,23 @@
    */
   CW.painel.definirDiagnostico(texto);
 
-  setInterval(verificar, INTERVALO);
+  /**
+   * O laço nunca deixa a página quebrar a ferramenta.
+   *
+   * Detector lê DOM alheio, e DOM alheio muda. Uma exceção aqui, sem a
+   * proteção, derrubava a primeira execução e com ela o próprio
+   * `setInterval` — o painel ficava montado e mudo, sem nada no
+   * console da nossa origem.
+   */
+  function verificarComRede() {
+    try {
+      verificar();
+    } catch (erro) {
+      console.warn("[CW] detector falhou nesta volta", erro);
+    }
+  }
 
-  verificar();
+  setInterval(verificarComRede, INTERVALO);
+
+  verificarComRede();
 })();

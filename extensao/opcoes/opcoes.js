@@ -20,6 +20,7 @@ const aviso = document.getElementById("aviso");
 
 const caixas = {
   autoAbrir: document.getElementById("autoAbrir"),
+  empurrar: document.getElementById("empurrar"),
   contador: document.getElementById("contador"),
   aviso: document.getElementById("aviso-diario"),
   lembretes: document.getElementById("lembretes"),
@@ -74,6 +75,7 @@ async function carregar() {
   campoBase.value = config.base ?? "";
 
   caixas.autoAbrir.checked = Boolean(config.autoAbrir);
+  caixas.empurrar.checked = config.empurrar !== false;
   caixas.contador.checked = Boolean(config.contador);
   caixas.aviso.checked = Boolean(config.aviso);
   caixas.lembretes.checked = Boolean(config.lembretes);

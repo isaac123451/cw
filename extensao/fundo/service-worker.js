@@ -31,6 +31,8 @@ const CAMINHOS = {
   mover: "/api/extensao/mover",
   fila: "/api/extensao/fila",
   anotar: "/api/extensao/anotar",
+  detalhe: "/api/extensao/detalhe",
+  agenda: "/api/extensao/agenda",
 };
 
 /**
@@ -363,10 +365,47 @@ async function tratar(mensagem) {
     return { ok: true, dados };
   }
 
+  /**
+   * O caso inteiro, para ler dentro do painel.
+   *
+   * Sem cache: quem abre o detalhe quer o estado de agora, e a
+   * própria tela move etapa e anota logo em seguida.
+   */
+  if (mensagem?.tipo === "detalhe") {
+
+    const dados = await chamar(CAMINHOS.detalhe, {
+      protocolo: mensagem.protocolo,
+    });
+
+    return { ok: true, dados };
+  }
+
+  /** A agenda do dia — e o atrasado, que vem junto. */
+  if (mensagem?.tipo === "agenda") {
+
+    const dados = await chamar(CAMINHOS.agenda);
+
+    return { ok: true, dados };
+  }
+
+  if (mensagem?.tipo === "concluirTarefa") {
+
+    const dados = await chamar(CAMINHOS.agenda, {}, {
+      id: mensagem.id,
+      concluida: mensagem.concluida,
+    });
+
+    cache.clear();
+
+    return { ok: true, dados };
+  }
+
   if (mensagem?.tipo === "fila") {
 
     const dados = await chamar(CAMINHOS.fila, {
       canal: mensagem.canal,
+      etapa: mensagem.etapa,
+      segmento: mensagem.segmento,
     });
 
     return { ok: true, dados };

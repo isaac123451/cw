@@ -719,6 +719,44 @@
   background: color-mix(in srgb, var(--violeta) 9%, transparent);
 }
 
+/* ---------- filtros em chip ---------- */
+
+/**
+ * A barra de filtros da fila — etapa, segmento, escopo.
+ *
+ * Quebra em várias linhas de propósito: numa gaveta de 380 px, cinco
+ * etapas com contagem não cabem numa linha só, e rolagem horizontal
+ * esconde justamente o filtro que a pessoa procura.
+ */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 9px;
+}
+
+.chip {
+  border: 1px solid var(--borda);
+  border-radius: 999px;
+  background: var(--elevado);
+  color: var(--fraco);
+  padding: 3px 9px;
+  font-size: 11px;
+  font-weight: 500;
+  font-family: var(--fonte);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.chip:hover { border-color: var(--violeta); color: var(--violeta); }
+
+.chip[aria-pressed="true"] {
+  border-color: var(--violeta);
+  background: color-mix(in srgb, var(--violeta) 14%, transparent);
+  color: var(--violeta);
+  font-weight: 600;
+}
+
 /* ---------- avançar e voltar etapa ---------- */
 
 .etapas {

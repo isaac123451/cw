@@ -34,6 +34,17 @@ export const PADROES = {
   largura: 380,
 
   /**
+   * Empurrar a página para o lado enquanto a gaveta está aberta.
+   *
+   * Ancorada, a gaveta fica por cima do site — e no WhatsApp Web é
+   * justamente a coluna das mensagens que ela cobre. Ligado, o site se
+   * redesenha mais estreito, como faz com qualquer barra lateral de
+   * navegador. Vale só para a gaveta ancorada: solta, ela já é janela
+   * flutuante e o empurrão só encolheria a página sem motivo.
+   */
+  empurrar: true,
+
+  /**
    * Manter o painel aberto.
    *
    * O WhatsApp Web reescreve a árvore da página em algumas navegações,

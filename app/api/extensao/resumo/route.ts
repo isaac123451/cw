@@ -27,6 +27,7 @@ import { isOpen } from "@/lib/services/case.service";
 import { getPrisma } from "@/lib/prisma";
 import { NpsResponseView } from "@/lib/models/nps";
 import { summarize } from "@/lib/services/nps.service";
+import { provedorDeIA } from "@/lib/services/ia.service";
 
 /**
  * O NPS do mês corrido, para o popup.
@@ -163,6 +164,19 @@ export async function GET(request: Request) {
     demonstracao,
 
     aplicacao: origem,
+
+    /**
+     * Qual IA está ligada **nesta** instalação.
+     *
+     * O popup e o painel mostram isso porque a resposta muda por
+     * ambiente: a chave pode estar no `.env` local e faltar na Vercel,
+     * e o sintoma disso era o botão de resumir não fazer nada em
+     * produção enquanto funcionava na máquina de quem programou.
+     */
+    ia: {
+      disponivel: Boolean(provedorDeIA()),
+      provedor: provedorDeIA(),
+    },
 
     reputacao: {
       nota: reputacao.raScore,

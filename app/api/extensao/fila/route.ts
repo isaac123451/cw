@@ -16,7 +16,10 @@ import {
 import { slaStatus } from "@/lib/services/sla.service";
 import { REFERENCE_DATE } from "@/lib/services/reputation.service";
 
-import { isEncerrado } from "@/lib/models/nps";
+import {
+  isEncerrado,
+  segmentOf,
+} from "@/lib/models/nps";
 import {
   retratoNps,
   SELECAO_NPS,
@@ -61,7 +64,10 @@ export async function GET(request: Request) {
   if (canal === "nps") {
     return responder(
       request,
-      await filaDoNps(origem)
+      await filaDoNps(
+        origem,
+        url.searchParams.get("segmento") ?? ""
+      )
     );
   }
 
@@ -83,13 +89,36 @@ export async function GET(request: Request) {
   const abertos = byChannel(todos, canal).filter(isOpen);
 
   /**
+   * Quantos há em cada etapa, sobre a fila inteira.
+   *
+   * Mesmo motivo da contagem por segmento do NPS: filtrar não pode
+   * apagar o mapa que serve para escolher o próximo filtro.
+   */
+  const porEtapa: Record<string, number> = {};
+
+  for (const item of abertos) {
+    porEtapa[item.status] =
+      (porEtapa[item.status] ?? 0) + 1;
+  }
+
+  const etapaPedida = (
+    url.searchParams.get("etapa") ?? ""
+  ).trim();
+
+  const daEtapa = etapaPedida
+    ? abertos.filter(
+        (item) => item.status === etapaPedida
+      )
+    : abertos;
+
+  /**
    * Ordem: prazo estourado primeiro, depois quem vence antes.
    *
    * É a mesma pergunta que o Kanban responde por cor, dita em lista —
    * quem abre a fila quer saber o que pega agora, não o que chegou
    * primeiro.
    */
-  const comSla = abertos.map((item) => ({
+  const comSla = daEtapa.map((item) => ({
     item,
     sla: slaStatus(item, workspace.slaRules, REFERENCE_DATE),
   }));
@@ -109,7 +138,10 @@ export async function GET(request: Request) {
 
   return responder(request, {
     canal,
-    total: abertos.length,
+    total: daEtapa.length,
+    totalGeral: abertos.length,
+    etapa: etapaPedida,
+    porEtapa,
 
     itens: comSla.slice(0, TETO).map(({ item, sla }) => ({
       id: item.id,
@@ -144,7 +176,10 @@ export async function GET(request: Request) {
  * promotor calado, que são ~790 por mês e enterrariam os detratores.
  * Ordem por prazo de primeiro contato: quem está fora do prazo primeiro.
  */
-async function filaDoNps(origem: string) {
+async function filaDoNps(
+  origem: string,
+  segmento: string
+) {
 
   const prisma = getPrisma();
 
@@ -162,11 +197,38 @@ async function filaDoNps(origem: string) {
     .map(retratoNps)
     .filter((item) => !isEncerrado(item.status));
 
+  /**
+   * Quantos há em cada faixa, **antes** de filtrar.
+   *
+   * A contagem tem de descrever a fila inteira: se ela mudasse junto
+   * com o filtro, escolher "Detratores" mostraria "3 detratores, 0
+   * passivos, 0 promotores" e a barra deixaria de servir para navegar.
+   */
+  const porSegmento = {
+    Detrator: 0,
+    Passivo: 0,
+    Promotor: 0,
+  } as Record<string, number>;
+
+  for (const item of abertos) {
+    porSegmento[segmentOf(item.nota).label] += 1;
+  }
+
+  const filtrados = segmento
+    ? abertos.filter(
+        (item) => segmentOf(item.nota).label === segmento
+      )
+    : abertos;
+
   return {
     canal: "nps",
-    total: abertos.length,
-    itens: abertos.slice(0, TETO).map((item) => ({
+    total: filtrados.length,
+    totalGeral: abertos.length,
+    segmento,
+    porSegmento,
+    itens: filtrados.slice(0, TETO).map((item) => ({
       ...item,
+      segmento: segmentOf(item.nota).label,
       url: `${origem}/nps`,
     })),
   };
