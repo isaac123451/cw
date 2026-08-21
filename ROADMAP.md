@@ -39,6 +39,9 @@ aplicação e **de sessão (5432)** em `DIRECT_URL`, usada por `db:push`,
 | `npm run check:nps` | Compara o NPS daqui com o do Wootric na mesma janela |
 | `npm run nps:wootric -- --dias=90` | Importa o NPS do Wootric (`--seco` para simular) |
 | `npm run ra:importar -- <arquivo.xlsx>` | Grava o export do RA no banco **com contato completo** |
+| `npm run check:ia` | Diz qual IA está ligada e faz uma chamada real com saída estruturada |
+| `npm run check:busca` | Prova que a busca por candidatos não perdeu nenhum caso, e mede |
+| `npm run check:mover` | Prova o que acontece ao mover um caso de etapa |
 | `npm run check:ra` | Prova os leitores da página do Reclame Aqui contra o texto de uma reclamação real |
 | `npm run check:cadastros` | Prova que Times, Metas e Clientes sobrevivem ao recarregamento |
 | `npm run extensao:icones` | Regera os PNGs do ícone da extensão |
@@ -62,10 +65,11 @@ O contexto inteiro está em `extensao/LEIA-ME.md` e no fim de
    mês a mês em SVG e o NPS dos 30 dias, no popup.
 3. ~~**Anotações pela extensão.**~~ Feito em 21/08 —
    `app/api/extensao/anotar/` e o formulário no painel.
-4. **Telas por segmento e análise do NPS.** Os três indicadores do topo
-   já filtram a lista ao clique. Falta a tela dedicada, no espírito de
-   `/reclame-aqui/analytics`: tendência do NPS, causa raiz, distribuição
-   da régua de humor, e o recorte por segmento com página própria.
+4. **Tela de análise do NPS.** Os filtros por segmento já estão na
+   barra (Detratores / Passivos / Promotores, com contagem) e na fila da
+   extensão. Falta a **tela dedicada**, no espírito de
+   `/reclame-aqui/analytics`: tendência do NPS, causa raiz e
+   distribuição da régua de humor.
 5. **ManyChat.** Bloqueado: a planilha compartilhada
    (`1-pCxjB4Rrw3drlDFGNRYMFceMVWSJe34PBLVR6Vfz4o`) tem **uma aba só**,
    "Métricas do Reclame Aqui" — não há aba de ManyChat nela. Sem o
@@ -198,6 +202,65 @@ no banco. Ver "Tudo persiste" em Entregue.)*
 ---
 
 ## Entregue
+
+### Triagem por IA, e a IA como configuração (21/08/2026)
+
+**"Dá para responder agora, ou precisa de análise?"** é a primeira
+pergunta de quem abre uma reclamação, e a que mais custa quando erra nos
+dois sentidos: responder o que exigia apuração vira promessa que não se
+cumpre; mandar para análise o que já tinha resposta pronta queima o
+prazo do índice de resposta, o item de maior peso da nota.
+
+`/api/extensao/triagem` lê o relato **e os textos aprovados**. É o que
+separa "sei responder" de "inventei uma resposta": sem macro que cubra o
+assunto e com o relato pedindo dado que não está ali, a resposta certa é
+analisar. Devolve decisão, gravidade, o que verificar, área sugerida e
+um rascunho — e **não grava nem envia nada**.
+
+Provado contra a reclamação real `RA-256949163`: decidiu *analisar*,
+gravidade alta, quatro itens concretos para verificar, área "Suporte
+Técnico", e um rascunho que acolhe sem prometer prazo.
+
+**O assistente passou a usar a IA que estiver configurada.** Antes olhava
+só a `ANTHROPIC_API_KEY` e ficava desligado numa instalação com Gemini —
+a chave existia, só não era a que aquele arquivo conhecia. O streaming
+foi para `ia.service.ts`, implementado nos dois provedores.
+
+**Prazo nas chamadas.** Medido: uma triagem chegou a **162 segundos** com
+a camada gratuita congestionada, e o botão ficou dois minutos e meio em
+"Lendo…". Trinta segundos agora, e estourar conta como falha
+transitória — que é o que faz tentar a reserva em vez de desistir.
+
+### O cache que não existia (21/08/2026)
+
+O cache do service worker era um `Map` em memória. No Manifest V3 o
+service worker é **encerrado depois de poucos segundos ocioso** e
+recriado na próxima mensagem — então quase nenhuma consulta acertava o
+cache, e toda abertura do painel pagava a ida completa ao servidor.
+
+Agora vive no `chrome.storage.session`, com dois prazos: **fresco por
+dois minutos, servível por trinta**. Dentro do primeiro responde sem
+tocar na rede; entre um e outro desenha na hora com o guardado e busca o
+atual atrás, sem piscar a tela. `session` e não `local` porque some ao
+fechar o navegador — contato de consumidor não fica gravado em disco.
+
+Somado à busca por candidatos (7× mais rápida), é o grosso da lentidão
+que se sentia ao abrir a gaveta.
+
+### /api/saude (21/08/2026)
+
+Diz o que **este** ambiente tem configurado — provedor de IA, banco
+alcançável, Google, Wootric — sem revelar segredo nenhum. Nasceu de um
+problema repetido: variável presente no `.env` e ausente na Vercel
+produz recurso que funciona aqui e não lá, e descobrir isso exigia
+entrar na aplicação e clicar no botão que falha.
+
+Protegida pelo `API_TOKEN`:
+
+```bash
+curl -H "Authorization: Bearer SEU_API_TOKEN" https://cw-rho-eight.vercel.app/api/saude
+```
+
 
 ### Filas por canal, anotações e escolha de IA (21/08/2026)
 
