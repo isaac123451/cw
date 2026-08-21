@@ -245,6 +245,22 @@ const RESERVA_GEMINI =
   "gemini-3.6-flash";
 
 /**
+ * Prazo para desistir de uma chamada.
+ *
+ * Medido: uma triagem chegou a **162 segundos** na camada gratuita
+ * congestionada — a primeira tentativa ficou pendurada, a reserva
+ * também, e o botão do painel ficou dois minutos e meio "Lendo…". Sem
+ * teto, o `fetch` espera o quanto o servidor quiser.
+ *
+ * Trinta segundos é generoso para um resumo curto e curto o bastante
+ * para a pessoa entender que falhou em vez de achar que travou. Quem
+ * roda em lote pode afrouxar por variável.
+ */
+const PRAZO_MS = Number(
+  process.env.IA_PRAZO_MS ?? 30_000
+);
+
+/**
  * O `responseSchema` do Gemini é um subconjunto do JSON Schema.
  *
  * Ele aceita `type`, `properties`, `required`, `items`, `enum` e
@@ -399,6 +415,7 @@ async function chamarGemini(
           responseSchema: paraGemini(pedido.esquema),
         },
       }),
+      signal: AbortSignal.timeout(PRAZO_MS),
     });
 
     if (!resposta.ok) {
@@ -489,11 +506,300 @@ async function chamarGemini(
       },
     };
 
-  } catch {
+  } catch (erro) {
+
+    /**
+     * Estourar o prazo é falha transitória, e por isso devolve 503:
+     * é o código que faz `peloGemini` tentar a reserva, em vez de
+     * desistir de uma vez.
+     */
+    const expirou =
+      erro instanceof Error &&
+      (erro.name === "TimeoutError" ||
+        erro.name === "AbortError");
+
     return {
       provedor: "gemini",
-      status: 502,
-      erro: "Falha ao falar com o Gemini.",
+      status: expirou ? 503 : 502,
+      erro: expirou
+        ? `O Gemini não respondeu em ${Math.round(PRAZO_MS / 1000)} segundos. A camada gratuita fica em fila nos horários de pico.`
+        : "Falha ao falar com o Gemini.",
     };
   }
+}
+
+/* ============================================================
+   CONVERSA EM FLUXO
+============================================================ */
+
+export interface Turno {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export type PedacoDaConversa =
+  | { tipo: "delta"; texto: string }
+  | {
+      tipo: "fim";
+      uso: { entrada: number; saida: number };
+    }
+  | { tipo: "erro"; mensagem: string };
+
+/**
+ * O assistente, no provedor que estiver ligado.
+ *
+ * Em fluxo porque a resposta é longa e lida enquanto chega — esperar o
+ * texto inteiro para então mostrar transforma vinte segundos de leitura
+ * em vinte segundos de tela parada.
+ *
+ * O retrato da operação vai na **instrução de sistema**, e não como
+ * primeiro turno: é a única forma que os dois provedores tratam igual, e
+ * na Anthropic continua sendo o trecho estável que o cache de prompt
+ * aproveita entre perguntas.
+ */
+export async function* conversar(pedido: {
+  sistema: string;
+  turnos: Turno[];
+}): AsyncGenerator<PedacoDaConversa> {
+
+  const provedor = provedorDeIA();
+
+  if (!provedor) {
+    yield {
+      tipo: "erro",
+      mensagem:
+        "Nenhuma IA configurada. Defina ANTHROPIC_API_KEY ou GEMINI_API_KEY.",
+    };
+    return;
+  }
+
+  if (provedor === "gemini") {
+    yield* conversarNoGemini(pedido);
+    return;
+  }
+
+  yield* conversarNaAnthropic(pedido);
+}
+
+async function* conversarNaAnthropic(pedido: {
+  sistema: string;
+  turnos: Turno[];
+}): AsyncGenerator<PedacoDaConversa> {
+
+  const client = new Anthropic();
+
+  try {
+
+    const fluxo = client.messages.stream({
+      model: "claude-opus-5",
+
+      // Cobre o raciocínio adaptativo (ligado por padrão) mais o texto.
+      max_tokens: 16000,
+
+      system: [
+        {
+          type: "text",
+          text: pedido.sistema,
+          cache_control: { type: "ephemeral" },
+        },
+      ],
+      output_config: { effort: "medium" },
+      messages: pedido.turnos.map((t) => ({
+        role: t.role,
+        content: t.content,
+      })),
+    });
+
+    /**
+     * Fila entre o evento e o gerador.
+     *
+     * O SDK entrega os deltas por callback e o gerador precisa
+     * devolvê-los por `yield` — sem a fila, um dos dois lados teria de
+     * bloquear o outro.
+     */
+    const pendentes: string[] = [];
+    let acabou = false;
+    let acordar: (() => void) | null = null;
+
+    fluxo.on("text", (delta) => {
+      pendentes.push(delta);
+      acordar?.();
+    });
+
+    const finalizacao = fluxo
+      .finalMessage()
+      .finally(() => {
+        acabou = true;
+        acordar?.();
+      });
+
+    while (!acabou || pendentes.length > 0) {
+
+      if (pendentes.length === 0) {
+        await new Promise<void>((resolver) => {
+          acordar = resolver;
+        });
+        acordar = null;
+        continue;
+      }
+
+      yield { tipo: "delta", texto: pendentes.shift()! };
+    }
+
+    const final = await finalizacao;
+
+    if (final.stop_reason === "refusal") {
+      yield {
+        tipo: "erro",
+        mensagem:
+          "O modelo recusou responder a esta pergunta.",
+      };
+      return;
+    }
+
+    yield {
+      tipo: "fim",
+      uso: {
+        entrada: final.usage.input_tokens,
+        saida: final.usage.output_tokens,
+      },
+    };
+
+  } catch (erro) {
+
+    yield {
+      tipo: "erro",
+      mensagem:
+        erro instanceof Anthropic.RateLimitError
+          ? "Limite de requisições atingido. Tente de novo em instantes."
+          : erro instanceof Anthropic.AuthenticationError
+            ? "Chave da Anthropic inválida."
+            : erro instanceof Anthropic.APIError
+              ? `Erro da API (${erro.status}).`
+              : "Falha ao falar com o modelo.",
+    };
+  }
+}
+
+async function* conversarNoGemini(pedido: {
+  sistema: string;
+  turnos: Turno[];
+}): AsyncGenerator<PedacoDaConversa> {
+
+  /**
+   * `alt=sse` é o que faz o Gemini devolver eventos.
+   *
+   * Sem ele, `streamGenerateContent` devolve um array JSON inteiro no
+   * fim — que é o oposto de fluxo, e daria a mesma tela parada que
+   * motivou o streaming.
+   */
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODELO_GEMINI}:streamGenerateContent?alt=sse`;
+
+  let resposta: Response;
+
+  try {
+    resposta = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": chave("GEMINI_API_KEY"),
+      },
+      body: JSON.stringify({
+        systemInstruction: {
+          parts: [{ text: pedido.sistema }],
+        },
+        contents: pedido.turnos.map((t) => ({
+          // O Gemini chama de "model" o que a Anthropic chama de
+          // "assistant"; o papel do usuário tem o mesmo nome.
+          role: t.role === "assistant" ? "model" : "user",
+          parts: [{ text: t.content }],
+        })),
+      }),
+    });
+  } catch {
+    yield {
+      tipo: "erro",
+      mensagem: "Falha ao falar com o Gemini.",
+    };
+    return;
+  }
+
+  if (!resposta.ok || !resposta.body) {
+
+    yield {
+      tipo: "erro",
+      mensagem:
+        resposta.status === 503
+          ? "O Gemini está congestionado neste momento. Tente de novo em alguns segundos."
+          : resposta.status === 429
+            ? "Cota do Gemini esgotada. A camada gratuita tem limite por minuto e por dia."
+            : `O Gemini respondeu ${resposta.status}.`,
+    };
+    return;
+  }
+
+  const leitor = resposta.body.getReader();
+  const decodificador = new TextDecoder();
+
+  let sobra = "";
+  let entrada = 0;
+  let saida = 0;
+
+  while (true) {
+
+    const { done, value } = await leitor.read();
+
+    if (done) break;
+
+    sobra += decodificador.decode(value, {
+      stream: true,
+    });
+
+    /**
+     * Um evento por linha em branco dupla — e o pedaço final pode vir
+     * cortado no meio, por isso a sobra volta para a próxima volta.
+     */
+    const partes = sobra.split("\n\n");
+
+    sobra = partes.pop() ?? "";
+
+    for (const parte of partes) {
+
+      const linha = parte
+        .split("\n")
+        .find((l) => l.startsWith("data:"));
+
+      if (!linha) continue;
+
+      const cru = linha.slice(5).trim();
+
+      if (cru === "" || cru === "[DONE]") continue;
+
+      try {
+
+        const evento = JSON.parse(cru);
+
+        const texto = (
+          evento.candidates?.[0]?.content?.parts ?? []
+        )
+          .map((p: { text?: string }) => p.text ?? "")
+          .join("");
+
+        if (texto) yield { tipo: "delta", texto };
+
+        if (evento.usageMetadata) {
+          entrada =
+            evento.usageMetadata.promptTokenCount ?? entrada;
+          saida =
+            evento.usageMetadata.candidatesTokenCount ??
+            saida;
+        }
+
+      } catch {
+        // Pedaço inválido não derruba a conversa inteira.
+      }
+    }
+  }
+
+  yield { tipo: "fim", uso: { entrada, saida } };
 }

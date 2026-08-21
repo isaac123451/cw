@@ -1,4 +1,7 @@
-import Anthropic from "@anthropic-ai/sdk";
+import {
+  conversar,
+  provedorDeIA,
+} from "@/lib/services/ia.service";
 
 import { ASSISTANT_SYSTEM } from "@/lib/services/assistant.context";
 
@@ -28,14 +31,14 @@ interface Payload {
  */
 export function hasAssistant() {
 
-  const chave = (process.env.ANTHROPIC_API_KEY ?? "").trim();
-
-  if (chave === "") return false;
-
-  // Placeholders herdados do .env.example.
-  if (chave.endsWith("...")) return false;
-
-  return chave.startsWith("sk-ant-");
+  /**
+   * Delegado ao serviço de IA.
+   *
+   * Antes olhava só a `ANTHROPIC_API_KEY`, e o assistente ficava
+   * desligado numa instalação que tinha o Gemini configurado — a chave
+   * existia, só não era a que este arquivo conhecia.
+   */
+  return Boolean(provedorDeIA());
 }
 
 /**
@@ -108,31 +111,19 @@ export async function POST(request: Request) {
     );
   }
 
-  const client = new Anthropic();
+  /**
+   * O retrato da operação entra na instrução de sistema.
+   *
+   * Antes era o primeiro turno da conversa, para aproveitar o cache de
+   * prompt entre perguntas. No sistema ele continua sendo o trecho
+   * estável que o cache marca — e é a única forma que os dois
+   * provedores tratam do mesmo jeito, agora que o assistente responde
+   * pela IA que estiver configurada.
+   */
+  const sistema = `${ASSISTANT_SYSTEM}
 
-  // O retrato entra como primeiro turno para o restante da conversa
-  // aproveitar o cache de prompt entre perguntas.
-  const conversa: Anthropic.MessageParam[] = [
-    {
-      role: "user",
-      content: [
-        {
-          type: "text",
-          text: snapshot,
-          cache_control: { type: "ephemeral" },
-        },
-      ],
-    },
-    {
-      role: "assistant",
-      content:
-        "Retrato da operação recebido. Pode perguntar.",
-    },
-    ...messages.map((item) => ({
-      role: item.role,
-      content: item.content,
-    })),
-  ];
+--- RETRATO DA OPERAÇÃO ---
+${snapshot}`;
 
   const encoder = new TextEncoder();
 
@@ -143,59 +134,52 @@ export async function POST(request: Request) {
       function send(evento: unknown) {
         controller.enqueue(
           encoder.encode(
-            `data: ${JSON.stringify(evento)}\n\n`
+            `data: ${JSON.stringify(evento)}
+
+`
           )
         );
       }
 
       try {
 
-        const resposta = client.messages.stream({
-          model: "claude-opus-5",
-          // Espaço para o raciocínio adaptativo (ligado por padrão no
-          // Opus 5) mais o texto — o limite cobre os dois juntos.
-          max_tokens: 16000,
-          system: ASSISTANT_SYSTEM,
-          output_config: { effort: "medium" },
-          messages: conversa,
-        });
+        for await (const pedaco of conversar({
+          sistema,
+          turnos: messages.map((item) => ({
+            role: item.role,
+            content: item.content,
+          })),
+        })) {
 
-        resposta.on("text", (delta) => {
-          send({ type: "delta", text: delta });
-        });
+          if (pedaco.tipo === "delta") {
+            send({ type: "delta", text: pedaco.texto });
+            continue;
+          }
 
-        const final = await resposta.finalMessage();
+          if (pedaco.tipo === "erro") {
+            send({
+              type: "error",
+              message: pedaco.mensagem,
+            });
+            continue;
+          }
 
-        if (final.stop_reason === "refusal") {
-          send({
-            type: "error",
-            message:
-              "O modelo recusou responder a esta pergunta.",
-          });
-        } else {
           send({
             type: "done",
+            provedor: provedorDeIA(),
             usage: {
-              input: final.usage.input_tokens,
-              output: final.usage.output_tokens,
-              cacheRead:
-                final.usage.cache_read_input_tokens ?? 0,
+              input: pedaco.uso.entrada,
+              output: pedaco.uso.saida,
             },
           });
         }
 
-      } catch (error) {
+      } catch {
 
-        const message =
-          error instanceof Anthropic.RateLimitError
-            ? "Limite de requisições atingido. Tente de novo em instantes."
-            : error instanceof Anthropic.AuthenticationError
-            ? "Chave da API inválida."
-            : error instanceof Anthropic.APIError
-            ? `Erro da API (${error.status}).`
-            : "Falha ao falar com o modelo.";
-
-        send({ type: "error", message });
+        send({
+          type: "error",
+          message: "Falha ao falar com o modelo.",
+        });
       }
 
       controller.close();

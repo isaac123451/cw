@@ -33,6 +33,7 @@ const CAMINHOS = {
   anotar: "/api/extensao/anotar",
   detalhe: "/api/extensao/detalhe",
   agenda: "/api/extensao/agenda",
+  triagem: "/api/extensao/triagem",
 };
 
 /**
@@ -42,26 +43,92 @@ const CAMINHOS = {
  * frequência. Sem isto, trocar de conversa e voltar renderia dezenas de
  * consultas iguais em poucos segundos.
  */
-const CACHE_MS = 45_000;
+/**
+ * Fresco por dois minutos; servível por trinta.
+ *
+ * Dois prazos porque são duas perguntas diferentes. Dentro do primeiro,
+ * o dado é bom e a resposta sai sem tocar na rede. Entre um e outro, o
+ * dado é **velho mas útil**: o painel desenha na hora com ele e pede
+ * uma atualização em seguida — que é a diferença entre uma gaveta que
+ * abre instantânea e uma que fica dois segundos em "Consultando…".
+ */
+const FRESCO_MS = 120_000;
+const SERVIVEL_MS = 30 * 60_000;
 
-const cache = new Map();
+/**
+ * O cache mora no `chrome.storage.session`, não em memória.
+ *
+ * Isto era um `Map`, e o `Map` não sobrevivia: no Manifest V3 o service
+ * worker é **encerrado depois de poucos segundos ocioso** e recriado na
+ * próxima mensagem. Na prática quase nenhuma consulta acertava o cache,
+ * e cada abertura do painel pagava a ida completa ao servidor — era boa
+ * parte da lentidão que se sentia.
+ *
+ * `session` e não `local`: some ao fechar o navegador, que é o
+ * comportamento certo para retrato de cliente. Nada de contato de
+ * consumidor fica gravado em disco.
+ */
+const deposito =
+  chrome.storage.session ?? chrome.storage.local;
 
-function doCache(chave) {
-
-  const item = cache.get(chave);
-
-  if (!item) return null;
-
-  if (Date.now() - item.em > CACHE_MS) {
-    cache.delete(chave);
-    return null;
-  }
-
-  return item.dados;
+function chaveDoCache(chave) {
+  return `cache:${chave}`;
 }
 
-function guardar(chave, dados) {
-  cache.set(chave, { em: Date.now(), dados });
+async function doCache(chave) {
+
+  try {
+
+    const nome = chaveDoCache(chave);
+
+    const guardado = (await deposito.get(nome))[nome];
+
+    if (!guardado) return null;
+
+    const idade = Date.now() - guardado.em;
+
+    if (idade > SERVIVEL_MS) {
+      await deposito.remove(nome);
+      return null;
+    }
+
+    return {
+      dados: guardado.dados,
+      vencido: idade > FRESCO_MS,
+    };
+
+  } catch {
+    // Storage indisponível não pode derrubar a consulta.
+    return null;
+  }
+}
+
+async function guardar(chave, dados) {
+  try {
+    await deposito.set({
+      [chaveDoCache(chave)]: { em: Date.now(), dados },
+    });
+  } catch {
+    /**
+     * Cota do storage estourada, por exemplo. Perder o cache é
+     * aceitável; perder a resposta que já está em mãos, não.
+     */
+  }
+}
+
+/** Esquece tudo — depois de gravar, o retrato guardado envelheceu. */
+async function limparCache() {
+  try {
+    const tudo = await deposito.get(null);
+
+    const nossas = Object.keys(tudo).filter((k) =>
+      k.startsWith("cache:")
+    );
+
+    if (nossas.length) await deposito.remove(nossas);
+  } catch {
+    /* nada a fazer */
+  }
 }
 
 /* ============================================================
@@ -260,10 +327,22 @@ async function tratar(mensagem) {
 
     const chave = JSON.stringify(consulta);
 
-    const guardado = doCache(chave);
+    const guardado = mensagem.forcar
+      ? null
+      : await doCache(chave);
 
-    if (guardado && !mensagem.forcar) {
-      return { ok: true, dados: guardado, doCache: true };
+    if (guardado) {
+      /**
+       * Velho ainda serve — e o painel decide o que fazer com isso.
+       * `vencido` é o sinal para ele pedir a atualização depois de já
+       * ter desenhado.
+       */
+      return {
+        ok: true,
+        dados: guardado.dados,
+        doCache: true,
+        vencido: guardado.vencido,
+      };
     }
 
     const dados = await chamar(
@@ -271,7 +350,7 @@ async function tratar(mensagem) {
       consulta
     );
 
-    guardar(chave, dados);
+    await guardar(chave, dados);
 
     return { ok: true, dados };
   }
@@ -313,7 +392,7 @@ async function tratar(mensagem) {
     );
 
     // A base mudou: o retrato guardado envelheceu na hora.
-    cache.clear();
+    await limparCache();
 
     return { ok: true, dados };
   }
@@ -334,7 +413,7 @@ async function tratar(mensagem) {
       para: mensagem.para,
     });
 
-    cache.clear();
+    await limparCache();
 
     return { ok: true, dados };
   }
@@ -360,7 +439,7 @@ async function tratar(mensagem) {
       mensagem.anotacao ?? {}
     );
 
-    cache.clear();
+    await limparCache();
 
     return { ok: true, dados };
   }
@@ -371,11 +450,45 @@ async function tratar(mensagem) {
    * Sem cache: quem abre o detalhe quer o estado de agora, e a
    * própria tela move etapa e anota logo em seguida.
    */
+  /**
+   * Triagem: dá para responder agora, ou precisa de análise?
+   *
+   * Sem cache — custa uma chamada ao modelo e só acontece quando
+   * alguém clica. Guardar pareceria economia, mas o caso muda
+   * (ganha resposta, muda de etapa) e triagem velha é pior do que
+   * triagem nenhuma.
+   */
+  if (mensagem?.tipo === "triagem") {
+
+    const dados = await chamar(CAMINHOS.triagem, {}, {
+      protocolo: mensagem.protocolo,
+    });
+
+    return { ok: true, dados };
+  }
+
   if (mensagem?.tipo === "detalhe") {
+
+    const chave = `detalhe:${mensagem.protocolo}`;
+
+    const guardado = mensagem.forcar
+      ? null
+      : await doCache(chave);
+
+    if (guardado) {
+      return {
+        ok: true,
+        dados: guardado.dados,
+        doCache: true,
+        vencido: guardado.vencido,
+      };
+    }
 
     const dados = await chamar(CAMINHOS.detalhe, {
       protocolo: mensagem.protocolo,
     });
+
+    await guardar(chave, dados);
 
     return { ok: true, dados };
   }
@@ -395,7 +508,7 @@ async function tratar(mensagem) {
       concluida: mensagem.concluida,
     });
 
-    cache.clear();
+    await limparCache();
 
     return { ok: true, dados };
   }
@@ -427,7 +540,7 @@ async function tratar(mensagem) {
       mensagem.registro ?? {}
     );
 
-    cache.clear();
+    await limparCache();
 
     return { ok: true, dados };
   }

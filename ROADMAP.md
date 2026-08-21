@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 21/08/2026. Aplicação **0.6.1**, extensão **0.6.1**.
+Atualizado em 21/08/2026. Aplicação **0.7.0**, extensão **0.7.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para

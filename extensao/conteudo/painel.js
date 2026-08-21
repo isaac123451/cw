@@ -292,6 +292,7 @@
       if (acao === "voltar-da-vista") voltarDaVista();
       if (acao === "anotar-detalhe") anotarNoDetalhe(alvo);
       if (acao === "anotar-dia") anotarODia(alvo);
+      if (acao === "triar") triarCaso(alvo);
       if (acao === "concluir") concluirTarefa(alvo);
       if (acao === "nps-contato") gravarContatoDoNps(alvo);
 
@@ -1219,6 +1220,11 @@
 
     ultimoDado = resposta.dados;
     render(resposta.dados);
+
+    // Desenhou com o guardado: busca o atual sem piscar a tela.
+    if (resposta.vencido) {
+      atualizarAtras(() => consultar(true));
+    }
   }
 
   /** Igual, mas sem mexer no que está na tela. */
@@ -2497,17 +2503,20 @@
    * extensão. O relato do consumidor é justamente o que se precisa ler
    * antes de responder.
    */
-  async function abrirDetalhe(protocolo) {
+  async function abrirDetalhe(protocolo, emSilencio = false) {
 
     vista = "caso";
 
     refletirCanal();
 
-    corpo.innerHTML = `<div class="carregando">Abrindo ${CW.escapar(protocolo)}…</div>`;
+    if (!emSilencio) {
+      corpo.innerHTML = `<div class="carregando">Abrindo ${CW.escapar(protocolo)}…</div>`;
+    }
 
     const resposta = await CW.enviar({
       tipo: "detalhe",
       protocolo,
+      forcar: emSilencio,
     });
 
     if (!resposta.ok) {
@@ -2522,7 +2531,38 @@
 
     detalhe = resposta.dados;
 
+    // Triagem é de um caso só: trocar de caso descarta a anterior.
+    if (triagem && triagem.protocolo !== protocolo) {
+      triagem = null;
+    }
+
     desenharDetalhe(detalhe);
+
+    /**
+     * Desenhou com dado velho: atualiza atrás.
+     *
+     * É o que faz a gaveta abrir instantânea sem mostrar informação
+     * desatualizada por muito tempo — a tela aparece com o que já se
+     * tinha e se corrige sozinha um instante depois.
+     */
+    if (resposta.vencido) {
+      atualizarAtras(() => abrirDetalhe(protocolo, true));
+    }
+  }
+
+  /**
+   * Refaz a consulta em segundo plano, sem piscar a tela.
+   *
+   * `requestIdleCallback` porque isto nunca é urgente: o usuário já
+   * está lendo o resultado. Onde ele não existe, um `setTimeout` curto
+   * dá o mesmo efeito.
+   */
+  function atualizarAtras(fn) {
+    if (typeof requestIdleCallback === "function") {
+      requestIdleCallback(() => fn(), { timeout: 3000 });
+    } else {
+      setTimeout(fn, 300);
+    }
   }
 
   function desenharDetalhe(d) {
@@ -2554,6 +2594,24 @@
       '  </div>',
       '</div>',
     ];
+
+    /* ---- triagem ---- */
+
+    if (d.relato) {
+      partes.push(
+        '<div class="bloco">',
+        '  <div class="rotulo">Responder ou analisar?</div>',
+        triagem && triagem.protocolo === d.protocolo
+          ? blocoTriagem(triagem)
+          : [
+              '  <button class="copiar" data-acao="triar" data-protocolo="' +
+                CW.escapar(d.protocolo) +
+                '" style="width:100%;padding:8px">Ler com a IA e sugerir</button>',
+              '  <p class="sub" style="margin-top:6px">Lê o relato e os textos aprovados e diz se dá para responder agora ou se precisa de apuração. Sugere — não grava nem envia nada.</p>',
+            ].join(""),
+        '</div>'
+      );
+    }
 
     if (d.relato) {
       partes.push(
@@ -2611,6 +2669,88 @@
 
     corpo.innerHTML = partes.filter(Boolean).join("");
     corpo.scrollTop = 0;
+  }
+
+  /**
+   * A leitura da IA sobre o caso aberto.
+   *
+   * Guardada por caso — sair do detalhe e voltar não deve gastar outra
+   * chamada ao modelo, e a triagem do caso A não pode aparecer no caso
+   * B.
+   */
+  let triagem = null;
+
+  function blocoTriagem(t) {
+
+    const responder = t.decisao === "responder";
+
+    return [
+      '  <div class="cartao">',
+      '    <div class="linha">',
+      `      <span class="tag ${responder ? "ok" : "atencao"}">${responder ? "dá para responder" : "precisa de análise"}</span>`,
+      `      <span class="tag ${t.gravidade === "alta" ? "perigo" : "neutro"}">gravidade ${CW.escapar(t.gravidade)}</span>`,
+      '    </div>',
+      `    <div class="sub" style="margin-top:6px;color:var(--texto)">${CW.escapar(t.assunto)}</div>`,
+      `    <p class="sub" style="margin-top:4px">${CW.escapar(t.porque)}</p>`,
+
+      (t.oQueFalta ?? []).length > 0
+        ? [
+            '    <div class="rotulo" style="margin-top:10px">O que verificar</div>',
+            ...t.oQueFalta.map(
+              (item) =>
+                `    <div class="sub" style="color:var(--suave)">• ${CW.escapar(item)}</div>`
+            ),
+            t.areaSugerida
+              ? `    <div class="sub" style="margin-top:5px">Sugerido para: <strong>${CW.escapar(t.areaSugerida)}</strong></div>`
+              : "",
+          ].join("")
+        : "",
+
+      '  </div>',
+
+      '  <div class="macro" style="margin-top:7px">',
+      '    <div class="linha">',
+      '      <span style="font-weight:600;font-size:12.5px">Rascunho para revisar</span>',
+      `      <button class="copiar" data-acao="copiar" data-texto="${CW.escapar(t.rascunho)}">copiar</button>`,
+      '    </div>',
+      `    <pre style="max-height:none">${CW.escapar(t.rascunho)}</pre>`,
+      '  </div>',
+
+      `  <p class="sub" style="margin-top:6px">Sugestão da IA (${CW.escapar(t.provedor ?? "—")}). Confira antes de enviar — nada foi gravado.</p>`,
+      `  <button class="copiar" data-acao="triar" data-protocolo="${CW.escapar(t.protocolo)}" style="width:100%;margin-top:7px;padding:7px">Ler de novo</button>`,
+    ]
+      .filter(Boolean)
+      .join("");
+  }
+
+  async function triarCaso(botao) {
+
+    const rotulo = botao.textContent;
+
+    botao.disabled = true;
+    botao.textContent = "Lendo…";
+
+    const resposta = await CW.enviar({
+      tipo: "triagem",
+      protocolo: botao.dataset.protocolo,
+    });
+
+    botao.disabled = false;
+    botao.textContent = rotulo;
+
+    if (!resposta.ok || resposta.dados?.erro) {
+      avisar(
+        resposta.dados?.erro ??
+          resposta.erro ??
+          "Falha ao triar.",
+        "perigo"
+      );
+      return;
+    }
+
+    triagem = resposta.dados;
+
+    if (detalhe) desenharDetalhe(detalhe);
   }
 
   async function anotarNoDetalhe(botao) {
