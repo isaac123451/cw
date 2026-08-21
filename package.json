@@ -1,6 +1,6 @@
 {
   "name": "cw-reputacao",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -15,6 +15,7 @@
     "check:cadastros": "tsx scripts/check-cadastros.ts",
     "check:mover": "tsx scripts/check-mover.ts",
     "check:ia": "tsx scripts/check-ia.ts",
+    "check:busca": "tsx scripts/check-busca.ts",
     "extensao:icones": "node extensao/icones/gerar-icones.js",
     "db:rls": "node scripts/apply-rls.js",
     "db:password": "tsx scripts/set-password.ts",

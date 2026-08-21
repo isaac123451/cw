@@ -7,7 +7,10 @@ import {
 
 import { getApiCases } from "@/lib/api/source";
 import { loadWorkspace } from "@/lib/actions/workspace";
+import { Prisma } from "@prisma/client";
+
 import { getPrisma } from "@/lib/prisma";
+import { fetchCandidateCases } from "@/lib/services/case.repository";
 
 import { Case } from "@/lib/models/case";
 import { Establishment } from "@/lib/models/establishment";
@@ -173,8 +176,28 @@ export async function GET(request: Request) {
       : "todos";
   })();
 
+  /**
+   * Só os candidatos, e não a base inteira.
+   *
+   * Medido antes: `getApiCases("all")` custava **1.448 ms e 233 KB** por
+   * consulta — em toda conversa aberta. O banco agora estreita de forma
+   * generosa (últimos quatro dígitos, pedaço do nome, domínio do
+   * e-mail) e o casamento decide com a mesma precisão de antes.
+   *
+   * Sem banco cai no dataset de demonstração, que é pequeno e cabe em
+   * memória — é o que mantém `npm run dev` útil sem infraestrutura.
+   */
+  const prismaBusca = getPrisma();
+
   const [todos, workspace] = await Promise.all([
-    getApiCases("all"),
+    prismaBusca
+      ? fetchCandidateCases(prismaBusca, {
+          protocolo: alvo.protocolo,
+          digitosDoTelefone: alvo.telefone?.digitos,
+          email: alvo.email,
+          nome: alvo.nome,
+        })
+      : getApiCases("all"),
     loadWorkspace(),
   ]);
 
@@ -859,10 +882,50 @@ async function buscarNpsTodos(alvo: Alvo) {
 
   if (!prisma) return [];
 
+  /**
+   * Estreita no banco, decide em JavaScript.
+   *
+   * Antes eram 500 linhas e **375 KB** por consulta, para achar no
+   * máximo alguns ciclos. O filtro aqui é generoso de propósito — os
+   * quatro últimos dígitos, o domínio do e-mail, um pedaço do nome —
+   * porque quem decide continua sendo `compararTelefone`, que conhece
+   * nono dígito e máscara.
+   */
+  const ou: Prisma.NpsResponseWhereInput[] = [];
+
+  const digitos = alvo.telefone?.digitos ?? "";
+
+  if (digitos.length >= 4) {
+    ou.push({ phone: { contains: digitos.slice(-4) } });
+  }
+
+  if (alvo.email?.includes("@")) {
+    ou.push({
+      email: {
+        contains: alvo.email.split("@")[1],
+        mode: "insensitive",
+      },
+    });
+  }
+
+  if (alvo.nome) {
+    for (const parte of alvo.nome
+      .trim()
+      .split(/s+/)
+      .filter((p) => p.length >= 3)) {
+      ou.push({
+        customer: { contains: parte, mode: "insensitive" },
+      });
+    }
+  }
+
+  if (ou.length === 0) return [];
+
   const linhas = await prisma.npsResponse.findMany({
+    where: { OR: ou },
     select: SELECAO_NPS,
     orderBy: { respondedAt: "desc" },
-    take: 500,
+    take: 60,
   });
 
   const achados = linhas.filter((linha) => {

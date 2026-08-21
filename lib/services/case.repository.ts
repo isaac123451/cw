@@ -1,5 +1,8 @@
 import { Case } from "@/lib/models/case";
-import { PrismaClient } from "@prisma/client";
+import {
+  Prisma,
+  PrismaClient,
+} from "@prisma/client";
 
 import {
   parseElapsedText,
@@ -290,6 +293,128 @@ export async function fetchCaseByProtocol(
   });
 
   return row ? toCaseModel(row) : null;
+}
+
+/**
+ * Os casos que **podem** ser de um contato — não os que são.
+ *
+ * O painel da extensão carregava as 334 reclamações inteiras e decidia
+ * em JavaScript quem casava. Medido: 1.448 ms e 233 KB por consulta, a
+ * cada conversa aberta. É a lentidão que se sente ao abrir o painel.
+ *
+ * A divisão de trabalho passa a ser: o banco **estreita** de forma
+ * generosa (últimos quatro dígitos do telefone, pedaço do nome, domínio
+ * do e-mail) e o JavaScript **decide** com a mesma precisão de antes —
+ * nono dígito, máscara, homônimo. Como o filtro do banco é um
+ * superconjunto do que o casamento aceitaria, nenhum caso que era
+ * encontrado deixa de ser.
+ *
+ * Sem nada para procurar devolve lista vazia, e não a base inteira: a
+ * pergunta "quem é este contato?" sem contato nenhum não tem resposta.
+ */
+export async function fetchCandidateCases(
+  prisma: PrismaClient,
+  alvo: {
+    protocolo?: string;
+    digitosDoTelefone?: string;
+    email?: string;
+    nome?: string;
+  },
+  limite = 80
+): Promise<Case[]> {
+
+  const ou: Prisma.CaseWhereInput[] = [];
+
+  if (alvo.protocolo) {
+
+    const limpo = alvo.protocolo
+      .replace(/^[A-Z]{2}-?/i, "")
+      .trim();
+
+    if (limpo) {
+      ou.push(
+        { protocol: { contains: limpo } },
+        { externalId: limpo }
+      );
+    }
+  }
+
+  /**
+   * Quatro dígitos, e não oito.
+   *
+   * O casamento aceita "parcial" com DDD + quatro últimos, e a base já
+   * teve telefone mascarado nesse formato. Estreitar por oito deixaria
+   * de fora exatamente os registros que a regra parcial existe para
+   * alcançar.
+   */
+  if ((alvo.digitosDoTelefone ?? "").length >= 4) {
+    ou.push({
+      phone: {
+        contains: alvo.digitosDoTelefone!.slice(-4),
+      },
+    });
+  }
+
+  if (alvo.email?.includes("@")) {
+    ou.push({
+      email: {
+        contains: alvo.email.split("@")[1],
+        mode: "insensitive",
+      },
+    });
+  }
+
+  if (alvo.nome) {
+
+    const partes = alvo.nome
+      .trim()
+      .split(/\s+/)
+      .filter((parte) => parte.length >= 3);
+
+    /**
+     * Primeiro e último pedaço, no consumidor **e na empresa**.
+     *
+     * O nome da empresa entra porque o WhatsApp mostra o nome do
+     * estabelecimento ("Alquimia dos Doces by Jessy") enquanto a base
+     * guarda o do consumidor — e sem isto o painel dizia "nada
+     * encontrado" para um cliente que estava lá.
+     */
+    for (const parte of [
+      partes[0],
+      partes[partes.length - 1],
+    ]) {
+      if (!parte) continue;
+
+      ou.push(
+        {
+          customer: {
+            contains: parte,
+            mode: "insensitive",
+          },
+        },
+        {
+          companyName: {
+            contains: parte,
+            mode: "insensitive",
+          },
+        }
+      );
+    }
+  }
+
+  if (ou.length === 0) return [];
+
+  const rows = await prisma.case.findMany({
+    where: { OR: ou },
+    include: INCLUDE,
+    omit: { description: true },
+    orderBy: { publishedAt: "desc" },
+    take: limite,
+  });
+
+  return rows.map((row) =>
+    toCaseModel({ ...row, description: null })
+  );
 }
 
 export async function persistCase(

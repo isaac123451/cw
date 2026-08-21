@@ -204,6 +204,8 @@
           <button class="icone-botao" data-acao="tema"
                   title="Tema: automático, claro ou escuro"
                   type="button">&#9681;</button>
+          <button class="icone-botao" data-acao="voltar-da-vista"
+                  title="Voltar" style="display:none">&#8592;</button>
           <button class="icone-botao" data-acao="recarregar"
                   title="Consultar de novo" type="button">&#8635;</button>
           <button class="icone-botao" data-acao="fechar"
@@ -1128,6 +1130,21 @@
 
   function refletirCanal() {
 
+    /**
+     * O voltar só existe quando há de onde voltar.
+     *
+     * Um botão permanente que não faz nada na tela inicial ensina a
+     * pessoa a ignorá-lo — e aí ele não serve quando passa a servir.
+     */
+    const voltar = raiz?.querySelector(
+      '[data-acao="voltar-da-vista"]'
+    );
+
+    if (voltar) {
+      voltar.style.display =
+        vista === "contato" ? "none" : "";
+    }
+
     const ativo = vista === "painel" ? "painel" : canal;
 
     for (const botao of raiz.querySelectorAll(
@@ -1746,10 +1763,14 @@
         resposta.erro ??
         "Falha desconhecida ao resumir.";
 
+      const onde = resposta.base
+        ? ` (endereço configurado: ${resposta.base})`
+        : "";
+
       avisar(
-        /ANTHROPIC_API_KEY/i.test(motivo)
-          ? `${motivo} Ela é opcional no deploy — se a aplicação está na Vercel, precisa ser adicionada lá em Settings → Environment Variables.`
-          : motivo,
+        /API_KEY|IA configurada/i.test(motivo)
+          ? `${motivo}${onde} A chave precisa existir no ambiente que a extensão chama — se o endereço é o da Vercel, é lá que ela tem de estar.`
+          : `${motivo}${onde}`,
         "perigo"
       );
 
