@@ -878,14 +878,36 @@ export async function assignTeamMember(
     select: { id: true },
   });
 
-  if (!existente) {
-    throw new Error(
-      `Nenhuma conta com o e-mail ${member.email}. A pessoa precisa se cadastrar antes de entrar no time.`
-    );
-  }
+  /**
+   * Sem conta? Cria uma **sem senha**.
+   *
+   * Antes isto recusava: "a pessoa precisa se cadastrar antes de entrar
+   * no time". O efeito era pior do que a proteção — não havia como
+   * cadastrar responsável nenhum, e o Kanban só oferecia quem já tinha
+   * login. Quem cuida da operação nem sempre é quem usa a ferramenta.
+   *
+   * `passwordHash` vazio **não** é uma senha em branco: o login exige um
+   * hash bcrypt válido (`isBcryptHash`) e recusa qualquer coisa fora
+   * disso. A pessoa existe para receber caso e tarefa, e não entra até
+   * se cadastrar — quando o fizer, o autocadastro **adota esta mesma
+   * linha**, e tudo que já estava no nome dela continua lá.
+   */
+  const id =
+    existente?.id ??
+    (
+      await prisma.user.create({
+        data: {
+          name: member.name,
+          email: member.email.toLowerCase(),
+          passwordHash: "",
+          role: "LEITURA",
+        },
+        select: { id: true },
+      })
+    ).id;
 
   await prisma.user.update({
-    where: { id: existente.id },
+    where: { id },
     data: {
       name: member.name,
       jobTitle: member.role || null,

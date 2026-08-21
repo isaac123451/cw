@@ -158,7 +158,7 @@ export default function ConfiguracoesPage() {
                 Versão
               </dt>
               <dd className="mt-1 text-sm font-medium text-zinc-800">
-                1.0.0
+                {process.env.NEXT_PUBLIC_VERSAO}
               </dd>
             </div>
 

@@ -7,6 +7,11 @@ import { Mail, Phone, Send, User } from "lucide-react";
 import { Case } from "@/lib/models/case";
 
 import { loadCaseDescription } from "@/lib/actions/cases";
+import {
+  addCaseNote,
+  CaseNote,
+  listCaseNotes,
+} from "@/lib/actions/notes";
 
 import SurfaceCard from "@/components/shared/SurfaceCard";
 
@@ -26,9 +31,16 @@ export default function OverviewTab({
   onChange,
 }: Props) {
 
-  const [comments, setComments] = useState<
-    { id: string; text: string; author: string }[]
-  >([]);
+  const [comments, setComments] = useState<CaseNote[]>(
+    []
+  );
+
+  const [carregandoNotas, setCarregandoNotas] =
+    useState(false);
+  const [anotando, setAnotando] = useState(false);
+
+  /** Evita rebuscar as anotações a cada re-render do mesmo caso. */
+  const notasDe = useRef<string | null>(null);
 
   const [draft, setDraft] = useState("");
 
@@ -79,19 +91,72 @@ export default function OverviewTab({
 
   }, [data.protocol, data.description, onChange]);
 
-  function publish() {
-    if (draft.trim() === "") return;
+  /**
+   * As anotações vêm do banco — as mesmas que a extensão grava.
+   *
+   * Antes isto era `useState([])` e nada mais: o que se escrevia aqui
+   * sumia no recarregamento, e o que o painel do WhatsApp gravava nunca
+   * aparecia nesta tela. Eram dois históricos paralelos do mesmo
+   * atendimento, e nenhum contava a história inteira.
+   */
+  useEffect(() => {
 
-    setComments((prev) => [
-      {
-        id: crypto.randomUUID(),
-        text: draft.trim(),
-        author: data.owner ?? "Operação",
-      },
-      ...prev,
-    ]);
+    if (notasDe.current === data.protocol) return;
 
-    setDraft("");
+    notasDe.current = data.protocol;
+
+    let ativo = true;
+
+    setCarregandoNotas(true);
+
+    listCaseNotes(data.protocol)
+      .then((lista) => {
+        if (ativo) setComments(lista);
+      })
+      .catch((error: unknown) => {
+        console.error(
+          "[caso] anotações não carregaram",
+          error
+        );
+      })
+      .finally(() => {
+        if (ativo) setCarregandoNotas(false);
+      });
+
+    return () => {
+      ativo = false;
+    };
+
+  }, [data.protocol]);
+
+  async function publish() {
+
+    const texto = draft.trim();
+
+    if (texto === "" || anotando) return;
+
+    setAnotando(true);
+
+    try {
+
+      const criada = await addCaseNote(
+        data.protocol,
+        texto
+      );
+
+      /**
+       * A anotação só entra na lista depois de o servidor confirmar —
+       * e com o autor que **ele** registrou. Otimismo aqui mostraria
+       * "Operação" no lugar de quem realmente anotou.
+       */
+      if (criada) {
+        setComments((prev) => [criada, ...prev]);
+        setDraft("");
+      }
+
+    } finally {
+      setAnotando(false);
+    }
   }
 
   return (
@@ -258,19 +323,25 @@ export default function OverviewTab({
       </SurfaceCard>
 
       <SurfaceCard
-        title="Comentários internos"
-        description="Registre andamento, decisões e contexto interno sem perder o histórico."
+        title="Anotações"
+        description="Andamento, decisões e contexto interno. É a mesma lista que a extensão grava e lê — anotar aqui ou pelo painel dá no mesmo."
         action={
           <span className="shrink-0 rounded-xl bg-zinc-50 px-3 py-1.5 text-xs font-medium text-zinc-600">
-            {comments.length} comentário(s)
+            {comments.length} anotação(ões)
           </span>
         }
       >
 
-        {comments.length === 0 ? (
+        {carregandoNotas ? (
 
           <p className="rounded-xl border border-dashed border-zinc-200 py-8 text-center text-sm text-zinc-400">
-            Ainda não há comentários internos nesta reclamação.
+            Carregando anotações...
+          </p>
+
+        ) : comments.length === 0 ? (
+
+          <p className="rounded-xl border border-dashed border-zinc-200 py-8 text-center text-sm text-zinc-400">
+            Ainda não há anotações nesta reclamação — nem aqui, nem pela extensão.
           </p>
 
         ) : (
@@ -289,7 +360,16 @@ export default function OverviewTab({
                 </p>
 
                 <p className="mt-1.5 text-[11px] text-zinc-400">
-                  {item.author}
+                  {item.author} ·{" "}
+                  {new Date(
+                    item.createdAt
+                  ).toLocaleString("pt-BR", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
                 </p>
 
               </li>
@@ -303,7 +383,7 @@ export default function OverviewTab({
         <div className="mt-4">
 
           <label className={label}>
-            Adicionar comentário
+            Nova anotação
           </label>
 
           <textarea
@@ -318,11 +398,11 @@ export default function OverviewTab({
 
             <button
               onClick={publish}
-              disabled={draft.trim() === ""}
+              disabled={draft.trim() === "" || anotando}
               className="flex items-center gap-2 rounded-xl bg-violet-700 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-violet-800 disabled:cursor-not-allowed disabled:bg-zinc-200 disabled:text-zinc-400"
             >
               <Send size={15} />
-              Publicar comentário
+              {anotando ? "Anotando..." : "Anotar"}
             </button>
 
           </div>

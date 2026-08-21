@@ -270,7 +270,7 @@
       const acao = alvo.dataset.acao;
 
       if (acao === "fechar") fechar();
-      if (acao === "recarregar") consultar(true);
+      if (acao === "recarregar") recarregarVista(true);
       if (acao === "buscar") buscarManual();
       if (acao === "opcoes") CW.enviar({ tipo: "opcoes" });
       if (acao === "tema") girarTema();
@@ -932,6 +932,21 @@
     resumo = null;
 
     marcarSelo(null);
+
+    /**
+     * Contato novo com uma aba de canal aberta.
+     *
+     * A aba "só deste cliente" é sobre **este** contato — trocar de
+     * conversa e continuar mostrando os casos do anterior é pior do que
+     * não mostrar nada. As demais vistas ficam: quem está lendo um caso
+     * ou o painel do dia não pediu para ser interrompido.
+     */
+    if (vista === "fila" && soDoCliente) {
+      if (aberto) carregarFila();
+      return;
+    }
+
+    if (vista !== "contato") return;
 
     if (aberto) {
       consultar(false);
@@ -3292,11 +3307,28 @@
     recarregarVista();
   }
 
-  /** Recarrega o que está na tela, e não sempre o contato. */
-  function recarregarVista() {
-    if (vista === "fila") carregarFila();
-    else if (vista === "painel") carregarPainel();
-    else consultar(true);
+  /**
+   * Recarrega o que está na tela, e não sempre o contato.
+   *
+   * O botão de atualizar chamava `consultar(true)` direto — e
+   * `consultar` sai cedo quando a vista não é a de contato. O resultado
+   * era o pior possível: numa aba de canal ou no detalhe, o botão de
+   * atualizar não fazia **nada**, sem dizer por quê.
+   */
+  function recarregarVista(naMao = false) {
+
+    if (vista === "fila") return carregarFila();
+    if (vista === "painel") return carregarPainel();
+
+    if (vista === "caso") {
+      return detalhe
+        ? abrirDetalhe(detalhe.protocolo)
+        : voltarAoContato();
+    }
+
+    consultar(true);
+
+    void naMao;
   }
 
   async function moverNps(botao) {

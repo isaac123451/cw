@@ -50,106 +50,143 @@ aplicação e **de sessão (5432)** em `DIRECT_URL`, usada por `db:push`,
 
 ## A fazer
 
-### 0. Fila da extensão e do NPS (aberta em 20/08/2026)
+### 0. Handoff — leia isto primeiro (21/08/2026)
 
-> **Feito em 21/08:** itens 1, 2 e 7, a leitura da página do Reclame
-> Aqui, o rodapé de canais com avançar/voltar etapa e o responsável no
-> Kanban. Ver Entregue.
+**Produção:** https://cw-rho-eight.vercel.app · repo `isaac123451/cw`,
+branch `main` · aplicação e extensão em **0.8.0**, sempre no mesmo
+número.
 
-O contexto inteiro está em `extensao/LEIA-ME.md` e no fim de
-`EXTENSAO.md`. O que ficou pendente, na ordem em que eu pegaria:
+**Antes de dizer que algo está pronto, rode o `check:` correspondente.**
+São scripts que rodam a conta contra o banco real; `tsc` e `lint` passam
+limpos em cima de defeito de dado.
 
-1. ~~**Registrar NPS pela extensão.**~~ Feito em 21/08 —
-   `app/api/extensao/nps/route.ts` e o formulário no painel.
-2. ~~**Notas e gráficos pela extensão.**~~ Feito em 21/08 — tendência
-   mês a mês em SVG e o NPS dos 30 dias, no popup.
-3. ~~**Anotações pela extensão.**~~ Feito em 21/08 —
-   `app/api/extensao/anotar/` e o formulário no painel.
-4. **Tela de análise do NPS.** Os filtros por segmento já estão na
-   barra (Detratores / Passivos / Promotores, com contagem) e na fila da
-   extensão. Falta a **tela dedicada**, no espírito de
-   `/reclame-aqui/analytics`: tendência do NPS, causa raiz e
-   distribuição da régua de humor.
-5. **ManyChat.** Bloqueado: a planilha compartilhada
-   (`1-pCxjB4Rrw3drlDFGNRYMFceMVWSJe34PBLVR6Vfz4o`) tem **uma aba só**,
-   "Métricas do Reclame Aqui" — não há aba de ManyChat nela. Sem o
-   arquivo certo não dá para desenhar o importador, e chutar o formato
-   seria inventar. O canal já está pronto do outro lado: `Channel` no
-   Prisma tem `MANYCHAT`, `SOCIAL_SOURCES` já o inclui, e a extensão já
-   cria caso com origem ManyChat.
-6. **Vínculo cliente → estabelecimento.** É o que destrava plano, status
-   e MRR no painel, e hoje quase nunca aparece. Três quartos do caminho
-   já andaram:
-   - o Wootric manda `properties.company_id`, gravado em
-     `NpsResponse.externalCompanyId`;
-   - o enriquecimento **agora persiste** (`ClientProfile`, com a coluna
-     `establishmentId`) — antes vivia em memória;
-   - o **RA Forms** da reclamação traz o CNPJ de cadastro no portal, o
-     e-mail de acesso e o nome do proprietário, e a extensão já lê e
-     mostra os três na prévia.
+| Comando | Prova o quê |
+| ------- | ----------- |
+| `npm run check:ia` | Qual IA está ligada, com uma chamada real |
+| `npm run check:busca` | Que a busca por candidatos não perdeu nenhum caso |
+| `npm run check:mover` | Que voltar de "Resolvido" apaga a avaliação |
+| `npm run check:cadastros` | Que Times, Metas e Clientes sobrevivem ao reload |
+| `npm run check:ra` | Os leitores da página do Reclame Aqui (45 conferências) |
+| `curl -H "Authorization: Bearer $API_TOKEN" .../api/saude` | O que **um ambiente** tem configurado |
 
-   Falta a decisão: **onde** cada um desses campos entra. `Case` não tem
-   coluna de estabelecimento, e `Case.cnpj` existe mas ninguém preenche.
-   Casar por CNPJ é o caminho óbvio; o que não dá é gravar antes de
-   decidir, porque erra em três tabelas de uma vez. **Aguardando o
-   Isaac** — foi ele quem pediu para levar o RA Forms para análise em
-   vez de sair gravando.
-7. ~~**Limpeza.**~~ Feito em 21/08 — o caso `IG-58097161` saiu da base.
-8. **Botão Salvar no resto das telas.** As cinco abas de
-   `/reclame-aqui/configuracoes` já usam o rascunho
-   (`lib/hooks/useRascunho.ts` + `BarraDeSalvar`). Continuam gravando a
-   cada tecla: Prazos (SLA), Movimentações, Tipos de impacto, Causa raiz
-   do NPS, Estabelecimentos, Jornada, Projetos, Macros e Times
-   (pessoas). O gancho é genérico — converter cada uma é repetir o mesmo
-   passo, sem decisão nova pela frente.
+> O `API_TOKEN` da Vercel é **diferente** do local — conferido.
 
-### 1. Webhook: reenvio e evento de atraso
+---
 
-O webhook está no ar e funcionando (ver Entregue). Duas lacunas
-conhecidas:
+### 1. Pausado pelo Isaac
 
-- **Não há reenvio automático** quando a entrega falha. Hoje o histórico
-  registra o erro e para por aí. Reenviar pede fila com espera
-  progressiva — decidir se vale antes de ter um consumidor real.
-- **`movimentacao.atrasada` não existe.** Os dois eventos atuais nascem
-  de uma gravação; atraso é estado que só se descobre comparando com o
-  relógio, e precisa de job agendado (cron), que a aplicação não tem.
+**ManyChat — não mexer até ele avisar.** A planilha compartilhada
+(`1-pCxjB4Rrw3drlDFGNRYMFceMVWSJe34PBLVR6Vfz4o`) tem uma aba só,
+"Métricas do Reclame Aqui". O canal já está pronto do outro lado:
+`Channel` no Prisma tem `MANYCHAT`, `SOCIAL_SOURCES` o inclui, a
+extensão cria caso com essa origem e o detector do ManyChat já informa
+o canal da página. Falta **só** o importador, e ele depende do arquivo.
 
-### 2. Planos e macros
+---
 
-Isaac pediu para puxar nomes, valores e módulos dos planos da central de
-ajuda (`ajuda.cardapioweb.com`) para usar nas macros.
+### 2. Aberto, sem decisão pela frente — é só trabalho
 
-**Ressalva registrada:** preço e nome de plano mudam, e copiar isso para
-dentro do sistema cria dado que envelhece calado. A recomendação foi
-cadastrar planos numa tela, como foi feito com os tipos de impacto.
-**Aguardando a decisão do Isaac.**
+**a) Botão Salvar nas telas restantes.** O Isaac pediu "em tudo que for
+adicionar ou alterar". Cinco telas já usam o rascunho
+(`lib/hooks/useRascunho.ts` + `components/shared/BarraDeSalvar.tsx`): as
+cinco abas de `/reclame-aqui/configuracoes`. **Faltam nove**, e todas
+gravam a cada tecla:
 
-### 3. NPS — o que ficou para a próxima rodada
+- `components/reclame-aqui/detail/CaseDetail.tsx`
+- `components/clientes/ClientDetail.tsx`
+- `components/estabelecimentos/EstablishmentDetail.tsx`
+- `components/impacto/ImpactTypesCard.tsx`
+- `components/jornada/JourneyTopics.tsx`
+- `components/reclame-aqui/settings/WorkflowSettings.tsx`
+- `components/reclame-aqui/toolbar/SavedFilters.tsx`
+- `components/agenda/GoogleCalendarCard.tsx`
+- `components/nps/RootCauseManager.tsx`
 
-O módulo está no ar (ver Entregue). Feedback do Isaac ainda não feito:
+O passo é mecânico e está documentado no commit `2dbea29`: trocar a
+lista pelo `rascunho.itens`, `saveX({...item, campo})` por
+`rascunho.alterar(item.id, {campo})`, acrescentar `<BarraDeSalvar>` e
+proteger a exclusão com a trava do "item que só existe no rascunho".
 
-- **Importar respostas em lote**, como o Reclame Aqui faz com a planilha
-  do HugMe. O parser compartilhado (`raImport.service.ts`) é o modelo a
-  seguir.
-- **Categorias e fluxo configuráveis**: hoje os sete tipos e a lista de
-  causa raiz são fixos no código (`lib/models/nps.ts`). Virar cadastro,
-  como foi feito com tipos de impacto — a ressalva é a mesma: lista
-  fechada existe para a análise de tendência não virar texto livre.
-- **Encerramento automático dos 30 dias** roda quando alguém abre a
-  tela; sem ninguém logado, não roda. Precisa de job agendado, o mesmo
-  que falta para `movimentacao.atrasada` do webhook.
+**b) Tela de análise do NPS.** Os filtros por segmento já existem na
+barra do `/nps` e na fila da extensão. Falta a tela dedicada, no
+espírito de `/reclame-aqui/analytics`: tendência do NPS, causa raiz e
+distribuição da régua de humor. `summarize`, `bySegment` e `byRootCause`
+já calculam tudo em `lib/services/nps.service.ts`.
 
-### 4. Permissões por módulo — último card "Em breve"
+**c) O cron — destrava três coisas de uma vez.** A aplicação não tem job
+agendado, e por isso:
+- o **encerramento automático dos 30 dias** do NPS só roda quando
+  alguém abre a tela;
+- **`movimentacao.atrasada`** não existe (atraso é estado que só se
+  descobre comparando com o relógio);
+- o **reenvio de webhook** que falhou não acontece.
 
-Dos quatro cards sem link em `app/configuracoes/page.tsx`, só este
-restou: "Categorias e assuntos", "Usuários e times" e "Integrações" já
-foram ligados (ver Entregue).
+Uma peça só (cron da Vercel) resolve as três.
 
-**Permissões** não tem tela. Existe o enum de papel
-(`ADMIN`/`AGENTE`/`LEITURA`) e a aba de acessos em `/conta`, mas nada de
-permissão por módulo. Definir o alcance antes de construir: papel por
-módulo, ou permissão fina por ação?
+**d) Importar NPS em lote**, como o Reclame Aqui faz com a planilha do
+HugMe. O parser compartilhado (`raImport.service.ts`) é o modelo.
+
+**e) Tipos e causa raiz do NPS como cadastro.** Hoje os sete tipos são
+fixos em `lib/models/nps.ts`. A causa raiz já virou cadastro
+(`NpsRootCause`) — os tipos seguem o mesmo caminho. A ressalva: lista
+fechada existe para a análise de tendência não virar texto livre.
+
+---
+
+### 3. Bloqueado no Isaac — não dá para avançar sem ele
+
+**a) A `ANTHROPIC_API_KEY` nunca foi preenchida** (o valor no `.env` é o
+exemplo literal, `"sk-ant-..."`). Hoje quem responde é o **Gemini**, e
+funciona. Se quiser a Anthropic, é preencher.
+
+**b) `GEMINI_API_KEY` na Vercel.** Está no `.env` local e **não foi
+possível confirmar em produção** — o `API_TOKEN` de lá é outro. Conferir
+com `/api/saude`.
+
+**c) `NEXT_PUBLIC_APP_URL` ausente.** Sem ela o retorno do OAuth do
+Google Agenda monta `http://localhost:3000`.
+
+**d) Onde gravar o vínculo cliente ↔ estabelecimento.** Três quartos do
+caminho andaram: o Wootric manda `company_id` (gravado em
+`NpsResponse.externalCompanyId`), o enriquecimento persiste
+(`ClientProfile.establishmentId`), e o **RA Forms** da reclamação traz
+CNPJ de cadastro, e-mail de acesso e nome do proprietário — a extensão
+já lê e mostra os três na prévia, sem gravar.
+
+Falta decidir **onde cada campo entra**. `Case` não tem coluna de
+estabelecimento e `Case.cnpj` existe mas ninguém preenche. Casar por
+CNPJ é o caminho óbvio. Medido e relevante: **nenhum dos 334 casos
+importados tem empresa diferente do consumidor** — o export do Reclame
+Aqui trata o reclamante como a empresa. Por isso o WhatsApp mostra o
+estabelecimento e a base guarda a pessoa, e elas não casam.
+
+**e) Planos nas macros.** Puxar da central de ajuda ou virar cadastro
+numa tela. A ressalva registrada: preço e nome de plano envelhecem
+calados dentro do sistema.
+
+**f) Permissões por módulo.** Último card "Em breve" de
+`app/configuracoes/page.tsx`. Definir o alcance antes de construir:
+papel por módulo, ou permissão fina por ação?
+
+---
+
+### 4. Armadilhas já medidas — não redescobrir
+
+- **O service worker do Manifest V3 morre em segundos.** Cache em `Map`
+  não existe na prática; usar `chrome.storage.session`.
+- **Dependência dura mata o painel.** Montar primeiro, checar depois —
+  senão o sintoma é "a extensão não abre mais, só reinstalando".
+- **200 com HTML não é sucesso.** Conferir `content-type` antes de
+  `resposta.json()`, nos dois lados.
+- **O `enum` do Gemini só aceita texto**; nome de modelo envelhece
+  (`gemini-2.0-flash` já é 404); 503 é fila, não configuração errada.
+- **Voltar um caso de "Resolvido" apaga a avaliação** (`moverPara`).
+- **`updateTag` só vale em server action**; em rota é
+  `revalidateTag(tag, "max")`.
+- **A Área da Empresa do RA é um SPA**: a chave da leitura tem de ser
+  endereço **+ id**, e o `<h1>` é o cabeçalho da tela, não o título.
+- **Vários arquivos estão em CRLF** e heredoc de bash quebra com
+  conteúdo grande — usar a ferramenta Write.
 
 ---
 

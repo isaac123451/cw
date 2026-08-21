@@ -93,10 +93,41 @@ export async function signUp(
     where: { email },
   });
 
-  if (existing) {
+  /**
+   * Cadastro sobre uma pessoa que já existe **sem senha**.
+   *
+   * O cadastro de Times cria a pessoa antes de ela ter login, para que
+   * possa receber caso e tarefa (`passwordHash` vazio). Quando ela
+   * enfim se cadastra, adotar a linha existente é o que preserva tudo
+   * que já estava no nome dela — casos, tarefas, anotações. Criar uma
+   * segunda conta com o mesmo e-mail é impossível (o campo é único), e
+   * recusar deixaria a pessoa para sempre sem acesso.
+   */
+  if (existing && isBcryptHash(existing.passwordHash)) {
     return {
       error: "Já existe uma conta com este e-mail.",
     };
+  }
+
+  if (existing) {
+
+    const adotado = await prisma.user.update({
+      where: { id: existing.id },
+      data: {
+        name,
+        passwordHash: await bcrypt.hash(password, 10),
+        active: true,
+      },
+    });
+
+    await createSession({
+      id: adotado.id,
+      email: adotado.email,
+      name: adotado.name,
+      role: adotado.role,
+    });
+
+    redirect("/dashboard");
   }
 
   /**

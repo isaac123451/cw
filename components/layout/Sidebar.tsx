@@ -145,7 +145,7 @@ export default function Sidebar() {
           </p>
 
           <p className="mt-1 text-[11px] leading-relaxed text-zinc-500">
-            Versão 1.0.0 · Cardápio Web
+            Versão {process.env.NEXT_PUBLIC_VERSAO} · Cardápio Web
           </p>
 
         </div>
