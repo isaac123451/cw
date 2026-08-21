@@ -271,6 +271,27 @@ async function sincronizarTags(
  * Cria ou atualiza. A chave é o protocolo, que é único e estável — o id
  * da tela pode ser o do portal ou um uuid gerado no cadastro manual.
  */
+/**
+ * Um caso pelo protocolo, inteiro.
+ *
+ * Com a descrição, ao contrário de `fetchCases`: aqui é um registro
+ * só, e quem pede um caso específico quer o relato junto. E é
+ * necessário para gravar de volta — `persistCase` recebe o `Case`
+ * completo, e um campo ausente viraria `null` na coluna.
+ */
+export async function fetchCaseByProtocol(
+  prisma: PrismaClient,
+  protocol: string
+): Promise<Case | null> {
+
+  const row = await prisma.case.findUnique({
+    where: { protocol },
+    include: INCLUDE,
+  });
+
+  return row ? toCaseModel(row) : null;
+}
+
 export async function persistCase(
   prisma: PrismaClient,
   item: Case,

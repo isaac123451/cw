@@ -10,7 +10,12 @@ import {
 import { WORKSPACE_TAG } from "@/lib/actions/tags";
 import { getPrisma } from "@/lib/prisma";
 
-import { CHANNELS, MOODS } from "@/lib/models/nps";
+import {
+  CHANNELS,
+  FLUXO_EM_ANDAMENTO,
+  isEncerrado,
+  MOODS,
+} from "@/lib/models/nps";
 import {
   aplicarPosContato,
   registrarTentativa,
@@ -52,8 +57,10 @@ export const dynamic = "force-dynamic";
 
 interface Entrada {
   id?: string;
-  /** "pos-contato" (padrão) ou "tentativa". */
+  /** "pos-contato" (padrão), "tentativa" ou "status". */
   acao?: string;
+  /** Para `acao: "status"` — "avancar" ou "voltar". */
+  direcao?: string;
   /** Régua de humor, 1 a 5. `null` limpa o registro. */
   humor?: number | null;
   /** A situação foi resolvida? `null` = não respondido. */
@@ -152,9 +159,77 @@ export async function POST(request: Request) {
   const autor = usuario?.nome ?? "Extensão";
 
   const acao =
-    entrada.acao === "tentativa"
-      ? "tentativa"
+    entrada.acao === "tentativa" ||
+    entrada.acao === "status"
+      ? entrada.acao
       : "pos-contato";
+
+  if (acao === "status") {
+
+    const direcao =
+      entrada.direcao === "voltar"
+        ? "voltar"
+        : "avancar";
+
+    /**
+     * Ciclo encerrado não volta por botão.
+     *
+     * Reabrir uma tratativa é decisão com consequência no indicador —
+     * o caso volta para a fila de quem ainda não foi atendido. Isso tem
+     * lugar próprio na tela, com o histórico à vista.
+     */
+    if (isEncerrado(existente.status)) {
+      return responder(request, {
+        movido: false,
+        status: existente.status,
+        aviso:
+          "Este ciclo já foi encerrado. Reabrir é pela tela do NPS, que mostra o histórico inteiro.",
+      });
+    }
+
+    const i = FLUXO_EM_ANDAMENTO.indexOf(
+      existente.status
+    );
+
+    const alvo =
+      i < 0
+        ? null
+        : (FLUXO_EM_ANDAMENTO[
+            direcao === "avancar" ? i + 1 : i - 1
+          ] ?? null);
+
+    if (!alvo) {
+      return responder(request, {
+        movido: false,
+        status: existente.status,
+        aviso:
+          i < 0
+            ? `"${existente.status}" está fora do fluxo de andamento.`
+            : direcao === "avancar"
+              ? "Daqui em diante é encerramento, e encerrar pede o checklist — é pela tela do NPS."
+              : `Já está no primeiro passo ("${existente.status}").`,
+      });
+    }
+
+    await prisma.npsResponse.update({
+      where: { id },
+      data: { status: alvo },
+    });
+
+    revalidateTag(WORKSPACE_TAG, "max");
+
+    const atual = await prisma.npsResponse.findUnique({
+      where: { id },
+      select: SELECAO_NPS,
+    });
+
+    return responder(request, {
+      movido: true,
+      de: existente.status,
+      status: alvo,
+      nps: atual ? retratoNps(atual) : null,
+    });
+  }
 
   if (acao === "tentativa") {
 

@@ -16,7 +16,7 @@ import {
 
 import { useScopedCases } from "@/lib/context/useScopedCases";
 import { useSettings } from "@/lib/context/SettingsContext";
-import { useTeams } from "@/lib/context/TeamsContext";
+import { useOwners } from "@/lib/hooks/useOwners";
 
 import { countCriteria } from "@/lib/models/savedFilter";
 
@@ -47,7 +47,6 @@ export default function Toolbar({
   } = useScopedCases("reclame-aqui");
 
   const { tags } = useSettings();
-  const { people } = useTeams();
 
   const companies = useMemo(
     () =>
@@ -67,28 +66,8 @@ export default function Toolbar({
     [cases]
   );
 
-  /**
-   * Quem pode receber um caso: o cadastro de Times manda, mas casos
-   * importados trazem responsáveis que ainda não estão lá — sem a união
-   * o filtro esconderia justamente esses.
-   */
-  const owners = useMemo(() => {
-
-    const nomes = new Set<string>();
-
-    for (const item of cases) {
-      if (item.owner) nomes.add(item.owner);
-    }
-
-    for (const pessoa of people) {
-      nomes.add(pessoa.name);
-    }
-
-    return [...nomes].sort((a, b) =>
-      a.localeCompare(b)
-    );
-
-  }, [cases, people]);
+  // A mesma lista que o cartão do Kanban usa para atribuir.
+  const owners = useOwners();
 
   const [createOpen, setCreateOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);

@@ -15,6 +15,9 @@ import {
 import { Case } from "@/lib/models/case";
 import { TagChips } from "@/components/shared/TagPicker";
 
+import { useCases } from "@/lib/context/CaseContext";
+import { useOwners } from "@/lib/hooks/useOwners";
+
 interface Props {
   item: Case;
   onDragStart: (id: string) => void;
@@ -35,6 +38,23 @@ export default function KanbanCard({
 }: Props) {
 
   const [dragging, setDragging] = useState(false);
+
+  const { updateCase } = useCases();
+  const owners = useOwners();
+
+  /**
+   * Vazio é "sem responsável", não a string vazia.
+   *
+   * `Case.owner` é opcional; gravar `""` faria o cartão mostrar um
+   * responsável de nome em branco e o filtro por responsável ganharia
+   * uma opção invisível.
+   */
+  function atribuir(nome: string) {
+    updateCase({
+      ...item,
+      owner: nome === "" ? undefined : nome,
+    });
+  }
 
   return (
     <Link
@@ -123,13 +143,53 @@ export default function KanbanCard({
 
       <div className="mt-3 flex items-center justify-between border-t border-zinc-100 pt-2.5">
 
-        <span className="flex items-center gap-1.5 text-[11px] text-zinc-500">
+        {/*
+          Atribuir responsável sem sair do quadro.
 
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-zinc-100 text-[9px] font-semibold text-zinc-600">
+          Antes o nome era só texto: para pôr alguém num caso era
+          preciso abrir a tela do caso — e no Kanban, que é onde a
+          operação distribui o trabalho, não havia caminho nenhum.
+
+          O cartão inteiro é um link e é arrastável, então o seletor
+          precisa das três travas abaixo: `preventDefault` no clique
+          (senão navega), `stopPropagation` (senão o clique sobe para o
+          link) e `draggable={false}` (senão arrastar para abrir a lista
+          arrasta o cartão para outra coluna).
+        */}
+        <span
+          className="flex min-w-0 items-center gap-1.5 text-[11px] text-zinc-500"
+          draggable={false}
+          onDragStart={(event) => event.preventDefault()}
+        >
+
+          <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[9px] font-semibold ${item.owner ? "bg-violet-100 text-violet-700" : "bg-zinc-100 text-zinc-400"}`}>
             {(item.owner ?? "?").slice(0, 1).toUpperCase()}
           </span>
 
-          {item.owner ?? "Sem responsável"}
+          <select
+            value={item.owner ?? ""}
+            aria-label={`Responsável por ${item.protocol}`}
+            title="Atribuir responsável"
+            draggable={false}
+            onDragStart={(event) => event.preventDefault()}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+            }}
+            onChange={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              atribuir(event.target.value);
+            }}
+            className={`-ml-1 max-w-[130px] cursor-pointer truncate rounded-md border border-transparent bg-transparent px-1 py-0.5 text-[11px] outline-none transition-colors hover:border-zinc-200 hover:bg-zinc-50 focus:border-violet-400 ${item.owner ? "text-zinc-600" : "text-zinc-400"}`}
+          >
+            <option value="">Sem responsável</option>
+            {owners.map((nome) => (
+              <option key={nome} value={nome}>
+                {nome}
+              </option>
+            ))}
+          </select>
 
         </span>
 

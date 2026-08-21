@@ -259,3 +259,66 @@ export function getRecentCases(
     )
     .slice(0, limit);
 }
+
+/* ============================================================
+   MOVER DE ETAPA
+============================================================ */
+
+/**
+ * O caso depois de mudar de etapa.
+ *
+ * Mover não é só trocar o texto do status: duas colunas do quadro
+ * **são** a avaliação do consumidor. "Resolvido" e "Não resolvido"
+ * significam que ele avaliou; qualquer etapa anterior significa que
+ * ainda não. Por isso voltar um caso para trás **apaga a nota** — senão
+ * ela continuaria pesando na reputação de um caso que, segundo o
+ * próprio quadro, ainda não foi avaliado.
+ *
+ * Mora aqui, e não dentro do `CaseContext`, porque a extensão move caso
+ * por uma rota que autentica pelo cabeçalho e não pode chamar server
+ * action. Duas cópias desta regra divergiriam na primeira correção, e o
+ * sintoma seria uma nota fantasma na base.
+ */
+export function moverPara(
+  item: Case,
+  status: string,
+  quando: string
+): Case {
+
+  const avaliado =
+    status === "Resolvido" || status === "Não resolvido";
+
+  return {
+    ...item,
+    status,
+    resolved: status === "Resolvido",
+    evaluated: avaliado,
+    score: avaliado ? item.score : undefined,
+    evaluatedAt: avaliado ? item.evaluatedAt : undefined,
+    updatedAt: quando,
+  };
+}
+
+/**
+ * A etapa vizinha, na ordem do quadro.
+ *
+ * Devolve `null` na ponta — não circula. Um caso em "Novo" que
+ * "voltasse" para a última coluna seria a forma mais rápida de dar
+ * baixa sem querer numa reclamação que ninguém atendeu.
+ */
+export function etapaVizinha(
+  etapas: string[],
+  atual: string,
+  direcao: "avancar" | "voltar"
+): string | null {
+
+  const i = etapas.indexOf(atual);
+
+  if (i < 0) return null;
+
+  const alvo = direcao === "avancar" ? i + 1 : i - 1;
+
+  return alvo >= 0 && alvo < etapas.length
+    ? etapas[alvo]
+    : null;
+}

@@ -28,6 +28,7 @@ const CAMINHOS = {
   lembretes: "/api/extensao/lembretes",
   conversa: "/api/extensao/conversa",
   nps: "/api/extensao/nps",
+  mover: "/api/extensao/mover",
 };
 
 /**
@@ -308,6 +309,26 @@ async function tratar(mensagem) {
     );
 
     // A base mudou: o retrato guardado envelheceu na hora.
+    cache.clear();
+
+    return { ok: true, dados };
+  }
+
+  /**
+   * Avança ou volta um caso uma etapa do quadro.
+   *
+   * A extensão manda a **direção**, não a etapa: a ordem das colunas é
+   * cadastro, muda na tela de configurações, e uma extensão instalada
+   * há três semanas teria uma cópia velha dela. Quem resolve é o
+   * servidor.
+   */
+  if (mensagem?.tipo === "moverCaso") {
+
+    const dados = await chamar(CAMINHOS.mover, {}, {
+      protocolo: mensagem.protocolo,
+      direcao: mensagem.direcao,
+    });
+
     cache.clear();
 
     return { ok: true, dados };

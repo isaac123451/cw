@@ -203,6 +203,24 @@ export function isEncerrado(status: string) {
   return status.startsWith("[Encerrado]");
 }
 
+/**
+ * Os degraus que dá para subir e descer sem checklist.
+ *
+ * O ciclo do NPS tem duas metades. Esta é a de andamento — trocar entre
+ * elas é registro de onde a tratativa está, e não conclusão de nada.
+ *
+ * **Encerrar não entra.** Os status finais dependem do tipo e do
+ * checklist do guia (`podeEncerrar`), e alguns exigem o cliente ter
+ * confirmado. Um botão "avançar" que atravessasse essa fronteira
+ * produziria encerramento sem lastro — que é o oposto do que o
+ * indicador de resolução precisa medir.
+ */
+export const FLUXO_EM_ANDAMENTO = [
+  STATUS_NOVO,
+  STATUS_EM_TRATATIVA,
+  STATUS_AGUARDANDO,
+];
+
 /* ============================================================
    CAUSA RAIZ
 ============================================================ */

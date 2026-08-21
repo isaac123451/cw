@@ -680,6 +680,117 @@
 
 .sub.falha:empty { display: none; }
 
+/* ---------- rodapé de canais ---------- */
+
+/**
+ * As três filas da operação, lado a lado.
+ *
+ * Fica acima do rodapé de opções, colado nele, porque é navegação e
+ * não configuração — e porque no alto já existem a busca e o cabeçalho.
+ */
+.canais {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-top: 1px solid var(--borda);
+  background: var(--superficie);
+}
+
+.canais button {
+  border: none;
+  border-right: 1px solid var(--borda);
+  background: transparent;
+  color: var(--fraco);
+  padding: 9px 4px;
+  font-size: 11.5px;
+  font-weight: 500;
+  font-family: var(--fonte);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+
+.canais button:last-child { border-right: none; }
+
+.canais button:hover { color: var(--texto); }
+
+.canais button[aria-pressed="true"] {
+  color: var(--violeta);
+  font-weight: 600;
+  border-bottom-color: var(--violeta);
+  background: color-mix(in srgb, var(--violeta) 9%, transparent);
+}
+
+/* ---------- avançar e voltar etapa ---------- */
+
+.etapas {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 9px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--borda);
+}
+
+.passo {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  background: var(--elevado);
+  color: var(--suave);
+  padding: 5px 7px;
+  font-size: 11px;
+  font-weight: 500;
+  font-family: var(--fonte);
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.passo:hover {
+  border-color: var(--violeta);
+  color: var(--violeta);
+}
+
+.passo:disabled { opacity: .55; cursor: progress; }
+
+/* Ponta do fluxo: informa, não convida ao clique. */
+.passo.vazio {
+  border-style: dashed;
+  color: var(--fraco);
+  cursor: default;
+  text-align: center;
+}
+
+/* ---------- recado passageiro ---------- */
+
+.recado {
+  border-radius: 9px;
+  padding: 8px 11px;
+  font-size: 12px;
+  line-height: 1.45;
+  margin-bottom: 12px;
+  border: 1px solid transparent;
+}
+
+.recado.ok {
+  background: color-mix(in srgb, var(--ok) 13%, transparent);
+  border-color: color-mix(in srgb, var(--ok) 35%, transparent);
+  color: var(--ok);
+}
+
+.recado.atencao {
+  background: color-mix(in srgb, var(--laranja) 13%, transparent);
+  border-color: color-mix(in srgb, var(--laranja) 40%, transparent);
+  color: var(--atencao);
+}
+
+.recado.perigo {
+  background: color-mix(in srgb, var(--perigo) 13%, transparent);
+  border-color: color-mix(in srgb, var(--perigo) 35%, transparent);
+  color: var(--perigo);
+}
+
 /* ---------- estados ---------- */
 
 .aviso {

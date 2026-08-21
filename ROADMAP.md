@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 21/08/2026. Aplicação **0.3.0**, extensão **0.3.0**.
+Atualizado em 21/08/2026. Aplicação **0.4.0**, extensão **0.4.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -199,6 +199,68 @@ no banco. Ver "Tudo persiste" em Entregue.)*
 ---
 
 ## Entregue
+
+### Responsável no Kanban, e canais na extensão (21/08/2026)
+
+**Não havia como atribuir responsável.** O nome aparecia no cartão e na
+gaveta como texto — a gaveta inteira é somente leitura. Agora o cartão
+do Kanban tem o seletor, que é onde a operação distribui o trabalho. A
+lista virou `lib/hooks/useOwners.ts` (união do cadastro de Times com os
+responsáveis que vieram nas 333 reclamações importadas), que a Toolbar
+já usava duplicada.
+
+O cartão é um link **e** é arrastável, então o seletor precisou de três
+travas: `preventDefault` no clique, `stopPropagation` e
+`draggable={false}` — sem a última, abrir a lista arrastava o cartão
+para outra coluna.
+
+**O painel ganhou rodapé de canais:** Reclame Aqui · NPS · Redes
+Sociais. O motivo é o NPS: a pesquisa fala com o cliente por um
+**WhatsApp próprio**, e uma conversa aberta ali não casa com reclamação
+nenhuma do portal — o painel dizia "nada encontrado" para um cliente que
+estava ali, com ciclo aberto. Na aba de NPS o painel lista **todos** os
+ciclos da pessoa, em aberto primeiro; nas outras, só o mais recente.
+
+A aba de NPS **não** filtra as reclamações. Ela filtra o destaque, não o
+histórico: quem atende um detrator ganha em ver que a mesma pessoa tem
+uma reclamação pública aberta.
+
+**Avançar e voltar etapa, nos três canais.** `/api/extensao/mover` para
+caso e `/api/extensao/nps` (`acao: "status"`) para o ciclo de NPS. Duas
+decisões:
+
+- **A extensão manda a direção, não a etapa.** A ordem das colunas é
+  cadastro e muda na tela de configurações; uma extensão instalada há
+  três semanas teria uma cópia velha. Ela só usa a lista para *rotular*
+  o botão ("→ Em atendimento").
+- **Não circula, e não encerra.** Na ponta vem aviso, não salto. E o
+  encerramento do NPS depende do tipo e do checklist do guia — um botão
+  que atravessasse isso produziria encerramento sem lastro.
+
+A regra de mover saiu para `moverPara` em `case.service.ts`,
+compartilhada com o `CaseContext`: voltar um caso de "Resolvido" apaga a
+avaliação, e duas cópias dessa regra deixariam nota fantasma pesando na
+reputação. O painel avisa quando isso acontece.
+
+### "Resumir conversa" não era código (21/08/2026)
+
+A `ANTHROPIC_API_KEY` **nunca foi preenchida**: o valor no `.env` é o
+exemplo literal do `.env.example`, `"sk-ant-..."`, doze caracteres.
+`hasAssistant()` rejeita corretamente, e a rota devolve 503 com o
+motivo.
+
+O defeito real era outro: o painel jogava a mensagem de erro **dentro do
+rótulo do botão** por dois segundos. Num botão de 350 px, "ANTHROPIC_API_KEY
+não configurada" é ilegível — e o efeito era o botão parecer que não faz
+nada. Agora o motivo vai para um recado no topo do corpo, e o painel
+distingue os dois casos que pareciam iguais: **zero mensagens lidas** é a
+extensão (o WhatsApp Web mudou a marcação), **uma mensagem** é a
+conversa mesmo.
+
+*Pendência de configuração, não de código: preencher a chave no `.env` e
+na Vercel. `NEXT_PUBLIC_APP_URL` também está ausente — sem ela o retorno
+do OAuth do Google Agenda monta `http://localhost:3000`.*
+
 
 ### Ler a reclamação na Área da Empresa — a segunda rodada (21/08/2026)
 

@@ -19,6 +19,7 @@ import {
 } from "@/lib/actions/cases";
 
 import { REFERENCE_DATE } from "@/lib/services/reputation.service";
+import { moverPara } from "@/lib/services/case.service";
 
 const STORAGE_KEY = "cw:casos";
 
@@ -393,23 +394,12 @@ export function CaseProvider({
 
     if (!atual) return;
 
-    const avaliado =
-      status === "Resolvido" ||
-      status === "Não resolvido";
-
-    const movido: Case = {
-      ...atual,
-      status,
-      resolved: status === "Resolvido",
-      evaluated: avaliado,
-      // Voltando para um status anterior à avaliação, a nota deixa
-      // de existir — senão ela continuaria pesando na reputação.
-      score: avaliado ? atual.score : undefined,
-      evaluatedAt: avaliado
-        ? atual.evaluatedAt
-        : undefined,
-      updatedAt: REFERENCE_DATE,
-    };
+    /**
+     * A regra vive em `case.service.ts` porque a extensão move caso
+     * pela rota `/api/extensao/mover`, que não pode chamar server
+     * action. Duas cópias divergiriam, e o sintoma seria nota fantasma.
+     */
+    const movido = moverPara(atual, status, REFERENCE_DATE);
 
     setCases((prev) =>
       prev.map((item) =>

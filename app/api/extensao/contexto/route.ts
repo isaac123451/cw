@@ -12,7 +12,10 @@ import { getPrisma } from "@/lib/prisma";
 import { Case } from "@/lib/models/case";
 import { Establishment } from "@/lib/models/establishment";
 
-import { isOpen } from "@/lib/services/case.service";
+import {
+  byChannel,
+  isOpen,
+} from "@/lib/services/case.service";
 import { slaStatus } from "@/lib/services/sla.service";
 import {
   movementStatus,
@@ -151,14 +154,48 @@ export async function GET(request: Request) {
     );
   }
 
-  const [casos, workspace] = await Promise.all([
+  /**
+   * O canal do rodapé do painel.
+   *
+   * Existe porque os três não são a mesma fila. O NPS tem **WhatsApp
+   * próprio**: o número por onde a pesquisa fala com o cliente não é o
+   * do atendimento, então uma conversa aberta ali não casa com
+   * reclamação nenhuma do Reclame Aqui — e o painel dizia "nada
+   * encontrado" para um cliente que estava bem ali, num ciclo de NPS
+   * aberto.
+   */
+  const canal = (() => {
+    const pedido = params.get("canal") ?? "";
+    return ["reclame-aqui", "social", "nps"].includes(
+      pedido
+    )
+      ? pedido
+      : "todos";
+  })();
+
+  const [todos, workspace] = await Promise.all([
     getApiCases("all"),
     loadWorkspace(),
   ]);
 
+  /**
+   * A aba do NPS **não** filtra os casos.
+   *
+   * Ela filtra o destaque, não o histórico: quem está atendendo um
+   * detrator ganha muito em ver que a mesma pessoa tem uma reclamação
+   * pública aberta. Esconder isso por causa da aba seria esconder o
+   * motivo da nota.
+   */
+  const casos =
+    canal === "reclame-aqui" || canal === "social"
+      ? byChannel(todos, canal)
+      : todos;
+
   const encontro = casar(casos, alvo);
 
-  const nps = await buscarNps(alvo);
+  const listaNps = await buscarNpsTodos(alvo);
+
+  const nps = listaNps[0] ?? null;
 
   const estabelecimento = acharEstabelecimento(
     workspace.establishments,
@@ -211,7 +248,26 @@ export async function GET(request: Request) {
         }
       : null,
 
+    canal,
+
+    /**
+     * As etapas ativas, na ordem do quadro.
+     *
+     * A extensão precisa delas para **rotular** os botões de avançar e
+     * voltar ("→ Em atendimento"), não para decidir: quem decide é
+     * `/api/extensao/mover`, porque a ordem é cadastro e muda na tela de
+     * configurações. Uma extensão instalada há três semanas teria uma
+     * cópia velha.
+     */
+    etapas: workspace.workflow
+      .filter((item) => item.active)
+      .sort((a, b) => a.order - b.order)
+      .map((item) => item.name),
+
     nps,
+
+    /** Todos os ciclos do cliente — é o que a aba de NPS lista. */
+    npsLista: listaNps,
 
     casos: resumos,
 
@@ -221,7 +277,9 @@ export async function GET(request: Request) {
 
     macros: macrosDe(encontro.casos, workspace, origem),
 
-    cadastros: cadastrosDe(workspace, casos),
+    // `todos`, e não o recorte do canal: o mapa de UF por cidade fica
+    // pobre se a aba filtrar as reclamações que o alimentam.
+    cadastros: cadastrosDe(workspace, todos),
   });
 }
 
@@ -783,10 +841,23 @@ function acharEstabelecimento(
  * verdade hoje.
  */
 async function buscarNps(alvo: Alvo) {
+  return (await buscarNpsTodos(alvo))[0] ?? null;
+}
+
+/**
+ * **Todos** os ciclos daquele cliente, não só o mais recente.
+ *
+ * A aba de NPS precisa da lista: o WhatsApp do NPS é outro número, os
+ * casos do Reclame Aqui não aparecem por ele, e uma pessoa que
+ * respondeu a pesquisa três vezes tem três ciclos — mostrar só o último
+ * esconderia justamente o histórico que diz se ela já reclamou disso
+ * antes.
+ */
+async function buscarNpsTodos(alvo: Alvo) {
 
   const prisma = getPrisma();
 
-  if (!prisma) return null;
+  if (!prisma) return [];
 
   const linhas = await prisma.npsResponse.findMany({
     select: SELECAO_NPS,
@@ -794,7 +865,7 @@ async function buscarNps(alvo: Alvo) {
     take: 500,
   });
 
-  const achado = linhas.find((linha) => {
+  const achados = linhas.filter((linha) => {
 
     if (
       alvo.telefone &&
@@ -819,9 +890,24 @@ async function buscarNps(alvo: Alvo) {
     );
   });
 
-  if (!achado) return null;
-
-  return retratoNps(achado);
+  /**
+   * Em aberto primeiro, e depois por data.
+   *
+   * Quem abre a aba de NPS está atendendo — o ciclo que precisa de ação
+   * tem de estar no topo, mesmo que seja mais antigo que um promotor já
+   * encerrado da semana passada.
+   */
+  return achados
+    .map(retratoNps)
+    .sort((a, b) => {
+      if (a.encerrado !== b.encerrado) {
+        return a.encerrado ? 1 : -1;
+      }
+      return (b.respondidoEm ?? "").localeCompare(
+        a.respondidoEm ?? ""
+      );
+    })
+    .slice(0, 8);
 }
 
 /* ============================================================

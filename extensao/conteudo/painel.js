@@ -103,6 +103,14 @@
   let chaveConsulta = "";
   let ultimoDado = null;
 
+  /**
+   * Canal escolhido no rodapé: "todos", "reclame-aqui", "nps", "social".
+   *
+   * Entra na chave da consulta — trocar de aba tem de refazer a busca,
+   * senão o painel mostraria o recorte anterior sob o rótulo novo.
+   */
+  let canal = "todos";
+
   /* ============================================================
      MONTAGEM
   ============================================================ */
@@ -184,6 +192,24 @@
 
         <div class="corpo"></div>
 
+        <!--
+          O rodapé de canais.
+
+          Os três não são a mesma fila, e o NPS é o motivo: a pesquisa
+          fala com o cliente por um **WhatsApp próprio**, então uma
+          conversa aberta ali não casa com reclamação nenhuma do Reclame
+          Aqui. Sem separar, o painel dizia "nada encontrado" para um
+          cliente que estava ali, com ciclo de NPS aberto.
+        -->
+        <nav class="canais">
+          <button type="button" data-acao="canal" data-canal="reclame-aqui"
+                  aria-pressed="false">Reclame Aqui</button>
+          <button type="button" data-acao="canal" data-canal="nps"
+                  aria-pressed="false">NPS</button>
+          <button type="button" data-acao="canal" data-canal="social"
+                  aria-pressed="false">Redes Sociais</button>
+        </nav>
+
         <footer class="rodape-painel">
           <label class="auto" title="Abrir o painel sozinho ao trocar de conversa (só no WhatsApp Web)">
             <input type="checkbox" data-acao="auto" />
@@ -228,6 +254,11 @@
       }
       if (acao === "criar-caso") criarCaso(alvo);
       if (acao === "reler") reler();
+      if (acao === "canal") trocarCanal(alvo);
+
+      // Avançar e voltar etapa, nos três canais.
+      if (acao === "mover") moverCaso(alvo);
+      if (acao === "nps-mover") moverNps(alvo);
 
       if (acao === "diagnostico") {
         copiar(
@@ -302,6 +333,8 @@
 
     ligarRedimensionamento();
     ligarArrasto();
+
+    refletirCanal();
 
     // A fonte é registrada no documento — @font-face não vale no shadow.
     CW.registrarFonte?.();
@@ -808,7 +841,38 @@
       protocolo: consulta?.protocolo ?? "",
       email: consulta?.email ?? "",
       termo: consulta?.termo ?? "",
+      canal,
     };
+  }
+
+  /**
+   * Troca a aba do rodapé e refaz a consulta.
+   *
+   * Clicar na aba já ativa volta para "todos" — é o caminho de saída
+   * sem precisar de um quarto botão só para isso.
+   */
+  function trocarCanal(alvo) {
+
+    const pedido = alvo.dataset.canal;
+
+    canal = canal === pedido ? "todos" : pedido;
+
+    refletirCanal();
+
+    ultimoDado = null;
+
+    if (temOndeProcurar()) consultar(true);
+  }
+
+  function refletirCanal() {
+    for (const botao of raiz.querySelectorAll(
+      '[data-acao="canal"]'
+    )) {
+      botao.setAttribute(
+        "aria-pressed",
+        botao.dataset.canal === canal ? "true" : "false"
+      );
+    }
   }
 
   /**
@@ -1103,8 +1167,30 @@
 
     /* ---- NPS ---- */
 
-    if (dados.nps) {
-      partes.push(blocoNps(dados.nps, podeEscrever(dados)));
+    /**
+     * Na aba de NPS, **todos** os ciclos; fora dela, só o mais recente.
+     *
+     * Quem abriu a aba está atendendo pelo WhatsApp da pesquisa, e ali
+     * o histórico é o assunto: uma pessoa que respondeu três vezes tem
+     * três ciclos, e mostrar só o último esconderia se ela já tinha
+     * reclamado do mesmo antes. Nas outras abas o NPS é contexto de
+     * canto, e um cartão basta.
+     */
+    const ciclos =
+      canal === "nps"
+        ? (dados.npsLista ?? [])
+        : dados.nps
+          ? [dados.nps]
+          : [];
+
+    for (const ciclo of ciclos) {
+      partes.push(
+        blocoNps(
+          ciclo,
+          podeEscrever(dados),
+          ciclos.length > 1
+        )
+      );
     }
 
     /* ---- sugestões ---- */
@@ -1220,6 +1306,15 @@
       );
     }
 
+    /**
+     * Os botões de etapa ficam **dentro** do cartão, e funcionam.
+     *
+     * O cartão inteiro tem `data-acao="abrir"`, mas o despachante usa
+     * `closest("[data-acao]")` a partir do que foi clicado — o botão
+     * está mais perto que o cartão, então ele ganha. Sem isso, tentar
+     * avançar a etapa abriria o caso na aplicação, que é exatamente o
+     * que estes botões existem para evitar.
+     */
     return `
       <div class="caso ${classe}" data-acao="abrir"
            data-url="${CW.escapar(caso.url)}">
@@ -1229,6 +1324,7 @@
         </div>
         <div class="titulo-caso">${CW.escapar(caso.titulo)}</div>
         <div class="rodape">${etiquetas.join("")}</div>
+        ${botoesDeEtapa(caso)}
       </div>`;
   }
 
@@ -1297,9 +1393,27 @@
 
     const rotulo = botao.textContent;
 
+    /**
+     * Zero mensagens e "duas mensagens" são problemas diferentes.
+     *
+     * Zero quase sempre é o leitor: o WhatsApp Web troca a marcação sem
+     * avisar, e `div[data-id]` para de casar. Dizer "conversa curta
+     * demais" nesse caso manda procurar o defeito no lugar errado — a
+     * conversa está cheia, quem não está lendo é a extensão.
+     */
+    if (mensagens.length === 0) {
+      avisar(
+        "Não consegui ler nenhuma mensagem desta conversa. Isso é a extensão, não a conversa: o WhatsApp Web mudou a marcação. Recarregue a página; se continuar, me avise.",
+        "perigo"
+      );
+      return;
+    }
+
     if (mensagens.length < 2) {
-      botao.textContent = "conversa curta demais";
-      setTimeout(() => (botao.textContent = rotulo), 1800);
+      avisar(
+        "Só consegui ler uma mensagem — pouco para resumir. Role a conversa para cima e tente de novo.",
+        "atencao"
+      );
       return;
     }
 
@@ -1334,14 +1448,33 @@
 
     botao.disabled = false;
 
+    botao.textContent = rotulo;
+
+    /**
+     * O motivo vai no recado, não no rótulo do botão.
+     *
+     * Antes a mensagem de erro virava o texto do botão por dois
+     * segundos e meio. Num botão de 350 px, "ANTHROPIC_API_KEY não
+     * configurada — o resumo precisa dela" é ilegível, e o efeito era
+     * o botão parecer que simplesmente não faz nada.
+     */
     if (!resposta.ok || resposta.dados?.erro) {
-      botao.textContent =
-        resposta.dados?.erro ?? resposta.erro ?? "falhou";
-      setTimeout(() => (botao.textContent = rotulo), 2600);
+
+      const motivo =
+        resposta.dados?.erro ??
+        resposta.erro ??
+        "Falha desconhecida ao resumir.";
+
+      avisar(
+        /ANTHROPIC_API_KEY/i.test(motivo)
+          ? `${motivo} Ela é opcional no deploy — se a aplicação está na Vercel, precisa ser adicionada lá em Settings → Environment Variables.`
+          : motivo,
+        "perigo"
+      );
+
       return;
     }
 
-    botao.textContent = rotulo;
     resumo = resposta.dados;
 
     if (ultimoDado) render(ultimoDado);
@@ -1456,6 +1589,46 @@
   const CANAIS = ["Telefone", "WhatsApp", "E-mail"];
 
   /**
+   * Os passos de andamento do ciclo de NPS.
+   *
+   * Só esta metade: encerrar depende do tipo e do checklist do guia, e
+   * alguns finais exigem o cliente ter confirmado. Um botão "avançar"
+   * que atravessasse isso produziria encerramento sem lastro — o
+   * oposto do que o indicador de resolução mede. O servidor recusa
+   * igual, e explica por quê.
+   */
+  const FLUXO_NPS = [
+    "Novo",
+    "Em tratativa",
+    "[Aguardando Resposta]",
+  ];
+
+  function passosDoNps(nps) {
+
+    if (nps.encerrado) {
+      return '    <div class="etapas"><span class="passo vazio">ciclo encerrado — reabrir é pela tela do NPS</span></div>';
+    }
+
+    const i = FLUXO_NPS.indexOf(nps.status);
+
+    if (i < 0) return "";
+
+    const antes = FLUXO_NPS[i - 1];
+    const depois = FLUXO_NPS[i + 1];
+
+    return [
+      '    <div class="etapas">',
+      antes
+        ? `      <button class="passo" data-acao="nps-mover" data-id="${CW.escapar(nps.id)}" data-direcao="voltar">&larr; ${CW.escapar(antes)}</button>`
+        : '      <span class="passo vazio">início do ciclo</span>',
+      depois
+        ? `      <button class="passo" data-acao="nps-mover" data-id="${CW.escapar(nps.id)}" data-direcao="avancar">${CW.escapar(depois)} &rarr;</button>`
+        : '      <span class="passo vazio">encerrar é pela tela</span>',
+      '    </div>',
+    ].join("");
+  }
+
+  /**
    * Quem pode gravar.
    *
    * O servidor recusa `LEITURA` de qualquer jeito; esconder o
@@ -1482,7 +1655,7 @@
    * sendo da tela, que tem o checklist — encerramento em gaveta de 380
    * px vira encerramento sem lastro.
    */
-  function blocoNps(nps, escrever) {
+  function blocoNps(nps, escrever, compacto = false) {
 
     const humorAtual = HUMORES.find(
       (h) => h.valor === nps.humor
@@ -1510,7 +1683,9 @@
 
     const partes = [
       '<div class="bloco">',
-      '  <div class="rotulo">NPS</div>',
+      compacto
+        ? `  <div class="rotulo">NPS · ${CW.data(nps.respondidoEm)}</div>`
+        : '  <div class="rotulo">NPS</div>',
       '  <div class="cartao">',
       '    <div class="linha">',
       `      <span class="nome">${nps.nota}/10</span>`,
@@ -1530,6 +1705,7 @@
       registrado
         ? `    <div class="sub" style="margin-top:6px;color:var(--suave)">${CW.escapar(registrado)}</div>`
         : "",
+      escrever ? passosDoNps(nps) : "",
       '  </div>',
     ];
 
@@ -1595,6 +1771,161 @@
     partes.push('</div>');
 
     return partes.filter(Boolean).join("");
+  }
+
+  /* ============================================================
+     AVANÇAR E VOLTAR ETAPA
+  ============================================================ */
+
+  /**
+   * A etapa vizinha, só para **rotular** o botão.
+   *
+   * Quem decide de verdade é o servidor, em `/api/extensao/mover`: a
+   * ordem das colunas é cadastro e muda na tela de configurações, e uma
+   * extensão instalada há três semanas teria uma cópia velha. Aqui a
+   * lista serve para o botão dizer "→ Em atendimento" em vez de um
+   * "avançar" que não diz para onde.
+   */
+  function vizinha(status, direcao) {
+
+    const etapas = ultimoDado?.etapas ?? [];
+
+    const i = etapas.indexOf(status);
+
+    if (i < 0) return "";
+
+    const alvo = direcao === "avancar" ? i + 1 : i - 1;
+
+    return alvo >= 0 && alvo < etapas.length
+      ? etapas[alvo]
+      : "";
+  }
+
+  /** Os dois botões de etapa de um caso. */
+  function botoesDeEtapa(caso) {
+
+    if (!podeEscrever(ultimoDado)) return "";
+
+    const antes = vizinha(caso.status, "voltar");
+    const depois = vizinha(caso.status, "avancar");
+
+    if (!antes && !depois) return "";
+
+    return [
+      '<div class="etapas">',
+      antes
+        ? `<button class="passo" data-acao="mover" data-protocolo="${CW.escapar(caso.protocolo)}" data-direcao="voltar" title="Voltar para ${CW.escapar(antes)}">&larr; ${CW.escapar(antes)}</button>`
+        : '<span class="passo vazio">início do fluxo</span>',
+      depois
+        ? `<button class="passo" data-acao="mover" data-protocolo="${CW.escapar(caso.protocolo)}" data-direcao="avancar" title="Avançar para ${CW.escapar(depois)}">${CW.escapar(depois)} &rarr;</button>`
+        : '<span class="passo vazio">fim do fluxo</span>',
+      '</div>',
+    ].join("");
+  }
+
+  async function moverCaso(botao) {
+
+    const rotulo = botao.textContent;
+
+    botao.disabled = true;
+    botao.textContent = "...";
+
+    const resposta = await CW.enviar({
+      tipo: "moverCaso",
+      protocolo: botao.dataset.protocolo,
+      direcao: botao.dataset.direcao,
+    });
+
+    botao.disabled = false;
+    botao.textContent = rotulo;
+
+    const r = resposta.dados;
+
+    if (!resposta.ok || r?.erro) {
+      avisar(resposta.erro ?? r?.erro, "perigo");
+      return;
+    }
+
+    if (!r.movido) {
+      avisar(r.aviso, "atencao");
+      return;
+    }
+
+    /**
+     * A nota some ao voltar de "Resolvido"/"Não resolvido" — regra de
+     * `moverPara`. Avisar não é enfeite: apagar avaliação em silêncio é
+     * a definição de efeito colateral, e ela pesa na reputação.
+     */
+    avisar(
+      `${r.protocolo}: ${r.de} → ${r.status}.${
+        r.notaRemovida
+          ? " A avaliação saiu junto, porque o caso voltou para antes dela."
+          : ""
+      }`,
+      r.notaRemovida ? "atencao" : "ok"
+    );
+
+    consultar(true);
+  }
+
+  async function moverNps(botao) {
+
+    const rotulo = botao.textContent;
+
+    botao.disabled = true;
+    botao.textContent = "...";
+
+    const resposta = await CW.enviar({
+      tipo: "registrarNps",
+      registro: {
+        id: botao.dataset.id,
+        acao: "status",
+        direcao: botao.dataset.direcao,
+      },
+    });
+
+    botao.disabled = false;
+    botao.textContent = rotulo;
+
+    const r = resposta.dados;
+
+    if (!resposta.ok || r?.erro) {
+      avisar(resposta.erro ?? r?.erro, "perigo");
+      return;
+    }
+
+    if (!r.movido) {
+      avisar(r.aviso, "atencao");
+      return;
+    }
+
+    avisar(`NPS: ${r.de} → ${r.status}.`, "ok");
+
+    consultar(true);
+  }
+
+  /**
+   * Um aviso curto no topo do corpo, que some sozinho.
+   *
+   * O painel não tem onde empilhar notificação, e um `alert()` dentro
+   * do WhatsApp Web sequestra a página inteira.
+   */
+  function avisar(texto, tom = "ok") {
+
+    if (!texto || !corpo) return;
+
+    const antigo = corpo.querySelector(".recado");
+
+    antigo?.remove();
+
+    const caixa = document.createElement("div");
+
+    caixa.className = `recado ${tom}`;
+    caixa.textContent = texto;
+
+    corpo.prepend(caixa);
+
+    setTimeout(() => caixa.remove(), 7000);
   }
 
   /**
