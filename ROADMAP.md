@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 23/08/2026. Aplicação **0.15.0**, extensão **0.15.0**.
+Atualizado em 23/08/2026. Aplicação **0.16.0**, extensão **0.16.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -15,10 +15,10 @@ Atualizado em 23/08/2026. Aplicação **0.15.0**, extensão **0.15.0**.
 
 ## Estado atual
 
-**Banco: Supabase, no ar.** 43 tabelas, RLS ligado em todas, **127
-reclamações** — a base inteira do Reclame Aqui, com relato completo,
-telefone, e-mail e documento —, **105 estabelecimentos**, **117
-clientes** e **868** respostas de NPS. **Nada da interface vive fora do
+**Banco: Supabase, no ar.** 43 tabelas, RLS ligado em todas, **340
+reclamações** — a base inteira do Reclame Aqui desde 02/2024, com relato
+e resposta pública completos, telefone, e-mail e documento —, **239
+estabelecimentos**, **296 clientes** e **868** respostas de NPS. **Nada da interface vive fora do
 banco** — o que se edita sobrevive ao reload e segue a conta, não o
 dispositivo.
 Connection string **pooled** para a aplicação e **de sessão** em
@@ -66,7 +66,7 @@ workspace junto com os outros cadastros.
 ### 0. Handoff — leia isto primeiro (22/08/2026)
 
 **Produção:** https://cw-rho-eight.vercel.app · repo `isaac123451/cw`,
-branch `main` · aplicação e extensão em **0.15.0**, sempre no mesmo
+branch `main` · aplicação e extensão em **0.16.0**, sempre no mesmo
 número.
 
 **Antes de dizer que algo está pronto, rode o `check:` correspondente.**
@@ -381,6 +381,64 @@ da camada gratuita.
 
 
 ## Entregue
+
+
+### O export "Base de dados RA", que é o completo (23/08/2026)
+
+O portal exporta dois relatórios, e até hoje a carga vinha do menor. O
+**"Base de dados RA"** tem 340 reclamações contra 127, cobre de
+**15/02/2024 a hoje** em vez de seis meses, e traz três colunas que o
+outro não tem:
+
+| Coluna | O que muda |
+| ------ | ---------- |
+| `Resposta da empresa` | O texto público inteiro, em 327 das 340. Antes ficava a frase de reserva "Resposta pública registrada no portal" — que dizia *que* houve resposta e não *qual*. |
+| `Problema RA` | A classificação que o **próprio consumidor** escolhe ao abrir a reclamação, em 312 das 340. É dado de origem, não palpite por título. |
+| `Avaliações desconsideradas RA` | As notas que o portal invalidou. Sem ler isso, uma nota já descartada por eles continuaria pesando no indicador daqui, e os dois números divergiriam sem explicação. |
+
+A classificação passou a ter três degraus, em ordem de confiança: o CW
+Engine (feita por gente da operação), o `Problema RA` (do portal) e, só
+então, o classificador por título. O degrau existe em vez de uma escolha
+fixa porque o mesmo comando lê os dois exports.
+
+Resultado da carga: **340 reclamações, 283 com estabelecimento** em 239
+cadastros, 296 clientes, 233 estabelecimentos com documento. O casamento
+com o CW Engine subiu junto — 332 de 340 acharam par, 227 deles pelo id
+do Reclame Aqui.
+
+**Um efeito da regra da Carla que vale registrar:** "de janeiro de 2026
+para trás" passou a cobrir **196 dos 340** casos, porque a base agora
+inclui 2024 e 2025. É literalmente a regra pedida, aplicada a uma base
+três vezes maior.
+
+### Etapas e tipos do NPS: a tela não dizia o que era cada campo (23/08/2026)
+
+O cadastro era uma linha de campos sem rótulo nenhum, distinguidos por
+largura e por `title`. O que aparecia na tela era uma caixa larga vazia
+com uma bolinha colorida no meio — e a bolinha era o campo do **emoji**,
+com o campo do **nome** empurrado para fora da vista.
+
+A causa: um `flex` com um campo `w-full` ao lado de três `shrink-0`. A
+soma passava da largura do modal, e o que sobrava era barra de rolagem
+horizontal. Medido no navegador depois do conserto: **zero elementos com
+rolagem horizontal** dentro do modal.
+
+Cada item virou um cartão com:
+
+- **Cabeçalho com a identidade** — emoji, nome e as marcas de "encerra" e
+  "inativo". Antes, para saber de que etapa se tratava era preciso clicar
+  dentro do campo.
+- **Rótulo em cima de cada campo**, numa grade que quebra em vez de
+  estourar.
+- **As travas com a explicação visível.** Eram três caixas de marcar com
+  rótulo de quatro palavras e o motivo escondido num `title` — que
+  aparece depois de um segundo com o mouse parado, e nunca em telefone.
+  Quem configura isto faz uma vez a cada muitos meses: é exatamente quem
+  não lembra o que a opção faz.
+
+A descrição do modal também mudou. Dizia "os dois deixaram de ser lista
+fixa no código", que é história de implementação — agora diz para que a
+aba aberta serve.
 
 
 ### Carga incremental: criar só o que falta (23/08/2026)

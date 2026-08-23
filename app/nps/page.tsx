@@ -444,7 +444,7 @@ export default function NpsPage() {
 
             <button
               onClick={() => setEtapasOpen(true)}
-              title="As colunas do quadro e os sete tipos de tratativa."
+              title="As colunas por onde a tratativa caminha e os tipos que classificam cada resposta."
               className="flex items-center gap-2 rounded-xl border border-zinc-200 px-3.5 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:border-violet-300 hover:text-violet-700"
             >
               <Columns3 size={15} />

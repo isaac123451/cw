@@ -88,7 +88,7 @@ export default function StageManager({
     <Modal
       open
       title="Etapas e tipos do NPS"
-      description="As colunas do quadro e os sete tipos de tratativa — os dois deixaram de ser lista fixa no código."
+      description="Duas listas que definem o quadro: por onde o ciclo passa e como ele é classificado."
       size="wide"
       onClose={fechar}
       footer={
@@ -117,6 +117,19 @@ export default function StageManager({
           ))}
         </div>
 
+        {/*
+          Uma linha dizendo **para que serve a aba aberta**.
+
+          O título do modal cobre as duas, e quem abre pela primeira vez
+          não tem como saber a diferença entre "etapa" e "tipo" — são
+          conceitos do processo, não do produto.
+        */}
+        <p className="text-xs leading-relaxed text-zinc-500">
+          {aba === "etapas"
+            ? "As colunas do quadro do NPS: por onde a tratativa caminha, em que ordem, e quais colunas encerram o ciclo."
+            : "Como cada resposta é classificada — e o que essa classificação passa a exigir antes de deixar encerrar."}
+        </p>
+
         {aba === "etapas" ? (
           <Etapas
             rascunho={rascunhoEtapas}
@@ -134,6 +147,93 @@ export default function StageManager({
       </div>
 
     </Modal>
+  );
+}
+
+/* ============================================================
+   PEÇAS COMPARTILHADAS PELAS DUAS ABAS
+============================================================ */
+
+/**
+ * Campo com rótulo em cima.
+ *
+ * A versão anterior não tinha rótulo nenhum: os campos eram
+ * distinguidos por largura e por `title`, e o resultado é o que o Isaac
+ * viu — uma caixa larga vazia, uma bolinha colorida no meio, e nenhuma
+ * pista do que era cada uma.
+ */
+function Campo({
+  rotulo,
+  dica,
+  children,
+}: {
+  rotulo: string;
+  dica?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="block min-w-0">
+
+      <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+        {rotulo}
+        {dica && (
+          <span className="ml-1 font-normal normal-case tracking-normal text-zinc-400">
+            {dica}
+          </span>
+        )}
+      </span>
+
+      {children}
+
+    </label>
+  );
+}
+
+/**
+ * Caixa de marcar com o motivo **visível**.
+ *
+ * O motivo morava num `title`: aparecia depois de um segundo parado com
+ * o mouse em cima, e nunca em telefone. Quem configura isto faz uma vez
+ * a cada muitos meses — é exatamente quem não lembra o que a opção faz.
+ */
+function Marcador({
+  marcado,
+  onChange,
+  titulo,
+  explicacao,
+}: {
+  marcado: boolean;
+  onChange: (valor: boolean) => void;
+  titulo: string;
+  explicacao: string;
+}) {
+  return (
+    <label
+      className={`flex cursor-pointer gap-2.5 rounded-lg border p-2.5 transition-colors ${marcado ? "border-violet-200 bg-violet-50/50" : "border-zinc-200 hover:bg-zinc-50"}`}
+    >
+
+      <input
+        type="checkbox"
+        checked={marcado}
+        onChange={(e) => onChange(e.target.checked)}
+        className="mt-0.5 h-3.5 w-3.5 shrink-0 accent-violet-600"
+      />
+
+      <span className="min-w-0">
+
+        <span
+          className={`block text-xs font-medium ${marcado ? "text-violet-900" : "text-zinc-700"}`}
+        >
+          {titulo}
+        </span>
+
+        <span className="mt-0.5 block text-[11px] leading-relaxed text-zinc-500">
+          {explicacao}
+        </span>
+
+      </span>
+
+    </label>
   );
 }
 
@@ -188,109 +288,160 @@ function Etapas({
       <ul className="divide-y divide-zinc-100 rounded-xl border border-zinc-200">
 
         {ordenadas.map((etapa) => (
-          <li key={etapa.id} className="space-y-2 px-3.5 py-3">
+          <li
+            key={etapa.id}
+            className="space-y-3 px-4 py-3.5"
+          >
 
-            <div className="flex items-center gap-2">
+            {/*
+              O cabeçalho existe para a lista ser **percorrível**.
 
-              <input
-                type="color"
-                value={etapa.color}
-                onChange={(e) =>
-                  rascunho.alterar(etapa.id, {
-                    color: e.target.value,
-                  })
-                }
-                title="Cor da coluna"
-                className="h-8 w-8 shrink-0 cursor-pointer rounded-lg border border-zinc-200 bg-white p-0.5"
+              Sem ele, catorze linhas de campos vazios em sequência não
+              dizem qual é qual: a versão anterior mostrava só uma
+              bolinha colorida no meio de uma caixa, e para descobrir de
+              que etapa se tratava era preciso clicar dentro.
+            */}
+            <div className="flex items-center gap-2.5">
+
+              <span
+                aria-hidden
+                className="h-3.5 w-3.5 shrink-0 rounded-full ring-1 ring-inset ring-black/10"
+                style={{ background: etapa.color }}
               />
 
-              <input
-                value={rotuloDeEtapa(etapa.name)}
-                onChange={(e) =>
-                  rascunho.alterar(etapa.id, {
-                    name: nomeDeEtapa(
-                      e.target.value,
-                      etapa.final
-                    ),
-                  })
-                }
-                placeholder="Nome da etapa"
-                className={`${inputClass} h-8 py-1`}
-              />
+              <strong className="min-w-0 flex-1 truncate text-sm font-semibold text-zinc-900">
+                {rotuloDeEtapa(etapa.name) || (
+                  <span className="font-normal text-zinc-400">
+                    Etapa sem nome
+                  </span>
+                )}
+              </strong>
 
-              <input
-                type="number"
-                value={etapa.order}
-                onChange={(e) =>
-                  rascunho.alterar(etapa.id, {
-                    order: Number(e.target.value),
-                  })
-                }
-                title="Ordem no quadro"
-                className={`${inputClass} h-8 w-16 shrink-0 py-1`}
-              />
+              {etapa.final && (
+                <span className="shrink-0 rounded-md bg-zinc-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-600">
+                  encerra
+                </span>
+              )}
 
-              <label
-                title="Encerra o ciclo: carimba a data de fechamento, tira da fila e entra no indicador de resolução."
-                className="flex shrink-0 items-center gap-1.5 text-xs text-zinc-600"
-              >
-                <input
-                  type="checkbox"
-                  checked={etapa.final}
-                  onChange={(e) =>
-                    rascunho.alterar(etapa.id, {
-                      final: e.target.checked,
-                      /*
-                        O nome acompanha a marcação.
-
-                        É o prefixo que o resto da aplicação lê — deixar
-                        os dois divergirem é criar uma etapa que a tela
-                        chama de final e o indicador não.
-                      */
-                      name: nomeDeEtapa(
-                        etapa.name,
-                        e.target.checked
-                      ),
-                    })
-                  }
-                />
-                encerra
-              </label>
-
-              <label
-                title="Etapa desativada some do quadro, mas o ciclo parado nela continua aparecendo."
-                className="flex shrink-0 items-center gap-1.5 text-xs text-zinc-600"
-              >
-                <input
-                  type="checkbox"
-                  checked={etapa.active}
-                  onChange={(e) =>
-                    rascunho.alterar(etapa.id, {
-                      active: e.target.checked,
-                    })
-                  }
-                />
-                ativa
-              </label>
+              {!etapa.active && (
+                <span className="shrink-0 rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
+                  inativa
+                </span>
+              )}
 
               <button
                 onClick={() => excluir(etapa)}
-                title="Excluir"
-                className="shrink-0 rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-rose-50 hover:text-rose-600"
+                title="Excluir etapa"
+                className="shrink-0 rounded-lg p-1.5 text-zinc-300 transition-colors hover:bg-rose-50 hover:text-rose-600"
               >
                 <Trash2 size={14} />
               </button>
 
             </div>
 
+            {/*
+              Grade que **quebra** em vez de estourar.
+
+              A versão anterior era um `flex` com um campo `w-full` ao
+              lado de três `shrink-0`: a soma passava da largura do
+              modal, e o que sobrava era barra de rolagem horizontal com
+              o campo do nome empurrado para fora da vista.
+            */}
+            <div className="grid gap-3 sm:grid-cols-[4rem_1fr_5.5rem]">
+
+              <Campo rotulo="Cor">
+                <input
+                  type="color"
+                  value={etapa.color}
+                  onChange={(e) =>
+                    rascunho.alterar(etapa.id, {
+                      color: e.target.value,
+                    })
+                  }
+                  className="h-9 w-full cursor-pointer rounded-lg border border-zinc-200 bg-white p-0.5"
+                />
+              </Campo>
+
+              <Campo rotulo="Nome da etapa">
+                <input
+                  value={rotuloDeEtapa(etapa.name)}
+                  onChange={(e) =>
+                    rascunho.alterar(etapa.id, {
+                      name: nomeDeEtapa(
+                        e.target.value,
+                        etapa.final
+                      ),
+                    })
+                  }
+                  placeholder="Ex.: Em tratativa"
+                  className={`${inputClass} h-9`}
+                />
+              </Campo>
+
+              <Campo
+                rotulo="Posição"
+                dica="ordem no quadro"
+              >
+                <input
+                  type="number"
+                  value={etapa.order}
+                  onChange={(e) =>
+                    rascunho.alterar(etapa.id, {
+                      order: Number(e.target.value),
+                    })
+                  }
+                  className={`${inputClass} h-9`}
+                />
+              </Campo>
+
+            </div>
+
+            <div className="space-y-1.5">
+
+              <Marcador
+                marcado={etapa.final}
+                onChange={(valor) =>
+                  rascunho.alterar(etapa.id, {
+                    final: valor,
+                    /*
+                      O nome acompanha a marcação.
+
+                      É o prefixo que o resto da aplicação lê — deixar
+                      os dois divergirem é criar uma etapa que a tela
+                      chama de final e o indicador não.
+                    */
+                    name: nomeDeEtapa(etapa.name, valor),
+                  })
+                }
+                titulo="Esta etapa encerra o ciclo"
+                explicacao="Carimba a data de fechamento, tira o ciclo da fila e conta no indicador de resolução. O nome ganha o prefixo [Encerrado], que é o que o resto do sistema lê."
+              />
+
+              <Marcador
+                marcado={etapa.active}
+                onChange={(valor) =>
+                  rascunho.alterar(etapa.id, {
+                    active: valor,
+                  })
+                }
+                titulo="Aparece no quadro"
+                explicacao="Desmarcada, a etapa some das colunas — mas o ciclo que já estava nela continua visível, para não desaparecer sem ninguém ter movido."
+              />
+
+            </div>
+
             {etapa.final && (
 
-              <div className="pl-10">
+              <div className="rounded-xl bg-zinc-50 p-3">
 
-                <p className="mb-1 text-[11px] text-zinc-500">
-                  Quais tipos podem encerrar aqui
-                  {etapa.kinds.length === 0 &&
-                    " — nenhum marcado significa todos"}
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+                  Quem pode encerrar aqui
+                </p>
+
+                <p className="mb-2 mt-0.5 text-[11px] leading-relaxed text-zinc-500">
+                  {etapa.kinds.length === 0
+                    ? "Nenhum marcado — vale para todos os tipos."
+                    : "Só os tipos marcados vão oferecer esta etapa como saída."}
                 </p>
 
                 <div className="flex flex-wrap gap-1.5">
@@ -316,7 +467,7 @@ function Etapas({
                                   ],
                             })
                           }
-                          className={`rounded-lg px-2 py-1 text-[11px] font-medium ring-1 ring-inset transition-colors ${marcado ? "bg-violet-50 text-violet-700 ring-violet-200" : "text-zinc-500 ring-zinc-200 hover:bg-zinc-50"}`}
+                          className={`rounded-lg px-2 py-1 text-[11px] font-medium ring-1 ring-inset transition-colors ${marcado ? "bg-violet-100 text-violet-800 ring-violet-300" : "bg-white text-zinc-500 ring-zinc-200 hover:bg-zinc-50"}`}
                         >
                           {tipo.emoji} {tipo.name}
                         </button>
@@ -437,122 +588,169 @@ function Tipos({
       <ul className="divide-y divide-zinc-100 rounded-xl border border-zinc-200">
 
         {ordenados.map((tipo) => (
-          <li key={tipo.id} className="space-y-2 px-3.5 py-3">
+          <li
+            key={tipo.id}
+            className="space-y-3 px-4 py-3.5"
+          >
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
 
-              <input
-                value={tipo.emoji}
-                onChange={(e) =>
-                  rascunho.alterar(tipo.id, {
-                    emoji: e.target.value.slice(0, 4),
-                  })
-                }
-                title="Emoji"
-                className={`${inputClass} h-8 w-12 shrink-0 py-1 text-center`}
-              />
+              <span
+                aria-hidden
+                className="shrink-0 text-base leading-none"
+              >
+                {tipo.emoji || "⚪"}
+              </span>
 
-              <input
-                value={tipo.name}
-                onChange={(e) =>
-                  rascunho.alterar(tipo.id, {
-                    name: e.target.value,
-                  })
-                }
-                placeholder="Nome do tipo"
-                className={`${inputClass} h-8 py-1`}
-              />
+              <strong className="min-w-0 flex-1 truncate text-sm font-semibold text-zinc-900">
+                {tipo.name || (
+                  <span className="font-normal text-zinc-400">
+                    Tipo sem nome
+                  </span>
+                )}
+              </strong>
 
-              <input
-                type="number"
-                value={tipo.ownDeadlineHours ?? ""}
-                onChange={(e) =>
-                  rascunho.alterar(tipo.id, {
-                    ownDeadlineHours: e.target.value
-                      ? Number(e.target.value)
-                      : undefined,
-                  })
-                }
-                placeholder="—"
-                title="Prazo próprio em horas úteis. Vazio usa o prazo do segmento."
-                className={`${inputClass} h-8 w-20 shrink-0 py-1`}
-              />
-
-              <label className="flex shrink-0 items-center gap-1.5 text-xs text-zinc-600">
-                <input
-                  type="checkbox"
-                  checked={tipo.active}
-                  onChange={(e) =>
-                    rascunho.alterar(tipo.id, {
-                      active: e.target.checked,
-                    })
-                  }
-                />
-                ativo
-              </label>
+              {!tipo.active && (
+                <span className="shrink-0 rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
+                  inativo
+                </span>
+              )}
 
               <button
                 onClick={() => excluir(tipo)}
-                title="Excluir"
-                className="shrink-0 rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-rose-50 hover:text-rose-600"
+                title="Excluir tipo"
+                className="shrink-0 rounded-lg p-1.5 text-zinc-300 transition-colors hover:bg-rose-50 hover:text-rose-600"
               >
                 <Trash2 size={14} />
               </button>
 
             </div>
 
-            <div className="flex flex-wrap gap-3 pl-14 text-xs text-zinc-600">
+            <div className="grid gap-3 sm:grid-cols-[4rem_1fr_7rem]">
 
-              {(
-                [
-                  [
-                    "requiresConfirmation",
-                    "exige confirmação do cliente",
-                    "Sem a resposta de reengajamento, o ciclo não vai para resolvido.",
-                  ],
-                  [
-                    "requiresRootCause",
-                    "exige causa raiz",
-                    "Trava o encerramento enquanto a causa não estiver marcada.",
-                  ],
-                  [
-                    "opensProcessReview",
-                    "abre revisão de processo",
-                    "Ao classificar, cria um item em Projetos e Melhorias.",
-                  ],
-                ] as const
-              ).map(([campo, label, dica]) => (
-                <label
-                  key={campo}
-                  title={dica}
-                  className="flex items-center gap-1.5"
-                >
-                  <input
-                    type="checkbox"
-                    checked={tipo[campo]}
-                    onChange={(e) =>
-                      rascunho.alterar(tipo.id, {
-                        [campo]: e.target.checked,
-                      })
-                    }
-                  />
-                  {label}
-                </label>
-              ))}
+              <Campo rotulo="Emoji">
+                <input
+                  value={tipo.emoji}
+                  onChange={(e) =>
+                    rascunho.alterar(tipo.id, {
+                      emoji: e.target.value.slice(0, 4),
+                    })
+                  }
+                  placeholder="⚪"
+                  className={`${inputClass} h-9 text-center`}
+                />
+              </Campo>
+
+              <Campo rotulo="Nome do tipo">
+                <input
+                  value={tipo.name}
+                  onChange={(e) =>
+                    rascunho.alterar(tipo.id, {
+                      name: e.target.value,
+                    })
+                  }
+                  placeholder="Ex.: Reclamação"
+                  className={`${inputClass} h-9`}
+                />
+              </Campo>
+
+              <Campo
+                rotulo="Prazo"
+                dica="horas úteis; vazio usa o do segmento"
+              >
+                <input
+                  type="number"
+                  value={tipo.ownDeadlineHours ?? ""}
+                  onChange={(e) =>
+                    rascunho.alterar(tipo.id, {
+                      ownDeadlineHours: e.target.value
+                        ? Number(e.target.value)
+                        : undefined,
+                    })
+                  }
+                  placeholder="—"
+                  className={`${inputClass} h-9`}
+                />
+              </Campo>
 
             </div>
 
-            <textarea
-              value={tipo.action}
-              onChange={(e) =>
-                rascunho.alterar(tipo.id, {
-                  action: e.target.value,
-                })
-              }
-              rows={2}
-              placeholder="O que fazer com este tipo — aparece na ficha da tratativa."
-              className={`${inputClass} ml-14 w-[calc(100%-3.5rem)] py-1.5 text-xs`}
-            />
+            {/*
+              As travas, com a explicação **na tela**.
+
+              Eram três caixas com rótulo de quatro palavras e o motivo
+              escondido num `title`. Quem nunca configurou isso não tem
+              como adivinhar que "exige causa raiz" trava o encerramento
+              — e tooltip não existe em telefone.
+            */}
+            <div className="space-y-1.5">
+
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+                O que este tipo exige
+              </p>
+
+              <Marcador
+                marcado={tipo.requiresConfirmation}
+                onChange={(valor) =>
+                  rascunho.alterar(tipo.id, {
+                    requiresConfirmation: valor,
+                  })
+                }
+                titulo="Confirmar com o cliente antes de encerrar"
+                explicacao="Enquanto o cliente não responder ao reengajamento, o ciclo não pode ir para uma etapa de encerramento."
+              />
+
+              <Marcador
+                marcado={tipo.requiresRootCause}
+                onChange={(valor) =>
+                  rascunho.alterar(tipo.id, {
+                    requiresRootCause: valor,
+                  })
+                }
+                titulo="Registrar a causa raiz"
+                explicacao="O encerramento fica travado enquanto ninguém marcar a causa. É o que faz a análise de tendência ter o que agrupar."
+              />
+
+              <Marcador
+                marcado={tipo.opensProcessReview}
+                onChange={(valor) =>
+                  rascunho.alterar(tipo.id, {
+                    opensProcessReview: valor,
+                  })
+                }
+                titulo="Abrir revisão de processo"
+                explicacao="Ao classificar o ciclo com este tipo, um item é criado em Projetos e Melhorias — para o problema virar trabalho, e não só registro."
+              />
+
+              <Marcador
+                marcado={tipo.active}
+                onChange={(valor) =>
+                  rascunho.alterar(tipo.id, {
+                    active: valor,
+                  })
+                }
+                titulo="Aparece na classificação"
+                explicacao="Desmarcado, o tipo deixa de ser oferecido nas tratativas novas. Os ciclos que já o usam continuam como estão."
+              />
+
+            </div>
+
+            <Campo
+              rotulo="O que fazer com este tipo"
+              dica="aparece na ficha da tratativa"
+            >
+              <textarea
+                value={tipo.action}
+                onChange={(e) =>
+                  rascunho.alterar(tipo.id, {
+                    action: e.target.value,
+                  })
+                }
+                rows={2}
+                placeholder="Ex.: contatar em até 48 h úteis, registrar e enviar link de acompanhamento."
+                className={`${inputClass} h-auto resize-y py-2 text-xs leading-relaxed`}
+              />
+            </Campo>
 
           </li>
         ))}

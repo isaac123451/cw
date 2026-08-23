@@ -50,7 +50,10 @@ import * as XLSX from "xlsx";
 
 import type { Case } from "../lib/models/case";
 import { slugify } from "../lib/services/slug";
-import { classificar } from "../lib/services/raClassify";
+import {
+  classificar,
+  classificarPorProblema,
+} from "../lib/services/raClassify";
 import { importCasesBulk } from "../lib/services/case.repository";
 
 /* ============================================================
@@ -636,7 +639,31 @@ async function main() {
         ? e.Subcategoria
         : "";
 
-    const palpite = classificar(r["Título"] ?? "");
+    /**
+     * Três fontes de classificação, em ordem de confiança.
+     *
+     * 1. **O CW Engine**, quando tem — é classificação feita por gente
+     *    da operação, com o vocabulário dela.
+     * 2. **O `Problema RA`** do export "Base de dados", que o próprio
+     *    consumidor escolhe no portal ao abrir a reclamação. Cobre 312
+     *    das 340 linhas, e é dado de origem, não palpite.
+     * 3. **O classificador por título**, que é chute informado.
+     *
+     * O relatório "Previsão para o RA1000" não traz `Problema RA`; o
+     * "Base de dados" traz. Por isso o degrau existe em vez de escolher
+     * um dos dois: o mesmo comando lê os dois arquivos.
+     */
+    const problemaRa = (r["Problema RA"] ?? "").trim();
+
+    const doPortal = problemaRa
+      ? classificarPorProblema(
+          problemaRa,
+          r["Título"] ?? ""
+        )
+      : null;
+
+    const palpite =
+      doPortal ?? classificar(r["Título"] ?? "");
 
     const categoria = doEngine || palpite.categoria;
 
@@ -779,12 +806,39 @@ async function main() {
           .trim() ||
         "Reclamação registrada no Reclame Aqui.",
 
-      publicResponse: respondida
-        ? "Resposta pública registrada no portal."
-        : "",
+      /**
+       * A resposta pública, quando o export a traz.
+       *
+       * O "Base de dados RA" tem a coluna `Resposta da empresa` com o
+       * texto inteiro — 327 das 340 linhas. O "Previsão para o RA1000"
+       * não tem, e ali só dá para dizer *que* houve resposta.
+       *
+       * A frase de reserva importa: é ela que faz `tagsOf` não marcar
+       * "aguardando área interna" numa reclamação já respondida.
+       */
+      publicResponse:
+        (r["Resposta da empresa"] ?? "")
+          .replace(/\r/g, "")
+          .trim() ||
+        (respondida
+          ? "Resposta pública registrada no portal."
+          : ""),
 
       score: temNota ? nota : undefined,
       evaluated: temNota,
+
+      /**
+       * O portal marca as avaliações que ele mesmo invalidou.
+       *
+       * Aqui vira sinalização; quem tira do cálculo da nota é o
+       * `reputation.service`. Sem ler esta coluna, uma nota que o
+       * Reclame Aqui já descartou continuaria pesando no indicador
+       * daqui — e os dois números divergiriam sem explicação.
+       */
+      scoreDisregarded:
+        (r["Avaliações desconsideradas RA"] ?? "")
+          .trim()
+          .toLowerCase() === "sim" || undefined,
 
       resolved: resolvida,
       wouldDoBusiness: voltaria,
@@ -931,6 +985,28 @@ async function main() {
 
   console.log(
     `\n  reclamações sem relato: ${semTexto} | com nota: ${casos.filter((c) => c.evaluated).length} | resolvidas: ${casos.filter((c) => c.resolved).length}`
+  );
+
+  /**
+   * O que o arquivo trouxe além do básico.
+   *
+   * Os dois exports do portal têm colunas diferentes, e sem esta linha
+   * não dá para saber qual deles foi usado — nem por que uma carga
+   * ficou com resposta pública e a outra com a frase de reserva.
+   */
+  const comRespostaReal = casos.filter(
+    (c) =>
+      c.publicResponse &&
+      c.publicResponse !==
+        "Resposta pública registrada no portal."
+  ).length;
+
+  const doPortalRa = base.filter((r) =>
+    (r["Problema RA"] ?? "").trim()
+  ).length;
+
+  console.log(
+    `  com a resposta pública inteira: ${comRespostaReal} | classificadas pelo portal: ${doPortalRa} | avaliações desconsideradas: ${casos.filter((c) => c.scoreDisregarded).length}`
   );
 
   if (SOMENTE_NOVAS && novas.length === 0) {
