@@ -23,6 +23,8 @@ import {
 
 import PageHeading from "@/components/shared/PageHeading";
 import StatTile from "@/components/shared/StatTile";
+import { ExternalLink } from "lucide-react";
+
 import SurfaceCard from "@/components/shared/SurfaceCard";
 
 import {
@@ -225,7 +227,21 @@ export default function EstablishmentDetail({
     ],
     ["Cliente desde", br(establishment.startedAt)],
     ["Responsável na CW", establishment.owner ?? "—"],
+    ["Conta no CW Engine", establishment.externalId ?? "—"],
   ];
+
+  /**
+   * O endereço da conta no portal, quando a carga o trouxe.
+   *
+   * Fica fora da lista acima porque é **link**, e link em lista de
+   * texto vira número para copiar à mão. Daqui a operação abre a conta
+   * do restaurante em um clique — que é o motivo de o campo existir.
+   *
+   * Não é montado a partir do id da conta: são **dois números
+   * diferentes** — a conta 27409 abre em /contas/25681 —, e montar a
+   * URL pelo id errado levaria à ficha de outro restaurante.
+   */
+  const noPortal = establishment.portalUrl?.trim();
 
   return (
     <div className="space-y-6">
@@ -383,6 +399,18 @@ export default function EstablishmentDetail({
               ))}
 
             </dl>
+
+            {noPortal ? (
+              <a
+                href={noPortal}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:border-violet-300 hover:text-violet-700"
+              >
+                Abrir a conta no portal
+                <ExternalLink size={13} />
+              </a>
+            ) : null}
 
           </SurfaceCard>
 

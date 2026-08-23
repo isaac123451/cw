@@ -29,6 +29,8 @@ import { GoogleEventsProvider } from "@/lib/context/GoogleEventsContext";
 import { NpsProvider } from "@/lib/context/NpsContext";
 import ToastHost from "@/components/shared/ToastHost";
 
+import { SpeedInsights } from "@vercel/speed-insights/next";
+
 import { getSession } from "@/lib/auth/session";
 import { hasDatabase } from "@/lib/prisma";
 import { hasGoogle } from "@/lib/services/google.service";
@@ -108,6 +110,23 @@ export default async function RootLayout({
           <ToastHost />
           </ToastProvider>
         </SessionProvider>
+
+        {/**
+          * Medição de desempenho real, ligada por decisão do Isaac.
+          *
+          * O pacote já era dependência e estava **importado sem ser
+          * renderizado** — media exatamente nada, e o import morto dava a
+          * impressão contrária a quem lesse.
+          *
+          * O que ele manda para a Vercel é tempo de carregamento por
+          * rota, do navegador de quem usa: nenhuma reclamação, nenhum
+          * telefone, nenhum conteúdo de tela. É a diferença entre saber
+          * que "/reclame-aqui demora 4 s no notebook da operação" e
+          * descobrir isso por reclamação.
+          *
+          * Só reporta em produção — em desenvolvimento ele não envia.
+          */}
+        <SpeedInsights />
 
       </body>
 

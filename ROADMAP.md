@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 23/08/2026. Aplicação **0.13.0**, extensão **0.13.0**.
+Atualizado em 23/08/2026. Aplicação **0.14.0**, extensão **0.14.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -65,7 +65,7 @@ workspace junto com os outros cadastros.
 ### 0. Handoff — leia isto primeiro (22/08/2026)
 
 **Produção:** https://cw-rho-eight.vercel.app · repo `isaac123451/cw`,
-branch `main` · aplicação e extensão em **0.13.0**, sempre no mesmo
+branch `main` · aplicação e extensão em **0.14.0**, sempre no mesmo
 número.
 
 **Antes de dizer que algo está pronto, rode o `check:` correspondente.**
@@ -104,14 +104,10 @@ o canal da página. Falta **só** o importador, e ele depende do arquivo.
 
 ### 2. Aberto, sem decisão pela frente — é só trabalho
 
-Nada. A fila desta seção foi limpa em 22/08 — o que sobrou depende de
-decisão sua (seção 3) ou de o Isaac liberar o ManyChat (seção 1).
+Nada. O que sobrou depende de você (seção 3) ou de liberar o ManyChat
+(seção 1).
 
-O aviso pendente mais próximo de virar trabalho: **`SpeedInsights`** é
-dependência do projeto e estava importado no dashboard **sem ser
-renderizado**, então não media nada. O import morto saiu. Ligar de
-verdade é pôr o componente no layout raiz — mas isso passa a mandar
-telemetria de uso para a Vercel, e essa é uma decisão sua.
+O `SpeedInsights` saiu daqui em 23/08 — ligado, com sua autorização.
 
 ---
 
@@ -384,6 +380,27 @@ da camada gratuita.
 
 
 ## Entregue
+
+
+### SpeedInsights ligado, e a conta do CW Engine visível (23/08/2026)
+
+Duas pontas soltas, fechadas com sua autorização.
+
+**`SpeedInsights`** era dependência do projeto, estava importado sem ser
+renderizado, e por isso media exatamente nada. Agora está no layout
+raiz. O que ele manda para a Vercel é tempo de carregamento por rota, do
+navegador de quem usa — nenhuma reclamação, nenhum telefone, nenhum
+conteúdo de tela. Só reporta em produção.
+
+**A conta no CW Engine estava gravada e invisível.** A carga trouxe o
+`Company ID` de 105 estabelecimentos e o endereço do portal de 27, e
+nada disso aparecia na tela. O id entrou na ficha, e o endereço virou um
+botão — "Abrir a conta no portal" —, porque link em lista de texto vira
+número para copiar à mão.
+
+O endereço é guardado inteiro, e não montado a partir do id: são **dois
+números diferentes** — a conta 27409 abre em `/contas/25681`. Montar a
+URL pelo id errado levaria a operação para a ficha de outro restaurante.
 
 
 ### O assistente respondia vazio, e um `\r` era a razão (23/08/2026)
