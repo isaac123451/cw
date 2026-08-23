@@ -181,13 +181,23 @@ export default function AssistentePage() {
 
         buffer += decoder.decode(value, { stream: true });
 
-        const partes = buffer.split("\n\n");
+        /**
+         * `\r?` porque o mesmo descuido já emudeceu esta tela uma vez.
+         *
+         * Aqui quem escreve o SSE é a nossa própria rota, e ela usa
+         * `\n\n` — então este lado nunca esteve errado. Mas foi
+         * exatamente esta linha, do outro lado (lendo o Gemini, que
+         * separa com `\r\n\r\n`), que fez o assistente responder HTTP
+         * 200 com zero caracteres, sem erro nenhum. Aceitar as duas
+         * formas custa um caractere e fecha a porta de vez.
+         */
+        const partes = buffer.split(/\r?\n\r?\n/);
         buffer = partes.pop() ?? "";
 
         for (const parte of partes) {
 
           const linha = parte
-            .split("\n")
+            .split(/\r?\n/)
             .find((item) => item.startsWith("data: "));
 
           if (!linha) continue;

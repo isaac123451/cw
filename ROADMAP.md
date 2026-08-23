@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 23/08/2026. Aplicação **0.12.0**, extensão **0.12.0**.
+Atualizado em 23/08/2026. Aplicação **0.13.0**, extensão **0.13.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -42,7 +42,7 @@ workspace junto com os outros cadastros.
 | `npm run check:nps` | Compara o NPS daqui com o do Wootric na mesma janela |
 | `npm run nps:wootric -- --dias=90` | Importa o NPS do Wootric (`--seco` para simular) |
 | `npm run ra:importar -- <arquivo.xlsx>` | Grava o export do RA no banco **com contato completo** |
-| `npm run check:ia` | Diz qual IA está ligada, em que velocidade, e mede o tempo das duas vias |
+| `npm run check:ia` | Diz qual IA está ligada, mede as duas vias **e prova o decodificador de SSE do assistente**, sem gastar chamada |
 | `npm run check:busca` | Prova que a busca por candidatos não perdeu nenhum caso, e mede |
 | `npm run check:mover` | Prova o que acontece ao mover um caso de etapa |
 | `npm run check:ra` | Prova os leitores da página do Reclame Aqui contra o texto de uma reclamação real |
@@ -65,7 +65,7 @@ workspace junto com os outros cadastros.
 ### 0. Handoff — leia isto primeiro (22/08/2026)
 
 **Produção:** https://cw-rho-eight.vercel.app · repo `isaac123451/cw`,
-branch `main` · aplicação e extensão em **0.12.0**, sempre no mesmo
+branch `main` · aplicação e extensão em **0.13.0**, sempre no mesmo
 número.
 
 **Antes de dizer que algo está pronto, rode o `check:` correspondente.**
@@ -117,8 +117,10 @@ telemetria de uso para a Vercel, e essa é uma decisão sua.
 
 ### 3. Bloqueado no Isaac — não dá para avançar sem ele
 
-**a) A `ANTHROPIC_API_KEY` nunca foi preenchida** (o valor no `.env` é o
-exemplo literal, `"sk-ant-..."`). Hoje quem responde é o **Gemini**.
+**a) A `ANTHROPIC_API_KEY` nunca foi preenchida** — conferido em
+23/08: o valor no `.env` continua o exemplo literal `"sk-ant-..."`, dez
+caracteres. Hoje quem responde é o **Gemini**, e `/api/saude` agora diz
+isso corretamente (dizia o contrário até hoje).
 
 > Como definir, e o que cada variável quebra sem estar definida: seção
 > **Variáveis de ambiente**, mais abaixo.
@@ -382,6 +384,47 @@ da camada gratuita.
 
 
 ## Entregue
+
+
+### O assistente respondia vazio, e um `\r` era a razão (23/08/2026)
+
+A tela do assistente devolvia **HTTP 200 com zero caracteres**. Sem
+erro, sem aviso, sem onde olhar — a mesma classe de defeito do leitor do
+WhatsApp, e por isso demorou tanto para aparecer.
+
+O Gemini separa os eventos do SSE com `\r\n\r\n`. O decodificador
+dividia por `\n\n`: nenhum evento fechava, o fluxo inteiro era consumido
+sem render nada, e o gerador terminava com o pedaço final zerado. A rota
+recebia um único evento `done` com `usage: 0/0` e fechava a conexão.
+
+Medido na mesma resposta do Gemini: **4 eventos** dividindo por
+`\r\n\r\n`, **1** dividindo por `\n\n`. O SSE permite as duas formas —
+a Anthropic manda sem `\r` —, e agora o leitor aceita as duas.
+
+Por que passou tanto tempo: **o resumo e o assistente usam vias
+diferentes.** O resumo (`pedirEstruturado`) pede a resposta inteira e
+nunca tocou nesse código; o assistente escuta um fluxo. `check:ia`
+provava só o primeiro. Agora prova os dois, e a parte do streaming roda
+com bytes escritos à mão, sem gastar chamada de modelo — **conferido que
+ela falha** quando o `\r?` é removido.
+
+Depois do conserto, contra a base real: primeiro token em **2,9 s**,
+resposta completa em 3,9 s, com protocolos e números certos.
+
+A mesma tolerância entrou na tela do assistente. Ali quem escreve o SSE
+é a nossa própria rota, que usa `\n\n` — aquele lado nunca esteve
+errado. Mas custa um caractere fechar a porta de vez.
+
+### O /api/saude mentia sobre a chave da Anthropic (23/08/2026)
+
+Ele reportava `anthropic: true` porque a chave começava com `sk-ant-` —
+e o valor no `.env` é o **exemplo literal**, `sk-ant-...`, dez
+caracteres. O endereço que existe justamente para dizer o que está
+configurado afirmava que a Anthropic estava ligada enquanto o assistente
+respondia pelo Gemini.
+
+Agora ele pergunta ao `provedorDeIA`, que é a mesma régua que o serviço
+de IA usa — o retrato e o comportamento real não têm mais como divergir.
 
 
 ### O leitor do WhatsApp culpava a página (23/08/2026)

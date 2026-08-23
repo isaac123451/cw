@@ -13,6 +13,7 @@
 import "dotenv/config";
 
 import {
+  lerEventos,
   pedirEstruturado,
   provedorDeIA,
 } from "../lib/services/ia.service";
@@ -196,11 +197,129 @@ async function main() {
 
   console.log(
     respeitouOEsquema
-      ? `\n${resultado.provedor} está funcionando. O botão "Resumir conversa" da extensão vai responder.\n`
-      : "\n  O provedor respondeu, mas fora do formato pedido — o painel não conseguiria desenhar os campos.\n"
+      ? `\n${resultado.provedor} está funcionando. O botão "Resumir conversa" da extensão vai responder.`
+      : "\n  O provedor respondeu, mas fora do formato pedido — o painel não conseguiria desenhar os campos."
   );
 
-  process.exitCode = respeitouOEsquema ? 0 : 1;
+  /**
+   * O resumo e o assistente usam vias diferentes.
+   *
+   * O resumo pede uma resposta inteira; o assistente **escuta um fluxo**.
+   * Provar só o primeiro deixou passar o defeito que emudeceu o segundo
+   * por completo — ver `conferirStreaming`.
+   */
+  const streamingOk = await conferirStreaming();
+
+  process.exitCode =
+    respeitouOEsquema && streamingOk ? 0 : 1;
+}
+
+
+/**
+ * O separador de eventos do SSE — a prova mais barata deste arquivo.
+ *
+ * **Este `` derrubou o assistente inteiro em silêncio.** O Gemini
+ * separa os eventos com `
+
+`; o leitor dividia por `
+
+`, nenhum
+ * evento fechava, e a tela recebia HTTP 200 com zero caracteres. Sem
+ * erro, sem aviso, sem onde olhar — a mesma classe de defeito do leitor
+ * do WhatsApp.
+ *
+ * Roda sem gastar chamada de modelo: alimenta o decodificador com bytes
+ * escritos à mão, nas duas convenções. É por isso que ele foi exportado.
+ */
+async function conferirStreaming() {
+
+  const eventos = (sep: string) =>
+    [
+      `data: ${JSON.stringify({
+        candidates: [
+          { content: { parts: [{ text: "oi" }] } },
+        ],
+      })}`,
+      `data: ${JSON.stringify({
+        candidates: [
+          { content: { parts: [{ text: " mundo" }] } },
+        ],
+        usageMetadata: {
+          promptTokenCount: 7,
+          candidatesTokenCount: 2,
+        },
+      })}`,
+      "",
+    ].join(sep);
+
+  async function ler(corpo: string) {
+
+    const bytes = new TextEncoder().encode(corpo);
+
+    const fluxo = new ReadableStream<Uint8Array>({
+      start(controle) {
+        // Em dois pedaços, para exercitar a sobra entre leituras.
+        controle.enqueue(bytes.slice(0, 60));
+        controle.enqueue(bytes.slice(60));
+        controle.close();
+      },
+    });
+
+    let texto = "";
+    let uso = { entrada: 0, saida: 0 };
+
+    for await (const p of lerEventos(fluxo.getReader())) {
+      if (p.tipo === "delta") texto += p.texto;
+      if (p.tipo === "fim") uso = p.uso;
+    }
+
+    return { texto, uso };
+  }
+
+  console.log(
+    "\n\nStreaming — separador de eventos\n"
+  );
+
+  const CR = String.fromCharCode(13);
+  const LF = String.fromCharCode(10);
+
+  const comCr = await ler(
+    eventos(CR + LF + CR + LF)
+  );
+
+  const semCr = await ler(eventos(LF + LF));
+
+  const casos: [string, boolean][] = [
+    [
+      "Gemini (CRLF CRLF) devolve o texto",
+      comCr.texto === "oi mundo",
+    ],
+    [
+      "e devolve o uso",
+      comCr.uso.entrada === 7 && comCr.uso.saida === 2,
+    ],
+    [
+      "Anthropic (LF LF) devolve o texto",
+      semCr.texto === "oi mundo",
+    ],
+  ];
+
+  let ok = true;
+
+  for (const [nome, passou] of casos) {
+    if (!passou) ok = false;
+    console.log(
+      `${passou ? "  ok  " : "FALHA "} ${nome}`
+    );
+  }
+
+  console.log(
+    ok
+      ? "\n  O assistente recebe o que o modelo escreve.\n"
+      : "\n  O decodificador de SSE está perdendo eventos — o assistente responderia vazio.\n"
+  );
+
+  return ok;
 }
 
 main().catch((erro) => {

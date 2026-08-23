@@ -81,11 +81,23 @@ export async function GET(request: Request) {
         prazoSegundos: Math.round(
           configDeIa.prazoMs / 1000
         ),
-        anthropic: (process.env.ANTHROPIC_API_KEY ?? "")
-          .trim()
-          .startsWith("sk-ant-"),
-        gemini:
-          (process.env.GEMINI_API_KEY ?? "").trim() !== "",
+        /**
+         * A mesma régua que o serviço de IA usa, e não uma cópia solta.
+         *
+         * Esta linha dizia `anthropic: true` para a chave de exemplo do
+         * `.env` (`sk-ant-...`): ela começa com o prefixo certo. O
+         * endereço que existe justamente para dizer o que está
+         * configurado afirmava que a Anthropic estava ligada enquanto o
+         * assistente respondia pelo Gemini — e quem conferisse por aqui
+         * concluiria o oposto do que acontece.
+         *
+         * `provedorDeIA` recusa o marcador do exemplo. Perguntar a ele é
+         * o que garante que este retrato e o comportamento real não
+         * possam divergir.
+         */
+        anthropic:
+          provedorDeIA("anthropic") === "anthropic",
+        gemini: provedorDeIA("gemini") === "gemini",
       },
 
       google: Boolean(

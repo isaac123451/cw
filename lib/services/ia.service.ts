@@ -994,8 +994,15 @@ async function abrirFluxoGemini(
   return { fluxo: comOPrimeiro() };
 }
 
-/** Decodifica o SSE do Gemini em pedaços de conversa. */
-async function* lerEventos(
+/**
+ * Decodifica o SSE do Gemini em pedaços de conversa.
+ *
+ * **Exportada de propósito**, e não por acaso: o separador de eventos
+ * derrubou o assistente inteiro em silêncio, e uma regra assim precisa
+ * de prova. `npm run check:ia` exercita esta função com os dois
+ * separadores, sem gastar chamada de modelo.
+ */
+export async function* lerEventos(
   leitor: ReadableStreamDefaultReader<Uint8Array>
 ): AsyncGenerator<PedacoDaConversa> {
 
@@ -1023,17 +1030,33 @@ async function* lerEventos(
     });
 
     /**
-     * Um evento por linha em branco dupla — e o pedaço final pode vir
-     * cortado no meio, por isso a sobra volta para a próxima volta.
+     * Um evento por linha em branco dupla — **com ou sem `\r`**.
+     *
+     * Este `\r?` era o defeito inteiro do assistente. O Gemini separa
+     * os eventos com `\r\n\r\n`, e o leitor dividia por `\n\n`: nenhum
+     * evento fechava nunca, o fluxo era consumido inteiro sem render
+     * nada, e o que chegava à tela era **HTTP 200 com zero caracteres**.
+     * Sem erro e sem aviso — o assistente simplesmente não respondia, e
+     * não havia onde olhar.
+     *
+     * Medido em 23/08 na mesma resposta: 4 eventos dividindo por
+     * `\r\n\r\n`, **1** dividindo por `\n\n`.
+     *
+     * O SSE permite as duas formas, então o leitor aceita as duas — a
+     * Anthropic manda sem `\r`, e trocar de provedor não pode voltar a
+     * quebrar isto.
+     *
+     * O pedaço final pode vir cortado no meio, por isso a sobra volta
+     * para a próxima volta.
      */
-    const partes = sobra.split("\n\n");
+    const partes = sobra.split(/\r?\n\r?\n/);
 
     sobra = partes.pop() ?? "";
 
     for (const parte of partes) {
 
       const linha = parte
-        .split("\n")
+        .split(/\r?\n/)
         .find((l) => l.startsWith("data:"));
 
       if (!linha) continue;
