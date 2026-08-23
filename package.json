@@ -1,6 +1,6 @@
 {
   "name": "cw-reputacao",
-  "version": "0.19.0",
+  "version": "0.20.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -41,7 +41,9 @@
     "check:desempenho": "tsx scripts/check-desempenho.ts",
     "check:seguranca": "tsx scripts/check-seguranca.ts",
     "check:telas": "tsx scripts/check-telas.ts",
-    "check:fiacao": "tsx scripts/check-fiacao.ts"
+    "check:fiacao": "tsx scripts/check-fiacao.ts",
+    "check:escape": "tsx scripts/check-escape.ts",
+    "check:dependencias": "tsx scripts/check-dependencias.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",
@@ -58,7 +60,7 @@
     "geist": "^1.7.2",
     "jose": "^6.2.8",
     "lucide-react": "^1.25.0",
-    "next": "16.2.11",
+    "next": "^16.3.2",
     "pg": "^8.22.0",
     "prisma": "^7.9.0",
     "react": "19.2.4",
@@ -68,7 +70,7 @@
     "shadcn": "^4.13.1",
     "tailwind-merge": "^3.6.0",
     "tw-animate-css": "^1.4.0",
-    "xlsx": "^0.18.5",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
     "zod": "^4.4.3"
   },
   "devDependencies": {

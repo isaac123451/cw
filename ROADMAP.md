@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 23/08/2026. Aplicação **0.19.0**, extensão **0.19.0**.
+Atualizado em 23/08/2026. Aplicação **0.20.0**, extensão **0.20.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -61,6 +61,8 @@ workspace junto com os outros cadastros.
 | `npm run check:desempenho` | Mede as consultas que as telas fazem, com teto por medição |
 | `npm run check:telas` | Abre as 34 telas com sessão e confere que voltam com conteúdo (precisa do `npm run dev`) |
 | `npm run check:fiacao` | Nenhum botão da extensão sem tratador, nenhuma rota inventada — estático, roda antes de subir |
+| `npm run check:escape` | Nada do consumidor entra no `innerHTML` do painel sem passar por `CW.escapar` |
+| `npm run check:dependencias` | Nenhuma vulnerabilidade conhecida em produção sem correção ou sem decisão registrada |
 | `npm run check:whatsapp` | Prova o leitor de conversa do WhatsApp contra seis marcações, sem navegador |
 | `npm run check:busca-texto` | Prova o campo Buscar da tela: telefone, documento, e-mail e texto, contra a base real |
 | `npm run extensao:icones` | Regera os PNGs do ícone da extensão |
@@ -72,7 +74,7 @@ workspace junto com os outros cadastros.
 ### 0. Handoff — leia isto primeiro (22/08/2026)
 
 **Produção:** https://cw-rho-eight.vercel.app · repo `isaac123451/cw`,
-branch `main` · aplicação e extensão em **0.19.0**, sempre no mesmo
+branch `main` · aplicação e extensão em **0.20.0**, sempre no mesmo
 número.
 
 **Antes de dizer que algo está pronto, rode o `check:` correspondente.**
@@ -111,8 +113,25 @@ o canal da página. Falta **só** o importador, e ele depende do arquivo.
 
 ### 2. Aberto, sem decisão pela frente — é só trabalho
 
-Nada. O que sobrou depende de você (seção 3) ou de liberar o ManyChat
-(seção 1).
+Fila pedida pelo Isaac em 23/08, depois da auditoria. Em ordem de
+entrega:
+
+1. **Verificação em duas etapas**, com código por e-mail.
+2. **Botão para o portal da Cardápio Web** na extensão.
+3. **Buscar a reclamação pelo número do cliente**, usando o nome do
+   contato só para conferir — hoje o nome participa do casamento.
+4. **Tirar a aba "Meu time"**: ela cadastra pessoas e times sem relação
+   com os times de reclamação, NPS e ManyChat. Criar time e responsável
+   passa a ser dentro do fluxo de reclamações.
+5. **"Atribuir para mim"** com o usuário logado, esteja ele cadastrado
+   como responsável ou não.
+6. **Aba de status editável.**
+7. **Zerar Processos e SLA**, para começar do vazio.
+8. **Assistente**: ele recusa perguntas que a base responde — "quantas
+   avaliações faltam para a nota 9" é conta, não consulta a sistema
+   externo.
+9. **Analytics**: gráficos com defeito.
+10. **Análise do NPS** e **Dashboard**: melhorar.
 
 O `SpeedInsights` saiu daqui em 23/08 — ligado, com sua autorização.
 
@@ -387,6 +406,58 @@ da camada gratuita.
 
 
 ## Entregue
+
+
+### Dezoito vulnerabilidades em produção, e o XSS que não existia (23/08/2026)
+
+**`npm audit` nunca tinha rodado neste projeto.** Encontrou 18
+vulnerabilidades em dependências de produção — nada disso aparece em
+`tsc`, `lint` ou nos vinte `check:`, porque é código de terceiro.
+
+| | |
+| --- | --- |
+| Antes | 18 (3 moderadas, 15 altas) |
+| `npm audit fix` | −11 |
+| `next@16.3.2` | −3 (postcss, sharp) |
+| SheetJS do CDN | −1 |
+| **Restam** | **3, aceitas com motivo escrito** |
+
+A que mais importava era o **`xlsx`**. O pacote do npm está congelado na
+0.18.5 com *prototype pollution* conhecido e **sem correção publicada
+lá** — e não é risco teórico: esta aplicação lê planilha que a operação
+envia, e é exatamente esse o caminho. A versão mantida vive no CDN do
+próprio SheetJS, e passou a vir de lá. Provado depois: o importador lê
+as 340 linhas, os cinco `check:` que tocam planilha passam, e o build
+compila.
+
+As três que sobram são artefato do próprio `npm audit`: ele oferece como
+correção da cadeia do CLI do Prisma a versão **6.12.0**, anterior à 7
+que a aplicação usa com `prisma.config.ts` e adapters. Aceitar isso
+quebraria o banco inteiro para resolver um aviso sobre código que **não
+roda em produção**. Ficaram declaradas em `check:dependencias`, com data
+— o teto é por decisão registrada, não "zero avisos", porque teto
+impossível vira check que alguém desliga.
+
+**O XSS que eu procurei e não achei.** O painel monta HTML em texto e o
+injeta dentro da página do WhatsApp — cada interpolação é um ponto de
+execução, e o texto vem do consumidor. Investiguei campo a campo os
+candidatos:
+
+- `c.titulo` e `c.protocolo` montam o **prompt da IA**, não HTML.
+- `dados.usuario.nome` vai para `textContent`, que não interpreta HTML.
+- `captura.cliente` é argumento de `vazio()`, que escapa.
+
+Nenhum caminho até `innerHTML` passa sem tratamento. Ficou o
+`check:escape`, que olha **o sumidouro e não a fonte**: as 18 injeções
+de HTML, em vez das 305 interpolações do arquivo. A primeira versão fez
+o contrário e devolveu 105 suspeitas — quase todas prompt de IA e
+`textContent`. Auditor com 105 falsos positivos é auditor desligado.
+
+O resto da varredura de segurança, conferido e limpo: cookie de sessão
+com `httpOnly`, `sameSite` e `secure` em produção; token de API
+comparado com `timingSafeEqual`; senha em bcrypt com 10 rodadas; nenhum
+`$queryRawUnsafe`; nenhum `dangerouslySetInnerHTML`; e o `.env` nunca
+esteve no histórico do Git.
 
 
 ### As telas e a fiação da extensão (23/08/2026)
