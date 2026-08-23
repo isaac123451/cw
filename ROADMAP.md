@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 23/08/2026. Aplicação **0.17.0**, extensão **0.17.0**.
+Atualizado em 23/08/2026. Aplicação **0.18.0**, extensão **0.18.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -56,6 +56,9 @@ workspace junto com os outros cadastros.
 | `npm run ra:completo` | Carga do RA. `--somente-novas` cria só o que falta (o do dia a dia); sem ele, refaz a base do zero. Simula por padrão; `--gravar` executa |
 | `npm run check:incremental` | Prova que a carga incremental cria o que falta e **não toca** no que já existe |
 | `npm run check:reputacao` | Prova que a nota fecha com a própria memória de cálculo e que o tempo chega ao banco como saiu da planilha — e imprime o retrato atual |
+| `npm run check:persistencia` | Percorre os 21 contextos e exige que **todo mutador exposto** chame o servidor. É o que pega "altera na tela e não grava" |
+| `npm run check:seguranca` | Toda rota de `/api` e toda server action conferem quem chama? Algum segredo vaza para o navegador? |
+| `npm run check:desempenho` | Mede as consultas que as telas fazem, com teto por medição |
 | `npm run check:whatsapp` | Prova o leitor de conversa do WhatsApp contra seis marcações, sem navegador |
 | `npm run check:busca-texto` | Prova o campo Buscar da tela: telefone, documento, e-mail e texto, contra a base real |
 | `npm run extensao:icones` | Regera os PNGs do ícone da extensão |
@@ -67,7 +70,7 @@ workspace junto com os outros cadastros.
 ### 0. Handoff — leia isto primeiro (22/08/2026)
 
 **Produção:** https://cw-rho-eight.vercel.app · repo `isaac123451/cw`,
-branch `main` · aplicação e extensão em **0.17.0**, sempre no mesmo
+branch `main` · aplicação e extensão em **0.18.0**, sempre no mesmo
 número.
 
 **Antes de dizer que algo está pronto, rode o `check:` correspondente.**
@@ -382,6 +385,77 @@ da camada gratuita.
 
 
 ## Entregue
+
+
+### Auditoria da plataforma inteira (23/08/2026)
+
+O Isaac pediu para passar por tudo: bugs, segurança, desempenho. Três
+varreduras novas ficaram no repositório, porque auditoria que não vira
+comando é auditoria que vale uma vez.
+
+**Um buraco de segurança real, e ele era invisível.** O arquivo
+`lib/actions/case.actions.ts` era sobra da era dos mocks: cinco server
+actions — `getCases`, `getCaseById`, `createCase`, `updateCase`,
+`deleteCase` — sem autenticação nenhuma, mexendo em `mockCases` na
+memória. **Ninguém importava o arquivo**, e é justamente isso que o
+tornava perigoso: `"use server"` faz o Next publicar cada função como
+endpoint HTTP, esteja ela em uso ou não. `getCases()` devolvia 334
+reclamações com nome, cidade e relato para qualquer um que chamasse. O
+arquivo foi removido.
+
+A outra correção: `listIaPerfis` era a única action da plataforma sem
+checagem. A lista não é segredo, mas diz quais modelos a operação usa e
+quanto cada um demora — e uma exceção sem motivo é a porta que fica
+destrancada porque ninguém lembra por quê. Passou a pedir LEITURA, como
+o resto do arquivo.
+
+**O que estava certo, e agora está provado:**
+
+| | |
+| --- | --- |
+| 19 rotas de `/api` | todas conferem quem chama |
+| 51 server actions em 10 arquivos | todas conferem o papel |
+| 43 tabelas | RLS ligado em todas |
+| `NEXT_PUBLIC_` | só `APP_URL` e `VERSAO` — nenhuma chave |
+| Componentes de cliente | nenhum lê segredo |
+| Extensão | pede a **origem exata** configurada, nunca o curinga |
+
+O callback do OAuth do Google merece nota: ele é a única rota sem dono
+no momento da chamada, e resolve isso com um `state` assinado por JWT,
+com expiração. Sem essa verificação, um link montado por terceiro
+conectaria a conta Google do atacante à sessão da vítima.
+
+**Persistência: 69 mutadores expostos, todos gravam.** É a varredura que
+existe por causa do defeito que já apareceu três vezes aqui — Times,
+Metas e Clientes alteravam a tela e não gravavam. O contrato é único:
+todo mutador de contexto passa por `sincronizar`. Nove exceções estão
+declaradas com o motivo escrito, e contexto que o script não entende é
+**reportado**, não ignorado: um auditor que passa calado quando não
+entende o arquivo é pior do que auditor nenhum.
+
+**Desempenho, com a base três vezes maior:**
+
+```
+carga do quadro (fetchCases)      428 ms   teto 1500   340 registros
+contagem por etapa                 57 ms   teto  400
+cadastro de estabelecimentos       73 ms   teto  600   239 registros
+respostas de NPS                  132 ms   teto 1500   868 registros
+busca por telefone (extensão)     166 ms   teto  700
+reclamação pelo protocolo         125 ms   teto  300
+```
+
+Os tetos são de percepção, não de banco, e estão folgados de propósito:
+isto existe para pegar regressão de ordem de grandeza, não para
+reprovar variação de rede. No navegador, o quadro mantém 4.828 nós no
+DOM com 340 reclamações — a lista é janelada, não renderiza tudo.
+
+**Três detectores tiveram de ser consertados no caminho**, e vale
+registrar porque o padrão se repete: a primeira versão de cada um dava
+falso positivo em massa. Auditor que grita demais é auditor desligado —
+o de persistência apontava `setState` interno como se fosse contrato, e
+o de segurança seguia só um elo da corrente de auxiliares, o que
+acusava as três actions do Google que passam por `comToken` →
+`contexto` → `requireRole`.
 
 
 ### O tempo de resposta perdia as horas no caminho (23/08/2026)

@@ -235,7 +235,18 @@ export async function medirIa(
   };
 }
 
-/** Os perfis, para a tela desenhar as opções com os números medidos. */
+/**
+ * Os perfis, para a tela desenhar as opções com os números medidos.
+ *
+ * Pede **LEITURA** como todo o resto deste arquivo, e não porque a lista
+ * seja segredo: ela diz quais modelos a operação usa e quanto cada um
+ * demora. Era a única action da plataforma sem checagem nenhuma, e uma
+ * exceção sem motivo é a porta que fica destrancada porque ninguém
+ * lembra de por que ela ficou assim.
+ */
 export async function listIaPerfis() {
-  return PERFIS;
+
+  const ctx = await tryRole("LEITURA", MODULO);
+
+  return ctx ? PERFIS : [];
 }
