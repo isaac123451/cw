@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 23/08/2026. Aplicação **0.18.0**, extensão **0.18.0**.
+Atualizado em 23/08/2026. Aplicação **0.19.0**, extensão **0.19.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -59,6 +59,8 @@ workspace junto com os outros cadastros.
 | `npm run check:persistencia` | Percorre os 21 contextos e exige que **todo mutador exposto** chame o servidor. É o que pega "altera na tela e não grava" |
 | `npm run check:seguranca` | Toda rota de `/api` e toda server action conferem quem chama? Algum segredo vaza para o navegador? |
 | `npm run check:desempenho` | Mede as consultas que as telas fazem, com teto por medição |
+| `npm run check:telas` | Abre as 34 telas com sessão e confere que voltam com conteúdo (precisa do `npm run dev`) |
+| `npm run check:fiacao` | Nenhum botão da extensão sem tratador, nenhuma rota inventada — estático, roda antes de subir |
 | `npm run check:whatsapp` | Prova o leitor de conversa do WhatsApp contra seis marcações, sem navegador |
 | `npm run check:busca-texto` | Prova o campo Buscar da tela: telefone, documento, e-mail e texto, contra a base real |
 | `npm run extensao:icones` | Regera os PNGs do ícone da extensão |
@@ -70,7 +72,7 @@ workspace junto com os outros cadastros.
 ### 0. Handoff — leia isto primeiro (22/08/2026)
 
 **Produção:** https://cw-rho-eight.vercel.app · repo `isaac123451/cw`,
-branch `main` · aplicação e extensão em **0.18.0**, sempre no mesmo
+branch `main` · aplicação e extensão em **0.19.0**, sempre no mesmo
 número.
 
 **Antes de dizer que algo está pronto, rode o `check:` correspondente.**
@@ -385,6 +387,53 @@ da camada gratuita.
 
 
 ## Entregue
+
+
+### As telas e a fiação da extensão (23/08/2026)
+
+Faltava o outro lado da auditoria. As varreduras anteriores olhavam o
+código; estas abrem a tela e seguem o fio.
+
+**`check:telas` abre as 34 rotas com sessão** e confere que cada uma
+volta com conteúdo. Pega três coisas que nenhum `tsc` vê: erro de
+servidor na renderização com dado real, rota que virou 404 depois de
+renomear uma pasta, e página que responde 200 devolvendo só o esqueleto
+— o número que denuncia isso é o tamanho do corpo, e o piso é 4 kB.
+
+As rotas com parâmetro recebem **um id que existe no banco**: testar com
+id inventado provaria só a tela de "não encontrado".
+
+Resultado: 34 de 34 com conteúdo. Os dois redirecionamentos que a
+primeira versão acusou — `/` para `/dashboard` e `/empresas` para
+`/estabelecimentos`, a URL nova do módulo renomeado — são intencionais,
+e o script passou a distinguir "redireciona para onde deve" de "cai no
+login".
+
+**`check:fiacao` segue os três elos que se rompem em silêncio** no
+painel da extensão:
+
+    botão  →  tratador do clique  →  service worker  →  rota da API
+
+O painel é HTML montado em texto e os cliques são despachados por
+`data-acao`. Um botão com `data-acao="triar"` e nenhum `case "triar"`
+compila, renderiza, fica bonito na tela e **não faz nada** ao ser
+clicado. Nada disso passa por `tsc`.
+
+Resultado: 41 botões, todos com tratador; 17 tipos de mensagem, todos
+atendidos; 13 rotas chamadas, todas existem; nenhum tratador sobrando.
+
+**O desempenho em dev engana, e vale registrar.** A primeira abertura de
+`/estabelecimentos/[id]` levou **41 segundos** — compilação do Turbopack
+para aquela rota. Na segunda passada, **211 ms**. Medir a primeira
+abertura em desenvolvimento é medir o compilador, não a aplicação; o
+número que vale é o da segunda.
+
+Duas varreduras, dois alarmes falsos consertados antes de virarem
+relatório — o mesmo padrão das anteriores. `situacao === "estourado"`
+casava com o padrão de `acao === "..."` e acusava três valores de SLA
+como botões órfãos; e `tipo: "caso"` **dentro** de `anotacao` parecia
+uma mensagem sem tratador. Os dois foram investigados à mão antes de eu
+acreditar neles.
 
 
 ### Auditoria da plataforma inteira (23/08/2026)
