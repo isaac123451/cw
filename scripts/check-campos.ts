@@ -90,42 +90,6 @@ const INTERNAS: Record<string, string[]> = {
   CaseMovement: ["caseId", "lateNotifiedAt"],
 };
 
-const MOTIVOS: Record<string, string> = {
-  "*": "chave, carimbo de tempo ou segredo",
-  Case: "tem carga própria em listCases",
-  NpsResponse: "carga própria em listNpsResponses",
-  NpsAttempt: "carga própria",
-  User: "carga própria, e senha nunca sai do servidor",
-  UserPreference: "carga própria em getPreferences",
-  UserModuleRole: "lido pelo guard, não pela tela",
-  GoogleAccount: "tokens nunca saem do servidor",
-  AllowedEmail: "usado só no cadastro",
-  CaseTag: "vínculo, resolvido em listCases",
-  CaseComment: "carga própria",
-  CaseEvent: "linha do tempo, carga própria",
-  CaseChecklistMark: "marcação, carga própria",
-  JourneyPlacement: "mapa próprio no workspace",
-  WebhookConfig: "carga própria em listWebhooks",
-  WebhookDelivery: "histórico, carga própria",
-  SavedFilter: "carga própria em listSavedFilters",
-  Company: "cadastro derivado das reclamações",
-  IaConfig: "lido pelo serviço de IA",
-  Plan: "carga própria em listPlans",
-  NpsStage: "carga própria em listNpsStages",
-  NpsKind: "carga própria",
-  NpsRootCause: "carga própria",
-  ReputationGoal: "mapa próprio no workspace",
-  mrrCents: "convertido para reais em `mrr`",
-  legacyName: "nome antigo, só para migração",
-  categoryId: "resolvido para o nome da categoria",
-  stageId: "resolvido pela estrutura da jornada",
-  topicId: "resolvido pela estrutura da jornada",
-  manual: "separa as duas metades da tabela na carga",
-  caseId: "vínculo resolvido na tela do caso",
-  lateNotifiedAt:
-    "carimbo do cron: separa avisar de cobrar todo dia. Ninguém precisa ver.",
-  establishmentId: "vínculo resolvido na tela",
-};
 
 /** Modelos e suas colunas, lidos do schema. */
 function modelos() {
