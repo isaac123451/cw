@@ -322,3 +322,70 @@ export function etapaVizinha(
     ? etapas[alvo]
     : null;
 }
+
+/**
+ * O termo digitado casa com este caso?
+ *
+ * Vive aqui, e não dentro do `CaseContext`, porque tem dois
+ * consumidores: o filtro da tela e o `check:busca-texto`, que o exercita
+ * contra a base real. Enquanto a regra morava no contexto ela não tinha
+ * como ser provada — e foi assim que passou meses sem procurar por
+ * telefone sem ninguém notar.
+ *
+ * **O telefone é comparado em dígitos, dos dois lados.** A base guarda
+ * `51992187321` e quem digita escreve `(51) 99218-7321`; comparar texto
+ * com texto não casaria nunca. Quem atende chega com o número na mão —
+ * é o que o WhatsApp mostra e o que o consumidor dita —, e não achar
+ * nada leva à conclusão errada de que o caso não existe.
+ *
+ * O piso de quatro dígitos existe para "2" não devolver meia base.
+ */
+export function casaComTermo(
+  item: Pick<
+    Case,
+    | "protocol"
+    | "title"
+    | "company"
+    | "customer"
+    | "category"
+    | "owner"
+    | "city"
+    | "email"
+    | "phone"
+    | "document"
+  >,
+  termo: string
+) {
+
+  const t = termo.trim().toLowerCase();
+
+  if (!t) return true;
+
+  const digitos = t.replace(/[^0-9]/g, "");
+
+  if (digitos.length >= 4) {
+
+    const numericos = [item.phone, item.document]
+      .filter(Boolean)
+      .map((v) => String(v).replace(/[^0-9]/g, ""));
+
+    if (numericos.some((v) => v.includes(digitos))) {
+      return true;
+    }
+  }
+
+  return [
+    item.protocol,
+    item.title,
+    item.company,
+    item.customer,
+    item.category,
+    item.owner,
+    item.city,
+    item.email,
+  ]
+    .filter(Boolean)
+    .some((campo) =>
+      String(campo).toLowerCase().includes(t)
+    );
+}

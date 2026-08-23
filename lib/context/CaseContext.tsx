@@ -12,6 +12,7 @@ import {
 
 import { Case } from "@/lib/models/case";
 
+
 import {
   deleteCase as removeCase,
   listCases,
@@ -19,7 +20,10 @@ import {
 } from "@/lib/actions/cases";
 
 import { REFERENCE_DATE } from "@/lib/services/reputation.service";
-import { moverPara } from "@/lib/services/case.service";
+import {
+  casaComTermo,
+  moverPara,
+} from "@/lib/services/case.service";
 import type { Gravacao } from "@/lib/context/sync";
 
 const STORAGE_KEY = "cw:casos";
@@ -518,23 +522,15 @@ export function CaseProvider({
         return false;
       }
 
-      if (!term) return true;
-
-      return [
-        item.protocol,
-        item.title,
-        item.company,
-        item.customer,
-        item.category,
-        item.owner,
-        item.city,
-      ]
-        .filter(Boolean)
-        .some((field) =>
-          String(field)
-            .toLowerCase()
-            .includes(term)
-        );
+      /**
+       * A regra do texto mora em `case.service`, e não aqui.
+       *
+       * Dois consumidores: este filtro e o `check:busca-texto`, que a
+       * exercita contra a base real. Enquanto ela vivia dentro deste
+       * `useMemo` não tinha como ser provada — e foi assim que passou
+       * meses sem procurar por telefone sem ninguém notar.
+       */
+      return casaComTermo(item, term);
 
     });
 

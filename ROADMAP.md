@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 22/08/2026. Aplicação **0.11.0**, extensão **0.11.0**.
+Atualizado em 23/08/2026. Aplicação **0.12.0**, extensão **0.12.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -54,6 +54,8 @@ workspace junto com os outros cadastros.
 | `npm run check:vinculo` | Prova o vínculo por CPF ou CNPJ: que a varredura liga, que rodar de novo não muda nada, que a planilha não apaga e que a escolha de uma pessoa vence |
 | `npm run db:backup` | Despeja num JSON as reclamações, clientes e estabelecimentos — antes de qualquer carga |
 | `npm run ra:completo` | Carga completa: a planilha do RA vira a base, o CW Engine dá o estabelecimento. Simula por padrão; `--gravar` executa |
+| `npm run check:whatsapp` | Prova o leitor de conversa do WhatsApp contra seis marcações, sem navegador |
+| `npm run check:busca-texto` | Prova o campo Buscar da tela: telefone, documento, e-mail e texto, contra a base real |
 | `npm run extensao:icones` | Regera os PNGs do ícone da extensão |
 
 ---
@@ -63,7 +65,7 @@ workspace junto com os outros cadastros.
 ### 0. Handoff — leia isto primeiro (22/08/2026)
 
 **Produção:** https://cw-rho-eight.vercel.app · repo `isaac123451/cw`,
-branch `main` · aplicação e extensão em **0.11.0**, sempre no mesmo
+branch `main` · aplicação e extensão em **0.12.0**, sempre no mesmo
 número.
 
 **Antes de dizer que algo está pronto, rode o `check:` correspondente.**
@@ -380,6 +382,68 @@ da camada gratuita.
 
 
 ## Entregue
+
+
+### O leitor do WhatsApp culpava a página (23/08/2026)
+
+A extensão dizia "achei 10 linhas por `div[data-id]`, mas nenhuma com
+texto" numa conversa cheia. A frase estava errada e mandava procurar no
+lugar errado: as dez linhas **tinham** texto. O que acontecia é que o
+leitor as descartava antes de olhar.
+
+O filtro era este: linha cujo `data-id` não tem `@` não é mensagem — a
+ideia era tirar divisores de data e avisos do sistema, e funcionava
+enquanto o id vinha como `true_5511999@c.us_ABC`. Quando o WhatsApp
+mudou o formato, **todas** caíram no filtro, e o leitor anunciou como
+"sem texto" um descarte que ele mesmo tinha feito.
+
+Três mudanças:
+
+- **O texto é extraído antes de qualquer filtro.** O filtro do id virou
+  preferência: se ele deixar tudo de fora, a leitura usa o que sobrou
+  sem ele. Continua valendo quando o id está no formato conhecido,
+  porque é ele que tira os divisores de data.
+- **O motivo diz em que degrau a leitura morreu.** "Nenhuma com texto"
+  só é dito quando é verdade.
+- **Uma linha pode ter mais de um `selectable-text`** — mensagem citada
+  mais a resposta. Antes pegava o primeiro e devolvia a citação,
+  perdendo a resposta.
+
+E agora tem prova: `npm run check:whatsapp` roda o leitor contra seis
+marcações num DOM mínimo em memória, sem navegador — inclusive a que
+falhou. Este leitor já tinha quebrado três vezes sem nada que o
+exercitasse; `tsc` não lê DOM alheio.
+
+O resumo em si estava bom — o erro era só a entrada vazia. Medido depois
+do conserto, com uma conversa de seis mensagens: **HTTP 200 em 4,0 s**,
+com resumo, assunto, humor na régua de 1 a 5, pendência, próximo passo e
+rascunho de resposta.
+
+### A busca da tela não procurava por telefone (23/08/2026)
+
+O campo "Buscar" olhava protocolo, título, empresa, cliente, categoria,
+responsável e cidade. **Telefone não estava na lista** — nem e-mail, nem
+documento. Quem atende chega com o número na mão, porque é o que o
+WhatsApp mostra e o que o consumidor dita; procurar por ele não devolvia
+nada, e a conclusão natural era que o caso não existia.
+
+O telefone é comparado **em dígitos, dos dois lados**: a base guarda
+`51992187321` e a pessoa digita `(51) 99218-7321`. Há um piso de quatro
+dígitos, senão "5" devolveria meia base.
+
+A regra saiu do `useMemo` do `CaseContext` para `case.service`, e é aí
+que está o ponto: enquanto morava dentro do contexto, **nada podia
+exercitá-la** — foi assim que ela passou meses sem procurar por telefone
+sem ninguém notar. Agora `check:busca-texto` roda a mesma função que a
+tela roda, com termos tirados da própria base a cada execução.
+
+### Os telefones e e-mails estão completos (23/08/2026)
+
+Conferido depois da carga: **127 de 127** com telefone e e-mail, zero
+mascarados, zero asteriscos. O mascaramento (`maskEmail`/`maskPhone`)
+existe e só age no dataset versionado do repositório, que é público para
+quem tem acesso ao Git. O banco recebe o dado inteiro — é o que faz o
+casamento por telefone ser exato em vez de por DDD e quatro últimos.
 
 
 ### A carga rodou (23/08/2026)

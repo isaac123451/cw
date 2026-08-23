@@ -185,6 +185,73 @@
     return "cliente";
   }
 
+  /**
+   * O texto de uma linha, tentando o mais preciso primeiro.
+   *
+   * `span.selectable-text` é o texto que o WhatsApp deixa selecionar —
+   * é o balão da mensagem sem hora, sem "editada" e sem os check de
+   * entrega. Quando ele não existe, as camadas de baixo pegam mais
+   * lixo junto, mas pegar lixo é melhor do que devolver conversa vazia.
+   *
+   * Uma linha pode ter **mais de um** `selectable-text` (mensagem
+   * citada + resposta), então junta todos em vez de pegar o primeiro:
+   * pegar só o primeiro devolvia a citação e perdia a resposta.
+   */
+  function textoDaLinha(linha) {
+
+    const spans = linha.querySelectorAll?.(
+      "span.selectable-text, div.selectable-text"
+    );
+
+    if (spans && spans.length > 0) {
+
+      const junto = [...spans]
+        .map((s) => s.innerText ?? "")
+        .filter(Boolean)
+        .join(" ");
+
+      if (junto.trim()) return junto;
+    }
+
+    const copiavel = linha.querySelector?.(
+      "[data-pre-plain-text], .copyable-text"
+    );
+
+    if (copiavel?.innerText?.trim()) {
+      return copiavel.innerText;
+    }
+
+    return linha.innerText ?? "";
+  }
+
+  /**
+   * Sobra da interface que não é conteúdo da mensagem.
+   *
+   * Quando a leitura cai para o `innerText` da linha inteira, vem junto
+   * a hora, o "Encaminhada", o "Editada" e o rótulo de status. Tirar
+   * isso importa porque o texto vai para a IA resumir: uma conversa de
+   * trinta mensagens vira trinta repetições de "Entregue 14:32" no meio
+   * do assunto, e o resumo sai sobre isso.
+   */
+  const RUIDO = [
+    /^\s*\d{1,2}:\d{2}\s*$/,
+    /^(Encaminhada|Editada|Entregue|Lida|Enviada|Reproduzir)$/i,
+    /^\s*$/,
+  ];
+
+  function limpar(texto) {
+
+    return String(texto)
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(
+        (l) => !RUIDO.some((re) => re.test(l))
+      )
+      .join(" ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
   function lerMensagens() {
 
     const container = ONDE_FICAM.map((seletor) =>
@@ -209,56 +276,67 @@
       };
     }
 
-    const mensagens = [];
+    /**
+     * O texto é extraído **antes** de qualquer filtro.
+     *
+     * Era o contrário, e foi o defeito: a linha sem `@` no `data-id`
+     * era descartada antes de alguém olhar se ela tinha texto. Quando o
+     * WhatsApp mudou o formato do id, **todas** caíram nesse filtro — e
+     * a extensão anunciou "achei 10 linhas, nenhuma com texto" numa
+     * conversa cheia, culpando a ausência de texto por um descarte que
+     * ela mesma tinha feito.
+     *
+     * Agora o filtro é uma **preferência**: se ele deixar tudo de fora,
+     * a leitura usa o que sobrou sem ele. Vale a pena mesmo assim,
+     * porque é ele que tira os divisores de data e os avisos do sistema
+     * quando o id está no formato conhecido.
+     */
+    const brutas = [];
 
     for (const linha of encontro.achados) {
 
-      /**
-       * Linha sem `@` no id não é mensagem.
-       *
-       * O `data-id` das mensagens carrega o telefone
-       * (`true_5511...@c.us_ABC`). Os outros elementos com `data-id`
-       * são divisores de data e avisos do sistema. A checagem só vale
-       * quando o id existe — nas camadas de baixo ele não existe, e
-       * exigi-lo lá jogaria fora tudo.
-       */
-      const id = linha.getAttribute?.("data-id") ?? "";
-
-      if (id && !id.includes("@")) continue;
-
-      const balao = linha.querySelector(
-        ".selectable-text, [data-pre-plain-text], .copyable-text"
-      );
-
-      const texto = (
-        balao?.innerText ??
-        linha.innerText ??
-        ""
-      )
-        .replace(/\s+/g, " ")
-        .trim();
+      const texto = limpar(textoDaLinha(linha));
 
       if (!texto) continue;
 
+      const id = linha.getAttribute?.("data-id") ?? "";
+
       /**
-       * O WhatsApp guarda o carimbo num atributo, no formato
-       * "[HH:MM, DD/MM/AAAA] Nome: ". A hora é o que vem logo depois do
-       * colchete e antes da vírgula.
+       * O carimbo do WhatsApp: "[HH:MM, DD/MM/AAAA] Nome: ".
+       * A hora é o que vem depois do colchete e antes da vírgula.
        */
       const carimbo =
         linha
-          .querySelector("[data-pre-plain-text]")
+          .querySelector?.("[data-pre-plain-text]")
           ?.getAttribute("data-pre-plain-text") ?? "";
 
-      const hora =
-        carimbo.match(/\[([^\],]+)/)?.[1] ?? "";
-
-      mensagens.push({
+      brutas.push({
         de: deQuemE(linha),
         texto: texto.slice(0, 1200),
-        hora: hora.trim(),
+        hora: (carimbo.match(/\[([^\],]+)/)?.[1] ?? "").trim(),
+        /** Linha com telefone no id é mensagem; sem, é aviso ou data. */
+        parecemensagem: !id || id.includes("@"),
       });
     }
+
+    const preferidas = brutas.filter(
+      (m) => m.parecemensagem
+    );
+
+    /**
+     * O descarte não pode levar tudo.
+     *
+     * Se o filtro do id zerou a conversa mas havia texto, ele é que
+     * está errado — o formato do id mudou. Usar o bruto perde a limpeza
+     * dos divisores de data, e é infinitamente melhor do que anunciar
+     * conversa vazia.
+     */
+    const usadas =
+      preferidas.length > 0 ? preferidas : brutas;
+
+    const mensagens = usadas.map(
+      ({ de, texto, hora }) => ({ de, texto, hora })
+    );
 
     return {
       mensagens,
@@ -270,12 +348,24 @@
        * distingue conversa vazia de leitor quebrado — e foi essa
        * confusão que fez a mesma falha ser reportada três vezes.
        */
-      via: encontro.seletor,
+      via:
+        preferidas.length > 0
+          ? encontro.seletor
+          : `${encontro.seletor} (sem o filtro de id)`,
 
+      /**
+       * O motivo diz **em que degrau** a leitura morreu.
+       *
+       * "Nenhuma com texto" só é dito quando é verdade. Antes ele era
+       * dito também quando o filtro tinha comido tudo, e mandava quem
+       * lesse procurar defeito no lugar errado.
+       */
       motivo:
-        mensagens.length === 0
-          ? `achei ${encontro.achados.length} linha(s) por "${encontro.seletor}", mas nenhuma com texto`
-          : undefined,
+        mensagens.length > 0
+          ? undefined
+          : brutas.length > 0
+            ? `li ${brutas.length} linha(s) por "${encontro.seletor}", mas nenhuma sobrou depois da limpeza`
+            : `achei ${encontro.achados.length} linha(s) por "${encontro.seletor}", e nenhuma tem texto — provavelmente a conversa ainda está carregando`,
     };
   }
 
