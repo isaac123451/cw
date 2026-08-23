@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Save, Search } from "lucide-react";
 
@@ -55,71 +55,68 @@ export default function ImpactForm({
   /** Só os ativos entram na escolha; os inativos seguem no histórico. */
   const tipos = types.filter((item) => item.active);
 
-  const [type, setType] = useState<ImpactType>("");
-  const [company, setCompany] = useState("");
-  const [description, setDescription] = useState("");
-  const [amount, setAmount] = useState("");
-  const [date, setDate] = useState("");
-  const [caseId, setCaseId] = useState("");
+  /**
+   * Os campos nascem preenchidos, e o formulário remonta a cada
+   * abertura.
+   *
+   * Era um `useEffect` que copiava `editing` (ou o preset) para o
+   * estado quando o modal abria. Funcionava, mas ao custo de uma
+   * renderização a mais por abertura — e de uma janela em que o
+   * formulário já estava na tela com os campos do lançamento anterior.
+   * Quem abre passa `key`, e é ela que garante instância nova.
+   */
+  /**
+   * O caso e o estabelecimento de onde o modal foi aberto.
+   *
+   * Abrir o lançamento a partir de uma reclamação ou de um
+   * estabelecimento já preenche o que aquela tela sabe — é a diferença
+   * entre registrar o impacto ali mesmo e ir procurar o caso de novo.
+   */
+  const preset = presetCaseId
+    ? cases.find((item) => item.id === presetCaseId)
+    : undefined;
+
+  const estab = presetEstablishmentId
+    ? establishments.find(
+        (item) => item.id === presetEstablishmentId
+      )
+    : undefined;
+
+  const [type, setType] = useState<ImpactType>(
+    editing?.type ?? "Cancelamento evitado"
+  );
+  const [company, setCompany] = useState(
+    editing?.company ??
+      preset?.company ??
+      estab?.name ??
+      ""
+  );
+  const [description, setDescription] = useState(
+    editing?.description ?? ""
+  );
+  const [amount, setAmount] = useState(
+    editing ? String(Math.abs(editing.amount)) : ""
+  );
+  const [date, setDate] = useState(
+    editing?.date ?? preset?.createdAt ?? ""
+  );
+  const [caseId, setCaseId] = useState(
+    editing?.relatedCase ?? preset?.protocol ?? ""
+  );
   const [caseSearch, setCaseSearch] = useState("");
-  const [establishmentId, setEstablishmentId] =
-    useState("");
-  const [clientSlug, setClientSlug] = useState("");
+  const [establishmentId, setEstablishmentId] = useState(
+    editing?.establishmentId ??
+      preset?.establishmentId ??
+      presetEstablishmentId ??
+      ""
+  );
+  const [clientSlug, setClientSlug] = useState(
+    editing?.clientSlug ??
+      (preset ? slugify(preset.customer) : "")
+  );
 
   /** Texto digitado enquanto o nome ainda não casa com nenhum cliente. */
   const [clientName, setClientName] = useState("");
-
-  useEffect(() => {
-    if (!open) return;
-
-    if (editing) {
-      setType(editing.type);
-      setCompany(editing.company);
-      setDescription(editing.description ?? "");
-      setAmount(String(Math.abs(editing.amount)));
-      setDate(editing.date);
-      setCaseId(editing.relatedCase ?? "");
-      setEstablishmentId(editing.establishmentId ?? "");
-      setClientSlug(editing.clientSlug ?? "");
-      setClientName("");
-      return;
-    }
-
-    const preset = presetCaseId
-      ? cases.find((item) => item.id === presetCaseId)
-      : undefined;
-
-    // Abrindo a partir do estabelecimento, o nome dele já preenche o campo.
-    const estab = presetEstablishmentId
-      ? establishments.find(
-          (item) => item.id === presetEstablishmentId
-        )
-      : undefined;
-
-    setType("Cancelamento evitado");
-    setCompany(preset?.company ?? estab?.name ?? "");
-    setDescription("");
-    setAmount("");
-    setDate(preset?.createdAt ?? "");
-    setCaseId(preset?.protocol ?? "");
-    setCaseSearch("");
-    setEstablishmentId(
-      preset?.establishmentId ??
-        presetEstablishmentId ??
-        ""
-    );
-    setClientSlug(
-      preset ? slugify(preset.customer) : ""
-    );
-    setClientName("");
-  }, [
-    open,
-    editing,
-    presetCaseId,
-    presetEstablishmentId,
-    cases,
-    establishments,
-  ]);
 
   // Custo entra negativo na conta; receita, positivo.
   const sinal =

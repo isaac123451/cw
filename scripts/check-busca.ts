@@ -26,7 +26,6 @@ import {
 } from "../lib/services/case.repository";
 
 import {
-  compararNome,
   compararTelefone,
   lerTelefone,
 } from "../lib/services/contato.service";

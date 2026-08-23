@@ -40,6 +40,7 @@ model User {
   googleAccount GoogleAccount?
   preferences   UserPreference?
   npsResponses  NpsResponse[]   @relation("NpsOwner")
+  moduleRoles   UserModuleRole[]
 
   @@index([email])
 }
@@ -82,6 +83,32 @@ model GoogleAccount {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+/// Papel de uma pessoa **dentro de um módulo**.
+///
+/// Só a exceção é gravada: quem não tem linha aqui segue o `role` da
+/// conta. É a mesma escolha das metas de reputação — guardar o padrão
+/// em toda linha congelaria uma cópia dele, e mudar o papel da pessoa
+/// deixaria de valer onde ninguém mexeu.
+///
+/// Papel por módulo, e não permissão por ação: são três contas, e o
+/// recorte real é "quem mexe no NPS" contra "quem mexe no Reclame
+/// Aqui". Permissão por ação exigiria uma decisão a cada action nova, e
+/// quem esquecesse criaria um buraco que só aparece quando alguém faz o
+/// que não devia.
+model UserModuleRole {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Um dos nomes de `lib/auth/modules.ts`.
+  module String
+  role   Role
+
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, module])
 }
 
 /// E-mails liberados para se cadastrar. O domínio @cardapioweb.com é
@@ -269,6 +296,45 @@ model Case {
 
   churnRisk Boolean @default(false)
   request   String?
+
+  /// Documento de cadastro no portal — **CPF ou CNPJ**.
+  ///
+  /// Vem do **RA Forms**, o formulário que o Reclame Aqui pede antes de
+  /// abrir a reclamação. A pergunta lá é literalmente "CPF ou CNPJ", e
+  /// a Cardápio Web cadastra estabelecimento das duas formas: 122 das
+  /// 127 reclamações da base real respondem com CPF. Um campo chamado
+  /// `cnpj` guardando CPF seria uma mentira que custaria uma hora a
+  /// quem lesse depois.
+  ///
+  /// É o único campo que aparece dos dois lados: aqui e no cadastro do
+  /// estabelecimento. Por isso ele é o vínculo.
+  ///
+  /// Guardado só com os dígitos: o portal aceita com e sem pontuação, e
+  /// duas grafias do mesmo número nunca casariam entre si.
+  document String?
+
+  /// O restaurante por trás da reclamação, quando dá para saber.
+  ///
+  /// **Não sai do nome.** Medido na base real: nenhum caso tem empresa
+  /// diferente do consumidor — o export do Reclame Aqui trata o
+  /// reclamante como a empresa. Por isso o WhatsApp mostra o
+  /// estabelecimento e a base guarda a pessoa, e os dois não casam.
+  ///
+  /// O documento casa. É o vínculo que este campo grava.
+  establishmentId String?
+  establishment   Establishment? @relation(fields: [establishmentId], references: [id])
+
+  /// Alguém decidiu o vínculo na mão — nada automático mexe mais nele.
+  ///
+  /// Existe porque "sem vínculo" tem dois significados que a coluna
+  /// sozinha não distingue: *ainda não foi ligado* e *foi desligado de
+  /// propósito*. Sem esta marca, desvincular na tela duraria até a
+  /// próxima varredura do cron, que religaria pelo CNPJ — e a pessoa
+  /// concluiria, com razão, que o botão de desvincular não funciona.
+  ///
+  /// Vale nos dois sentidos: vincular à mão também trava, para o
+  /// automático não sobrescrever a escolha de alguém que olhou o caso.
+  establishmentManual Boolean @default(false)
 
   responseMinutes Int?
   solutionMinutes Int?
@@ -469,6 +535,16 @@ model CaseMovement {
   returnedAt  DateTime?
   outcome     String?
 
+  /// Quando o webhook de atraso foi disparado para esta movimentação.
+  ///
+  /// Atraso é estado que só se descobre comparando com o relógio: não
+  /// existe evento no momento em que ele acontece, e por isso quem
+  /// avisa é a rotina agendada. O carimbo é o que impede a rotina de
+  /// avisar de novo toda madrugada sobre a mesma movimentação parada —
+  /// um alerta que se repete sozinho é um alerta que se aprende a
+  /// ignorar.
+  lateNotifiedAt DateTime?
+
   createdAt DateTime @default(now())
 
   @@index([caseId, startedAt])
@@ -483,7 +559,25 @@ model Establishment {
   id        String    @id @default(cuid())
   slug      String    @unique
   name      String
-  cnpj      String?
+
+  /// **CPF ou CNPJ.** A Cardápio Web cadastra restaurante das duas
+  /// formas — a maioria dos pequenos entra por CPF do proprietário.
+  /// Chamar de `cnpj` deixaria metade dos cadastros com o campo errado.
+  document String?
+
+  /// Id da conta no CW Engine — a coluna "Company ID" do export.
+  ///
+  /// É o que liga este cadastro ao sistema onde o restaurante realmente
+  /// vive. O documento nem sempre está preenchido lá; este número está.
+  externalId String?
+
+  /// Endereço da conta no portal, como o export entrega.
+  ///
+  /// Guardado inteiro em vez de montado a partir do `externalId`: são
+  /// **dois números diferentes** — a conta 27409 abre em /contas/25681 —
+  /// e montar a URL a partir do id errado levaria a operação para a
+  /// ficha de outro restaurante.
+  portalUrl String?
   segment   String?
   city      String?
   state     String?
@@ -498,6 +592,7 @@ model Establishment {
   notes     String?
 
   npsResponses NpsResponse[]
+  cases        Case[]
 }
 
 /// Cliente — a pessoa que reclamou.
@@ -631,8 +726,52 @@ model Macro {
   body      String
   category  String
   owner     String
+
+  /// Onde este texto é usado: "Reclame Aqui" ou "WhatsApp".
+  ///
+  /// Não é etiqueta: são formatos diferentes. O WhatsApp entende
+  /// `*negrito*` e emoji, e a resposta pública do portal mostra os
+  /// asteriscos crus. Um texto de WhatsApp oferecido no seletor da
+  /// resposta pública seria colado com a marcação à mostra, na frente
+  /// do consumidor.
+  channel   String   @default("Reclame Aqui")
+
   tags      String[] @default([])
   uses      Int      @default(0)
+  updatedAt DateTime @updatedAt
+}
+
+/// Plano ou módulo vendido, com o preço vigente.
+///
+/// Existe por causa das macros. O texto pronto que explica preço estava
+/// com o valor **digitado dentro dele** — e preço digitado em texto
+/// envelhece calado: ninguém revisa uma resposta pronta quando a tabela
+/// muda, e o consumidor recebe um número que não existe mais.
+///
+/// Com o cadastro, a macro escreve `{{planos}}` e a tabela é montada na
+/// hora da inserção. O valor errado deixa de ser possível por
+/// construção.
+///
+/// **Centavos, e não decimal.** Dinheiro em ponto flutuante soma
+/// errado, e o erro só aparece no total de um relatório meses depois.
+model Plan {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  description String?
+
+  /// "plano" ou "modulo" — os dois têm nome, preço e o que incluem.
+  kind String @default("plano")
+
+  /// Preço mensal em centavos.
+  priceCents Int @default(0)
+
+  /// O que está incluído, uma linha por item.
+  features String[] @default([])
+
+  order  Int     @default(0)
+  active Boolean @default(true)
+
+  createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
@@ -751,6 +890,84 @@ model NpsRootCause {
   createdAt DateTime @default(now())
 }
 
+/// Etapa do quadro de NPS, administrada pela própria operação.
+///
+/// Eram quatro colunas fixas no código (`FLUXO_EM_ANDAMENTO` mais os
+/// finais de `ALL_STATUS`). Viraram cadastro pelo mesmo motivo do
+/// `WorkflowStatus` do Reclame Aqui: o fluxo da operação muda, e etapa
+/// nova não pode depender de deploy.
+///
+/// **O nome de etapa final começa com `[Encerrado] `, sempre.** Não é
+/// convenção de escrita — é o mecanismo: `isEncerrado()` é uma função
+/// pura sobre o texto do status, usada em dezenas de lugares que não
+/// têm como consultar o banco (o cartão do quadro, o filtro da tela, a
+/// fila da extensão, o indicador de resolução). O campo `final` é o que
+/// a pessoa marca na tela; a gravação normaliza o nome para carregar o
+/// prefixo, e é assim que os dois nunca divergem. Sem isso, uma etapa
+/// nova marcada como final não tiraria o ciclo da fila e o indicador
+/// passaria a contar como resolvido o que ninguém fechou.
+model NpsStage {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  description String?
+  color       String  @default("#7B3FBF")
+  order       Int     @default(0)
+  active      Boolean @default(true)
+
+  /// Encerra o ciclo: carimba `closedAt` e `outcome`, e tira da fila.
+  final Boolean @default(false)
+
+  /// Quais tipos aceitam esta etapa como final. Vazio = todos.
+  ///
+  /// É o que `KINDS[].finais` fazia no código, do outro lado da
+  /// relação: guardar a lista na etapa (e não no tipo) evita que uma
+  /// etapa nova nasça inalcançável — quem a cria escolhe ali mesmo
+  /// quem pode chegar nela.
+  kinds String[] @default([])
+
+  createdAt DateTime @default(now())
+}
+
+/// Tipo de tratativa do NPS, administrado pela própria operação.
+///
+/// Eram os sete do guia, fixos em `KINDS`. Continua sendo **lista
+/// fechada**, e não texto livre: o tipo alimenta a análise de tendência,
+/// e campo aberto transforma "Reclamação"/"reclamacao" em dois
+/// problemas diferentes no mesmo gráfico. O que mudou é quem fecha a
+/// lista — a operação, numa tela, em vez de um deploy.
+model NpsKind {
+  id     String @id @default(cuid())
+  name   String @unique
+  emoji  String @default("⚪")
+  color  String @default("#71717A")
+  /// O que fazer, resumido do guia. Aparece na tela de tratativa.
+  action String @default("")
+
+  /// Exige o cliente confirmar que resolveu antes de encerrar.
+  requiresConfirmation Boolean @default(false)
+
+  /// Exige causa raiz marcada antes de encerrar.
+  ///
+  /// Era uma lista de três nomes dentro do `checklist()`. Com o tipo
+  /// virando cadastro, nome fixo em código volta a ser o defeito que
+  /// este cadastro existe para tirar: um tipo novo nasceria sem a
+  /// exigência, e a série de causa raiz ganharia um buraco calado.
+  requiresRootCause Boolean @default(false)
+
+  /// Abre item de revisão em Projetos e Melhorias ao ser classificado.
+  ///
+  /// Mesma história: era `if (kind !== "Erro Processual")` no código.
+  opensProcessReview Boolean @default(false)
+
+  /// Prazo próprio em horas úteis, quando difere do prazo do segmento.
+  ownDeadlineHours Int?
+
+  order  Int     @default(0)
+  active Boolean @default(true)
+
+  createdAt DateTime @default(now())
+}
+
 /// Cada tentativa de contato, para sustentar a regra das três em 7 dias.
 model NpsAttempt {
   id String @id @default(cuid())
@@ -775,6 +992,46 @@ model NpsAttempt {
 /// Webhook para o CW Engine (ou outro destino) ser avisado por evento,
 /// em vez de só puxar via GET /api. Um registro só: a aplicação atende
 /// um tenant (Cardápio Web), não é multiempresa.
+/// Qual IA responde, e quão rápido — escolhido na tela.
+///
+/// Antes isso era só variável de ambiente, o que tem dois problemas na
+/// prática: mudar exige deploy, e o valor fica invisível para quem usa
+/// a ferramenta. "A IA está demorando" é uma reclamação da operação, e
+/// a resposta estava num arquivo que a operação não abre.
+///
+/// Um registro só, como o `WebhookConfig`: a aplicação atende um tenant.
+/// Sem registro nenhum, valem as variáveis de ambiente — que continuam
+/// sendo o caminho de quem roda isto fora daqui.
+model IaConfig {
+  /// Id fixo: é singleton, e um `findFirst` sem âncora convida a
+  /// existirem dois registros discordando em silêncio.
+  id String @id @default("unico")
+
+  /// "auto", "anthropic" ou "gemini".
+  provider String @default("auto")
+
+  /// "rapido", "equilibrado" ou "profundo".
+  ///
+  /// É o que a pessoa realmente quer mexer. Os campos abaixo são a
+  /// saída de emergência para quem precisa fixar um modelo específico.
+  speed String @default("equilibrado")
+
+  /// Modelo principal fixado à mão. Vazio segue o perfil.
+  model String?
+  /// O modelo da via rápida (resumo de conversa).
+  modelFast String?
+  /// A rede contra o 404, quando um modelo é aposentado.
+  modelFallback String?
+
+  /// Segundos até a reserva partir **em paralelo**. Zero desliga a corrida.
+  hedgeSeconds Int?
+
+  /// Segundos até desistir da chamada.
+  timeoutSeconds Int?
+
+  updatedAt DateTime @updatedAt
+}
+
 model WebhookConfig {
   id     String  @id @default(cuid())
   url    String
@@ -803,6 +1060,22 @@ model WebhookDelivery {
   ok          Boolean
   statusCode  Int?
   error       String?
+
+  /// O corpo enviado, guardado **só quando a entrega falha**.
+  ///
+  /// É o que permite reenviar depois: sem ele o reenvio teria de
+  /// remontar a mensagem a partir do caso, e o caso já mudou — a
+  /// segunda tentativa entregaria um retrato diferente do que a
+  /// primeira prometeu.
+  ///
+  /// Só na falha porque é conteúdo de reclamação: guardar o corpo de
+  /// toda entrega bem-sucedida seria uma segunda cópia da base dentro
+  /// da tabela de log. Ao reenviar com sucesso, ele é apagado.
+  payload     Json?
+
+  /// Quantas vezes esta mensagem já foi tentada.
+  attempts    Int           @default(1)
+
   createdAt   DateTime      @default(now())
 
   @@index([webhookId, createdAt])

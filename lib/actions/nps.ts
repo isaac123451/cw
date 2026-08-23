@@ -7,6 +7,7 @@ import { updateTag } from "next/cache";
 import { PrismaClient } from "@prisma/client";
 
 import { requireRole, tryRole } from "@/lib/auth/guard";
+import type { Modulo } from "@/lib/auth/modules";
 import { WORKSPACE_TAG } from "@/lib/actions/tags";
 
 import {
@@ -26,11 +27,19 @@ import {
 } from "@/lib/services/nps.repository";
 
 import {
+  FormatoInvalido,
+  parseNpsPlanilha,
+} from "@/lib/services/npsImport.service";
+
+import {
   listarRespostas,
   RespostaImportada,
   temWootric,
   traduzir,
 } from "@/lib/services/wootric.service";
+
+/** O módulo a que estas ações pertencem — ver lib/auth/modules.ts. */
+const MODULO: Modulo = "nps";
 
 /**
  * Registro e tratativa do NPS.
@@ -64,7 +73,7 @@ export async function listNpsResponses(): Promise<
 > {
 
   // Leitura: o provider monta no layout raiz e roda em `/login` também.
-  const ctx = await tryRole("LEITURA");
+  const ctx = await tryRole("LEITURA", MODULO);
 
   if (!ctx) return [];
 
@@ -131,7 +140,7 @@ export async function listNpsRootCauses(): Promise<
   RootCauseOption[]
 > {
 
-  const ctx = await tryRole("LEITURA");
+  const ctx = await tryRole("LEITURA", MODULO);
 
   if (!ctx) {
     return ROOT_CAUSES.map((name, i) => ({
@@ -168,7 +177,7 @@ export async function saveNpsRootCause(
   input: RootCauseOption
 ) {
 
-  const ctx = await requireRole("AGENTE");
+  const ctx = await requireRole("AGENTE", MODULO);
 
   if (!ctx) return null;
 
@@ -258,7 +267,7 @@ async function semearRestantes(
 
 export async function removeNpsRootCause(id: string) {
 
-  const ctx = await requireRole("AGENTE");
+  const ctx = await requireRole("AGENTE", MODULO);
 
   if (!ctx || id.startsWith("padrao-")) return;
 
@@ -298,7 +307,7 @@ export async function saveNpsResponse(
   input: NpsDraft
 ) {
 
-  const ctx = await requireRole("AGENTE");
+  const ctx = await requireRole("AGENTE", MODULO);
 
   if (!ctx) return null;
 
@@ -408,7 +417,7 @@ export async function registerNpsAttempt(input: {
   actor: string;
 }) {
 
-  const ctx = await requireRole("AGENTE");
+  const ctx = await requireRole("AGENTE", MODULO);
 
   if (!ctx) return;
 
@@ -423,7 +432,7 @@ export async function setNpsStatus(
   outcome?: string
 ) {
 
-  const ctx = await requireRole("AGENTE");
+  const ctx = await requireRole("AGENTE", MODULO);
 
   if (!ctx) return;
 
@@ -457,7 +466,7 @@ export async function registerPostContact(input: {
   actor?: string;
 }) {
 
-  const ctx = await requireRole("AGENTE");
+  const ctx = await requireRole("AGENTE", MODULO);
 
   if (!ctx) return;
 
@@ -472,7 +481,7 @@ export async function confirmNpsResolution(
   confirmado: boolean
 ) {
 
-  const ctx = await requireRole("AGENTE");
+  const ctx = await requireRole("AGENTE", MODULO);
 
   if (!ctx) return;
 
@@ -493,7 +502,7 @@ export async function setNpsAdvocacy(
   valor: boolean
 ) {
 
-  const ctx = await requireRole("AGENTE");
+  const ctx = await requireRole("AGENTE", MODULO);
 
   if (!ctx) return;
 
@@ -514,7 +523,7 @@ export async function setNpsAdvocacy(
 export async function deleteNpsResponse(id: string) {
 
   // Apagar resposta de pesquisa altera indicador: é ato de ADMIN.
-  const ctx = await requireRole("ADMIN");
+  const ctx = await requireRole("ADMIN", MODULO);
 
   if (!ctx) return;
 
@@ -535,7 +544,35 @@ export interface ResultadoImportacao {
   semTratativa: number;
   desde: string;
   ate?: string;
+
+  /**
+   * Parou no teto — ainda há resposta esperando.
+   *
+   * A tela chama de novo até isto vir falso. É o que faz uma
+   * importação grande caber em várias requisições curtas em vez de uma
+   * que a Vercel corta no meio.
+   */
+  parcial?: boolean;
+
+  /** De onde a próxima rodada deve continuar. */
+  proximoDesde?: string;
 }
+
+/**
+ * Quantas respostas uma rodada processa.
+ *
+ * Não é limite do Wootric nem do banco: é o **relógio da plataforma**.
+ * Uma server action na Vercel tem dezenas de segundos, e a leitura são
+ * idas e voltas de 50 em 50 à API deles. Uma rodada de 800 respostas
+ * não termina — e o sintoma não diz isso: a requisição é cortada e o
+ * botão devolve um erro de rede genérico, que parece integração
+ * quebrada quando é só trabalho demais para uma requisição.
+ *
+ * Sessenta cabe com folga. O que passa disso vira a próxima rodada.
+ */
+const TETO_POR_RODADA = Number(
+  process.env.WOOTRIC_TETO ?? 60
+);
 
 /**
  * Grava um lote no banco.
@@ -665,9 +702,18 @@ export async function importWootric(input?: {
    * requisição que a Vercel corta no meio.
    */
   ateDias?: number;
+
+  /**
+   * Continuar de um instante exato, em vez do começo da janela.
+   *
+   * É o que a tela devolve para a rodada seguinte quando a anterior
+   * parou no teto. Sem isso, a rodada seguinte recomeçaria do começo
+   * da mesma janela e releria tudo de novo — e nunca chegaria ao fim.
+   */
+  desdeIso?: string;
 }): Promise<ResultadoImportacao> {
 
-  const ctx = await requireRole("AGENTE");
+  const ctx = await requireRole("AGENTE", MODULO);
 
   const vazio = {
     lidas: 0,
@@ -693,7 +739,9 @@ export async function importWootric(input?: {
 
   let desde: Date;
 
-  if (input?.dias) {
+  if (input?.desdeIso) {
+    desde = new Date(input.desdeIso);
+  } else if (input?.dias) {
     desde = new Date(
       Date.now() - input.dias * 86400000
     );
@@ -716,34 +764,66 @@ export async function importWootric(input?: {
 
   try {
 
+    /**
+     * Lê no máximo uma rodada, e grava exatamente o que leu.
+     *
+     * O teto entra nos dois lados: na leitura, para não gastar o tempo
+     * da requisição em idas ao Wootric; e no corte abaixo, porque a
+     * última página traz 50 de uma vez e pode passar do teto.
+     */
     const brutas = await listarRespostas(
       desde,
       undefined,
-      ate
+      ate,
+      TETO_POR_RODADA
     );
 
-    const itens = brutas
+    const todos = brutas
       .map(traduzir)
       .filter(
         (item): item is RespostaImportada =>
           item !== null
+      )
+      /**
+       * Da mais antiga para a mais nova.
+       *
+       * A ordem importa por causa da continuação: a rodada seguinte
+       * parte da última gravada, então gravar fora de ordem deixaria
+       * um buraco no meio da janela que ninguém voltaria a preencher.
+       */
+      .sort(
+        (a, b) =>
+          a.respondedAt.getTime() -
+          b.respondedAt.getTime()
       );
+
+    const itens = todos.slice(0, TETO_POR_RODADA);
+
+    const parcial = todos.length > itens.length;
 
     const contas = await gravarLote(ctx.prisma, itens);
 
     updateTag(WORKSPACE_TAG);
 
-    const datas = itens
-      .map((i) => i.respondedAt.getTime())
-      .sort((a, b) => a - b);
+    const ultima = itens[itens.length - 1]?.respondedAt;
 
     return {
       ...contas,
       lidas: itens.length,
       desde: desde.toISOString(),
-      ate: datas.length
+      ate: ultima?.toISOString(),
+
+      /**
+       * Só é parcial se houver de onde continuar.
+       *
+       * Sem a última data a tela repetiria a mesma janela para sempre,
+       * que é pior do que parar.
+       */
+      parcial: parcial && Boolean(ultima),
+
+      proximoDesde: ultima
         ? new Date(
-            datas[datas.length - 1]
+            ultima.getTime() - 1000
           ).toISOString()
         : undefined,
     };
@@ -756,14 +836,184 @@ export async function importWootric(input?: {
         erro instanceof Error
           ? erro.message
           : "Falha ao falar com o Wootric.",
+      parcial: false,
     };
   }
+}
+
+/* ============================================================
+   IMPORTAÇÃO POR PLANILHA
+============================================================ */
+
+export interface ResultadoDaPlanilha {
+  erro?: string;
+  lidas: number;
+  novas: number;
+  atualizadas: number;
+  ignoradas: { linha: number; motivo: string }[];
+  de?: string;
+  ate?: string;
+}
+
+/**
+ * Lê uma planilha de NPS e grava no banco.
+ *
+ * O Reclame Aqui já entrava por planilha; o NPS só entrava pela API do
+ * Wootric. Ficavam de fora a pesquisa que roda fora do Wootric, o
+ * histórico anterior à integração e a correção em massa — exportar,
+ * arrumar e devolver.
+ *
+ * **O que a planilha não sobrescreve:** status, responsável, tentativas
+ * e todo o pós-contato. Nota, comentário, contato, tipo e causa raiz,
+ * sim — são justamente os campos que alguém arruma numa planilha. Um
+ * arquivo que reabrisse ciclos encerrados desfaria trabalho de semanas
+ * sem ninguém pedir.
+ */
+export async function importNpsPlanilha(
+  _estado: ResultadoDaPlanilha,
+  formData: FormData
+): Promise<ResultadoDaPlanilha> {
+
+  const vazio = {
+    lidas: 0,
+    novas: 0,
+    atualizadas: 0,
+    ignoradas: [],
+  };
+
+  const ctx = await requireRole("AGENTE", MODULO);
+
+  if (!ctx) {
+    return {
+      ...vazio,
+      erro: "Sem banco configurado — a importação precisa de onde gravar.",
+    };
+  }
+
+  const arquivo = formData.get("arquivo");
+
+  if (
+    !(arquivo instanceof File) ||
+    arquivo.size === 0
+  ) {
+    return {
+      ...vazio,
+      erro: "Selecione um arquivo .xlsx ou .csv.",
+    };
+  }
+
+  let lidas;
+
+  try {
+
+    lidas = parseNpsPlanilha(
+      Buffer.from(await arquivo.arrayBuffer())
+    );
+
+  } catch (erro) {
+
+    if (erro instanceof FormatoInvalido) {
+      return { ...vazio, erro: erro.message };
+    }
+
+    console.error("[nps] leitura da planilha falhou", erro);
+
+    return {
+      ...vazio,
+      erro: "Não foi possível ler a planilha. Confira se é um .xlsx ou .csv válido.",
+    };
+  }
+
+  let novas = 0;
+  let atualizadas = 0;
+
+  /**
+   * Cinco por vez, como a importação do Wootric.
+   *
+   * É o mesmo teto que `case.repository.ts` respeita: o pooler do
+   * Supabase no plano gratuito derruba a conexão com paralelismo maior.
+   */
+  for (let i = 0; i < lidas.itens.length; i += 5) {
+
+    const lote = lidas.itens.slice(i, i + 5);
+
+    await Promise.all(
+      lote.map(async (item) => {
+
+        const existente =
+          await ctx.prisma.npsResponse.findUnique({
+            where: { externalId: item.externalId },
+            select: { id: true },
+          });
+
+        const daPlanilha = {
+          score: item.score,
+          comment: item.comment,
+          respondedAt: item.respondedAt,
+          customer: item.customer,
+          email: item.email ?? null,
+          phone: item.phone ?? null,
+          company: item.company ?? null,
+          kind: item.kind ?? null,
+          rootCause: item.rootCause ?? null,
+          source: "Planilha",
+        };
+
+        if (existente) {
+          await ctx.prisma.npsResponse.update({
+            where: { id: existente.id },
+            data: daPlanilha,
+          });
+          atualizadas += 1;
+          return;
+        }
+
+        await ctx.prisma.npsResponse.create({
+          data: {
+            ...daPlanilha,
+            externalId: item.externalId,
+
+            firstContactDueAt: prazoPrimeiroContato(
+              item.respondedAt,
+              item.score,
+              item.kind
+            ),
+
+            status: item.exigeTratativa
+              ? "Novo"
+              : STATUS_SEM_TRATATIVA,
+
+            closedAt: item.exigeTratativa
+              ? null
+              : item.respondedAt,
+
+            outcome: item.exigeTratativa
+              ? null
+              : STATUS_SEM_TRATATIVA,
+          },
+        });
+
+        novas += 1;
+      })
+    );
+  }
+
+  updateTag(WORKSPACE_TAG);
+
+  return {
+    lidas: lidas.itens.length,
+    novas,
+    atualizadas,
+    ignoradas: lidas.ignoradas,
+    de: lidas.de,
+    ate: lidas.ate,
+  };
 }
 
 /** Aplica o encerramento automático por falta de retorno. */
 export async function closeAbandonedNps(ids: string[]) {
 
-  const ctx = await requireRole("AGENTE");
+  const ctx = await requireRole("AGENTE", MODULO);
 
   if (!ctx || ids.length === 0) return 0;
 
@@ -803,7 +1053,7 @@ export async function exportNps(ids?: string[]): Promise<{
   total?: number;
 }> {
 
-  const ctx = await tryRole("LEITURA");
+  const ctx = await tryRole("LEITURA", MODULO);
 
   if (!ctx) {
     return {

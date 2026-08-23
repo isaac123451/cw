@@ -41,7 +41,9 @@ No painel da Vercel (Settings → Environment Variables) e no `.env` local:
 | `DIRECT_URL` | sim, para migrar | Conexão de sessão (5432) usada por `db:push`, `migrate` e `db:seed`. |
 | `AUTH_SECRET` | sim | Assina o cookie de sessão. |
 | `API_TOKEN` | só se for usar a API | Libera `/api/reputacao` e `/api/casos`. Sem ela a API responde 503 e fica **desligada, nunca aberta**. Ver `API.md`. |
-| `ANTHROPIC_API_KEY` | não | Assistente com IA. Sem ela a tela responde em modo local. |
+| `GEMINI_API_KEY` | é quem responde hoje | IA da triagem, do resumo de conversa e da sugestão de resposta — no assistente e na extensão. Sem ela essas funções dizem "sem provedor configurado"; nada mais quebra. |
+| `ANTHROPIC_API_KEY` | não | A alternativa ao Gemini. **Nunca foi preenchida** — o valor no `.env` é o exemplo literal. Sem ela o Gemini responde por tudo, e escolher "Anthropic" na tela não muda nada. |
+| `CRON_SECRET` | só em produção | Senha da rotina agendada. Sem ela (nem `API_TOKEN`) a rotina responde 503 e fica **desligada, nunca aberta**. |
 | `NEXT_PUBLIC_APP_URL` | só com Google Agenda | Endereço público da aplicação, para montar a URL de retorno do OAuth. Sem ela assume `http://localhost:3000`. |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | não | Google Agenda. Sem elas a integração fica desligada e a tela de Agenda mostra o que falta. Ver a seção abaixo. |
 
@@ -49,6 +51,52 @@ No painel da Vercel (Settings → Environment Variables) e no `.env` local:
 openssl rand -base64 32   # AUTH_SECRET
 openssl rand -hex 32      # API_TOKEN
 ```
+
+Sem `openssl` à mão (Windows), o Node faz o mesmo:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+### Como definir na Vercel
+
+Projeto → **Settings** → **Environment Variables** → **Add New**. Marque
+os três ambientes (*Production*, *Preview*, *Development*), salvo:
+
+- `CRON_SECRET`: só *Production* — é lá que o agendamento roda.
+- `NEXT_PUBLIC_APP_URL`: *Production* e *Preview*.
+
+> **Variável nova só vale no próximo deploy.** Depois de salvar, vá em
+> *Deployments*, abra o mais recente e use **Redeploy**. Esta é a causa
+> mais comum de "coloquei a chave e continua igual".
+
+Para conferir o que um ambiente tem, sem revelar nenhum valor:
+
+```bash
+curl -H "Authorization: Bearer SEU_API_TOKEN" https://cw-rho-eight.vercel.app/api/saude
+```
+
+O `API_TOKEN` da Vercel é **diferente** do local — conferido.
+
+### Onde pegar cada chave
+
+- **`GEMINI_API_KEY`** — <https://aistudio.google.com/apikey> → *Create
+  API key*. Começa com `AIza`. A camada gratuita entra em fila, e é ela
+  o teto da velocidade da IA: medido no mesmo minuto, com o mesmo pedido,
+  `gemini-flash-latest` não respondeu em 35 s enquanto
+  `gemini-flash-lite-latest` respondeu em 0,98 s. A velocidade se escolhe
+  em **Configurações → Integrações**.
+- **`ANTHROPIC_API_KEY`** — <https://console.anthropic.com> → *API Keys*
+  → *Create Key*. Começa com `sk-ant-`. Paga por uso, com valor
+  pré-carregado. É o que torna o perfil **Profundo** da tela de IA
+  interessante — sem chave paga, o piso continua sendo a fila do plano
+  gratuito.
+- **`CRON_SECRET`** — invente com o comando acima. A Vercel manda o valor
+  no cabeçalho `Authorization` quando dispara o cron dela, sozinha; nada
+  precisa ser configurado além da variável.
+- **`NEXT_PUBLIC_APP_URL`** — `https://cw-rho-eight.vercel.app`, sem barra
+  no fim. Vai para o navegador (é o que `NEXT_PUBLIC_` significa), então
+  não pode guardar segredo — e não guarda, é só uma URL.
 
 Opcional no seed: `SEED_ADMIN_PASSWORD` (padrão `cw-reputacao-2026`).
 

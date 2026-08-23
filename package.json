@@ -1,6 +1,6 @@
 {
   "name": "cw-reputacao",
-  "version": "0.8.0",
+  "version": "0.11.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -14,6 +14,10 @@
     "check:ra": "node scripts/check-ra.js",
     "check:cadastros": "tsx scripts/check-cadastros.ts",
     "check:mover": "tsx scripts/check-mover.ts",
+    "check:nps-etapas": "tsx scripts/check-nps-etapas.ts",
+    "check:extensao": "tsx scripts/check-extensao.ts",
+    "check:cron": "tsx scripts/check-cron.ts",
+    "check:nps-planilha": "tsx scripts/check-nps-planilha.ts",
     "check:ia": "tsx scripts/check-ia.ts",
     "check:busca": "tsx scripts/check-busca.ts",
     "extensao:icones": "node extensao/icones/gerar-icones.js",
@@ -25,7 +29,10 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
     "postinstall": "prisma generate",
-    "ra:importar": "tsx scripts/import-ra-db.ts"
+    "ra:importar": "tsx scripts/import-ra-db.ts",
+    "check:vinculo": "tsx scripts/check-vinculo.ts",
+    "db:backup": "tsx scripts/backup-base.ts",
+    "ra:completo": "tsx scripts/import-ra-completo.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",

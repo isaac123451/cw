@@ -133,41 +133,47 @@ export default function CaseActions({
 
       </div>
 
-      <ImpactForm
-        open={impactOpen}
-        presetCaseId={data.id}
-        onClose={() => setImpactOpen(false)}
-        onSave={(item) => {
-          if (!("id" in item)) createRecord(item);
-          setImpactOpen(false);
-        }}
-      />
+      {impactOpen && (
+        <ImpactForm
+          key={data.id}
+          open={impactOpen}
+          presetCaseId={data.id}
+          onClose={() => setImpactOpen(false)}
+          onSave={(item) => {
+            if (!("id" in item)) createRecord(item);
+            setImpactOpen(false);
+          }}
+        />
+      )}
 
-      <TaskForm
-        open={taskOpen}
-        presetCase={{
-          protocol: data.protocol,
-          company: data.company,
-          title: data.title,
-        }}
-        onClose={() => setTaskOpen(false)}
-        onSave={(item) => {
+      {taskOpen && (
+        <TaskForm
+          key={data.id}
+          open={taskOpen}
+          presetCase={{
+            protocol: data.protocol,
+            company: data.company,
+            title: data.title,
+          }}
+          onClose={() => setTaskOpen(false)}
+          onSave={(item) => {
 
-          if (!("id" in item)) createTask(item);
+            if (!("id" in item)) createTask(item);
 
-          setTaskOpen(false);
+            setTaskOpen(false);
 
-          notify({
-            tone: "success",
-            title: "Atividade criada.",
-            detail: item.title,
-          });
+            notify({
+              tone: "success",
+              title: "Atividade criada.",
+              detail: item.title,
+            });
 
-          // Levar para a agenda: a atividade nasce aqui, mas é lá que a
-          // pessoa acompanha e reagenda.
-          router.push("/agenda");
-        }}
-      />
+            // Levar para a agenda: a atividade nasce aqui, mas é lá que a
+            // pessoa acompanha e reagenda.
+            router.push("/agenda");
+          }}
+        />
+      )}
     </>
   );
 }

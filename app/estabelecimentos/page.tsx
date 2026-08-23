@@ -126,7 +126,7 @@ export default function EstabelecimentosPage() {
         (establishment.segment ?? "")
           .toLowerCase()
           .includes(termo) ||
-        (establishment.cnpj ?? "").includes(termo)
+        (establishment.document ?? "").includes(termo)
       );
     });
 
@@ -574,15 +574,18 @@ export default function EstabelecimentosPage() {
 
       </div>
 
-      <EstablishmentForm
-        open={formOpen}
-        editing={editing}
-        onClose={() => {
-          setFormOpen(false);
-          setEditing(undefined);
-        }}
-        onSave={salvar}
-      />
+      {formOpen && (
+        <EstablishmentForm
+          key={editing?.id ?? "novo"}
+          open={formOpen}
+          editing={editing}
+          onClose={() => {
+            setFormOpen(false);
+            setEditing(undefined);
+          }}
+          onSave={salvar}
+        />
+      )}
 
       <ConfirmDelete
         open={Boolean(deleting)}

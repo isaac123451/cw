@@ -77,8 +77,30 @@
     BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI",
     Roboto, Helvetica, Arial, sans-serif;
 
+  /**
+   * A viewport inteira, e não uma faixa na direita.
+   *
+   * Era \`inset: 0 0 0 auto\`, que com os dois filhos absolutos deixa a
+   * raiz com **largura zero**, colada na borda direita. Enquanto tudo
+   * é ancorado ninguém percebe: \`.gatilho\` e \`.gaveta\` se posicionam
+   * por \`right\`, e right:0 de uma caixa de largura zero na borda dá no
+   * mesmo lugar.
+   *
+   * A janela solta usa \`left\`, e aí a conta desanda: arrastar grava a
+   * posição em coordenada de tela (x = 900 numa janela de 1280), a
+   * gaveta passa a se posicionar a 900px **da borda direita** e vai
+   * parar em 2180 — fora da tela. E como \`.gaveta.solta:not(.aberta)\`
+   * some por completo, o efeito era o painel sumir para sempre: o
+   * botão continuava abrindo uma gaveta que ninguém via, em qualquer
+   * site, porque a posição fica no \`storage.sync\`. Era o "de nada a
+   * extensão não abre mais, só reinstalando".
+   *
+   * Com a raiz cobrindo a viewport, coordenada de dentro é coordenada
+   * de tela. Ela não atrapalha a página: \`pointer-events: none\`, e só
+   * os filhos voltam a receber clique.
+   */
   position: fixed;
-  inset: 0 0 0 auto;
+  inset: 0;
   z-index: 2147483000;
   pointer-events: none;
 
@@ -393,12 +415,35 @@
   margin-top: 10px;
 }
 
+/**
+ * O contador é botão: clicar abre a lista daquele recorte.
+ *
+ * \`all: unset\` não serve aqui — o \`<button>\` traz fonte e alinhamento
+ * próprios do agente do usuário, e o que se quer é a mesma caixa de
+ * antes, só que clicável.
+ */
 .numero {
+  display: block;
+  width: 100%;
+  font: inherit;
+  color: inherit;
   background: var(--elevado);
   border: 1px solid var(--borda);
   border-radius: 9px;
   padding: 7px 4px;
   text-align: center;
+  cursor: pointer;
+  transition: border-color .15s ease, background .15s ease;
+}
+
+.numero:hover {
+  border-color: var(--violeta);
+  background: var(--superficie);
+}
+
+.numero:focus-visible {
+  outline: 2px solid var(--violeta);
+  outline-offset: 1px;
 }
 
 .numero b {
@@ -688,9 +733,16 @@
  * Fica acima do rodapé de opções, colado nele, porque é navegação e
  * não configuração — e porque no alto já existem a busca e o cabeçalho.
  */
+/**
+ * Cinco abas, não quatro.
+ *
+ * Atividades entrou ao lado de Painel. Em 320px de gaveta são 64px por
+ * aba — daí a fonte um ponto menor e a quebra de linha desligada: um
+ * rótulo partido no meio é pior do que um rótulo apertado.
+ */
 .canais {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   border-top: 1px solid var(--borda);
   background: var(--superficie);
 }
@@ -700,8 +752,11 @@
   border-right: 1px solid var(--borda);
   background: transparent;
   color: var(--fraco);
-  padding: 9px 4px;
-  font-size: 11.5px;
+  padding: 9px 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 10.5px;
   font-weight: 500;
   font-family: var(--fonte);
   cursor: pointer;

@@ -10,6 +10,7 @@ import { mockCases } from "@/lib/data/mockCases";
 
 import { getPrisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth/guard";
+import type { Modulo } from "@/lib/auth/modules";
 
 import {
   fetchCaseDescription,
@@ -20,6 +21,9 @@ import {
 
 import { toPublicCase } from "@/lib/api/source";
 import { dispatchWebhookEvent } from "@/lib/services/webhook.service";
+
+/** O módulo a que estas ações pertencem — ver lib/auth/modules.ts. */
+const MODULO: Modulo = "reclame-aqui";
 
 /**
  * Gravação das reclamações, chamada direto pelas telas.
@@ -42,7 +46,7 @@ import { dispatchWebhookEvent } from "@/lib/services/webhook.service";
  */
 async function autorizado() {
 
-  const ctx = await requireRole("AGENTE");
+  const ctx = await requireRole("AGENTE", MODULO);
 
   return ctx?.prisma ?? null;
 }

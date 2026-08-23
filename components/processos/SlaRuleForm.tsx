@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Save } from "lucide-react";
 
@@ -50,16 +50,37 @@ export default function SlaRuleForm({
   const { teams } = useTeams();
   const { categories } = useSettings();
 
-  const [category, setCategory] =
-    useState(ANY_CATEGORY);
-  const [priority, setPriority] = useState("");
-  const [responseHours, setResponseHours] =
-    useState("48");
-  const [solutionHours, setSolutionHours] =
-    useState("120");
-  const [team, setTeam] = useState("");
-  const [note, setNote] = useState("");
-  const [active, setActive] = useState(true);
+  /**
+   * Os campos nascem preenchidos, e o formulário remonta a cada
+   * abertura.
+   *
+   * Era um `useEffect` que copiava `editing` para o estado quando o
+   * modal abria. Funcionava, mas ao custo de uma renderização a mais
+   * por abertura — e de uma janela em que o formulário já estava na
+   * tela com os campos do registro anterior. Quem abre passa `key`, e
+   * é ela que garante instância nova.
+   */
+  const [category, setCategory] = useState(
+    editing?.category ?? ANY_CATEGORY
+  );
+  const [priority, setPriority] = useState(
+    editing?.priority ?? ""
+  );
+  const [responseHours, setResponseHours] = useState(
+    editing ? String(editing.responseHours) : "48"
+  );
+  const [solutionHours, setSolutionHours] = useState(
+    editing ? String(editing.solutionHours) : "120"
+  );
+  const [team, setTeam] = useState(
+    editing?.team ?? ""
+  );
+  const [note, setNote] = useState(
+    editing?.note ?? ""
+  );
+  const [active, setActive] = useState(
+    editing?.active ?? true
+  );
 
   /**
    * As categorias vêm de Configurar fluxo — é lá que se cria, edita e
@@ -78,29 +99,6 @@ export default function SlaRuleForm({
         })),
     [categories, cases]
   );
-
-  useEffect(() => {
-    if (!open) return;
-
-    if (editing) {
-      setCategory(editing.category);
-      setPriority(editing.priority ?? "");
-      setResponseHours(String(editing.responseHours));
-      setSolutionHours(String(editing.solutionHours));
-      setTeam(editing.team ?? "");
-      setNote(editing.note ?? "");
-      setActive(editing.active);
-      return;
-    }
-
-    setCategory(ANY_CATEGORY);
-    setPriority("");
-    setResponseHours("48");
-    setSolutionHours("120");
-    setTeam("");
-    setNote("");
-    setActive(true);
-  }, [open, editing]);
 
   const resposta = Number(responseHours);
   const solucao = Number(solutionHours);

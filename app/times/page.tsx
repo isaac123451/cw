@@ -529,26 +529,32 @@ export default function TimesPage() {
 
       </div>
 
-      <TeamForm
-        open={teamForm}
-        editing={editingTeam}
-        onClose={() => {
-          setTeamForm(false);
-          setEditingTeam(undefined);
-        }}
-        onSave={salvarTime}
-      />
+      {teamForm && (
+        <TeamForm
+          key={editingTeam?.id ?? "novo"}
+          open={teamForm}
+          editing={editingTeam}
+          onClose={() => {
+            setTeamForm(false);
+            setEditingTeam(undefined);
+          }}
+          onSave={salvarTime}
+        />
+      )}
 
-      <MemberForm
-        open={memberForm}
-        editing={editingMember}
-        teamName={team?.name ?? ""}
-        onClose={() => {
-          setMemberForm(false);
-          setEditingMember(undefined);
-        }}
-        onSave={salvarMembro}
-      />
+      {memberForm && (
+        <MemberForm
+          key={editingMember?.id ?? "novo"}
+          open={memberForm}
+          editing={editingMember}
+          teamName={team?.name ?? ""}
+          onClose={() => {
+            setMemberForm(false);
+            setEditingMember(undefined);
+          }}
+          onSave={salvarMembro}
+        />
+      )}
 
       <ConfirmDelete
         open={Boolean(deletingTeam)}

@@ -3,7 +3,11 @@
 import { updateTag } from "next/cache";
 
 import { requireRole, tryRole } from "@/lib/auth/guard";
+import type { Modulo } from "@/lib/auth/modules";
 import { WORKSPACE_TAG } from "@/lib/actions/tags";
+
+/** O módulo a que estas ações pertencem — ver lib/auth/modules.ts. */
+const MODULO: Modulo = "reclame-aqui";
 
 /**
  * Anotações de uma reclamação.
@@ -30,7 +34,7 @@ export async function listCaseNotes(
   protocol: string
 ): Promise<CaseNote[]> {
 
-  const ctx = await tryRole("LEITURA");
+  const ctx = await tryRole("LEITURA", MODULO);
 
   if (!ctx || !protocol) return [];
 
@@ -64,7 +68,7 @@ export async function addCaseNote(
   body: string
 ): Promise<CaseNote | null> {
 
-  const ctx = await requireRole("AGENTE");
+  const ctx = await requireRole("AGENTE", MODULO);
 
   if (!ctx) return null;
 

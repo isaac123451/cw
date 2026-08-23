@@ -27,6 +27,10 @@ import {
 import { Project } from "@/lib/models/project";
 import { Macro } from "@/lib/models/macro";
 import {
+  PLANOS_PADRAO,
+  PlanOption,
+} from "@/lib/models/plan";
+import {
   JourneyEntry,
   JourneyStage,
   JourneyTopic,
@@ -37,6 +41,12 @@ import {
   ImpactTypeOption,
 } from "@/lib/models/impact";
 import { Team } from "@/lib/models/team";
+import {
+  ETAPAS_PADRAO,
+  NpsKindOption,
+  NpsStageOption,
+  TIPOS_PADRAO,
+} from "@/lib/models/nps";
 
 import {
   CaseTag,
@@ -108,6 +118,26 @@ export interface Workspace {
   impactTypes: ImpactTypeOption[];
 
   /**
+   * As etapas e os tipos do NPS, como cadastro.
+   *
+   * Entram aqui, e não numa consulta própria da tela, pelo mesmo
+   * motivo dos outros doze: a extensão e as duas telas de NPS leem a
+   * mesma lista, e uma consulta por leitor seriam mais conexões
+   * simultâneas ao pooler do que o plano gratuito sustenta.
+   */
+  npsStages: NpsStageOption[];
+  npsKinds: NpsKindOption[];
+
+  /**
+   * Planos e módulos vendidos, com o preço vigente.
+   *
+   * Entram na carga porque quem os lê é a inserção de macro, no meio
+   * da resposta ao consumidor — uma consulta própria ali seria uma ida
+   * ao banco no clique que mais precisa ser instantâneo.
+   */
+  plans: PlanOption[];
+
+  /**
    * Metas dos indicadores que **diferem** do RA1000.
    *
    * Só o que foi ajustado: indicador ausente aqui segue o critério
@@ -150,6 +180,12 @@ const DEMONSTRACAO: Workspace = {
   playbooks: mockPlaybooks,
   teams: mockTeams,
   impactTypes: mockImpactTypes,
+  npsStages: ETAPAS_PADRAO,
+  npsKinds: TIPOS_PADRAO,
+  plans: PLANOS_PADRAO.map((item, i) => ({
+    ...item,
+    id: `padrao-plano-${i}`,
+  })),
   reputationGoals: {},
   clientEnrichment: {},
   manualClients: [],
@@ -208,6 +244,9 @@ async function carregarDoBanco(): Promise<Workspace | null> {
     impact,
     playbooks,
     impactTypes,
+    npsStages,
+    npsKinds,
+    plans,
     journeyPlacements,
     reputationGoals,
     clientProfiles,
@@ -281,6 +320,19 @@ async function carregarDoBanco(): Promise<Workspace | null> {
     }),
     prisma.impactType.findMany({
       orderBy: { order: "asc" },
+    }),
+    prisma.npsStage.findMany({
+      orderBy: [{ order: "asc" }, { name: "asc" }],
+    }),
+    prisma.npsKind.findMany({
+      orderBy: [{ order: "asc" }, { name: "asc" }],
+    }),
+    prisma.plan.findMany({
+      orderBy: [
+        { kind: "asc" },
+        { order: "asc" },
+        { name: "asc" },
+      ],
     }),
     prisma.journeyPlacement.findMany(),
     prisma.reputationGoal.findMany(),
@@ -382,7 +434,9 @@ async function carregarDoBanco(): Promise<Workspace | null> {
       id: r.id,
       slug: r.slug,
       name: r.name,
-      cnpj: r.cnpj ?? undefined,
+      document: r.document ?? undefined,
+      externalId: r.externalId ?? undefined,
+      portalUrl: r.portalUrl ?? undefined,
       segment: r.segment ?? undefined,
       city: r.city ?? undefined,
       state: r.state ?? undefined,
@@ -415,6 +469,7 @@ async function carregarDoBanco(): Promise<Workspace | null> {
       title: r.title,
       body: r.body,
       category: r.category,
+      channel: r.channel as Macro["channel"],
       owner: r.owner,
       tags: r.tags,
       uses: r.uses,
@@ -551,7 +606,20 @@ async function carregarDoBanco(): Promise<Workspace | null> {
         id: m.id,
         name: m.name,
         role: m.jobTitle ?? "",
-        email: m.email,
+
+        /**
+         * O endereço interno não aparece na tela.
+         *
+         * Quem foi cadastrado só pelo nome recebe um e-mail
+         * `@sem-acesso.local` — inválido de propósito, para ocupar a
+         * chave única sem chutar o endereço real de ninguém. Mostrá-lo
+         * faria parecer que a pessoa tem um e-mail estranho; o campo
+         * vazio diz a verdade, que é "esta pessoa não entra".
+         */
+        email: m.email.endsWith("@sem-acesso.local")
+          ? ""
+          : m.email,
+
         // Presença e carga são estado de tela, não do cadastro.
         online: false,
         openCases: 0,
@@ -567,5 +635,68 @@ async function carregarDoBanco(): Promise<Workspace | null> {
       order: r.order,
       active: r.active,
     })),
+
+    /**
+     * Banco vazio devolve os valores de partida.
+     *
+     * Mesma regra da causa raiz: a tela funciona antes de qualquer
+     * cadastro, e o formulário não precisa de um caso especial para
+     * "ainda não existe nada".
+     */
+    npsStages:
+      npsStages.length === 0
+        ? ETAPAS_PADRAO
+        : npsStages.map((r) => ({
+            id: r.id,
+            name: r.name,
+            description: r.description ?? undefined,
+            color: r.color,
+            order: r.order,
+            active: r.active,
+            final: r.final,
+            kinds: r.kinds,
+          })),
+
+    npsKinds:
+      npsKinds.length === 0
+        ? TIPOS_PADRAO
+        : npsKinds.map((r) => ({
+            id: r.id,
+            name: r.name,
+            emoji: r.emoji,
+            color: r.color,
+            action: r.action,
+            requiresConfirmation: r.requiresConfirmation,
+            requiresRootCause: r.requiresRootCause,
+            opensProcessReview: r.opensProcessReview,
+            ownDeadlineHours:
+              r.ownDeadlineHours ?? undefined,
+            order: r.order,
+            active: r.active,
+          })),
+
+    /**
+     * Banco vazio devolve a tabela da central de ajuda.
+     *
+     * Mesma regra dos outros cadastros: a tela funciona antes de
+     * qualquer edição, e o dia em que a tabela mudar quem corrige é a
+     * tela — não este arquivo.
+     */
+    plans:
+      plans.length === 0
+        ? PLANOS_PADRAO.map((item, i) => ({
+            ...item,
+            id: `padrao-plano-${i}`,
+          }))
+        : plans.map((r) => ({
+            id: r.id,
+            name: r.name,
+            description: r.description ?? undefined,
+            kind: r.kind as PlanOption["kind"],
+            priceCents: r.priceCents,
+            features: r.features,
+            order: r.order,
+            active: r.active,
+          })),
   };
 }

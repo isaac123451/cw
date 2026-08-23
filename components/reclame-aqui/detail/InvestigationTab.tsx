@@ -1,5 +1,10 @@
 "use client";
 
+import {
+  documentoFormatado,
+  tipoDeDocumento,
+} from "@/lib/models/establishment";
+
 import { useMemo, useState } from "react";
 
 import { Building2, Check } from "lucide-react";
@@ -185,7 +190,8 @@ export default function InvestigationTab({
               </p>
 
               <p className="text-xs text-zinc-500">
-                CNPJ {data.cnpj ?? "—"}
+                {tipoDeDocumento(data.document) || "CPF/CNPJ"}{" "}
+                {documentoFormatado(data.document) || "—"}
               </p>
 
             </div>

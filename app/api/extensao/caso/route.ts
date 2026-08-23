@@ -7,6 +7,8 @@ import {
 
 import { getPrisma } from "@/lib/prisma";
 import { Case } from "@/lib/models/case";
+import { digitosDoDocumento } from "@/lib/models/establishment";
+
 import { persistCase } from "@/lib/services/case.repository";
 import {
   RECLAME_AQUI,
@@ -40,8 +42,18 @@ export const dynamic = "force-dynamic";
  */
 
 interface Entrada {
-  /** Id da reclamação no portal. Vira o protocolo `RA-<id>`. */
+  /** Número da reclamação no portal ("ID: 256949163"). */
   id?: string;
+
+  /**
+   * Código alfanumérico da reclamação ("COD: r72QQCpOtF-sFwCZ").
+   *
+   * É o que vira o protocolo `RA-<cod>`, porque é o identificador que o
+   * **export do portal** também traz — o número não aparece lá. Com o
+   * número, a mesma reclamação entraria duas vezes: uma pela extensão e
+   * outra pela planilha.
+   */
+  cod?: string;
   protocolo?: string;
   cliente?: string;
   titulo?: string;
@@ -68,6 +80,19 @@ interface Entrada {
   origem?: string;
   telefone?: string;
   email?: string;
+  /**
+   * Documento do estabelecimento — **CPF ou CNPJ** —, lido do RA Forms.
+   *
+   * É o vínculo: o cadastro de estabelecimentos guarda o mesmo número, e
+   * gravá-lo no caso faz a ligação se montar sem ninguém escolher na
+   * tela. Casar por nome não funcionaria — o export do portal grava o
+   * reclamante no lugar da empresa.
+   *
+   * Os dois tamanhos entram. A Cardápio Web cadastra restaurante por CPF
+   * do proprietário com frequência, e recusar onze dígitos jogaria fora
+   * quase todo o vínculo que existe.
+   */
+  documento?: string;
 }
 
 /** Canais aceitos. Fora desta lista o caso sumiria dos dois módulos. */
@@ -148,11 +173,31 @@ export async function POST(request: Request) {
 
   const sigla = SIGLA[origem] ?? "CW";
 
-  let idPortal = limpo(
-    entrada.id ??
-      entrada.protocolo?.replace(/^[A-Z]{2}-?/i, ""),
-    40
-  ).replace(/\D/g, "");
+  /**
+   * O **COD** é a identidade, e o número é a reserva.
+   *
+   * O portal dá dois identificadores para a mesma reclamação: um número
+   * ("ID: 256949163") e um código alfanumérico
+   * ("COD: r72QQCpOtF-sFwCZ"), que é o que aparece no fim da URL
+   * pública. **O export do portal traz o código, não o número** — então
+   * usar o número aqui faria a reclamação capturada pela extensão e a
+   * mesma reclamação vinda da planilha entrarem como dois casos, e
+   * ninguém entenderia por quê.
+   *
+   * O número continua valendo para as páginas onde o COD não aparece.
+   */
+  const cod = limpo(entrada.cod, 40).replace(
+    /[^A-Za-z0-9._-]/g,
+    ""
+  );
+
+  let idPortal =
+    cod ||
+    limpo(
+      entrada.id ??
+        entrada.protocolo?.replace(/^[A-Z]{2}-?/i, ""),
+      40
+    ).replace(/\D/g, "");
 
   /**
    * Conversa não tem número de protocolo.
@@ -297,6 +342,20 @@ export async function POST(request: Request) {
      */
     company: cliente,
     customer: cliente,
+
+    /**
+     * Só com catorze dígitos, e sem inventar o estabelecimento.
+     *
+     * O `persistCase` procura o cadastro com este CNPJ e grava o
+     * vínculo quando encontra; quando não encontra, o CNPJ fica guardado
+     * e o vínculo se resolve sozinho no dia em que o estabelecimento for
+     * cadastrado — pela varredura do cron.
+     *
+     * Criar o estabelecimento aqui seria o caminho fácil e o errado: o
+     * cadastro tem plano, MRR e responsável, e nada disso está na página
+     * de uma reclamação. Nasceriam fichas vazias que ninguém pediu.
+     */
+    document: digitosDoDocumento(entrada.documento),
 
     city: limpo(entrada.cidade, 80) || undefined,
     state: limpo(entrada.estado, 4) || undefined,

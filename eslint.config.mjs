@@ -16,18 +16,23 @@ const eslintConfig = defineConfig([
   {
     rules: {
       /**
-       * Aviso, não erro.
+       * De volta a erro (22/08/2026).
        *
-       * Os formulários da aplicação preenchem seus campos em um efeito
-       * quando o modal abre — e os contextos de preferência leem o
-       * localStorage na montagem, que é a única forma de não quebrar a
-       * hidratação. São 13 ocorrências do mesmo padrão deliberado; como
-       * erro, elas escondiam os problemas de verdade no `npm run lint`.
+       * Ficou como aviso enquanto treze formulários preenchiam os
+       * campos num efeito ao abrir o modal — a dívida precisava ficar
+       * visível sem esconder problema de verdade no `npm run lint`.
        *
-       * A correção certa (remontar os formulários por `key`) está no
-       * ROADMAP.md — até lá a dívida fica visível como aviso.
+       * Os treze foram migrados: os campos nascem no `useState` e quem
+       * abre passa `key`, então o formulário remonta a cada abertura.
+       * Sobraram dois efeitos legítimos (ler `localStorage` na
+       * montagem, que no servidor não existe), e esses estão marcados
+       * um a um com o motivo escrito ao lado.
+       *
+       * Como erro, a regra volta a servir para o que existe: impedir a
+       * próxima ocorrência de entrar sem alguém decidir que ela é a
+       * exceção.
        */
-      "react-hooks/set-state-in-effect": "warn",
+      "react-hooks/set-state-in-effect": "error",
     },
   },
   {

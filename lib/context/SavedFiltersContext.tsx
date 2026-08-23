@@ -32,10 +32,17 @@ interface SavedFiltersContextType {
   filters: SavedFilter[];
 
   /** Guarda o critério atual. Nome repetido sobrescreve o anterior. */
+  /**
+   * Guarda a combinação e **diz o que aconteceu**.
+   *
+   * Devolvia `void`, e o silêncio escondia três desfechos diferentes:
+   * criou, sobrescreveu um filtro de mesmo nome, ou não fez nada por
+   * faltar nome ou critério. Os três davam na mesma tela.
+   */
   saveFilter: (
     name: string,
     criteria: CaseFilters
-  ) => void;
+  ) => "criado" | "atualizado" | "vazio";
 
   removeFilter: (id: string) => void;
 }
@@ -114,6 +121,16 @@ export function SavedFiltersProvider({
 
       if (!Array.isArray(parsed)) return;
 
+      /**
+       * Ler o `localStorage` **precisa** ser efeito.
+       *
+       * No servidor ele não existe, então inicializar o estado com ele
+       * produziria um HTML diferente do que o navegador desenha — e a
+       * hidratação quebra. É o caso que a própria regra descreve como
+       * legítimo: sincronizar com um sistema externo. Os formulários,
+       * que eram o abuso de verdade, já saíram daqui.
+       */
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setMine(parsed.map(normalizar));
     } catch {
       // Filtro corrompido não pode derrubar a aplicação.
@@ -172,7 +189,7 @@ export function SavedFiltersProvider({
         // Sem nome ou sem critério não há o que guardar — e um filtro
         // vazio aplicado depois pareceria um bug ("não filtrou nada").
         if (nome === "" || countCriteria(criteria) === 0) {
-          return;
+          return "vazio" as const;
         }
 
         const existente = mine.find(
@@ -190,7 +207,8 @@ export function SavedFiltersProvider({
             ),
             () => saveSavedFilter({ name: nome, criteria })
           );
-          return;
+
+          return "atualizado" as const;
         }
 
         /**
@@ -229,6 +247,8 @@ export function SavedFiltersProvider({
             }
           }
         );
+
+        return "criado" as const;
       },
 
       removeFilter: (id) =>

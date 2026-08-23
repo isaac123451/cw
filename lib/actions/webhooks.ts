@@ -1,6 +1,7 @@
 "use server";
 
 import { can, requireRole } from "@/lib/auth/guard";
+import type { Modulo } from "@/lib/auth/modules";
 
 import {
   deliverWebhook,
@@ -8,6 +9,9 @@ import {
 } from "@/lib/services/webhook.service";
 
 import { WebhookEvent } from "@/lib/models/webhook";
+
+/** O módulo a que estas ações pertencem — ver lib/auth/modules.ts. */
+const MODULO: Modulo = "configuracoes";
 
 /**
  * Tela de Integrações, não bundle de `loadWorkspace`: é um registro só,
@@ -24,7 +28,7 @@ import { WebhookEvent } from "@/lib/models/webhook";
  */
 async function autorizado() {
 
-  const ctx = await requireRole("ADMIN");
+  const ctx = await requireRole("ADMIN", MODULO);
 
   return ctx?.prisma ?? null;
 }

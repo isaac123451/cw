@@ -1,0 +1,487 @@
+/**
+ * Prova as rotas que a extensão chama, contra a aplicação rodando.
+ *
+ *   npm run dev            (noutra janela)
+ *   npm run check:extensao
+ *
+ * Os `check:` que já existiam provam **regra** — a conta da nota, o
+ * movimento de etapa, o casamento do telefone. Este prova a outra
+ * metade: que o contrato entre a extensão e a aplicação continua de pé.
+ *
+ * É o defeito que mais custou aqui, e ele nunca aparece no `tsc`: a rota
+ * passa a devolver um campo com outro nome, ou deixa de aceitar um
+ * parâmetro, e o painel simplesmente mostra uma lista vazia. Ninguém
+ * percebe até alguém abrir o WhatsApp e a gaveta não ter nada dentro.
+ *
+ * Assina uma sessão com o `AUTH_SECRET` do `.env`, como o navegador
+ * faria depois do login, e chama as rotas por HTTP.
+ *
+ * Quase tudo é leitura. A exceção é uma tarefa de agenda **descartável**
+ * — criada pela rota real e apagada aqui no fim —, porque o horário só
+ * se prova indo até o banco e voltando.
+ */
+import "dotenv/config";
+
+import { SignJWT } from "jose";
+
+import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "@prisma/client";
+
+const base = (
+  process.env.CW_BASE ?? "http://localhost:3000"
+).replace(/\/$/, "");
+
+const url =
+  process.env.DIRECT_URL || process.env.DATABASE_URL;
+
+const segredo =
+  process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET;
+
+if (!url || !segredo) {
+  console.error(
+    "\n  Faltou DATABASE_URL ou AUTH_SECRET no .env.\n"
+  );
+  process.exit(1);
+}
+
+const prisma = new PrismaClient({
+  adapter: new PrismaPg({ connectionString: url }),
+});
+
+let falhas = 0;
+
+function conferir(
+  campo: string,
+  obtido: unknown,
+  esperado: unknown
+) {
+
+  const ok =
+    JSON.stringify(obtido) === JSON.stringify(esperado);
+
+  if (!ok) falhas += 1;
+
+  console.log(
+    `${ok ? "  ok  " : "FALHA "} ${campo.padEnd(46)} ${JSON.stringify(obtido)}`
+  );
+
+  if (!ok) {
+    console.log(
+      `${" ".repeat(7)}${"esperado".padEnd(46)} ${JSON.stringify(esperado)}`
+    );
+  }
+}
+
+let sessao = "";
+
+async function pegar(
+  caminho: string,
+  parametros: Record<string, string> = {}
+) {
+
+  const destino = new URL(base + caminho);
+
+  for (const [chave, valor] of Object.entries(
+    parametros
+  )) {
+    if (valor) destino.searchParams.set(chave, valor);
+  }
+
+  const resposta = await fetch(destino.toString(), {
+    headers: {
+      Accept: "application/json",
+      "X-CW-Sessao": sessao,
+    },
+    cache: "no-store",
+  });
+
+  /**
+   * 200 com HTML não é sucesso.
+   *
+   * Já aconteceu: um endereço errado devolvia a página de login com
+   * status 200, e o painel morria em `Unexpected token '<'`.
+   */
+  const tipo =
+    resposta.headers.get("content-type") ?? "";
+
+  if (!tipo.includes("json")) {
+    throw new Error(
+      `${caminho} respondeu ${resposta.status} em ${tipo || "tipo desconhecido"}, não JSON.`
+    );
+  }
+
+  return {
+    status: resposta.status,
+    corpo: (await resposta.json()) as Record<
+      string,
+      unknown
+    >,
+  };
+}
+
+async function main() {
+
+  /* ---- a sessão, como o navegador teria ---- */
+
+  const admin = await prisma.user.findFirst({
+    where: { active: true, role: "ADMIN" },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      role: true,
+    },
+  });
+
+  if (!admin) {
+    throw new Error(
+      "Nenhum ADMIN ativo no banco — rode npm run db:seed."
+    );
+  }
+
+  sessao = await new SignJWT({ ...admin })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime("600s")
+    .sign(new TextEncoder().encode(segredo));
+
+  console.log(
+    `\nContra ${base}, como ${admin.name}.\n`
+  );
+
+  /* ============================================================
+     SESSÃO
+  ============================================================ */
+
+  const sessaoResposta = await pegar(
+    "/api/extensao/sessao"
+  );
+
+  conferir(
+    "a sessão é aceita",
+    sessaoResposta.status,
+    200
+  );
+
+  conferir(
+    "e devolve quem é",
+    (
+      sessaoResposta.corpo.usuario as {
+        nome?: string;
+      } | null
+    )?.nome,
+    admin.name
+  );
+
+  /* ============================================================
+     PAINEL DO DIA — OS CONTADORES QUE VIRARAM LISTA
+  ============================================================ */
+
+  const resumo = await pegar("/api/extensao/resumo");
+
+  const contagens = resumo.corpo.contagens as Record<
+    string,
+    number
+  >;
+
+  console.log(
+    "\n  contadores do painel:",
+    JSON.stringify(contagens),
+    "\n"
+  );
+
+  conferir(
+    "o painel devolve os quatro contadores",
+    Object.keys(contagens ?? {}).sort(),
+    ["abertos", "replicas", "risco", "semResposta"]
+  );
+
+  /**
+   * O número que se clica e a lista que abre têm de bater.
+   *
+   * É a razão de o recorte existir na fila com o mesmo nome: um painel
+   * que diz "4 sem resposta" e abre uma lista de 7 ensina a operação a
+   * desconfiar dele.
+   */
+  for (const [recorte, contador] of [
+    ["", "abertos"],
+    ["sem-resposta", "semResposta"],
+    ["replicas", "replicas"],
+    ["risco", "risco"],
+  ] as const) {
+
+    const fila = await pegar("/api/extensao/fila", {
+      canal: "todos",
+      recorte,
+    });
+
+    conferir(
+      `fila "${recorte || "abertos"}" bate com o contador`,
+      fila.corpo.totalGeral,
+      contagens[contador]
+    );
+  }
+
+  /* ============================================================
+     ATIVIDADES
+  ============================================================ */
+
+  const vencendo = await pegar("/api/extensao/agenda");
+
+  const contagensDaAgenda = vencendo.corpo
+    .contagens as Record<string, number>;
+
+  console.log(
+    "\n  atividades:",
+    JSON.stringify(contagensDaAgenda),
+    "\n"
+  );
+
+  conferir(
+    "a agenda devolve as quatro contagens",
+    Object.keys(contagensDaAgenda ?? {}).sort(),
+    [
+      "atrasadas",
+      "concluidas",
+      "pendentes",
+      "proximos",
+    ]
+  );
+
+  conferir(
+    "o recorte que vence bate com a contagem",
+    (vencendo.corpo.itens as unknown[]).length,
+    Math.min(contagensDaAgenda.pendentes, 40)
+  );
+
+  const proximas = await pegar("/api/extensao/agenda", {
+    escopo: "proximos",
+  });
+
+  conferir(
+    "o recorte das próximas é aceito",
+    proximas.corpo.escopo,
+    "proximos"
+  );
+
+  conferir(
+    "e nenhuma delas está atrasada",
+    (
+      proximas.corpo.itens as { atrasada: boolean }[]
+    ).some((t) => t.atrasada),
+    false
+  );
+
+  const concluidas = await pegar(
+    "/api/extensao/agenda",
+    { escopo: "concluidas" }
+  );
+
+  conferir(
+    "o recorte das concluídas só traz concluída",
+    (
+      concluidas.corpo.itens as { concluida: boolean }[]
+    ).every((t) => t.concluida),
+    true
+  );
+
+  /* ============================================================
+     O HORÁRIO DA ATIVIDADE
+  ============================================================ */
+
+  /**
+   * Marcar pela extensão passou a aceitar hora.
+   *
+   * A coluna sempre existiu (`AgendaTask.time`) e a tela sempre soube
+   * mostrá-la — faltava o campo no painel, e a tarefa nascia só com o
+   * dia. O que se prova aqui é o caminho inteiro: a rota aceita, o
+   * banco guarda, e a listagem devolve.
+   */
+  const marcaDaTarefa = `ZZ Conferência ${Date.now().toString(36).toUpperCase()}`;
+
+  const criada = await fetch(
+    `${base}/api/extensao/anotar`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "X-CW-Sessao": sessao,
+      },
+      body: JSON.stringify({
+        tipo: "agenda",
+        titulo: marcaDaTarefa,
+        quando: new Date().toISOString().slice(0, 10),
+        hora: "09:30",
+        tipoDeTarefa: "Pendência",
+      }),
+    }
+  );
+
+  const corpoDaTarefa = (await criada.json()) as {
+    id?: string;
+    hora?: string | null;
+  };
+
+  conferir(
+    "a rota aceita hora na atividade",
+    corpoDaTarefa.hora,
+    "09:30"
+  );
+
+  const noBanco = corpoDaTarefa.id
+    ? await prisma.agendaTask.findUnique({
+        where: { id: corpoDaTarefa.id },
+        select: { time: true, dueDate: true },
+      })
+    : null;
+
+  conferir(
+    "o banco guardou o horário",
+    noBanco?.time,
+    "09:30"
+  );
+
+  /**
+   * A hora entra também no `dueDate`.
+   *
+   * A agenda ordena por ele: uma tarefa das 9h30 que ficasse com 00:00
+   * apareceria misturada com as sem hora, na ordem de criação.
+   */
+  conferir(
+    "e o vencimento carrega a hora, para a ordenação",
+    noBanco?.dueDate.toISOString().slice(11, 16),
+    "09:30"
+  );
+
+  /**
+   * Hora inválida não pode sujar a agenda.
+   *
+   * O corpo é escrito pelo script de conteúdo, que roda dentro da
+   * página alheia — e a coluna é texto livre no banco.
+   */
+  const comHoraInvalida = await fetch(
+    `${base}/api/extensao/anotar`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "X-CW-Sessao": sessao,
+      },
+      body: JSON.stringify({
+        tipo: "agenda",
+        titulo: `${marcaDaTarefa} sem hora`,
+        hora: "25:99",
+      }),
+    }
+  );
+
+  const corpoInvalido =
+    (await comHoraInvalida.json()) as {
+      id?: string;
+      hora?: string | null;
+    };
+
+  conferir(
+    "hora fora de HH:MM é descartada, não gravada",
+    corpoInvalido.hora,
+    null
+  );
+
+  await prisma.agendaTask.deleteMany({
+    where: { title: { startsWith: marcaDaTarefa } },
+  });
+
+  conferir(
+    "as tarefas descartáveis saíram da base",
+    await prisma.agendaTask.findFirst({
+      where: { title: { startsWith: marcaDaTarefa } },
+    }),
+    null
+  );
+
+  /* ============================================================
+     A ESCADA DO NPS VEM DO CADASTRO
+  ============================================================ */
+
+  const filaNps = await pegar("/api/extensao/fila", {
+    canal: "nps",
+  });
+
+  const doBanco = (
+    await prisma.npsStage.findMany({
+      where: { active: true, final: false },
+      orderBy: [{ order: "asc" }, { name: "asc" }],
+      select: { name: true },
+    })
+  ).map((e) => e.name);
+
+  console.log(
+    "\n  escada do NPS:",
+    (filaNps.corpo.etapasNps as string[])?.join(" → "),
+    "\n"
+  );
+
+  /**
+   * A extensão rotula os botões com a lista que o servidor manda.
+   *
+   * Se ela viesse da constante do arquivo, uma etapa renomeada na tela
+   * faria o painel esconder os botões de avançar e voltar — porque o
+   * status atual não estaria na lista dele.
+   */
+  conferir(
+    "a escada do NPS é a do cadastro",
+    filaNps.corpo.etapasNps,
+    doBanco.length > 0
+      ? doBanco
+      : ["Novo", "Em tratativa", "[Aguardando Resposta]"]
+  );
+
+  conferir(
+    "e nenhum ciclo encerrado está na fila",
+    (
+      filaNps.corpo.itens as { status: string }[]
+    ).some((i) => i.status.startsWith("[Encerrado]")),
+    false
+  );
+
+  /* ============================================================
+     CANAL INVÁLIDO CONTINUA SENDO RECUSADO
+  ============================================================ */
+
+  const invalido = await pegar("/api/extensao/fila", {
+    canal: "telepatia",
+  });
+
+  conferir(
+    "canal inválido é recusado com 400",
+    invalido.status,
+    400
+  );
+
+  await prisma.$disconnect();
+
+  console.log(
+    falhas === 0
+      ? "\nO contrato entre a extensão e a aplicação está de pé.\n"
+      : `\n${falhas} conferência(s) fora do esperado.\n`
+  );
+
+  process.exit(falhas === 0 ? 0 : 1);
+}
+
+main().catch(async (erro) => {
+
+  console.error(
+    "\n  Falhou:",
+    erro instanceof Error ? erro.message : erro
+  );
+
+  console.error(
+    `\n  A aplicação está no ar em ${base}? Suba com "npm run dev".\n`
+  );
+
+  await prisma.$disconnect();
+  process.exit(1);
+});

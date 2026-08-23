@@ -1,5 +1,7 @@
 import { Case } from "@/lib/models/case";
 
+import { digitosDoDocumento } from "@/lib/models/establishment";
+
 import { formatElapsed } from "@/lib/services/reputation.service";
 
 /**
@@ -64,6 +66,9 @@ export function toCaseModel(row: {
   externalId: string | null;
   protocol: string;
   companyName: string;
+  document: string | null;
+  establishmentId: string | null;
+  establishmentManual?: boolean;
   customer: string;
   email: string | null;
   phone: string | null;
@@ -100,6 +105,9 @@ export function toCaseModel(row: {
     id: row.externalId ?? row.id,
     protocol: row.protocol,
     company: row.companyName,
+    document: row.document ?? undefined,
+    establishmentId: row.establishmentId ?? undefined,
+    establishmentManual: row.establishmentManual,
     customer: row.customer,
     email: row.email ?? undefined,
     phone: row.phone ?? undefined,
@@ -187,6 +195,19 @@ export function toCaseColumns(item: Case) {
     channel: (ORIGEM_PARA_CANAL[item.source] ??
       "OUTRO") as never,
     companyName: item.company,
+
+    // Só os dígitos: as duas grafias do mesmo número nunca casariam.
+    document: digitosDoDocumento(item.document) ?? null,
+    establishmentId: item.establishmentId || null,
+
+    /**
+     * `undefined` aqui não é descuido: o Prisma **pula** o campo no
+     * update e usa o padrão no create. É o que deixa a importação da
+     * planilha — que não conhece este campo — passar sem apagar a
+     * escolha de quem vinculou na mão.
+     */
+    establishmentManual: item.establishmentManual,
+
     customer: item.customer,
     email: item.email ?? null,
     phone: item.phone ?? null,

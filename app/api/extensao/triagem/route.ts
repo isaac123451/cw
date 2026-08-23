@@ -97,6 +97,18 @@ const ESQUEMA = {
 
 interface Entrada {
   protocolo?: string;
+  /**
+   * Quem está com o cliente na linha pede rápido.
+   *
+   * A triagem é a chamada mais lenta da extensão — é a que pede
+   * julgamento, e por isso roda no modelo maior. Medido: ~10 s contra
+   * ~1 s no menor. Nem sempre valem os dez: quem já leu a reclamação e
+   * só quer uma segunda opinião prefere a resposta agora.
+   *
+   * A escolha é de quem clica, não do servidor — por isso vem no
+   * corpo, e não numa configuração global.
+   */
+  rapido?: boolean;
 }
 
 export async function POST(request: Request) {
@@ -205,10 +217,13 @@ export async function POST(request: Request) {
     .filter(Boolean)
     .join("\n");
 
+  const rapido = entrada.rapido === true;
+
   const resultado = await pedirEstruturado({
     sistema: SISTEMA,
     prompt,
     esquema: ESQUEMA,
+    rapido,
   });
 
   if (resultado.erro || !resultado.dados) {
@@ -226,6 +241,14 @@ export async function POST(request: Request) {
     ...resultado.dados,
     protocolo: caso.protocol,
     provedor: resultado.provedor,
+    /**
+     * Qual via respondeu volta junto.
+     *
+     * A triagem rápida acerta menos no julgamento — e quem lê o
+     * resultado precisa saber qual das duas está lendo antes de
+     * decidir em cima dela.
+     */
+    rapido,
     custo: resultado.uso,
   });
 }

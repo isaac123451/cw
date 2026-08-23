@@ -24,6 +24,11 @@ import {
 import PageHeading from "@/components/shared/PageHeading";
 import StatTile from "@/components/shared/StatTile";
 import SurfaceCard from "@/components/shared/SurfaceCard";
+
+import {
+  documentoFormatado,
+  tipoDeDocumento,
+} from "@/lib/models/establishment";
 import { ConfirmDelete } from "@/components/shared/Modal";
 
 import EstablishmentForm from "@/components/estabelecimentos/EstablishmentForm";
@@ -32,6 +37,7 @@ import ImpactForm from "@/components/impacto/ImpactForm";
 import { useCases } from "@/lib/context/CaseContext";
 import { useClients } from "@/lib/context/ClientsContext";
 import { useImpact } from "@/lib/context/ImpactContext";
+import { useToast } from "@/lib/context/ToastContext";
 import {
   EstablishmentDraft,
   useEstablishments,
@@ -71,6 +77,19 @@ export default function EstablishmentDetail({
 }) {
 
   const { cases, updateCase } = useCases();
+
+  const { notify } = useToast();
+
+  /**
+   * Alterar tem de dizer que alterou.
+   *
+   * Vincular e desvincular reclamação são atos fechados — não há o que
+   * segurar num rascunho. O que faltava era a confirmação: a tela
+   * gravava calada, e só a falha aparecia.
+   */
+  function confirmar(titulo: string, detalhe?: string) {
+    notify({ tone: "success", title: titulo, detail: detalhe });
+  }
   const { clients } = useClients();
   const { records, createRecord } = useImpact();
 
@@ -172,13 +191,20 @@ export default function EstablishmentDetail({
     data: EstablishmentDraft | Establishment
   ) {
 
-    if ("id" in data) updateEstablishment(data);
+    if ("id" in data) {
+      updateEstablishment(data);
+      confirmar("Estabelecimento salvo.", data.name);
+    }
 
     setFormOpen(false);
   }
 
   const dados: [string, string][] = [
-    ["CNPJ", establishment.cnpj ?? "—"],
+    [
+      tipoDeDocumento(establishment.document) ||
+        "CPF/CNPJ",
+      documentoFormatado(establishment.document) || "—",
+    ],
     ["Segmento", establishment.segment ?? "—"],
     [
       "Cidade",
@@ -470,7 +496,16 @@ export default function EstablishmentDetail({
                           ...item,
                           establishmentId:
                             establishment.id,
+
+                          // Escolha de gente trava o automático.
+                          establishmentManual: true,
                         });
+
+                        confirmar(
+                          "Reclamação vinculada.",
+                          `${item.protocol} — ${establishment.name}`
+                        );
+
                         setCaseSearch("");
                       }}
                       className="flex w-full items-center gap-3 border-b border-zinc-100 px-3.5 py-2.5 text-left transition-colors last:border-0 hover:bg-violet-50/50"
@@ -557,12 +592,25 @@ export default function EstablishmentDetail({
                       </span>
 
                       <button
-                        onClick={() =>
+                        onClick={() => {
+
                           updateCase({
                             ...item,
                             establishmentId: undefined,
-                          })
-                        }
+
+                            /**
+                             * Sem esta marca, o CNPJ religaria no
+                             * salvamento seguinte e o botão pareceria
+                             * não funcionar.
+                             */
+                            establishmentManual: true,
+                          });
+
+                          confirmar(
+                            "Reclamação desvinculada.",
+                            item.protocol
+                          );
+                        }}
                         title="Desvincular deste estabelecimento"
                         className="shrink-0 rounded-lg p-1.5 text-zinc-300 opacity-0 transition-all hover:bg-rose-50 hover:text-rose-600 group-hover:opacity-100"
                       >
@@ -653,22 +701,28 @@ export default function EstablishmentDetail({
 
       </div>
 
-      <EstablishmentForm
-        open={formOpen}
-        editing={establishment}
-        onClose={() => setFormOpen(false)}
-        onSave={salvar}
-      />
+      {formOpen && (
+        <EstablishmentForm
+          key={establishment.id}
+          open={formOpen}
+          editing={establishment}
+          onClose={() => setFormOpen(false)}
+          onSave={salvar}
+        />
+      )}
 
-      <ImpactForm
-        open={impactOpen}
-        presetEstablishmentId={establishment.id}
-        onClose={() => setImpactOpen(false)}
-        onSave={(item) => {
-          if (!("id" in item)) createRecord(item);
-          setImpactOpen(false);
-        }}
-      />
+      {impactOpen && (
+        <ImpactForm
+          key={establishment.id}
+          open={impactOpen}
+          presetEstablishmentId={establishment.id}
+          onClose={() => setImpactOpen(false)}
+          onSave={(item) => {
+            if (!("id" in item)) createRecord(item);
+            setImpactOpen(false);
+          }}
+        />
+      )}
 
       <ConfirmDelete
         open={deleting}

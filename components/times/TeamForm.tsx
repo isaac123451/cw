@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { Save } from "lucide-react";
 
@@ -41,32 +41,31 @@ export default function TeamForm({
   onSave,
 }: Props) {
 
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [department, setDepartment] = useState(
-    DEPARTAMENTOS[0]
+  /**
+   * Os campos nascem preenchidos, e o formulário remonta a cada
+   * abertura.
+   *
+   * Era um `useEffect` que copiava `editing` para o estado quando o
+   * modal abria. Funcionava, mas ao custo de uma renderização a mais
+   * por abertura — e de uma janela em que o formulário já estava na
+   * tela com os campos do registro anterior. Quem abre passa `key`, e
+   * é ela que garante instância nova.
+   */
+  const [name, setName] = useState(
+    editing?.name ?? ""
   );
-  const [leader, setLeader] = useState("");
-  const [active, setActive] = useState(true);
-
-  useEffect(() => {
-    if (!open) return;
-
-    if (editing) {
-      setName(editing.name);
-      setDescription(editing.description);
-      setDepartment(editing.department);
-      setLeader(editing.leader);
-      setActive(editing.active);
-      return;
-    }
-
-    setName("");
-    setDescription("");
-    setDepartment(DEPARTAMENTOS[0]);
-    setLeader("");
-    setActive(true);
-  }, [open, editing]);
+  const [description, setDescription] = useState(
+    editing?.description ?? ""
+  );
+  const [department, setDepartment] = useState(
+    editing?.department ?? DEPARTAMENTOS[0]
+  );
+  const [leader, setLeader] = useState(
+    editing?.leader ?? ""
+  );
+  const [active, setActive] = useState(
+    editing?.active ?? true
+  );
 
   const valido = name.trim() !== "";
 

@@ -17,10 +17,19 @@ import {
 } from "@/lib/actions/nps";
 
 import {
+  ETAPAS_PADRAO,
+  NpsKindOption,
   NpsResponseView,
+  NpsStageOption,
   ROOT_CAUSES,
   RootCauseOption,
+  TIPOS_PADRAO,
 } from "@/lib/models/nps";
+
+import {
+  carregarWorkspace,
+  invalidarWorkspace,
+} from "@/lib/context/useWorkspace";
 
 interface NpsContextType {
   responses: NpsResponseView[];
@@ -29,9 +38,20 @@ interface NpsContextType {
    * duas consultas separadas na montagem custam duas conexões ao pooler.
    */
   rootCauses: RootCauseOption[];
+  /**
+   * Etapas do quadro e tipos de tratativa, cadastrados.
+   *
+   * Vêm da carga do workspace, que já é uma requisição só para os doze
+   * contextos — e não de uma consulta própria daqui. A extensão lê as
+   * mesmas tabelas direto pelo Prisma, na rota.
+   */
+  stages: NpsStageOption[];
+  kinds: NpsKindOption[];
   loading: boolean;
   recarregar: () => Promise<void>;
   recarregarCausas: () => Promise<void>;
+  /** Depois de gravar etapa ou tipo: descarta o cache e relê. */
+  recarregarCadastro: () => Promise<void>;
   /** Aplica na tela sem esperar o banco. */
   aplicarLocal: (
     id: string,
@@ -77,6 +97,14 @@ export function NpsProvider({
     RootCauseOption[]
   >(CAUSAS_PADRAO);
 
+  const [stages, setStages] = useState<NpsStageOption[]>(
+    ETAPAS_PADRAO
+  );
+
+  const [kinds, setKinds] = useState<NpsKindOption[]>(
+    TIPOS_PADRAO
+  );
+
   const [loading, setLoading] = useState(enabled);
 
   const recarregar = useCallback(async () => {
@@ -103,6 +131,22 @@ export function NpsProvider({
     }
   }, [enabled]);
 
+  const recarregarCadastro = useCallback(async () => {
+
+    if (!enabled) return;
+
+    // A carga é memoizada no módulo: sem descartar, releria o guardado.
+    invalidarWorkspace();
+
+    try {
+      const workspace = await carregarWorkspace();
+      setStages(workspace.npsStages);
+      setKinds(workspace.npsKinds);
+    } catch (erro) {
+      console.error("[nps] cadastro falhou", erro);
+    }
+  }, [enabled]);
+
   useEffect(() => {
 
     let ativo = true;
@@ -112,11 +156,14 @@ export function NpsProvider({
     Promise.all([
       listNpsResponses(),
       listNpsRootCauses(),
+      carregarWorkspace(),
     ])
-      .then(([lista, causas]) => {
+      .then(([lista, causas, workspace]) => {
         if (!ativo) return;
         setResponses(lista);
         setRootCauses(causas);
+        setStages(workspace.npsStages);
+        setKinds(workspace.npsKinds);
       })
       .catch((erro: unknown) => {
         console.error("[nps] carga falhou", erro);
@@ -148,17 +195,23 @@ export function NpsProvider({
     () => ({
       responses,
       rootCauses,
+      stages,
+      kinds,
       loading,
       recarregar,
       recarregarCausas,
+      recarregarCadastro,
       aplicarLocal,
     }),
     [
       responses,
       rootCauses,
+      stages,
+      kinds,
       loading,
       recarregar,
       recarregarCausas,
+      recarregarCadastro,
       aplicarLocal,
     ]
   );

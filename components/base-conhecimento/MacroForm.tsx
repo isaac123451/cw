@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Plus, Save, X } from "lucide-react";
 
@@ -16,7 +16,12 @@ import { useCases } from "@/lib/context/CaseContext";
 import { useSession } from "@/lib/context/SessionContext";
 import { MacroDraft } from "@/lib/context/MacrosContext";
 
-import { Macro, MACRO_VARS } from "@/lib/models/macro";
+import {
+  Macro,
+  MACRO_CHANNELS,
+  MacroChannel,
+  MACRO_VARS,
+} from "@/lib/models/macro";
 
 interface Props {
   open: boolean;
@@ -35,13 +40,37 @@ export default function MacroForm({
   const { cases } = useCases();
   const session = useSession();
 
-  const [title, setTitle] = useState("");
-  const [body, setBody] = useState("");
-  const [category, setCategory] = useState("");
-  const [owner, setOwner] = useState("");
-  const [tags, setTags] = useState<string[]>([]);
+  /**
+   * Os campos nascem preenchidos, e o formulário remonta a cada
+   * abertura.
+   *
+   * Era um `useEffect` que copiava `editing` para o estado quando o
+   * modal abria. Funcionava, mas ao custo de uma renderização a mais
+   * por abertura — e de uma janela em que o formulário já estava na
+   * tela com os campos do registro anterior. Quem abre passa `key`, e
+   * é ela que garante instância nova.
+   */
+  const [title, setTitle] = useState(
+    editing?.title ?? ""
+  );
+  const [body, setBody] = useState(
+    editing?.body ?? ""
+  );
+  const [owner, setOwner] = useState(
+    editing?.owner ?? session?.name ?? "Operação"
+  );
+  const [tags, setTags] = useState<string[]>(
+    editing?.tags ?? []
+  );
   const [tagDraft, setTagDraft] = useState("");
 
+  /**
+   * As categorias saem dos casos que existem — não de uma lista fixa.
+   *
+   * Fica **antes** do estado da categoria porque é dela que sai o valor
+   * inicial de uma macro nova: a primeira categoria em uso é um palpite
+   * melhor do que "Atendimento" escrito no código.
+   */
   const categorias = useMemo(
     () =>
       [
@@ -50,26 +79,22 @@ export default function MacroForm({
     [cases]
   );
 
-  useEffect(() => {
-    if (!open) return;
+  const [category, setCategory] = useState(
+    editing?.category ??
+      categorias[0] ??
+      "Atendimento"
+  );
 
-    if (editing) {
-      setTitle(editing.title);
-      setBody(editing.body);
-      setCategory(editing.category);
-      setOwner(editing.owner);
-      setTags(editing.tags);
-      setTagDraft("");
-      return;
-    }
-
-    setTitle("");
-    setBody("");
-    setCategory(categorias[0] ?? "Atendimento");
-    setOwner(session?.name ?? "Operação");
-    setTags([]);
-    setTagDraft("");
-  }, [open, editing, session, categorias]);
+  /**
+   * Onde o texto vai ser usado.
+   *
+   * Não é etiqueta: são formatos diferentes. O WhatsApp entende
+   * `*negrito*` e emoji; a resposta pública do portal mostra os
+   * asteriscos crus, na frente do consumidor.
+   */
+  const [channel, setChannel] = useState<MacroChannel>(
+    editing?.channel ?? "Reclame Aqui"
+  );
 
   /** Insere a variável no fim do texto — o cursor não é rastreado. */
   function inserirVariavel(token: string) {
@@ -104,6 +129,7 @@ export default function MacroForm({
       title: title.trim(),
       body: body.trim(),
       category,
+      channel,
       owner: owner.trim() || "Operação",
       tags,
     };
@@ -159,7 +185,28 @@ export default function MacroForm({
           />
         </Field>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-3">
+
+          <Field
+            label="Onde é usado"
+            hint="O seletor da resposta pública só oferece os do Reclame Aqui."
+          >
+            <select
+              value={channel}
+              onChange={(e) =>
+                setChannel(
+                  e.target.value as MacroChannel
+                )
+              }
+              className={inputClass}
+            >
+              {MACRO_CHANNELS.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+          </Field>
 
           <Field
             label="Categoria"

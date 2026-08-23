@@ -58,13 +58,46 @@ export async function GET(request: Request) {
    */
   const hoje = REFERENCE_DATE;
 
-  const limite = new Date(`${hoje}T23:59:59Z`);
+  const fimDeHoje = new Date(`${hoje}T23:59:59Z`);
+
+  /**
+   * O recorte que a aba de Atividades pede.
+   *
+   * O painel do dia mostra só o que está vencendo — é o que ele tem de
+   * mostrar, porque divide espaço com a nota, os contadores e os
+   * alertas. A aba é a tela inteira do assunto, e ali "o que vem pela
+   * frente" e "o que eu já fechei hoje" são perguntas legítimas: sem a
+   * primeira não dá para planejar a tarde, e sem a segunda a lista
+   * esvazia sem deixar rastro de que o trabalho foi feito.
+   */
+  const escopo = (
+    new URL(request.url).searchParams.get("escopo") ?? ""
+  ).trim();
+
+  const where =
+    escopo === "proximos"
+      ? {
+          done: false,
+          dueDate: {
+            gt: fimDeHoje,
+            lte: new Date(
+              fimDeHoje.getTime() + 14 * 86400000
+            ),
+          },
+        }
+      : escopo === "concluidas"
+        ? {
+            done: true,
+            dueDate: {
+              gte: new Date(
+                fimDeHoje.getTime() - 7 * 86400000
+              ),
+            },
+          }
+        : { done: false, dueDate: { lte: fimDeHoje } };
 
   const linhas = await prisma.agendaTask.findMany({
-    where: {
-      done: false,
-      dueDate: { lte: limite },
-    },
+    where,
     include: {
       owner: { select: { name: true } },
       case: {
@@ -75,29 +108,90 @@ export async function GET(request: Request) {
     take: 40,
   });
 
+  /**
+   * As contagens dos três recortes, sempre.
+   *
+   * O chip precisa dizer quantos há do outro lado **antes** de alguém
+   * clicar nele: uma barra de filtros que só sabe contar o recorte
+   * aberto deixa de servir para escolher o próximo.
+   */
+  const inicioDeHoje = new Date(`${hoje}T00:00:00Z`);
+
+  const [pendentes, atrasadas, proximos, concluidas] =
+    await Promise.all([
+      prisma.agendaTask.count({
+        where: { done: false, dueDate: { lte: fimDeHoje } },
+      }),
+      /**
+       * Contada no banco, e não sobre a lista devolvida.
+       *
+       * Sobre a lista, "atrasadas" daria zero sempre que o recorte
+       * aberto fosse "próximos" — e o chip que existe para chamar de
+       * volta quem se distraiu diria justamente que não há nada.
+       */
+      prisma.agendaTask.count({
+        where: {
+          done: false,
+          dueDate: { lt: inicioDeHoje },
+        },
+      }),
+      prisma.agendaTask.count({
+        where: {
+          done: false,
+          dueDate: {
+            gt: fimDeHoje,
+            lte: new Date(
+              fimDeHoje.getTime() + 14 * 86400000
+            ),
+          },
+        },
+      }),
+      prisma.agendaTask.count({
+        where: {
+          done: true,
+          dueDate: {
+            gte: new Date(
+              fimDeHoje.getTime() - 7 * 86400000
+            ),
+          },
+        },
+      }),
+    ]);
+
   const origem = new URL(request.url).origin;
+
+  const itens = linhas.map((item) => {
+
+    const dia = item.dueDate.toISOString().slice(0, 10);
+
+    return {
+      id: item.id,
+      titulo: item.title,
+      tipo: item.type,
+      prioridade: item.priority,
+      quando: dia,
+      /** HH:MM, quando quem marcou informou hora. */
+      hora: item.time ?? null,
+      atrasada: !item.done && dia < hoje,
+      concluida: item.done,
+      responsavel: item.owner?.name,
+      protocolo: item.case?.protocol,
+      caso: item.case?.title,
+    };
+  });
 
   return responder(request, {
     hoje,
+    escopo,
+    itens,
 
-    itens: linhas.map((item) => {
-
-      const dia = item.dueDate
-        .toISOString()
-        .slice(0, 10);
-
-      return {
-        id: item.id,
-        titulo: item.title,
-        tipo: item.type,
-        prioridade: item.priority,
-        quando: dia,
-        atrasada: dia < hoje,
-        responsavel: item.owner?.name,
-        protocolo: item.case?.protocol,
-        caso: item.case?.title,
-      };
-    }),
+    /** Quantas de cada, para os chips da aba de Atividades. */
+    contagens: {
+      pendentes,
+      atrasadas,
+      proximos,
+      concluidas,
+    },
 
     url: `${origem}/agenda`,
   });

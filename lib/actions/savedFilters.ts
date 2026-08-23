@@ -1,8 +1,12 @@
 "use server";
 
 import { requireRole, tryRole } from "@/lib/auth/guard";
+import type { Modulo } from "@/lib/auth/modules";
 
 import type { CaseFilters } from "@/lib/context/CaseContext";
+
+/** O módulo a que estas ações pertencem — ver lib/auth/modules.ts. */
+const MODULO: Modulo = "reclame-aqui";
 
 /**
  * Filtros salvos, no banco em vez do `localStorage`.
@@ -18,7 +22,7 @@ import type { CaseFilters } from "@/lib/context/CaseContext";
 /** `LEITURA` basta: o filtro é da própria pessoa. */
 async function contexto() {
 
-  const ctx = await requireRole("LEITURA");
+  const ctx = await requireRole("LEITURA", MODULO);
 
   return ctx
     ? { prisma: ctx.prisma, userId: ctx.userId }
@@ -37,7 +41,7 @@ export async function listSavedFilters(): Promise<
 > {
 
   // `tryRole`: o provider monta no layout raiz e roda em `/login` também.
-  const ctx = await tryRole("LEITURA");
+  const ctx = await tryRole("LEITURA", MODULO);
 
   if (!ctx) return [];
 

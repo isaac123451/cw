@@ -1,6 +1,7 @@
 "use server";
 
 import { requireRole, tryRole } from "@/lib/auth/guard";
+import type { Modulo } from "@/lib/auth/modules";
 
 import {
   authorizeUrl,
@@ -16,6 +17,9 @@ import {
   GoogleEvent,
   GoogleEventDraft,
 } from "@/lib/models/google";
+
+/** O módulo a que estas ações pertencem — ver lib/auth/modules.ts. */
+const MODULO: Modulo = "agenda";
 
 /**
  * Conexão do Google Agenda, sempre do usuário **da sessão**.
@@ -33,7 +37,7 @@ import {
  */
 async function contexto() {
 
-  const ctx = await requireRole("LEITURA");
+  const ctx = await requireRole("LEITURA", MODULO);
 
   return ctx
     ? { prisma: ctx.prisma, userId: ctx.userId }
@@ -51,7 +55,7 @@ export async function getGoogleStatus(): Promise<GoogleStatus> {
   const configurado = hasGoogle();
 
   // Leitura: `tryRole` devolve null sem sessão, em vez de lançar.
-  const ctx = await tryRole("LEITURA");
+  const ctx = await tryRole("LEITURA", MODULO);
 
   if (!ctx) return { configurado, conectado: false };
 
@@ -107,7 +111,7 @@ export async function getUpcomingEvents(janela?: {
   error?: string;
 }> {
 
-  const ctx = await tryRole("LEITURA");
+  const ctx = await tryRole("LEITURA", MODULO);
 
   if (!ctx) return { events: [] };
 

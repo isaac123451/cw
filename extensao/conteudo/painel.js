@@ -134,6 +134,35 @@
   let etapaFiltro = "";
   let segmentoFiltro = "";
 
+  /**
+   * Recorte vindo dos contadores do painel do dia.
+   *
+   * "", "sem-resposta", "replicas" ou "risco". Os quatro números do
+   * painel eram leitura morta — mostravam "4 sem resposta" e a pergunta
+   * seguinte, "quais?", só tinha resposta abrindo a aplicação.
+   */
+  let recorteFiltro = "";
+
+  /**
+   * A vista de caso veio de uma lista?
+   *
+   * É o que o botão "voltar" precisa saber. Antes a pergunta era `canal
+   * === "todos"`, que passou a significar outra coisa quando os
+   * contadores do painel ganharam fila própria.
+   */
+  let veioDaFila = false;
+
+  /** A vista de onde o caso foi aberto — "fila", "atividades"... */
+  let vistaAnterior = "contato";
+
+  /**
+   * Recorte da aba de Atividades: "", "proximos" ou "concluidas".
+   *
+   * Vazio é o que está vencendo — hoje e o atrasado junto. Uma agenda
+   * que só mostra "hoje" esconde exatamente o que não foi feito ontem.
+   */
+  let escopoAtividades = "";
+
   /** Caso aberto para leitura dentro do painel. */
   let detalhe = null;
 
@@ -141,14 +170,26 @@
      MONTAGEM
   ============================================================ */
 
+  /**
+   * O painel está no documento **e** inteiro?
+   *
+   * Não basta o hospedeiro estar na árvore: uma montagem que estourou
+   * no meio deixa o `<div>` no lugar com o shadow vazio, e aí `montar()`
+   * sairia cedo para sempre — o sintoma de "só reinstalando".
+   */
+  function montado() {
+    return Boolean(
+      hospedeiro &&
+        document.documentElement.contains(hospedeiro) &&
+        raiz &&
+        hospedeiro.shadowRoot?.contains(raiz) &&
+        raiz.querySelector(".gatilho")
+    );
+  }
+
   function montar() {
 
-    if (
-      hospedeiro &&
-      document.documentElement.contains(hospedeiro)
-    ) {
-      return;
-    }
+    if (montado()) return;
 
     /**
      * Sobrou um painel de uma montagem anterior? Some com ele.
@@ -238,6 +279,17 @@
                   aria-pressed="false">Redes Sociais</button>
           <button type="button" data-acao="canal" data-canal="painel"
                   aria-pressed="false" title="Nota, contadores e alertas do dia">Painel</button>
+          <!--
+            Atividades é aba própria, e não só um bloco do Painel.
+
+            No Painel a agenda divide espaço com a nota, os contadores e
+            os alertas — cabem as de hoje e nada mais. A pergunta "o que
+            eu tenho para fazer, e o que ficou para trás" é uma tela
+            inteira: pede o atrasado junto, o que vem pela frente, e o
+            caso vinculado a um clique de distância.
+          -->
+          <button type="button" data-acao="canal" data-canal="atividades"
+                  aria-pressed="false" title="O que está marcado: hoje, atrasado e o que vem">Atividades</button>
         </nav>
 
         <footer class="rodape-painel">
@@ -251,15 +303,36 @@
 
     shadow.appendChild(raiz);
 
+    /**
+     * Gaveta nova nasce fechada — e o estado tem de saber disso.
+     *
+     * `aberto` é variável de módulo e sobrevive à remontagem que a
+     * página provoca ao trocar a árvore. Ficando `true` sobre uma
+     * gaveta recém-criada (que não tem a classe `aberta`), o primeiro
+     * clique no botão chamava `fechar()` de uma coisa já fechada: nada
+     * acontecia, e só o segundo clique abria.
+     */
+    aberto = false;
+
     gaveta = raiz.querySelector(".gaveta");
     corpo = raiz.querySelector(".corpo");
     selo = raiz.querySelector(".selo");
     campoBusca = raiz.querySelector(".busca input");
     linhaQuem = raiz.querySelector(".quem");
 
+    /**
+     * O botão de abrir é o **primeiro** a ser ligado.
+     *
+     * É a armadilha já registrada — montar primeiro, checar depois. Se
+     * qualquer linha daqui para baixo estourar, o painel fica pela
+     * metade, mas continua abrindo; e o `hospedeiro` já está no
+     * documento, então `garantir()` não remontaria nunca mais. Um
+     * painel meio montado que abre é recuperável; um que não abre só
+     * sai reinstalando.
+     */
     raiz
       .querySelector(".gatilho")
-      .addEventListener("click", alternar);
+      ?.addEventListener("click", alternar);
 
     raiz.addEventListener("click", (evento) => {
 
@@ -295,6 +368,23 @@
       if (acao === "triar") triarCaso(alvo);
       if (acao === "concluir") concluirTarefa(alvo);
       if (acao === "nps-contato") gravarContatoDoNps(alvo);
+
+      if (acao === "fila-recorte") {
+        abrirRecorte(alvo.dataset.recorte ?? "");
+      }
+
+      if (acao === "recorte") {
+        recorteFiltro = alvo.dataset.valor ?? "";
+        etapaFiltro = "";
+        carregarFila();
+      }
+
+      if (acao === "escopo-atividade") {
+        escopoAtividades = alvo.dataset.valor ?? "";
+        carregarAtividades();
+      }
+
+      if (acao === "reabrir") reabrirTarefa(alvo);
 
       if (acao === "escopo") {
         soDoCliente = alvo.dataset.valor === "cliente";
@@ -566,8 +656,21 @@
     if (!topo) return;
 
     let arrastando = false;
+    let soltou = false;
     let deltaX = 0;
     let deltaY = 0;
+    let inicioX = 0;
+    let inicioY = 0;
+
+    /**
+     * Quanto a mão precisa andar para soltar a gaveta do canto.
+     *
+     * O comentário acima sempre prometeu isso, mas a implementação
+     * soltava no **primeiro** `pointermove` — e um clique de mouse
+     * quase nunca é imóvel. Bastavam dois pixels de tremor para o
+     * painel virar janela flutuante sem ninguém ter pedido.
+     */
+    const LIMIAR = 5;
 
     topo.addEventListener("pointerdown", (evento) => {
 
@@ -579,8 +682,11 @@
       deltaX = evento.clientX - caixa.left;
       deltaY = evento.clientY - caixa.top;
 
+      inicioX = evento.clientX;
+      inicioY = evento.clientY;
+
       arrastando = true;
-      gaveta.classList.add("arrastando");
+      soltou = false;
       topo.setPointerCapture(evento.pointerId);
       evento.preventDefault();
     });
@@ -588,6 +694,18 @@
     topo.addEventListener("pointermove", (evento) => {
 
       if (!arrastando) return;
+
+      if (!soltou) {
+
+        const andou =
+          Math.abs(evento.clientX - inicioX) +
+          Math.abs(evento.clientY - inicioY);
+
+        if (andou < LIMIAR) return;
+
+        soltou = true;
+        gaveta.classList.add("arrastando");
+      }
 
       aplicarPosicao({
         x: evento.clientX - deltaX,
@@ -607,6 +725,9 @@
       } catch {
         // Já liberado.
       }
+
+      // Não passou do limiar: foi clique, não arrasto. Nada muda.
+      if (!soltou) return;
 
       const posicao = aplicarPosicao({
         x: evento.clientX - deltaX,
@@ -629,6 +750,36 @@
       if (evento.target.closest("[data-acao]")) return;
       ancorar();
     });
+
+    /**
+     * Janela menor não pode engolir o painel.
+     *
+     * A posição é gravada em `storage.sync` e viaja: quem soltou a
+     * gaveta num monitor de 2560px abre o notebook de 1366 no dia
+     * seguinte e ela estaria fora da tela. `aplicarPosicao` já prende à
+     * viewport — só faltava alguém chamá-la quando a viewport muda.
+     */
+    window.addEventListener(
+      "resize",
+      CW.debounce(() => {
+
+        if (!config.posicao) return;
+
+        const posicao = aplicarPosicao(config.posicao);
+
+        if (
+          posicao &&
+          (posicao.x !== config.posicao.x ||
+            posicao.y !== config.posicao.y)
+        ) {
+          config.posicao = posicao;
+          CW.enviar({
+            tipo: "salvar",
+            parcial: { posicao },
+          });
+        }
+      }, 250)
+    );
   }
 
   /**
@@ -742,6 +893,15 @@
 
       config.largura = largura;
 
+      /**
+       * A página acompanha a nova largura.
+       *
+       * Sem isto, alargar a gaveta a fazia cobrir de novo o pedaço de
+       * site que o empurrão tinha aberto — e o empurrão só voltaria a
+       * bater no próximo abrir.
+       */
+      empurrarPagina(aberto);
+
       CW.enviar({
         tipo: "salvar",
         parcial: { largura },
@@ -822,12 +982,34 @@
   ============================================================ */
 
   /**
+   * O que o empurrão estreitou, e a largura que o elemento tinha antes.
+   *
+   * Guardado por elemento para poder desfazer exatamente: mexer no
+   * estilo embutido de uma página alheia sem saber devolver é como
+   * deixar a casa dos outros de móvel arrastado.
+   */
+  const empurrados = new Map();
+
+  /**
    * Empurra a página para o lado enquanto a gaveta está aberta.
    *
-   * Ancorada, a gaveta fica **por cima** da conversa — e no WhatsApp Web
-   * é justamente a coluna das mensagens que ela cobre. Um `margin-right`
-   * no elemento raiz faz o site se redesenhar mais estreito, que é o que
-   * qualquer barra lateral de navegador faz.
+   * A primeira versão punha `margin-right` no elemento raiz, que é o que
+   * funciona num site de fluxo normal. **No WhatsApp Web não funcionava**
+   * — e era o site que mais precisava, porque a gaveta cobre justamente
+   * a coluna das mensagens. Medido na página real: com 380px de margem
+   * no `<html>`, o `<html>` vai para 900px e o `#app` continua em 1280.
+   *
+   * O motivo é que o `#app` é `position: absolute` com `inset: 0` e sem
+   * ancestral posicionado — então o bloco que o contém é a **viewport**,
+   * não o `<html>`. Largura de `<html>` não o alcança; largura própria,
+   * sim (`calc(100vw - 380px)` levou os mesmos 1280 para 900).
+   *
+   * Então o empurrão faz as duas coisas: a margem no raiz, que resolve o
+   * site de fluxo normal, e uma passada pelos filhos diretos de `<html>`
+   * e `<body>` procurando quem esteja preso à viewport ocupando-a
+   * inteira. Quem está, ganha largura própria. É medição em vez de lista
+   * de sites: um portal que mude o nome da `div` amanhã continua sendo
+   * empurrado.
    *
    * Só vale para a gaveta ancorada: solta, ela já é uma janela flutuante
    * e o empurrão só encolheria a página sem motivo. E é preferência —
@@ -845,15 +1027,121 @@
       !config.posicao;
 
     if (!deveEmpurrar) {
+
       raizDoSite.style.marginRight = "";
       raizDoSite.style.transition = "";
+
+      for (const [elemento, antes] of empurrados) {
+        elemento.style.width = antes.width;
+        elemento.style.transition = antes.transition;
+      }
+
+      empurrados.clear();
       return;
     }
+
+    const px = config.largura || 380;
 
     raizDoSite.style.transition =
       "margin-right .22s cubic-bezier(.32,.72,0,1)";
 
-    raizDoSite.style.marginRight = `${config.largura || 380}px`;
+    raizDoSite.style.marginRight = `${px}px`;
+
+    const largura = `calc(100vw - ${px}px)`;
+
+    // Já estreitado: só acompanha a nova largura da gaveta.
+    for (const [elemento] of empurrados) {
+
+      if (!elemento.isConnected) {
+        empurrados.delete(elemento);
+        continue;
+      }
+
+      elemento.style.width = largura;
+    }
+
+    for (const elemento of presosAViewport()) {
+
+      if (empurrados.has(elemento)) continue;
+
+      empurrados.set(elemento, {
+        width: elemento.style.width,
+        transition: elemento.style.transition,
+      });
+
+      elemento.style.transition =
+        "width .22s cubic-bezier(.32,.72,0,1)";
+
+      elemento.style.width = largura;
+    }
+  }
+
+  const SEM_LAYOUT = [
+    "SCRIPT",
+    "STYLE",
+    "LINK",
+    "HEAD",
+    "TEMPLATE",
+    "NOSCRIPT",
+  ];
+
+  /**
+   * Quem está preso à viewport ocupando-a inteira.
+   *
+   * Desce a árvore a partir do `<html>`, mas **só por dentro de quem
+   * ocupa a tela toda** — é o que mantém a varredura barata numa página
+   * de milhares de nós: a primeira `div` estreita corta o galho inteiro.
+   * O teto de profundidade é a segunda trava.
+   *
+   * Não olha só os filhos diretos porque o alvo raramente está ali: no
+   * WhatsApp Web o `#app` é neto (`body > div.page-version > #app`), e
+   * uma varredura de um nível só voltava de mãos vazias — medido.
+   */
+  function presosAViewport() {
+
+    const achados = [];
+    const larguraDaTela = window.innerWidth;
+
+    const visitar = (elemento, profundidade) => {
+
+      if (profundidade > 5) return;
+
+      for (const filho of elemento.children) {
+
+        // O nosso próprio painel, e o que não desenha nada.
+        if (filho === hospedeiro) continue;
+        if (SEM_LAYOUT.includes(filho.tagName)) continue;
+
+        /**
+         * Só quem ocupa a viewport inteira.
+         *
+         * Um menu flutuante de 200px também é `absolute`, e estreitá-lo
+         * não teria sentido nenhum. A folga de 4px é para
+         * arredondamento de zoom.
+         */
+        if (
+          filho.getBoundingClientRect().width <
+          larguraDaTela - 4
+        ) {
+          continue;
+        }
+
+        const estilo = getComputedStyle(filho);
+
+        if (
+          estilo.position === "absolute" ||
+          estilo.position === "fixed"
+        ) {
+          achados.push(filho);
+        }
+
+        visitar(filho, profundidade + 1);
+      }
+    };
+
+    visitar(document.documentElement, 0);
+
+    return achados;
   }
 
   function abrir() {
@@ -1048,6 +1336,7 @@
       categoria: "",
       subcategoria: "",
       prioridade: "Alta",
+      documento: "",
       formulario: [],
       formularioRecolhido: false,
     };
@@ -1090,16 +1379,29 @@
       return;
     }
 
+    if (pedido === "atividades") {
+      if (vista === "atividades") {
+        return voltarAoContato();
+      }
+      vista = "atividades";
+      canal = "todos";
+      refletirCanal();
+      carregarAtividades();
+      return;
+    }
+
     if (vista !== "contato" && canal === pedido) {
       return voltarAoContato();
     }
 
     canal = pedido;
     vista = "fila";
+    veioDaFila = true;
 
     // Filtro é do canal que estava aberto; trocar de aba zera.
     etapaFiltro = "";
     segmentoFiltro = "";
+    recorteFiltro = "";
 
     /**
      * Com contato na tela, a aba abre **naquele cliente**.
@@ -1109,6 +1411,32 @@
      * ali, não a fila geral. O chip "toda a fila" desfaz num clique.
      */
     soDoCliente = temOndeProcurar();
+
+    refletirCanal();
+    carregarFila();
+  }
+
+  /**
+   * Um contador do painel do dia abre a lista por trás do número.
+   *
+   * O recorte é da operação inteira, não de um canal — é a mesma conta
+   * que produziu o número no painel. Por isso `canal = "todos"`: filtrar
+   * por Reclame Aqui aqui faria a lista ser menor que o número clicado,
+   * e um painel que se contradiz ensina a não confiar nele.
+   */
+  function abrirRecorte(recorte) {
+
+    vista = "fila";
+    canal = "todos";
+    veioDaFila = true;
+    soDoCliente = false;
+
+    etapaFiltro = "";
+    segmentoFiltro = "";
+
+    recorteFiltro = NOME_DO_RECORTE[recorte]
+      ? recorte
+      : "";
 
     refletirCanal();
     carregarFila();
@@ -1126,7 +1454,36 @@
 
     detalhe = null;
 
-    if (canal === "todos") return voltarAoContato();
+    /**
+     * Volta para a lista de onde o caso foi aberto.
+     *
+     * A aba de Atividades também abre caso, então "de onde vim" deixou
+     * de ser sinônimo de fila.
+     */
+    if (vistaAnterior === "atividades") {
+      vista = "atividades";
+      refletirCanal();
+      carregarAtividades();
+      return;
+    }
+
+    if (vistaAnterior === "painel") {
+      vista = "painel";
+      refletirCanal();
+      carregarPainel();
+      return;
+    }
+
+    /**
+     * A marca é o caminho percorrido, não o canal.
+     *
+     * Era `canal === "todos"`, o que funcionava enquanto "todos"
+     * significasse "nenhuma aba aberta". Os contadores do painel abrem
+     * fila justamente com `canal = "todos"` — e sem esta distinção,
+     * abrir um caso a partir dali e voltar jogava a pessoa no contato,
+     * perdendo a lista.
+     */
+    if (!veioDaFila) return voltarAoContato();
 
     vista = "fila";
     refletirCanal();
@@ -1137,6 +1494,9 @@
 
     vista = "contato";
     canal = "todos";
+    veioDaFila = false;
+    vistaAnterior = "contato";
+    recorteFiltro = "";
 
     refletirCanal();
 
@@ -1161,7 +1521,12 @@
         vista === "contato" ? "none" : "";
     }
 
-    const ativo = vista === "painel" ? "painel" : canal;
+    const ativo =
+      vista === "painel"
+        ? "painel"
+        : vista === "atividades"
+          ? "atividades"
+          : canal;
 
     for (const botao of raiz.querySelectorAll(
       '[data-acao="canal"]'
@@ -1708,7 +2073,24 @@
 
     if (!lerConversa) return;
 
-    const mensagens = lerConversa();
+    const leitura = lerConversa();
+
+    /**
+     * O leitor passou a devolver o motivo junto.
+     *
+     * Antes devolvia só a lista, e "0 mensagens" não distinguia
+     * conversa vazia de leitor quebrado — a mesma falha foi reportada
+     * três vezes sem que desse para dizer qual das duas era. A forma
+     * antiga (um array) continua aceita: uma extensão nova contra uma
+     * versão antiga do detector não pode parar de funcionar.
+     */
+    const mensagens = Array.isArray(leitura)
+      ? leitura
+      : (leitura?.mensagens ?? []);
+
+    const motivo = Array.isArray(leitura)
+      ? undefined
+      : leitura?.motivo;
 
     const rotulo = botao.textContent;
 
@@ -1716,13 +2098,13 @@
      * Zero mensagens e "duas mensagens" são problemas diferentes.
      *
      * Zero quase sempre é o leitor: o WhatsApp Web troca a marcação sem
-     * avisar, e `div[data-id]` para de casar. Dizer "conversa curta
-     * demais" nesse caso manda procurar o defeito no lugar errado — a
-     * conversa está cheia, quem não está lendo é a extensão.
+     * avisar, e o seletor para de casar. Dizer "conversa curta demais"
+     * nesse caso manda procurar o defeito no lugar errado — a conversa
+     * está cheia, quem não está lendo é a extensão.
      */
     if (mensagens.length === 0) {
       avisar(
-        "Não consegui ler nenhuma mensagem desta conversa. Isso é a extensão, não a conversa: o WhatsApp Web mudou a marcação. Recarregue a página; se continuar, me avise.",
+        `Não consegui ler nenhuma mensagem${motivo ? ` — ${motivo}` : ""}. Isso é a extensão, não a conversa. Role a conversa para cima e tente de novo; se continuar, me avise com esta mensagem.`,
         "perigo"
       );
       return;
@@ -1920,11 +2302,32 @@
    * oposto do que o indicador de resolução mede. O servidor recusa
    * igual, e explica por quê.
    */
-  const FLUXO_NPS = [
+  /**
+   * A escada do NPS, quando o servidor ainda não disse qual é.
+   *
+   * As etapas viraram cadastro, então a lista verdadeira vem junto da
+   * resposta (`etapasNps`), como já acontecia com as do quadro do
+   * Reclame Aqui. Isto aqui é só o que rotula os botões numa versão da
+   * aplicação antiga demais para mandar a lista — sem ele, uma
+   * extensão nova contra uma aplicação velha esconderia os botões de
+   * avançar e voltar sem explicar por quê.
+   */
+  const FLUXO_NPS_PADRAO = [
     "Novo",
     "Em tratativa",
     "[Aguardando Resposta]",
   ];
+
+  /** A escada do NPS que o servidor mandou nesta vista. */
+  function escadaDoNps() {
+
+    const doServidor =
+      filaAtual?.etapasNps ?? ultimoDado?.etapasNps;
+
+    return Array.isArray(doServidor) && doServidor.length
+      ? doServidor
+      : FLUXO_NPS_PADRAO;
+  }
 
   /**
    * O contato que falta, para digitar ali mesmo.
@@ -1952,12 +2355,14 @@
       return '    <div class="etapas"><span class="passo vazio">ciclo encerrado — reabrir é pela tela do NPS</span></div>';
     }
 
-    const i = FLUXO_NPS.indexOf(nps.status);
+    const fluxo = escadaDoNps();
+
+    const i = fluxo.indexOf(nps.status);
 
     if (i < 0) return "";
 
-    const antes = FLUXO_NPS[i - 1];
-    const depois = FLUXO_NPS[i + 1];
+    const antes = fluxo[i - 1];
+    const depois = fluxo[i + 1];
 
     return [
       '    <div class="etapas">',
@@ -2162,15 +2567,17 @@
       '  <div class="cartao" style="margin-top:7px">',
       '    <label class="rotulo" for="anota-tarefa">Lembrar depois</label>',
       '    <input class="campo" id="anota-tarefa" type="text" style="margin-top:0" placeholder="Ex.: cobrar retorno do time de pagamentos" />',
-      '    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">',
+      '    <div style="display:grid;grid-template-columns:1.2fr .9fr;gap:8px">',
       '      <input class="campo" id="anota-quando" type="date" />',
-      '      <select class="campo" id="anota-tipo">',
-      '        <option value="Follow-up">Follow-up</option>',
-      '        <option value="Cobrança interna">Cobrança interna</option>',
-      '        <option value="Solicitação de avaliação">Solicitação de avaliação</option>',
-      '        <option value="Pendência">Pendência</option>',
-      '      </select>',
+      // Opcional: nem toda pendência tem hora marcada.
+      '      <input class="campo" id="anota-hora" type="time" title="Opcional — deixe em branco para o dia inteiro" />',
       '    </div>',
+      '    <select class="campo" id="anota-tipo">',
+      '      <option value="Follow-up">Follow-up</option>',
+      '      <option value="Cobrança interna">Cobrança interna</option>',
+      '      <option value="Solicitação de avaliação">Solicitação de avaliação</option>',
+      '      <option value="Pendência">Pendência</option>',
+      '    </select>',
       '    <div class="linha" style="margin-top:9px;align-items:center">',
       '      <span class="sub">Vai para a agenda, com o caso vinculado.</span>',
       '      <button class="acao" style="margin-top:0" data-acao="anotar-tarefa">Marcar</button>',
@@ -2265,6 +2672,7 @@
         titulo,
         quando:
           corpo.querySelector("#anota-quando")?.value,
+        hora: corpo.querySelector("#anota-hora")?.value,
         tipoDeTarefa:
           corpo.querySelector("#anota-tipo")?.value,
         protocolo:
@@ -2286,7 +2694,11 @@
     }
 
     avisar(
-      `Marcado na agenda para ${CW.data(resposta.dados.quando)}.`,
+      `Marcado na agenda para ${CW.data(resposta.dados.quando)}${
+        resposta.dados.hora
+          ? ` às ${resposta.dados.hora}`
+          : ""
+      }.`,
       "ok"
     );
 
@@ -2303,6 +2715,14 @@
     "reclame-aqui": "Reclame Aqui",
     nps: "NPS",
     social: "Redes Sociais",
+    todos: "Todos os canais",
+  };
+
+  /** Rótulo de cada recorte do painel, para a fila dizer o que mostra. */
+  const NOME_DO_RECORTE = {
+    "sem-resposta": "Sem resposta",
+    replicas: "Réplicas",
+    risco: "Risco de churn",
   };
 
   async function carregarFila() {
@@ -2330,6 +2750,7 @@
           canal,
           etapa: etapaFiltro,
           segmento: segmentoFiltro,
+          recorte: recorteFiltro,
         });
 
     if (!resposta.ok) {
@@ -2425,17 +2846,47 @@
 
     const itens = dados.itens ?? [];
 
+    /** O recorte, quando há, é quem dá nome à lista. */
+    const titulo =
+      NOME_DO_RECORTE[dados.recorte] ??
+      NOME_DO_CANAL[dados.canal] ??
+      dados.canal;
+
+    /**
+     * Lista vazia com filtro na tela **mantém** os filtros.
+     *
+     * `vazio()` limpa o corpo, e trocar de recorte a partir dali só
+     * seria possível voltando ao painel e clicando outro número — o
+     * caminho longo para desfazer um clique.
+     */
     if (itens.length === 0) {
-      vazio(
-        `Nada aberto em ${NOME_DO_CANAL[dados.canal] ?? dados.canal}`,
-        "A fila deste canal está limpa."
-      );
+
+      const filtros = filtrosDaFila(dados);
+
+      if (!filtros) {
+        vazio(
+          `Nada em ${titulo}`,
+          "A fila deste canal está limpa."
+        );
+        return;
+      }
+
+      corpo.innerHTML = [
+        '<div class="bloco">',
+        `  <div class="rotulo">${CW.escapar(titulo)} · nada em aberto</div>`,
+        chipsDeEscopo(),
+        filtros,
+        '  <p class="sub" style="margin-top:9px">Nenhum caso neste recorte. Escolha outro acima.</p>',
+        '</div>',
+      ].join("");
+
+      corpo.scrollTop = 0;
       return;
     }
 
     corpo.innerHTML = [
       '<div class="bloco">',
-      `  <div class="rotulo">${CW.escapar(NOME_DO_CANAL[dados.canal] ?? dados.canal)} · ${dados.total} em aberto</div>`,
+      `  <div class="rotulo">${CW.escapar(titulo)} · ${dados.total} em aberto</div>`,
       chipsDeEscopo(),
       filtrosDaFila(dados),
       `  <p class="sub" style="margin-bottom:9px">${
@@ -2493,16 +2944,38 @@
       (nome) => (contagem[nome] ?? 0) > 0
     );
 
-    if (etapas.length === 0) return "";
+    const chipsDeEtapa =
+      etapas.length === 0
+        ? ""
+        : [
+            '<div class="chips">',
+            `  <button class="chip" data-acao="etapa" data-valor="" aria-pressed="${!etapaFiltro}">Todas ${dados.totalGeral ?? 0}</button>`,
+            ...etapas.map(
+              (nome) =>
+                `  <button class="chip" data-acao="etapa" data-valor="${CW.escapar(nome)}" aria-pressed="${etapaFiltro === nome}">${CW.escapar(nome)} ${contagem[nome]}</button>`
+            ),
+            '</div>',
+          ].join("");
+
+    /**
+     * Os recortes do painel, quando a fila veio de um contador.
+     *
+     * Só aí: numa fila de canal eles seriam mais três chips competindo
+     * com as etapas, que é a pergunta daquela tela.
+     */
+    if (dados.canal !== "todos") return chipsDeEtapa;
+
+    const porRecorte = dados.porRecorte ?? {};
 
     return [
       '<div class="chips">',
-      `  <button class="chip" data-acao="etapa" data-valor="" aria-pressed="${!etapaFiltro}">Todas ${dados.totalGeral ?? 0}</button>`,
-      ...etapas.map(
-        (nome) =>
-          `  <button class="chip" data-acao="etapa" data-valor="${CW.escapar(nome)}" aria-pressed="${etapaFiltro === nome}">${CW.escapar(nome)} ${contagem[nome]}</button>`
+      `  <button class="chip" data-acao="recorte" data-valor="" aria-pressed="${!recorteFiltro}">Em aberto ${dados.totalDoCanal ?? 0}</button>`,
+      ...Object.entries(NOME_DO_RECORTE).map(
+        ([id, rotulo]) =>
+          `  <button class="chip" data-acao="recorte" data-valor="${id}" aria-pressed="${recorteFiltro === id}">${CW.escapar(rotulo)} ${porRecorte[id] ?? 0}</button>`
       ),
       '</div>',
+      chipsDeEtapa,
     ].join("");
   }
 
@@ -2519,6 +2992,15 @@
    * antes de responder.
    */
   async function abrirDetalhe(protocolo, emSilencio = false) {
+
+    /**
+     * De onde viemos, para o voltar saber para onde volta.
+     *
+     * Sem isto, abrir um caso a partir da aba de Atividades e fechar o
+     * detalhe jogava a pessoa no contato — perdendo a lista e o
+     * recorte que ela tinha escolhido.
+     */
+    if (vista !== "caso") vistaAnterior = vista;
 
     vista = "caso";
 
@@ -2619,10 +3101,28 @@
         triagem && triagem.protocolo === d.protocolo
           ? blocoTriagem(triagem)
           : [
-              '  <button class="copiar" data-acao="triar" data-protocolo="' +
+              /*
+                Duas velocidades, e a diferença é dita em segundos.
+
+                A triagem é a chamada mais lenta da extensão: é a que
+                pede julgamento, e por isso roda no modelo maior.
+                Medido, ~10 s contra ~1 s no menor. Nem sempre valem os
+                dez — quem já leu a reclamação e só quer uma segunda
+                opinião prefere a resposta agora; quem vai decidir em
+                cima dela, não.
+
+                O rótulo diz o tempo porque é isso que se está
+                escolhendo: "rápido" sozinho não deixa ninguém decidir.
+              */
+              '  <div class="etapas" style="margin-top:0">',
+              '    <button class="passo" data-acao="triar" data-protocolo="' +
                 CW.escapar(d.protocolo) +
-                '" style="width:100%;padding:8px">Ler com a IA e sugerir</button>',
-              '  <p class="sub" style="margin-top:6px">Lê o relato e os textos aprovados e diz se dá para responder agora ou se precisa de apuração. Sugere — não grava nem envia nada.</p>',
+                '" style="flex:1">Ler com calma (~10 s)</button>',
+              '    <button class="passo" data-acao="triar" data-rapido="1" data-protocolo="' +
+                CW.escapar(d.protocolo) +
+                '" style="flex:1">Ler rápido (~1 s)</button>',
+              '  </div>',
+              '  <p class="sub" style="margin-top:6px">Lê o relato e os textos aprovados e diz se dá para responder agora ou se precisa de apuração. Sugere — não grava nem envia nada. A leitura rápida usa o modelo menor: responde na hora e erra mais no julgamento.</p>',
             ].join(""),
         '</div>'
       );
@@ -2731,8 +3231,28 @@
       `    <pre style="max-height:none">${CW.escapar(t.rascunho)}</pre>`,
       '  </div>',
 
-      `  <p class="sub" style="margin-top:6px">Sugestão da IA (${CW.escapar(t.provedor ?? "—")}). Confira antes de enviar — nada foi gravado.</p>`,
-      `  <button class="copiar" data-acao="triar" data-protocolo="${CW.escapar(t.protocolo)}" style="width:100%;margin-top:7px;padding:7px">Ler de novo</button>`,
+      /*
+        Por qual via a leitura veio.
+
+        A rápida acerta menos no julgamento, e quem lê o resultado
+        precisa saber qual das duas está lendo antes de decidir em cima
+        dela.
+      */
+      `  <p class="sub" style="margin-top:6px">Sugestão da IA (${CW.escapar(t.provedor ?? "—")}${t.rapido ? " · leitura rápida" : ""}). Confira antes de enviar — nada foi gravado.</p>`,
+
+      /*
+        Depois de ler rápido, a leitura com calma fica a um clique.
+
+        É o desfecho que o modo rápido precisa ter: ele serve para
+        decidir se vale gastar os dez segundos, e isso só é verdade se
+        o caminho de volta estiver ali.
+      */
+      '  <div class="etapas" style="margin-top:7px">',
+      `    <button class="passo" data-acao="triar" data-protocolo="${CW.escapar(t.protocolo)}" style="flex:1">${t.rapido ? "Ler com calma (~10 s)" : "Ler de novo"}</button>`,
+      t.rapido
+        ? ""
+        : `    <button class="passo" data-acao="triar" data-rapido="1" data-protocolo="${CW.escapar(t.protocolo)}" style="flex:1">Ler rápido (~1 s)</button>`,
+      '  </div>',
     ]
       .filter(Boolean)
       .join("");
@@ -2742,12 +3262,24 @@
 
     const rotulo = botao.textContent;
 
+    const rapido = botao.dataset.rapido === "1";
+
     botao.disabled = true;
-    botao.textContent = "Lendo…";
+
+    /**
+     * O rótulo de espera diz quanto vai demorar.
+     *
+     * "Lendo…" num botão que fica dez segundos parado parece travado.
+     * Dizer o tempo é a diferença entre esperar e clicar de novo.
+     */
+    botao.textContent = rapido
+      ? "Lendo…"
+      : "Lendo… (~10 s)";
 
     const resposta = await CW.enviar({
       tipo: "triagem",
       protocolo: botao.dataset.protocolo,
+      rapido,
     });
 
     botao.disabled = false;
@@ -2882,11 +3414,24 @@
       '    </div>',
       `    <div class="sub">${CW.data(rep.inicio)} a ${CW.data(rep.fim)}</div>`,
       '  </div>',
+      /*
+        Os quatro números abrem a lista.
+
+        Eram leitura morta: o painel dizia "4 sem resposta" e a pergunta
+        seguinte — quais? — só tinha resposta abrindo a aplicação em
+        outra aba. Cada um leva ao mesmo recorte em
+        `/api/extensao/fila`, com a mesma conta dos dois lados.
+      */
       '  <div class="numeros">',
-      `    <div class="numero"><b>${dados.contagens?.abertos ?? 0}</b><span>abertos</span></div>`,
-      `    <div class="numero"><b>${dados.contagens?.semResposta ?? 0}</b><span>s/ resposta</span></div>`,
-      `    <div class="numero"><b>${dados.contagens?.replicas ?? 0}</b><span>réplicas</span></div>`,
-      `    <div class="numero"><b>${dados.contagens?.risco ?? 0}</b><span>risco</span></div>`,
+      ...[
+        ["", "abertos", dados.contagens?.abertos ?? 0, "Tudo que está em aberto, em todos os canais"],
+        ["sem-resposta", "s/ resposta", dados.contagens?.semResposta ?? 0, "Reclamações ainda na coluna Novo"],
+        ["replicas", "réplicas", dados.contagens?.replicas ?? 0, "Aguardando nossa réplica"],
+        ["risco", "risco", dados.contagens?.risco ?? 0, "Casos abertos com risco de churn"],
+      ].map(
+        ([recorte, rotulo, valor, dica]) =>
+          `    <button class="numero" type="button" data-acao="fila-recorte" data-recorte="${recorte}" title="${CW.escapar(dica)}"><b>${valor}</b><span>${rotulo}</span></button>`
+      ),
       '  </div>',
       '</div>',
     ];
@@ -2955,7 +3500,7 @@
           }
         </div>
         <div class="sub" style="margin-top:3px">
-          ${CW.escapar(t.tipo)}${t.protocolo ? ` · ${CW.escapar(t.protocolo)}` : ""}${t.responsavel ? ` · ${CW.escapar(t.responsavel)}` : ""}
+          ${CW.escapar(t.tipo)}${t.hora ? ` · ${CW.escapar(t.hora)}` : ""}${t.protocolo ? ` · ${CW.escapar(t.protocolo)}` : ""}${t.responsavel ? ` · ${CW.escapar(t.responsavel)}` : ""}
         </div>
         <div class="etapas">
           <button class="passo" data-acao="concluir" data-id="${CW.escapar(t.id)}">concluir</button>
@@ -2971,31 +3516,12 @@
       '</div>'
     );
 
-    /* ---- anotação do dia ---- */
+    /* ---- marcar uma atividade ---- */
 
+    // O mesmo bloco da aba de Atividades: duas cópias divergiriam na
+    // primeira vez que alguém acrescentasse um tipo de tarefa.
     if (podeMover()) {
-      partes.push(
-        '<div class="bloco">',
-        '  <div class="rotulo">Anotar o dia</div>',
-        '  <div class="cartao">',
-        '    <input class="campo" id="dia-tarefa" type="text" style="margin-top:0" placeholder="Ex.: cobrar o time de pagamentos sobre o caso do pixel" />',
-        '    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">',
-        '      <input class="campo" id="dia-quando" type="date" />',
-        '      <select class="campo" id="dia-tipo">',
-        '        <option value="Pendência">Pendência</option>',
-        '        <option value="Follow-up">Follow-up</option>',
-        '        <option value="Cobrança interna">Cobrança interna</option>',
-        '        <option value="Solicitação de avaliação">Solicitação de avaliação</option>',
-        '      </select>',
-        '    </div>',
-        '    <div class="linha" style="margin-top:9px;align-items:center">',
-        '      <span class="sub">Vai para a agenda, sem caso ligado.</span>',
-        '      <button class="acao" style="margin-top:0" data-acao="anotar-dia">Marcar</button>',
-        '    </div>',
-        '    <p class="sub falha" id="dia-erro"></p>',
-        '  </div>',
-        '</div>'
-      );
+      partes.push(blocoNovaAtividade());
     }
 
     /* ---- resumo da conversa, quando o site oferece ---- */
@@ -3037,6 +3563,7 @@
         tipo: "agenda",
         titulo,
         quando: corpo.querySelector("#dia-quando")?.value,
+        hora: corpo.querySelector("#dia-hora")?.value,
         tipoDeTarefa:
           corpo.querySelector("#dia-tipo")?.value,
       },
@@ -3056,11 +3583,213 @@
     }
 
     avisar(
-      `Marcado para ${CW.data(resposta.dados.quando)}.`,
+      `Marcado para ${CW.data(resposta.dados.quando)}${
+        resposta.dados.hora
+          ? ` às ${resposta.dados.hora}`
+          : ""
+      }.`,
       "ok"
     );
 
-    carregarPainel();
+    recarregarVista();
+  }
+
+  /* ============================================================
+     ATIVIDADES
+  ============================================================ */
+
+  const NOME_DO_ESCOPO = {
+    "": "Vencendo",
+    proximos: "Próximas",
+    concluidas: "Concluídas",
+  };
+
+  /**
+   * A aba de Atividades.
+   *
+   * O que está marcado, ligado à agenda da aplicação: o que é de hoje,
+   * o que ficou para trás, o que vem pela frente — e o caso vinculado a
+   * um clique de distância.
+   *
+   * Existe separada do Painel porque ali a agenda divide espaço com a
+   * nota, os contadores e os alertas: cabem as tarefas de hoje e mais
+   * nada. E a pergunta que essa lista responde não é "como estamos", é
+   * "o que eu faço agora" — que é a tela em que se passa a manhã.
+   *
+   * Ela **não** duplica a agenda do Painel: as duas leem a mesma rota,
+   * `/api/extensao/agenda`, com recortes diferentes.
+   */
+  async function carregarAtividades() {
+
+    corpo.innerHTML = `<div class="carregando">Carregando as atividades…</div>`;
+
+    const resposta = await CW.enviar({
+      tipo: "agenda",
+      escopo: escopoAtividades,
+    });
+
+    if (!resposta.ok) {
+      renderFalha(resposta);
+      return;
+    }
+
+    const dados = resposta.dados ?? {};
+    const itens = dados.itens ?? [];
+    const contagens = dados.contagens ?? {};
+
+    /**
+     * O atrasado primeiro, sempre.
+     *
+     * O servidor já ordena por vencimento, o que numa lista de hoje +
+     * atrasado põe o atrasado na frente naturalmente. A ordenação aqui
+     * é para o caso de a data ser a mesma: quem já venceu não pode
+     * ficar embaixo de quem vence às 18h.
+     */
+    const ordenados = [...itens].sort((a, b) => {
+      if (Boolean(a.atrasada) !== Boolean(b.atrasada)) {
+        return a.atrasada ? -1 : 1;
+      }
+      return String(a.quando).localeCompare(
+        String(b.quando)
+      );
+    });
+
+    const partes = [
+      '<div class="bloco">',
+      `  <div class="rotulo">Atividades · ${CW.escapar(NOME_DO_ESCOPO[dados.escopo ?? ""] ?? "Vencendo")}</div>`,
+
+      '  <div class="chips">',
+      ...[
+        ["", "Vencendo", contagens.pendentes ?? 0],
+        ["proximos", "Próximas", contagens.proximos ?? 0],
+        [
+          "concluidas",
+          "Concluídas",
+          contagens.concluidas ?? 0,
+        ],
+      ].map(
+        ([id, rotulo, quantidade]) =>
+          `    <button class="chip" data-acao="escopo-atividade" data-valor="${id}" aria-pressed="${escopoAtividades === id}">${rotulo} ${quantidade}</button>`
+      ),
+      '  </div>',
+
+      contagens.atrasadas > 0 && escopoAtividades !== ""
+        ? `  <p class="sub" style="margin-top:8px;color:var(--perigo)"><strong>${contagens.atrasadas} atrasada(s)</strong> esperando em "Vencendo".</p>`
+        : "",
+
+      '</div>',
+    ];
+
+    if (ordenados.length === 0) {
+
+      partes.push(
+        '<div class="bloco">',
+        `  <p class="sub">${
+          escopoAtividades === "concluidas"
+            ? "Nada concluído nos últimos sete dias."
+            : escopoAtividades === "proximos"
+              ? "Nada marcado para as próximas duas semanas."
+              : "Nada em aberto para hoje, e nada atrasado."
+        }</p>`,
+        '</div>'
+      );
+
+    } else {
+
+      partes.push(
+        ...ordenados.map((t) => cartaoDeAtividade(t))
+      );
+    }
+
+    /* ---- marcar uma nova, sem sair da aba ---- */
+
+    if (podeMover()) {
+      partes.push(blocoNovaAtividade());
+    }
+
+    partes.push(
+      `<button class="acao" data-acao="abrir" data-url="${CW.escapar(dados.url ?? "")}" style="width:100%">Abrir a agenda na aplicação</button>`
+    );
+
+    corpo.innerHTML = partes.filter(Boolean).join("");
+    corpo.scrollTop = 0;
+  }
+
+  /** Uma tarefa, com o caso vinculado e a baixa. */
+  function cartaoDeAtividade(t) {
+
+    const etiqueta = t.concluida
+      ? '<span class="tag ok">concluída</span>'
+      : t.atrasada
+        ? `<span class="tag perigo">${CW.data(t.quando)}</span>`
+        : `<span class="tag neutro">${CW.data(t.quando)}</span>`;
+
+    return `
+      <div class="cartao" style="margin-bottom:7px">
+        <div class="linha">
+          <span class="sub" style="color:var(--texto);font-weight:600">${CW.escapar(t.titulo)}</span>
+          ${etiqueta}
+        </div>
+        <div class="sub" style="margin-top:3px">
+          ${CW.escapar(t.tipo ?? "")}${t.hora ? ` · ${CW.escapar(t.hora)}` : ""}${t.responsavel ? ` · ${CW.escapar(t.responsavel)}` : ""}
+        </div>
+        ${
+          t.protocolo
+            ? `<div class="sub" style="margin-top:3px">${CW.escapar(t.protocolo)}${t.caso ? ` — ${CW.escapar(t.caso)}` : ""}</div>`
+            : ""
+        }
+        <div class="etapas">
+          ${
+            t.concluida
+              ? `<button class="passo" data-acao="reabrir" data-id="${CW.escapar(t.id)}">reabrir</button>`
+              : `<button class="passo" data-acao="concluir" data-id="${CW.escapar(t.id)}">concluir</button>`
+          }
+          ${
+            t.protocolo
+              ? `<button class="passo" data-acao="ver" data-protocolo="${CW.escapar(t.protocolo)}">abrir o caso</button>`
+              : '<span class="passo vazio">sem caso ligado</span>'
+          }
+        </div>
+      </div>`;
+  }
+
+  /** Marcar uma atividade nova, sem sair da aba. */
+  function blocoNovaAtividade() {
+    return [
+      '<div class="bloco">',
+      '  <div class="rotulo">Marcar uma atividade</div>',
+      '  <div class="cartao">',
+      '    <input class="campo" id="dia-tarefa" type="text" style="margin-top:0" placeholder="Ex.: cobrar o time de pagamentos sobre o caso do pixel" />',
+      /*
+        Data e hora lado a lado.
+
+        A agenda sempre teve a coluna de horário e a tela sempre soube
+        mostrá-la — quem marcava pela extensão é que não tinha onde
+        digitar, e a tarefa nascia só com o dia. "Ligar amanhã" e
+        "ligar amanhã às 9h" são compromissos diferentes, e o segundo é
+        o que dá para encaixar entre dois atendimentos.
+
+        A hora é opcional: nem toda pendência tem hora marcada, e
+        exigir uma inventaria compromisso que ninguém assumiu.
+      */
+      '    <div style="display:grid;grid-template-columns:1.2fr .9fr;gap:8px">',
+      '      <input class="campo" id="dia-quando" type="date" />',
+      '      <input class="campo" id="dia-hora" type="time" title="Opcional — deixe em branco para o dia inteiro" />',
+      '    </div>',
+      '    <select class="campo" id="dia-tipo">',
+      '      <option value="Pendência">Pendência</option>',
+      '      <option value="Follow-up">Follow-up</option>',
+      '      <option value="Cobrança interna">Cobrança interna</option>',
+      '      <option value="Solicitação de avaliação">Solicitação de avaliação</option>',
+      '    </select>',
+      '    <div class="linha" style="margin-top:9px;align-items:center">',
+      '      <span class="sub">Vai para a agenda, sem caso ligado.</span>',
+      '      <button class="acao" style="margin-top:0" data-acao="anotar-dia">Marcar</button>',
+      '    </div>',
+      '    <p class="sub falha" id="dia-erro"></p>',
+      '  </div>',
+      '</div>',
+    ].join("");
   }
 
   /* ============================================================
@@ -3095,7 +3824,47 @@
 
     avisar("Tarefa concluída.", "ok");
 
-    carregarPainel();
+    // A tarefa saiu da lista da vista em que estamos, seja qual for.
+    recarregarVista();
+  }
+
+  /**
+   * Desfaz a baixa.
+   *
+   * A rota sempre soube desfazer (`concluida: false`) — é o que torna o
+   * clique em "concluir" seguro. Faltava o botão, e ele só faz sentido
+   * numa lista que mostra o que já foi concluído, que é a aba de
+   * Atividades.
+   */
+  async function reabrirTarefa(botao) {
+
+    const rotulo = botao.textContent;
+
+    botao.disabled = true;
+    botao.textContent = "...";
+
+    const resposta = await CW.enviar({
+      tipo: "concluirTarefa",
+      id: botao.dataset.id,
+      concluida: false,
+    });
+
+    botao.disabled = false;
+    botao.textContent = rotulo;
+
+    if (!resposta.ok || resposta.dados?.erro) {
+      avisar(
+        resposta.dados?.erro ??
+          resposta.erro ??
+          "Falha ao reabrir.",
+        "perigo"
+      );
+      return;
+    }
+
+    avisar("Tarefa reaberta.", "ok");
+
+    recarregarVista();
   }
 
   /**
@@ -3319,6 +4088,9 @@
 
     if (vista === "fila") return carregarFila();
     if (vista === "painel") return carregarPainel();
+    if (vista === "atividades") {
+      return carregarAtividades();
+    }
 
     if (vista === "caso") {
       return detalhe
@@ -3868,11 +4640,16 @@ const ORIGENS = [
   /**
    * O formulário que o Reclame Aqui coleta antes de publicar.
    *
-   * Mostra e **não grava**. Traz o CNPJ de cadastro no portal, o e-mail
-   * de acesso e o nome do proprietário — que é justamente o vínculo
-   * cliente ↔ estabelecimento que hoje falta na base. Onde cada um desses
-   * campos deve ser gravado ainda não foi decidido, e escrever antes de
-   * decidir criaria dado torto em três tabelas de uma vez.
+   * Dele, **só o documento é gravado** — CPF ou CNPJ. É o único campo
+   * que casa com algo daqui: o cadastro de estabelecimentos guarda o
+   * mesmo número, e a reclamação passa a guardar também, o que monta o
+   * vínculo sem ninguém escolher na mão. O e-mail de acesso e o nome do
+   * proprietário continuam só na tela: não há onde gravá-los sem
+   * inventar cadastro.
+   *
+   * Casar por nome não funcionaria: o export do Reclame Aqui grava o
+   * reclamante no lugar da empresa, então o nome da reclamação é o do
+   * consumidor.
    */
   function blocoInformacoesAdicionais() {
 
@@ -3894,7 +4671,9 @@ const ORIGENS = [
     return [
       '<div class="bloco">',
       '  <div class="rotulo">Informações adicionais da reclamação</div>',
-      '  <p class="sub" style="margin-bottom:8px">O Reclame Aqui coleta isto antes de publicar. <strong>Não é gravado</strong> — está aqui para análise.</p>',
+      captura.documento
+        ? `  <p class="sub" style="margin-bottom:8px">O Reclame Aqui coleta isto antes de publicar. O <strong>CPF/CNPJ</strong> é gravado no caso e vincula ao estabelecimento; o restante fica só aqui, para análise.</p>`
+        : '  <p class="sub" style="margin-bottom:8px">O Reclame Aqui coleta isto antes de publicar. <strong>Não é gravado</strong> — está aqui para análise.</p>',
       '  <div class="cartao">',
       ...itens.map(
         (item, i) => `
@@ -3992,9 +4771,29 @@ const ORIGENS = [
     botao.disabled = true;
     botao.textContent = "Criando...";
 
+    /**
+     * O documento não é campo do formulário, então vai por fora.
+     *
+     * Ele não é editável de propósito: é identificador, não descrição.
+     * Um dígito trocado à mão não daria erro — daria vínculo com o
+     * restaurante errado, que é pior do que vínculo nenhum.
+     */
     const resposta = await CW.enviar({
       tipo: "criarCaso",
-      caso: dados,
+      caso: {
+        ...dados,
+        documento: captura?.documento ?? "",
+
+        /**
+         * O COD vai junto e vira o protocolo no servidor.
+         *
+         * É o identificador que o export do portal também traz; o número
+         * do "ID:" não aparece lá. Sem mandá-lo, a reclamação capturada
+         * aqui e a mesma reclamação vinda da planilha entrariam como
+         * dois casos.
+         */
+        cod: captura?.cod ?? "",
+      },
     });
 
     botao.disabled = false;
@@ -4098,16 +4897,29 @@ const ORIGENS = [
       refletirAuto();
     },
 
-    /** Reanexa o painel se a página o tiver removido. */
+    /** Reanexa o painel se a página o tiver removido — ou quebrado. */
     garantir() {
-      if (
-        !hospedeiro ||
-        !document.documentElement.contains(hospedeiro)
-      ) {
-        hospedeiro = null;
-        raiz = null;
-        montar();
+
+      if (montado()) {
+
+        /**
+         * A página pode ter trocado a árvore por baixo do empurrão.
+         *
+         * O WhatsApp Web recria o `#app` em algumas navegações, e o
+         * elemento novo nasce com a largura da viewport inteira — a
+         * gaveta voltaria a cobrir a conversa sem ninguém ter mexido
+         * em nada.
+         */
+        if (aberto) empurrarPagina(true);
+
+        return;
       }
+
+      hospedeiro?.remove();
+      hospedeiro = null;
+      raiz = null;
+
+      montar();
     },
   };
 })();

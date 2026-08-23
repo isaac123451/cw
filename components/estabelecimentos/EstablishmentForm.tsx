@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Save } from "lucide-react";
 
@@ -47,12 +47,28 @@ interface Props {
   ) => void;
 }
 
-/** Aplica a máscara de CNPJ conforme digita. */
-function maskCnpj(value: string) {
+/**
+ * Máscara de **CPF ou CNPJ**, decidida pelo tamanho.
+ *
+ * A Cardápio Web cadastra restaurante das duas formas — a maioria dos
+ * pequenos entra pelo CPF do proprietário. Forçar a máscara de CNPJ em
+ * onze dígitos escreveria `12.345.678/901`, e quem digitou concluiria,
+ * com razão, que errou o número.
+ *
+ * A virada é em onze: até lá desenha CPF, dali em diante CNPJ.
+ */
+function mascaraDeDocumento(value: string) {
 
-  const digits = value.replace(/\D/g, "").slice(0, 14);
+  const d = value.replace(/\D/g, "").slice(0, 14);
 
-  return digits
+  if (d.length <= 11) {
+    return d
+      .replace(/^(\d{3})(\d)/, "$1.$2")
+      .replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
+      .replace(/\.(\d{3})(\d)/, ".$1-$2");
+  }
+
+  return d
     .replace(/^(\d{2})(\d)/, "$1.$2")
     .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
     .replace(/\.(\d{3})(\d)/, ".$1/$2")
@@ -69,58 +85,58 @@ export default function EstablishmentForm({
   const { people } = useTeams();
   const session = useSession();
 
-  const [name, setName] = useState("");
-  const [cnpj, setCnpj] = useState("");
-  const [segment, setSegment] = useState("");
-  const [city, setCity] = useState("");
-  const [state, setState] = useState("");
-  const [plan, setPlan] =
-    useState<EstablishmentPlan>("Essencial");
+  /**
+   * Os campos nascem preenchidos, e o formulário remonta a cada
+   * abertura.
+   *
+   * Era um `useEffect` que copiava `editing` para o estado quando o
+   * modal abria. Funcionava, mas ao custo de uma renderização a mais
+   * por abertura — e de uma janela em que o formulário já estava na
+   * tela com os campos do registro anterior. Quem abre passa `key`, e
+   * é ela que garante instância nova.
+   */
+  const [name, setName] = useState(
+    editing?.name ?? ""
+  );
+  const [documento, setDocumento] = useState(
+    editing?.document ?? ""
+  );
+  const [segment, setSegment] = useState(
+    editing?.segment ?? ""
+  );
+  const [city, setCity] = useState(
+    editing?.city ?? ""
+  );
+  const [state, setState] = useState(
+    editing?.state ?? ""
+  );
+  const [plan, setPlan] = useState<EstablishmentPlan>(
+    editing?.plan ?? "Essencial"
+  );
   const [status, setStatus] =
-    useState<EstablishmentStatus>("Ativo");
-  const [mrr, setMrr] = useState("");
-  const [owner, setOwner] = useState("");
-  const [startedAt, setStartedAt] = useState("");
-  const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
-  const [notes, setNotes] = useState("");
-
-  useEffect(() => {
-    if (!open) return;
-
-    if (editing) {
-      setName(editing.name);
-      setCnpj(editing.cnpj ?? "");
-      setSegment(editing.segment ?? "");
-      setCity(editing.city ?? "");
-      setState(editing.state ?? "");
-      setPlan(editing.plan);
-      setStatus(editing.status);
-      setMrr(
-        editing.mrr ? String(editing.mrr) : ""
-      );
-      setOwner(editing.owner ?? "");
-      setStartedAt(editing.startedAt ?? "");
-      setPhone(editing.phone ?? "");
-      setEmail(editing.email ?? "");
-      setNotes(editing.notes ?? "");
-      return;
-    }
-
-    setName("");
-    setCnpj("");
-    setSegment("");
-    setCity("");
-    setState("");
-    setPlan("Essencial");
-    setStatus("Ativo");
-    setMrr("");
-    setOwner(session?.name ?? "Operação");
-    setStartedAt(new Date().toISOString().slice(0, 10));
-    setPhone("");
-    setEmail("");
-    setNotes("");
-  }, [open, editing, session]);
+    useState<EstablishmentStatus>(
+      editing?.status ?? "Ativo"
+    );
+  const [mrr, setMrr] = useState(
+    editing?.mrr ? String(editing.mrr) : ""
+  );
+  const [owner, setOwner] = useState(
+    editing?.owner ?? session?.name ?? "Operação"
+  );
+  /** Cadastro novo começa hoje: é o que quem cadastra vai digitar. */
+  const [startedAt, setStartedAt] = useState(
+    editing?.startedAt ??
+      new Date().toISOString().slice(0, 10)
+  );
+  const [phone, setPhone] = useState(
+    editing?.phone ?? ""
+  );
+  const [email, setEmail] = useState(
+    editing?.email ?? ""
+  );
+  const [notes, setNotes] = useState(
+    editing?.notes ?? ""
+  );
 
   const responsaveis = useMemo(
     () =>
@@ -151,7 +167,7 @@ export default function EstablishmentForm({
 
     const base: EstablishmentDraft = {
       name: name.trim(),
-      cnpj: cnpj.trim() || undefined,
+      document: documento.trim() || undefined,
       segment: segment.trim() || undefined,
       city: city.trim() || undefined,
       state: state.trim() || undefined,
@@ -217,13 +233,18 @@ export default function EstablishmentForm({
             />
           </Field>
 
-          <Field label="CNPJ" hint="Opcional.">
+          <Field
+            label="CPF ou CNPJ"
+            hint="É por ele que a reclamação encontra este estabelecimento sozinha."
+          >
             <input
-              value={cnpj}
+              value={documento}
               onChange={(e) =>
-                setCnpj(maskCnpj(e.target.value))
+                setDocumento(
+                  mascaraDeDocumento(e.target.value)
+                )
               }
-              placeholder="00.000.000/0001-00"
+              placeholder="000.000.000-00 ou 00.000.000/0001-00"
               inputMode="numeric"
               className={inputClass}
             />

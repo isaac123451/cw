@@ -79,13 +79,28 @@ que ferramentas de CRM (HubSpot, Kommo e afins) usam há anos sobre o
 WhatsApp Web sem problema. Se um dia entrar automação de envio, é outro
 risco, e outra conversa.
 
-## Peça B — Rotina agendada (o que resolve o "sem cron")
+## Peça B — Rotina agendada — **feita** (22/08/2026)
 
-O ROADMAP já nomeia essa lacuna duas vezes — fechamento automático do
-NPS em 30 dias e o evento `movimentacao.atrasada` do webhook — como
-coisas que "precisam de job agendado, que a aplicação não tem hoje".
+> A lacuna que o ROADMAP nomeava duas vezes foi fechada:
+> `app/api/cron/route.ts`, agendada em `vercel.json` para as 6h e
+> protegida por `CRON_SECRET` (ou `API_TOKEN`). Ela encerra o NPS
+> abandonado, dispara `movimentacao.atrasada` e reenvia webhook que
+> falhou — **as três coisas que só existem quando ninguém está com a
+> tela aberta**.
+>
+> A primeira rodada real encerrou 29 ciclos parados havia mais de 30
+> dias. `npm run check:cron` prova que rodar duas vezes não repete
+> trabalho, que é o que importa num job que a plataforma reexecuta
+> quando falha.
+>
+> **Falta só ligar em produção:** definir `CRON_SECRET` na Vercel. Sem
+> ela a rotina responde 503 e fica desligada, não aberta.
 
-Um cron diário (Vercel Cron, já que o deploy é lá) que roda de manhã e:
+O que ficou de fora, e continua valendo como próximo passo: o **resumo
+que chega até você** (o cron calcula, mas ninguém entrega) e o
+relatório de sexta. Falta decidir o canal.
+
+O desenho original era um cron diário que:
 
 - Chama `buildNotifications()` — a função já existe e já calcula
   sem-resposta, réplicas, avaliação negativa, movimentação atrasada e
@@ -152,7 +167,23 @@ peça nova obrigatória:
 | `app/api/extensao/sessao/` | Quem sou eu — usado pelo "testar conexão" |
 | `app/api/extensao/contexto/` | O retrato do cliente |
 | `app/api/extensao/resumo/` | Nota, contadores e alertas do dia |
+| `app/api/extensao/fila/` | A fila de um canal — e os recortes que os contadores do painel abrem |
+| `app/api/extensao/agenda/` | Atividades: vencendo, próximas e concluídas |
+| `app/api/extensao/anotar/` | Anotação no caso e tarefa na agenda, com hora |
 | `scripts/check-contato.ts` | A prova do casamento contra o banco real |
+| `scripts/check-extensao.ts` | A prova do **contrato**: o número que o painel mostra e o tamanho da lista que ele abre |
+
+### As cinco abas do painel (22/08/2026)
+
+Reclame Aqui · NPS · Redes Sociais · Painel · **Atividades**.
+
+A de Atividades entrou por último e é a que responde "o que eu faço
+agora": hoje, o atrasado, o que vem pela frente, e o caso vinculado a um
+clique. Ela existe separada do Painel porque ali a agenda divide espaço
+com a nota, os contadores e os alertas — cabem as de hoje e nada mais.
+
+E os quatro números do Painel deixaram de ser leitura morta: cada um
+abre a lista por trás dele, com a mesma conta dos dois lados.
 
 **Do lado do navegador**, em `extensao/`: manifesto V3, service worker,
 painel em Shadow DOM, três detectores (WhatsApp Web, Hugme/RA,

@@ -12,6 +12,7 @@ import {
 
 import type { CaseFilters } from "@/lib/context/CaseContext";
 import { useSavedFilters } from "@/lib/context/SavedFiltersContext";
+import { useToast } from "@/lib/context/ToastContext";
 
 import {
   countCriteria,
@@ -39,6 +40,8 @@ export default function SavedFilters({
   const { filters, saveFilter, removeFilter } =
     useSavedFilters();
 
+  const { notify } = useToast();
+
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
 
@@ -47,10 +50,51 @@ export default function SavedFilters({
   const meus = filters.filter((item) => !item.builtIn);
   const prontos = filters.filter((item) => item.builtIn);
 
+  /**
+   * Salvar diz o que fez.
+   *
+   * O botão gravava calado, e sobrescrever um filtro de mesmo nome era
+   * o desfecho mais fácil de não perceber: a gaveta fechava igual, e a
+   * combinação anterior tinha ido embora.
+   */
   function handleSave() {
-    saveFilter(name, criteria);
+
+    const resultado = saveFilter(name, criteria);
+
+    if (resultado === "vazio") {
+      notify({
+        tone: "error",
+        title: "Não deu para salvar o filtro.",
+        detail:
+          "Ele precisa de um nome e de pelo menos um critério na barra.",
+      });
+      return;
+    }
+
+    notify({
+      tone: "success",
+      title:
+        resultado === "atualizado"
+          ? `"${name.trim()}" foi atualizado.`
+          : `"${name.trim()}" foi salvo.`,
+      detail: describeCriteria(criteria).join(" · "),
+    });
+
     setName("");
     setOpen(false);
+  }
+
+  function handleRemove(
+    item: (typeof filters)[number]
+  ) {
+
+    removeFilter(item.id);
+
+    notify({
+      tone: "info",
+      title: `"${item.name}" foi excluído.`,
+      detail: "Os filtros da operação continuam ali.",
+    });
   }
 
   function renderItem(
@@ -94,7 +138,7 @@ export default function SavedFilters({
 
         {!item.builtIn && (
           <button
-            onClick={() => removeFilter(item.id)}
+            onClick={() => handleRemove(item)}
             aria-label={`Excluir o filtro ${item.name}`}
             title="Excluir este filtro"
             className="absolute right-2 top-2.5 rounded-lg p-1.5 text-zinc-400 opacity-0 transition-colors hover:bg-rose-50 hover:text-rose-600 focus:opacity-100 group-hover:opacity-100"

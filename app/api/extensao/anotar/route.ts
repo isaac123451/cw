@@ -54,6 +54,15 @@ interface Entrada {
   titulo?: string;
   /** AAAA-MM-DD. Sem isso, hoje. */
   quando?: string;
+  /**
+   * HH:MM. Opcional.
+   *
+   * A agenda sempre teve a coluna (`AgendaTask.time`) e a tela sempre
+   * soube mostrá-la — quem marcava pela extensão é que não tinha onde
+   * digitar, e a tarefa nascia sem hora. "Ligar amanhã" e "ligar amanhã
+   * às 9h" são compromissos diferentes.
+   */
+  hora?: string;
   tipoDeTarefa?: string;
   prioridade?: string;
 }
@@ -191,6 +200,20 @@ async function criarTarefa(
     : REFERENCE_DATE;
 
   /**
+   * A hora é validada, não confiada.
+   *
+   * O corpo é escrito pelo script de conteúdo, que roda dentro da
+   * página alheia — e `AgendaTask.time` é texto livre no banco. Um
+   * valor fora de HH:MM sujaria a agenda de todo mundo sem erro nenhum
+   * aparecer.
+   */
+  const hora = /^([01]\d|2[0-3]):[0-5]\d$/.test(
+    entrada.hora ?? ""
+  )
+    ? (entrada.hora as string)
+    : null;
+
+  /**
    * O caso é opcional: "ligar para o cliente amanhã" às vezes não tem
    * reclamação nenhuma atrás. Protocolo que não existe é ignorado em
    * vez de recusar a tarefa — a anotação vale mesmo sem o vínculo.
@@ -217,7 +240,17 @@ async function criarTarefa(
       )
         ? (entrada.prioridade as string)
         : "Média",
-      dueDate: new Date(`${dia}T00:00:00Z`),
+      /**
+       * A data guarda o dia **e** a hora.
+       *
+       * A agenda ordena por `dueDate`, então uma tarefa das 9h que
+       * ficasse com 00:00 apareceria junto das sem hora, na ordem de
+       * criação. `time` guarda o rótulo, que é o que a tela mostra.
+       */
+      dueDate: new Date(
+        `${dia}T${hora ?? "00:00"}:00Z`
+      ),
+      time: hora,
       ownerId: usuario?.id ?? null,
       caseId: caso?.id ?? null,
     },
@@ -235,6 +268,7 @@ async function criarTarefa(
       tipo: "agenda",
       id: criada.id,
       quando: dia,
+      hora,
       vinculadaAoCaso: Boolean(caso),
       url: `${host}/agenda`,
     },

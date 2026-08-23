@@ -10,8 +10,10 @@ import {
 } from "@/lib/models/impact";
 
 import { useImpact } from "@/lib/context/ImpactContext";
+import { useRascunho } from "@/lib/hooks/useRascunho";
 
 import SurfaceCard from "@/components/shared/SurfaceCard";
+import BarraDeSalvar from "@/components/shared/BarraDeSalvar";
 import { ConfirmDelete } from "@/components/shared/Modal";
 
 const campo =
@@ -29,6 +31,15 @@ export default function ImpactTypesCard() {
   const { types, records, saveType, removeType } =
     useImpact();
 
+  /**
+   * Editar não grava; o botão Salvar grava.
+   *
+   * Antes cada tecla ia ao banco — o nome pela metade virava uma
+   * gravação, e nunca havia um momento em que dissesse "salvo".
+   * Ver `lib/hooks/useRascunho.ts`.
+   */
+  const rascunho = useRascunho(types, saveType);
+
   const [excluindo, setExcluindo] =
     useState<ImpactTypeOption>();
 
@@ -40,14 +51,30 @@ export default function ImpactTypesCard() {
   }
 
   function adicionar() {
-    saveType({
+    rascunho.adicionar({
       id: crypto.randomUUID(),
       name: "Novo tipo",
       direction: "receita",
       description: "",
-      order: types.length + 1,
+      order: rascunho.itens.length + 1,
       active: true,
     });
+  }
+
+  /**
+   * Apagar continua imediato — já pergunta antes. A trava é outra:
+   * tipo que só existe no rascunho nunca chegou ao banco, e mandar
+   * apagar um id inexistente devolveria erro do servidor.
+   */
+  function apagar(item: ImpactTypeOption) {
+
+    const existeNoBanco = types.some(
+      (t) => t.id === item.id
+    );
+
+    rascunho.esquecer(item.id);
+
+    if (existeNoBanco) removeType(item.id);
   }
 
   return (
@@ -98,7 +125,7 @@ export default function ImpactTypesCard() {
 
             <tbody className="divide-y divide-zinc-100">
 
-              {types.map((item) => (
+              {rascunho.itens.map((item) => (
 
                 <tr
                   key={item.id}
@@ -109,8 +136,7 @@ export default function ImpactTypesCard() {
                     <input
                       value={item.name}
                       onChange={(e) =>
-                        saveType({
-                          ...item,
+                        rascunho.alterar(item.id, {
                           name: e.target.value,
                         })
                       }
@@ -122,8 +148,7 @@ export default function ImpactTypesCard() {
                     <select
                       value={item.direction}
                       onChange={(e) =>
-                        saveType({
-                          ...item,
+                        rascunho.alterar(item.id, {
                           direction: e.target
                             .value as ImpactTypeOption["direction"],
                         })
@@ -150,8 +175,7 @@ export default function ImpactTypesCard() {
                     <input
                       value={item.description ?? ""}
                       onChange={(e) =>
-                        saveType({
-                          ...item,
+                        rascunho.alterar(item.id, {
                           description: e.target.value,
                         })
                       }
@@ -170,8 +194,7 @@ export default function ImpactTypesCard() {
                         type="checkbox"
                         checked={item.active}
                         onChange={(e) =>
-                          saveType({
-                            ...item,
+                          rascunho.alterar(item.id, {
                             active: e.target.checked,
                           })
                         }
@@ -200,13 +223,15 @@ export default function ImpactTypesCard() {
 
           </table>
 
-          {types.length === 0 && (
+          {rascunho.itens.length === 0 && (
             <p className="py-10 text-center text-sm text-zinc-400">
               Nenhum tipo cadastrado.
             </p>
           )}
 
         </div>
+
+        <BarraDeSalvar rascunho={rascunho} nome="tipos" />
 
       </SurfaceCard>
 
@@ -215,7 +240,7 @@ export default function ImpactTypesCard() {
         label={excluindo?.name ?? ""}
         onCancel={() => setExcluindo(undefined)}
         onConfirm={() => {
-          if (excluindo) removeType(excluindo.id);
+          if (excluindo) apagar(excluindo);
           setExcluindo(undefined);
         }}
       />

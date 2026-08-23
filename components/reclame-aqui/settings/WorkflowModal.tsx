@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { X } from "lucide-react";
 
 import { WorkflowStatus } from "@/lib/models/workflow";
@@ -29,11 +29,30 @@ export default function WorkflowModal({
   onClose,
   onSave,
 }: Props) {
-  const [name, setName] = useState("");
-  const [color, setColor] = useState(COLORS[0]);
-  const [order, setOrder] = useState(1);
-  const [limit, setLimit] = useState<number | "">("");
-  const [active, setActive] = useState(true);
+  /**
+   * Os campos nascem preenchidos, e o modal remonta a cada abertura.
+   *
+   * Era um `useEffect` que copiava `initialData` para o estado.
+   * Funcionava, mas ao custo de uma renderização a mais por abertura —
+   * e de uma janela em que o formulário já estava na tela com os campos
+   * da etapa anterior. Quem abre passa `key`, e é ela que garante
+   * instância nova.
+   */
+  const [name, setName] = useState(
+    initialData?.name ?? ""
+  );
+  const [color, setColor] = useState(
+    initialData?.color ?? COLORS[0]
+  );
+  const [order, setOrder] = useState(
+    initialData?.order ?? 1
+  );
+  const [limit, setLimit] = useState<number | "">(
+    initialData?.limit ?? ""
+  );
+  const [active, setActive] = useState(
+    initialData?.active ?? true
+  );
 
   /**
    * Lembrete enquanto o caso ficar nesta etapa.
@@ -42,28 +61,12 @@ export default function WorkflowModal({
    * quanto em quanto tempo. Guardar só o número faria "0" e "vazio"
    * significarem coisas diferentes num campo onde ninguém espera isso.
    */
-  const [lembrar, setLembrar] = useState(false);
-  const [minutos, setMinutos] = useState(10);
-
-  useEffect(() => {
-    if (initialData) {
-      setName(initialData.name);
-      setColor(initialData.color);
-      setOrder(initialData.order);
-      setLimit(initialData.limit ?? "");
-      setActive(initialData.active);
-      setLembrar(Boolean(initialData.reminderMinutes));
-      setMinutos(initialData.reminderMinutes ?? 10);
-    } else {
-      setName("");
-      setColor(COLORS[0]);
-      setOrder(1);
-      setLimit("");
-      setActive(true);
-      setLembrar(false);
-      setMinutos(10);
-    }
-  }, [initialData, open]);
+  const [lembrar, setLembrar] = useState(
+    Boolean(initialData?.reminderMinutes)
+  );
+  const [minutos, setMinutos] = useState(
+    initialData?.reminderMinutes ?? 10
+  );
 
   if (!open) return null;
 

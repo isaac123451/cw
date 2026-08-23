@@ -10,7 +10,7 @@ export interface CompanyProfile {
   /** Slug estável usado na rota — o nome pode mudar, o vínculo não. */
   slug: string;
   name: string;
-  cnpj?: string;
+  document?: string;
   city?: string;
   state?: string;
 
@@ -98,7 +98,7 @@ export function buildCompanies(
       return {
         slug: companySlug(name),
         name,
-        cnpj: reference?.cnpj,
+        document: reference?.document,
         city: reference?.city,
         state: reference?.state,
 

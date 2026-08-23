@@ -190,16 +190,29 @@ export function parseReclameAqui(
     { header: 1, defval: null, raw: false }
   );
 
-  // O cabeçalho não fica na primeira linha do export.
+  /**
+   * Dois relatórios diferentes, o mesmo leitor.
+   *
+   * O portal exporta a "Base de dados do Reclame Aqui", que traz **Id
+   * HugMe**, e a "Previsão para o RA1000", que **não traz id nenhum**.
+   * Os dois descrevem a mesma reclamação e têm as mesmas colunas de
+   * conteúdo; exigir a coluna de id recusava o segundo com um erro de
+   * formato — e era essa a recusa que travava a importação pela tela.
+   *
+   * A âncora passa a ser a coluna que os dois têm.
+   */
   const headerRow = grid.findIndex(
     (row) =>
-      Array.isArray(row) && row.includes("Id HugMe")
+      Array.isArray(row) &&
+      (row.includes("Id HugMe") ||
+        row.includes("Data Reclamação"))
   );
 
   if (headerRow === -1) {
     throw new ImportFormatError(
-      "Cabeçalho não encontrado. O arquivo precisa ser o export " +
-        '"Base de dados do Reclame Aqui" do HugMe, com a coluna "Id HugMe".'
+      "Cabeçalho não encontrado. O arquivo precisa ser um export do " +
+        'Reclame Aqui — "Base de dados" ou "Previsão para o RA1000" — ' +
+        'com a coluna "Data Reclamação".'
     );
   }
 
@@ -255,9 +268,43 @@ export function parseReclameAqui(
 
     const nome = String(row[col("Nome")] ?? "").trim();
 
-    const idHugme = String(
-      row[col("Id HugMe")] ?? index + 1
+    /**
+     * A identidade, em ordem de preferência.
+     *
+     * 1. **ID Reclame Aqui** — o código do portal (`r72QQCpOtF-sFwCZ`),
+     *    o mesmo que aparece no fim da URL pública e que a extensão lê
+     *    da página como `COD`. É ele que faz a reclamação capturada pela
+     *    extensão e a mesma reclamação vinda da planilha serem um
+     *    registro só.
+     * 2. **Id HugMe** — do outro export do portal.
+     * 3. **Data e hora** — para o relatório que não traz nenhum dos dois.
+     *
+     * Nunca o índice da linha: reexportar o relatório com uma reclamação
+     * a mais deslocaria todas as outras, e cada reimportação criaria a
+     * base inteira de novo, duplicada.
+     */
+    const bruta = String(
+      row[col("Data Reclamação")] ?? ""
     );
+
+    const carimbo = bruta.match(
+      /(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})/
+    );
+
+    const idPortal =
+      col("ID Reclame Aqui") !== -1
+        ? String(
+            row[col("ID Reclame Aqui")] ?? ""
+          ).trim()
+        : "";
+
+    const idHugme =
+      idPortal ||
+      (col("Id HugMe") !== -1 && row[col("Id HugMe")]
+        ? String(row[col("Id HugMe")])
+        : carimbo
+          ? `${carimbo[3].slice(2)}${carimbo[2].padStart(2, "0")}${carimbo[1].padStart(2, "0")}${carimbo[4].padStart(2, "0")}${carimbo[5]}`
+          : String(index + 1));
 
     // Texto público da reclamação, quando o export o traz.
     const texto =

@@ -106,26 +106,128 @@
    * inferir por posição ou por cor da bolha, que mudam a cada
    * reestilização do WhatsApp.
    */
+  /**
+   * Onde as mensagens moram.
+   *
+   * `#main` é o de sempre, e é o primeiro a ser tentado. Os outros
+   * existem porque **a marcação do WhatsApp Web muda sem aviso**, e
+   * quando muda o sintoma é o pior possível: a extensão diz "não achei
+   * mensagem nenhuma" numa conversa cheia, e ninguém sabe se o defeito
+   * é a leitura ou a conversa.
+   *
+   * Do mais específico para o mais genérico: um `id` que eles mantêm há
+   * anos, um `data-testid` que eles usam nos testes deles, e por fim a
+   * função ARIA — que é a que mais sobrevive a reestilização, porque é
+   * o que faz o site funcionar com leitor de tela.
+   */
+  const ONDE_FICAM = [
+    "#main",
+    '[data-testid="conversation-panel-messages"]',
+    '[role="application"]',
+    '[role="log"]',
+  ];
+
+  /**
+   * Como reconhecer uma mensagem dentro dele.
+   *
+   * Mesma lógica em camadas. O `data-id` é o melhor porque traz a
+   * direção junto (`true_` é nosso); os demais são redes.
+   */
+  const COMO_SAO = [
+    "div[data-id]",
+    "[data-id]",
+    '[role="row"]',
+    ".message-in, .message-out",
+  ];
+
+  function primeiroQueAcha(raiz, seletores, minimo = 1) {
+
+    for (const seletor of seletores) {
+
+      const achados = raiz.querySelectorAll(seletor);
+
+      if (achados.length >= minimo) {
+        return { seletor, achados };
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * De quem é a mensagem.
+   *
+   * Três leituras, em ordem de confiança. O `data-id` é o que não
+   * depende de estilo — o prefixo `true_` marca o que saiu daqui. A
+   * classe `message-out` é o marcador clássico, e sobrevive à maioria
+   * das mudanças. A posição na tela é o último recurso, e é chute
+   * informado: o WhatsApp alinha o que é nosso à direita.
+   */
+  function deQuemE(linha) {
+
+    const id = linha.getAttribute?.("data-id") ?? "";
+
+    if (id.startsWith("true_")) return "nos";
+    if (id.startsWith("false_")) return "cliente";
+
+    if (linha.querySelector?.(".message-out")) return "nos";
+    if (linha.classList?.contains("message-out")) {
+      return "nos";
+    }
+
+    if (linha.querySelector?.(".message-in")) {
+      return "cliente";
+    }
+    if (linha.classList?.contains("message-in")) {
+      return "cliente";
+    }
+
+    return "cliente";
+  }
+
   function lerMensagens() {
 
-    const principal = document.querySelector("#main");
+    const container = ONDE_FICAM.map((seletor) =>
+      document.querySelector(seletor)
+    ).find(Boolean);
 
-    if (!principal) return [];
+    if (!container) {
+      return {
+        mensagens: [],
+        motivo:
+          "não achei o painel da conversa nesta página",
+      };
+    }
 
-    const linhas = principal.querySelectorAll(
-      "div[data-id]"
-    );
+    const encontro = primeiroQueAcha(container, COMO_SAO);
+
+    if (!encontro) {
+      return {
+        mensagens: [],
+        motivo:
+          "achei a conversa, mas nenhuma linha de mensagem — a marcação do WhatsApp mudou",
+      };
+    }
 
     const mensagens = [];
 
-    for (const linha of linhas) {
+    for (const linha of encontro.achados) {
 
-      const id = linha.getAttribute("data-id") ?? "";
+      /**
+       * Linha sem `@` no id não é mensagem.
+       *
+       * O `data-id` das mensagens carrega o telefone
+       * (`true_5511...@c.us_ABC`). Os outros elementos com `data-id`
+       * são divisores de data e avisos do sistema. A checagem só vale
+       * quando o id existe — nas camadas de baixo ele não existe, e
+       * exigi-lo lá jogaria fora tudo.
+       */
+      const id = linha.getAttribute?.("data-id") ?? "";
 
-      if (!id.includes("@")) continue;
+      if (id && !id.includes("@")) continue;
 
       const balao = linha.querySelector(
-        ".selectable-text, [data-pre-plain-text]"
+        ".selectable-text, [data-pre-plain-text], .copyable-text"
       );
 
       const texto = (
@@ -152,13 +254,29 @@
         carimbo.match(/\[([^\],]+)/)?.[1] ?? "";
 
       mensagens.push({
-        de: id.startsWith("true_") ? "nos" : "cliente",
+        de: deQuemE(linha),
         texto: texto.slice(0, 1200),
         hora: hora.trim(),
       });
     }
 
-    return mensagens;
+    return {
+      mensagens,
+
+      /**
+       * Por qual camada a leitura passou.
+       *
+       * Vai para a tela quando dá ruim. Sem isso, "0 mensagens" não
+       * distingue conversa vazia de leitor quebrado — e foi essa
+       * confusão que fez a mesma falha ser reportada três vezes.
+       */
+      via: encontro.seletor,
+
+      motivo:
+        mensagens.length === 0
+          ? `achei ${encontro.achados.length} linha(s) por "${encontro.seletor}", mas nenhuma com texto`
+          : undefined,
+    };
   }
 
   CW.painel.definirLeitorDeConversa?.(lerMensagens);

@@ -24,7 +24,10 @@ import {
 } from "@/lib/actions/registry";
 
 import { useWorkspaceSlice } from "@/lib/context/useWorkspace";
-import { sincronizar } from "@/lib/context/sync";
+import {
+  sincronizar,
+  type Gravacao,
+} from "@/lib/context/sync";
 
 import { REFERENCE_DATE } from "@/lib/services/reputation.service";
 
@@ -44,7 +47,8 @@ interface JourneyContextType {
   saveStage: (data: JourneyStage) => void;
   removeStage: (id: string) => void;
 
-  saveTopic: (data: JourneyTopic) => void;
+  /** Devolve o resultado: a tela de tópicos grava por botão. */
+  saveTopic: (data: JourneyTopic) => Promise<Gravacao>;
   removeTopic: (id: string) => void;
 
   addEntry: (
@@ -137,7 +141,7 @@ export function JourneyProvider({
 
       saveTopic: (data) => {
         setTopics((prev) => upsert(prev, data));
-        sincronizar(() => saveJourneyTopic(data));
+        return sincronizar(() => saveJourneyTopic(data));
       },
 
       removeTopic: (id) => {

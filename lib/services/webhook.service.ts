@@ -9,11 +9,11 @@ import { PrismaClient } from "@prisma/client";
  * Integrações precisa deles e é client component — este módulo é
  * `server-only`.
  *
- * "Movimentação atrasada" ficou de fora de propósito: os dois eventos
- * atuais nascem de uma gravação (`saveCase`), mas atraso é um estado que
- * só se descobre comparando com o relógio — precisa de um job agendado
- * (cron) rodando sem ninguém com a tela aberta, e isso ainda não existe
- * aqui. Ver ROADMAP.md.
+ * "Movimentação atrasada" é diferente dos outros dois: eles nascem de
+ * uma gravação (`saveCase`), enquanto atraso é um estado que só se
+ * descobre comparando com o relógio — não há gravação nenhuma no
+ * instante em que ele acontece. Quem o dispara é a rotina agendada, em
+ * `app/api/cron/route.ts`.
  */
 import type { WebhookEvent } from "@/lib/models/webhook";
 
@@ -54,16 +54,28 @@ export async function deliverWebhook(
   webhook: WebhookTarget,
   event: string,
   data: unknown,
-  caseProtocol?: string
+  caseProtocol?: string,
+  /**
+   * O corpo exato de uma tentativa anterior.
+   *
+   * O reenvio da rotina agendada manda o mesmo corpo, e não um novo:
+   * uma mensagem reenviada com dados de agora não é a mesma mensagem,
+   * e quem recebe não teria como notar a diferença.
+   */
+  corpoAnterior?: string,
+  /** Em que tentativa estamos, para o histórico dizer. */
+  attempts = 1
 ) {
 
   const timestamp = Math.floor(Date.now() / 1000);
 
-  const body = JSON.stringify({
-    evento: event,
-    criadoEm: new Date().toISOString(),
-    dados: data,
-  });
+  const body =
+    corpoAnterior ??
+    JSON.stringify({
+      evento: event,
+      criadoEm: new Date().toISOString(),
+      dados: data,
+    });
 
   const signature = signPayload(
     webhook.secret,
@@ -106,6 +118,19 @@ export async function deliverWebhook(
       statusCode: statusCode ?? undefined,
       error: error ?? undefined,
       caseProtocol,
+
+      /**
+       * O corpo fica guardado **só quando falha**.
+       *
+       * É o que a rotina agendada precisa para reenviar: remontar a
+       * mensagem a partir do caso entregaria um retrato diferente do
+       * que a primeira tentativa prometeu, porque o caso já mudou.
+       *
+       * Na entrega bem-sucedida não se guarda nada — seria uma segunda
+       * cópia da base dentro da tabela de log.
+       */
+      payload: ok ? undefined : body,
+      attempts,
     },
   });
 

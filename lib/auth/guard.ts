@@ -4,8 +4,21 @@ import { PrismaClient } from "@prisma/client";
 
 import { getPrisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth/session";
+import type { Modulo } from "@/lib/auth/modules";
 
-export type Role = "ADMIN" | "AGENTE" | "LEITURA";
+/**
+ * Reexportados de `lib/auth/modules.ts`, que não é `server-only`.
+ *
+ * As actions continuam importando papel daqui — o vocabulário do guard
+ * não mudou. O que mudou é que uma tela pode pegar o rótulo sem arrastar
+ * o Prisma para o navegador.
+ */
+export {
+  ROLE_LABELS,
+  type Role,
+} from "@/lib/auth/modules";
+
+import type { Role } from "@/lib/auth/modules";
 
 /**
  * Papéis em ordem de poder. Comparar por número deixa a regra ser
@@ -15,12 +28,6 @@ const NIVEL: Record<Role, number> = {
   LEITURA: 0,
   AGENTE: 1,
   ADMIN: 2,
-};
-
-export const ROLE_LABELS: Record<Role, string> = {
-  ADMIN: "Administrador",
-  AGENTE: "Agente",
-  LEITURA: "Somente leitura",
 };
 
 export class SemPermissao extends Error {
@@ -41,7 +48,9 @@ export class SemPermissao extends Error {
  * Também derruba quem foi desativado (`active: false`) sem esperar a
  * sessão expirar.
  */
-export async function currentRole(): Promise<Role | null> {
+export async function currentRole(
+  modulo?: Modulo
+): Promise<Role | null> {
 
   const prisma = getPrisma();
 
@@ -58,13 +67,44 @@ export async function currentRole(): Promise<Role | null> {
 
   if (!user || !user.active) return null;
 
-  return user.role as Role;
+  return papelNoModulo(
+    prisma,
+    session.id,
+    user.role as Role,
+    modulo
+  );
 }
 
 export interface Autorizado {
   prisma: PrismaClient;
   userId: string;
+  /** O papel **efetivo** — o do módulo, quando há exceção gravada. */
   role: Role;
+}
+
+/**
+ * O papel de alguém dentro de um módulo.
+ *
+ * Só a exceção é gravada em `UserModuleRole`: sem linha, vale o papel
+ * da conta. É o que faz mudar o papel da pessoa continuar valendo em
+ * todo módulo onde ninguém mexeu — o contrário congelaria uma cópia do
+ * padrão em cada linha.
+ */
+async function papelNoModulo(
+  prisma: PrismaClient,
+  userId: string,
+  base: Role,
+  modulo?: Modulo
+): Promise<Role> {
+
+  if (!modulo) return base;
+
+  const excecao = await prisma.userModuleRole.findUnique({
+    where: { userId_module: { userId, module: modulo } },
+    select: { role: true },
+  });
+
+  return (excecao?.role as Role) ?? base;
 }
 
 /**
@@ -78,7 +118,14 @@ export interface Autorizado {
  * de chamar a action direto.
  */
 export async function requireRole(
-  minimo: Role = "AGENTE"
+  minimo: Role = "AGENTE",
+  /**
+   * O módulo em que a ação acontece.
+   *
+   * Sem ele vale o papel da conta, que é o comportamento de sempre —
+   * é assim que uma action ainda não classificada continua protegida.
+   */
+  modulo?: Modulo
 ): Promise<Autorizado | null> {
 
   const prisma = getPrisma();
@@ -110,13 +157,26 @@ export async function requireRole(
     );
   }
 
-  const role = user.role as Role;
+  /**
+   * O papel do módulo vence o da conta.
+   *
+   * Quem é AGENTE em geral pode ser LEITURA no NPS, e vice-versa. Sem
+   * exceção gravada, os dois são a mesma coisa.
+   */
+  const role = await papelNoModulo(
+    prisma,
+    session.id,
+    user.role as Role,
+    modulo
+  );
 
   if (NIVEL[role] < NIVEL[minimo]) {
     throw new SemPermissao(
       minimo === "ADMIN"
         ? "Só administradores podem fazer isso."
-        : "Seu acesso é somente leitura."
+        : modulo
+          ? "Seu acesso a este módulo é somente leitura."
+          : "Seu acesso é somente leitura."
     );
   }
 
@@ -124,9 +184,12 @@ export async function requireRole(
 }
 
 /** Versão booleana, para a interface esconder o que não adianta mostrar. */
-export async function can(minimo: Role) {
+export async function can(
+  minimo: Role,
+  modulo?: Modulo
+) {
 
-  const role = await currentRole();
+  const role = await currentRole(modulo);
 
   return role ? NIVEL[role] >= NIVEL[minimo] : false;
 }
@@ -145,7 +208,8 @@ export async function can(minimo: Role) {
  * recusa que a pessoa precisa ver.
  */
 export async function tryRole(
-  minimo: Role = "LEITURA"
+  minimo: Role = "LEITURA",
+  modulo?: Modulo
 ): Promise<Autorizado | null> {
 
   const prisma = getPrisma();
@@ -163,7 +227,12 @@ export async function tryRole(
 
   if (!user || !user.active) return null;
 
-  const role = user.role as Role;
+  const role = await papelNoModulo(
+    prisma,
+    session.id,
+    user.role as Role,
+    modulo
+  );
 
   return NIVEL[role] < NIVEL[minimo]
     ? null

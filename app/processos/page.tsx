@@ -752,15 +752,18 @@ export default function ProcessosPage() {
 
       </div>
 
-      <SlaRuleForm
-        open={formOpen}
-        editing={editing}
-        onClose={() => {
-          setFormOpen(false);
-          setEditing(undefined);
-        }}
-        onSave={salvar}
-      />
+      {formOpen && (
+        <SlaRuleForm
+          key={editing?.id ?? "novo"}
+          open={formOpen}
+          editing={editing}
+          onClose={() => {
+            setFormOpen(false);
+            setEditing(undefined);
+          }}
+          onSave={salvar}
+        />
+      )}
 
       {movFormOpen && (
         <MovementRuleForm

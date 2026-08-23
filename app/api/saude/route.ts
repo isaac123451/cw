@@ -1,6 +1,7 @@
 import { checkToken } from "@/lib/api/auth";
 import { getPrisma } from "@/lib/prisma";
 import { provedorDeIA } from "@/lib/services/ia.service";
+import { lerConfigDeIA } from "@/lib/services/iaConfig.service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -48,6 +49,8 @@ export async function GET(request: Request) {
     }
   }
 
+  const configDeIa = await lerConfigDeIA();
+
   return Response.json(
     {
       versao: process.env.npm_package_version ?? null,
@@ -55,14 +58,34 @@ export async function GET(request: Request) {
 
       banco,
 
+      /**
+       * A IA como está **valendo**, não como o `.env` sugere.
+       *
+       * A escolha de provedor e de velocidade virou configuração de
+       * tela, gravada no banco. Reportar aqui a variável de ambiente
+       * passaria a mentir no dia em que alguém trocasse o perfil — e
+       * esta rota existe justamente para não haver esse tipo de
+       * discordância entre ambientes.
+       */
       ia: {
-        provedor: provedorDeIA(),
+        provedor: provedorDeIA(
+          configDeIa.provedorPreferido
+        ),
+        perfil: configDeIa.perfil,
+        origem: configDeIa.origem,
+        modelo: configDeIa.modelo,
+        modeloRapido: configDeIa.modeloRapido,
+        corridaSegundos: Math.round(
+          configDeIa.hedgeMs / 1000
+        ),
+        prazoSegundos: Math.round(
+          configDeIa.prazoMs / 1000
+        ),
         anthropic: (process.env.ANTHROPIC_API_KEY ?? "")
           .trim()
           .startsWith("sk-ant-"),
         gemini:
           (process.env.GEMINI_API_KEY ?? "").trim() !== "",
-        modelo: process.env.GEMINI_MODELO ?? "(padrão)",
       },
 
       google: Boolean(

@@ -2,21 +2,26 @@
 
 import { useState } from "react";
 
-import { Check, Pencil, Plus, Trash2, X } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 
 import Modal, {
   GhostButton,
   inputClass,
-  PrimaryButton,
 } from "@/components/shared/Modal";
+
+import BarraDeSalvar from "@/components/shared/BarraDeSalvar";
+
+import { useRascunho } from "@/lib/hooks/useRascunho";
+import type { Gravacao } from "@/lib/context/sync";
 
 import { RootCauseOption } from "@/lib/models/nps";
 
 interface Props {
   causas: RootCauseOption[];
-  salvando: boolean;
   onClose: () => void;
-  onSave: (causa: RootCauseOption) => Promise<void>;
+  onSave: (
+    causa: RootCauseOption
+  ) => Promise<Gravacao>;
   onRemove: (causa: RootCauseOption) => Promise<void>;
 }
 
@@ -30,50 +35,53 @@ interface Props {
  * "cobrança", "Cobrança" e "cobranca" em três problemas distintos no
  * mesmo gráfico.
  *
+ * **Editar não grava; o botão Salvar grava.** Antes renomear era um
+ * lápis, um campo e um `Enter` que ia direto ao banco — e o `Enter`
+ * fechava o campo mesmo quando a gravação falhava. Agora a edição é no
+ * próprio lugar, como no resto dos cadastros.
+ *
  * Excluir uma causa **já usada** desativa em vez de apagar. Apagar
  * reescreveria o passado: as respostas que apontam para ela ficariam
  * sem causa, e a série histórica mudaria sozinha.
  */
 export default function RootCauseManager({
   causas,
-  salvando,
   onClose,
   onSave,
   onRemove,
 }: Props) {
 
-  const [nova, setNova] = useState("");
-  const [editando, setEditando] = useState<string>();
-  const [rascunho, setRascunho] = useState("");
+  const rascunho = useRascunho(causas, onSave);
 
-  async function criar() {
+  const [removendo, setRemovendo] = useState<string>();
 
-    const nome = nova.trim();
+  const ordenadas = [...rascunho.itens].sort(
+    (a, b) => a.order - b.order
+  );
 
-    if (nome === "") return;
+  async function excluir(causa: RootCauseOption) {
 
-    await onSave({
-      id: "",
-      name: nome,
-      order: causas.length,
-      active: true,
-    });
-
-    setNova("");
-  }
-
-  async function renomear(causa: RootCauseOption) {
-
-    const nome = rascunho.trim();
-
-    if (nome === "" || nome === causa.name) {
-      setEditando(undefined);
+    /**
+     * Causa que só existe no rascunho é esquecida, não apagada.
+     *
+     * Mandar o servidor apagar um id `padrao-3` — ou um que ainda não
+     * foi gravado — devolveria erro sobre uma linha que nunca existiu.
+     */
+    if (
+      causa.id.startsWith("padrao-") ||
+      !causas.some((item) => item.id === causa.id)
+    ) {
+      rascunho.esquecer(causa.id);
       return;
     }
 
-    await onSave({ ...causa, name: nome });
+    setRemovendo(causa.id);
 
-    setEditando(undefined);
+    await onRemove(causa);
+
+    rascunho.esquecer(causa.id);
+
+    setRemovendo(undefined);
   }
 
   return (
@@ -91,129 +99,89 @@ export default function RootCauseManager({
 
       <div className="space-y-4">
 
-        <div className="flex gap-2">
-
-          <input
-            value={nova}
-            onChange={(e) => setNova(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") criar();
-            }}
-            placeholder="Nova causa — ex.: Integração com iFood"
-            className={inputClass}
-          />
-
-          <PrimaryButton
-            onClick={criar}
-            disabled={salvando || nova.trim() === ""}
-          >
-            <Plus size={15} />
-            Adicionar
-          </PrimaryButton>
-
-        </div>
-
         <ul className="divide-y divide-zinc-100 rounded-xl border border-zinc-200">
 
-          {causas.length === 0 && (
+          {ordenadas.length === 0 && (
             <li className="px-3.5 py-8 text-center text-sm text-zinc-400">
               Nenhuma causa cadastrada.
             </li>
           )}
 
-          {causas.map((causa) => (
+          {ordenadas.map((causa) => (
             <li
               key={causa.id}
               className="flex items-center gap-2 px-3.5 py-2.5"
             >
 
-              {editando === causa.id ? (
+              <input
+                value={causa.name}
+                onChange={(e) =>
+                  rascunho.alterar(causa.id, {
+                    name: e.target.value,
+                  })
+                }
+                placeholder="Nome da causa"
+                className={`${inputClass} h-8 py-1 ${causa.active ? "" : "text-zinc-400 line-through"}`}
+              />
 
-                <>
-                  <input
-                    autoFocus
-                    value={rascunho}
-                    onChange={(e) =>
-                      setRascunho(e.target.value)
-                    }
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        renomear(causa);
-                      }
-                      if (e.key === "Escape") {
-                        setEditando(undefined);
-                      }
-                    }}
-                    className={`${inputClass} h-8 py-1`}
-                  />
+              <label
+                title="Causa desativada some do formulário, mas continua no registro que já a usava."
+                className="flex shrink-0 items-center gap-1.5 text-xs text-zinc-600"
+              >
+                <input
+                  type="checkbox"
+                  checked={causa.active}
+                  onChange={(e) =>
+                    rascunho.alterar(causa.id, {
+                      active: e.target.checked,
+                    })
+                  }
+                />
+                ativa
+              </label>
 
-                  <button
-                    onClick={() => renomear(causa)}
-                    title="Salvar"
-                    className="shrink-0 rounded-lg p-1.5 text-emerald-600 transition-colors hover:bg-emerald-50"
-                  >
-                    <Check size={15} />
-                  </button>
-
-                  <button
-                    onClick={() => setEditando(undefined)}
-                    title="Cancelar"
-                    className="shrink-0 rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-50"
-                  >
-                    <X size={15} />
-                  </button>
-                </>
-
-              ) : (
-
-                <>
-                  <span
-                    className={`min-w-0 flex-1 truncate text-sm ${causa.active ? "text-zinc-800" : "text-zinc-400 line-through"}`}
-                  >
-                    {causa.name}
-                  </span>
-
-                  {!causa.active && (
-                    <button
-                      onClick={() =>
-                        onSave({ ...causa, active: true })
-                      }
-                      className="shrink-0 rounded-lg px-2 py-1 text-[11px] font-medium text-violet-600 transition-colors hover:bg-violet-50"
-                    >
-                      Reativar
-                    </button>
-                  )}
-
-                  <button
-                    onClick={() => {
-                      setEditando(causa.id);
-                      setRascunho(causa.name);
-                    }}
-                    title="Renomear"
-                    className="shrink-0 rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-50 hover:text-zinc-700"
-                  >
-                    <Pencil size={14} />
-                  </button>
-
-                  <button
-                    onClick={() => onRemove(causa)}
-                    title="Excluir"
-                    className="shrink-0 rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-rose-50 hover:text-rose-600"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </>
-
-              )}
+              <button
+                onClick={() => excluir(causa)}
+                disabled={removendo === causa.id}
+                title="Excluir"
+                className="shrink-0 rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-rose-50 hover:text-rose-600 disabled:opacity-40"
+              >
+                <Trash2 size={14} />
+              </button>
 
             </li>
           ))}
 
         </ul>
 
+        <button
+          onClick={() =>
+            rascunho.adicionar({
+              id: `novo-${Date.now()}`,
+              name: "",
+              order: rascunho.itens.length,
+              active: true,
+            })
+          }
+          className="flex items-center gap-2 rounded-xl border border-dashed border-zinc-300 px-3.5 py-2 text-sm font-medium text-zinc-600 transition-colors hover:border-violet-300 hover:text-violet-700"
+        >
+          <Plus size={15} />
+          Nova causa
+        </button>
+
         <p className="text-xs leading-relaxed text-zinc-500">
-          Renomear arrasta as respostas junto — elas guardam o nome, e sem isso a causa antiga e a nova apareceriam como coisas diferentes no gráfico. Excluir uma causa que já foi usada apenas a desativa, pelo mesmo motivo.
+          Renomear arrasta as respostas junto — elas
+          guardam o nome, e sem isso a causa antiga e a
+          nova apareceriam como coisas diferentes no
+          gráfico. Excluir uma causa que já foi usada
+          apenas a desativa, pelo mesmo motivo.
         </p>
+
+        <BarraDeSalvar
+          rascunho={rascunho}
+          nome="causas"
+          genero="f"
+        />
 
       </div>
 

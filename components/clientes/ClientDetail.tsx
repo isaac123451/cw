@@ -38,6 +38,7 @@ import {
 } from "@/lib/context/ClientsContext";
 import { useEstablishments } from "@/lib/context/EstablishmentsContext";
 import { useImpact } from "@/lib/context/ImpactContext";
+import { useToast } from "@/lib/context/ToastContext";
 
 import { ptBR } from "@/lib/services/reputation.service";
 import { isOpen } from "@/lib/services/case.service";
@@ -78,6 +79,8 @@ export default function ClientDetail({
     removeClient,
     isManual,
   } = useClients();
+
+  const { notify } = useToast();
 
   const { establishments, findEstablishment } =
     useEstablishments();
@@ -186,6 +189,18 @@ export default function ClientDetail({
     );
   }
 
+  /**
+   * Alterar tem de dizer que alterou.
+   *
+   * Não é rascunho como nos cadastros: aqui cada mudança é um ato
+   * fechado — vincular um estabelecimento, marcar uma etiqueta, salvar
+   * a ficha. O que faltava não era o botão, era a confirmação: a tela
+   * gravava calada, e só a falha aparecia.
+   */
+  function confirmar(titulo: string, detalhe?: string) {
+    notify({ tone: "success", title: titulo, detail: detalhe });
+  }
+
   function salvarEdicao(data: ManualClientDraft) {
 
     if (!client) return;
@@ -204,6 +219,13 @@ export default function ClientDetail({
         notes: data.notes,
       });
     }
+
+    confirmar(
+      "Ficha do cliente salva.",
+      client.manual
+        ? client.name
+        : `${client.name} — só o que a operação preenche por cima é gravado.`
+    );
 
     setFormOpen(false);
   }
@@ -513,10 +535,20 @@ export default function ClientDetail({
                 defaultValue=""
                 onChange={(e) => {
                   if (e.target.value) {
+
                     enrich(client.slug, {
                       establishmentId: e.target.value,
                     });
+
+                    confirmar(
+                      "Estabelecimento vinculado.",
+                      establishments.find(
+                        (item) =>
+                          item.id === e.target.value
+                      )?.name
+                    );
                   }
+
                   setEstablishmentOpen(false);
                 }}
                 onBlur={() => setEstablishmentOpen(false)}
@@ -554,6 +586,7 @@ export default function ClientDetail({
               <TagPicker
                 selected={client.tags}
                 onToggle={(tag) => {
+
                   const has = client.tags.includes(tag);
 
                   enrich(client.slug, {
@@ -563,6 +596,13 @@ export default function ClientDetail({
                         )
                       : [...client.tags, tag],
                   });
+
+                  confirmar(
+                    has
+                      ? `Etiqueta "${tag}" removida.`
+                      : `Etiqueta "${tag}" aplicada.`,
+                    client.name
+                  );
                 }}
               />
             }
@@ -777,12 +817,15 @@ export default function ClientDetail({
 
       </div>
 
-      <ClientForm
-        open={formOpen}
-        editing={client}
-        onClose={() => setFormOpen(false)}
-        onSave={salvarEdicao}
-      />
+      {formOpen && (
+        <ClientForm
+          key={client.slug}
+          open={formOpen}
+          editing={client}
+          onClose={() => setFormOpen(false)}
+          onSave={salvarEdicao}
+        />
+      )}
 
       <ConfirmDelete
         open={deleting}

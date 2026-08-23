@@ -42,3 +42,6 @@ yarn-error.log*
 next-env.d.ts
 
 /app/generated/prisma
+
+# Backups da base — contêm PII real (e-mail e telefone dos consumidores).
+backup-*.json

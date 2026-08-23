@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { Save } from "lucide-react";
 
@@ -48,27 +48,28 @@ export default function MemberForm({
   onSave,
 }: Props) {
 
-  const [name, setName] = useState("");
-  const [role, setRole] = useState(CARGOS[1]);
-  const [email, setEmail] = useState("");
-  const [online, setOnline] = useState(false);
-
-  useEffect(() => {
-    if (!open) return;
-
-    if (editing) {
-      setName(editing.name);
-      setRole(editing.role);
-      setEmail(editing.email);
-      setOnline(editing.online);
-      return;
-    }
-
-    setName("");
-    setRole(CARGOS[1]);
-    setEmail("");
-    setOnline(false);
-  }, [open, editing]);
+  /**
+   * Os campos nascem preenchidos, e o formulário remonta a cada
+   * abertura.
+   *
+   * Era um `useEffect` que copiava `editing` para o estado quando o
+   * modal abria. Funcionava, mas ao custo de uma renderização a mais
+   * por abertura — e de uma janela em que o formulário já estava na
+   * tela com os campos do registro anterior. Quem abre passa `key`, e
+   * é ela que garante instância nova.
+   */
+  const [name, setName] = useState(
+    editing?.name ?? ""
+  );
+  const [role, setRole] = useState(
+    editing?.role ?? CARGOS[1]
+  );
+  const [email, setEmail] = useState(
+    editing?.email ?? ""
+  );
+  const [online, setOnline] = useState(
+    editing?.online ?? false
+  );
 
   /** Sugere o e-mail corporativo a partir do nome. */
   function sugerirEmail(valor: string) {
@@ -91,10 +92,20 @@ export default function MemberForm({
     email.trim() === "" ||
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 
-  const valido =
-    name.trim() !== "" &&
-    email.trim() !== "" &&
-    emailValido;
+  /**
+   * **O e-mail deixou de ser obrigatório.**
+   *
+   * Quem cuida da operação nem sempre é quem usa a ferramenta, e nem
+   * todo responsável tem — ou vai ter — conta aqui. Exigir e-mail
+   * obrigava a inventar um, e e-mail inventado é pior do que e-mail
+   * nenhum: no dia em que a pessoa se cadastrar de verdade, o endereço
+   * chutado já está ocupado por uma linha que não é dela.
+   *
+   * Sem e-mail, a pessoa existe para receber caso e atividade, e não
+   * entra. O endereço interno que o servidor gera é explicitamente
+   * inválido para login — ver `assignTeamMember`.
+   */
+  const valido = name.trim() !== "" && emailValido;
 
   return (
     <Modal
@@ -166,15 +177,17 @@ export default function MemberForm({
         <Field
           label="E-mail corporativo"
           hint={
-            emailValido
-              ? `Sugerido automaticamente a partir do nome.`
-              : "E-mail inválido."
+            !emailValido
+              ? "E-mail inválido."
+              : email.trim() === ""
+                ? "Opcional. Sem e-mail, a pessoa recebe casos e atividades mas não entra na ferramenta."
+                : "É por ele que a pessoa entra, quando se cadastrar."
           }
         >
           <input
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder={`nome@${ALLOWED_DOMAIN}`}
+            placeholder={`nome@${ALLOWED_DOMAIN} (opcional)`}
             className={`${inputClass} ${
               emailValido
                 ? ""

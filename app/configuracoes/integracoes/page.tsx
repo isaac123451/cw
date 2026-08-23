@@ -15,6 +15,7 @@ import {
 import MainLayout from "@/components/layout/MainLayout";
 import PageHeading from "@/components/shared/PageHeading";
 import SurfaceCard from "@/components/shared/SurfaceCard";
+import IaCard from "@/components/configuracoes/IaCard";
 
 import {
   ConfirmDelete,
@@ -242,8 +243,17 @@ export default function IntegracoesPage() {
         <PageHeading
           eyebrow="Plataforma"
           title="Integrações"
-          description="Webhook disparado por evento, para o CW Engine (ou outro destino) ser avisado em vez de só puxar via API."
+          description="Quem responde pela inteligência artificial, e o webhook disparado por evento para o CW Engine ser avisado em vez de só puxar via API."
         />
+
+        {/*
+          A IA vem antes do webhook de propósito.
+
+          É a configuração que a operação sente todo dia — "está
+          demorando" é uma reclamação semanal —, enquanto o webhook é
+          coisa de quem integra, e se mexe uma vez.
+        */}
+        <IaCard />
 
         {loading ? (
 
@@ -326,10 +336,18 @@ export default function IntegracoesPage() {
 
                   </div>
 
-                  <p className="mt-2 text-xs text-zinc-400">
-                    &quot;Movimentação atrasada&quot; ainda
-                    não existe: precisa de um job agendado
-                    (cron), que a aplicação não tem hoje.
+                  <p className="mt-2 text-xs leading-relaxed text-zinc-400">
+                    &quot;Movimentação atrasada&quot; é
+                    diferente dos outros dois: eles nascem
+                    de alguém salvar um caso, e este nasce
+                    do relógio passar do prazo. Quem o
+                    dispara é a rotina agendada, uma vez
+                    por movimentação — e ela só roda em
+                    produção com{" "}
+                    <code className="rounded bg-zinc-100 px-1 py-0.5 text-[11px]">
+                      CRON_SECRET
+                    </code>{" "}
+                    definida.
                   </p>
 
                 </div>

@@ -20,7 +20,10 @@ import {
 } from "@/lib/actions/registry";
 
 import { useWorkspaceSlice } from "@/lib/context/useWorkspace";
-import { sincronizar } from "@/lib/context/sync";
+import {
+  sincronizar,
+  type Gravacao,
+} from "@/lib/context/sync";
 
 export type ImpactDraft = Omit<ImpactRecord, "id">;
 
@@ -33,7 +36,15 @@ interface ImpactContextType {
   /** Carga inicial ainda em andamento. */
   loading: boolean;
 
-  saveType: (data: ImpactTypeOption) => void;
+  /**
+   * Devolve o resultado da gravação.
+   *
+   * A tela de tipos passou a usar o botão Salvar, e o `useRascunho`
+   * precisa saber se cada item foi gravado para decidir se limpa o
+   * rascunho — confirmar "salvo" antes da resposta do servidor
+   * confirmaria o clique, não a gravação.
+   */
+  saveType: (data: ImpactTypeOption) => Promise<Gravacao>;
   removeType: (id: string) => void;
   createRecord: (data: ImpactDraft) => void;
   updateRecord: (data: ImpactRecord) => void;
@@ -86,7 +97,7 @@ export function ImpactProvider({
           ).sort((a, b) => a.order - b.order);
         });
 
-        sincronizar(() => saveImpactType(data));
+        return sincronizar(() => saveImpactType(data));
       },
 
       removeType: (id) => {

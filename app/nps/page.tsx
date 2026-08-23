@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 
 import {
   CircleAlert,
+  Columns3,
   Download,
   Gauge,
   LayoutGrid,
@@ -12,6 +13,7 @@ import {
   SlidersHorizontal,
   Star,
   ThumbsDown,
+  Upload,
   Users,
 } from "lucide-react";
 
@@ -28,12 +30,15 @@ import NpsDrawer from "@/components/nps/NpsDrawer";
 import NpsList from "@/components/nps/NpsList";
 import NpsKanban from "@/components/nps/NpsKanban";
 import RootCauseManager from "@/components/nps/RootCauseManager";
+import StageManager from "@/components/nps/StageManager";
+import NpsSheetImport from "@/components/nps/NpsSheetImport";
 import WootricImport from "@/components/nps/WootricImport";
 
 import { useNps } from "@/lib/context/NpsContext";
 import { invalidarWorkspace } from "@/lib/context/useWorkspace";
 import { useToast } from "@/lib/context/ToastContext";
 import { useSession } from "@/lib/context/SessionContext";
+import { sincronizar } from "@/lib/context/sync";
 
 import {
   confirmNpsResolution,
@@ -51,7 +56,6 @@ import {
 
 import {
   isEncerrado,
-  KINDS,
   NpsResponseView,
   RootCauseOption,
   STATUS_EM_TRATATIVA,
@@ -91,9 +95,12 @@ export default function NpsPage() {
   const {
     responses,
     rootCauses,
+    stages,
+    kinds,
     loading,
     recarregar,
     recarregarCausas,
+    recarregarCadastro,
     aplicarLocal,
   } = useNps();
 
@@ -131,7 +138,8 @@ export default function NpsPage() {
   const [exportando, setExportando] = useState(false);
 
   const [causasOpen, setCausasOpen] = useState(false);
-  const [salvandoCausa, setSalvandoCausa] =
+  const [etapasOpen, setEtapasOpen] = useState(false);
+  const [planilhaOpen, setPlanilhaOpen] =
     useState(false);
 
   const [excluindo, setExcluindo] =
@@ -374,30 +382,27 @@ export default function NpsPage() {
     }
   }
 
+  /**
+   * Devolve o resultado, e não só grava.
+   *
+   * A tela de causa raiz passou a usar o botão Salvar, e o rascunho
+   * precisa saber item a item se a gravação foi aceita: só com o lote
+   * inteiro gravado ele se funde na base. Falhou alguma, o que não foi
+   * gravado **continua na tela**, para dar para corrigir em vez de
+   * redigitar.
+   */
   async function salvarCausa(causa: RootCauseOption) {
 
-    setSalvandoCausa(true);
+    const resultado = await sincronizar(() =>
+      saveNpsRootCause(causa)
+    );
 
-    try {
-      await saveNpsRootCause(causa);
-      await recarregarCausas();
-    } catch (erro) {
-      notify({
-        tone: "error",
-        title: "Não foi possível salvar a causa.",
-        detail:
-          erro instanceof Error
-            ? erro.message
-            : "Nome já usado, talvez.",
-      });
-    } finally {
-      setSalvandoCausa(false);
-    }
+    if (resultado.ok) await recarregarCausas();
+
+    return resultado;
   }
 
   async function excluirCausa(causa: RootCauseOption) {
-
-    setSalvandoCausa(true);
 
     try {
 
@@ -413,8 +418,15 @@ export default function NpsPage() {
         });
       }
 
-    } finally {
-      setSalvandoCausa(false);
+    } catch (erro) {
+      notify({
+        tone: "error",
+        title: "Não foi possível excluir a causa.",
+        detail:
+          erro instanceof Error
+            ? erro.message
+            : "Falha ao gravar.",
+      });
     }
   }
 
@@ -429,6 +441,15 @@ export default function NpsPage() {
           description="Pesquisa do portal e o ciclo de feedback até o encerramento — reter quem está insatisfeito e aproveitar quem está satisfeito."
         >
           <div className="flex flex-wrap items-center gap-2">
+
+            <button
+              onClick={() => setEtapasOpen(true)}
+              title="As colunas do quadro e os sete tipos de tratativa."
+              className="flex items-center gap-2 rounded-xl border border-zinc-200 px-3.5 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:border-violet-300 hover:text-violet-700"
+            >
+              <Columns3 size={15} />
+              Etapas e tipos
+            </button>
 
             <button
               onClick={() => setCausasOpen(true)}
@@ -448,6 +469,15 @@ export default function NpsPage() {
               {exportando
                 ? "Exportando..."
                 : `Exportar (${visiveis.length})`}
+            </button>
+
+            <button
+              onClick={() => setPlanilhaOpen(true)}
+              title="Um .xlsx ou .csv — o mesmo cabeçalho que a exportação gera."
+              className="flex items-center gap-2 rounded-xl border border-zinc-200 px-3.5 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:border-violet-300 hover:text-violet-700"
+            >
+              <Upload size={15} />
+              Importar planilha
             </button>
 
             <WootricImport
@@ -748,11 +778,15 @@ export default function NpsPage() {
                 className="h-7 rounded-lg border border-zinc-200 px-2 text-xs outline-none focus:border-violet-400"
               >
                 <option value="">Todos os tipos</option>
-                {KINDS.map((k) => (
-                  <option key={k.label} value={k.label}>
-                    {k.label}
-                  </option>
-                ))}
+                {kinds
+                  .filter(
+                    (k) => k.active || k.name === kindFiltro
+                  )
+                  .map((k) => (
+                    <option key={k.id} value={k.name}>
+                      {k.emoji} {k.name}
+                    </option>
+                  ))}
               </select>
 
             </div>
@@ -770,6 +804,8 @@ export default function NpsPage() {
             <div className="p-3">
               <NpsKanban
                 itens={visiveis}
+                etapas={stages}
+                tipos={kinds}
                 onOpen={(item) => setAberto(item.id)}
                 onMove={async (item, status) => {
 
@@ -811,6 +847,7 @@ export default function NpsPage() {
           editing={editando}
           saving={salvando}
           rootCauses={rootCauses}
+          tipos={kinds}
           onClose={() => {
             setFormOpen(false);
             setEditando(undefined);
@@ -820,10 +857,26 @@ export default function NpsPage() {
         />
       )}
 
+      {planilhaOpen && (
+        <NpsSheetImport
+          open={planilhaOpen}
+          onClose={() => setPlanilhaOpen(false)}
+          onDone={recarregar}
+        />
+      )}
+
+      {etapasOpen && (
+        <StageManager
+          etapas={stages}
+          tipos={kinds}
+          onClose={() => setEtapasOpen(false)}
+          onSaved={recarregarCadastro}
+        />
+      )}
+
       {causasOpen && (
         <RootCauseManager
           causas={rootCauses}
-          salvando={salvandoCausa}
           onClose={() => setCausasOpen(false)}
           onSave={salvarCausa}
           onRemove={excluirCausa}
@@ -862,6 +915,8 @@ export default function NpsPage() {
       {selecionado && (
         <NpsDrawer
           item={selecionado}
+          etapas={stages}
+          tipos={kinds}
           onClose={() => setAberto(undefined)}
           onAttempt={async (channel, note) => {
             await registerNpsAttempt({

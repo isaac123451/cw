@@ -30,6 +30,10 @@ import { mockPlaybooks } from "../lib/data/mockPlaybooks";
 import { mockMacros } from "../lib/data/mockMacros";
 import { mockTeams } from "../lib/data/mockTeams";
 import { mockImpactTypes } from "../lib/data/mockImpactTypes";
+import {
+  ETAPAS_PADRAO,
+  TIPOS_PADRAO,
+} from "../lib/models/nps";
 import { BOOTSTRAP_EMAILS } from "../lib/auth/access";
 import { parseElapsed } from "../lib/services/reputation.service";
 import type { Case } from "../lib/models/case";
@@ -404,7 +408,7 @@ async function main() {
       create: {
         slug: item.slug,
         name: item.name,
-        cnpj: item.cnpj ?? null,
+        document: item.document ?? null,
         segment: item.segment ?? null,
         city: item.city ?? null,
         state: item.state ?? null,
@@ -515,16 +519,80 @@ async function main() {
     });
   }
 
-  if ((await prisma.macro.count()) === 0) {
-    await prisma.macro.createMany({
-      data: mockMacros.map((m) => ({
+  /**
+   * As etapas e os tipos do NPS.
+   *
+   * `update: {}` de propósito, como no resto do seed: rodar de novo não
+   * pode desfazer o que a operação ajustou na tela. Estes são os
+   * valores de partida do guia — a mesma lista que a aplicação devolve
+   * com a tabela vazia, só que agora gravada, para a tela de cadastro
+   * ter o que editar.
+   */
+  for (const etapa of ETAPAS_PADRAO) {
+    await prisma.npsStage.upsert({
+      where: { name: etapa.name },
+      update: {},
+      create: {
+        name: etapa.name,
+        color: etapa.color,
+        order: etapa.order,
+        active: etapa.active,
+        final: etapa.final,
+        kinds: etapa.kinds,
+      },
+    });
+  }
+
+  for (const tipo of TIPOS_PADRAO) {
+    await prisma.npsKind.upsert({
+      where: { name: tipo.name },
+      update: {},
+      create: {
+        name: tipo.name,
+        emoji: tipo.emoji,
+        color: tipo.color,
+        action: tipo.action,
+        requiresConfirmation: tipo.requiresConfirmation,
+        requiresRootCause: tipo.requiresRootCause,
+        opensProcessReview: tipo.opensProcessReview,
+        ownDeadlineHours: tipo.ownDeadlineHours ?? null,
+        order: tipo.order,
+        active: tipo.active,
+      },
+    });
+  }
+
+  /**
+   * As respostas prontas entram uma a uma, e só as que faltam.
+   *
+   * Era um `createMany` guardado por `count() === 0`, o que funciona
+   * para semear um banco vazio e **nunca mais**. Quando as cinco do
+   * WhatsApp foram escritas, elas não entraram: já havia cinco no
+   * banco, e a guarda pulava o bloco inteiro.
+   *
+   * Agora a comparação é por título, e quem já existe é deixado em paz:
+   * o seed acrescenta, não reescreve. O que a operação editou na tela
+   * fica como está.
+   */
+  for (const m of mockMacros) {
+
+    const existente = await prisma.macro.findFirst({
+      where: { title: m.title },
+      select: { id: true },
+    });
+
+    if (existente) continue;
+
+    await prisma.macro.create({
+      data: {
         title: m.title,
         body: m.body,
         category: m.category,
+        channel: m.channel,
         owner: m.owner,
         tags: m.tags,
         uses: m.uses,
-      })),
+      },
     });
   }
 

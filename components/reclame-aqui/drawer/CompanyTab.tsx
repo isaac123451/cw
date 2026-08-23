@@ -1,5 +1,7 @@
 "use client";
 
+import { documentoFormatado } from "@/lib/models/establishment";
+
 import {
   Building2,
   FileText,
@@ -88,7 +90,7 @@ export default function CompanyTab({
           <InfoCard
             icon={<FileText size={18}/>}
             label="CNPJ"
-            value={data.cnpj}
+            value={documentoFormatado(data.document)}
           />
 
 

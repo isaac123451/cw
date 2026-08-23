@@ -10,6 +10,7 @@
 export const WEBHOOK_EVENTS = [
   "caso.criado",
   "caso.avaliado",
+  "movimentacao.atrasada",
 ] as const;
 
 export type WebhookEvent = (typeof WEBHOOK_EVENTS)[number];
@@ -20,4 +21,13 @@ export const WEBHOOK_EVENT_LABELS: Record<
 > = {
   "caso.criado": "Caso criado",
   "caso.avaliado": "Caso avaliado",
+  /**
+   * Atraso não é evento, é estado.
+   *
+   * Os outros dois nascem de alguém gravando alguma coisa. Este só
+   * existe quando o relógio passa do prazo, e ninguém está gravando
+   * nada nesse instante — por isso quem o dispara é a rotina agendada,
+   * e por isso ele não existia antes de haver uma.
+   */
+  "movimentacao.atrasada": "Movimentação atrasada",
 };

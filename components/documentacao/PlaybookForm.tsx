@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import {
   ArrowDown,
@@ -53,43 +53,49 @@ export default function PlaybookForm({
 
   const session = useSession();
 
-  const [title, setTitle] = useState("");
-  const [summary, setSummary] = useState("");
-  const [scope, setScope] = useState(ESCOPOS[0]);
-  const [owner, setOwner] = useState("");
-  const [version, setVersion] = useState("1.0");
-  const [confluenceUrl, setConfluenceUrl] = useState("");
-  const [steps, setSteps] = useState<PlaybookStep[]>([]);
-  const [rules, setRules] = useState<string[]>([]);
-  const [ruleDraft, setRuleDraft] = useState("");
-
-  useEffect(() => {
-    if (!open) return;
-
-    if (editing) {
-      setTitle(editing.title);
-      setSummary(editing.summary);
-      setScope(editing.scope);
-      setOwner(editing.owner);
-      setVersion(editing.version);
-      setConfluenceUrl(editing.confluenceUrl ?? "");
-      setSteps(editing.steps);
-      setRules(editing.rules ?? []);
-      return;
-    }
-
-    setTitle("");
-    setSummary("");
-    setScope(ESCOPOS[0]);
-    setOwner(session?.name ?? "Operação");
-    setVersion("1.0");
-    setConfluenceUrl("");
-    setSteps([
+  /**
+   * Os campos nascem preenchidos, e o formulário remonta a cada
+   * abertura.
+   *
+   * Era um `useEffect` que copiava `editing` para o estado quando o
+   * modal abria. Funcionava, mas ao custo de uma renderização a mais
+   * por abertura — e de uma janela em que o formulário já estava na
+   * tela com os campos do registro anterior. Quem abre passa `key`, e
+   * é ela que garante instância nova.
+   */
+  const [title, setTitle] = useState(
+    editing?.title ?? ""
+  );
+  const [summary, setSummary] = useState(
+    editing?.summary ?? ""
+  );
+  const [scope, setScope] = useState(
+    editing?.scope ?? ESCOPOS[0]
+  );
+  const [owner, setOwner] = useState(
+    editing?.owner ?? session?.name ?? "Operação"
+  );
+  const [version, setVersion] = useState(
+    editing?.version ?? "1.0"
+  );
+  const [confluenceUrl, setConfluenceUrl] = useState(
+    editing?.confluenceUrl ?? ""
+  );
+  /**
+   * Um passo em branco no cadastro novo.
+   *
+   * Um playbook sem passo nenhum é um formulário que não diz o que
+   * fazer — a primeira linha vazia é o convite.
+   */
+  const [steps, setSteps] = useState<PlaybookStep[]>(
+    editing?.steps ?? [
       { title: "", owner: "", detail: "" },
-    ]);
-    setRules([]);
-    setRuleDraft("");
-  }, [open, editing, session]);
+    ]
+  );
+  const [rules, setRules] = useState<string[]>(
+    editing?.rules ?? []
+  );
+  const [ruleDraft, setRuleDraft] = useState("");
 
   function patchStep(
     index: number,

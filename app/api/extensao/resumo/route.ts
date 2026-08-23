@@ -195,6 +195,18 @@ export async function GET(request: Request) {
 
     nps,
 
+    /**
+     * Os quatro números que o painel mostra — e que agora abrem lista.
+     *
+     * Cada um tem um recorte de mesmo nome em `/api/extensao/fila`, e a
+     * conta é a mesma dos dois lados: o número que se clica e a lista
+     * que abre têm de ter o mesmo tamanho, senão o painel ensina a
+     * desconfiar dele mesmo.
+     *
+     * `risco` passou a exigir o caso estar **aberto**. Contava também
+     * os encerrados, e caso encerrado em risco de churn não é trabalho
+     * de ninguém hoje — era um número que só crescia.
+     */
     contagens: {
       abertos: casos.filter(isOpen).length,
       semResposta: casos.filter(
@@ -204,7 +216,9 @@ export async function GET(request: Request) {
         (item) =>
           item.status === "Aguardando nossa réplica"
       ).length,
-      risco: casos.filter((item) => item.churnRisk).length,
+      risco: casos.filter(
+        (item) => item.churnRisk && isOpen(item)
+      ).length,
     },
 
     alertas: alertas.map((item) => ({

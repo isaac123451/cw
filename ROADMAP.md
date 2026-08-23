@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 21/08/2026. Aplicação **0.7.0**, extensão **0.7.0**.
+Atualizado em 22/08/2026. Aplicação **0.11.0**, extensão **0.11.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -15,17 +15,20 @@ Atualizado em 21/08/2026. Aplicação **0.7.0**, extensão **0.7.0**.
 
 ## Estado atual
 
-**Banco: Supabase, no ar.** 38 tabelas, RLS ligado em todas, 334
-reclamações **com telefone e e-mail completos** (não mais mascarados) e
-789 respostas de NPS vindas do Wootric. **Nada da interface vive fora do banco** — o que
-se edita sobrevive ao reload e segue a conta, não o dispositivo. Connection string **pooled (6543)** para a
-aplicação e **de sessão (5432)** em `DIRECT_URL`, usada por `db:push`,
-`db:seed` e pelos scripts.
+**Banco: Supabase, no ar.** 43 tabelas, RLS ligado em todas, **127
+reclamações** — a base inteira do Reclame Aqui, com relato completo,
+telefone, e-mail e documento —, **105 estabelecimentos**, **117
+clientes** e **868** respostas de NPS. **Nada da interface vive fora do
+banco** — o que se edita sobrevive ao reload e segue a conta, não o
+dispositivo.
+Connection string **pooled** para a aplicação e **de sessão** em
+`DIRECT_URL`, usada por `db:push`, `db:seed` e pelos scripts.
 
 **Os 12 contextos da interface gravam no Postgres** por server actions
-(`lib/actions/`). O que se edita na tela sobrevive ao reload.
+(`lib/actions/`). As etapas e os tipos do NPS entraram na carga do
+workspace junto com os outros cadastros.
 
-**Deploy:** em andamento na Vercel, importando de `isaac123451/cw`.
+**Deploy:** Vercel, importando de `isaac123451/cw`.
 
 ### Comandos próprios
 
@@ -39,21 +42,28 @@ aplicação e **de sessão (5432)** em `DIRECT_URL`, usada por `db:push`,
 | `npm run check:nps` | Compara o NPS daqui com o do Wootric na mesma janela |
 | `npm run nps:wootric -- --dias=90` | Importa o NPS do Wootric (`--seco` para simular) |
 | `npm run ra:importar -- <arquivo.xlsx>` | Grava o export do RA no banco **com contato completo** |
-| `npm run check:ia` | Diz qual IA está ligada e faz uma chamada real com saída estruturada |
+| `npm run check:ia` | Diz qual IA está ligada, em que velocidade, e mede o tempo das duas vias |
 | `npm run check:busca` | Prova que a busca por candidatos não perdeu nenhum caso, e mede |
 | `npm run check:mover` | Prova o que acontece ao mover um caso de etapa |
 | `npm run check:ra` | Prova os leitores da página do Reclame Aqui contra o texto de uma reclamação real |
 | `npm run check:cadastros` | Prova que Times, Metas e Clientes sobrevivem ao recarregamento |
+| `npm run check:nps-etapas` | Prova as etapas e os tipos do NPS como cadastro, contra o banco |
+| `npm run check:nps-planilha` | Prova o leitor de planilha do NPS, com arquivos montados em memória |
+| `npm run check:extensao` | Prova o contrato das rotas que a extensão chama (precisa do `npm run dev`) |
+| `npm run check:cron` | Prova a rotina agendada, inclusive que rodar duas vezes não repete trabalho |
+| `npm run check:vinculo` | Prova o vínculo por CPF ou CNPJ: que a varredura liga, que rodar de novo não muda nada, que a planilha não apaga e que a escolha de uma pessoa vence |
+| `npm run db:backup` | Despeja num JSON as reclamações, clientes e estabelecimentos — antes de qualquer carga |
+| `npm run ra:completo` | Carga completa: a planilha do RA vira a base, o CW Engine dá o estabelecimento. Simula por padrão; `--gravar` executa |
 | `npm run extensao:icones` | Regera os PNGs do ícone da extensão |
 
 ---
 
 ## A fazer
 
-### 0. Handoff — leia isto primeiro (21/08/2026)
+### 0. Handoff — leia isto primeiro (22/08/2026)
 
 **Produção:** https://cw-rho-eight.vercel.app · repo `isaac123451/cw`,
-branch `main` · aplicação e extensão em **0.8.0**, sempre no mesmo
+branch `main` · aplicação e extensão em **0.11.0**, sempre no mesmo
 número.
 
 **Antes de dizer que algo está pronto, rode o `check:` correspondente.**
@@ -62,14 +72,20 @@ limpos em cima de defeito de dado.
 
 | Comando | Prova o quê |
 | ------- | ----------- |
-| `npm run check:ia` | Qual IA está ligada, com uma chamada real |
+| `npm run check:ia` | Qual IA está ligada, com uma chamada real — e quanto ela demora |
 | `npm run check:busca` | Que a busca por candidatos não perdeu nenhum caso |
 | `npm run check:mover` | Que voltar de "Resolvido" apaga a avaliação |
 | `npm run check:cadastros` | Que Times, Metas e Clientes sobrevivem ao reload |
-| `npm run check:ra` | Os leitores da página do Reclame Aqui (45 conferências) |
+| `npm run check:ra` | Os leitores da página do Reclame Aqui, **inclusive que o FAQ do portal não entra no relato** |
+| `npm run check:nps-etapas` | Que etapa final carrega o prefixo `[Encerrado]`, que renomear arrasta os ciclos e que etapa em uso é desativada |
+| `npm run check:nps-planilha` | Que o leitor de planilha lê os dois formatos e **diz o que deixou de fora** |
+| `npm run check:extensao` | Que o número que o painel mostra e a lista que ele abre têm o mesmo tamanho |
+| `npm run check:cron` | Que a rotina encerra o que a regra manda — e só uma vez |
+| `npm run check:vinculo` | Que o documento (CPF ou CNPJ) liga a reclamação ao estabelecimento — e que reimportar a planilha **não apaga** o vínculo |
 | `curl -H "Authorization: Bearer $API_TOKEN" .../api/saude` | O que **um ambiente** tem configurado |
 
-> O `API_TOKEN` da Vercel é **diferente** do local — conferido.
+> Os dois últimos precisam da aplicação no ar (`npm run dev` noutra
+> janela). O `API_TOKEN` da Vercel é **diferente** do local — conferido.
 
 ---
 
@@ -86,102 +102,37 @@ o canal da página. Falta **só** o importador, e ele depende do arquivo.
 
 ### 2. Aberto, sem decisão pela frente — é só trabalho
 
-**a) Etapas do Kanban do NPS viram cadastro.** *(pedido em 21/08)* Hoje
-as quatro colunas são **fixas no código**: `FLUXO_EM_ANDAMENTO` em
-`lib/models/nps.ts` (Novo, Em tratativa, [Aguardando Resposta]) mais os
-finais de `ALL_STATUS`. O Isaac quer poder criar etapas, como já dá no
-quadro do Reclame Aqui.
+Nada. A fila desta seção foi limpa em 22/08 — o que sobrou depende de
+decisão sua (seção 3) ou de o Isaac liberar o ManyChat (seção 1).
 
-O caminho já existe e é o mesmo do `WorkflowStatus`: tabela nova
-(`NpsStage`: nome, cor, ordem, ativo, e um marcador de "é final"), a
-listagem entrando na carga do workspace, e `NpsKanban` lendo dela em vez
-da constante. Três cuidados registrados:
-
-- **Etapa final não é igual às outras.** O que define encerramento hoje
-  é o prefixo `[Encerrado]` (`isEncerrado`), e é ele que tira o ciclo da
-  fila, alimenta `closedAt` e sustenta o checklist de `podeEncerrar`.
-  Uma etapa nova precisa dizer se encerra ou não — senão o indicador de
-  resolução passa a contar coisa que ninguém fechou.
-- **Os sete tipos amarram os finais.** `KINDS[].finais` lista quais
-  status cada tipo aceita. Etapa nova sem entrar nessa lista fica
-  inalcançável pelo fluxo.
-- **A extensão avança pela mesma escada** (`acao: "status"` em
-  `app/api/extensao/nps/route.ts`), que hoje lê `FLUXO_EM_ANDAMENTO`.
-  Passa a ler o cadastro junto, ou os dois divergem.
-
-**b) Aba de Atividades, vinculada à agenda.** *(pedido em 21/08)* Uma
-aba própria na extensão para o que está marcado — não só criar tarefa
-(que já existe em `/api/extensao/anotar` com `tipo: "agenda"`) e não só
-listar o dia (que já existe em `/api/extensao/agenda`, com o atrasado
-vindo junto e o botão de dar baixa), mas a **visão de atividades** ligada
-à agenda da aplicação: o que é de hoje, o que ficou para trás, o que
-está vinculado a qual caso.
-
-O que já está pronto do lado do servidor:
-- `GET /api/extensao/agenda` — hoje + atrasado, com `protocolo` e
-  título do caso vinculado, ordenado por vencimento;
-- `POST /api/extensao/agenda` — dar baixa e desfazer;
-- `POST /api/extensao/anotar` com `tipo: "agenda"` — cria a tarefa já
-  vinculada ao caso, com tipo e data.
-
-Falta **a aba no painel** (`extensao/conteudo/painel.js`): mais um botão
-no rodapé de canais, no mesmo padrão de "Painel", com a lista, o filtro
-de hoje/atrasado e o clique que leva ao caso vinculado. A agenda também
-deve aparecer dentro da aba Painel, junto das anotações do dia — foi
-assim que o Isaac descreveu.
-
-**c) Botão Salvar nas telas restantes.** O Isaac pediu "em tudo que for
-adicionar ou alterar". Cinco telas já usam o rascunho
-(`lib/hooks/useRascunho.ts` + `components/shared/BarraDeSalvar.tsx`): as
-cinco abas de `/reclame-aqui/configuracoes`. **Faltam nove**, e todas
-gravam a cada tecla:
-
-- `components/reclame-aqui/detail/CaseDetail.tsx`
-- `components/clientes/ClientDetail.tsx`
-- `components/estabelecimentos/EstablishmentDetail.tsx`
-- `components/impacto/ImpactTypesCard.tsx`
-- `components/jornada/JourneyTopics.tsx`
-- `components/reclame-aqui/settings/WorkflowSettings.tsx`
-- `components/reclame-aqui/toolbar/SavedFilters.tsx`
-- `components/agenda/GoogleCalendarCard.tsx`
-- `components/nps/RootCauseManager.tsx`
-
-O passo é mecânico e está no commit `2dbea29`: trocar a lista pelo
-`rascunho.itens`, `saveX({...item, campo})` por
-`rascunho.alterar(item.id, {campo})`, acrescentar `<BarraDeSalvar>` e
-proteger a exclusão com a trava do "item que só existe no rascunho".
-
-**d) Tela de análise do NPS.** Os filtros por segmento já existem na
-barra do `/nps` e na fila da extensão. Falta a tela dedicada, no
-espírito de `/reclame-aqui/analytics`: tendência do NPS, causa raiz e
-distribuição da régua de humor. `summarize`, `bySegment` e `byRootCause`
-já calculam tudo em `lib/services/nps.service.ts`.
-
-**e) O cron — destrava três coisas de uma vez.** A aplicação não tem job
-agendado, e por isso:
-- o **encerramento automático dos 30 dias** do NPS só roda quando
-  alguém abre a tela;
-- **`movimentacao.atrasada`** não existe (atraso é estado que só se
-  descobre comparando com o relógio);
-- o **reenvio de webhook** que falhou não acontece.
-
-Uma peça só (cron da Vercel) resolve as três.
-
-**f) Importar NPS em lote**, como o Reclame Aqui faz com a planilha do
-HugMe. O parser compartilhado (`raImport.service.ts`) é o modelo.
-
-**g) Tipos do NPS como cadastro.** Os sete tipos são fixos em
-`lib/models/nps.ts`. A causa raiz já virou cadastro (`NpsRootCause`) —
-os tipos seguem o mesmo caminho. A ressalva: lista fechada existe para a
-análise de tendência não virar texto livre.
+O aviso pendente mais próximo de virar trabalho: **`SpeedInsights`** é
+dependência do projeto e estava importado no dashboard **sem ser
+renderizado**, então não media nada. O import morto saiu. Ligar de
+verdade é pôr o componente no layout raiz — mas isso passa a mandar
+telemetria de uso para a Vercel, e essa é uma decisão sua.
 
 ---
 
 ### 3. Bloqueado no Isaac — não dá para avançar sem ele
 
 **a) A `ANTHROPIC_API_KEY` nunca foi preenchida** (o valor no `.env` é o
-exemplo literal, `"sk-ant-..."`). Hoje quem responde é o **Gemini**, e
-funciona. Se quiser a Anthropic, é preencher.
+exemplo literal, `"sk-ant-..."`). Hoje quem responde é o **Gemini**.
+
+> Como definir, e o que cada variável quebra sem estar definida: seção
+> **Variáveis de ambiente**, mais abaixo.
+
+> **Isto virou o teto da velocidade da IA.** A camada gratuita do Gemini
+> entra em fila: medido no mesmo minuto, com o mesmo pedido de 52
+> tokens, `gemini-flash-latest` não respondeu em 35 segundos enquanto
+> `gemini-3.6-flash` respondeu em 10,4 e `gemini-flash-lite-latest` em
+> 0,98.
+>
+> A velocidade agora se escolhe na tela (**Configurações → Integrações**,
+> três perfis com o tempo medido em cada um), e o botão "Conferir na
+> prática" mede de verdade: 10,6 s no Equilibrado contra **1,1 s** no
+> Rápido, na mesma via. Mas o piso continua sendo o da camada gratuita —
+> uma chave paga tira a fila da conta, e é a única coisa que faz o
+> perfil Profundo valer a pena.
 
 **b) `GEMINI_API_KEY` na Vercel.** Está no `.env` local e **não foi
 possível confirmar em produção** — o `API_TOKEN` de lá é outro. Conferir
@@ -190,27 +141,14 @@ com `/api/saude`.
 **c) `NEXT_PUBLIC_APP_URL` ausente.** Sem ela o retorno do OAuth do
 Google Agenda monta `http://localhost:3000`.
 
-**d) Onde gravar o vínculo cliente ↔ estabelecimento.** Três quartos do
-caminho andaram: o Wootric manda `company_id` (gravado em
-`NpsResponse.externalCompanyId`), o enriquecimento persiste
-(`ClientProfile.establishmentId`), e o **RA Forms** da reclamação traz
-CNPJ de cadastro, e-mail de acesso e nome do proprietário — a extensão
-já lê e mostra os três na prévia, sem gravar.
+**d) `CRON_SECRET` na Vercel.** A rotina agendada existe
+(`app/api/cron/route.ts`, agendada em `vercel.json` para 6h) e roda
+localmente. Em produção ela aceita `CRON_SECRET` ou o `API_TOKEN` — sem
+nenhum dos dois ela responde 503 e **fica desligada, não aberta**.
+Definir a variável na Vercel é o que a liga lá.
 
-Falta decidir **onde cada campo entra**. `Case` não tem coluna de
-estabelecimento e `Case.cnpj` existe mas ninguém preenche. Casar por
-CNPJ é o caminho óbvio. Medido e relevante: **nenhum dos 334 casos
-importados tem empresa diferente do consumidor** — o export do Reclame
-Aqui trata o reclamante como a empresa. Por isso o WhatsApp mostra o
-estabelecimento e a base guarda a pessoa, e elas não casam.
-
-**e) Planos nas macros.** Puxar da central de ajuda ou virar cadastro
-numa tela. A ressalva registrada: preço e nome de plano envelhecem
-calados dentro do sistema.
-
-**f) Permissões por módulo.** Último card "Em breve" de
-`app/configuracoes/page.tsx`. Definir o alcance antes de construir:
-papel por módulo, ou permissão fina por ação?
+**e) Nada mais.** Vínculo, planos e permissões saíram desta seção em
+22/08 — estão em *Entregue*, com o `check:` de cada um.
 
 ---
 
@@ -220,39 +158,80 @@ papel por módulo, ou permissão fina por ação?
   não existe na prática; usar `chrome.storage.session`.
 - **Dependência dura mata o painel.** Montar primeiro, checar depois —
   senão o sintoma é "a extensão não abre mais, só reinstalando".
+  `montar()` liga o botão de abrir **antes** de qualquer outra coisa, e
+  `montado()` confere que o shadow ainda tem o gatilho.
+- **`inset: 0 0 0 auto` numa raiz com filhos absolutos dá largura zero.**
+  Foi o que sumiu com o painel: a gaveta solta se posicionava por `left`
+  a partir da borda direita da tela e ia parar fora dela. Medido em
+  Chrome: gaveta em 900 → desenhada em 2180 numa janela de 1280.
+- **Empurrar a página com `margin-right` no `<html>` não funciona em
+  todo site.** No WhatsApp Web o `#app` é `position: absolute` com
+  `inset: 0` — o bloco que o contém é a viewport, não o `<html>`.
+  Medido: margem de 380px levou o `<html>` a 900 e o `#app` continuou em
+  1280. Só largura própria (`calc(100vw - 380px)`) o alcança, e ele é
+  **neto** do `<body>`, não filho.
 - **200 com HTML não é sucesso.** Conferir `content-type` antes de
   `resposta.json()`, nos dois lados.
+- **O apelido do modelo é o congestionado.** `gemini-flash-latest`
+  concentra quem não fixou versão. Versão fixa como principal, apelido
+  como reserva — e o 404 que o apelido nunca tem é justamente o que ele
+  cobre. A escolha está em Configurações → Integrações; o `.env` só vale
+  onde não há banco.
 - **O `enum` do Gemini só aceita texto**; nome de modelo envelhece
   (`gemini-2.0-flash` já é 404); 503 é fila, não configuração errada.
+- **Server action na Vercel tem relógio.** A importação do Wootric
+  morria com um erro de rede genérico que parecia integração quebrada —
+  era trabalho demais para uma requisição. Rodada curta com continuação
+  (`parcial` / `proximoDesde`) e `maxDuration` no layout da rota.
 - **Voltar um caso de "Resolvido" apaga a avaliação** (`moverPara`).
 - **`updateTag` só vale em server action**; em rota é
   `revalidateTag(tag, "max")`.
 - **A Área da Empresa do RA é um SPA**: a chave da leitura tem de ser
   endereço **+ id**, e o `<h1>` é o cabeçalho da tela, não o título.
+- **A página do RA continua depois da reclamação.** O leitor do relato
+  parava numa lista de seções conhecidas e, não achando nenhuma, seguia
+  até o fim do documento — trazendo o FAQ do portal colado no relato do
+  consumidor. Duas travas agora: a lista de seções e uma regra de forma
+  (título é curto, começa com maiúscula e não termina em ponto).
+- **Trocar coluna exige reiniciar o `next dev`.** O Turbopack guarda o
+  cliente Prisma compilado, e a primeira requisição depois de um
+  `db:push` estoura com "a coluna X não existe" mesmo com o banco já
+  correto. Uma ocorrência, no primeiro pedido; as seguintes passam. O
+  console do navegador **mantém** o erro antigo no buffer, então conferir
+  ali engana — o número que vale é o do log do servidor.
 - **Vários arquivos estão em CRLF** e heredoc de bash quebra com
-  conteúdo grande — usar a ferramenta Write.
+  conteúdo grande — usar a ferramenta Write. Script de patch que casa
+  texto literal tem de normalizar `\r\n` antes: `case.mapper.ts` é LF e
+  `case.repository.ts` é CRLF, no mesmo diretório. O sintoma é a troca
+  falhar **em silêncio** — `String.replace` sem match devolve o original.
+- **`lib/auth/guard.ts` é `server-only` e arrasta o Prisma.** Uma tela
+  cliente que importou dali só o rótulo do papel derrubou o `build` com
+  `module not found: dns` — o driver do Postgres foi parar no bundle do
+  navegador. `Role` e `ROLE_LABELS` moram em `lib/auth/modules.ts`, que
+  não tem `server-only`; o guard reexporta.
+- **Gravação que não conhece o campo apaga o campo.** A planilha do
+  Reclame Aqui não traz CNPJ, e o `upsert` da reimportação escrevia
+  `null` por ausência — cada reimportação semanal zeraria em silêncio
+  todo vínculo que a extensão tivesse construído, com o sintoma
+  aparecendo semanas depois como "os vínculos somem sozinhos". O
+  `update` do upsert passa por `semApagarVinculo`; o `create` não.
 
 ---
 
 ## Dívida técnica
 
-### `setState` em efeito nos formulários
+### Nenhuma aberta (22/08/2026)
 
-Treze ocorrências do mesmo padrão: o formulário preenche os campos em um
-`useEffect` quando o modal abre. A correção certa é remontar com `key` e
-inicializar no `useState`, mexendo em cada formulário **e** em quem o
-abre.
+A única que havia — treze formulários preenchendo os campos num efeito
+— foi paga, e a regra do `eslint.config.mjs` voltou de `warn` para
+`error`. O detalhe está em “A dívida do `setState` em efeito foi paga”,
+em Entregue.
 
-A regra está como **aviso** em `eslint.config.mjs` para a dívida ficar
-visível sem esconder erro real — `npm run lint` fecha com 0 erros e 16
-avisos. Ao migrar, subir a regra de volta para `error`.
-
-Os formulários novos (`MovementForm`, `MovementRuleForm`,
-`CreateCaseModal`) já montam e desmontam com a abertura e **não** entram
-nessa conta.
-
-*(A etapa da jornada e os filtros salvos saíram daqui — hoje persistem
-no banco. Ver "Tudo persiste" em Entregue.)*
+`npm run lint` fecha com **0 erros e 1 aviso**: um `exhaustive-deps` no
+`CaseContext`, onde incluir as funções na lista recriaria o valor do
+contexto a cada render e derrubaria a memoização inteira. É decisão, não
+esquecimento — e uma que só compensa mexer junto com a migração daquele
+contexto para `useCallback`.
 
 ---
 
@@ -282,7 +261,856 @@ no banco. Ver "Tudo persiste" em Entregue.)*
 
 ---
 
+
+## Variáveis de ambiente
+
+Onde cada uma mora, o que quebra sem ela, e como definir.
+
+**Na Vercel:** projeto → *Settings* → *Environment Variables* → *Add
+New*. Marque os três ambientes (*Production*, *Preview*, *Development*)
+salvo onde este quadro disser o contrário. **Variável nova só vale no
+próximo deploy** — depois de salvar, vá em *Deployments*, abra o mais
+recente e use *Redeploy*. Isso é a causa mais comum de "coloquei a chave
+e continua igual".
+
+**No local:** arquivo `.env` na raiz de `cw-reputacao/`, uma por linha,
+sem aspas. O `.env` **não** vai para o Git.
+
+Para conferir o que um ambiente tem, sem revelar nenhum valor:
+
+```bash
+curl -H "Authorization: Bearer SEU_API_TOKEN" https://cw-rho-eight.vercel.app/api/saude
+```
+
+O `API_TOKEN` da Vercel é **diferente** do local — conferido.
+
+---
+
+### `CRON_SECRET`
+
+**O que é:** a senha da rotina agendada (`app/api/cron/route.ts`,
+agendada em `vercel.json` para as 6h). Ela encerra ciclo de NPS
+abandonado, avisa movimentação atrasada, reenvia webhook que falhou e
+liga reclamação a estabelecimento pelo CNPJ.
+
+**Sem ela:** a rotina responde **503 e fica desligada** — não aberta.
+É a escolha certa: ela mexe em indicador e dispara webhook, e sem senha
+qualquer pessoa com o endereço mexeria nos números.
+
+**Valor:** qualquer texto longo e aleatório. Gere um assim:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+**Onde:** Vercel, só em *Production*. A Vercel manda o valor no
+cabeçalho `Authorization` quando dispara o cron dela, sozinha. No local
+é opcional — sem ela, o `API_TOKEN` serve.
+
+---
+
+### `NEXT_PUBLIC_APP_URL`
+
+**O que é:** o endereço público da aplicação. Vai para o navegador (é o
+que o prefixo `NEXT_PUBLIC_` significa), então **não pode guardar
+segredo** — e não guarda, é só uma URL.
+
+**Sem ela:** o retorno do OAuth do Google Agenda monta
+`http://localhost:3000`, e quem conecta a agenda em produção é jogado
+para a própria máquina. O sintoma é "conectei e não voltou".
+
+**Valor:** `https://cw-rho-eight.vercel.app` — sem barra no fim.
+
+**Onde:** Vercel, em *Production* e *Preview*. No local, deixe fora ou
+ponha `http://localhost:3000`.
+
+---
+
+### `GEMINI_API_KEY`
+
+**O que é:** a chave da IA que responde hoje — triagem, resumo de
+conversa, sugestão de resposta, tanto no assistente quanto na extensão.
+
+**Sem ela:** as funções de IA respondem "sem provedor configurado". Nada
+mais quebra; o resto do sistema não depende de IA.
+
+**Onde pegar:** <https://aistudio.google.com/apikey> → *Create API key*.
+Começa com `AIza`.
+
+**Onde:** Vercel, nos três ambientes. Está no `.env` local e **não foi
+possível confirmar em produção** — confira com `/api/saude`.
+
+**A ressalva que importa:** a camada gratuita entra em fila, e é ela o
+teto da velocidade. Medido no mesmo minuto, com o mesmo pedido de 52
+tokens: `gemini-flash-latest` não respondeu em 35 segundos enquanto
+`gemini-3.6-flash` respondeu em 10,4 e `gemini-flash-lite-latest` em
+0,98. Uma chave paga tira a fila da conta.
+
+---
+
+### `ANTHROPIC_API_KEY`
+
+**O que é:** a alternativa ao Gemini. **Nunca foi preenchida** — o valor
+no `.env` é o exemplo literal, `"sk-ant-..."`.
+
+**Sem ela:** o Gemini responde por tudo. O seletor de provedor em
+*Configurações → Integrações* mostra a chave da Anthropic como ausente,
+e escolher "Anthropic" ali não muda nada enquanto ela faltar.
+
+**Onde pegar:** <https://console.anthropic.com> → *API Keys* → *Create
+Key*. Começa com `sk-ant-`. É paga por uso, com valor pré-carregado.
+
+**Onde:** Vercel, nos três ambientes, e no `.env` local.
+
+**O que ela destrava:** o perfil **Profundo** da tela de IA. Ele existe
+hoje, mas sem chave paga não vale a pena — o piso continua sendo a fila
+da camada gratuita.
+
+---
+
+### As que já estão definidas
+
+| Variável | Para quê |
+| -------- | -------- |
+| `DATABASE_URL` | Postgres do Supabase, **pooled** (porta 6543). É a que a aplicação usa. |
+| `DIRECT_URL` | O mesmo banco em conexão de sessão (porta 5432). Só para `prisma db push` e os `check:`. |
+| `API_TOKEN` | Senha da API pública que alimenta o CW Engine, e da `/api/saude`. |
+| `AUTH_SECRET` | Assina o cookie de sessão. Trocar derruba todo mundo. |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | OAuth da agenda. |
+
+
 ## Entregue
+
+
+### A carga rodou (23/08/2026)
+
+Números do banco depois de executar, e não da simulação:
+
+| | |
+| --- | --- |
+| Reclamações | **127** (eram 336, de um export antigo e menos completo) |
+| Com estabelecimento | **116** |
+| Estabelecimentos | **105** |
+| Clientes | **117** |
+| Com relato do consumidor | 127 |
+| Com telefone e e-mail | 127 |
+| Com responsável | 122 |
+| Com time | 71 |
+
+**O passo que quase faltou.** O CW Engine diz *qual* restaurante está
+por trás de cada reclamação, mas não diz o CPF/CNPJ dele — então os 105
+cadastros nasceriam sem documento. E é o documento **do cadastro** que a
+extensão consulta para ligar a próxima captura sozinha: sem ele, toda
+reclamação futura cairia órfã, e o mecanismo recém-construído nunca mais
+dispararia.
+
+A pergunta do RA Forms é "CPF ou CNPJ **de cadastro no portal**" — é o
+documento do estabelecimento, não o do consumidor. Então ele sobe das
+reclamações para o cadastro, **e só quando elas concordam**: 102 dos 105
+ganharam documento assim. Os três em que duas reclamações apontam
+documentos diferentes ficam vazios de propósito e saem nomeados no
+relatório — pode ser restaurante que migrou de CPF para CNPJ, e escolher
+no escuro ligaria as próximas capturas ao cadastro errado, que é pior do
+que não ligar nenhuma:
+
+- Pizzaria Veneza (10042530792 / 29017436000175)
+- Doce Cesta Presentes (16514223893 / 44628376816)
+- Espetinhos Du Marcinho (09999723756 / 08773131725)
+
+Carla Campos e Wesley Costa foram criadas como responsáveis pelo mesmo
+caminho da tela de Times — nome, sem e-mail. Aparecem lá para serem
+editadas.
+
+Dois backups ficaram na pasta antes de cada execução, com as 336
+anteriores inteiras. Estão fora do Git: trazem PII real.
+
+
+### O documento deixou de ser só CNPJ (22/08/2026)
+
+O campo que liga reclamação a estabelecimento chamava-se `cnpj` e
+aceitava catorze dígitos. **A Cardápio Web cadastra restaurante por CPF
+do proprietário na maioria das vezes** — 122 das 127 reclamações da base
+real respondem "CPF ou CNPJ" com CPF. O vínculo funcionava para cinco
+casos em cada cento.
+
+`Case.cnpj` e `Establishment.cnpj` viraram `document`, e o helper aceita
+onze ou catorze dígitos. Não foi só renomear: um campo chamado `cnpj`
+guardando CPF é a espécie de mentira que custa uma hora a quem lê
+depois, e o rótulo da tela ("CPF ou CNPJ") tem de bater com o que o banco
+faz.
+
+Junto vieram três coisas que só existem porque os dois formatos convivem:
+
+- **A máscara decide pelo tamanho.** Até onze dígitos desenha CPF, dali
+  em diante CNPJ. Forçar máscara de CNPJ em onze dígitos escreveria
+  `12.345.678/901`, e quem digitou concluiria que errou o número.
+- **A extensão aceita os dois** ao ler o RA Forms, e a pergunta que ela
+  procura passou a ser "CPF **ou** CNPJ" — que é como o portal escreve.
+- **Fora de onze e catorze, nada.** Campo pela metade, "não informado",
+  telefone digitado no lugar errado: guardar isso criaria vínculo falso
+  entre reclamações que só têm em comum o mesmo lixo no campo.
+
+### O protocolo virou o ID do Reclame Aqui (22/08/2026)
+
+O relatório do portal passou a trazer a coluna **ID Reclame Aqui**
+(`r72QQCpOtF-sFwCZ`). É o mesmo código que aparece no fim da URL pública
+e que a extensão já lia da página como **COD**.
+
+Isso resolve um problema que estava armado para aparecer depois: o portal
+dá **dois** identificadores para a mesma reclamação — um número
+("ID: 256949163") e esse código. A extensão gravava pelo número, o
+export traz o código. Quem capturasse pela extensão uma reclamação que a
+planilha também trouxesse teria **dois casos**, e nada na tela explicaria
+por quê.
+
+Agora os dois lados usam o código. O número continua valendo onde o
+código não aparece na página, e a data e hora continuam de reserva para o
+relatório antigo, que não tem coluna de id nenhuma.
+
+De quebra, o casamento com o CW Engine ganhou um degrau novo e exato: o
+link público do CW Engine termina no mesmo código, depois do último
+sublinhado. Ele resolve **87 das 127** sozinho, e os degraus de título e
+nome — que são heurística — só recebem o que sobra.
+
+### Responsável se cadastra só com o nome (22/08/2026)
+
+Criar integrante exigia nome **e** e-mail. Quem cuida da operação nem
+sempre é quem usa a ferramenta: Carla Campos e Wesley Costa respondem por
+20 reclamações da base e não têm conta aqui.
+
+Exigir e-mail obrigava a inventar um, e e-mail inventado é pior do que
+e-mail nenhum — no dia em que a pessoa se cadastrasse de verdade, o
+endereço que ela usa já estaria ocupado por uma linha que não é dela.
+
+Agora o e-mail é opcional. Sem ele, o servidor gera um endereço
+`@sem-acesso.local` — domínio reservado, que não roteia e que o
+autocadastro (`@cardapioweb.com`) nunca vai colidir. A pessoa existe para
+receber caso e atividade, e não entra. **O endereço interno não aparece
+na tela**: o campo fica vazio, que é a verdade.
+
+A carga do Reclame Aqui usa esse mesmo caminho, e não um especial: quem
+ela cria aparece em Times para ser editado como qualquer outro.
+
+### Regras da carga que vieram do Isaac (22/08/2026)
+
+- **De janeiro de 2026 para trás, a responsável é a Carla.** A regra
+  **vence** o CW Engine: naquele período o registro de responsável lá
+  estava incompleto, e quem cuidou da fila foi ela. São 13 reclamações,
+  e o relatório da carga diz quantas foram por esta regra e não pelo
+  arquivo.
+- **O time do caso passou a ser gravado.** `Case.teamId` existia no banco
+  e `department` era lido na carga, mas nada o escrevia — nenhum caso
+  chegava ao banco com time. Resolve por nome, sem criar: os nomes do CW
+  Engine ("Implementacão", "Atendimento") passam por um de→para explícito
+  para os desta base ("Implantação", "Suporte"), e o que não estiver no
+  de→para fica sem time e sai no relatório.
+
+
+### A carga completa: duas planilhas, papéis diferentes (22/08/2026)
+
+A base do Reclame Aqui foi refeita a partir do relatório **"Previsão
+para o RA1000"** — 127 reclamações, de 06/01/2026 a 30/06/2026, com o
+relato inteiro, contato completo, nota, resolvida, tempos e datas.
+
+A segunda planilha, o export do **CW Engine**, não virou base e não
+podia virar: tem 563 linhas de 02/2024 a 08/2026, informação errada o
+bastante para o Isaac avisar antes, e reclamações que não estão no
+portal. Ela entra só para preencher o que a primeira não tem — e o que
+ela tem de único é o **estabelecimento**: qual restaurante está por trás
+de cada reclamação.
+
+**Casar as duas não é direto**, e foi aí que estava o trabalho. O CW
+Engine reescreve o título de parte das reclamações (viram "Acesso via
+HugMe") e abrevia o nome do cliente — grava "Alex Diego" onde o portal
+tem "ALEX DIEGO DA SILVA DASCANIO". Casamento por título sozinho
+resolvia 106 das 127. A escada de quatro degraus, do mais seguro ao mais
+tolerante, resolve **126**:
+
+| Degrau | Acertos |
+| ------ | ------- |
+| Título idêntico | 106 |
+| Nome + data de publicação | 8 |
+| Nome abreviado, ±2 dias | 10 |
+| Nome único no arquivo inteiro | 2 |
+| Sem par | 1 |
+
+O degrau do nome abreviado aceita um nome como o outro quando **todos**
+os seus pedaços aparecem no outro. É o que faz "Marcos Brum" casar com
+"ANTONIO MARCOS BRUM SOARES" e, na mesma data, recusar "Mariana Poças".
+
+Resultado: **116 das 127 reclamações com estabelecimento**, em 103
+restaurantes distintos. As 11 sem — 1 sem par e 10 cujo par não tinha
+conta preenchida — ficam sem vínculo de propósito, para o cadastro nascer
+quando a reclamação delas aparecer.
+
+Três decisões que valem registro:
+
+- **O protocolo sai do ID do Reclame Aqui**, não do id do CW Engine —
+  ver a entrada própria, acima. Quando o relatório não traz a coluna, a
+  data e hora servem de reserva.
+- **Só os 103 estabelecimentos com reclamação são criados**, não os 405
+  do arquivo. Plano e situação ficam em "Essencial/Ativo" com nota
+  dizendo que não foram conferidos — inventar precisão que não existe
+  seria pior do que o campo vazio.
+- **CPF e CNPJ entram os dois** em `Case.document` — ver a entrada
+  própria, acima. A primeira versão guardava só catorze dígitos e
+  deixava de fora 122 das 127.
+
+Duas coisas que estavam quebradas e apareceram no caminho:
+
+- **A tela de importar recusava este relatório.** O leitor exigia a
+  coluna "Id HugMe", que só existe no outro export do portal. Agora a
+  âncora é "Data Reclamação", que os dois têm, e o id é derivado quando
+  falta — pela data e hora, nunca pelo número da linha, senão reexportar
+  com uma reclamação a mais deslocaria todas e duplicaria a base inteira.
+- **O time do caso nunca era gravado.** `Case.teamId` existia no banco e
+  `department` era lido na carga, mas nada o escrevia — nenhum caso
+  chegava ao banco com time. Agora `persistCase` e a importação em lote
+  resolvem o time por nome, sem criar: os nomes do CW Engine
+  ("Implementacão", "Atendimento") passam por um de→para explícito para
+  os desta base ("Implantação", "Suporte"), e o que não estiver no
+  de→para fica sem time e sai no relatório.
+
+Os responsáveis do CW Engine que não têm conta aqui — Carla Campos (12
+casos) e Wesley Costa (6) — viram **conta histórica**: inativa, com
+e-mail `@historico.local` que não existe e senha aleatória que ninguém
+recebe. Sem isso a carga perderia, em silêncio, quem cuidou de cada
+reclamação. Quem quiser transformar em conta de verdade troca o e-mail em
+Times e roda `npm run db:password`.
+
+A carga é destrutiva e sabe disso: `--gravar` **recusa** se não houver
+um `backup-<data>.json` do dia na pasta. Sem `--gravar`, ela só simula e
+imprime o relatório inteiro.
+
+
+### O vínculo cliente ↔ estabelecimento, por CNPJ (22/08/2026)
+
+A decisão que faltava era **onde gravar**. A resposta é: no caso, e por
+CNPJ.
+
+Casar por nome não funciona, e isso é medido — `check:vinculo` confere
+na base a cada execução: **nenhuma das 336 reclamações tem empresa
+diferente do consumidor**. O export do Reclame Aqui trata o reclamante
+como a empresa, então casar por nome ligaria a reclamação ao consumidor,
+não ao restaurante. É exatamente por isso que o WhatsApp mostra o
+estabelecimento e a base guarda a pessoa.
+
+O CNPJ casa. Ele está nos dois lados: o cadastro de estabelecimentos já
+tinha a coluna, e o **RA Forms** — o formulário que o portal coleta antes
+de publicar — traz o CNPJ de cadastro. A extensão já lia e só mostrava.
+
+Agora:
+
+- `Case` ganhou `cnpj` e `establishmentId`. O CNPJ é guardado **só com
+  os dígitos**: o portal aceita com e sem máscara, e duas grafias do
+  mesmo número nunca casariam entre si.
+- A extensão grava o CNPJ ao criar o caso. Ele **não é campo editável**
+  da prévia, de propósito: é identificador, não descrição — um dígito
+  trocado à mão não daria erro, daria vínculo com o restaurante errado.
+- `persistCase` procura o cadastro com aquele CNPJ e liga na hora. Não
+  cria estabelecimento: o cadastro tem plano, MRR e responsável, e nada
+  disso está na página de uma reclamação — nasceriam fichas vazias que
+  ninguém pediu.
+- Quem for capturado **antes** do cadastro existir fica com o CNPJ e sem
+  vínculo. Duas coisas resolvem depois: salvar o estabelecimento com
+  CNPJ liga na hora as reclamações que esperavam, e a rotina agendada
+  varre o que sobrar. As duas são idempotentes — a segunda passada liga
+  zero.
+- Nenhuma das duas **desfaz** vínculo, e nenhuma toca no que uma pessoa
+  decidiu. Vincular ou desvincular na tela grava `establishmentManual`
+  junto, e isso trava o automático nos dois sentidos.
+
+O segundo defeito que quase entrou: "sem vínculo" tem dois significados
+que a coluna sozinha não distingue — *ainda não foi ligado* e *foi
+desligado de propósito*. Sem a marca, desvincular na tela duraria até a
+varredura da madrugada, que religaria pelo CNPJ. O sintoma seria "o botão
+de desvincular não funciona", e ele funcionava.
+
+O defeito que quase entrou junto, e que o `check:` pega: a planilha do
+Reclame Aqui não tem CNPJ, então a reimportação semanal escrevia `null`
+por ausência e apagava o vínculo. O `update` do upsert passa por
+`semApagarVinculo`, que remove os dois campos quando vêm vazios; o
+`create` não passa, porque ali o nulo é o valor certo.
+
+Catorze conferências contra o banco real, em estabelecimentos
+descartáveis criados e apagados pelo próprio script.
+
+### Permissões por módulo (22/08/2026)
+
+O card "Em breve" de `/configuracoes` virou tela. A pergunta em aberto
+era papel por módulo ou permissão fina por ação, e a resposta é **por
+módulo**, por três motivos concretos:
+
+1. A operação tem três contas, e o recorte real é "quem mexe no NPS"
+   contra "quem mexe no Reclame Aqui".
+2. Permissão por ação apodrece: cada action nova exige alguém decidir
+   onde ela entra na matriz, e quem esquece cria um buraco que só
+   aparece quando alguém faz o que não devia.
+3. O guard já fala em papéis. `requireRole("AGENTE")` continua igual —
+   o que mudou é de onde o papel vem. Nenhuma action aprendeu
+   vocabulário novo.
+
+**Só a exceção é gravada.** Quem não tem linha em `UserModuleRole` segue
+o papel da conta — mesma escolha das metas de reputação. Guardar o padrão
+em toda linha congelaria uma cópia dele, e mudar o papel da pessoa
+deixaria de valer onde ninguém mexeu. Escolher na tela o mesmo papel da
+conta **apaga** a linha, em vez de gravar a cópia.
+
+Onze módulos, dez arquivos de action declarando a que módulo pertencem.
+Uma trava proposital: ninguém reduz o próprio acesso às Configurações —
+é a porta por onde se desfaz qualquer engano da tela, e fechá-la exigiria
+mexer no banco à mão.
+
+A checagem mora no servidor. Esconder um botão não impede ninguém de
+chamar a action direto.
+
+### Planos e módulos viraram cadastro (22/08/2026)
+
+Os valores da central de ajuda entraram — três planos e cinco módulos —
+mas como **ponto de partida**, não como constante. A ressalva registrada
+no roadmap era exatamente essa: preço e nome de plano envelhecem calados
+dentro do sistema. Agora se edita, se cria e se desativa em
+`/configuracoes/planos`, e a macro insere a tabela por `{{planos}}` e
+`{{modulos}}`.
+
+Preço em **centavos**, nunca em ponto flutuante.
+
+Banco vazio devolve os valores de partida com id derivado da posição —
+mesma regra da causa raiz e das etapas do NPS: a tela funciona antes de
+qualquer cadastro, sem um caso especial dentro do formulário. Gravar o
+primeiro plano materializa os outros oito, senão criar um plano novo
+faria os da central de ajuda sumirem de uma vez.
+
+### As macros que faltavam, sem o nome de ninguém (22/08/2026)
+
+Cinco textos do WhatsApp Business entraram, ao lado dos cinco do Reclame
+Aqui que já existiam. Macro agora tem **canal**, porque texto de portal
+público e texto de conversa privada não se substituem: o primeiro é lido
+por quem nunca falou com a gente, o segundo por quem já está falando.
+
+O nome da atendente saiu de dentro do texto. Estava escrito ("Aqui é a
+Carla") e virou `{{responsavel}}` — texto pronto com nome de pessoa
+dentro só serve para quem tem aquele nome, e a pessoa seguinte manda a
+mensagem assinada por outra. Os espaços em branco de nome viraram
+`{{cliente}}` e o número de protocolo virou `{{protocolo}}`, pela mesma
+razão.
+
+
+### A dívida do `setState` em efeito foi paga (22/08/2026)
+
+Treze formulários preenchiam os campos num `useEffect` quando o modal
+abria. Funcionava, ao custo de uma renderização a mais por abertura — e
+de uma janela em que o formulário já estava na tela com os campos do
+registro **anterior**.
+
+Os treze migraram: os campos nascem no `useState`, e quem abre passa
+`key` e só renderiza o formulário enquanto ele estiver aberto. As duas
+coisas juntas, porque a `key` sozinha não basta — com o componente
+sempre montado, fechar e reabrir no mesmo registro não trocaria a `key`
+e o estado velho ficaria.
+
+Três descobertas do caminho, que não estavam no plano:
+
+- **Alguns valores iniciais dependiam de listas calculadas.** A
+  categoria da macro sai das categorias em uso; o status do caso de
+  rede social sai da primeira etapa ativa. Os dois `useMemo` subiram
+  para antes do estado — antes existiam para o efeito não reexecutar,
+  agora existem para serem lidos uma vez.
+- **O `ImpactForm` misturava `editing` com dois presets** (o caso e o
+  estabelecimento de onde o modal foi aberto). Virou uma cadeia de
+  `??` explícita, que é o que aquele efeito de trinta linhas dizia.
+- **Sobraram dois efeitos legítimos**, e eles não são o mesmo problema:
+  `PreferencesContext` e `SavedFiltersContext` leem o `localStorage` na
+  montagem. No servidor ele não existe, então inicializar o estado com
+  ele quebraria a hidratação — é o caso que a própria regra descreve
+  como sincronizar com sistema externo. Estão marcados um a um, com o
+  motivo escrito ao lado.
+
+Com isso a regra voltou de `warn` para **`error`** no
+`eslint.config.mjs`, que era o ponto: como aviso ela registrava a
+dívida; como erro ela impede a próxima ocorrência de entrar sem alguém
+decidir que é a exceção. `npm run lint` fecha com **0 erros e 1 aviso**
+— era 20.
+
+### A IA rápida também na extensão (22/08/2026)
+
+A triagem é a chamada mais lenta da extensão: é a que pede julgamento, e
+por isso roda no modelo maior — ~10 s contra ~1 s no menor. Nem sempre
+valem os dez. Quem já leu a reclamação e só quer uma segunda opinião
+prefere a resposta agora; quem vai decidir em cima dela, não.
+
+Agora são dois botões, e **o rótulo diz o tempo**: "Ler com calma
+(~10 s)" e "Ler rápido (~1 s)". A palavra "rápido" sozinha não deixa
+ninguém escolher — o número, sim.
+
+Duas coisas que fazem a escolha honesta:
+
+- **O resultado diz por qual via veio.** A leitura rápida erra mais no
+  julgamento, e quem lê precisa saber qual das duas está lendo antes de
+  decidir em cima dela.
+- **Depois de ler rápido, a leitura com calma fica a um clique.** O modo
+  rápido serve para decidir se vale gastar os dez segundos, e isso só é
+  verdade se o caminho de volta estiver ali.
+
+A escolha vem no corpo da requisição, e não de uma configuração global:
+é de quem clica, naquela reclamação. A velocidade *padrão* da instalação
+continua sendo a da tela de Integrações.
+
+### Ler a conversa do WhatsApp parou de falhar em silêncio (22/08/2026)
+
+"Às vezes falha para ler a conversa." O leitor tinha um caminho só:
+`#main` e `div[data-id]`. Quando o WhatsApp Web mexe na marcação — e ele
+mexe sem avisar — o resultado era zero mensagens numa conversa cheia, e
+o aviso na tela não sabia dizer se o defeito era a leitura ou a conversa.
+
+Agora são camadas, da mais específica para a mais genérica. O container:
+`#main`, depois o `data-testid` que eles usam nos testes deles, depois a
+função ARIA — que é a que mais sobrevive a reestilização, porque é o que
+faz o site funcionar com leitor de tela. As linhas: `data-id`,
+`role="row"`, e as classes `message-in`/`message-out`. A direção segue a
+mesma ideia: o prefixo `true_` do `data-id`, senão a classe, senão o
+lado.
+
+Provado em Chrome real, contra três marcações montadas para isso:
+
+| marcação | lidas | por onde | direções |
+| --- | --- | --- | --- |
+| a de hoje | 3 | `div[data-id]` | cliente, nós, cliente |
+| sem `#main` e sem `data-id` | **3** | `[role="row"]` | cliente, nós, cliente |
+| só `data-testid` | 2 | `div[data-id]` | cliente, nós |
+| conversa vazia | 0 | — | com o motivo escrito |
+
+O leitor antigo devolvia zero na segunda — que é exatamente a falha
+relatada. E o divisor de data (que também tem `data-id`, mas sem `@`)
+continua sendo descartado.
+
+Quando ainda assim não achar nada, o aviso **diz o que tentou**: "achei
+4 linha(s) por `div[data-id]`, mas nenhuma com texto". Sem isso, "0
+mensagens" não distingue conversa vazia de leitor quebrado — e foi essa
+confusão que fez a mesma falha ser reportada três vezes.
+
+### A velocidade da IA virou escolha de tela (22/08/2026)
+
+Estava em variável de ambiente, o que tem dois problemas: mudar exige
+deploy, e o valor fica invisível para quem usa a ferramenta. "A IA está
+demorando" é reclamação da operação, e a resposta estava num arquivo que
+a operação não abre.
+
+Agora são **três perfis**, em Configurações → Integrações, cada um com o
+tempo medido escrito ao lado:
+
+| perfil | o que faz | medido |
+| --- | --- | --- |
+| Rápido | modelo pequeno nas duas vias | ~1 s |
+| Equilibrado (padrão) | maior para decidir, menor para resumir, um correndo atrás do outro | ~10 s na triagem, ~1 s no resumo |
+| Profundo | **sem corrida** — deixa o modelo pensar | até 60 s |
+
+Três decisões que fazem a tela valer alguma coisa:
+
+- **O botão "Conferir na prática" mede de verdade**, com o mesmo pedido
+  do `npm run check:ia` para os números serem comparáveis. Escolher
+  velocidade sem poder conferir é escolher no escuro — e foi o escuro
+  que deixou uma instalação rodando 39 s por chamada sem ninguém saber.
+  Provado no navegador: **10,6 s** no Equilibrado, **1,1 s** no Rápido,
+  na mesma via.
+- **Trocar de perfil reescreve o ajuste fino.** Sem isso, escolher
+  "Rápido" com um prazo de 60 s deixado de um ajuste anterior entregaria
+  uma tela que promete rápido e uma chamada que não é.
+- **Zero na corrida é uma escolha, não um caso degenerado.** É o que o
+  perfil Profundo faz: ali a pressa é o que atrapalha, e chamar um
+  modelo menor no meio do caminho entregaria justamente a resposta rasa
+  que se estava evitando.
+
+A precedência é **banco > ambiente > código**: quem escolheu na tela
+escolheu, e o ambiente é o padrão de quem roda sem banco. `/api/saude` e
+`check:ia` passaram a reportar o que está **valendo**, e não o que o
+`.env` sugere — senão os dois passariam a mentir no dia em que alguém
+trocasse o perfil.
+
+A tela também diz, quando é o caso, que a chave da Anthropic não está
+preenchida: era a informação que faltava para entender por que escolher
+"Anthropic" não mudava nada.
+
+O ajuste fino continua ali para quem precisa fixar um modelo — é a saída
+de emergência de quando a família se renova e um nome some do ar, que já
+aconteceu uma vez (`gemini-2.0-flash`).
+
+### O painel sumia, e não era da extensão (22/08/2026)
+
+"Do nada a extensão buga e não dá pra abrir." O botão flutuante
+continuava lá e continuava respondendo — a gaveta é que abria **fora da
+tela**, em qualquer site, para sempre.
+
+A raiz do painel era `inset: 0 0 0 auto`. Com os dois filhos
+posicionados de forma absoluta, isso deixa a caixa com **largura zero**,
+colada na borda direita. Enquanto tudo é ancorado ninguém percebe:
+`.gatilho` e `.gaveta` se posicionam por `right`, e right:0 de uma caixa
+de largura zero na borda dá no mesmo lugar. A janela solta usa `left`, e
+aí a conta desanda. Medido em Chrome, janela de 1280:
+
+| | antes (`inset: 0 0 0 auto`) | depois (`inset: 0`) |
+| --- | --- | --- |
+| largura da raiz | 0 | 1280 |
+| botão flutuante | 18px da direita | **idêntico** |
+| gaveta ancorada | left 900, largura 380 | **idêntica** |
+| gaveta solta | left **2180** (fora) | left **900** (dentro) |
+
+E como `.gaveta.solta:not(.aberta)` some por completo, e a posição fica
+no `chrome.storage.sync`, bastava **um tremor de mão** no cabeçalho para
+o painel desaparecer de todos os sites e não voltar. Reinstalar limpava
+o storage, o que escondia a causa.
+
+Três correções, e as duas últimas são sobre o mesmo susto: arrastar
+agora exige 5px antes de soltar a gaveta do canto (o comentário sempre
+prometeu isso; a implementação soltava no primeiro `pointermove`), e a
+posição é reancorada quando a janela encolhe.
+
+### A extensão empurra a página, de verdade (22/08/2026)
+
+A preferência de empurrar existia e não funcionava justamente no site
+que mais precisava. Medido em `web.whatsapp.com`: com 380px de
+`margin-right` no `<html>`, o `<html>` vai para 900 e o `#app` continua
+em 1280 — ele é `position: absolute` com `inset: 0`, então o bloco que o
+contém é a **viewport**, não o `<html>`.
+
+Agora o empurrão faz as duas coisas: a margem no raiz, que resolve site
+de fluxo normal, e uma varredura que acha quem está preso à viewport
+ocupando-a inteira e dá largura própria a cada um. É medição em vez de
+lista de sites — um portal que renomeie a `div` amanhã continua sendo
+empurrado. A varredura desce a árvore só por dentro de quem ocupa a tela
+toda (no WhatsApp o `#app` é **neto** do `<body>`, e uma varredura de um
+nível voltava de mãos vazias) e custou 1,72 ms na página real.
+
+### A IA parou de demorar (22/08/2026)
+
+"Demora muito" tinha número: `npm run check:ia` levava **39 segundos**
+para um pedido de 40 tokens de entrada e 21 de saída. Não era rede — era
+fila.
+
+Medido no mesmo minuto, com o mesmo pedido:
+
+| modelo | tempo | raciocínio |
+| --- | --- | --- |
+| `gemini-flash-latest` (o que estava em uso) | estourou 35 s, três vezes | — |
+| `gemini-3.6-flash` | 10,4 s | 616 tokens |
+| `gemini-flash-lite-latest` | 0,98 s | 0 |
+
+O apelido é o congestionado, porque concentra a demanda de todo mundo
+que não fixou versão — e ele era o **principal**, com a versão fixa
+apenas como reserva depois de 30 segundos de espera. Somava-se prazo
+onde dava para sobrepor.
+
+Três mudanças: a ordem se inverteu (versão fixa na frente, apelido como
+rede contra o 404 que só ele nunca tem); a reserva agora parte **em
+paralelo** depois de 6 segundos, e vale quem chegar bem primeiro; e
+quem só precisa de rapidez pede `rapido: true` e cai no modelo pequeno —
+é o caso do "Resumir conversa", que roda com o cliente na linha.
+
+O assistente em fluxo ganhou prazo para **começar** a responder.
+Streaming esconde lentidão de um jeito perverso: a conexão abre, o
+cursor pisca, e o modelo está numa fila do outro lado. Não havia prazo
+nenhum ali. Se o primeiro pedaço não chega, a chamada é refeita no
+modelo menor — e como nada tinha sido escrito, a troca é invisível.
+
+`check:ia` agora imprime o tempo, e mede as duas vias. Depois: **5,6 s**.
+
+### O FAQ do portal entrava no relato (22/08/2026)
+
+A prévia de importação chegava com as dúvidas frequentes do Reclame
+Aqui coladas no fim do que o consumidor escreveu. O leitor do relato
+parava numa lista de seções conhecidas — "Reações", "Resposta da
+empresa" — e, não achando nenhuma, seguia até o fim do documento. A
+página continua depois da reclamação, com ajuda e reclamações parecidas,
+e nada disso estava na lista.
+
+Duas travas agora, porque uma lista de nomes envelhece: a lista cresceu,
+e ao lado dela entrou uma regra de **forma** — título de bloco é curto,
+começa com maiúscula e não termina em ponto, enquanto quem reclama
+escreve frases. A segunda só vale depois de o relato ter substância, para
+não comer a primeira linha de uma reclamação curta.
+
+`check:ra` ganhou a página com rodapé (uma versão com seção conhecida,
+outra com nome inventado) e uma reclamação de uma linha só. As três
+conferem.
+
+### A importação do NPS voltou a caber numa requisição (22/08/2026)
+
+"A integração dá erro na hora." O caminho de gravação estava certo — a
+prova é que rodá-lo por fora trouxe as **79 respostas** que faltavam, e
+a base foi de 789 para 868. O que quebrava era o relógio da plataforma:
+a rodada lia da API do Wootric de 50 em 50 e gravava tudo numa server
+action só, e a Vercel cortava a requisição no meio. O sintoma não dizia
+nada disso — um erro de rede genérico, que parece integração quebrada.
+
+Agora cada rodada processa um punhado e diz de onde continuar
+(`parcial` / `proximoDesde`); a tela repete até acabar, mostrando o
+progresso. E `app/nps/layout.tsx` existe só para dar `maxDuration = 60`
+às server actions daquela rota.
+
+### Etapas e tipos do NPS viraram cadastro (22/08/2026)
+
+As quatro colunas do quadro e os sete tipos do guia eram listas fixas no
+código. Agora são `NpsStage` e `NpsKind`, editáveis em **Etapas e
+tipos** na tela do NPS — com rascunho e botão Salvar, como o resto dos
+cadastros.
+
+Os três cuidados que estavam anotados, e como cada um foi resolvido:
+
+- **Etapa final não é igual às outras.** O que define encerramento é o
+  prefixo `[Encerrado]`, lido por `isEncerrado()` — função pura sobre o
+  texto do status, usada no cartão do quadro, no filtro da tela, na fila
+  da extensão e no indicador de resolução, em lugares que não têm banco
+  à mão. Fazer a etapa "dizer se encerra" por uma coluna criaria duas
+  verdades. Então o campo `final` é o que a pessoa marca, e a gravação
+  **normaliza o nome** para carregar o prefixo. Uma verdade só, e a
+  antiga.
+- **Etapa final precisa dizer quem chega nela.** `KINDS[].finais` foi
+  invertido: quem guarda a relação agora é a etapa, porque é ela que se
+  cria numa tela nova — e quem a cria escolhe ali mesmo os tipos. Sem
+  isso a etapa nasce inalcançável.
+- **A extensão sobe pela mesma escada.** A lista vem do servidor
+  (`etapasNps` no contexto e na fila) em vez de uma cópia no arquivo, e
+  a rota de mover lê o cadastro. As duas pontas não podem discordar
+  sobre qual é o próximo passo.
+
+Dois campos entraram no tipo por causa do mesmo raciocínio: `exige causa
+raiz` e `abre revisão de processo` eram nomes escritos dentro do
+`checklist()` e do `gerarRevisaoDeProcesso`. Com o tipo virando
+cadastro, nome fixo em código volta a ser o defeito que o cadastro
+existe para tirar.
+
+`npm run check:nps-etapas` prova 26 conferências contra o banco real,
+num cadastro descartável: o prefixo normaliza nos dois sentidos,
+renomear a etapa arrasta os ciclos, renomear o tipo arrasta os ciclos
+**e** as etapas finais que o listavam, e etapa em uso é desativada em
+vez de apagada.
+
+### A aba de Atividades (22/08/2026)
+
+O que está marcado, ligado à agenda da aplicação: o que é de hoje, o que
+ficou para trás, o que vem pela frente — e o caso vinculado a um clique.
+
+Separada do Painel porque ali a agenda divide espaço com a nota, os
+contadores e os alertas: cabem as de hoje e nada mais. A pergunta que
+esta lista responde não é "como estamos", é "o que eu faço agora".
+
+`/api/extensao/agenda` ganhou o recorte (`escopo`) e as contagens dos
+três — a contagem de atrasadas é feita **no banco**, e não sobre a lista
+devolvida, senão o chip que existe para chamar de volta quem se
+distraiu diria que não há nada justamente quando o recorte aberto fosse
+"próximas".
+
+**Horário na atividade.** A coluna sempre existiu (`AgendaTask.time`) e
+a tela sempre soube mostrá-la; quem marcava pela extensão é que não
+tinha onde digitar. "Ligar amanhã" e "ligar amanhã às 9h" são
+compromissos diferentes. A hora entra também no `dueDate`, porque a
+agenda ordena por ele — e é validada contra `HH:MM` no servidor, já que
+o corpo é escrito por um script que roda dentro de página alheia.
+
+### Os contadores do painel abrem a lista (22/08/2026)
+
+"Dá também a possibilidade de verificar as reclamações em aberto." Os
+quatro números do painel do dia — abertos, sem resposta, réplicas,
+risco — eram leitura morta: a pergunta seguinte de quem lê "4 sem
+resposta" é sempre *quais?*, e a resposta exigia abrir a aplicação em
+outra aba.
+
+Cada um virou botão e abre o mesmo recorte em `/api/extensao/fila`, com
+a **mesma conta dos dois lados**: `check:extensao` confere que o número
+clicado e o tamanho da lista batem (19/18/1/0 na última rodada). Um
+painel que se contradiz ensina a desconfiar dele.
+
+`risco` passou a exigir o caso estar aberto. Contava também os
+encerrados — caso encerrado em risco de churn não é trabalho de
+ninguém, era um número que só crescia.
+
+### A rotina agendada (22/08/2026)
+
+Três coisas dependiam de existir alguém rodando sem ninguém com a tela
+aberta, e as três estavam quebradas de um jeito que parecia
+funcionamento:
+
+1. **O encerramento automático do NPS** só era avaliado quando alguém
+   abria o `/nps`. Numa semana sem ninguém abrir, o indicador contava
+   como aberto o que já tinha morrido de velho. A primeira rodada real
+   encerrou **29 ciclos** parados havia mais de 30 dias.
+2. **`movimentacao.atrasada`** não existia porque atraso não é gravação:
+   os outros dois webhooks nascem de alguém salvar um caso, este nasce
+   do relógio passar.
+3. **O reenvio de webhook** não acontecia. Quem recebe estava fora do ar
+   por dez minutos perdia o evento para sempre.
+
+`app/api/cron/route.ts`, agendada em `vercel.json` para as 6h,
+protegida por `CRON_SECRET` ou `API_TOKEN` — sem nenhum dos dois ela
+responde 503 e fica **desligada, não aberta**.
+
+**É idempotente, e isso é a metade que importa.** Cron falha e é
+reexecutado. O aviso de atraso carimba `lateNotifiedAt` (mesmo sem
+webhook configurado, para ligar a integração amanhã não disparar um lote
+sobre atrasos velhos) e o reenvio manda o **mesmo corpo** da tentativa
+que falhou, guardado só na falha. `check:cron` roda duas vezes e confere
+que a segunda não encerra nada de novo nem reescreve a data de
+encerramento — que é o que sustenta o tempo médio de resolução.
+
+### Tela de análise do NPS (22/08/2026)
+
+`/nps/analise`. A tela do `/nps` responde "o que fazer agora"; esta
+responde a pergunta da reunião: **está melhorando?** E, se não, por causa
+de quê.
+
+Três leituras, na ordem em que a conversa acontece: a tendência (com o
+volume ao lado, porque um NPS que sobe com um terço das respostas do mês
+anterior não subiu — mudou de amostra), a causa raiz (com o aviso de
+quantas respostas têm comentário e nenhuma causa marcada, que são
+justamente as que teriam algo a dizer) e a régua de humor, que é o único
+indicador que mede se o atendimento moveu a agulha.
+
+A escala do gráfico é fixa de −100 a 100 de propósito: apertada ao redor
+dos valores, três pontos de variação parecem um despencar.
+
+### Importar NPS por planilha (22/08/2026)
+
+O Reclame Aqui já entrava assim; o NPS só entrava pela API do Wootric, e
+isso deixava de fora a pesquisa que roda fora dele, o histórico anterior
+à integração e a correção em massa — exportar, arrumar e devolver.
+
+As colunas são reconhecidas **pelo nome**, com sinônimos, e não pela
+posição: planilha de operação sempre chega com uma coluna a mais no
+meio. O cabeçalho é procurado, não assumido na primeira linha.
+
+Duas decisões que fazem o recurso valer:
+
+- **Linha ruim não derruba o arquivo.** Uma célula de texto na coluna de
+  nota é o erro mais comum de planilha montada à mão, e recusar as 800
+  linhas por causa de uma devolve o problema para quem não sabe qual
+  corrigir. Cada descarte volta com o número da linha e o motivo.
+- **Reimportar não duplica e não desfaz tratativa.** Sem id na planilha,
+  a identidade é quem + quando + quanto, com prefixo próprio para não
+  colidir com os ids numéricos do Wootric. Status, responsável,
+  tentativas e pós-contato ficam intactos.
+
+`check:nps-planilha` monta os arquivos em memória e prova os dois
+formatos, a estabilidade da chave e os cinco motivos de descarte.
+
+### Botão Salvar nas telas restantes (22/08/2026)
+
+As nove que faltavam, e elas não eram o mesmo problema:
+
+**Cinco gravavam a cada tecla** e viraram rascunho com `BarraDeSalvar`:
+a tela do caso (a pior — escrever a resposta pública virava centenas de
+gravações), tipos de impacto, tópicos da jornada, etapas do quadro do
+Reclame Aqui (arrastar uma coluna reescrevia a ordem de **todas**) e
+causa raiz do NPS.
+
+**Três gravavam por ato fechado e em silêncio** — vincular
+estabelecimento, etiquetar cliente, vincular reclamação, salvar filtro.
+Ali o que faltava não era o botão, era a confirmação: só a falha
+aparecia. Ganharam aviso do que aconteceu, inclusive o desfecho mais
+fácil de não perceber, que é sobrescrever um filtro de mesmo nome.
+
+**Uma já estava certa:** `GoogleCalendarCard` sempre teve modal com
+Salvar e confirmação em criar, editar, excluir e desconectar. Ficou como
+está.
 
 ### Anotações são uma lista só (21/08/2026)
 

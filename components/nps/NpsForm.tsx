@@ -11,7 +11,7 @@ import Modal, {
 } from "@/components/shared/Modal";
 
 import {
-  KINDS,
+  NpsKindOption,
   NpsResponseView,
   RootCauseOption,
   segmentOf,
@@ -27,6 +27,8 @@ interface Props {
   saving: boolean;
   /** Vem do cadastro (`NpsRootCause`), não mais de uma lista fixa. */
   rootCauses: RootCauseOption[];
+  /** Idem: os tipos agora são `NpsKind`, e não a constante do guia. */
+  tipos: NpsKindOption[];
   onClose: () => void;
   onSave: (data: NpsDraft) => void;
   onManageCauses?: () => void;
@@ -47,6 +49,7 @@ export default function NpsForm({
   editing,
   saving,
   rootCauses,
+  tipos,
   onClose,
   onSave,
   onManageCauses,
@@ -95,7 +98,8 @@ export default function NpsForm({
   const prazo = prazoPrimeiroContato(
     new Date(`${respondedAt}T12:00:00Z`),
     score,
-    kind || undefined
+    kind || undefined,
+    tipos
   );
 
   return (
@@ -257,11 +261,15 @@ export default function NpsForm({
               <option value="">
                 Não classificado
               </option>
-              {KINDS.map((k) => (
-                <option key={k.label} value={k.label}>
-                  {k.emoji} {k.label}
-                </option>
-              ))}
+              {tipos
+                .filter(
+                  (t) => t.active || t.name === kind
+                )
+                .map((t) => (
+                  <option key={t.id} value={t.name}>
+                    {t.emoji} {t.name}
+                  </option>
+                ))}
             </select>
           </Field>
 
@@ -269,7 +277,24 @@ export default function NpsForm({
 
         <Field
           label="Causa raiz"
-          hint="Obrigatória para encerrar Reclamação, Erro no Sistema e Erro Processual."
+          /*
+            A dica sai do cadastro, e não de três nomes escritos aqui.
+
+            Com o tipo virando cadastro, uma frase fixa envelheceria na
+            primeira vez que alguém criasse ou renomeasse um tipo — e
+            envelheceria calada, dizendo à operação uma regra que o
+            sistema não aplica mais.
+          */
+          hint={
+            tipos.some((t) => t.requiresRootCause)
+              ? `Obrigatória para encerrar ${tipos
+                  .filter(
+                    (t) => t.active && t.requiresRootCause
+                  )
+                  .map((t) => t.name)
+                  .join(", ")}.`
+              : "Serve para ver tendência — vale marcar sempre que der."
+          }
         >
           <div className="flex gap-2">
 

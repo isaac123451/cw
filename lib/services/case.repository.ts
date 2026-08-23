@@ -5,6 +5,11 @@ import {
 } from "@prisma/client";
 
 import {
+  digitosDoDocumento,
+  documentoFormatado,
+} from "@/lib/models/establishment";
+
+import {
   parseElapsedText,
   toCaseColumns,
   toCaseModel,
@@ -91,7 +96,9 @@ const cache = {
   categoria: new Map<string, string>(),
   subcategoria: new Map<string, string>(),
   usuario: new Map<string, string | null>(),
+  time: new Map<string, string | null>(),
   etiqueta: new Map<string, string>(),
+  estabelecimento: new Map<string, string | null>(),
 };
 
 function cacheValido() {
@@ -100,7 +107,9 @@ function cacheValido() {
     cache.categoria.clear();
     cache.subcategoria.clear();
     cache.usuario.clear();
+    cache.time.clear();
     cache.etiqueta.clear();
+    cache.estabelecimento.clear();
     cache.expira = Date.now() + CACHE_TTL;
   }
 
@@ -199,7 +208,109 @@ async function resolverRelacoes(
     }
   }
 
-  return { categoryId, subcategoryId, ownerId };
+  /**
+   * O time **não** é criado quando não existe.
+   *
+   * Mesma regra do responsável, e pelo mesmo motivo: time entra pelo
+   * cadastro de Times, não digitando num formulário de caso. Uma carga
+   * que criasse criaria "Implementacão" ao lado de "Implantação", e
+   * ninguém saberia qual dos dois usar.
+   */
+  let teamId: string | null = null;
+
+  if (item.department) {
+
+    if (c.time.has(item.department)) {
+      teamId = c.time.get(item.department) ?? null;
+    } else {
+
+      const row = await prisma.team.findFirst({
+        where: { name: item.department },
+        select: { id: true },
+      });
+
+      teamId = row?.id ?? null;
+      c.time.set(item.department, teamId);
+    }
+  }
+
+  /**
+   * O CNPJ só é consultado quando ninguém decidiu na mão.
+   *
+   * A escolha da pessoa vence nos dois sentidos. Vincular à mão manda o
+   * id; desvincular manda vazio **com a marca** — e é a marca que
+   * impede o CNPJ de religar no salvamento seguinte, o que faria o
+   * botão de desvincular parecer quebrado.
+   */
+  const establishmentId = item.establishmentManual
+    ? item.establishmentId || null
+    : item.establishmentId ||
+      (await resolverEstabelecimento(prisma, item.document));
+
+  return {
+    categoryId,
+    subcategoryId,
+    ownerId,
+    teamId,
+    establishmentId,
+  };
+}
+
+
+/**
+ * O estabelecimento por trás do CNPJ, quando existe.
+ *
+ * **Só o CNPJ casa.** Medido nos casos importados: o export do Reclame
+ * Aqui grava o reclamante no lugar da empresa, então casar por nome
+ * ligaria a reclamação ao consumidor, não ao restaurante. O CNPJ vem do
+ * RA Forms e é o mesmo número dos dois lados.
+ *
+ * Comparação por dígitos: o portal entrega `12.345.678/0001-90` e o
+ * cadastro daqui costuma ter `12345678000190`.
+ *
+ * Devolve `null` — e guarda o `null` no cache — quando não há
+ * estabelecimento com aquele CNPJ. É o caso comum: nem todo restaurante
+ * que aparece no Reclame Aqui está cadastrado aqui, e repetir a consulta
+ * a cada caso salvo custaria uma ida ao banco para confirmar a mesma
+ * ausência.
+ */
+async function resolverEstabelecimento(
+  prisma: PrismaClient,
+  documento?: string | null
+) {
+
+  const digitos = digitosDoDocumento(documento);
+
+  if (!digitos) return null;
+
+  const c = cacheValido();
+
+  if (c.estabelecimento.has(digitos)) {
+    return c.estabelecimento.get(digitos) ?? null;
+  }
+
+  /**
+   * A consulta cobre as duas grafias.
+   *
+   * O cadastro de estabelecimentos é preenchido à mão e a máscara não é
+   * obrigatória — a base tem os dois formatos. Filtrar só por um
+   * deixaria parte dos vínculos sem casar, sem nenhum sinal de erro.
+   */
+  const row = await prisma.establishment.findFirst({
+    where: {
+      OR: [
+        { document: digitos },
+        { document: documentoFormatado(digitos) },
+      ],
+    },
+    select: { id: true },
+  });
+
+  const id = row?.id ?? null;
+
+  c.estabelecimento.set(digitos, id);
+
+  return id;
 }
 
 /**
@@ -417,6 +528,40 @@ export async function fetchCandidateCases(
   );
 }
 
+
+/**
+ * Guarda da **importação da planilha**: campo vazio ali não apaga nada.
+ *
+ * O CNPJ não vem da planilha — vem do RA Forms, que só a extensão lê. Se
+ * a atualização gravasse `null` por ele estar ausente na origem, a
+ * próxima reimportação semanal apagaria em silêncio todo vínculo que a
+ * extensão tivesse construído, e o sintoma só apareceria semanas depois,
+ * como "os vínculos somem sozinhos".
+ *
+ * Vale só para o `update`: no `create` o nulo é o valor certo, porque
+ * não há nada anterior para preservar.
+ *
+ * Desvincular na mão continua possível: a tela grava `establishmentManual`
+ * junto, e esse caminho passa por `persistCase`, que não filtra nada.
+ */
+function semApagarVinculo<
+  T extends {
+    document?: string | null;
+    establishmentId?: string | null;
+  },
+>(dados: T) {
+
+  const saida = { ...dados };
+
+  if (saida.document === null) delete saida.document;
+
+  if (saida.establishmentId === null) {
+    delete saida.establishmentId;
+  }
+
+  return saida;
+}
+
 export async function persistCase(
   prisma: PrismaClient,
   item: Case,
@@ -434,6 +579,14 @@ export async function persistCase(
     ...relacoes,
   };
 
+  /**
+   * Aqui **não** passa por `semApagarVinculo`, e isso é o ponto.
+   *
+   * Este caminho vem da tela e da extensão, que carregam o caso inteiro:
+   * campo vazio aqui significa "foi esvaziado", e desvincular precisa
+   * gravar o vazio. Quem não conhece os campos é a planilha, e ela entra
+   * por `importCasesBulk`.
+   */
   const salvo = await prisma.case.upsert({
     where: { protocol: item.protocol },
     update: dados,
@@ -688,7 +841,38 @@ async function gravarLote(
     etiquetas.set(nome, row.id);
   }
 
-  // 4. Responsáveis existentes, em uma consulta só.
+  /**
+   * 4. Estabelecimentos, por CNPJ, em uma consulta só.
+   *
+   * Aqui não dá para usar `resolverEstabelecimento`: ele consulta um
+   * por vez, e uma importação de 334 linhas viraria 334 idas ao banco
+   * para responder a mesma pergunta sobre poucas dezenas de CNPJs.
+   *
+   * O mapa é indexado pelos dígitos, e cada cadastro entra uma vez só —
+   * mesmo que esteja gravado com pontuação.
+   */
+  const estabelecimentos = new Map<string, string>();
+
+  for (const row of await prisma.establishment.findMany({
+    where: { document: { not: null } },
+    select: { id: true, document: true },
+  })) {
+
+    const digitos = digitosDoDocumento(row.document);
+
+    if (digitos) estabelecimentos.set(digitos, row.id);
+  }
+
+  // 5. Times existentes, em uma consulta só — nenhum é criado.
+  const times = new Map(
+    (
+      await prisma.team.findMany({
+        select: { id: true, name: true },
+      })
+    ).map((t) => [t.name, t.id])
+  );
+
+  // 6. Responsáveis existentes, em uma consulta só.
   const usuarios = new Map(
     (
       await prisma.user.findMany({
@@ -698,7 +882,7 @@ async function gravarLote(
   );
 
   /**
-   * 5. As reclamações, em paralelo limitado.
+   * 7. As reclamações, em paralelo limitado.
    *
    * Cinco por vez, e não vinte: o pooler do Supabase no plano gratuito
    * tem poucas conexões, e o lote maior derrubava a conexão no meio da
@@ -717,17 +901,30 @@ async function gravarLote(
       ownerId: item.owner
         ? usuarios.get(item.owner) ?? null
         : null,
+
+      teamId: item.department
+        ? times.get(item.department) ?? null
+        : null,
+
+      // Vínculo decidido na mão vence o do CNPJ — ver resolverRelacoes.
+      establishmentId: item.establishmentManual
+        ? item.establishmentId || null
+        : item.establishmentId ||
+          estabelecimentos.get(
+            digitosDoDocumento(item.document) ?? ""
+          ) ||
+          null,
     };
 
     return prisma.case.upsert({
       where: { protocol: item.protocol },
-      update: dados,
+      update: semApagarVinculo(dados),
       create: { protocol: item.protocol, ...dados },
       select: { id: true },
     });
   });
 
-  // 6. Etiquetas dos casos: apaga e recria em bloco.
+  // 8. Etiquetas dos casos: apaga e recria em bloco.
   const ids = new Map(
     (
       await prisma.case.findMany({

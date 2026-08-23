@@ -36,6 +36,56 @@ function mesmoToken(recebido: string, esperado: string) {
 }
 
 /**
+ * O token do cron da Vercel, quando existe; senão o da API.
+ *
+ * A Vercel manda `Authorization: Bearer $CRON_SECRET` nas chamadas
+ * agendadas. Aceitar o `API_TOKEN` como alternativa é o que permite
+ * disparar a rotina à mão — `curl` de um terminal — para conferir o que
+ * ela faria sem esperar a madrugada.
+ *
+ * **Sem nenhum dos dois a rotina fica desligada, não aberta.** Ela
+ * encerra ciclo e dispara webhook; um endpoint público por esquecimento
+ * de variável seria alguém de fora mexendo no indicador.
+ */
+export function checkCronToken(request: Request) {
+
+  const header =
+    request.headers.get("authorization") ?? "";
+
+  const token = header.startsWith("Bearer ")
+    ? header.slice(7).trim()
+    : "";
+
+  const cron = (process.env.CRON_SECRET ?? "").trim();
+  const api = (process.env.API_TOKEN ?? "").trim();
+
+  if (cron === "" && api === "") {
+    return Response.json(
+      {
+        error:
+          "Rotina desativada. Defina CRON_SECRET (ou API_TOKEN) para habilitar.",
+      },
+      { status: 503 }
+    );
+  }
+
+  if (
+    mesmoToken(token, cron) ||
+    mesmoToken(token, api)
+  ) {
+    return null;
+  }
+
+  return Response.json(
+    { error: "Token inválido ou ausente." },
+    {
+      status: 401,
+      headers: { "WWW-Authenticate": "Bearer" },
+    }
+  );
+}
+
+/**
  * Devolve uma `Response` quando a requisição deve ser barrada, ou `null`
  * quando pode seguir.
  */

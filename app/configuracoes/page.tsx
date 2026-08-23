@@ -8,6 +8,7 @@ import {
   ShieldCheck,
   Tags,
   Users,
+  Wallet,
   Workflow,
 } from "lucide-react";
 
@@ -62,8 +63,16 @@ const settings: SettingLink[] = [
   {
     title: "Permissões",
     description:
-      "Perfis de acesso por módulo para Suporte, Produto e Qualidade.",
+      "O papel de cada pessoa dentro de cada módulo. Quem fica em Padrão segue o papel da conta.",
+    href: "/configuracoes/permissoes",
     icon: ShieldCheck,
+  },
+  {
+    title: "Planos e módulos",
+    description:
+      "A tabela de preços que a resposta pronta usa — editar aqui muda o que sai na próxima resposta.",
+    href: "/configuracoes/planos",
+    icon: Wallet,
   },
   {
     title: "Integrações",

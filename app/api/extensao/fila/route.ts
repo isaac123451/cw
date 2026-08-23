@@ -17,6 +17,7 @@ import { slaStatus } from "@/lib/services/sla.service";
 import { REFERENCE_DATE } from "@/lib/services/reputation.service";
 
 import {
+  emAndamento,
   isEncerrado,
   segmentOf,
 } from "@/lib/models/nps";
@@ -66,16 +67,23 @@ export async function GET(request: Request) {
       request,
       await filaDoNps(
         origem,
-        url.searchParams.get("segmento") ?? ""
+        url.searchParams.get("segmento") ?? "",
+        emAndamento(
+          (await loadWorkspace()).npsStages
+        ).map((etapa) => etapa.name)
       )
     );
   }
 
-  if (canal !== "reclame-aqui" && canal !== "social") {
+  if (
+    canal !== "reclame-aqui" &&
+    canal !== "social" &&
+    canal !== "todos"
+  ) {
     return responder(
       request,
       {
-        erro: 'Canal inválido. Use "reclame-aqui", "social" ou "nps".',
+        erro: 'Canal inválido. Use "reclame-aqui", "social", "todos" ou "nps".',
       },
       400
     );
@@ -86,7 +94,49 @@ export async function GET(request: Request) {
     loadWorkspace(),
   ]);
 
-  const abertos = byChannel(todos, canal).filter(isOpen);
+  const abertos = byChannel(
+    todos,
+    canal as Parameters<typeof byChannel>[1]
+  ).filter(isOpen);
+
+  /**
+   * Os recortes que os contadores do painel abrem.
+   *
+   * O painel mostrava "12 abertos · 4 sem resposta · 2 réplicas · 1
+   * risco" como número morto — a pergunta seguinte de quem lê isso é
+   * sempre "quais?", e a resposta exigia abrir a aplicação em outra
+   * aba. Aqui os quatro viram lista, e é a **mesma conta** de
+   * `/api/extensao/resumo`: dois filtros parecidos em lugares
+   * diferentes é como o número da tela e o da lista passam a discordar.
+   */
+  const RECORTES: Record<
+    string,
+    (item: (typeof abertos)[number]) => boolean
+  > = {
+    "sem-resposta": (item) => item.status === "Novo",
+    replicas: (item) =>
+      item.status === "Aguardando nossa réplica",
+    risco: (item) => Boolean(item.churnRisk),
+  };
+
+  const recortePedido = (
+    url.searchParams.get("recorte") ?? ""
+  ).trim();
+
+  const recorte = RECORTES[recortePedido]
+    ? recortePedido
+    : "";
+
+  const porRecorte = Object.fromEntries(
+    Object.entries(RECORTES).map(([nome, teste]) => [
+      nome,
+      abertos.filter(teste).length,
+    ])
+  );
+
+  const doRecorte = recorte
+    ? abertos.filter(RECORTES[recorte])
+    : abertos;
 
   /**
    * Quantos há em cada etapa, sobre a fila inteira.
@@ -96,7 +146,7 @@ export async function GET(request: Request) {
    */
   const porEtapa: Record<string, number> = {};
 
-  for (const item of abertos) {
+  for (const item of doRecorte) {
     porEtapa[item.status] =
       (porEtapa[item.status] ?? 0) + 1;
   }
@@ -106,10 +156,10 @@ export async function GET(request: Request) {
   ).trim();
 
   const daEtapa = etapaPedida
-    ? abertos.filter(
+    ? doRecorte.filter(
         (item) => item.status === etapaPedida
       )
-    : abertos;
+    : doRecorte;
 
   /**
    * Ordem: prazo estourado primeiro, depois quem vence antes.
@@ -139,9 +189,13 @@ export async function GET(request: Request) {
   return responder(request, {
     canal,
     total: daEtapa.length,
-    totalGeral: abertos.length,
+    /** A fila inteira do canal, para o chip "Todas" não mentir. */
+    totalGeral: doRecorte.length,
+    totalDoCanal: abertos.length,
     etapa: etapaPedida,
     porEtapa,
+    recorte,
+    porRecorte,
 
     itens: comSla.slice(0, TETO).map(({ item, sla }) => ({
       id: item.id,
@@ -178,13 +232,20 @@ export async function GET(request: Request) {
  */
 async function filaDoNps(
   origem: string,
-  segmento: string
+  segmento: string,
+  /** A escada de andamento, para o painel rotular avançar e voltar. */
+  etapasNps: string[]
 ) {
 
   const prisma = getPrisma();
 
   if (!prisma) {
-    return { canal: "nps", total: 0, itens: [] };
+    return {
+      canal: "nps",
+      total: 0,
+      itens: [],
+      etapasNps,
+    };
   }
 
   const linhas = await prisma.npsResponse.findMany({
@@ -226,6 +287,7 @@ async function filaDoNps(
     totalGeral: abertos.length,
     segmento,
     porSegmento,
+    etapasNps,
     itens: filtrados.slice(0, TETO).map((item) => ({
       ...item,
       segmento: segmentOf(item.nota).label,

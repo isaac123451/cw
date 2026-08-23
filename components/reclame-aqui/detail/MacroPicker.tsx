@@ -15,6 +15,8 @@ import { useSession } from "@/lib/context/SessionContext";
 import { useEstablishments } from "@/lib/context/EstablishmentsContext";
 
 import { applyMacro } from "@/lib/models/macro";
+import { tabelaDePlanos } from "@/lib/models/plan";
+import { usePlans } from "@/lib/hooks/usePlans";
 import { Case } from "@/lib/models/case";
 
 interface Props {
@@ -36,6 +38,8 @@ export default function MacroPicker({
   const session = useSession();
   const { findEstablishment } = useEstablishments();
 
+  const [planos] = usePlans();
+
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -47,11 +51,19 @@ export default function MacroPicker({
 
     const termo = search.trim().toLowerCase();
 
+    /**
+     * Só os textos do Reclame Aqui.
+     *
+     * Os do WhatsApp usam `*negrito*` e emoji — o portal mostraria os
+     * asteriscos crus na resposta pública, na frente do consumidor.
+     * São formatos diferentes, não etiquetas do mesmo texto.
+     */
     const lista = macros.filter(
       (item) =>
-        !termo ||
-        item.title.toLowerCase().includes(termo) ||
-        item.body.toLowerCase().includes(termo)
+        item.channel === "Reclame Aqui" &&
+        (!termo ||
+          item.title.toLowerCase().includes(termo) ||
+          item.body.toLowerCase().includes(termo))
     );
 
     // Respostas da mesma categoria do caso vêm primeiro.
@@ -75,6 +87,17 @@ export default function MacroPicker({
           data.owner ?? session?.name ?? "nossa equipe",
         estabelecimento:
           estabelecimento ?? "seu estabelecimento",
+
+        /**
+         * O preço vem do cadastro, na hora.
+         *
+         * É o ponto do `{{planos}}`: um texto pronto com o valor
+         * digitado dentro dele envelhece calado — ninguém revisa uma
+         * macro quando a tabela muda, e o consumidor recebe um número
+         * que não existe mais.
+         */
+        planos: tabelaDePlanos(planos, "plano"),
+        modulos: tabelaDePlanos(planos, "modulo"),
       })
     );
 

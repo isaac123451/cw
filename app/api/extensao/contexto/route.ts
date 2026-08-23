@@ -30,6 +30,7 @@ import {
   retratoNps,
   SELECAO_NPS,
 } from "@/lib/services/nps.repository";
+import { emAndamento } from "@/lib/models/nps";
 
 import {
   chaveTelefone,
@@ -286,6 +287,19 @@ export async function GET(request: Request) {
       .filter((item) => item.active)
       .sort((a, b) => a.order - b.order)
       .map((item) => item.name),
+
+    /**
+     * A escada do NPS, pelo mesmo motivo e com a mesma ressalva.
+     *
+     * As etapas do NPS também viraram cadastro. A extensão tinha uma
+     * cópia da lista antiga escrita no arquivo, e ela rotularia os
+     * botões com nomes de etapas que a operação pode ter renomeado —
+     * ou pior, não acharia o status atual na lista e sumiria com os
+     * botões de avançar e voltar.
+     */
+    etapasNps: emAndamento(workspace.npsStages).map(
+      (etapa) => etapa.name
+    ),
 
     nps,
 
@@ -863,10 +877,6 @@ function acharEstabelecimento(
  * inteiro — este é o único lugar em que o casamento exato acontece de
  * verdade hoje.
  */
-async function buscarNps(alvo: Alvo) {
-  return (await buscarNpsTodos(alvo))[0] ?? null;
-}
-
 /**
  * **Todos** os ciclos daquele cliente, não só o mais recente.
  *
@@ -988,7 +998,18 @@ async function buscarNpsTodos(alvo: Alvo) {
 function sugerir(
   casos: Case[],
   resumos: CasoResumo[],
-  nps: Awaited<ReturnType<typeof buscarNps>>
+  /**
+   * O ciclo mais recente daquele cliente, quando existe.
+   *
+   * O tipo sai de , que é a função de verdade — havia
+   * um  aqui que ninguém chamava, vivo só para ser
+   * apontado por este .
+   */
+  nps:
+    | Awaited<
+        ReturnType<typeof buscarNpsTodos>
+      >[number]
+    | null
 ): Sugestao[] {
 
   const lista: Sugestao[] = [];

@@ -19,12 +19,16 @@ import Modal, {
 
 import {
   CHANNELS,
+  finaisDoTipo,
   isEncerrado,
-  kindRule,
   moodOf,
   MOODS,
+  NpsKindOption,
   NpsResponseView,
+  NpsStageOption,
+  rotuloDeEtapa,
   segmentOf,
+  tipoPorNome,
 } from "@/lib/models/nps";
 
 import {
@@ -36,6 +40,9 @@ import {
 
 interface Props {
   item: NpsResponseView;
+  /** As etapas cadastradas — é delas que saem os finais oferecidos. */
+  etapas: NpsStageOption[];
+  tipos: NpsKindOption[];
   onClose: () => void;
   onAttempt: (
     channel: string,
@@ -75,6 +82,8 @@ function quando(iso?: string) {
  */
 export default function NpsDrawer({
   item,
+  etapas,
+  tipos,
   onClose,
   onAttempt,
   onConfirm,
@@ -121,10 +130,20 @@ export default function NpsDrawer({
   }
 
   const segmento = segmentOf(item.score);
-  const regra = kindRule(item.kind);
+  const regra = tipoPorNome(tipos, item.kind);
 
-  const itens = checklist(item);
-  const liberado = podeEncerrar(item);
+  const itens = checklist(item, tipos);
+  const liberado = podeEncerrar(item, tipos);
+
+  /**
+   * Os finais que este tipo aceita, vindos do cadastro.
+   *
+   * Era `regra.finais`, uma lista dentro do tipo. Agora quem guarda a
+   * relação é a etapa — quem cria uma etapa final escolhe ali mesmo
+   * quais tipos chegam nela, e é isso que impede a etapa nova de
+   * nascer inalcançável.
+   */
+  const finais = finaisDoTipo(etapas, item.kind);
   const encerrado = isEncerrado(item.status);
 
   const sla = slaState(item);
@@ -240,9 +259,9 @@ export default function NpsDrawer({
         {regra && (
           <p className="rounded-xl bg-zinc-50 px-3.5 py-2.5 text-xs leading-relaxed text-zinc-600">
             <strong className="font-semibold text-zinc-800">
-              {regra.emoji} {regra.label}:
+              {regra.emoji} {regra.name}:
             </strong>{" "}
-            {regra.acao}
+            {regra.action}
           </p>
         )}
 
@@ -488,7 +507,7 @@ export default function NpsDrawer({
           )}
 
         {/* Confirmação do cliente */}
-        {regra?.exigeConfirmacao && !encerrado && (
+        {regra?.requiresConfirmation && !encerrado && (
 
           <div className="rounded-xl border border-zinc-200 p-3.5">
 
@@ -571,30 +590,59 @@ export default function NpsDrawer({
               Encerrar como
             </p>
 
-            <div className="flex flex-wrap gap-2">
-              {regra.finais.map((f) => {
+            {finais.length === 0 ? (
 
-                const bloqueado =
-                  f.startsWith("[Encerrado] Resolvido") &&
-                  !liberado;
+              /**
+               * Tipo sem final é um beco.
+               *
+               * Acontece de verdade agora que etapa e tipo são cadastro:
+               * criar um tipo novo e não marcá-lo em nenhuma etapa final
+               * produz um ciclo que entra e nunca sai. Melhor dizer isso
+               * do que mostrar uma fileira vazia de botões.
+               */
+              <p className="rounded-xl bg-amber-50 px-3.5 py-2.5 text-sm text-amber-800 ring-1 ring-inset ring-amber-100">
+                Nenhuma etapa final aceita o tipo &ldquo;
+                {item.kind}&rdquo;. Marque o tipo em alguma
+                etapa de encerramento, em Etapas e tipos.
+              </p>
 
-                return (
-                  <button
-                    key={f}
-                    onClick={() => onStatus(f)}
-                    disabled={bloqueado}
-                    title={
-                      bloqueado
-                        ? "Cumpra os itens obrigatórios do checklist primeiro."
-                        : undefined
-                    }
-                    className="rounded-xl border border-zinc-200 px-3.5 py-2 text-sm font-medium text-zinc-700 transition-colors hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-zinc-200 disabled:hover:bg-transparent disabled:hover:text-zinc-700"
-                  >
-                    {f}
-                  </button>
-                );
-              })}
-            </div>
+            ) : (
+
+              <div className="flex flex-wrap gap-2">
+                {finais.map((etapa) => {
+
+                  /**
+                   * O checklist trava o encerramento **resolvido**.
+                   *
+                   * Não trava "Sem Retorno" nem "Engano": esses
+                   * descrevem justamente o ciclo que não se completou,
+                   * e exigir a confirmação do cliente ali deixaria o
+                   * registro aberto para sempre.
+                   */
+                  const bloqueado =
+                    etapa.name.startsWith(
+                      "[Encerrado] Resolvido"
+                    ) && !liberado;
+
+                  return (
+                    <button
+                      key={etapa.id}
+                      onClick={() => onStatus(etapa.name)}
+                      disabled={bloqueado}
+                      title={
+                        bloqueado
+                          ? "Cumpra os itens obrigatórios do checklist primeiro."
+                          : etapa.description
+                      }
+                      className="rounded-xl border border-zinc-200 px-3.5 py-2 text-sm font-medium text-zinc-700 transition-colors hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-zinc-200 disabled:hover:bg-transparent disabled:hover:text-zinc-700"
+                    >
+                      {rotuloDeEtapa(etapa.name)}
+                    </button>
+                  );
+                })}
+              </div>
+
+            )}
 
           </div>
 

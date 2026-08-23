@@ -6,7 +6,6 @@ import { CloudDownload } from "lucide-react";
 
 import Modal, {
   GhostButton,
-  PrimaryButton,
 } from "@/components/shared/Modal";
 
 import {
@@ -110,34 +109,76 @@ export default function WootricImport({
           : `Fatia ${i + 1} de ${fatias.length} — de ${fatia.dias} a ${fatia.ateDias} dias atrás`
       );
 
-      let r: ResultadoImportacao;
+      /**
+       * Cada fatia pode precisar de várias rodadas.
+       *
+       * O servidor processa no máximo um punhado por chamada — não por
+       * limite do Wootric nem do banco, mas do **relógio da
+       * plataforma**: a Vercel corta a requisição no meio, e o botão
+       * devolvia um erro de rede que parecia integração quebrada
+       * quando era só trabalho demais para uma requisição.
+       *
+       * Aqui a fatia vira uma sequência de rodadas curtas, cada uma
+       * continuando de onde a anterior parou.
+       */
+      let desdeIso: string | undefined;
+      let rodada = 0;
 
-      try {
-        r = await importWootric(
-          fatia.dias === 0
-            ? undefined
-            : {
-                dias: fatia.dias,
-                ateDias: fatia.ateDias || undefined,
-              }
-        );
-      } catch (falha) {
-        erro =
-          falha instanceof Error
-            ? falha.message
-            : "Falha na chamada.";
-        break;
+      /** Trava: rodada que não avança não pode virar laço infinito. */
+      const TETO_DE_RODADAS = 200;
+
+      while (rodada < TETO_DE_RODADAS) {
+
+        rodada += 1;
+
+        if (rodada > 1) {
+          setProgresso(
+            `${
+              fatia.dias === 0
+                ? "Continuando"
+                : `Fatia ${i + 1} de ${fatias.length}`
+            } — rodada ${rodada}, ${soma.novas} nova(s) até agora`
+          );
+        }
+
+        let r: ResultadoImportacao;
+
+        try {
+          r = await importWootric(
+            fatia.dias === 0
+              ? desdeIso
+                ? { desdeIso }
+                : undefined
+              : {
+                  dias: fatia.dias,
+                  ateDias: fatia.ateDias || undefined,
+                  desdeIso,
+                }
+          );
+        } catch (falha) {
+          erro =
+            falha instanceof Error
+              ? falha.message
+              : "Falha na chamada.";
+          break;
+        }
+
+        if (r.erro) {
+          erro = r.erro;
+          break;
+        }
+
+        soma.lidas += r.lidas;
+        soma.novas += r.novas;
+        soma.atualizadas += r.atualizadas;
+        soma.semTratativa += r.semTratativa;
+
+        if (!r.parcial || !r.proximoDesde) break;
+
+        desdeIso = r.proximoDesde;
       }
 
-      if (r.erro) {
-        erro = r.erro;
-        break;
-      }
-
-      soma.lidas += r.lidas;
-      soma.novas += r.novas;
-      soma.atualizadas += r.atualizadas;
-      soma.semTratativa += r.semTratativa;
+      if (erro) break;
 
       setFeito(i + 1);
     }

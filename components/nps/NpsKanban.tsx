@@ -1,22 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import {
+  emAndamento,
   isEncerrado,
-  kindRule,
   moodOf,
+  NpsKindOption,
   NpsResponseView,
+  NpsStageOption,
+  rotuloDeEtapa,
   segmentOf,
-  STATUS_AGUARDANDO,
-  STATUS_EM_TRATATIVA,
-  STATUS_NOVO,
+  tipoPorNome,
 } from "@/lib/models/nps";
 
 import { slaState } from "@/lib/services/nps.service";
 
 interface Props {
   itens: NpsResponseView[];
+  /** As etapas cadastradas — o quadro é desenhado a partir delas. */
+  etapas: NpsStageOption[];
+  tipos: NpsKindOption[];
   onOpen: (item: NpsResponseView) => void;
   /** Devolve o status escolhido; a página decide o que gravar. */
   onMove: (
@@ -25,52 +29,64 @@ interface Props {
   ) => Promise<void>;
 }
 
+const ENCERRADO = "__encerrado__";
+
 /**
- * As quatro etapas do ciclo.
+ * As colunas do ciclo, vindas do cadastro.
  *
- * A coluna de encerrados é **uma só**, e não uma por rótulo final: são
- * oito status de encerramento no guia, e oito colunas fariam o quadro
- * virar uma planilha rolando na horizontal. Quem quer o rótulo exato
- * abre a ficha.
+ * Eram quatro fixas no código. Agora as de andamento são as etapas
+ * ativas não finais, na ordem cadastrada — e a de encerrados continua
+ * sendo **uma só**, e não uma por rótulo final: são vários status de
+ * encerramento no guia, e uma coluna para cada faria o quadro virar uma
+ * planilha rolando na horizontal. Quem quer o rótulo exato abre a ficha.
  */
-const COLUNAS = [
-  {
-    id: STATUS_NOVO,
-    titulo: "Novo",
-    dica: "Ainda sem contato.",
-    cor: "#DC2626",
-  },
-  {
-    id: STATUS_EM_TRATATIVA,
-    titulo: "Em tratativa",
-    dica: "Já falamos com o cliente.",
-    cor: "#F9A11B",
-  },
-  {
-    id: STATUS_AGUARDANDO,
-    titulo: "Aguardando resposta",
-    dica: "A bola está com o cliente.",
-    cor: "#7B3FBF",
-  },
-  {
-    id: "encerrado",
-    titulo: "Encerrado",
-    dica: "Ciclo fechado.",
-    cor: "#71717A",
-  },
-];
+function colunasDe(etapas: NpsStageOption[]) {
 
-function colunaDe(item: NpsResponseView) {
+  const andamento = emAndamento(etapas).map((etapa) => ({
+    id: etapa.name,
+    titulo: rotuloDeEtapa(etapa.name),
+    dica:
+      etapa.description ??
+      "Nenhum ciclo parado aqui.",
+    cor: etapa.color,
+  }));
 
-  if (isEncerrado(item.status)) return "encerrado";
+  return [
+    ...andamento,
+    {
+      id: ENCERRADO,
+      titulo: "Encerrado",
+      dica: "Ciclo fechado.",
+      cor: "#71717A",
+    },
+  ];
+}
 
-  if (item.status === STATUS_AGUARDANDO) {
-    return STATUS_AGUARDANDO;
-  }
+/**
+ * Em que coluna o ciclo cai.
+ *
+ * O encerramento sai do **prefixo do status**, não do cadastro: é o
+ * mesmo `isEncerrado()` que a fila da extensão e o indicador de
+ * resolução usam, e ele não depende de a lista de etapas ter carregado.
+ *
+ * O status que não existe mais no cadastro cai na primeira coluna de
+ * andamento — desativar uma etapa não pode fazer sumir do quadro o
+ * ciclo que estava parado nela.
+ */
+function colunaDe(
+  item: NpsResponseView,
+  colunas: { id: string }[]
+) {
 
-  return item.status === STATUS_NOVO
-    ? STATUS_NOVO
-    : STATUS_EM_TRATATIVA;
+  if (isEncerrado(item.status)) return ENCERRADO;
+
+  const existe = colunas.some(
+    (coluna) => coluna.id === item.status
+  );
+
+  return existe
+    ? item.status
+    : (colunas[0]?.id ?? ENCERRADO);
 }
 
 /**
@@ -87,11 +103,18 @@ function colunaDe(item: NpsResponseView) {
  */
 export default function NpsKanban({
   itens,
+  etapas,
+  tipos,
   onOpen,
   onMove,
 }: Props) {
 
   const [sobre, setSobre] = useState<string>();
+
+  const colunas = useMemo(
+    () => colunasDe(etapas),
+    [etapas]
+  );
 
   async function soltar(
     evento: React.DragEvent,
@@ -112,14 +135,14 @@ export default function NpsKanban({
 
     if (!item) return;
 
-    if (colunaDe(item) === coluna) return;
+    if (colunaDe(item, colunas) === coluna) return;
 
     /**
      * Encerrar exige escolher entre os finais do tipo — "[Encerrado]
      * Resolvido" e "[Encerrado] Sem Retorno" não são a mesma coisa, e
      * arrastar não tem como perguntar qual. Então abre a ficha.
      */
-    if (coluna === "encerrado") {
+    if (coluna === ENCERRADO) {
       onOpen(item);
       return;
     }
@@ -127,13 +150,33 @@ export default function NpsKanban({
     await onMove(item, coluna);
   }
 
-  return (
-    <div className="grid h-[calc(100vh-420px)] min-h-[380px] grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+  /**
+   * Quantas colunas cabem lado a lado.
+   *
+   * Com a etapa virando cadastro, o número deixou de ser quatro. Sem
+   * isto, cadastrar a quinta etapa produziria uma quinta coluna
+   * espremida embaixo, fora da grade — e o quadro deixaria de ser
+   * legível justamente para quem mexeu no fluxo.
+   */
+  const grade =
+    colunas.length <= 3
+      ? "xl:grid-cols-3"
+      : colunas.length === 4
+        ? "xl:grid-cols-4"
+        : colunas.length === 5
+          ? "xl:grid-cols-5"
+          : "xl:grid-cols-6";
 
-      {COLUNAS.map((coluna) => {
+  return (
+    <div
+      className={`grid h-[calc(100vh-420px)] min-h-[380px] grid-cols-1 gap-3 sm:grid-cols-2 ${grade}`}
+    >
+
+      {colunas.map((coluna) => {
 
         const daColuna = itens.filter(
-          (item) => colunaDe(item) === coluna.id
+          (item) =>
+            colunaDe(item, colunas) === coluna.id
         );
 
         return (
@@ -173,6 +216,7 @@ export default function NpsKanban({
                 <Cartao
                   key={item.id}
                   item={item}
+                  tipos={tipos}
                   onOpen={onOpen}
                 />
               ))}
@@ -189,15 +233,17 @@ export default function NpsKanban({
 
 function Cartao({
   item,
+  tipos,
   onOpen,
 }: {
   item: NpsResponseView;
+  tipos: NpsKindOption[];
   onOpen: (item: NpsResponseView) => void;
 }) {
 
   const segmento = segmentOf(item.score);
   const humor = moodOf(item.moodAfter);
-  const regra = kindRule(item.kind);
+  const regra = tipoPorNome(tipos, item.kind);
 
   const atrasado = slaState(item) === "estourado";
 
@@ -246,7 +292,7 @@ function Cartao({
 
         {regra && (
           <span className="rounded-md bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-600">
-            {regra.emoji} {regra.label}
+            {regra.emoji} {regra.name}
           </span>
         )}
 

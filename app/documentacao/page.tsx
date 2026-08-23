@@ -461,15 +461,18 @@ export default function DocumentacaoPage() {
 
       </div>
 
-      <PlaybookForm
-        open={formOpen}
-        editing={editing}
-        onClose={() => {
-          setFormOpen(false);
-          setEditing(undefined);
-        }}
-        onSave={salvar}
-      />
+      {formOpen && (
+        <PlaybookForm
+          key={editing?.id ?? "novo"}
+          open={formOpen}
+          editing={editing}
+          onClose={() => {
+            setFormOpen(false);
+            setEditing(undefined);
+          }}
+          onSave={salvar}
+        />
+      )}
 
       <ConfirmDelete
         open={Boolean(deleting)}

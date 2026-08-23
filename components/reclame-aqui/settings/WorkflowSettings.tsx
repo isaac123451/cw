@@ -18,17 +18,28 @@ import { useScopedCases } from "@/lib/context/useScopedCases";
 import { WorkflowStatus } from "@/lib/models/workflow";
 
 import SurfaceCard from "@/components/shared/SurfaceCard";
+import BarraDeSalvar from "@/components/shared/BarraDeSalvar";
+
+import { useRascunho } from "@/lib/hooks/useRascunho";
 
 import WorkflowModal from "./WorkflowModal";
 
 export default function WorkflowSettings() {
   const {
     workflow,
-    addStatus,
     updateStatus,
     deleteStatus,
-    toggleStatus,
   } = useWorkflow();
+
+  /**
+   * Reordenar, mexer no limite e ativar viram rascunho.
+   *
+   * Era a tela que mais gravava sem pedir: arrastar uma coluna
+   * reescrevia a ordem de **todas** as etapas, uma gravação por etapa,
+   * a cada solto. E o campo de limite gravava a cada dígito — digitar
+   * "12" mandava um 1 e depois um 12.
+   */
+  const rascunho = useRascunho(workflow, updateStatus);
 
   const { cases } = useScopedCases("reclame-aqui");
 
@@ -48,8 +59,11 @@ export default function WorkflowSettings() {
   // Cópia antes de ordenar: `sort` muta o array e o do contexto
   // não pode ser alterado durante o render.
   const sorted = useMemo(
-    () => [...workflow].sort((a, b) => a.order - b.order),
-    [workflow]
+    () =>
+      [...rascunho.itens].sort(
+        (a, b) => a.order - b.order
+      ),
+    [rascunho.itens]
   );
 
   const countByStatus = useMemo(() => {
@@ -76,10 +90,23 @@ export default function WorkflowSettings() {
   }
 
   function save(status: WorkflowStatus) {
-    if (editing) updateStatus(status);
-    else addStatus(status);
+
+    if (editing) rascunho.alterar(status.id, status);
+    else rascunho.adicionar(status);
 
     setOpen(false);
+  }
+
+  /** Etapa que só existe no rascunho nunca chegou ao banco. */
+  function apagar(id: string) {
+
+    const existeNoBanco = workflow.some(
+      (item) => item.id === id
+    );
+
+    rascunho.esquecer(id);
+
+    if (existeNoBanco) deleteStatus(id);
   }
 
   /**
@@ -106,7 +133,7 @@ export default function WorkflowSettings() {
 
     next.forEach((item, index) => {
       if (item.order !== index + 1) {
-        updateStatus({ ...item, order: index + 1 });
+        rascunho.alterar(item.id, { order: index + 1 });
       }
     });
   }
@@ -119,8 +146,13 @@ export default function WorkflowSettings() {
 
     const current = sorted[index];
 
-    updateStatus({ ...current, order: target.order });
-    updateStatus({ ...target, order: current.order });
+    rascunho.alterar(current.id, {
+      order: target.order,
+    });
+
+    rascunho.alterar(target.id, {
+      order: current.order,
+    });
   }
 
   const active = sorted.filter((item) => item.active);
@@ -366,8 +398,7 @@ export default function WorkflowSettings() {
                           min={0}
                           value={item.limit ?? 0}
                           onChange={(e) =>
-                            updateStatus({
-                              ...item,
+                            rascunho.alterar(item.id, {
                               limit: Number(e.target.value),
                             })
                           }
@@ -379,7 +410,11 @@ export default function WorkflowSettings() {
                       <td className="px-5 py-3">
 
                         <button
-                          onClick={() => toggleStatus(item.id)}
+                          onClick={() =>
+                            rascunho.alterar(item.id, {
+                              active: !item.active,
+                            })
+                          }
                           title={
                             item.active
                               ? "Desativar etapa"
@@ -411,7 +446,7 @@ export default function WorkflowSettings() {
                           </button>
 
                           <button
-                            onClick={() => deleteStatus(item.id)}
+                            onClick={() => apagar(item.id)}
                             aria-label={`Excluir ${item.name}`}
                             title={
                               count > 0
@@ -442,16 +477,25 @@ export default function WorkflowSettings() {
             casos que já estão nela.
           </p>
 
+          <BarraDeSalvar
+            rascunho={rascunho}
+            nome="etapas"
+            genero="f"
+          />
+
         </SurfaceCard>
 
       </div>
 
-      <WorkflowModal
-        open={open}
-        initialData={editing}
-        onClose={() => setOpen(false)}
-        onSave={save}
-      />
+      {open && (
+        <WorkflowModal
+          key={editing?.id ?? "novo"}
+          open={open}
+          initialData={editing}
+          onClose={() => setOpen(false)}
+          onSave={save}
+        />
+      )}
     </>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { Save, X } from "lucide-react";
 
@@ -48,39 +48,38 @@ export default function ProjectForm({
 
   const session = useSession();
 
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [stage, setStage] = useState<ProjectStage>("Ideia");
-  const [impact, setImpact] =
-    useState<Project["impact"]>("Médio");
-  const [owner, setOwner] = useState("");
-  const [progress, setProgress] = useState(0);
-  const [tags, setTags] = useState<string[]>([]);
+  /**
+   * Os campos nascem preenchidos, e o formulário remonta a cada
+   * abertura.
+   *
+   * Era um `useEffect` que copiava `editing` para o estado quando o
+   * modal abria. Funcionava, mas ao custo de uma renderização a mais
+   * por abertura — e de uma janela em que o formulário já estava na
+   * tela com os campos do registro anterior. Quem abre passa `key`, e
+   * é ela que garante instância nova.
+   */
+  const [title, setTitle] = useState(
+    editing?.title ?? ""
+  );
+  const [description, setDescription] = useState(
+    editing?.description ?? ""
+  );
+  const [stage, setStage] = useState<ProjectStage>(
+    editing?.stage ?? presetStage ?? "Ideia"
+  );
+  const [impact, setImpact] = useState<
+    Project["impact"]
+  >(editing?.impact ?? "Médio");
+  const [owner, setOwner] = useState(
+    editing?.owner ?? session?.name ?? "Operação"
+  );
+  const [progress, setProgress] = useState(
+    editing?.progress ?? 0
+  );
+  const [tags, setTags] = useState<string[]>(
+    editing?.tags ?? []
+  );
   const [tagDraft, setTagDraft] = useState("");
-
-  useEffect(() => {
-    if (!open) return;
-
-    if (editing) {
-      setTitle(editing.title);
-      setDescription(editing.description);
-      setStage(editing.stage);
-      setImpact(editing.impact);
-      setOwner(editing.owner);
-      setProgress(editing.progress);
-      setTags(editing.tags);
-      return;
-    }
-
-    setTitle("");
-    setDescription("");
-    setStage(presetStage ?? "Ideia");
-    setImpact("Médio");
-    setOwner(session?.name ?? "Operação");
-    setProgress(0);
-    setTags([]);
-    setTagDraft("");
-  }, [open, editing, presetStage, session]);
 
   function addTag() {
     const valor = tagDraft.trim();

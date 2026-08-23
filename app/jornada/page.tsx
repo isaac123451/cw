@@ -507,25 +507,28 @@ export default function JornadaPage() {
 
       </div>
 
-      <StageForm
-        open={stageOpen}
-        editing={editingStage}
-        nextOrder={
-          Math.max(
-            0,
-            ...stages.map((item) => item.order)
-          ) + 1
-        }
-        onClose={() => {
-          setStageOpen(false);
-          setEditingStage(undefined);
-        }}
-        onSave={(data) => {
-          saveStage(data);
-          setStageOpen(false);
-          setEditingStage(undefined);
-        }}
-      />
+      {stageOpen && (
+        <StageForm
+          key={editingStage?.id ?? "novo"}
+          open={stageOpen}
+          editing={editingStage}
+          nextOrder={
+            Math.max(
+              0,
+              ...stages.map((item) => item.order)
+            ) + 1
+          }
+          onClose={() => {
+            setStageOpen(false);
+            setEditingStage(undefined);
+          }}
+          onSave={(data) => {
+            saveStage(data);
+            setStageOpen(false);
+            setEditingStage(undefined);
+          }}
+        />
+      )}
 
       <ConfirmDelete
         open={Boolean(deletingStage)}

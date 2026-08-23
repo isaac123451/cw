@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { Save } from "lucide-react";
 
@@ -55,48 +55,46 @@ export default function ClientForm({
 
   const { establishments } = useEstablishments();
 
-  const [name, setName] = useState("");
-  const [kind, setKind] = useState<ClientKind>("Consumidor");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [document, setDocument] = useState("");
-  const [city, setCity] = useState("");
-  const [state, setState] = useState("");
-  const [establishmentId, setEstablishmentId] =
-    useState("");
-  const [notes, setNotes] = useState("");
+  /**
+   * Os campos nascem preenchidos, e o formulário remonta a cada
+   * abertura.
+   *
+   * Era um `useEffect` que copiava `editing` para o estado quando o
+   * modal abria. Funcionava, mas ao custo de uma renderização a mais
+   * por abertura — e de uma janela em que o formulário já estava na
+   * tela com os campos do registro anterior. Quem abre passa `key`, e
+   * é ela que garante instância nova.
+   */
+  const [name, setName] = useState(
+    editing?.name ?? ""
+  );
+  const [kind, setKind] = useState<ClientKind>(
+    editing?.kind ?? "Consumidor"
+  );
+  const [email, setEmail] = useState(
+    editing?.email ?? ""
+  );
+  const [phone, setPhone] = useState(
+    editing?.phone ?? ""
+  );
+  const [document, setDocument] = useState(
+    editing?.document ?? ""
+  );
+  const [city, setCity] = useState(
+    editing?.city ?? ""
+  );
+  const [state, setState] = useState(
+    editing?.state ?? ""
+  );
+  const [establishmentId, setEstablishmentId] = useState(
+    editing?.establishmentId ?? ""
+  );
+  const [notes, setNotes] = useState(
+    editing?.notes ?? ""
+  );
 
   /** Vindo de uma reclamação, nome e contato não se editam aqui. */
   const derivado = Boolean(editing && !editing.manual);
-
-  useEffect(() => {
-    if (!open) return;
-
-    if (editing) {
-      setName(editing.name);
-      setKind(editing.kind);
-      setEmail(editing.email ?? "");
-      setPhone(editing.phone ?? "");
-      setDocument(editing.document ?? "");
-      setCity(editing.city ?? "");
-      setState(editing.state ?? "");
-      setEstablishmentId(
-        editing.establishmentId ?? ""
-      );
-      setNotes(editing.notes ?? "");
-      return;
-    }
-
-    setName("");
-    setKind("Consumidor");
-    setEmail("");
-    setPhone("");
-    setDocument("");
-    setCity("");
-    setState("");
-    setEstablishmentId("");
-    setNotes("");
-  }, [open, editing]);
 
   const emailValido =
     email.trim() === "" ||

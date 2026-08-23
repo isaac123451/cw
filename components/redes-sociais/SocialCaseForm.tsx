@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Camera, Save } from "lucide-react";
 
@@ -46,23 +46,14 @@ export default function SocialCaseForm({
   const { workflow } = useWorkflow();
   const session = useSession();
 
-  const [title, setTitle] = useState("");
-  const [customer, setCustomer] = useState("");
-  const [handle, setHandle] = useState("");
-  const [phone, setPhone] = useState("");
-  const [city, setCity] = useState("");
-  const [state, setState] = useState("");
-  const [category, setCategory] = useState("");
-  const [subcategory, setSubcategory] = useState("");
-  const [team, setTeam] = useState("");
-  const [priority, setPriority] =
-    useState<Case["priority"]>("Média");
-  const [status, setStatus] = useState("");
-  const [createdAt, setCreatedAt] = useState("");
-  const [description, setDescription] = useState("");
-
-  // Memoizado para o efeito abaixo poder depender da lista pronta sem
-  // recalcular (e reexecutar) a cada render.
+  /**
+   * As etapas ativas, na ordem do quadro — a primeira é onde o caso
+   * novo nasce.
+   *
+   * Fica **antes** do estado porque é dela que sai o valor inicial do
+   * status. Antes ela existia memoizada para o efeito não reexecutar a
+   * cada render; sem o efeito, ela existe só para ser lida uma vez.
+   */
   const etapas = useMemo(
     () =>
       workflow
@@ -71,40 +62,55 @@ export default function SocialCaseForm({
     [workflow]
   );
 
-  useEffect(() => {
-    if (!open) return;
-
-    if (editing) {
-      setTitle(editing.title);
-      setCustomer(editing.customer);
-      setHandle(editing.email ?? "");
-      setPhone(editing.phone ?? "");
-      setCity(editing.city ?? "");
-      setState(editing.state ?? "");
-      setCategory(editing.category);
-      setSubcategory(editing.subcategory ?? "");
-      setTeam(editing.department ?? "");
-      setPriority(editing.priority);
-      setStatus(editing.status);
-      setCreatedAt(editing.createdAt);
-      setDescription(editing.description);
-      return;
-    }
-
-    setTitle("");
-    setCustomer("");
-    setHandle("");
-    setPhone("");
-    setCity("");
-    setState("");
-    setCategory(categories[0]?.name ?? "");
-    setSubcategory("");
-    setTeam("");
-    setPriority("Média");
-    setStatus(etapas[0]?.name ?? "Novo");
-    setCreatedAt(REFERENCE_DATE);
-    setDescription("");
-  }, [open, editing, categories, etapas]);
+  /**
+   * Os campos nascem preenchidos, e o formulário remonta a cada
+   * abertura.
+   *
+   * Era um `useEffect` que copiava `editing` para o estado quando o
+   * modal abria. Funcionava, mas ao custo de uma renderização a mais
+   * por abertura — e de uma janela em que o formulário já estava na
+   * tela com os campos do caso anterior. Quem abre passa `key`, e é
+   * ela que garante instância nova.
+   */
+  const [title, setTitle] = useState(
+    editing?.title ?? ""
+  );
+  const [customer, setCustomer] = useState(
+    editing?.customer ?? ""
+  );
+  const [handle, setHandle] = useState(
+    editing?.email ?? ""
+  );
+  const [phone, setPhone] = useState(
+    editing?.phone ?? ""
+  );
+  const [city, setCity] = useState(
+    editing?.city ?? ""
+  );
+  const [state, setState] = useState(
+    editing?.state ?? ""
+  );
+  const [category, setCategory] = useState(
+    editing?.category ?? categories[0]?.name ?? ""
+  );
+  const [subcategory, setSubcategory] = useState(
+    editing?.subcategory ?? ""
+  );
+  const [team, setTeam] = useState(
+    editing?.department ?? ""
+  );
+  const [priority, setPriority] = useState<
+    Case["priority"]
+  >(editing?.priority ?? "Média");
+  const [status, setStatus] = useState(
+    editing?.status ?? etapas[0]?.name ?? "Novo"
+  );
+  const [createdAt, setCreatedAt] = useState(
+    editing?.createdAt ?? REFERENCE_DATE
+  );
+  const [description, setDescription] = useState(
+    editing?.description ?? ""
+  );
 
   const subsDaCategoria = subcategories.filter(
     (item) => item.category === category

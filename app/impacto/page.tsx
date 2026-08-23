@@ -514,15 +514,18 @@ export default function ImpactoPage() {
 
       </div>
 
-      <ImpactForm
-        open={formOpen}
-        editing={editing}
-        onClose={() => {
-          setFormOpen(false);
-          setEditing(undefined);
-        }}
-        onSave={salvar}
-      />
+      {formOpen && (
+        <ImpactForm
+          key={editing?.id ?? "novo"}
+          open={formOpen}
+          editing={editing}
+          onClose={() => {
+            setFormOpen(false);
+            setEditing(undefined);
+          }}
+          onSave={salvar}
+        />
+      )}
 
       <ConfirmDelete
         open={Boolean(deleting)}

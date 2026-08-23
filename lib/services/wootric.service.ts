@@ -278,7 +278,19 @@ export async function listarRespostas(
    * gravar antes de a Vercel cortar. Com o teto, a tela pede pedaço por
    * pedaço e cada chamada termina.
    */
-  ate?: Date
+  ate?: Date,
+  /**
+   * Quantas bastam.
+   *
+   * A leitura é a metade lenta: são idas e voltas ao Wootric, 50 por
+   * página, e uma janela grande são dezenas delas. Quem chama de dentro
+   * de uma server action tem tempo contado — a Vercel corta a
+   * requisição e o botão devolve um erro que não explica nada.
+   *
+   * Com o teto, a leitura para assim que junta o suficiente para uma
+   * rodada, e quem chamou volta a pedir do ponto em que parou.
+   */
+  teto?: number
 ): Promise<WootricResponse[]> {
 
   const encontradas = new Map<number, WootricResponse>();
@@ -327,12 +339,23 @@ export async function listarRespostas(
         if (quando > maior) maior = quando;
       }
 
+      /**
+       * O corte vem **depois** de guardar a página.
+       *
+       * Cortando antes, a página que acabou de custar uma ida à rede
+       * seria jogada fora — e a rodada seguinte a buscaria de novo.
+       */
+      if (teto && encontradas.size >= teto) break;
+
       if (lote.length < POR_PAGINA) break;
     }
 
     aoProgredir?.(encontradas.size);
 
     if (doBloco === 0) break;
+
+    // Já tem o bastante para esta rodada.
+    if (teto && encontradas.size >= teto) break;
 
     const proximo = maior - 1 > cursor ? maior - 1 : maior;
 

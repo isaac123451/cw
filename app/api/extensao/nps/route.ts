@@ -238,14 +238,35 @@ export async function POST(request: Request) {
       });
     }
 
-    const i = FLUXO_EM_ANDAMENTO.indexOf(
-      existente.status
-    );
+    /**
+     * A escada vem do **cadastro**, não da constante.
+     *
+     * As etapas do NPS viraram tabela (`NpsStage`), e a extensão sobe e
+     * desce pela mesma escada que a tela desenha. Lendo a constante,
+     * uma etapa nova nasceria inalcançável pela extensão — e as duas
+     * pontas discordariam sobre qual é o próximo passo, que é pior do
+     * que a extensão não mover nada.
+     *
+     * Banco sem cadastro nenhum cai nos degraus do guia, que é o mesmo
+     * que a tela mostra nesse caso.
+     */
+    const cadastradas = await prisma.npsStage.findMany({
+      where: { active: true, final: false },
+      orderBy: [{ order: "asc" }, { name: "asc" }],
+      select: { name: true },
+    });
+
+    const escada =
+      cadastradas.length > 0
+        ? cadastradas.map((e) => e.name)
+        : FLUXO_EM_ANDAMENTO;
+
+    const i = escada.indexOf(existente.status);
 
     const alvo =
       i < 0
         ? null
-        : (FLUXO_EM_ANDAMENTO[
+        : (escada[
             direcao === "avancar" ? i + 1 : i - 1
           ] ?? null);
 

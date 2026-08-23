@@ -462,6 +462,7 @@ async function tratar(mensagem) {
 
     const dados = await chamar(CAMINHOS.triagem, {}, {
       protocolo: mensagem.protocolo,
+      rapido: mensagem.rapido,
     });
 
     return { ok: true, dados };
@@ -493,10 +494,19 @@ async function tratar(mensagem) {
     return { ok: true, dados };
   }
 
-  /** A agenda do dia — e o atrasado, que vem junto. */
+  /**
+   * A agenda do dia — e o atrasado, que vem junto.
+   *
+   * `escopo` é da aba de Atividades: vazio traz o que está vencendo
+   * (hoje e atrasado), "proximos" o que vem pela frente, "concluidas" o
+   * que já foi fechado. Sem cache: é lista de trabalho, e uma agenda de
+   * um minuto atrás pode ter uma tarefa a menos.
+   */
   if (mensagem?.tipo === "agenda") {
 
-    const dados = await chamar(CAMINHOS.agenda);
+    const dados = await chamar(CAMINHOS.agenda, {
+      escopo: mensagem.escopo,
+    });
 
     return { ok: true, dados };
   }
@@ -519,6 +529,7 @@ async function tratar(mensagem) {
       canal: mensagem.canal,
       etapa: mensagem.etapa,
       segmento: mensagem.segmento,
+      recorte: mensagem.recorte,
     });
 
     return { ok: true, dados };

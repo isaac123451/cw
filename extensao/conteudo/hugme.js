@@ -195,13 +195,17 @@
       statusPortal: CW.ra.status(conteudo),
 
       /**
-       * O RA Forms vai junto para a prévia **mostrar**, e só. Traz o
-       * CNPJ de cadastro no portal, o e-mail de acesso e o nome do
-       * proprietário — o vínculo com o estabelecimento, que hoje falta
-       * na base. Onde isso deve ser gravado é decisão que ainda não foi
-       * tomada, e gravar antes de decidir cria dado torto em três
-       * tabelas.
+       * O RA Forms vai junto: a prévia mostra tudo, e **um** campo é
+       * gravado.
+       *
+       * O campo é o documento — CPF ou CNPJ. Ele é o único do formulário
+       * que casa com algo daqui: o cadastro de estabelecimentos guarda o
+       * mesmo número, e a reclamação passa a guardar também, o que faz o
+       * vínculo se montar sozinho. O e-mail de acesso e o nome do
+       * proprietário continuam só na prévia: não há campo para eles sem
+       * inventar cadastro novo.
        */
+      documento: CW.ra.documento(conteudo),
       formulario: CW.ra.formulario(conteudo),
       formularioRecolhido:
         CW.ra.formularioRecolhido(conteudo),

@@ -422,11 +422,14 @@ export default function ClientesPage() {
 
       </div>
 
-      <ClientForm
-        open={formOpen}
-        onClose={() => setFormOpen(false)}
-        onSave={salvar}
-      />
+      {formOpen && (
+        <ClientForm
+          key={"novo"}
+          open={formOpen}
+          onClose={() => setFormOpen(false)}
+          onSave={salvar}
+        />
+      )}
 
     </MainLayout>
   );

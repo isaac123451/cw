@@ -1,5 +1,10 @@
 "use client";
 
+import {
+  documentoFormatado,
+  tipoDeDocumento,
+} from "@/lib/models/establishment";
+
 import Link from "next/link";
 
 import { useMemo } from "react";
@@ -109,7 +114,8 @@ export default function CompanyDetail({ slug }: Props) {
 
               <p className="mt-1 text-sm text-zinc-500">
                 {company.city}/{company.state}
-                {company.cnpj && ` · CNPJ ${company.cnpj}`}
+                {company.document &&
+                  ` · ${tipoDeDocumento(company.document)} ${documentoFormatado(company.document)}`}
               </p>
 
               <p className="mt-1 text-xs text-zinc-400">

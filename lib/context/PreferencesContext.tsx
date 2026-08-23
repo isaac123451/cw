@@ -99,6 +99,16 @@ export function PreferencesProvider({
 
       const parsed = JSON.parse(saved) as Preferences;
 
+      /**
+       * Ler o `localStorage` **precisa** ser efeito.
+       *
+       * No servidor ele não existe, então inicializar o estado com ele
+       * produziria um HTML diferente do que o navegador desenha — e a
+       * hidratação quebra. É o caso que a própria regra descreve como
+       * legítimo: sincronizar com um sistema externo. Os formulários,
+       * que eram o abuso de verdade, já saíram daqui.
+       */
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPrefs({
         notifications: {
           ...defaults.notifications,

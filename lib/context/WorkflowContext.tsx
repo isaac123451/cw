@@ -14,7 +14,10 @@ import {
 } from "@/lib/actions/registry";
 
 import { useWorkspaceSlice } from "@/lib/context/useWorkspace";
-import { sincronizar } from "@/lib/context/sync";
+import {
+  sincronizar,
+  type Gravacao,
+} from "@/lib/context/sync";
 
 interface WorkflowContextProps {
   workflow: WorkflowStatus[];
@@ -22,8 +25,9 @@ interface WorkflowContextProps {
   /** Carga inicial ainda em andamento. */
   loading: boolean;
 
-  addStatus: (item: WorkflowStatus) => void;
-  updateStatus: (item: WorkflowStatus) => void;
+  addStatus: (item: WorkflowStatus) => Promise<Gravacao>;
+  /** Devolve o resultado: a tela de etapas grava por botão. */
+  updateStatus: (item: WorkflowStatus) => Promise<Gravacao>;
   deleteStatus: (id: string) => void;
   toggleStatus: (id: string) => void;
 }
@@ -53,7 +57,7 @@ export function WorkflowProvider({
 
   function addStatus(item: WorkflowStatus) {
     setWorkflow((current) => [...current, item]);
-    sincronizar(() => saveWorkflowStatus(item));
+    return sincronizar(() => saveWorkflowStatus(item));
   }
 
   function updateStatus(item: WorkflowStatus) {
@@ -62,7 +66,7 @@ export function WorkflowProvider({
         status.id === item.id ? item : status
       )
     );
-    sincronizar(() => saveWorkflowStatus(item));
+    return sincronizar(() => saveWorkflowStatus(item));
   }
 
   function deleteStatus(id: string) {

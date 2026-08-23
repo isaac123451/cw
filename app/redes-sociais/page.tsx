@@ -298,15 +298,18 @@ export default function RedesSociaisPage() {
 
       </div>
 
-      <SocialCaseForm
-        open={formOpen}
-        editing={editing}
-        onClose={() => {
-          setFormOpen(false);
-          setEditing(undefined);
-        }}
-        onSave={salvar}
-      />
+      {formOpen && (
+        <SocialCaseForm
+          key={editing?.id ?? "novo"}
+          open={formOpen}
+          editing={editing}
+          onClose={() => {
+            setFormOpen(false);
+            setEditing(undefined);
+          }}
+          onSave={salvar}
+        />
+      )}
 
       <ConfirmDelete
         open={Boolean(deleting)}

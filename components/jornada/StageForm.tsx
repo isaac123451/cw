@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { Save } from "lucide-react";
 
@@ -43,27 +43,28 @@ export default function StageForm({
   onSave,
 }: Props) {
 
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [color, setColor] = useState(CORES[0]);
-  const [active, setActive] = useState(true);
-
-  useEffect(() => {
-    if (!open) return;
-
-    if (editing) {
-      setName(editing.name);
-      setDescription(editing.description);
-      setColor(editing.color);
-      setActive(editing.active);
-      return;
-    }
-
-    setName("");
-    setDescription("");
-    setColor(CORES[0]);
-    setActive(true);
-  }, [open, editing]);
+  /**
+   * Os campos nascem preenchidos, e o formulário remonta a cada
+   * abertura.
+   *
+   * Era um `useEffect` que copiava `editing` para o estado quando o
+   * modal abria. Funcionava, mas ao custo de uma renderização a mais
+   * por abertura — e de uma janela em que o formulário já estava na
+   * tela com os campos do registro anterior. Quem abre passa `key`, e
+   * é ela que garante instância nova.
+   */
+  const [name, setName] = useState(
+    editing?.name ?? ""
+  );
+  const [description, setDescription] = useState(
+    editing?.description ?? ""
+  );
+  const [color, setColor] = useState(
+    editing?.color ?? CORES[0]
+  );
+  const [active, setActive] = useState(
+    editing?.active ?? true
+  );
 
   const valido = name.trim() !== "";
 

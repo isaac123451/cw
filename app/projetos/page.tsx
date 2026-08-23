@@ -390,17 +390,20 @@ export default function ProjetosPage() {
 
       </div>
 
-      <ProjectForm
-        open={formOpen}
-        editing={editing}
-        presetStage={presetStage}
-        onClose={() => {
-          setFormOpen(false);
-          setEditing(undefined);
-          setPresetStage(undefined);
-        }}
-        onSave={salvar}
-      />
+      {formOpen && (
+        <ProjectForm
+          key={editing?.id ?? presetStage ?? "novo"}
+          open={formOpen}
+          editing={editing}
+          presetStage={presetStage}
+          onClose={() => {
+            setFormOpen(false);
+            setEditing(undefined);
+            setPresetStage(undefined);
+          }}
+          onSave={salvar}
+        />
+      )}
 
       <ConfirmDelete
         open={Boolean(deleting)}

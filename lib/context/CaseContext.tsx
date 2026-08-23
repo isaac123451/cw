@@ -20,6 +20,7 @@ import {
 
 import { REFERENCE_DATE } from "@/lib/services/reputation.service";
 import { moverPara } from "@/lib/services/case.service";
+import type { Gravacao } from "@/lib/context/sync";
 
 const STORAGE_KEY = "cw:casos";
 
@@ -143,7 +144,14 @@ interface CaseContextType {
 
   createCase: (data: Case) => void;
 
-  updateCase: (data: Case) => void;
+  /**
+   * Devolve o resultado da gravação.
+   *
+   * A tela do caso passou a gravar por botão, e o rascunho precisa
+   * saber se o servidor aceitou antes de dizer "salvo" — confirmar
+   * antes da resposta confirma o clique, não a gravação.
+   */
+  updateCase: (data: Case) => Promise<Gravacao>;
 
   deleteCase: (id: string) => void;
 
@@ -232,15 +240,32 @@ export function CaseProvider({
     }
   }
 
-  /** Dispara a gravação sem travar a interface, e registra a falha. */
+  /**
+   * Dispara a gravação sem travar a interface, e registra a falha.
+   *
+   * **Devolve o resultado, e nunca rejeita.** A tela do caso passou a
+   * gravar por botão, e o rascunho só limpa o que foi de fato aceito
+   * pelo servidor — o que falhou continua na tela para dar para tentar
+   * de novo em vez de redigitar.
+   *
+   * Sem banco (modo demonstração) conta como sucesso: a edição já está
+   * no estado local, que é onde ela vive ali.
+   */
   function sincronizar(
     executar: () => Promise<void>
-  ) {
-    if (!hasDatabase) return;
+  ): Promise<Gravacao> {
 
-    executar()
-      .then(() => setSyncError(null))
-      .catch((error: unknown) => {
+    if (!hasDatabase) {
+      return Promise.resolve({ ok: true });
+    }
+
+    return executar().then(
+      (): Gravacao => {
+        setSyncError(null);
+        return { ok: true };
+      },
+      (error: unknown): Gravacao => {
+
         const mensagem =
           error instanceof Error
             ? error.message
@@ -248,7 +273,10 @@ export function CaseProvider({
 
         console.error("[casos] gravação falhou", error);
         setSyncError(mensagem);
-      });
+
+        return { ok: false, erro: mensagem };
+      }
+    );
   }
 
   // A carga acontece após a montagem: no servidor não há localStorage,
@@ -362,7 +390,7 @@ export function CaseProvider({
       )
     );
 
-    sincronizar(() => saveCase(data));
+    return sincronizar(() => saveCase(data));
   }
 
   function deleteCase(id: string) {

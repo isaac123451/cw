@@ -17,6 +17,7 @@ import { Case } from "@/lib/models/case";
 
 import { useCases } from "@/lib/context/CaseContext";
 import { useMovements } from "@/lib/context/MovementsContext";
+import { useRascunho } from "@/lib/hooks/useRascunho";
 
 import {
   movementStatus,
@@ -27,6 +28,7 @@ import { toneOfSla } from "@/lib/services/sla.service";
 
 import TagPicker, { TagChips } from "@/components/shared/TagPicker";
 import StatusPicker from "@/components/reclame-aqui/shared/StatusPicker";
+import BarraDeSalvar from "@/components/shared/BarraDeSalvar";
 import CaseActions from "./CaseActions";
 
 import OverviewTab from "./OverviewTab";
@@ -78,6 +80,29 @@ export default function CaseDetail({
   const { cases, updateCase, toggleTag, moveCase } =
     useCases();
 
+  /**
+   * A edição vive num rascunho; o botão Salvar grava.
+   *
+   * Era a tela que mais gravava sem pedir — **uma ida ao banco por
+   * tecla**. Escrever a resposta pública, que tem centenas de
+   * caracteres, virava centenas de gravações, e nenhuma delas dizia
+   * "salvo": não existia um momento em que salvar acontecesse.
+   *
+   * O rascunho é de lista, e aqui a lista tem um item só. Vale a pena
+   * mesmo assim: é o mesmo gancho já provado nos cadastros, com a
+   * mesma barra, o mesmo aviso de saída e a mesma regra de não limpar
+   * o que o servidor recusou.
+   *
+   * **Mover etapa e etiquetar continuam imediatos.** São atos com
+   * consequência própria — voltar de "Resolvido" apaga a avaliação —,
+   * e segurá-los num rascunho faria a coluna do quadro discordar da
+   * tela enquanto ninguém clicasse em Salvar.
+   */
+  const rascunho = useRascunho([data], updateCase);
+
+  /** O caso como está sendo editado, e não como está no banco. */
+  const emEdicao = rascunho.itens[0] ?? data;
+
   const { movements } = useMovements();
 
   const [tab, setTab] = useState<Tab>("visao-geral");
@@ -108,7 +133,7 @@ export default function CaseDetail({
   );
 
   function patch(changes: Partial<Case>) {
-    updateCase({ ...data, ...changes });
+    rascunho.alterar(data.id, changes);
   }
 
   // Só oferece WhatsApp quando existe telefone de verdade. O import
@@ -330,12 +355,12 @@ export default function CaseDetail({
           </div>
 
           {tab === "visao-geral" && (
-            <OverviewTab data={data} onChange={patch} />
+            <OverviewTab data={emEdicao} onChange={patch} />
           )}
 
           {tab === "investigacao" && (
             <InvestigationTab
-              data={data}
+              data={emEdicao}
               onChange={patch}
             />
           )}
@@ -343,12 +368,12 @@ export default function CaseDetail({
           {tab === "atendimento" && <ServiceTab data={data} />}
 
           {tab === "avaliacao" && (
-            <EvaluationTab data={data} onChange={patch} />
+            <EvaluationTab data={emEdicao} onChange={patch} />
           )}
 
           {tab === "dados" && (
             <CaseSidebar
-              data={data}
+              data={emEdicao}
               owners={owners}
               onChange={patch}
             />
@@ -362,13 +387,15 @@ export default function CaseDetail({
 
         {!drawer && (
           <CaseSidebar
-            data={data}
+            data={emEdicao}
             owners={owners}
             onChange={patch}
           />
         )}
 
       </div>
+
+      <BarraDeSalvar rascunho={rascunho} nome="caso" />
 
     </div>
   );

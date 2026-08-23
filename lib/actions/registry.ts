@@ -4,6 +4,7 @@ import { updateTag } from "next/cache";
 import { WORKSPACE_TAG } from "@/lib/actions/tags";
 
 import { requireRole, Role } from "@/lib/auth/guard";
+import type { Modulo } from "@/lib/auth/modules";
 
 import {
   CategoryOption,
@@ -18,7 +19,12 @@ import {
   CaseMovement,
   MovementRule,
 } from "@/lib/models/movement";
-import { Establishment } from "@/lib/models/establishment";
+import { slugify } from "@/lib/services/slug";
+
+import {
+  digitosDoDocumento,
+  Establishment,
+} from "@/lib/models/establishment";
 import { Project } from "@/lib/models/project";
 import { Macro } from "@/lib/models/macro";
 import {
@@ -59,9 +65,21 @@ import type { Playbook } from "@/lib/data/mockPlaybooks";
  * Padrão AGENTE (opera a rotina); os cadastros que definem como a
  * operação funciona pedem ADMIN.
  */
-async function autorizado(minimo: Role = "AGENTE") {
+/**
+ * O módulo entra por parâmetro porque este arquivo atende vários.
+ *
+ * A maioria dos cadastros daqui é alcançada por Configurações, mas as
+ * respostas prontas e os playbooks têm tela própria — e quem administra
+ * um não necessariamente administra o outro. Tratar tudo como
+ * "configuracoes" daria a quem cuida das respostas prontas a chave do
+ * fluxo inteiro.
+ */
+async function autorizado(
+  minimo: Role = "AGENTE",
+  modulo: Modulo = "configuracoes"
+) {
 
-  const ctx = await requireRole(minimo);
+  const ctx = await requireRole(minimo, modulo);
 
   return ctx?.prisma ?? null;
 }
@@ -372,7 +390,20 @@ export async function saveEstablishment(
   const dados = {
     slug: item.slug,
     name: item.name,
-    cnpj: item.cnpj ?? null,
+    document: item.document ?? null,
+
+    /**
+     * `undefined` aqui não é descuido: o Prisma **pula** o campo no
+     * update e usa o padrão no create.
+     *
+     * Estes dois vêm do CW Engine pela carga, e o formulário da tela não
+     * os tem. Escrever `null` por ausência faria uma edição de nome
+     * apagar o id da conta e o link do portal — sem aviso, e com o
+     * sintoma aparecendo só no dia em que alguém fosse clicar no link.
+     */
+    externalId: item.externalId,
+    portalUrl: item.portalUrl,
+
     segment: item.segment ?? null,
     city: item.city ?? null,
     state: item.state ?? null,
@@ -389,11 +420,40 @@ export async function saveEstablishment(
     notes: item.notes ?? null,
   };
 
-  await prisma.establishment.upsert({
+  const salvo = await prisma.establishment.upsert({
     where: { id: item.id },
     update: dados,
     create: { id: item.id, ...dados },
+    select: { id: true },
   });
+
+  /**
+   * Cadastrou com CNPJ: as reclamações que estavam esperando ligam agora.
+   *
+   * A extensão grava o CNPJ do RA Forms em toda reclamação que captura,
+   * inclusive de restaurante que ainda não existe aqui. Sem esta
+   * varredura, quem cadastrasse o estabelecimento depois teria de esperar
+   * o cron da madrugada para ver os casos aparecerem na ficha — e a
+   * conclusão natural seria que o vínculo não funciona.
+   *
+   * Só preenche o que está vazio. Reclamação já vinculada ficou assim por
+   * escolha de alguém, e sobrescrever seria discordar dessa escolha sem
+   * dizer nada.
+   */
+  const digitos = digitosDoDocumento(item.document);
+
+  if (digitos) {
+    await prisma.case.updateMany({
+      where: {
+        document: digitos,
+        establishmentId: null,
+
+        // Quem desvinculou na mão não é religado por cadastro novo.
+        establishmentManual: false,
+      },
+      data: { establishmentId: salvo.id },
+    });
+  }
 
   updateTag(WORKSPACE_TAG);
 }
@@ -440,13 +500,14 @@ export async function removeProject(id: string) {
 }
 
 export async function saveMacro(item: Macro) {
-  const prisma = await autorizado();
+  const prisma = await autorizado("AGENTE", "base-conhecimento");
   if (!prisma) return;
 
   const dados = {
     title: item.title,
     body: item.body,
     category: item.category,
+    channel: item.channel,
     owner: item.owner,
     tags: item.tags,
     uses: item.uses,
@@ -462,7 +523,7 @@ export async function saveMacro(item: Macro) {
 }
 
 export async function removeMacro(id: string) {
-  const prisma = await autorizado();
+  const prisma = await autorizado("AGENTE", "base-conhecimento");
   if (!prisma) return;
 
   await prisma.macro.delete({ where: { id } });
@@ -471,7 +532,7 @@ export async function removeMacro(id: string) {
 }
 
 export async function savePlaybook(item: Playbook) {
-  const prisma = await autorizado();
+  const prisma = await autorizado("AGENTE", "documentacao");
   if (!prisma) return;
 
   const dados = {
@@ -496,7 +557,7 @@ export async function savePlaybook(item: Playbook) {
 }
 
 export async function removePlaybook(id: string) {
-  const prisma = await autorizado();
+  const prisma = await autorizado("AGENTE", "documentacao");
   if (!prisma) return;
 
   await prisma.playbook.delete({ where: { id } });
@@ -873,8 +934,30 @@ export async function assignTeamMember(
   const prisma = await autorizado("ADMIN");
   if (!prisma) return;
 
+  const nome = member.name.trim();
+
+  if (!nome) return;
+
+  /**
+   * Sem e-mail, o servidor gera um que **não pode existir**.
+   *
+   * O e-mail é a chave única de `User`, então a pessoa precisa de um
+   * valor — mas exigir da tela obrigava a inventar um endereço, e
+   * endereço inventado é pior do que nenhum: no dia em que a pessoa se
+   * cadastrasse de verdade, o que ela usa já estaria ocupado por uma
+   * linha que não é dela.
+   *
+   * O domínio `.local` é reservado e não roteia: nenhuma pessoa real vai
+   * ter esse endereço, e o autocadastro exige `@cardapioweb.com`. A
+   * linha existe para receber caso e atividade, e não abre porta
+   * nenhuma.
+   */
+  const email =
+    member.email.trim().toLowerCase() ||
+    `${slugify(nome)}@sem-acesso.local`;
+
   const existente = await prisma.user.findUnique({
-    where: { email: member.email.toLowerCase() },
+    where: { email },
     select: { id: true },
   });
 
@@ -897,8 +980,8 @@ export async function assignTeamMember(
     (
       await prisma.user.create({
         data: {
-          name: member.name,
-          email: member.email.toLowerCase(),
+          name: nome,
+          email,
           passwordHash: "",
           role: "LEITURA",
         },
@@ -909,7 +992,7 @@ export async function assignTeamMember(
   await prisma.user.update({
     where: { id },
     data: {
-      name: member.name,
+      name: nome,
       jobTitle: member.role || null,
       teamId,
     },

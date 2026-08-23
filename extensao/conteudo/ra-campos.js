@@ -418,8 +418,46 @@
     return achado ? achado[1] : "";
   };
 
+  /**
+   * Onde o relato acaba.
+   *
+   * A lista cresceu por um defeito real: a página do Reclame Aqui
+   * continua **depois** da reclamação, com ajuda, dúvidas frequentes e
+   * reclamações parecidas — e nada disso estava aqui. O laço então
+   * seguia até o fim do documento, e a prévia de importação chegava com
+   * o FAQ do portal colado no fim do relato do consumidor.
+   */
   const FIM_DO_RELATO =
-    /^(Reações|Imagens e documentos anexados|Resposta da empresa|Réplica|Avaliação|Considerações finais|Interações|Histórico)/i;
+    /^(Reações|Imagens e documentos anexados|Resposta da empresa|Réplica|Avaliação|Considerações finais|Interações|Histórico|D[úu]vidas frequentes|Perguntas frequentes|FAQ|Central de ajuda|Precisa de ajuda|Ajuda|Sobre a empresa|Sobre a Cardápio Web|Reclamações (relacionadas|parecidas|semelhantes)|Confira também|Veja também|Últimas reclamações|Outras reclamações|Empresas parecidas|Recomendadas para você|Avalie o atendimento|Compartilhar|Denunciar)/i;
+
+  /**
+   * Uma linha que parece **título de seção**, e não texto de gente.
+   *
+   * A lista acima é uma lista de nomes, e nome de seção muda: o portal
+   * troca "Dúvidas frequentes" por "Ficou com dúvida?" e o FAQ volta
+   * para dentro do relato sem ninguém perceber. Esta é a segunda trava,
+   * e ela não depende de conhecer o nome: título de bloco é curto,
+   * começa com maiúscula e não termina em ponto — enquanto quem está
+   * reclamando escreve frases.
+   *
+   * Só vale depois de o relato já ter substância (ver abaixo): a
+   * primeira linha de uma reclamação curta pode muito bem parecer um
+   * título, e cortá-la ali deixaria a prévia vazia.
+   */
+  const PARECE_TITULO = (linha) =>
+    linha.length <= 42 &&
+    /^[A-ZÁÀÂÃÉÊÍÓÔÕÚÇ]/.test(linha) &&
+    !/[.!?…,;:]$/.test(linha) &&
+    // "51 90000-0000" e afins não são título, são dado solto.
+    !/\d{4}/.test(linha);
+
+  /**
+   * Quanto o relato precisa ter para a trava acima valer.
+   *
+   * Abaixo disso ainda estamos lendo o começo da reclamação, e uma
+   * linha curta ali é parte do que a pessoa escreveu.
+   */
+  const RELATO_JA_TEM_SUBSTANCIA = 180;
 
   /**
    * O relato do consumidor.
@@ -443,11 +481,29 @@
 
     const partes = [];
 
+    /** Quanto já se juntou, para a trava de título saber quando vale. */
+    let tamanho = 0;
+
     for (let i = inicio + 1; i < todas.length; i += 1) {
 
       const linha = todas[i];
 
       if (FIM_DO_RELATO.test(linha)) break;
+
+      /**
+       * A segunda trava: seção nova, mesmo sem nome conhecido.
+       *
+       * Sem ela o laço ia até o fim do documento sempre que o portal
+       * mudasse um rótulo — e a página continua depois da reclamação,
+       * com ajuda e dúvidas frequentes. Era isso que chegava colado no
+       * fim do relato na prévia de importação.
+       */
+      if (
+        tamanho >= RELATO_JA_TEM_SUBSTANCIA &&
+        PARECE_TITULO(linha)
+      ) {
+        break;
+      }
 
       if (
         linha === "" ||
@@ -457,6 +513,7 @@
       }
 
       partes.push(linha);
+      tamanho += linha.length;
     }
 
     return partes.join("\n\n").slice(0, 20000);
@@ -602,6 +659,44 @@
   ra.formularioRecolhido = (texto) =>
     /informações adicionais coletadas/i.test(texto) &&
     ra.formulario(texto).length === 0;
+
+
+  /**
+   * O documento do estabelecimento, tirado do RA Forms.
+   *
+   * É o único campo do formulário que casa com algo daqui: o cadastro de
+   * estabelecimentos guarda o mesmo número, e a reclamação passa a
+   * guardar também — é assim que o vínculo se faz sozinho.
+   *
+   * **Casar por nome não funciona.** O export do Reclame Aqui grava o
+   * reclamante no lugar da empresa, então o nome da reclamação é o do
+   * consumidor. O documento é o mesmo número dos dois lados.
+   *
+   * **CPF entra.** A pergunta do portal é literalmente "CPF ou CNPJ", e a
+   * Cardápio Web cadastra restaurante das duas formas — na base real, 122
+   * de 127 respondem com CPF. Aceitar só catorze dígitos jogaria fora
+   * quase todo o vínculo que existe.
+   *
+   * Fora de onze e catorze, nada: campo pela metade ou "não informado"
+   * viraria vínculo falso entre reclamações que só têm em comum o lixo.
+   */
+  ra.documento = (texto) => {
+
+    const itens = ra.formulario(texto);
+
+    for (const item of itens) {
+
+      if (!/cpf|cnpj/i.test(item.pergunta)) continue;
+
+      const digitos = String(item.resposta).replace(/[^0-9]/g, "");
+
+      if (digitos.length === 11 || digitos.length === 14) {
+        return digitos;
+      }
+    }
+
+    return "";
+  };
 
   ra.linhas = linhas;
 

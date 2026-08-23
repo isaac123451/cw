@@ -11,8 +11,10 @@ import {
 } from "lucide-react";
 
 import SurfaceCard from "@/components/shared/SurfaceCard";
+import BarraDeSalvar from "@/components/shared/BarraDeSalvar";
 
 import { useJourney } from "@/lib/context/JourneyContext";
+import { useRascunho } from "@/lib/hooks/useRascunho";
 
 interface Props {
   company: string;
@@ -43,6 +45,19 @@ export default function JourneyTopics({
     removeEntry,
   } = useJourney();
 
+  /**
+   * O tópico se edita no rascunho; o botão Salvar grava.
+   *
+   * Antes cada tecla do nome ia ao banco — e renomear um tópico é
+   * justamente onde isso doía mais, porque "Novo tópico" virava sete
+   * gravações até chegar em "Onboarding".
+   *
+   * **Os registros não entram no rascunho.** Publicar um registro é
+   * ato próprio, com botão próprio, e segurá-lo até alguém clicar em
+   * Salvar transformaria "Add" numa promessa.
+   */
+  const rascunho = useRascunho(topics, saveTopic);
+
   const [drafts, setDrafts] = useState<
     Record<string, string>
   >({});
@@ -58,13 +73,26 @@ export default function JourneyTopics({
   );
 
   function addTopic() {
-    saveTopic({
+    rascunho.adicionar({
       id: crypto.randomUUID(),
       name: "Novo tópico",
       icon: "note",
-      color: PALETTE[topics.length % PALETTE.length],
-      order: topics.length + 1,
+      color:
+        PALETTE[rascunho.itens.length % PALETTE.length],
+      order: rascunho.itens.length + 1,
     });
+  }
+
+  /** Tópico que só existe no rascunho nunca chegou ao banco. */
+  function apagarTopico(id: string) {
+
+    const existeNoBanco = topics.some(
+      (item) => item.id === id
+    );
+
+    rascunho.esquecer(id);
+
+    if (existeNoBanco) removeTopic(id);
   }
 
   function publish(topicId: string) {
@@ -95,7 +123,7 @@ export default function JourneyTopics({
 
       <div className="space-y-4">
 
-        {topics.map((topic) => {
+        {rascunho.itens.map((topic) => {
 
           const list = entries.filter(
             (item) =>
@@ -124,8 +152,7 @@ export default function JourneyTopics({
                       autoFocus
                       value={topic.name}
                       onChange={(e) =>
-                        saveTopic({
-                          ...topic,
+                        rascunho.alterar(topic.id, {
                           name: e.target.value,
                         })
                       }
@@ -158,7 +185,9 @@ export default function JourneyTopics({
                       <button
                         key={color}
                         onClick={() =>
-                          saveTopic({ ...topic, color })
+                          rascunho.alterar(topic.id, {
+                            color,
+                          })
                         }
                         aria-label={`Cor ${color}`}
                         className={`h-4 w-4 rounded-full transition-transform hover:scale-110 ${
@@ -180,7 +209,7 @@ export default function JourneyTopics({
                   </button>
 
                   <button
-                    onClick={() => removeTopic(topic.id)}
+                    onClick={() => apagarTopico(topic.id)}
                     title={
                       list.length > 0
                         ? `Remove o tópico e ${list.length} registro(s)`
@@ -344,13 +373,18 @@ export default function JourneyTopics({
           );
         })}
 
-        {topics.length === 0 && (
+        {rascunho.itens.length === 0 && (
           <p className="rounded-2xl border border-dashed border-zinc-200 py-10 text-center text-sm text-zinc-400">
             Nenhum tópico criado. Comece adicionando um.
           </p>
         )}
 
       </div>
+
+      <BarraDeSalvar
+        rascunho={rascunho}
+        nome="tópicos"
+      />
 
     </SurfaceCard>
   );

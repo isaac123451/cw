@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Save, Search } from "lucide-react";
 
@@ -75,46 +75,44 @@ export default function TaskForm({
   const session = useSession();
   const { people } = useTeams();
 
-  const [title, setTitle] = useState("");
-  const [type, setType] = useState<TaskType>("Follow-up");
-  const [priority, setPriority] =
-    useState<AgendaTask["priority"]>("Média");
-  const [dueDate, setDueDate] = useState("");
-  const [time, setTime] = useState("");
-  const [owner, setOwner] = useState("");
-  const [caseProtocol, setCaseProtocol] = useState("");
-  const [company, setCompany] = useState("");
-  const [caseSearch, setCaseSearch] = useState("");
-
-  useEffect(() => {
-    if (!open) return;
-
-    if (editing) {
-      setTitle(editing.title);
-      setType(editing.type);
-      setPriority(editing.priority);
-      setDueDate(editing.dueDate);
-      setTime(editing.time ?? "");
-      setOwner(editing.owner);
-      setCaseProtocol(editing.relatedCase ?? "");
-      setCompany(editing.relatedCompany ?? "");
-      return;
-    }
-
-    setTitle(
-      presetCase
+  /**
+   * Os campos nascem preenchidos, e o formulário remonta a cada
+   * abertura.
+   *
+   * Era um `useEffect` que copiava `editing` para o estado quando o
+   * modal abria. Funcionava, mas ao custo de uma renderização a mais
+   * por abertura — e de uma janela em que o formulário já estava na
+   * tela com os campos do registro anterior. Quem abre passa `key`, e
+   * é ela que garante instância nova.
+   */
+  const [title, setTitle] = useState(
+    editing?.title ??
+      (presetCase
         ? `Follow-up: ${presetCase.title}`
-        : ""
-    );
-    setType("Follow-up");
-    setPriority("Média");
-    setDueDate(presetDate ?? "");
-    setTime("");
-    setOwner(session?.name ?? "Operação");
-    setCaseProtocol(presetCase?.protocol ?? "");
-    setCompany(presetCase?.company ?? "");
-    setCaseSearch("");
-  }, [open, editing, presetDate, presetCase, session]);
+        : "")
+  );
+  const [type, setType] = useState<TaskType>(
+    editing?.type ?? "Follow-up"
+  );
+  const [priority, setPriority] = useState<
+    AgendaTask["priority"]
+  >(editing?.priority ?? "Média");
+  const [dueDate, setDueDate] = useState(
+    editing?.dueDate ?? presetDate ?? ""
+  );
+  const [time, setTime] = useState(
+    editing?.time ?? ""
+  );
+  const [owner, setOwner] = useState(
+    editing?.owner ?? session?.name ?? "Operação"
+  );
+  const [caseProtocol, setCaseProtocol] = useState(
+    editing?.relatedCase ?? presetCase?.protocol ?? ""
+  );
+  const [company, setCompany] = useState(
+    editing?.relatedCompany ?? presetCase?.company ?? ""
+  );
+  const [caseSearch, setCaseSearch] = useState("");
 
   const responsaveis = useMemo(
     () =>

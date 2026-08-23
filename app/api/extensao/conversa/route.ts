@@ -213,6 +213,16 @@ export async function POST(request: Request) {
 
 ${transcricao}`,
     esquema: ESQUEMA,
+
+    /**
+     * Resumir é ler e condensar — o modelo menor faz igual.
+     *
+     * E aqui a velocidade é o recurso: quem clica em "Resumir" está com
+     * o cliente na linha. Medido, o mesmo pedido leva ~1 s no modelo
+     * pequeno e ~10 s no grande, quando este não está em fila. Um
+     * resumo que chega depois da conversa acabar não serviu para nada.
+     */
+    rapido: true,
   });
 
   if (resultado.erro || !resultado.dados) {

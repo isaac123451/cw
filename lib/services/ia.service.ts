@@ -1,5 +1,10 @@
 import Anthropic from "@anthropic-ai/sdk";
 
+import {
+  type ConfigDeIA,
+  lerConfigDeIA,
+} from "@/lib/services/iaConfig.service";
+
 /**
  * De quem é a inteligência — e por que isso é configuração, não código.
  *
@@ -46,10 +51,20 @@ function chave(nome: string) {
  * aqui, e trocar de modelo muda o texto que a operação lê. Para inverter
  * a ordem, defina `IA_PROVEDOR=gemini`.
  */
-export function provedorDeIA(): Provedor | null {
+export function provedorDeIA(
+  /**
+   * A preferência já resolvida (banco > ambiente).
+   *
+   * Sem argumento, cai no ambiente — é o caminho de quem chama isto de
+   * um script ou de uma tela que só quer saber "tem IA ligada?".
+   */
+  preferencia?: string
+): Provedor | null {
 
   const preferido = (
-    process.env.IA_PROVEDOR ?? ""
+    preferencia ??
+    process.env.IA_PROVEDOR ??
+    ""
   ).trim().toLowerCase();
 
   const temAnthropic =
@@ -77,6 +92,15 @@ export interface PedidoDeIA {
   prompt: string;
   /** JSON Schema do que se espera de volta. */
   esquema: Record<string, unknown>;
+  /**
+   * A tarefa vale mais rápida do que profunda?
+   *
+   * Resumir uma conversa é ler e condensar: o modelo menor faz igual e
+   * responde em **um segundo** em vez de dez (medido). Triagem, não —
+   * ali a decisão "dá para responder agora ou precisa apurar" é o
+   * julgamento inteiro, e é o que o modelo maior faz melhor.
+   */
+  rapido?: boolean;
 }
 
 export interface RespostaDeIA {
@@ -99,7 +123,18 @@ export async function pedirEstruturado(
   pedido: PedidoDeIA
 ): Promise<RespostaDeIA> {
 
-  const provedor = provedorDeIA();
+  /**
+   * O perfil de velocidade vem da configuração, não de constante.
+   *
+   * "A IA está demorando" é reclamação da operação, e a resposta
+   * estava numa variável de ambiente que a operação não abre. Agora a
+   * escolha é na tela, e é lida aqui.
+   */
+  const config = await lerConfigDeIA();
+
+  const provedor = provedorDeIA(
+    config.provedorPreferido
+  );
 
   if (!provedor) {
     return {
@@ -110,8 +145,8 @@ export async function pedirEstruturado(
   }
 
   return provedor === "gemini"
-    ? peloGemini(pedido)
-    : pelaAnthropic(pedido);
+    ? peloGemini(pedido, config)
+    : pelaAnthropic(pedido, config);
 }
 
 /* ============================================================
@@ -119,7 +154,8 @@ export async function pedirEstruturado(
 ============================================================ */
 
 async function pelaAnthropic(
-  pedido: PedidoDeIA
+  pedido: PedidoDeIA,
+  config: ConfigDeIA
 ): Promise<RespostaDeIA> {
 
   const client = new Anthropic();
@@ -143,7 +179,16 @@ async function pelaAnthropic(
       max_tokens: 8000,
       system: pedido.sistema,
       output_config: {
-        effort: "low",
+        /**
+         * O esforço acompanha o perfil escolhido na tela.
+         *
+         * Era `"low"` fixo, com a justificativa de que resumir não
+         * melhora com deliberação. Continua verdade para resumir — mas
+         * a mesma função atende a triagem, onde a decisão "responder ou
+         * apurar" é o julgamento inteiro. Quem escolhe "Profundo" está
+         * pedindo exatamente isso.
+         */
+        effort: pedido.rapido ? "low" : config.esforco,
         format: {
           type: "json_schema",
           schema: pedido.esquema,
@@ -211,54 +256,14 @@ async function pelaAnthropic(
 ============================================================ */
 
 /**
- * O modelo do Gemini — apelido por padrão, e isso é deliberado.
+ * Modelo, prazo e corrida vêm de `iaConfig.service.ts`.
  *
- * O primeiro palpite aqui foi `gemini-2.0-flash`, e ele durou até a
- * primeira chamada: `404 — This model is no longer available`. A
- * família se renova rápido, e um nome fixo transforma o recurso em
- * defeito silencioso alguns meses depois de escrito.
- *
- * `gemini-flash-latest` aponta sempre para o flash corrente. O preço é
- * o comportamento poder mudar sozinho — mas para resumir conversa isso
- * significa a redação sair um pouco diferente, enquanto um 404 significa
- * o botão parar de funcionar. Quem quiser previsibilidade fixa a versão
- * em `GEMINI_MODELO` (`npm run check:ia` lista o que a conta enxerga).
+ * Eram constantes aqui, lidas do ambiente. Mudaram de lugar porque a
+ * escolha deixou de ser de quem programa: "a IA está demorando" é uma
+ * reclamação da operação, e a resposta estava numa variável que a
+ * operação não abre. Os três perfis, e os tempos medidos que os
+ * justificam, moram lá.
  */
-const MODELO_GEMINI =
-  process.env.GEMINI_MODELO?.trim() ||
-  "gemini-flash-latest";
-
-/**
- * A reserva, para quando o apelido estiver em fila.
- *
- * Medido na primeira integração: `gemini-flash-latest` respondeu
- * `503 — high demand` enquanto `gemini-3.6-flash` respondia normalmente
- * no mesmo minuto. O apelido concentra a demanda de todo mundo que não
- * fixou versão, então é o mais sujeito a congestionar.
- *
- * Uma segunda tentativa, só em falha transitória, resolve sem custo no
- * caminho feliz — e mantém a vantagem do apelido, que é nunca virar 404
- * quando a família se renova.
- */
-const RESERVA_GEMINI =
-  process.env.GEMINI_MODELO_RESERVA?.trim() ||
-  "gemini-3.6-flash";
-
-/**
- * Prazo para desistir de uma chamada.
- *
- * Medido: uma triagem chegou a **162 segundos** na camada gratuita
- * congestionada — a primeira tentativa ficou pendurada, a reserva
- * também, e o botão do painel ficou dois minutos e meio "Lendo…". Sem
- * teto, o `fetch` espera o quanto o servidor quiser.
- *
- * Trinta segundos é generoso para um resumo curto e curto o bastante
- * para a pessoa entender que falhou em vez de achar que travou. Quem
- * roda em lote pode afrouxar por variável.
- */
-const PRAZO_MS = Number(
-  process.env.IA_PRAZO_MS ?? 30_000
-);
 
 /**
  * O `responseSchema` do Gemini é um subconjunto do JSON Schema.
@@ -356,38 +361,161 @@ function paraGemini(
  * endpoint do Gemini é estável o bastante para ser chamado direto.
  */
 async function peloGemini(
-  pedido: PedidoDeIA
+  pedido: PedidoDeIA,
+  config: ConfigDeIA
 ): Promise<RespostaDeIA> {
 
-  const primeira = await chamarGemini(
+  /**
+   * As duas se cobrem.
+   *
+   * Quem pede rápido começa pelo menor e tem o maior como reserva; quem
+   * não pede começa pelo maior e tem o menor como reserva. Nos dois
+   * casos a reserva é um modelo **medido como saudável**, e não o
+   * apelido que costuma estar em fila.
+   */
+  const principal = pedido.rapido
+    ? config.modeloRapido
+    : config.modelo;
+
+  const reserva = pedido.rapido
+    ? config.modelo
+    : config.modeloRapido;
+
+  const resultado = await comReserva(
     pedido,
-    MODELO_GEMINI
+    principal,
+    reserva,
+    config
   );
 
   /**
-   * Só falha transitória tenta de novo, e só uma vez.
+   * Modelo aposentado é a única falha que o apelido resolve.
    *
-   * Cota estourada (429) e esquema inválido (400) não melhoram com
-   * repetição — repetir ali só gastaria a cota que já acabou.
+   * Ele é o que nunca vira 404 — e é exatamente por isso que não serve
+   * de principal: quem nunca 404 é quem todo mundo chama.
    */
   if (
-    primeira.status !== 503 ||
-    RESERVA_GEMINI === MODELO_GEMINI
+    resultado.erro &&
+    resultado.status === 502 &&
+    resultado.erro.includes("não existe mais")
   ) {
-    return primeira;
+    return chamarGemini(
+      pedido,
+      config.modeloReserva,
+      config
+    );
   }
 
-  const segunda = await chamarGemini(
+  return resultado;
+}
+
+function espera(ms: number) {
+  return new Promise<void>((resolver) =>
+    setTimeout(resolver, ms)
+  );
+}
+
+/**
+ * A primeira que responder **bem** ganha; nula se nenhuma responder.
+ *
+ * Erro não vence corrida: um 404 que volta em 300 ms não pode
+ * atropelar a chamada boa que ainda está a caminho.
+ */
+function primeiraBoa(
+  tentativas: Promise<RespostaDeIA>[]
+): Promise<RespostaDeIA | null> {
+
+  return new Promise((resolver) => {
+
+    let restantes = tentativas.length;
+
+    const desistir = () => {
+      restantes -= 1;
+      if (restantes === 0) resolver(null);
+    };
+
+    for (const tentativa of tentativas) {
+      tentativa
+        .then((resposta) => {
+          if (!resposta.erro) return resolver(resposta);
+          desistir();
+        })
+        .catch(desistir);
+    }
+  });
+}
+
+/**
+ * Chamada com reserva em paralelo.
+ *
+ * A principal sai na frente sozinha. Se ela responder bem dentro do
+ * `HEDGE_MS`, acabou — o caminho feliz custa uma chamada, como antes.
+ * Se demorar (ou falhar rápido), a reserva parte **sem cancelar a
+ * primeira**, e vale quem chegar bem primeiro.
+ *
+ * A alternativa que estava aqui era sequencial: esperar a principal
+ * estourar os 30 s e só então tentar a reserva — os 40 segundos que a
+ * operação sentia. Somar prazos onde dava para sobrepor é o que
+ * transformava uma fila do provedor em espera do atendente.
+ */
+async function comReserva(
+  pedido: PedidoDeIA,
+  principal: string,
+  reserva: string,
+  config: ConfigDeIA
+): Promise<RespostaDeIA> {
+
+  const daPrincipal = chamarGemini(
     pedido,
-    RESERVA_GEMINI
+    principal,
+    config
   );
 
-  return segunda.erro ? primeira : segunda;
+  /**
+   * Corrida desligada é uma escolha, não um caso degenerado.
+   *
+   * O perfil "Profundo" zera o `hedgeMs` de propósito: ali a pressa é
+   * o que atrapalha, e chamar um modelo menor no meio do caminho
+   * entregaria justamente a resposta rasa que se estava evitando.
+   */
+  if (reserva === principal || config.hedgeMs <= 0) {
+    return daPrincipal;
+  }
+
+  const cedo = await Promise.race([
+    daPrincipal,
+    espera(config.hedgeMs).then(
+      () => "demorou" as const
+    ),
+  ]);
+
+  if (cedo !== "demorou" && !cedo.erro) return cedo;
+
+  const daReserva = chamarGemini(
+    pedido,
+    reserva,
+    config
+  );
+
+  const boa = await primeiraBoa([
+    daPrincipal,
+    daReserva,
+  ]);
+
+  /**
+   * Nenhuma deu certo: vale o erro da principal.
+   *
+   * É o que descreve a instalação — chave errada, cota estourada,
+   * esquema inválido. O erro da reserva costuma ser o mesmo motivo
+   * dito de outro jeito.
+   */
+  return boa ?? (await daPrincipal);
 }
 
 async function chamarGemini(
   pedido: PedidoDeIA,
-  modelo: string
+  modelo: string,
+  config: ConfigDeIA
 ): Promise<RespostaDeIA> {
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent`;
@@ -415,7 +543,7 @@ async function chamarGemini(
           responseSchema: paraGemini(pedido.esquema),
         },
       }),
-      signal: AbortSignal.timeout(PRAZO_MS),
+      signal: AbortSignal.timeout(config.prazoMs),
     });
 
     if (!resposta.ok) {
@@ -522,7 +650,7 @@ async function chamarGemini(
       provedor: "gemini",
       status: expirou ? 503 : 502,
       erro: expirou
-        ? `O Gemini não respondeu em ${Math.round(PRAZO_MS / 1000)} segundos. A camada gratuita fica em fila nos horários de pico.`
+        ? `O Gemini não respondeu em ${Math.round(config.prazoMs / 1000)} segundos. A camada gratuita fica em fila nos horários de pico.`
         : "Falha ao falar com o Gemini.",
     };
   }
@@ -562,7 +690,11 @@ export async function* conversar(pedido: {
   turnos: Turno[];
 }): AsyncGenerator<PedacoDaConversa> {
 
-  const provedor = provedorDeIA();
+  const config = await lerConfigDeIA();
+
+  const provedor = provedorDeIA(
+    config.provedorPreferido
+  );
 
   if (!provedor) {
     yield {
@@ -574,17 +706,20 @@ export async function* conversar(pedido: {
   }
 
   if (provedor === "gemini") {
-    yield* conversarNoGemini(pedido);
+    yield* conversarNoGemini(pedido, config);
     return;
   }
 
-  yield* conversarNaAnthropic(pedido);
+  yield* conversarNaAnthropic(pedido, config);
 }
 
-async function* conversarNaAnthropic(pedido: {
-  sistema: string;
-  turnos: Turno[];
-}): AsyncGenerator<PedacoDaConversa> {
+async function* conversarNaAnthropic(
+  pedido: {
+    sistema: string;
+    turnos: Turno[];
+  },
+  config: ConfigDeIA
+): AsyncGenerator<PedacoDaConversa> {
 
   const client = new Anthropic();
 
@@ -603,7 +738,8 @@ async function* conversarNaAnthropic(pedido: {
           cache_control: { type: "ephemeral" },
         },
       ],
-      output_config: { effort: "medium" },
+      // O esforço acompanha o perfil de velocidade escolhido na tela.
+      output_config: { effort: config.esforco },
       messages: pedido.turnos.map((t) => ({
         role: t.role,
         content: t.content,
@@ -681,10 +817,96 @@ async function* conversarNaAnthropic(pedido: {
   }
 }
 
-async function* conversarNoGemini(pedido: {
-  sistema: string;
-  turnos: Turno[];
-}): AsyncGenerator<PedacoDaConversa> {
+/**
+ * O assistente no Gemini, com prazo para **começar** a responder.
+ *
+ * Streaming esconde a lentidão de um jeito perverso: a requisição é
+ * aceita, a conexão fica aberta, e a tela mostra o cursor piscando
+ * enquanto o modelo está numa fila do outro lado. Não havia prazo
+ * nenhum aqui — a conversa podia ficar pendurada o quanto o provedor
+ * quisesse, e foi isso que a operação sentiu como "o assistente
+ * demora muito".
+ *
+ * Agora a régua é o **primeiro pedaço de texto**. Se ele não chega no
+ * `HEDGE_MS`, a chamada é abortada e refeita no modelo menor — que
+ * responde em um segundo. Como nada tinha sido escrito na tela ainda,
+ * a troca é invisível: ninguém vê meia resposta de um modelo emendada
+ * na metade do outro.
+ */
+async function* conversarNoGemini(
+  pedido: {
+    sistema: string;
+    turnos: Turno[];
+  },
+  config: ConfigDeIA
+): AsyncGenerator<PedacoDaConversa> {
+
+  /**
+   * Com a corrida desligada, o prazo do primeiro pedaço é o prazo
+   * inteiro: o perfil "Profundo" pede para deixar o modelo pensar, e
+   * trocar de modelo aos seis segundos seria o contrário disso.
+   */
+  const prazoDoPrimeiro =
+    config.hedgeMs > 0 ? config.hedgeMs : config.prazoMs;
+
+  const principal = await abrirFluxoGemini(
+    pedido,
+    config.modelo,
+    prazoDoPrimeiro
+  );
+
+  if (principal.fluxo) {
+    yield* principal.fluxo;
+    return;
+  }
+
+  if (config.hedgeMs <= 0) {
+    yield {
+      tipo: "erro",
+      mensagem:
+        principal.erro ??
+        "Falha ao falar com o Gemini.",
+    };
+    return;
+  }
+
+  const reserva = await abrirFluxoGemini(
+    pedido,
+    config.modeloRapido,
+    config.prazoMs
+  );
+
+  if (reserva.fluxo) {
+    yield* reserva.fluxo;
+    return;
+  }
+
+  yield {
+    tipo: "erro",
+    mensagem:
+      reserva.erro ??
+      principal.erro ??
+      "Falha ao falar com o Gemini.",
+  };
+}
+
+interface FluxoAberto {
+  fluxo?: AsyncGenerator<PedacoDaConversa>;
+  erro?: string;
+}
+
+/**
+ * Abre o fluxo e só o devolve depois do primeiro pedaço chegar.
+ *
+ * É o que permite trocar de modelo sem a pessoa ver: enquanto o
+ * primeiro pedaço não veio, nada foi escrito, e desistir não deixa
+ * rastro na tela.
+ */
+async function abrirFluxoGemini(
+  pedido: { sistema: string; turnos: Turno[] },
+  modelo: string,
+  prazoDoPrimeiro: number
+): Promise<FluxoAberto> {
 
   /**
    * `alt=sse` é o que faz o Gemini devolver eventos.
@@ -693,7 +915,9 @@ async function* conversarNoGemini(pedido: {
    * fim — que é o oposto de fluxo, e daria a mesma tela parada que
    * motivou o streaming.
    */
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODELO_GEMINI}:streamGenerateContent?alt=sse`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:streamGenerateContent?alt=sse`;
+
+  const controle = new AbortController();
 
   let resposta: Response;
 
@@ -715,30 +939,66 @@ async function* conversarNoGemini(pedido: {
           parts: [{ text: t.content }],
         })),
       }),
+      signal: controle.signal,
     });
   } catch {
-    yield {
-      tipo: "erro",
-      mensagem: "Falha ao falar com o Gemini.",
-    };
-    return;
+    return { erro: "Falha ao falar com o Gemini." };
   }
 
   if (!resposta.ok || !resposta.body) {
 
-    yield {
-      tipo: "erro",
-      mensagem:
+    controle.abort();
+
+    return {
+      erro:
         resposta.status === 503
           ? "O Gemini está congestionado neste momento. Tente de novo em alguns segundos."
           : resposta.status === 429
             ? "Cota do Gemini esgotada. A camada gratuita tem limite por minuto e por dia."
-            : `O Gemini respondeu ${resposta.status}.`,
+            : resposta.status === 404
+              ? `O modelo "${modelo}" não existe mais.`
+              : `O Gemini respondeu ${resposta.status}.`,
     };
-    return;
   }
 
-  const leitor = resposta.body.getReader();
+  const pedacos = lerEventos(resposta.body.getReader());
+
+  const primeiro = await Promise.race([
+    pedacos.next(),
+    espera(prazoDoPrimeiro).then(
+      () => "demorou" as const
+    ),
+  ]);
+
+  if (primeiro === "demorou") {
+
+    controle.abort();
+
+    return {
+      erro: `O Gemini não começou a responder em ${Math.round(prazoDoPrimeiro / 1000)} segundos.`,
+    };
+  }
+
+  if (primeiro.done) {
+    return { erro: "O Gemini respondeu sem conteúdo." };
+  }
+
+  // Numa const: dentro do gerador o estreitamento de `primeiro` se perde.
+  const abertura = primeiro.value;
+
+  async function* comOPrimeiro() {
+    yield abertura;
+    yield* pedacos;
+  }
+
+  return { fluxo: comOPrimeiro() };
+}
+
+/** Decodifica o SSE do Gemini em pedaços de conversa. */
+async function* lerEventos(
+  leitor: ReadableStreamDefaultReader<Uint8Array>
+): AsyncGenerator<PedacoDaConversa> {
+
   const decodificador = new TextDecoder();
 
   let sobra = "";
@@ -747,11 +1007,18 @@ async function* conversarNoGemini(pedido: {
 
   while (true) {
 
-    const { done, value } = await leitor.read();
+    let leitura;
 
-    if (done) break;
+    try {
+      leitura = await leitor.read();
+    } catch {
+      // Fluxo abortado (troca de modelo) ou conexão caída.
+      break;
+    }
 
-    sobra += decodificador.decode(value, {
+    if (leitura.done) break;
+
+    sobra += decodificador.decode(leitura.value, {
       stream: true,
     });
 
@@ -789,7 +1056,8 @@ async function* conversarNoGemini(pedido: {
 
         if (evento.usageMetadata) {
           entrada =
-            evento.usageMetadata.promptTokenCount ?? entrada;
+            evento.usageMetadata.promptTokenCount ??
+            entrada;
           saida =
             evento.usageMetadata.candidatesTokenCount ??
             saida;
@@ -803,3 +1071,4 @@ async function* conversarNoGemini(pedido: {
 
   yield { tipo: "fim", uso: { entrada, saida } };
 }
+

@@ -503,17 +503,20 @@ export default function AgendaPage() {
 
       </div>
 
-      <TaskForm
-        open={formOpen}
-        editing={editing}
-        presetDate={presetDate}
-        onClose={() => {
-          setFormOpen(false);
-          setEditing(undefined);
-          setPresetDate(undefined);
-        }}
-        onSave={salvar}
-      />
+      {formOpen && (
+        <TaskForm
+          key={editing?.id ?? presetDate ?? "novo"}
+          open={formOpen}
+          editing={editing}
+          presetDate={presetDate}
+          onClose={() => {
+            setFormOpen(false);
+            setEditing(undefined);
+            setPresetDate(undefined);
+          }}
+          onSave={salvar}
+        />
+      )}
 
       <ConfirmDelete
         open={Boolean(deleting)}

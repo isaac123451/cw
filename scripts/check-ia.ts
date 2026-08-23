@@ -16,6 +16,7 @@ import {
   pedirEstruturado,
   provedorDeIA,
 } from "../lib/services/ia.service";
+import { lerConfigDeIA } from "../lib/services/iaConfig.service";
 
 function retrato(nome: string) {
 
@@ -48,9 +49,36 @@ async function main() {
       "(não definido — vale a ordem padrão)"
   );
 
-  const provedor = provedorDeIA();
+  /**
+   * O que está **valendo**, e não o que o `.env` sugere.
+   *
+   * A escolha de provedor e de velocidade virou configuração de tela,
+   * gravada no banco. Um script que reportasse só as variáveis passaria
+   * a mentir no dia em que alguém trocasse o perfil — e é justamente
+   * este script que se roda para entender por que está lento.
+   */
+  const config = await lerConfigDeIA();
+
+  const provedor = provedorDeIA(
+    config.provedorPreferido
+  );
 
   console.log("\nProvedor ativo:", provedor ?? "NENHUM");
+
+  console.log(
+    "Velocidade:    ",
+    `${config.perfil} (${config.origem === "banco" ? "escolhida na tela" : "vinda do ambiente"})`
+  );
+
+  console.log(
+    "Modelos:       ",
+    `${config.modelo} · rápido: ${config.modeloRapido} · reserva: ${config.modeloReserva}`
+  );
+
+  console.log(
+    "Prazos:        ",
+    `corrida em ${Math.round(config.hedgeMs / 1000)}s · desiste em ${Math.round(config.prazoMs / 1000)}s`
+  );
 
   if (!provedor) {
     console.log(
@@ -68,7 +96,7 @@ async function main() {
    * prática: um enum, um inteiro e um campo obrigatório. Se o provedor
    * respeita isto, respeita o esquema do resumo.
    */
-  const resultado = await pedirEstruturado({
+  const pedido = {
     sistema:
       "Você classifica mensagens curtas de clientes de um sistema para restaurantes. Responda em português do Brasil.",
     prompt:
@@ -90,7 +118,21 @@ async function main() {
       },
       required: ["assunto", "humor", "urgente"],
     },
-  });
+  };
+
+  /**
+   * O tempo entra no relatório porque o defeito era ele.
+   *
+   * "Está configurado" não é a pergunta inteira: a IA já esteve ligada
+   * e respondendo em 40 segundos, o que na prática é a mesma coisa que
+   * desligada — ninguém espera isso com o cliente na linha. Sem o
+   * número aqui, uma regressão de latência volta calada.
+   */
+  const marca = Date.now();
+
+  const resultado = await pedirEstruturado(pedido);
+
+  const msDaPadrao = Date.now() - marca;
 
   if (resultado.erro) {
     console.log("  FALHOU:", resultado.erro);
@@ -112,6 +154,32 @@ async function main() {
   console.log(
     "  tokens:  ",
     `${resultado.uso?.entrada ?? 0} de entrada, ${resultado.uso?.saida ?? 0} de saída`
+  );
+
+  console.log(
+    "  tempo:   ",
+    `${(msDaPadrao / 1000).toFixed(1)} s`
+  );
+
+  /**
+   * O mesmo pedido pela via rápida.
+   *
+   * É a que o "Resumir conversa" usa — resumir é ler e condensar, e o
+   * modelo menor faz igual. Ter os dois números lado a lado é o que
+   * mostra se a escolha ainda se paga.
+   */
+  const marcaRapida = Date.now();
+
+  const rapido = await pedirEstruturado({
+    ...pedido,
+    rapido: true,
+  });
+
+  console.log(
+    "\n  pela via rápida:",
+    rapido.erro
+      ? `FALHOU — ${rapido.erro}`
+      : `${((Date.now() - marcaRapida) / 1000).toFixed(1)} s · ${JSON.stringify(rapido.dados)}`
   );
 
   const dados = resultado.dados ?? {};

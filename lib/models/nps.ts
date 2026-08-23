@@ -186,6 +186,62 @@ export function kindRule(kind?: string | null) {
   return KINDS.find((k) => k.label === kind);
 }
 
+/* ============================================================
+   OS TIPOS COMO CADASTRO
+============================================================ */
+
+/**
+ * Um tipo de tratativa, vindo do banco.
+ *
+ * `KINDS` acima continua existindo como **semente**: é o que a
+ * aplicação usa antes de qualquer cadastro e no modo demonstração. A
+ * tela lê daqui.
+ */
+export interface NpsKindOption {
+  id: string;
+  name: string;
+  emoji: string;
+  color: string;
+  action: string;
+  requiresConfirmation: boolean;
+  requiresRootCause: boolean;
+  opensProcessReview: boolean;
+  ownDeadlineHours?: number;
+  order: number;
+  active: boolean;
+}
+
+/** Quais tipos exigem causa raiz, na versão fixa do guia. */
+const EXIGEM_CAUSA = [
+  "Reclamação",
+  "Erro no Sistema",
+  "Erro Processual",
+];
+
+/** Os sete do guia, no formato do cadastro. */
+export const TIPOS_PADRAO: NpsKindOption[] = KINDS.map(
+  (k, i) => ({
+    id: `padrao-tipo-${i}`,
+    name: k.label,
+    emoji: k.emoji,
+    color: k.color,
+    action: k.acao,
+    requiresConfirmation: k.exigeConfirmacao,
+    requiresRootCause: EXIGEM_CAUSA.includes(k.label),
+    opensProcessReview: k.label === "Erro Processual",
+    ownDeadlineHours: k.prazoProprioHoras,
+    order: i,
+    active: true,
+  })
+);
+
+export function tipoPorNome(
+  tipos: NpsKindOption[],
+  nome?: string | null
+) {
+  return tipos.find((t) => t.name === nome);
+}
+
 /** Todo status que a tela pode exibir, na ordem do fluxo. */
 export const ALL_STATUS = [
   STATUS_NOVO,
@@ -220,6 +276,138 @@ export const FLUXO_EM_ANDAMENTO = [
   STATUS_EM_TRATATIVA,
   STATUS_AGUARDANDO,
 ];
+
+/* ============================================================
+   AS ETAPAS COMO CADASTRO
+============================================================ */
+
+/**
+ * Uma etapa do quadro de NPS, vinda do banco.
+ *
+ * O `final` é o que a pessoa marca na tela. O que o resto da aplicação
+ * lê é o **prefixo do nome** — ver `PREFIXO_ENCERRADO` abaixo.
+ */
+export interface NpsStageOption {
+  id: string;
+  name: string;
+  description?: string;
+  color: string;
+  order: number;
+  active: boolean;
+  final: boolean;
+  /** Tipos que aceitam esta etapa como final. Vazio = todos. */
+  kinds: string[];
+}
+
+/**
+ * O prefixo **é** o mecanismo de encerramento.
+ *
+ * `isEncerrado()` é função pura sobre o texto do status, e é ela que
+ * tira o ciclo da fila, carimba `closedAt` e alimenta o indicador de
+ * resolução. Ela roda em lugares que não têm banco à mão: o cartão do
+ * quadro, o filtro da tela, a fila da extensão.
+ *
+ * Fazer a etapa nova "dizer se encerra" por uma coluna do banco criaria
+ * duas verdades — e a que perde é sempre a que não está no texto do
+ * status já gravado em 789 respostas. Então a gravação **normaliza o
+ * nome**: marcou "encerra o ciclo", o nome ganha o prefixo; desmarcou,
+ * perde. Uma verdade só, e a antiga.
+ */
+export const PREFIXO_ENCERRADO = "[Encerrado] ";
+
+/**
+ * O nome que a etapa terá de fato, dado o que se marcou.
+ *
+ * Idempotente de propósito: gravar duas vezes não vira
+ * "[Encerrado] [Encerrado] Resolvido".
+ */
+export function nomeDeEtapa(
+  nome: string,
+  final: boolean
+) {
+
+  const limpo = nome
+    .trim()
+    .replace(/^(\[Encerrado\]\s*)+/i, "")
+    .trim();
+
+  return final ? `${PREFIXO_ENCERRADO}${limpo}` : limpo;
+}
+
+/** O rótulo sem o prefixo — o que a tela mostra na coluna. */
+export function rotuloDeEtapa(nome: string) {
+  return nome.replace(/^\[Encerrado\]\s*/i, "").trim();
+}
+
+const CORES_PADRAO: Record<string, string> = {
+  [STATUS_NOVO]: "#DC2626",
+  [STATUS_EM_TRATATIVA]: "#F9A11B",
+  [STATUS_AGUARDANDO]: "#7B3FBF",
+};
+
+/**
+ * Quem aceita cada final, na versão fixa do guia.
+ *
+ * Sai de `KINDS[].finais`, invertido: lá cada tipo lista seus finais,
+ * aqui cada final lista seus tipos. A relação é a mesma; o lado que
+ * guarda mudou porque é a **etapa** que se cria numa tela nova, e quem
+ * a cria precisa dizer ali mesmo quem pode chegar nela — senão ela
+ * nasce inalcançável.
+ */
+function tiposQueAceitam(status: string) {
+  return KINDS.filter((k) =>
+    k.finais.includes(status)
+  ).map((k) => k.label as string);
+}
+
+/** As nove etapas do guia, no formato do cadastro. */
+export const ETAPAS_PADRAO: NpsStageOption[] =
+  ALL_STATUS.map((nome, i) => {
+
+    const final = isEncerrado(nome);
+
+    return {
+      id: `padrao-etapa-${i}`,
+      name: nome,
+      color: CORES_PADRAO[nome] ?? "#71717A",
+      order: i,
+      active: true,
+      final,
+
+      /**
+       * "[Encerrado] Sem tratativa" não é de tipo nenhum.
+       *
+       * É onde o promotor calado nasce — a importação o grava direto,
+       * sem passar por classificação. Ficando com a lista vazia, ele
+       * vale para todos, que é o que mantém a tela coerente com o que
+       * a base já tem.
+       */
+      kinds: final ? tiposQueAceitam(nome) : [],
+    };
+  });
+
+/** As etapas de andamento, na ordem — a escada que se sobe e desce. */
+export function emAndamento(etapas: NpsStageOption[]) {
+  return etapas
+    .filter((e) => e.active && !e.final)
+    .sort((a, b) => a.order - b.order);
+}
+
+/** As etapas finais que um tipo aceita. Sem tipo, todas as finais. */
+export function finaisDoTipo(
+  etapas: NpsStageOption[],
+  tipo?: string | null
+) {
+  return etapas
+    .filter(
+      (e) =>
+        e.active &&
+        e.final &&
+        (e.kinds.length === 0 ||
+          (tipo ? e.kinds.includes(tipo) : true))
+    )
+    .sort((a, b) => a.order - b.order);
+}
 
 /* ============================================================
    CAUSA RAIZ

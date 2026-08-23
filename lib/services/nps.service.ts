@@ -2,13 +2,16 @@ import {
   ABANDONO_DIAS,
   isEncerrado,
   JANELA_TENTATIVAS_DIAS,
-  kindRule,
+  MOODS,
+  NpsKindOption,
   NpsResponseView,
   NpsSegment,
   segmentOf,
   SEGMENTS,
   STATUS_AGUARDANDO,
   TENTATIVAS_MINIMAS,
+  tipoPorNome,
+  TIPOS_PADRAO,
 } from "@/lib/models/nps";
 
 /* ============================================================
@@ -47,17 +50,25 @@ export function prazoUtil(
   return cursor;
 }
 
-/** Prazo do primeiro contato: o do tipo, quando existe; senão o do segmento. */
+/**
+ * Prazo do primeiro contato: o do tipo, quando existe; senão o do
+ * segmento.
+ *
+ * `tipos` entra por parâmetro, com os do guia como padrão. Quem tem a
+ * lista cadastrada em mãos (a tela, a rota) passa a dela; quem não tem
+ * — um script, um teste — continua funcionando sem tocar no banco.
+ */
 export function prazoPrimeiroContato(
   respondedAt: Date,
   score: number,
-  kind?: string | null
+  kind?: string | null,
+  tipos: NpsKindOption[] = TIPOS_PADRAO
 ): Date {
 
-  const regra = kindRule(kind);
+  const regra = tipoPorNome(tipos, kind);
 
   const horas =
-    regra?.prazoProprioHoras ??
+    regra?.ownDeadlineHours ??
     segmentOf(score).slaHoursUteis;
 
   return prazoUtil(respondedAt, horas);
@@ -151,15 +162,21 @@ export interface ChecklistItem {
  * obrigatórios precisam estar cumpridos para o botão liberar.
  */
 export function checklist(
-  item: NpsResponseView
+  item: NpsResponseView,
+  tipos: NpsKindOption[] = TIPOS_PADRAO
 ): ChecklistItem[] {
 
-  const regra = kindRule(item.kind);
+  const regra = tipoPorNome(tipos, item.kind);
 
-  const precisaCausa =
-    item.kind === "Reclamação" ||
-    item.kind === "Erro no Sistema" ||
-    item.kind === "Erro Processual";
+  /**
+   * Quem exige causa raiz sai do **cadastro**, não de três nomes.
+   *
+   * Era `item.kind === "Reclamação" || ...` aqui dentro. Com o tipo
+   * virando cadastro, isso voltaria a ser o defeito que o cadastro
+   * existe para tirar: um tipo novo nasceria sem a exigência, e a série
+   * de causa raiz ganharia um buraco que ninguém veria.
+   */
+  const precisaCausa = Boolean(regra?.requiresRootCause);
 
   return [
     {
@@ -191,13 +208,16 @@ export function checklist(
     {
       label: "Cliente confirmou que resolveu",
       ok: Boolean(item.confirmedAt),
-      obrigatorio: Boolean(regra?.exigeConfirmacao),
+      obrigatorio: Boolean(regra?.requiresConfirmation),
     },
   ];
 }
 
-export function podeEncerrar(item: NpsResponseView) {
-  return checklist(item).every(
+export function podeEncerrar(
+  item: NpsResponseView,
+  tipos: NpsKindOption[] = TIPOS_PADRAO
+) {
+  return checklist(item, tipos).every(
     (c) => !c.obrigatorio || c.ok
   );
 }
@@ -208,8 +228,11 @@ export function podeEncerrar(item: NpsResponseView) {
  * O guia é explícito: sem a resposta de reengajamento ("isso resolveu
  * sua questão?"), o loop **não** vai para resolvido.
  */
-export function statusSemConfirmacao(kind?: string | null) {
-  return kindRule(kind)?.exigeConfirmacao
+export function statusSemConfirmacao(
+  kind?: string | null,
+  tipos: NpsKindOption[] = TIPOS_PADRAO
+) {
+  return tipoPorNome(tipos, kind)?.requiresConfirmation
     ? STATUS_AGUARDANDO
     : undefined;
 }
@@ -305,6 +328,180 @@ export function bySegment(itens: NpsResponseView[]) {
       color: s.color,
     };
   });
+}
+
+/* ============================================================
+   TENDÊNCIA
+============================================================ */
+
+export interface PontoDeTendencia {
+  /** "2026-08" — a chave, para ordenar sem depender do rótulo. */
+  chave: string;
+  /** "ago/26" — o que a tela mostra. */
+  rotulo: string;
+  score: number;
+  media: number;
+  total: number;
+  promotores: number;
+  passivos: number;
+  detratores: number;
+  /** Quantas trouxeram comentário — a base do que dá para trabalhar. */
+  comentarios: number;
+}
+
+const MESES = [
+  "jan",
+  "fev",
+  "mar",
+  "abr",
+  "mai",
+  "jun",
+  "jul",
+  "ago",
+  "set",
+  "out",
+  "nov",
+  "dez",
+];
+
+/**
+ * O NPS mês a mês.
+ *
+ * **A nota é recalculada em cada mês, não a média das notas mensais.**
+ * São coisas diferentes quando os meses têm tamanhos diferentes, e a
+ * segunda é a que produz um número plausível e errado.
+ *
+ * Meses sem resposta nenhuma **não** entram: uma linha caindo a zero
+ * num mês vazio se lê como piora, quando é ausência de dado.
+ */
+export function trendByMonth(
+  itens: NpsResponseView[],
+  meses = 12
+): PontoDeTendencia[] {
+
+  const porMes = new Map<string, NpsResponseView[]>();
+
+  for (const item of itens) {
+
+    const chave = item.respondedAt.slice(0, 7);
+
+    const lista = porMes.get(chave);
+
+    if (lista) lista.push(item);
+    else porMes.set(chave, [item]);
+  }
+
+  return [...porMes.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .slice(-meses)
+    .map(([chave, doMes]) => {
+
+      const resumo = summarize(doMes);
+
+      const [ano, mes] = chave.split("-");
+
+      return {
+        chave,
+        rotulo: `${MESES[Number(mes) - 1] ?? mes}/${ano.slice(2)}`,
+        score: resumo.score,
+        media: resumo.media,
+        total: resumo.total,
+        promotores: resumo.promotores,
+        passivos: resumo.passivos,
+        detratores: resumo.detratores,
+        comentarios: doMes.filter(
+          (i) => i.comment.trim() !== ""
+        ).length,
+      };
+    });
+}
+
+/**
+ * Distribuição da régua de humor — o **depois** do contato.
+ *
+ * A nota do NPS é de antes e não se reescreve. Esta é a única leitura
+ * que responde se o atendimento moveu a agulha, e ela só existe sobre
+ * quem teve pós-contato registrado — por isso a conta é sobre esses, e
+ * não sobre a base inteira: dividir por 868 quando 40 têm registro
+ * transformaria um indicador de recuperação num indicador de cobertura.
+ */
+export function byMood(itens: NpsResponseView[]) {
+
+  const comRegistro = itens.filter(
+    (item) => typeof item.moodAfter === "number"
+  );
+
+  return MOODS.map((passo) => {
+
+    const value = comRegistro.filter(
+      (item) => item.moodAfter === passo.value
+    ).length;
+
+    return {
+      label: `${passo.emoji} ${passo.label}`,
+      value,
+      percent:
+        comRegistro.length === 0
+          ? 0
+          : Math.round(
+              (value / comRegistro.length) * 1000
+            ) / 10,
+      color: passo.color,
+    };
+  });
+}
+
+/**
+ * Recuperação: de quem saiu do contato bem, entre os que registraram.
+ *
+ * "Satisfeito" ou "Encantado" na régua — 4 e 5. É o que responde se a
+ * operação conseguiu fazer alguma coisa a respeito, que é diferente de
+ * saber que o cliente estava insatisfeito.
+ */
+export function recuperacao(itens: NpsResponseView[]) {
+
+  const comRegistro = itens.filter(
+    (item) => typeof item.moodAfter === "number"
+  );
+
+  const bons = comRegistro.filter(
+    (item) => (item.moodAfter ?? 0) >= 4
+  ).length;
+
+  return {
+    comRegistro: comRegistro.length,
+    recuperados: bons,
+    percent:
+      comRegistro.length === 0
+        ? 0
+        : Math.round(
+            (bons / comRegistro.length) * 100
+          ),
+  };
+}
+
+/** Ranking por tipo de tratativa — o que mais chega. */
+export function byKind(itens: NpsResponseView[]) {
+
+  const mapa = new Map<string, number>();
+
+  for (const item of itens) {
+    const chave = item.kind ?? "Não classificado";
+    mapa.set(chave, (mapa.get(chave) ?? 0) + 1);
+  }
+
+  const total = itens.length;
+
+  return [...mapa.entries()]
+    .map(([label, value]) => ({
+      label,
+      value,
+      percent:
+        total === 0
+          ? 0
+          : Math.round((value / total) * 1000) / 10,
+    }))
+    .sort((a, b) => b.value - a.value);
 }
 
 /** Ranking de causa raiz — onde investir para parar de sangrar. */
