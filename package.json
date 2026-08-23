@@ -43,7 +43,8 @@
     "check:telas": "tsx scripts/check-telas.ts",
     "check:fiacao": "tsx scripts/check-fiacao.ts",
     "check:escape": "tsx scripts/check-escape.ts",
-    "check:dependencias": "tsx scripts/check-dependencias.ts"
+    "check:dependencias": "tsx scripts/check-dependencias.ts",
+    "check:campos": "tsx scripts/check-campos.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",
