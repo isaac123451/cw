@@ -35,6 +35,7 @@ import {
   PeriodKey,
   PeriodMode,
   pendingAnswers,
+  pendingEvaluations,
   PROMOTER_SCORE,
   ptBR,
   RA1000_BAND,
@@ -101,6 +102,19 @@ export default function CalculadoraPage() {
 
   const current = useMemo(
     () => scoreFrom(base),
+    [base]
+  );
+
+  /**
+   * Quantas reclamações do período ainda podem ser avaliadas.
+   *
+   * Precisa aparecer na tela: o cálculo passou a respeitar esse teto, e
+   * um campo que trava sem dizer por quê é pior do que um campo que
+   * aceita bobagem. Com o número à vista, "digitei 200 e a nota parou"
+   * vira "só existem 51 para avaliar".
+   */
+  const tetoDeAvaliacoes = useMemo(
+    () => pendingEvaluations(base),
     [base]
   );
 
@@ -400,11 +414,58 @@ export default function CalculadoraPage() {
                     title="3. Notas de avaliação"
                     description="Quantas novas avaliações por nota. Nota 7 ou mais conta como resolvida e favorável — mesmo critério de promotor."
                     action={
-                      <span className="shrink-0 rounded-xl bg-zinc-50 px-3 py-1.5 text-xs font-medium text-zinc-600">
-                        Total: {avaliacoesDistribuidas}
+                      <span
+                        className={`shrink-0 rounded-xl px-3 py-1.5 text-xs font-medium ${
+                          avaliacoesDistribuidas >
+                          tetoDeAvaliacoes
+                            ? "bg-amber-50 text-amber-700"
+                            : "bg-zinc-50 text-zinc-600"
+                        }`}
+                      >
+                        Total: {avaliacoesDistribuidas} de{" "}
+                        {tetoDeAvaliacoes}
                       </span>
                     }
                   >
+
+                  {/*
+                    O teto é regra do Reclame Aqui, não limite nosso:
+                    quem avalia é o consumidor que abriu a reclamação,
+                    então não há avaliação sem caso para avaliar.
+                  */}
+                  <p className="mb-4 text-xs text-zinc-500">
+                    {tetoDeAvaliacoes === 0 ? (
+                      <>
+                        Todas as {base.received} reclamações
+                        do período já foram avaliadas — só
+                        reclamações novas trazem avaliações
+                        novas.
+                      </>
+                    ) : (
+                      <>
+                        <strong className="font-semibold text-zinc-700">
+                          {tetoDeAvaliacoes}
+                        </strong>{" "}
+                        reclamações do período ainda estão
+                        sem avaliação. Acima disso o cenário
+                        não sobe, porque cada avaliação
+                        pertence a uma reclamação.
+                      </>
+                    )}
+                  </p>
+
+                  {avaliacoesDistribuidas >
+                    tetoDeAvaliacoes && (
+                    <p className="mb-4 rounded-xl bg-amber-50 px-3 py-2.5 text-xs text-amber-700 ring-1 ring-inset ring-amber-100">
+                      As{" "}
+                      {avaliacoesDistribuidas -
+                        tetoDeAvaliacoes}{" "}
+                      avaliações acima do teto estão sendo
+                      ignoradas no resultado. Para simular
+                      mais, adicione reclamações novas na
+                      etapa 2.
+                    </p>
+                  )}
 
                     <div className="grid grid-cols-4 gap-2">
 
@@ -553,7 +614,12 @@ export default function CalculadoraPage() {
                                 setField(
                                   "answerPending",
                                   Math.min(
-                                    Number(e.target.value),
+                                    Math.max(
+                                      Number(
+                                        e.target.value
+                                      ) || 0,
+                                      0
+                                    ),
                                     pendentes
                                   )
                                 )
@@ -603,7 +669,11 @@ export default function CalculadoraPage() {
                             onChange={(e) =>
                               setField(
                                 "addAnswered",
-                                Number(e.target.value)
+                                Math.max(
+                                  Number(e.target.value) ||
+                                    0,
+                                  0
+                                )
                               )
                             }
                             className={`${numberField} mt-1.5`}
@@ -622,7 +692,11 @@ export default function CalculadoraPage() {
                             onChange={(e) =>
                               setField(
                                 "addUnanswered",
-                                Number(e.target.value)
+                                Math.max(
+                                  Number(e.target.value) ||
+                                    0,
+                                  0
+                                )
                               )
                             }
                             className={`${numberField} mt-1.5`}
@@ -928,9 +1002,26 @@ export default function CalculadoraPage() {
 
                     {!target.reachable && (
                       <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2.5 text-xs text-amber-700 ring-1 ring-inset ring-amber-100">
-                        A meta não é alcançável apenas com
-                        avaliações neste período — é preciso
-                        elevar o índice de resposta também.
+                        {target.reason ===
+                        "sem-avaliacoes" ? (
+                          <>
+                            Mesmo avaliando nota 10 as{" "}
+                            {target.ceiling} reclamações que
+                            ainda não têm avaliação, a nota
+                            chega a{" "}
+                            {ptBR(target.projected, 1)} — não
+                            à meta. O caminho é o índice de
+                            resposta e a moderação das notas
+                            baixas.
+                          </>
+                        ) : (
+                          <>
+                            A meta não é alcançável apenas com
+                            avaliações neste período — é
+                            preciso elevar o índice de
+                            resposta também.
+                          </>
+                        )}
                       </p>
                     )}
                   </>

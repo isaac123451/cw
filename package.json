@@ -45,7 +45,8 @@
     "check:escape": "tsx scripts/check-escape.ts",
     "check:dependencias": "tsx scripts/check-dependencias.ts",
     "check:campos": "tsx scripts/check-campos.ts",
-    "check:acesso": "tsx scripts/check-acesso.ts"
+    "check:acesso": "tsx scripts/check-acesso.ts",
+    "check:calculadora": "tsx scripts/check-calculadora.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",

@@ -720,6 +720,25 @@ export function pendingAnswers(base: ReputationRaw) {
   return Math.max(base.received - base.answered, 0);
 }
 
+/**
+ * Quantas reclamações do período ainda podem receber avaliação.
+ *
+ * **Uma avaliação pertence a uma reclamação.** Não existe avaliação
+ * solta no Reclame Aqui: o consumidor avalia o atendimento de um caso
+ * que ele abriu. Logo o número de avaliadas nunca passa o de recebidas,
+ * e o que dá para conquistar num período é, no máximo, o que ainda está
+ * sem avaliação.
+ *
+ * Sem esse teto a calculadora aceitava 200 avaliações nota 10 sobre 129
+ * reclamações e prometia nota 9,5 — medido na base real em 23/08. Era o
+ * pior tipo de erro que uma calculadora pode ter: ela não travava nem
+ * avisava, respondia com um número redondo e convincente para um plano
+ * que não tem como acontecer.
+ */
+export function pendingEvaluations(base: ReputationRaw) {
+  return Math.max(base.received - base.evaluated, 0);
+}
+
 export function totalRatings(
   ratings: Record<number, number>
 ) {
@@ -774,10 +793,56 @@ export function resolveIndicators(
  * Diferente da calculadora do Hugme, funciona sobre qualquer janela —
  * inclusive a do próximo período, ainda não fechada.
  */
+/**
+ * Nenhum campo do cenário aceita número negativo.
+ *
+ * "Menos vinte avaliações nota 3" não quer dizer nada — e produzia
+ * resultado pior do que um erro: as vinte saíam de `evaluated` mas
+ * sessenta pontos saíam de `scoreSum`, e a média do consumidor subia
+ * para **18,97**, entregando uma nota final de 12,7 numa escala que vai
+ * até 10.
+ *
+ * A tela já travava dois dos campos em zero; `answerPending`,
+ * `addAnswered' e `addUnanswered` passavam direto, e `min={0}` no
+ * HTML é dica de validação, não trava — digitar "-50" grava -50. A
+ * defesa fica aqui porque este é o ponto por onde todo mundo passa.
+ */
+function saneia(input: SimulationInput): SimulationInput {
+
+  const naoNegativo = (valor: number) =>
+    Number.isFinite(valor) ? Math.max(valor, 0) : 0;
+
+  const ratings: Record<number, number> = {};
+
+  for (const [nota, qtd] of Object.entries(
+    input.ratings
+  )) {
+    ratings[Number(nota)] = naoNegativo(qtd || 0);
+  }
+
+  return {
+    ...input,
+    answerPending: naoNegativo(input.answerPending),
+    addAnswered: naoNegativo(input.addAnswered),
+    addUnanswered: naoNegativo(input.addUnanswered),
+    ratings,
+    resolved:
+      input.resolved === null
+        ? null
+        : naoNegativo(input.resolved),
+    wouldReturn:
+      input.wouldReturn === null
+        ? null
+        : naoNegativo(input.wouldReturn),
+  };
+}
+
 export function simulate(
   base: ReputationRaw,
-  input: SimulationInput
+  entrada: SimulationInput
 ): ReputationRaw {
+
+  const input = saneia(entrada);
 
   const novasAvaliacoes = totalRatings(input.ratings);
 
@@ -825,11 +890,45 @@ export function simulate(
       removidas.length
   );
 
-  const evaluated = naoNegativo(
-    base.evaluated +
-      novasAvaliacoes -
-      removidasAvaliadas.length
+  /**
+   * O teto corta a avaliação inteira — contagem **e** nota.
+   *
+   * Uma primeira versão limitou só `evaluated` e deixou `scoreSum`
+   * passar inteiro. Foi pior do que o defeito original: com 200 notas
+   * 10 sobre 129 reclamações, o denominador parava em 129 e o
+   * numerador seguia até 2.610, dando média 20,2 e **nota final 12,9**
+   * numa escala que vai até 10. O bug estava na tela, não no teste — a
+   * conferência olhava só a contagem, e por isso passou.
+   *
+   * O corte mantém a proporção entre as notas digitadas. É o que a
+   * pessoa quis dizer: quem pede 200 avaliações nota 10 e só tem 51
+   * vagas está pedindo 51 avaliações nota 10, não 51 avaliações de
+   * nota qualquer.
+   */
+  const avaliadasDaBase = naoNegativo(
+    base.evaluated - removidasAvaliadas.length
   );
+
+  /** Quantas avaliações novas ainda cabem no cenário. */
+  const espaco = naoNegativo(
+    received - avaliadasDaBase
+  );
+
+  const aceitas = Math.min(novasAvaliacoes, espaco);
+
+  /**
+   * A soma acompanha o corte pelo mesmo fator, preservando a média do
+   * que foi digitado. Cortar por nota — as mais altas primeiro, ou as
+   * mais baixas — mudaria a média e responderia outra pergunta.
+   */
+  const fatorDoCorte =
+    novasAvaliacoes === 0
+      ? 1
+      : aceitas / novasAvaliacoes;
+
+  const somaAceita = somaNotas * fatorDoCorte;
+
+  const evaluated = avaliadasDaBase + aceitas;
 
   return {
     received,
@@ -851,13 +950,23 @@ export function simulate(
     evaluated,
 
     scoreSum: naoNegativo(
-      base.scoreSum + somaNotas - notasRemovidas
+      base.scoreSum + somaAceita - notasRemovidas
     ),
 
+    /**
+     * Os dois indicadores derivados encolhem pelo mesmo fator.
+     *
+     * Sem isto, pedir 251 avaliações nota 10 num teto de 51 rendia 251
+     * "resolvidas" — que o `Math.min` abaixo depois grudava no total,
+     * levando o índice de solução a 100% e a nota a 9,5 em vez de 9,1.
+     * O excedente descartado continuava mexendo na nota por uma porta
+     * lateral, e a diferença de 0,4 é grande num número que vai de 0 a
+     * 10.
+     */
     resolved: Math.min(
       naoNegativo(
         base.resolved +
-          indicadores.resolved -
+          indicadores.resolved * fatorDoCorte -
           conta(
             (item) => item.evaluated && item.resolved
           )
@@ -868,7 +977,7 @@ export function simulate(
     wouldReturn: Math.min(
       naoNegativo(
         base.wouldReturn +
-          indicadores.wouldReturn -
+          indicadores.wouldReturn * fatorDoCorte -
           conta(
             (item) =>
               item.evaluated && item.wouldReturn
@@ -885,6 +994,19 @@ export interface SimulationTarget {
   needed: number;
   reachable: boolean;
   projected: number;
+  /**
+   * Por que não dá, quando não dá.
+   *
+   * "Não alcançável" sem motivo manda a pessoa adivinhar. São duas
+   * situações diferentes e com saída diferente: ou acabaram as
+   * reclamações sem avaliação do período (`sem-avaliacoes`), e aí só o
+   * tempo traz mais; ou há espaço de sobra e mesmo com tudo nota 10 a
+   * nota não chega (`teto-da-nota`), e aí o caminho é o índice de
+   * resposta.
+   */
+  reason?: "sem-avaliacoes" | "teto-da-nota";
+  /** Quantas avaliações ainda cabem no período. */
+  ceiling?: number;
 }
 
 /**
@@ -917,9 +1039,22 @@ export function evaluationsToReach(
     };
   }
 
+  /**
+   * A busca para onde acabam as reclamações sem avaliação.
+   *
+   * Antes ela subia até 2000 sem olhar para a base, e devolvia um
+   * número que `simulate` — depois do teto — não consegue reproduzir.
+   * Os dois caminhos existem na mesma tela: a pessoa lê "faltam N" de
+   * um e digita N no outro. Discordarem é a tela mentindo para si
+   * mesma.
+   */
+  const teto = pendingEvaluations(base);
+
+  const maximo = Math.min(limit, teto);
+
   let raw = base;
 
-  for (let n = 1; n <= limit; n++) {
+  for (let n = 1; n <= maximo; n++) {
 
     // Avaliação ideal: nota 10, resolvida e favorável.
     raw = {
@@ -936,15 +1071,19 @@ export function evaluationsToReach(
         needed: n,
         reachable: true,
         projected: scoreFrom(raw).raScore,
+        ceiling: teto,
       };
     }
   }
 
   return {
     band: target,
-    needed: limit,
+    needed: maximo,
     reachable: false,
     projected: scoreFrom(raw).raScore,
+    reason:
+      teto <= limit ? "sem-avaliacoes" : "teto-da-nota",
+    ceiling: teto,
   };
 }
 

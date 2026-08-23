@@ -1,3 +1,7 @@
+"use client";
+
+import { useState } from "react";
+
 import SurfaceCard from "@/components/shared/SurfaceCard";
 
 import { MonthlyReputation } from "@/lib/services/reputation.service";
@@ -14,12 +18,30 @@ const PAD_T = 24;
 const AXIS = 30;
 
 /**
- * Barras (volume recebido) combinadas com linha (nota RA) em SVG puro,
- * mantendo o render idêntico entre servidor e cliente.
+ * Largura mínima de um rótulo de mês sem encostar no vizinho.
+ *
+ * "Ago 26" a 11 px ocupa cerca de 45; setenta dá folga. É este número
+ * que decide quantos rótulos cabem quando a janela cresce.
+ */
+const LARGURA_POR_ROTULO = 70;
+
+/**
+ * Barras (volume recebido) combinadas com linha (nota RA) em SVG puro.
+ *
+ * SVG e não biblioteca de gráfico: o desenho é o mesmo no servidor e no
+ * cliente, sem medir o DOM.
+ *
+ * **Não tinha informação nenhuma ao passar o mouse** — as barras e os
+ * pontos eram decorativos. Numa tela que existe para explicar a nota,
+ * isso significa mostrar que ela caiu sem deixar ver de quanto para
+ * quanto, nem com que volume. Agora cada mês tem uma faixa de captura
+ * e um cartão com os três números que a pessoa procuraria.
  */
 export default function ReputationTrend({
   data,
 }: Props) {
+
+  const [ativo, setAtivo] = useState<number | null>(null);
 
   if (data.length === 0) {
     return (
@@ -54,6 +76,42 @@ export default function ReputationTrend({
   const scoreY = (value: number) =>
     PAD_T + plot - (value / 10) * plot;
 
+  /**
+   * De quantos em quantos meses desenhar um rótulo.
+   *
+   * Com a janela de seis meses cabem todos — medido: folga de 66 px.
+   * O afinamento existe para quando alguém abrir doze ou vinte e quatro,
+   * que é quando as datas começam a se empilhar.
+   */
+  const cabem = Math.max(
+    Math.floor(inner / LARGURA_POR_ROTULO),
+    2
+  );
+
+  const passo = Math.max(
+    Math.ceil(data.length / cabem),
+    1
+  );
+
+  const ultimo = data.length - 1;
+
+  const vizinhoDoUltimo =
+    ultimo - (ultimo % passo || passo);
+
+  /** O vizinho sai se o último for encostar nele — ver TrendChart. */
+  const espremido =
+    ultimo % passo !== 0 &&
+    (ultimo - vizinhoDoUltimo) * slot <
+      LARGURA_POR_ROTULO;
+
+  const mostraRotulo = (index: number) =>
+    index === 0 ||
+    index === ultimo ||
+    (index % passo === 0 &&
+      !(espremido && index === vizinhoDoUltimo));
+
+  const ponto = ativo === null ? null : data[ativo];
+
   const linePath = data
     .map(
       (item, index) =>
@@ -83,13 +141,14 @@ export default function ReputationTrend({
 
       </div>
 
-      <div className="w-full overflow-x-auto">
+      <div className="relative w-full overflow-x-auto">
 
         <svg
           viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
           className="h-auto w-full min-w-[520px]"
           role="img"
           aria-label="Evolução da nota de reputação e do volume de reclamações"
+          onMouseLeave={() => setAtivo(null)}
         >
 
           {[0, 0.25, 0.5, 0.75, 1].map((ratio) => (
@@ -149,17 +208,42 @@ export default function ReputationTrend({
             </g>
           ))}
 
+          {data.map((item, index) =>
+            mostraRotulo(index) ? (
+              <text
+                key={`lb-${item.label}`}
+                x={centerX(index)}
+                y={HEIGHT - 8}
+                textAnchor="middle"
+                fontSize={11}
+                fill={
+                  ativo === index ? "#7C3AED" : "#9CA3AF"
+                }
+                fontWeight={ativo === index ? 600 : 400}
+              >
+                {item.label}
+              </text>
+            ) : null
+          )}
+
+          {/*
+            A faixa de captura, por mês.
+
+            Vai por cima de tudo porque é ela que recebe o mouse — e é
+            transparente, então não muda o desenho. Cobrir a coluna
+            inteira faz acertar o mês depender de estar nele, e não de
+            acertar a barra.
+          */}
           {data.map((item, index) => (
-            <text
-              key={`lb-${item.label}`}
-              x={centerX(index)}
-              y={HEIGHT - 8}
-              textAnchor="middle"
-              fontSize={11}
-              fill="#9CA3AF"
-            >
-              {item.label}
-            </text>
+            <rect
+              key={`faixa-${item.label}`}
+              x={PAD_L + slot * index}
+              y={PAD_T}
+              width={slot}
+              height={plot}
+              fill="transparent"
+              onMouseEnter={() => setAtivo(index)}
+            />
           ))}
 
           {[0, 5, 10].map((tick) => (
@@ -175,6 +259,63 @@ export default function ReputationTrend({
           ))}
 
         </svg>
+
+        {ponto && (
+          <div
+            className="pointer-events-none absolute top-2 z-10 rounded-xl border border-zinc-200 bg-white/95 px-3 py-2 text-xs shadow-lg backdrop-blur"
+            style={
+              ativo !== null && ativo > data.length * 0.6
+                ? { left: "1rem" }
+                : { right: "1rem" }
+            }
+          >
+
+            <div className="font-semibold text-zinc-900">
+              {ponto.label}
+            </div>
+
+            <div className="mt-1.5 flex items-center gap-2 text-zinc-600">
+              <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-emerald-500" />
+              Nota RA
+              <strong className="ml-auto pl-3 font-semibold text-zinc-900">
+                {ponto.score
+                  .toFixed(1)
+                  .replace(".", ",")}
+              </strong>
+            </div>
+
+            <div className="mt-1 flex items-center gap-2 text-zinc-600">
+              <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-violet-200" />
+              Recebidas
+              <strong className="ml-auto pl-3 font-semibold text-zinc-900">
+                {ponto.received}
+              </strong>
+            </div>
+
+            {/*
+              A variação contra o mês anterior é o que a tela existe para
+              responder. Sem ela, quem olha compara duas alturas de barra
+              a olho — que é exatamente o erro que o gráfico deveria
+              evitar.
+            */}
+            {ativo !== null && ativo > 0 && (
+              <div className="mt-1.5 border-t border-zinc-100 pt-1.5 text-[11px] text-zinc-500">
+                {(() => {
+
+                  const antes = data[ativo - 1].score;
+                  const delta = ponto.score - antes;
+
+                  if (Math.abs(delta) < 0.05) {
+                    return "estável contra o mês anterior";
+                  }
+
+                  return `${delta > 0 ? "+" : "−"}${Math.abs(delta).toFixed(1).replace(".", ",")} contra ${data[ativo - 1].label}`;
+                })()}
+              </div>
+            )}
+
+          </div>
+        )}
 
       </div>
 
