@@ -3,7 +3,15 @@
  * completa o que ela não traz.
  *
  *   npm run ra:completo -- --base <arquivo.xlsx> --engine <arquivo.csv>
- *   npm run ra:completo -- ... --gravar     (sem isto, só simula)
+ *   npm run ra:completo -- ... --gravar          (sem isto, só simula)
+ *   npm run ra:completo -- ... --somente-novas   (cria o que falta, não apaga)
+ *
+ * **Dois modos, e o segundo é o do dia a dia.** A carga completa refaz a
+ * base do zero e se faz uma vez; o que acontece toda semana é chegar um
+ * export novo do portal e a pergunta ser "o que aqui ainda não está lá?".
+ * O `--somente-novas` responde isso sem apagar nada e sem tocar no que já
+ * existe — nem para atualizar, porque quem move o caso no quadro é a
+ * operação, e regravar desfaria o trabalho dela.
  *
  * **Duas planilhas com papéis diferentes, e isso é o desenho:**
  *
@@ -22,9 +30,14 @@
  * casamento é uma escada de quatro degraus, do mais seguro ao mais
  * tolerante, e cada degrau só recebe quem o anterior não resolveu.
  *
- * **É destrutivo.** Apaga reclamações, clientes e estabelecimentos antes
- * de gravar. Rode `npm run db:backup` antes — o `--gravar` recusa se não
- * houver backup do dia.
+ * **A carga completa é destrutiva.** Apaga reclamações, clientes e
+ * estabelecimentos antes de gravar; rode `npm run db:backup` antes, e ela
+ * recusa se não houver backup do dia. O `--somente-novas` não apaga nada
+ * e por isso não exige backup.
+ *
+ * Os dois modos são provados: `npm run check:incremental` monta uma
+ * planilha descartável e confere que o incremental cria o que falta e
+ * **não toca** no que já existe.
  */
 import "dotenv/config";
 
@@ -54,6 +67,22 @@ function opcao(nome: string) {
 const CAMINHO_BASE = opcao("base");
 const CAMINHO_ENGINE = opcao("engine");
 const GRAVAR = argv.includes("--gravar");
+
+/**
+ * Só cria o que falta — não apaga nada.
+ *
+ * É o modo do dia a dia. A carga completa existe para refazer a base do
+ * zero, e isso se faz uma vez; o que acontece toda semana é chegar um
+ * export novo do portal e a pergunta ser "o que aqui ainda não está
+ * lá?". Sem este modo, a resposta exigia apagar 127 reclamações para
+ * regravar 128 — e junto iam as anotações, as etiquetas e as
+ * movimentações que a operação tinha feito em cima delas.
+ *
+ * O que já existe **não é tocado**. Nem para atualizar: o portal reescreve
+ * status e nota, mas quem move o caso no quadro é a operação, e uma
+ * reimportação que sobrescrevesse isso desfaria o trabalho de alguém.
+ */
+const SOMENTE_NOVAS = argv.includes("--somente-novas");
 
 if (!CAMINHO_BASE) {
   console.error(
@@ -799,6 +828,34 @@ async function main() {
     return item;
   });
 
+  /* ---------- 4.5. o que já está no banco ---------- */
+
+  /**
+   * No modo incremental, o filtro acontece **antes** do relatório.
+   *
+   * Assim os números que saem na tela são os do que vai realmente
+   * entrar, e não os do arquivo inteiro — que é a diferença entre "vou
+   * criar 1" e "vou criar 127", lida por quem está prestes a apertar
+   * `--gravar`.
+   */
+  const jaNoBanco = new Set(
+    (
+      await prisma.case.findMany({
+        select: { protocol: true },
+      })
+    ).map((c) => c.protocol)
+  );
+
+  const novas = casos.filter(
+    (c) => !jaNoBanco.has(c.protocol)
+  );
+
+  if (SOMENTE_NOVAS) {
+    console.log(
+      `  base atual: ${jaNoBanco.size} reclamações · do arquivo, ${casos.length - novas.length} já estão lá e ${novas.length} são novas\n`
+    );
+  }
+
   /* ---------- 5. relatório ---------- */
 
   console.log("  CASAMENTO COM O CW ENGINE");
@@ -876,47 +933,73 @@ async function main() {
     `\n  reclamações sem relato: ${semTexto} | com nota: ${casos.filter((c) => c.evaluated).length} | resolvidas: ${casos.filter((c) => c.resolved).length}`
   );
 
+  if (SOMENTE_NOVAS && novas.length === 0) {
+    console.log(
+      "\n  Nada a criar: tudo que está no arquivo já está na base.\n"
+    );
+    return;
+  }
+
   if (!GRAVAR) {
     console.log(
-      "\n  SIMULAÇÃO — nada foi gravado. Repita com --gravar.\n"
+      `\n  SIMULAÇÃO — nada foi gravado. Repita com --gravar.\n`
     );
     return;
   }
 
   /* ---------- 6. trava do backup ---------- */
 
-  const hoje = new Date().toISOString().slice(0, 10);
+  /**
+   * A trava do backup é da carga completa, não do modo incremental.
+   *
+   * Ela existe porque a carga **apaga** a base antes de gravar, e sem
+   * cópia não há de onde voltar. O modo incremental não apaga nada:
+   * exigir backup ali seria atrito por simetria, e atrito por simetria
+   * é o que faz as pessoas contornarem a trava quando ela importa.
+   */
+  if (!SOMENTE_NOVAS) {
 
-  const temBackup = readdirSync(process.cwd()).some(
-    (f) =>
-      f.startsWith(`backup-${hoje}`) &&
-      f.endsWith(".json")
-  );
+    const hoje = new Date()
+      .toISOString()
+      .slice(0, 10);
 
-  if (!temBackup) {
-    console.error(
-      `\n  Não há backup de hoje na pasta. Rode "npm run db:backup" antes — este comando apaga a base.\n`
+    const temBackup = readdirSync(process.cwd()).some(
+      (f) =>
+        f.startsWith(`backup-${hoje}`) &&
+        f.endsWith(".json")
     );
-    process.exit(1);
+
+    if (!temBackup) {
+      console.error(
+        `\n  Não há backup de hoje na pasta. Rode "npm run db:backup" antes — este comando apaga a base.\n`
+      );
+      process.exit(1);
+    }
   }
 
-  /* ---------- 7. limpeza ---------- */
+  /* ---------- 7. limpeza (só na carga completa) ---------- */
 
-  console.log("\n  APAGANDO");
+  if (!SOMENTE_NOVAS) {
 
-  const apagados = {
-    casos: (await prisma.case.deleteMany({})).count,
-    clientes: (
-      await prisma.clientProfile.deleteMany({})
-    ).count,
-    estabelecimentos: (
-      await prisma.establishment.deleteMany({})
-    ).count,
-    empresas: (await prisma.company.deleteMany({}))
-      .count,
-  };
+    console.log("\n  APAGANDO");
 
-  console.log(`    ${JSON.stringify(apagados)}`);
+    const apagados = {
+      casos: (await prisma.case.deleteMany({})).count,
+      clientes: (
+        await prisma.clientProfile.deleteMany({})
+      ).count,
+      estabelecimentos: (
+        await prisma.establishment.deleteMany({})
+      ).count,
+      empresas: (await prisma.company.deleteMany({}))
+        .count,
+    };
+
+    console.log(`    ${JSON.stringify(apagados)}`);
+  }
+
+  /** No modo incremental, só as que faltam entram. */
+  const paraGravar = SOMENTE_NOVAS ? novas : casos;
 
   /* ---------- 8. estabelecimentos ---------- */
 
@@ -929,7 +1012,26 @@ async function main() {
    */
   const idPorSlug = new Map<string, string>();
 
+  /**
+   * No modo incremental, o cadastro que já existe é **reaproveitado**.
+   *
+   * Criar de novo estouraria o `slug` único, e recriar seria pior: a
+   * ficha do restaurante carrega plano, MRR e responsável preenchidos à
+   * mão, e nada disso vem de planilha nenhuma.
+   */
+  if (SOMENTE_NOVAS) {
+    for (const e of await prisma.establishment.findMany({
+      select: { id: true, slug: true },
+    })) {
+      idPorSlug.set(e.slug, e.id);
+    }
+  }
+
+  let criados = 0;
+
   for (const e of estabelecimentos.values()) {
+
+    if (idPorSlug.has(e.slug)) continue;
 
     const criado = await prisma.establishment.create({
       data: {
@@ -954,10 +1056,11 @@ async function main() {
     });
 
     idPorSlug.set(criado.slug, criado.id);
+    criados += 1;
   }
 
   console.log(
-    `\n  ${idPorSlug.size} estabelecimentos criados`
+    `\n  ${criados} estabelecimentos criados`
   );
 
   /* ---------- 9. reclamações ---------- */
@@ -970,8 +1073,13 @@ async function main() {
    * então ela é gravada direto, com `establishmentManual` para a
    * varredura do cron não tentar refazer o que já está feito.
    */
-  casos.forEach((item, i) => {
+  const indice = new Map(
+    casos.map((c, i) => [c.protocol, i])
+  );
 
+  paraGravar.forEach((item) => {
+
+    const i = indice.get(item.protocol) ?? -1;
     const conta = pares[i]?.linha.Conta?.trim();
 
     if (!conta) return;
@@ -1015,10 +1123,13 @@ async function main() {
     );
   }
 
-  const saida = await importCasesBulk(prisma, casos);
+  const saida = await importCasesBulk(
+    prisma,
+    paraGravar
+  );
 
   console.log(
-    `  ${saida.gravadas ?? casos.length} reclamações gravadas`
+    `  ${saida.gravadas ?? paraGravar.length} reclamações gravadas`
   );
 
   /* ---------- 10. clientes ---------- */
@@ -1032,7 +1143,18 @@ async function main() {
    */
   let comDocumento = 0;
 
+  /** Quem já tem enriquecimento não é recriado — o slug é único. */
+  const clientesExistentes = new Set(
+    (
+      await prisma.clientProfile.findMany({
+        select: { slug: true },
+      })
+    ).map((c) => c.slug)
+  );
+
   for (const c of clientes.values()) {
+
+    if (clientesExistentes.has(c.slug)) continue;
 
     const establishmentId = c.conta
       ? idPorSlug.get(slugify(c.conta))
@@ -1104,7 +1226,25 @@ async function main() {
   let comDocumentoNoCadastro = 0;
   const divergentes: string[] = [];
 
+  /**
+   * Cadastro que já tem documento não é tocado.
+   *
+   * Pode ter sido corrigido à mão — é exatamente o caso dos três que a
+   * carga deixou vazios de propósito, por divergência. Sobrescrever
+   * aqui desfaria a decisão de quem olhou.
+   */
+  const semDocumento = new Set(
+    (
+      await prisma.establishment.findMany({
+        where: { document: null },
+        select: { id: true },
+      })
+    ).map((e) => e.id)
+  );
+
   for (const [id, docs] of documentosPorEst) {
+
+    if (!semDocumento.has(id)) continue;
 
     if (docs.size !== 1) {
 

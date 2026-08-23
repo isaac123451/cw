@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 23/08/2026. Aplicação **0.14.0**, extensão **0.14.0**.
+Atualizado em 23/08/2026. Aplicação **0.15.0**, extensão **0.15.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -53,7 +53,8 @@ workspace junto com os outros cadastros.
 | `npm run check:cron` | Prova a rotina agendada, inclusive que rodar duas vezes não repete trabalho |
 | `npm run check:vinculo` | Prova o vínculo por CPF ou CNPJ: que a varredura liga, que rodar de novo não muda nada, que a planilha não apaga e que a escolha de uma pessoa vence |
 | `npm run db:backup` | Despeja num JSON as reclamações, clientes e estabelecimentos — antes de qualquer carga |
-| `npm run ra:completo` | Carga completa: a planilha do RA vira a base, o CW Engine dá o estabelecimento. Simula por padrão; `--gravar` executa |
+| `npm run ra:completo` | Carga do RA. `--somente-novas` cria só o que falta (o do dia a dia); sem ele, refaz a base do zero. Simula por padrão; `--gravar` executa |
+| `npm run check:incremental` | Prova que a carga incremental cria o que falta e **não toca** no que já existe |
 | `npm run check:whatsapp` | Prova o leitor de conversa do WhatsApp contra seis marcações, sem navegador |
 | `npm run check:busca-texto` | Prova o campo Buscar da tela: telefone, documento, e-mail e texto, contra a base real |
 | `npm run extensao:icones` | Regera os PNGs do ícone da extensão |
@@ -65,7 +66,7 @@ workspace junto com os outros cadastros.
 ### 0. Handoff — leia isto primeiro (22/08/2026)
 
 **Produção:** https://cw-rho-eight.vercel.app · repo `isaac123451/cw`,
-branch `main` · aplicação e extensão em **0.14.0**, sempre no mesmo
+branch `main` · aplicação e extensão em **0.15.0**, sempre no mesmo
 número.
 
 **Antes de dizer que algo está pronto, rode o `check:` correspondente.**
@@ -380,6 +381,42 @@ da camada gratuita.
 
 
 ## Entregue
+
+
+### Carga incremental: criar só o que falta (23/08/2026)
+
+Chegou um export novo do portal com a pergunta certa: "compare com a
+base e crie o que não tiver". A resposta daquele arquivo específico foi
+**nada** — as 127 linhas já estavam lá, e conferido por três caminhos:
+arquivo idêntico ao anterior campo a campo, todos os protocolos
+presentes, e **zero divergência** de etapa, nota ou resolvida.
+
+Mas a pergunta se repete a cada export, e até aqui a única resposta que
+o sistema tinha era a carga completa — que **apaga** a base para
+regravar. Trocar 127 reclamações para inserir 1 levaria junto as
+anotações, as etiquetas e as movimentações que a operação fez em cima
+delas.
+
+Agora existe `--somente-novas`. Ele tem duas obrigações opostas, e as
+duas são provadas por `check:incremental`, que monta uma planilha
+descartável com uma linha que já existe e uma inventada:
+
+1. **Cria o que falta** — com contato completo e o CPF virando
+   documento.
+2. **Não toca no que existe.** A linha da reclamação já cadastrada vai
+   para a planilha do teste com a **etapa trocada de propósito**; se a
+   carga a regravasse, a etapa mudaria e a conferência pegaria. O portal
+   reescreve status e nota; quem move o caso no quadro é gente.
+
+Rodar de novo não duplica, e a trava do backup não se aplica — ela
+existe porque a carga completa apaga, e atrito por simetria é o que faz
+as pessoas contornarem a trava quando ela importa.
+
+Duas coisas do caminho: cadastro de estabelecimento que já existe é
+**reaproveitado** em vez de recriado (a ficha carrega plano, MRR e
+responsável preenchidos à mão), e estabelecimento que já tem documento
+não é sobrescrito — é exatamente o caso dos três deixados vazios por
+divergência.
 
 
 ### SpeedInsights ligado, e a conta do CW Engine visível (23/08/2026)
