@@ -207,15 +207,6 @@ function interna(modelo: string, coluna: string) {
   );
 }
 
-function motivo(modelo: string, coluna: string) {
-  return (
-    MOTIVOS[modelo] ??
-    MOTIVOS[coluna] ??
-    MOTIVOS["*"] ??
-    ""
-  );
-}
-
 console.log(
   "\n  CAMPOS — a coluna do banco chega à tela?\n"
 );

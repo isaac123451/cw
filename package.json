@@ -44,7 +44,8 @@
     "check:fiacao": "tsx scripts/check-fiacao.ts",
     "check:escape": "tsx scripts/check-escape.ts",
     "check:dependencias": "tsx scripts/check-dependencias.ts",
-    "check:campos": "tsx scripts/check-campos.ts"
+    "check:campos": "tsx scripts/check-campos.ts",
+    "check:acesso": "tsx scripts/check-acesso.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",
