@@ -55,6 +55,7 @@ import {
   classificarPorProblema,
 } from "../lib/services/raClassify";
 import { importCasesBulk } from "../lib/services/case.repository";
+import { formatElapsed } from "../lib/services/reputation.service";
 
 /* ============================================================
    ARGUMENTOS
@@ -212,7 +213,23 @@ function instante(valor: unknown) {
   );
 }
 
-/** Tempo decorrido no formato que as telas exibem. */
+/**
+ * Tempo decorrido, no mesmo formato que as telas exibem.
+ *
+ * Usa o `formatElapsed` do serviço de reputação em vez de um formatador
+ * próprio, e a diferença não é estética. A versão que estava aqui
+ * colapsava tudo acima de 48 h em dias inteiros — "6 dias" —, e o
+ * caminho de volta (`parseElapsedText`, na gravação) multiplicava esses
+ * dias por 1440. As horas eram jogadas fora **entre a leitura e o
+ * banco**.
+ *
+ * Medido na carga de 340: a mediana do tempo de primeira resposta ia de
+ * 138,1 h na planilha para 144,0 h no banco. Quatro por cento de
+ * distorção num indicador que é o motivo de o produto existir.
+ *
+ * `formatElapsed` escreve "5 dias e 18 horas", e `parseElapsedText` lê
+ * os dois pedaços — o par é fiel até a hora.
+ */
 function decorrido(
   de: Date | null,
   ate: Date | null
@@ -224,12 +241,7 @@ function decorrido(
     (ate.getTime() - de.getTime()) / 60000
   );
 
-  if (min < 0) return "-";
-  if (min < 60) return `${min}min`;
-
-  const h = Math.round(min / 60);
-
-  return h < 48 ? `${h}h` : `${Math.round(h / 24)} dias`;
+  return min <= 0 ? "-" : formatElapsed(min);
 }
 
 /**

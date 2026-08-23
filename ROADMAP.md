@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 23/08/2026. Aplicação **0.16.0**, extensão **0.16.0**.
+Atualizado em 23/08/2026. Aplicação **0.17.0**, extensão **0.17.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -55,6 +55,7 @@ workspace junto com os outros cadastros.
 | `npm run db:backup` | Despeja num JSON as reclamações, clientes e estabelecimentos — antes de qualquer carga |
 | `npm run ra:completo` | Carga do RA. `--somente-novas` cria só o que falta (o do dia a dia); sem ele, refaz a base do zero. Simula por padrão; `--gravar` executa |
 | `npm run check:incremental` | Prova que a carga incremental cria o que falta e **não toca** no que já existe |
+| `npm run check:reputacao` | Prova que a nota fecha com a própria memória de cálculo e que o tempo chega ao banco como saiu da planilha — e imprime o retrato atual |
 | `npm run check:whatsapp` | Prova o leitor de conversa do WhatsApp contra seis marcações, sem navegador |
 | `npm run check:busca-texto` | Prova o campo Buscar da tela: telefone, documento, e-mail e texto, contra a base real |
 | `npm run extensao:icones` | Regera os PNGs do ícone da extensão |
@@ -66,7 +67,7 @@ workspace junto com os outros cadastros.
 ### 0. Handoff — leia isto primeiro (22/08/2026)
 
 **Produção:** https://cw-rho-eight.vercel.app · repo `isaac123451/cw`,
-branch `main` · aplicação e extensão em **0.16.0**, sempre no mesmo
+branch `main` · aplicação e extensão em **0.17.0**, sempre no mesmo
 número.
 
 **Antes de dizer que algo está pronto, rode o `check:` correspondente.**
@@ -381,6 +382,55 @@ da camada gratuita.
 
 
 ## Entregue
+
+
+### O tempo de resposta perdia as horas no caminho (23/08/2026)
+
+A carga tinha um formatador próprio de tempo decorrido, e ele colapsava
+tudo acima de 48 h em dias inteiros — "6 dias". Na gravação,
+`parseElapsedText` lia isso de volta e multiplicava por 1440. **As horas
+eram jogadas fora entre a leitura e o banco.**
+
+Medido na carga de 340, comparando planilha e banco:
+
+| | Antes | Depois |
+| --- | --- | --- |
+| Mediana da primeira resposta | 144,0 h | **138,0 h** (planilha: 138,1) |
+| Média | 281,8 h | **280,9 h** (planilha: 281,4) |
+| Máximo | 4104,0 h | **4101,0 h** (planilha: 4101,1) |
+
+Quatro por cento de distorção na mediana de um indicador que é o motivo
+de o produto existir. O conserto é usar o `formatElapsed` do serviço de
+reputação em vez do formatador local: ele escreve "5 dias e 18 horas", e
+o `parseElapsedText` lê os dois pedaços. O par é fiel até a hora — o
+formato não carrega o minuto, e isso está escrito na tolerância do teste.
+
+Agora existe `npm run check:reputacao`, e ele faz duas coisas que
+faltavam:
+
+- **Prova a ida e volta** em treze valores, um por faixa que o
+  formatador trata diferente, incluindo o que quebrava.
+- **Prova que a nota fecha com a própria memória de cálculo.** Os quatro
+  componentes com seus pesos têm de somar o `raScore` exibido; se não
+  somarem, a tela de auditoria conta uma história que não é a do cálculo.
+
+E imprime o retrato, que é a resposta rápida para "como estamos" sem
+abrir o navegador:
+
+```
+6m   2026-02-01 a 2026-07-31 · 129 reclamações
+     nota 8.60 (RA1000) · RA1000: sim
+     resposta 95.3% · solução 92.3% · consumidor 7.82 · voltaria 76.9%
+
+12m  2025-08-01 a 2026-07-31 · 212 reclamações
+     nota 8.40 (Ótimo) · RA1000: não
+     resposta 97.2% · solução 89.9% · consumidor 7.56 · voltaria 76.8%
+```
+
+**O número que a base nova revelou:** a primeira resposta pública leva
+uma mediana de **5 dias e 18 horas**, e 259 das 327 respondidas passam
+de 48 h. Não é defeito de importação — é o que os dois lados dizem. Com
+a base antiga de seis meses isso não aparecia com essa clareza.
 
 
 ### O export "Base de dados RA", que é o completo (23/08/2026)
