@@ -26,14 +26,20 @@ import {
 } from "@/lib/services/operations.service";
 
 import {
+  CustomRange,
   formatElapsed,
+  getRange,
+  inRange,
+  PeriodKey,
   ptBR,
+  REFERENCE_DATE,
 } from "@/lib/services/reputation.service";
 
 import PageHeading from "@/components/shared/PageHeading";
 import StatTile from "@/components/shared/StatTile";
 import SurfaceCard from "@/components/shared/SurfaceCard";
 import BarList from "@/components/shared/BarList";
+import PeriodPicker from "@/components/shared/PeriodPicker";
 import TrendChart from "@/components/shared/TrendChart";
 
 interface Props {
@@ -54,49 +60,89 @@ export default function AnalyticsOverview({
     "state"
   );
 
+  /**
+   * A tela inteira passa a ter janela.
+   *
+   * Antes cada painel lia a base completa e não havia como recortar —
+   * era o defeito que o Isaac descreveu ao lado das datas empilhadas:
+   * "não tem um filtro de período como outras funcionalidades". Uma
+   * tela de análise sem janela responde sempre "desde sempre", que é a
+   * única pergunta que ninguém faz numa reunião de operação.
+   *
+   * Doze meses por padrão, e não seis: aqui a leitura é de operação
+   * (volume, produtividade, causa), onde a sazonalidade importa. Seis
+   * meses é a janela **oficial** do Reclame Aqui e continua sendo o
+   * padrão da tela de reputação, onde a nota é o assunto.
+   */
+  const [period, setPeriod] = useState<PeriodKey>("12m");
+
+  const [custom, setCustom] = useState<CustomRange>({
+    start: `${REFERENCE_DATE.slice(0, 4)}-01-01`,
+    end: REFERENCE_DATE,
+  });
+
+  const range = useMemo(
+    () => getRange(period, "vigente", custom),
+    [period, custom]
+  );
+
+  /**
+   * O recorte é aplicado **uma vez**, e todo painel abaixo lê daqui.
+   *
+   * Filtrar painel a painel é como duas metades da mesma tela passam a
+   * falar de períodos diferentes sem ninguém perceber.
+   */
+  const noPeriodo = useMemo(
+    () =>
+      cases.filter((item) =>
+        inRange(item, range.start, range.end)
+      ),
+    [cases, range]
+  );
+
   const metrics = useMemo(
-    () => getMetrics(cases),
-    [cases]
+    () => getMetrics(noPeriodo),
+    [noPeriodo]
   );
 
   const trend = useMemo(
-    () => getMonthlyTrend(cases),
-    [cases]
+    () => getMonthlyTrend(noPeriodo),
+    [noPeriodo]
   );
 
   const canais = useMemo(
-    () => byChannelSummary(cases),
-    [cases]
+    () => byChannelSummary(noPeriodo),
+    [noPeriodo]
   );
 
   const responsaveis = useMemo(
-    () => byOwner(cases),
-    [cases]
+    () => byOwner(noPeriodo),
+    [noPeriodo]
   );
 
   const regioes = useMemo(
-    () => byRegion(cases, regiao),
-    [cases, regiao]
+    () => byRegion(noPeriodo, regiao),
+    [noPeriodo, regiao]
   );
 
   const tempos = useMemo(
-    () => responseBuckets(cases),
-    [cases]
+    () => responseBuckets(noPeriodo),
+    [noPeriodo]
   );
 
   const byCategory = useMemo(
-    () => groupBy(cases, "category"),
-    [cases]
+    () => groupBy(noPeriodo, "category"),
+    [noPeriodo]
   );
 
   const bySubcategory = useMemo(
-    () => groupBy(cases, "subcategory"),
-    [cases]
+    () => groupBy(noPeriodo, "subcategory"),
+    [noPeriodo]
   );
 
   const byStatus = useMemo(
-    () => groupBy(cases, "status"),
-    [cases]
+    () => groupBy(noPeriodo, "status"),
+    [noPeriodo]
   );
 
   const tempoMedio = useMemo(() => {
@@ -116,13 +162,26 @@ export default function AnalyticsOverview({
         description={description}
       />
 
+      <SurfaceCard bodyClassName="p-4">
+
+        <PeriodPicker
+          period={period}
+          onPeriodChange={setPeriod}
+          range={range}
+          custom={custom}
+          onCustomChange={setCustom}
+          note={`${noPeriodo.length} de ${cases.length} casos no recorte`}
+        />
+
+      </SurfaceCard>
+
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
 
         <StatTile
           label="Total de casos"
           description="Todas as ocorrências registradas, somando os canais."
           value={metrics.total}
-          hint="na base"
+          hint="no período"
           icon={Timer}
           tone="info"
         />
