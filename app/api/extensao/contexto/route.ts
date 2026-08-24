@@ -269,6 +269,23 @@ export async function GET(request: Request) {
           cidade: estabelecimento.city,
           estado: estabelecimento.state,
           url: `${origem}/estabelecimentos/${estabelecimento.slug}`,
+
+          /**
+           * O portal da Cardápio Web — a conta do restaurante no
+           * produto, não o cadastro daqui.
+           *
+           * São dois destinos diferentes e quem atende precisa dos
+           * dois: o cadastro responde "quem é este cliente para nós",
+           * o portal responde "o que está acontecendo na operação
+           * dele agora". Sem este link, descobrir isso custa sair do
+           * atendimento, abrir outra aba e procurar o restaurante pelo
+           * nome.
+           *
+           * Vai como `null` quando o cadastro não tem a URL — e o
+           * botão não aparece, em vez de aparecer levando a lugar
+           * nenhum.
+           */
+          portal: estabelecimento.portalUrl || null,
         }
       : null,
 

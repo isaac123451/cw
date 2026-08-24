@@ -13,7 +13,7 @@ import {
   TeamOption,
 } from "@/lib/models/settings";
 import { WorkflowStatus } from "@/lib/models/workflow";
-import { CaseTag } from "@/lib/data/mockTags";
+import { CaseTag } from "@/lib/models/tag";
 import { SlaRule } from "@/lib/models/sla";
 import {
   CaseMovement,
@@ -42,7 +42,7 @@ import {
   ClientEnrichment,
   ManualClient,
 } from "@/lib/models/client";
-import type { Playbook } from "@/lib/data/mockPlaybooks";
+import type { Playbook } from "@/lib/models/playbook";
 
 /**
  * Gravação dos cadastros da operação.

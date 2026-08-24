@@ -26,7 +26,7 @@ import { PlaybookDraft } from "@/lib/context/DocsContext";
 import {
   Playbook,
   PlaybookStep,
-} from "@/lib/data/mockPlaybooks";
+} from "@/lib/models/playbook";
 
 const ESCOPOS = [
   "Reclame Aqui",

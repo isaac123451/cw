@@ -6,7 +6,6 @@ import { unstable_cache, updateTag } from "next/cache";
 import { CASES_TAG } from "@/lib/actions/tags";
 
 import { Case } from "@/lib/models/case";
-import { mockCases } from "@/lib/data/mockCases";
 
 import { getPrisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth/guard";
@@ -78,10 +77,23 @@ const lerDoBanco = unstable_cache(
 
 export async function listCases(): Promise<Case[]> {
 
-  // Modo demonstração: o dataset do repositório continua servindo.
-  if (!getPrisma()) return mockCases;
-
-  return (await lerDoBanco()) ?? mockCases;
+  /**
+   * **Sem banco, nenhuma reclamação — nunca dado inventado.**
+   *
+   * Até 23/08/2026 estas duas linhas eram
+   * `if (!getPrisma()) return mockCases` e
+   * `return (await lerDoBanco()) ?? mockCases`. A segunda é a grave: o
+   * `??` disparava quando a **leitura falhava**, não só quando não
+   * havia banco. Uma queda de conexão com o Supabase — coisa de
+   * segundos, que acontece — fazia a plataforma inteira exibir 334
+   * reclamações inventadas, com nomes de consumidores que não existem,
+   * indistinguíveis das reais. Ninguém teria como perceber.
+   *
+   * Lista vazia é uma resposta ruim; lista falsa é uma resposta
+   * perigosa. A tela vazia diz "não consegui carregar"; a tela cheia de
+   * ficção diz "aqui está a sua operação".
+   */
+  return (await lerDoBanco()) ?? [];
 }
 
 /**
@@ -95,13 +107,7 @@ export async function loadCaseDescription(
 
   const prisma = getPrisma();
 
-  if (!prisma) {
-    return (
-      mockCases.find(
-        (item) => item.protocol === protocol
-      )?.description ?? ""
-    );
-  }
+  if (!prisma) return "";
 
   return fetchCaseDescription(prisma, protocol);
 }

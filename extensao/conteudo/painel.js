@@ -1840,9 +1840,30 @@
                 .filter(Boolean)
                 .join(" · ")}
             </div>
-            <a class="tag marca" data-acao="abrir"
-               data-url="${CW.escapar(est.url)}"
-               style="cursor:pointer;margin-top:8px">abrir cadastro &rarr;</a>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">
+
+              <a class="tag marca" data-acao="abrir"
+                 data-url="${CW.escapar(est.url)}"
+                 style="cursor:pointer">abrir cadastro &rarr;</a>
+
+              ${
+                /*
+                  O portal só aparece quando o cadastro tem a URL.
+
+                  Botão que leva a lugar nenhum é pior do que botão
+                  ausente: quem clica uma vez e não vai a lugar algum
+                  para de clicar nos outros. Sem `portalUrl` gravado no
+                  estabelecimento, ele simplesmente não é desenhado.
+                */
+                est.portal
+                  ? `<a class="tag marca" data-acao="abrir"
+                        data-url="${CW.escapar(est.portal)}"
+                        title="Abrir a conta deste restaurante no portal da Cardápio Web"
+                        style="cursor:pointer">portal Cardápio Web &rarr;</a>`
+                  : ""
+              }
+
+            </div>
           </div>
         </div>`);
     }

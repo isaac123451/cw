@@ -18,6 +18,7 @@ import SettingsTabs, {
 import WorkflowSettings from "@/components/reclame-aqui/settings/WorkflowSettings";
 import CategoriesSettings from "@/components/reclame-aqui/settings/CategoriesSettings";
 import SubcategoriesSettings from "@/components/reclame-aqui/settings/SubcategoriesSettings";
+import ResponsaveisSettings from "@/components/reclame-aqui/settings/ResponsaveisSettings";
 import TeamsSettings from "@/components/reclame-aqui/settings/TeamsSettings";
 import TagsSettings from "@/components/reclame-aqui/settings/TagsSettings";
 import ChecklistSettings from "@/components/reclame-aqui/settings/ChecklistSettings";
@@ -79,7 +80,21 @@ function ConfiguracoesConteudo() {
         <SubcategoriesSettings />
       )}
 
-      {tab === "times" && <TeamsSettings />}
+      {tab === "times" && (
+        <div className="space-y-6">
+          <TeamsSettings />
+          {/*
+            As pessoas vêm logo abaixo dos times, na mesma aba.
+
+            Estavam numa aba própria no menu — "Meu time" —, o que
+            criava dois cadastros de time em paralelo: o que classifica
+            a reclamação e o que tinha gente dentro. Duas listas com o
+            mesmo nome e conteúdo diferente é como uma operação passa a
+            discutir qual das duas está certa.
+          */}
+          <ResponsaveisSettings />
+        </div>
+      )}
 
       {tab === "tags" && <TagsSettings />}
 

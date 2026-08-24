@@ -8,7 +8,7 @@ import {
 } from "react";
 
 // Só o tipo: os dados vêm do banco pela carga compartilhada.
-import type { Playbook } from "@/lib/data/mockPlaybooks";
+import type { Playbook } from "@/lib/models/playbook";
 
 import {
   removePlaybook,

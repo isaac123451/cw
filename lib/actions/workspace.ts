@@ -2,6 +2,12 @@
 
 import { unstable_cache } from "next/cache";
 
+import type { CaseTag } from "@/lib/models/tag";
+import type {
+  Playbook,
+  PlaybookStep,
+} from "@/lib/models/playbook";
+
 import { WORKSPACE_TAG } from "@/lib/actions/tags";
 
 import { getPrisma } from "@/lib/prisma";
@@ -48,39 +54,6 @@ import {
   TIPOS_PADRAO,
 } from "@/lib/models/nps";
 
-import {
-  CaseTag,
-  mockTags,
-} from "@/lib/data/mockTags";
-import { mockWorkflow } from "@/lib/data/mockWorkflow";
-import {
-  mockCategories,
-  mockChecklist,
-  mockSubcategories,
-  mockTeamOptions,
-} from "@/lib/data/mockSettings";
-import { mockSlaRules } from "@/lib/data/mockSla";
-import {
-  mockMovementRules,
-  mockMovements,
-} from "@/lib/data/mockMovements";
-import { mockEstablishments } from "@/lib/data/mockEstablishments";
-import { mockProjects } from "@/lib/data/mockProjects";
-import { mockMacros } from "@/lib/data/mockMacros";
-import {
-  mockJourneyEntries,
-  mockJourneyStages,
-  mockJourneyTopics,
-} from "@/lib/data/mockJourney";
-import { mockAgenda } from "@/lib/data/mockAgenda";
-import { mockImpact } from "@/lib/data/mockImpact";
-import { mockTeams } from "@/lib/data/mockTeams";
-import { mockImpactTypes } from "@/lib/data/mockImpactTypes";
-import {
-  mockPlaybooks,
-  type Playbook,
-  type PlaybookStep,
-} from "@/lib/data/mockPlaybooks";
 
 /**
  * Carga única de tudo que os cadastros precisam.
@@ -158,28 +131,46 @@ export interface Workspace {
   manualClients: ManualClient[];
 }
 
-const DEMONSTRACAO: Workspace = {
-  workflow: mockWorkflow,
-  categories: mockCategories,
-  subcategories: mockSubcategories,
-  tags: mockTags,
-  checklist: mockChecklist,
-  teamOptions: mockTeamOptions,
-  slaRules: mockSlaRules,
-  movementRules: mockMovementRules,
-  movements: mockMovements,
-  establishments: mockEstablishments,
-  projects: mockProjects,
-  macros: mockMacros,
-  journeyStages: mockJourneyStages,
-  journeyTopics: mockJourneyTopics,
-  journeyEntries: mockJourneyEntries,
+/**
+ * O espaço de trabalho vazio.
+ *
+ * Era `DEMONSTRACAO`, e servia os quinze arquivos de `lib/data/mock*`
+ * quando não havia banco — ou quando a leitura falhava, que é o caso
+ * grave: o `??` abaixo disparava numa queda de conexão de segundos, e
+ * a plataforma passava a exibir estabelecimentos, projetos, agenda e
+ * movimentações inventados, indistinguíveis dos reais.
+ *
+ * Agora não há dado de mentira em lugar nenhum. Tela vazia diz "não
+ * carregou"; tela cheia de ficção diz "esta é a sua operação", e essa
+ * é a diferença entre um problema que alguém percebe e um que ninguém
+ * percebe.
+ *
+ * As listas de estrutura — etapas do quadro, categorias, etiquetas —
+ * também saem vazias: elas moram no banco, e o banco já as tem. Quem
+ * instala do zero as recebe pelo `db:seed`.
+ */
+const VAZIO: Workspace = {
+  workflow: [],
+  categories: [],
+  subcategories: [],
+  tags: [],
+  checklist: [],
+  teamOptions: [],
+  slaRules: [],
+  movementRules: [],
+  movements: [],
+  establishments: [],
+  projects: [],
+  macros: [],
+  journeyStages: [],
+  journeyTopics: [],
+  journeyEntries: [],
   journeyPlacements: {},
-  agenda: mockAgenda,
-  impact: mockImpact,
-  playbooks: mockPlaybooks,
-  teams: mockTeams,
-  impactTypes: mockImpactTypes,
+  agenda: [],
+  impact: [],
+  playbooks: [],
+  teams: [],
+  impactTypes: [],
   npsStages: ETAPAS_PADRAO,
   npsKinds: TIPOS_PADRAO,
   plans: PLANOS_PADRAO.map((item, i) => ({
@@ -213,9 +204,9 @@ const lerWorkspace = unstable_cache(
 
 export async function loadWorkspace(): Promise<Workspace> {
 
-  if (!getPrisma()) return DEMONSTRACAO;
+  if (!getPrisma()) return VAZIO;
 
-  return (await lerWorkspace()) ?? DEMONSTRACAO;
+  return (await lerWorkspace()) ?? VAZIO;
 }
 
 async function carregarDoBanco(): Promise<Workspace | null> {

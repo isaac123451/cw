@@ -14,7 +14,6 @@ import {
   Settings,
   TrendingUp,
   UserRound,
-  UsersRound,
   Wallet,
   Workflow,
 } from "lucide-react";
@@ -122,12 +121,6 @@ export const menuItems: MenuItem[] = [
     href: "/projetos",
     icon: FolderKanban,
     group: "Conhecimento",
-  },
-  {
-    title: "Meu time",
-    href: "/times",
-    icon: UsersRound,
-    group: "Pessoas",
   },
   {
     title: "Configurações",

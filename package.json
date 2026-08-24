@@ -1,6 +1,6 @@
 {
   "name": "cw-reputacao",
-  "version": "0.23.0",
+  "version": "0.24.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -48,7 +48,8 @@
     "check:acesso": "tsx scripts/check-acesso.ts",
     "check:calculadora": "tsx scripts/check-calculadora.ts",
     "check:duas-etapas": "tsx --conditions=react-server scripts/check-duas-etapas.ts",
-    "zerar:processos": "tsx scripts/zerar-processos.ts"
+    "zerar:processos": "tsx scripts/zerar-processos.ts",
+    "check:mortos": "tsx scripts/check-mortos.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",

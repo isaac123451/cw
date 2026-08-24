@@ -55,10 +55,10 @@ const settings: SettingLink[] = [
     icon: Tags,
   },
   {
-    title: "Usuários e times",
+    title: "Times e responsáveis",
     description:
-      "Agentes da operação, áreas responsáveis e distribuição de carga.",
-    href: "/times",
+      "Quem atende reclamação e em que time. Vive dentro do fluxo, junto das etapas e categorias que usam esses times.",
+    href: "/reclame-aqui/configuracoes?tab=times",
     icon: Users,
   },
   {

@@ -1,5 +1,4 @@
 import { Case } from "@/lib/models/case";
-import { mockCases } from "@/lib/data/mockCases";
 
 import { getPrisma } from "@/lib/prisma";
 
@@ -13,12 +12,18 @@ import { fetchCases } from "@/lib/services/case.repository";
 /**
  * Fonte de dados da API.
  *
- * Com `DATABASE_URL` configurado lê do banco — é o caminho de produção,
- * e é o que outro sistema da Cardápio Web consome. Sem banco, cai no
- * dataset do repositório, para a API continuar respondendo em
- * desenvolvimento e no modo demonstração.
+ * Lê do banco, e só do banco. A troca vive aqui e só aqui: as rotas não
+ * sabem de onde veio.
  *
- * A troca vive aqui e só aqui: as rotas não sabem de onde veio.
+ * **Sem banco, devolve vazio.** Havia um retorno de dados de
+ * demonstração aqui, e este é o pior lugar possível para isso: quem
+ * consome esta API é o **CW Engine**, outro sistema, que não tem como
+ * saber que os dados são inventados. Ele integraria 334 reclamações de
+ * consumidores que não existem e as trataria como operação real.
+ *
+ * Uma resposta vazia é um problema visível — some indicador, alguém
+ * pergunta. Uma resposta com ficção é um problema invisível, e
+ * invisível é o que não se conserta.
  */
 export async function getApiCases(
   channel?: Channel
@@ -26,11 +31,7 @@ export async function getApiCases(
 
   const prisma = getPrisma();
 
-  if (!prisma) {
-    return channel
-      ? byChannel(mockCases, channel)
-      : mockCases;
-  }
+  if (!prisma) return [];
 
   // Mesmo caminho que as telas usam — o mapeamento mora em um lugar só.
   const casos = await fetchCases(prisma);

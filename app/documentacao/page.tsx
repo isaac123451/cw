@@ -28,7 +28,7 @@ import {
   useDocs,
 } from "@/lib/context/DocsContext";
 
-import { Playbook } from "@/lib/data/mockPlaybooks";
+import { Playbook } from "@/lib/models/playbook";
 
 const scopeTone: Record<string, string> = {
   "Reclame Aqui": "bg-violet-50 text-violet-700 ring-violet-100",

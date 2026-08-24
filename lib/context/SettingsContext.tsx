@@ -15,7 +15,7 @@ import {
 } from "@/lib/models/settings";
 
 // Só o tipo: os dados vêm do banco pela carga compartilhada.
-import type { CaseTag } from "@/lib/data/mockTags";
+import type { CaseTag } from "@/lib/models/tag";
 
 import {
   removeCategory as apagarCategoria,
