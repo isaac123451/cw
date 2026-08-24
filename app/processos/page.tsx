@@ -311,6 +311,32 @@ export default function ProcessosPage() {
 
               <tbody className="divide-y divide-zinc-100">
 
+                {/*
+                  Tabela sem regra nenhuma é o estado normal agora — as
+                  seis que existiam eram semente e foram zeradas em
+                  23/08. Cabeçalho sozinho com nada embaixo parece tela
+                  quebrada; o vazio precisa dizer o que é e o que fazer.
+                */}
+                {linhas.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={6}
+                      className="px-5 py-10 text-center"
+                    >
+                      <p className="text-sm font-medium text-zinc-600">
+                        Nenhuma regra de SLA cadastrada.
+                      </p>
+                      <p className="mx-auto mt-1.5 max-w-md text-sm text-zinc-400">
+                        Enquanto não houver regra, nenhum
+                        caso é marcado como fora do prazo —
+                        não há prazo contra o que comparar.
+                        Comece por uma regra padrão em
+                        &ldquo;Nova regra&rdquo;.
+                      </p>
+                    </td>
+                  </tr>
+                )}
+
                 {linhas.map(({ rule, total, estourado }) => (
 
                   <tr
@@ -483,6 +509,24 @@ export default function ProcessosPage() {
               </thead>
 
               <tbody className="divide-y divide-zinc-100">
+
+                {cargaPorDestino.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={5}
+                      className="px-5 py-10 text-center"
+                    >
+                      <p className="text-sm font-medium text-zinc-600">
+                        Nenhum destino cadastrado.
+                      </p>
+                      <p className="mx-auto mt-1.5 max-w-md text-sm text-zinc-400">
+                        Cadastre as áreas para as quais a
+                        Reputação move caso — e quantas
+                        horas cada uma tem para devolver.
+                      </p>
+                    </td>
+                  </tr>
+                )}
 
                 {cargaPorDestino.map(
                   ({

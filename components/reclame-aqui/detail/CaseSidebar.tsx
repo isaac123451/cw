@@ -2,11 +2,17 @@
 
 import Link from "next/link";
 
-import { ArrowUpRight, ExternalLink, Pencil } from "lucide-react";
+import {
+  ArrowUpRight,
+  ExternalLink,
+  Pencil,
+  UserCheck,
+} from "lucide-react";
 
 import { Case } from "@/lib/models/case";
 import { useTeams } from "@/lib/context/TeamsContext";
 import { useEstablishments } from "@/lib/context/EstablishmentsContext";
+import { useSession } from "@/lib/context/SessionContext";
 import { useSla } from "@/lib/context/SlaContext";
 
 import {
@@ -20,6 +26,16 @@ interface Props {
   data: Case;
   owners: string[];
   onChange: (patch: Partial<Case>) => void;
+
+  /**
+   * Leva para a aba "Avaliação RA", onde estes campos se editam.
+   *
+   * A lateral **espelha** avaliação e situação; quem edita é a aba. Ter
+   * dois lugares que gravam o mesmo campo é como duas telas passam a
+   * discordar — então aqui o lápis não abre um segundo formulário,
+   * leva ao único que existe.
+   */
+  onEditarAvaliacao?: () => void;
 }
 
 function Block({
@@ -54,6 +70,7 @@ export default function CaseSidebar({
   data,
   owners,
   onChange,
+  onEditarAvaliacao,
 }: Props) {
 
   const { people } = useTeams();
@@ -62,13 +79,33 @@ export default function CaseSidebar({
   const sla = slaStatus(data, rules);
   const { establishments } = useEstablishments();
 
-  // Pessoas cadastradas em Times + quem já aparece nos casos.
+  const sessao = useSession();
+
+  /**
+   * Quem está logado entra na lista mesmo sem cadastro em Times.
+   *
+   * Era o defeito por trás do pedido do Isaac: quem acabou de entrar na
+   * equipe não aparece em lugar nenhum até alguém cadastrá-la, e o
+   * caso fica sem dono enquanto isso. Pior — sem este nome entre as
+   * opções, atribuir para si deixaria o `<select>` com um valor que não
+   * casa com nenhuma `<option>`, e o campo apareceria **em branco**
+   * logo depois de ter sido preenchido.
+   */
+  const eu = sessao?.name?.trim() || "";
+
   const opcoes = [
-    ...new Set([
-      ...people.map((item) => item.name),
-      ...owners,
-    ]),
+    ...new Set(
+      [
+        ...people.map((item) => item.name),
+        ...owners,
+        eu,
+      ].filter(Boolean)
+    ),
   ].sort();
+
+  const jaEMeu =
+    Boolean(eu) &&
+    (data.owner ?? "").trim() === eu;
 
   const avaliada = data.evaluated;
 
@@ -78,9 +115,23 @@ export default function CaseSidebar({
       <Block
         title="Status"
         action={
-          <span className="rounded-lg p-1.5 text-zinc-300">
-            <Pencil size={14} />
-          </span>
+          /*
+            Era um `<span>` com um lápis cinza: parecia botão de editar
+            e não fazia nada. Um ícone que promete ação e não entrega é
+            pior do que ícone nenhum — a pessoa clica, não acontece, e
+            passa a desconfiar dos outros botões da tela.
+          */
+          onEditarAvaliacao ? (
+            <button
+              type="button"
+              onClick={onEditarAvaliacao}
+              title="Editar em Avaliação RA"
+              className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-medium text-violet-700 transition-colors hover:bg-violet-50"
+            >
+              <Pencil size={12} />
+              Editar
+            </button>
+          ) : null
         }
       >
 
@@ -104,7 +155,28 @@ export default function CaseSidebar({
 
       </Block>
 
-      <Block title="Responsável">
+      <Block
+        title="Responsável"
+        action={
+          /*
+            Pegar um caso para si é a ação mais comum desta tela, e
+            fazê-la pela lista custa abrir o `<select>`, procurar o
+            próprio nome no meio de dezenas e escolher. Um clique
+            resolve — e some quando o caso já é seu, porque aí o botão
+            não teria o que fazer.
+          */
+          eu && !jaEMeu ? (
+            <button
+              type="button"
+              onClick={() => onChange({ owner: eu })}
+              className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-medium text-violet-700 transition-colors hover:bg-violet-50"
+            >
+              <UserCheck size={13} />
+              Atribuir para mim
+            </button>
+          ) : null
+        }
+      >
 
         <select
           value={data.owner ?? ""}
@@ -118,9 +190,17 @@ export default function CaseSidebar({
           {opcoes.map((item) => (
             <option key={item} value={item}>
               {item}
+              {item === eu ? " (você)" : ""}
             </option>
           ))}
         </select>
+
+        {jaEMeu && (
+          <p className="mt-2 flex items-center gap-1.5 text-xs text-emerald-700">
+            <UserCheck size={12} />
+            Este caso é seu.
+          </p>
+        )}
 
       </Block>
 
@@ -169,7 +249,22 @@ export default function CaseSidebar({
 
       </Block>
 
-      <Block title="Situação">
+      <Block
+        title="Situação"
+        action={
+          onEditarAvaliacao ? (
+            <button
+              type="button"
+              onClick={onEditarAvaliacao}
+              title="Editar em Avaliação RA"
+              className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-medium text-violet-700 transition-colors hover:bg-violet-50"
+            >
+              <Pencil size={12} />
+              Editar
+            </button>
+          ) : null
+        }
+      >
 
         <span
           className={`inline-block rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${

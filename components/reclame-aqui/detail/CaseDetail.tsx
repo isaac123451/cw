@@ -376,6 +376,7 @@ export default function CaseDetail({
               data={emEdicao}
               owners={owners}
               onChange={patch}
+              onEditarAvaliacao={() => setTab("avaliacao")}
             />
           )}
 
@@ -390,6 +391,7 @@ export default function CaseDetail({
             data={emEdicao}
             owners={owners}
             onChange={patch}
+            onEditarAvaliacao={() => setTab("avaliacao")}
           />
         )}
 

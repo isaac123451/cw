@@ -14,11 +14,7 @@ import {
 } from "../lib/data/mockSettings";
 import { mockTags } from "../lib/data/mockTags";
 import { mockCases } from "../lib/data/mockCases";
-import { mockSlaRules } from "../lib/data/mockSla";
-import {
-  mockMovementRules,
-  mockMovements,
-} from "../lib/data/mockMovements";
+import { mockMovements } from "../lib/data/mockMovements";
 import { mockEstablishments } from "../lib/data/mockEstablishments";
 import {
   mockJourneyEntries,
@@ -374,32 +370,26 @@ async function main() {
    * demais só entram quando a tabela ainda está vazia.
    */
 
-  for (const rule of mockMovementRules) {
-    await prisma.movementRule.upsert({
-      where: { destination: rule.destination },
-      update: {},
-      create: {
-        destination: rule.destination,
-        hours: rule.hours,
-        note: rule.note ?? null,
-        active: rule.active,
-      },
-    });
-  }
-
-  if ((await prisma.slaRule.count()) === 0) {
-    await prisma.slaRule.createMany({
-      data: mockSlaRules.map((rule) => ({
-        category: rule.category,
-        priority: rule.priority ?? null,
-        responseHours: rule.responseHours,
-        solutionHours: rule.solutionHours,
-        team: rule.team ?? null,
-        note: rule.note ?? null,
-        active: rule.active,
-      })),
-    });
-  }
+  /**
+   * **Processos e SLA nascem vazios, de propósito.**
+   *
+   * O seed plantava seis regras de SLA e cinco prazos de movimentação
+   * para a tela não abrir em branco. O Isaac pediu para zerar em 23/08,
+   * e a razão é mais forte do que a estética: prazo que ninguém
+   * escolheu ainda pinta caso de vermelho. A equipe passa a ver
+   * "estourado" por um combinado que nunca foi feito, e o que ela
+   * aprende é a ignorar o vermelho — que era o único sinal útil da
+   * tela.
+   *
+   * Não basta apagar no banco: o `movementRule` voltava por `upsert` em
+   * **toda** execução do seed, e o `slaRule` voltava sempre que a
+   * tabela estivesse vazia — exatamente o estado em que
+   * `npm run zerar:processos` a deixa. Sem esta mudança aqui, zerar
+   * duraria até o próximo seed.
+   *
+   * `mockSlaRules` e `mockMovementRules` seguem em `lib/data/` como
+   * exemplo do formato — quem quiser recriá-las tem o modelo à mão.
+   */
 
   for (const item of mockEstablishments) {
     await prisma.establishment.upsert({
