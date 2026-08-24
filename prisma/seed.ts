@@ -312,23 +312,56 @@ async function main() {
   }
 
   /**
-   * Reclamações.
+   * Reclamações de demonstração — **só numa base vazia**.
    *
-   * Vai por último porque depende de categoria e subcategoria já
-   * existirem. Uma a uma e por `upsert`: rodar o seed de novo atualiza o
-   * que mudou em vez de duplicar protocolo.
+   * Esta trava existe por causa de um estrago real, em 23/08. Rodei
+   * `db:seed` para provar outra coisa, e ele despejou as 334
+   * reclamações de exemplo por cima da base de produção, que tinha as
+   * 340 reais da planilha do Reclame Aqui. Ninguém foi sobrescrito (não
+   * houve colisão de protocolo), mas a base dobrou de tamanho e todo
+   * indicador da plataforma passou a misturar cliente de verdade com
+   * cliente inventado.
+   *
+   * O `upsert` protegia contra **duplicar**, não contra **poluir** — e
+   * o comando estava descrito como "idempotente: recarrega base e
+   * cadastros sem duplicar", que é verdade e insuficiente. Idempotente
+   * quer dizer que rodar duas vezes dá no mesmo; não quer dizer que
+   * rodar uma vez seja seguro.
+   *
+   * Agora: com qualquer reclamação já no banco, o seed **pula** as de
+   * exemplo e diz por quê. `--com-exemplos` força, para quem quer
+   * mesmo uma base de demonstração.
+   *
+   * Os cadastros acima (categorias, status, times) seguem entrando por
+   * `upsert` — são estrutura, e a operação editou o que quis neles.
    */
+  const jaTemCasos = await prisma.case.count();
+
+  const forcar = process.argv.includes("--com-exemplos");
+
   let gravados = 0;
 
-  for (const item of mockCases) {
-    await seedCase(item);
-    gravados++;
+  if (jaTemCasos > 0 && !forcar) {
+
+    console.log(
+      `\n  Reclamações de exemplo NÃO foram inseridas.` +
+        `\n  O banco já tem ${jaTemCasos} reclamação(ões) — misturar as de demonstração` +
+        `\n  com dados reais estragaria todo indicador da plataforma.` +
+        `\n  Se quiser mesmo uma base de demonstração: npm run db:seed -- --com-exemplos\n`
+    );
+
+  } else {
+
+    for (const item of mockCases) {
+      await seedCase(item);
+      gravados++;
+    }
+
+    console.log(`Reclamações no banco: ${gravados}`);
   }
 
-  console.log(`Reclamações no banco: ${gravados}`);
-
   // Etiquetas aplicadas aos casos
-  for (const item of mockCases) {
+  for (const item of gravados === 0 ? [] : mockCases) {
 
     if (!item.tags || item.tags.length === 0) continue;
 
@@ -391,7 +424,21 @@ async function main() {
    * exemplo do formato — quem quiser recriá-las tem o modelo à mão.
    */
 
-  for (const item of mockEstablishments) {
+  /**
+   * Estabelecimentos de exemplo seguem a mesma regra das reclamações.
+   *
+   * Os três — Pizzaria Itália, Burger Prime, Sushi House — são fictícios
+   * e voltavam a cada `db:seed`, mesmo depois de apagados: `upsert` por
+   * slug não pergunta se a base já é real. Numa base de produção eles
+   * aparecem no cadastro de clientes ao lado dos 239 restaurantes de
+   * verdade, e alguém acaba vinculando uma reclamação a um deles.
+   */
+  const jaTemEstabelecimentos =
+    await prisma.establishment.count();
+
+  for (const item of jaTemEstabelecimentos > 0 && !forcar
+    ? []
+    : mockEstablishments) {
     await prisma.establishment.upsert({
       where: { slug: item.slug },
       update: {},

@@ -608,63 +608,40 @@ function casar(base: Case[], alvo: Alvo): Encontro {
     }
   }
 
-  /** 4. Nome. */
-  if (alvo.nome) {
-
-    const exatos = base.filter(
-      (item) =>
-        compararNome(alvo.nome, item.customer) === "exata"
-    );
-
-    if (exatos.length > 0) {
-      return {
-        casos: ordenar(exatos),
-        confianca: "provavel",
-        porQue: "Nome idêntico ao do cadastro.",
-        aviso:
-          "Encontrado por nome. Homônimo é possível — confirme o contato.",
-      };
-    }
-
-    const parciais = base.filter(
-      (item) => compararNome(alvo.nome, item.customer)
-    );
-
-    if (parciais.length > 0) {
-      return {
-        casos: ordenar(parciais),
-        confianca: "ambigua",
-        porQue: "Primeiro e último nome conferem.",
-        aviso:
-          "Encontrado só por primeiro e último nome. Confirme antes de tratar como o mesmo cliente.",
-      };
-    }
-
-    /** Última tentativa: pedaço do nome, como uma busca de tela faria. */
-    const alvoNormalizado = normalizarNome(alvo.nome);
-
-    if (alvoNormalizado.length >= 4) {
-
-      const contem = base.filter((item) =>
-        normalizarNome(item.customer).includes(
-          alvoNormalizado
-        )
-      );
-
-      if (contem.length > 0) {
-        return {
-          casos: ordenar(contem),
-          confianca: "ambigua",
-          porQue: `Busca por "${alvo.nome}" no nome do cliente.`,
-        };
-      }
-    }
-  }
-
+  /**
+   * **O nome não casa mais nada.**
+   *
+   * Havia um quarto degrau que achava por nome sozinho, em três
+   * tentativas cada vez mais frouxas: nome idêntico, primeiro + último
+   * nome, e por fim qualquer pedaço do nome contido no do cliente. O
+   * Isaac pediu para tirar, e o motivo aguenta escrutínio:
+   *
+   * O nome que a extensão lê vem da **agenda do celular de quem
+   * atende** — "João Pizzaria", "Maria RA", "Contato Novo". Não é o
+   * nome do cadastro, e a última tentativa, por pedaço, casava
+   * "Silva" com toda pessoa chamada Silva da base. O que a tela
+   * mostrava era "reclamações deste cliente"; o que a pessoa via, às
+   * vezes, era a reclamação de outra família.
+   *
+   * O prejuízo é assimétrico. Não achar custa uma busca à mão. Achar
+   * errado faz alguém responder no WhatsApp sobre uma reclamação que
+   * não é daquela pessoa — e isso é vazamento de dado de terceiro,
+   * não inconveniência.
+   *
+   * O nome segue em uso, mas só para **confirmar**: no degrau do
+   * telefone parcial, ele é o que transforma "provável" em "exata".
+   * Confirmar um casamento que o número já fez é seguro; criar um do
+   * nada não é.
+   */
   return {
     casos: [],
     confianca: "nenhuma",
-    porQue: "Nenhuma reclamação encontrada para este contato.",
+    porQue: alvo.nome
+      ? "Nenhuma reclamação com este telefone. O nome do contato não é usado para localizar — só para confirmar."
+      : "Nenhuma reclamação encontrada para este contato.",
+    aviso: alvo.nome
+      ? `Se souber que "${alvo.nome}" tem caso aberto, busque pelo telefone, documento ou protocolo na tela de reclamações.`
+      : undefined,
   };
 }
 
@@ -844,10 +821,17 @@ function acharEstabelecimento(
     if (porEmail) return porEmail;
   }
 
-  const nomes = [
-    alvo.nome,
-    ...casos.map((item) => item.company),
-  ].filter(Boolean);
+  /**
+   * O nome do contato saiu daqui; o da empresa ficou.
+   *
+   * São coisas diferentes. `alvo.nome` é o que está salvo na agenda do
+   * celular de quem atende — um palpite. `item.company` vem das
+   * reclamações que **já foram casadas** por telefone ou protocolo:
+   * é fato derivado de um casamento confirmado, não um chute novo.
+   */
+  const nomes = casos
+    .map((item) => item.company)
+    .filter(Boolean);
 
   for (const nome of nomes) {
 
