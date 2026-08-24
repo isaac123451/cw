@@ -37,6 +37,12 @@ export interface Establishment {
   /** Endereço da conta no portal, como o CW Engine entrega. */
   portalUrl?: string;
 
+  /** Conversa do restaurante no Crisp — o canal por trás do ManyChat. */
+  crispUrl?: string;
+
+  /** WhatsApp de quem responde o NPS. Não é o telefone da loja. */
+  npsWhatsapp?: string;
+
   segment?: string;
 
   city?: string;

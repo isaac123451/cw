@@ -286,6 +286,28 @@ export async function GET(request: Request) {
            * nenhum.
            */
           portal: estabelecimento.portalUrl || null,
+
+          /**
+           * A conversa no Crisp — o canal por trás do ManyChat.
+           *
+           * Quem atende pelo ManyChat precisa chegar na conversa, e ela
+           * não fica no ManyChat: fica no Crisp. Sem isto o painel só
+           * sabia oferecer WhatsApp, que é outro canal e muitas vezes
+           * outra pessoa.
+           */
+          crisp: estabelecimento.crispUrl || null,
+
+          /**
+           * O WhatsApp de quem responde a pesquisa, já como link.
+           *
+           * Vai montado aqui, e não como número, pelo mesmo motivo que
+           * o ciclo de NPS manda `temContato` em vez do telefone: a
+           * resposta desta rota fica em cache na extensão, e número de
+           * contato solto ali não tem uso. O link tem: é o botão.
+           */
+          whatsappNps: linkDeWhatsapp(
+            estabelecimento.npsWhatsapp
+          ),
         }
       : null,
 
@@ -510,6 +532,38 @@ function ordenar(casos: Case[]) {
   return [...casos].sort((a, b) =>
     b.createdAt.localeCompare(a.createdAt)
   );
+}
+
+/**
+ * Número brasileiro → link do WhatsApp, ou nada.
+ *
+ * O `wa.me` exige o país junto e só dígitos: "(11) 98888-7777" não
+ * abre, "5511988887777" abre. Quem digita no cadastro escreve do jeito
+ * de gente, então a normalização mora aqui.
+ *
+ * Devolve `null` para o que não parece telefone — dez ou onze dígitos
+ * depois do DDD. Um link com número quebrado abre o WhatsApp numa tela
+ * de erro, e quem clicou conclui que a plataforma está errada, não o
+ * cadastro.
+ */
+function linkDeWhatsapp(
+  valor?: string | null
+): string | null {
+
+  const digitos = (valor ?? "").replace(/\D/g, "");
+
+  if (!digitos) return null;
+
+  /** Já veio com o 55 na frente? Não duplica. */
+  const semPais = digitos.startsWith("55")
+    ? digitos.slice(2)
+    : digitos;
+
+  if (semPais.length !== 10 && semPais.length !== 11) {
+    return null;
+  }
+
+  return `https://wa.me/55${semPais}`;
 }
 
 function casar(base: Case[], alvo: Alvo): Encontro {

@@ -10,8 +10,13 @@ import {
   getRange,
   getReputation,
   inRange,
+  evaluationsToReach,
+  getRawCounts,
+  pendingEvaluations,
   ptBR,
+  RA1000_BAND,
   REFERENCE_DATE,
+  scoreBands,
 } from "@/lib/services/reputation.service";
 
 import { slaStatus } from "@/lib/services/sla.service";
@@ -118,7 +123,105 @@ export function buildOperationSnapshot(
     .filter((item) => item.amount < 0)
     .reduce((sum, item) => sum + item.amount, 0);
 
+  /**
+   * As simulações já resolvidas, para o modelo não precisar calcular.
+   *
+   * **Era isto que faltava.** O Isaac reportou que o assistente recusa
+   * perguntas que a base responde — "quantas avaliações faltam para a
+   * nota 9" é conta, não consulta a sistema externo. E ele recusava com
+   * razão: a instrução manda usar só o retrato, e o retrato trazia os
+   * indicadores crus, nunca a projeção.
+   *
+   * A conta não podia ficar com o modelo. Modelo de linguagem errando
+   * aritmética é o defeito mais conhecido que existe, e aqui o número
+   * vira decisão de quantas avaliações a operação vai perseguir no mês.
+   * Então a plataforma calcula — com o mesmo `evaluationsToReach` da
+   * calculadora — e o modelo narra.
+   *
+   * O teto vai junto: uma avaliação pertence a uma reclamação, e sem
+   * ele o modelo prometeria metas que não cabem no período.
+   */
+  const base6 = getRawCounts(janela6);
+
+  const tetoDeAvaliacoes = pendingEvaluations(base6);
+
+  /**
+   * As metas projetadas: as faixas oficiais **e** os números redondos.
+   *
+   * Só as faixas não bastava, e a tela provou: com a nota em 8,6 — já
+   * na faixa mais alta — não sobrava nenhuma faixa acima, e o retrato
+   * dizia apenas "já está no topo". Quem perguntou "quantas avaliações
+   * faltam para a nota 9" recebeu de volta um comentário sobre o teto,
+   * sem o número que pediu.
+   *
+   * A faixa é o critério do Reclame Aqui; 9 e 9,5 são o que a operação
+   * persegue de fato. Os dois precisam estar aqui, porque o modelo não
+   * pode calcular o que faltar.
+   */
+  const metas = [
+    ...scoreBands.map((faixa) => ({
+      nota: faixa.min,
+      comoChamar: `faixa "${faixa.label}"`,
+      band: faixa,
+    })),
+    ...[9, 9.5, 10].map((nota) => ({
+      nota,
+      comoChamar: "meta redonda",
+      band: {
+        label: `nota ${ptBR(nota)}`,
+        range: "",
+        color: "",
+        min: nota,
+      },
+    })),
+  ]
+    .filter((m) => m.nota > r6.raScore)
+    .sort((a, b) => a.nota - b.nota)
+    /** Uma linha por nota: 9 é meta redonda e pode ser faixa também. */
+    .filter(
+      (m, i, todas) =>
+        todas.findIndex((x) => x.nota === m.nota) === i
+    );
+
+  const projecoes = metas.map((meta) => {
+
+    const alvo = evaluationsToReach(base6, meta.band);
+
+    return alvo.reachable
+      ? `- Para a nota ${ptBR(meta.nota)} (${meta.comoChamar}): faltam ${alvo.needed} avaliação(ões) nota 10, resolvidas e favoráveis — a nota iria a ${ptBR(alvo.projected)}.`
+      : `- Para a nota ${ptBR(meta.nota)} (${meta.comoChamar}): NÃO alcançável só com avaliação neste período. Mesmo avaliando nota 10 as ${tetoDeAvaliacoes} reclamações sem avaliação, a nota chega a ${ptBR(alvo.projected)}.`;
+  });
+
+  const selo = evaluationsToReach(
+    base6,
+    RA1000_BAND,
+    true
+  );
+
   return `# Retrato da operação em ${REFERENCE_DATE}
+
+## Simulações já calculadas (use estes números, não recalcule)
+
+Estes valores saem da mesma função da tela de calculadora
+(\`evaluationsToReach\`). Se a pergunta for "quantas avaliações faltam
+para a nota X", "como subir a nota" ou "como chegar ao RA1000",
+responda com o número daqui — **não faça a conta por conta própria**.
+
+- Reclamações da janela de 6 meses ainda SEM avaliação: ${tetoDeAvaliacoes}.
+  Este é o teto: cada avaliação pertence a uma reclamação, então não é
+  possível conquistar mais avaliações do que isto no período.
+${
+  projecoes.length > 0
+    ? projecoes.join("\n")
+    : `- A nota já está na faixa mais alta (${ptBR(r6.raScore)}).`
+}
+- Selo RA1000 (exige as quatro metas juntas, não só a nota): ${
+    selo.needed === 0
+      ? "já atendido."
+      : selo.reachable
+        ? `faltam ${selo.needed} avaliação(ões) nota 10 resolvidas e favoráveis.`
+        : `não alcançável só com avaliação neste período — chegaria a ${ptBR(selo.projected)}.`
+  }
 
 ## Nota de reputação (fórmula oficial do Reclame Aqui)
 

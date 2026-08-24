@@ -404,6 +404,13 @@ export async function saveEstablishment(
     externalId: item.externalId,
     portalUrl: item.portalUrl,
 
+    /*
+      Estes dois a tela edita, então null por ausência é a intenção:
+      apagar o campo no formulário tem de apagar no banco.
+    */
+    crispUrl: item.crispUrl?.trim() || null,
+    npsWhatsapp: item.npsWhatsapp?.trim() || null,
+
     segment: item.segment ?? null,
     city: item.city ?? null,
     state: item.state ?? null,

@@ -9,8 +9,13 @@ import {
   getRange,
   getReputation,
   inRange,
+  evaluationsToReach,
+  getRawCounts,
+  pendingEvaluations,
   ptBR,
   REFERENCE_DATE,
+  scoreBands,
+  scoreFrom,
 } from "@/lib/services/reputation.service";
 
 import { slaStatus } from "@/lib/services/sla.service";
@@ -41,7 +46,42 @@ interface Skill {
   intent: string;
   /** Palavras que ativam a rotina. */
   triggers: string[];
-  run: (input: AssistantInput) => AssistantAnswer;
+
+  /**
+   * A pergunta chega junto, e não só os dados.
+   *
+   * Antes a assinatura era `(input) => AssistantAnswer`, e por isso
+   * nenhuma rotina conseguia ler um número do que a pessoa escreveu.
+   * "Quantas avaliações faltam para a nota 9" não tinha como saber que
+   * o alvo era 9 — a pergunta que o Isaac deu de exemplo era, na
+   * prática, impossível de responder por construção.
+   */
+  run: (
+    input: AssistantInput,
+    pergunta: string
+  ) => AssistantAnswer;
+}
+
+/**
+ * O número que a pessoa escreveu, quando escreveu um.
+ *
+ * Aceita vírgula e ponto — "nota 8,5" e "nota 8.5" são a mesma coisa
+ * para quem digita. Ignora número fora da escala: "quantas avaliações
+ * para 2026" não está pedindo nota 2026.
+ */
+function notaPedida(pergunta: string): number | null {
+
+  const m = pergunta.match(
+    /\b(\d{1,2})(?:[.,](\d))?\b/
+  );
+
+  if (!m) return null;
+
+  const valor = Number(
+    m[2] ? `${m[1]}.${m[2]}` : m[1]
+  );
+
+  return valor >= 0 && valor <= 10 ? valor : null;
 }
 
 function normalize(text: string) {
@@ -64,6 +104,130 @@ function currentWindow(cases: Case[]) {
 }
 
 const skills: Skill[] = [
+
+  /**
+   * Quantas avaliações faltam para uma meta.
+   *
+   * Era a pergunta que o Isaac deu de exemplo — "quantas avaliações
+   * faltam para a nota 9" — e que caía num resumo genérico. É conta, e
+   * a plataforma sabe fazê-la exata.
+   *
+   * Os gatilhos são frases, não palavras: "quantas avaliacoes" tem 17
+   * letras e ganha de "nota", que tem 4, na escolha por especificidade
+   * lá embaixo. A posição no array não importa.
+   *
+   * A conta é a mesma da calculadora (`evaluationsToReach`), não uma
+   * segunda implementação: assistente e tela discordarem sobre quantas
+   * avaliações faltam seria pior do que o assistente não responder.
+   */
+  {
+    intent: "meta-de-nota",
+    triggers: [
+      "quantas avaliacoes",
+      "quantas avaliacao",
+      "faltam para",
+      "falta para",
+      "chegar na nota",
+      "chegar a nota",
+      "subir a nota",
+      "aumentar a nota",
+      "atingir a nota",
+      "como melhorar a nota",
+    ],
+    run: ({ cases }, pergunta) => {
+
+      const janela = currentWindow(cases);
+      const base = getRawCounts(janela);
+      const atual = scoreFrom(base);
+
+      const alvo = notaPedida(pergunta);
+
+      /**
+       * Sem número na pergunta, a meta é a próxima faixa acima.
+       *
+       * "Como subir a nota?" não diz até onde, e responder "faltam N
+       * para 10" seria desanimador e inútil. A faixa seguinte é a meta
+       * que a operação persegue de fato.
+       */
+      const proxima = [...scoreBands]
+        .sort((a, b) => a.min - b.min)
+        .find((b) => b.min > atual.raScore);
+
+      const meta = alvo ?? proxima?.min ?? 10;
+
+      const teto = pendingEvaluations(base);
+
+      if (atual.raScore >= meta) {
+        return {
+          intent: "meta-de-nota",
+          paragraphs: [
+            `A nota já está em ${ptBR(atual.raScore)}, acima de ${ptBR(meta)} — não falta nenhuma avaliação para essa meta.`,
+            base.received - base.answered > 0
+              ? `Para segurar: ${base.received - base.answered} reclamação(ões) da janela ainda estão sem resposta, e resposta é o único indicador que depende só de nós.`
+              : "Todas as reclamações da janela foram respondidas.",
+          ],
+          links: [
+            {
+              label: "Simular na calculadora",
+              href: "/reclame-aqui/calculadora",
+            },
+          ],
+        };
+      }
+
+      const resultado = evaluationsToReach(base, {
+        label: `nota ${ptBR(meta)}`,
+        range: `${ptBR(meta)} a 10`,
+        color: "",
+        min: meta,
+      });
+
+      /**
+       * O teto do período entra na resposta, não só o número.
+       *
+       * Uma avaliação pertence a uma reclamação: se faltam 40 e só há
+       * 12 reclamações sem avaliação, "faltam 40" é uma meia-verdade
+       * que manda alguém perseguir o impossível. É a mesma trava que a
+       * calculadora ganhou.
+       */
+      if (!resultado.reachable) {
+        return {
+          intent: "meta-de-nota",
+          paragraphs: [
+            `Não dá para chegar a ${ptBR(meta)} só com avaliação neste período. Mesmo avaliando nota 10 as ${teto} reclamações que ainda não têm avaliação, a nota chega a ${ptBR(resultado.projected)}.`,
+            `Hoje a nota é ${ptBR(atual.raScore)}, com índice de resposta em ${ptBR(atual.responseIndex)}% e solução em ${ptBR(atual.solutionIndex)}%. O caminho é responder o que está parado e pedir moderação das notas baixas.`,
+          ],
+          links: [
+            {
+              label: "Simular na calculadora",
+              href: "/reclame-aqui/calculadora",
+            },
+            {
+              label: "Ver o que está sem resposta",
+              href: "/reclame-aqui?status=Novo",
+            },
+          ],
+        };
+      }
+
+      return {
+        intent: "meta-de-nota",
+        paragraphs: [
+          `Faltam ${resultado.needed} avaliação(ões) nota 10, resolvidas e favoráveis, para a nota sair de ${ptBR(atual.raScore)} e chegar a ${ptBR(resultado.projected)}.`,
+          `Cabem no período: há ${teto} reclamação(ões) da janela ainda sem avaliação, e cada avaliação pertence a uma reclamação.`,
+          base.received - base.answered > 0
+            ? `Antes disso, ${base.received - base.answered} reclamação(ões) seguem sem resposta — responder é mais rápido do que conquistar avaliação, e o índice de resposta pesa 20% da nota.`
+            : "Todas as reclamações da janela já foram respondidas, então o ganho vem mesmo de avaliação.",
+        ],
+        links: [
+          {
+            label: "Simular na calculadora",
+            href: "/reclame-aqui/calculadora",
+          },
+        ],
+      };
+    },
+  },
 
   {
     intent: "nota",
@@ -240,7 +404,7 @@ const skills: Skill[] = [
       "churn",
       "cancelamento",
       "cancelar",
-      "risco",
+      "risco de",
       "perder cliente",
     ],
     run: ({ cases }) => {
@@ -300,7 +464,7 @@ const skills: Skill[] = [
       "causa",
       "categoria",
       "assunto",
-      "motivo",
+      "motivo das reclamacoes",
       "reclamam",
       "recorrente",
     ],
@@ -370,7 +534,7 @@ const skills: Skill[] = [
       "impacto",
       "receita",
       "financeiro",
-      "retorno",
+      "retorno financeiro",
       "dinheiro",
     ],
     run: ({ impacts }) => {
@@ -431,7 +595,7 @@ const skills: Skill[] = [
       "agenda",
       "atividade",
       "tarefa",
-      "hoje",
+      "para hoje",
       "vencida",
       "follow",
     ],
@@ -473,7 +637,10 @@ const skills: Skill[] = [
   {
     intent: "tempo-resposta",
     triggers: [
-      "tempo",
+      "tempo de resposta",
+      "tempo medio",
+      "demora",
+      "quanto tempo",
       "demora",
       "rapidez",
       "quanto tempo",
@@ -501,25 +668,43 @@ const skills: Skill[] = [
   },
 ];
 
-/** Resposta padrão quando nenhuma rotina reconhece a pergunta. */
+/**
+ * Quando nenhuma rotina reconhece a pergunta.
+ *
+ * **Isto não devolve mais um resumo genérico.** Devolver "a nota é 8,4
+ * e há 13 sem resposta" para quem perguntou outra coisa é pior do que
+ * dizer "não sei": parece resposta, então quem lê acredita que foi
+ * respondido e vai embora com o número errado na cabeça.
+ *
+ * Agora diz que não entendeu, lista o que sabe fazer, e — quando a
+ * pergunta tem cara de conta sobre a nota — sugere a formulação que
+ * funciona, em vez de deixar a pessoa adivinhar.
+ */
 function fallback(
-  input: AssistantInput
+  input: AssistantInput,
+  pergunta: string
 ): AssistantAnswer {
 
-  const janela = currentWindow(input.cases);
-  const resumo = getReputation(janela);
+  const texto = normalize(pergunta);
+
+  const pareceConta =
+    /quant|falta|preciso|chegar|subir|meta|melhorar/.test(
+      texto
+    );
 
   return {
-    intent: "resumo",
+    intent: "nao-entendi",
     paragraphs: [
-      `Resumo da operação: nota ${ptBR(resumo.raScore)}, ${resumo.received} reclamações na janela de 6 meses, ${resumo.unanswered} ainda sem resposta.`,
-      "Consigo responder sobre nota e reputação, fila sem resposta, prazos e SLA, risco de cancelamento, causa raiz por categoria, impacto financeiro, agenda e tempo de resposta.",
-      "Pergunte por exemplo: “quais casos estão fora do prazo?” ou “qual a causa raiz mais recorrente?”.",
+      "Não entendi essa. Respondo com número da base, e prefiro dizer que não sei a chutar.",
+      "Sei falar de: nota e reputação, quantas avaliações faltam para uma meta, fila sem resposta, prazos e SLA, risco de cancelamento, causa raiz por categoria, impacto financeiro, agenda e tempo de resposta.",
+      pareceConta
+        ? "Se for conta sobre a nota, tente “quantas avaliações faltam para a nota 9?” — eu simulo sobre a base real e digo o teto do período."
+        : "Tente “quais casos estão fora do prazo?” ou “qual a causa raiz mais recorrente?”.",
     ],
     links: [
       {
-        label: "Ver analytics",
-        href: "/reclame-aqui/analytics",
+        label: "Simular na calculadora",
+        href: "/reclame-aqui/calculadora",
       },
     ],
   };
@@ -539,20 +724,66 @@ export function ask(
 
   const texto = normalize(question);
 
-  const encontrada = skills.find((skill) =>
-    skill.triggers.some((trigger) =>
-      texto.includes(normalize(trigger))
-    )
-  );
+  /**
+   * Ganha o gatilho **mais específico**, não o primeiro da lista.
+   *
+   * Duas coisas estavam erradas aqui.
+   *
+   * A primeira: a comparação era `texto.includes(gatilho)`, sem
+   * fronteira de palavra. "Qual a previsão do **tempo** amanhã?" casava
+   * com o gatilho "tempo" e recebia o tempo médio de primeira resposta
+   * — uma resposta impecável para outra pergunta, que é o pior tipo de
+   * erro que um assistente pode cometer.
+   *
+   * A segunda: `find` devolvia a **primeira** rotina que casasse, então
+   * a resposta dependia da ordem do array. "Quantas avaliações faltam
+   * para a nota 9" casa com "nota" e com "quantas avaliacoes"; qual
+   * vencia era acidente de posição.
+   *
+   * Agora o gatilho mais longo vence, o que na prática é o mais
+   * específico: "quantas avaliacoes" (17 letras) passa na frente de
+   * "nota" (4). Ordenar o array deixa de importar.
+   */
+  const casar = (gatilho: string) => {
 
-  return encontrada
-    ? encontrada.run(input)
-    : fallback(input);
+    const g = normalize(gatilho);
+
+    const escapado = g.replace(
+      /[.*+?^${}()|[\]\\]/g,
+      "\\$&"
+    );
+
+    return new RegExp(
+      `(^|[^a-z0-9])${escapado}([^a-z0-9]|$)`
+    ).test(texto)
+      ? g.length
+      : 0;
+  };
+
+  let melhor: Skill | null = null;
+  let peso = 0;
+
+  for (const skill of skills) {
+    for (const gatilho of skill.triggers) {
+
+      const p = casar(gatilho);
+
+      if (p > peso) {
+        peso = p;
+        melhor = skill;
+      }
+    }
+  }
+
+  return melhor
+    ? melhor.run(input, question)
+    : fallback(input, question);
 }
 
 /** Perguntas sugeridas na tela. */
 export const suggestions = [
   "Como está a nota da reputação agora?",
+  "Quantas avaliações faltam para a nota 9?",
   "Quais reclamações estão sem resposta?",
   "O que está fora do prazo de SLA?",
   "Qual a causa raiz mais recorrente?",

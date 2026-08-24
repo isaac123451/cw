@@ -1848,18 +1848,35 @@
 
               ${
                 /*
-                  O portal só aparece quando o cadastro tem a URL.
+                  Cada link só aparece quando o cadastro tem a URL.
 
                   Botão que leva a lugar nenhum é pior do que botão
                   ausente: quem clica uma vez e não vai a lugar algum
-                  para de clicar nos outros. Sem `portalUrl` gravado no
-                  estabelecimento, ele simplesmente não é desenhado.
+                  para de clicar nos outros. Sem o campo gravado no
+                  estabelecimento, o botão simplesmente não é desenhado.
                 */
                 est.portal
                   ? `<a class="tag marca" data-acao="abrir"
                         data-url="${CW.escapar(est.portal)}"
                         title="Abrir a conta deste restaurante no portal da Cardápio Web"
                         style="cursor:pointer">portal Cardápio Web &rarr;</a>`
+                  : ""
+              }
+
+              ${
+                /*
+                  O Crisp é para o ManyChat.
+
+                  Ali o canal é o ManyChat, mas a conversa fica no
+                  Crisp — e sem este botão a única saída que o painel
+                  oferecia era WhatsApp, que é outro canal e costuma ser
+                  outra pessoa.
+                */
+                est.crisp
+                  ? `<a class="tag marca" data-acao="abrir"
+                        data-url="${CW.escapar(est.crisp)}"
+                        title="Abrir a conversa deste restaurante no Crisp"
+                        style="cursor:pointer">Crisp &rarr;</a>`
                   : ""
               }
 
@@ -1891,7 +1908,8 @@
         blocoNps(
           ciclo,
           podeEscrever(dados),
-          ciclos.length > 1
+          ciclos.length > 1,
+          dados.estabelecimento?.whatsappNps ?? null
         )
       );
     }
@@ -2424,7 +2442,19 @@
    * sendo da tela, que tem o checklist — encerramento em gaveta de 380
    * px vira encerramento sem lastro.
    */
-  function blocoNps(nps, escrever, compacto = false) {
+  /**
+   * O cartão de um ciclo de NPS.
+   *
+   * `whatsapp` chega de fora porque o link é do **estabelecimento**, e
+   * não do ciclo: o número de quem responde a pesquisa é cadastro do
+   * restaurante. Vem pronto do servidor, montado e validado lá.
+   */
+  function blocoNps(
+    nps,
+    escrever,
+    compacto = false,
+    whatsapp = null
+  ) {
 
     const humorAtual = HUMORES.find(
       (h) => h.valor === nps.humor
@@ -2474,6 +2504,23 @@
       registrado
         ? `    <div class="sub" style="margin-top:6px;color:var(--suave)">${CW.escapar(registrado)}</div>`
         : "",
+
+      /*
+        O WhatsApp do NPS, no mesmo padrão do portal e do Crisp: só
+        aparece quando o cadastro tem o número.
+
+        Fica dentro do cartão do ciclo, e não no bloco do
+        estabelecimento, porque a ação é "falar com quem deu esta nota"
+        — quem abre o painel no NPS está atendendo a pesquisa, e o
+        número da recepção da loja não serve para isso.
+      */
+      whatsapp && !nps.encerrado
+        ? `    <a class="tag marca" data-acao="abrir"
+                data-url="${CW.escapar(whatsapp)}"
+                title="Abrir o WhatsApp de quem respondeu a pesquisa"
+                style="cursor:pointer;margin-top:8px;display:inline-block">WhatsApp do NPS &rarr;</a>`
+        : "",
+
       escrever ? passosDoNps(nps) : "",
       escrever ? campoDeContatoDoNps(nps) : "",
       '  </div>',
@@ -2852,7 +2899,12 @@
         ? '<div class="bloco"><p class="sub">Nenhum ciclo de NPS para este contato. O WhatsApp da pesquisa é outro número — se souber que é a mesma pessoa, abra o ciclo pela fila e grave o telefone ali.</p></div>'
         : ciclos
             .map((ciclo) =>
-              blocoNps(ciclo, podeEscrever(dados), true)
+              blocoNps(
+                ciclo,
+                podeEscrever(dados),
+                true,
+                dados.estabelecimento?.whatsappNps ?? null
+              )
             )
             .join(""),
     ].join("");

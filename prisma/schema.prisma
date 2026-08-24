@@ -587,6 +587,27 @@ model Establishment {
   /// e montar a URL a partir do id errado levaria a operação para a
   /// ficha de outro restaurante.
   portalUrl String?
+
+  /// Conversa deste restaurante no Crisp.
+  ///
+  /// O ManyChat é o canal, mas a conversa fica no Crisp — e quem atende
+  /// pelo ManyChat precisa chegar nela. Sem este campo, a extensão só
+  /// sabia oferecer WhatsApp, que é outro canal e outra pessoa.
+  ///
+  /// É link guardado, e não montado a partir de um id: o Crisp usa
+  /// identificadores de sessão e de site que não têm relação com o
+  /// cadastro daqui — montar levaria a operação para a conversa errada,
+  /// que é o mesmo motivo do `portalUrl`.
+  crispUrl String?
+
+  /// WhatsApp do contato da pesquisa de NPS.
+  ///
+  /// Separado do `phone` de propósito. O `phone` é o telefone do
+  /// estabelecimento — recepção, fixo, o número do cardápio. Quem
+  /// responde o NPS é uma pessoa, com o WhatsApp dela, e ligar para a
+  /// loja para falar de uma nota que o dono deu em particular é o tipo
+  /// de contato que piora a relação em vez de melhorar.
+  npsWhatsapp String?
   segment   String?
   city      String?
   state     String?

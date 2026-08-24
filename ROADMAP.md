@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 23/08/2026. Aplicação **0.24.0**, extensão **0.24.0**.
+Atualizado em 23/08/2026. Aplicação **0.25.0**, extensão **0.25.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -76,7 +76,7 @@ workspace junto com os outros cadastros.
 ### 0. Handoff — leia isto primeiro (22/08/2026)
 
 **Produção:** https://cw-rho-eight.vercel.app · repo `isaac123451/cw`,
-branch `main` · aplicação e extensão em **0.24.0**, sempre no mesmo
+branch `main` · aplicação e extensão em **0.25.0**, sempre no mesmo
 número.
 
 **Antes de dizer que algo está pronto, rode o `check:` correspondente.**

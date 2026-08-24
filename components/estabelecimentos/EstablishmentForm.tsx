@@ -137,6 +137,12 @@ export default function EstablishmentForm({
   const [notes, setNotes] = useState(
     editing?.notes ?? ""
   );
+  const [crispUrl, setCrispUrl] = useState(
+    editing?.crispUrl ?? ""
+  );
+  const [npsWhatsapp, setNpsWhatsapp] = useState(
+    editing?.npsWhatsapp ?? ""
+  );
 
   const responsaveis = useMemo(
     () =>
@@ -179,6 +185,8 @@ export default function EstablishmentForm({
       phone: phone.trim() || undefined,
       email: email.trim().toLowerCase() || undefined,
       notes: notes.trim() || undefined,
+      crispUrl: crispUrl.trim() || undefined,
+      npsWhatsapp: npsWhatsapp.trim() || undefined,
     };
 
     onSave(
@@ -425,6 +433,67 @@ export default function EstablishmentForm({
               className={inputClass}
             />
           </Field>
+
+        </div>
+
+        {/*
+          Os canais de atendimento, cada um no seu lugar.
+
+          Ficam juntos e separados do telefone da loja porque respondem
+          perguntas diferentes: "como falo com a recepção" é uma coisa,
+          "onde está a conversa que este restaurante já abriu" é outra.
+          Sem isto, a extensão só sabia oferecer WhatsApp — que no
+          ManyChat leva a outro canal e, no NPS, ao número errado.
+        */}
+        <div className="rounded-2xl bg-zinc-50/70 p-4">
+
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+            Canais de atendimento
+          </p>
+
+          <p className="mt-1 text-xs text-zinc-500">
+            Cada link preenchido vira um botão na extensão.
+            Vazio, o botão não aparece — botão que leva a
+            lugar nenhum é pior do que botão ausente.
+          </p>
+
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+
+            <Field label="Link do Crisp">
+              <input
+                value={crispUrl}
+                onChange={(e) =>
+                  setCrispUrl(e.target.value)
+                }
+                placeholder="https://app.crisp.chat/website/.../inbox/..."
+                className={inputClass}
+              />
+            </Field>
+
+            <Field label="WhatsApp do NPS">
+              <input
+                value={npsWhatsapp}
+                onChange={(e) =>
+                  setNpsWhatsapp(e.target.value)
+                }
+                placeholder="(00) 00000-0000"
+                className={inputClass}
+              />
+            </Field>
+
+          </div>
+
+          {/*
+            O ManyChat é o canal, mas a conversa mora no Crisp; e quem
+            responde o NPS é uma pessoa, não a recepção da loja.
+          */}
+          <p className="mt-3 text-xs leading-relaxed text-zinc-400">
+            O Crisp é onde a conversa do ManyChat fica de
+            verdade. O WhatsApp do NPS é o de quem respondeu
+            a pesquisa — ligar para a loja sobre uma nota
+            que o dono deu em particular costuma piorar a
+            relação.
+          </p>
 
         </div>
 
