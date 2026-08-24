@@ -37,9 +37,24 @@
       3000
     );
 
-    const achado = texto.match(
-      /\+55[\s\-().]*\d{2}[\s\-().]*\d{4,5}[\s\-().]*\d{4}/
-    );
+    /*
+      A mesma família de traços do WhatsApp.
+
+      O padrão era `[\s\-().]` — só o hífen ASCII. O ManyChat exibe o
+      telefone com a tipografia do navegador, e um travessão curto ou um
+      hífen não separável no meio fazia o número inteiro passar
+      despercebido. É o mesmo defeito que o Isaac viu no WhatsApp, no
+      outro leitor.
+    */
+    const SEP = "[\\s\\-().\\u00A0\\u2010-\\u2015\\u2212]*";
+
+    const achado = texto
+      .replace(CW.INVISIVEIS, "")
+      .match(
+        new RegExp(
+          `\\+55${SEP}\\d{2}${SEP}\\d{4,5}${SEP}\\d{4}`
+        )
+      );
 
     return achado ? CW.digitos(achado[0]) : "";
   }

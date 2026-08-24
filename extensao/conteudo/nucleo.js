@@ -143,6 +143,70 @@
     String(valor ?? "").replace(/\D/g, "");
 
   /**
+   * Caracteres invisíveis que os sites inserem em telefone.
+   *
+   * Marcas e embutidos de direção: um `+` seguido de dígitos precisa de
+   * dica de direção para renderizar igual em qualquer idioma, e o
+   * WhatsApp Web as coloca sem avisar. Não aparecem no editor nem na
+   * tela, mas quebram qualquer teste que valide a **forma** do texto.
+   */
+  CW.INVISIVEIS =
+    /[\u200B-\u200F\u202A-\u202E\u2066-\u2069\uFEFF]/g;
+
+  /**
+   * Tudo que separa dígito num telefone, em qualquer tipografia.
+   *
+   * Espaço (inclusive o não separável U+00A0), parêntese, ponto,
+   * barra, o sinal de mais, a família inteira de traços (U+2010 a
+   * U+2015) e o menos matemático (U+2212).
+   *
+   * **Isto existe por um defeito real**, reportado pelo Isaac: alguns
+   * contatos do WhatsApp não eram reconhecidos com o número idêntico
+   * ao da base. Os leitores validavam a forma com `[\s\-().]`, que só
+   * aceita o hífen ASCII — e o WhatsApp escreve com hífen não
+   * separável (U+2011) ou travessão curto (U+2013) conforme o caso.
+   * Medido: dez de quinze formatos reais eram recusados.
+   *
+   * Escrito com escape e não com o caractere: os invisíveis somem
+   * num copiar e colar, e a expressão voltaria a falhar só para
+   * alguns contatos — o mesmo sintoma que isto conserta.
+   */
+  CW.SEPARADORES =
+    /[\s()./+\u00A0\u2010-\u2015\u2212-]/g;
+  /**
+   * O texto é um telefone? Devolve os dígitos, ou vazio.
+   *
+   * A pergunta não é "tem a forma de um telefone" — é "sobrou letra
+   * depois de tirar a pontuação". Nome tem letra, número não, e essa
+   * pergunta não muda quando o site troca de traço.
+   */
+  CW.telefoneDoTexto = (valor) => {
+
+    const semInvisiveis = String(valor ?? "").replace(
+      CW.INVISIVEIS,
+      ""
+    );
+
+    const semPontuacao = semInvisiveis.replace(
+      CW.SEPARADORES,
+      ""
+    );
+
+    const digitos = CW.digitos(semInvisiveis);
+
+    const soDigitos =
+      semPontuacao.length > 0 &&
+      /^\d+$/.test(semPontuacao);
+
+    /** Dez sem DDI, treze com ele; quinze é o teto do E.164. */
+    return soDigitos &&
+      digitos.length >= 10 &&
+      digitos.length <= 15
+      ? digitos
+      : "";
+  };
+
+  /**
    * Texto visível de um elemento, cortado.
    *
    * Existe para ler rótulo de cabeçalho, nunca conteúdo de mensagem —

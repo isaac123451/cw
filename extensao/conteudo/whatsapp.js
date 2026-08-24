@@ -44,17 +44,32 @@
     let telefone = "";
     let grupo = false;
 
-    const comId = principal.querySelector("[data-id]");
+    /**
+     * O primeiro `[data-id]` nem sempre é uma mensagem.
+     *
+     * Era `querySelector` — o primeiro do documento, e só ele. O
+     * WhatsApp Web põe `data-id` em outras coisas além de mensagem, e
+     * quando a primeira ocorrência não é uma, a leitura devolvia vazio
+     * e caía no cabeçalho, que é justamente o caminho que estava
+     * recusando número por causa do traço.
+     *
+     * Vinte é de sobra e barato: as mensagens estão no começo da lista,
+     * e a varredura para na primeira que serve.
+     */
+    const comIds = principal.querySelectorAll("[data-id]");
 
-    if (comId) {
+    for (const el of Array.from(comIds).slice(0, 20)) {
 
-      const bruto = comId.getAttribute("data-id") ?? "";
+      const bruto = el.getAttribute("data-id") ?? "";
 
       if (bruto.includes("@g.us")) grupo = true;
 
       const achado = bruto.match(/(\d{8,20})@c\.us/);
 
-      if (achado) telefone = achado[1];
+      if (achado) {
+        telefone = achado[1];
+        break;
+      }
     }
 
     const cabecalho = principal.querySelector("header");
@@ -75,19 +90,40 @@
      * Contato fora da agenda: o cabeçalho já é o próprio número. Serve
      * de rede quando a conversa ainda não tem mensagem e o `data-id`
      * não existe.
+     *
+     * **Aqui morava um defeito que o Isaac reportou**: alguns contatos
+     * não eram reconhecidos, com o número idêntico ao da base. O teste
+     * era `/^[+\d\s()\-]+$/` — texto composto **só** de `+`, dígito,
+     * espaço comum, parêntese e o hífen ASCII.
+     *
+     * O WhatsApp Web não escreve assim. Ele monta o número com hífen
+     * não separável (U+2011), travessão curto (U+2013) ou hífen
+     * tipográfico (U+2010), e envolve o `+55` em marcas de direção
+     * invisíveis (U+200E, U+202A…U+202C) — porque um `+` seguido de
+     * dígitos precisa de dica de direção para renderizar igual em
+     * qualquer idioma. Nenhum desses caracteres passa naquele teste.
+     *
+     * Medido com onze formatos reais: **seis eram recusados**, todos
+     * números válidos. E como o degrau de casamento por nome saiu (ele
+     * devolvia 53 reclamações para um contato chamado "Santos"), a
+     * recusa aqui virou "nada encontrado" em vez de um palpite ruim.
+     *
+     * A regra agora não olha a forma do texto: olha se **sobrou letra**
+     * depois de tirar o que é pontuação de telefone. Nome tem letra,
+     * número não — e essa pergunta não muda quando o WhatsApp troca de
+     * traço.
      */
     if (!telefone && nome) {
 
-      const digitos = CW.digitos(nome);
+      /*
+        A regra mora no núcleo, e é a mesma do ManyChat.
 
-      if (
-        digitos.length >= 10 &&
-        /^[+\d\s()\-]+$/.test(nome)
-      ) {
-        telefone = digitos;
-      }
+        Duas cópias da mesma pergunta é como uma delas fica para
+        trás: o dia em que o WhatsApp trocar de traço de novo, o
+        conserto tem de valer para os dois leitores.
+      */
+      telefone = CW.telefoneDoTexto(nome);
     }
-
     if (!telefone && !nome) return null;
 
     return { telefone, nome, grupo };
