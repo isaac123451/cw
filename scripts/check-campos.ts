@@ -82,6 +82,26 @@ const INTERNAS: Record<string, string[]> = {
   SavedFilter: ["*"],
   Company: ["*"],
   IaConfig: ["*"],
+
+  /**
+   * Configuração de acesso, com carga própria (`lerSeguranca`).
+   *
+   * Fora do workspace de propósito: ela só interessa a quem administra,
+   * e mandá-la na carga que toda tela recebe espalharia a postura de
+   * segurança da empresa por todo `sessionStorage` de todo navegador.
+   */
+  SecurityConfig: ["*"],
+
+  /**
+   * **Nada daqui pode chegar a tela nenhuma.**
+   *
+   * É o código de login em si. `codeHash` numa carga de cliente seria
+   * entregar ao navegador o material para quebrar a segunda etapa
+   * offline; `attempts` e `expiresAt` diriam a quem tenta quanto ainda
+   * dá para chutar. Este modelo é lido só no servidor, por
+   * `lib/auth/two-factor.ts`, e a ausência aqui é o comportamento certo.
+   */
+  LoginChallenge: ["*"],
   Plan: ["*"],
   NpsStage: ["*"],
   NpsKind: ["*"],

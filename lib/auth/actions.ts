@@ -1,5 +1,6 @@
 "use server";
 
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import bcrypt from "bcryptjs";
@@ -19,9 +20,18 @@ import {
 } from "@/lib/auth/access";
 
 import {
+  clearPendingLogin,
+  createPendingLogin,
   createSession,
   destroySession,
+  getPendingLogin,
 } from "@/lib/auth/session";
+
+import {
+  conferirCodigo,
+  criarDesafio,
+  exigeSegundaEtapa,
+} from "@/lib/auth/two-factor";
 
 import {
   checarBloqueio,
@@ -246,6 +256,43 @@ export async function signIn(
 
   limparFalhas(email);
 
+  /**
+   * A senha bateu. A partir daqui, ou a sessão sai agora, ou sai
+   * depois do código.
+   *
+   * O freio de tentativas é limpo **antes** da bifurcação de propósito:
+   * quem provou a senha não deve continuar acumulando bloqueio por
+   * errar o código, que tem freio próprio e mais apertado.
+   */
+  if (await exigeSegundaEtapa(user)) {
+
+    const cabecalhos = await headers();
+
+    const pedido = await criarDesafio(user, {
+      ip:
+        cabecalhos.get("x-forwarded-for")?.split(",")[0] ??
+        undefined,
+      userAgent:
+        cabecalhos.get("user-agent") ?? undefined,
+    });
+
+    if (!pedido.ok || !pedido.challengeId) {
+      return {
+        error:
+          pedido.erro ??
+          "Não consegui enviar o código de verificação.",
+      };
+    }
+
+    await createPendingLogin({
+      challengeId: pedido.challengeId,
+      userId: user.id,
+      email: user.email,
+    });
+
+    redirect("/login/codigo");
+  }
+
   await createSession({
     id: user.id,
     email: user.email,
@@ -254,6 +301,152 @@ export async function signIn(
   });
 
   redirect("/dashboard");
+}
+
+/**
+ * A segunda etapa: confere o código e só então abre a sessão.
+ *
+ * Quem chega aqui já provou a senha — o cookie de etapa intermediária
+ * é assinado e só sai de `signIn`. Mesmo assim a conferência é feita
+ * do zero contra o banco: o cookie diz **qual** desafio, nunca que ele
+ * está resolvido.
+ */
+export async function verifyCode(
+  _state: FormState,
+  formData: FormData
+): Promise<FormState> {
+
+  const pendente = await getPendingLogin();
+
+  if (!pendente) {
+    return {
+      error:
+        "Sua verificação expirou. Entre com e-mail e senha de novo.",
+    };
+  }
+
+  const codigo = String(formData.get("code") ?? "").trim();
+
+  if (!codigo) {
+    return { error: "Digite o código que chegou no e-mail." };
+  }
+
+  const conferido = await conferirCodigo(
+    pendente.challengeId,
+    codigo
+  );
+
+  if (!conferido.ok) {
+
+    if (conferido.recomecar) {
+      await clearPendingLogin();
+    }
+
+    return {
+      error: conferido.erro ?? "Código inválido.",
+    };
+  }
+
+  const prisma = getPrisma();
+
+  if (!prisma) {
+    return { error: "Banco de dados não configurado." };
+  }
+
+  /**
+   * O usuário é relido do banco, não reaproveitado do cookie.
+   *
+   * Entre a senha e o código passaram minutos, e nesses minutos a
+   * conta pode ter sido desativada ou ter mudado de papel. A sessão
+   * tem de nascer do estado de agora — carregar o papel antigo dentro
+   * do cookie seria uma escalação de privilégio de dez minutos de
+   * validade.
+   */
+  const user = await prisma.user.findUnique({
+    where: { id: conferido.userId },
+  });
+
+  if (!user || !user.active) {
+    await clearPendingLogin();
+    return { error: "Esta conta está desativada." };
+  }
+
+  await clearPendingLogin();
+
+  await createSession({
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role,
+  });
+
+  redirect("/dashboard");
+}
+
+/** Manda outro código, respeitando a espera entre envios. */
+export async function resendCode(
+  _state: FormState,
+  _formData: FormData
+): Promise<FormState> {
+
+  const pendente = await getPendingLogin();
+
+  if (!pendente) {
+    return {
+      error:
+        "Sua verificação expirou. Entre com e-mail e senha de novo.",
+    };
+  }
+
+  const prisma = getPrisma();
+
+  if (!prisma) {
+    return { error: "Banco de dados não configurado." };
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: pendente.userId },
+  });
+
+  if (!user || !user.active) {
+    await clearPendingLogin();
+    return { error: "Esta conta está desativada." };
+  }
+
+  const cabecalhos = await headers();
+
+  const pedido = await criarDesafio(user, {
+    ip:
+      cabecalhos.get("x-forwarded-for")?.split(",")[0] ??
+      undefined,
+    userAgent: cabecalhos.get("user-agent") ?? undefined,
+  });
+
+  if (!pedido.ok || !pedido.challengeId) {
+    return {
+      error: pedido.erro ?? "Não consegui reenviar o código.",
+    };
+  }
+
+  /**
+   * O cookie é reescrito com o desafio novo — o anterior acabou de ser
+   * invalidado, e sem isto a tela conferiria contra um código morto.
+   */
+  await createPendingLogin({
+    challengeId: pedido.challengeId,
+    userId: user.id,
+    email: user.email,
+  });
+
+  return {
+    success: "Código novo enviado. Confira seu e-mail.",
+  };
+}
+
+/** Desiste da segunda etapa e volta ao início. */
+export async function cancelPendingLogin() {
+  await clearPendingLogin();
+  redirect("/login");
 }
 
 export async function signOut() {

@@ -203,6 +203,7 @@ async function main() {
     "/configuracoes",
     "/configuracoes/integracoes",
     "/configuracoes/permissoes",
+  "/configuracoes/seguranca",
     "/configuracoes/planos",
   ];
 

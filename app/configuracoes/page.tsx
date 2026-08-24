@@ -4,6 +4,7 @@ import {
   ArrowUpRight,
   Building2,
   GitBranch,
+  KeyRound,
   LucideIcon,
   ShieldCheck,
   Tags,
@@ -66,6 +67,13 @@ const settings: SettingLink[] = [
       "O papel de cada pessoa dentro de cada módulo. Quem fica em Padrão segue o papel da conta.",
     href: "/configuracoes/permissoes",
     icon: ShieldCheck,
+  },
+  {
+    title: "Segurança do acesso",
+    description:
+      "Verificação em duas etapas: um código de seis dígitos por e-mail depois da senha.",
+    href: "/configuracoes/seguranca",
+    icon: KeyRound,
   },
   {
     title: "Planos e módulos",

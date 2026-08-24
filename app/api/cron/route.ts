@@ -17,6 +17,8 @@ import { deveEncerrarSemRetorno } from "@/lib/services/nps.service";
 import { movementStatus } from "@/lib/services/movement.service";
 import { deliverWebhook } from "@/lib/services/webhook.service";
 
+import { limparDesafiosVelhos } from "@/lib/auth/two-factor";
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -91,13 +93,26 @@ export async function GET(request: Request) {
 
   const inicio = Date.now();
 
-  const [nps, movimentacoes, reenvios, vinculos] =
-    await Promise.all([
-      encerrarNpsAbandonado(prisma),
-      avisarMovimentacoesAtrasadas(prisma),
-      reenviarWebhooksFalhados(prisma),
-      vincularPorCnpj(prisma),
-    ]);
+  const [
+    nps,
+    movimentacoes,
+    reenvios,
+    vinculos,
+    desafios,
+  ] = await Promise.all([
+    encerrarNpsAbandonado(prisma),
+    avisarMovimentacoesAtrasadas(prisma),
+    reenviarWebhooksFalhados(prisma),
+    vincularPorCnpj(prisma),
+    /**
+     * Faxina dos códigos de verificação vencidos.
+     *
+     * É dado de acesso — hash de código de login. Não deve ficar por
+     * perto mais do que precisa, e sem faxina a tabela só cresce
+     * guardando o que ninguém mais vai usar.
+     */
+    limparDesafiosVelhos(),
+  ]);
 
   /**
    * A etiqueta é invalidada uma vez, no fim.
@@ -121,6 +136,7 @@ export async function GET(request: Request) {
     movimentacoes,
     reenvios,
     vinculos,
+    desafiosApagados: desafios,
   });
 }
 

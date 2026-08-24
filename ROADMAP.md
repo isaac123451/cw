@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 23/08/2026. Aplicação **0.21.0**, extensão **0.21.0**.
+Atualizado em 23/08/2026. Aplicação **0.22.0**, extensão **0.22.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -66,6 +66,7 @@ workspace junto com os outros cadastros.
 | `npm run check:whatsapp` | Prova o leitor de conversa do WhatsApp contra seis marcações, sem navegador |
 | `npm run check:busca-texto` | Prova o campo Buscar da tela: telefone, documento, e-mail e texto, contra a base real |
 | `npm run check:calculadora` | Mexe em cada campo do cenário sobre a base real e exige que ele mova a nota, para o lado certo — e que nenhuma combinação saia de 0–10 |
+| `npm run check:duas-etapas` | Onze defesas do código por e-mail, cada uma provada recusando o que deve: código errado, vencido, gasto, sem palpites, reenviado |
 | `npm run extensao:icones` | Regera os PNGs do ícone da extensão |
 
 ---
@@ -75,7 +76,7 @@ workspace junto com os outros cadastros.
 ### 0. Handoff — leia isto primeiro (22/08/2026)
 
 **Produção:** https://cw-rho-eight.vercel.app · repo `isaac123451/cw`,
-branch `main` · aplicação e extensão em **0.21.0**, sempre no mesmo
+branch `main` · aplicação e extensão em **0.22.0**, sempre no mesmo
 número.
 
 **Antes de dizer que algo está pronto, rode o `check:` correspondente.**
@@ -117,7 +118,9 @@ o canal da página. Falta **só** o importador, e ele depende do arquivo.
 Fila pedida pelo Isaac em 23/08, depois da auditoria. Em ordem de
 entrega:
 
-1. **Verificação em duas etapas**, com código por e-mail.
+1. ~~**Verificação em duas etapas**, com código por e-mail.~~ Entregue
+   em 23/08 — ver abaixo. **Falta você definir `RESEND_API_KEY` na
+   Vercel**; até lá o recurso fica indisponível de propósito.
 2. **Botão para o portal da Cardápio Web** na extensão.
 3. **Buscar a reclamação pelo número do cliente**, usando o nome do
    contato só para conferir — hoje o nome participa do casamento.
@@ -358,6 +361,39 @@ ponha `http://localhost:3000`.
 
 ---
 
+### `RESEND_API_KEY` — **falta definir**
+
+**O que é:** a chave de envio de e-mail transacional. Hoje ela serve a
+uma coisa só: mandar o código de seis dígitos da verificação em duas
+etapas.
+
+**Sem ela:** a verificação em duas etapas **não liga**, nem para uma
+pessoa nem para a equipe. Não é limitação de tela — é a trava certa:
+exigir um código que não tem como chegar trancaria todo mundo do lado
+de fora, e o conserto exigiria abrir o banco na mão. Fora de produção o
+código sai no terminal do `npm run dev`, o que deixa desenvolver o
+fluxo sem chave nenhuma.
+
+**Onde pegar:** <https://resend.com> → conta gratuita (3.000 e-mails por
+mês, 100 por dia) → *API Keys* → *Create API Key*. Começa com `re_`.
+
+**Antes de funcionar, um passo a mais:** em *Domains*, adicionar
+`cardapioweb.com` e criar os registros DNS que o Resend mostrar (SPF e
+DKIM). Sem o domínio verificado, o envio volta com 403 dizendo qual
+domínio falta. Enquanto isso não acontece dá para testar com o
+remetente de sandbox do próprio Resend.
+
+**Onde:** Vercel, nos três ambientes, e **refazer o deploy** — variável
+nova só vale no próximo. Opcionalmente defina também
+`EMAIL_REMETENTE`, no formato `CW Reputação <nao-responda@cardapioweb.com>`;
+sem ela vale esse mesmo valor como padrão.
+
+**Trocar de provedor depois é barato:** todo o envio passa por
+`lib/email/enviar.ts`, e nada fora desse arquivo sabe qual provedor
+está em uso.
+
+---
+
 ### `GEMINI_API_KEY`
 
 **O que é:** a chave da IA que responde hoje — triagem, resumo de
@@ -413,6 +449,73 @@ da camada gratuita.
 
 ## Entregue
 
+
+### Verificação em duas etapas, com código por e-mail (23/08/2026)
+
+Primeiro item da fila. A senha prova o que a pessoa **sabe**; o código
+prova que ela tem a caixa de e-mail. É o que sobra de proteção quando
+uma senha vaza — e senha vaza por reuso em outro site, não por falha
+daqui.
+
+**O projeto não tinha envio de e-mail.** Foi a primeira coisa a existir:
+`lib/email/enviar.ts`, uma função, provedor escolhido por variável de
+ambiente, **zero dependência nova** — a API do Resend é um POST com
+JSON, e o pacote oficial seria 200 kB para embrulhar quinze linhas.
+Fora de produção o e-mail sai no terminal, o que deixa desenvolver o
+fluxo sem chave nenhuma.
+
+**As decisões que valem a pena não redescobrir:**
+
+- **O código nunca é guardado em claro.** Seis dígitos são um milhão de
+  combinações: em texto, um vazamento do banco viraria vazamento de
+  sessões. É bcrypt justamente porque o espaço é pequeno — o custo por
+  tentativa é a defesa.
+- **O estado entre as duas telas é um cookie assinado próprio
+  (`cw_2fa`), não a sessão marcada como "pendente".** Um cookie de
+  sessão válido é a chave da casa; marcá-lo como incompleto e confiar
+  que toda tela lembre de conferir a marca é a forma de, um dia, uma
+  tela nova esquecer. `getSession` continua devolvendo `null` até o
+  código bater. E `sameSite: strict`, não `lax` como a sessão — esta
+  etapa só existe entre duas telas nossas.
+- **O usuário é relido do banco depois do código, não reaproveitado do
+  cookie.** Entre a senha e o código passam minutos, e neles a conta
+  pode ter sido desativada ou mudado de papel. Carregar o papel antigo
+  dentro do cookie seria uma escalação de privilégio com dez minutos de
+  validade.
+- **O palpite é contado antes da comparação.** Contar depois deixaria
+  quem derrubasse a conexão tentar de graça, e o limite de cinco
+  viraria decorativo.
+- **Esgotar os palpites mata o código, não a conta.** O contrário seria
+  arma: bastaria errar cinco vezes o código de alguém para trancá-la
+  fora.
+- **Pedir código novo mata o anterior**, com espera de 60 segundos entre
+  pedidos. Sem a primeira regra o e-mail vira um chaveiro de códigos
+  vivos; sem a segunda, o botão vira máquina de encher caixa de entrada
+  alheia.
+- **Sem provedor de e-mail, a exigência global não liga** — recusada no
+  servidor, não só desabilitada na tela, porque botão desabilitado se
+  contorna. Exigir um código que não chega tranca a equipe inteira e o
+  conserto exigiria abrir o banco.
+- **`padStart` no código.** Um sorteio de 42.318 viraria "42318", cinco
+  dígitos num campo que espera seis. Um em cada dez cairia nessa faixa,
+  e o relato seria "às vezes o código não funciona" — o tipo de coisa
+  que ninguém reproduz. Medido: em 2.000 amostras, 186 começam com zero.
+- **O campo é `text` com `inputMode="numeric"`, não `type="number"`.**
+  O campo numérico aceita sinal e expoente e come o zero à esquerda.
+
+`npm run check:duas-etapas` prova as onze defesas contra o banco real,
+criando e apagando um usuário de teste. Ele não confere só que o código
+certo entra — confere que **cada recusa recusa**. O fluxo completo
+também foi percorrido no navegador: senha certa → tela do código →
+palpite errado recusado com a contagem → código certo → dashboard.
+Nenhum dos dois cookies é legível por JavaScript.
+
+Uma nota de método: `server-only` não é resolvível pelo Node fora do
+build do Next, então o script roda com
+`tsx --conditions=react-server`. Com isso, qualquer conferência futura
+consegue importar módulo de servidor.
+
+---
 
 ### Os gráficos, e a calculadora que prometia o impossível (23/08/2026)
 

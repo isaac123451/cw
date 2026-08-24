@@ -33,14 +33,23 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  ownedCases   Case[]        @relation("CaseOwner")
-  comments     CaseComment[]
-  tasks        AgendaTask[]
-  savedFilters SavedFilter[]
+  ownedCases    Case[]           @relation("CaseOwner")
+  comments      CaseComment[]
+  tasks         AgendaTask[]
+  savedFilters  SavedFilter[]
   googleAccount GoogleAccount?
   preferences   UserPreference?
-  npsResponses  NpsResponse[]   @relation("NpsOwner")
+  npsResponses  NpsResponse[]    @relation("NpsOwner")
   moduleRoles   UserModuleRole[]
+  challenges    LoginChallenge[]
+
+  /// Exige código por e-mail no login desta pessoa, mesmo que a
+  /// exigência global esteja desligada.
+  ///
+  /// Separado do global porque as duas perguntas são diferentes: a
+  /// empresa pode não exigir de todo mundo e alguém com acesso de
+  /// administrador querer para si.
+  twoFactorEnabled Boolean @default(false)
 
   @@index([email])
 }
@@ -75,11 +84,11 @@ model GoogleAccount {
   /// Conta autorizada, exibida na tela para a pessoa conferir qual é.
   email String
 
-  accessToken String
+  accessToken  String
   /// Só vem no primeiro consentimento; por isso nunca sobrescrever com vazio.
   refreshToken String
   /// Quando o access token expira — antes disso não precisa renovar.
-  expiresAt DateTime
+  expiresAt    DateTime
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -139,12 +148,12 @@ model Team {
 }
 
 model WorkflowStatus {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  color     String   @default("#7C3AED")
-  order     Int      @default(0)
-  active    Boolean  @default(true)
-  wipLimit  Int?
+  id       String  @id @default(cuid())
+  name     String  @unique
+  color    String  @default("#7C3AED")
+  order    Int     @default(0)
+  active   Boolean @default(true)
+  wipLimit Int?
 
   /// Minutos entre lembretes enquanto um caso estiver parado nesta etapa.
   ///
@@ -466,8 +475,8 @@ model AgendaTask {
 
 /// Filtro salvo pelo usuário (ou pré-definido pela operação).
 model SavedFilter {
-  id   String @id @default(cuid())
-  name String
+  id       String  @id @default(cuid())
+  name     String
   /// Critérios serializados — evita uma tabela por tipo de filtro.
   criteria Json
   shared   Boolean @default(false)
@@ -556,9 +565,9 @@ model CaseMovement {
 
 /// Restaurante que contrata a Cardápio Web. Não confundir com Cliente.
 model Establishment {
-  id        String    @id @default(cuid())
-  slug      String    @unique
-  name      String
+  id   String @id @default(cuid())
+  slug String @unique
+  name String
 
   /// **CPF ou CNPJ.** A Cardápio Web cadastra restaurante das duas
   /// formas — a maioria dos pequenos entra por CPF do proprietário.
@@ -721,11 +730,11 @@ model Playbook {
 
 /// Resposta pronta inserida na réplica pública.
 model Macro {
-  id        String   @id @default(cuid())
-  title     String
-  body      String
-  category  String
-  owner     String
+  id       String @id @default(cuid())
+  title    String
+  body     String
+  category String
+  owner    String
 
   /// Onde este texto é usado: "Reclame Aqui" ou "WhatsApp".
   ///
@@ -734,7 +743,7 @@ model Macro {
   /// asteriscos crus. Um texto de WhatsApp oferecido no seletor da
   /// resposta pública seria colado com a marcação à mostra, na frente
   /// do consumidor.
-  channel   String   @default("Reclame Aqui")
+  channel String @default("Reclame Aqui")
 
   tags      String[] @default([])
   uses      Int      @default(0)
@@ -788,7 +797,7 @@ model NpsResponse {
   id String @id @default(cuid())
 
   /// 0 a 10, como o cliente respondeu.
-  score Int
+  score       Int
   /// Comentário livre da pesquisa. É daqui que sai a causa raiz.
   comment     String   @default("")
   respondedAt DateTime
@@ -825,7 +834,7 @@ model NpsResponse {
 
   closedAt DateTime?
   /// Rótulo final: "[Encerrado] Resolvido", "[Encerrado] Sem Retorno"...
-  outcome String?
+  outcome  String?
 
   /// Marcações do pós-elogio (review pública, depoimento, indicação).
   reviewAsked      Boolean @default(false)
@@ -977,7 +986,7 @@ model NpsAttempt {
 
   /// e-mail, telefone, whatsapp.
   channel String
-  note    String  @default("")
+  note    String @default("")
   actor   String
 
   createdAt DateTime @default(now())
@@ -1017,9 +1026,9 @@ model IaConfig {
   speed String @default("equilibrado")
 
   /// Modelo principal fixado à mão. Vazio segue o perfil.
-  model String?
+  model         String?
   /// O modelo da via rápida (resumo de conversa).
-  modelFast String?
+  modelFast     String?
   /// A rede contra o 404, quando um modelo é aposentado.
   modelFallback String?
 
@@ -1033,12 +1042,12 @@ model IaConfig {
 }
 
 model WebhookConfig {
-  id     String  @id @default(cuid())
+  id     String   @id @default(cuid())
   url    String
   /// Chave HMAC em texto puro — é segredo compartilhado com quem
   /// recebe, como o `API_TOKEN` do `.env`, não senha de pessoa.
   secret String
-  active Boolean @default(true)
+  active Boolean  @default(true)
   /// Nomes de evento assinados (`caso.criado`, `caso.avaliado`).
   events String[] @default([])
 
@@ -1052,14 +1061,14 @@ model WebhookConfig {
 /// na tela, sem log de servidor. Só as últimas por webhook: é rastro
 /// operacional, não auditoria.
 model WebhookDelivery {
-  id          String        @id @default(cuid())
-  webhookId   String
-  webhook     WebhookConfig @relation(fields: [webhookId], references: [id], onDelete: Cascade)
-  event       String
+  id           String        @id @default(cuid())
+  webhookId    String
+  webhook      WebhookConfig @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+  event        String
   caseProtocol String?
-  ok          Boolean
-  statusCode  Int?
-  error       String?
+  ok           Boolean
+  statusCode   Int?
+  error        String?
 
   /// O corpo enviado, guardado **só quando a entrega falha**.
   ///
@@ -1071,12 +1080,81 @@ model WebhookDelivery {
   /// Só na falha porque é conteúdo de reclamação: guardar o corpo de
   /// toda entrega bem-sucedida seria uma segunda cópia da base dentro
   /// da tabela de log. Ao reenviar com sucesso, ele é apagado.
-  payload     Json?
+  payload Json?
 
   /// Quantas vezes esta mensagem já foi tentada.
-  attempts    Int           @default(1)
+  attempts Int @default(1)
 
-  createdAt   DateTime      @default(now())
+  createdAt DateTime @default(now())
 
   @@index([webhookId, createdAt])
+}
+
+/// ============================================================
+/// ACESSO EM DUAS ETAPAS
+/// ============================================================
+
+/// Configuração de segurança do acesso. Singleton, como o `IaConfig`.
+///
+/// Id fixo pelo mesmo motivo: um `findFirst` sem âncora convida a
+/// existirem dois registros discordando em silêncio — e aqui os dois
+/// discordariam sobre quem entra.
+model SecurityConfig {
+  id String @id @default("unico")
+
+  /// Exige código por e-mail no login de **todo mundo**.
+  ///
+  /// Desligado por padrão de propósito: ligar sem provedor de e-mail
+  /// configurado trancaria a equipe inteira para fora, e o conserto
+  /// exigiria acesso direto ao banco. A tela de configurações só
+  /// oferece o botão quando `podeEnviarEmail()` responde que sim.
+  twoFactorRequired Boolean @default(false)
+
+  /// Minutos de validade do código.
+  ///
+  /// Dez é o equilíbrio usual: tempo de abrir o e-mail no celular sem
+  /// deixar um código válido esquecido na caixa de entrada a tarde
+  /// toda.
+  codeTtlMinutes Int @default(10)
+
+  /// Quantos palpites errados antes de o código morrer.
+  maxAttempts Int @default(5)
+
+  updatedAt DateTime @updatedAt
+  /// Quem mexeu por último — é configuração de acesso, tem de ter dono.
+  updatedBy String?
+}
+
+/// Um código de verificação em duas etapas: em uso, gasto ou vencido.
+///
+/// Fica no banco, e não na memória do processo como o freio de
+/// tentativas de senha, porque a Vercel roda várias instâncias: um
+/// código gerado numa e conferido em outra precisa existir nas duas.
+model LoginChallenge {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Hash bcrypt do código, nunca o código.
+  ///
+  /// Seis dígitos são um milhão de combinações — em claro, um vazamento
+  /// do banco viraria vazamento de sessões de quem estivesse entrando
+  /// naquele minuto. bcrypt e não HMAC justamente porque o espaço é
+  /// pequeno: o custo por tentativa é a defesa.
+  codeHash String
+
+  expiresAt  DateTime
+  attempts   Int       @default(0)
+  /// Carimbo do uso. Código é de uso único; sem isto, um código
+  /// interceptado serviria de novo enquanto não vencesse.
+  consumedAt DateTime?
+
+  /// De onde veio o pedido — para a auditoria e para o e-mail dizer.
+  ip        String?
+  userAgent String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
 }
