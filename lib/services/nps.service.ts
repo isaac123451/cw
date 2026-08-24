@@ -504,7 +504,24 @@ export function byKind(itens: NpsResponseView[]) {
     .sort((a, b) => b.value - a.value);
 }
 
-/** Ranking de causa raiz — onde investir para parar de sangrar. */
+/**
+ * Ranking de causa raiz — onde investir para parar de sangrar.
+ *
+ * **O percentual é sobre tudo que poderia ter causa raiz**, e não sobre
+ * o que já foi classificado. A diferença não é acadêmica: na base real
+ * havia 89 respostas com comentário e **uma** classificada, e dividir
+ * pelo classificado devolvia "Outro — 100%".
+ *
+ * Cem por cento é uma afirmação forte numa tela chamada "onde investir
+ * para parar de perder cliente". Ela diria que a operação inteira tem
+ * uma causa só, quando o que existe é uma amostra de um. Sobre a
+ * população certa, o mesmo dado vira "Outro — 1,1%", que é verdade e
+ * ainda escancara o buraco de classificação.
+ *
+ * A população certa é quem escreveu alguma coisa: sem comentário não há
+ * o que classificar, e contar essas respostas no denominador diluiria o
+ * indicador com quem nunca teve chance de entrar nele.
+ */
 export function byRootCause(itens: NpsResponseView[]) {
 
   const mapa = new Map<string, number>();
@@ -517,19 +534,21 @@ export function byRootCause(itens: NpsResponseView[]) {
     );
   }
 
-  const total = [...mapa.values()].reduce(
-    (s, v) => s + v,
-    0
-  );
+  const classificaveis = itens.filter(
+    (item) =>
+      item.rootCause || item.comment.trim() !== ""
+  ).length;
 
   return [...mapa.entries()]
     .map(([label, value]) => ({
       label,
       value,
       percent:
-        total === 0
+        classificaveis === 0
           ? 0
-          : Math.round((value / total) * 1000) / 10,
+          : Math.round(
+              (value / classificaveis) * 1000
+            ) / 10,
     }))
     .sort((a, b) => b.value - a.value);
 }

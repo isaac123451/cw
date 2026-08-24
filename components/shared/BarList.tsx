@@ -1,5 +1,7 @@
 import { Distribution } from "@/lib/services/case.service";
 
+import { ptBR } from "@/lib/services/reputation.service";
+
 interface Props {
   data: Distribution[];
   limit?: number;
@@ -49,7 +51,16 @@ export default function BarList({
             <span className="flex shrink-0 items-baseline gap-1.5 text-sm font-semibold tabular-nums text-zinc-900">
               {item.value}
               <span className="text-xs font-normal text-zinc-400">
-                ({item.percent}%)
+                {/*
+                  Vírgula, não ponto.
+
+                  `{item.percent}` era o número cru do JavaScript, que
+                  imprime "1.1". Em português isso não é "um vírgula um"
+                  — é o começo de "1.100", e num painel cheio de
+                  contagem inteira ao lado a leitura errada é a mais
+                  natural.
+                */}
+                ({ptBR(item.percent)}%)
               </span>
             </span>
 

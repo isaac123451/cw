@@ -24,6 +24,8 @@ import NpsTrendChart from "@/components/nps/NpsTrendChart";
 
 import { useNps } from "@/lib/context/NpsContext";
 
+import { ptBR } from "@/lib/services/reputation.service";
+
 import {
   isEncerrado,
   NpsSegment,
@@ -462,7 +464,7 @@ export default function NpsAnalisePage() {
                           {s.label}
                         </span>
                         <span className="tabular-nums text-zinc-500">
-                          {s.value} · {s.percent}%
+                          {s.value} · {ptBR(s.percent)}%
                         </span>
                       </div>
 
@@ -505,7 +507,7 @@ export default function NpsAnalisePage() {
                             {h.label}
                           </span>
                           <span className="tabular-nums text-zinc-500">
-                            {h.value} · {h.percent}%
+                            {h.value} · {ptBR(h.percent)}%
                           </span>
                         </div>
 

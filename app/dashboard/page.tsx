@@ -103,13 +103,34 @@ export default function DashboardPage() {
 
         <ReputationHero />
 
+        {/*
+          O aviso que faltava.
+
+          O bloco acima é a janela oficial de 6 meses — é ela que define
+          a nota pública. Os quatro cartões abaixo são a base inteira,
+          porque uma reclamação de 2024 sem resposta continua sem
+          resposta e continua sendo trabalho.
+
+          Os dois estão certos e mediam coisas diferentes, mas nada na
+          tela dizia isso: a nota mostrava 6 sem resposta e o cartão
+          logo abaixo mostrava 13. Dois números para a mesma pergunta,
+          um do lado do outro, é como alguém perde a confiança na tela
+          inteira.
+        */}
+        <p className="-mb-1 text-xs text-zinc-500">
+          Acima, a janela oficial de 6 meses — a que define
+          a nota pública. Abaixo, <strong className="font-semibold text-zinc-700">toda a base</strong>:
+          reclamação antiga sem resposta continua sendo
+          trabalho, mesmo fora da janela.
+        </p>
+
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
 
           <StatTile
             label="Sem resposta pública"
             description="Reclamações que ainda não foram respondidas no portal. É o que mais pesa na nota."
             value={metrics.semResposta}
-            hint="impacto direto na nota"
+            hint="em toda a base"
             icon={MessageSquareWarning}
             tone={
               metrics.semResposta > 0
@@ -122,7 +143,7 @@ export default function DashboardPage() {
             label="Vencidas há +7 dias"
             description="Sem resposta há mais de uma semana — prioridade máxima."
             value={metrics.vencidos}
-            hint="prioridade máxima"
+            hint="em toda a base"
             icon={Timer}
             tone={
               metrics.vencidos > 0 ? "warning" : "success"
@@ -133,7 +154,7 @@ export default function DashboardPage() {
             label="Na fila da operação"
             description="Casos que dependem de alguma ação do time."
             value={metrics.abertos}
-            hint="dependem do time"
+            hint="em toda a base"
             icon={Inbox}
             tone="info"
           />
@@ -142,7 +163,7 @@ export default function DashboardPage() {
             label="Risco de cancelamento"
             description="Clientes que avaliaram mal e não voltariam a fazer negócio."
             value={metrics.churn}
-            hint="clientes em risco"
+            hint="em toda a base"
             icon={TriangleAlert}
             tone="primary"
           />

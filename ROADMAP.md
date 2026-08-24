@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 23/08/2026. Aplicação **0.25.0**, extensão **0.25.0**.
+Atualizado em 23/08/2026. Aplicação **0.26.0**, extensão **0.26.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -76,7 +76,7 @@ workspace junto com os outros cadastros.
 ### 0. Handoff — leia isto primeiro (22/08/2026)
 
 **Produção:** https://cw-rho-eight.vercel.app · repo `isaac123451/cw`,
-branch `main` · aplicação e extensão em **0.25.0**, sempre no mesmo
+branch `main` · aplicação e extensão em **0.26.0**, sempre no mesmo
 número.
 
 **Antes de dizer que algo está pronto, rode o `check:` correspondente.**
@@ -138,9 +138,13 @@ entrega:
    descreveu foram entregues em 23/08 — ver "Os gráficos, e a
    calculadora que prometia o impossível". O que sobra em Analytics é
    melhoria, não conserto.
-10. **Análise do NPS** e **Dashboard**: melhorar. O gráfico de
-    tendência do NPS já ganhou cartão ao passar o mouse e afinamento de
-    rótulos; falta a análise em si.
+10. ~~**Análise do NPS** e **Dashboard**: melhorar.~~ Entregue em
+    23/08 — ver abaixo.
+
+**A fila acabou.** O que sobra é o que depende de você: definir
+`RESEND_API_KEY` na Vercel para a verificação em duas etapas ligar, e
+preencher o link do Crisp e o WhatsApp do NPS no cadastro dos
+estabelecimentos para os dois botões aparecerem na extensão.
 
 O `SpeedInsights` saiu daqui em 23/08 — ligado, com sua autorização.
 
@@ -449,6 +453,46 @@ da camada gratuita.
 
 ## Entregue
 
+
+### Dashboard e análise do NPS: dois números para a mesma pergunta (23/08/2026)
+
+Último item da fila.
+
+**No Dashboard, dois números contraditórios lado a lado.** O bloco de
+reputação mostrava a janela oficial de 6 meses — 6 reclamações sem
+resposta — e o cartão logo abaixo mostrava **13**, que é a base
+inteira. Os dois estavam certos e mediam coisas diferentes; nada na
+tela dizia isso. Um número que contradiz o de cima é como alguém perde
+a confiança na tela toda, inclusive na parte que está certa.
+
+Agora há uma linha entre os dois blocos dizendo qual é qual, e os
+quatro cartões declaram "em toda a base". A escolha de manter o escopo
+amplo é deliberada: reclamação de 2024 sem resposta continua sem
+resposta e continua sendo trabalho, mesmo fora da janela que compõe a
+nota.
+
+**A evolução mensal ganhou janela.** Ela desenhava de fevereiro de 2024
+a agosto de 2026, logo abaixo de um bloco de 6 meses, sem dizer.
+Padrão de 12 meses: seis é curto demais num gráfico mensal — seriam
+seis pontos — e "tudo" começa em 2024, quando o volume era outro e a
+comparação engana.
+
+**Na análise do NPS, a causa raiz dizia "Outro — 100%".** O percentual
+era calculado sobre o que já estava classificado, e havia **uma**
+classificação entre 89 respostas com comentário. Cem por cento é uma
+afirmação forte numa tela chamada "onde investir para parar de perder
+cliente": ela diz que a operação inteira tem uma causa só. Sobre a
+população certa — quem escreveu alguma coisa, porque sem comentário não
+há o que classificar — o mesmo dado vira **1,1%**, que é verdade e
+ainda escancara o buraco de classificação.
+
+**E o separador decimal era ponto.** "10.1%" em português não é "dez
+vírgula um": é o começo de "10.100", e num painel cheio de contagem
+inteira ao lado a leitura errada é a mais natural. Corrigido na
+distribuição por segmento, na régua de humor e no `BarList`, que é
+compartilhado e levava o defeito para toda tela que o usa.
+
+---
 
 ### Verificação em duas etapas, com código por e-mail (23/08/2026)
 
