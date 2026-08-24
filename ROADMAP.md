@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 23/08/2026. Aplicação **0.20.0**, extensão **0.20.0**.
+Atualizado em 23/08/2026. Aplicação **0.21.0**, extensão **0.21.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -65,6 +65,7 @@ workspace junto com os outros cadastros.
 | `npm run check:dependencias` | Nenhuma vulnerabilidade conhecida em produção sem correção ou sem decisão registrada |
 | `npm run check:whatsapp` | Prova o leitor de conversa do WhatsApp contra seis marcações, sem navegador |
 | `npm run check:busca-texto` | Prova o campo Buscar da tela: telefone, documento, e-mail e texto, contra a base real |
+| `npm run check:calculadora` | Mexe em cada campo do cenário sobre a base real e exige que ele mova a nota, para o lado certo — e que nenhuma combinação saia de 0–10 |
 | `npm run extensao:icones` | Regera os PNGs do ícone da extensão |
 
 ---
@@ -74,7 +75,7 @@ workspace junto com os outros cadastros.
 ### 0. Handoff — leia isto primeiro (22/08/2026)
 
 **Produção:** https://cw-rho-eight.vercel.app · repo `isaac123451/cw`,
-branch `main` · aplicação e extensão em **0.20.0**, sempre no mesmo
+branch `main` · aplicação e extensão em **0.21.0**, sempre no mesmo
 número.
 
 **Antes de dizer que algo está pronto, rode o `check:` correspondente.**
@@ -130,8 +131,13 @@ entrega:
 8. **Assistente**: ele recusa perguntas que a base responde — "quantas
    avaliações faltam para a nota 9" é conta, não consulta a sistema
    externo.
-9. **Analytics**: gráficos com defeito.
-10. **Análise do NPS** e **Dashboard**: melhorar.
+9. ~~**Analytics**: gráficos com defeito.~~ Os três defeitos que você
+   descreveu foram entregues em 23/08 — ver "Os gráficos, e a
+   calculadora que prometia o impossível". O que sobra em Analytics é
+   melhoria, não conserto.
+10. **Análise do NPS** e **Dashboard**: melhorar. O gráfico de
+    tendência do NPS já ganhou cartão ao passar o mouse e afinamento de
+    rótulos; falta a análise em si.
 
 O `SpeedInsights` saiu daqui em 23/08 — ligado, com sua autorização.
 
@@ -407,6 +413,80 @@ da camada gratuita.
 
 ## Entregue
 
+
+### Os gráficos, e a calculadora que prometia o impossível (23/08/2026)
+
+O Isaac descreveu três defeitos: **"as datas ficam em cima das outras,
+não tem um filtro de período como outras funcionalidades e também
+quando passo o mouse em cima não tem nenhuma informações ou
+descrição."** Os três eram reais.
+
+**Datas empilhadas.** Cada componente desenhava um rótulo por ponto. O
+número de rótulos passa a sair da largura disponível
+(`LARGURA_POR_ROTULO`), com o primeiro e o último sempre presentes —
+são eles que dizem o período que o gráfico cobre. Um detalhe custou
+duas tentativas: forçar o último rótulo faz ele encostar no vizinho do
+passo. O critério certo é **distância em pixels**, não fração do passo;
+`passo / 2` não dispara quando o passo é 3 e a sobra é 2, mas dois
+intervalos de 24 px dão 48 px e o rótulo precisa de 70. Medido no
+navegador: o `TrendChart` foi de 30 rótulos sobrepostos para 10 com
+folga mínima de 21 px; o do NPS, de 24 para 8 com folga de 96 px.
+
+**Sem informação ao passar o mouse.** O `ReputationTrend` não tinha
+nada; o do NPS tinha um `<title>` — o balão nativo do navegador, que
+espera um segundo, não tem estilo e não existe no telefone. Os dois
+ganharam cartão próprio, com faixa de captura por mês (a área sensível
+era o ponto de 3 px) e o número que responde à pergunta da tela: no de
+reputação, a variação contra o mês anterior; no de NPS, a divisão entre
+promotor, passivo e detrator, porque um NPS de 40 com trinta respostas
+e um com três são fatos diferentes.
+
+**Sem filtro de período.** Era a tela de **Analytics**: nove painéis
+lendo a base inteira, sem recorte — respondia sempre "desde sempre".
+Passou a usar o mesmo `PeriodPicker` das telas de reputação, com o
+filtro aplicado uma vez e todos os painéis lendo dele. Medido: 30 dias
+→ 17 casos, 3 meses → 56, 6 meses → 129, 12 meses → 212, de 334.
+
+Os oito gráficos de `/reclame-aqui/graficos` foram conferidos e já
+estavam certos: zero sobreposição de rótulo e cartão com dados nos
+oito. O `MultiLineChart` já tinha afinamento e `onPointerMove`.
+
+---
+
+**A calculadora foi a parte séria.** Você pediu para conferi-la junto, e
+ela nunca tinha sido rodada contra a base. Três defeitos, todos achados
+pelo `npm run check:calculadora` novo:
+
+1. **Não havia teto de avaliações.** Uma avaliação pertence a uma
+   reclamação — não existe avaliação solta no Reclame Aqui. A tela
+   aceitava 200 avaliações nota 10 sobre 129 reclamações e respondia
+   **nota 9,5**, com cara de número exato, para um plano que não tem
+   como acontecer. Só havia 51 reclamações sem avaliação no período.
+2. **Os dois caminhos da mesma tela discordavam.** `evaluationsToReach`
+   subia até 2000 sem olhar a base; a pessoa lia "faltam N" ali e
+   digitava N no cenário, que dá outro número. Agora os dois param no
+   mesmo teto, e "não alcançável" diz qual dos dois motivos é.
+3. **Contagem negativa passava.** `min={0}` no HTML é validação, não
+   trava. Digitar "-20" em nota 3 tirava 20 de `evaluated` e 60 de
+   `scoreSum`, levando a média do consumidor a 18,97 e a nota final a
+   **12,7** numa escala que vai até 10.
+
+**O primeiro conserto do teto estava errado, e foi a tela que pegou.**
+Travar `evaluated` sem travar `scoreSum` prende o denominador e solta o
+numerador: 200 notas 10 passaram a dar **12,9**, pior do que o defeito
+original. O teste tinha ficado verde porque conferia só a contagem.
+Depois faltou ainda um terceiro lugar — os indicadores derivados: 251
+notas 10 num teto de 51 ainda rendiam 251 "resolvidas", que o
+`Math.min` grudava no total e levava a nota a 9,5 em vez de 9,1. A
+lição está escrita no script: **contagem coerente com nota impossível é
+exatamente o que uma conferência de calculadora existe para não deixar
+passar.** Ele hoje varre 72 combinações exigindo 0–10 em todas.
+
+O teto aparece na tela ("51 reclamações do período ainda estão sem
+avaliação"), porque um campo que trava sem dizer por quê é pior do que
+um campo que aceita bobagem.
+
+---
 
 ### Dezoito vulnerabilidades em produção, e o XSS que não existia (23/08/2026)
 
