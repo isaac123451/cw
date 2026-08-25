@@ -35,42 +35,129 @@
 
   const INTERVALO = 1200;
 
+  /**
+   * O número da conversa aberta, procurado em várias camadas.
+   *
+   * **Por que várias.** O Isaac reportou um contato que não foi
+   * identificado ao abrir a conversa e que a busca manual achou na hora
+   * — o número era 89 9443-6065, e ele tem sete reclamações na base.
+   * Medido contra o servidor: o casamento acha esse número em todas as
+   * formas (com DDI, sem DDI, com e sem o nono dígito) e por qualquer
+   * nome de agenda. Ou seja, o problema não era achar o cliente: era a
+   * extensão nunca ter lido o número.
+   *
+   * A leitura antiga tinha um caminho só — `[data-id]` dentro de
+   * `#main` — com o cabeçalho como rede. Quando a conversa ainda não
+   * carregou mensagem, ou quando o WhatsApp reescreve a árvore no meio
+   * do ciclo, esse caminho volta vazio; e se o contato está salvo na
+   * agenda, o cabeçalho é um nome, não um número. Aí não sobra nada.
+   *
+   * Agora são quatro lugares, do mais confiável para o menos. Cada um é
+   * barato, e a varredura para no primeiro que serve.
+   */
+  function telefoneDaConversa(principal) {
+
+    /** 1. O id das mensagens da conversa aberta. O melhor. */
+    for (const el of Array.from(
+      principal.querySelectorAll("[data-id]")
+    ).slice(0, 30)) {
+
+      const achado = (
+        el.getAttribute("data-id") ?? ""
+      ).match(/(\d{8,20})@c\.us/);
+
+      if (achado) return achado[1];
+    }
+
+    /**
+     * 2. A linha selecionada na lista de conversas.
+     *
+     * Ela também carrega o id, e existe **antes** de qualquer mensagem
+     * ser renderizada — que é o caso em que a camada 1 falha.
+     */
+    const listaLateral = document.querySelector(
+      "#pane-side"
+    );
+
+    if (listaLateral) {
+
+      const selecionada =
+        listaLateral.querySelector(
+          '[aria-selected="true"] [data-id], [aria-selected="true"]'
+        );
+
+      const achado = (
+        selecionada?.getAttribute("data-id") ?? ""
+      ).match(/(\d{8,20})@c\.us/);
+
+      if (achado) return achado[1];
+    }
+
+    /**
+     * 3. Qualquer id de conversa no documento inteiro.
+     *
+     * Menos preciso — pode pegar outra conversa —, então só entra
+     * quando existe **um** id só na página. Com mais de um não dá para
+     * saber qual é a aberta, e chutar aqui abriria o painel do cliente
+     * errado, que é pior do que não abrir.
+     */
+    const todos = new Set();
+
+    for (const el of document.querySelectorAll(
+      '[data-id*="@c.us"]'
+    )) {
+
+      const achado = (
+        el.getAttribute("data-id") ?? ""
+      ).match(/(\d{8,20})@c\.us/);
+
+      if (achado) todos.add(achado[1]);
+    }
+
+    if (todos.size === 1) {
+      return [...todos][0];
+    }
+
+    /**
+     * 4. O cabeçalho, quando ele próprio é o número.
+     *
+     * Contato fora da agenda: o WhatsApp mostra o número no lugar do
+     * nome. A regra de leitura mora no núcleo e aceita qualquer
+     * tipografia de traço — ver `CW.telefoneDoTexto`.
+     */
+    const cabecalho = principal.querySelector("header");
+
+    if (cabecalho) {
+
+      for (const el of cabecalho.querySelectorAll(
+        "span[title], span"
+      )) {
+
+        const candidato =
+          el.getAttribute?.("title") ??
+          el.textContent ??
+          "";
+
+        const lido = CW.telefoneDoTexto(candidato);
+
+        if (lido) return lido;
+      }
+    }
+
+    return "";
+  }
+
   function lerConversa() {
 
     const principal = document.querySelector("#main");
 
     if (!principal) return null;
 
-    let telefone = "";
-    let grupo = false;
+    const grupo = Boolean(
+      principal.querySelector('[data-id*="@g.us"]')
+    );
 
-    /**
-     * O primeiro `[data-id]` nem sempre é uma mensagem.
-     *
-     * Era `querySelector` — o primeiro do documento, e só ele. O
-     * WhatsApp Web põe `data-id` em outras coisas além de mensagem, e
-     * quando a primeira ocorrência não é uma, a leitura devolvia vazio
-     * e caía no cabeçalho, que é justamente o caminho que estava
-     * recusando número por causa do traço.
-     *
-     * Vinte é de sobra e barato: as mensagens estão no começo da lista,
-     * e a varredura para na primeira que serve.
-     */
-    const comIds = principal.querySelectorAll("[data-id]");
-
-    for (const el of Array.from(comIds).slice(0, 20)) {
-
-      const bruto = el.getAttribute("data-id") ?? "";
-
-      if (bruto.includes("@g.us")) grupo = true;
-
-      const achado = bruto.match(/(\d{8,20})@c\.us/);
-
-      if (achado) {
-        telefone = achado[1];
-        break;
-      }
-    }
+    const telefone = telefoneDaConversa(principal);
 
     const cabecalho = principal.querySelector("header");
 
@@ -86,44 +173,6 @@
         CW.texto(cabecalho.querySelector("span"), 80);
     }
 
-    /**
-     * Contato fora da agenda: o cabeçalho já é o próprio número. Serve
-     * de rede quando a conversa ainda não tem mensagem e o `data-id`
-     * não existe.
-     *
-     * **Aqui morava um defeito que o Isaac reportou**: alguns contatos
-     * não eram reconhecidos, com o número idêntico ao da base. O teste
-     * era `/^[+\d\s()\-]+$/` — texto composto **só** de `+`, dígito,
-     * espaço comum, parêntese e o hífen ASCII.
-     *
-     * O WhatsApp Web não escreve assim. Ele monta o número com hífen
-     * não separável (U+2011), travessão curto (U+2013) ou hífen
-     * tipográfico (U+2010), e envolve o `+55` em marcas de direção
-     * invisíveis (U+200E, U+202A…U+202C) — porque um `+` seguido de
-     * dígitos precisa de dica de direção para renderizar igual em
-     * qualquer idioma. Nenhum desses caracteres passa naquele teste.
-     *
-     * Medido com onze formatos reais: **seis eram recusados**, todos
-     * números válidos. E como o degrau de casamento por nome saiu (ele
-     * devolvia 53 reclamações para um contato chamado "Santos"), a
-     * recusa aqui virou "nada encontrado" em vez de um palpite ruim.
-     *
-     * A regra agora não olha a forma do texto: olha se **sobrou letra**
-     * depois de tirar o que é pontuação de telefone. Nome tem letra,
-     * número não — e essa pergunta não muda quando o WhatsApp troca de
-     * traço.
-     */
-    if (!telefone && nome) {
-
-      /*
-        A regra mora no núcleo, e é a mesma do ManyChat.
-
-        Duas cópias da mesma pergunta é como uma delas fica para
-        trás: o dia em que o WhatsApp trocar de traço de novo, o
-        conserto tem de valer para os dois leitores.
-      */
-      telefone = CW.telefoneDoTexto(nome);
-    }
     if (!telefone && !nome) return null;
 
     return { telefone, nome, grupo };

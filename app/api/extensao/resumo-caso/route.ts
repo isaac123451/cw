@@ -61,7 +61,7 @@ São seis coisas, e cada uma responde uma pergunta diferente. Não repita conte�
 
 - "ultimo": o que aconteceu por último e o que isso exige agora. Se a última coisa foi uma anotação interna, diga o que ela mudou. Se nada aconteceu depois do relato, diga exatamente isso — não invente movimento. No máximo duas frases.
 
-- "dossie": **tudo que aconteceu, na ordem em que aconteceu.** Este é o campo longo e não tem limite de tamanho: escreva o quanto for preciso para alguém que nunca viu o caso conseguir assumi-lo sem ler mais nada. Comece pelo que o consumidor relatou, com os detalhes concretos que ele deu. Depois, cada movimento na sequência: o que a empresa respondeu publicamente, cada anotação interna e o que ela mudou, cada movimentação entre times e se voltou. Cite datas quando existirem. Termine dizendo em que estado o caso está agora. Se o material for pobre, diga o que falta em vez de inventar — um dossiê curto e honesto vale mais do que um longo e imaginado.
+- "dossie": **tudo que aconteceu, na ordem em que aconteceu.** Quando houver transcrição do Crisp no material, ela entra na narrativa junto do resto, na ordem cronológica: quantas vezes o consumidor procurou o suporte, o que foi prometido a ele, quem atendeu, onde travou. O que aconteceu no chat costuma explicar por que a reclamação existe. Este é o campo longo e não tem limite de tamanho: escreva o quanto for preciso para alguém que nunca viu o caso conseguir assumi-lo sem ler mais nada. Comece pelo que o consumidor relatou, com os detalhes concretos que ele deu. Depois, cada movimento na sequência: o que a empresa respondeu publicamente, cada anotação interna e o que ela mudou, cada movimentação entre times e se voltou. Cite datas quando existirem. Termine dizendo em que estado o caso está agora. Se o material for pobre, diga o que falta em vez de inventar — um dossiê curto e honesto vale mais do que um longo e imaginado.
 
 - "proximaResposta": o que dizer na próxima interação com o consumidor, e por quê. Duas ou três frases. Não é o texto da resposta — é a orientação de conteúdo: o que reconhecer, o que informar, o que não prometer.
 
@@ -177,17 +177,52 @@ export async function POST(request: Request) {
     entrada.protocolo ?? ""
   ).trim();
 
-  if (!protocolo) {
+  /**
+   * O teto de 40 mil caracteres não é economia — é proteção.
+   *
+   * Uma transcrição longa demais empurra o relato e a linha do tempo
+   * para fora da janela do modelo, e o dossiê sairia contando bem o
+   * chat e mal a reclamação. Quarenta mil cobrem um atendimento inteiro
+   * com folga; o que passar disso é conversa de meses, e o começo é o
+   * que menos importa.
+   */
+  const transcricao = String(entrada.transcricao ?? "")
+    .trim()
+    .slice(-40_000);
+
+  /** Quem é o contato, quando não há caso para dizer. */
+  const contato = {
+    nome: String(entrada.nome ?? "").trim(),
+    telefone: String(entrada.telefone ?? "").trim(),
+  };
+
+  /**
+   * **Dá para montar dossiê sem caso cadastrado.**
+   *
+   * A primeira versão exigia protocolo e devolvia 400 sem ele — e o
+   * Isaac apontou o buraco: cliente que ainda não abriu reclamação
+   * pública é justamente quem mais precisa de dossiê. É a conversa que
+   * pode virar reclamação, e ler o atendimento antes de responder é o
+   * que evita que vire.
+   *
+   * O que muda é o material, não o formato: sem caso, o dossiê se apoia
+   * na transcrição e no contato. Sem caso **e** sem transcrição não há
+   * o que resumir, e aí a recusa é honesta — não há material nenhum.
+   */
+  if (!protocolo && !transcricao) {
     return responder(
       request,
-      { erro: "Informe o protocolo." },
+      {
+        erro: "Sem caso e sem transcrição não há o que resumir.",
+        dica: "Cole a transcrição do atendimento no Crisp, ou abra um caso deste cliente.",
+      },
       400
     );
   }
 
   const prisma = getPrisma();
 
-  if (!prisma) {
+  if (!prisma && protocolo) {
     return responder(
       request,
       {
@@ -197,12 +232,19 @@ export async function POST(request: Request) {
     );
   }
 
-  const caso = await fetchCaseByProtocol(
-    prisma,
-    protocolo
-  );
+  const caso =
+    prisma && protocolo
+      ? await fetchCaseByProtocol(prisma, protocolo)
+      : null;
 
-  if (!caso) {
+  /**
+   * Protocolo pedido e não achado é erro; protocolo ausente não é.
+   *
+   * A diferença importa: quem mandou um número e não recebe nada
+   * precisa saber que o número está errado, e não receber um dossiê
+   * genérico como se estivesse tudo bem.
+   */
+  if (protocolo && !caso) {
     return responder(
       request,
       { erro: `Não achei o caso ${protocolo}.` },
@@ -219,12 +261,15 @@ export async function POST(request: Request) {
    * quê, e uma lista invertida faz ele descrever a história de trás
    * para a frente.
    */
-  const anotacoes = await prisma.caseComment.findMany({
-    where: { case: { protocol: protocolo } },
-    include: { author: { select: { name: true } } },
-    orderBy: { createdAt: "asc" },
-    take: 30,
-  });
+  const anotacoes =
+    prisma && caso
+      ? await prisma.caseComment.findMany({
+          where: { case: { protocol: protocolo } },
+          include: { author: { select: { name: true } } },
+          orderBy: { createdAt: "asc" },
+          take: 30,
+        })
+      : [];
 
   /**
    * As movimentações entre times entram junto.
@@ -234,11 +279,13 @@ export async function POST(request: Request) {
    * relato nem nas anotações — está aqui.
    */
   const movimentacoes =
-    await prisma.caseMovement.findMany({
-      where: { case: { protocol: protocolo } },
-      orderBy: { startedAt: "asc" },
-      take: 20,
-    });
+    prisma && caso
+      ? await prisma.caseMovement.findMany({
+          where: { case: { protocol: protocolo } },
+          orderBy: { startedAt: "asc" },
+          take: 20,
+        })
+      : [];
 
   const dia = (d: Date) =>
     d.toISOString().slice(0, 10);
@@ -264,28 +311,76 @@ export async function POST(request: Request) {
     )
     .map((item) => item.texto);
 
+  /**
+   * O material muda conforme o que existe, e o formato não.
+   *
+   * Com caso, o dossiê nasce da reclamação e a transcrição entra como
+   * contexto. Sem caso — cliente que ainda não abriu reclamação
+   * pública —, a transcrição **é** o material, e o dossiê descreve o
+   * atendimento em vez da reclamação.
+   *
+   * Vale a pena atender os dois: é justamente antes de virar reclamação
+   * que ler o histórico ainda muda o desfecho.
+   */
+  const doCaso = caso
+    ? [
+        `Reclamação ${caso.protocol}, canal ${caso.source}, status "${caso.status}".`,
+        caso.category &&
+          `Categoria: ${caso.category}${caso.subcategory ? ` / ${caso.subcategory}` : ""}.`,
+        `Aberta em ${caso.createdAt}. Consumidor: ${caso.customer}.`,
+        caso.evaluated
+          ? `Avaliada: nota ${caso.score ?? "—"}, ${caso.resolved ? "resolvida" : "NÃO resolvida"}, ${caso.wouldDoBusiness ? "voltaria" : "não voltaria"} a fazer negócio.`
+          : "Ainda sem avaliação do consumidor.",
+        caso.churnRisk
+          ? "Marcada como risco de cancelamento."
+          : "",
+        "",
+        `Título: ${caso.title}`,
+        "",
+        "Relato do consumidor:",
+        caso.description || "(sem relato registrado)",
+        "",
+        (caso.publicResponse ?? "").trim()
+          ? `Resposta pública que já publicamos:\n${caso.publicResponse}`
+          : "Ainda sem resposta pública nossa.",
+        "",
+        linhaDoTempo.length > 0
+          ? `Linha do tempo interna, do mais antigo para o mais recente:\n${linhaDoTempo.join("\n")}`
+          : "Nenhuma anotação nem movimentação interna registrada — nada aconteceu depois do relato.",
+      ]
+    : [
+        "**Este cliente não tem reclamação cadastrada.**",
+        "",
+        contato.nome
+          ? `Contato: ${contato.nome}${contato.telefone ? ` · ${contato.telefone}` : ""}.`
+          : contato.telefone
+            ? `Telefone: ${contato.telefone}.`
+            : "Sem identificação do contato.",
+        "",
+        "Não existe relato público, resposta publicada nem linha do tempo interna — o que há é o atendimento abaixo. Descreva o atendimento, não uma reclamação: não invente protocolo, avaliação nem histórico que não estejam na transcrição.",
+      ];
+
   const prompt = [
-    `Reclamação ${caso.protocol}, canal ${caso.source}, status "${caso.status}".`,
-    caso.category &&
-      `Categoria: ${caso.category}${caso.subcategory ? ` / ${caso.subcategory}` : ""}.`,
-    `Aberta em ${caso.createdAt}. Consumidor: ${caso.customer}.`,
-    caso.evaluated
-      ? `Avaliada: nota ${caso.score ?? "—"}, ${caso.resolved ? "resolvida" : "NÃO resolvida"}, ${caso.wouldDoBusiness ? "voltaria" : "não voltaria"} a fazer negócio.`
-      : "Ainda sem avaliação do consumidor.",
-    caso.churnRisk ? "Marcada como risco de cancelamento." : "",
-    "",
-    `Título: ${caso.title}`,
-    "",
-    "Relato do consumidor:",
-    caso.description || "(sem relato registrado)",
-    "",
-    (caso.publicResponse ?? "").trim()
-      ? `Resposta pública que já publicamos:\n${caso.publicResponse}`
-      : "Ainda sem resposta pública nossa.",
-    "",
-    linhaDoTempo.length > 0
-      ? `Linha do tempo interna, do mais antigo para o mais recente:\n${linhaDoTempo.join("\n")}`
-      : "Nenhuma anotação nem movimentação interna registrada — nada aconteceu depois do relato.",
+    ...doCaso,
+
+    /**
+     * A transcrição do Crisp, quando alguém cola uma.
+     *
+     * É a peça que faltava para o dossiê ser completo: a reclamação
+     * pública conta o que o consumidor decidiu tornar público, e o
+     * atendimento no chat conta o que realmente aconteceu antes —
+     * quantas vezes ele tentou, o que foi prometido, quem atendeu, onde
+     * travou. Nada disso está no Reclame Aqui, e é o material que mais
+     * muda a resposta.
+     *
+     * Vem colada à mão, e não por integração, porque o Crisp fica fora
+     * daqui: exportar a conversa é um clique lá, e uma integração
+     * exigiria credencial, permissão e um contrato de dados que
+     * ninguém pediu para manter.
+     */
+    transcricao
+      ? `\n--- TRANSCRIÇÃO DO ATENDIMENTO NO CRISP (colada pelo atendente) ---\n${transcricao}\n--- fim da transcrição ---`
+      : "",
   ]
     .filter(Boolean)
     .join("\n");
@@ -312,7 +407,10 @@ export async function POST(request: Request) {
 
   return responder(request, {
     ...resultado.dados,
-    protocolo: caso.protocol,
+    protocolo: caso?.protocol ?? null,
+
+    /** Houve caso, ou o dossiê saiu só do atendimento? */
+    semCaso: !caso,
 
     /**
      * Quantos fatos internos o resumo teve para ler.
@@ -322,6 +420,16 @@ export async function POST(request: Request) {
      * coisas muito diferentes para quem vai decidir o que fazer.
      */
     fatos: linhaDoTempo.length,
+
+    /**
+     * A transcrição entrou na leitura?
+     *
+     * A tela precisa dizer isso: "o dossiê não menciona o chat" e "o
+     * dossiê não recebeu o chat" são coisas diferentes, e sem o sinal
+     * quem cola a transcrição não tem como saber se ela chegou.
+     */
+    comTranscricao: transcricao.length > 0,
+    tamanhoDaTranscricao: transcricao.length,
 
     provedor: resultado.provedor,
     rapido,

@@ -1767,6 +1767,18 @@
       // Sem caso, mas com conversa aberta: resumir ainda ajuda.
       corpo.insertAdjacentHTML("beforeend", blocoResumo());
 
+      /*
+        E o dossiê, que aqui nasce da transcrição.
+
+        Cliente sem reclamação cadastrada é quem mais ganha com isto:
+        ler o atendimento inteiro antes de responder é o que evita que
+        a conversa vire reclamação pública.
+      */
+      corpo.insertAdjacentHTML(
+        "beforeend",
+        blocoDossie("")
+      );
+
       marcarSelo(null);
       return;
     }
@@ -3205,27 +3217,7 @@
       que é isto", depois "o que eu faço". Uma sugestão de resposta
       acima do resumo faria a pessoa decidir antes de entender.
     */
-    if (d.relato) {
-      partes.push(
-        '<div class="bloco">',
-        '  <div class="rotulo">O caso em duas leituras</div>',
-        resumoDoCaso &&
-          resumoDoCaso.protocolo === d.protocolo
-          ? blocoResumoDoCaso(resumoDoCaso)
-          : [
-              '  <div class="etapas" style="margin-top:0">',
-              '    <button class="passo" data-acao="resumir-caso" data-protocolo="' +
-                CW.escapar(d.protocolo) +
-                '" style="flex:1">Montar dossiê (~15 s)</button>',
-              '    <button class="passo" data-acao="resumir-caso" data-rapido="1" data-protocolo="' +
-                CW.escapar(d.protocolo) +
-                '" style="flex:1">Resumo rápido (~2 s)</button>',
-              '  </div>',
-              '  <p class="sub" style="margin-top:6px">Lê o relato, a resposta pública e a linha do tempo interna, e devolve o dossiê completo, o que mudou, o que falta resolver e três respostas prontas para revisar. Só lê — não grava nem envia nada.</p>',
-            ].join(""),
-        '</div>'
-      );
-    }
+    partes.push(blocoDossie(d.protocolo));
 
     /* ---- triagem ---- */
 
@@ -3355,6 +3347,65 @@
    * história inteira — que é longa e fica recolhida, porque quem já
    * conhece o caso não quer rolar por ela toda vez.
    */
+  /**
+   * O convite ao dossiê, com o campo da transcrição.
+   *
+   * Uma função e não um trecho inline porque agora aparece em dois
+   * lugares: no caso aberto e na tela de contato. **Cliente sem
+   * reclamação cadastrada também precisa de dossiê** — é justamente
+   * antes de virar reclamação que ler o histórico ainda muda o
+   * desfecho, e a primeira versão recusava esse caso.
+   *
+   * `protocolo` vem vazio quando não há caso; o servidor entende e
+   * monta o dossiê a partir da transcrição e do contato.
+   */
+  function blocoDossie(protocolo) {
+
+    const pronto =
+      resumoDoCaso &&
+      (resumoDoCaso.protocolo ?? "") === (protocolo ?? "");
+
+    return [
+      '<div class="bloco">',
+      '  <div class="rotulo">Dossiê do atendimento</div>',
+
+      pronto
+        ? blocoResumoDoCaso(resumoDoCaso)
+        : [
+            '  <div class="etapas" style="margin-top:0">',
+            '    <button class="passo" data-acao="resumir-caso" data-protocolo="' +
+              CW.escapar(protocolo ?? "") +
+              '" style="flex:1">Montar dossiê (~15 s)</button>',
+            '    <button class="passo" data-acao="resumir-caso" data-rapido="1" data-protocolo="' +
+              CW.escapar(protocolo ?? "") +
+              '" style="flex:1">Resumo rápido (~2 s)</button>',
+            '  </div>',
+
+            protocolo
+              ? '  <p class="sub" style="margin-top:6px">Lê o relato, a resposta pública e a linha do tempo interna. Devolve o dossiê completo, o que mudou, o que falta resolver e três respostas prontas para revisar. Só lê — não grava nem envia nada.</p>'
+              : '  <p class="sub" style="margin-top:6px">Este contato não tem reclamação cadastrada. Cole o atendimento do Crisp abaixo e o dossiê sai dele — é o que mais ajuda antes de o assunto virar reclamação.</p>',
+
+            /*
+              O campo da transcrição fica recolhido.
+
+              Ele é grande e não é usado toda vez; aberto por padrão,
+              empurraria o resto do painel para baixo em todo caso que
+              não precisa dele. Fechado, quem precisa clica.
+            */
+            `
+  <details style="margin-top:8px" ${protocolo ? "" : "open"}>
+    <summary style="cursor:pointer;font-size:12px;font-weight:600;padding:5px 0">Colar transcrição do Crisp (opcional)</summary>
+    <textarea class="campo" id="dossie-transcricao" rows="4"
+              style="margin-top:5px;font-family:inherit"
+              placeholder="Cole aqui a transcrição exportada do Crisp. Ela entra no dossiê como parte da história — o que foi prometido, quem atendeu, onde travou."></textarea>
+    <p class="sub" style="margin-top:5px;color:var(--suave)">Fica só nesta consulta: não é gravada em lugar nenhum.</p>
+  </details>`,
+          ].join(""),
+
+      '</div>',
+    ].join("");
+  }
+
   function blocoResumoDoCaso(r) {
 
     const bloco = (titulo, conteudo, estilo = "") =>
@@ -3378,6 +3429,14 @@
       '    <div class="rotulo" style="margin-bottom:5px">Onde estou</div>',
       paragrafo(r.geral),
       '  </div>',
+
+      r.comTranscricao
+        ? `  <div class="sub" style="margin-top:6px;color:var(--suave)">Transcrição do Crisp lida (${r.tamanhoDaTranscricao} caracteres).</div>`
+        : "",
+
+      r.semCaso
+        ? '  <div class="sub" style="margin-top:6px;color:var(--suave)">Sem reclamação cadastrada — o dossiê saiu do atendimento.</div>'
+        : "",
 
       bloco(
         "O que aconteceu por último",
@@ -3483,9 +3542,22 @@
       ? "Lendo…"
       : "Montando… (~15 s)";
 
+    /**
+     * A transcrição é lida na hora do clique, do campo aberto.
+     *
+     * Guardá-la em estado seria uma cópia a mais para manter em dia — e
+     * ela vale para esta consulta só, então o campo é a fonte.
+     */
+    const campoTranscricao = corpo.querySelector(
+      "#dossie-transcricao"
+    );
+
     const resposta = await CW.enviar({
       tipo: "resumoCaso",
       protocolo: botao.dataset.protocolo,
+      transcricao: campoTranscricao?.value ?? "",
+      nome: consulta?.nome ?? "",
+      telefone: consulta?.telefone ?? "",
       rapido,
     });
 
