@@ -416,6 +416,7 @@
         );
       }
       if (acao === "resumir") resumirConversa(alvo);
+      if (acao === "resumir-caso") resumirCaso(alvo);
 
       // NPS: as duas escritas da tratativa, e os botões que as compõem.
       if (
@@ -3106,6 +3107,13 @@
       triagem = null;
     }
 
+    if (
+      resumoDoCaso &&
+      resumoDoCaso.protocolo !== protocolo
+    ) {
+      resumoDoCaso = null;
+    }
+
     desenharDetalhe(detalhe);
 
     /**
@@ -3164,6 +3172,37 @@
       '  </div>',
       '</div>',
     ];
+
+    /* ---- resumo do caso ---- */
+
+    /*
+      Vem antes da triagem de propósito.
+
+      A ordem na tela é a ordem da cabeça de quem atende: primeiro "o
+      que é isto", depois "o que eu faço". Uma sugestão de resposta
+      acima do resumo faria a pessoa decidir antes de entender.
+    */
+    if (d.relato) {
+      partes.push(
+        '<div class="bloco">',
+        '  <div class="rotulo">O caso em duas leituras</div>',
+        resumoDoCaso &&
+          resumoDoCaso.protocolo === d.protocolo
+          ? blocoResumoDoCaso(resumoDoCaso)
+          : [
+              '  <div class="etapas" style="margin-top:0">',
+              '    <button class="passo" data-acao="resumir-caso" data-protocolo="' +
+                CW.escapar(d.protocolo) +
+                '" style="flex:1">Resumir o caso (~8 s)</button>',
+              '    <button class="passo" data-acao="resumir-caso" data-rapido="1" data-protocolo="' +
+                CW.escapar(d.protocolo) +
+                '" style="flex:1">Resumo rápido (~1 s)</button>',
+              '  </div>',
+              '  <p class="sub" style="margin-top:6px">Lê o relato, a resposta pública e a linha do tempo interna, e devolve duas coisas: o caso inteiro para quem nunca viu, e o que aconteceu por último para quem já conhece. Só lê — não grava nem envia nada.</p>',
+            ].join(""),
+        '</div>'
+      );
+    }
 
     /* ---- triagem ---- */
 
@@ -3267,6 +3306,107 @@
    * B.
    */
   let triagem = null;
+
+  /**
+   * O resumo do caso aberto, quando alguém pediu.
+   *
+   * Guardado por caso, como a triagem: sair do detalhe e voltar não
+   * deve gastar outra chamada ao modelo, e o resumo do caso A não pode
+   * aparecer no caso B.
+   */
+  let resumoDoCaso = null;
+
+  /**
+   * O resumo, em dois cartões separados.
+   *
+   * Separados e não num texto corrido: são duas perguntas diferentes, e
+   * quem volta a um caso conhecido lê só a segunda. Num parágrafo só,
+   * ela ficaria no fim — depois do que a pessoa já sabe.
+   */
+  function blocoResumoDoCaso(r) {
+
+    return [
+      '  <div class="cartao">',
+      '    <div class="rotulo" style="margin-bottom:5px">O que é este caso</div>',
+      `    <p class="sub" style="color:var(--texto)">${CW.escapar(r.geral)}</p>`,
+      '  </div>',
+
+      '  <div class="cartao" style="margin-top:7px">',
+      '    <div class="rotulo" style="margin-bottom:5px">O que aconteceu por último</div>',
+      `    <p class="sub" style="color:var(--texto)">${CW.escapar(r.ultimo)}</p>`,
+
+      /*
+        Quantos fatos internos existiam para ler.
+
+        Sem este número, "nada aconteceu depois do relato" e "o resumo
+        não recebeu a linha do tempo" ficam iguais na tela — e são
+        coisas bem diferentes para quem vai decidir o que fazer.
+      */
+      typeof r.fatos === "number"
+        ? `    <div class="sub" style="margin-top:6px;color:var(--suave)">${
+            r.fatos === 0
+              ? "Nenhuma anotação ou movimentação interna registrada."
+              : `Lido sobre ${r.fatos} registro(s) internos.`
+          }</div>`
+        : "",
+
+      '  </div>',
+
+      (r.pontos ?? []).length > 0
+        ? [
+            '  <div class="cartao" style="margin-top:7px">',
+            '    <div class="rotulo" style="margin-bottom:5px">Fatos que pesam</div>',
+            ...r.pontos.map(
+              (item) =>
+                `    <div class="sub" style="color:var(--suave)">• ${CW.escapar(item)}</div>`
+            ),
+            '  </div>',
+          ].join("")
+        : "",
+
+      r.rapido
+        ? '  <p class="sub" style="margin-top:6px;color:var(--suave)">Resumo rápido: modelo menor, responde na hora e resume com menos cuidado.</p>'
+        : "",
+    ]
+      .filter(Boolean)
+      .join("");
+  }
+
+  async function resumirCaso(botao) {
+
+    const rapido = botao.dataset.rapido === "1";
+    const rotulo = botao.textContent;
+
+    botao.disabled = true;
+
+    /* O rótulo de espera diz quanto vai demorar — ver a triagem. */
+    botao.textContent = rapido
+      ? "Lendo…"
+      : "Lendo… (~8 s)";
+
+    const resposta = await CW.enviar({
+      tipo: "resumoCaso",
+      protocolo: botao.dataset.protocolo,
+      rapido,
+    });
+
+    botao.disabled = false;
+    botao.textContent = rotulo;
+
+    if (!resposta.ok || resposta.dados?.erro) {
+      avisar(
+        resposta.dados?.erro ??
+          resposta.erro ??
+          "Falha ao resumir o caso.",
+        "perigo"
+      );
+      return;
+    }
+
+    resumoDoCaso = resposta.dados;
+
+    if (detalhe) desenharDetalhe(detalhe);
+  }
 
   function blocoTriagem(t) {
 

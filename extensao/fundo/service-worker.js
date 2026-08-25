@@ -34,6 +34,7 @@ const CAMINHOS = {
   detalhe: "/api/extensao/detalhe",
   agenda: "/api/extensao/agenda",
   triagem: "/api/extensao/triagem",
+  resumoCaso: "/api/extensao/resumo-caso",
 };
 
 /**
@@ -464,6 +465,28 @@ async function tratar(mensagem) {
       protocolo: mensagem.protocolo,
       rapido: mensagem.rapido,
     });
+
+    return { ok: true, dados };
+  }
+
+  /**
+   * Resumo do caso: o geral e o que aconteceu por último.
+   *
+   * Sem cache, pelo mesmo motivo da triagem — e por um a mais: a
+   * segunda metade do resumo é justamente "o que mudou", e servir uma
+   * cópia guardada responderia essa pergunta com o estado de antes,
+   * que é a única resposta pior do que não responder.
+   */
+  if (mensagem?.tipo === "resumoCaso") {
+
+    const dados = await chamar(
+      CAMINHOS.resumoCaso,
+      {},
+      {
+        protocolo: mensagem.protocolo,
+        rapido: mensagem.rapido,
+      }
+    );
 
     return { ok: true, dados };
   }

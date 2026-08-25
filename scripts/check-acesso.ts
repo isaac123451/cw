@@ -18,6 +18,13 @@
  */
 import "dotenv/config";
 
+import {
+  readdirSync,
+  readFileSync,
+  statSync,
+} from "node:fs";
+import { join, resolve } from "node:path";
+
 import { SignJWT } from "jose";
 
 import { PrismaPg } from "@prisma/adapter-pg";
@@ -255,19 +262,73 @@ async function main() {
    * mas de outra natureza: o método sequer chega à autenticação. Bater
    * com o método errado testaria o roteador, não o cadeado.
    */
-  const daExtensao: [string, string][] = [
-    ["/api/extensao/fila", "GET"],
-    ["/api/extensao/contexto", "GET"],
-    ["/api/extensao/agenda", "GET"],
-    ["/api/extensao/lembretes", "GET"],
-    ["/api/extensao/detalhe", "GET"],
-    ["/api/extensao/nps", "POST"],
-    ["/api/extensao/caso", "POST"],
-    ["/api/extensao/mover", "POST"],
-    ["/api/extensao/anotar", "POST"],
-    ["/api/extensao/triagem", "POST"],
-    ["/api/extensao/conversa", "POST"],
-  ];
+  /**
+   * A lista sai do disco, e não daqui.
+   *
+   * Era escrita à mão, e isso a deixou desatualizada no dia em que uma
+   * rota nova apareceu: `resumo-caso` foi criada com a guarda errada —
+   * `if (!sessao)` sobre um objeto que é sempre verdadeiro — e
+   * respondeu **200 sem sessão**, devolvendo o relato do consumidor e
+   * gastando chamada ao modelo. Nem este script nem o `check:seguranca`
+   * apontaram: um não conhecia a rota, o outro só confere se a guarda
+   * **existe** no arquivo, não se ela funciona.
+   *
+   * Lendo o diretório, toda rota nova entra na varredura sozinha. É a
+   * diferença entre uma lista que envelhece e uma que não pode
+   * envelhecer.
+   */
+  const pastaDaExtensao = resolve(
+    __dirname,
+    "../app/api/extensao"
+  );
+
+  const daExtensao: [string, string][] = readdirSync(
+    pastaDaExtensao
+  )
+    .filter((nome) => {
+      try {
+        return statSync(
+          join(pastaDaExtensao, nome, "route.ts")
+        ).isFile();
+      } catch {
+        return false;
+      }
+    })
+    /**
+     * `/sessao` é a sonda de estado do painel e responde 200 de
+     * propósito — ela tem conferência própria logo abaixo.
+     */
+    .filter((nome) => nome !== "sessao")
+    .map((nome) => {
+
+      const fonte = readFileSync(
+        join(pastaDaExtensao, nome, "route.ts"),
+        "utf8"
+      );
+
+      /**
+       * O método vem do que a rota exporta.
+       *
+       * Bater com o método errado devolve 405 e testaria o roteador,
+       * não o cadeado — e um 405 passaria por "não deixou entrar" sem
+       * nunca ter chegado na autenticação.
+       */
+      const metodo = /export\s+(async\s+)?function\s+GET/.test(
+        fonte
+      )
+        ? "GET"
+        : "POST";
+
+      return [`/api/extensao/${nome}`, metodo] as [
+        string,
+        string,
+      ];
+    })
+    .sort((a, b) => a[0].localeCompare(b[0]));
+
+  console.log(
+    `\n  ${daExtensao.length} rotas de extensão achadas no disco — a lista não é escrita à mão.\n`
+  );
 
   for (const [rota, metodo] of daExtensao) {
     conferir(

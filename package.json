@@ -1,6 +1,6 @@
 {
   "name": "cw-reputacao",
-  "version": "0.26.1",
+  "version": "0.27.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -52,7 +52,8 @@
     "check:mortos": "tsx scripts/check-mortos.ts",
     "check:assistente": "tsx scripts/check-assistente.ts",
     "check:canais": "tsx scripts/check-canais.ts",
-    "check:whatsapp-numero": "tsx scripts/check-whatsapp-numero.ts"
+    "check:whatsapp-numero": "tsx scripts/check-whatsapp-numero.ts",
+    "check:resumo-caso": "tsx scripts/check-resumo-caso.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",
