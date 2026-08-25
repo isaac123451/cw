@@ -126,6 +126,7 @@ export async function GET(request: Request) {
   const nomeBruto = params.get("nome") ?? "";
   const emailBruto = params.get("email") ?? "";
   const protocoloBruto = params.get("protocolo") ?? "";
+  const documentoBruto = params.get("documento") ?? "";
 
   /**
    * `termo` é o campo de busca manual do painel: uma caixa só, em que
@@ -140,6 +141,7 @@ export async function GET(request: Request) {
     nome: nomeBruto,
     email: emailBruto,
     protocolo: protocoloBruto,
+    documento: documentoBruto,
     termo,
   });
 
@@ -147,12 +149,13 @@ export async function GET(request: Request) {
     !alvo.telefone &&
     !alvo.nome &&
     !alvo.email &&
-    !alvo.protocolo
+    !alvo.protocolo &&
+    !alvo.documento
   ) {
     return responder(
       request,
       {
-        erro: "Informe telefone, nome, e-mail, protocolo ou termo.",
+        erro: "Informe telefone, documento, nome, e-mail, protocolo ou termo.",
       },
       400
     );
@@ -197,6 +200,7 @@ export async function GET(request: Request) {
           digitosDoTelefone: alvo.telefone?.digitos,
           email: alvo.email,
           nome: alvo.nome,
+          documento: alvo.documento,
         })
       : getApiCases("all"),
     loadWorkspace(),
@@ -248,6 +252,7 @@ export async function GET(request: Request) {
       chave: chaveTelefone(alvo.telefone),
       nome: nomeBruto || termo || undefined,
       protocolo: alvo.protocolo,
+      documento: alvo.documento || undefined,
     },
 
     confianca: encontro.confianca,
@@ -466,6 +471,19 @@ interface Alvo {
   nome: string;
   email: string;
   protocolo: string;
+
+  /**
+   * CPF ou CNPJ, só dígitos.
+   *
+   * O identificador mais forte que esta base tem — 340 das 342
+   * reclamações carregam um — e que não era usado em lugar nenhum da
+   * busca. A extensão o lê do RA Forms desde sempre, pelo
+   * `CW.ra.documento`, e o descartava no caminho.
+   *
+   * Telefone muda, nome se escreve de várias formas; documento é o
+   * mesmo número em todos os lugares.
+   */
+  documento: string;
 }
 
 /**
@@ -480,6 +498,7 @@ function interpretar(entrada: {
   nome: string;
   email: string;
   protocolo: string;
+  documento: string;
   termo: string;
 }): Alvo {
 
@@ -487,6 +506,14 @@ function interpretar(entrada: {
   let nome = entrada.nome.trim();
   let email = entrada.email.trim();
   let protocolo = entrada.protocolo.trim();
+
+  /** Onze dígitos é CPF, catorze é CNPJ. O resto não é documento. */
+  const soDigitos = entrada.documento.replace(/\D/g, "");
+
+  let documento =
+    soDigitos.length === 11 || soDigitos.length === 14
+      ? soDigitos
+      : "";
 
   const termo = entrada.termo;
 
@@ -512,9 +539,35 @@ function interpretar(entrada: {
     } else {
       nome = nome || termo;
     }
+
+    /**
+     * O termo livre também pode ser um documento.
+     *
+     * Onze ou catorze dígitos exatos, sem letra: quem cola um CNPJ na
+     * caixa de busca está procurando por documento, não por telefone —
+     * e antes disto o número caía no ramo do telefone e não achava
+     * nada, porque documento nenhum é telefone de ninguém.
+     */
+    const digitosDoTermo = termo.replace(/\D/g, "");
+
+    if (
+      !documento &&
+      (digitosDoTermo.length === 11 ||
+        digitosDoTermo.length === 14) &&
+      digitosDoTermo.length ===
+        termo.replace(/[\s.\-/]/g, "").length
+    ) {
+      documento = digitosDoTermo;
+    }
   }
 
-  return { telefone, nome, email, protocolo };
+  return {
+    telefone,
+    nome,
+    email,
+    protocolo,
+    documento,
+  };
 }
 
 /* ============================================================
@@ -592,7 +645,33 @@ function casar(base: Case[], alvo: Alvo): Encontro {
     }
   }
 
-  /** 2. Telefone. */
+  /**
+   * 2. Documento — CPF ou CNPJ.
+   *
+   * Vem antes do telefone porque é igualdade, não semelhança: o
+   * telefone casa por DDD e quatro dígitos finais, e o documento casa
+   * ou não casa. Também é a única chave que sobrevive a alguém trocar
+   * de número, que é justamente o caso em que a busca por telefone
+   * falha sem ninguém entender por quê.
+   */
+  if (alvo.documento) {
+
+    const achados = base.filter(
+      (item) =>
+        (item.document ?? "").replace(/\D/g, "") ===
+        alvo.documento
+    );
+
+    if (achados.length > 0) {
+      return {
+        casos: ordenar(achados),
+        confianca: "exata",
+        porQue: `${alvo.documento.length === 11 ? "CPF" : "CNPJ"} confere com o cadastro da reclamação.`,
+      };
+    }
+  }
+
+  /** 3. Telefone. */
   if (alvo.telefone) {
 
     const exatos: Case[] = [];

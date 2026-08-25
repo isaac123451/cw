@@ -430,6 +430,15 @@ export async function fetchCandidateCases(
     digitosDoTelefone?: string;
     email?: string;
     nome?: string;
+
+    /**
+     * CPF ou CNPJ, só dígitos.
+     *
+     * É o identificador mais forte que existe nesta base — 340 das 342
+     * reclamações têm um — e não era usado em lugar nenhum da busca. A
+     * extensão o lê do RA Forms desde sempre e o jogava fora.
+     */
+    documento?: string;
   },
   limite = 80
 ): Promise<Case[]> {
@@ -458,6 +467,19 @@ export async function fetchCandidateCases(
    * de fora exatamente os registros que a regra parcial existe para
    * alcançar.
    */
+  /**
+   * Documento primeiro, porque é igualdade e não semelhança.
+   *
+   * Telefone casa por quatro dígitos finais e nome casa por pedaço;
+   * CPF e CNPJ casam ou não casam. Quando existe, é a resposta — e é
+   * também a única chave que sobrevive a alguém trocar de número.
+   */
+  if ((alvo.documento ?? "").replace(/\D/g, "").length >= 11) {
+    ou.push({
+      document: alvo.documento!.replace(/\D/g, ""),
+    });
+  }
+
   if ((alvo.digitosDoTelefone ?? "").length >= 4) {
     ou.push({
       phone: {

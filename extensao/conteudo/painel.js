@@ -1205,6 +1205,17 @@
       nome: novo?.nome ?? "",
       protocolo: novo?.protocolo ?? "",
       email: novo?.email ?? "",
+
+      /*
+        O documento entra na chave junto com o resto.
+
+        Fora dela, o painel trataria "mesmo cliente, agora com CPF"
+        como a mesma consulta de antes e não refaria a busca — perdendo
+        justamente o identificador mais forte no momento em que ele
+        aparece.
+      */
+      documento: novo?.documento ?? "",
+
       canalDaPagina: novo?.canalDaPagina ?? "",
     });
 
@@ -1351,6 +1362,18 @@
       nome: consulta?.nome ?? "",
       protocolo: consulta?.protocolo ?? "",
       email: consulta?.email ?? "",
+
+      /*
+        O documento vai junto quando a tela o conhece.
+
+        O Reclame Aqui mostra CPF ou CNPJ no RA Forms, e o leitor já o
+        extraía — mas ele parava aqui e nunca chegava à busca. É o
+        identificador mais forte que a base tem: 340 das 342
+        reclamações carregam um, e ele é o único que sobrevive a
+        alguém trocar de telefone.
+      */
+      documento: consulta?.documento ?? "",
+
       termo: consulta?.termo ?? "",
       canal,
     };
@@ -3193,12 +3216,12 @@
               '  <div class="etapas" style="margin-top:0">',
               '    <button class="passo" data-acao="resumir-caso" data-protocolo="' +
                 CW.escapar(d.protocolo) +
-                '" style="flex:1">Resumir o caso (~8 s)</button>',
+                '" style="flex:1">Montar dossiê (~15 s)</button>',
               '    <button class="passo" data-acao="resumir-caso" data-rapido="1" data-protocolo="' +
                 CW.escapar(d.protocolo) +
-                '" style="flex:1">Resumo rápido (~1 s)</button>',
+                '" style="flex:1">Resumo rápido (~2 s)</button>',
               '  </div>',
-              '  <p class="sub" style="margin-top:6px">Lê o relato, a resposta pública e a linha do tempo interna, e devolve duas coisas: o caso inteiro para quem nunca viu, e o que aconteceu por último para quem já conhece. Só lê — não grava nem envia nada.</p>',
+              '  <p class="sub" style="margin-top:6px">Lê o relato, a resposta pública e a linha do tempo interna, e devolve o dossiê completo, o que mudou, o que falta resolver e três respostas prontas para revisar. Só lê — não grava nem envia nada.</p>',
             ].join(""),
         '</div>'
       );
@@ -3323,45 +3346,121 @@
    * quem volta a um caso conhecido lê só a segunda. Num parágrafo só,
    * ela ficaria no fim — depois do que a pessoa já sabe.
    */
+  /**
+   * O dossiê, em blocos que respondem perguntas diferentes.
+   *
+   * A ordem é a da cabeça de quem abre o caso: "onde estou" (geral),
+   * "o que mudou" (último), "o que faço agora" (próxima resposta e
+   * pendências), "me dá o texto" (as três respostas) e, por último, a
+   * história inteira — que é longa e fica recolhida, porque quem já
+   * conhece o caso não quer rolar por ela toda vez.
+   */
   function blocoResumoDoCaso(r) {
 
-    return [
-      '  <div class="cartao">',
-      '    <div class="rotulo" style="margin-bottom:5px">O que é este caso</div>',
-      `    <p class="sub" style="color:var(--texto)">${CW.escapar(r.geral)}</p>`,
-      '  </div>',
-
-      '  <div class="cartao" style="margin-top:7px">',
-      '    <div class="rotulo" style="margin-bottom:5px">O que aconteceu por último</div>',
-      `    <p class="sub" style="color:var(--texto)">${CW.escapar(r.ultimo)}</p>`,
-
-      /*
-        Quantos fatos internos existiam para ler.
-
-        Sem este número, "nada aconteceu depois do relato" e "o resumo
-        não recebeu a linha do tempo" ficam iguais na tela — e são
-        coisas bem diferentes para quem vai decidir o que fazer.
-      */
-      typeof r.fatos === "number"
-        ? `    <div class="sub" style="margin-top:6px;color:var(--suave)">${
-            r.fatos === 0
-              ? "Nenhuma anotação ou movimentação interna registrada."
-              : `Lido sobre ${r.fatos} registro(s) internos.`
-          }</div>`
-        : "",
-
-      '  </div>',
-
-      (r.pontos ?? []).length > 0
+    const bloco = (titulo, conteudo, estilo = "") =>
+      conteudo
         ? [
-            '  <div class="cartao" style="margin-top:7px">',
-            '    <div class="rotulo" style="margin-bottom:5px">Fatos que pesam</div>',
-            ...r.pontos.map(
-              (item) =>
-                `    <div class="sub" style="color:var(--suave)">• ${CW.escapar(item)}</div>`
-            ),
+            `  <div class="cartao" style="margin-top:7px;${estilo}">`,
+            `    <div class="rotulo" style="margin-bottom:5px">${titulo}</div>`,
+            conteudo,
             '  </div>',
           ].join("")
+        : "";
+
+    const paragrafo = (texto) =>
+      `    <p class="sub" style="color:var(--texto)">${CW.escapar(texto)}</p>`;
+
+    return [
+
+      /* ---- situar ---- */
+
+      '  <div class="cartao">',
+      '    <div class="rotulo" style="margin-bottom:5px">Onde estou</div>',
+      paragrafo(r.geral),
+      '  </div>',
+
+      bloco(
+        "O que aconteceu por último",
+        [
+          paragrafo(r.ultimo),
+
+          /*
+            Quantos fatos internos existiam para ler.
+
+            Sem este número, "nada aconteceu depois do relato" e "o
+            resumo não recebeu a linha do tempo" ficam iguais na tela —
+            e são coisas bem diferentes para quem vai decidir.
+          */
+          typeof r.fatos === "number"
+            ? `    <div class="sub" style="margin-top:6px;color:var(--suave)">${
+                r.fatos === 0
+                  ? "Nenhuma anotação ou movimentação interna registrada."
+                  : `Lido sobre ${r.fatos} registro(s) internos.`
+              }</div>`
+            : "",
+        ].join("")
+      ),
+
+      /* ---- agir ---- */
+
+      bloco(
+        "Para a próxima resposta",
+        paragrafo(r.proximaResposta)
+      ),
+
+      (r.pendencias ?? []).length > 0
+        ? bloco(
+            "O que precisa ser resolvido",
+            r.pendencias
+              .map(
+                (item) =>
+                  `    <div class="sub" style="color:var(--suave)">• ${CW.escapar(item)}</div>`
+              )
+              .join("")
+          )
+        : "",
+
+      (r.pontos ?? []).length > 0
+        ? bloco(
+            "Fatos que pesam",
+            r.pontos
+              .map(
+                (item) =>
+                  `    <div class="sub" style="color:var(--suave)">• ${CW.escapar(item)}</div>`
+              )
+              .join("")
+          )
+        : "",
+
+      /* ---- os três textos ---- */
+
+      (r.respostas ?? []).length > 0
+        ? [
+            '  <div class="rotulo" style="margin-top:10px;margin-bottom:5px">Enviar ao cliente — escolha a que faz sentido</div>',
+            ...r.respostas.map(
+              (item) => `
+  <div class="macro" style="margin-top:7px">
+    <div class="linha">
+      <span style="font-weight:600;font-size:12.5px">${CW.escapar(item.titulo)}</span>
+      <button class="copiar" data-acao="copiar" data-texto="${CW.escapar(item.texto)}">copiar</button>
+    </div>
+    <div class="sub" style="margin:3px 0 6px;color:var(--suave)">${CW.escapar(item.quando)}</div>
+    <pre style="max-height:none">${CW.escapar(item.texto)}</pre>
+  </div>`
+            ),
+          ].join("")
+        : "",
+
+      /* ---- a história inteira, recolhida ---- */
+
+      r.dossie
+        ? `
+  <details style="margin-top:9px">
+    <summary style="cursor:pointer;font-size:12.5px;font-weight:600;padding:7px 0">Dossiê completo — tudo que aconteceu</summary>
+    <div class="cartao" style="margin-top:5px">
+      <p class="sub" style="color:var(--texto);white-space:pre-wrap">${CW.escapar(r.dossie)}</p>
+    </div>
+  </details>`
         : "",
 
       r.rapido
@@ -3382,7 +3481,7 @@
     /* O rótulo de espera diz quanto vai demorar — ver a triagem. */
     botao.textContent = rapido
       ? "Lendo…"
-      : "Lendo… (~8 s)";
+      : "Montando… (~15 s)";
 
     const resposta = await CW.enviar({
       tipo: "resumoCaso",

@@ -267,6 +267,15 @@
       nome: lida.cliente,
       telefone: lida.telefone,
       email: lida.email,
+
+      /*
+        O documento do RA Forms entra na busca.
+
+        Ele já era lido para gravar o vínculo com o estabelecimento, e
+        parava por aí. Como chave de busca é a mais forte que existe:
+        casa por igualdade, e sobrevive a alguém trocar de telefone.
+      */
+      documento: lida.documento,
       rotulo: lida.id
         ? `protocolo ${lida.id}`
         : lida.cliente,

@@ -368,6 +368,13 @@ model Case {
   @@index([channel, publishedAt])
   @@index([status])
   @@index([companyName])
+
+  /// A extensão busca por documento — igualdade, então índice serve.
+  ///
+  /// Telefone e e-mail ficam de fora: a busca deles é `contains`, que
+  /// varre de qualquer jeito. Índice ali seria custo de escrita sem
+  /// ganho de leitura.
+  @@index([document])
 }
 
 model CaseTag {
@@ -608,18 +615,18 @@ model Establishment {
   /// loja para falar de uma nota que o dono deu em particular é o tipo
   /// de contato que piora a relação em vez de melhorar.
   npsWhatsapp String?
-  segment   String?
-  city      String?
-  state     String?
-  plan      String
-  status    String
+  segment     String?
+  city        String?
+  state       String?
+  plan        String
+  status      String
   /// Receita mensal recorrente, em centavos.
-  mrrCents  Int?
-  owner     String?
-  startedAt DateTime?
-  phone     String?
-  email     String?
-  notes     String?
+  mrrCents    Int?
+  owner       String?
+  startedAt   DateTime?
+  phone       String?
+  email       String?
+  notes       String?
 
   npsResponses NpsResponse[]
   cases        Case[]

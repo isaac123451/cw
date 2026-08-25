@@ -13,47 +13,73 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * O caso em duas leituras: o geral e o que aconteceu por último.
+ * O dossiê do caso: tudo que aconteceu, e o que fazer com isso.
  *
  * Quem atende chega no caso no meio da história. O relato do consumidor
- * costuma ter mil e poucos caracteres, a resposta pública mais alguns
+ * costuma ter mil e poucos caracteres, a resposta pública mais algumas
  * centenas, e por cima disso vem a linha do tempo — anotações de quem
  * mexeu antes, cada uma escrita para quem já sabia do assunto. Ler tudo
  * antes de responder é o certo e é o que ninguém faz com a fila cheia.
  *
- * **São duas perguntas diferentes, e é por isso que são dois campos.**
+ * **A primeira versão trazia só duas frases curtas**, e o Isaac apontou
+ * o problema: "traz só uma situação". Um resumo enxuto serve para
+ * situar e não serve para assumir o caso — quem precisa responder ainda
+ * tinha de ler tudo de novo.
  *
- * "O que é este caso" é a história inteira: do que o consumidor
- * reclamou, o que já foi feito, onde parou. Serve para quem nunca viu.
+ * Agora são seis campos, e cada um responde uma pergunta que os outros
+ * não respondem:
  *
- * "O que aconteceu por último" é o estado de agora: a última
- * movimentação real e o que ela exige. Serve para quem já conhece o
- * caso e voltou nele depois de dois dias — e é a pergunta que o resumo
- * geral responde mal, porque o geral dilui o recente no meio do resto.
+ * - `geral` — para situar em dez segundos. Continua curto de propósito.
+ * - `ultimo` — o que mudou desde a última vez que alguém olhou.
+ * - `dossie` — **tudo, na ordem, sem limite de tamanho.** É o campo que
+ *   o Isaac pediu: o suficiente para assumir o caso sem ler mais nada.
+ * - `proximaResposta` — o que dizer na próxima interação, e por quê.
+ * - `pendencias` — o que falta para o caso fechar.
+ * - `respostas` — três textos prontos, um para cada situação em que o
+ *   caso pode estar: acolher e apurar, responder com solução, encerrar
+ *   e pedir reavaliação.
  *
- * Juntar as duas num texto só faria as duas piores: o começo repetiria
- * o que a pessoa já sabe, e o que ela precisa saber ficaria no fim.
+ * **Por que três respostas e não uma.** A triagem já decide "responder
+ * ou analisar" e escreve um rascunho para aquela decisão. Aqui é outra
+ * coisa: o caso pode estar em três estados diferentes conforme o que a
+ * apuração descobrir, e escrever os três de uma vez evita uma segunda
+ * chamada ao modelo no momento em que a pessoa já sabe o que quer
+ * dizer. Quem atende escolhe qual serve.
  *
- * **Nada é gravado e nada é enviado ao consumidor.** É leitura, como a
- * triagem — a extensão segue sem mandar mensagem em site nenhum.
+ * **Nada é gravado e nada é enviado ao consumidor.** É leitura e
+ * rascunho, como a triagem — a extensão segue sem mandar mensagem em
+ * site nenhum.
  */
 
-const SISTEMA = `Você resume reclamações da Cardápio Web, empresa de sistema para restaurantes (PDV, cardápio online, integrações de delivery), para quem vai atender agora.
+const SISTEMA = `Você monta o dossiê de uma reclamação da Cardápio Web, empresa de sistema para restaurantes (PDV, cardápio online, integrações de delivery), para quem vai atender agora.
 
 Escreva em português do Brasil, direto, sem preâmbulo e sem repetir o que o campo já diz.
 
-Duas leituras, e elas não se repetem:
+São seis coisas, e cada uma responde uma pergunta diferente. Não repita conteúdo entre elas.
 
-- "geral": a história do caso para quem nunca viu. Do que o consumidor reclamou, o que já foi feito, onde parou. No máximo quatro frases.
+- "geral": para situar em dez segundos. Do que o consumidor reclamou e onde o caso parou. No máximo quatro frases.
+
 - "ultimo": o que aconteceu por último e o que isso exige agora. Se a última coisa foi uma anotação interna, diga o que ela mudou. Se nada aconteceu depois do relato, diga exatamente isso — não invente movimento. No máximo duas frases.
 
-Regras que valem para as duas:
-- Nunca invente protocolo, valor, data, prazo, nome ou promessa que não esteja no material.
-- Não sugira resposta e não escreva rascunho: quem faz isso é a triagem.
-- Não repita o título do caso; quem lê já está olhando para ele.
-- Se o material for curto demais para resumir, diga isso em vez de encher linguiça.
+- "dossie": **tudo que aconteceu, na ordem em que aconteceu.** Este é o campo longo e não tem limite de tamanho: escreva o quanto for preciso para alguém que nunca viu o caso conseguir assumi-lo sem ler mais nada. Comece pelo que o consumidor relatou, com os detalhes concretos que ele deu. Depois, cada movimento na sequência: o que a empresa respondeu publicamente, cada anotação interna e o que ela mudou, cada movimentação entre times e se voltou. Cite datas quando existirem. Termine dizendo em que estado o caso está agora. Se o material for pobre, diga o que falta em vez de inventar — um dossiê curto e honesto vale mais do que um longo e imaginado.
 
-"pontos" são os fatos que mudam a decisão de quem atende: valor citado, prazo prometido, produto envolvido, o que o consumidor pediu. No máximo quatro, cada um em poucas palavras. Fato, não conselho.`;
+- "proximaResposta": o que dizer na próxima interação com o consumidor, e por quê. Duas ou três frases. Não é o texto da resposta — é a orientação de conteúdo: o que reconhecer, o que informar, o que não prometer.
+
+- "pendencias": o que precisa ser resolvido para este caso fechar. Cada item é uma coisa concreta que alguém tem de fazer ou descobrir, com o responsável quando o material disser. Não repita o que já foi feito. Se não houver pendência, devolva lista vazia — não invente trabalho.
+
+- "respostas": exatamente três textos prontos, cada um para uma situação diferente do mesmo caso. Sempre estes três, nesta ordem:
+  1. titulo "Acolher e apurar" — quando ainda não há resposta e é preciso responder dentro do prazo sem prometer solução. Reconhece o problema, diz que está sendo apurado, não dá prazo em número.
+  2. titulo "Responder com solução" — quando há o que informar. Explica o que foi feito ou o que o consumidor precisa fazer, em passos concretos tirados do material.
+  3. titulo "Encerrar e pedir reavaliação" — para quando o assunto está resolvido. Confirma a solução e convida o consumidor a atualizar a avaliação, sem cobrar nota.
+  Cada uma tem "quando" (uma frase dizendo em que situação usar) e "texto" (a mensagem pronta para revisar e enviar).
+
+Regras que valem para tudo:
+- Nunca invente protocolo, valor, data, prazo, nome ou promessa que não esteja no material.
+- Não prometa prazo em número. Se precisar falar de tempo, diga que a equipe retorna com a apuração.
+- Os textos de "respostas" são para o atendente revisar antes de enviar — escreva-os prontos, mas nada é enviado automaticamente.
+- Não repita o título do caso; quem lê já está olhando para ele.
+
+"pontos" são os fatos que mudam a decisão de quem atende: valor citado, prazo prometido, produto envolvido, o que o consumidor pediu. No máximo seis, cada um em poucas palavras. Fato, não conselho.`;
 
 const ESQUEMA = {
   type: "object",
@@ -61,21 +87,64 @@ const ESQUEMA = {
     geral: {
       type: "string",
       description:
-        "A história do caso para quem nunca viu. Até quatro frases.",
+        "Para situar em dez segundos. Até quatro frases.",
     },
     ultimo: {
       type: "string",
       description:
         "O que aconteceu por último e o que exige agora. Até duas frases.",
     },
+    dossie: {
+      type: "string",
+      description:
+        "Tudo que aconteceu, na ordem. Sem limite de tamanho — o suficiente para alguém assumir o caso sem ler mais nada.",
+    },
+    proximaResposta: {
+      type: "string",
+      description:
+        "O que dizer na próxima interação e por quê. Orientação de conteúdo, não o texto.",
+    },
+    pendencias: {
+      type: "array",
+      items: { type: "string" },
+      description:
+        "O que precisa ser resolvido para o caso fechar. Vazio quando não há nada.",
+    },
+    respostas: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          titulo: { type: "string" },
+          quando: {
+            type: "string",
+            description:
+              "Uma frase dizendo em que situação usar esta.",
+          },
+          texto: {
+            type: "string",
+            description:
+              "A mensagem pronta para revisar e enviar.",
+          },
+        },
+        required: ["titulo", "quando", "texto"],
+      },
+      description:
+        "Exatamente três: acolher e apurar, responder com solução, encerrar e pedir reavaliação.",
+    },
     pontos: {
       type: "array",
       items: { type: "string" },
       description:
-        "Fatos que mudam a decisão de quem atende. Até quatro.",
+        "Fatos que mudam a decisão de quem atende. Até seis.",
     },
   },
-  required: ["geral", "ultimo"],
+  required: [
+    "geral",
+    "ultimo",
+    "dossie",
+    "proximaResposta",
+  ],
 } as const;
 
 export async function POST(request: Request) {
