@@ -2346,10 +2346,10 @@
       return [
         '<div class="bloco">',
         '  <button class="copiar" data-acao="resumir" style="width:100%;padding:8px">',
-        '    Resumir conversa',
+        '    Resumir e escrever a resposta (~10 s)',
         '  </button>',
         '  <p class="sub" style="margin-top:6px">',
-        '    Lê as mensagens visíveis desta conversa e devolve o resumo, o humor e um rascunho de resposta. Só acontece quando você clica.',
+        '    Lê as mensagens visíveis desta conversa e devolve o resumo, o humor e três respostas prontas para escolher e enviar. Só acontece quando você clica.',
         '  </p>',
         '</div>',
       ].join("");
@@ -2380,13 +2380,53 @@
       `      <span style="margin-left:6px">${resumo.mensagensLidas ?? 0} mensagens lidas</span>`,
       '    </p>',
       '  </div>',
-      '  <div class="macro" style="margin-top:7px">',
-      '    <div class="linha">',
-      '      <span style="font-weight:600;font-size:12.5px">Rascunho de resposta</span>',
-      `      <button class="copiar" data-acao="copiar" data-texto="${CW.escapar(resumo.resposta ?? "")}">copiar</button>`,
-      '    </div>',
-      `    <pre style="max-height:none">${CW.escapar(resumo.resposta ?? "")}</pre>`,
-      '  </div>',
+      /*
+        As três respostas, para escolher e enviar.
+
+        Ficam aqui, no resumo, e não só no dossiê. É onde a pessoa está
+        quando vai escrever: quem clicou em "Resumir" está com o cliente
+        na linha. O dossiê é para entender um caso; o resumo é para
+        responder.
+
+        A primeira vem aberta e as outras fechadas. Abrir as três
+        empurraria o resto do painel para fora da tela, e na maioria das
+        conversas a primeira é a que serve.
+      */
+      Array.isArray(resumo.respostas) &&
+      resumo.respostas.length > 0
+        ? resumo.respostas
+            .map((r, i) =>
+              [
+                `  <details class="macro" style="margin-top:7px" ${i === 0 ? "open" : ""}>`,
+                '    <summary style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px">',
+                `      <span style="font-weight:600;font-size:12.5px">${CW.escapar(r.titulo ?? `Resposta ${i + 1}`)}</span>`,
+                `      <button class="copiar" data-acao="copiar" data-texto="${CW.escapar(r.texto ?? "")}">copiar</button>`,
+                '    </summary>',
+                r.quando
+                  ? `    <p class="sub" style="margin:5px 0 0;color:var(--suave)">${CW.escapar(r.quando)}</p>`
+                  : "",
+                `    <pre style="max-height:none">${CW.escapar(r.texto ?? "")}</pre>`,
+                '  </details>',
+              ].join("")
+            )
+            .join("")
+        : /*
+            O modelo antigo devolvia um rascunho só.
+
+            Manter o caminho de volta importa: uma extensão nova contra
+            um servidor que ainda não subiu — ou um provedor que ignorou
+            o campo novo — não pode ficar sem nenhuma resposta na tela.
+          */
+          [
+            '  <div class="macro" style="margin-top:7px">',
+            '    <div class="linha">',
+            '      <span style="font-weight:600;font-size:12.5px">Rascunho de resposta</span>',
+            `      <button class="copiar" data-acao="copiar" data-texto="${CW.escapar(resumo.resposta ?? "")}">copiar</button>`,
+            '    </div>',
+            `    <pre style="max-height:none">${CW.escapar(resumo.resposta ?? "")}</pre>`,
+            '  </div>',
+          ].join(""),
+
       '  <button class="copiar" data-acao="resumir" style="width:100%;margin-top:7px;padding:7px">Resumir de novo</button>',
       '</div>',
     ].join("");
@@ -4353,9 +4393,20 @@
       c.semResposta
         ? `    <span class="chip" aria-pressed="false" style="cursor:default">${c.semResposta} sem resposta</span>`
         : "",
-      c.foraDoPrazo
-        ? `    <span class="chip" aria-pressed="false" style="cursor:default;color:var(--perigo)">${c.foraDoPrazo} fora do prazo</span>`
-        : "",
+      /*
+        "Fora do prazo" só é dito quando há prazo.
+
+        Zero atrasados e zero prazos cadastrados dão o mesmo número e
+        significam o contrário: no primeiro caso a operação está em
+        dia, no segundo ninguém está medindo. Enquanto não houver
+        regra de SLA, a tela diz isso em vez de mostrar um zero que
+        tranquiliza à toa.
+      */
+      c.semRegraDeSla && c.semRegraDeSla >= (c.mostrados ?? 0)
+        ? `    <span class="chip" aria-pressed="false" style="cursor:default;color:var(--atencao)" title="Nenhuma regra de SLA cadastrada em Processos e SLA. Sem prazo definido, nenhum caso pode ser apontado como atrasado.">sem prazo definido</span>`
+        : c.foraDoPrazo
+          ? `    <span class="chip" aria-pressed="false" style="cursor:default;color:var(--perigo)">${c.foraDoPrazo} fora do prazo</span>`
+          : "",
       c.semResponsavel
         ? `    <span class="chip" aria-pressed="false" style="cursor:default">${c.semResponsavel} sem responsável</span>`
         : "",

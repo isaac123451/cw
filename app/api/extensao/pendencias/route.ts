@@ -235,6 +235,20 @@ export async function POST(request: Request) {
     mostrados: ordenados.length,
 
     /**
+     * Quantos casos não têm nenhuma regra de prazo que os alcance.
+     *
+     * Sem isto, "0 fora do prazo" é a mentira mais tranquilizadora que
+     * esta tela sabe contar. Zero atrasados e zero prazos definidos
+     * produzem exatamente o mesmo número, e significam o contrário um
+     * do outro: no primeiro caso a operação está em dia, no segundo
+     * ninguém está medindo. Hoje a base tem **nenhuma** regra de SLA
+     * cadastrada, então todo caso cai aqui.
+     */
+    semRegraDeSla: comFaltas.filter(
+      (c) => c.sla.situacao === "sem-regra"
+    ).length,
+
+    /**
      * Os avaliados como "Não resolvido" — que não entram na lista.
      *
      * Para o fluxo de trabalho eles estão fechados, e é por isso que

@@ -63,9 +63,15 @@ Regras:
 - O resumo é do problema e do estado atual, não da conversa mensagem a mensagem.
 - "pendencia" é o que está travado agora. Se nada está travado, diga isso.
 - "proximoPasso" é uma ação concreta de quem atende, não um conselho genérico.
-- "resposta" é um rascunho para o atendente enviar: cordial, específico ao caso, sem prometer prazo que a conversa não sustenta, sem inventar dado que não está ali. Se o certo for perguntar algo antes de resolver, o rascunho pergunta.
+- "resposta" é o rascunho mais óbvio para esta conversa: cordial, específico, sem prometer prazo que a conversa não sustenta, sem inventar dado que não está ali. Se o certo for perguntar algo antes de resolver, o rascunho pergunta.
+- "respostas" são exatamente três textos prontos, cada um para um caminho diferente que esta mesma conversa pode tomar. Sempre estes três, nesta ordem:
+  1. titulo "Responder agora" — o que dizer com o que já se sabe. Reconhece o problema e diz o que está sendo feito.
+  2. titulo "Pedir o que falta" — quando não dá para resolver sem algo do cliente: um print, um número de pedido, um horário. Pede uma coisa de cada vez e explica para quê.
+  3. titulo "Confirmar e encerrar" — para quando o assunto está resolvido. Confirma o que foi feito e abre espaço para o cliente dizer se ficou de pé.
+  Cada uma tem "quando" (uma frase dizendo em que situação usar) e "texto" (a mensagem pronta para revisar e enviar pelo WhatsApp).
+- Os três são para o atendente **escolher e enviar**: escreva-os prontos, no tom de mensagem de WhatsApp — curtos, sem assinatura, sem formalidade de e-mail. Nada é enviado automaticamente.
 - Nunca invente protocolo, valor, data ou nome que não apareça na conversa ou no contexto fornecido.
-- Se a conversa for curta ou irrelevante demais para concluir algo, diga isso no resumo em vez de preencher com suposição.`;
+- Se a conversa for curta ou irrelevante demais para concluir algo, diga isso no resumo em vez de preencher com suposição. Mesmo assim escreva os três textos com o que houver — quem atende revisa antes de enviar.`;
 
 const ESQUEMA = {
   type: "object",
@@ -98,6 +104,34 @@ const ESQUEMA = {
       description:
         "Rascunho de mensagem para enviar ao cliente agora.",
     },
+
+    /**
+     * As três respostas moram **aqui**, no resumo — e não no dossiê.
+     *
+     * O dossiê também tem as suas, e por um bom tempo eram só dele. O
+     * Isaac corrigiu: "as respostas não é necessariamente para o
+     * dossiê, mas sim para o resumo e assim enviar ao cliente ao que
+     * faça sentido". Faz sentido: o dossiê é para entender um caso, e
+     * quem o abre está estudando. O resumo é para responder — quem
+     * clicou em "Resumir" está com o cliente na linha e a próxima coisa
+     * que vai fazer é escrever. Oferecer um único rascunho ali obriga a
+     * pessoa a reescrever quando o caminho da conversa é outro.
+     */
+    respostas: {
+      type: "array",
+      minItems: 3,
+      maxItems: 3,
+      items: {
+        type: "object",
+        properties: {
+          titulo: { type: "string" },
+          quando: { type: "string" },
+          texto: { type: "string" },
+        },
+        required: ["titulo", "quando", "texto"],
+        additionalProperties: false,
+      },
+    },
     resolvido: {
       type: "boolean",
       description:
@@ -111,6 +145,7 @@ const ESQUEMA = {
     "pendencia",
     "proximoPasso",
     "resposta",
+    "respostas",
     "resolvido",
   ],
   additionalProperties: false,
