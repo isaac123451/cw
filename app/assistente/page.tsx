@@ -51,9 +51,31 @@ interface Turn {
   error?: string;
 }
 
+/**
+ * As perguntas que a operação faz de verdade, prontas para clicar.
+ *
+ * Um campo em branco com "pergunte alguma coisa" é o pior começo que
+ * um assistente pode ter: quem chega não sabe o que ele responde, testa
+ * algo que ele não entende, e conclui que não serve.
+ *
+ * As seis abaixo são as da segunda-feira, e cada uma prova uma
+ * capacidade diferente — projeção de nota, fila, prazo, retenção, causa
+ * raiz e dinheiro. Quem lê a lista já sabe o alcance da ferramenta sem
+ * precisar descobrir por tentativa.
+ */
+const SUGESTOES = [
+  "Quantas avaliações preciso para chegar a 9,0?",
+  "Quais reclamações estão sem resposta?",
+  "O que está fora do prazo hoje?",
+  "Quem está em risco de cancelamento?",
+  "Qual a causa raiz que mais aparece?",
+  "Quanto de impacto financeiro no mês?",
+];
+
 export default function AssistentePage() {
 
   const { cases } = useCases();
+
   const { tasks } = useAgenda();
   const { records } = useImpact();
   const { rules } = useSla();
@@ -350,6 +372,36 @@ export default function AssistentePage() {
                       </p>
 
                     </div>
+
+                  </div>
+
+                  {/*
+                    As perguntas que se faz de verdade, prontas.
+
+                    O Isaac pediu: "preciso que algo mais criação de
+                    análise, como: 'quantas notas preciso para conseguir
+                    9,0 de reputação', coisa assim mais direcionadas".
+
+                    Um campo em branco com "pergunte alguma coisa" é o
+                    pior começo que um assistente pode ter: quem chega
+                    não sabe o que ele responde, testa uma pergunta que
+                    ele não entende, e conclui que não serve. Estas seis
+                    são as que a operação faz na segunda-feira, e cada
+                    uma prova uma capacidade diferente.
+                  */}
+                  <div className="mt-4 flex flex-wrap gap-2">
+
+                    {SUGESTOES.map((pergunta) => (
+                      <button
+                        key={pergunta}
+                        type="button"
+                        onClick={() => perguntar(pergunta)}
+                        disabled={busy}
+                        className="rounded-full bg-white px-3 py-1.5 text-xs font-medium text-violet-700 ring-1 ring-inset ring-violet-200 transition-colors hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {pergunta}
+                      </button>
+                    ))}
 
                   </div>
 

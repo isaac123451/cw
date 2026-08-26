@@ -58,7 +58,8 @@
     "extensao:pacote": "node scripts/empacotar-extensao.js",
     "check:respostas": "tsx scripts/check-respostas.ts",
     "check:frentes": "tsx scripts/check-frentes.ts",
-    "limpar:estabelecimentos": "tsx scripts/limpar-estabelecimentos-pessoa.ts"
+    "limpar:estabelecimentos": "tsx scripts/limpar-estabelecimentos-pessoa.ts",
+    "semear:macros": "tsx scripts/semear-macros.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",

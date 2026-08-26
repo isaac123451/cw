@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 import {
   ArrowUpRight,
@@ -13,6 +14,7 @@ import {
   Pencil,
   Plus,
   Trash2,
+  Filter,
 } from "lucide-react";
 
 import MainLayout from "@/components/layout/MainLayout";
@@ -32,15 +34,49 @@ import { groupBy, isOpen } from "@/lib/services/case.service";
 
 import { Case } from "@/lib/models/case";
 
-export default function RedesSociaisPage() {
+function RedesSociaisConteudo() {
 
   const {
-    cases: social,
+    cases: todosOsSociais,
     moveCase,
     createCase,
     updateCase,
     deleteCase,
   } = useScopedCases("social");
+
+  /**
+   * O recorte que veio pelo link do gráfico.
+   *
+   * Clicar num assunto frequente traz `?categoria=Entrega` — a mesma
+   * convenção da fila do Reclame Aqui, em português porque o endereço é
+   * lido por gente.
+   *
+   * O filtro vale para a lista e para o quadro, e **não** para os
+   * gráficos: recortar o gráfico pelo que ele mesmo filtrou deixaria uma
+   * barra só, e a comparação — que é a razão do gráfico existir — some.
+   */
+  const params = useSearchParams();
+
+  const categoriaFiltrada = params.get("categoria") ?? "";
+  const statusFiltrado = params.get("status") ?? "";
+
+  const social = useMemo(
+    () =>
+      todosOsSociais
+        .filter(
+          (c) =>
+            !categoriaFiltrada ||
+            c.category === categoriaFiltrada
+        )
+        .filter(
+          (c) =>
+            !statusFiltrado ||
+            c.status === statusFiltrado
+        ),
+    [todosOsSociais, categoriaFiltrada, statusFiltrado]
+  );
+
+  const recorte = categoriaFiltrada || statusFiltrado;
 
   const { workflow } = useWorkflow();
 
@@ -49,13 +85,13 @@ export default function RedesSociaisPage() {
   const [deleting, setDeleting] = useState<Case>();
 
   const byCategory = useMemo(
-    () => groupBy(social, "category"),
-    [social]
+    () => groupBy(todosOsSociais, "category"),
+    [todosOsSociais]
   );
 
   const byStatus = useMemo(
-    () => groupBy(social, "status"),
-    [social]
+    () => groupBy(todosOsSociais, "status"),
+    [todosOsSociais]
   );
 
   const colunas = useMemo(
@@ -106,6 +142,39 @@ export default function RedesSociaisPage() {
             Novo atendimento
           </button>
         </PageHeading>
+
+        {/*
+          Um zero filtrado precisa dizer que é filtrado.
+
+          Chegando por um link de gráfico — `?categoria=Sistema` — os
+          contadores passam a contar só aquele recorte. Sem esta faixa,
+          "0 atendimentos" é lido como "o módulo está vazio", que é o
+          mesmo zero mudo do SLA e do teto: o número certo, a conclusão
+          errada, e ninguém sabe por quê.
+        */}
+        {recorte && (
+          <div className="flex flex-wrap items-center gap-2 rounded-xl bg-violet-50/60 px-4 py-3 text-sm ring-1 ring-inset ring-violet-100">
+
+            <Filter size={15} className="text-violet-600" />
+
+            <span className="text-zinc-700">
+              Mostrando só{" "}
+              <strong className="font-semibold">
+                {categoriaFiltrada || statusFiltrado}
+              </strong>{" "}
+              — {social.length} de{" "}
+              {todosOsSociais.length} atendimento(s).
+            </span>
+
+            <Link
+              href="/redes-sociais"
+              className="ml-auto rounded-lg px-2.5 py-1 text-xs font-medium text-violet-700 transition-colors hover:bg-violet-100"
+            >
+              Ver todos
+            </Link>
+
+          </div>
+        )}
 
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
 
@@ -191,14 +260,34 @@ export default function RedesSociaisPage() {
                 title="Assuntos mais frequentes"
                 description="Categorias tratadas no canal."
               >
-                <BarList data={byCategory} color="#EC4899" />
+                {/*
+                  Clicar no assunto abre os casos dele.
+
+                  "quando eu clicar em um assunto frequente seja possível
+                  verificar os casos daquela categoria." Mesma leitura
+                  das outras telas: o número diz quantos, e a pergunta
+                  seguinte é sempre quais.
+                */}
+                <BarList
+                  data={byCategory}
+                  color="#EC4899"
+                  hrefDe={(categoria) =>
+                    `/redes-sociais?categoria=${encodeURIComponent(categoria)}`
+                  }
+                />
               </SurfaceCard>
 
               <SurfaceCard
                 title="Distribuição por status"
                 description="Como a fila do canal está hoje."
               >
-                <BarList data={byStatus} color="#0EA5E9" />
+                <BarList
+                  data={byStatus}
+                  color="#0EA5E9"
+                  hrefDe={(status) =>
+                    `/redes-sociais?status=${encodeURIComponent(status)}`
+                  }
+                />
               </SurfaceCard>
 
             </div>
@@ -322,5 +411,19 @@ export default function RedesSociaisPage() {
       />
 
     </MainLayout>
+  );
+}
+
+/**
+ * useSearchParams suspende o render.
+ *
+ * Sem o <Suspense>, a página inteira vira dinâmica e perde a
+ * pré-renderização — o mesmo cuidado da fila do Reclame Aqui.
+ */
+export default function RedesSociaisPage() {
+  return (
+    <Suspense fallback={null}>
+      <RedesSociaisConteudo />
+    </Suspense>
   );
 }
