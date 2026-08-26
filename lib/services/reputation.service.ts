@@ -1349,3 +1349,104 @@ export function textoSobre(cor: string) {
 
   return luminancia > 0.45 ? "#18181B" : "#FFFFFF";
 }
+
+/**
+ * O caminho até uma nota **específica** — não uma faixa.
+ *
+ * `evaluationsToReach` responde por faixa: "Ótimo" quer dizer 8,0, e a
+ * pessoa que quer 9,0 fica sem resposta. O Isaac pediu a pergunta
+ * exata: "quantas avaliações ou respostas de reclamações preciso para
+ * alcançar nota de reputação 9.0".
+ *
+ * E são **duas** alavancas, não uma. Responder as pendentes move o
+ * índice de resposta, que tem peso 2 na fórmula e é o item mais barato
+ * de mexer — não depende de o consumidor voltar. Avaliar move a nota
+ * média (peso 3), o índice de solução (peso 3) e o de novo negócio
+ * (peso 2), mas depende de alguém avaliar.
+ *
+ * Por isso a resposta vem em três partes:
+ *
+ *  - `soRespondendo` — a nota que sai de responder tudo que está
+ *    pendente, sem nenhuma avaliação nova. É o que dá para fazer hoje,
+ *    sozinho.
+ *  - `avaliacoesDepoisDeResponder` — quantas avaliações nota 10 faltam
+ *    **depois** disso.
+ *  - `avaliacoesSemResponder` — quantas faltariam sem mexer nas
+ *    pendentes, para mostrar o preço de não responder.
+ *
+ * Ver `evaluationsToReach` para o teto: não dá para pedir mais
+ * avaliações do que há reclamações sem avaliação no período.
+ */
+export interface CaminhoParaNota {
+  alvo: number;
+  atual: number;
+
+  /** Já está lá — nada a fazer. */
+  jaAlcancada: boolean;
+
+  pendentes: number;
+  soRespondendo: number;
+
+  /** Responder tudo já basta? */
+  respondendoBasta: boolean;
+
+  avaliacoesDepoisDeResponder: SimulationTarget;
+  avaliacoesSemResponder: SimulationTarget;
+}
+
+export function caminhoParaNota(
+  base: ReputationRaw,
+  alvo: number
+): CaminhoParaNota {
+
+  const atual = scoreFrom(base).raScore;
+
+  const pendentes = pendingAnswers(base);
+
+  /** A faixa sintética que representa a nota pedida. */
+  const faixa: ScoreBand = {
+    label: `Nota ${ptBR(alvo)}`,
+    range: `≥ ${ptBR(alvo)}`,
+    color: "#7C3AED",
+    min: alvo,
+  };
+
+  const respondendoTudo = simulate(base, {
+    ...cenarioVazio(),
+    answerPending: pendentes,
+  });
+
+  const soRespondendo = scoreFrom(respondendoTudo).raScore;
+
+  return {
+    alvo,
+    atual,
+    jaAlcancada: atual >= alvo,
+    pendentes,
+    soRespondendo,
+    respondendoBasta: soRespondendo >= alvo,
+
+    avaliacoesDepoisDeResponder: evaluationsToReach(
+      respondendoTudo,
+      faixa
+    ),
+
+    avaliacoesSemResponder: evaluationsToReach(
+      base,
+      faixa
+    ),
+  };
+}
+
+/** Cenário sem nenhuma mudança — a base para simular uma coisa só. */
+function cenarioVazio(): SimulationInput {
+  return {
+    answerPending: 0,
+    addAnswered: 0,
+    addUnanswered: 0,
+    ratings: {},
+    resolved: null,
+    wouldReturn: null,
+    removed: [],
+  };
+}

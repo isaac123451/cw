@@ -48,6 +48,7 @@ import {
   SimulationInput,
   totalRatings,
 } from "@/lib/services/reputation.service";
+import CaminhoParaNota from "@/components/reclame-aqui/calculadora/CaminhoParaNota";
 
 const periodLabels: Record<string, string> = {
   "6m": "6 meses",
@@ -303,9 +304,20 @@ export default function CalculadoraPage() {
 
             {kind === "simplificada" ? (
 
+              <>
+              {/*
+                A nota exata, antes das faixas.
+
+                Faixa é intervalo: "Ótimo" responde 8,0, e quem quer
+                9,0 fica sem resposta. Este cartão recebe a nota
+                digitada e separa o caminho em duas alavancas — o que
+                dá para fazer hoje e o que depende do consumidor.
+              */}
+              <CaminhoParaNota base={base} />
+
               <SurfaceCard
-                title="Defina o objetivo"
-                description="Selecione a reputação que a empresa quer alcançar."
+                title="Ou escolha uma faixa"
+                description="As faixas oficiais do portal, para quando o alvo é a faixa e não um número."
               >
 
                 <div className="grid grid-cols-2 gap-2">
@@ -336,6 +348,7 @@ export default function CalculadoraPage() {
                 </div>
 
               </SurfaceCard>
+              </>
 
             ) : (
 
