@@ -1,5 +1,13 @@
 "use client";
 
+import { useMemo, useState } from "react";
+
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+} from "lucide-react";
+
 import { Case } from "@/lib/models/case";
 
 import CaseRow from "./CaseRow";
@@ -9,10 +17,109 @@ interface Props {
   onSelect: (item: Case) => void;
 }
 
+/**
+ * As colunas que ordenam, e por qual valor.
+ *
+ * Nem toda coluna entra. "Status" e "Categoria" são rótulos de
+ * classificação: ordenar por eles agrupa sem hierarquia, que é o que o
+ * filtro já faz melhor. Entram as que têm ordem natural — data, nota,
+ * nome — e o par resolvido/voltaria, onde a ordem separa dois grupos
+ * que a operação lê como grupos.
+ *
+ * O mesmo desenho da lista de NPS, de propósito: são a mesma tarefa em
+ * duas frentes, e dois padrões para triar seriam duas coisas para
+ * aprender.
+ */
+const ORDENAVEIS: Record<
+  string,
+  (item: Case) => number | string
+> = {
+  Data: (item) => item.createdAt ?? "",
+  Estabelecimento: (item) =>
+    (item.company || "zzz").toLowerCase(),
+  Cliente: (item) => item.customer.toLowerCase(),
+  Nota: (item) => (item.evaluated ? (item.score ?? 0) : -1),
+  Resolvido: (item) => (item.resolved ? 1 : 0),
+  Voltaria: (item) => (item.wouldDoBusiness ? 1 : 0),
+  Responsável: (item) =>
+    (item.owner || "zzz").toLowerCase(),
+};
+
+/** As colunas, na ordem em que aparecem. */
+const COLUNAS = [
+  "ID",
+  "Data",
+  "Estabelecimento",
+  "Cliente",
+  "Categoria",
+  "Nota",
+  "Resolvido",
+  "Voltaria",
+  "Status",
+  "SLA",
+  "Responsável",
+  "Contato",
+];
+
+/**
+ * A lista em tabela.
+ *
+ * **A data ganhou coluna.** O Isaac: "melhore a parte da data e que
+ * seja possível na parte de lista para verificar a data". Ela existia
+ * na ficha e no kanban, e faltava justamente onde se compara um caso
+ * com o outro — sem ela, a lista mostrava onze colunas e nenhuma
+ * respondia "isto é de ontem ou de março".
+ *
+ * **Ordena nos dois sentidos.** Mais antigas primeiro para atacar a
+ * fila; mais recentes para ver o que entrou hoje. As duas perguntas são
+ * feitas todo dia, e o terceiro clique devolve a ordem que veio de fora
+ * — que é por urgência, e é a que ninguém quer perder por acidente.
+ */
 export default function CasesTable({
   cases,
   onSelect,
 }: Props) {
+
+  const [ordem, setOrdem] = useState<{
+    coluna: string;
+    desc: boolean;
+  } | null>(null);
+
+  const ordenados = useMemo(() => {
+
+    if (!ordem) return cases;
+
+    const valor = ORDENAVEIS[ordem.coluna];
+
+    if (!valor) return cases;
+
+    return [...cases].sort((a, b) => {
+
+      const x = valor(a);
+      const y = valor(b);
+
+      const cmp =
+        typeof x === "number" && typeof y === "number"
+          ? x - y
+          : String(x).localeCompare(String(y), "pt-BR");
+
+      return ordem.desc ? -cmp : cmp;
+    });
+  }, [cases, ordem]);
+
+  function alternar(coluna: string) {
+
+    setOrdem((atual) => {
+
+      if (atual?.coluna !== coluna) {
+        return { coluna, desc: false };
+      }
+
+      // Crescente -> decrescente -> sem ordenação.
+      return atual.desc ? null : { coluna, desc: true };
+    });
+  }
+
   return (
     <div className="flex-1 overflow-auto">
 
@@ -22,49 +129,56 @@ export default function CasesTable({
 
           <tr className="border-b border-zinc-200">
 
-            <th className="whitespace-nowrap px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-zinc-500">
-              ID
-            </th>
+            {COLUNAS.map((h) => (
 
-            <th className="whitespace-nowrap px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-zinc-500">
-              Estabelecimento
-            </th>
+              <th
+                key={h}
+                className="whitespace-nowrap px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-zinc-500"
+              >
 
-            <th className="whitespace-nowrap px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-zinc-500">
-              Cliente
-            </th>
+                {ORDENAVEIS[h] ? (
 
-            <th className="whitespace-nowrap px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-zinc-500">
-              Categoria
-            </th>
+                  <button
+                    type="button"
+                    onClick={() => alternar(h)}
+                    title={
+                      ordem?.coluna === h
+                        ? ordem.desc
+                          ? "Clique para voltar à ordem original"
+                          : "Clique para inverter"
+                        : `Ordenar por ${h}`
+                    }
+                    className={`group/ord flex items-center gap-1.5 uppercase tracking-[0.06em] transition-colors hover:text-zinc-800 ${
+                      ordem?.coluna === h
+                        ? "text-violet-700"
+                        : ""
+                    }`}
+                  >
 
-            <th className="whitespace-nowrap px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-zinc-500">
-              Nota
-            </th>
+                    {h}
 
-            <th className="whitespace-nowrap px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-zinc-500">
-              Resolvido
-            </th>
+                    {ordem?.coluna === h ? (
+                      ordem.desc ? (
+                        <ArrowDown size={12} />
+                      ) : (
+                        <ArrowUp size={12} />
+                      )
+                    ) : (
+                      <ArrowUpDown
+                        size={12}
+                        className="opacity-0 transition-opacity group-hover/ord:opacity-40"
+                      />
+                    )}
 
-            <th className="whitespace-nowrap px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-zinc-500">
-              Voltaria
-            </th>
+                  </button>
 
-            <th className="whitespace-nowrap px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-zinc-500">
-              Status
-            </th>
+                ) : (
+                  h
+                )}
 
-            <th className="whitespace-nowrap px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-zinc-500">
-              SLA
-            </th>
+              </th>
 
-            <th className="whitespace-nowrap px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-zinc-500">
-              Responsável
-            </th>
-
-            <th className="whitespace-nowrap px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-zinc-500">
-              Contato
-            </th>
+            ))}
 
           </tr>
 
@@ -72,7 +186,7 @@ export default function CasesTable({
 
         <tbody>
 
-          {cases.map((item) => (
+          {ordenados.map((item) => (
 
             <CaseRow
               key={item.id}

@@ -22,6 +22,34 @@ interface Props {
   onClick: () => void;
 }
 
+const DIA = new Intl.DateTimeFormat("pt-BR", {
+  day: "2-digit",
+  month: "2-digit",
+  year: "2-digit",
+});
+
+/**
+ * "há 3 dias", "hoje", "há 4 meses".
+ *
+ * A idade responde a pergunta que se faz olhando a lista; a data
+ * absoluta responde a que se faz depois de escolher o caso, e por isso
+ * ela fica no `title`.
+ */
+function idadeEmDias(iso: string) {
+
+  const dias = Math.floor(
+    (Date.now() - new Date(iso).getTime()) / 86400000
+  );
+
+  if (dias <= 0) return "hoje";
+  if (dias === 1) return "ontem";
+  if (dias < 30) return `há ${dias} dias`;
+
+  const meses = Math.floor(dias / 30);
+
+  return meses === 1 ? "há 1 mês" : `há ${meses} meses`;
+}
+
 export default function CaseRow({
   data,
   onClick,
@@ -62,6 +90,40 @@ export default function CaseRow({
           <div className="mt-1.5">
             <TagChips tags={data.tags} limit={2} />
           </div>
+        )}
+
+      </td>
+
+      {/*
+        A data da reclamação.
+
+        Dia e mês em cima, ano embaixo e a idade em dias ao lado: a
+        pergunta na lista quase nunca é "que dia foi", é "há quanto
+        tempo está aqui". A data completa fica no `title` para quem
+        precisa do dado exato.
+      */}
+      <td className="whitespace-nowrap px-5 text-zinc-600">
+
+        {data.createdAt ? (
+
+          <span
+            title={new Date(
+              data.createdAt
+            ).toLocaleString("pt-BR")}
+          >
+
+            <span className="block text-xs font-medium text-zinc-700 tabular-nums">
+              {DIA.format(new Date(data.createdAt))}
+            </span>
+
+            <span className="mt-0.5 block text-[11px] text-zinc-400">
+              {idadeEmDias(data.createdAt)}
+            </span>
+
+          </span>
+
+        ) : (
+          <span className="text-zinc-300">—</span>
         )}
 
       </td>
