@@ -2,6 +2,7 @@ import { checkToken } from "@/lib/api/auth";
 import { getPrisma } from "@/lib/prisma";
 import { provedorDeIA } from "@/lib/services/ia.service";
 import { lerConfigDeIA } from "@/lib/services/iaConfig.service";
+import { hojeNaOperacao } from "@/lib/services/reputation.service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -55,6 +56,27 @@ export async function GET(request: Request) {
     {
       versao: process.env.npm_package_version ?? null,
       ambiente: process.env.VERCEL_ENV ?? "local",
+
+      /**
+       * Que dia este ambiente acha que é.
+       *
+       * Entrou aqui depois de a aplicação inteira passar duas semanas
+       * presa em 10/08/2026 sem que nada quebrasse: prazo, agenda,
+       * gráficos e alertas continuaram respondendo, plausíveis e
+       * errados. Uma data congelada não produz erro — produz números
+       * que envelhecem em silêncio, e o único jeito de flagrar é
+       * perguntar.
+       *
+       * `relogio` vai junto de propósito. Se `hoje` e `relogio`
+       * discordarem do dia, o problema é o fuso do ambiente; se `hoje`
+       * ficar parado enquanto `relogio` anda, alguém guardou a data num
+       * módulo de novo — que é a forma que este defeito tem de voltar.
+       */
+      data: {
+        hoje: hojeNaOperacao(),
+        relogio: new Date().toISOString(),
+        fuso: process.env.TZ ?? "não definido",
+      },
 
       banco,
 
