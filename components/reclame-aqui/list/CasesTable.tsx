@@ -23,7 +23,7 @@ export default function CasesTable({
           <tr className="border-b border-zinc-200">
 
             <th className="whitespace-nowrap px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-zinc-500">
-              Protocolo
+              ID
             </th>
 
             <th className="whitespace-nowrap px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-zinc-500">

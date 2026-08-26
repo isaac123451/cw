@@ -15,6 +15,7 @@ import StatusPicker from "@/components/reclame-aqui/shared/StatusPicker";
 
 import { useCases } from "@/lib/context/CaseContext";
 import { useEstablishments } from "@/lib/context/EstablishmentsContext";
+import { idExterno } from "@/lib/services/case.service";
 
 interface Props {
   data: Case;
@@ -50,7 +51,7 @@ export default function CaseRow({
       <td className="px-5 py-3.5">
 
         <span className="font-mono text-xs font-semibold text-violet-700">
-          {data.protocol}
+          {idExterno(data)}
         </span>
 
         <p className="mt-0.5 max-w-[220px] truncate text-xs text-zinc-500">

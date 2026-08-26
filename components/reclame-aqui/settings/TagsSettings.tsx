@@ -11,7 +11,25 @@ import { useScopedCases } from "@/lib/context/useScopedCases";
 import SurfaceCard from "@/components/shared/SurfaceCard";
 import BarraDeSalvar from "@/components/shared/BarraDeSalvar";
 
+/**
+ * As cores que uma etiqueta pode ter.
+ *
+ * Eram oito, e o Isaac pediu mais: com poucas cores, a nona etiqueta
+ * repete a cor da primeira e a distinção visual — que é a razão de a
+ * etiqueta ser colorida — desaparece. Uma etiqueta que tem a mesma cor
+ * de outra é uma etiqueta que só se lê pelo texto, e aí a cor virou
+ * enfeite.
+ *
+ * Vinte e quatro, em três intensidades de oito matizes. As intensidades
+ * importam tanto quanto os matizes: dois verdes diferentes distinguem-se
+ * de relance, e é isso que se pede a um quadro cheio.
+ *
+ * Todas passam em contraste sobre branco no texto do chip — o
+ * `TagPicker` desenha a cor a 18% de opacidade no fundo e cheia no
+ * texto, então a cor precisa ser legível sozinha.
+ */
 const PALETTE = [
+  // Vivas
   "#22C55E",
   "#0EA5E9",
   "#7C3AED",
@@ -20,6 +38,26 @@ const PALETTE = [
   "#EC4899",
   "#14B8A6",
   "#71717A",
+
+  // Escuras — mesma família, outra leitura
+  "#15803D",
+  "#0369A1",
+  "#5B21B6",
+  "#B45309",
+  "#B91C1C",
+  "#BE185D",
+  "#0F766E",
+  "#3F3F46",
+
+  // Outros matizes, para quem já usou os oito primeiros
+  "#65A30D",
+  "#4F46E5",
+  "#9333EA",
+  "#EA580C",
+  "#DC2626",
+  "#DB2777",
+  "#0891B2",
+  "#525252",
 ];
 
 export default function TagsSettings() {

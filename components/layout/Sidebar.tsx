@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+
+import { ChevronDown } from "lucide-react";
 
 import { menuItems } from "@/core/navigation/menu";
 import BrandMark from "@/components/shared/BrandMark";
@@ -40,6 +42,21 @@ export default function Sidebar() {
     return () =>
       nav.removeEventListener("scroll", onScroll);
   }, [pathname]);
+
+  /**
+   * Qual módulo está com a cascata aberta.
+   *
+   * `null` significa "ninguém mexeu ainda", e aí quem abre é o módulo da
+   * rota atual — chegar em /reclame-aqui/analytics já mostra as irmãs,
+   * sem exigir um clique para descobrir que elas existem.
+   *
+   * String vazia é "fechei na mão", e é diferente de `null`: sem essa
+   * distinção, fechar a cascata do módulo em que se está a reabriria
+   * sozinha no render seguinte.
+   */
+  const [expandido, setExpandido] = useState<
+    string | null
+  >(null);
 
   const groups = [
     ...new Set(menuItems.map((item) => item.group)),
@@ -100,29 +117,118 @@ export default function Sidebar() {
                     pathname === item.href ||
                     pathname.startsWith(`${item.href}/`);
 
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={cn(
-                        "group flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors",
-                        active
-                          ? "bg-violet-600 text-white shadow-sm shadow-violet-600/25"
-                          : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
-                      )}
-                    >
-                      <Icon
-                        size={17}
-                        className={cn(
-                          "shrink-0 transition-colors",
-                          active
-                            ? "text-white"
-                            : "text-zinc-400 group-hover:text-zinc-600"
-                        )}
-                      />
+                  const aberto =
+                    expandido === item.href ||
+                    (expandido === null && active);
 
-                      <span className="truncate">{item.title}</span>
-                    </Link>
+                  return (
+                    <div key={item.href}>
+
+                      <div
+                        className={cn(
+                          "group flex items-center rounded-xl transition-colors",
+                          active
+                            ? "bg-violet-600 text-white shadow-sm shadow-violet-600/25"
+                            : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
+                        )}
+                      >
+
+                        <Link
+                          href={item.href}
+                          className="flex min-w-0 flex-1 items-center gap-3 py-2 pl-3 text-sm font-medium"
+                        >
+                          <Icon
+                            size={17}
+                            className={cn(
+                              "shrink-0 transition-colors",
+                              active
+                                ? "text-white"
+                                : "text-zinc-400 group-hover:text-zinc-600"
+                            )}
+                          />
+
+                          <span className="truncate">
+                            {item.title}
+                          </span>
+                        </Link>
+
+                        {/*
+                          A setinha separa dois desejos.
+
+                          Clicar no nome é "quero ir para o módulo" — e
+                          continua funcionando como sempre. Clicar na
+                          seta é "quero ver o que tem dentro", e só isso:
+                          não navega. Juntar os dois num clique só faria
+                          espiar o menu custar uma navegação.
+                        */}
+                        {item.children && (
+                          <button
+                            type="button"
+                            aria-label={`${aberto ? "Recolher" : "Expandir"} ${item.title}`}
+                            aria-expanded={aberto}
+                            onClick={() =>
+                              setExpandido(
+                                aberto ? "" : item.href
+                              )
+                            }
+                            className={cn(
+                              "shrink-0 rounded-lg p-2 transition-colors",
+                              active
+                                ? "text-white/80 hover:bg-white/15 hover:text-white"
+                                : "text-zinc-400 hover:bg-zinc-200/70 hover:text-zinc-700"
+                            )}
+                          >
+                            <ChevronDown
+                              size={14}
+                              className={cn(
+                                "transition-transform",
+                                aberto ? "rotate-180" : ""
+                              )}
+                            />
+                          </button>
+                        )}
+
+                      </div>
+
+                      {item.children && aberto && (
+
+                        <div className="mb-1 mt-0.5 space-y-0.5 border-l border-zinc-200 pl-3 ml-5">
+
+                          {item.children.map((filho) => {
+
+                            /*
+                              O primeiro filho aponta para o próprio
+                              módulo. Comparar por prefixo o marcaria
+                              como ativo em todas as telas de dentro.
+                            */
+                            const ativoFilho =
+                              filho.href === item.href
+                                ? pathname === filho.href
+                                : pathname.startsWith(
+                                    filho.href
+                                  );
+
+                            return (
+                              <Link
+                                key={filho.href}
+                                href={filho.href}
+                                className={cn(
+                                  "block truncate rounded-lg px-3 py-1.5 text-[13px] transition-colors",
+                                  ativoFilho
+                                    ? "bg-violet-50 font-medium text-violet-800"
+                                    : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800"
+                                )}
+                              >
+                                {filho.title}
+                              </Link>
+                            );
+                          })}
+
+                        </div>
+
+                      )}
+
+                    </div>
                   );
                 })}
 

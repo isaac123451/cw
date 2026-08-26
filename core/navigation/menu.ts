@@ -23,6 +23,21 @@ export interface MenuItem {
   href: string;
   icon: typeof LayoutDashboard;
   group: string;
+
+  /**
+   * As telas de dentro do módulo, quando ele tem mais de uma.
+   *
+   * Sem isto, chegar ao Analytics do Reclame Aqui exigia abrir o quadro
+   * primeiro e achar a barra de cima — e essa barra nem estava em todas
+   * as telas. O Isaac pediu o caminho direto: "quando eu for abrir o
+   * reclame aqui e clicar, seja possível abrir uma cascata e ser
+   * possível selecionar algo tipo kanban, analytics, fluxo".
+   *
+   * O item continua sendo um link: clicar no nome leva ao módulo, como
+   * antes. A cascata abre pela setinha, que é o que separa "quero ir
+   * para o módulo" de "quero ver o que tem dentro dele".
+   */
+  children?: { title: string; href: string }[];
 }
 
 export const menuItems: MenuItem[] = [
@@ -37,6 +52,25 @@ export const menuItems: MenuItem[] = [
     href: "/reclame-aqui",
     icon: MessageSquareWarning,
     group: "Operação",
+    children: [
+      { title: "Quadro", href: "/reclame-aqui" },
+      {
+        title: "Analytics",
+        href: "/reclame-aqui/analytics",
+      },
+      {
+        title: "Gráficos",
+        href: "/reclame-aqui/graficos",
+      },
+      {
+        title: "Calculadora",
+        href: "/reclame-aqui/calculadora",
+      },
+      {
+        title: "Configurar fluxo",
+        href: "/reclame-aqui/configuracoes",
+      },
+    ],
   },
   {
     title: "Redes Sociais",

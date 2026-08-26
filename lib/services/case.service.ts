@@ -408,3 +408,47 @@ export function casaComTermo(
       String(campo).toLowerCase().includes(t)
     );
 }
+
+/**
+ * Como se chama, em cada frente, o número que identifica o caso.
+ *
+ * O Isaac corrigiu o vocabulário: "não tem essa de protocolo, tem que
+ * ser o id do reclame aqui". E é verdade — o Reclame Aqui não emite
+ * protocolo, emite um id, e chamar de protocolo faz quem atende
+ * procurar no portal um campo que não existe.
+ *
+ * O dado sempre foi o id: a carga grava `RA-<id do portal>`. O que
+ * estava errado era só o rótulo, em seis telas.
+ *
+ * Cada frente tem o seu nome, e por isso isto é função e não constante:
+ * o Instagram não tem id do Reclame Aqui, e o caso aberto à mão aqui
+ * dentro não tem id de lugar nenhum — tem uma referência nossa.
+ */
+export function idLabel(item: Case) {
+
+  if (isSocial(item)) return "Referência";
+
+  /*
+    O que nasce na própria aplicação começa com CW-.
+
+    Chamar isso de "ID do Reclame Aqui" seria pior do que chamar de
+    protocolo: mandaria procurar no portal um número que a aplicação
+    inventou e que o portal nunca viu.
+  */
+  if (item.protocol.startsWith("CW-")) {
+    return "Referência interna";
+  }
+
+  return "ID do Reclame Aqui";
+}
+
+/**
+ * O identificador como ele é lá fora.
+ *
+ * `RA-` é prefixo nosso, para o número não colidir com o das outras
+ * frentes dentro do banco. No portal, o id é o que vem depois — e é ele
+ * que a pessoa cola na busca do Reclame Aqui.
+ */
+export function idExterno(item: Case) {
+  return item.protocol.replace(/^RA-/, "");
+}

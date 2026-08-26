@@ -22,6 +22,7 @@ import {
 
 import { formatHours } from "@/lib/models/sla";
 import Combobox from "@/components/shared/Combobox";
+import { idExterno, idLabel } from "@/lib/services/case.service";
 
 interface Props {
   data: Case;
@@ -400,7 +401,7 @@ export default function CaseSidebar({
         </p>
 
         <p className="mt-0.5 text-sm text-zinc-500">
-          Protocolo {data.protocol}
+          {idLabel(data)} {idExterno(data)}
         </p>
 
         {data.evaluatedAt && (

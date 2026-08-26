@@ -102,7 +102,21 @@ export function useRascunho<T extends { id: string }>(
       .filter((item) => !esquecidos.includes(item.id))
       .map((item) => edicoes[item.id] ?? item);
 
-    return [...daBase, ...novos];
+    /**
+     * O que acabou de ser criado vai para **cima**.
+     *
+     * Ia para o fim, e o Isaac descreveu o efeito: "quando for criar
+     * apareça na tela para criar e não algo lá em baixo para ser visto
+     * e adicionar, não faz sentido assim". Numa tabela de trinta
+     * categorias, clicar em "Nova categoria" acrescentava uma linha na
+     * trigésima primeira posição — fora da tela. O botão respondia, e
+     * nada parecia ter acontecido; a reação natural é clicar de novo, e
+     * aí nascem duas.
+     *
+     * Em cima, a linha nova aparece onde os olhos já estão, imediatamente
+     * abaixo do botão que a criou.
+     */
+    return [...novos, ...daBase];
   }, [base, edicoes, novos, esquecidos]);
 
   const alterar = useCallback(

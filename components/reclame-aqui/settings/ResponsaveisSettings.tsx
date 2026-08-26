@@ -49,8 +49,7 @@ export default function ResponsaveisSettings() {
   const [novo, setNovo] = useState<{
     teamId: string;
     name: string;
-    role: string;
-  }>({ teamId: "", name: "", role: "" });
+  }>({ teamId: "", name: "" });
 
   const [apagando, setApagando] = useState<{
     teamId: string;
@@ -90,14 +89,21 @@ export default function ResponsaveisSettings() {
     addMember(novo.teamId, {
       name: nome,
       email: "",
-      role: novo.role.trim() || "Atendimento",
+      /*
+        A coluna continua no banco, com um valor fixo.
+
+        É `NOT NULL`, e apagá-la exigiria migração para ganhar nada:
+        o campo não é lido em lugar nenhum. Fixo aqui é mais honesto do
+        que um campo vazio na tela pedindo que alguém invente uma
+        função.
+      */
+      role: "Atendimento",
       online: false,
     } as never);
 
     setNovo({
       teamId: novo.teamId,
       name: "",
-      role: "",
     });
   }
 
@@ -179,22 +185,17 @@ export default function ResponsaveisSettings() {
                   className={campo}
                 />
 
-                <div className="flex gap-2">
+                {/*
+                  A função saiu do cadastro.
 
-                  <input
-                    value={novo.role}
-                    onChange={(e) =>
-                      setNovo({
-                        ...novo,
-                        role: e.target.value,
-                      })
-                    }
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") adicionar();
-                    }}
-                    placeholder="Função (opcional)"
-                    className={campo}
-                  />
+                  Era um campo de texto livre que ninguém lia: nenhuma
+                  tela filtra por ele, nenhuma regra o consulta, nenhum
+                  relatório o mostra. O Isaac perguntou para que serve, e
+                  a resposta honesta é "para nada" — pedir uma decisão
+                  sem consequência é fazer quem cadastra perder tempo e
+                  desconfiar dos campos que importam.
+                */}
+                <div className="flex gap-2">
 
                   <button
                     onClick={adicionar}
@@ -270,18 +271,6 @@ export default function ResponsaveisSettings() {
 
                             <span className="block truncate text-sm font-medium text-zinc-800">
                               {pessoa.name}
-                            </span>
-
-                            {/*
-                              Só a função.
-
-                              O endereço gerado não é informação para
-                              ninguém: mostrar "@sem-acesso.local" faria
-                              parecer que há um e-mail errado no
-                              cadastro, e alguém tentaria "corrigir".
-                            */}
-                            <span className="block truncate text-xs text-zinc-500">
-                              {pessoa.role}
                             </span>
 
                           </span>

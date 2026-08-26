@@ -51,11 +51,37 @@ export default function ChecklistSettings() {
       .includes(search.trim().toLowerCase())
   );
 
+  /**
+   * A chave nasce do nome, e some da tela.
+   *
+   * Ela era uma coluna editável ao lado do item, e o Isaac perguntou
+   * para que serve — pergunta certa: **nada no sistema lê esse campo**.
+   * Nenhuma tela, nenhum serviço, nenhuma rota. Era um campo técnico
+   * exposto a quem cadastra, pedindo uma decisão sem consequência.
+   *
+   * A coluna continua no banco porque é `NOT NULL` e porque um
+   * identificador estável do item pode vir a servir — para uma
+   * integração, um relatório, uma migração. O que muda é quem a
+   * escreve: aqui, derivada do nome, em vez de ninguém saber o que
+   * digitar.
+   */
+  function chaveDe(label: string) {
+    return (
+      label
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "_")
+        .replace(/^_+|_+$/g, "")
+        .slice(0, 48) || "item"
+    );
+  }
+
   function addItem() {
     rascunho.adicionar({
       id: crypto.randomUUID(),
       label: "Novo item",
-      key: "novo_item",
+      key: chaveDe("Novo item"),
       required: false,
       order: rascunho.itens.length + 1,
       active: true,
@@ -110,10 +136,6 @@ export default function ChecklistSettings() {
                 Item do checklist
               </th>
 
-              <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
-                Chave
-              </th>
-
               <th className="whitespace-nowrap px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
                 Obrigatório
               </th>
@@ -143,23 +165,10 @@ export default function ChecklistSettings() {
                     onChange={(e) =>
                       rascunho.alterar(item.id, {
                         label: e.target.value,
+                        key: chaveDe(e.target.value),
                       })
                     }
                     className="h-10 w-full min-w-[240px] rounded-xl border border-zinc-200 px-3 text-sm outline-none transition-colors focus:border-violet-400"
-                  />
-
-                </td>
-
-                <td className="px-5 py-3">
-
-                  <input
-                    value={item.key}
-                    onChange={(e) =>
-                      rascunho.alterar(item.id, {
-                        key: e.target.value,
-                      })
-                    }
-                    className="h-10 w-52 rounded-xl border border-zinc-200 px-3 font-mono text-xs outline-none transition-colors focus:border-violet-400"
                   />
 
                 </td>

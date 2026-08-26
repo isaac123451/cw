@@ -39,6 +39,7 @@ import EvaluationTab from "./EvaluationTab";
 import SocialTab from "./SocialTab";
 import CaseSidebar from "./CaseSidebar";
 import CaseTimeline from "./CaseTimeline";
+import { idExterno, idLabel } from "@/lib/services/case.service";
 
 type Tab =
   | "visao-geral"
@@ -258,8 +259,11 @@ export default function CaseDetail({
 
             <p className="mt-2 text-sm text-zinc-500">
               {data.customer} ·{" "}
-              <span className="font-mono">
-                {data.protocol}
+              <span
+                className="font-mono"
+                title={idLabel(data)}
+              >
+                {idExterno(data)}
               </span>{" "}
               · {br(data.createdAt)}
             </p>

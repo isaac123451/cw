@@ -22,6 +22,7 @@ import ResponsaveisSettings from "@/components/reclame-aqui/settings/Responsavei
 import TeamsSettings from "@/components/reclame-aqui/settings/TeamsSettings";
 import TagsSettings from "@/components/reclame-aqui/settings/TagsSettings";
 import ChecklistSettings from "@/components/reclame-aqui/settings/ChecklistSettings";
+import ModuleNav from "@/components/reclame-aqui/ModuleNav";
 
 const VALID_TABS: SettingsTab[] = [
   "status",
@@ -69,6 +70,8 @@ function ConfiguracoesConteudo() {
         title="Configurações do módulo"
         description="Gerencie status, categorias, subcategorias, times e checklist usados no fluxo operacional."
       />
+
+      <ModuleNav />
 
       <SettingsTabs active={tab} onChange={setTab} />
 
