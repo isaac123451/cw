@@ -21,6 +21,7 @@ const DE_PARA = {
   cliente: "company",
   estabelecimento: "establishment",
   busca: "search",
+  situacao: "situacao",
   de: "de",
   ate: "ate",
 } as const;
@@ -66,7 +67,16 @@ export default function FiltroDaUrl() {
       const valor = params.get(naUrl);
 
       if (valor) {
-        criterio[noFiltro] = valor;
+        /*
+          O valor vem da barra de endereço, então é sempre `string`.
+
+          `situacao` é a única chave de união fechada, e um valor
+          inventado na URL simplesmente não casa com caso nenhum — a
+          lista vem vazia, que é o comportamento certo para um link
+          malformado. A garantia real está no filtro, não no tipo.
+        */
+        (criterio as Record<string, string>)[noFiltro] =
+          valor;
         achou = true;
       }
     }

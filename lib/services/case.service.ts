@@ -1,4 +1,5 @@
 import { Case } from "@/lib/models/case";
+import { hojeNaOperacao } from "@/lib/services/reputation.service";
 
 export interface Distribution {
   label: string;
@@ -451,4 +452,90 @@ export function idLabel(item: Case) {
  */
 export function idExterno(item: Case) {
   return item.protocol.replace(/^RA-/, "");
+}
+
+/* ============================================================
+   SITUAÇÃO — OS NÚMEROS DO PAINEL, COMO FILTRO
+============================================================ */
+
+/**
+ * As situações que o painel sabe apontar.
+ *
+ * Em português porque entram na barra de endereço: um link colado num
+ * chat é lido por gente, e `?situacao=vencidas` diz o que faz.
+ *
+ * Moram aqui, e não no contexto, porque a regra que **conta** e a que
+ * **filtra** têm de ser a mesma — e o contexto já importa deste
+ * arquivo, então o caminho contrário fecharia um ciclo.
+ */
+export type SituacaoDoCaso =
+  | "sem-resposta"
+  | "vencidas"
+  | "na-fila"
+  | "risco";
+
+export const ROTULO_DA_SITUACAO: Record<
+  SituacaoDoCaso,
+  string
+> = {
+  "sem-resposta": "Sem resposta pública",
+  vencidas: "Vencidas há +7 dias",
+  "na-fila": "Na fila da operação",
+  risco: "Risco de cancelamento",
+};
+
+/**
+ * O corte de "vencida": sete dias atrás, no fuso da operação.
+ *
+ * Sete dias porque é onde o Reclame Aqui passa a marcar a reclamação
+ * como vencida no painel público — não é um número escolhido aqui.
+ */
+export function seteDiasAtras() {
+
+  const limite = new Date(
+    `${hojeNaOperacao()}T00:00:00Z`
+  );
+
+  limite.setUTCDate(limite.getUTCDate() - 7);
+
+  return limite.toISOString().slice(0, 10);
+}
+
+/**
+ * O caso está na situação apontada pelo painel?
+ *
+ * Mesma regra que o painel usa para **contar**, agora disponível para
+ * **filtrar**. Estavam duplicadas: o dashboard somava "sem resposta
+ * pública" com uma expressão sua, e não havia como pedir a lista dessa
+ * mesma conta. Contagem e lista que discordam é o defeito clássico
+ * desse tipo de tela, e a única defesa é as duas saírem daqui.
+ *
+ * `corte` entra por parâmetro em vez de ser calculado dentro porque
+ * isto roda uma vez por caso — 341 chamadas a `new Date` por render
+ * para responder sempre a mesma pergunta.
+ */
+export function naSituacao(
+  item: Case,
+  situacao: SituacaoDoCaso,
+  corte: string
+) {
+
+  const semResposta =
+    isReclameAqui(item) &&
+    (item.publicResponse ?? "").trim() === "";
+
+  switch (situacao) {
+
+    case "sem-resposta":
+      return semResposta;
+
+    case "vencidas":
+      return semResposta && item.createdAt < corte;
+
+    case "na-fila":
+      return isOpen(item);
+
+    case "risco":
+      return Boolean(item.churnRisk);
+  }
 }

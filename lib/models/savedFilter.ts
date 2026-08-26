@@ -36,6 +36,7 @@ const LABELS: Record<keyof CaseFilters, string> = {
   establishment: "Estabelecimento",
   de: "A partir de",
   ate: "Até",
+  situacao: "Situação",
 };
 
 const FIELDS = Object.keys(
@@ -53,6 +54,7 @@ export const emptyCriteria: CaseFilters = {
   establishment: "",
   de: "",
   ate: "",
+  situacao: "",
 };
 
 /** Quantos campos estão preenchidos — zero significa "sem filtro". */

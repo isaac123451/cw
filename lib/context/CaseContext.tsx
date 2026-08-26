@@ -23,6 +23,9 @@ import { hojeNaOperacao } from "@/lib/services/reputation.service";
 import {
   casaComTermo,
   moverPara,
+  naSituacao,
+  seteDiasAtras,
+  SituacaoDoCaso,
 } from "@/lib/services/case.service";
 import type { Gravacao } from "@/lib/context/sync";
 
@@ -128,6 +131,22 @@ export interface CaseFilters {
    */
   de: string;
   ate: string;
+
+  /**
+   * Recorte por situação, que não é um campo do caso.
+   *
+   * Os outros filtros comparam um valor com uma coluna. Estes são
+   * perguntas da operação que atravessam colunas: "sem resposta
+   * pública" olha `publicResponse`, "vencida" cruza isso com a data,
+   * "risco" olha `churnRisk`, "na fila" olha o status.
+   *
+   * Existem porque os números do painel eram becos sem saída: a tela
+   * dizia "14 sem resposta pública" e não havia caminho da contagem
+   * para as catorze. Quem quisesse a lista remontava o filtro à mão, e
+   * como não havia filtro para isso, não remontava — lia o número e
+   * seguia em frente.
+   */
+  situacao: SituacaoDoCaso | "";
 }
 
 export const emptyFilters: CaseFilters = {
@@ -140,6 +159,7 @@ export const emptyFilters: CaseFilters = {
   establishment: "",
   de: "",
   ate: "",
+  situacao: "",
 };
 
 interface CaseContextType {
@@ -495,6 +515,8 @@ export function CaseProvider({
       .trim()
       .toLowerCase();
 
+    const corteDeVencimento = seteDiasAtras();
+
     return cases.filter((item) => {
 
       if (
@@ -553,6 +575,24 @@ export function CaseProvider({
       }
 
       if (filters.ate && item.createdAt > filters.ate) {
+        return false;
+      }
+
+      /*
+        A situação, que cruza colunas.
+
+        `corteDeVencimento` é calculado uma vez fora do laço: dentro
+        dele seriam 341 construções de Date por render, para responder
+        sempre a mesma pergunta.
+      */
+      if (
+        filters.situacao &&
+        !naSituacao(
+          item,
+          filters.situacao,
+          corteDeVencimento
+        )
+      ) {
         return false;
       }
 

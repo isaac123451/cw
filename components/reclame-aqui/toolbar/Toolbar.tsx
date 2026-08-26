@@ -25,6 +25,7 @@ import TransferModal from "@/components/reclame-aqui/toolbar/TransferModal";
 import SavedFilters from "@/components/reclame-aqui/toolbar/SavedFilters";
 import SearchSelect from "@/components/shared/SearchSelect";
 import { hojeNaOperacao } from "@/lib/services/reputation.service";
+import { ROTULO_DA_SITUACAO } from "@/lib/services/case.service";
 
 interface Props {
   view: "kanban" | "list";
@@ -278,6 +279,26 @@ export default function Toolbar({
               </button>
             );
           })}
+
+          {/*
+            A situação, quando se chega por um cartão do painel.
+
+            Não tem seletor próprio: ninguém escolhe "vencidas há +7
+            dias" numa caixa de opções, chega-se aqui clicando no número
+            que apontou para elas. O que faltava era o caminho de volta
+            — sem esta etiqueta, a fila mostrava onze de trezentas e
+            quarenta e uma sem dizer por quê, e parecia base sumida.
+          */}
+          {filters.situacao && (
+            <button
+              onClick={() => setFilter("situacao", "")}
+              title="Remover o recorte por situação e ver a fila inteira"
+              className="flex h-10 items-center gap-1.5 rounded-xl bg-violet-50 px-3 text-sm font-medium text-violet-700 ring-1 ring-inset ring-violet-200 transition-colors hover:bg-violet-100"
+            >
+              {ROTULO_DA_SITUACAO[filters.situacao]}
+              <X size={14} />
+            </button>
+          )}
 
           <SavedFilters
             criteria={filters}

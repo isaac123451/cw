@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo } from "react";
 
 import {
@@ -26,17 +27,64 @@ import CategoryDistribution from "@/components/dashboard/CategoryDistribution";
 
 import { useCases } from "@/lib/context/CaseContext";
 import { useSession } from "@/lib/context/SessionContext";
+import { useNps } from "@/lib/context/NpsContext";
+import { useAgenda } from "@/lib/context/AgendaContext";
 
-import { isOpen, isReclameAqui } from "@/lib/services/case.service";
+import { STATUS_SEM_TRATATIVA } from "@/lib/models/nps";
+
+import {
+  isOpen,
+  isReclameAqui,
+  isSocial,
+  seteDiasAtras,
+} from "@/lib/services/case.service";
 import { hojeNaOperacao } from "@/lib/services/reputation.service";
 import FrentesResumo from "@/components/dashboard/FrentesResumo";
 
-/** Atalhos para onde a operação realmente age. */
-const atalhos = [
+/**
+ * Atalhos para onde a operação realmente age.
+ *
+ * Eram três, todos do Reclame Aqui — o painel abria falando das três
+ * frentes e o rodapé oferecia caminho para uma. Os de agora cobrem as
+ * três, mais o que se faz depois de resolver: registrar impacto e
+ * agendar retorno.
+ *
+ * `contar` é opcional e transforma o atalho num número com destino: um
+ * link chamado "NPS" é uma navegação, um chamado "NPS · 23 sem
+ * tratativa" é uma decisão.
+ */
+const atalhos: {
+  label: string;
+  href: string;
+  hint: string;
+  contar?: (dados: {
+    semTratativaNps: number;
+    socialAbertos: number;
+    tarefasHoje: number;
+  }) => number;
+}[] = [
   {
     label: "Fila do Reclame Aqui",
     href: "/reclame-aqui",
     hint: "Quadro e lista das reclamações",
+  },
+  {
+    label: "NPS sem tratativa",
+    href: "/nps",
+    hint: "Respostas da pesquisa que ninguém pegou",
+    contar: (d) => d.semTratativaNps,
+  },
+  {
+    label: "Redes sociais",
+    href: "/redes-sociais",
+    hint: "Instagram, WhatsApp e ManyChat",
+    contar: (d) => d.socialAbertos,
+  },
+  {
+    label: "Agenda de hoje",
+    href: "/agenda",
+    hint: "Retornos e lembretes do dia",
+    contar: (d) => d.tarefasHoje,
   },
   {
     label: "Analytics de reputação",
@@ -44,9 +92,19 @@ const atalhos = [
     hint: "Nota, indicadores e diagnóstico",
   },
   {
+    label: "Gráficos e dados",
+    href: "/reclame-aqui/graficos",
+    hint: "Tempo de resposta, causas e movimento",
+  },
+  {
     label: "Calculadora",
     href: "/reclame-aqui/calculadora",
     hint: "Simule o efeito de novas avaliações",
+  },
+  {
+    label: "Impacto no negócio",
+    href: "/impacto",
+    hint: "Registrar o resultado de uma tratativa",
   },
 ];
 
@@ -54,6 +112,9 @@ export default function DashboardPage() {
 
   const { cases } = useCases();
   const session = useSession();
+  const { responses } = useNps();
+  const { tasks } = useAgenda();
+  const router = useRouter();
 
   const metrics = useMemo(() => {
 
@@ -65,12 +126,15 @@ export default function DashboardPage() {
         (item.publicResponse ?? "").trim() === ""
     );
 
-    // Sem resposta há mais de 7 dias — o que derruba a nota.
-    const limite = new Date(
-      `${hojeNaOperacao()}T00:00:00Z`
-    );
-    limite.setUTCDate(limite.getUTCDate() - 7);
-    const corte = limite.toISOString().slice(0, 10);
+    /*
+      Sem resposta há mais de 7 dias — o que derruba a nota.
+
+      O corte vem de `case.service` porque a lista filtrada usa o
+      mesmo. Painel e fila que discordam sobre o que é "vencida" é
+      exatamente o defeito que estes cartões clicáveis criariam se cada
+      um tivesse a sua conta.
+    */
+    const corte = seteDiasAtras();
 
     return {
       abertos: abertos.length,
@@ -83,6 +147,31 @@ export default function DashboardPage() {
     };
 
   }, [cases]);
+
+  /**
+   * O que cada atalho tem para mostrar.
+   *
+   * Uma conta só, memorizada junto: são três varreduras sobre listas
+   * que a tela já tem em memória, e fazê-las dentro do `map` do rodapé
+   * seria repeti-las a cada render do painel.
+   */
+  const contagens = useMemo(
+    () => ({
+      semTratativaNps: responses.filter(
+        (item) => item.status === STATUS_SEM_TRATATIVA
+      ).length,
+
+      socialAbertos: cases.filter(
+        (item) => isSocial(item) && isOpen(item)
+      ).length,
+
+      tarefasHoje: tasks.filter(
+        (item) =>
+          !item.done && item.dueDate <= hojeNaOperacao()
+      ).length,
+    }),
+    [responses, cases, tasks]
+  );
 
   const primeiroNome =
     session?.name?.split(" ")[0] ?? "";
@@ -125,14 +214,32 @@ export default function DashboardPage() {
           trabalho, mesmo fora da janela.
         </p>
 
+        {/*
+          Os quatro números, agora com destino.
+
+          Eram becos sem saída: a tela dizia "14 sem resposta pública" e
+          não havia caminho da contagem para as catorze. Quem quisesse a
+          lista atravessava a aplicação e remontava o filtro à mão — e
+          como não havia filtro para "sem resposta", não remontava.
+
+          Cada cartão leva à fila já recortada pela mesma regra que o
+          contou (`naSituacao`, em `case.service`), e é isso que impede
+          o defeito clássico dessas telas: o painel dizer 14 e a lista
+          mostrar 11.
+        */}
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
 
           <StatTile
             label="Sem resposta pública"
-            description="Reclamações que ainda não foram respondidas no portal. É o que mais pesa na nota."
+            description="Reclamações que ainda não foram respondidas no portal. É o que mais pesa na nota. Clique para ver a lista."
             value={metrics.semResposta}
             hint="em toda a base"
             icon={MessageSquareWarning}
+            onClick={() =>
+              router.push(
+                "/reclame-aqui?situacao=sem-resposta"
+              )
+            }
             tone={
               metrics.semResposta > 0
                 ? "danger"
@@ -142,10 +249,15 @@ export default function DashboardPage() {
 
           <StatTile
             label="Vencidas há +7 dias"
-            description="Sem resposta há mais de uma semana — prioridade máxima."
+            description="Sem resposta há mais de uma semana — prioridade máxima. Clique para ver a lista."
             value={metrics.vencidos}
             hint="em toda a base"
             icon={Timer}
+            onClick={() =>
+              router.push(
+                "/reclame-aqui?situacao=vencidas"
+              )
+            }
             tone={
               metrics.vencidos > 0 ? "warning" : "success"
             }
@@ -153,16 +265,22 @@ export default function DashboardPage() {
 
           <StatTile
             label="Na fila da operação"
-            description="Casos que dependem de alguma ação do time."
+            description="Casos que dependem de alguma ação do time. Clique para ver a lista."
             value={metrics.abertos}
             hint="em toda a base"
             icon={Inbox}
+            onClick={() =>
+              router.push("/reclame-aqui?situacao=na-fila")
+            }
             tone="info"
           />
 
           <StatTile
             label="Risco de cancelamento"
-            description="Clientes que avaliaram mal e não voltariam a fazer negócio."
+            description="Contas marcadas como caso de retenção — o cliente sinalizou que pode cancelar. Clique para ver a lista."
+            onClick={() =>
+              router.push("/reclame-aqui?situacao=risco")
+            }
             value={metrics.churn}
             hint="em toda a base"
             icon={TriangleAlert}
@@ -235,6 +353,20 @@ export default function DashboardPage() {
                       </span>
 
                     </span>
+
+                    {/*
+                      O número só aparece quando é maior que zero.
+
+                      Uma etiqueta "0" em quatro atalhos é ruído com
+                      cara de alerta; a ausência já diz que não há nada
+                      esperando ali.
+                    */}
+                    {item.contar &&
+                      item.contar(contagens) > 0 && (
+                        <span className="shrink-0 rounded-full bg-violet-50 px-2 py-0.5 text-[11px] font-semibold text-violet-700">
+                          {item.contar(contagens)}
+                        </span>
+                      )}
 
                     <ArrowRight
                       size={15}
