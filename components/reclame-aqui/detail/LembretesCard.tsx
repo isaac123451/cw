@@ -189,8 +189,8 @@ export default function LembretesCard({
       {doCaso.length === 0 ? (
 
         <p className="rounded-xl border border-dashed border-zinc-200 py-8 text-center text-sm text-zinc-400">
-          Nenhum lembrete marcado para esta reclamação —
-          nem aqui, nem pela extensão.
+          Nenhum lembrete marcado para este caso — nem
+          aqui, nem pela extensão.
         </p>
 
       ) : (

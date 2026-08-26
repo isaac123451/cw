@@ -20,6 +20,7 @@ import {
 
 import { slaStatus } from "@/lib/services/sla.service";
 import { isOpen } from "@/lib/services/case.service";
+import { parseElapsedText } from "@/lib/services/case.mapper";
 import { slugify } from "@/lib/services/slug";
 
 export interface AssistantLink {
@@ -37,6 +38,25 @@ export interface AssistantAnswer {
 
 export interface AssistantInput {
   cases: Case[];
+
+  /**
+   * As respostas de NPS, quando a tela as tem.
+   *
+   * Opcional porque o assistente é chamado de mais de um lugar e nem
+   * todos carregam o NPS. As rotinas que dependem dele dizem que não
+   * têm o dado em vez de responder sobre uma lista vazia — "o NPS está
+   * em 0" seria uma afirmação falsa dita com a mesma confiança das
+   * verdadeiras.
+   */
+  nps?: {
+    score: number;
+    status: string;
+    churnRisk?: boolean;
+    respondedAt: string;
+    customer: string;
+    comment?: string;
+  }[];
+
   tasks: AgendaTask[];
   impacts: ImpactRecord[];
   rules: SlaRule[];
@@ -634,6 +654,18 @@ const skills: Skill[] = [
     },
   },
 
+  /**
+   * O tempo de resposta pela **distribuição**, e não pela média.
+   *
+   * A resposta era a média, e a média mente aqui: medido na base real,
+   * ela dá 21 dias enquanto a mediana é 7 e a pior levou 171. Quem
+   * ouve "21 dias" imagina que os casos se parecem uns com os outros;
+   * na verdade 30% passaram de quinze dias e é essa cauda que gera
+   * avaliação baixa.
+   *
+   * Foi a mesma correção que o Isaac fez sobre o teto: "não é média,
+   * mas sim sobre o máximo".
+   */
   {
     intent: "tempo-resposta",
     triggers: [
@@ -641,27 +673,257 @@ const skills: Skill[] = [
       "tempo medio",
       "demora",
       "quanto tempo",
-      "demora",
       "rapidez",
-      "quanto tempo",
       "media",
+      "estamos demorando",
+      "demorando muito",
     ],
     run: ({ cases }) => {
 
       const janela = currentWindow(cases);
       const resumo = getReputation(janela);
 
+      const minutos = janela
+        .filter(
+          (item) =>
+            (item.publicResponse ?? "").trim() !== ""
+        )
+        .map((item) =>
+          parseElapsedText(item.responseTime)
+        )
+        .filter(
+          (valor): valor is number => valor !== null
+        )
+        .sort((a, b) => a - b);
+
+      if (minutos.length === 0) {
+        return {
+          intent: "tempo-resposta",
+          paragraphs: [
+            "Nenhuma reclamação da janela de 6 meses tem tempo de resposta registrado, então não dá para dizer quanto estamos demorando.",
+            "O tempo vem da importação do Reclame Aqui; sem ele, o que sobra é o índice de resposta, que hoje está em " +
+              `${ptBR(scoreFrom(getRawCounts(janela)).responseIndex)}%.`,
+          ],
+          links: [
+            {
+              label: "Ver gráficos",
+              href: "/reclame-aqui/graficos",
+            },
+          ],
+        };
+      }
+
+      const mediana =
+        minutos[Math.floor(minutos.length / 2)];
+
+      const pior = minutos[minutos.length - 1];
+
+      const acimaDeQuinze = minutos.filter(
+        (valor) => valor > 21600
+      ).length;
+
+      const dentroDeUmDia = minutos.filter(
+        (valor) => valor <= 1440
+      ).length;
+
+      const parte = (n: number) =>
+        Math.round((n / minutos.length) * 100);
+
       return {
         intent: "tempo-resposta",
         paragraphs: [
-          `O tempo médio até a primeira resposta pública é de ${formatElapsed(resumo.responseMinutes)}, calculado sobre as reclamações respondidas da janela de 6 meses.`,
-          "O tempo não entra direto na fórmula da nota, mas atraso costuma virar réplica do consumidor e avaliação baixa.",
+          `Metade das respostas saiu em até ${formatElapsed(mediana)}, e a pior levou ${formatElapsed(pior)} — sobre ${minutos.length} reclamação(ões) respondidas da janela de 6 meses.`,
+          `${dentroDeUmDia} (${parte(dentroDeUmDia)}%) foram respondidas em até 24 h; ${acimaDeQuinze} (${parte(acimaDeQuinze)}%) passaram de 15 dias, que é onde a avaliação vem baixa mesmo com a resposta certa.`,
+          `A média é ${formatElapsed(resumo.responseMinutes)}, e ela esconde essa cauda: alguns casos muito longos puxam o número sem que a maioria se pareça com ele. Prefira a mediana para decidir.`,
         ],
         links: [
           {
-            label: "Ver evolução do tempo",
+            label: "Ver a distribuição",
             href: "/reclame-aqui/graficos",
           },
+          {
+            label: "Ver o que está sem resposta",
+            href: "/reclame-aqui?situacao=sem-resposta",
+          },
+        ],
+      };
+    },
+  },
+
+  /**
+   * Como está o NPS.
+   *
+   * O assistente não sabia falar da pesquisa — respondia sobre o
+   * Reclame Aqui a quem perguntasse "como está o NPS", porque "nota"
+   * casava com o gatilho da reputação. Duas frentes com a palavra
+   * "nota" e uma resposta só é como se dá a informação errada com
+   * segurança.
+   */
+  {
+    intent: "nps",
+    triggers: [
+      "nps",
+      "pesquisa",
+      "detratores",
+      "detrator",
+      "promotores",
+      "promotor",
+      "como esta o nps",
+    ],
+    run: ({ nps }) => {
+
+      if (!nps) {
+        return {
+          intent: "nps",
+          paragraphs: [
+            "Não recebi as respostas de NPS nesta tela, então não vou arriscar um número.",
+            "A tela do NPS tem o indicador do período, a fila sem tratativa e os detratores por causa raiz.",
+          ],
+          links: [
+            { label: "Abrir NPS", href: "/nps" },
+            {
+              label: "Análise do NPS",
+              href: "/nps/analise",
+            },
+          ],
+        };
+      }
+
+      if (nps.length === 0) {
+        return {
+          intent: "nps",
+          paragraphs: [
+            "Não há nenhuma resposta de NPS na base — não é nota zero, é ausência de resposta.",
+            "A importação do Wootric roda na rotina agendada; se ela não estiver trazendo nada, a tela do NPS mostra o motivo.",
+          ],
+          links: [{ label: "Abrir NPS", href: "/nps" }],
+        };
+      }
+
+      const promotores = nps.filter(
+        (item) => item.score >= 9
+      ).length;
+
+      const neutros = nps.filter(
+        (item) => item.score >= 7 && item.score <= 8
+      ).length;
+
+      const detratores = nps.filter(
+        (item) => item.score <= 6
+      ).length;
+
+      const indicador = Math.round(
+        ((promotores - detratores) / nps.length) * 100
+      );
+
+      const semTratativa = nps.filter((item) =>
+        item.status.toLowerCase().includes("novo")
+      ).length;
+
+      const emRisco = nps.filter(
+        (item) => item.churnRisk
+      ).length;
+
+      return {
+        intent: "nps",
+        paragraphs: [
+          `O NPS da base é ${indicador}, sobre ${nps.length} resposta(s): ${promotores} promotor(es), ${neutros} neutro(s) e ${detratores} detrator(es).`,
+          semTratativa > 0
+            ? `${semTratativa} resposta(s) ainda estão sem tratativa — é a fila que fecha o ciclo, e detrator sem retorno vira reclamação pública.`
+            : "Todas as respostas já entraram em tratativa.",
+          emRisco > 0
+            ? `${emRisco} conta(s) estão marcadas como caso de retenção a partir da pesquisa.`
+            : "Nenhuma conta foi marcada como retenção a partir da pesquisa.",
+        ],
+        links: [
+          { label: "Abrir NPS", href: "/nps" },
+          {
+            label: "Análise do NPS",
+            href: "/nps/analise",
+          },
+        ],
+      };
+    },
+  },
+
+  /**
+   * Quem precisa de retenção, nas três frentes.
+   *
+   * A rotina de churn existente olha só as reclamações. A marca de
+   * retenção agora existe também no NPS, e a pergunta "quem está para
+   * cancelar" não é sobre um canal — é sobre a carteira.
+   */
+  {
+    intent: "retencao",
+    triggers: [
+      "quem vai cancelar",
+      "retencao",
+      "reter",
+      "para cancelar",
+      "casos de retencao",
+      "risco de cancelamento",
+    ],
+    run: ({ cases, nps }) => {
+
+      /*
+        Conta **todas** as marcadas, e diz quantas seguem abertas.
+
+        A primeira versão filtrava por `isOpen`, e sobre a base real
+        isso dava zero: as 28 reclamações marcadas estão todas em "Não
+        resolvido", que é status de encerrado. O assistente diria
+        "nenhuma" enquanto o painel dizia 28, e as duas telas estariam
+        certas pela própria régua — que é exatamente como se perde a
+        confiança numa ferramenta.
+
+        A régua passa a ser a mesma do painel e da fila
+        (`naSituacao`): marcada é marcada. O quanto ainda está aberto
+        entra como detalhe, porque é informação e não critério — uma
+        reclamação encerrada como "não resolvido" com o cliente
+        falando em cancelar continua sendo trabalho de retenção.
+      */
+      const doRa = cases.filter((item) => item.churnRisk);
+
+      const abertas = doRa.filter(isOpen);
+
+      const doNps = (nps ?? []).filter(
+        (item) => item.churnRisk
+      );
+
+      const total = doRa.length + doNps.length;
+
+      if (total === 0) {
+        return {
+          intent: "retencao",
+          paragraphs: [
+            "Nenhuma conta está marcada como caso de retenção — nem nas reclamações, nem no NPS.",
+            "A marca é manual: quem ouve o cliente falar em cancelar aperta o botão na ficha, e é ele que junta essas contas numa fila só.",
+          ],
+          links: [
+            {
+              label: "Ver a fila",
+              href: "/reclame-aqui?situacao=risco",
+            },
+          ],
+        };
+      }
+
+      return {
+        intent: "retencao",
+        paragraphs: [
+          `${total} conta(s) estão marcadas como retenção: ${doRa.length} vinda(s) de reclamação e ${doNps.length} do NPS. É o mesmo número do cartão "Risco de cancelamento" no painel.`,
+          abertas.length > 0
+            ? `Dessas, ${abertas.length} reclamação(ões) ainda estão em aberto — a mais antiga é de ${brDate([...abertas].sort((a, b) => a.createdAt.localeCompare(b.createdAt))[0].createdAt)}.`
+            : `Nenhuma das ${doRa.length} reclamações marcadas segue em aberto: foram encerradas, a maioria como "não resolvido". A conta continua precisando de retenção mesmo assim — o caso fechou, a relação não.`,
+          nps === undefined
+            ? "Não recebi as respostas de NPS nesta tela, então a contagem acima cobre só as reclamações."
+            : "A conta cobre as duas frentes que têm a marca.",
+        ],
+        links: [
+          {
+            label: "Reclamações em retenção",
+            href: "/reclame-aqui?situacao=risco",
+          },
+          { label: "Abrir NPS", href: "/nps" },
         ],
       };
     },
@@ -696,7 +958,7 @@ function fallback(
     intent: "nao-entendi",
     paragraphs: [
       "Não entendi essa. Respondo com número da base, e prefiro dizer que não sei a chutar.",
-      "Sei falar de: nota e reputação, quantas avaliações faltam para uma meta, fila sem resposta, prazos e SLA, risco de cancelamento, causa raiz por categoria, impacto financeiro, agenda e tempo de resposta.",
+      "Sei falar de: nota e reputação, quantas avaliações faltam para uma meta, fila sem resposta, prazos e SLA, contas que precisam de retenção nas três frentes, causa raiz por categoria, NPS e detratores, impacto financeiro, agenda, e quanto tempo o consumidor esperou de verdade — pela mediana e pela cauda, não pela média.",
       pareceConta
         ? "Se for conta sobre a nota, tente “quantas avaliações faltam para a nota 9?” — eu simulo sobre a base real e digo o teto do período."
         : "Tente “quais casos estão fora do prazo?” ou “qual a causa raiz mais recorrente?”.",

@@ -30,6 +30,7 @@ import { useCases } from "@/lib/context/CaseContext";
 import { useAgenda } from "@/lib/context/AgendaContext";
 import { useImpact } from "@/lib/context/ImpactContext";
 import { useSla } from "@/lib/context/SlaContext";
+import { useNps } from "@/lib/context/NpsContext";
 import { useEstablishments } from "@/lib/context/EstablishmentsContext";
 
 import {
@@ -79,6 +80,7 @@ export default function AssistentePage() {
   const { tasks } = useAgenda();
   const { records } = useImpact();
   const { rules } = useSla();
+  const { responses } = useNps();
   const { establishments } = useEstablishments();
 
   const [message, setMessage] = useState("");
@@ -107,9 +109,29 @@ export default function AssistentePage() {
     });
   }, [turns]);
 
+  /*
+    O NPS entra no que o assistente enxerga.
+
+    Sem ele, "como está o NPS?" caía na rotina da reputação — porque
+    as duas frentes falam em "nota" — e a resposta vinha sobre o
+    Reclame Aqui, com a mesma segurança de uma resposta certa.
+  */
   const localInput = useMemo(
-    () => ({ cases, tasks, impacts: records, rules }),
-    [cases, tasks, records, rules]
+    () => ({
+      cases,
+      nps: responses.map((item) => ({
+        score: item.score,
+        status: item.status,
+        churnRisk: item.churnRisk,
+        respondedAt: item.respondedAt,
+        customer: item.customer,
+        comment: item.comment,
+      })),
+      tasks,
+      impacts: records,
+      rules,
+    }),
+    [cases, responses, tasks, records, rules]
   );
 
   async function perguntar(texto: string) {

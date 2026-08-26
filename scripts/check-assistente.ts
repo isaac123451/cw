@@ -90,8 +90,34 @@ async function main() {
 
   const cases = linhas.map((r) => toCaseModel(r));
 
+  /*
+    O NPS entra na entrada porque as rotinas novas dependem dele.
+
+    Com `nps` ausente elas respondem "não recebi esse dado", que é a
+    resposta certa mas não exercita a conta. Aqui vem do banco, como na
+    tela.
+  */
+  const respostas = await prisma.npsResponse.findMany({
+    select: {
+      score: true,
+      status: true,
+      churnRisk: true,
+      respondedAt: true,
+      customer: true,
+      comment: true,
+    },
+  });
+
   const entrada: AssistantInput = {
     cases,
+    nps: respostas.map((r) => ({
+      score: r.score,
+      status: r.status,
+      churnRisk: r.churnRisk,
+      respondedAt: r.respondedAt.toISOString(),
+      customer: r.customer,
+      comment: r.comment,
+    })),
     tasks: [],
     impacts: [],
     rules: [],
@@ -130,6 +156,18 @@ async function main() {
       "quais reclamações estão sem resposta?",
       "sem-resposta",
     ],
+
+    /*
+      As rotinas novas, e por que cada uma existe.
+
+      "como está o NPS" caía em "nota" antes — as duas frentes falam
+      em nota, e o assistente respondia sobre o Reclame Aqui com a
+      mesma segurança de uma resposta certa.
+    */
+    ["como está o NPS?", "nps"],
+    ["quantos detratores temos?", "nps"],
+    ["quem precisa de retenção?", "retencao"],
+    ["estamos demorando muito para responder?", "tempo-resposta"],
   ];
 
   for (const [pergunta, rotina] of esperado) {
