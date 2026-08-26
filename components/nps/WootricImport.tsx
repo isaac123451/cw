@@ -8,9 +8,10 @@ import Modal, {
   GhostButton,
 } from "@/components/shared/Modal";
 
+import type { ResultadoImportacao } from "@/lib/services/wootric.import";
+
 import {
   importWootric,
-  ResultadoImportacao,
 } from "@/lib/actions/nps";
 
 interface Props {

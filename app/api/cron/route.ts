@@ -19,7 +19,7 @@ import { deliverWebhook } from "@/lib/services/webhook.service";
 
 import { limparDesafiosVelhos } from "@/lib/auth/two-factor";
 
-import { importarDoWootric } from "@/lib/actions/nps";
+import { importarDoWootric } from "@/lib/services/wootric.import";
 import { temWootric } from "@/lib/services/wootric.service";
 
 export const runtime = "nodejs";
