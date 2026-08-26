@@ -715,6 +715,52 @@ export async function importWootric(input?: {
 
   const ctx = await requireRole("AGENTE", MODULO);
 
+  if (!ctx) {
+    return {
+      lidas: 0,
+      novas: 0,
+      atualizadas: 0,
+      semTratativa: 0,
+      desde: "",
+      erro: "Sem banco configurado — a importação precisa de onde gravar.",
+    };
+  }
+
+  const r = await importarDoWootric(ctx.prisma, input);
+
+  /* Aqui é server action: `updateTag` faz a própria sessão já ler o novo. */
+  if (r.novas > 0 || r.atualizadas > 0) {
+    updateTag(WORKSPACE_TAG);
+  }
+
+  return r;
+}
+
+/**
+ * A importação em si, sem exigir sessão de ninguém.
+ *
+ * Separada da action de propósito, e o motivo é um defeito medido: a
+ * rotina diária passou a chamar a importação e recebia **"Sessão
+ * expirada. Entre novamente."** Ela autentica pelo próprio token de
+ * cron e não tem usuário nenhum logado — `requireRole` a recusava, e o
+ * recurso nascia morto sem que nada quebrasse: o cron respondia 200, o
+ * campo de erro ficava no JSON, e a base envelhecia em silêncio.
+ *
+ * A autorização é de quem chama: a action de tela exige AGENTE, a rota
+ * de cron exige o segredo dela. As duas chegam aqui já autorizadas, e
+ * esta função só se ocupa de ler o Wootric e gravar.
+ */
+export async function importarDoWootric(
+  prisma: PrismaClient,
+  input?: {
+    dias?: number;
+    ateDias?: number;
+    desdeIso?: string;
+  }
+): Promise<ResultadoImportacao> {
+
+  const ctx = { prisma };
+
   const vazio = {
     lidas: 0,
     novas: 0,
@@ -722,13 +768,6 @@ export async function importWootric(input?: {
     semTratativa: 0,
     desde: "",
   };
-
-  if (!ctx) {
-    return {
-      ...vazio,
-      erro: "Sem banco configurado — a importação precisa de onde gravar.",
-    };
-  }
 
   if (!temWootric()) {
     return {
@@ -803,7 +842,16 @@ export async function importWootric(input?: {
 
     const contas = await gravarLote(ctx.prisma, itens);
 
-    updateTag(WORKSPACE_TAG);
+    /*
+      A invalidação do cache é de quem chama, não daqui.
+
+      `updateTag` só existe dentro de uma server action; a rota de cron
+      chama esta mesma função e recebia o erro em cheio — outra vez com
+      200 na resposta e a falha escondida num campo. Cada chamador
+      invalida com o que lhe cabe: a tela com `updateTag`, para ler o
+      valor novo na sequência; o cron com `revalidateTag`, que é o que
+      um route handler pode.
+    */
 
     const ultima = itens[itens.length - 1]?.respondedAt;
 
@@ -1153,4 +1201,61 @@ export async function exportNps(ids?: string[]): Promise<{
     nome: `cw-nps-${new Date().toISOString().slice(0, 10)}.xlsx`,
     total: linhas.length,
   };
+}
+
+/**
+ * Grava o telefone e o estabelecimento de um ciclo de NPS.
+ *
+ * Existe separada de `saveNpsResponse` porque a intenção é outra.
+ * Aquela grava o ciclo inteiro — nota, comentário, data da resposta —
+ * e é o formulário de cadastro. Esta é a ficha aberta durante a
+ * tratativa: quem está com o cliente na linha descobre o telefone e o
+ * restaurante, e precisa anotar **isso**, sem passar por um formulário
+ * que pede a nota de novo.
+ *
+ * Medido antes de escrever: dos 959 ciclos na base, **zero** têm
+ * telefone e **zero** têm estabelecimento — contra 958 com e-mail. A
+ * carga do Wootric não traz nenhum dos dois, e não havia onde
+ * preencher. É o que o Isaac relatou: "não tem como adicionar o
+ * telefone, não tem como adicionar portal".
+ *
+ * O e-mail fica de fora de propósito: é a **única** chave que liga este
+ * ciclo às reclamações e às redes sociais do mesmo cliente. Deixar que
+ * se edite aqui é deixar que se quebre o cruzamento sem querer, e o
+ * ganho seria corrigir um endereço — que se faz no cadastro, onde a
+ * consequência está à vista.
+ */
+export async function updateNpsContato(input: {
+  id: string;
+  phone?: string | null;
+  establishmentId?: string | null;
+}) {
+
+  const ctx = await requireRole("AGENTE", MODULO);
+
+  if (!ctx) return;
+
+  await ctx.prisma.npsResponse.update({
+    where: { id: input.id },
+    data: {
+      /*
+        `undefined` não toca no campo; `null` limpa.
+
+        A distinção importa: a tela grava um campo por vez, e sem ela
+        salvar o telefone apagaria o estabelecimento.
+      */
+      ...(input.phone !== undefined
+        ? { phone: input.phone?.trim() || null }
+        : {}),
+
+      ...(input.establishmentId !== undefined
+        ? {
+            establishmentId:
+              input.establishmentId || null,
+          }
+        : {}),
+    },
+  });
+
+  updateTag(WORKSPACE_TAG);
 }

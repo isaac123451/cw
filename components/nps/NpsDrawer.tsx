@@ -5,10 +5,17 @@ import { useState } from "react";
 import {
   Check,
   CircleAlert,
+  ExternalLink,
   Megaphone,
   Phone,
+  Store,
   X,
 } from "lucide-react";
+
+import Combobox from "@/components/shared/Combobox";
+
+import { useEstablishments } from "@/lib/context/EstablishmentsContext";
+import { linkDoPortal } from "@/lib/models/establishment";
 
 import Modal, {
   Field,
@@ -59,6 +66,17 @@ interface Props {
     resolved?: boolean | null;
     note?: string;
   }) => Promise<void>;
+
+  /**
+   * Grava telefone e estabelecimento deste ciclo.
+   *
+   * Um campo por vez, e por isso os dois são opcionais: gravar o
+   * telefone não pode apagar o vínculo do restaurante.
+   */
+  onContato: (dados: {
+    phone?: string | null;
+    establishmentId?: string | null;
+  }) => Promise<void>;
 }
 
 function quando(iso?: string) {
@@ -90,6 +108,7 @@ export default function NpsDrawer({
   onStatus,
   onAdvocacy,
   onPostContact,
+  onContato,
 }: Props) {
 
   const [channel, setChannel] = useState(CHANNELS[0]);
@@ -104,6 +123,22 @@ export default function NpsDrawer({
   const [resolveu, setResolveu] = useState<
     boolean | undefined
   >(item.resolvedAfter);
+
+  const { establishments } = useEstablishments();
+
+  const [telefone, setTelefone] = useState(
+    item.phone ?? ""
+  );
+
+  const [gravando, setGravando] = useState(false);
+
+  const estabelecimento = establishments.find(
+    (e) => e.id === item.establishmentId
+  );
+
+  const portal = estabelecimento
+    ? linkDoPortal(estabelecimento)
+    : "";
 
   const [notaContato, setNotaContato] = useState(
     item.postContactNote ?? ""
@@ -264,6 +299,125 @@ export default function NpsDrawer({
             {regra.action}
           </p>
         )}
+
+        {/*
+          Quem é esta pessoa, e onde fica o restaurante dela.
+
+          Medido antes de escrever: dos 959 ciclos, **zero** têm
+          telefone e **zero** têm estabelecimento, contra 958 com
+          e-mail. A carga do Wootric não traz nenhum dos dois e não
+          havia onde preencher — quem descobria o telefone durante a
+          tratativa não tinha onde anotar.
+        */}
+        <div className="rounded-xl border border-zinc-200 p-4">
+
+          <p className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+            Contato e conta
+          </p>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+
+            <Field label="E-mail">
+              {/*
+                Só leitura, e de propósito.
+
+                É a única chave que liga este ciclo às reclamações e às
+                redes sociais do mesmo cliente. Editável aqui, o
+                cruzamento se quebra sem querer — corrigir endereço é no
+                cadastro, onde a consequência está à vista.
+              */}
+              <p className="flex h-11 items-center truncate rounded-xl bg-zinc-50 px-3.5 text-sm text-zinc-600">
+                {item.email || "sem e-mail"}
+              </p>
+            </Field>
+
+            <Field label="Telefone">
+              <div className="flex gap-2">
+
+                <input
+                  value={telefone}
+                  onChange={(e) =>
+                    setTelefone(e.target.value)
+                  }
+                  placeholder="(00) 00000-0000"
+                  className={inputClass}
+                />
+
+                <button
+                  type="button"
+                  disabled={
+                    telefone.trim() ===
+                      (item.phone ?? "").trim() ||
+                    gravando
+                  }
+                  onClick={async () => {
+                    setGravando(true);
+                    await onContato({ phone: telefone });
+                    setGravando(false);
+                  }}
+                  className="shrink-0 rounded-xl bg-violet-700 px-3.5 text-sm font-medium text-white transition-colors hover:bg-violet-800 disabled:cursor-not-allowed disabled:bg-zinc-200 disabled:text-zinc-400"
+                >
+                  Salvar
+                </button>
+
+              </div>
+            </Field>
+
+          </div>
+
+          <div className="mt-3">
+
+            <Field label="Estabelecimento">
+              <Combobox
+                value={item.establishmentId ?? ""}
+                onChange={(id) =>
+                  onContato({ establishmentId: id })
+                }
+                emptyLabel="Sem vínculo"
+                placeholder="Buscar restaurante…"
+                options={establishments.map((e) => ({
+                  value: e.id,
+                  label: e.name,
+                  hint: [e.city, e.document]
+                    .filter(Boolean)
+                    .join(" · "),
+                }))}
+              />
+            </Field>
+
+            {/*
+              O portal abre a conta em um clique.
+
+              Mesma lógica do Reclame Aqui: o link vem pronto da
+              planilha ou é montado com o id do portal. O botão só
+              aparece quando há para onde ir.
+            */}
+            {estabelecimento && (
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+
+                {portal ? (
+                  <a
+                    href={portal}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-violet-50 px-2.5 py-1.5 text-xs font-medium text-violet-700 transition-colors hover:bg-violet-100"
+                  >
+                    <ExternalLink size={12} />
+                    Abrir no portal
+                  </a>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 text-xs text-zinc-500">
+                    <Store size={12} />
+                    Sem o id do portal neste cadastro.
+                  </span>
+                )}
+
+              </div>
+            )}
+
+          </div>
+
+        </div>
 
         {/* Contato */}
         <div>

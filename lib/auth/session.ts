@@ -2,6 +2,7 @@ import "server-only";
 
 import { cookies } from "next/headers";
 import { SignJWT, jwtVerify } from "jose";
+import { getPrisma } from "@/lib/prisma";
 
 export const SESSION_COOKIE = "cw_session";
 
@@ -171,4 +172,44 @@ export async function getPendingLogin(): Promise<PendingLogin | null> {
 export async function clearPendingLogin() {
   const store = await cookies();
   store.delete(PENDING_COOKIE);
+}
+
+/**
+ * A sessão, confirmada contra o banco.
+ *
+ * `getSession` só verifica a **assinatura** do token, e o middleware faz
+ * o mesmo — ele roda no Edge e não alcança o Postgres. A consequência é
+ * um estado que confunde quem está usando: uma conta apagada ou
+ * desativada continua navegando até o token vencer, e como toda leitura
+ * de dados passa por `tryRole`, que confere no banco e recusa, a
+ * aplicação abre **inteira e vazia**. Menu, cabeçalhos, cartões — tudo
+ * no lugar, todos os números em zero.
+ *
+ * Foi o que aconteceu numa conferência aqui: a tela dizia "0 respostas"
+ * com 959 no banco, e a leitura óbvia — a que o Isaac fez — é "não está
+ * salvando". Não era: era uma sessão órfã mostrando a casa vazia.
+ *
+ * Devolve `null` quando o token é válido mas a pessoa por trás dele não
+ * é mais. Quem chama trata isso como não autenticado.
+ */
+export async function getSessionViva(): Promise<SessionUser | null> {
+
+  const sessao = await getSession();
+
+  if (!sessao) return null;
+
+  const prisma = getPrisma();
+
+  /*
+    Sem banco é o modo demonstração: a aplicação roda aberta e não há
+    contra o que confirmar. Recusar aqui derrubaria esse modo.
+  */
+  if (!prisma) return sessao;
+
+  const user = await prisma.user.findUnique({
+    where: { id: sessao.id },
+    select: { active: true },
+  });
+
+  return user?.active ? sessao : null;
 }

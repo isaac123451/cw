@@ -47,6 +47,7 @@ import {
   NpsDraft,
   registerNpsAttempt,
   registerPostContact,
+  updateNpsContato,
   removeNpsRootCause,
   saveNpsResponse,
   saveNpsRootCause,
@@ -961,6 +962,45 @@ export default function NpsPage() {
               valor
             );
           }}
+          onContato={async (dados) => {
+
+            /*
+              Reflete na tela antes de ir ao banco.
+
+              É o mesmo padrão do resto desta tela: a ficha continua
+              aberta enquanto a gravação acontece, e sem o reflexo
+              local o campo voltaria ao valor antigo por um instante.
+            */
+            aplicarLocal(selecionado.id, {
+              ...(dados.phone !== undefined
+                ? { phone: dados.phone ?? undefined }
+                : {}),
+              ...(dados.establishmentId !== undefined
+                ? {
+                    establishmentId:
+                      dados.establishmentId ?? undefined,
+                  }
+                : {}),
+            });
+
+            await updateNpsContato({
+              id: selecionado.id,
+              ...dados,
+            });
+
+            startTransition(() => {
+              recarregar();
+            });
+
+            notify({
+              tone: "success",
+              title:
+                dados.phone !== undefined
+                  ? "Telefone gravado."
+                  : "Estabelecimento vinculado.",
+            });
+          }}
+
           onPostContact={async (dados) => {
 
             const agora = new Date().toISOString();

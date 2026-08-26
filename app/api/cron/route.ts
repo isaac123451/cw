@@ -19,6 +19,9 @@ import { deliverWebhook } from "@/lib/services/webhook.service";
 
 import { limparDesafiosVelhos } from "@/lib/auth/two-factor";
 
+import { importarDoWootric } from "@/lib/actions/nps";
+import { temWootric } from "@/lib/services/wootric.service";
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -99,6 +102,7 @@ export async function GET(request: Request) {
     reenvios,
     vinculos,
     desafios,
+    wootric,
   ] = await Promise.all([
     encerrarNpsAbandonado(prisma),
     avisarMovimentacoesAtrasadas(prisma),
@@ -112,6 +116,28 @@ export async function GET(request: Request) {
      * guardando o que ninguém mais vai usar.
      */
     limparDesafiosVelhos(),
+
+    /**
+     * Traz o que respondeu o NPS desde ontem.
+     *
+     * O Isaac descreveu o sintoma: "aparentemente não está salvando e
+     * tem que ficar sempre importando do wootric. outro ponto, tem que
+     * ter algo para atualizar os casos e chegarem os que chegaram
+     * recentemente".
+     *
+     * O botão de importar sempre existiu e sempre funcionou — o que
+     * não existia era alguém apertando. A rotina diária fazia quatro
+     * tarefas e nenhuma delas era esta, então uma resposta nova só
+     * aparecia quando alguém lembrava de abrir a tela e clicar. Entre
+     * um clique e outro, a base ficava velha em silêncio.
+     *
+     * Sem argumento, a importação parte da última resposta gravada e
+     * pega uma hora antes dela — a sobreposição é de propósito: a chave
+     * é o `externalId` do Wootric, então reimportar atualiza em vez de
+     * duplicar, e uma hora a mais é barato contra o risco de um buraco
+     * na janela.
+     */
+    importarNpsRecente(prisma),
   ]);
 
   /**
@@ -124,7 +150,9 @@ export async function GET(request: Request) {
   if (
     nps.encerrados > 0 ||
     movimentacoes.avisadas > 0 ||
-    vinculos.vinculados > 0
+    vinculos.vinculados > 0 ||
+    (wootric.novas ?? 0) > 0 ||
+    (wootric.atualizadas ?? 0) > 0
   ) {
     revalidateTag(WORKSPACE_TAG, "max");
   }
@@ -137,7 +165,67 @@ export async function GET(request: Request) {
     reenvios,
     vinculos,
     desafiosApagados: desafios,
+    wootric,
   });
+}
+
+/* ============================================================
+   0. NPS RECENTE DO WOOTRIC
+============================================================ */
+
+/**
+ * A importação incremental, com as bordas que uma rotina precisa.
+ *
+ * Três cuidados que a tela não precisa ter e a rotina precisa:
+ *
+ *  1. **Nunca derruba o cron.** Wootric fora do ar, credencial trocada,
+ *     limite de chamadas — nenhum desses pode impedir que as outras
+ *     quatro tarefas rodem. O erro vira número na resposta, não exceção.
+ *
+ *  2. **Uma rodada só.** A tela fatia janelas grandes em várias
+ *     chamadas porque uma pessoa está olhando e pode continuar. Aqui
+ *     não há quem continue, e a função serverless tem relógio: uma
+ *     rodada por dia dá conta do movimento diário (~26 respostas), e o
+ *     que sobrar entra amanhã.
+ *
+ *  3. **Silencia quando não está configurado.** Sem as credenciais, a
+ *     resposta diz "desligado" em vez de "erro" — porque não é erro:
+ *     é uma integração que este ambiente não tem.
+ */
+async function importarNpsRecente(
+  prisma: PrismaClient
+) {
+
+  if (!temWootric()) {
+    return { ligado: false as const };
+  }
+
+  try {
+
+    const r = await importarDoWootric(prisma);
+
+    return {
+      ligado: true as const,
+      novas: r.novas,
+      atualizadas: r.atualizadas,
+      lidas: r.lidas,
+      parcial: Boolean(r.parcial),
+      erro: r.erro,
+    };
+
+  } catch (e) {
+
+    return {
+      ligado: true as const,
+      novas: 0,
+      atualizadas: 0,
+      lidas: 0,
+      erro:
+        e instanceof Error
+          ? e.message
+          : "falha ao falar com o Wootric",
+    };
+  }
 }
 
 /**

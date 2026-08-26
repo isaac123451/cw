@@ -31,7 +31,8 @@ import ToastHost from "@/components/shared/ToastHost";
 
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
-import { getSession } from "@/lib/auth/session";
+import { getSessionViva } from "@/lib/auth/session";
+import SessionGuard from "@/components/auth/SessionGuard";
 import { hasDatabase } from "@/lib/prisma";
 import { hasGoogle } from "@/lib/services/google.service";
 
@@ -51,7 +52,18 @@ export default async function RootLayout({
   children: React.ReactNode;
 }) {
 
-  const session = await getSession();
+  /**
+   * Confirmada contra o banco, e não só pela assinatura.
+   *
+   * O middleware roda no Edge e só sabe verificar o token; uma conta
+   * apagada ou desativada continuava navegando até ele vencer, com a
+   * aplicação inteira aberta e todos os números em zero — porque as
+   * leituras passam por `tryRole`, que confere no banco e recusa.
+   *
+   * Sessão órfã vira `null` aqui, e a tela mostra o que mostra para
+   * quem não entrou: o caminho de volta ao login.
+   */
+  const session = await getSessionViva();
 
   return (
     <html
@@ -62,6 +74,9 @@ export default async function RootLayout({
       <body>
 
         <SessionProvider value={session}>
+
+          <SessionGuard />
+
           <ToastProvider>
           <PreferencesProvider hasDatabase={hasDatabase()}>
             <SavedFiltersProvider hasDatabase={hasDatabase()}>

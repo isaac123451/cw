@@ -93,6 +93,15 @@ interface Rodada {
     avisadas: number;
   };
   reenvios?: { pendentes: number; entregues: number };
+
+  /** A importação do Wootric. `ligado: false` = sem credencial aqui. */
+  wootric?: {
+    ligado: boolean;
+    erro?: string;
+    lidas?: number;
+    novas?: number;
+    atualizadas?: number;
+  };
 }
 
 async function rodar(comToken = true) {
@@ -208,6 +217,47 @@ async function main() {
   console.log(
     `\n  rodada 1: ${JSON.stringify(primeira.corpo.nps)}\n`
   );
+
+  /* ---- 3b. o NPS novo do Wootric entra pela rotina ---- */
+
+  /**
+   * A importação do Wootric **dentro** do cron.
+   *
+   * Vale um teste próprio porque ela falhou duas vezes seguidas sem
+   * derrubar nada: primeiro com "Sessão expirada" — a importação era
+   * server action e exigia usuário logado, que o cron não tem —, depois
+   * com "updateTag só pode ser chamado de dentro de uma Server Action".
+   *
+   * Nos dois casos o cron respondeu **200**, as outras tarefas rodaram,
+   * e a falha ficou num campo do JSON que ninguém lê. Era o sintoma que
+   * o Isaac descreveu: "aparentemente não está salvando". Não é o tipo
+   * de coisa que se percebe olhando — é o tipo que só um teste encontra.
+   */
+  const wootric = primeira.corpo.wootric;
+
+  conferir(
+    "a rotina inclui a importação do NPS",
+    wootric !== undefined,
+    true
+  );
+
+  if (wootric?.ligado) {
+
+    conferir(
+      "e ela roda sem erro (sessão, cache, credencial)",
+      wootric.erro ?? null,
+      null
+    );
+
+    console.log(
+      `  --   trouxe do Wootric                             ${wootric.lidas ?? 0} lida(s), ${wootric.novas ?? 0} nova(s), ${wootric.atualizadas ?? 0} atualizada(s)`
+    );
+
+  } else {
+    console.log(
+      "  --   Wootric não configurado neste ambiente        a rotina pula, sem erro"
+    );
+  }
 
   /* ---- 4. rodar de novo não repete trabalho ---- */
 
