@@ -41,6 +41,7 @@ import SocialTab from "./SocialTab";
 import CaseSidebar from "./CaseSidebar";
 import CaseTimeline from "./CaseTimeline";
 import DossieCard from "./DossieCard";
+import LembretesCard from "./LembretesCard";
 import { idExterno, idLabel } from "@/lib/services/case.service";
 
 type Tab =
@@ -472,6 +473,17 @@ export default function CaseDetail({
               <DossieCard data={emEdicao} />
 
               <OverviewTab data={emEdicao} onChange={patch} />
+
+              {/*
+                Os lembretes, depois das anotações.
+
+                A anotação é o que aconteceu; o lembrete é o que ainda
+                vai acontecer, e essa é a ordem em que se lê uma ficha.
+                Vinham da agenda e da extensão e não apareciam aqui —
+                quem abria o caso não tinha como saber que havia um
+                retorno marcado para quinta.
+              */}
+              <LembretesCard data={emEdicao} />
             </>
           )}
 

@@ -298,12 +298,12 @@ async function carregarDoBanco(): Promise<Workspace | null> {
     prisma.agendaTask.findMany({
       include: {
         owner: { select: { name: true } },
-        case: { select: { externalId: true } },
+        case: { select: { protocol: true } },
       },
       orderBy: { dueDate: "asc" },
     }),
     prisma.impactRecord.findMany({
-      include: { case: { select: { externalId: true } } },
+      include: { case: { select: { protocol: true } } },
       orderBy: { date: "desc" },
     }),
     prisma.playbook.findMany({
@@ -556,7 +556,7 @@ async function carregarDoBanco(): Promise<Workspace | null> {
       time: r.time ?? undefined,
       priority: r.priority as AgendaTask["priority"],
       done: r.done,
-      relatedCase: r.case?.externalId ?? undefined,
+      relatedCase: r.case?.protocol ?? undefined,
     })),
 
     impact: impact.map((r) => ({
@@ -570,7 +570,7 @@ async function carregarDoBanco(): Promise<Workspace | null> {
       amount: r.amountCents / 100,
       owner: r.owner ?? "",
       date: dia(r.date) as string,
-      relatedCase: r.case?.externalId ?? undefined,
+      relatedCase: r.case?.protocol ?? undefined,
       moodAfter: r.moodAfter ?? undefined,
       wouldHaveChurned: r.wouldHaveChurned ?? undefined,
     })),

@@ -577,6 +577,47 @@ export async function removePlaybook(id: string) {
    AGENDA E IMPACTO
 ============================================================ */
 
+/**
+ * O caso a que uma tarefa ou um impacto se refere.
+ *
+ * **O defeito que isto conserta.** A busca era por `externalId`, e a
+ * tela sempre mandou `protocol` — `relatedCase` é preenchido com
+ * `data.protocol` na agenda, no impacto e na ficha do caso. Nas
+ * reclamações importadas os dois campos são iguais (`RA-xxx` nos dois),
+ * então funcionava; nos casos **criados dentro da aplicação** não são:
+ * medido na base, três casos com `protocol` "IG-69758033" e
+ * "MAN-0001" carregavam um UUID em `externalId`.
+ *
+ * Para esses, a busca não achava nada, `caseId` gravava `null` e o
+ * vínculo sumia — sem erro nenhum. A tarefa aparecia ligada ao caso
+ * enquanto a tela estava aberta, porque o estado local guardava o
+ * `relatedCase`, e desaparecia na recarga seguinte. Justamente nas
+ * Redes Sociais, que é onde os casos nascem na aplicação.
+ *
+ * Agora procura por `protocol`, que é `@unique` e é a chave que a
+ * aplicação inteira usa. `externalId` fica como segunda tentativa, para
+ * qualquer vínculo antigo que tenha sido gravado com ele.
+ */
+async function casoPorReferencia(
+  prisma: NonNullable<
+    Awaited<ReturnType<typeof autorizado>>
+  >,
+  referencia: string
+) {
+
+  const porProtocolo = await prisma.case.findUnique({
+    where: { protocol: referencia },
+    select: { id: true },
+  });
+
+  if (porProtocolo) return porProtocolo;
+
+  return prisma.case.findFirst({
+    where: { externalId: referencia },
+    select: { id: true },
+  });
+}
+
 export async function saveAgendaTask(item: AgendaTask) {
   const prisma = await autorizado();
   if (!prisma) return;
@@ -590,10 +631,7 @@ export async function saveAgendaTask(item: AgendaTask) {
     : null;
 
   const caso = item.relatedCase
-    ? await prisma.case.findFirst({
-        where: { externalId: item.relatedCase },
-        select: { id: true },
-      })
+    ? await casoPorReferencia(prisma, item.relatedCase)
     : null;
 
   const dados = {
@@ -632,10 +670,7 @@ export async function saveImpactRecord(
   if (!prisma) return;
 
   const caso = item.relatedCase
-    ? await prisma.case.findFirst({
-        where: { externalId: item.relatedCase },
-        select: { id: true },
-      })
+    ? await casoPorReferencia(prisma, item.relatedCase)
     : null;
 
   const dados = {
