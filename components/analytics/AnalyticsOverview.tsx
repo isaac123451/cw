@@ -2,6 +2,10 @@
 
 import { useMemo, useState } from "react";
 
+import FrenteTabs, {
+  Frente,
+} from "@/components/analytics/FrenteTabs";
+
 import {
   Building2,
   CheckCircle2,
@@ -16,6 +20,8 @@ import {
   getMetrics,
   getMonthlyTrend,
   groupBy,
+  isReclameAqui,
+  isSocial,
 } from "@/lib/services/case.service";
 
 import {
@@ -92,12 +98,30 @@ export default function AnalyticsOverview({
    * Filtrar painel a painel é como duas metades da mesma tela passam a
    * falar de períodos diferentes sem ninguém perceber.
    */
+  /**
+   * Qual frente está sendo lida.
+   *
+   * Somar Reclame Aqui e Redes Sociais faz sentido para "quantos
+   * atendimentos tivemos", e faz muito pouco para o resto: 341
+   * reclamações e 2 atendimentos de Instagram no mesmo gráfico de
+   * categorias dão um gráfico de reclamações com ruído.
+   */
+  const [frente, setFrente] = useState<Frente>("tudo");
+
   const noPeriodo = useMemo(
     () =>
-      cases.filter((item) =>
-        inRange(item, range.start, range.end)
-      ),
-    [cases, range]
+      cases
+        .filter((item) =>
+          inRange(item, range.start, range.end)
+        )
+        .filter((item) =>
+          frente === "reclame-aqui"
+            ? isReclameAqui(item)
+            : frente === "social"
+              ? isSocial(item)
+              : true
+        ),
+    [cases, range, frente]
   );
 
   const metrics = useMemo(
@@ -162,6 +186,8 @@ export default function AnalyticsOverview({
         description={description}
       />
 
+      <FrenteTabs atual={frente} onChange={setFrente} />
+
       <SurfaceCard bodyClassName="p-4">
 
         <PeriodPicker
@@ -170,7 +196,13 @@ export default function AnalyticsOverview({
           range={range}
           custom={custom}
           onCustomChange={setCustom}
-          note={`${noPeriodo.length} de ${cases.length} casos no recorte`}
+          note={`${noPeriodo.length} de ${cases.length} casos no recorte${
+            frente === "tudo"
+              ? ""
+              : frente === "reclame-aqui"
+                ? " · só Reclame Aqui"
+                : " · só Redes Sociais"
+          }`}
         />
 
       </SurfaceCard>
