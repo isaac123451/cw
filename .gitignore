@@ -49,3 +49,7 @@ backup-*.json
 # Pacotes gerados da extensão — saem do "npm run extensao:pacote".
 # Binário reconstruível não entra no histórico.
 dist/
+
+# Scripts temporários de conferência — nunca entram no histórico.
+# Alguns criam conta com senha em texto para inspecionar tela.
+scripts/_*.ts
