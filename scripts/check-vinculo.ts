@@ -171,11 +171,62 @@ function casoDeTeste(
   };
 }
 
+/**
+ * Apaga o que corridas anteriores deixaram para trás.
+ *
+ * **Por que existe.** Os CNPJs de teste são constantes, e a limpeza do
+ * fim só roda se a verificação chegar até lá. Uma corrida que falhou no
+ * meio — foi o que aconteceu — deixa um estabelecimento com o CNPJ
+ * `11222333000181` na base, e a corrida seguinte encontra **dois**
+ * cadastros com o mesmo documento. A varredura liga no primeiro, que é
+ * o do dia anterior, e três verificações falham apontando ids que não
+ * dizem nada a quem lê.
+ *
+ * O sintoma engana: parece defeito no vínculo, e é sujeira do próprio
+ * teste. Limpar na entrada é o que torna a verificação repetível — que
+ * é a única coisa que a faz valer alguma coisa.
+ */
+async function limparSobras() {
+
+  const sobras = await prisma.establishment.findMany({
+    where: { slug: { startsWith: "zz-vinculo-" } },
+    select: { id: true },
+  });
+
+  await prisma.case.deleteMany({
+    where: { protocol: { startsWith: "ZZ-VINC-" } },
+  });
+
+  if (sobras.length === 0) return 0;
+
+  const ids = sobras.map((item) => item.id);
+
+  /* Reclamação real ligada à sobra volta a ficar solta, e não some. */
+  await prisma.case.updateMany({
+    where: { establishmentId: { in: ids } },
+    data: { establishmentId: null },
+  });
+
+  await prisma.establishment.deleteMany({
+    where: { id: { in: ids } },
+  });
+
+  return sobras.length;
+}
+
 async function main() {
 
   console.log(
     "\n  VÍNCULO RECLAMAÇÃO x ESTABELECIMENTO\n"
   );
+
+  const sobras = await limparSobras();
+
+  if (sobras > 0) {
+    console.log(
+      `  (${sobras} cadastro(s) descartável(is) de uma corrida anterior foram apagados antes de começar)\n`
+    );
+  }
 
   /* ----------------------------------------------------------
      0. Por que CNPJ e não nome — conferido na base real.
@@ -183,16 +234,36 @@ async function main() {
 
   const total = await prisma.case.count();
 
+  /*
+    Vazio não conta como "empresa diferente do consumidor".
+
+    A pergunta desta linha é: **existe nome de empresa aproveitável em
+    `companyName`?** Na base real não existe — a coluna guarda o nome
+    do consumidor, e é por isso que o vínculo é por CNPJ e nunca por
+    nome.
+
+    A limpeza que veio depois passou a gravar `""` onde o nome era o do
+    próprio consumidor. Isso é o defeito **corrigido**, não um
+    contraexemplo: uma string vazia não liga a nada. Contá-la fazia
+    esta verificação acusar falha exatamente por causa da correção que
+    ela deveria celebrar — e um teste que fica vermelho quando o código
+    melhora é um teste que alguém logo desliga.
+  */
   const [{ diferentes }] = await prisma.$queryRaw<
     { diferentes: bigint }[]
-  >`SELECT COUNT(*)::bigint AS diferentes FROM "Case" WHERE "companyName" <> "customer"`;
+  >`SELECT COUNT(*)::bigint AS diferentes FROM "Case" WHERE "companyName" <> "customer" AND TRIM("companyName") <> ''`;
+
+  const [{ vazios }] = await prisma.$queryRaw<
+    { vazios: bigint }[]
+  >`SELECT COUNT(*)::bigint AS vazios FROM "Case" WHERE TRIM("companyName") = ''`;
 
   console.log(
-    `  base: ${total} reclamações, ${Number(diferentes)} com empresa diferente do consumidor\n`
+    `  base: ${total} reclamações, ${Number(diferentes)} com nome de empresa aproveitável\n` +
+      `        (${Number(vazios)} com o campo limpo — eram o nome do próprio consumidor)\n`
   );
 
   conferir(
-    "0. casar por nome ligaria ao consumidor",
+    "0. nenhum nome de empresa aproveitável na base",
     Number(diferentes),
     0
   );

@@ -547,6 +547,29 @@ export async function fetchCandidateCases(
             contains: parte,
             mode: "insensitive",
           },
+        },
+
+        /**
+         * E no **estabelecimento vinculado**.
+         *
+         * Faltava, e a falta apareceu depois que a tela passou a
+         * mostrar o nome do estabelecimento no lugar do
+         * `companyName` — que na base é o nome do próprio consumidor
+         * e por isso foi limpo. A partir dali a extensão exibia
+         * "Maceió Burgers" no caso e não encontrava nada ao procurar
+         * por "Maceió Burgers": o nome estava numa tabela que a busca
+         * não olhava.
+         *
+         * É o mesmo nome que o WhatsApp mostra no topo da conversa,
+         * então é literalmente o que a pessoa digita.
+         */
+        {
+          establishment: {
+            name: {
+              contains: parte,
+              mode: "insensitive",
+            },
+          },
         }
       );
     }
