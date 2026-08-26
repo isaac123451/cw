@@ -109,7 +109,19 @@ export default function WorkflowModal({
         className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
       />
 
-      <div className="fixed left-1/2 top-1/2 z-50 w-[560px] -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white shadow-2xl">
+      {/*
+        Largura que cabe, e altura que rola.
+
+        Era `w-[560px]` fixo: num celular de 375 px a janela nascia 185
+        px mais larga que a tela, com metade do formulário fora — e como
+        ela é `fixed`, nem rolando dava para alcançar. A criação de
+        etapa era impossível no telefone.
+
+        `max-h` com rolagem interna resolve o outro lado: numa tela
+        baixa, os campos de cor e de lembrete ficavam abaixo da dobra da
+        própria janela, sem jeito de chegar até o botão de salvar.
+      */}
+      <div className="fixed left-1/2 top-1/2 z-50 flex max-h-[calc(100dvh-32px)] w-[calc(100vw-32px)] max-w-[560px] -translate-x-1/2 -translate-y-1/2 flex-col overflow-y-auto rounded-2xl bg-white shadow-2xl">
 
         {/* Header */}
 
