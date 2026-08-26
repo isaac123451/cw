@@ -30,6 +30,15 @@ const INCLUDE = {
   owner: { select: { name: true } },
   team: { select: { name: true } },
   tags: { include: { tag: { select: { name: true } } } },
+
+  /*
+    O nome do estabelecimento vinculado.
+
+    Só o `name` — o cadastro inteiro tem endereço, plano, receita e
+    contatos, e nada disso a lista precisa. Um `select` de um campo
+    numa relação já carregada pelo id não custa consulta a mais.
+  */
+  establishment: { select: { name: true } },
 } as const;
 
 /**

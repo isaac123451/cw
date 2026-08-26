@@ -41,7 +41,9 @@ import { useImpact } from "@/lib/context/ImpactContext";
 import { useToast } from "@/lib/context/ToastContext";
 
 import { ptBR } from "@/lib/services/reputation.service";
-import { isOpen } from "@/lib/services/case.service";
+import { isOpen,
+  caseHref,
+} from "@/lib/services/case.service";
 
 import { kindTone } from "@/lib/models/client";
 
@@ -671,7 +673,7 @@ export default function ClientDetail({
                     />
 
                     <Link
-                      href={`/reclame-aqui/${item.id}`}
+                      href={caseHref(item)}
                       className="group block rounded-xl border border-zinc-200/80 p-3.5 transition-colors hover:border-violet-200 hover:bg-violet-50/30"
                     >
 

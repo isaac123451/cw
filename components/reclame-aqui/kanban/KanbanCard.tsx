@@ -17,6 +17,7 @@ import { TagChips } from "@/components/shared/TagPicker";
 
 import { useCases } from "@/lib/context/CaseContext";
 import { useOwners } from "@/lib/hooks/useOwners";
+import { caseHref } from "@/lib/services/case.service";
 
 interface Props {
   item: Case;
@@ -58,7 +59,7 @@ export default function KanbanCard({
 
   return (
     <Link
-      href={`/reclame-aqui/${item.id}`}
+      href={caseHref(item)}
       draggable
       onDragStart={(event) => {
         event.dataTransfer.setData("text/plain", item.id);

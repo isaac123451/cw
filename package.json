@@ -56,7 +56,9 @@
     "check:resumo-caso": "tsx scripts/check-resumo-caso.ts",
     "check:data": "tsx scripts/check-data.ts",
     "extensao:pacote": "node scripts/empacotar-extensao.js",
-    "check:respostas": "tsx scripts/check-respostas.ts"
+    "check:respostas": "tsx scripts/check-respostas.ts",
+    "check:frentes": "tsx scripts/check-frentes.ts",
+    "limpar:estabelecimentos": "tsx scripts/limpar-estabelecimentos-pessoa.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",

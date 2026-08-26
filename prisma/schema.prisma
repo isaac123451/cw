@@ -271,6 +271,23 @@ model Case {
   city     String?
   state    String?
 
+  /// O @ do perfil, nas Redes Sociais. Vazio no Reclame Aqui.
+  ///
+  /// Campo próprio e não reaproveitando `email`, que era onde o
+  /// formulário do Instagram guardava o @ por falta de lugar. Um @ no
+  /// campo de e-mail some do cruzamento por e-mail entre canais e ainda
+  /// aparece como endereço inválido em qualquer tela que liste contatos.
+  socialHandle String?
+
+  /// Seguidores do perfil no momento do atendimento.
+  ///
+  /// Guardado no caso e não no contato de propósito: é um número que
+  /// muda toda semana, e o que importa para decidir a urgência é quanto
+  /// alcance a pessoa tinha **quando reclamou**. Um perfil de 200 mil
+  /// seguidores reclamando publicamente não é o mesmo problema que um
+  /// de 200, e essa diferença precisa sobreviver no registro.
+  followers Int?
+
   categoryId String?
   category   Category? @relation(fields: [categoryId], references: [id])
 
@@ -609,6 +626,19 @@ model Establishment {
   /// e montar a URL a partir do id errado levaria a operação para a
   /// ficha de outro restaurante.
   portalUrl String?
+
+  /// O id que compõe `portal.cardapioweb.com/<id>`.
+  ///
+  /// Existe **junto** com o `portalUrl` e não no lugar dele. O
+  /// `portalUrl` é o que a planilha de exportação entrega pronto, e
+  /// vale enquanto durar aquele formato; este é o número que a operação
+  /// tem em mãos e digita. Quem sabe um dos dois consegue abrir a
+  /// conta — e ninguém precisa saber os dois.
+  ///
+  /// **Não é o `externalId`.** Aquele é o id da conta no CW Engine; este
+  /// é o do link do portal, e são números diferentes para o mesmo
+  /// restaurante. Montar o link com o id errado abre a ficha de outro.
+  portalId String?
 
   /// Conversa deste restaurante no Crisp.
   ///

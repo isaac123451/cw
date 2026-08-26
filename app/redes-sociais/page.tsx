@@ -234,7 +234,7 @@ export default function RedesSociaisPage() {
                     </span>
 
                     <Link
-                      href={`/reclame-aqui/${item.id}`}
+                      href={`/redes-sociais/${item.id}`}
                       className="min-w-0 flex-1"
                     >
 
@@ -276,7 +276,7 @@ export default function RedesSociaisPage() {
                       </button>
 
                       <Link
-                        href={`/reclame-aqui/${item.id}`}
+                        href={`/redes-sociais/${item.id}`}
                         title="Abrir tratativa completa"
                         className="rounded-lg p-2 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-violet-600"
                       >

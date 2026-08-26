@@ -7,7 +7,9 @@ import { useMemo } from "react";
 import { ArrowUpRight, ShieldAlert } from "lucide-react";
 
 import { useCases } from "@/lib/context/CaseContext";
-import { getCriticalCases } from "@/lib/services/case.service";
+import { getCriticalCases,
+  caseHref,
+} from "@/lib/services/case.service";
 
 import SurfaceCard from "@/components/shared/SurfaceCard";
 
@@ -59,7 +61,7 @@ export default function CriticalCases() {
             <li key={item.id}>
 
               <Link
-                href={`/reclame-aqui/${item.id}`}
+                href={caseHref(item)}
                 className="group flex items-center gap-3 rounded-xl border border-zinc-100 p-3 transition-colors hover:border-violet-200 hover:bg-violet-50/40"
               >
 

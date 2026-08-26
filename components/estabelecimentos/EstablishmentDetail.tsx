@@ -30,6 +30,7 @@ import SurfaceCard from "@/components/shared/SurfaceCard";
 import {
   documentoFormatado,
   tipoDeDocumento,
+  linkDoPortal,
 } from "@/lib/models/establishment";
 import { ConfirmDelete } from "@/components/shared/Modal";
 
@@ -60,6 +61,8 @@ import {
 } from "@/lib/models/establishment";
 
 import { kindTone } from "@/lib/models/client";
+
+import { caseHref } from "@/lib/services/case.service";
 
 const money = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -241,7 +244,7 @@ export default function EstablishmentDetail({
    * diferentes** — a conta 27409 abre em /contas/25681 —, e montar a
    * URL pelo id errado levaria à ficha de outro restaurante.
    */
-  const noPortal = establishment.portalUrl?.trim();
+  const noPortal = linkDoPortal(establishment);
 
   return (
     <div className="space-y-6">
@@ -588,7 +591,7 @@ export default function EstablishmentDetail({
                     >
 
                       <Link
-                        href={`/reclame-aqui/${item.id}`}
+                        href={caseHref(item)}
                         className="min-w-0 flex-1"
                       >
 

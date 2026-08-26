@@ -41,6 +41,25 @@ export interface Case {
 
   state?: string;
 
+  /**
+   * O @ do perfil, nas Redes Sociais.
+   *
+   * Campo próprio porque o formulário do Instagram guardava o @ em
+   * `email` por falta de lugar — e um @ ali some do cruzamento por
+   * e-mail entre canais e aparece como endereço inválido em toda tela
+   * que lista contatos.
+   */
+  socialHandle?: string;
+
+  /**
+   * Seguidores do perfil quando o caso foi aberto.
+   *
+   * Guardado no caso e não no contato: é o alcance que a pessoa tinha
+   * **ao reclamar** que decide a urgência, e esse número muda toda
+   * semana.
+   */
+  followers?: number;
+
   source: string;
 
   category: string;

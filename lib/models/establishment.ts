@@ -37,6 +37,14 @@ export interface Establishment {
   /** Endereço da conta no portal, como o CW Engine entrega. */
   portalUrl?: string;
 
+  /**
+   * O id que compõe `portal.cardapioweb.com/<id>`.
+   *
+   * Não é o `externalId` — aquele é a conta no CW Engine, este é o do
+   * link do portal, e são números diferentes para o mesmo restaurante.
+   */
+  portalId?: string;
+
   /** Conversa do restaurante no Crisp — o canal por trás do ManyChat. */
   crispUrl?: string;
 
@@ -159,4 +167,49 @@ export function tipoDeDocumento(valor?: string | null) {
   const d = digitosDoDocumento(valor);
 
   return d ? (d.length === 11 ? "CPF" : "CNPJ") : "";
+}
+
+/** O endereço do portal da Cardápio Web. */
+export const PORTAL_BASE = "https://portal.cardapioweb.com";
+
+/**
+ * O link do restaurante no portal, venha de onde vier.
+ *
+ * Dois caminhos chegam ao mesmo lugar, e existir os dois é o ponto:
+ *
+ *  - `portalUrl` é o que a planilha de exportação entrega pronto. Vale
+ *    enquanto durar aquele formato, e é o que os 34 cadastros com
+ *    portal já têm hoje.
+ *
+ *  - `portalId` é o número que a operação tem em mãos e digita. É o que
+ *    o Isaac pediu: "tem que ser possível tanto adicionar o id do
+ *    estabelecimento como id do link do portal, o id do link do portal
+ *    quando for adicionado você irá utilizar para complementar o link".
+ *
+ * O guardado ganha do montado. Se alguém colou a URL inteira, ela é a
+ * verdade sobre onde aquela conta abre — inclusive quando o formato do
+ * portal mudar e a montagem daqui ficar desatualizada.
+ *
+ * **Nunca monte com o `externalId`.** Aquele é o id da conta no CW
+ * Engine, e são números diferentes para o mesmo restaurante: a conta
+ * 27409 abre em /25681. Montar com o errado abre a ficha de outro
+ * restaurante, e quem clica não tem como saber.
+ */
+export function linkDoPortal(
+  estabelecimento: Pick<
+    Establishment,
+    "portalUrl" | "portalId"
+  >
+) {
+
+  const pronto = estabelecimento.portalUrl?.trim();
+
+  if (pronto) return pronto;
+
+  const id = estabelecimento.portalId?.trim();
+
+  if (!id) return "";
+
+  // Aceita o id com ou sem barra, colado como veio.
+  return `${PORTAL_BASE}/${id.replace(/^\/+/, "")}`;
 }

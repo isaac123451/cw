@@ -428,6 +428,7 @@ async function carregarDoBanco(): Promise<Workspace | null> {
       document: r.document ?? undefined,
       externalId: r.externalId ?? undefined,
       portalUrl: r.portalUrl ?? undefined,
+      portalId: r.portalId ?? undefined,
       crispUrl: r.crispUrl ?? undefined,
       npsWhatsapp: r.npsWhatsapp ?? undefined,
       segment: r.segment ?? undefined,

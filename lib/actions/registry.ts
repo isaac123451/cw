@@ -403,6 +403,7 @@ export async function saveEstablishment(
      */
     externalId: item.externalId,
     portalUrl: item.portalUrl,
+    portalId: item.portalId,
 
     /*
       Estes dois a tela edita, então null por ausência é a intenção:

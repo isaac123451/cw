@@ -171,22 +171,52 @@ export default function InvestigationTab({
         description="Vínculos e classificação usados no diagnóstico da reclamação."
       >
 
-        <div className="rounded-xl bg-violet-50/50 p-4 ring-1 ring-inset ring-violet-100">
+        {/*
+          Sem vínculo, a tela **diz** que falta.
 
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-violet-600">
-            Estabelecimento vinculado
+          Antes ela mostrava o nome do consumidor aqui, porque a
+          exportação do Reclame Aqui não traz o nome do restaurante e a
+          carga copiou a coluna de quem reclamou. Um cadastro que se
+          chama "Ana Karla da Silva" parece resolvido e não é: o
+          restaurante está faltando na planilha, e essa é a única
+          informação que leva alguém a agir.
+        */}
+        <div
+          className={`rounded-xl p-4 ring-1 ring-inset ${
+            data.company
+              ? "bg-violet-50/50 ring-violet-100"
+              : "bg-amber-50/60 ring-amber-100"
+          }`}
+        >
+
+          <p
+            className={`text-[11px] font-semibold uppercase tracking-wide ${
+              data.company
+                ? "text-violet-600"
+                : "text-amber-700"
+            }`}
+          >
+            {data.company
+              ? "Estabelecimento vinculado"
+              : "Sem estabelecimento vinculado"}
           </p>
 
           <div className="mt-2 flex items-center gap-3">
 
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-violet-600 ring-1 ring-inset ring-violet-100">
+            <span
+              className={`flex h-9 w-9 items-center justify-center rounded-xl bg-white ring-1 ring-inset ${
+                data.company
+                  ? "text-violet-600 ring-violet-100"
+                  : "text-amber-600 ring-amber-100"
+              }`}
+            >
               <Building2 size={17} />
             </span>
 
             <div className="min-w-0">
 
               <p className="truncate text-sm font-semibold text-zinc-900">
-                {data.company}
+                {data.company || "Restaurante não identificado"}
               </p>
 
               <p className="text-xs text-zinc-500">
@@ -197,6 +227,14 @@ export default function InvestigationTab({
             </div>
 
           </div>
+
+          {!data.company && (
+            <p className="mt-3 text-xs leading-relaxed text-amber-800">
+              {data.document
+                ? "O documento desta reclamação não casa com nenhum estabelecimento cadastrado. Falta o restaurante na planilha de cadastro — o vínculo se faz sozinho assim que ele existir."
+                : "A reclamação chegou sem CPF nem CNPJ, e é por documento que o vínculo acontece. Sem ele, o restaurante precisa ser escolhido à mão."}
+            </p>
+          )}
 
         </div>
 

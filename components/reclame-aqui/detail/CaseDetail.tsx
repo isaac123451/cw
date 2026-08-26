@@ -25,6 +25,7 @@ import {
 } from "@/lib/services/movement.service";
 
 import { toneOfSla } from "@/lib/services/sla.service";
+import { isSocial } from "@/lib/services/case.service";
 
 import TagPicker, { TagChips } from "@/components/shared/TagPicker";
 import StatusPicker from "@/components/reclame-aqui/shared/StatusPicker";
@@ -35,6 +36,7 @@ import OverviewTab from "./OverviewTab";
 import InvestigationTab from "./InvestigationTab";
 import ServiceTab from "./ServiceTab";
 import EvaluationTab from "./EvaluationTab";
+import SocialTab from "./SocialTab";
 import CaseSidebar from "./CaseSidebar";
 import CaseTimeline from "./CaseTimeline";
 
@@ -43,19 +45,47 @@ type Tab =
   | "investigacao"
   | "atendimento"
   | "avaliacao"
+  | "rede-social"
   | "dados"
   | "historico";
 
-const tabs: { id: Tab; label: string; drawerOnly?: boolean }[] =
-  [
-    { id: "visao-geral", label: "Visão geral" },
-    { id: "investigacao", label: "Investigação" },
-    { id: "atendimento", label: "Atendimento" },
-    { id: "avaliacao", label: "Avaliação RA" },
-    // No drawer não cabe a coluna lateral: ela vira uma aba.
-    { id: "dados", label: "Dados do caso", drawerOnly: true },
-    { id: "historico", label: "Histórico" },
-  ];
+/**
+ * As abas mudam conforme a frente do caso.
+ *
+ * A tela nasceu só para o Reclame Aqui e passou a servir também as
+ * Redes Sociais sem que nada distinguisse as duas — um atendimento do
+ * Instagram abria com a aba "Avaliação RA", pedindo nota do portal,
+ * índice de solução e réplica para um caso que nunca vai ter nenhum dos
+ * três. Era o que o Isaac descreveu: "quando é criado um caso nas redes
+ * sociais é como se ele fosse do reclame aqui".
+ *
+ * `canais` diz em que frente cada aba faz sentido. Ausente vale para
+ * todas — o que descreve o caso (relato, atendimento, histórico) não
+ * depende de onde ele chegou.
+ */
+const tabs: {
+  id: Tab;
+  label: string;
+  drawerOnly?: boolean;
+  canais?: ("reclame-aqui" | "social")[];
+}[] = [
+  { id: "visao-geral", label: "Visão geral" },
+  { id: "investigacao", label: "Investigação" },
+  { id: "atendimento", label: "Atendimento" },
+  {
+    id: "avaliacao",
+    label: "Avaliação RA",
+    canais: ["reclame-aqui"],
+  },
+  {
+    id: "rede-social",
+    label: "Rede social",
+    canais: ["social"],
+  },
+  // No drawer não cabe a coluna lateral: ela vira uma aba.
+  { id: "dados", label: "Dados do caso", drawerOnly: true },
+  { id: "historico", label: "Histórico" },
+];
 
 interface Props {
   data: Case;
@@ -145,9 +175,39 @@ export default function CaseDetail({
       ? digits
       : null;
 
+  /** Em que frente este caso vive. É o que decide as abas. */
+  const canal: "reclame-aqui" | "social" = isSocial(data)
+    ? "social"
+    : "reclame-aqui";
+
+  /**
+   * O módulo a que o caso pertence, para os links de volta.
+   *
+   * "Voltar para Reclame Aqui" num atendimento do Instagram mandava a
+   * pessoa para a fila errada — e, pior, confirmava a impressão de que
+   * o caso era de lá. São frentes diferentes e cada uma tem a sua fila.
+   */
+  const modulo =
+    canal === "social"
+      ? { base: "/redes-sociais", nome: "Redes Sociais" }
+      : { base: "/reclame-aqui", nome: "Reclame Aqui" };
+
   const visibleTabs = tabs.filter(
-    (item) => !item.drawerOnly || drawer
+    (item) =>
+      (!item.drawerOnly || drawer) &&
+      (!item.canais || item.canais.includes(canal))
   );
+
+  /**
+   * Aba escolhida que não existe nesta frente volta para a primeira.
+   *
+   * Acontece ao navegar de um caso do RA (parado em "Avaliação RA")
+   * para um do Instagram pelo mesmo drawer: sem isto, o corpo fica
+   * vazio e a tela parece quebrada.
+   */
+  const tabAtiva = visibleTabs.some((t) => t.id === tab)
+    ? tab
+    : (visibleTabs[0]?.id ?? "visao-geral");
 
   return (
     <div className="space-y-5">
@@ -165,7 +225,7 @@ export default function CaseDetail({
         {drawer ? (
 
           <Link
-            href={`/reclame-aqui/${data.id}`}
+            href={`${modulo.base}/${data.id}`}
             className="inline-flex items-center gap-1.5 text-sm font-medium text-zinc-500 transition-colors hover:text-violet-700"
           >
             <Maximize2 size={14} />
@@ -175,11 +235,11 @@ export default function CaseDetail({
         ) : (
 
           <Link
-            href="/reclame-aqui"
+            href={modulo.base}
             className="inline-flex items-center gap-1.5 text-sm font-medium text-zinc-500 transition-colors hover:text-violet-700"
           >
             <ChevronLeft size={16} />
-            Voltar para Reclame Aqui
+            Voltar para {modulo.nome}
           </Link>
 
         )}
@@ -342,7 +402,7 @@ export default function CaseDetail({
 
                   {item.label}
 
-                  {tab === item.id && (
+                  {tabAtiva === item.id && (
                     <span className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-violet-800" />
                   )}
 
@@ -354,24 +414,28 @@ export default function CaseDetail({
 
           </div>
 
-          {tab === "visao-geral" && (
+          {tabAtiva === "visao-geral" && (
             <OverviewTab data={emEdicao} onChange={patch} />
           )}
 
-          {tab === "investigacao" && (
+          {tabAtiva === "investigacao" && (
             <InvestigationTab
               data={emEdicao}
               onChange={patch}
             />
           )}
 
-          {tab === "atendimento" && <ServiceTab data={data} />}
+          {tabAtiva === "atendimento" && <ServiceTab data={data} />}
 
-          {tab === "avaliacao" && (
+          {tabAtiva === "avaliacao" && (
             <EvaluationTab data={emEdicao} onChange={patch} />
           )}
 
-          {tab === "dados" && (
+          {tabAtiva === "rede-social" && (
+            <SocialTab data={emEdicao} onChange={patch} />
+          )}
+
+          {tabAtiva === "dados" && (
             <CaseSidebar
               data={emEdicao}
               owners={owners}
@@ -380,7 +444,7 @@ export default function CaseDetail({
             />
           )}
 
-          {tab === "historico" && (
+          {tabAtiva === "historico" && (
             <CaseTimeline data={data} />
           )}
 

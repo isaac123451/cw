@@ -12,6 +12,29 @@ import { formatElapsed } from "@/lib/services/reputation.service";
  * (`lib/actions/cases.ts`). Duplicar isso seria garantir divergência.
  */
 
+/**
+ * Dois nomes são o mesmo nome, ignorando caixa, acento e espaço.
+ *
+ * Comparação local e propositalmente simples: aqui não se está casando
+ * pessoas — só detectando que a coluna de empresa recebeu uma cópia da
+ * coluna de consumidor, que é uma igualdade literal com ruído de
+ * formatação.
+ */
+function mesmoNome(a?: string | null, b?: string | null) {
+
+  const limpar = (v?: string | null) =>
+    (v ?? "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/\s+/g, " ")
+      .trim();
+
+  const um = limpar(a);
+
+  return um !== "" && um === limpar(b);
+}
+
 const CANAL_PARA_ORIGEM: Record<string, string> = {
   RECLAME_AQUI: "Reclame Aqui",
   INSTAGRAM: "Instagram",
@@ -69,6 +92,7 @@ export function toCaseModel(row: {
   document: string | null;
   establishmentId: string | null;
   establishmentManual?: boolean;
+  establishment?: { name: string } | null;
   customer: string;
   email: string | null;
   phone: string | null;
@@ -81,6 +105,8 @@ export function toCaseModel(row: {
   description: string | null;
   publicResponse: string | null;
   draftResponse: string | null;
+  socialHandle: string | null;
+  followers: number | null;
   evaluated: boolean;
   score: number | null;
   scoreDisregarded?: boolean | null;
@@ -105,7 +131,28 @@ export function toCaseModel(row: {
     // O id do portal é o que as URLs usam; o cuid só existe no banco.
     id: row.externalId ?? row.id,
     protocol: row.protocol,
-    company: row.companyName,
+    /**
+     * A empresa é o **estabelecimento**, não o consumidor.
+     *
+     * Os 343 casos desta base têm `companyName` idêntico ao
+     * `customer`: a exportação do Reclame Aqui não traz o nome do
+     * restaurante, e a carga preencheu a coluna com o nome de quem
+     * reclamou. O efeito na tela era o que o Isaac reportou duas vezes
+     * — "você adicionou nome do cliente como estabelecimento".
+     *
+     * A ordem aqui é a correção: quando há vínculo, o nome vem do
+     * cadastro. Quando não há, **nada** vem — e o vazio é a informação
+     * certa: "está faltando este restaurante", que é acionável, contra
+     * "Ana Karla da Silva", que finge que está tudo resolvido.
+     *
+     * `companyName` ainda é usado quando difere do consumidor, porque
+     * aí alguém digitou uma empresa de verdade e ela não deve sumir.
+     */
+    company:
+      row.establishment?.name ??
+      (mesmoNome(row.companyName, row.customer)
+        ? ""
+        : row.companyName),
     document: row.document ?? undefined,
     establishmentId: row.establishmentId ?? undefined,
     establishmentManual: row.establishmentManual,
@@ -129,6 +176,8 @@ export function toCaseModel(row: {
     description: row.description ?? "",
     publicResponse: row.publicResponse ?? undefined,
     draftResponse: row.draftResponse ?? undefined,
+    socialHandle: row.socialHandle ?? undefined,
+    followers: row.followers ?? undefined,
     score: row.score ?? undefined,
     evaluated: row.evaluated,
     scoreDisregarded:
@@ -222,6 +271,12 @@ export function toCaseColumns(item: Case) {
     description: item.description || null,
     publicResponse: item.publicResponse || null,
     draftResponse: item.draftResponse || null,
+    socialHandle: item.socialHandle || null,
+    followers:
+      typeof item.followers === "number" &&
+      Number.isFinite(item.followers)
+        ? item.followers
+        : null,
     evaluated: Boolean(item.evaluated),
     score: item.score ?? null,
     scoreDisregarded: Boolean(item.scoreDisregarded),

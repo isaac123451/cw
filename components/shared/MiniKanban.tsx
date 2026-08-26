@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { Case } from "@/lib/models/case";
+import { caseHref } from "@/lib/services/case.service";
 
 interface Column {
   name: string;
@@ -102,7 +103,7 @@ export default function MiniKanban({
 
                     <Link
                       key={item.id}
-                      href={`/reclame-aqui/${item.id}`}
+                      href={caseHref(item)}
                       draggable
                       onDragStart={(event) => {
                         event.dataTransfer.setData(

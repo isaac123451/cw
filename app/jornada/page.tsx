@@ -38,7 +38,9 @@ import { useJourney } from "@/lib/context/JourneyContext";
 import { useSession } from "@/lib/context/SessionContext";
 
 import { buildJourneys } from "@/lib/services/journey.service";
-import { byChannel, Channel } from "@/lib/services/case.service";
+import { byChannel, Channel,
+  caseHref,
+} from "@/lib/services/case.service";
 import { slugify } from "@/lib/services/slug";
 
 const channels: { id: Channel; label: string }[] = [
@@ -482,7 +484,7 @@ export default function JornadaPage() {
                     />
 
                     <Link
-                      href={`/reclame-aqui/${item.id}`}
+                      href={caseHref(item)}
                       className="text-sm font-medium text-zinc-800 hover:text-violet-700 hover:underline"
                     >
                       {item.title}

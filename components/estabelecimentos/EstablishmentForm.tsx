@@ -140,6 +140,22 @@ export default function EstablishmentForm({
   const [crispUrl, setCrispUrl] = useState(
     editing?.crispUrl ?? ""
   );
+
+  /**
+   * Os dois ids do restaurante, que são números diferentes.
+   *
+   * `externalId` é a conta no CW Engine; `portalId` é o do link do
+   * portal. A conta 27409 abre em /25681 — confundir os dois leva a
+   * operação para a ficha de outro restaurante, e quem clica não tem
+   * como perceber.
+   */
+  const [externalId, setExternalId] = useState(
+    editing?.externalId ?? ""
+  );
+
+  const [portalId, setPortalId] = useState(
+    editing?.portalId ?? ""
+  );
   const [npsWhatsapp, setNpsWhatsapp] = useState(
     editing?.npsWhatsapp ?? ""
   );
@@ -186,6 +202,23 @@ export default function EstablishmentForm({
       email: email.trim().toLowerCase() || undefined,
       notes: notes.trim() || undefined,
       crispUrl: crispUrl.trim() || undefined,
+      externalId: externalId.trim() || undefined,
+
+      /*
+        Aceita o id puro ou a URL inteira colada.
+
+        Quem tem a planilha copia o número; quem está com a conta aberta
+        copia a barra de endereço. Recusar o segundo seria pedir para a
+        pessoa editar o texto à mão antes de colar.
+      */
+      portalId:
+        portalId
+          .trim()
+          .replace(
+            /^https?:\/\/(www\.)?portal\.cardapioweb\.com\//i,
+            ""
+          )
+          .replace(/^\/+|\/+$/g, "") || undefined,
       npsWhatsapp: npsWhatsapp.trim() || undefined,
     };
 
@@ -481,7 +514,51 @@ export default function EstablishmentForm({
               />
             </Field>
 
+            <Field
+              label="Id da conta no CW Engine"
+              hint="A coluna Company ID do export."
+            >
+              <input
+                value={externalId}
+                onChange={(e) =>
+                  setExternalId(e.target.value)
+                }
+                placeholder="27409"
+                className={inputClass}
+              />
+            </Field>
+
+            <Field
+              label="Id do link do portal"
+              hint="Abre portal.cardapioweb.com/<id>. Não é o mesmo número do CW Engine."
+            >
+              <input
+                value={portalId}
+                onChange={(e) =>
+                  setPortalId(e.target.value)
+                }
+                placeholder="25681"
+                className={inputClass}
+              />
+            </Field>
+
           </div>
+
+          {portalId.trim() && (
+            <p className="mt-3 truncate text-xs text-zinc-500">
+              Vai abrir:{" "}
+              <span className="font-mono text-violet-700">
+                portal.cardapioweb.com/
+                {portalId
+                  .trim()
+                  .replace(
+                    /^https?:\/\/(www\.)?portal\.cardapioweb\.com\//i,
+                    ""
+                  )
+                  .replace(/^\/+|\/+$/g, "")}
+              </span>
+            </p>
+          )}
 
           {/*
             O ManyChat é o canal, mas a conversa mora no Crisp; e quem

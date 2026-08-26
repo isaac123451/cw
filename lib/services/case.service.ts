@@ -80,6 +80,25 @@ export function isOpen(item: Case) {
   return !CLOSED_STATUS.includes(item.status);
 }
 
+/**
+ * O endereço deste caso, no módulo a que ele pertence.
+ *
+ * Existe porque **oito telas** montavam `/reclame-aqui/${id}` à mão —
+ * painel, clientes, estabelecimentos, jornada, processos, a fila social
+ * — e todas elas listam casos de mais de uma frente. Um atendimento do
+ * Instagram aberto por qualquer uma delas caía no módulo do Reclame
+ * Aqui, com a aba de avaliação do portal pedindo nota para um caso que
+ * nunca vai ter uma.
+ *
+ * Uma função em vez de oito interpolações: a nona tela que listar casos
+ * acerta sozinha, e a próxima frente que existir se resolve aqui.
+ */
+export function caseHref(item: Case) {
+  return isSocial(item)
+    ? `/redes-sociais/${item.id}`
+    : `/reclame-aqui/${item.id}`;
+}
+
 function rate(part: number, total: number) {
   return total === 0
     ? 0

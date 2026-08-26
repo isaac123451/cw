@@ -33,6 +33,15 @@ const PRIORIDADES: Case["priority"][] = [
   "Baixa",
 ];
 
+/** "@fulano", "fulano" e a URL do perfil chegam ao mesmo lugar. */
+function arrobaLimpa(valor: string) {
+  return valor
+    .trim()
+    .replace(/^https?:\/\/(www\.)?instagram\.com\//i, "")
+    .replace(/\/+$/, "")
+    .replace(/^@/, "");
+}
+
 export default function SocialCaseForm({
   open,
   editing,
@@ -78,8 +87,27 @@ export default function SocialCaseForm({
   const [customer, setCustomer] = useState(
     editing?.customer ?? ""
   );
+  /**
+   * O @ e o e-mail são campos diferentes.
+   *
+   * Aqui o @ era guardado em `email` por falta de lugar. O efeito não
+   * era visual: o e-mail é a **única** chave que cruza um contato entre
+   * o Reclame Aqui, o NPS e as Redes Sociais nesta base, e um @ ali
+   * some do cruzamento e ainda aparece como endereço inválido em toda
+   * tela que lista contatos.
+   *
+   * `editing?.email` continua no fallback para os casos gravados antes
+   * desta separação — o @ deles está lá, e perder o dado ao abrir para
+   * editar seria pior do que o defeito original.
+   */
   const [handle, setHandle] = useState(
-    editing?.email ?? ""
+    editing?.socialHandle ?? editing?.email ?? ""
+  );
+
+  const [followers, setFollowers] = useState(
+    typeof editing?.followers === "number"
+      ? String(editing.followers)
+      : ""
   );
   const [phone, setPhone] = useState(
     editing?.phone ?? ""
@@ -132,7 +160,18 @@ export default function SocialCaseForm({
         `IG-${Date.now().toString().slice(-8)}`,
       company: customer.trim(),
       customer: customer.trim(),
-      email: handle.trim() || undefined,
+      /*
+        O e-mail fica vazio quando só há @: são coisas diferentes, e
+        preencher um com o outro é o que quebrava o cruzamento.
+      */
+      email: editing?.email || undefined,
+
+      socialHandle: arrobaLimpa(handle) || undefined,
+
+      followers:
+        followers.replace(/\D/g, "") === ""
+          ? undefined
+          : Number(followers.replace(/\D/g, "")),
       phone: phone.trim() || undefined,
       city: city.trim() || undefined,
       state: state.trim() || undefined,
@@ -234,11 +273,38 @@ export default function SocialCaseForm({
             />
           </Field>
 
-          <Field label="@ do Instagram" hint="Opcional.">
+          <Field
+            label="@ do Instagram"
+            hint="Cole o @ ou o link do perfil."
+          >
             <input
               value={handle}
               onChange={(e) => setHandle(e.target.value)}
               placeholder="@usuario"
+              className={inputClass}
+            />
+          </Field>
+
+          {/*
+            Seguidores decidem a urgência de um caso social.
+
+            Um perfil de 200 mil reclamando publicamente é outro
+            problema — de outra pressa e outra resposta — do que um de
+            200, e nenhum campo da tela do Reclame Aqui dizia isso.
+          */}
+          <Field
+            label="Seguidores"
+            hint="Quantos o perfil tinha agora. Opcional."
+          >
+            <input
+              inputMode="numeric"
+              value={followers}
+              onChange={(e) =>
+                setFollowers(
+                  e.target.value.replace(/\D/g, "")
+                )
+              }
+              placeholder="18400"
               className={inputClass}
             />
           </Field>

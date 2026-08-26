@@ -47,7 +47,9 @@ import {
   loadByDestination,
 } from "@/lib/services/movement.service";
 
-import { isOpen } from "@/lib/services/case.service";
+import { isOpen,
+  caseHref,
+} from "@/lib/services/case.service";
 
 import {
   ANY_CATEGORY,
@@ -672,7 +674,11 @@ export default function ProcessosPage() {
                   <li key={movement.id}>
 
                     <Link
-                      href={`/reclame-aqui/${movement.caseId}`}
+                      href={
+                        caso
+                          ? caseHref(caso)
+                          : `/reclame-aqui/${movement.caseId}`
+                      }
                       className="flex items-center gap-3 rounded-xl border border-zinc-200/80 px-4 py-3 transition-colors hover:border-violet-200 hover:bg-violet-50/40"
                     >
 
@@ -743,7 +749,7 @@ export default function ProcessosPage() {
                 <li key={item.id}>
 
                   <Link
-                    href={`/reclame-aqui/${item.id}`}
+                    href={caseHref(item)}
                     className="flex items-center gap-3 rounded-xl border border-zinc-200/80 px-4 py-3 transition-colors hover:border-violet-200 hover:bg-violet-50/40"
                   >
 
