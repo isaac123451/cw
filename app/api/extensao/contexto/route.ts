@@ -18,6 +18,8 @@ import { Establishment } from "@/lib/models/establishment";
 import {
   byChannel,
   isOpen,
+  isReclameAqui,
+  isSocial,
 } from "@/lib/services/case.service";
 import { slaStatus } from "@/lib/services/sla.service";
 import {
@@ -218,6 +220,48 @@ export async function GET(request: Request) {
 
   const encontro = casar(casos, alvo);
 
+  /**
+   * O que este contato tem nas **outras** frentes.
+   *
+   * A aba recorta os casos, e o recorte é certo — quem abriu o Reclame
+   * Aqui quer ver reclamações. Mas o silêncio sobre o resto é errado: um
+   * cliente com atendimento aberto no Instagram e nada no portal fazia o
+   * painel dizer "este cliente não tem caso em Reclame Aqui", e ponto.
+   * Quem lê conclui que não há nada, e não há nada **ali**.
+   *
+   * O Isaac descreveu o efeito: "se um caso está nas redes sociais e
+   * abri na extensão em um contato com aba do reclame aqui na extensão,
+   * é importante sinalizar que o caso está nas redes sociais e verificar
+   * por lá".
+   *
+   * Vai como contagem por frente, não como lista: a lista seria a aba
+   * do lado, e repeti-la aqui misturaria as duas de novo — que é o
+   * defeito que a separação de frentes acabou de corrigir.
+   */
+  const emTodasAsFrentes = casar(todos, alvo).casos;
+
+  const outrasFrentes = [
+    {
+      canal: "reclame-aqui" as const,
+      nome: "Reclame Aqui",
+      casos: emTodasAsFrentes.filter(isReclameAqui),
+    },
+    {
+      canal: "social" as const,
+      nome: "Redes Sociais",
+      casos: emTodasAsFrentes.filter(isSocial),
+    },
+  ]
+    .filter((f) => f.canal !== canal)
+    .filter((f) => f.casos.length > 0)
+    .map((f) => ({
+      canal: f.canal,
+      nome: f.nome,
+      total: f.casos.length,
+      abertos: f.casos.filter(isOpen).length,
+      url: `${origem}/${f.canal === "social" ? "redes-sociais" : "reclame-aqui"}`,
+    }));
+
   const listaNps = await buscarNpsTodos(alvo);
 
   const nps = listaNps[0] ?? null;
@@ -350,6 +394,9 @@ export async function GET(request: Request) {
     casos: resumos,
 
     totalCasos: encontro.casos.length,
+
+    /** Onde mais este contato aparece. Ver `outrasFrentes` acima. */
+    outrasFrentes,
 
     sugestoes: sugerir(encontro.casos, resumos, nps),
 

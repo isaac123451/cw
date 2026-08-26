@@ -434,6 +434,33 @@
         resumirPendencias(alvo);
       }
 
+      /*
+        Recolher e reabrir só mexem no estado e redesenham.
+
+        Nada vai ao servidor: o conteúdo já está em memória, e é essa a
+        razão de o botão existir — reler custaria quinze segundos e uma
+        chamada ao modelo para ver de novo o que já foi montado.
+      */
+      if (acao === "recolher-dossie") {
+        dossieRecolhido = true;
+        recarregarVista();
+      }
+
+      if (acao === "expandir-dossie") {
+        dossieRecolhido = false;
+        recarregarVista();
+      }
+
+      if (acao === "recolher-resumo") {
+        resumoRecolhido = true;
+        recarregarVista();
+      }
+
+      if (acao === "expandir-resumo") {
+        resumoRecolhido = false;
+        recarregarVista();
+      }
+
       // NPS: as duas escritas da tratativa, e os botões que as compõem.
       if (
         acao === "nps-humor" ||
@@ -2362,9 +2389,23 @@
           ? "neutro"
           : "ok";
 
+    if (resumoRecolhido) {
+      return [
+        '<div class="bloco">',
+        '  <div class="linha">',
+        `    <span class="rotulo">Resumo · ${CW.escapar(resumo.assunto ?? "conversa")}</span>`,
+        '    <button class="passo" data-acao="expandir-resumo">abrir</button>',
+        '  </div>',
+        '</div>',
+      ].join("");
+    }
+
     return [
       '<div class="bloco">',
-      '  <div class="rotulo">Resumo da conversa</div>',
+      '  <div class="linha">',
+      '    <span class="rotulo">Resumo da conversa</span>',
+      '    <button class="passo" data-acao="recolher-resumo" title="Recolher e devolver o espaço do painel">recolher</button>',
+      '  </div>',
       '  <div class="cartao">',
       '    <div class="linha">',
       `      <span class="nome" style="font-size:13px">${CW.escapar(resumo.assunto ?? "Conversa")}</span>`,
@@ -3040,6 +3081,7 @@
         quando não há — o servidor cruza os dois lados e traz o NPS e os
         outros canais deste mesmo cliente junto.
       */
+      blocoOutrasFrentes(dados.outrasFrentes),
       lerConversa ? blocoResumo() : "",
       blocoDossie(casos[0]?.protocolo ?? ""),
     ].join("");
@@ -3082,6 +3124,7 @@
         O dossiê vai sem protocolo: o servidor cruza pelo contato e traz
         os ciclos de NPS junto com os casos dos outros canais.
       */
+      blocoOutrasFrentes(dados.outrasFrentes),
       lerConversa ? blocoResumo() : "",
       blocoDossie(""),
     ].join("");
@@ -3488,6 +3531,21 @@
   let transcricaoImportada = null;
 
   /**
+   * O dossiê e o resumo ficam recolhidos?
+   *
+   * O Isaac pediu: "preciso que tenha um botão para recolher o dossiê,
+   * resumo". O motivo é de espaço — o painel tem 350 px de largura
+   * dentro do WhatsApp, e o dossiê montado empurra a fila de casos, as
+   * anotações e os botões de mover para muito abaixo da dobra. Depois
+   * de ler, quem atende quer o painel de volta.
+   *
+   * Recolhido guarda o conteúdo, não o joga fora: reabrir não gasta
+   * outra chamada ao modelo.
+   */
+  let dossieRecolhido = false;
+  let resumoRecolhido = false;
+
+  /**
    * O resumo, em dois cartões separados.
    *
    * Separados e não num texto corrido: são duas perguntas diferentes, e
@@ -3515,6 +3573,52 @@
    * `protocolo` vem vazio quando não há caso; o servidor entende e
    * monta o dossiê a partir da transcrição e do contato.
    */
+  /**
+   * "Este contato também tem caso em outra frente."
+   *
+   * A aba recorta os casos, e o recorte é certo — quem abriu o Reclame
+   * Aqui quer ver reclamações. O silêncio sobre o resto é que não era:
+   * um cliente com atendimento aberto no Instagram e nada no portal
+   * fazia o painel dizer "não tem caso em Reclame Aqui", e quem lê
+   * conclui que não há nada. Há — noutro lugar.
+   *
+   * O Isaac: "é importante sinalizar que o caso está nas redes sociais
+   * e verificar por lá".
+   *
+   * Não lista os casos: a lista é a aba do lado, e repeti-la aqui
+   * misturaria as frentes de novo. Diz que existem, quantos, e leva.
+   */
+  function blocoOutrasFrentes(frentes) {
+
+    if (!Array.isArray(frentes) || frentes.length === 0) {
+      return "";
+    }
+
+    return [
+      '<div class="bloco">',
+      '  <div class="rotulo">Este contato em outras frentes</div>',
+
+      ...frentes.map((f) =>
+        [
+          '  <div class="cartao" style="margin-top:6px">',
+          '    <div class="linha">',
+          `      <span class="sub" style="color:var(--texto);font-weight:600">${CW.escapar(f.nome)}</span>`,
+          f.abertos > 0
+            ? `      <span class="tag atencao">${f.abertos} em aberto</span>`
+            : '      <span class="tag neutro">sem nada em aberto</span>',
+          '    </div>',
+          `    <p class="sub" style="margin-top:3px;color:var(--suave)">${f.total} caso(s) deste contato. Esta aba não os mostra — a fila é outra.</p>`,
+          '    <div class="etapas">',
+          `      <button class="passo" data-acao="canal" data-canal="${CW.escapar(f.canal)}">ver em ${CW.escapar(f.nome)}</button>`,
+          '    </div>',
+          '  </div>',
+        ].join("")
+      ),
+
+      '</div>',
+    ].join("");
+  }
+
   function blocoDossie(protocolo) {
 
     const pronto =
@@ -3564,6 +3668,24 @@
 
   function blocoResumoDoCaso(r) {
 
+    /*
+      Recolhido, sobra o cabeçalho e o botão de reabrir.
+
+      Some o conteúdo, não o dossiê: `resumoDoCaso` continua em
+      memória, e reabrir é instantâneo.
+    */
+    if (dossieRecolhido) {
+      return [
+        '  <div class="cartao">',
+        '    <div class="linha">',
+        '      <span class="sub" style="color:var(--texto);font-weight:600">Dossiê montado</span>',
+        '      <button class="passo" data-acao="expandir-dossie">abrir</button>',
+        '    </div>',
+        `    <p class="sub" style="margin-top:4px;color:var(--suave)">${CW.escapar((r.geral ?? "").slice(0, 90))}${(r.geral ?? "").length > 90 ? "…" : ""}</p>`,
+        '  </div>',
+      ].join("");
+    }
+
     const bloco = (titulo, conteudo, estilo = "") =>
       conteudo
         ? [
@@ -3582,7 +3704,10 @@
       /* ---- situar ---- */
 
       '  <div class="cartao">',
-      '    <div class="rotulo" style="margin-bottom:5px">Onde estou</div>',
+      '    <div class="linha" style="margin-bottom:5px">',
+      '      <span class="rotulo">Onde estou</span>',
+      '      <button class="passo" data-acao="recolher-dossie" title="Recolher o dossiê e devolver o espaço do painel">recolher</button>',
+      '    </div>',
       paragrafo(r.geral),
       '  </div>',
 
@@ -3743,6 +3868,9 @@
     }
 
     resumoDoCaso = resposta.dados;
+
+    /* Montar um dossiê é querer lê-lo: recolhido, o clique não faria nada. */
+    dossieRecolhido = false;
 
     if (detalhe) desenharDetalhe(detalhe);
   }
