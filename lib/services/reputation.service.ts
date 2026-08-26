@@ -1316,3 +1316,36 @@ export function getBacklog(
     },
   ];
 }
+
+/**
+ * Preto ou branco sobre uma cor, pelo que se lê melhor.
+ *
+ * As faixas da nota são cores de sinalização — vermelho para o pior,
+ * verde-limão para o selo — e a etiqueta escrevia sempre em branco. Nas
+ * duas faixas claras isso dava **1,98:1**: "RA1000" em branco sobre
+ * limão é quase invisível, e sempre foi, nos dois temas. Não era defeito
+ * do escuro; era defeito que o escuro fez aparecer numa auditoria.
+ *
+ * O corte é a luminância relativa da WCAG. Acima de 0,45 a cor é clara o
+ * bastante para pedir texto escuro; abaixo, texto claro. É o mesmo
+ * cálculo que decide contraste, aplicado uma vez em vez de escolhido a
+ * olho para cada cor.
+ */
+export function textoSobre(cor: string) {
+
+  const hex = cor.replace("#", "");
+
+  const canal = (i: number) => {
+    const v = parseInt(hex.slice(i, i + 2), 16) / 255;
+    return v <= 0.03928
+      ? v / 12.92
+      : Math.pow((v + 0.055) / 1.055, 2.4);
+  };
+
+  const luminancia =
+    0.2126 * canal(0) +
+    0.7152 * canal(2) +
+    0.0722 * canal(4);
+
+  return luminancia > 0.45 ? "#18181B" : "#FFFFFF";
+}

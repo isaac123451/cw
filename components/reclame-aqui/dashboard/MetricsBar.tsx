@@ -24,6 +24,7 @@ import {
   getReputation,
   inRange,
   ptBR,
+  textoSobre,
 } from "@/lib/services/reputation.service";
 
 export default function MetricsBar() {
@@ -77,8 +78,11 @@ export default function MetricsBar() {
           </p>
 
           <span
-            className="rounded-full px-2 py-0.5 text-[10px] font-semibold text-white"
-            style={{ background: band.color }}
+            className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
+            style={{
+              background: band.color,
+              color: textoSobre(band.color),
+            }}
           >
             {band.label}
           </span>

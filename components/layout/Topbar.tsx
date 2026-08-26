@@ -8,6 +8,7 @@ import { menuItems } from "@/core/navigation/menu";
 import UserMenu from "./UserMenu";
 import NotificationsMenu from "./NotificationsMenu";
 import { useSession } from "@/lib/context/SessionContext";
+import ThemeToggle from "@/components/shared/ThemeToggle";
 
 export default function Topbar() {
 
@@ -51,6 +52,8 @@ export default function Topbar() {
           />
 
         </div>
+
+        <ThemeToggle />
 
         <NotificationsMenu />
 

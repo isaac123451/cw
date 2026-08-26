@@ -11,6 +11,7 @@ import {
   RA1000_TARGETS,
   ReputationSummary,
   scoreBands,
+  textoSobre,
 } from "@/lib/services/reputation.service";
 
 interface Props {
@@ -68,8 +69,11 @@ export default function ReputationRuler({
       description="Faixa da nota e situação do selo RA1000."
       action={
         <span
-          className="shrink-0 rounded-full px-3 py-1 text-[11px] font-semibold text-white"
-          style={{ background: band.color }}
+          className="shrink-0 rounded-full px-3 py-1 text-[11px] font-semibold"
+          style={{
+            background: band.color,
+            color: textoSobre(band.color),
+          }}
           title={
             selo
               ? "Todos os critérios do selo atingidos"

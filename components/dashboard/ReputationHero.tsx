@@ -23,6 +23,7 @@ import {
   hasRA1000,
   inRange,
   ptBR,
+  textoSobre,
 } from "@/lib/services/reputation.service";
 
 /**
@@ -134,8 +135,11 @@ export default function ReputationHero() {
             </div>
 
             <span
-              className="shrink-0 rounded-full px-3 py-1 text-[11px] font-semibold text-white"
-              style={{ background: band.color }}
+              className="shrink-0 rounded-full px-3 py-1 text-[11px] font-semibold"
+              style={{
+                background: band.color,
+                color: textoSobre(band.color),
+              }}
               title={
                 selo
                   ? "Todos os critérios do selo atingidos"

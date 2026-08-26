@@ -35,6 +35,24 @@ import { getSessionViva } from "@/lib/auth/session";
 import SessionGuard from "@/components/auth/SessionGuard";
 import { hasDatabase } from "@/lib/prisma";
 import { hasGoogle } from "@/lib/services/google.service";
+import { ThemeProvider } from "@/lib/context/ThemeContext";
+
+/**
+ * Lê a preferência e aplica a classe antes de o navegador desenhar.
+ *
+ * Precisa ser uma string, e não um import: o script roda no `<head>`,
+ * fora do React, e o servidor não tem como saber o que está guardado
+ * no `localStorage` de quem pediu a página.
+ */
+const TEMA_ANTES_DA_PINTURA = `(function(){
+  try {
+    var escolhido = localStorage.getItem("cw:tema") || "auto";
+    var vale = escolhido === "auto"
+      ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "escuro" : "claro")
+      : escolhido;
+    if (vale === "escuro") document.documentElement.classList.add("dark");
+  } catch (_) {}
+})()`;
 
 export const metadata: Metadata = {
   title: "CW Reputação",
@@ -71,8 +89,30 @@ export default async function RootLayout({
       className={`${GeistSans.variable} ${GeistMono.variable}`}
     >
 
+      {/*
+        A classe do tema entra **antes** da primeira pintura.
+
+        O ThemeProvider aplica no efeito, que roda depois do primeiro
+        render — e o efeito disso é o clarão: a tela pisca branca por
+        um quadro antes de escurecer, em toda navegação. É o defeito
+        mais visível que um tema escuro pode ter.
+
+        O script é minúsculo e bloqueante de propósito: ele precisa
+        rodar antes do navegador desenhar. E é o único jeito — o
+        servidor não tem como saber o que está no localStorage de quem
+        pede a página.
+      */}
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: TEMA_ANTES_DA_PINTURA,
+          }}
+        />
+      </head>
+
       <body>
 
+        <ThemeProvider>
         <SessionProvider value={session}>
 
           <SessionGuard />
@@ -125,6 +165,7 @@ export default async function RootLayout({
           <ToastHost />
           </ToastProvider>
         </SessionProvider>
+        </ThemeProvider>
 
         {/**
           * Medição de desempenho real, ligada por decisão do Isaac.
