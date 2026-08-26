@@ -572,9 +572,151 @@ export async function POST(request: Request) {
     );
   }
 
+  /**
+   * As **peças** do dossiê — o conjunto organizado de registros.
+   *
+   * O Isaac mandou a definição de dicionário: dossiê é "conjunto
+   * organizado de documentos ou informações sobre um assunto
+   * específico", que "reúne papéis, relatórios, registros ou arquivos
+   * digitais focados em um único tema".
+   *
+   * O que existia era só a leitura — um texto escrito pelo modelo,
+   * bem escrito e mesmo assim uma versão da história, sem os documentos
+   * atrás dela. Quem lê uma narrativa não consegue conferir nada: não
+   * sabe quantas anotações existem, de que data, quem escreveu, nem se
+   * o modelo deixou alguma de fora.
+   *
+   * Estas peças são **fato**, montadas do banco, e não passam pelo
+   * modelo. Cada uma diz o que é, de onde veio, quando, e o começo do
+   * conteúdo. Juntas com a leitura, o dossiê passa a ser as duas coisas
+   * que o nome promete: a pasta e o parecer.
+   */
+  const pecas: {
+    tipo: string;
+    origem: string;
+    quando?: string;
+    autor?: string;
+    trecho: string;
+  }[] = [];
+
+  if (caso) {
+
+    pecas.push({
+      tipo: "Reclamação",
+      origem: caso.source,
+      quando: caso.createdAt,
+      autor: caso.customer,
+      trecho: (caso.description || "").slice(0, 400),
+    });
+
+    if ((caso.publicResponse ?? "").trim()) {
+      /*
+        Sem data: o modelo da tela não carrega `publicResponseAt`.
+
+        A coluna existe no banco, e a lista não a traz — como não traz
+        o relato nem o dossiê, pelo mesmo motivo de peso. Uma peça sem
+        data ordena junto das sem data, o que é honesto; inventar a data
+        do caso aqui seria dizer que a resposta saiu no dia da abertura.
+      */
+      pecas.push({
+        tipo: "Resposta pública",
+        origem: caso.source,
+        trecho: caso.publicResponse!.slice(0, 400),
+      });
+    }
+
+    if (caso.evaluated) {
+      pecas.push({
+        tipo: "Avaliação do consumidor",
+        origem: caso.source,
+        quando: caso.evaluatedAt,
+        autor: caso.customer,
+        trecho: `Nota ${caso.score ?? "—"} · ${
+          caso.resolved ? "resolvida" : "NÃO resolvida"
+        } · ${
+          caso.wouldDoBusiness
+            ? "voltaria a fazer negócio"
+            : "não voltaria"
+        }`,
+      });
+    }
+  }
+
+  for (const nota of anotacoes) {
+    pecas.push({
+      tipo: "Anotação interna",
+      origem: "CW Reputação",
+      quando: nota.createdAt.toISOString(),
+      autor: nota.author?.name ?? undefined,
+      trecho: nota.body.slice(0, 400),
+    });
+  }
+
+  for (const m of movimentacoes) {
+    pecas.push({
+      tipo: "Movimentação",
+      origem: "CW Reputação",
+      quando: m.startedAt.toISOString(),
+      trecho: `Para ${m.destination}${
+        m.reason ? ` — ${m.reason}` : ""
+      }. ${
+        m.returnedAt
+          ? `Devolvida em ${dia(m.returnedAt)}${m.outcome ? `: ${m.outcome}` : ""}`
+          : "**Ainda não devolvida.**"
+      }`,
+    });
+  }
+
+  for (const n of npsDoContato) {
+    pecas.push({
+      tipo: "Resposta de NPS",
+      origem: "Pesquisa",
+      quando: n.respondedAt.toISOString(),
+      trecho: `Nota ${n.score}${n.kind ? ` (${n.kind})` : ""}${
+        n.comment ? `: "${n.comment}"` : ""
+      }`,
+    });
+  }
+
+  for (const c of casosDoContato) {
+    pecas.push({
+      tipo: "Caso em outro canal",
+      origem: c.source,
+      quando: c.createdAt,
+      trecho: `${c.protocol} — "${c.title}" · ${c.status}`,
+    });
+  }
+
+  if (transcricao) {
+    pecas.push({
+      tipo: "Transcrição do Crisp",
+      origem: "Crisp",
+      autor: String(
+        entrada.arquivoDaTranscricao ?? ""
+      ).slice(0, 200),
+      trecho: `${transcricao.length.toLocaleString("pt-BR")} caracteres de atendimento, lidos para este dossiê. Não são guardados — ver a rota de salvar.`,
+    });
+  }
+
+  /*
+    Do mais antigo para o mais recente.
+
+    Uma pasta de documentos se lê na ordem em que os fatos aconteceram;
+    invertida, ela conta a história de trás para a frente, que é
+    exatamente o que um dossiê não deve fazer.
+  */
+  pecas.sort((a, b) =>
+    String(a.quando ?? "").localeCompare(
+      String(b.quando ?? "")
+    )
+  );
+
   return responder(request, {
     ...resultado.dados,
     protocolo: caso?.protocol ?? null,
+
+    /** O conjunto organizado — ver o comentário acima. */
+    pecas,
 
     /** Houve caso, ou o dossiê saiu só do atendimento? */
     semCaso: !caso,

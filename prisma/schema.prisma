@@ -324,6 +324,29 @@ model Case {
   /// errado ali é o erro mais caro que esta base pode ter.
   draftResponse String?
 
+  /// O dossiê montado na extensão, quando alguém mandou guardar.
+  ///
+  /// O Isaac foi específico sobre **o que** guardar: "não quero que você
+  /// salve o arquivo do crisp, quero que você salve o dossiê caso eu
+  /// clique em salvar pela extensão e assim apareça na ferramenta".
+  ///
+  /// A distinção é boa e vale registrar. A transcrição do Crisp é
+  /// matéria-prima: dezenas de milhares de caracteres de conversa
+  /// bruta, com dado de contato espalhado, que já vive no Crisp e não
+  /// precisa de segunda cópia aqui. O dossiê é o produto — a história
+  /// lida e ordenada, do tamanho que se lê antes de responder. Guardar
+  /// a primeira seria duplicar um sistema; guardar o segundo é guardar
+  /// o trabalho.
+  ///
+  /// Fica como texto e não como JSON: o que a próxima pessoa precisa é
+  /// **ler**, e um formato estruturado só serviria se alguma tela fosse
+  /// recompor o dossiê campo a campo — o que ninguém pediu e ninguém
+  /// faria melhor do que o texto corrido que o modelo escreveu.
+  dossier   String?
+  dossierAt DateTime?
+  /// Quem mandou guardar. Nome, não id — é para ler na tela.
+  dossierBy String?
+
   /// Consumidor avaliou o atendimento no portal.
   evaluated       Boolean   @default(false)
   score           Int?

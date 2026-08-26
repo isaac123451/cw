@@ -56,9 +56,17 @@ export async function fetchCases(
 
   const rows = await prisma.case.findMany({
     include: INCLUDE,
+    /*
+      O dossiê sai da lista pelo mesmo motivo do relato.
+
+      São milhares de caracteres por caso, e só a tela de detalhe os
+      mostra — carregá-los na abertura da aplicação custaria o mesmo que
+      `description` custava antes de sair daqui: mais de um segundo em
+      toda carga, para um texto que quase ninguém abre.
+    */
     omit: withDescription
       ? undefined
-      : { description: true },
+      : { description: true, dossier: true },
     orderBy: { publishedAt: "desc" },
   });
 
@@ -549,7 +557,7 @@ export async function fetchCandidateCases(
   const rows = await prisma.case.findMany({
     where: { OR: ou },
     include: INCLUDE,
-    omit: { description: true },
+    omit: { description: true, dossier: true },
     orderBy: { publishedAt: "desc" },
     take: limite,
   });

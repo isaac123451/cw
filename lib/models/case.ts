@@ -92,6 +92,16 @@ export interface Case {
    */
   draftResponse?: string;
 
+  /**
+   * O dossiê guardado pela extensão.
+   *
+   * Só o dossiê, e não a transcrição do Crisp: aquela é matéria-prima e
+   * já vive no Crisp; este é a leitura ordenada, que é o trabalho.
+   */
+  dossier?: string;
+  dossierAt?: string;
+  dossierBy?: string;
+
   score?: number;
 
   /** Consumidor avaliou o atendimento no Reclame Aqui. */

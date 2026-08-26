@@ -105,6 +105,17 @@ export function toCaseModel(row: {
   description: string | null;
   publicResponse: string | null;
   draftResponse: string | null;
+  /**
+   * Opcional porque a lista **não** o carrega.
+   *
+   * São milhares de caracteres por caso, e só a tela de detalhe os
+   * mostra — o mesmo motivo que tirou `description` da carga. A lista
+   * omite a coluna, então o campo simplesmente não chega aqui, e exigi-lo
+   * quebraria a carga inteira por um texto que quase ninguém abre.
+   */
+  dossier?: string | null;
+  dossierAt?: Date | null;
+  dossierBy?: string | null;
   socialHandle: string | null;
   followers: number | null;
   evaluated: boolean;
@@ -176,6 +187,10 @@ export function toCaseModel(row: {
     description: row.description ?? "",
     publicResponse: row.publicResponse ?? undefined,
     draftResponse: row.draftResponse ?? undefined,
+    dossier: row.dossier ?? undefined,
+    dossierAt:
+      row.dossierAt?.toISOString() ?? undefined,
+    dossierBy: row.dossierBy ?? undefined,
     socialHandle: row.socialHandle ?? undefined,
     followers: row.followers ?? undefined,
     score: row.score ?? undefined,
@@ -271,6 +286,16 @@ export function toCaseColumns(item: Case) {
     description: item.description || null,
     publicResponse: item.publicResponse || null,
     draftResponse: item.draftResponse || null,
+
+    /*
+      O dossiê **não** é escrito por aqui.
+
+      Quem o grava é a rota da extensão, que também carimba autor e
+      data. Incluí-lo no caminho da tela apagaria o dossiê a cada
+      gravação do caso — a tela não o carrega para reenviar, e um campo
+      ausente no formulário viraria `null` no banco.
+    */
+
     socialHandle: item.socialHandle || null,
     followers:
       typeof item.followers === "number" &&

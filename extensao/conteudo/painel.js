@@ -441,6 +441,10 @@
         razão de o botão existir — reler custaria quinze segundos e uma
         chamada ao modelo para ver de novo o que já foi montado.
       */
+      if (acao === "salvar-dossie") {
+        guardarDossie(alvo);
+      }
+
       if (acao === "recolher-dossie") {
         dossieRecolhido = true;
         recarregarVista();
@@ -3811,6 +3815,44 @@
           ].join("")
         : "",
 
+      /* ---- as peças: o conjunto organizado ---- */
+
+      /*
+        Um dossiê é uma pasta, não só um parecer.
+
+        O Isaac mandou a definição de dicionário: "conjunto organizado
+        de documentos ou informações", que "reúne papéis, relatórios,
+        registros ou arquivos digitais". O que existia era só a leitura
+        — bem escrita, e ainda assim uma versão da história, sem os
+        documentos atrás dela. Quem lê uma narrativa não confere nada:
+        não sabe quantas anotações existem, de que data, quem escreveu,
+        nem se ficou alguma de fora.
+
+        Estas peças são fato, montadas do banco, e não passam pelo
+        modelo. Recolhidas porque são muitas e a leitura vem primeiro.
+      */
+      Array.isArray(r.pecas) && r.pecas.length > 0
+        ? `
+  <details style="margin-top:9px">
+    <summary style="cursor:pointer;font-size:12.5px;font-weight:600;padding:7px 0">As peças — ${r.pecas.length} registro(s) que formam este dossiê</summary>
+    <div style="margin-top:5px">${r.pecas
+      .map(
+        (peca) => `
+      <div class="cartao" style="margin-bottom:5px">
+        <div class="linha">
+          <span class="sub" style="color:var(--texto);font-weight:600">${CW.escapar(peca.tipo)}</span>
+          <span class="tag neutro">${CW.escapar(peca.origem ?? "")}</span>
+        </div>
+        <div class="sub" style="margin-top:2px;color:var(--suave)">${
+          peca.quando ? CW.data(peca.quando) : "sem data"
+        }${peca.autor ? ` · ${CW.escapar(peca.autor)}` : ""}</div>
+        <p class="sub" style="margin-top:4px;color:var(--texto);white-space:pre-wrap">${CW.escapar(peca.trecho ?? "")}</p>
+      </div>`
+      )
+      .join("")}</div>
+  </details>`
+        : "",
+
       /* ---- a história inteira, recolhida ---- */
 
       r.dossie
@@ -3823,12 +3865,95 @@
   </details>`
         : "",
 
+      /*
+        Guardar na ficha, para quem abrir o caso pela aplicação.
+
+        Por clique e não automático: montar dossiê é barato e se faz por
+        curiosidade; guardar é decidir que aquele texto vale para a
+        próxima pessoa. E só com caso — dossiê de contato sem reclamação
+        cadastrada não tem ficha onde morar.
+      */
+      r.protocolo && r.dossie
+        ? `
+  <button class="copiar" data-acao="salvar-dossie"
+          data-protocolo="${CW.escapar(r.protocolo)}"
+          style="width:100%;margin-top:8px;padding:7px">Salvar dossiê</button>
+  <p class="sub" style="margin-top:5px;color:var(--suave)">Fica visível para quem abrir o caso na aplicação. A transcrição do Crisp não é guardada — só esta leitura.</p>`
+        : "",
+
       r.rapido
         ? '  <p class="sub" style="margin-top:6px;color:var(--suave)">Resumo rápido: modelo menor, responde na hora e resume com menos cuidado.</p>'
         : "",
     ]
       .filter(Boolean)
       .join("");
+  }
+
+  /**
+   * Manda o dossiê para a ficha do caso.
+   *
+   * O texto vem do estado, e não da tela: o cartão mostra o dossiê
+   * dentro de um `<details>` que pode estar fechado, e ler do DOM
+   * traria vazio na metade das vezes.
+   */
+  async function guardarDossie(botao) {
+
+    if (!resumoDoCaso?.dossie) return;
+
+    const rotulo = botao.textContent;
+
+    botao.disabled = true;
+    botao.textContent = "salvando…";
+
+    /*
+      Vai a leitura **e** as peças.
+
+      Salvar só a narrativa devolveria à ficha o mesmo que o dicionário
+      diz que um dossiê não é: um parecer sem a pasta. Quem abrir o caso
+      amanhã precisa poder conferir de onde saiu cada afirmação.
+
+      A transcrição do Crisp continua de fora — é o que o Isaac pediu
+      explicitamente, e a peça dela guarda só o nome do arquivo e o
+      tamanho, não o conteúdo.
+    */
+    const pecas = (resumoDoCaso.pecas ?? [])
+      .map(
+        (p) =>
+          `— ${p.tipo}${p.origem ? ` (${p.origem})` : ""}${
+            p.quando ? ` · ${CW.data(p.quando)}` : ""
+          }${p.autor ? ` · ${p.autor}` : ""}\n${p.trecho ?? ""}`
+      )
+      .join("\n\n");
+
+    const texto = pecas
+      ? `${resumoDoCaso.dossie}\n\n\n=== AS PEÇAS DESTE DOSSIÊ ===\n\n${pecas}`
+      : resumoDoCaso.dossie;
+
+    const resposta = await CW.enviar({
+      tipo: "salvarDossie",
+      protocolo: botao.dataset.protocolo,
+      dossie: texto,
+    });
+
+    botao.disabled = false;
+
+    if (!resposta.ok || resposta.dados?.erro) {
+      botao.textContent = rotulo;
+      avisar(
+        resposta.dados?.erro ??
+          resposta.erro ??
+          "Não deu para guardar agora.",
+        "perigo"
+      );
+      return;
+    }
+
+    botao.textContent = "dossiê salvo";
+
+    avisar(
+      "Dossiê salvo — aparece na ficha do caso na aplicação.",
+      "ok"
+    );
   }
 
   async function resumirCaso(botao) {

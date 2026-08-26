@@ -171,3 +171,37 @@ export async function deleteCase(protocol: string) {
   // gravou leia o valor novo na sequência, sem esperar o cache expirar.
   updateTag(CASES_TAG);
 }
+
+/**
+ * Apaga o dossiê guardado num caso.
+ *
+ * Precisa de ação própria porque `toCaseColumns` **não** escreve o
+ * campo, e isso é deliberado: quem grava o dossiê é a rota da extensão,
+ * que carimba autor e data junto. Se a tela o incluísse no caminho
+ * normal de gravação, toda edição do caso o apagaria — a tela não o
+ * carrega na lista para reenviar, e um campo ausente no formulário
+ * viraria `null` no banco.
+ *
+ * Existe porque o dossiê envelhece. Ele é um retrato do caso no dia em
+ * que foi montado; depois de três movimentações descreve um caso que já
+ * não existe, e um texto desatualizado com cara de resumo oficial é
+ * pior do que nenhum. Apagar é barato: monta-se outro pela extensão em
+ * quinze segundos.
+ */
+export async function limparDossie(protocol: string) {
+
+  const prisma = await autorizado();
+
+  if (!prisma) return;
+
+  await prisma.case.update({
+    where: { protocol },
+    data: {
+      dossier: null,
+      dossierAt: null,
+      dossierBy: null,
+    },
+  });
+
+  updateTag(CASES_TAG);
+}

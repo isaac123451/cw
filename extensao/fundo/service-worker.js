@@ -36,6 +36,7 @@ const CAMINHOS = {
   triagem: "/api/extensao/triagem",
   resumoCaso: "/api/extensao/resumo-caso",
   pendencias: "/api/extensao/pendencias",
+  salvarDossie: "/api/extensao/salvar-dossie",
 };
 
 /**
@@ -516,6 +517,28 @@ async function tratar(mensagem) {
    * minutos atrás mostraria como pendente o caso que a pessoa acabou de
    * responder — e mandaria alguém responder de novo.
    */
+  /**
+   * Guarda o dossiê na ficha do caso.
+   *
+   * Só o dossiê — a transcrição do Crisp não vai junto, e é decisão do
+   * Isaac: ela já vive no Crisp, e uma segunda cópia de conversa bruta
+   * aqui é sistema duplicado. O que vale guardar é a leitura, que é o
+   * trabalho.
+   */
+  if (mensagem?.tipo === "salvarDossie") {
+
+    const dados = await chamar(
+      CAMINHOS.salvarDossie,
+      {},
+      {
+        protocolo: mensagem.protocolo,
+        dossie: mensagem.dossie,
+      }
+    );
+
+    return { ok: true, dados };
+  }
+
   if (mensagem?.tipo === "pendencias") {
 
     const dados = await chamar(

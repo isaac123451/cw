@@ -40,6 +40,7 @@ import EvaluationTab from "./EvaluationTab";
 import SocialTab from "./SocialTab";
 import CaseSidebar from "./CaseSidebar";
 import CaseTimeline from "./CaseTimeline";
+import DossieCard from "./DossieCard";
 import { idExterno, idLabel } from "@/lib/services/case.service";
 
 type Tab =
@@ -459,7 +460,19 @@ export default function CaseDetail({
           </div>
 
           {tabAtiva === "visao-geral" && (
-            <OverviewTab data={emEdicao} onChange={patch} />
+            <>
+              {/*
+                O dossiê salvo pela extensão abre a visão geral.
+
+                É a leitura que situa em dez segundos, e quem abre o
+                caso quer justamente isso antes do relato inteiro.
+                Some quando não há — a maioria dos casos não precisa
+                de dossiê, e um cartão vazio em 341 fichas seria ruído.
+              */}
+              <DossieCard data={emEdicao} />
+
+              <OverviewTab data={emEdicao} onChange={patch} />
+            </>
           )}
 
           {tabAtiva === "investigacao" && (
