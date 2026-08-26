@@ -14,6 +14,8 @@ import ModuleNav from "@/components/reclame-aqui/ModuleNav";
 import { useScopedCases } from "@/lib/context/useScopedCases";
 
 import {
+  getCausasNoTempo,
+  getDistribuicaoDeResposta,
   getMonthlyIndices,
   getRollingIndices,
   getTimeSeries,
@@ -25,6 +27,7 @@ import {
   formatRange,
   getRange,
   PeriodKey,
+  periodLabels,
   ptBR,
   hojeNaOperacao,
   scoreBands,
@@ -71,7 +74,32 @@ export default function GraficosPage() {
   );
 
   /**
-   * Série temporal do período escolhido, incluindo o mês corrente —
+   * A janela do movimento, que pode divergir da janela da página.
+   *
+   * O Isaac pediu "um seletor de período na parte de movimento diário".
+   * O motivo é o passo do eixo: com o período em 12 meses a série é
+   * agrupada por mês, e é a única leitura possível — 365 pontos diários
+   * seriam ilegíveis. Só que a pergunta que se faz olhando o movimento
+   * quase sempre é do dia ("o que entrou esta semana?"), enquanto a que
+   * se faz nos gráficos acima é do ano.
+   *
+   * Trocar o período da página inteira para responder uma delas
+   * derrubava a outra. Aqui a série tem a própria janela, e `null`
+   * significa seguir a de cima — que continua sendo o padrão.
+   */
+  const [janelaDoMovimento, setJanelaDoMovimento] =
+    useState<PeriodKey | null>(null);
+
+  const rangeDoMovimento = useMemo(
+    () =>
+      janelaDoMovimento
+        ? getRange(janelaDoMovimento, "vigente", custom)
+        : range,
+    [janelaDoMovimento, custom, range]
+  );
+
+  /**
+   * Série temporal da janela do movimento, incluindo o mês corrente —
    * que os gráficos mensais deixam de fora por só contarem meses
    * fechados.
    *
@@ -79,11 +107,59 @@ export default function GraficosPage() {
    * num gráfico dessa largura seriam ilegíveis.
    */
   const daily = useMemo(
-    () => getTimeSeries(cases, range),
+    () => getTimeSeries(cases, rangeDoMovimento),
+    [cases, rangeDoMovimento]
+  );
+
+  /**
+   * A distribuição dos tempos de resposta, e não a média deles.
+   *
+   * A média esconde a cauda: 100 respostas em 2 h e 5 em 40 dias dão
+   * uma média confortável, e os cinco abandonados somem dela.
+   */
+  const distribuicao = useMemo(
+    () => getDistribuicaoDeResposta(cases, range),
+    [cases, range]
+  );
+
+  /**
+   * As cinco maiores causas, mês a mês.
+   *
+   * O ranking responde "qual é o maior problema"; esta série responde
+   * "qual está crescendo", que é a pergunta que muda o que a operação
+   * faz na semana seguinte.
+   */
+  const causas = useMemo(
+    () => getCausasNoTempo(cases, range),
     [cases, range]
   );
 
   const labels = monthly.map((item) => item.label);
+
+  /** Uma cor por causa, estável enquanto a ordem não muda. */
+  const CORES_DE_CAUSA = [
+    "#8B5CF6",
+    "#0EA5E9",
+    "#F59E0B",
+    "#22C55E",
+    "#EC4899",
+  ];
+
+  /** Minutos → "2 h", "3 dias", "1 mês e 4 dias". */
+  function emTexto(minutos: number | null) {
+
+    if (minutos === null) return "—";
+
+    if (minutos < 60) return `${minutos} min`;
+
+    if (minutos < 1440) {
+      return `${Math.round(minutos / 60)} h`;
+    }
+
+    const dias = Math.round(minutos / 1440);
+
+    return dias === 1 ? "1 dia" : `${dias} dias`;
+  }
 
   return (
     <MainLayout>
@@ -496,12 +572,177 @@ export default function GraficosPage() {
 
         </SurfaceCard>
 
+        {/* Distribuição do tempo de resposta */}
+
+        <SurfaceCard
+          title="Quanto tempo o consumidor esperou"
+          description={
+            distribuicao.medidas === 0
+              ? "Nenhuma reclamação respondida com tempo registrado neste período."
+              : `${distribuicao.medidas} resposta(s) com tempo medido. Metade saiu em até ${emTexto(distribuicao.mediana)}; a pior levou ${emTexto(distribuicao.pior)}.`
+          }
+          hint="A média some com a cauda: 100 respostas em 2 h e 5 em 40 dias dão uma média de menos de dois dias, e os cinco consumidores abandonados desaparecem dela. Aqui cada faixa é uma experiência diferente, e a última é a que gera avaliação baixa mesmo com a resposta certa."
+        >
+
+          {distribuicao.medidas === 0 ? (
+
+            <p className="rounded-xl border border-dashed border-zinc-200 py-10 text-center text-sm text-zinc-400">
+              Sem tempo de resposta registrado neste
+              período.
+            </p>
+
+          ) : (
+
+            <div className="space-y-2.5">
+
+              {distribuicao.faixas.map((faixa) => (
+
+                <div
+                  key={faixa.label}
+                  className="flex items-center gap-3"
+                  title={faixa.hint}
+                >
+
+                  <span className="w-28 shrink-0 text-xs font-medium text-zinc-600">
+                    {faixa.label}
+                  </span>
+
+                  <span className="h-6 flex-1 overflow-hidden rounded-lg bg-zinc-100">
+                    <span
+                      className="block h-full rounded-lg transition-all"
+                      style={{
+                        width: `${Math.max(faixa.parte, faixa.quantidade > 0 ? 2 : 0)}%`,
+                        background: faixa.color,
+                      }}
+                    />
+                  </span>
+
+                  <span className="w-24 shrink-0 text-right text-xs tabular-nums text-zinc-500">
+                    <span className="font-semibold text-zinc-800">
+                      {faixa.quantidade}
+                    </span>{" "}
+                    ({faixa.parte.toFixed(0)}%)
+                  </span>
+
+                </div>
+
+              ))}
+
+              {/*
+                As respondidas sem tempo registrado ficam fora da conta,
+                e o cartão diz isso. Um percentual calculado sobre uma
+                base menor do que a pessoa imagina é pior do que não ter
+                percentual.
+              */}
+              {distribuicao.semMedida > 0 && (
+                <p className="pt-1 text-[11px] text-zinc-400">
+                  {distribuicao.semMedida} resposta(s)
+                  ficaram fora: foram publicadas, mas sem
+                  tempo registrado na importação.
+                </p>
+              )}
+
+            </div>
+
+          )}
+
+        </SurfaceCard>
+
+        {/* Causas ao longo do tempo */}
+
+        <SurfaceCard
+          title="Principais causas, mês a mês"
+          description={
+            causas.series.length === 0
+              ? "Nenhuma reclamação categorizada neste período."
+              : `As ${causas.series.length} maiores categorias do período${causas.outras > 0 ? `, de ${causas.outras + causas.series.length} no total` : ""}.`
+          }
+          hint="O ranking responde qual é o maior problema; esta série responde qual está crescendo — que é a pergunta que muda o trabalho da semana seguinte. Uma categoria que dobrou em dois meses merece ação mesmo em terceiro lugar absoluto."
+        >
+
+          {causas.series.length === 0 ? (
+
+            <p className="rounded-xl border border-dashed border-zinc-200 py-10 text-center text-sm text-zinc-400">
+              Sem categorias para exibir neste período.
+            </p>
+
+          ) : (
+
+            <MultiLineChart
+              labels={causas.labels}
+              height={240}
+              series={causas.series.map(
+                (serie, i) => ({
+                  key: `causa-${i}`,
+                  label: serie.categoria,
+                  color:
+                    CORES_DE_CAUSA[
+                      i % CORES_DE_CAUSA.length
+                    ],
+                  values: serie.valores,
+                })
+              )}
+            />
+
+          )}
+
+        </SurfaceCard>
+
         {/* Diário */}
 
         <SurfaceCard
           title={`Movimento ${granularityLabels[daily.granularity]}`}
-          description={`${formatRange(range.start, range.end)} — segue o período selecionado acima e inclui o mês corrente.`}
+          description={`${formatRange(rangeDoMovimento.start, rangeDoMovimento.end)} — ${
+            janelaDoMovimento
+              ? "janela própria desta série"
+              : "segue o período selecionado acima"
+          } e inclui o mês corrente.`}
           hint="Diferente dos gráficos mensais, esta série entra no mês corrente ainda aberto. O passo do eixo acompanha o tamanho da janela: por dia até 60 dias, por semana até 7 meses, por mês acima disso — 365 pontos diários seriam ilegíveis."
+          action={
+            /*
+              Janela própria, porque o passo do eixo depende dela.
+
+              Em 12 meses esta série é agrupada por mês; para ver
+              movimento por dia é preciso uma janela curta, e mudar o
+              período da página só para isso derruba todos os gráficos
+              acima. "Período da página" devolve o comportamento
+              anterior, que segue sendo o padrão.
+            */
+            <div className="flex shrink-0 flex-wrap items-center gap-1">
+
+              {(
+                [null, "30d", "3m", "6m", "12m"] as const
+              ).map((chave) => {
+
+                const ativo = janelaDoMovimento === chave;
+
+                return (
+                  <button
+                    key={chave ?? "pagina"}
+                    type="button"
+                    onClick={() =>
+                      setJanelaDoMovimento(chave)
+                    }
+                    title={
+                      chave
+                        ? `Ver o movimento dos últimos ${periodLabels[chave]}`
+                        : "Voltar a acompanhar o período escolhido no topo da página"
+                    }
+                    className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
+                      ativo
+                        ? "bg-violet-600 text-white"
+                        : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700"
+                    }`}
+                  >
+                    {chave
+                      ? periodLabels[chave]
+                      : "Período da página"}
+                  </button>
+                );
+              })}
+
+            </div>
+          }
         >
 
           <MultiLineChart
