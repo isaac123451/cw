@@ -96,6 +96,49 @@ export async function fetchCaseDescription(
 }
 
 /**
+ * O dossiê guardado de um caso.
+ *
+ * **O defeito que isto conserta.** O dossiê saiu da listagem por peso —
+ * milhares de caracteres por caso —, com a ideia de que a tela de
+ * detalhe buscaria depois. Só que a busca sob demanda pedia **só** o
+ * relato: o dossiê não chegava a tela nenhuma, `DossieCard` recebia
+ * `undefined`, e o cartão some quando não há dossiê. Resultado: ele
+ * nunca apareceu, uma vez sequer, desde que foi escrito.
+ *
+ * Nada quebrava. A extensão gravava, o banco guardava, a tela não
+ * mostrava — e o sintoma era "cadê o campo do dossiê", sem erro nenhum
+ * para investigar.
+ *
+ * **Consulta própria, e não junto com o relato.** O relato é campo
+ * editável e entra no rascunho da tela; o dossiê não se edita. Trazer
+ * os dois na mesma ida obrigaria a empurrar o dossiê pelo rascunho, e
+ * a barra "Salvar" apareceria só de abrir o caso — anunciando uma
+ * alteração que ninguém fez.
+ */
+export async function fetchCaseDossier(
+  prisma: PrismaClient,
+  protocol: string
+) {
+
+  const row = await prisma.case.findUnique({
+    where: { protocol },
+    select: {
+      dossier: true,
+      dossierAt: true,
+      dossierBy: true,
+    },
+  });
+
+  if (!row?.dossier) return null;
+
+  return {
+    dossier: row.dossier,
+    dossierAt: row.dossierAt?.toISOString(),
+    dossierBy: row.dossierBy ?? undefined,
+  };
+}
+
+/**
  * Cache de nome → id das entidades de apoio.
  *
  * Gravar um caso exigia consultar categoria, subcategoria, responsável e

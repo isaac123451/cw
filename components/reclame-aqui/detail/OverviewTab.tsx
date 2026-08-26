@@ -65,13 +65,30 @@ export default function OverviewTab({
 
     buscado.current = data.protocol;
 
-    let ativo = true;
+    const pedido = data.protocol;
 
     setCarregandoRelato(true);
 
-    loadCaseDescription(data.protocol)
+    /*
+      Confere o protocolo, e não um booleano de "ainda montado".
+
+      Era `let ativo = true` com `return () => { ativo = false }`, e
+      junto com o `ref` de "já busquei" isso **impede a carga** em
+      desenvolvimento: o React monta, desmonta e monta de novo cada
+      componente de propósito, então a limpeza zera o `ativo` da
+      primeira busca, o segundo efeito sai cedo pelo `ref`, e a resposta
+      que chega é jogada fora. O relato ficava vazio na tela com 1.482
+      caracteres no banco — sem erro, sem aviso.
+
+      Em produção não acontece (a repetição é só do modo de
+      desenvolvimento), o que é pior: o defeito só aparecia onde a gente
+      confere as coisas.
+    */
+    loadCaseDescription(pedido)
       .then((texto) => {
-        if (ativo && texto) {
+        if (buscado.current !== pedido) return;
+
+        if (texto) {
           onChange({ description: texto });
         }
       })
@@ -82,12 +99,10 @@ export default function OverviewTab({
         );
       })
       .finally(() => {
-        if (ativo) setCarregandoRelato(false);
+        if (buscado.current === pedido) {
+          setCarregandoRelato(false);
+        }
       });
-
-    return () => {
-      ativo = false;
-    };
 
   }, [data.protocol, data.description, onChange]);
 

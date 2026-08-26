@@ -13,6 +13,7 @@ import type { Modulo } from "@/lib/auth/modules";
 
 import {
   fetchCaseDescription,
+  fetchCaseDossier,
   fetchCases,
   persistCase,
   removeCaseByProtocol,
@@ -110,6 +111,23 @@ export async function loadCaseDescription(
   if (!prisma) return "";
 
   return fetchCaseDescription(prisma, protocol);
+}
+
+/**
+ * O dossiê guardado deste caso.
+ *
+ * Consulta própria porque o dossiê não é campo editável: trazê-lo
+ * junto com o relato obrigaria a empurrá-lo pelo rascunho da tela, e a
+ * barra "Salvar" apareceria só de abrir o caso. Ver o comentário em
+ * `fetchCaseDossier`.
+ */
+export async function loadDossie(protocol: string) {
+
+  const prisma = getPrisma();
+
+  if (!prisma) return null;
+
+  return fetchCaseDossier(prisma, protocol);
 }
 
 export async function saveCase(

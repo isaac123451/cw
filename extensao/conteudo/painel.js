@@ -2087,6 +2087,26 @@
         </div>`);
     }
 
+    /*
+      O dossiê, que faltava justamente aqui.
+
+      Ele aparecia em três telas — contato sem caso nenhum, aba de
+      Redes Sociais e caso aberto — e **não** nesta, que é a que abre
+      sozinha quando a extensão identifica o contato no WhatsApp. Ou
+      seja: sumia exatamente na hora mais comum de precisar dele, com o
+      cliente na linha e a reclamação já reconhecida na tela.
+
+      Vem depois da lista de reclamações porque é sobre elas: primeiro
+      se vê o que existe, depois se abre a pasta. E antes das macros,
+      que é o "me dá o texto" — entender vem antes de responder.
+
+      Sem caso, vai com protocolo vazio: o servidor cruza pelo contato
+      e monta a partir do NPS, dos outros canais e da transcrição.
+    */
+    partes.push(
+      blocoDossie(dados.casos?.[0]?.protocolo ?? "")
+    );
+
     /* ---- macros ---- */
 
     if ((dados.macros ?? []).length > 0) {
@@ -3670,6 +3690,157 @@
     ].join("");
   }
 
+  /**
+   * A capa do dossiê e as peças, agrupadas por tipo.
+   *
+   * **A definição que o Isaac mandou.** Dossiê é "conjunto organizado
+   * de documentos ou informações sobre um assunto específico", que
+   * "reúne papéis, relatórios, registros ou arquivos digitais focados
+   * em um único tema". As três palavras que mandam ali são *conjunto*,
+   * *organizado* e *documentos* — e a versão anterior entregava uma
+   * lista corrida, em ordem de data, sem dizer o que a pasta continha.
+   *
+   * Uma lista corrida é um monte de papel; um dossiê tem capa. A capa
+   * responde antes de abrir: **quantos documentos**, **de quando até
+   * quando** e **de onde vieram**. É o que permite dizer "isto aqui
+   * cobre agosto inteiro e não tem nada do financeiro" sem ler nada.
+   *
+   * **Agrupado por tipo, cronológico dentro do grupo.** Uma pasta de
+   * verdade tem separadores: as anotações juntas, as movimentações
+   * juntas. Misturadas por data, para achar "todas as anotações" é
+   * preciso varrer tudo — que é o trabalho que a organização existe
+   * para poupar. A ordem do tempo continua valendo dentro de cada
+   * grupo, que é onde ela responde alguma coisa.
+   *
+   * **Cada peça é numerada.** Um dossiê serve para ser citado: "veja a
+   * peça 4" é uma frase que alguém escreve num grupo de trabalho, e
+   * sem número não existe.
+   */
+  function capaEPecas(pecas) {
+
+    /*
+      A janela que a pasta cobre.
+
+      Peça sem data não estraga o cálculo — é filtrada antes. E se
+      nenhuma tiver data, a capa simplesmente não fala de período, em
+      vez de inventar um.
+    */
+    const datas = pecas
+      .map((p) => p.quando)
+      .filter(Boolean)
+      .sort();
+
+    const origens = [
+      ...new Set(
+        pecas.map((p) => p.origem).filter(Boolean)
+      ),
+    ];
+
+    /* Ordem estável dos separadores: a que veio do servidor. */
+    const grupos = [];
+
+    for (const peca of pecas) {
+
+      const tipo = peca.tipo ?? "Documento";
+
+      let grupo = grupos.find((g) => g.tipo === tipo);
+
+      if (!grupo) {
+        grupo = { tipo, itens: [] };
+        grupos.push(grupo);
+      }
+
+      grupo.itens.push(peca);
+    }
+
+    let numero = 0;
+
+    const periodo =
+      datas.length === 0
+        ? ""
+        : datas.length === 1 ||
+            CW.data(datas[0]) ===
+              CW.data(datas[datas.length - 1])
+          ? `de ${CW.data(datas[0])}`
+          : `de ${CW.data(datas[0])} a ${CW.data(datas[datas.length - 1])}`;
+
+    return [
+      '  <div class="cartao" style="margin-top:9px">',
+
+      '    <div class="linha">',
+      '      <span class="rotulo">As peças deste dossiê</span>',
+      `      <span class="tag neutro">${pecas.length} documento(s)</span>`,
+      '    </div>',
+
+      /*
+        A capa em uma frase.
+
+        Sem ela a pessoa precisa abrir e contar para saber o que tem na
+        pasta — e quem não abre fica sem saber que existe.
+      */
+      `    <p class="sub" style="margin-top:5px;color:var(--suave)">${[
+        periodo,
+        origens.length > 0
+          ? `de ${origens.map(CW.escapar).join(", ")}`
+          : "",
+      ]
+        .filter(Boolean)
+        .join(" · ")}</p>`,
+
+      /* Um resumo do que tem, por tipo, antes de abrir. */
+      '    <div class="etapas" style="margin-top:7px">',
+      /*
+        Só a primeira letra desce.
+
+        `toLowerCase()` inteiro virava "1 resposta de nps" e "1
+        transcrição do crisp" — siglas e nomes próprios não são
+        minúsculos, e o rótulo passava a parecer erro de digitação.
+      */
+      ...grupos.map(
+        (g) =>
+          `      <span class="tag neutro">${g.itens.length} ${CW.escapar(
+            g.tipo.charAt(0).toLowerCase() +
+              g.tipo.slice(1)
+          )}</span>`
+      ),
+      '    </div>',
+
+      `
+    <details style="margin-top:8px">
+      <summary style="cursor:pointer;font-size:12.5px;font-weight:600;padding:6px 0">Abrir a pasta</summary>
+      <div style="margin-top:5px">${grupos
+        .map(
+          (g) => `
+        <div style="margin-bottom:9px">
+          <div class="rotulo" style="margin-bottom:4px">${CW.escapar(g.tipo)} (${g.itens.length})</div>
+          ${g.itens
+            .map((peca) => {
+
+              numero += 1;
+
+              return `
+          <div class="cartao" style="margin-bottom:5px">
+            <div class="linha">
+              <span class="sub" style="color:var(--texto);font-weight:600">Peça ${numero}</span>
+              <span class="sub" style="color:var(--suave)">${
+                peca.quando
+                  ? CW.data(peca.quando)
+                  : "sem data"
+              }${peca.autor ? ` · ${CW.escapar(peca.autor)}` : ""}</span>
+            </div>
+            <p class="sub" style="margin-top:4px;color:var(--texto);white-space:pre-wrap">${CW.escapar(peca.trecho ?? "")}</p>
+          </div>`;
+            })
+            .join("")}
+        </div>`
+        )
+        .join("")}</div>
+    </details>`,
+
+      '  </div>',
+    ].join("");
+  }
+
   function blocoResumoDoCaso(r) {
 
     /*
@@ -3832,25 +4003,7 @@
         modelo. Recolhidas porque são muitas e a leitura vem primeiro.
       */
       Array.isArray(r.pecas) && r.pecas.length > 0
-        ? `
-  <details style="margin-top:9px">
-    <summary style="cursor:pointer;font-size:12.5px;font-weight:600;padding:7px 0">As peças — ${r.pecas.length} registro(s) que formam este dossiê</summary>
-    <div style="margin-top:5px">${r.pecas
-      .map(
-        (peca) => `
-      <div class="cartao" style="margin-bottom:5px">
-        <div class="linha">
-          <span class="sub" style="color:var(--texto);font-weight:600">${CW.escapar(peca.tipo)}</span>
-          <span class="tag neutro">${CW.escapar(peca.origem ?? "")}</span>
-        </div>
-        <div class="sub" style="margin-top:2px;color:var(--suave)">${
-          peca.quando ? CW.data(peca.quando) : "sem data"
-        }${peca.autor ? ` · ${CW.escapar(peca.autor)}` : ""}</div>
-        <p class="sub" style="margin-top:4px;color:var(--texto);white-space:pre-wrap">${CW.escapar(peca.trecho ?? "")}</p>
-      </div>`
-      )
-      .join("")}</div>
-  </details>`
+        ? capaEPecas(r.pecas)
         : "",
 
       /* ---- a história inteira, recolhida ---- */
@@ -3916,17 +4069,46 @@
       explicitamente, e a peça dela guarda só o nome do arquivo e o
       tamanho, não o conteúdo.
     */
-    const pecas = (resumoDoCaso.pecas ?? [])
+    const lista = resumoDoCaso.pecas ?? [];
+
+    /*
+      Numeradas, e com a capa, como na tela.
+
+      O texto salvo é lido meses depois, por gente que não estava na
+      conversa. "Veja a peça 4" só funciona se as peças tiverem número
+      no que ficou guardado — e a capa é o que permite dizer, sem ler
+      tudo, o que aquela pasta cobre e o que ela não cobre.
+    */
+    const datas = lista
+      .map((p) => p.quando)
+      .filter(Boolean)
+      .sort();
+
+    const capa = [
+      `${lista.length} documento(s)`,
+      datas.length > 0
+        ? `de ${CW.data(datas[0])} a ${CW.data(datas[datas.length - 1])}`
+        : "",
+      [
+        ...new Set(
+          lista.map((p) => p.origem).filter(Boolean)
+        ),
+      ].join(", "),
+    ]
+      .filter(Boolean)
+      .join(" · ");
+
+    const pecas = lista
       .map(
-        (p) =>
-          `— ${p.tipo}${p.origem ? ` (${p.origem})` : ""}${
+        (p, i) =>
+          `[${i + 1}] ${p.tipo}${p.origem ? ` (${p.origem})` : ""}${
             p.quando ? ` · ${CW.data(p.quando)}` : ""
           }${p.autor ? ` · ${p.autor}` : ""}\n${p.trecho ?? ""}`
       )
       .join("\n\n");
 
     const texto = pecas
-      ? `${resumoDoCaso.dossie}\n\n\n=== AS PEÇAS DESTE DOSSIÊ ===\n\n${pecas}`
+      ? `${resumoDoCaso.dossie}\n\n\n=== AS PEÇAS DESTE DOSSIÊ ===\n${capa}\n\n${pecas}`
       : resumoDoCaso.dossie;
 
     const resposta = await CW.enviar({
