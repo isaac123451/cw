@@ -222,7 +222,7 @@ export default function Toolbar({
             existem porque digitar duas datas para ver os últimos 30
             dias é trabalho demais para a pergunta mais frequente.
           */}
-          <div className="flex items-center gap-1 rounded-xl border border-zinc-200 px-1">
+          <div className="flex shrink-0 items-center gap-1 rounded-xl border border-zinc-200 px-1">
 
             <input
               type="date"
@@ -296,7 +296,14 @@ export default function Toolbar({
 
         </div>
 
-        <div className="flex items-center gap-2">
+        {/*
+          O grupo da direita também quebra linha.
+
+          Sem `flex-wrap`, num celular ele empurra a barra para 383 px
+          numa tela de 375 e os botões de visão saem pela borda. Os
+          filtros à esquerda já quebravam; este ficou de fora.
+        */}
+        <div className="flex flex-wrap items-center gap-2">
 
           <div className="flex items-center rounded-xl border border-zinc-200 p-1">
 

@@ -34,7 +34,7 @@ export default function SurfaceCard({
   return (
     <section
       className={cn(
-        "rounded-2xl border border-zinc-200/80 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04),0_8px_24px_-12px_rgba(16,24,40,0.10)]",
+        "min-w-0 rounded-2xl border border-zinc-200/80 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04),0_8px_24px_-12px_rgba(16,24,40,0.10)]",
         className
       )}
     >
@@ -78,7 +78,24 @@ export default function SurfaceCard({
 
       )}
 
-      <div className={cn("p-6", bodyClassName)}>
+      {/*
+        O corpo não pode empurrar o cartão para fora da tela.
+
+        Item de grid nasce com `min-width: auto`, então um gráfico ou
+        uma tabela larga estica a coluna inteira — num celular de 375 px
+        o cartão da evolução mensal ficava com 570, e o dos casos
+        críticos com 896. O documento não rolava (o `overflow` do main
+        segurava), mas metade de cada cartão ficava do lado de fora.
+
+        `min-w-0` deixa o cartão encolher; `overflow-x-auto` dá ao
+        conteúdo largo a barra dele, em vez de espalhá-lo pela página.
+      */}
+      <div
+        className={cn(
+          "min-w-0 overflow-x-auto p-5 sm:p-6",
+          bodyClassName
+        )}
+      >
         {children}
       </div>
 

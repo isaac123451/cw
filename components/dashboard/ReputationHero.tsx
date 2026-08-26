@@ -23,6 +23,7 @@ import {
   hasRA1000,
   inRange,
   ptBR,
+  RA1000_TARGETS,
   textoSobre,
 } from "@/lib/services/reputation.service";
 
@@ -84,24 +85,28 @@ export default function ReputationHero() {
       label: "Índice de resposta",
       value: atual.responseIndex,
       meta: goals.resposta,
+      oficial: RA1000_TARGETS.resposta,
       unit: "%",
     },
     {
       label: "Nota do consumidor",
       value: atual.consumerScore,
       meta: goals.consumidor,
+      oficial: RA1000_TARGETS.consumidor,
       unit: "",
     },
     {
       label: "Índice de solução",
       value: atual.solutionIndex,
       meta: goals.solucao,
+      oficial: RA1000_TARGETS.solucao,
       unit: "%",
     },
     {
       label: "Voltaria a fazer negócio",
       value: atual.wouldReturnIndex,
       meta: goals["novos-negocios"],
+      oficial: RA1000_TARGETS["novos-negocios"],
       unit: "%",
     },
   ];
@@ -214,15 +219,28 @@ export default function ReputationHero() {
               const max = item.unit === "%" ? 100 : 10;
               const ok = item.value >= item.meta;
 
+              /*
+                A meta ajustada é diferente do critério do portal?
+
+                Vale dizer: quem baixou a meta para 85 precisa saber que
+                bater a **sua** meta não é o mesmo que ganhar o selo, que
+                continua cobrando o número oficial.
+              */
+              const ajustada = item.meta !== item.oficial;
+
               return (
                 <div
                   key={item.label}
-                  title={`Meta: ${ptBR(item.meta)}${item.unit}`}
+                  title={
+                    ajustada
+                      ? `Sua meta: ${ptBR(item.meta)}${item.unit}. O selo RA1000 exige ${ptBR(item.oficial)}${item.unit}.`
+                      : `Meta: ${ptBR(item.meta)}${item.unit} — o critério do RA1000.`
+                  }
                 >
 
                   <div className="flex items-baseline justify-between gap-2">
 
-                    <span className="text-xs font-medium text-zinc-600">
+                    <span className="min-w-0 truncate text-xs font-medium text-zinc-600">
                       {item.label}
                     </span>
 
@@ -275,6 +293,35 @@ export default function ReputationHero() {
                     />
 
                   </div>
+
+                  {/*
+                    A meta escrita, e não só um risco na barra.
+
+                    Ela existia num `title` e num traço de meio pixel —
+                    invisível na prática. O Isaac reparou justamente
+                    nisso: "as metas não são as que foram definidas em
+                    analytics do reclame aqui". Estavam sendo: o número
+                    é que nunca aparecia, e sem ele não há como
+                    conferir.
+                  */}
+                  <p className="mt-1 text-[11px] text-zinc-500">
+                    Meta{" "}
+                    <strong className="font-semibold tabular-nums text-zinc-700">
+                      {ptBR(item.meta)}
+                      {item.unit}
+                    </strong>
+
+                    {ajustada && (
+                      <>
+                        {" "}
+                        <span className="text-zinc-400">
+                          · ajustada por você (RA1000 pede{" "}
+                          {ptBR(item.oficial)}
+                          {item.unit})
+                        </span>
+                      </>
+                    )}
+                  </p>
 
                 </div>
               );

@@ -9,6 +9,7 @@ import UserMenu from "./UserMenu";
 import NotificationsMenu from "./NotificationsMenu";
 import { useSession } from "@/lib/context/SessionContext";
 import ThemeToggle from "@/components/shared/ThemeToggle";
+import MobileNav from "./MobileNav";
 
 export default function Topbar() {
 
@@ -23,9 +24,11 @@ export default function Topbar() {
   );
 
   return (
-    <header className="sticky top-0 z-40 flex h-16 items-center justify-between gap-6 border-b border-zinc-200/80 bg-white/85 px-6 backdrop-blur-md lg:px-8">
+    <header className="sticky top-0 z-40 flex h-16 items-center justify-between gap-3 border-b border-zinc-200/80 bg-white/85 px-4 backdrop-blur-md sm:gap-6 sm:px-6 lg:px-8">
 
-      <div className="min-w-0">
+      <MobileNav />
+
+      <div className="min-w-0 flex-1">
 
         <p className="truncate text-sm font-semibold text-zinc-900">
           {current?.title ?? "CW Reputação"}

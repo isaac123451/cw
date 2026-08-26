@@ -29,6 +29,7 @@ import { useSession } from "@/lib/context/SessionContext";
 
 import { isOpen, isReclameAqui } from "@/lib/services/case.service";
 import { hojeNaOperacao } from "@/lib/services/reputation.service";
+import FrentesResumo from "@/components/dashboard/FrentesResumo";
 
 /** Atalhos para onde a operação realmente age. */
 const atalhos = [
@@ -170,9 +171,19 @@ export default function DashboardPage() {
 
         </div>
 
-        <div className="grid gap-6 xl:grid-cols-3">
+        {/*
+          As três frentes, antes de qualquer gráfico.
 
-          <div className="xl:col-span-2">
+          O painel abria direto na nota do Reclame Aqui, e o resto da
+          operação — NPS e redes sociais — não aparecia em lugar nenhum.
+          Este cartão responde "onde está o trabalho hoje" antes de
+          entrar no detalhe de uma frente só.
+        */}
+        <FrentesResumo />
+
+        <div className="grid min-w-0 gap-5 sm:gap-6 xl:grid-cols-3">
+
+          <div className="min-w-0 xl:col-span-2">
             <MonthlyEvolution />
           </div>
 
@@ -180,9 +191,9 @@ export default function DashboardPage() {
 
         </div>
 
-        <div className="grid gap-6 xl:grid-cols-3">
+        <div className="grid min-w-0 gap-5 sm:gap-6 xl:grid-cols-3">
 
-          <div className="xl:col-span-2">
+          <div className="min-w-0 xl:col-span-2">
             <CriticalCases />
           </div>
 
@@ -190,9 +201,9 @@ export default function DashboardPage() {
 
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-3">
+        <div className="grid min-w-0 gap-5 sm:gap-6 lg:grid-cols-3">
 
-          <div className="lg:col-span-2">
+          <div className="min-w-0 lg:col-span-2">
             <CategoryDistribution />
           </div>
 
