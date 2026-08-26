@@ -14,6 +14,7 @@ import {
 
 import { useScopedCases } from "@/lib/context/useScopedCases";
 import { isOpen } from "@/lib/services/case.service";
+import { useGoals } from "@/lib/context/GoalsContext";
 import { parseElapsedText } from "@/lib/services/case.mapper";
 
 import StatTile from "@/components/shared/StatTile";
@@ -26,6 +27,7 @@ import {
   getReputation,
   inRange,
   ptBR,
+  RA1000_TARGETS,
   textoSobre,
 } from "@/lib/services/reputation.service";
 
@@ -33,6 +35,7 @@ export default function MetricsBar() {
 
   const { cases } = useScopedCases("reclame-aqui");
   const router = useRouter();
+  const { goals } = useGoals();
 
   /** Janela oficial de 6 meses — a mesma que define a nota pública. */
   const range = useMemo(() => getRange("6m"), []);
@@ -144,14 +147,31 @@ export default function MetricsBar() {
         tone="danger"
       />
 
+      {/*
+        A meta vem do cadastro, não de um 90 escrito aqui.
+
+        O Isaac: "quando eu selecionar uma meta, ela precisa ser
+        atribuída a tudo que se relaciona a meta". Este cartão dizia
+        "meta de 90%" fixo, e quem tivesse ajustado a meta para 92% em
+        Analytics via dois números diferentes para a mesma coisa em duas
+        telas — e a fixa era a que abria primeiro.
+
+        O rodapé diz quando a meta é sua e não a do portal: sem isso,
+        alcançar 91% com meta ajustada para 92% pareceria fracasso
+        diante de um critério que o Reclame Aqui já daria por cumprido.
+      */}
       <StatTile
         label="Índice de resposta"
         description="Percentual respondido publicamente. É o item de maior peso na nota."
         value={`${ptBR(reputacao.responseIndex)}%`}
-        hint="meta de 90%"
+        hint={
+          goals.resposta === RA1000_TARGETS.resposta
+            ? `meta de ${ptBR(goals.resposta)}%`
+            : `meta de ${ptBR(goals.resposta)}% · ajustada por você (RA1000 pede ${ptBR(RA1000_TARGETS.resposta)}%)`
+        }
         icon={CheckCircle2}
         tone={
-          reputacao.responseIndex >= 90
+          reputacao.responseIndex >= goals.resposta
             ? "success"
             : "warning"
         }

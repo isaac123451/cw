@@ -2,7 +2,10 @@
 
 import { useState } from "react";
 
-import { CloudDownload } from "lucide-react";
+import {
+  CloudDownload,
+  RefreshCw,
+} from "lucide-react";
 
 import Modal, {
   GhostButton,
@@ -203,18 +206,45 @@ export default function WootricImport({
 
   return (
     <>
+      {/*
+        Buscar o que chegou: um clique, sem escolher nada.
+
+        O Isaac: "tem que ter algo para atualizar os casos e chegarem os
+        que chegaram recentemente". A opção existia — "Desde a última
+        importação", a primeira do modal — só que atrás de duas telas e
+        de uma decisão sobre janelas de tempo. A ação mais frequente do
+        cadastro, feita várias vezes por dia, era a que custava mais
+        cliques.
+
+        A escolha de período continua ali do lado, para as recargas
+        grandes, que são raras e merecem a pergunta "tem certeza?" que o
+        modal faz.
+      */}
       <button
-        onClick={() => setAberto(true)}
+        onClick={() => importar(0)}
         disabled={rodando}
-        title="Puxa as respostas da pesquisa direto do Wootric."
-        className="flex items-center gap-2 rounded-xl border border-zinc-200 px-3.5 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:border-violet-300 hover:text-violet-700 disabled:opacity-50"
+        title="Traz as respostas que chegaram desde a última importação. Segundos."
+        className="flex items-center gap-2 rounded-xl border border-violet-200 px-3.5 py-2.5 text-sm font-medium text-violet-700 transition-colors hover:bg-violet-50 disabled:opacity-50"
       >
-        <CloudDownload size={15} />
+        <RefreshCw
+          size={15}
+          className={rodando ? "animate-spin" : ""}
+        />
         {rodando
           ? total > 1
             ? `Importando ${feito}/${total}...`
-            : "Importando..."
-          : "Importar do Wootric"}
+            : "Buscando..."
+          : "Buscar novas"}
+      </button>
+
+      <button
+        onClick={() => setAberto(true)}
+        disabled={rodando}
+        title="Escolher um período maior — recarga de 30 dias, 6 meses ou 1 ano."
+        className="flex items-center gap-2 rounded-xl border border-zinc-200 px-3.5 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:border-violet-300 hover:text-violet-700 disabled:opacity-50"
+      >
+        <CloudDownload size={15} />
+        Período
       </button>
 
       {aberto && (
