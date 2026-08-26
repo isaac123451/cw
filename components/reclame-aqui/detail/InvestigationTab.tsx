@@ -14,6 +14,7 @@ import { Case } from "@/lib/models/case";
 import SurfaceCard from "@/components/shared/SurfaceCard";
 
 import { useSettings } from "@/lib/context/SettingsContext";
+import Combobox from "@/components/shared/Combobox";
 
 interface Props {
   data: Case;
@@ -246,22 +247,18 @@ export default function InvestigationTab({
               Categoria
             </label>
 
-            <select
-              value={data.category}
-              onChange={(e) =>
-                onChange({
-                  category: e.target.value,
-                  subcategory: "",
-                })
-              }
-              className="mt-1.5 h-11 w-full rounded-xl border border-zinc-200 px-3 text-sm outline-none transition-colors focus:border-violet-400"
-            >
-              {categories.map((item) => (
-                <option key={item.id} value={item.name}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
+            <div className="mt-1.5">
+              <Combobox
+                value={data.category}
+                onChange={(category) =>
+                  onChange({ category, subcategory: "" })
+                }
+                placeholder="Escolher categoria…"
+                options={categories.map(
+                  (item) => item.name
+                )}
+              />
+            </div>
 
           </div>
 
@@ -271,23 +268,19 @@ export default function InvestigationTab({
               Subcategoria
             </label>
 
-            <select
-              value={data.subcategory ?? ""}
-              onChange={(e) =>
-                onChange({ subcategory: e.target.value })
-              }
-              className="mt-1.5 h-11 w-full rounded-xl border border-zinc-200 px-3 text-sm outline-none transition-colors focus:border-violet-400"
-            >
-              <option value="">
-                Nenhuma selecionada
-              </option>
-
-              {relatedSubcategories.map((item) => (
-                <option key={item.id} value={item.name}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
+            <div className="mt-1.5">
+              <Combobox
+                value={data.subcategory ?? ""}
+                onChange={(subcategory) =>
+                  onChange({ subcategory })
+                }
+                emptyLabel="Nenhuma selecionada"
+                placeholder="Nenhuma selecionada"
+                options={relatedSubcategories.map(
+                  (item) => item.name
+                )}
+              />
+            </div>
 
           </div>
 
@@ -297,23 +290,19 @@ export default function InvestigationTab({
               Time envolvido
             </label>
 
-            <select
-              value={data.department ?? ""}
-              onChange={(e) =>
-                onChange({ department: e.target.value })
-              }
-              className="mt-1.5 h-11 w-full rounded-xl border border-zinc-200 px-3 text-sm outline-none transition-colors focus:border-violet-400"
-            >
-              <option value="">Nenhum</option>
-
-              {teams
-                .filter((item) => item.active)
-                .map((item) => (
-                  <option key={item.id} value={item.name}>
-                    {item.name}
-                  </option>
-                ))}
-            </select>
+            <div className="mt-1.5">
+              <Combobox
+                value={data.department ?? ""}
+                onChange={(department) =>
+                  onChange({ department })
+                }
+                emptyLabel="Nenhum"
+                placeholder="Nenhum"
+                options={teams
+                  .filter((item) => item.active)
+                  .map((item) => item.name)}
+              />
+            </div>
 
           </div>
 

@@ -9,8 +9,9 @@ import { Case } from "@/lib/models/case";
 import { useSettings } from "@/lib/context/SettingsContext";
 
 import {
-  averageResponseByCategory,
+  responseByCategory,
   overCeiling,
+  totalBreaches,
 } from "@/lib/services/ceiling.service";
 
 import { toneOfSla } from "@/lib/services/sla.service";
@@ -20,11 +21,17 @@ import { formatHours } from "@/lib/models/sla";
 import SurfaceCard from "@/components/shared/SurfaceCard";
 
 /**
- * Tempo médio de resposta por categoria contra o teto declarado.
+ * Tempo de resposta por categoria contra o teto declarado.
  *
- * Sem teto, "19 dias e 17 horas" é só um número na tela. Com teto, cada
- * categoria passa a ter um alvo e a barra mostra quanto dele já foi
- * consumido.
+ * **A barra mede o pior caso, não a média.** Teto é um máximo, e a média
+ * de um conjunto que contém um desastre é a maneira mais confiável de
+ * esconder o desastre: dez respostas em uma hora e uma esquecida por
+ * cem dão média de dez, e a tela pintava de verde contra um teto de
+ * vinte e quatro enquanto um consumidor esperava quatro dias.
+ *
+ * A média continua na linha, à direita, porque as duas perguntas são
+ * legítimas e diferentes — o pior diz se alguém foi abandonado, a média
+ * diz se a categoria vai bem no geral.
  */
 export default function ResponseCeiling({
   cases,
@@ -34,18 +41,21 @@ export default function ResponseCeiling({
 
   const { categories } = useSettings();
 
-  const linhas = averageResponseByCategory(
-    cases,
-    categories
-  );
+  const linhas = responseByCategory(cases, categories);
 
   const estouradas = overCeiling(linhas);
+  const reclamacoesEstouradas = totalBreaches(linhas);
+
+  /** Quantas categorias nem teto têm — ver o rodapé. */
+  const semTeto = linhas.filter(
+    (item) => item.ceilingHours === undefined
+  ).length;
 
   return (
     <SurfaceCard
-      title="Tempo médio por categoria"
-      description="Média de resposta do período contra o teto definido em Configurar fluxo."
-      hint="A média considera apenas reclamações com tempo de resposta preenchido — categoria sem base não aparece. Categoria sem teto cadastrado não é cobrada."
+      title="Resposta por categoria"
+      description="O pior tempo de cada categoria contra o teto definido em Configurar fluxo."
+      hint="A barra mede o pior caso, porque teto é máximo: uma média dentro do teto pode esconder uma reclamação esquecida por dias. Só entram reclamações com tempo de resposta preenchido; categoria sem teto cadastrado não é cobrada."
       action={
         <Link
           href="/reclame-aqui/configuracoes"
@@ -92,9 +102,16 @@ export default function ResponseCeiling({
 
                 <span
                   className="w-32 shrink-0 text-right text-sm font-semibold tabular-nums text-zinc-900"
-                  title={`Base: ${item.samples} reclamação(ões) com tempo preenchido`}
+                  title={`Pior tempo de resposta da categoria. Base: ${item.samples} reclamação(ões) com tempo preenchido.`}
                 >
-                  {formatElapsed(item.averageMinutes)}
+                  {formatElapsed(item.worstMinutes)}
+                </span>
+
+                <span
+                  className="w-28 shrink-0 text-right text-xs tabular-nums text-zinc-400"
+                  title="Média da categoria — contexto, não é o que o teto cobra."
+                >
+                  méd. {formatElapsed(item.averageMinutes)}
                 </span>
 
                 <span className="w-28 shrink-0 text-right text-xs tabular-nums text-zinc-400">
@@ -121,9 +138,27 @@ export default function ResponseCeiling({
 
             <Timer size={13} className="text-zinc-400" />
 
-            {estouradas === 0
-              ? "Nenhuma categoria acima do teto no período."
-              : `${estouradas} categoria(s) acima do teto no período.`}
+            {/*
+              Categorias **e** reclamações.
+
+              "2 categorias acima do teto" não diz se foram dois casos
+              ou duzentos — e a diferença decide se o problema é um
+              atendimento esquecido ou um processo quebrado.
+            */}
+            {/*
+              Sem teto cadastrado, o zero é mudo.
+
+              "Nenhuma reclamação passou do teto" e "nenhum teto foi
+              definido" dão o mesmo zero e significam o contrário: no
+              primeiro caso a operação está em dia, no segundo ninguém
+              está medindo. Hoje **nenhuma** categoria tem teto, então
+              esta é a mensagem que aparece.
+            */}
+            {semTeto === linhas.length
+              ? `Nenhuma categoria tem teto cadastrado — sem prazo definido, nada pode ser apontado como estouro. O pior tempo acima já é real: defina os tetos em Configurar fluxo.`
+              : estouradas === 0
+                ? "Nenhuma reclamação passou do teto da sua categoria no período."
+                : `${reclamacoesEstouradas} reclamação(ões) passaram do teto, em ${estouradas} categoria(s).`}
 
           </p>
         </>

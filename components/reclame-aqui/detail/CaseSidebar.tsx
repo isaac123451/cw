@@ -21,6 +21,7 @@ import {
 } from "@/lib/services/sla.service";
 
 import { formatHours } from "@/lib/models/sla";
+import Combobox from "@/components/shared/Combobox";
 
 interface Props {
   data: Case;
@@ -178,22 +179,24 @@ export default function CaseSidebar({
         }
       >
 
-        <select
-          value={data.owner ?? ""}
-          onChange={(e) =>
-            onChange({ owner: e.target.value })
-          }
-          className="h-11 w-full rounded-xl border border-zinc-200 px-3 text-sm outline-none transition-colors focus:border-violet-400"
-        >
-          <option value="">Sem responsável</option>
+        {/*
+          Com busca, porque a lista cresce com o time.
 
-          {opcoes.map((item) => (
-            <option key={item} value={item}>
-              {item}
-              {item === eu ? " (você)" : ""}
-            </option>
-          ))}
-        </select>
+          Um `<select>` nativo obriga a rolar atrás de um nome que a
+          pessoa já sabe de cor. Três letras resolvem, e o campo nativo
+          não tem onde recebê-las.
+        */}
+        <Combobox
+          value={data.owner ?? ""}
+          onChange={(owner) => onChange({ owner })}
+          emptyLabel="Sem responsável"
+          placeholder="Sem responsável"
+          options={opcoes.map((item) => ({
+            value: item,
+            label:
+              item === eu ? `${item} (você)` : item,
+          }))}
+        />
 
         {jaEMeu && (
           <p className="mt-2 flex items-center gap-1.5 text-xs text-emerald-700">
@@ -223,28 +226,47 @@ export default function CaseSidebar({
         }
       >
 
-        <select
+        {/*
+          Esta é a caixa que o Isaac mostrou na print.
+
+          Duzentos e trinta e nove restaurantes numa lista nativa: para
+          achar um, rola-se a lista inteira atrás de um nome que a
+          pessoa já sabe de cor. Aqui três letras bastam, e a busca
+          alcança também a cidade e o documento — porque "Maceió
+          Burgers" tem homônimo e o CNPJ não tem.
+        */}
+        <Combobox
           value={data.establishmentId ?? ""}
-          onChange={(e) =>
+          onChange={(id) =>
             onChange({
-              establishmentId:
-                e.target.value || undefined,
+              establishmentId: id || undefined,
+
+              /*
+                Escolher à mão trava o vínculo.
+
+                Sem isto, a próxima varredura por documento
+                sobrescreveria a escolha da pessoa — que é o defeito
+                que `establishmentManual` existe para impedir.
+              */
+              establishmentManual: true,
             })
           }
-          className="h-11 w-full rounded-xl border border-zinc-200 px-3 text-sm outline-none transition-colors focus:border-violet-400"
-        >
-          <option value="">Sem vínculo</option>
-
-          {establishments.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.name}
-            </option>
-          ))}
-        </select>
+          emptyLabel="Sem vínculo"
+          placeholder="Buscar restaurante…"
+          options={establishments.map((item) => ({
+            value: item.id,
+            label: item.name,
+            hint: [item.city, item.document]
+              .filter(Boolean)
+              .join(" · "),
+          }))}
+        />
 
         <p className="mt-2 text-xs leading-relaxed text-zinc-500">
-          O Reclame Aqui não informa o estabelecimento — o
-          vínculo é feito aqui manualmente.
+          O Reclame Aqui não informa o estabelecimento. O
+          vínculo se faz sozinho pelo CPF ou CNPJ da
+          reclamação; escolher aqui à mão passa na frente
+          e não é desfeito pela próxima varredura.
         </p>
 
       </Block>
