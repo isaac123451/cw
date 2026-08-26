@@ -87,6 +87,43 @@ export function temIA() {
   return provedorDeIA() !== null;
 }
 
+/**
+ * O outro provedor, quando existe um configurado.
+ *
+ * **Por que existe.** Medido em 26/08/2026: a única chave configurada é
+ * a do Gemini, e o `check:ia` daquele momento voltou 503 — "O Gemini
+ * está congestionado neste momento". Quando isso acontece, o resumo da
+ * extensão simplesmente não sai, e para quem está atendendo a
+ * ferramenta parece quebrada.
+ *
+ * A plataforma sempre soube falar com dois provedores, mas escolhia
+ * **um** e parava ali. Ter a segunda chave e não usá-la numa hora
+ * dessas é desperdício de uma redundância que já está paga.
+ *
+ * Devolve `null` quando só há um configurado — que é o caso hoje, e é
+ * por isso que o `check:ia` diz na cara qual chave falta.
+ */
+export function provedorReserva(
+  emUso: Provedor,
+  preferencia?: string
+): Provedor | null {
+
+  const outro: Provedor =
+    emUso === "gemini" ? "anthropic" : "gemini";
+
+  /*
+    A mesma checagem de chave do seletor, e não uma segunda.
+
+    `provedorDeIA` com a preferência invertida responde exatamente
+    "esse outro está utilizável?" sem duplicar a regra do marcador do
+    .env.example, que já enganou uma vez.
+  */
+  return provedorDeIA(outro) === outro &&
+    outro !== provedorDeIA(preferencia)
+    ? outro
+    : null;
+}
+
 export interface PedidoDeIA {
   sistema: string;
   prompt: string;
@@ -144,9 +181,48 @@ export async function pedirEstruturado(
     };
   }
 
-  return provedor === "gemini"
-    ? peloGemini(pedido, config)
-    : pelaAnthropic(pedido, config);
+  const primeira =
+    provedor === "gemini"
+      ? await peloGemini(pedido, config)
+      : await pelaAnthropic(pedido, config);
+
+  /*
+    Deu certo, ou a culpa é do pedido: entrega como está.
+
+    Só falha de infraestrutura justifica tentar de novo. 422 é recusa
+    ou limite do modelo — repetir no outro provedor daria a mesma
+    recusa, com o dobro do tempo de espera.
+  */
+  if (!primeira.erro || primeira.status === 422) {
+    return primeira;
+  }
+
+  const reserva = provedorReserva(
+    provedor,
+    config.provedorPreferido
+  );
+
+  if (!reserva) return primeira;
+
+  /**
+   * A segunda tentativa, no outro provedor.
+   *
+   * O 503 de congestionamento do Gemini é o caso real: sem isto o
+   * resumo da extensão simplesmente não sai, e quem está atendendo vê
+   * uma ferramenta quebrada. A chave do outro provedor já está
+   * configurada — não usá-la numa hora dessas é desperdiçar uma
+   * redundância paga.
+   *
+   * Se a segunda também falhar, quem volta é a **primeira** resposta:
+   * ela descreve o provedor que a operação escolheu, e é o erro que
+   * faz sentido investigar.
+   */
+  const segunda =
+    reserva === "gemini"
+      ? await peloGemini(pedido, config)
+      : await pelaAnthropic(pedido, config);
+
+  return segunda.erro ? primeira : segunda;
 }
 
 /* ============================================================

@@ -15,6 +15,7 @@ import "dotenv/config";
 import {
   lerEventos,
   pedirEstruturado,
+  provedorReserva,
   provedorDeIA,
 } from "../lib/services/ia.service";
 import { lerConfigDeIA } from "../lib/services/iaConfig.service";
@@ -79,6 +80,29 @@ async function main() {
   console.log(
     "Prazos:        ",
     `corrida em ${Math.round(config.hedgeMs / 1000)}s · desiste em ${Math.round(config.prazoMs / 1000)}s`
+  );
+
+  /**
+   * Há para onde correr quando o provedor cai?
+   *
+   * Esta linha existe por causa de uma falha medida: com só a chave do
+   * Gemini configurada, um 503 de congestionamento derrubava o resumo
+   * da extensão inteiro — e para quem está atendendo a ferramenta
+   * parece quebrada, sem explicação.
+   *
+   * A plataforma agora tenta o outro provedor sozinha quando a falha é
+   * de infraestrutura. Só que isso depende da segunda chave existir, e
+   * a ausência dela é silenciosa. Aqui ela deixa de ser.
+   */
+  const reserva = provedor
+    ? provedorReserva(provedor, config.provedorPreferido)
+    : null;
+
+  console.log(
+    "Reserva:       ",
+    reserva
+      ? `${reserva} — se ${provedor} falhar por infraestrutura, a chamada é refeita nele`
+      : `NENHUMA. Com só ${provedor} configurado, um 503 dele derruba o recurso. Configure a outra chave.`
   );
 
   if (!provedor) {
