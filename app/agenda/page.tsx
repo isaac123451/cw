@@ -31,7 +31,7 @@ import {
 import { pushTaskToGoogle } from "@/lib/actions/google";
 
 import { AgendaTask } from "@/lib/models/agenda";
-import { REFERENCE_DATE } from "@/lib/services/reputation.service";
+import { hojeNaOperacao } from "@/lib/services/reputation.service";
 
 const typeTone: Record<string, string> = {
   "Follow-up": "bg-sky-50 text-sky-700 ring-sky-100",
@@ -51,7 +51,7 @@ const priorityTone: Record<string, string> = {
 
 function formatDay(date: string) {
 
-  if (date === REFERENCE_DATE) return "Hoje";
+  if (date === hojeNaOperacao()) return "Hoje";
 
   const [year, month, day] = date.split("-").map(Number);
 
@@ -130,13 +130,13 @@ export default function AgendaPage() {
   }, [visible]);
 
   const today = tasks.filter(
-    (item) => item.dueDate === REFERENCE_DATE
+    (item) => item.dueDate === hojeNaOperacao()
   );
 
   const done = tasks.filter((item) => item.done).length;
 
   const late = tasks.filter(
-    (item) => !item.done && item.dueDate < REFERENCE_DATE
+    (item) => !item.done && item.dueDate < hojeNaOperacao()
   ).length;
 
   function salvar(data: TaskDraft | AgendaTask) {
@@ -281,7 +281,7 @@ export default function AgendaPage() {
           {days.map(([date, items]) => {
 
             const atrasado =
-              date < REFERENCE_DATE &&
+              date < hojeNaOperacao() &&
               items.some((item) => !item.done);
 
             return (

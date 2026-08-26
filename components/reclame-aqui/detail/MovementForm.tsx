@@ -16,7 +16,7 @@ import { useMovements } from "@/lib/context/MovementsContext";
 import { useSession } from "@/lib/context/SessionContext";
 
 import { formatHours } from "@/lib/models/sla";
-import { REFERENCE_DATE } from "@/lib/services/reputation.service";
+import { hojeNaOperacao } from "@/lib/services/reputation.service";
 
 interface Props {
   caseId: string;
@@ -51,7 +51,7 @@ export default function MovementForm({
   const [reason, setReason] = useState("");
 
   const [startedAt, setStartedAt] =
-    useState(REFERENCE_DATE);
+    useState(hojeNaOperacao());
 
   const regra = ativas.find(
     (item) => item.destination === destination

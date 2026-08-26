@@ -21,7 +21,7 @@ import {
 
 import { toneOfSla } from "@/lib/services/sla.service";
 import { formatHours } from "@/lib/models/sla";
-import { REFERENCE_DATE } from "@/lib/services/reputation.service";
+import { hojeNaOperacao } from "@/lib/services/reputation.service";
 
 import SurfaceCard from "@/components/shared/SurfaceCard";
 import {
@@ -55,7 +55,7 @@ export default function MovementPanel({
   const [formOpen, setFormOpen] = useState(false);
   const [outcome, setOutcome] = useState("");
   const [returnedAt, setReturnedAt] =
-    useState(REFERENCE_DATE);
+    useState(hojeNaOperacao());
 
   const doCaso = movementsOf(data.id, movements);
   const aberta = openMovementOf(data.id, movements);
@@ -78,7 +78,7 @@ export default function MovementPanel({
     );
 
     setOutcome("");
-    setReturnedAt(REFERENCE_DATE);
+    setReturnedAt(hojeNaOperacao());
   }
 
   return (

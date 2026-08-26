@@ -20,7 +20,7 @@ import {
 import { useWorkspaceSlice } from "@/lib/context/useWorkspace";
 import { sincronizar } from "@/lib/context/sync";
 
-import { REFERENCE_DATE } from "@/lib/services/reputation.service";
+import { hojeNaOperacao } from "@/lib/services/reputation.service";
 
 export type ProjectDraft = Omit<Project, "id">;
 
@@ -101,7 +101,7 @@ export function ProjectsProvider({
               : atual.progress === 100
               ? 50
               : atual.progress,
-          updatedAt: REFERENCE_DATE,
+          updatedAt: hojeNaOperacao(),
         };
 
         setProjects((prev) =>

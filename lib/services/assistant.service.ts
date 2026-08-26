@@ -13,7 +13,7 @@ import {
   getRawCounts,
   pendingEvaluations,
   ptBR,
-  REFERENCE_DATE,
+  hojeNaOperacao,
   scoreBands,
   scoreFrom,
 } from "@/lib/services/reputation.service";
@@ -302,7 +302,7 @@ const skills: Skill[] = [
       const antigo = semResposta[0];
 
       const dias = Math.round(
-        (Date.parse(`${REFERENCE_DATE}T00:00:00Z`) -
+        (Date.parse(`${hojeNaOperacao()}T00:00:00Z`) -
           Date.parse(`${antigo.createdAt}T00:00:00Z`)) /
           86400000
       );
@@ -603,12 +603,12 @@ const skills: Skill[] = [
 
       const vencidas = tasks.filter(
         (item) =>
-          !item.done && item.dueDate < REFERENCE_DATE
+          !item.done && item.dueDate < hojeNaOperacao()
       );
 
       const hoje = tasks.filter(
         (item) =>
-          !item.done && item.dueDate === REFERENCE_DATE
+          !item.done && item.dueDate === hojeNaOperacao()
       );
 
       return {

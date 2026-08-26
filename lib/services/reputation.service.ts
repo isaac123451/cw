@@ -1,11 +1,51 @@
 import { Case } from "@/lib/models/case";
 
 /**
- * Data de referência da operação. Fixa de propósito: usar `new Date()` em
- * render faria o servidor e o cliente calcularem períodos diferentes,
- * quebrando a hidratação.
+ * O fuso da operação. A base inteira é brasileira, e o dia útil de quem
+ * usa esta aplicação começa e termina aqui — não em UTC.
  */
-export const REFERENCE_DATE = "2026-08-10";
+const FUSO_DA_OPERACAO = "America/Sao_Paulo";
+
+/**
+ * `en-CA` é o atalho para `AAAA-MM-DD` sem montar a string à mão.
+ *
+ * Criado uma vez: `Intl.DateTimeFormat` é caro de instanciar, e esta
+ * função é chamada em laço sobre centenas de casos.
+ */
+const FORMATO_DO_DIA = new Intl.DateTimeFormat("en-CA", {
+  timeZone: FUSO_DA_OPERACAO,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+/**
+ * O dia de hoje na operação, em `AAAA-MM-DD`.
+ *
+ * **Isto já foi uma constante** — `REFERENCE_DATE = "2026-08-10"` — e o
+ * motivo alegado era hidratação: `new Date()` no render faria servidor e
+ * navegador calcularem períodos diferentes. O motivo era real, a solução
+ * não: congelar a data não corrige a divergência, só a esconde atrás de
+ * um erro pior. A aplicação inteira parou no dia 10 — prazo de SLA,
+ * agenda, gráficos, alertas, "hoje" na extensão. Em 25/08 o painel ainda
+ * dizia que faltavam quinze dias para vencer o que já tinha vencido.
+ *
+ * A divergência de hidratação vinha do **fuso**, não do relógio: um
+ * servidor em UTC e um navegador em UTC−3 discordam sobre que dia é,
+ * entre 21h e meia-noite. Fixando o fuso nos dois lados, os dois
+ * calculam a mesma data de parede e a hidratação fecha. Sobra só a
+ * virada de meia-noite no meio de um render — uma janela de
+ * milissegundos que se corrige no próximo.
+ *
+ * É função, e não constante calculada na carga do módulo, de propósito:
+ * um servidor de pé há três dias serviria a data de anteontem. Quem
+ * recebe `today` por parâmetro deve usar `hojeNaOperacao()` como
+ * **valor padrão** — que reavalia a cada chamada — e nunca guardar o
+ * resultado num módulo.
+ */
+export function hojeNaOperacao(): string {
+  return FORMATO_DO_DIA.format(new Date());
+}
 
 export type PeriodKey =
   | "30d"
@@ -102,8 +142,8 @@ export function getRange(
 
     // `||` e não `??`: o input de data devolve string vazia quando é
     // limpo, e "" passaria pelo `??` até virar Invalid Date no shift().
-    const start = custom?.start || REFERENCE_DATE;
-    const end = custom?.end || REFERENCE_DATE;
+    const start = custom?.start || hojeNaOperacao();
+    const end = custom?.end || hojeNaOperacao();
 
     const dias =
       Math.round(
@@ -122,7 +162,7 @@ export function getRange(
         -Math.max(dias - 1, 0)
       ),
       previousEnd,
-      partial: end >= REFERENCE_DATE,
+      partial: end >= hojeNaOperacao(),
     };
   }
 
@@ -139,7 +179,7 @@ export function getRange(
    */
   if (period === "30d") {
 
-    const end = REFERENCE_DATE;
+    const end = hojeNaOperacao();
     const start = shift(end, -(ROLLING_DAYS - 1));
 
     const previousEnd = shift(start, -1);
@@ -161,10 +201,10 @@ export function getRange(
   // Janela vigente termina no último mês fechado; a próxima, no atual.
   const endOffset = mode === "vigente" ? -1 : 0;
 
-  const end = monthEnd(REFERENCE_DATE, endOffset);
+  const end = monthEnd(hojeNaOperacao(), endOffset);
 
   const start = monthStart(
-    REFERENCE_DATE,
+    hojeNaOperacao(),
     endOffset - months + 1
   );
 
@@ -173,7 +213,7 @@ export function getRange(
     end,
     previousEnd: shift(start, -1),
     previousStart: monthStart(
-      REFERENCE_DATE,
+      hojeNaOperacao(),
       endOffset - months * 2 + 1
     ),
     partial: mode === "proximo",
@@ -1246,7 +1286,7 @@ export function getBacklog(
     if ((item.publicResponse ?? "").trim() !== "")
       return false;
 
-    return item.createdAt < shift(REFERENCE_DATE, -7);
+    return item.createdAt < shift(hojeNaOperacao(), -7);
   }).length;
 
   const awaitingRating = cases.filter(

@@ -19,7 +19,7 @@ import {
   saveCase,
 } from "@/lib/actions/cases";
 
-import { REFERENCE_DATE } from "@/lib/services/reputation.service";
+import { hojeNaOperacao } from "@/lib/services/reputation.service";
 import {
   casaComTermo,
   moverPara,
@@ -431,7 +431,7 @@ export function CaseProvider({
      * pela rota `/api/extensao/mover`, que não pode chamar server
      * action. Duas cópias divergiriam, e o sintoma seria nota fantasma.
      */
-    const movido = moverPara(atual, status, REFERENCE_DATE);
+    const movido = moverPara(atual, status, hojeNaOperacao());
 
     setCases((prev) =>
       prev.map((item) =>

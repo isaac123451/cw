@@ -6,7 +6,7 @@ import {
   getRawCounts,
   inRange,
   PeriodKey,
-  REFERENCE_DATE,
+  hojeNaOperacao,
   scoreFrom,
 } from "@/lib/services/reputation.service";
 
@@ -335,8 +335,8 @@ export function getTimeSeries(
   range: { start: string; end: string }
 ): TimeSeries {
 
-  const start = range.start || REFERENCE_DATE;
-  const end = range.end || REFERENCE_DATE;
+  const start = range.start || hojeNaOperacao();
+  const end = range.end || hojeNaOperacao();
 
   const total = Math.max(daysBetween(start, end), 1);
 

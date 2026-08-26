@@ -235,7 +235,7 @@ export async function POST(request: Request) {
 
   /**
    * Data de publicação. Sem ela vinda da tela, usa o dia real — e não a
-   * `REFERENCE_DATE` da operação: uma reclamação que está sendo lida
+   * `hojeNaOperacao()` da operação: uma reclamação que está sendo lida
    * agora é de agora, e datá-la no passado moveria a janela da nota.
    *
    * Vem antes das checagens de duplicata porque uma delas compara a

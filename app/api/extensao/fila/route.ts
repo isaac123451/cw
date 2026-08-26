@@ -14,7 +14,7 @@ import {
   isOpen,
 } from "@/lib/services/case.service";
 import { slaStatus } from "@/lib/services/sla.service";
-import { REFERENCE_DATE } from "@/lib/services/reputation.service";
+import { hojeNaOperacao } from "@/lib/services/reputation.service";
 
 import {
   emAndamento,
@@ -170,7 +170,7 @@ export async function GET(request: Request) {
    */
   const comSla = daEtapa.map((item) => ({
     item,
-    sla: slaStatus(item, workspace.slaRules, REFERENCE_DATE),
+    sla: slaStatus(item, workspace.slaRules, hojeNaOperacao()),
   }));
 
   comSla.sort((a, b) => {

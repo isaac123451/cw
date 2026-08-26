@@ -3,7 +3,7 @@ import { AgendaTask } from "@/lib/models/agenda";
 import { CaseMovement } from "@/lib/models/movement";
 import { GoogleEvent } from "@/lib/models/google";
 
-import { REFERENCE_DATE } from "@/lib/services/reputation.service";
+import { hojeNaOperacao } from "@/lib/services/reputation.service";
 import { lateMovements } from "@/lib/services/movement.service";
 
 export type NotificationTone =
@@ -90,7 +90,7 @@ export function buildNotifications(
 
   const list: Notification[] = [];
 
-  const hoje = REFERENCE_DATE;
+  const hoje = hojeNaOperacao();
 
   if (prefs.semResposta) {
 
@@ -238,7 +238,7 @@ export function buildNotifications(
      * dia é um só — separar em duas listas obrigaria a olhar dois
      * lugares para saber o que vem pela frente.
      *
-     * Usa o dia real do navegador, não `REFERENCE_DATE`: o evento vem
+     * Usa o dia real do navegador, não `hojeNaOperacao()`: o evento vem
      * da agenda de verdade, e comparar com a data fixa da operação
      * esconderia tudo.
      */

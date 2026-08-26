@@ -91,8 +91,14 @@ scripts/        utilitários de banco e importação
 - TailwindCSS apenas, sem CSS externo. **Cada `className` numa linha
   só**: CRLF dentro de `className` multilinha quebra a hidratação.
 - Nunca chamar `new Date()` durante o render — servidor e cliente
-  calculariam períodos diferentes. Use `REFERENCE_DATE` de
-  `reputation.service.ts`.
+  calculariam dias diferentes entre 21h e meia-noite, porque um está em
+  UTC e o outro em UTC−3. Use `hojeNaOperacao()` de
+  `reputation.service.ts`, que fixa o fuso em `America/Sao_Paulo` nos
+  dois lados. **É função, não constante**: guardar o retorno num módulo
+  faz um servidor de pé há três dias servir a data de anteontem — foi
+  assim que a aplicação inteira ficou presa em 10/08/2026. Parâmetro de
+  data se escreve `today = hojeNaOperacao()`, que reavalia a cada
+  chamada.
 - Módulo `server-only` não pode ser importado por client component:
   derruba a rota em runtime, com `tsc` e `lint` limpos. Constante que a
   tela precisa vai para `lib/models/`.

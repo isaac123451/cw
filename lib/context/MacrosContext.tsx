@@ -17,7 +17,7 @@ import {
 import { useWorkspaceSlice } from "@/lib/context/useWorkspace";
 import { sincronizar } from "@/lib/context/sync";
 
-import { REFERENCE_DATE } from "@/lib/services/reputation.service";
+import { hojeNaOperacao } from "@/lib/services/reputation.service";
 
 export type MacroDraft = Omit<
   Macro,
@@ -64,7 +64,7 @@ export function MacrosProvider({
           ...data,
           id: crypto.randomUUID(),
           uses: 0,
-          updatedAt: REFERENCE_DATE,
+          updatedAt: hojeNaOperacao(),
         };
 
         setMacros((prev) => [novo, ...prev]);
@@ -75,7 +75,7 @@ export function MacrosProvider({
 
         const alterado = {
           ...data,
-          updatedAt: REFERENCE_DATE,
+          updatedAt: hojeNaOperacao(),
         };
 
         setMacros((prev) =>

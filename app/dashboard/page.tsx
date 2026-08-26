@@ -28,7 +28,7 @@ import { useCases } from "@/lib/context/CaseContext";
 import { useSession } from "@/lib/context/SessionContext";
 
 import { isOpen, isReclameAqui } from "@/lib/services/case.service";
-import { REFERENCE_DATE } from "@/lib/services/reputation.service";
+import { hojeNaOperacao } from "@/lib/services/reputation.service";
 
 /** Atalhos para onde a operação realmente age. */
 const atalhos = [
@@ -66,7 +66,7 @@ export default function DashboardPage() {
 
     // Sem resposta há mais de 7 dias — o que derruba a nota.
     const limite = new Date(
-      `${REFERENCE_DATE}T00:00:00Z`
+      `${hojeNaOperacao()}T00:00:00Z`
     );
     limite.setUTCDate(limite.getUTCDate() - 7);
     const corte = limite.toISOString().slice(0, 10);

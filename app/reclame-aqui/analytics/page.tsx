@@ -48,7 +48,7 @@ import {
   PeriodKey,
   PeriodMode,
   ptBR,
-  REFERENCE_DATE,
+  hojeNaOperacao,
 } from "@/lib/services/reputation.service";
 
 const backlogTone: Record<string, string> = {
@@ -99,8 +99,8 @@ export default function ReclameAquiAnalyticsPage() {
   const [mode, setMode] = useState<PeriodMode>("vigente");
 
   const [custom, setCustom] = useState<CustomRange>({
-    start: `${REFERENCE_DATE.slice(0, 4)}-01-01`,
-    end: REFERENCE_DATE,
+    start: `${hojeNaOperacao().slice(0, 4)}-01-01`,
+    end: hojeNaOperacao(),
   });
 
   const range = useMemo(

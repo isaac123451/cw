@@ -80,6 +80,7 @@ export function toCaseModel(row: {
   title: string;
   description: string | null;
   publicResponse: string | null;
+  draftResponse: string | null;
   evaluated: boolean;
   score: number | null;
   scoreDisregarded?: boolean | null;
@@ -127,6 +128,7 @@ export function toCaseModel(row: {
     title: row.title,
     description: row.description ?? "",
     publicResponse: row.publicResponse ?? undefined,
+    draftResponse: row.draftResponse ?? undefined,
     score: row.score ?? undefined,
     evaluated: row.evaluated,
     scoreDisregarded:
@@ -219,6 +221,7 @@ export function toCaseColumns(item: Case) {
     title: item.title,
     description: item.description || null,
     publicResponse: item.publicResponse || null,
+    draftResponse: item.draftResponse || null,
     evaluated: Boolean(item.evaluated),
     score: item.score ?? null,
     scoreDisregarded: Boolean(item.scoreDisregarded),

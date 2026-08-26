@@ -20,7 +20,7 @@ import { useWorkflow } from "@/lib/context/WorkflowContext";
 import { useTeams } from "@/lib/context/TeamsContext";
 import { useSession } from "@/lib/context/SessionContext";
 
-import { REFERENCE_DATE } from "@/lib/services/reputation.service";
+import { hojeNaOperacao } from "@/lib/services/reputation.service";
 
 interface Props {
   open: boolean;
@@ -132,7 +132,7 @@ export default function CreateCaseModal({
     session?.name ?? ""
   );
   const [createdAt, setCreatedAt] =
-    useState(REFERENCE_DATE);
+    useState(hojeNaOperacao());
   const [description, setDescription] = useState("");
 
   const subsDaCategoria = useMemo(

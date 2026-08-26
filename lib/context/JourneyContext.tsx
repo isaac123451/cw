@@ -29,7 +29,7 @@ import {
   type Gravacao,
 } from "@/lib/context/sync";
 
-import { REFERENCE_DATE } from "@/lib/services/reputation.service";
+import { hojeNaOperacao } from "@/lib/services/reputation.service";
 
 interface JourneyContextType {
   stages: JourneyStage[];
@@ -163,7 +163,7 @@ export function JourneyProvider({
         const nova: JourneyEntry = {
           ...data,
           id: crypto.randomUUID(),
-          createdAt: REFERENCE_DATE,
+          createdAt: hojeNaOperacao(),
         };
 
         setEntries((prev) => [nova, ...prev]);

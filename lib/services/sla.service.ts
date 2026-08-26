@@ -1,7 +1,7 @@
 import { Case } from "@/lib/models/case";
 import { ANY_CATEGORY, SlaRule } from "@/lib/models/sla";
 
-import { REFERENCE_DATE } from "@/lib/services/reputation.service";
+import { hojeNaOperacao } from "@/lib/services/reputation.service";
 
 /**
  * Escolhe a regra que vale para um caso.
@@ -88,7 +88,7 @@ export function toneOfSla(situation: SlaSituation) {
 export function slaStatus(
   item: Case,
   rules: SlaRule[],
-  today = REFERENCE_DATE
+  today = hojeNaOperacao()
 ): SlaStatus {
 
   const rule = resolveRule(item, rules);

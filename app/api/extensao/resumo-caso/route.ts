@@ -6,7 +6,16 @@ import {
 } from "@/lib/api/extensao";
 
 import { getPrisma } from "@/lib/prisma";
-import { fetchCaseByProtocol } from "@/lib/services/case.repository";
+import {
+  fetchCaseByProtocol,
+  fetchCases,
+} from "@/lib/services/case.repository";
+
+import {
+  compararNome,
+  compararTelefone,
+  lerTelefone,
+} from "@/lib/services/contato.service";
 import { pedirEstruturado } from "@/lib/services/ia.service";
 
 export const runtime = "nodejs";
@@ -194,6 +203,9 @@ export async function POST(request: Request) {
   const contato = {
     nome: String(entrada.nome ?? "").trim(),
     telefone: String(entrada.telefone ?? "").trim(),
+
+    /** A chave que liga o NPS aos outros canais — ver `alvo` abaixo. */
+    email: String(entrada.email ?? "").trim(),
   };
 
   /**
@@ -290,6 +302,126 @@ export async function POST(request: Request) {
   const dia = (d: Date) =>
     d.toISOString().slice(0, 10);
 
+  /**
+   * O histórico do contato inteiro: NPS e os outros casos dele.
+   *
+   * O dossiê nasceu preso a um caso, e por isso descrevia uma
+   * reclamação — não um cliente. O Isaac pediu o mesmo recurso no NPS e
+   * nas Redes Sociais, e a leitura certa do pedido não é "faça outro
+   * dossiê para cada canal": é que o cliente é um só. Quem detratou no
+   * NPS em março e abriu reclamação em agosto está contando a mesma
+   * história em dois lugares, e o dossiê que enxerga só um dos dois faz
+   * quem atende repetir a pergunta que já foi respondida.
+   *
+   * Por isso a busca é por contato, não por canal — e o mesmo bloco
+   * serve o Reclame Aqui, o NPS e as Redes Sociais sem nenhum ramo
+   * dedicado.
+   */
+  const alvo = {
+    telefone: lerTelefone(
+      contato.telefone || caso?.phone || ""
+    ),
+    nome: contato.nome || caso?.customer || "",
+
+    /**
+     * O e-mail é o que **de fato** liga os canais nesta base.
+     *
+     * Medido antes de escrever este código, sobre os dados reais: dos
+     * 868 ciclos de NPS, **zero** têm telefone e 867 têm e-mail. E o
+     * campo `customer` do NPS não guarda nome de pessoa — guarda o
+     * começo do e-mail ("northparrilla", "dtchellopizzaria"), porque a
+     * carga veio da ferramenta de pesquisa e não do cadastro. Cruzar
+     * por telefone ou por nome ali é procurar o que não existe.
+     *
+     * Por isso o e-mail vem primeiro e é igualdade, não semelhança.
+     * Telefone e nome ficam como as rungs seguintes: servem para os
+     * outros casos do mesmo cliente, onde o telefone existe nos dois
+     * lados.
+     */
+    email: (contato.email || caso?.email || "")
+      .trim()
+      .toLowerCase(),
+  };
+
+  const temContato = Boolean(
+    alvo.email || alvo.telefone?.digitos || alvo.nome
+  );
+
+  const [ciclosDeNps, outrosCasos] =
+    prisma && temContato
+      ? await Promise.all([
+          prisma.npsResponse.findMany({
+            orderBy: { respondedAt: "desc" },
+            take: 400,
+            select: {
+              customer: true,
+              email: true,
+              phone: true,
+              score: true,
+              comment: true,
+              respondedAt: true,
+              status: true,
+              kind: true,
+              rootCause: true,
+              postContactNote: true,
+              resolvedAfter: true,
+            },
+          }),
+          fetchCases(prisma),
+        ])
+      : [[], []];
+
+  /** E-mail primeiro, telefone depois, nome por último. */
+  const eDele = (
+    telefone?: string | null,
+    nome?: string | null,
+    email?: string | null
+  ) => {
+
+    /*
+      E-mail é igualdade — ou é a mesma caixa, ou não é.
+
+      Vem antes de tudo porque não erra: telefone precisa tolerar o
+      nono dígito e nome precisa tolerar abreviação, e cada tolerância
+      dessas é uma chance de juntar duas pessoas diferentes.
+    */
+    const dele = (email ?? "").trim().toLowerCase();
+
+    if (alvo.email && dele) {
+      return alvo.email === dele;
+    }
+
+    if (alvo.telefone?.digitos) {
+
+      const casou = compararTelefone(
+        alvo.telefone,
+        lerTelefone(telefone ?? "")
+      );
+
+      if (casou) return true;
+
+      /*
+        Telefone dos dois lados e discordante encerra a comparação.
+
+        Com telefone disponível em ambos, nome igual é coincidência mais
+        provável do que a mesma pessoa — "Maria Silva" aparece às
+        dezenas nesta base.
+      */
+      if (telefone) return false;
+    }
+
+    return compararNome(alvo.nome, nome ?? "") === "exata";
+  };
+
+  const npsDoContato = ciclosDeNps
+    .filter((n) => eDele(n.phone, n.customer, n.email))
+    .slice(0, 12);
+
+  const casosDoContato = outrosCasos
+    .filter((c) => c.protocol !== protocolo)
+    .filter((c) => eDele(c.phone, c.customer, c.email))
+    .slice(0, 12);
+
   const linhaDoTempo = [
     ...anotacoes.map((item) => ({
       quando: item.createdAt,
@@ -310,6 +442,30 @@ export async function POST(request: Request) {
       (a, b) => a.quando.getTime() - b.quando.getTime()
     )
     .map((item) => item.texto);
+
+  /**
+   * O que o contato já viveu nos outros canais, em texto.
+   *
+   * Vai como bloco próprio e rotulado. Misturado à linha do tempo do
+   * caso, o modelo dataria um comentário de NPS de março como se fosse
+   * anotação da reclamação de agosto.
+   */
+  const historicoDoContato = [
+    ...npsDoContato.map(
+      (n) =>
+        `${dia(n.respondedAt)} — NPS nota ${n.score}${n.kind ? ` (${n.kind})` : ""}, situação ${n.status}${n.rootCause ? `, causa raiz: ${n.rootCause}` : ""}${n.comment ? `. Comentário: "${n.comment}"` : ""}${n.postContactNote ? `. Tratativa: ${n.postContactNote}` : ""}${
+          n.resolvedAfter === true
+            ? ". Resolvido depois do contato."
+            : n.resolvedAfter === false
+              ? ". **Não** resolvido depois do contato."
+              : ""
+        }`
+    ),
+    ...casosDoContato.map(
+      (c) =>
+        `${c.createdAt} — ${c.source}: ${c.protocol} "${c.title}" — situação ${c.status}${c.evaluated ? `, avaliado como ${c.resolved ? "resolvido" : "NÃO resolvido"}` : ", ainda sem avaliação"}`
+    ),
+  ];
 
   /**
    * O material muda conforme o que existe, e o formato não.
@@ -363,6 +519,17 @@ export async function POST(request: Request) {
   const prompt = [
     ...doCaso,
 
+    /*
+      O histórico do contato nos outros canais.
+
+      Rotulado e separado de propósito: o modelo precisa saber que isto
+      é outra conversa, de outra data, em outro lugar — e não mais uma
+      anotação deste caso.
+    */
+    historicoDoContato.length > 0
+      ? `\n--- ESTE MESMO CLIENTE, EM OUTROS CANAIS ---\n${historicoDoContato.join("\n")}\n--- fim do histórico ---`
+      : "",
+
     /**
      * A transcrição do Crisp, quando alguém cola uma.
      *
@@ -379,7 +546,7 @@ export async function POST(request: Request) {
      * ninguém pediu para manter.
      */
     transcricao
-      ? `\n--- TRANSCRIÇÃO DO ATENDIMENTO NO CRISP (colada pelo atendente) ---\n${transcricao}\n--- fim da transcrição ---`
+      ? `\n--- TRANSCRIÇÃO DO ATENDIMENTO NO CRISP (arquivo importado pelo atendente) ---\n${transcricao}\n--- fim da transcrição ---`
       : "",
   ]
     .filter(Boolean)
@@ -413,6 +580,17 @@ export async function POST(request: Request) {
     semCaso: !caso,
 
     /**
+     * Quantos ciclos de NPS e casos de outros canais entraram.
+     *
+     * A tela precisa poder dizer "leu 2 ciclos de NPS e 1 caso de
+     * Instagram". Sem esse número, um dossiê que menciona o NPS e um
+     * que o ignorou têm exatamente a mesma cara — e quem lê não sabe se
+     * o cliente nunca respondeu NPS ou se o cruzamento falhou.
+     */
+    npsLidos: npsDoContato.length,
+    casosLidos: casosDoContato.length,
+
+    /**
      * Quantos fatos internos o resumo teve para ler.
      *
      * Sem isso, "nada aconteceu depois do relato" e "o modelo não
@@ -430,6 +608,17 @@ export async function POST(request: Request) {
      */
     comTranscricao: transcricao.length > 0,
     tamanhoDaTranscricao: transcricao.length,
+
+    /**
+     * O nome do arquivo volta para a tela conferir o que foi lido.
+     *
+     * Sem ele, "transcrição lida (38.412 caracteres)" não distingue o
+     * arquivo certo do arquivo do cliente anterior — e é exatamente o
+     * erro que dá, porque o importador guarda a última escolha.
+     */
+    arquivoDaTranscricao: String(
+      entrada.arquivoDaTranscricao ?? ""
+    ).slice(0, 200),
 
     provedor: resultado.provedor,
     rapido,

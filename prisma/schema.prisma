@@ -292,6 +292,21 @@ model Case {
   publicResponse   String?
   publicResponseAt DateTime?
 
+  /// A resposta que **ainda vai** ser publicada no portal.
+  ///
+  /// Separada da `publicResponse` de propósito. Aquela é registro: o
+  /// que já está publicado, visível para qualquer pessoa que abra a
+  /// reclamação no Reclame Aqui. Esta é rascunho: o texto que alguém
+  /// escreveu, ou que a IA sugeriu, e que ainda precisa ser revisado e
+  /// colado no portal.
+  ///
+  /// Guardar as duas no mesmo campo obrigaria a escolher entre duas
+  /// mentiras — ou o índice de resposta contaria um rascunho como
+  /// resposta publicada, ou o rascunho se perderia a cada troca de
+  /// tela. O índice de resposta é o item de maior peso da nota; contar
+  /// errado ali é o erro mais caro que esta base pode ter.
+  draftResponse String?
+
   /// Consumidor avaliou o atendimento no portal.
   evaluated       Boolean   @default(false)
   score           Int?

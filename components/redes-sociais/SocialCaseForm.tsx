@@ -17,7 +17,7 @@ import { useSession } from "@/lib/context/SessionContext";
 import { useWorkflow } from "@/lib/context/WorkflowContext";
 
 import { Case } from "@/lib/models/case";
-import { REFERENCE_DATE } from "@/lib/services/reputation.service";
+import { hojeNaOperacao } from "@/lib/services/reputation.service";
 
 interface Props {
   open: boolean;
@@ -106,7 +106,7 @@ export default function SocialCaseForm({
     editing?.status ?? etapas[0]?.name ?? "Novo"
   );
   const [createdAt, setCreatedAt] = useState(
-    editing?.createdAt ?? REFERENCE_DATE
+    editing?.createdAt ?? hojeNaOperacao()
   );
   const [description, setDescription] = useState(
     editing?.description ?? ""
@@ -155,8 +155,8 @@ export default function SocialCaseForm({
       solutionTime: editing?.solutionTime ?? "-",
       sla: editing?.sla ?? "4h",
       createdAt,
-      updatedAt: REFERENCE_DATE,
-      lastInteraction: REFERENCE_DATE,
+      updatedAt: hojeNaOperacao(),
+      lastInteraction: hojeNaOperacao(),
       churnRisk: editing?.churnRisk ?? false,
       tags: editing?.tags ?? [],
     };

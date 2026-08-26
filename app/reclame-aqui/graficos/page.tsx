@@ -26,7 +26,7 @@ import {
   getRange,
   PeriodKey,
   ptBR,
-  REFERENCE_DATE,
+  hojeNaOperacao,
   scoreBands,
 } from "@/lib/services/reputation.service";
 
@@ -51,8 +51,8 @@ export default function GraficosPage() {
   const [period, setPeriod] = useState<PeriodKey>("12m");
 
   const [custom, setCustom] = useState<CustomRange>({
-    start: `${REFERENCE_DATE.slice(0, 4)}-01-01`,
-    end: REFERENCE_DATE,
+    start: `${hojeNaOperacao().slice(0, 4)}-01-01`,
+    end: hojeNaOperacao(),
   });
 
   const range = useMemo(

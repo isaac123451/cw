@@ -15,7 +15,7 @@ import {
   pendingEvaluations,
   ptBR,
   RA1000_BAND,
-  REFERENCE_DATE,
+  hojeNaOperacao,
   scoreBands,
 } from "@/lib/services/reputation.service";
 
@@ -108,11 +108,11 @@ export function buildOperationSnapshot(
     } | "${item.title}" | id=${item.id}`;
 
   const vencidas = tasks.filter(
-    (item) => !item.done && item.dueDate < REFERENCE_DATE
+    (item) => !item.done && item.dueDate < hojeNaOperacao()
   );
 
   const paraHoje = tasks.filter(
-    (item) => !item.done && item.dueDate === REFERENCE_DATE
+    (item) => !item.done && item.dueDate === hojeNaOperacao()
   );
 
   const entradas = impacts
@@ -198,7 +198,7 @@ export function buildOperationSnapshot(
     true
   );
 
-  return `# Retrato da operação em ${REFERENCE_DATE}
+  return `# Retrato da operação em ${hojeNaOperacao()}
 
 ## Simulações já calculadas (use estes números, não recalcule)
 

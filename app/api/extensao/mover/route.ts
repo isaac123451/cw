@@ -19,7 +19,7 @@ import {
   etapaVizinha,
   moverPara,
 } from "@/lib/services/case.service";
-import { REFERENCE_DATE } from "@/lib/services/reputation.service";
+import { hojeNaOperacao } from "@/lib/services/reputation.service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -192,7 +192,7 @@ export async function POST(request: Request) {
     });
   }
 
-  const movido = moverPara(caso, alvo, REFERENCE_DATE);
+  const movido = moverPara(caso, alvo, hojeNaOperacao());
 
   // Mover não mexe em etiqueta: uma ida ao banco em vez de três.
   await persistCase(prisma, movido, { syncTags: false });

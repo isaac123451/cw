@@ -35,6 +35,7 @@ const CAMINHOS = {
   agenda: "/api/extensao/agenda",
   triagem: "/api/extensao/triagem",
   resumoCaso: "/api/extensao/resumo-caso",
+  pendencias: "/api/extensao/pendencias",
 };
 
 /**
@@ -479,11 +480,50 @@ async function tratar(mensagem) {
    */
   if (mensagem?.tipo === "resumoCaso") {
 
+    /**
+     * Tudo que o painel mandou vai junto, e não só o protocolo.
+     *
+     * Esta lista já esteve curta — `protocolo` e `rapido` — e o efeito
+     * era mudo: a transcrição importada, o nome e o telefone do contato
+     * eram lidos no painel, apareciam na tela como carregados, e o
+     * worker os descartava no caminho. O servidor então montava o
+     * dossiê sem eles e devolvia um resumo plausível, sem erro nenhum
+     * para denunciar a perda. Campo novo daqui para frente entra aqui
+     * também.
+     */
     const dados = await chamar(
       CAMINHOS.resumoCaso,
       {},
       {
         protocolo: mensagem.protocolo,
+        rapido: mensagem.rapido,
+        transcricao: mensagem.transcricao,
+        arquivoDaTranscricao:
+          mensagem.arquivoDaTranscricao,
+        nome: mensagem.nome,
+        telefone: mensagem.telefone,
+      }
+    );
+
+    return { ok: true, dados };
+  }
+
+  /**
+   * A fila do Reclame Aqui, com o que falta em cada caso.
+   *
+   * Sem cache, e por um motivo que vale escrever: a lista existe para
+   * dizer o que **ainda** não foi feito. Servir uma cópia de cinco
+   * minutos atrás mostraria como pendente o caso que a pessoa acabou de
+   * responder — e mandaria alguém responder de novo.
+   */
+  if (mensagem?.tipo === "pendencias") {
+
+    const dados = await chamar(
+      CAMINHOS.pendencias,
+      {},
+      {
+        resumir: mensagem.resumir === true,
+        conversa: mensagem.conversa,
         rapido: mensagem.rapido,
       }
     );

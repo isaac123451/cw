@@ -9,7 +9,7 @@ import {
 
 import { WORKSPACE_TAG } from "@/lib/actions/tags";
 import { getPrisma } from "@/lib/prisma";
-import { REFERENCE_DATE } from "@/lib/services/reputation.service";
+import { hojeNaOperacao } from "@/lib/services/reputation.service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -45,7 +45,7 @@ export async function GET(request: Request) {
 
   if (!prisma) {
     return responder(request, {
-      hoje: REFERENCE_DATE,
+      hoje: hojeNaOperacao(),
       itens: [],
     });
   }
@@ -56,7 +56,7 @@ export async function GET(request: Request) {
    * É a mesma regra do resto da aplicação — usar `new Date()` aqui faria
    * a extensão discordar da tela de Agenda sobre o que é "hoje".
    */
-  const hoje = REFERENCE_DATE;
+  const hoje = hojeNaOperacao();
 
   const fimDeHoje = new Date(`${hoje}T23:59:59Z`);
 

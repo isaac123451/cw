@@ -13,7 +13,7 @@ import {
 import SurfaceCard from "@/components/shared/SurfaceCard";
 
 import { useAgenda } from "@/lib/context/AgendaContext";
-import { REFERENCE_DATE } from "@/lib/services/reputation.service";
+import { hojeNaOperacao } from "@/lib/services/reputation.service";
 
 const priorityTone: Record<string, string> = {
   Alta: "bg-rose-500",
@@ -33,10 +33,10 @@ export default function TodayAgenda() {
 
     return {
       hoje: pendentes.filter(
-        (item) => item.dueDate === REFERENCE_DATE
+        (item) => item.dueDate === hojeNaOperacao()
       ),
       atrasadas: pendentes.filter(
-        (item) => item.dueDate < REFERENCE_DATE
+        (item) => item.dueDate < hojeNaOperacao()
       ),
     };
 
@@ -86,7 +86,7 @@ export default function TodayAgenda() {
           {lista.map((item) => {
 
             const atrasada =
-              item.dueDate < REFERENCE_DATE;
+              item.dueDate < hojeNaOperacao();
 
             return (
               <li

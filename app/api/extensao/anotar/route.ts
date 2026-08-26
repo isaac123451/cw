@@ -9,7 +9,7 @@ import {
 
 import { WORKSPACE_TAG } from "@/lib/actions/tags";
 import { getPrisma } from "@/lib/prisma";
-import { REFERENCE_DATE } from "@/lib/services/reputation.service";
+import { hojeNaOperacao } from "@/lib/services/reputation.service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -197,7 +197,7 @@ async function criarTarefa(
     entrada.quando ?? ""
   )
     ? (entrada.quando as string)
-    : REFERENCE_DATE;
+    : hojeNaOperacao();
 
   /**
    * A hora é validada, não confiada.

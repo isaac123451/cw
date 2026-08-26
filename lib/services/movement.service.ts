@@ -4,7 +4,7 @@ import {
 } from "@/lib/models/movement";
 
 import { SlaSituation } from "@/lib/services/sla.service";
-import { REFERENCE_DATE } from "@/lib/services/reputation.service";
+import { hojeNaOperacao } from "@/lib/services/reputation.service";
 
 /** Regra ativa de um destino. */
 export function ruleFor(
@@ -56,7 +56,7 @@ export interface MovementStatus {
  */
 export function movementStatus(
   movement: CaseMovement,
-  today = REFERENCE_DATE
+  today = hojeNaOperacao()
 ): MovementStatus {
 
   const fim = movement.returnedAt ?? today;
@@ -137,7 +137,7 @@ export function openMovementOf(
 /** Pendentes fora do prazo, da mais atrasada para a menos. */
 export function lateMovements(
   movements: CaseMovement[],
-  today = REFERENCE_DATE
+  today = hojeNaOperacao()
 ) {
   return movements
     .filter(isPending)
@@ -164,7 +164,7 @@ export interface DestinationLoad {
 export function loadByDestination(
   movements: CaseMovement[],
   rules: MovementRule[],
-  today = REFERENCE_DATE
+  today = hojeNaOperacao()
 ): DestinationLoad[] {
 
   return rules.map((rule) => {

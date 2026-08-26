@@ -25,7 +25,7 @@ import {
   openMovementOf,
 } from "@/lib/services/movement.service";
 import { slugify } from "@/lib/services/slug";
-import { REFERENCE_DATE } from "@/lib/services/reputation.service";
+import { hojeNaOperacao } from "@/lib/services/reputation.service";
 import {
   retratoNps,
   SELECAO_NPS,
@@ -97,9 +97,6 @@ interface Sugestao {
   tom: "danger" | "warning" | "info";
   texto: string;
 }
-
-/** Data de referência da operação, não a do relógio do navegador. */
-const HOJE = REFERENCE_DATE;
 
 function diasEntre(de: string, ate: string) {
   return Math.round(
@@ -245,7 +242,7 @@ export async function GET(request: Request) {
 
     demonstracao,
 
-    referencia: HOJE,
+    referencia: hojeNaOperacao(),
 
     consulta: {
       telefone: alvo.telefone?.digitos,
@@ -874,7 +871,7 @@ function resumir(
   origem: string
 ): CasoResumo {
 
-  const sla = slaStatus(item, workspace.slaRules, HOJE);
+  const sla = slaStatus(item, workspace.slaRules, hojeNaOperacao());
 
   const movimento = openMovementOf(
     item.id,
@@ -882,7 +879,7 @@ function resumir(
   );
 
   const situacaoMovimento = movimento
-    ? movementStatus(movimento, HOJE)
+    ? movementStatus(movimento, hojeNaOperacao())
     : null;
 
   return {
@@ -1158,7 +1155,7 @@ function sugerir(
       [...semResposta].sort((a, b) =>
         a.createdAt.localeCompare(b.createdAt)
       )[0].createdAt,
-      HOJE
+      hojeNaOperacao()
     );
 
     lista.push({
@@ -1192,7 +1189,7 @@ function sugerir(
   const negativas = casos.filter(
     (item) =>
       item.status === "Não resolvido" &&
-      diasEntre(item.createdAt, HOJE) <= 30
+      diasEntre(item.createdAt, hojeNaOperacao()) <= 30
   );
 
   if (negativas.length > 0) {

@@ -381,6 +381,18 @@
 
       if (acao === "escopo-atividade") {
         escopoAtividades = alvo.dataset.valor ?? "";
+
+        /*
+          Sair da fila e voltar relê do servidor.
+
+          O que a lista mostra é o que **ainda** falta: guardar a
+          resposta entre idas e vindas mostraria como pendente o caso
+          que a pessoa acabou de responder. A leitura do modelo cai
+          junto, porque ela descreve aquela fila e não a de agora.
+        */
+        pendencias = null;
+        resumoDasPendencias = null;
+
         carregarAtividades();
       }
 
@@ -417,6 +429,10 @@
       }
       if (acao === "resumir") resumirConversa(alvo);
       if (acao === "resumir-caso") resumirCaso(alvo);
+
+      if (acao === "resumir-pendencias") {
+        resumirPendencias(alvo);
+      }
 
       // NPS: as duas escritas da tratativa, e os botões que as compõem.
       if (
@@ -468,6 +484,66 @@
         if (destino) {
           moverCaso(evento.target, destino);
         }
+
+        return;
+      }
+
+      /**
+       * A transcrição do Crisp, lida do arquivo escolhido.
+       *
+       * Lida aqui e não na hora do clique porque `file.text()` é
+       * assíncrono: se a leitura começasse junto com o pedido do
+       * dossiê, o pedido sairia com a transcrição pela metade em
+       * arquivo grande. Lendo na escolha, quando o botão for clicado o
+       * texto já está inteiro na memória.
+       */
+      if (evento.target?.id === "dossie-arquivo") {
+
+        const aviso = corpo.querySelector(
+          "#dossie-arquivo-info"
+        );
+
+        const arquivo = evento.target.files?.[0];
+
+        if (!arquivo) {
+          transcricaoImportada = null;
+          if (aviso) {
+            aviso.textContent =
+              "Nenhum arquivo escolhido.";
+          }
+          return;
+        }
+
+        if (aviso) {
+          aviso.textContent = "Lendo o arquivo…";
+        }
+
+        arquivo
+          .text()
+          .then((texto) => {
+
+            transcricaoImportada = {
+              nome: arquivo.name,
+              texto,
+            };
+
+            if (aviso) {
+              aviso.textContent =
+                arquivo.name +
+                " · " +
+                texto.length.toLocaleString("pt-BR") +
+                " caracteres. Entra no próximo dossiê.";
+            }
+          })
+          .catch(() => {
+
+            transcricaoImportada = null;
+
+            if (aviso) {
+              aviso.textContent =
+                "Não deu para ler este arquivo. Ele precisa ser texto — o .txt que o Crisp exporta.";
+            }
+          });
 
         return;
       }
@@ -2916,6 +2992,16 @@
         ? `  <p class="sub" style="margin-top:9px">Este cliente não tem caso em ${CW.escapar(NOME_DO_CANAL[canal] ?? canal)}.</p>`
         : casos.map(desenharCaso).join(""),
       '</div>',
+
+      /*
+        Resumo e dossiê valem para Redes Sociais como valem para o RA.
+
+        O dossiê se apoia no primeiro caso quando há um, e no contato
+        quando não há — o servidor cruza os dois lados e traz o NPS e os
+        outros canais deste mesmo cliente junto.
+      */
+      lerConversa ? blocoResumo() : "",
+      blocoDossie(casos[0]?.protocolo ?? ""),
     ].join("");
 
     corpo.scrollTop = 0;
@@ -2943,6 +3029,21 @@
               )
             )
             .join(""),
+
+      /*
+        Resumo e dossiê também aqui.
+
+        O Isaac pediu: "essa possibilidade de resumos, dossiê, outras
+        funcionalidades, precisam estar também no NPS e Redes sociais".
+        Nada disso é exclusivo do Reclame Aqui — o cliente que detratou
+        no NPS é o mesmo que pode abrir reclamação amanhã, e é agora que
+        ler o histórico dele ainda muda o desfecho.
+
+        O dossiê vai sem protocolo: o servidor cruza pelo contato e traz
+        os ciclos de NPS junto com os casos dos outros canais.
+      */
+      lerConversa ? blocoResumo() : "",
+      blocoDossie(""),
     ].join("");
 
     corpo.scrollTop = 0;
@@ -3332,6 +3433,21 @@
   let resumoDoCaso = null;
 
   /**
+   * A transcrição do Crisp, **importada do arquivo** que o Crisp gera.
+   *
+   * Era um campo de colar. Colar quebra na prática: a transcrição do
+   * Crisp vem com dezenas de milhares de caracteres, e o WhatsApp — que
+   * é onde este painel vive — captura teclas globalmente. Um Ctrl+V de
+   * 40 mil caracteres num textarea dentro do WhatsApp é lento e às
+   * vezes some pela metade. O arquivo entra inteiro, de uma vez, e o
+   * nome dele ainda serve de conferência do que foi carregado.
+   *
+   * Fica em memória e some quando o painel fecha: transcrição de
+   * atendimento não é para ficar guardada em extensão.
+   */
+  let transcricaoImportada = null;
+
+  /**
    * O resumo, em dois cartões separados.
    *
    * Separados e não num texto corrido: são duas perguntas diferentes, e
@@ -3383,22 +3499,22 @@
 
             protocolo
               ? '  <p class="sub" style="margin-top:6px">Lê o relato, a resposta pública e a linha do tempo interna. Devolve o dossiê completo, o que mudou, o que falta resolver e três respostas prontas para revisar. Só lê — não grava nem envia nada.</p>'
-              : '  <p class="sub" style="margin-top:6px">Este contato não tem reclamação cadastrada. Cole o atendimento do Crisp abaixo e o dossiê sai dele — é o que mais ajuda antes de o assunto virar reclamação.</p>',
+              : '  <p class="sub" style="margin-top:6px">Este contato não tem reclamação cadastrada. Importe o arquivo de atendimento do Crisp abaixo e o dossiê sai dele — é o que mais ajuda antes de o assunto virar reclamação.</p>',
 
             /*
-              O campo da transcrição fica recolhido.
+              O importador fica recolhido.
 
-              Ele é grande e não é usado toda vez; aberto por padrão,
-              empurraria o resto do painel para baixo em todo caso que
-              não precisa dele. Fechado, quem precisa clica.
+              Não é usado toda vez; aberto por padrão, empurraria o
+              resto do painel para baixo em todo caso que não precisa
+              dele. Fechado, quem precisa clica.
             */
             `
   <details style="margin-top:8px" ${protocolo ? "" : "open"}>
-    <summary style="cursor:pointer;font-size:12px;font-weight:600;padding:5px 0">Colar transcrição do Crisp (opcional)</summary>
-    <textarea class="campo" id="dossie-transcricao" rows="4"
-              style="margin-top:5px;font-family:inherit"
-              placeholder="Cole aqui a transcrição exportada do Crisp. Ela entra no dossiê como parte da história — o que foi prometido, quem atendeu, onde travou."></textarea>
-    <p class="sub" style="margin-top:5px;color:var(--suave)">Fica só nesta consulta: não é gravada em lugar nenhum.</p>
+    <summary style="cursor:pointer;font-size:12px;font-weight:600;padding:5px 0">Importar transcrição do Crisp (opcional)</summary>
+    <input type="file" id="dossie-arquivo"
+           accept=".txt,.log,.md,.json,.csv,text/plain"
+           style="margin-top:6px;font-size:11px;width:100%" />
+    <p class="sub" id="dossie-arquivo-info" style="margin-top:5px;color:var(--suave)">Escolha o arquivo de transcrição que o Crisp exporta. Ele entra no dossiê como parte da história — o que foi prometido, quem atendeu, onde travou. Fica só nesta consulta: não é gravado em lugar nenhum.</p>
   </details>`,
           ].join(""),
 
@@ -3431,11 +3547,31 @@
       '  </div>',
 
       r.comTranscricao
-        ? `  <div class="sub" style="margin-top:6px;color:var(--suave)">Transcrição do Crisp lida (${r.tamanhoDaTranscricao} caracteres).</div>`
+        ? `  <div class="sub" style="margin-top:6px;color:var(--suave)">Transcrição lida: ${CW.escapar(r.arquivoDaTranscricao || "arquivo do Crisp")} (${r.tamanhoDaTranscricao} caracteres).</div>`
         : "",
 
       r.semCaso
         ? '  <div class="sub" style="margin-top:6px;color:var(--suave)">Sem reclamação cadastrada — o dossiê saiu do atendimento.</div>'
+        : "",
+
+      /*
+        O que o cruzamento por contato encontrou nos outros canais.
+
+        Precisa aparecer: um dossiê que leu dois ciclos de NPS e um que
+        não achou nenhum têm a mesma cara na tela, e quem lê não saberia
+        se o cliente nunca respondeu NPS ou se o cruzamento falhou.
+      */
+      r.npsLidos || r.casosLidos
+        ? `  <div class="sub" style="margin-top:6px;color:var(--suave)">Leu também ${[
+            r.npsLidos
+              ? `${r.npsLidos} ciclo(s) de NPS`
+              : "",
+            r.casosLidos
+              ? `${r.casosLidos} caso(s) de outros canais`
+              : "",
+          ]
+            .filter(Boolean)
+            .join(" e ")} deste mesmo cliente.</div>`
         : "",
 
       bloco(
@@ -3542,20 +3678,12 @@
       ? "Lendo…"
       : "Montando… (~15 s)";
 
-    /**
-     * A transcrição é lida na hora do clique, do campo aberto.
-     *
-     * Guardá-la em estado seria uma cópia a mais para manter em dia — e
-     * ela vale para esta consulta só, então o campo é a fonte.
-     */
-    const campoTranscricao = corpo.querySelector(
-      "#dossie-transcricao"
-    );
-
     const resposta = await CW.enviar({
       tipo: "resumoCaso",
       protocolo: botao.dataset.protocolo,
-      transcricao: campoTranscricao?.value ?? "",
+      transcricao: transcricaoImportada?.texto ?? "",
+      arquivoDaTranscricao:
+        transcricaoImportada?.nome ?? "",
       nome: consulta?.nome ?? "",
       telefone: consulta?.telefone ?? "",
       rapido,
@@ -3986,7 +4114,60 @@
     "": "Vencendo",
     proximos: "Próximas",
     concluidas: "Concluídas",
+    reclamacoes: "RA em aberto",
   };
+
+  /**
+   * A fila do Reclame Aqui e a leitura dela, guardadas entre trocas de
+   * recorte.
+   *
+   * Voltar de "Concluídas" para "RA em aberto" não deve gastar outra
+   * chamada ao modelo — o resumo custa caro e a fila não mudou em três
+   * segundos. Some quando o painel fecha.
+   */
+  let pendencias = null;
+  let resumoDasPendencias = null;
+
+  /**
+   * As contagens da agenda, guardadas para os chips da outra tela.
+   *
+   * A fila do RA desenha a mesma linha de recortes, e ela não pede a
+   * agenda — se os números não viessem daqui, "Vencendo 0 · Próximas 0"
+   * apareceria em cima de uma agenda cheia, e o zero seria lido como
+   * "não tem nada", não como "não perguntei".
+   */
+  let contagensDaAgenda = {};
+
+  /**
+   * Os quatro recortes, num lugar só.
+   *
+   * Duas telas os desenham — a agenda e a fila do RA — e uma lista de
+   * botões copiada em dois lugares é uma lista que fica diferente na
+   * primeira vez que alguém mexe num deles.
+   */
+  function chipsDeAtividade(contagens, abertos) {
+    return [
+      '  <div class="chips">',
+      ...[
+        ["", "Vencendo", contagens.pendentes ?? 0],
+        ["proximos", "Próximas", contagens.proximos ?? 0],
+        [
+          "concluidas",
+          "Concluídas",
+          contagens.concluidas ?? 0,
+        ],
+        [
+          "reclamacoes",
+          "RA em aberto",
+          abertos ?? "",
+        ],
+      ].map(
+        ([id, rotulo, quantidade]) =>
+          `    <button class="chip" data-acao="escopo-atividade" data-valor="${id}" aria-pressed="${escopoAtividades === id}">${rotulo} ${quantidade}</button>`
+      ),
+      '  </div>',
+    ].join("");
+  }
 
   /**
    * A aba de Atividades.
@@ -4005,6 +4186,19 @@
    */
   async function carregarAtividades() {
 
+    /*
+      "RA em aberto" não é um recorte da agenda: é outra fonte.
+
+      A agenda lista o que alguém marcou; esta lista, o que está aberto
+      no portal quer alguém tenha marcado ou não. São as duas metades
+      do mesmo dia de trabalho, e por isso moram na mesma aba — mas a
+      rota é outra.
+    */
+    if (escopoAtividades === "reclamacoes") {
+      await carregarReclamacoesAbertas();
+      return;
+    }
+
     corpo.innerHTML = `<div class="carregando">Carregando as atividades…</div>`;
 
     const resposta = await CW.enviar({
@@ -4020,6 +4214,9 @@
     const dados = resposta.dados ?? {};
     const itens = dados.itens ?? [];
     const contagens = dados.contagens ?? {};
+
+    // Guardadas para os chips da fila do RA — ver contagensDaAgenda.
+    contagensDaAgenda = contagens;
 
     /**
      * O atrasado primeiro, sempre.
@@ -4042,20 +4239,10 @@
       '<div class="bloco">',
       `  <div class="rotulo">Atividades · ${CW.escapar(NOME_DO_ESCOPO[dados.escopo ?? ""] ?? "Vencendo")}</div>`,
 
-      '  <div class="chips">',
-      ...[
-        ["", "Vencendo", contagens.pendentes ?? 0],
-        ["proximos", "Próximas", contagens.proximos ?? 0],
-        [
-          "concluidas",
-          "Concluídas",
-          contagens.concluidas ?? 0,
-        ],
-      ].map(
-        ([id, rotulo, quantidade]) =>
-          `    <button class="chip" data-acao="escopo-atividade" data-valor="${id}" aria-pressed="${escopoAtividades === id}">${rotulo} ${quantidade}</button>`
+      chipsDeAtividade(
+        contagens,
+        pendencias?.contagens?.abertos ?? ""
       ),
-      '  </div>',
 
       contagens.atrasadas > 0 && escopoAtividades !== ""
         ? `  <p class="sub" style="margin-top:8px;color:var(--perigo)"><strong>${contagens.atrasadas} atrasada(s)</strong> esperando em "Vencendo".</p>`
@@ -4097,6 +4284,260 @@
 
     corpo.innerHTML = partes.filter(Boolean).join("");
     corpo.scrollTop = 0;
+  }
+
+  /* ============================================================
+     A FILA DO RECLAME AQUI
+  ============================================================ */
+
+  /**
+   * O que está aberto no portal, e o que falta em cada um.
+   *
+   * A agenda mostra o que alguém marcou. Esta lista mostra o que está
+   * aberto quer alguém tenha marcado ou não — que é a metade do
+   * trabalho que some quando ninguém lembra de criar a tarefa.
+   *
+   * O checkpoint de cada caso ("sem resposta pública", "fora do prazo",
+   * "sem responsável") vem calculado do servidor, não escrito por
+   * modelo: numa lista de pendências, um item inventado manda alguém
+   * trabalhar no caso errado. A IA entra depois e por cima, e só para
+   * dizer por onde começar e do que cada caso trata.
+   */
+  async function carregarReclamacoesAbertas() {
+
+    if (!pendencias) {
+
+      corpo.innerHTML = `<div class="carregando">Lendo a fila do Reclame Aqui\u2026</div>`;
+
+      const resposta = await CW.enviar({
+        tipo: "pendencias",
+        resumir: false,
+      });
+
+      if (!resposta.ok) {
+        renderFalha(resposta);
+        return;
+      }
+
+      if (resposta.dados?.erro) {
+        avisar(resposta.dados.erro, "perigo");
+        return;
+      }
+
+      pendencias = resposta.dados ?? {};
+    }
+
+    desenharReclamacoesAbertas();
+  }
+
+  function desenharReclamacoesAbertas() {
+
+    const c = pendencias?.contagens ?? {};
+    const casos = pendencias?.casos ?? [];
+
+    const partes = [
+      '<div class="bloco">',
+      '  <div class="rotulo">Atividades \u00b7 RA em aberto</div>',
+
+      chipsDeAtividade(contagensDaAgenda, c.abertos ?? 0),
+
+      /*
+        Os números da fila inteira, e não só do que coube na tela.
+
+        Sem esta linha, "25 casos" seria lido como o total — e quem
+        olha decide o dia por ela.
+      */
+      `  <p class="sub" style="margin-top:8px">${c.abertos ?? 0} em aberto${(c.abertos ?? 0) > (c.mostrados ?? 0) ? ` \u00b7 mostrando os ${c.mostrados} mais urgentes` : ""}.</p>`,
+
+      '  <div class="chips" style="margin-top:6px">',
+      c.semResposta
+        ? `    <span class="chip" aria-pressed="false" style="cursor:default">${c.semResposta} sem resposta</span>`
+        : "",
+      c.foraDoPrazo
+        ? `    <span class="chip" aria-pressed="false" style="cursor:default;color:var(--perigo)">${c.foraDoPrazo} fora do prazo</span>`
+        : "",
+      c.semResponsavel
+        ? `    <span class="chip" aria-pressed="false" style="cursor:default">${c.semResponsavel} sem responsável</span>`
+        : "",
+      c.comRascunho
+        ? `    <span class="chip" aria-pressed="false" style="cursor:default">${c.comRascunho} com rascunho pronto</span>`
+        : "",
+      c.risco
+        ? `    <span class="chip" aria-pressed="false" style="cursor:default;color:var(--perigo)">${c.risco} em risco</span>`
+        : "",
+      c.naoResolvidos
+        ? `    <span class="chip" aria-pressed="false" style="cursor:default" title="Fora da fila: já foram respondidos e avaliados. Mas cada um puxa o índice de solução para baixo, e recuperação ainda é possível.">${c.naoResolvidos} avaliados como não resolvido</span>`
+        : "",
+      '  </div>',
+      '</div>',
+    ];
+
+    /* ---- a leitura, quando alguém pediu ---- */
+
+    if (resumoDasPendencias) {
+
+      const r = resumoDasPendencias;
+
+      partes.push(
+        '<div class="bloco">',
+        '  <div class="rotulo">Por onde começar</div>',
+        '  <div class="cartao">',
+        `    <p class="sub" style="color:var(--texto)">${CW.escapar(r.porOndeComecar ?? "")}</p>`,
+        r.atencao
+          ? `    <p class="sub" style="margin-top:8px"><strong>Atenção:</strong> ${CW.escapar(r.atencao)}</p>`
+          : "",
+        pendencias?.comConversa
+          ? '    <p class="sub" style="margin-top:8px;color:var(--suave)">Leu também a conversa aberta no WhatsApp.</p>'
+          : '    <p class="sub" style="margin-top:8px;color:var(--suave)">Nenhuma conversa aberta no WhatsApp — a ordem saiu só da fila.</p>',
+        '  </div>',
+        '  <button class="copiar" data-acao="resumir-pendencias" style="width:100%;margin-top:7px;padding:7px">Ler de novo</button>',
+        '</div>'
+      );
+
+    } else if (casos.length > 0) {
+
+      partes.push(
+        '<div class="bloco">',
+        '  <button class="copiar" data-acao="resumir-pendencias" style="width:100%;padding:8px">Ler o WhatsApp e organizar a fila (~20 s)</button>',
+        '  <p class="sub" style="margin-top:6px">Lê as mensagens da conversa aberta, junta com a fila abaixo e diz por onde começar e do que cada caso trata. Só acontece quando você clica.</p>',
+        '</div>'
+      );
+    }
+
+    /* ---- a fila ---- */
+
+    if (casos.length === 0) {
+      partes.push(
+        '<div class="bloco">',
+        '  <p class="sub">Nada em aberto no Reclame Aqui.</p>',
+        '</div>'
+      );
+    } else {
+      partes.push(
+        ...casos.map((caso) => cartaoDePendencia(caso))
+      );
+    }
+
+    corpo.innerHTML = partes.filter(Boolean).join("");
+    corpo.scrollTop = 0;
+  }
+
+  /** Um caso da fila, com o checkpoint do que não foi feito. */
+  function cartaoDePendencia(caso) {
+
+    const linha = (resumoDasPendencias?.linhas ?? []).find(
+      (l) => l.protocolo === caso.protocolo
+    );
+
+    const tom =
+      caso.sla?.situacao === "estourado"
+        ? "perigo"
+        : caso.sla?.situacao === "atencao"
+          ? "atencao"
+          : "neutro";
+
+    return `
+      <div class="cartao" style="margin-bottom:7px">
+        <div class="linha">
+          <span class="sub" style="color:var(--texto);font-weight:600">${CW.escapar(caso.cliente ?? "")}</span>
+          <span class="tag ${tom}">${CW.escapar(caso.sla?.rotulo ?? "")}</span>
+        </div>
+
+        <div class="sub" style="margin-top:3px">${CW.escapar(caso.protocolo ?? "")} \u00b7 ${CW.escapar(caso.categoria ?? "")}${caso.responsavel ? ` \u00b7 ${CW.escapar(caso.responsavel)}` : ""}</div>
+
+        <p class="sub" style="margin-top:5px;color:var(--suave)">${CW.escapar(linha?.resumo || caso.titulo || "")}</p>
+
+        ${
+          caso.falta?.length
+            ? `<ul style="margin:7px 0 0;padding-left:16px">${caso.falta
+                .map(
+                  (f) =>
+                    `<li class="sub" style="color:var(--suave);margin-top:2px">${CW.escapar(f)}</li>`
+                )
+                .join("")}</ul>`
+            : '<p class="sub" style="margin-top:7px;color:var(--suave)">Nada apontado — só falta o consumidor avaliar.</p>'
+        }
+
+        <div class="etapas">
+          <button class="passo" data-acao="ver" data-protocolo="${CW.escapar(caso.protocolo ?? "")}">abrir o caso</button>
+        </div>
+      </div>`;
+  }
+
+  /**
+   * A leitura da fila pelo modelo, com a conversa aberta junto.
+   *
+   * A conversa entra porque muda a ordem: quem acabou de escrever
+   * cobrando vem antes de quem sumiu há um mês, por pior que esteja o
+   * prazo do segundo. Quando não há conversa aberta, a fila é lida
+   * sozinha — que continua útil, só não é a lista daquele atendimento.
+   */
+  async function resumirPendencias(botao) {
+
+    const rotulo = botao.textContent;
+
+    botao.disabled = true;
+    botao.textContent = "lendo\u2026";
+
+    /*
+      As mensagens só são lidas aqui, no clique — como no resumo da
+      conversa. Enquanto ninguém pedir, nada é lido.
+    */
+    let conversa = "";
+
+    if (lerConversa) {
+
+      const leitura = lerConversa();
+
+      const mensagens = Array.isArray(leitura)
+        ? leitura
+        : (leitura?.mensagens ?? []);
+
+      /*
+        O rótulo sai de `de`, que o leitor tira do `data-id` do
+        WhatsApp: `true_` é o que saiu daqui, `false_` o que veio do
+        cliente. Sem a direção, o modelo lê promessa nossa como
+        cobrança do cliente — e a fila sai na ordem errada.
+      */
+      conversa = mensagens
+        .map(
+          (m) =>
+            `${m.hora ? `[${m.hora}] ` : ""}${m.de === "nos" ? "Nós" : "Cliente"}: ${m.texto ?? ""}`
+        )
+        .join("\n");
+    }
+
+    const resposta = await CW.enviar({
+      tipo: "pendencias",
+      resumir: true,
+      conversa,
+    });
+
+    botao.disabled = false;
+    botao.textContent = rotulo;
+
+    if (!resposta.ok || resposta.dados?.erro) {
+      avisar(
+        resposta.dados?.erro ??
+          resposta.erro ??
+          "Não deu para ler a fila agora.",
+        "perigo"
+      );
+      return;
+    }
+
+    pendencias = resposta.dados ?? pendencias;
+    resumoDasPendencias = resposta.dados?.resumo ?? null;
+
+    if (!resumoDasPendencias) {
+      avisar(
+        resposta.dados?.erroDoResumo ??
+          "A fila veio, mas o modelo não devolveu a leitura.",
+        "atencao"
+      );
+    }
+
+    desenharReclamacoesAbertas();
   }
 
   /** Uma tarefa, com o caso vinculado e a baixa. */

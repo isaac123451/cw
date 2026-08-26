@@ -65,6 +65,14 @@ export interface Case {
 
   publicResponse?: string;
 
+  /**
+   * Rascunho da resposta, ainda não publicado no portal.
+   *
+   * Nunca conta para o índice de resposta — quem conta é a
+   * `publicResponse`. Ver o comentário no schema.
+   */
+  draftResponse?: string;
+
   score?: number;
 
   /** Consumidor avaliou o atendimento no Reclame Aqui. */

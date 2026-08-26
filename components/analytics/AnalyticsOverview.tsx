@@ -32,7 +32,7 @@ import {
   inRange,
   PeriodKey,
   ptBR,
-  REFERENCE_DATE,
+  hojeNaOperacao,
 } from "@/lib/services/reputation.service";
 
 import PageHeading from "@/components/shared/PageHeading";
@@ -77,8 +77,8 @@ export default function AnalyticsOverview({
   const [period, setPeriod] = useState<PeriodKey>("12m");
 
   const [custom, setCustom] = useState<CustomRange>({
-    start: `${REFERENCE_DATE.slice(0, 4)}-01-01`,
-    end: REFERENCE_DATE,
+    start: `${hojeNaOperacao().slice(0, 4)}-01-01`,
+    end: hojeNaOperacao(),
   });
 
   const range = useMemo(
