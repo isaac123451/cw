@@ -22,7 +22,20 @@ export default function CategoryDistribution() {
       title="Principais causas"
       description="Categorias que mais geram reclamação."
     >
-      <BarList data={data} limit={7} />
+      {/*
+        Cada barra leva à fila filtrada por aquela categoria.
+
+        O número responde "quantas"; a pergunta seguinte é sempre
+        "quais", e antes ela custava atravessar a aplicação e remontar
+        o filtro à mão.
+      */}
+      <BarList
+        data={data}
+        limit={7}
+        hrefDe={(categoria) =>
+          `/reclame-aqui?categoria=${encodeURIComponent(categoria)}`
+        }
+      />
     </SurfaceCard>
   );
 }

@@ -577,7 +577,22 @@ export default function AnalyticsOverview({
           title="Principais causas"
           description="Categorias que mais geram ocorrência."
         >
-          <BarList data={byCategory} limit={8} />
+          {/*
+            A barra leva à fila daquela categoria.
+
+            "quando eu for clicar em uma categoria é interessante sim
+            verificar somente métricas daquela categoria, mas é
+            importante visualizar o atendimentos" — as duas coisas: o
+            recorte de métricas continua onde estava, e a barra abre os
+            casos.
+          */}
+          <BarList
+            data={byCategory}
+            limit={8}
+            hrefDe={(categoria) =>
+              `/reclame-aqui?categoria=${encodeURIComponent(categoria)}`
+            }
+          />
         </SurfaceCard>
 
         <SurfaceCard
@@ -588,6 +603,9 @@ export default function AnalyticsOverview({
             data={bySubcategory}
             limit={8}
             color="#0EA5E9"
+            hrefDe={(sub) =>
+              `/reclame-aqui?busca=${encodeURIComponent(sub)}`
+            }
           />
         </SurfaceCard>
 
@@ -599,6 +617,9 @@ export default function AnalyticsOverview({
             data={byStatus}
             limit={8}
             color="#F59E0B"
+            hrefDe={(status) =>
+              `/reclame-aqui?status=${encodeURIComponent(status)}`
+            }
           />
         </SurfaceCard>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 
 import Toolbar from "@/components/reclame-aqui/toolbar/Toolbar";
 import MetricsBar from "@/components/reclame-aqui/dashboard/MetricsBar";
@@ -14,6 +14,7 @@ import LoadingPanel from "@/components/shared/LoadingPanel";
 
 import { useCases } from "@/lib/context/CaseContext";
 import ModuleNav from "@/components/reclame-aqui/ModuleNav";
+import FiltroDaUrl from "@/components/reclame-aqui/FiltroDaUrl";
 
 export default function ReclameAquiPage() {
   const [view, setView] = useState<"kanban" | "list">("kanban");
@@ -23,6 +24,17 @@ export default function ReclameAquiPage() {
   return (
     <MainLayout>
       <div className="flex flex-col gap-5">
+
+        {/*
+          Chegar por link de gráfico já traz a fila filtrada.
+
+          Dentro de <Suspense> porque useSearchParams suspende o render
+          — sem ele, a página inteira vira dinâmica e perde a
+          pré-renderização.
+        */}
+        <Suspense fallback={null}>
+          <FiltroDaUrl />
+        </Suspense>
 
         <PageHeading
           eyebrow="Módulo"

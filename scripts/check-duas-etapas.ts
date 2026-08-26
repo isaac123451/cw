@@ -38,6 +38,11 @@ import { PrismaClient } from "@prisma/client";
 
 import bcrypt from "bcryptjs";
 
+import {
+  podeEnviarEmail,
+  provedorAtivo,
+} from "../lib/email/enviar";
+
 const url =
   process.env.DIRECT_URL || process.env.DATABASE_URL;
 
@@ -476,6 +481,81 @@ async function main() {
       "sobrou uma conta de teste no banco de produção",
       "removido"
     );
+  }
+
+  /* ---------------------------------------------------------------
+     O RETRATO: por que o login não pediu código?
+  --------------------------------------------------------------- */
+
+  /**
+   * As conferências acima provam que o **mecanismo** funciona. Esta
+   * parte responde outra pergunta, e é a que a operação faz: "liguei e
+   * não pediu nada".
+   *
+   * São três coisas que precisam valer juntas, e qualquer uma
+   * desligada deixa o login como sempre foi — sem erro, sem aviso, sem
+   * pedir código. Foi exatamente o relato do Isaac: "o código que pedi
+   * de dois fatores não funcionou, nunca pediu quando fui fazer login".
+   *
+   * Listar as três aqui transforma meia hora de suspeita num comando.
+   */
+  const cfg = await prisma.securityConfig.findFirst();
+
+  const comProprio = await prisma.user.count({
+    where: { twoFactorEnabled: true },
+  });
+
+  const totalDeContas = await prisma.user.count();
+
+  const desafios = await prisma.loginChallenge.count();
+
+  console.log(
+    "\n  ESTADO DE HOJE — o que faz o login pedir código\n"
+  );
+
+  console.log(
+    `    envio de e-mail       ${
+      podeEnviarEmail()
+        ? `ativo (${provedorAtivo()})`
+        : "DESLIGADO — sem RESEND_API_KEY a verificação não liga"
+    }`
+  );
+
+  console.log(
+    `    exigir para todos     ${cfg?.twoFactorRequired ? "ligado" : "DESLIGADO"}`
+  );
+
+  console.log(
+    `    contas com 2FA        ${comProprio} de ${totalDeContas}`
+  );
+
+  console.log(
+    `    desafios já criados   ${desafios}`
+  );
+
+  if (
+    !podeEnviarEmail() ||
+    (!cfg?.twoFactorRequired && comProprio === 0)
+  ) {
+
+    console.log(
+      "\n    O login não vai pedir código, e isto é o esperado:"
+    );
+
+    if (!podeEnviarEmail()) {
+      console.log(
+        "      · sem provedor de e-mail, exigir um código que não chega"
+      );
+      console.log(
+        "        trancaria todo mundo do lado de fora. Defina RESEND_API_KEY."
+      );
+    }
+
+    if (!cfg?.twoFactorRequired && comProprio === 0) {
+      console.log(
+        "      · ninguém ligou a exigência, nem global nem por conta."
+      );
+    }
   }
 
   console.log(

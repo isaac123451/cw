@@ -24,6 +24,7 @@ import CreateCaseModal from "@/components/reclame-aqui/modals/CreateCaseModal";
 import TransferModal from "@/components/reclame-aqui/toolbar/TransferModal";
 import SavedFilters from "@/components/reclame-aqui/toolbar/SavedFilters";
 import SearchSelect from "@/components/shared/SearchSelect";
+import { hojeNaOperacao } from "@/lib/services/reputation.service";
 
 interface Props {
   view: "kanban" | "list";
@@ -32,6 +33,40 @@ interface Props {
 
 const selectClass =
   "h-10 rounded-xl border border-zinc-200 bg-white px-3 text-sm text-zinc-700 outline-none transition-colors focus:border-violet-400";
+
+/**
+ * Os recortes de data que se pedem todo dia.
+ *
+ * "Este mês" e "30 dias" respondem coisas diferentes: o primeiro é o
+ * fechamento que a operação persegue, o segundo é o movimento recente
+ * independentemente da virada do mês. Os dois são pedidos, e nenhum
+ * deles vale o trabalho de digitar duas datas.
+ *
+ * A janela é calculada na hora do clique, e não guardada: guardada, "30
+ * dias" apontaria para trinta dias atrás de quando a tela abriu, e uma
+ * aba deixada aberta desde ontem filtraria o intervalo errado.
+ */
+const ATALHOS: {
+  rotulo: string;
+  janela: () => [string, string];
+}[] = [
+  {
+    rotulo: "Este mês",
+    janela: () => {
+      const hoje = hojeNaOperacao();
+      return [`${hoje.slice(0, 7)}-01`, hoje];
+    },
+  },
+  {
+    rotulo: "30 dias",
+    janela: () => {
+      const hoje = hojeNaOperacao();
+      const d = new Date(`${hoje}T00:00:00Z`);
+      d.setUTCDate(d.getUTCDate() - 29);
+      return [d.toISOString().slice(0, 10), hoje];
+    },
+  },
+];
 
 export default function Toolbar({
   view,
@@ -178,6 +213,71 @@ export default function Toolbar({
               </option>
             ))}
           </select>
+
+          {/*
+            O recorte por data de abertura.
+
+            Faltava, e sem ele não havia como responder a pergunta mais
+            comum de uma revisão — "o que entrou este mês?". Os atalhos
+            existem porque digitar duas datas para ver os últimos 30
+            dias é trabalho demais para a pergunta mais frequente.
+          */}
+          <div className="flex items-center gap-1 rounded-xl border border-zinc-200 px-1">
+
+            <input
+              type="date"
+              value={filters.de}
+              max={filters.ate || undefined}
+              onChange={(e) =>
+                setFilter("de", e.target.value)
+              }
+              title="Abertas a partir desta data"
+              className="h-9 rounded-lg bg-transparent px-2 text-sm text-zinc-700 outline-none"
+            />
+
+            <span className="text-xs text-zinc-400">
+              até
+            </span>
+
+            <input
+              type="date"
+              value={filters.ate}
+              min={filters.de || undefined}
+              onChange={(e) =>
+                setFilter("ate", e.target.value)
+              }
+              title="Abertas até esta data"
+              className="h-9 rounded-lg bg-transparent px-2 text-sm text-zinc-700 outline-none"
+            />
+
+          </div>
+
+          {ATALHOS.map((atalho) => {
+
+            const [de, ate] = atalho.janela();
+
+            const ativo =
+              filters.de === de && filters.ate === ate;
+
+            return (
+              <button
+                key={atalho.rotulo}
+                type="button"
+                onClick={() => {
+                  /* Clicar no atalho aceso desliga o recorte. */
+                  setFilter("de", ativo ? "" : de);
+                  setFilter("ate", ativo ? "" : ate);
+                }}
+                className={`h-10 rounded-xl px-3 text-sm font-medium transition-colors ${
+                  ativo
+                    ? "bg-violet-50 text-violet-700 ring-1 ring-inset ring-violet-200"
+                    : "text-zinc-600 hover:bg-zinc-100"
+                }`}
+              >
+                {atalho.rotulo}
+              </button>
+            );
+          })}
 
           <SavedFilters
             criteria={filters}

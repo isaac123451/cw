@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { Distribution } from "@/lib/services/case.service";
 
 import { ptBR } from "@/lib/services/reputation.service";
@@ -7,6 +9,26 @@ interface Props {
   limit?: number;
   color?: string;
   emptyLabel?: string;
+
+  /**
+   * Para onde cada barra leva, se levar a algum lugar.
+   *
+   * Recebe o rótulo e devolve o endereço. O Isaac pediu isto três
+   * vezes, em três telas diferentes: "quando eu passo o mouse em cima
+   * das principais causas, quero que seja possível ir para outra aba
+   * visualizar esses casos", "quando eu for clicar em uma categoria é
+   * interessante visualizar o atendimentos", "quando eu clicar em um
+   * assunto frequente seja possível verificar os casos daquela
+   * categoria".
+   *
+   * É a mesma pergunta em todas: o número diz *quantos*, e a próxima
+   * coisa que se quer saber é *quais*. Sem o link, a resposta custa
+   * atravessar a aplicação e remontar o filtro à mão.
+   *
+   * Ausente, a lista continua sendo só leitura — é o caso de gráficos
+   * cujo recorte não existe como filtro.
+   */
+  hrefDe?: (rotulo: string) => string;
 }
 
 /**
@@ -18,6 +40,7 @@ export default function BarList({
   limit = 6,
   color = "#7C3AED",
   emptyLabel = "Sem dados para exibir.",
+  hrefDe,
 }: Props) {
 
   const items = data.slice(0, limit);
@@ -38,13 +61,28 @@ export default function BarList({
   return (
     <ul className="space-y-4">
 
-      {items.map((item) => (
+      {items.map((item) => {
 
-        <li key={item.label}>
+        const href = hrefDe?.(item.label);
 
+        /*
+          O conteúdo é o mesmo com ou sem link.
+
+          Escrever duas vezes faria as duas versões divergirem na
+          primeira mudança — e a que ninguém olha é a que fica para
+          trás.
+        */
+        const conteudo = (
+          <>
           <div className="mb-1.5 flex items-baseline justify-between gap-3">
 
-            <span className="truncate text-sm font-medium text-zinc-700">
+            <span
+              className={`truncate text-sm font-medium ${
+                href
+                  ? "text-zinc-700 group-hover/barra:text-violet-700"
+                  : "text-zinc-700"
+              }`}
+            >
               {item.label}
             </span>
 
@@ -77,10 +115,27 @@ export default function BarList({
             />
 
           </div>
+          </>
+        );
 
-        </li>
+        return (
+          <li key={item.label}>
 
-      ))}
+            {href ? (
+              <Link
+                href={href}
+                title={`Ver as reclamações de ${item.label}`}
+                className="group/barra block rounded-lg outline-none transition-colors focus-visible:ring-2 focus-visible:ring-violet-300"
+              >
+                {conteudo}
+              </Link>
+            ) : (
+              conteudo
+            )}
+
+          </li>
+        );
+      })}
 
     </ul>
   );

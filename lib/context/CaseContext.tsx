@@ -112,6 +112,22 @@ export interface CaseFilters {
   owner: string;
   /** Id do estabelecimento vinculado. */
   establishment: string;
+
+  /**
+   * Recorte por data de abertura, em `AAAA-MM-DD`.
+   *
+   * Guardados como texto e comparados como texto: `createdAt` já é
+   * `AAAA-MM-DD`, e nesse formato a ordem alfabética **é** a ordem
+   * cronológica. Converter para `Date` só para comparar traria de volta
+   * o problema de fuso que a plataforma acabou de resolver — um caso
+   * aberto dia 1º às 22h vira dia 2 em UTC, e sumiria de um filtro que
+   * começa no dia 2.
+   *
+   * Qualquer um dos dois pode vir sozinho: só `de` é "a partir de", só
+   * `ate` é "até".
+   */
+  de: string;
+  ate: string;
 }
 
 export const emptyFilters: CaseFilters = {
@@ -122,6 +138,8 @@ export const emptyFilters: CaseFilters = {
   tag: "",
   owner: "",
   establishment: "",
+  de: "",
+  ate: "",
 };
 
 interface CaseContextType {
@@ -519,6 +537,22 @@ export function CaseProvider({
         (item.establishmentId ?? "") !==
           filters.establishment
       ) {
+        return false;
+      }
+
+      /*
+        Comparação de texto, e não de data.
+
+        `createdAt` é `AAAA-MM-DD`; nesse formato a ordem alfabética é a
+        cronológica, e o `>=` de string dá a resposta certa sem passar
+        por `Date` — que reintroduziria fuso e faria o caso aberto às
+        22h do dia 1º sumir de um filtro que começa no dia 2.
+      */
+      if (filters.de && item.createdAt < filters.de) {
+        return false;
+      }
+
+      if (filters.ate && item.createdAt > filters.ate) {
         return false;
       }
 
