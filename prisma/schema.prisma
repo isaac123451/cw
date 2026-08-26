@@ -985,6 +985,18 @@ model NpsResponse {
   /// Régua de humor após o contato, 1 (irritado) a 5 (encantado).
   moodAfter Int?
 
+  /// O cliente falou em cancelar, e a conta precisa de retenção.
+  ///
+  /// Mesmo campo que a reclamação já tinha, agora aqui. É no NPS que o
+  /// aviso costuma chegar primeiro: um detrator escreve "vou cancelar"
+  /// na pesquisa semanas antes de abrir reclamação pública, e essa
+  /// frase ficava presa no comentário — legível para quem abrisse
+  /// aquele registro, invisível para qualquer fila ou contagem.
+  ///
+  /// Marcar não muda o status nem o prazo; serve para a conta aparecer
+  /// junto das outras que precisam de retenção, nas três frentes.
+  churnRisk Boolean @default(false)
+
   /// A situação foi resolvida? Nulo enquanto ninguém registrou.
   resolvedAfter Boolean?
 

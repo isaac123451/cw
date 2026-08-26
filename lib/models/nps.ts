@@ -556,6 +556,15 @@ export interface NpsResponseView {
   source: string;
   externalId?: string;
 
+  /**
+   * O cliente falou em cancelar — a conta precisa de retenção.
+   *
+   * O mesmo campo da reclamação. No NPS o aviso chega antes: um
+   * detrator escreve "vou cancelar" na pesquisa semanas antes de
+   * qualquer reclamação pública, e a frase ficava presa no comentário.
+   */
+  churnRisk: boolean;
+
   /** Pós-contato: ver MOODS acima. */
   moodAfter?: number;
   resolvedAfter?: boolean;

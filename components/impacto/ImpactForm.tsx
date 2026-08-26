@@ -20,6 +20,8 @@ import { useEstablishments } from "@/lib/context/EstablishmentsContext";
 import { useClients } from "@/lib/context/ClientsContext";
 
 import { ImpactRecord, ImpactType } from "@/lib/models/impact";
+import { precoEmReais } from "@/lib/models/plan";
+import { usePlans } from "@/lib/hooks/usePlans";
 import {
   ImpactDraft,
   useImpact,
@@ -53,9 +55,30 @@ export default function ImpactForm({
   const { establishments } = useEstablishments();
   const { clients } = useClients();
   const { types } = useImpact();
+  const [planos] = usePlans();
 
   /** Só os ativos entram na escolha; os inativos seguem no histórico. */
   const tipos = types.filter((item) => item.active);
+
+  /**
+   * Planos e módulos ativos, para o valor não ser digitado de memória.
+   *
+   * O campo de valor era só um campo de texto, e um cancelamento evitado
+   * do Premium virava "270", "269", "3200" ou "3239,88" conforme quem
+   * lançou e de que se lembrava naquele dia. Lançamentos assim somam
+   * num total que ninguém consegue defender numa reunião.
+   *
+   * Aqui a tabela cadastrada preenche: um toque põe a mensalidade, o
+   * outro põe o contrato de doze meses. Continua editável — casos com
+   * desconto negociado existem —, e a diferença é que o número passa a
+   * ter procedência.
+   */
+  const vendaveis = planos
+    .filter((item) => item.active)
+    .sort(
+      (a, b) =>
+        a.kind.localeCompare(b.kind) || a.order - b.order
+    );
 
   /**
    * Os campos nascem preenchidos, e o formulário remonta a cada
@@ -288,6 +311,91 @@ export default function ImpactForm({
               placeholder="0"
               className={inputClass}
             />
+
+            {/*
+              A tabela de preços, a um toque do campo.
+
+              Fica embaixo do valor, e não num campo próprio, porque não
+              é um dado do lançamento — é a origem do número. Depois de
+              clicar, o que vale é o que está no campo: quem negociou
+              desconto corrige por cima.
+            */}
+            {vendaveis.length > 0 && (
+
+              <details className="mt-2 text-xs">
+
+                <summary className="cursor-pointer list-none text-violet-700 transition-colors hover:text-violet-900">
+                  Usar o preço de um plano ou módulo
+                </summary>
+
+                <div className="mt-2 max-h-44 space-y-1 overflow-y-auto rounded-lg border border-zinc-200 p-1.5">
+
+                  {vendaveis.map((item) => (
+
+                    <div
+                      key={item.id}
+                      className="flex items-center justify-between gap-2 rounded-md px-1.5 py-1 hover:bg-zinc-50"
+                    >
+
+                      <span className="min-w-0 truncate text-zinc-600">
+                        {item.name}
+                        <span className="ml-1 text-[10px] uppercase tracking-wide text-zinc-400">
+                          {item.kind}
+                        </span>
+                      </span>
+
+                      <span className="flex shrink-0 items-center gap-1">
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setAmount(
+                              String(
+                                Math.round(
+                                  item.priceCents / 100
+                                )
+                              )
+                            )
+                          }
+                          className="rounded-md border border-zinc-200 px-1.5 py-0.5 font-medium text-zinc-600 transition-colors hover:border-violet-300 hover:text-violet-700"
+                        >
+                          {precoEmReais(item.priceCents)}
+                          /mês
+                        </button>
+
+                        {/*
+                          Doze meses, porque é assim que um cancelamento
+                          evitado se mede: o que a conta renderia até a
+                          próxima renovação, não o boleto do mês.
+                        */}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setAmount(
+                              String(
+                                Math.round(
+                                  (item.priceCents * 12) /
+                                    100
+                                )
+                              )
+                            )
+                          }
+                          className="rounded-md border border-zinc-200 px-1.5 py-0.5 font-medium text-zinc-600 transition-colors hover:border-violet-300 hover:text-violet-700"
+                        >
+                          ×12
+                        </button>
+
+                      </span>
+
+                    </div>
+
+                  ))}
+
+                </div>
+
+              </details>
+
+            )}
           </Field>
 
           <Field label="Data">

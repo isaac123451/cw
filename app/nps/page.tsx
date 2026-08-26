@@ -47,6 +47,7 @@ import {
   NpsDraft,
   registerNpsAttempt,
   registerPostContact,
+  setNpsChurnRisk,
   updateNpsContato,
   removeNpsRootCause,
   saveNpsResponse,
@@ -998,6 +999,30 @@ export default function NpsPage() {
                 dados.phone !== undefined
                   ? "Telefone gravado."
                   : "Estabelecimento vinculado.",
+            });
+          }}
+
+          onRetencao={async (valor) => {
+
+            aplicarLocal(selecionado.id, {
+              churnRisk: valor,
+            });
+
+            await setNpsChurnRisk({
+              id: selecionado.id,
+              valor,
+            });
+
+            startTransition(() => {
+              recarregar();
+            });
+
+            notify({
+              tone: valor ? "info" : "success",
+              title: valor
+                ? "Marcado como caso de retenção."
+                : "Marca de retenção removida.",
+              detail: selecionado.customer,
             });
           }}
 

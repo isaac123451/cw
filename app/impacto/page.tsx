@@ -26,6 +26,7 @@ import { ConfirmDelete } from "@/components/shared/Modal";
 
 import ImpactForm from "@/components/impacto/ImpactForm";
 import ImpactTypesCard from "@/components/impacto/ImpactTypesCard";
+import PlanosDoImpacto from "@/components/impacto/PlanosDoImpacto";
 
 import {
   ImpactDraft,
@@ -307,6 +308,8 @@ export default function ImpactoPage() {
           </SurfaceCard>
 
         </div>
+
+        <PlanosDoImpacto />
 
         <ImpactTypesCard />
 

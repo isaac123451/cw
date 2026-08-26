@@ -117,6 +117,7 @@ export async function listNpsResponses(): Promise<
     referralAsked: r.referralAsked,
     source: r.source,
     externalId: r.externalId ?? undefined,
+    churnRisk: r.churnRisk,
     moodAfter: r.moodAfter ?? undefined,
     resolvedAfter: r.resolvedAfter ?? undefined,
     postContactNote: r.postContactNote ?? undefined,
@@ -940,6 +941,36 @@ export async function exportNps(ids?: string[]): Promise<{
  * ganho seria corrigir um endereço — que se faz no cadastro, onde a
  * consequência está à vista.
  */
+/**
+ * Marca (ou desmarca) que a conta precisa de retenção.
+ *
+ * O Isaac pediu o botão nas três frentes: "quando tenha um botão algo
+ * assim na reclamação ou nps e até mesmo redes sociais, para sinalizar
+ * que é um caso de cancelamento e ser necessário reter".
+ *
+ * **Grava na hora, sem passar pelo rascunho.** Os outros campos da
+ * ficha esperam o botão Salvar porque são texto em edição. Este é um
+ * alerta: quem clica acabou de ouvir "vou cancelar" e vai fechar a tela
+ * para ligar para o cliente. Se dependesse de um segundo clique, o
+ * aviso se perderia exatamente nos casos em que mais importa.
+ */
+export async function setNpsChurnRisk(input: {
+  id: string;
+  valor: boolean;
+}) {
+
+  const ctx = await requireRole("AGENTE", MODULO);
+
+  if (!ctx) return;
+
+  await ctx.prisma.npsResponse.update({
+    where: { id: input.id },
+    data: { churnRisk: input.valor },
+  });
+
+  updateTag(WORKSPACE_TAG);
+}
+
 export async function updateNpsContato(input: {
   id: string;
   phone?: string | null;

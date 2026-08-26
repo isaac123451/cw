@@ -8,6 +8,7 @@ import {
   ExternalLink,
   Megaphone,
   Phone,
+  ShieldAlert,
   Store,
   X,
 } from "lucide-react";
@@ -77,6 +78,14 @@ interface Props {
     phone?: string | null;
     establishmentId?: string | null;
   }) => Promise<void>;
+
+  /**
+   * Marca a conta como caso de retenção.
+   *
+   * Grava direto, sem esperar botão Salvar: quem clica acabou de ler
+   * "vou cancelar" no comentário e vai fechar a ficha para ligar.
+   */
+  onRetencao: (valor: boolean) => Promise<void>;
 }
 
 function quando(iso?: string) {
@@ -109,6 +118,7 @@ export default function NpsDrawer({
   onAdvocacy,
   onPostContact,
   onContato,
+  onRetencao,
 }: Props) {
 
   const [channel, setChannel] = useState(CHANNELS[0]);
@@ -145,6 +155,9 @@ export default function NpsDrawer({
   );
 
   const [gravandoPos, setGravandoPos] = useState(false);
+
+  const [marcandoRisco, setMarcandoRisco] =
+    useState(false);
 
   const posAlterado =
     humor !== item.moodAfter ||
@@ -216,6 +229,43 @@ export default function NpsDrawer({
     >
 
       <div className="space-y-5">
+
+        {/*
+          Retenção, no topo da ficha.
+
+          O Isaac pediu o botão nas três frentes, e no NPS ele é o mais
+          útil dos três: o "vou cancelar" chega aqui semanas antes de
+          virar reclamação pública, escrito no comentário da pesquisa —
+          onde só quem abre este registro lê. Marcado, a conta entra na
+          contagem de retenção junto com as das outras frentes.
+
+          Grava no clique. Segurar o aviso até alguém apertar Salvar é o
+          mesmo que não avisar.
+        */}
+        <button
+          type="button"
+          disabled={marcandoRisco}
+          onClick={async () => {
+            setMarcandoRisco(true);
+            await onRetencao(!item.churnRisk);
+            setMarcandoRisco(false);
+          }}
+          title={
+            item.churnRisk
+              ? "Tirar a marca de risco de cancelamento"
+              : "Marcar como caso de retenção — o cliente sinalizou que pode cancelar"
+          }
+          className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ring-1 ring-inset transition-colors disabled:opacity-60 ${
+            item.churnRisk
+              ? "bg-rose-50 text-rose-700 ring-rose-100 hover:bg-rose-100"
+              : "text-zinc-500 ring-zinc-200 hover:bg-zinc-50 hover:text-zinc-700"
+          }`}
+        >
+          <ShieldAlert size={12} />
+          {item.churnRisk
+            ? "Risco de cancelamento"
+            : "Marcar retenção"}
+        </button>
 
         {/* Situação */}
         <div className="grid gap-2 sm:grid-cols-3">
