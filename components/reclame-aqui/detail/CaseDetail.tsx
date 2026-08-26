@@ -9,6 +9,7 @@ import {
   ExternalLink,
   Maximize2,
   MessageCircle,
+  ShieldAlert,
   Star,
   Timer,
 } from "lucide-react";
@@ -297,11 +298,50 @@ export default function CaseDetail({
                 {data.wouldDoBusiness ? "Sim" : "Não"}
               </span>
 
-              {data.churnRisk && (
-                <span className="rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700 ring-1 ring-inset ring-rose-100">
-                  Risco de cancelamento
-                </span>
-              )}
+              {/*
+                Sinalizar retenção, e não só ler o sinal.
+
+                A etiqueta existia; o botão, não. `churnRisk` era só
+                exibido em oito telas e não havia onde marcar — os 28
+                casos com a marca vieram todos da carga inicial. Quem
+                descobria numa conversa que o cliente ia cancelar não
+                tinha o que fazer com a informação.
+
+                O Isaac: "quando tenha um botão algo assim na reclamação
+                ou nps e até mesmo redes sociais, para sinalizar que é
+                um caso de cancelamento e ser necessário reter".
+
+                Fica no cabeçalho e não numa aba porque é decisão de
+                triagem: quem percebe o risco percebe ao ler as
+                primeiras linhas, e um clique não pode custar procurar.
+                E grava direto, sem passar pelo rascunho — a marca muda
+                a prioridade da fila para todo mundo, e segurá-la até
+                alguém clicar em Salvar é o mesmo que não marcar.
+              */}
+              <button
+                type="button"
+                onClick={() =>
+                  updateCase({
+                    ...emEdicao,
+                    churnRisk: !data.churnRisk,
+                  })
+                }
+                title={
+                  data.churnRisk
+                    ? "Tirar a marca de risco de cancelamento"
+                    : "Marcar como caso de retenção — o cliente sinalizou que pode cancelar"
+                }
+                className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ring-1 ring-inset transition-colors ${
+                  data.churnRisk
+                    ? "bg-rose-50 text-rose-700 ring-rose-100 hover:bg-rose-100"
+                    : "text-zinc-500 ring-zinc-200 hover:bg-zinc-50 hover:text-zinc-700"
+                }`}
+              >
+                <ShieldAlert size={12} />
+                {data.churnRisk
+                  ? "Risco de cancelamento"
+                  : "Marcar retenção"}
+              </button>
 
               {movimentacao && movimentacaoStatus && (
                 <button

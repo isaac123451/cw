@@ -70,4 +70,26 @@ export interface ImpactRecord {
   date: string;
 
   relatedCase?: string;
+
+  /**
+   * Como o cliente ficou depois da negociação — 1 a 5.
+   *
+   * O impacto media só dinheiro. Dinheiro diz se a conta ficou; não diz
+   * se a relação ficou, e são coisas diferentes — um cancelamento
+   * evitado com o cliente furioso volta em três meses.
+   *
+   * A régua é a mesma do pós-contato do NPS, de propósito.
+   */
+  moodAfter?: number;
+
+  /**
+   * Sem esta tratativa, o cliente teria cancelado?
+   *
+   * Separa retenção de cortesia. Um desconto dado a quem não ia sair é
+   * custo; o mesmo desconto a quem ia sair é receita preservada, e
+   * somar os dois no mesmo total não diz nem uma coisa nem outra.
+   *
+   * `undefined` é "não perguntei" — diferente de `false`.
+   */
+  wouldHaveChurned?: boolean;
 }

@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react";
 
+import { MOODS } from "@/lib/models/nps";
+
 import { Save, Search } from "lucide-react";
 
 import Modal, {
@@ -118,6 +120,23 @@ export default function ImpactForm({
   /** Texto digitado enquanto o nome ainda não casa com nenhum cliente. */
   const [clientName, setClientName] = useState("");
 
+  /**
+   * Como o cliente ficou, e se ia mesmo sair.
+   *
+   * O registro media só dinheiro, e dinheiro responde metade da
+   * pergunta: diz se a conta ficou, não se a relação ficou. Um
+   * cancelamento evitado com o cliente furioso volta em três meses, e o
+   * total do mês não distingue os dois.
+   */
+  const [moodAfter, setMoodAfter] = useState<
+    number | undefined
+  >(editing?.moodAfter);
+
+  const [wouldHaveChurned, setWouldHaveChurned] =
+    useState<boolean | undefined>(
+      editing?.wouldHaveChurned
+    );
+
   // Custo entra negativo na conta; receita, positivo.
   const sinal =
     tipos.find((item) => item.name === type)
@@ -166,6 +185,8 @@ export default function ImpactForm({
       relatedCase: caseId.trim() || undefined,
       establishmentId: establishmentId || undefined,
       clientSlug: clientSlug || undefined,
+      moodAfter,
+      wouldHaveChurned,
     };
 
     onSave(
@@ -454,6 +475,117 @@ export default function ImpactForm({
             className={textareaClass}
           />
         </Field>
+
+        {/*
+          O que o dinheiro não conta.
+
+          Os dois campos são opcionais de propósito: quem registra um
+          "módulo contratado" não negociou retenção nenhuma, e obrigar a
+          responder faria inventar resposta. Vazio aqui é "não se
+          aplica" ou "não perguntei", e as duas coisas são melhores do
+          que um número chutado.
+        */}
+        <div className="sm:col-span-2">
+
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+            Depois da negociação
+          </p>
+
+          <p className="mt-1 text-xs text-zinc-500">
+            Opcional. O valor diz se a conta ficou; isto
+            diz se a relação ficou.
+          </p>
+
+          <div className="mt-3 grid gap-4 sm:grid-cols-2">
+
+            <div>
+
+              <label className="text-xs font-medium text-zinc-600">
+                Como o cliente ficou
+              </label>
+
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+
+                {MOODS.map((m) => (
+                  <button
+                    key={m.value}
+                    type="button"
+                    onClick={() =>
+                      setMoodAfter(
+                        moodAfter === m.value
+                          ? undefined
+                          : m.value
+                      )
+                    }
+                    title={m.label}
+                    className={`flex h-10 w-10 items-center justify-center rounded-xl text-lg transition-colors ring-1 ring-inset ${
+                      moodAfter === m.value
+                        ? "bg-violet-50 ring-violet-300"
+                        : "ring-zinc-200 hover:bg-zinc-50"
+                    }`}
+                  >
+                    {m.emoji}
+                  </button>
+                ))}
+
+              </div>
+
+            </div>
+
+            <div>
+
+              <label className="text-xs font-medium text-zinc-600">
+                Teria cancelado sem esta tratativa?
+              </label>
+
+              <div className="mt-1.5 flex gap-2">
+
+                {[
+                  { valor: true, rotulo: "Sim, ia sair" },
+                  { valor: false, rotulo: "Não ia sair" },
+                ].map((o) => (
+                  <button
+                    key={String(o.valor)}
+                    type="button"
+                    onClick={() =>
+                      setWouldHaveChurned(
+                        wouldHaveChurned === o.valor
+                          ? undefined
+                          : o.valor
+                      )
+                    }
+                    className={`h-10 flex-1 rounded-xl px-3 text-sm font-medium transition-colors ring-1 ring-inset ${
+                      wouldHaveChurned === o.valor
+                        ? "bg-violet-50 text-violet-800 ring-violet-300"
+                        : "text-zinc-600 ring-zinc-200 hover:bg-zinc-50"
+                    }`}
+                  >
+                    {o.rotulo}
+                  </button>
+                ))}
+
+              </div>
+
+              {/*
+                Sem resposta é diferente de "não ia sair".
+
+                É o que separa retenção de cortesia no relatório: um
+                desconto a quem não ia sair é custo, e o mesmo desconto a
+                quem ia sair é receita preservada.
+              */}
+              <p className="mt-1.5 text-[11px] text-zinc-400">
+                {wouldHaveChurned === undefined
+                  ? "Sem resposta — não entra na conta de retenção."
+                  : wouldHaveChurned
+                    ? "Conta como receita preservada."
+                    : "Conta como cortesia, não como retenção."}
+              </p>
+
+            </div>
+
+          </div>
+
+        </div>
 
       </div>
 

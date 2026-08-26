@@ -571,6 +571,8 @@ async function carregarDoBanco(): Promise<Workspace | null> {
       owner: r.owner ?? "",
       date: dia(r.date) as string,
       relatedCase: r.case?.externalId ?? undefined,
+      moodAfter: r.moodAfter ?? undefined,
+      wouldHaveChurned: r.wouldHaveChurned ?? undefined,
     })),
 
     playbooks: playbooks.map((r) => ({

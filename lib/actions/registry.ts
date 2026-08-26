@@ -649,6 +649,16 @@ export async function saveImpactRecord(
     establishmentId: item.establishmentId ?? null,
     clientSlug: item.clientSlug ?? null,
     caseId: caso?.id ?? null,
+
+    /*
+      Os dois campos da retenção.
+
+      `?? null` e não `|| null`: humor 0 não existe na régua, mas
+      `wouldHaveChurned: false` é resposta válida — "perguntei e ele não
+      ia sair" — e o `||` a transformaria em "não perguntei".
+    */
+    moodAfter: item.moodAfter ?? null,
+    wouldHaveChurned: item.wouldHaveChurned ?? null,
   };
 
   await prisma.impactRecord.upsert({

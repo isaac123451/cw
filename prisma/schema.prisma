@@ -492,6 +492,29 @@ model ImpactRecord {
 
   caseId String?
   case   Case?   @relation(fields: [caseId], references: [id])
+
+  /// Como o cliente ficou depois da negociação — 1 a 5, como no NPS.
+  ///
+  /// O impacto media só dinheiro: quanto foi salvo, quanto foi
+  /// concedido. Dinheiro diz se a conta ficou, e não diz se a relação
+  /// ficou — e são coisas diferentes: um cancelamento evitado com o
+  /// cliente furioso volta em três meses.
+  ///
+  /// A régua é a mesma do pós-contato do NPS de propósito. Duas réguas
+  /// para a mesma pergunta fariam os dois números serem lidos juntos e
+  /// significarem coisas diferentes.
+  moodAfter Int?
+
+  /// Sem esta tratativa, o cliente teria cancelado?
+  ///
+  /// É a pergunta que separa retenção de cortesia. Um desconto dado a
+  /// quem não ia sair é custo; o mesmo desconto a quem ia sair é
+  /// receita preservada, e a soma dos dois no mesmo total não diz nem
+  /// uma coisa nem outra.
+  ///
+  /// `null` é "não se sabe" — diferente de `false`. Quem não perguntou
+  /// não deve ser contado como quem perguntou e ouviu não.
+  wouldHaveChurned Boolean?
 }
 
 model AgendaTask {
