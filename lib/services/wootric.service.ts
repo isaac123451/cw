@@ -244,6 +244,17 @@ export interface WootricResponse {
   updated_at?: string;
   origin_url?: string | null;
   tags?: unknown;
+
+  /**
+   * As anotações que a operação escreve no painel do Wootric.
+   *
+   * Vêm como texto puro, sem autor e sem data -- conferido na conta:
+   * 26 das 600 respostas mais recentes têm uma, e o teor é "Tentativa
+   * de contato feita.". Chegam **na mesma chamada** que já buscamos
+   * as respostas, então trazê-las não custa requisição nenhuma.
+   */
+  notes?: string[] | null;
+
   end_user?: WootricEndUser;
 }
 
@@ -383,6 +394,14 @@ export interface RespostaImportada {
   company?: string;
   /** `properties.company_id` — o estabelecimento no sistema da casa. */
   externalCompanyId?: string;
+  /**
+   * As anotações escritas no painel do Wootric.
+   *
+   * Texto puro, sem autor nem data -- é tudo que a API devolve, e a
+   * tela diz isso em vez de inventar quem escreveu.
+   */
+  notasDoWootric: string[];
+
   /** Falso para promotor calado: entra na conta, não entra na fila. */
   exigeTratativa: boolean;
 }
@@ -508,6 +527,19 @@ export function traduzir(
       "companyId",
       "empresa_id"
     ),
+    /*
+      Só texto de verdade entra.
+
+      A API devolve `null` quando não há nota e, em alguns registros,
+      entradas vazias no meio do array. Guardar string vazia faria a
+      tela mostrar uma anotação em branco, que se lê como defeito.
+    */
+    notasDoWootric: Array.isArray(resposta.notes)
+      ? resposta.notes
+          .map((nota) => String(nota ?? "").trim())
+          .filter((nota) => nota !== "")
+      : [],
+
     exigeTratativa: exigeTratativa(
       resposta.score,
       comentario

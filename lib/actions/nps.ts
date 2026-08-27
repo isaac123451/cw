@@ -88,6 +88,7 @@ export async function listNpsResponses(): Promise<
     include: {
       owner: { select: { name: true } },
       attempts: { orderBy: { createdAt: "asc" } },
+      notes: { orderBy: { createdAt: "asc" } },
     },
     orderBy: { respondedAt: "desc" },
   });
@@ -118,6 +119,13 @@ export async function listNpsResponses(): Promise<
     source: r.source,
     externalId: r.externalId ?? undefined,
     churnRisk: r.churnRisk,
+    wootricNotes: r.wootricNotes,
+    notes: r.notes.map((n) => ({
+      id: n.id,
+      body: n.body,
+      actor: n.actor,
+      createdAt: n.createdAt.toISOString(),
+    })),
     moodAfter: r.moodAfter ?? undefined,
     resolvedAfter: r.resolvedAfter ?? undefined,
     postContactNote: r.postContactNote ?? undefined,
@@ -941,6 +949,71 @@ export async function exportNps(ids?: string[]): Promise<{
  * ganho seria corrigir um endereço — que se faz no cadastro, onde a
  * consequência está à vista.
  */
+/* ============================================================
+   ANOTAÇÕES DO CICLO
+============================================================ */
+
+/**
+ * Escreve uma anotação no ciclo de NPS.
+ *
+ * O Isaac pediu paridade com o Wootric: "preciso que seja possível
+ * adicionar notas assim nos casos de nps".
+ *
+ * **Por que não é uma tentativa de contato.** `NpsAttempt` já existia e
+ * seria o lugar tentador, mas ela tem canal e significa "liguei". Uma
+ * anotação que virasse tentativa inflaria a contagem — e é essa
+ * contagem que decide se o ciclo encerra por "sem retorno". O número
+ * passaria a mentir sobre quantas vezes se tentou falar com a pessoa.
+ *
+ * O nome de quem escreveu é gravado junto da relação, e não só como
+ * chave: desativar a conta de alguém não pode apagar a autoria do que
+ * essa pessoa escreveu.
+ */
+export async function addNpsNote(input: {
+  id: string;
+  texto: string;
+  /** Nome de quem escreveu, como a tela o exibe. */
+  actor: string;
+}) {
+
+  const ctx = await requireRole("AGENTE", MODULO);
+
+  if (!ctx) return null;
+
+  const texto = input.texto.trim().slice(0, 4000);
+
+  if (texto === "") return null;
+
+  const criada = await ctx.prisma.npsNote.create({
+    data: {
+      responseId: input.id,
+      body: texto,
+      authorId: ctx.userId,
+      actor: input.actor.trim(),
+    },
+    select: { id: true, createdAt: true },
+  });
+
+  updateTag(WORKSPACE_TAG);
+
+  return {
+    id: criada.id,
+    createdAt: criada.createdAt.toISOString(),
+    actor: input.actor.trim(),
+  };
+}
+
+export async function removeNpsNote(id: string) {
+
+  const ctx = await requireRole("AGENTE", MODULO);
+
+  if (!ctx) return;
+
+  await ctx.prisma.npsNote.delete({ where: { id } });
+
+  updateTag(WORKSPACE_TAG);
+}
+
 /**
  * Marca (ou desmarca) que a conta precisa de retenção.
  *

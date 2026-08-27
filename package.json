@@ -1,6 +1,6 @@
 {
   "name": "cw-reputacao",
-  "version": "0.38.1",
+  "version": "0.39.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -61,7 +61,8 @@
     "limpar:estabelecimentos": "tsx scripts/limpar-estabelecimentos-pessoa.ts",
     "semear:macros": "tsx scripts/semear-macros.ts",
     "check:vinculo-tarefa": "tsx scripts/check-vinculo-tarefa.ts",
-    "check:dossie": "tsx scripts/check-dossie.ts"
+    "check:dossie": "tsx scripts/check-dossie.ts",
+    "check:notas-nps": "tsx scripts/check-notas-nps.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",

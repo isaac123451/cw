@@ -40,6 +40,7 @@ model User {
   googleAccount GoogleAccount?
   preferences   UserPreference?
   npsResponses  NpsResponse[]    @relation("NpsOwner")
+  npsNotes      NpsNote[]        @relation("NpsNoteAuthor")
   moduleRoles   UserModuleRole[]
   challenges    LoginChallenge[]
 
@@ -921,6 +922,25 @@ model NpsResponse {
   comment     String   @default("")
   respondedAt DateTime
 
+  /// As anotações escritas no painel do **Wootric**, não aqui.
+  ///
+  /// Não confundir com `NpsAttempt`: aquilo é a tratativa registrada
+  /// nesta plataforma, com autor, canal e data. Isto é o que alguém
+  /// escreveu do outro lado — texto puro, sem autor e sem data, porque
+  /// é tudo que a API do Wootric devolve.
+  ///
+  /// Existem de verdade e estavam sendo jogadas fora: 26 das 600
+  /// respostas mais recentes trazem uma, quase sempre "Tentativa de
+  /// contato feita.". Elas chegam na **mesma** chamada que já busca as
+  /// respostas, então lê-las não custa requisição nenhuma — e sem elas
+  /// a ficha dizia "nenhuma tentativa registrada" sobre um ciclo em que
+  /// alguém já tinha ligado.
+  ///
+  /// Lista inteira a cada importação, e não acréscimo: a origem é o
+  /// Wootric, então reimportar tem de refletir o que está lá agora —
+  /// inclusive uma nota apagada de lá.
+  wootricNotes String[] @default([])
+
   /// Cliente por nome, como no resto da aplicação.
   customer String
   email    String?
@@ -1005,6 +1025,7 @@ model NpsResponse {
   postContactBy   String?
 
   attempts NpsAttempt[]
+  notes    NpsNote[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1109,6 +1130,38 @@ model NpsKind {
 }
 
 /// Cada tentativa de contato, para sustentar a regra das três em 7 dias.
+/// Anotação escrita **aqui**, num ciclo de NPS.
+///
+/// É o equivalente de `CaseComment` para a pesquisa, e existia só do
+/// lado da reclamação: quem atendia um detrator podia registrar
+/// tentativa de contato, mas não podia simplesmente escrever o que
+/// descobriu. Sobrava forçar a anotação dentro de uma tentativa, o que
+/// inflaria a contagem de tentativas — e é essa contagem que decide se
+/// o ciclo encerra por "sem retorno".
+///
+/// **Não confundir com `NpsResponse.wootricNotes`.** Aquilo vem do
+/// painel do Wootric, é texto puro sem autor nem data, e é reescrito a
+/// cada importação. Isto é nosso: tem quem escreveu, quando, e ninguém
+/// de fora apaga.
+model NpsNote {
+  id String @id @default(cuid())
+
+  responseId String
+  response   NpsResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
+
+  authorId String?
+  author   User?   @relation("NpsNoteAuthor", fields: [authorId], references: [id])
+
+  /// Guardado além da relação: o nome de quem escreveu não pode sumir
+  /// da ficha porque a conta foi desativada depois.
+  actor String @default("")
+
+  body      String
+  createdAt DateTime @default(now())
+
+  @@index([responseId, createdAt])
+}
+
 model NpsAttempt {
   id String @id @default(cuid())
 

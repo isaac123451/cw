@@ -120,6 +120,17 @@ async function gravarLote(
           company: item.company || null,
           externalCompanyId:
             item.externalCompanyId || null,
+
+          /*
+            As anotações do painel do Wootric.
+
+            Lista inteira, e não acréscimo: a origem é o Wootric, então
+            reimportar tem de refletir o que está lá agora — inclusive
+            uma nota apagada de lá. Acumular deixaria a ficha com
+            anotações que já não existem na fonte.
+          */
+          wootricNotes: item.notasDoWootric,
+
           source: "Wootric",
         };
 

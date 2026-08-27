@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import Combobox from "@/components/shared/Combobox";
+import NpsNotas from "@/components/nps/NpsNotas";
 
 import { useEstablishments } from "@/lib/context/EstablishmentsContext";
 import { linkDoPortal } from "@/lib/models/establishment";
@@ -86,6 +87,12 @@ interface Props {
    * "vou cancelar" no comentário e vai fechar a ficha para ligar.
    */
   onRetencao: (valor: boolean) => Promise<void>;
+
+  /** Escreve uma anotação neste ciclo. */
+  onAnotar: (texto: string) => Promise<void>;
+
+  /** Apaga uma anotação nossa. As do Wootric não se apagam daqui. */
+  onApagarNota: (id: string) => Promise<void>;
 }
 
 function quando(iso?: string) {
@@ -119,6 +126,8 @@ export default function NpsDrawer({
   onPostContact,
   onContato,
   onRetencao,
+  onAnotar,
+  onApagarNota,
 }: Props) {
 
   const [channel, setChannel] = useState(CHANNELS[0]);
@@ -468,6 +477,20 @@ export default function NpsDrawer({
           </div>
 
         </div>
+
+        {/*
+          As anotações, antes das tentativas.
+
+          A anotação diz o que se sabe sobre o cliente; a tentativa diz
+          quantas vezes se ligou. Quem abre a ficha quer a primeira
+          antes de decidir se faz a segunda.
+        */}
+        <NpsNotas
+          item={item}
+          podeEscrever={!encerrado}
+          onAdd={onAnotar}
+          onRemove={onApagarNota}
+        />
 
         {/* Contato */}
         <div>

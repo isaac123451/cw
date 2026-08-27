@@ -368,6 +368,8 @@
       if (acao === "triar") triarCaso(alvo);
       if (acao === "concluir") concluirTarefa(alvo);
       if (acao === "nps-contato") gravarContatoDoNps(alvo);
+      if (acao === "wpp-frente") gravarWhatsappDaFrente(alvo);
+      if (acao === "anotar-nps") anotarNoNps(alvo);
 
       if (acao === "fila-recorte") {
         abrirRecorte(alvo.dataset.recorte ?? "");
@@ -2605,6 +2607,123 @@
     ].join("");
   }
 
+  /**
+   * Anotar no ciclo, do lado de dentro da conversa.
+   *
+   * O caso do Reclame Aqui já tinha isto; o ciclo de NPS, não — só
+   * dava para registrar tentativa de contato, que é outra coisa. Quem
+   * descobria algo sobre o cliente no meio do atendimento não tinha
+   * onde escrever sem trocar de aba, e registro que exige trocar de
+   * aba é registro que não acontece.
+   *
+   * Fica recolhido: nem toda conversa vira anotação, e um campo de
+   * texto sempre aberto empurraria o resto do cartão para baixo.
+   */
+  function campoDeAnotacaoDoNps(nps) {
+
+    if (nps.encerrado) return "";
+
+    const id = CW.escapar(nps.id);
+
+    return `
+    <details style="margin-top:8px">
+      <summary style="cursor:pointer;font-size:12px;font-weight:600;padding:5px 0">Anotar neste ciclo</summary>
+      <textarea class="campo" id="nps-nota-${id}" rows="2" style="margin-top:6px" placeholder="O que você descobriu sobre este cliente"></textarea>
+      <div class="linha" style="margin-top:7px;align-items:center">
+        <span class="sub">Entra na ficha do NPS, com seu nome e a data.</span>
+        <button class="acao" style="margin-top:0" data-acao="anotar-nps" data-id="${id}">Anotar</button>
+      </div>
+    </details>`;
+  }
+
+  /**
+   * "Este WhatsApp é o do NPS."
+   *
+   * O Isaac: "no do nps ser possível selecionar que é do nps".
+   *
+   * A extensão sempre soube ler o número da conversa aberta e usá-lo
+   * para **procurar** ciclos. O caminho de volta não existia: achado o
+   * ciclo, não havia como dizer "e este número é o dele". O resultado
+   * está medido — 868 respostas sem telefone nenhum, enquanto quem
+   * atendia estava com a conversa aberta, com o número na tela.
+   *
+   * Não adivinha. O mesmo número pode ser do consumidor que reclamou no
+   * Reclame Aqui ou do dono que respondeu a pesquisa, e nada no número
+   * diz qual — são pessoas diferentes, com problemas diferentes. Quem
+   * está na conversa sabe; o painel pergunta.
+   *
+   * **Só aparece com conversa aberta.** Sem número na tela não há o que
+   * gravar, e um botão que não tem o que fazer é pior do que nenhum.
+   */
+  function esteWhatsappEDoNps(nps) {
+
+    const numero = numeroDaConversa();
+
+    if (!numero || nps.encerrado) return "";
+
+    /*
+      Sem comparar com o número que já está gravado, de propósito.
+
+      O servidor manda `temContato` e **não** o telefone do ciclo: a
+      resposta fica em cache na extensão, e contato solto ali não tem
+      uso e vira dado exposto sem motivo. Então o botão aparece mesmo
+      quando já existe contato — e o texto abaixo dele avisa que
+      substitui, em vez de trocar em silêncio.
+    */
+
+    return [
+      '    <div class="etapas" style="border-top-style:solid">',
+      `      <button class="passo" data-acao="wpp-frente" data-frente="nps" data-id="${CW.escapar(nps.id)}" data-numero="${CW.escapar(numero)}" style="flex:1">Este WhatsApp é do NPS</button>`,
+      '    </div>',
+      `    <p class="sub" style="margin-top:5px">Grava ${CW.escapar(numero)} como contato deste ciclo${nps.temContato ? " — substitui o que já está lá" : ""}.</p>`,
+    ].join("");
+  }
+
+  /**
+   * "Este WhatsApp é o do Reclame Aqui."
+   *
+   * A outra metade do pedido. Mesma mecânica, outro destino: o telefone
+   * do caso, que é o do consumidor que abriu a reclamação.
+   */
+  function esteWhatsappEDoCaso(protocolo, telefoneAtual) {
+
+    const numero = numeroDaConversa();
+
+    if (!numero) return "";
+
+    if (
+      String(telefoneAtual ?? "").replace(/\D/g, "") ===
+      numero
+    ) {
+      return "";
+    }
+
+    return [
+      '  <div class="etapas" style="border-top-style:solid">',
+      `    <button class="passo" data-acao="wpp-frente" data-frente="reclame-aqui" data-protocolo="${CW.escapar(protocolo)}" data-numero="${CW.escapar(numero)}" style="flex:1">Este WhatsApp é do Reclame Aqui</button>`,
+      '  </div>',
+      `  <p class="sub" style="margin-top:5px">Grava ${CW.escapar(numero)} como telefone desta reclamação${telefoneAtual ? " — substitui o que está lá" : ""}.</p>`,
+    ].join("");
+  }
+
+  /**
+   * O número da conversa aberta, só dígitos.
+   *
+   * Vem da captura do `whatsapp.js`, que é quem lê a página. O piso de
+   * dez dígitos existe porque a leitura às vezes pega um fragmento — e
+   * um telefone de três dígitos gravado num cadastro é pior do que
+   * campo vazio: ele parece preenchido.
+   */
+  function numeroDaConversa() {
+
+    const bruto =
+      captura?.telefone ?? consulta?.telefone ?? "";
+
+    const so = String(bruto).replace(/\D/g, "");
+
+    return so.length >= 10 && so.length <= 15 ? so : "";
+  }
+
   function passosDoNps(nps) {
 
     if (nps.encerrado) {
@@ -2740,6 +2859,8 @@
 
       escrever ? passosDoNps(nps) : "",
       escrever ? campoDeContatoDoNps(nps) : "",
+      escrever ? esteWhatsappEDoNps(nps) : "",
+      escrever ? campoDeAnotacaoDoNps(nps) : "",
       '  </div>',
     ];
 
@@ -3412,6 +3533,18 @@
         protocolo: d.protocolo,
         status: d.status,
       }),
+
+      /*
+        "Este WhatsApp é o do Reclame Aqui."
+
+        Fica no cartão do caso e não num bloco à parte: a pergunta que
+        ele responde é sobre **este** caso, e separada dele viraria uma
+        escolha sem sujeito.
+      */
+      podeEscrever(ultimoDado)
+        ? esteWhatsappEDoCaso(d.protocolo, d.telefone)
+        : "",
+
       '  </div>',
       '</div>',
     ];
@@ -5186,6 +5319,133 @@
    * casa com conversa nenhuma do WhatsApp e some do painel justamente
    * quando alguém está falando com a pessoa.
    */
+  /**
+   * Grava o número da conversa na frente que a pessoa escolheu.
+   *
+   * Um clique, sem digitar: o número já está na tela, lido da conversa
+   * aberta. O que faltava era dizer de quem ele é — e é isso que os
+   * dois botões perguntam.
+   */
+  async function gravarWhatsappDaFrente(botao) {
+
+    const frente = botao.dataset.frente;
+    const numero = botao.dataset.numero;
+
+    if (!numero) {
+      avisar(
+        "Não consegui ler o número desta conversa.",
+        "atencao"
+      );
+      return;
+    }
+
+    const rotulo = botao.textContent;
+
+    botao.disabled = true;
+    botao.textContent = "gravando...";
+
+    const resposta = await CW.enviar({
+      tipo: "whatsappDaFrente",
+      numero,
+      frente,
+      protocolo: botao.dataset.protocolo,
+      npsId: botao.dataset.id,
+
+      /*
+        No NPS, guarda também no cadastro do estabelecimento.
+
+        É o campo que faz o botão "WhatsApp do NPS" aparecer nos
+        **próximos** ciclos daquela conta, e não só neste. O servidor
+        ignora quando o ciclo não tem estabelecimento vinculado.
+      */
+      tambemNoEstabelecimento: frente === "nps",
+    });
+
+    botao.disabled = false;
+    botao.textContent = rotulo;
+
+    if (!resposta.ok || resposta.dados?.erro) {
+      avisar(
+        resposta.dados?.erro ??
+          resposta.erro ??
+          "Não deu para gravar o número.",
+        "perigo"
+      );
+      return;
+    }
+
+    const d = resposta.dados ?? {};
+
+    avisar(
+      `Número gravado ${
+        d.frente === "nps"
+          ? "no ciclo de NPS"
+          : `na reclamação ${d.onde ?? ""}`
+      }${d.substituiu ? " (substituiu o anterior)" : ""}${
+        d.noEstabelecimento
+          ? " e no cadastro do estabelecimento"
+          : ""
+      }.`,
+      "ok"
+    );
+
+    await recarregar();
+  }
+
+  /**
+   * Anota num ciclo de NPS, sem sair da conversa.
+   *
+   * O Isaac pediu paridade com o Reclame Aqui: "preciso que seja
+   * possível adicionar notas assim nos casos de nps, também seja
+   * possível via extensão".
+   *
+   * **Não é tentativa de contato.** A tentativa tem canal e significa
+   * "liguei" — é a contagem dela que decide se o ciclo encerra por
+   * "sem retorno". Escrever uma observação ali inflaria esse número.
+   */
+  async function anotarNoNps(botao) {
+
+    const id = botao.dataset.id;
+
+    const campo = corpo.querySelector(
+      `#nps-nota-${CSS.escape(id)}`
+    );
+
+    const texto = (campo?.value ?? "").trim();
+
+    if (!texto) {
+      avisar("Escreva a anotação antes.", "atencao");
+      return;
+    }
+
+    const rotulo = botao.textContent;
+
+    botao.disabled = true;
+    botao.textContent = "...";
+
+    const resposta = await CW.enviar({
+      tipo: "anotar",
+      anotacao: { tipo: "nps", npsId: id, texto },
+    });
+
+    botao.disabled = false;
+    botao.textContent = rotulo;
+
+    if (!resposta.ok || resposta.dados?.erro) {
+      avisar(
+        resposta.dados?.erro ??
+          resposta.erro ??
+          "Falha ao anotar.",
+        "perigo"
+      );
+      return;
+    }
+
+    if (campo) campo.value = "";
+
+    avisar("Anotação gravada no ciclo.", "ok");
+  }
+
   async function gravarContatoDoNps(botao) {
 
     const id = botao.dataset.id;

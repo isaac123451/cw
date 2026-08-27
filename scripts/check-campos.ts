@@ -60,6 +60,16 @@ const INTERNAS: Record<string, string[]> = {
   ],
   NpsResponse: ["*"],
   NpsAttempt: ["*"],
+
+  /**
+   * Anotação de um ciclo de NPS.
+   *
+   * Vem junto da resposta em `listNpsResponses`, que tem carga própria
+   * — como `CaseComment` vem junto do caso. O que sobra aqui são as
+   * chaves da relação, que a tela não desenha porque já sabe de que
+   * ciclo está falando.
+   */
+  NpsNote: ["*"],
   User: ["*"],
   UserPreference: ["*"],
   UserModuleRole: ["*"],

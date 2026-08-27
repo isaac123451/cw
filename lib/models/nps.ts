@@ -573,6 +573,28 @@ export interface NpsResponseView {
   postContactBy?: string;
 
   attempts: NpsAttemptView[];
+
+  /**
+   * As anotações escritas no painel do **Wootric**.
+   *
+   * Texto puro, sem autor e sem data: é tudo que a API devolve. Vêm
+   * na mesma chamada que busca as respostas, então lê-las não custa
+   * requisição — e sem elas a ficha dizia "nenhuma tentativa
+   * registrada" sobre um ciclo em que alguém já tinha ligado.
+   *
+   * Reescritas a cada importação: a origem é o Wootric.
+   */
+  wootricNotes: string[];
+
+  /** As anotações escritas aqui, com autor e data. */
+  notes: NpsNoteView[];
+}
+
+export interface NpsNoteView {
+  id: string;
+  body: string;
+  actor: string;
+  createdAt: string;
 }
 
 export interface NpsAttemptView {

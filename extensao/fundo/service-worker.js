@@ -37,6 +37,7 @@ const CAMINHOS = {
   resumoCaso: "/api/extensao/resumo-caso",
   pendencias: "/api/extensao/pendencias",
   salvarDossie: "/api/extensao/salvar-dossie",
+  whatsapp: "/api/extensao/whatsapp",
 };
 
 /**
@@ -525,6 +526,33 @@ async function tratar(mensagem) {
    * aqui é sistema duplicado. O que vale guardar é a leitura, que é o
    * trabalho.
    */
+  /**
+   * "Este WhatsApp é do Reclame Aqui" ou "é do NPS".
+   *
+   * Limpa o cache porque o número muda quem o painel encontra na
+   * conversa seguinte — sem isso, a mesma conversa continuaria
+   * dizendo "sem contato" pelos próximos dois minutos.
+   */
+  if (mensagem?.tipo === "whatsappDaFrente") {
+
+    const dados = await chamar(
+      CAMINHOS.whatsapp,
+      {},
+      {
+        numero: mensagem.numero,
+        frente: mensagem.frente,
+        protocolo: mensagem.protocolo,
+        npsId: mensagem.npsId,
+        tambemNoEstabelecimento:
+          mensagem.tambemNoEstabelecimento,
+      }
+    );
+
+    await limparCache();
+
+    return { ok: true, dados };
+  }
+
   if (mensagem?.tipo === "salvarDossie") {
 
     const dados = await chamar(

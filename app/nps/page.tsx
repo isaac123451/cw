@@ -46,7 +46,9 @@ import {
   exportNps,
   NpsDraft,
   registerNpsAttempt,
+  addNpsNote,
   registerPostContact,
+  removeNpsNote,
   setNpsChurnRisk,
   updateNpsContato,
   removeNpsRootCause,
@@ -999,6 +1001,39 @@ export default function NpsPage() {
                 dados.phone !== undefined
                   ? "Telefone gravado."
                   : "Estabelecimento vinculado.",
+            });
+          }}
+
+          onAnotar={async (texto) => {
+
+            await addNpsNote({
+              id: selecionado.id,
+              texto,
+              actor: session?.name ?? "",
+            });
+
+            startTransition(() => {
+              recarregar();
+            });
+
+            notify({
+              tone: "success",
+              title: "Anotação gravada.",
+              detail: selecionado.customer,
+            });
+          }}
+
+          onApagarNota={async (id) => {
+
+            await removeNpsNote(id);
+
+            startTransition(() => {
+              recarregar();
+            });
+
+            notify({
+              tone: "success",
+              title: "Anotação apagada.",
             });
           }}
 

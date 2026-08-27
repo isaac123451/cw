@@ -45,10 +45,12 @@ const TIPOS_DE_TAREFA = [
 const PRIORIDADES = ["Alta", "Média", "Baixa"];
 
 interface Entrada {
-  /** "caso" ou "agenda". */
+  /** "caso", "nps" ou "agenda". */
   tipo?: string;
   /** Para `caso`: o protocolo da reclamação. */
   protocolo?: string;
+  /** Para `nps`: o id do ciclo da pesquisa. */
+  npsId?: string;
   texto?: string;
   /** Para `agenda`. */
   titulo?: string;
@@ -116,6 +118,10 @@ export async function POST(request: Request) {
 
   if (entrada.tipo === "agenda") {
     return criarTarefa(request, prisma, entrada, usuario);
+  }
+
+  if (entrada.tipo === "nps") {
+    return anotarNoNps(request, prisma, entrada, usuario);
   }
 
   /* ---- anotação de caso ---- */
@@ -271,6 +277,76 @@ async function criarTarefa(
       hora,
       vinculadaAoCaso: Boolean(caso),
       url: `${host}/agenda`,
+    },
+    201
+  );
+}
+
+/**
+ * Uma anotação num ciclo de NPS.
+ *
+ * O Isaac pediu paridade: "preciso que seja possível adicionar notas
+ * assim nos casos de nps, também seja possível via extensão".
+ *
+ * **Anotação, e não tentativa de contato.** A extensão já sabia
+ * registrar tentativa no NPS, e ela tem canal e significa "liguei" — é
+ * a contagem dela que decide se o ciclo encerra por "sem retorno".
+ * Escrever uma observação ali inflaria esse número, e ele passaria a
+ * mentir sobre quantas vezes se tentou falar com a pessoa.
+ */
+async function anotarNoNps(
+  request: Request,
+  prisma: NonNullable<ReturnType<typeof getPrisma>>,
+  entrada: Entrada,
+  usuario: { id: string; nome?: string } | null
+) {
+
+  const id = limpo(entrada.npsId, 60);
+  const texto = limpo(entrada.texto);
+
+  if (!id || !texto) {
+    return responder(
+      request,
+      {
+        erro: "Faltou o ciclo do NPS ou o texto da anotação.",
+      },
+      400
+    );
+  }
+
+  const ciclo = await prisma.npsResponse.findUnique({
+    where: { id },
+    select: { id: true, customer: true },
+  });
+
+  if (!ciclo) {
+    return responder(
+      request,
+      { erro: "Esse ciclo de NPS não existe mais." },
+      404
+    );
+  }
+
+  const criada = await prisma.npsNote.create({
+    data: {
+      responseId: ciclo.id,
+      body: texto,
+      authorId: usuario?.id ?? null,
+      actor: usuario?.nome ?? "",
+    },
+    select: { id: true, createdAt: true },
+  });
+
+  revalidateTag(WORKSPACE_TAG, "max");
+
+  return responder(
+    request,
+    {
+      criada: true,
+      tipo: "nps",
+      id: criada.id,
+      cliente: ciclo.customer,
+      quando: criada.createdAt.toISOString(),
     },
     201
   );
