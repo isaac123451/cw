@@ -1195,6 +1195,39 @@ model NpsAttempt {
 /// Um registro só, como o `WebhookConfig`: a aplicação atende um tenant.
 /// Sem registro nenhum, valem as variáveis de ambiente — que continuam
 /// sendo o caminho de quem roda isto fora daqui.
+/// Quando a importação do Wootric rodou pela última vez.
+///
+/// **Por que existe.** A rotina agendada roda uma vez por dia, às 3h da
+/// manhã. Quem abre o NPS às 14h vê a base de ontem e precisa clicar em
+/// importar — foi o que o Isaac relatou: "os casos do nps ta tendo que
+/// importar toda vez que abro". Com este registro, a tela sabe se vale
+/// a pena buscar sozinha ao abrir, sem bater no Wootric a cada
+/// navegação.
+///
+/// Não dá para derivar da base. A resposta mais nova diz quando o
+/// **cliente** respondeu, não quando nós olhamos — e uma rodada que não
+/// trouxe nada é justamente a que precisa ser lembrada, para a próxima
+/// não repetir a ida à rede.
+model WootricSync {
+  /// Singleton: um `findFirst` sem âncora convida a dois registros
+  /// discordando em silêncio.
+  id String @id @default("unico")
+
+  /// Fim da última rodada, com ou sem novidade.
+  ranAt DateTime @default(now())
+
+  /// O que ela trouxe — para a tela poder dizer, em vez de só "ok".
+  imported Int @default(0)
+  updated  Int @default(0)
+
+  /// Mensagem da última falha. Nulo quando a rodada deu certo.
+  ///
+  /// Guardada porque a falha da rodada automática não tem ninguém
+  /// olhando: sem isto, a tela ficaria dias sem atualizar sem dizer
+  /// por quê.
+  lastError String?
+}
+
 model IaConfig {
   /// Id fixo: é singleton, e um `findFirst` sem âncora convida a
   /// existirem dois registros discordando em silêncio.

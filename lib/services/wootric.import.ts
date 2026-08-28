@@ -30,6 +30,46 @@ import { STATUS_SEM_TRATATIVA } from "@/lib/models/nps";
  */
 
 
+/**
+ * A nota do Wootric fala de um contato que já aconteceu?
+ *
+ * O Isaac: "no caso se tiver uma nota registrada de tentativa de
+ * contato, já altere". Na conta real as 26 notas existentes dizem
+ * "Tentativa de contato feita." — mas casar o texto exato seria frágil
+ * na primeira vez que alguém escrevesse diferente, então a leitura é
+ * por palavra.
+ *
+ * **Conservador de propósito.** Uma nota que não fala de contato —
+ * "cliente pediu desconto" — continua sendo só anotação. Marcar contato
+ * onde não houve faria o ciclo sair da fila de quem ainda não foi
+ * atendido, que é o pior erro possível aqui: o cliente ficaria sem
+ * retorno e sem ninguém para notar.
+ */
+export function falaDeContato(nota: string) {
+
+  const texto = nota
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "");
+
+  return [
+    "contato",
+    "tentativa",
+    "liguei",
+    "ligacao",
+    "ligamos",
+    "whatsapp",
+    "e-mail enviado",
+    "email enviado",
+    "retorno ao cliente",
+    "falei com",
+    "falamos com",
+  ].some((termo) => texto.includes(termo));
+}
+
+/** Canal e autor das tentativas que nascem de uma nota do Wootric. */
+export const ORIGEM_WOOTRIC = "Wootric";
+
 export interface ResultadoImportacao {
   erro?: string;
   lidas: number;
@@ -135,16 +175,25 @@ async function gravarLote(
         };
 
         if (jaExiste) {
-          await prisma.npsResponse.update({
-            where: { externalId: item.externalId },
-            data: doWootric,
-          });
+
+          const atual =
+            await prisma.npsResponse.update({
+              where: { externalId: item.externalId },
+              data: doWootric,
+              select: {
+                id: true,
+                status: true,
+                firstContactAt: true,
+              },
+            });
+
+          await refletirContato(prisma, atual, item);
 
           atualizadas += 1;
           return;
         }
 
-        await prisma.npsResponse.create({
+        const criada = await prisma.npsResponse.create({
           data: {
             ...doWootric,
             externalId: item.externalId,
@@ -172,7 +221,14 @@ async function gravarLote(
               ? null
               : STATUS_SEM_TRATATIVA,
           },
+          select: {
+            id: true,
+            status: true,
+            firstContactAt: true,
+          },
         });
+
+        await refletirContato(prisma, criada, item);
 
         novas += 1;
 
@@ -182,6 +238,110 @@ async function gravarLote(
   }
 
   return { novas, atualizadas, semTratativa };
+}
+
+/**
+ * A nota do Wootric move o ciclo, quando fala de contato.
+ *
+ * O Isaac: "no caso se tiver uma nota registrada de tentativa de
+ * contato, já altere, é somente para me ajudar". O problema que isto
+ * resolve é concreto: alguém registrou "Tentativa de contato feita." no
+ * Wootric, e aqui o ciclo continuava em "Novo", na fila de quem ainda
+ * não foi atendido, marcado como fora do prazo. Duas pessoas ligando
+ * para o mesmo cliente, ou nenhuma.
+ *
+ * **A data é a da importação, e a tela diz isso.** Conferido na conta:
+ * o Wootric não devolve data para a nota, e `updated_at` fica igual a
+ * `created_at` nas 26 respostas que têm uma — não há de onde tirar
+ * quando o contato aconteceu. Registrar com a data de agora é a
+ * aproximação que o Isaac autorizou; escondê-la seria fingir precisão
+ * que não existe, então o canal da tentativa é "Wootric" e o autor
+ * também, para ninguém ler aquilo como registro de alguém do time.
+ *
+ * **Idempotente.** A mesma nota reimportada não vira uma segunda
+ * tentativa: a busca é pelo texto exato já gravado com origem Wootric.
+ * Sem isso, cada rodada da rotina diária inflaria a contagem — e é ela
+ * que decide se o ciclo encerra por "sem retorno".
+ */
+async function refletirContato(
+  prisma: PrismaClient,
+  ciclo: {
+    id: string;
+    status: string;
+    firstContactAt: Date | null;
+  },
+  item: RespostaImportada
+) {
+
+  const deContato =
+    item.notasDoWootric.filter(falaDeContato);
+
+  if (deContato.length === 0) return;
+
+  /*
+    Ciclo encerrado fica como está.
+
+    Reabrir um ciclo fechado por causa de uma nota antiga colocaria de
+    volta na fila alguém que já foi atendido até o fim.
+  */
+  if (
+    ciclo.status.startsWith("[Encerrado]") ||
+    ciclo.status === STATUS_SEM_TRATATIVA
+  ) {
+    return;
+  }
+
+  const jaGravadas = new Set(
+    (
+      await prisma.npsAttempt.findMany({
+        where: {
+          responseId: ciclo.id,
+          actor: ORIGEM_WOOTRIC,
+        },
+        select: { note: true },
+      })
+    ).map((a) => a.note)
+  );
+
+  const novas = deContato.filter(
+    (nota) => !jaGravadas.has(nota)
+  );
+
+  if (novas.length === 0) return;
+
+  await prisma.npsAttempt.createMany({
+    data: novas.map((nota) => ({
+      responseId: ciclo.id,
+      channel: ORIGEM_WOOTRIC,
+      note: nota,
+      actor: ORIGEM_WOOTRIC,
+    })),
+  });
+
+  await prisma.npsResponse.update({
+    where: { id: ciclo.id },
+    data: {
+      /*
+        Sai de "Novo", que é a fila de quem ninguém pegou.
+
+        Só de "Novo": se a operação já moveu o ciclo para outra etapa,
+        a nota do Wootric não pode puxá-lo de volta.
+      */
+      ...(ciclo.status === "Novo"
+        ? { status: "Em tratativa" }
+        : {}),
+
+      /*
+        E marca que houve primeiro contato, se ainda não havia.
+
+        É o campo que alimenta o "fora do prazo" da tela. Sem ele, um
+        ciclo já contatado seguiria cobrado para sempre.
+      */
+      ...(ciclo.firstContactAt
+        ? {}
+        : { firstContactAt: new Date() }),
+    },
+  });
 }
 
 /**
@@ -303,6 +463,11 @@ export async function importarDoWootric(
 
     const ultima = itens[itens.length - 1]?.respondedAt;
 
+    await marcarRodada(prisma, {
+      imported: contas.novas,
+      updated: contas.atualizadas,
+    });
+
     return {
       ...contas,
       lidas: itens.length,
@@ -325,14 +490,66 @@ export async function importarDoWootric(
     };
 
   } catch (erro) {
+
+    const recado =
+      erro instanceof Error
+        ? erro.message
+        : "Falha ao falar com o Wootric.";
+
+    /*
+      A falha também é uma rodada.
+
+      Sem registrá-la, a tela tentaria de novo a cada abertura e bateria
+      no Wootric em laço enquanto a integração estivesse fora do ar. E o
+      recado fica guardado porque a rodada automática não tem ninguém
+      olhando: sem ele, a base envelheceria em silêncio.
+    */
+    await marcarRodada(prisma, { erro: recado });
+
     return {
       ...vazio,
       desde: desde.toISOString(),
-      erro:
-        erro instanceof Error
-          ? erro.message
-          : "Falha ao falar com o Wootric.",
+      erro: recado,
       parcial: false,
     };
+  }
+}
+
+/**
+ * Registra que a importação rodou — com ou sem novidade.
+ *
+ * Existe para a tela poder decidir se vale buscar sozinha ao abrir. O
+ * Isaac: "os casos do nps ta tendo que importar toda vez que abro". A
+ * rotina agendada roda uma vez por dia às 3h; quem abre às 14h via a
+ * base de ontem.
+ *
+ * **Nunca derruba a importação.** Se este registro falhar, o que
+ * importa — as respostas — já está gravado. Perder a marca só faz a
+ * próxima abertura buscar de novo, que é o comportamento seguro.
+ */
+async function marcarRodada(
+  prisma: PrismaClient,
+  dados: {
+    imported?: number;
+    updated?: number;
+    erro?: string;
+  }
+) {
+
+  const linha = {
+    ranAt: new Date(),
+    imported: dados.imported ?? 0,
+    updated: dados.updated ?? 0,
+    lastError: dados.erro ?? null,
+  };
+
+  try {
+    await prisma.wootricSync.upsert({
+      where: { id: "unico" },
+      create: { id: "unico", ...linha },
+      update: linha,
+    });
+  } catch {
+    /* Ver o comentário acima: a marca é conveniência, não dado. */
   }
 }

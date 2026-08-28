@@ -664,7 +664,7 @@ export default function NpsPage() {
           description="Clique para abrir a tratativa e fechar o ciclo."
           bodyClassName="p-0"
           action={
-            <div className="flex shrink-0 flex-wrap items-center gap-1.5">
+            <div className="flex min-w-0 flex-wrap items-center gap-1.5">
 
               <div className="mr-1 flex items-center gap-0.5 rounded-lg bg-zinc-100 p-0.5">
                 {(

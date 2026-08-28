@@ -9,11 +9,13 @@ import {
   GripVertical,
   MapPin,
   Star,
+  Trash2,
   TriangleAlert,
 } from "lucide-react";
 
 import { Case } from "@/lib/models/case";
 import { TagChips } from "@/components/shared/TagPicker";
+import { ConfirmDelete } from "@/components/shared/Modal";
 
 import { useCases } from "@/lib/context/CaseContext";
 import { useOwners } from "@/lib/hooks/useOwners";
@@ -40,7 +42,10 @@ export default function KanbanCard({
 
   const [dragging, setDragging] = useState(false);
 
-  const { updateCase } = useCases();
+  /** Diálogo de exclusão aberto. Apagar caso não tem desfazer. */
+  const [confirmando, setConfirmando] = useState(false);
+
+  const { updateCase, deleteCase } = useCases();
   const owners = useOwners();
 
   /**
@@ -58,6 +63,7 @@ export default function KanbanCard({
   }
 
   return (
+    <>
     <Link
       href={caseHref(item)}
       draggable
@@ -92,6 +98,39 @@ export default function KanbanCard({
           >
             {item.priority}
           </span>
+
+          {/*
+            Excluir a reclamação, do próprio quadro.
+
+            O Isaac: "crie a opção de excluir uma reclamação pelo quadro
+            ou quando abrir ela". Existe porque a base recebe caso
+            criado por engano — duplicata de captura, teste, reclamação
+            aberta na frente errada — e o único jeito de tirar era pelo
+            banco.
+
+            **Só aparece no hover, e sempre pede confirmação.** O cartão
+            é arrastável: um botão de excluir sempre visível fica a
+            milímetros do gesto de mover, e apagar reclamação não tem
+            desfazer.
+          */}
+          <button
+            type="button"
+            onClick={(e) => {
+              /*
+                O cartão inteiro é um link para o caso.
+
+                Sem parar a propagação, o clique em excluir abriria a
+                ficha por baixo do diálogo de confirmação.
+              */
+              e.preventDefault();
+              e.stopPropagation();
+              setConfirmando(true);
+            }}
+            title="Excluir esta reclamação"
+            className="rounded p-0.5 text-zinc-300 opacity-0 transition-all hover:bg-rose-50 hover:text-rose-600 focus-visible:opacity-100 group-hover:opacity-100"
+          >
+            <Trash2 size={13} />
+          </button>
 
           <GripVertical
             size={13}
@@ -213,6 +252,18 @@ export default function KanbanCard({
 
       </div>
 
-    </Link>
+      </Link>
+
+      <ConfirmDelete
+        open={confirmando}
+        label={`${item.protocol} — ${item.title}`}
+        onCancel={() => setConfirmando(false)}
+        onConfirm={() => {
+          deleteCase(item.id);
+          setConfirmando(false);
+        }}
+      />
+
+    </>
   );
 }

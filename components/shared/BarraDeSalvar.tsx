@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 
-import { CircleAlert, Loader2, Save } from "lucide-react";
+import { Loader2, Save } from "lucide-react";
 
 import { useToast } from "@/lib/context/ToastContext";
 import type { Rascunho } from "@/lib/hooks/useRascunho";
@@ -10,13 +10,31 @@ import type { Rascunho } from "@/lib/hooks/useRascunho";
 /**
  * A barra que aparece quando há alteração não salva.
  *
- * Fica colada no rodapé do cartão, some quando não há nada pendente, e
- * diz **quanta coisa** está pendente — "3 alterações" responde a
- * pergunta que "alterações não salvas" deixa no ar.
- *
- * Ela também é o lugar do aviso de saída: sem isso, trocar de aba com
+ * Some quando não há nada pendente, diz **quanta coisa** está pendente —
+ * "3 alterações" responde a pergunta que "alterações não salvas" deixa
+ * no ar — e é o lugar do aviso de saída: sem ele, trocar de aba com
  * edição pendente perderia o trabalho em silêncio, que é exatamente o
  * defeito que o botão Salvar veio corrigir.
+ *
+ * **Desenho: uma ilha, e não uma faixa de alerta.** Era uma tira âmbar
+ * na largura inteira, colada no rodapé do cartão. O Isaac: "melhore
+ * também este aviso de salvar, ta meio feio". Três coisas estavam
+ * erradas ali:
+ *
+ * 1. **A cor dizia "erro".** Âmbar com ícone de alerta é o vocabulário
+ *    de problema. Ter trabalho por salvar não é problema — é o estado
+ *    normal de quem está editando. O que a barra precisa é chamar
+ *    atenção, não assustar.
+ * 2. **A largura inteira competia com o conteúdo.** Uma faixa de ponta
+ *    a ponta pesa como cabeçalho de página para dizer uma frase curta.
+ * 3. **Ela ficava no fim do cartão.** Numa ficha longa, isso é abaixo
+ *    da dobra: a pessoa editava, rolava, e não via mais que havia algo
+ *    para salvar.
+ *
+ * Agora é uma ilha flutuante, centralizada na base da janela, escura
+ * sobre o conteúdo claro. Acompanha a rolagem, ocupa o que precisa, e o
+ * ponto âmbar pulsando carrega o "tem coisa pendente" sem precisar de
+ * uma faixa inteira para dizê-lo.
  */
 
 /**
@@ -125,64 +143,94 @@ export default function BarraDeSalvar<
     });
   }
 
-  const resumo = [
-    novos > 0 && contar(novos, "novo", "novos"),
-    alterados > 0 &&
-      contar(alterados, "alterado", "alterados"),
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  /**
+   * O detalhe só aparece quando há os dois tipos.
+   *
+   * Com um tipo só, ele repetia o número da manchete: "1 alteração · 1
+   * alterado". Duas vezes a mesma informação, e a segunda em jargão.
+   * Misturando novos e editados, aí sim a separação diz algo que a
+   * soma esconde.
+   */
+  const resumo =
+    novos > 0 && alterados > 0
+      ? `${contar(novos, "novo", "novos")} · ${contar(
+          alterados,
+          "editado",
+          "editados"
+        )}`
+      : "";
 
   return (
-    <div className="sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-3 border-t border-amber-200 bg-amber-50/90 px-5 py-3 backdrop-blur">
+    <div
+      /*
+        `pointer-events-none` no invólucro, e `auto` na ilha.
 
-      <p className="flex items-center gap-2 text-sm text-amber-900">
+        O invólucro ocupa a largura da janela para centralizar; sem
+        isto, ele engoliria os cliques na faixa vazia dos lados, e num
+        formulário largo a pessoa não conseguiria clicar no que está
+        embaixo dela.
+      */
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]"
+    >
 
-        <CircleAlert size={15} className="shrink-0" />
+      <div className="pointer-events-auto flex max-w-[calc(100vw-2rem)] flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl bg-zinc-900 px-4 py-2.5 shadow-[0_16px_40px_-12px_rgba(16,24,40,0.45)] ring-1 ring-white/10">
 
-        <span>
-          <strong className="font-semibold">
-            {contar(
-              pendentes,
-              "alteração não salva",
-              "alterações não salvas"
-            )}
-          </strong>
-          {resumo && (
-            <span className="text-amber-700">
+        <p className="flex min-w-0 items-center gap-2.5 text-sm text-white/70">
+
+          {/*
+            Um ponto que pulsa, no lugar do ícone de alerta.
+
+            Diz "há algo pendente" sem o vocabulário de erro. Pára de
+            piscar para quem pediu menos movimento na tela.
+          */}
+          <span className="relative flex h-2 w-2 shrink-0">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-70 motion-reduce:animate-none" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-400" />
+          </span>
+
+          <span className="truncate">
+            <strong className="font-semibold text-white">
+              {contar(
+                pendentes,
+                "alteração",
+                "alterações"
+              )}
+            </strong>
+            <span className="text-white/55">
               {" "}
-              ({resumo})
+              {resumo ? `· ${resumo}` : "por salvar"}
             </span>
-          )}
-        </span>
+          </span>
 
-      </p>
+        </p>
 
-      <div className="flex items-center gap-2">
+        <div className="ml-auto flex shrink-0 items-center gap-1.5">
 
-        <button
-          onClick={rascunho.descartar}
-          disabled={salvando}
-          className="rounded-xl px-3.5 py-2 text-sm font-medium text-amber-800 transition-colors hover:bg-amber-100 disabled:opacity-50"
-        >
-          Descartar
-        </button>
+          <button
+            onClick={rascunho.descartar}
+            disabled={salvando}
+            className="rounded-xl px-3 py-1.5 text-sm font-medium text-white/60 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50"
+          >
+            Descartar
+          </button>
 
-        <button
-          onClick={salvar}
-          disabled={salvando}
-          className="flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-violet-700 disabled:opacity-60"
-        >
-          {salvando ? (
-            <Loader2
-              size={15}
-              className="animate-spin"
-            />
-          ) : (
-            <Save size={15} />
-          )}
-          {salvando ? "Salvando..." : "Salvar"}
-        </button>
+          <button
+            onClick={salvar}
+            disabled={salvando}
+            className="flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-violet-500 disabled:opacity-60"
+          >
+            {salvando ? (
+              <Loader2
+                size={15}
+                className="animate-spin"
+              />
+            ) : (
+              <Save size={15} />
+            )}
+            {salvando ? "Salvando…" : "Salvar"}
+          </button>
+
+        </div>
 
       </div>
 

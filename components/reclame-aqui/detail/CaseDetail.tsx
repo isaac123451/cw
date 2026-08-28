@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import {
   ChevronLeft,
@@ -12,6 +13,7 @@ import {
   ShieldAlert,
   Star,
   Timer,
+  Trash2,
 } from "lucide-react";
 
 import { Case } from "@/lib/models/case";
@@ -31,6 +33,7 @@ import { isSocial } from "@/lib/services/case.service";
 import TagPicker, { TagChips } from "@/components/shared/TagPicker";
 import StatusPicker from "@/components/reclame-aqui/shared/StatusPicker";
 import BarraDeSalvar from "@/components/shared/BarraDeSalvar";
+import { ConfirmDelete } from "@/components/shared/Modal";
 import CaseActions from "./CaseActions";
 
 import OverviewTab from "./OverviewTab";
@@ -111,8 +114,19 @@ export default function CaseDetail({
   variant = "page",
 }: Props) {
 
-  const { cases, updateCase, toggleTag, moveCase } =
-    useCases();
+  const {
+    cases,
+    updateCase,
+    toggleTag,
+    moveCase,
+    deleteCase,
+  } = useCases();
+
+  const router = useRouter();
+
+  /** Diálogo de exclusão aberto. Apagar reclamação não tem desfazer. */
+  const [confirmandoExclusao, setConfirmandoExclusao] =
+    useState(false);
 
   /**
    * A edição vive num rascunho; o botão Salvar grava.
@@ -169,6 +183,23 @@ export default function CaseDetail({
   function patch(changes: Partial<Case>) {
     rascunho.alterar(data.id, changes);
   }
+
+  /**
+   * O que o servidor entrega depois, sem virar edição.
+   *
+   * O Isaac: "sempre quando abro uma reclamação está aparecendo para
+   * salvar". O relato é buscado sob demanda — é pesado e fica fora da
+   * listagem — e chegava por `patch`, que é o caminho da digitação.
+   * Abrir o caso sujava o rascunho: a barra "Salvar" aparecia sozinha
+   * em toda reclamação, e sair da tela pedia confirmação de um trabalho
+   * que ninguém tinha feito.
+   */
+  const completar = useCallback(
+    (dados: Partial<Case>) => {
+      rascunho.completar(data.id, dados);
+    },
+    [rascunho, data.id]
+  );
 
   // Só oferece WhatsApp quando existe telefone de verdade. O import
   // mascara os dígitos do meio, então número mascarado não vira link.
@@ -404,6 +435,30 @@ export default function CaseDetail({
               </a>
             )}
 
+            {/*
+              Excluir a reclamação, da própria ficha.
+
+              O Isaac: "crie a opção de excluir uma reclamação pelo
+              quadro ou quando abrir ela". Caso criado por engano —
+              duplicata de captura, teste, reclamação aberta na frente
+              errada — só saía pelo banco.
+
+              **Discreto e por último.** Fica à direita das ações que se
+              usam todo dia, sem cor de destaque: é a ação mais rara da
+              tela e a única sem volta. O diálogo diz qual caso vai
+              sumir, com id e título, porque "esta reclamação" numa aba
+              aberta há dez minutos não é confirmação de nada.
+            */}
+            <button
+              type="button"
+              onClick={() => setConfirmandoExclusao(true)}
+              title="Excluir esta reclamação da base"
+              className="flex items-center gap-2 rounded-xl border border-zinc-200 px-3.5 py-2.5 text-sm font-medium text-zinc-500 transition-colors hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700"
+            >
+              <Trash2 size={15} />
+              Excluir
+            </button>
+
           </div>
 
         </div>
@@ -472,7 +527,11 @@ export default function CaseDetail({
               */}
               <DossieCard data={emEdicao} />
 
-              <OverviewTab data={emEdicao} onChange={patch} />
+              <OverviewTab
+                data={emEdicao}
+                onChange={patch}
+                onLoad={completar}
+              />
 
               {/*
                 Os lembretes, depois das anotações.
@@ -531,6 +590,34 @@ export default function CaseDetail({
       </div>
 
       <BarraDeSalvar rascunho={rascunho} nome="caso" />
+
+      {/*
+        O diálogo nomeia o caso, e não "esta reclamação".
+
+        Uma aba aberta há dez minutos pode não ser a que a pessoa pensa
+        que é. O id e o título no texto de confirmação são o que
+        transforma o clique numa decisão sobre um caso específico.
+      */}
+      <ConfirmDelete
+        open={confirmandoExclusao}
+        label={`${idExterno(data)} — ${data.title}`}
+        onCancel={() => setConfirmandoExclusao(false)}
+        onConfirm={() => {
+
+          deleteCase(data.id);
+          setConfirmandoExclusao(false);
+
+          /*
+            Sai da ficha do que acabou de ser apagado.
+
+            Em tela cheia, ficar ali deixaria a pessoa olhando um caso
+            que já não existe — e recarregar cairia em "caso não
+            encontrado". No drawer não há para onde ir: a lista por trás
+            já se atualiza sozinha.
+          */
+          if (!drawer) router.push(modulo.base);
+        }}
+      />
 
     </div>
   );

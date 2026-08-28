@@ -708,7 +708,7 @@ export default function GraficosPage() {
               acima. "Período da página" devolve o comportamento
               anterior, que segue sendo o padrão.
             */
-            <div className="flex shrink-0 flex-wrap items-center gap-1">
+            <div className="flex min-w-0 flex-wrap items-center gap-1">
 
               {(
                 [null, "30d", "3m", "6m", "12m"] as const

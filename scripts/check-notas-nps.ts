@@ -30,6 +30,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 
 import { traduzir } from "../lib/services/wootric.service";
+import { falaDeContato } from "../lib/services/wootric.import";
 
 const url =
   process.env.DIRECT_URL || process.env.DATABASE_URL;
@@ -224,6 +225,39 @@ async function main() {
     0
   );
 
+  /* ---- 3b. a nota de contato move o ciclo ---- */
+
+  /*
+    O Isaac: "se tiver uma nota registrada de tentativa de contato, já
+    altere". Sem isto o ciclo ficava em "Novo", na fila de quem ainda
+    não foi atendido e marcado como fora do prazo, enquanto alguém já
+    havia ligado e registrado do lado do Wootric.
+  */
+  conferir(
+    "3b. 'Tentativa de contato feita.' conta como contato",
+    falaDeContato("Tentativa de contato feita."),
+    true
+  );
+
+  conferir(
+    "3b. sem acento também casa",
+    falaDeContato("liguei para o cliente"),
+    true
+  );
+
+  /*
+    Conservador: nota que não fala de contato continua só anotação.
+
+    Marcar contato onde não houve tiraria o ciclo da fila de quem
+    ainda não foi atendido — o cliente ficaria sem retorno e sem
+    ninguém para notar.
+  */
+  conferir(
+    "3b. nota sem contato NÃO conta",
+    falaDeContato("cliente pediu desconto no plano"),
+    false
+  );
+
   /* ---- 4. apagar o ciclo leva as anotações junto ---- */
 
   await prisma.npsResponse.delete({
@@ -257,8 +291,37 @@ async function main() {
 
   const nossas = await prisma.npsNote.count();
 
+  const doWootric = await prisma.npsAttempt.count({
+    where: { actor: "Wootric" },
+  });
+
+  /*
+    O ciclo com nota de contato não pode continuar em "Novo".
+
+    "Novo" é a fila de quem ninguém pegou. Um ciclo em que alguém já
+    ligou e registrou do lado do Wootric ficando ali é o defeito que o
+    Isaac apontou: duas pessoas ligando para o mesmo cliente, ou
+    nenhuma.
+  */
+  const presos = await prisma.npsResponse.count({
+    where: {
+      status: "Novo",
+      attempts: { some: { actor: "Wootric" } },
+    },
+  });
+
   console.log(
     `\n  base: ${total} resposta(s) · ${comNotaDoWootric} com nota do Wootric · ${nossas} anotação(ões) nossa(s)`
+  );
+
+  console.log(
+    `        ${doWootric} tentativa(s) nascidas de nota do Wootric`
+  );
+
+  conferir(
+    "5. nenhum ciclo com nota de contato ficou em 'Novo'",
+    presos,
+    0
   );
 
   if (comNotaDoWootric === 0) {

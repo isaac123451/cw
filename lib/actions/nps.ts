@@ -568,6 +568,51 @@ export async function deleteNpsResponse(id: string) {
  * chamada pelo botão da tela não tem tempo de vida para isso na Vercel.
  * Janela grande é trabalho de script: `npm run nps:wootric -- --dias=365`.
  */
+/**
+ * A base está velha o bastante para valer uma busca?
+ *
+ * O Isaac: "os casos do nps ta tendo que importar toda vez que abro". A
+ * rotina agendada roda **uma vez por dia**, às 3h da manhã — quem abre
+ * o NPS às 14h vê a base de ontem e precisa clicar em importar.
+ *
+ * A tela chama isto ao abrir e, se a resposta for sim, busca sozinha em
+ * segundo plano. A pergunta fica no servidor e não na tela porque a
+ * marca é da base inteira: dois navegadores abertos não podem chegar a
+ * respostas diferentes sobre a mesma pergunta.
+ *
+ * **Trinta minutos.** Curto o bastante para a fila estar em dia quando
+ * alguém senta para trabalhar, longo o bastante para navegar entre as
+ * telas não virar uma ida ao Wootric por clique.
+ */
+const JANELA_DE_FRESCOR_MS = 30 * 60 * 1000;
+
+export async function precisaBuscarNoWootric(): Promise<{
+  precisa: boolean;
+  ultimaEm?: string;
+  ultimoErro?: string;
+}> {
+
+  const ctx = await tryRole("LEITURA", MODULO);
+
+  if (!ctx || !temWootric()) return { precisa: false };
+
+  const marca = await ctx.prisma.wootricSync.findUnique({
+    where: { id: "unico" },
+    select: { ranAt: true, lastError: true },
+  });
+
+  /* Nunca rodou: vale buscar. */
+  if (!marca) return { precisa: true };
+
+  const idade = Date.now() - marca.ranAt.getTime();
+
+  return {
+    precisa: idade > JANELA_DE_FRESCOR_MS,
+    ultimaEm: marca.ranAt.toISOString(),
+    ultimoErro: marca.lastError ?? undefined,
+  };
+}
+
 export async function importWootric(input?: {
   dias?: number;
   /**

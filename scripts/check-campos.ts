@@ -94,6 +94,14 @@ const INTERNAS: Record<string, string[]> = {
   IaConfig: ["*"],
 
   /**
+   * Marca da última importação do Wootric.
+   *
+   * Não é conteúdo: a tela não a desenha, ela só pergunta ao servidor
+   * "vale buscar agora?". Ver lerSeguranca abaixo, mesmo caso.
+   */
+  WootricSync: ["*"],
+
+  /**
    * Configuração de acesso, com carga própria (`lerSeguranca`).
    *
    * Fora do workspace de propósito: ela só interessa a quem administra,

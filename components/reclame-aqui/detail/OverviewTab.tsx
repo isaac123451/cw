@@ -18,6 +18,18 @@ import SurfaceCard from "@/components/shared/SurfaceCard";
 interface Props {
   data: Case;
   onChange: (patch: Partial<Case>) => void;
+
+  /**
+   * O que veio do servidor, e não do teclado.
+   *
+   * Separado de `onChange` porque a diferença é de autoria. O relato é
+   * pesado e fica fora da listagem; buscá-lo ao abrir entregava o texto
+   * pelo mesmo caminho da digitação, e **abrir o caso passava a contar
+   * como tê-lo editado** — a barra "Salvar" aparecia sozinha em toda
+   * reclamação, e sair da tela pedia confirmação de um trabalho que
+   * ninguém fez.
+   */
+  onLoad: (dados: Partial<Case>) => void;
 }
 
 const field =
@@ -29,6 +41,7 @@ const label =
 export default function OverviewTab({
   data,
   onChange,
+  onLoad,
 }: Props) {
 
   const [comments, setComments] = useState<CaseNote[]>(
@@ -89,7 +102,7 @@ export default function OverviewTab({
         if (buscado.current !== pedido) return;
 
         if (texto) {
-          onChange({ description: texto });
+          onLoad({ description: texto });
         }
       })
       .catch((error: unknown) => {
@@ -104,7 +117,7 @@ export default function OverviewTab({
         }
       });
 
-  }, [data.protocol, data.description, onChange]);
+  }, [data.protocol, data.description, onLoad]);
 
   /**
    * As anotações vêm do banco — as mesmas que a extensão grava.

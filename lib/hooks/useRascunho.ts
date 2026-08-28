@@ -29,6 +29,27 @@ export interface Rascunho<T> {
   /** Altera um item do rascunho. Não vai ao banco. */
   alterar: (id: string, patch: Partial<T>) => void;
 
+  /**
+   * Completa um item com o que veio do servidor, **sem sujar**.
+   *
+   * Existe por um defeito que o Isaac viu: "sempre quando abro uma
+   * reclamação está aparecendo para salvar". A ficha do caso busca o
+   * relato sob demanda — ele é pesado e fica fora da listagem — e
+   * entregava o texto por `alterar`, que é o caminho da digitação. Abrir
+   * o caso passava a contar como tê-lo editado: a barra "Salvar"
+   * aparecia sozinha, e sair da tela pedia confirmação de um trabalho
+   * que ninguém fez.
+   *
+   * A diferença é de quem escreveu. `alterar` é a pessoa; `completar` é
+   * o servidor entregando um pedaço que já existia lá. Por isso este
+   * guarda numa camada própria — o valor aparece na tela, e o botão
+   * continua desligado até alguém digitar.
+   *
+   * Não toca no que já foi editado: se a pessoa começou a escrever
+   * antes de o texto chegar, o que ela digitou vence.
+   */
+  completar: (id: string, dados: Partial<T>) => void;
+
   /** Acrescenta um item novo ao rascunho. Não vai ao banco. */
   adicionar: (item: T) => void;
 
@@ -71,6 +92,27 @@ export function useRascunho<T extends { id: string }>(
   const [edicoes, setEdicoes] = useState<
     Record<string, T>
   >({});
+
+  /**
+   * O que o servidor completou depois — pedaços pesados, buscados sob
+   * demanda.
+   *
+   * **Camada própria, e não a base.** A base é substituída sempre que a
+   * carga do workspace chega com um array novo, o que acontece a cada
+   * render em quem chama `useRascunho([data], …)`. Escrever aqui o
+   * relato buscado sob demanda funcionava por um instante e era jogado
+   * fora no render seguinte — o campo voltava a ficar vazio.
+   *
+   * **E não as edições**, que é onde estava antes: ali o valor sobrevive,
+   * mas conta como alteração. Era o defeito que o Isaac viu — "sempre
+   * quando abro uma reclamação está aparecendo para salvar".
+   *
+   * Fica no meio: depois da base, antes das edições. Aparece na tela,
+   * sobrevive à recarga, e não liga o botão Salvar.
+   */
+  const [carregados, setCarregados] = useState<
+    Record<string, Partial<T>>
+  >({});
   const [novos, setNovos] = useState<T[]>([]);
   const [esquecidos, setEsquecidos] = useState<
     string[]
@@ -100,7 +142,22 @@ export function useRascunho<T extends { id: string }>(
 
     const daBase = base
       .filter((item) => !esquecidos.includes(item.id))
-      .map((item) => edicoes[item.id] ?? item);
+      .map((item) => {
+
+        /*
+          Base → completado pelo servidor → editado pela pessoa.
+
+          Nessa ordem: o que a pessoa digitou vence o que o servidor
+          mandou, e os dois vencem a carga original.
+        */
+        const completo = carregados[item.id]
+          ? { ...item, ...carregados[item.id] }
+          : item;
+
+        return edicoes[item.id]
+          ? { ...completo, ...edicoes[item.id] }
+          : completo;
+      });
 
     /**
      * O que acabou de ser criado vai para **cima**.
@@ -117,7 +174,7 @@ export function useRascunho<T extends { id: string }>(
      * abaixo do botão que a criou.
      */
     return [...novos, ...daBase];
-  }, [base, edicoes, novos, esquecidos]);
+  }, [base, carregados, edicoes, novos, esquecidos]);
 
   const alterar = useCallback(
     (id: string, patch: Partial<T>) => {
@@ -147,13 +204,64 @@ export function useRascunho<T extends { id: string }>(
 
         if (!doBanco) return prev;
 
+        /*
+          O que o servidor completou entra na edição.
+
+          Sem isto, editar o título de um caso mandaria ao banco um
+          objeto sem o relato — que veio depois, sob demanda — e gravar
+          apagaria o texto da reclamação.
+        */
         return {
           ...prev,
-          [id]: { ...doBanco, ...prev[id], ...patch },
+          [id]: {
+            ...doBanco,
+            ...carregados[id],
+            ...prev[id],
+            ...patch,
+          },
         };
       });
     },
-    [base]
+    [base, carregados]
+  );
+
+  /**
+   * O servidor completando um item — ver o comentário na interface.
+   *
+   * Guarda numa camada própria, e não na base: a base é trocada sempre
+   * que a carga chega com um array novo, e o valor seria descartado no
+   * render seguinte. Nem nas edições, que ligariam o botão Salvar.
+   */
+  const completar = useCallback(
+    (id: string, dados: Partial<T>) => {
+
+      setCarregados((prev) => {
+
+        const atual = prev[id];
+
+        /*
+          Nada a fazer se os valores já são estes.
+
+          Sem esta saída, cada chegada do servidor criaria um objeto
+          novo, `itens` seria recalculado e o efeito que buscou os dados
+          voltaria a rodar — um laço que não pára.
+        */
+        const mudou = Object.entries(dados).some(
+          ([chave, valor]) =>
+            (atual as Record<string, unknown>)?.[
+              chave
+            ] !== valor
+        );
+
+        if (atual && !mudou) return prev;
+
+        return {
+          ...prev,
+          [id]: { ...atual, ...dados },
+        };
+      });
+    },
+    []
   );
 
   const adicionar = useCallback((item: T) => {
@@ -250,6 +358,7 @@ export function useRascunho<T extends { id: string }>(
   return {
     itens,
     alterar,
+    completar,
     adicionar,
     esquecer,
     descartar,

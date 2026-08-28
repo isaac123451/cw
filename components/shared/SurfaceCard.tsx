@@ -39,9 +39,23 @@ export default function SurfaceCard({
       )}
     >
 
+      {/*
+        O cabeçalho quebra linha quando não cabe.
+
+        Era uma linha só, e num telefone isso escondia a ação: o grupo
+        de botões da tela de NPS mede 1.276 px, o cabeçalho o mantinha
+        ao lado do título numa tela de 375, e os botões simplesmente
+        ficavam fora do alcance — sem barra de rolagem, porque a página
+        corta o excesso. Não é que ficassem apertados: os filtros não
+        existiam no telefone.
+
+        `flex-wrap` deixa a ação cair para a própria linha quando a
+        largura acaba, e ali ela tem a linha inteira para se organizar.
+        Em tela larga nada muda, porque nada precisa quebrar.
+      */}
       {(title || action) && (
 
-        <header className="flex items-start justify-between gap-4 border-b border-zinc-100 px-6 py-5">
+        <header className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3 border-b border-zinc-100 px-6 py-5">
 
           <div className="min-w-0">
 

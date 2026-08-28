@@ -287,7 +287,7 @@ export default function NpsAnalisePage() {
               description="A nota de um mês sozinha não diz nada; a série diz."
               hint="A escala é fixa de −100 a 100 de propósito: uma escala apertada ao redor dos valores faz três pontos de variação parecerem um despencar."
               action={
-                <div className="flex shrink-0 flex-wrap items-center gap-1.5">
+                <div className="flex min-w-0 flex-wrap items-center gap-1.5">
                   {SEGMENTS.map((s) => {
 
                     const ativo = segmento === s.label;

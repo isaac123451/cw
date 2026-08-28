@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   CloudDownload,
@@ -15,6 +15,7 @@ import type { ResultadoImportacao } from "@/lib/services/wootric.import";
 
 import {
   importWootric,
+  precisaBuscarNoWootric,
 } from "@/lib/actions/nps";
 
 interface Props {
@@ -66,11 +67,67 @@ export default function WootricImport({
 
   const [aberto, setAberto] = useState(false);
   const [rodando, setRodando] = useState(false);
+
+  /** Buscou sozinho ao abrir a tela? Muda só o texto do aviso. */
+  const [sozinho, setSozinho] = useState(false);
   const [progresso, setProgresso] = useState("");
   const [feito, setFeito] = useState(0);
   const [total, setTotal] = useState(0);
 
-  async function importar(dias: number) {
+  /**
+   * Busca sozinho ao abrir, quando a base está velha.
+   *
+   * O Isaac: "os casos do nps ta tendo que importar toda vez que abro".
+   * A rotina agendada roda **uma vez por dia**, às 3h da manhã — quem
+   * abre o NPS às 14h vê a base de ontem e tem de clicar em importar.
+   *
+   * **Quem decide é o servidor.** `precisaBuscarNoWootric` olha a marca
+   * da última rodada, que é da base inteira: dois navegadores abertos
+   * não podem chegar a respostas diferentes sobre a mesma pergunta, e
+   * um `localStorage` faria exatamente isso.
+   *
+   * **Uma vez por montagem, e em silêncio se não achar nada.** A trava
+   * de referência existe porque em desenvolvimento o React monta duas
+   * vezes de propósito, e sem ela seriam duas idas ao Wootric por
+   * abertura.
+   */
+  const jaTentou = useRef(false);
+
+  useEffect(() => {
+
+    if (jaTentou.current) return;
+
+    jaTentou.current = true;
+
+    let vivo = true;
+
+    precisaBuscarNoWootric()
+      .then((estado) => {
+        if (!vivo || !estado.precisa) return;
+
+        setSozinho(true);
+        return importar(0, true);
+      })
+      .catch(() => {
+        /*
+          Falhar em silêncio é o certo aqui.
+
+          Isto é conveniência: a pessoa não pediu nada, e um aviso de
+          erro ao abrir a tela assustaria sem ter o que fazer. O botão
+          "Buscar novas" continua ali para quem quiser insistir.
+        */
+      });
+
+    return () => {
+      vivo = false;
+    };
+
+  }, []);
+
+  async function importar(
+    dias: number,
+    automatica = false
+  ) {
 
     setRodando(true);
     setFeito(0);
@@ -190,16 +247,41 @@ export default function WootricImport({
     setRodando(false);
     setAberto(false);
     setProgresso("");
+    setSozinho(false);
 
     if (erro) {
-      onDone(erro, true);
+
+      /*
+        Rodada automática que falha não interrompe ninguém.
+
+        A pessoa acabou de abrir a tela e não pediu nada; um aviso
+        vermelho no rosto dela seria sobre um problema que não é dela e
+        que ela não tem como resolver. O botão continua ali.
+      */
+      if (!automatica) onDone(erro, true);
+
+      return;
+    }
+
+    /*
+      Nada novo, e ninguém pediu: fica quieto.
+
+      "A base já está em dia" é uma resposta boa para quem clicou e
+      está esperando. Para quem só abriu a tela, é um aviso sobre coisa
+      nenhuma.
+    */
+    if (
+      automatica &&
+      soma.novas === 0 &&
+      soma.atualizadas === 0
+    ) {
       return;
     }
 
     onDone(
       soma.novas === 0 && soma.atualizadas === 0
         ? "Nada novo — a base já está em dia."
-        : `${soma.novas} nova(s), ${soma.atualizadas} atualizada(s). ${soma.semTratativa} promotor(es) sem comentário entraram na conta sem abrir ciclo.`,
+        : `${automatica ? "Atualizado ao abrir: " : ""}${soma.novas} nova(s), ${soma.atualizadas} atualizada(s). ${soma.semTratativa} promotor(es) sem comentário entraram na conta sem abrir ciclo.`,
       false
     );
   }
@@ -231,9 +313,11 @@ export default function WootricImport({
           className={rodando ? "animate-spin" : ""}
         />
         {rodando
-          ? total > 1
-            ? `Importando ${feito}/${total}...`
-            : "Buscando..."
+          ? sozinho
+            ? "Atualizando..."
+            : total > 1
+              ? `Importando ${feito}/${total}...`
+              : "Buscando..."
           : "Buscar novas"}
       </button>
 
