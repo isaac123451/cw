@@ -1042,13 +1042,20 @@ export function ask(
     : fallback(input, question);
 }
 
-/** Perguntas sugeridas na tela. */
+/**
+ * Perguntas sugeridas na tela.
+ *
+ * As primeiras são as que as rotinas exatas respondem na hora, sem
+ * custar chamada. As últimas exercitam o agente — ele escolhe as
+ * medições e o servidor as roda contra o banco.
+ */
 export const suggestions = [
   "Como está a nota da reputação agora?",
   "Quantas avaliações faltam para a nota 9?",
   "Quais reclamações estão sem resposta?",
   "O que está fora do prazo de SLA?",
-  "Qual a causa raiz mais recorrente?",
-  "Quais clientes têm risco de cancelamento?",
-  "Qual o impacto financeiro registrado?",
+  "Quanto o consumidor esperou de verdade?",
+  "Qual categoria está crescendo?",
+  "Como está o NPS e quais as causas mais comuns?",
+  "Quem precisa de retenção?",
 ];

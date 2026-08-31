@@ -5,8 +5,16 @@ import {
 
 import { ASSISTANT_SYSTEM } from "@/lib/services/assistant.context";
 
+import {
+  dadosParaMedir,
+  escolherMedicoes,
+  medir,
+} from "@/lib/services/assistant.agent";
+
+import { getApiCases } from "@/lib/api/source";
+
 import { getSession } from "@/lib/auth/session";
-import { hasDatabase } from "@/lib/prisma";
+import { getPrisma, hasDatabase } from "@/lib/prisma";
 
 /** Streaming precisa do runtime Node — o edge corta a conexão longa. */
 export const runtime = "nodejs";
@@ -112,18 +120,76 @@ export async function POST(request: Request) {
   }
 
   /**
-   * O retrato da operação entra na instrução de sistema.
+   * O agente: o modelo escolhe o que medir, o servidor mede.
    *
-   * Antes era o primeiro turno da conversa, para aproveitar o cache de
-   * prompt entre perguntas. No sistema ele continua sendo o trecho
-   * estável que o cache marca — e é a única forma que os dois
-   * provedores tratam do mesmo jeito, agora que o assistente responde
-   * pela IA que estiver configurada.
+   * O retrato abaixo é fixo — foi montado antes de a pergunta existir.
+   * Serve para o que ele cobre e não serve para o resto: se o número
+   * que a pergunta pede não estiver ali, o modelo dizia que não sabia
+   * ou, pior, arredondava a partir do que tinha.
+   *
+   * Aqui uma chamada curta pergunta **quais medições** a pergunta
+   * precisa, entre as do catálogo. As escolhidas rodam contra o
+   * Postgres, pelas mesmas funções que as telas usam. O que chega ao
+   * modelo são números conferíveis, e a resposta dele é escrita só com
+   * eles.
+   *
+   * **Falha em silêncio.** Se a escolha não vier — modelo fora do ar,
+   * pergunta que não é sobre a operação —, a conversa segue com o
+   * retrato de sempre. É enriquecimento, não dependência.
    */
+  let medicoes = "";
+
+  try {
+
+    const pergunta =
+      [...messages]
+        .reverse()
+        .find((m) => m.role === "user")?.content ?? "";
+
+    const escolhas = await escolherMedicoes(pergunta);
+
+    if (escolhas.length > 0) {
+
+      const prisma = getPrisma();
+
+      if (prisma) {
+        medicoes = medir(
+          await dadosParaMedir(
+            prisma,
+            await getApiCases("all")
+          ),
+          escolhas
+        );
+      }
+    }
+
+  } catch (erro) {
+    console.error("[assistente] medições", erro);
+  }
+
+  /*
+    O retrato da operação entra na instrução de sistema.
+
+    Antes era o primeiro turno da conversa, para aproveitar o cache de
+    prompt entre perguntas. No sistema ele continua sendo o trecho
+    estável que o cache marca — e é a única forma que os dois provedores
+    tratam do mesmo jeito.
+  */
   const sistema = `${ASSISTANT_SYSTEM}
 
 --- RETRATO DA OPERAÇÃO ---
-${snapshot}`;
+${snapshot}${
+    medicoes
+      ? `
+
+--- MEDIÇÕES PEDIDAS PARA ESTA PERGUNTA ---
+Estes números foram calculados agora, no banco, pelas mesmas funções
+das telas. Use-os literalmente e cite o nome da medição quando fizer
+sentido. Não recalcule nem arredonde.
+
+${medicoes}`
+      : ""
+  }`;
 
   const encoder = new TextEncoder();
 

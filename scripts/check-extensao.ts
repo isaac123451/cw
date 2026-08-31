@@ -460,6 +460,201 @@ async function main() {
     400
   );
 
+  /* ============================================================
+     ANOTAR NUM CICLO DE NPS, E O WHATSAPP POR FRENTE
+
+     O Isaac pediu as duas do painel: "preciso que seja possível
+     adicionar notas assim nos casos de nps, também seja possível via
+     extensão" e "whatsapp do reclame aqui ter a possibilidade de
+     selecionar esse wpp, no do nps ser possível selecionar que é do
+     nps".
+
+     Tudo acontece num ciclo **descartável**, criado e apagado aqui —
+     nenhuma resposta real é tocada.
+  ============================================================ */
+
+  const marcaNps = Date.now().toString(36).toUpperCase();
+
+  const cicloDescartavel =
+    await prisma.npsResponse.create({
+      data: {
+        externalId: `ZZ-EXT-${marcaNps}`,
+        score: 4,
+        comment: "Conferência da extensão — descartável.",
+        respondedAt: new Date(),
+        customer: `ZZ Extensão ${marcaNps}`,
+        source: "Wootric",
+        status: "Novo",
+        firstContactDueAt: new Date(),
+      },
+      select: { id: true },
+    });
+
+  const anotouNoNps = await fetch(
+    `${base}/api/extensao/anotar`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "X-CW-Sessao": sessao,
+      },
+      body: JSON.stringify({
+        tipo: "nps",
+        npsId: cicloDescartavel.id,
+        texto: "Falei com o dono pela extensão.",
+      }),
+    }
+  );
+
+  conferir(
+    "anotar num ciclo de NPS pela extensão",
+    anotouNoNps.status,
+    201
+  );
+
+  const anotacoes = await prisma.npsNote.findMany({
+    where: { responseId: cicloDescartavel.id },
+    select: { body: true, actor: true },
+  });
+
+  conferir(
+    "a anotação chegou ao banco, com autor",
+    anotacoes,
+    [
+      {
+        body: "Falei com o dono pela extensão.",
+        actor: admin.name,
+      },
+    ]
+  );
+
+  /*
+    E **não** virou tentativa de contato.
+
+    A tentativa tem canal e significa "liguei"; é a contagem dela que
+    decide se o ciclo encerra por "sem retorno". Anotação virando
+    tentativa faria esse número mentir.
+  */
+  conferir(
+    "e não virou tentativa de contato",
+    await prisma.npsAttempt.count({
+      where: { responseId: cicloDescartavel.id },
+    }),
+    0
+  );
+
+  /* ---- o WhatsApp da conversa, na frente escolhida ---- */
+
+  const numero = "11987654321";
+
+  const gravouNoNps = await fetch(
+    `${base}/api/extensao/whatsapp`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "X-CW-Sessao": sessao,
+      },
+      body: JSON.stringify({
+        numero: `(11) 98765-4321`,
+        frente: "nps",
+        npsId: cicloDescartavel.id,
+      }),
+    }
+  );
+
+  conferir(
+    'WhatsApp gravado na frente "nps"',
+    gravouNoNps.status,
+    200
+  );
+
+  /*
+    Só os dígitos são guardados.
+
+    A base tem telefone com e sem máscara, e é isso que faz a busca por
+    quatro últimos casar depois.
+  */
+  conferir(
+    "e a máscara foi descartada, sobrando os dígitos",
+    (
+      await prisma.npsResponse.findUnique({
+        where: { id: cicloDescartavel.id },
+        select: { phone: true },
+      })
+    )?.phone,
+    numero
+  );
+
+  /* ---- frente inválida e número curto são recusados ---- */
+
+  const frenteInvalida = await fetch(
+    `${base}/api/extensao/whatsapp`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "X-CW-Sessao": sessao,
+      },
+      body: JSON.stringify({
+        numero,
+        frente: "telepatia",
+        npsId: cicloDescartavel.id,
+      }),
+    }
+  );
+
+  conferir(
+    "frente inventada é recusada com 400",
+    frenteInvalida.status,
+    400
+  );
+
+  /*
+    Fragmento de número não vira cadastro.
+
+    A leitura da página às vezes pega um pedaço, e um telefone de três
+    dígitos gravado é pior do que campo vazio: ele parece preenchido.
+  */
+  const numeroCurto = await fetch(
+    `${base}/api/extensao/whatsapp`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "X-CW-Sessao": sessao,
+      },
+      body: JSON.stringify({
+        numero: "987",
+        frente: "nps",
+        npsId: cicloDescartavel.id,
+      }),
+    }
+  );
+
+  conferir(
+    "número curto demais é recusado com 400",
+    numeroCurto.status,
+    400
+  );
+
+  await prisma.npsResponse.delete({
+    where: { id: cicloDescartavel.id },
+  });
+
+  conferir(
+    "o ciclo descartável saiu da base",
+    await prisma.npsResponse.findUnique({
+      where: { id: cicloDescartavel.id },
+      select: { id: true },
+    }),
+    null
+  );
+
   await prisma.$disconnect();
 
   console.log(
