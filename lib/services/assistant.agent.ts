@@ -400,6 +400,332 @@ export const CATALOGO: Medicao[] = [
       ].join(" · ");
     },
   },
+
+  /* ---------------------------------------------------------------
+     As medições abaixo ampliam o alcance do agente sem modelo.
+
+     Cada uma é uma pergunta a mais que ele responde exato e de graça.
+     É assim que este agente fica mais inteligente — não treinando um
+     modelo, mas tendo mais coisas que sabe medir de verdade.
+  --------------------------------------------------------------- */
+
+  {
+    nome: "desfecho",
+    descricao:
+      "Quantas reclamações foram resolvidas, quantas o consumidor disse que voltaria a fazer negócio, e quantas ficaram avaliadas — os três números que formam a reputação no Reclame Aqui.",
+    rodar: ({ cases }) => {
+
+      if (cases.length === 0) {
+        return "nenhuma reclamação na base.";
+      }
+
+      const avaliadas = cases.filter(
+        (item) => item.evaluated
+      );
+
+      const resolvidas = cases.filter(
+        (item) => item.resolved
+      ).length;
+
+      const voltaria = cases.filter(
+        (item) => item.wouldDoBusiness
+      ).length;
+
+      const pct = (n: number, de: number) =>
+        de === 0 ? "—" : `${Math.round((n / de) * 100)}%`;
+
+      return [
+        `${cases.length} reclamação(ões)`,
+        `${resolvidas} resolvidas (${pct(resolvidas, cases.length)})`,
+        `${voltaria} voltariam a fazer negócio (${pct(voltaria, cases.length)})`,
+        `${avaliadas.length} avaliadas (${pct(avaliadas.length, cases.length)})`,
+      ].join(" · ");
+    },
+  },
+
+  {
+    nome: "por_prioridade",
+    descricao:
+      "Quantas reclamações em cada prioridade (Crítica, Alta, Média, Baixa) e quantas de cada uma ainda estão sem resposta pública.",
+    rodar: ({ cases }) => {
+
+      const ordem = [
+        "Crítica",
+        "Alta",
+        "Média",
+        "Baixa",
+      ];
+
+      const linhas = ordem
+        .map((nivel) => {
+
+          const doNivel = cases.filter(
+            (item) => item.priority === nivel
+          );
+
+          if (doNivel.length === 0) return "";
+
+          const semResposta = doNivel.filter(
+            (item) =>
+              (item.publicResponse ?? "").trim() === ""
+          ).length;
+
+          return `${nivel}: ${doNivel.length} (${semResposta} sem resposta)`;
+        })
+        .filter(Boolean);
+
+      return linhas.length > 0
+        ? linhas.join(" · ")
+        : "nenhuma reclamação classificada por prioridade.";
+    },
+  },
+
+  {
+    nome: "por_regiao",
+    descricao:
+      "De onde vêm as reclamações: os estados e as cidades que mais aparecem.",
+    rodar: ({ cases }) => {
+
+      const contar = (
+        pegar: (c: (typeof cases)[number]) => string
+      ) => {
+
+        const mapa = new Map<string, number>();
+
+        for (const item of cases) {
+          const chave = pegar(item).trim();
+          if (!chave) continue;
+          mapa.set(chave, (mapa.get(chave) ?? 0) + 1);
+        }
+
+        return [...mapa.entries()]
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 5)
+          .map(([nome, n]) => `${nome} (${n})`)
+          .join(", ");
+      };
+
+      const estados = contar((c) => c.state ?? "");
+      const cidades = contar((c) => c.city ?? "");
+
+      if (!estados && !cidades) {
+        return "nenhuma reclamação tem cidade ou estado preenchidos.";
+      }
+
+      return [
+        estados ? `estados: ${estados}` : "",
+        cidades ? `cidades: ${cidades}` : "",
+      ]
+        .filter(Boolean)
+        .join(" · ");
+    },
+  },
+
+  {
+    nome: "reincidencia",
+    descricao:
+      "Consumidores que reclamaram mais de uma vez — quantos são e quantas reclamações concentram.",
+    rodar: ({ cases }) => {
+
+      /*
+        A identidade é o documento, e o e-mail só quando não há
+        documento.
+
+        O nome não entra: dois "João Silva" diferentes viram um
+        reincidente que não existe, e é exatamente o erro que o
+        vínculo por documento existe para não cometer.
+      */
+      const mapa = new Map<string, number>();
+
+      for (const item of cases) {
+
+        const chave = (
+          item.document ||
+          item.email ||
+          ""
+        )
+          .trim()
+          .toLowerCase();
+
+        if (!chave) continue;
+
+        mapa.set(chave, (mapa.get(chave) ?? 0) + 1);
+      }
+
+      const repetidos = [...mapa.values()].filter(
+        (n) => n > 1
+      );
+
+      if (repetidos.length === 0) {
+        return `nenhum consumidor identificado reclamou duas vezes (${mapa.size} identificados por documento ou e-mail).`;
+      }
+
+      const concentradas = repetidos.reduce(
+        (soma, n) => soma + n,
+        0
+      );
+
+      return [
+        `${repetidos.length} consumidor(es) reclamaram mais de uma vez`,
+        `concentram ${concentradas} reclamação(ões)`,
+        `o mais recorrente tem ${Math.max(...repetidos)}`,
+        `base de ${mapa.size} identificados por documento ou e-mail`,
+      ].join(" · ");
+    },
+  },
+
+  {
+    nome: "mais_antigas_sem_resposta",
+    descricao:
+      "As reclamações sem resposta pública há mais tempo, com a idade de cada uma em dias.",
+    rodar: ({ cases }) => {
+
+      const hoje = new Date(
+        `${hojeNaOperacao()}T00:00:00Z`
+      ).getTime();
+
+      const paradas = cases
+        .filter(
+          (item) =>
+            (item.publicResponse ?? "").trim() === ""
+        )
+        .sort((a, b) =>
+          a.createdAt.localeCompare(b.createdAt)
+        )
+        .slice(0, 5);
+
+      if (paradas.length === 0) {
+        return "nenhuma reclamação sem resposta pública.";
+      }
+
+      return paradas
+        .map((item) => {
+
+          const dias = Math.round(
+            (hoje -
+              new Date(
+                `${item.createdAt.slice(0, 10)}T00:00:00Z`
+              ).getTime()) /
+              86_400_000
+          );
+
+          return `${item.protocol} (${item.category}, ${dias} dia(s))`;
+        })
+        .join(" · ");
+    },
+  },
+
+  {
+    nome: "retencao",
+    descricao:
+      "Casos marcados como risco de cancelamento — quantos, em que frentes, e quantos seguem sem resposta.",
+    rodar: ({ cases, nps }) => {
+
+      const emRisco = cases.filter((item) => item.churnRisk);
+
+      const npsEmRisco = nps.filter((n) => n.churnRisk);
+
+      if (
+        emRisco.length === 0 &&
+        npsEmRisco.length === 0
+      ) {
+        return "nenhum caso marcado para retenção.";
+      }
+
+      const semResposta = emRisco.filter(
+        (item) => (item.publicResponse ?? "").trim() === ""
+      ).length;
+
+      return [
+        `${emRisco.length} reclamação(ões) marcadas para retenção`,
+        `${semResposta} delas ainda sem resposta`,
+        `${npsEmRisco.length} resposta(s) de NPS marcadas`,
+        `${emRisco.filter(isSocial).length} vieram das redes sociais`,
+      ].join(" · ");
+    },
+  },
+
+  {
+    nome: "por_responsavel",
+    descricao:
+      "Como a carga está dividida entre as pessoas do time, e quantas reclamações de cada uma seguem sem resposta.",
+    rodar: ({ cases }) => {
+
+      const mapa = new Map<
+        string,
+        { total: number; semResposta: number }
+      >();
+
+      for (const item of cases) {
+
+        const dono = (item.owner ?? "").trim();
+
+        if (!dono) continue;
+
+        const atual = mapa.get(dono) ?? {
+          total: 0,
+          semResposta: 0,
+        };
+
+        atual.total += 1;
+
+        if ((item.publicResponse ?? "").trim() === "") {
+          atual.semResposta += 1;
+        }
+
+        mapa.set(dono, atual);
+      }
+
+      const semDono = cases.filter(
+        (item) => !(item.owner ?? "").trim()
+      ).length;
+
+      if (mapa.size === 0) {
+        return `nenhuma reclamação tem responsável definido (${cases.length} no total).`;
+      }
+
+      const linhas = [...mapa.entries()]
+        .sort((a, b) => b[1].total - a[1].total)
+        .slice(0, 8)
+        .map(
+          ([nome, n]) =>
+            `${nome}: ${n.total} (${n.semResposta} sem resposta)`
+        );
+
+      return [
+        ...linhas,
+        `sem responsável: ${semDono}`,
+      ].join(" · ");
+    },
+  },
+
+  {
+    nome: "etiquetas",
+    descricao:
+      "As etiquetas mais usadas nas reclamações, para ver o que a operação vem marcando.",
+    rodar: ({ cases }) => {
+
+      const mapa = new Map<string, number>();
+
+      for (const item of cases) {
+        for (const etiqueta of item.tags ?? []) {
+          const chave = etiqueta.trim();
+          if (!chave) continue;
+          mapa.set(chave, (mapa.get(chave) ?? 0) + 1);
+        }
+      }
+
+      if (mapa.size === 0) {
+        return "nenhuma reclamação foi etiquetada.";
+      }
+
+      return [...mapa.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 8)
+        .map(([nome, n]) => `${nome} (${n})`)
+        .join(", ");
+    },
+  },
 ];
 
 /* ============================================================
@@ -562,6 +888,105 @@ const GATILHOS: Record<string, string[]> = {
     "motivo",
     "motivos",
     "tipo de reclamacao",
+  ],
+
+  desfecho: [
+    "resolvida",
+    "resolvidas",
+    "resolvido",
+    "resolvidos",
+    "resolucao",
+    "voltaria a fazer negocio",
+    "voltariam",
+    "indice de solucao",
+    "taxa de resolucao",
+    "avaliadas",
+  ],
+
+  por_prioridade: [
+    "prioridade",
+    "prioridades",
+    /*
+      As quatro formas, e não só o feminino.
+
+      "temos casos **críticos** parados?" não casava com "criticas" nem
+      com "critica", e a medição ficava muda para a pergunta mais
+      urgente que a operação faz.
+    */
+    "criticas",
+    "critica",
+    "criticos",
+    "critico",
+    "urgentes",
+    "urgencia",
+    "gravidade",
+  ],
+
+  por_regiao: [
+    "regiao",
+    "regioes",
+    "estado",
+    "estados",
+    "cidade",
+    "cidades",
+    "de onde",
+    "onde vem",
+    "geografia",
+    "uf",
+  ],
+
+  reincidencia: [
+    "reincidencia",
+    "reincidente",
+    "reincidentes",
+    "mais de uma vez",
+    "repetiu",
+    "repetidas",
+    "mesmo cliente",
+    "voltou a reclamar",
+  ],
+
+  mais_antigas_sem_resposta: [
+    "mais antigas",
+    "mais antigo",
+    "ha mais tempo",
+    "paradas",
+    "parada",
+    "parados",
+    "parado",
+    "esquecidas",
+    "esquecida",
+    "encalhadas",
+  ],
+
+  retencao: [
+    "retencao",
+    "cancelamento",
+    "cancelar",
+    "churn",
+    "risco de cancelamento",
+    "reter",
+    "evasao",
+  ],
+
+  por_responsavel: [
+    "responsavel",
+    "responsaveis",
+    "por pessoa",
+    "carga",
+    "time",
+    "equipe",
+    "quem esta cuidando",
+    "atendente",
+    "dono do caso",
+  ],
+
+  etiquetas: [
+    "etiqueta",
+    "etiquetas",
+    "marcacoes",
+    "tags",
+    "rotulos",
   ],
 
   movimento_recente: [
