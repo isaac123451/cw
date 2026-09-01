@@ -35,6 +35,7 @@ import {
   enviarEmail,
   podeEnviarEmail,
   provedorAtivo,
+  remetenteAtual,
   remetenteEhSandbox,
 } from "../lib/email/enviar";
 
@@ -221,6 +222,66 @@ function traduzir(status: number, corpo: string) {
   return "";
 }
 
+/**
+ * O que cada recusa do servidor de SMTP quer dizer.
+ *
+ * O Google responde em códigos e jargão ("534-5.7.9"), e a diferença
+ * entre "sua senha está errada" e "esta conta exige senha de app" é
+ * exatamente a diferença entre dez segundos e uma tarde.
+ */
+function traduzirSmtp(mensagem: string) {
+
+  if (/application-specific password/i.test(mensagem)) {
+    return "Esta conta exige senha de app. Gere em myaccount.google.com/apppasswords (precisa da verificação em duas etapas ligada na conta Google) e use-a em SMTP_SENHA — não a senha normal.";
+  }
+
+  if (
+    /username and password not accepted|535|invalid login|EAUTH/i.test(
+      mensagem
+    )
+  ) {
+    return "Usuário ou senha recusados. Em conta Google, SMTP_SENHA tem de ser uma senha de app (16 caracteres), não a senha de login. Se o administrador do Workspace bloqueou senhas de app, este caminho não abre.";
+  }
+
+  if (/ETIMEDOUT|ECONNREFUSED|ENOTFOUND|ECONNECTION/i.test(mensagem)) {
+    return "Não cheguei ao servidor. Confira SMTP_HOST e SMTP_PORTA (587 com STARTTLS, ou 465). Alguns provedores de hospedagem bloqueiam a porta 25.";
+  }
+
+  return "";
+}
+
+/** A conexão e a credencial funcionam? Não envia nada. */
+async function conferirSmtp(): Promise<
+  { ok: true } | { ok: false; erro: string }
+> {
+
+  try {
+
+    const { createTransport } = await import("nodemailer");
+
+    const porta = Number(process.env.SMTP_PORTA ?? 587);
+
+    await createTransport({
+      host: process.env.SMTP_HOST,
+      port: porta,
+      secure: porta === 465,
+      auth: {
+        user: process.env.SMTP_USUARIO,
+        pass: process.env.SMTP_SENHA,
+      },
+    }).verify();
+
+    return { ok: true };
+
+  } catch (erro) {
+    return {
+      ok: false,
+      erro:
+        erro instanceof Error ? erro.message : String(erro),
+    };
+  }
+}
+
 async function main() {
 
   console.log(
@@ -250,7 +311,9 @@ async function main() {
   } else {
     ok(
       "há um provedor de e-mail configurado",
-      "resend"
+      provedor === "smtp"
+        ? `smtp — ${process.env.SMTP_HOST}`
+        : "resend"
     );
   }
 
@@ -271,7 +334,15 @@ async function main() {
 
   /* ------------------------------------------ 2. a chave ---- */
 
-  if (chave) {
+  /*
+    A chave só é conferida quando é ela que envia.
+
+    Com SMTP ativo, a `RESEND_API_KEY` pode continuar no ambiente sem
+    ser usada por nada. Aprovar ou reprovar uma credencial ociosa
+    espalha ruído — e reprovar seria pior: mandaria consertar o que não
+    está no caminho.
+  */
+  if (chave && provedor === "resend") {
 
     if (!chave.startsWith("re_")) {
       falhar(
@@ -293,26 +364,37 @@ async function main() {
 
   /* --------------------------------------- 3. o remetente ---- */
 
-  const bruto =
-    process.env.EMAIL_REMETENTE ||
-    "CW Reputação <nao-responda@cardapioweb.com>";
+  /*
+    O remetente vem do módulo, não da variável.
+
+    No SMTP o servidor só deixa enviar em nome da conta autenticada, e
+    `remetente()` já resolve isso — `EMAIL_REMETENTE` pode estar
+    apontando para outro lugar e não ser usado. Ler a variável aqui
+    faria a conferência relatar um remetente que não é o que sai.
+  */
+  const bruto = remetenteAtual();
 
   const de = lerRemetente(bruto);
 
   console.log("");
 
+  const tituloDoRemetente =
+    provedor === "smtp"
+      ? "o remetente é a conta autenticada no servidor"
+      : "o remetente está num formato que o Resend aceita";
+
   if (!de.temFormatoDeEmail) {
     falhar(
-      "o remetente está num formato que o Resend aceita",
+      tituloDoRemetente,
       `EMAIL_REMETENTE = "${bruto}" — não achei um endereço válido. Use \`Nome <caixa@dominio.com>\`.`
     );
   } else {
     ok(
-      "o remetente está num formato que o Resend aceita",
+      tituloDoRemetente,
       `${de.nome ? `${de.nome} ` : ""}<${de.endereco}>${
-        process.env.EMAIL_REMETENTE
-          ? ""
-          : "  (padrão do código — EMAIL_REMETENTE não está definida)"
+        provedor !== "smtp" && !process.env.EMAIL_REMETENTE
+          ? "  (padrão do código — EMAIL_REMETENTE não está definida)"
+          : ""
       }`
     );
   }
@@ -340,12 +422,39 @@ async function main() {
 
   const original = process.env.EMAIL_REMETENTE;
 
+  /*
+    O SMTP sai de cena durante esta conferência.
+
+    `remetenteEhSandbox()` consulta o provedor ativo — com SMTP
+    configurado, o remetente vem da conta do servidor e nunca é
+    sandbox. Verdade útil, e que tornaria estes seis casos sempre
+    "não": a conferência passaria sem exercer nada. Aqui a pergunta é
+    outra e mais estreita: **no caminho do Resend**, o classificador
+    reconhece o remetente de testes?
+  */
+  const smtpGuardado = {
+    host: process.env.SMTP_HOST,
+    usuario: process.env.SMTP_USUARIO,
+    senha: process.env.SMTP_SENHA,
+  };
+
+  delete process.env.SMTP_HOST;
+  delete process.env.SMTP_USUARIO;
+  delete process.env.SMTP_SENHA;
+
   const erradas = CASOS_DE_REMETENTE.filter(
     ([valor, esperado]) => {
       process.env.EMAIL_REMETENTE = valor;
       return remetenteEhSandbox() !== esperado;
     }
   );
+
+  if (smtpGuardado.host)
+    process.env.SMTP_HOST = smtpGuardado.host;
+  if (smtpGuardado.usuario)
+    process.env.SMTP_USUARIO = smtpGuardado.usuario;
+  if (smtpGuardado.senha)
+    process.env.SMTP_SENHA = smtpGuardado.senha;
 
   if (original === undefined) {
     delete process.env.EMAIL_REMETENTE;
@@ -367,9 +476,87 @@ async function main() {
     );
   }
 
+  /**
+   * O caso que destrava a equipe — e que passaria despercebido.
+   *
+   * Ao migrar para SMTP, `EMAIL_REMETENTE` continua no ambiente
+   * apontando para o sandbox do Resend: é o valor que estava lá antes,
+   * e ninguém tem motivo para lembrar dele. Se o classificador olhasse
+   * a variável em vez do remetente que sai de fato, ele responderia
+   * "sandbox" com o SMTP ativo, a tela seguiria bloqueando "exigir de
+   * todos", e a migração inteira não teria efeito visível nenhum.
+   *
+   * Nenhum erro apareceria. Só um botão que continua cinza.
+   */
+  const antesDoTeste = {
+    remetente: process.env.EMAIL_REMETENTE,
+    host: process.env.SMTP_HOST,
+    usuario: process.env.SMTP_USUARIO,
+    senha: process.env.SMTP_SENHA,
+  };
+
+  process.env.EMAIL_REMETENTE =
+    "CW Reputação <onboarding@resend.dev>";
+  process.env.SMTP_HOST = "smtp.gmail.com";
+  process.env.SMTP_USUARIO = "alguem@cardapioweb.com";
+  process.env.SMTP_SENHA = "senha-de-app-ficticia";
+
+  const aindaSandbox = remetenteEhSandbox();
+  const remetenteSobSmtp = remetenteAtual();
+
+  for (const [chaveEnv, valor] of [
+    ["EMAIL_REMETENTE", antesDoTeste.remetente],
+    ["SMTP_HOST", antesDoTeste.host],
+    ["SMTP_USUARIO", antesDoTeste.usuario],
+    ["SMTP_SENHA", antesDoTeste.senha],
+  ] as [string, string | undefined][]) {
+    if (valor === undefined) delete process.env[chaveEnv];
+    else process.env[chaveEnv] = valor;
+  }
+
+  if (!aindaSandbox) {
+    ok(
+      "com SMTP ativo, o EMAIL_REMETENTE antigo não trava mais a equipe",
+      `o remetente vira ${remetenteSobSmtp} — "exigir de todos" destrava`
+    );
+  } else {
+    falhar(
+      "com SMTP ativo, o EMAIL_REMETENTE antigo não trava mais a equipe",
+      `ainda classificado como sandbox (remetente: ${remetenteSobSmtp}). A tela continuaria bloqueando a exigência para todos, sem erro nenhum à vista.`
+    );
+  }
+
   /* ------------------------------ 4. o domínio, no Resend ---- */
 
-  if (chave && de.dominio) {
+  if (provedor === "smtp") {
+
+    console.log("");
+
+    const conexao = await conferirSmtp();
+
+    if (conexao.ok) {
+      ok(
+        "o servidor de SMTP aceitou a credencial",
+        `${process.env.SMTP_HOST}:${process.env.SMTP_PORTA ?? 587} como ${process.env.SMTP_USUARIO}`
+      );
+      ok(
+        "o remetente alcança qualquer pessoa da equipe",
+        "sem limite de destinatário: é o servidor da empresa enviando pelo domínio dela"
+      );
+    } else {
+
+      const explicacao = traduzirSmtp(conexao.erro);
+
+      falhar(
+        "o servidor de SMTP aceitou a credencial",
+        `${conexao.erro}${
+          explicacao ? `
+         → ${explicacao}` : ""
+        }`
+      );
+    }
+
+  } else if (chave && de.dominio) {
 
     console.log("");
 

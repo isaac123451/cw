@@ -40,6 +40,8 @@ const ACEITAS: Record<string, string> = {
     "Dependência do CLI do Prisma; mesma situação. (23/08/2026)",
   "deepmerge-ts":
     "Puxada pelo CLI do Prisma ao ler a configuração; não está no caminho de consulta. (23/08/2026)",
+  mysql2:
+    "Driver de MySQL que vem dentro do CLI do Prisma (`npm explain mysql2` → prisma@7.9.1). O banco daqui é Postgres, pelo @prisma/adapter-pg: este pacote não é carregado por nenhum caminho da aplicação. Apareceu na árvore ao instalar o nodemailer, que refez o lockfile — não é dependência dele. (01/09/2026)",
 };
 
 interface Auditoria {

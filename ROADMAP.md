@@ -405,6 +405,43 @@ primeiro. A propagação leva de minutos a algumas horas.
 O sandbox **não** substitui isso: ele só entrega para o e-mail dono da
 conta, então a equipe não receberia código nenhum.
 
+### SMTP — o caminho que alcança a equipe (01/09/2026)
+
+O sandbox entrega a uma pessoa, e a operação precisava que **cada
+pessoa recebesse o próprio código**. O DNS depende de terceiros, então
+o envio ganhou um segundo provedor: **SMTP**, autenticado na conta do
+Google Workspace da empresa. O Google já está autorizado a enviar pelo
+domínio, então não há registro de DNS a criar.
+
+Variáveis (na Vercel, nos três ambientes, e depois refazer o deploy):
+
+| variável | valor |
+|---|---|
+| `SMTP_HOST` | `smtp.gmail.com` |
+| `SMTP_PORTA` | `587` |
+| `SMTP_USUARIO` | o e-mail da conta que envia |
+| `SMTP_SENHA` | **senha de app** de 16 caracteres |
+| `EMAIL_PROVEDOR` | `smtp` (opcional — sem ela o SMTP já ganha) |
+
+A senha de app sai de <https://myaccount.google.com/apppasswords> e
+exige verificação em duas etapas ligada **na conta Google**. Não é a
+senha de login, e o administrador do Workspace pode ter bloqueado o
+recurso — nesse caso este caminho não abre.
+
+**O remetente é sempre `SMTP_USUARIO`.** O servidor só deixa enviar em
+nome da conta autenticada; um `From` diferente é reescrito em silêncio
+ou recusado. `EMAIL_REMETENTE` continua valendo para o nome de
+exibição. Isso também resolve uma armadilha da migração: a variável
+segue apontando para o sandbox do Resend, e se o remetente saísse dela
+a tela continuaria bloqueando "exigir de todos" — sem erro, só um botão
+cinza. `npm run check:email` confere exatamente esse caso.
+
+Trocar de provedor não vaza para lugar nenhum: tudo passa por
+`lib/email/enviar.ts`, e `EMAIL_PROVEDOR` escolhe. Sem ela o SMTP ganha
+do Resend, porque é o único que alcança a equipe inteira.
+
+---
+
 **A ponte, enquanto o DNS não sai.** `EMAIL_REMETENTE` aponta hoje para
 o sandbox, e isso deixa **uma pessoa** — o dono da conta do Resend —
 ligar a verificação na própria conta e usar 2FA de verdade. Duas travas
