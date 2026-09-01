@@ -36,6 +36,8 @@ import {
   CATALOGO,
   dadosParaMedir,
   escolherMedicoes,
+  escolherMedicoesLocalmente,
+  medicoesSemGatilho,
   medir,
 } from "../lib/services/assistant.agent";
 
@@ -246,6 +248,149 @@ async function main() {
     falhar(
       "medição inventada vira aviso, não silêncio",
       bloco.slice(0, 120)
+    );
+  }
+
+  /* --------------------- 4b. o seletor local, sem API nenhuma ---- */
+
+  /**
+   * O agente sem modelo.
+   *
+   * As contas sempre foram locais; o modelo só escolhia **quais**
+   * rodar. Este bloco prova que a escolha também acontece sem ele — e
+   * é o que tira o agente da dependência de uma API externa.
+   *
+   * Duas coisas são conferidas, e a segunda importa tanto quanto a
+   * primeira: escolher demais é um defeito. Um seletor que responde
+   * "operação" para qualquer frase devolveria números da base para
+   * "qual a previsão do tempo amanhã?".
+   */
+  console.log("");
+
+  const semGatilho = medicoesSemGatilho();
+
+  if (semGatilho.length === 0) {
+    ok(
+      "toda medição do catálogo é alcançável sem modelo",
+      `${CATALOGO.length} medições, todas com gatilhos`
+    );
+  } else {
+    falhar(
+      "toda medição do catálogo é alcançável sem modelo",
+      `sem gatilho: ${semGatilho.join(", ")} — nunca seriam escolhidas localmente, e ninguém notaria`
+    );
+  }
+
+  const CASOS_LOCAIS: [string, string | null][] = [
+    ["quantas avaliações preciso para chegar a 9,5?", "caminho_para_nota"],
+    ["estamos demorando muito para responder?", "espera_do_consumidor"],
+    ["como está o NPS?", "nps"],
+    ["qual categoria está crescendo?", "causas_no_tempo"],
+    ["quais casos estão fora do prazo?", "fila_da_operacao"],
+    ["qual a nota de reputação hoje?", "reputacao"],
+    ["quantos detratores temos?", "nps"],
+    ["o que chegou nos últimos 15 dias?", "movimento_recente"],
+    ["como está cada frente?", "por_frente"],
+    /* E o que **não** pode virar medição nenhuma. */
+    ["qual a previsão do tempo amanhã?", null],
+    ["quem ganhou o jogo ontem?", null],
+    ["me conte uma piada", null],
+  ];
+
+  let errosLocais = 0;
+
+  for (const [pergunta, esperada] of CASOS_LOCAIS) {
+
+    const escolhas = escolherMedicoesLocalmente(pergunta);
+    const nomes = escolhas.map((e) => e.nome);
+
+    const acertou =
+      esperada === null
+        ? nomes.length === 0
+        : nomes.includes(esperada);
+
+    if (acertou) {
+      ok(
+        `local: "${pergunta}"`,
+        esperada === null
+          ? "não mediu nada, como devia"
+          : `escolheu ${nomes.join(", ")}`
+      );
+    } else {
+      errosLocais += 1;
+      falhar(
+        `local: "${pergunta}"`,
+        esperada === null
+          ? `mediu ${nomes.join(", ")} para uma pergunta que não é da operação`
+          : `escolheu ${nomes.join(", ") || "nada"}, esperava incluir ${esperada}`
+      );
+    }
+  }
+
+  /* O argumento também tem de sair da frase, sem modelo. */
+
+  const noveEMeio = escolherMedicoesLocalmente(
+    "quantas avaliações preciso para chegar a 9,5?"
+  ).find((e) => e.nome === "caminho_para_nota");
+
+  if (noveEMeio?.argumento === "9.5") {
+    ok(
+      "local: o número da pergunta vira o argumento",
+      '"9,5" → argumento "9.5"'
+    );
+  } else {
+    falhar(
+      "local: o número da pergunta vira o argumento",
+      `veio ${JSON.stringify(noveEMeio?.argumento)} — sem isso ele responderia sobre a nota padrão, que é outra pergunta`
+    );
+  }
+
+  const quinzeDias = escolherMedicoesLocalmente(
+    "o que chegou nos últimos 15 dias?"
+  ).find((e) => e.nome === "movimento_recente");
+
+  if (quinzeDias?.argumento === "15") {
+    ok(
+      "local: a janela em dias vira o argumento",
+      '"15 dias" → argumento "15"'
+    );
+  } else {
+    falhar(
+      "local: a janela em dias vira o argumento",
+      `veio ${JSON.stringify(quinzeDias?.argumento)}`
+    );
+  }
+
+  /*
+    E o resultado local roda de verdade contra a base.
+
+    Escolher certo e estourar ao medir seria o mesmo que não escolher.
+  */
+  const blocoLocal = medir(
+    dados,
+    escolherMedicoesLocalmente(
+      "qual a nota e quantos casos estão fora do prazo?"
+    )
+  );
+
+  if (
+    blocoLocal.includes("reputacao:") &&
+    blocoLocal.includes("fila_da_operacao:")
+  ) {
+    ok(
+      "local: duas medições numa pergunta só, medidas contra o banco",
+      blocoLocal.split("\n")[0].slice(0, 90)
+    );
+  } else {
+    falhar(
+      "local: duas medições numa pergunta só, medidas contra o banco",
+      blocoLocal.slice(0, 140)
+    );
+  }
+
+  if (errosLocais === 0) {
+    console.log(
+      "\n  O agente escolhe e mede sem chamar API nenhuma.\n"
     );
   }
 

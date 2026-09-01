@@ -126,6 +126,8 @@ export default function AssistentePage() {
         respondedAt: item.respondedAt,
         customer: item.customer,
         comment: item.comment,
+        kind: item.kind,
+        rootCause: item.rootCause,
       })),
       tasks,
       impacts: records,

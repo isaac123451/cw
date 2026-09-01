@@ -23,6 +23,11 @@ import { isOpen } from "@/lib/services/case.service";
 import { parseElapsedText } from "@/lib/services/case.mapper";
 import { slugify } from "@/lib/services/slug";
 
+import {
+  escolherMedicoesLocalmente,
+  medir,
+} from "./assistant.agent";
+
 export interface AssistantLink {
   label: string;
   href: string;
@@ -55,6 +60,18 @@ export interface AssistantInput {
     respondedAt: string;
     customer: string;
     comment?: string;
+
+    /**
+     * Tipo e causa raiz, quando a tela os tem.
+     *
+     * Opcionais porque nem todo chamador carrega o NPS completo. O
+     * agente local usa estes campos; sem eles a medição de NPS diz
+     * "nenhuma causa raiz classificada", que é verdade sobre o dado
+     * que ela recebeu — mas seria enganoso se a tela tivesse a
+     * informação e não a passasse. Por isso a tela passa.
+     */
+    kind?: string | null;
+    rootCause?: string | null;
   }[];
 
   tasks: AgendaTask[];
@@ -1037,9 +1054,54 @@ export function ask(
     }
   }
 
-  return melhor
-    ? melhor.run(input, question)
-    : fallback(input, question);
+  if (melhor) return melhor.run(input, question);
+
+  /**
+   * Antes de dizer "não entendi", tenta o agente — localmente.
+   *
+   * As rotinas acima respondem nove perguntas previstas. O agente
+   * responde qualquer combinação do catálogo de medições, e desde que
+   * ele ganhou seletor local isso não custa chamada nenhuma: escolhe
+   * por gatilho e mede contra os dados que a tela já carregou.
+   *
+   * O ganho é que "não entendi" deixa de ser a resposta padrão para
+   * tudo que ninguém previu. O que **não** muda é a regra de ouro: se
+   * o seletor local não reconhecer nada, cai no `fallback` de sempre.
+   * Preferir dizer que não sabe a chutar continua valendo — só que
+   * agora a fronteira do "não sei" está muito mais longe.
+   */
+  const escolhas = escolherMedicoesLocalmente(question);
+
+  if (escolhas.length > 0) {
+
+    const medicoes = medir(
+      {
+        cases: input.cases,
+        nps: (input.nps ?? []).map((item) => ({
+          score: item.score,
+          status: item.status,
+          churnRisk: item.churnRisk ?? false,
+          respondedAt: item.respondedAt,
+          kind: item.kind ?? null,
+          rootCause: item.rootCause ?? null,
+        })),
+      },
+      escolhas
+    );
+
+    return {
+      paragraphs: [
+        "Medi isto na base agora, sem chamar modelo nenhum:",
+        ...medicoes.split("\n").filter(Boolean),
+      ],
+      links: [],
+      intent: `agente-local:${escolhas
+        .map((e) => e.nome)
+        .join("+")}`,
+    };
+  }
+
+  return fallback(input, question);
 }
 
 /**

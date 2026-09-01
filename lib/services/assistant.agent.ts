@@ -438,6 +438,270 @@ const ESQUEMA = {
   required: ["medicoes"],
 };
 
+/* =================================================================
+   O SELETOR LOCAL — o agente sem API nenhuma
+   ================================================================= */
+
+/**
+ * Gatilhos por medição, para escolher sem modelo.
+ *
+ * **Por que existe.** O catálogo e as contas sempre foram locais: o
+ * modelo nunca viu um dado, ele só escolhia **quais** medições rodar.
+ * Era um passo de classificação entre nove opções — e era o único
+ * motivo de o agente inteiro depender de uma API externa.
+ *
+ * Com estes gatilhos a escolha acontece aqui. A consequência é que o
+ * assistente responde com números reais mesmo sem chave nenhuma
+ * configurada, sem cota, sem rede e sem custo. O modelo passa a ser o
+ * que ele deveria ter sido desde o começo: uma melhoria opcional na
+ * escolha e na redação, não um requisito para funcionar.
+ *
+ * Ficam num mapa à parte, e não dentro de cada medição, para que a
+ * conferência possa exigir que **toda** medição do catálogo tenha
+ * gatilhos. Uma medição sem gatilho seria inalcançável localmente, e
+ * ninguém notaria: ela simplesmente nunca seria escolhida.
+ */
+const GATILHOS: Record<string, string[]> = {
+  reputacao: [
+    "nota",
+    "reputacao",
+    "score",
+    "nota atual",
+    "como esta a nota",
+    "avaliacao media",
+  ],
+
+  caminho_para_nota: [
+    "quantas avaliacoes",
+    "quantas notas",
+    "quantas respostas",
+    "para chegar",
+    "para alcancar",
+    "para atingir",
+    "faltam",
+    "meta de nota",
+    "caminho para a nota",
+    "o que falta",
+  ],
+
+  espera_do_consumidor: [
+    "tempo de resposta",
+    "quanto tempo",
+    "demora",
+    "demorando",
+    "demorado",
+    "espera",
+    "esperou",
+    "primeira resposta",
+    "rapidez",
+    "agilidade",
+  ],
+
+  causas_no_tempo: [
+    "crescendo",
+    "aumentando",
+    "subindo",
+    "tendencia",
+    "ao longo do tempo",
+    "por mes",
+    "nos ultimos meses",
+    "evolucao",
+    "piorando",
+    "melhorando",
+  ],
+
+  fila_da_operacao: [
+    "fila",
+    "sem resposta",
+    "vencidas",
+    "vencidos",
+    "fora do prazo",
+    "atrasadas",
+    "atrasados",
+    "pendentes",
+    "em aberto",
+    "sla",
+    "prazo",
+  ],
+
+  por_frente: [
+    "por frente",
+    /*
+      "frente" no singular também.
+      "como está cada frente?" não casava com "frentes" nem com "por
+      frente", e a medição ficava inalcançável para a forma mais
+      natural da pergunta.
+    */
+    "frente",
+    "cada frente",
+    "frentes",
+    "por canal",
+    "canais",
+    "redes sociais",
+    "manychat",
+    "reclame aqui e nps",
+  ],
+
+  nps: [
+    "nps",
+    "detratores",
+    "detrator",
+    "promotores",
+    "promotor",
+    "satisfacao",
+    "pesquisa de satisfacao",
+  ],
+
+  por_categoria: [
+    "categoria",
+    "categorias",
+    "causa raiz",
+    "causas",
+    "assunto",
+    "assuntos",
+    "motivo",
+    "motivos",
+    "tipo de reclamacao",
+  ],
+
+  movimento_recente: [
+    "ultimos dias",
+    "ultimos",
+    "recente",
+    "recentes",
+    "esta semana",
+    "movimento",
+    "chegaram",
+    "entraram",
+    "novos casos",
+  ],
+};
+
+/** Sem acento, minúsculo, espaços colapsados. */
+function simplificar(texto: string) {
+  return texto
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * O gatilho aparece como palavra inteira?
+ *
+ * Sem fronteira de palavra, "previsão do **tempo** amanhã" casaria com
+ * "tempo" e o agente responderia com o tempo de espera do consumidor —
+ * uma resposta impecável para outra pergunta, que é o pior erro que um
+ * assistente comete. O mesmo defeito já tinha aparecido nas rotinas
+ * determinísticas; a correção é a mesma.
+ */
+function casaComoPalavra(texto: string, gatilho: string) {
+
+  const escapado = gatilho.replace(
+    /[.*+?^${}()|[\]\\]/g,
+    "\\$&"
+  );
+
+  return new RegExp(
+    `(^|[^a-z0-9])${escapado}([^a-z0-9]|$)`
+  ).test(texto);
+}
+
+/**
+ * O número que a pergunta carrega, quando ela carrega um.
+ *
+ * "quantas avaliações para **9,5**" precisa virar `argumento: "9.5"`,
+ * e "o que mudou nos últimos **15** dias" precisa virar `"15"`. Sem
+ * isto o seletor local rodaria sempre com o padrão, e responderia
+ * sobre a nota 9 uma pergunta que era sobre a 9,5.
+ */
+function argumentoDaPergunta(
+  texto: string,
+  medicao: string
+): string | undefined {
+
+  if (medicao === "movimento_recente") {
+    const dias = texto.match(/(\d{1,3})\s*dias?/);
+    return dias?.[1];
+  }
+
+  if (medicao === "caminho_para_nota") {
+
+    /*
+      "nota 9,5" e "para 9.5" contam; "últimos 30 dias" não.
+      Por isso o número precisa estar perto de uma palavra de nota, ou
+      ser um decimal — 30 dias não vira nota 30.
+    */
+    const comContexto = texto.match(
+      /(?:nota|para|chegar a|alcancar|atingir)\s*(\d{1,2}(?:[.,]\d)?)/
+    );
+
+    const valor = comContexto?.[1];
+
+    if (!valor) return undefined;
+
+    return valor.replace(",", ".");
+  }
+
+  return undefined;
+}
+
+/**
+ * Escolhe as medições sem chamar modelo nenhum.
+ *
+ * Mesma saída de `escolherMedicoes`, mesmo teto de quatro. Devolve
+ * lista vazia quando nada casa — e isso é uma resposta, não uma falha:
+ * é o que faz "qual a previsão do tempo amanhã?" não receber números
+ * da operação.
+ */
+export function escolherMedicoesLocalmente(
+  pergunta: string
+): Escolha[] {
+
+  const texto = simplificar(pergunta);
+
+  const pontuadas = CATALOGO.map((medicao) => {
+
+    const gatilhos = GATILHOS[medicao.nome] ?? [];
+
+    /*
+      Ganha o gatilho mais específico, medido pelo comprimento.
+
+      "quantas avaliacoes" (18) tem de passar na frente de "nota" (4)
+      numa pergunta que contém as duas — senão "quantas avaliações
+      faltam para a nota 9" responderia a nota atual, que é outra
+      pergunta.
+    */
+    const peso = gatilhos.reduce(
+      (maior, gatilho) =>
+        casaComoPalavra(texto, simplificar(gatilho))
+          ? Math.max(maior, gatilho.length)
+          : maior,
+      0
+    );
+
+    return { medicao, peso };
+  })
+    .filter((item) => item.peso > 0)
+    .sort((a, b) => b.peso - a.peso)
+    .slice(0, 4);
+
+  return pontuadas.map(({ medicao }) => ({
+    nome: medicao.nome,
+    argumento: medicao.argumento
+      ? argumentoDaPergunta(texto, medicao.nome)
+      : undefined,
+  }));
+}
+
+/** Toda medição do catálogo é alcançável pelo seletor local? */
+export function medicoesSemGatilho() {
+  return CATALOGO.filter(
+    (m) => (GATILHOS[m.nome] ?? []).length === 0
+  ).map((m) => m.nome);
+}
+
 /**
  * Quais medições respondem esta pergunta?
  *
@@ -452,7 +716,18 @@ export async function escolherMedicoes(
   pergunta: string
 ): Promise<Escolha[]> {
 
-  if (!provedorDeIA()) return [];
+  /*
+    Sem provedor, o agente **não** desiste: escolhe aqui mesmo.
+
+    Antes esta linha era `return []`, e com ela o agente inteiro
+    dependia de uma API externa para um passo que nunca precisou de
+    uma — classificar uma frase entre nove opções. O efeito prático era
+    que, sem chave, o assistente só respondia as perguntas
+    pré-escritas.
+  */
+  if (!provedorDeIA()) {
+    return escolherMedicoesLocalmente(pergunta);
+  }
 
   const catalogo = CATALOGO.map(
     (m) =>
@@ -474,7 +749,18 @@ export async function escolherMedicoes(
     rapido: true,
   });
 
-  if (r.erro || !r.dados) return [];
+  /*
+    Modelo fora do ar cai no seletor local, não no vazio.
+
+    Cota estourada, 503 de congestionamento, rede caída: nada disso é
+    motivo para o assistente deixar de responder, já que as contas são
+    locais. O que **não** cai para o local é a lista vazia com resposta
+    bem-sucedida — ali o modelo disse "isto não é sobre a operação", e
+    essa é uma resposta legítima que precisa ser respeitada.
+  */
+  if (r.erro || !r.dados) {
+    return escolherMedicoesLocalmente(pergunta);
+  }
 
   const bruto = (r.dados.medicoes ?? []) as Escolha[];
 
