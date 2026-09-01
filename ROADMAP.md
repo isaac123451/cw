@@ -67,6 +67,7 @@ workspace junto com os outros cadastros.
 | `npm run check:busca-texto` | Prova o campo Buscar da tela: telefone, documento, e-mail e texto, contra a base real |
 | `npm run check:calculadora` | Mexe em cada campo do cenário sobre a base real e exige que ele mova a nota, para o lado certo — e que nenhuma combinação saia de 0–10 |
 | `npm run check:duas-etapas` | Onze defesas do código por e-mail, cada uma provada recusando o que deve: código errado, vencido, gasto, sem palpites, reenviado |
+| `npm run check:email` | Pergunta ao Resend, antes de alguém precisar: a chave vale? o remetente sai de domínio verificado? Com `-- --enviar voce@empresa.com`, manda um de verdade e traduz o erro se falhar |
 | `npm run extensao:icones` | Regera os PNGs do ícone da extensão |
 
 ---
@@ -119,8 +120,10 @@ Fila pedida pelo Isaac em 23/08, depois da auditoria. Em ordem de
 entrega:
 
 1. ~~**Verificação em duas etapas**, com código por e-mail.~~ Entregue
-   em 23/08 — ver abaixo. **Falta você definir `RESEND_API_KEY` na
-   Vercel**; até lá o recurso fica indisponível de propósito.
+   em 23/08 — ver abaixo. A chave do Resend existe, vale, e o envio foi
+   provado em 31/08. **Falta verificar `cardapioweb.com` no Resend** —
+   é DNS, não código, e depende de quem administra o domínio. Até lá o
+   recurso fica indisponível de propósito.
 2. **Botão para o portal da Cardápio Web** na extensão.
 3. **Buscar a reclamação pelo número do cliente**, usando o nome do
    contato só para conferir — hoje o nome participa do casamento.
@@ -141,8 +144,10 @@ entrega:
 10. ~~**Análise do NPS** e **Dashboard**: melhorar.~~ Entregue em
     23/08 — ver abaixo.
 
-**A fila acabou.** O que sobra é o que depende de você: definir
-`RESEND_API_KEY` na Vercel para a verificação em duas etapas ligar, e
+**A fila acabou.** O que sobra é o que depende de você: **verificar
+`cardapioweb.com` no Resend** (registros de DNS, com quem administra o
+domínio) para a verificação em duas etapas ligar — a chave já existe e
+o envio já foi provado, `npm run check:email` mostra o estado —, e
 preencher o link do Crisp e o WhatsApp do NPS no cadastro dos
 estabelecimentos para os dois botões aparecerem na extensão.
 
@@ -365,11 +370,56 @@ ponha `http://localhost:3000`.
 
 ---
 
-### `RESEND_API_KEY` — **falta definir**
+### `RESEND_API_KEY` — **existe e funciona; falta o DNS do domínio**
 
 **O que é:** a chave de envio de e-mail transacional. Hoje ela serve a
 uma coisa só: mandar o código de seis dígitos da verificação em duas
 etapas.
+
+**Onde está hoje (31/08/2026).** A chave **está** no `.env` local, é
+válida, e é do tipo restrito — *Sending access*, que envia e não lê o
+resto da conta. É o tipo certo, e vale registrar por quê: consultada
+pela API de domínios, uma chave dessas responde `401
+restricted_api_key`, e ler isso como "chave inválida" faria alguém
+revogar a chave boa e criar uma com permissão a mais.
+
+**O caminho do envio está provado.** Em 31/08/2026 um envio de teste
+saiu pelo Resend e foi aceito (id `2ebe8416-c151-48b4-9007-065e6478d1d2`),
+usando o remetente de sandbox. Ou seja: chave, rota, formato da
+mensagem e `lib/email/enviar.ts` funcionam de ponta a ponta.
+
+**O que trava, e é só isto:** `cardapioweb.com` **não está verificado**
+no Resend. O envio com o remetente de produção volta:
+
+```
+403 — The cardapioweb.com domain is not verified.
+      Please, add and verify your domain on https://resend.com/domains
+```
+
+O conserto é DNS, não código: <https://resend.com/domains> → *Add
+Domain* → `cardapioweb.com` → criar os registros que ele mostrar (SPF e
+DKIM) na zona do domínio → *Verify*. **Depende de quem administra o DNS
+da Cardápio Web** — se não for você, é o pedido que precisa sair
+primeiro. A propagação leva de minutos a algumas horas.
+
+O sandbox **não** substitui isso: ele só entrega para o e-mail dono da
+conta, então a equipe não receberia código nenhum.
+
+Para conferir o estado a qualquer momento, sem gastar envio:
+
+```bash
+npm run check:email
+```
+
+E, quando o DNS estiver pronto, para provar de verdade:
+
+```bash
+npm run check:email -- --enviar voce@cardapioweb.com
+```
+
+**Ainda aberto:** confirmar que `RESEND_API_KEY` também está nas
+variáveis da Vercel — o `.env` é local, e a produção tem o próprio
+conjunto.
 
 **Sem ela:** a verificação em duas etapas **não liga**, nem para uma
 pessoa nem para a equipe. Não é limitação de tela — é a trava certa:
