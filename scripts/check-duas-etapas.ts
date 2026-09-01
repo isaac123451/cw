@@ -8,7 +8,7 @@
  * que o código certo entra — é preciso provar que **cada uma das
  * defesas recusa** o que deve recusar.
  *
- * Onze perguntas, todas contra o banco real, com um usuário de teste
+ * Catorze perguntas, todas contra o banco real, com um usuário de teste
  * criado e apagado no fim:
  *
  *   1. O código certo entra.
@@ -27,6 +27,11 @@
  *      verdade, não um contador.
  *  11. A faxina apaga o que passou do prazo e **não** apaga o que ainda
  *      vale.
+ *  13. A exigência global alcança quem **não** ligou na própria conta —
+ *      senão o botão "exigir de todos" não exigiria de ninguém.
+ *  14. E a conferência devolve a exigência global ao valor de antes:
+ *      é um interruptor único, compartilhado com a produção, e deixá-lo
+ *      ligado por engano trancaria a equipe de verdade.
  *
  * O envio de e-mail roda no modo "console", então nada sai para caixa
  * de entrada de ninguém durante a conferência — ver a nota logo abaixo
@@ -494,6 +499,97 @@ async function main() {
       !velhoAinda && Boolean(novoAinda),
       `velho ${velhoAinda ? "sobreviveu" : "apagado"}, novo ${novoAinda ? "sobreviveu" : "APAGADO — a faxina está levando código em uso"}`,
       `${apagados} apagado(s), o de hoje intacto`
+    );
+
+    /* ---- 13. a exigência global alcança quem não ligou ---- */
+
+    /**
+     * A pergunta que o Isaac fez: "qualquer pessoa com conta ativa
+     * tem que preencher o código".
+     *
+     * Quem responde é `exigeSegundaEtapa`, com
+     * `twoFactorRequired || twoFactorEnabled`. A metade que importa
+     * aqui é a primeira, e ela **nunca tinha sido exercida** — todas as
+     * conferências acima olham o mecanismo do código, não a regra que
+     * decide pedi-lo.
+     *
+     * O risco de conferir isto é real: a exigência global é um valor
+     * único, compartilhado com a produção. Por isso ele é restaurado
+     * logo abaixo, e a conferência 14 confirma que voltou. Deixar
+     * ligado por engano trancaria a equipe de verdade.
+     */
+    const { exigeSegundaEtapa } = await import(
+      "../lib/auth/two-factor"
+    );
+
+    const configOriginal =
+      await prisma.securityConfig.findFirst();
+
+    const exigiaAntes = Boolean(
+      configOriginal?.twoFactorRequired
+    );
+
+    try {
+
+      await prisma.securityConfig.upsert({
+        where: { id: "unico" },
+        update: { twoFactorRequired: true },
+        create: {
+          id: "unico",
+          twoFactorRequired: true,
+        },
+      });
+
+      const pedeSemLigar = await exigeSegundaEtapa({
+        twoFactorEnabled: false,
+      });
+
+      conferir(
+        "13. com a exigência global, quem não ligou também precisa do código",
+        pedeSemLigar,
+        "a exigência global não alcançou quem não tinha ligado na própria conta — o botão 'exigir de todos' não exigiria de ninguém",
+        "twoFactorEnabled=false e ainda assim pede"
+      );
+
+      await prisma.securityConfig.update({
+        where: { id: "unico" },
+        data: { twoFactorRequired: false },
+      });
+
+      const semNadaLigado = await exigeSegundaEtapa({
+        twoFactorEnabled: false,
+      });
+
+      const soNaConta = await exigeSegundaEtapa({
+        twoFactorEnabled: true,
+      });
+
+      conferir(
+        "13b. sem exigência global, manda a escolha de cada conta",
+        !semNadaLigado && soNaConta,
+        `sem nada ligado pediu=${semNadaLigado}; só na conta pediu=${soNaConta}`,
+        "quem não ligou entra direto, quem ligou recebe código"
+      );
+
+    } finally {
+
+      await prisma.securityConfig.upsert({
+        where: { id: "unico" },
+        update: { twoFactorRequired: exigiaAntes },
+        create: {
+          id: "unico",
+          twoFactorRequired: exigiaAntes,
+        },
+      });
+    }
+
+    const depois = await prisma.securityConfig.findFirst();
+
+    conferir(
+      "14. a exigência global voltou ao valor de antes",
+      Boolean(depois?.twoFactorRequired) === exigiaAntes,
+      `ficou em ${depois?.twoFactorRequired}, era ${exigiaAntes} — CONFIRA ISTO AGORA, a conferência pode ter deixado a equipe trancada`,
+      `${exigiaAntes ? "ligada" : "desligada"}, como estava`
     );
 
   } finally {

@@ -138,6 +138,80 @@ export async function salvarSeguranca(
     };
   }
 
+  /**
+   * A última trava, e a que custa mais caro se faltar.
+   *
+   * As duas acima olham a **configuração**. Nenhuma olha se o envio
+   * de fato acontece: credencial recusada, senha de app revogada,
+   * porta bloqueada pela hospedagem — tudo isso passa por elas
+   * intacto, porque as variáveis continuam lá.
+   *
+   * E este é o único botão do sistema capaz de trancar **todo mundo**
+   * ao mesmo tempo. A partir daqui, ninguém entra sem receber um
+   * e-mail; se o envio estiver quebrado, não há tela que conserte —
+   * o conserto é no banco.
+   *
+   * Então o envio é exercido agora, de verdade, para quem está
+   * ligando. Não é uma amostra: é o mesmo caminho, o mesmo provedor e
+   * as mesmas credenciais que o login vai usar daqui a um minuto — e
+   * roda no ambiente onde elas existem, que é o servidor, não a
+   * máquina de quem programou.
+   *
+   * Um envio bem-sucedido para uma pessoa prova a entrega para as
+   * demais **neste provedor**: o SMTP da empresa não tem restrição de
+   * destinatário. A exceção conhecida é o sandbox do Resend, e ela já
+   * foi recusada logo acima.
+   */
+  /*
+    Só ao **ligar**, não a cada salvamento.
+
+    Esta tela também guarda validade do código e número de palpites.
+    Sem esta comparação, mexer em qualquer um desses campos com a
+    exigência já ligada dispararia mais um e-mail — e a caixa de
+    entrada de quem administra viraria um contador de cliques.
+  */
+  const jaExigia = (await lerConfiguracao())
+    .twoFactorRequired;
+
+  if (entrada.exigirParaTodos && !jaExigia) {
+
+    const quemLiga = await ctx.prisma.user.findUnique({
+      where: { id: ctx.userId },
+      select: { email: true, name: true },
+    });
+
+    if (!quemLiga) {
+      return { erro: "Conta não encontrada." };
+    }
+
+    const ativas = await ctx.prisma.user.count({
+      where: { active: true },
+    });
+
+    const teste = await enviarEmail({
+      para: quemLiga.email,
+      assunto:
+        "CW Reputação — verificação em duas etapas exigida de todos",
+      texto: [
+        `${quemLiga.name || "Olá"},`,
+        "",
+        `A verificação em duas etapas passou a ser exigida das ${ativas} contas ativas do CW Reputação.`,
+        "",
+        "Este e-mail foi enviado antes de a mudança ser gravada, para provar",
+        "que o envio funciona. Se ele não tivesse saído, nada teria mudado —",
+        "exigir um código que não chega trancaria a equipe inteira do lado de fora.",
+        "",
+        "A partir do próximo login, cada pessoa recebe o próprio código de seis dígitos.",
+      ].join("\n"),
+    });
+
+    if (!teste.ok) {
+      return {
+        erro: `Não exigi de todos: o envio de teste falhou. ${teste.erro ?? ""} Se eu tivesse gravado, as ${ativas} contas ativas ficariam sem entrar no próximo login, e o conserto seria no banco.`,
+      };
+    }
+  }
+
   const dentro = (
     valor: number,
     padrao: number,
