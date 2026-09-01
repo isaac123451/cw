@@ -41,6 +41,8 @@ import {
   medir,
 } from "../lib/services/assistant.agent";
 
+import { PERGUNTAS } from "./perguntas-do-agente";
+
 import { fetchCases } from "../lib/services/case.repository";
 
 import {
@@ -399,6 +401,147 @@ async function main() {
   if (errosLocais === 0) {
     console.log(
       "\n  O agente escolhe e mede sem chamar API nenhuma.\n"
+    );
+  }
+
+  /* ------------------- 4c. o acerto sobre o conjunto rotulado ---- */
+
+  /**
+   * O número que diz se o agente melhorou.
+   *
+   * Os casos acima são pontuais: cada um prova uma coisa. Este bloco
+   * mede o **conjunto** — dezenas de perguntas rotuladas, incluindo as
+   * que não são da operação. Mexer num gatilho para consertar uma
+   * pergunta quase sempre mexe em outras, e sem esta porcentagem não há
+   * como saber se a troca valeu.
+   *
+   * As duas colunas são separadas de propósito. Um seletor pode subir o
+   * acerto das perguntas da operação simplesmente escolhendo mais, e
+   * pagar isso respondendo "me conte uma piada" com números da base.
+   * Contar os dois juntos esconderia essa troca.
+   */
+  console.log("");
+
+  let acertosOperacao = 0;
+  let totalOperacao = 0;
+  let acertosForaDoTema = 0;
+  let totalForaDoTema = 0;
+
+  const errosPorMedicao = new Map<string, string[]>();
+
+  for (const { pergunta, esperada } of PERGUNTAS) {
+
+    const nomes = escolherMedicoesLocalmente(pergunta).map(
+      (e) => e.nome
+    );
+
+    if (esperada === null) {
+
+      totalForaDoTema += 1;
+
+      if (nomes.length === 0) acertosForaDoTema += 1;
+      else {
+        const lista =
+          errosPorMedicao.get("(fora do tema)") ?? [];
+        lista.push(
+          `"${pergunta}" → mediu ${nomes.join(", ")}`
+        );
+        errosPorMedicao.set("(fora do tema)", lista);
+      }
+
+      continue;
+    }
+
+    totalOperacao += 1;
+
+    if (nomes.includes(esperada)) {
+      acertosOperacao += 1;
+    } else {
+      const lista = errosPorMedicao.get(esperada) ?? [];
+      lista.push(
+        `"${pergunta}" → ${nomes.join(", ") || "nada"}`
+      );
+      errosPorMedicao.set(esperada, lista);
+    }
+  }
+
+  const pct = (n: number, de: number) =>
+    de === 0 ? 0 : Math.round((n / de) * 100);
+
+  const acertoOperacao = pct(
+    acertosOperacao,
+    totalOperacao
+  );
+
+  const acertoForaDoTema = pct(
+    acertosForaDoTema,
+    totalForaDoTema
+  );
+
+  console.log(
+    `  CONJUNTO ROTULADO — ${PERGUNTAS.length} perguntas\n`
+  );
+
+  console.log(
+    `    perguntas da operação   ${acertosOperacao}/${totalOperacao}  (${acertoOperacao}%)`
+  );
+
+  console.log(
+    `    fora do tema, recusadas ${acertosForaDoTema}/${totalForaDoTema}  (${acertoForaDoTema}%)\n`
+  );
+
+  if (errosPorMedicao.size > 0) {
+
+    console.log("    onde ainda erra:\n");
+
+    for (const [medicao, exemplos] of errosPorMedicao) {
+      console.log(`      ${medicao}`);
+      for (const exemplo of exemplos) {
+        console.log(`        · ${exemplo}`);
+      }
+    }
+
+    console.log("");
+  }
+
+  /*
+    O piso existe para o número não poder cair sem alguém saber.
+
+    Não é uma meta: é um alarme. Quem mexer nos gatilhos e derrubar o
+    acerto descobre aqui, e não na primeira pergunta que a operação
+    fizer.
+  */
+  /*
+    O piso subiu de 90 para 95 quando o acerto chegou a 99%.
+
+    Um piso muito abaixo do valor real deixa de alarmar: daria para
+    perder quatro perguntas sem ninguém notar. Ele acompanha o número,
+    alguns pontos atrás, para caber ajuste sem esconder regressão.
+  */
+  const PISO_OPERACAO = 95;
+  const PISO_FORA = 100;
+
+  if (acertoOperacao >= PISO_OPERACAO) {
+    ok(
+      `acerto nas perguntas da operação ≥ ${PISO_OPERACAO}%`,
+      `${acertoOperacao}%`
+    );
+  } else {
+    falhar(
+      `acerto nas perguntas da operação ≥ ${PISO_OPERACAO}%`,
+      `${acertoOperacao}% — veja a lista acima`
+    );
+  }
+
+  if (acertoForaDoTema >= PISO_FORA) {
+    ok(
+      "nenhuma pergunta fora do tema virou medição",
+      `${acertosForaDoTema}/${totalForaDoTema}`
+    );
+  } else {
+    falhar(
+      "nenhuma pergunta fora do tema virou medição",
+      `${acertoForaDoTema}% — o agente está respondendo o que não sabe`
     );
   }
 

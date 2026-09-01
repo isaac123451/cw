@@ -977,6 +977,7 @@ const GATILHOS: Record<string, string[]> = {
     "time",
     "equipe",
     "quem esta cuidando",
+    "quem tem mais",
     "atendente",
     "dono do caso",
   ],
@@ -987,6 +988,7 @@ const GATILHOS: Record<string, string[]> = {
     "marcacoes",
     "tags",
     "rotulos",
+    "etiquetando",
   ],
 
   movimento_recente: [
@@ -999,6 +1001,7 @@ const GATILHOS: Record<string, string[]> = {
     "chegaram",
     "entraram",
     "novos casos",
+    "casos novos",
   ],
 };
 
@@ -1013,24 +1016,85 @@ function simplificar(texto: string) {
 }
 
 /**
- * O gatilho aparece como palavra inteira?
+ * A raiz aproximada de uma palavra em português.
  *
- * Sem fronteira de palavra, "previsão do **tempo** amanhã" casaria com
- * "tempo" e o agente responderia com o tempo de espera do consumidor —
- * uma resposta impecável para outra pergunta, que é o pior erro que um
- * assistente comete. O mesmo defeito já tinha aparecido nas rotinas
- * determinísticas; a correção é a mesma.
+ * **Por que existe.** Duas vezes seguidas uma medição ficou muda pela
+ * forma da palavra: "críticos" não casava com "criticas", "parados"
+ * não casava com "paradas". A correção na hora foi escrever as quatro
+ * formas à mão — o que resolve o caso e deixa o defeito inteiro de pé,
+ * porque a próxima palavra vai chegar em outra conjugação.
+ *
+ * Recortar o plural e a marca de gênero resolve a classe: "vencida",
+ * "vencidos", "esquecido", "demorados" e "antiga" passam a encontrar o
+ * gatilho sem ninguém precisar prever a forma.
+ *
+ * **Conservadora de propósito.** O corte de gênero só vale a partir de
+ * seis letras, e é isso que mantém "caso" e "casa" distintos — em
+ * quatro letras a poda juntaria os dois numa raiz só. Perde-se alguma
+ * flexão rara; não se ganha uma colisão que faria o agente responder
+ * sobre outra coisa.
  */
-function casaComoPalavra(texto: string, gatilho: string) {
+function raiz(palavra: string) {
 
-  const escapado = gatilho.replace(
-    /[.*+?^${}()|[\]\\]/g,
-    "\\$&"
-  );
+  let p = palavra;
 
-  return new RegExp(
-    `(^|[^a-z0-9])${escapado}([^a-z0-9]|$)`
-  ).test(texto);
+  if (p.length > 4) {
+    p = p.replace(/(oes|aes)$/, "ao");
+    p = p.replace(/ais$/, "al");
+    p = p.replace(/eis$/, "el");
+    p = p.replace(/s$/, "");
+  }
+
+  if (p.length >= 6) {
+    p = p.replace(/[oa]$/, "");
+  }
+
+  return p;
+}
+
+/** A frase virada em raízes, na ordem. */
+function raizes(texto: string) {
+  return simplificar(texto)
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean)
+    .map(raiz);
+}
+
+/**
+ * A sequência do gatilho aparece inteira e em ordem na pergunta?
+ *
+ * Sequência, e não conjunto: "quanto tempo" tem de casar com "quanto
+ * tempo demora" e **não** com "qual a previsão do tempo amanhã". Se a
+ * ordem não importasse, qualquer frase com as duas palavras soltas
+ * receberia números da operação — que é exatamente o erro que a
+ * fronteira de palavra veio evitar, só que pior.
+ */
+function contemSequencia(
+  frase: string[],
+  gatilho: string[]
+) {
+
+  if (gatilho.length === 0) return false;
+
+  for (
+    let i = 0;
+    i + gatilho.length <= frase.length;
+    i += 1
+  ) {
+
+    let bate = true;
+
+    for (let j = 0; j < gatilho.length; j += 1) {
+      if (frase[i + j] !== gatilho[j]) {
+        bate = false;
+        break;
+      }
+    }
+
+    if (bate) return true;
+  }
+
+  return false;
 }
 
 /**
@@ -1086,6 +1150,9 @@ export function escolherMedicoesLocalmente(
 
   const texto = simplificar(pergunta);
 
+  /* A pergunta em raízes, uma vez só, reaproveitada por todas. */
+  const frase = raizes(pergunta);
+
   const pontuadas = CATALOGO.map((medicao) => {
 
     const gatilhos = GATILHOS[medicao.nome] ?? [];
@@ -1100,7 +1167,7 @@ export function escolherMedicoesLocalmente(
     */
     const peso = gatilhos.reduce(
       (maior, gatilho) =>
-        casaComoPalavra(texto, simplificar(gatilho))
+        contemSequencia(frase, raizes(gatilho))
           ? Math.max(maior, gatilho.length)
           : maior,
       0
