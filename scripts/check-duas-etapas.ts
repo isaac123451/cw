@@ -28,11 +28,29 @@
  *  11. A faxina apaga o que passou do prazo e **não** apaga o que ainda
  *      vale.
  *
- * O envio de e-mail roda no modo "console" (sem RESEND_API_KEY), então
- * nada sai para caixa de entrada de ninguém durante a conferência.
+ * O envio de e-mail roda no modo "console", então nada sai para caixa
+ * de entrada de ninguém durante a conferência — ver a nota logo abaixo
+ * dos imports, que é o que garante isso.
  */
 import "dotenv/config";
 
+/**
+ * O modo console é **forçado**, não presumido.
+ *
+ * Este cabeçalho sempre disse que a conferência roda sem enviar nada.
+ * Só que a garantia era "ninguém configurou `RESEND_API_KEY`" — e no
+ * dia em que alguém configurou (que é o objetivo do projeto), o script
+ * passou a tentar entregar de verdade um código para
+ * `verificacao-duas-etapas@cardapioweb.com`, um endereço que não
+ * existe. O provedor recusava, `criarDesafio` devolvia erro, e três
+ * conferências ficavam vermelhas **sem que nada estivesse quebrado**.
+ *
+ * Um verificador que reprova por causa do ambiente ensina a ignorar o
+ * vermelho, que é o pior estrago que ele pode causar. O que se prova
+ * aqui é o mecanismo do código de seis dígitos — expiração, palpites,
+ * reenvio, faxina —, e nenhuma dessas perguntas depende de o e-mail
+ * sair de verdade. Quem prova a entrega é `npm run check:email`.
+ */
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 
@@ -41,7 +59,29 @@ import bcrypt from "bcryptjs";
 import {
   podeEnviarEmail,
   provedorAtivo,
+  remetenteEhSandbox,
 } from "../lib/email/enviar";
+
+/**
+ * O retrato do ambiente é lido **antes** de forçar o console.
+ *
+ * O bloco "ESTADO DE HOJE", lá no fim, responde à pergunta da operação
+ * — "liguei e o login não pediu nada, por quê?". Se ele lesse o estado
+ * depois do `delete`, responderia "envio ativo (console)" numa
+ * instalação com Resend configurado: uma resposta tranquilizadora e
+ * falsa, sobre a única pergunta que aquele bloco existe para responder.
+ *
+ * Fica logo abaixo dos imports, e não junto do comentário lá em cima,
+ * porque precisa rodar **depois** que o módulo de e-mail carregou e
+ * **antes** do `delete`.
+ */
+const ENVIO_REAL = {
+  pode: podeEnviarEmail(),
+  provedor: provedorAtivo(),
+  sandbox: remetenteEhSandbox(),
+};
+
+delete process.env.RESEND_API_KEY;
 
 const url =
   process.env.DIRECT_URL || process.env.DATABASE_URL;
@@ -515,8 +555,12 @@ async function main() {
 
   console.log(
     `    envio de e-mail       ${
-      podeEnviarEmail()
-        ? `ativo (${provedorAtivo()})`
+      ENVIO_REAL.pode
+        ? `ativo (${ENVIO_REAL.provedor})${
+            ENVIO_REAL.sandbox
+              ? " · remetente de SANDBOX: só entrega para o dono da conta do Resend"
+              : ""
+          }`
         : "DESLIGADO — sem RESEND_API_KEY a verificação não liga"
     }`
   );
@@ -534,7 +578,7 @@ async function main() {
   );
 
   if (
-    !podeEnviarEmail() ||
+    !ENVIO_REAL.pode ||
     (!cfg?.twoFactorRequired && comProprio === 0)
   ) {
 
@@ -542,7 +586,7 @@ async function main() {
       "\n    O login não vai pedir código, e isto é o esperado:"
     );
 
-    if (!podeEnviarEmail()) {
+    if (!ENVIO_REAL.pode) {
       console.log(
         "      · sem provedor de e-mail, exigir um código que não chega"
       );

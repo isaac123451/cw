@@ -232,6 +232,35 @@ export default function SegurancaCard() {
               lado de fora.
             </span>
           </div>
+        ) : retrato.remetenteDeSandbox ? (
+          /*
+            Envio ativo, mas para uma pessoa só.
+
+            O sandbox do Resend entrega exclusivamente ao dono da conta.
+            Um "envio ativo" verde aqui seria verdade pela metade, e a
+            metade que falta é justamente a que decide se a equipe pode
+            ser obrigada ao 2FA. Dizer isso antes do clique evita
+            descobrir pelo erro — ou, pior, pelo login de outra pessoa.
+          */
+          <div className="flex items-start gap-2.5 rounded-xl bg-amber-50 px-3.5 py-3 text-sm text-amber-800 ring-1 ring-inset ring-amber-100">
+            <MailWarning
+              size={16}
+              className="mt-0.5 shrink-0"
+            />
+            <span>
+              <strong className="font-semibold">
+                Envio ativo, mas só para uma pessoa.
+              </strong>{" "}
+              O remetente atual é o de testes do Resend, que entrega
+              apenas ao e-mail dono da conta. Dá para{" "}
+              <strong className="font-semibold">
+                ligar na sua conta
+              </strong>{" "}
+              — a confirmação por e-mail é enviada antes de gravar, e
+              sem ela nada é ligado. Exigir de todos fica bloqueado até
+              um domínio próprio ser verificado no Resend.
+            </span>
+          </div>
         ) : (
           <p className="flex items-center gap-2 text-xs text-zinc-500">
             <ShieldCheck
@@ -327,12 +356,34 @@ export default function SegurancaCard() {
                 já usam por escolha própria.
               </p>
 
-              <label className="mt-4 flex cursor-pointer items-center gap-2.5">
+              {/*
+                Com o sandbox o campo fica bloqueado, e com o motivo à
+                vista.
+
+                O servidor já recusa — botão desabilitado se contorna, e
+                a recusa de verdade mora lá. Aqui a questão é outra:
+                deixar marcar, deixar salvar e só então dizer "não" faz
+                a pessoa acreditar que configurou algo. Pior ainda numa
+                trava cujo erro só apareceria no login da equipe.
+              */}
+              <label
+                className={`mt-4 flex items-center gap-2.5 ${
+                  retrato.remetenteDeSandbox
+                    ? "cursor-not-allowed"
+                    : "cursor-pointer"
+                }`}
+              >
 
                 <input
                   type="checkbox"
-                  checked={draft.exigirParaTodos}
-                  disabled={!retrato.podeEnviar}
+                  checked={
+                    draft.exigirParaTodos &&
+                    !retrato.remetenteDeSandbox
+                  }
+                  disabled={
+                    !retrato.podeEnviar ||
+                    retrato.remetenteDeSandbox
+                  }
                   onChange={(e) =>
                     setDraft({
                       ...draft,
@@ -342,11 +393,25 @@ export default function SegurancaCard() {
                   className="h-4 w-4 rounded border-zinc-300 accent-violet-700 disabled:cursor-not-allowed"
                 />
 
-                <span className="text-sm text-zinc-700">
+                <span
+                  className={`text-sm ${
+                    retrato.remetenteDeSandbox
+                      ? "text-zinc-400"
+                      : "text-zinc-700"
+                  }`}
+                >
                   Exigir código por e-mail de todo mundo
                 </span>
 
               </label>
+
+              {retrato.remetenteDeSandbox ? (
+                <p className="mt-2 text-xs text-zinc-500">
+                  Indisponível enquanto o remetente for o de testes do
+                  Resend: só uma pessoa receberia o código, e as demais
+                  ficariam sem entrar.
+                </p>
+              ) : null}
 
               <div className="mt-5 flex flex-wrap gap-6 border-t border-zinc-100 pt-4">
 

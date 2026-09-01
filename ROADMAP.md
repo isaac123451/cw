@@ -405,6 +405,23 @@ primeiro. A propagação leva de minutos a algumas horas.
 O sandbox **não** substitui isso: ele só entrega para o e-mail dono da
 conta, então a equipe não receberia código nenhum.
 
+**A ponte, enquanto o DNS não sai.** `EMAIL_REMETENTE` aponta hoje para
+o sandbox, e isso deixa **uma pessoa** — o dono da conta do Resend —
+ligar a verificação na própria conta e usar 2FA de verdade. Duas travas
+foram construídas para que essa ponte não vire armadilha:
+
+- **Ligar para si envia um e-mail de confirmação antes de gravar.** Se
+  ele não sair, não liga, e a tela diz por quê. Antes, "há provedor
+  configurado" era tratado como "o código chega até esta pessoa" — não
+  é a mesma coisa, e a diferença só apareceria no login seguinte, com a
+  pessoa já trancada do lado de fora.
+- **"Exigir de todos" fica bloqueado** enquanto o remetente for o de
+  sandbox, no servidor e na tela, porque entregaria para uma pessoa e
+  trancaria as outras.
+
+Quando o domínio for verificado, é uma variável: aponte
+`EMAIL_REMETENTE` para ele e as duas travas se soltam sozinhas.
+
 Para conferir o estado a qualquer momento, sem gastar envio:
 
 ```bash

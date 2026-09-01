@@ -35,6 +35,7 @@ import {
   enviarEmail,
   podeEnviarEmail,
   provedorAtivo,
+  remetenteEhSandbox,
 } from "../lib/email/enviar";
 
 let falhas = 0;
@@ -180,10 +181,27 @@ function traduzir(status: number, corpo: string) {
     return "A chave não vale — errada, revogada, ou copiada pela metade. Resend → API Keys → Create API Key (ela só aparece uma vez, então recopie inteira).";
   }
 
+  /*
+    Este caso vem antes do "domínio não verificado", e não depois.
+
+    Os dois erros citam "verify a domain", então casar pelo texto genérico
+    pegava este aqui primeiro e respondia "teste com o sandbox" — para
+    quem **já estava usando o sandbox**. Certo no formato, errado no
+    motivo, que é o defeito que este arquivo inteiro existe para não ter.
+  */
+  if (/only send testing emails/i.test(corpo)) {
+
+    const dono = corpo.match(
+      /your own email address \(([^)]+)\)/i
+    )?.[1];
+
+    return `Este é o limite do sandbox, não um defeito: ele só entrega para o e-mail dono da conta do Resend${
+      dono ? ` (${dono})` : ""
+    }. Serve para uma pessoa ligar a verificação em duas etapas para si; a equipe só passa a receber quando um domínio próprio for verificado.`;
+  }
+
   if (
-    /domain is not verified|not verified|testing emails/i.test(
-      corpo
-    )
+    /domain is not verified|not verified/i.test(corpo)
   ) {
     return "O domínio do remetente não está verificado. Resend → Domains → adicionar o domínio e criar os registros DNS (SPF e DKIM) que ele mostrar. Enquanto isso, dá para testar com o remetente de sandbox: EMAIL_REMETENTE=\"CW Reputação <onboarding@resend.dev>\" — mas ele só entrega para o e-mail dono da conta.";
   }
@@ -296,6 +314,56 @@ async function main() {
           ? ""
           : "  (padrão do código — EMAIL_REMETENTE não está definida)"
       }`
+    );
+  }
+
+  /* ------------------------- 3b. o classificador de sandbox ---- */
+
+  /**
+   * `remetenteEhSandbox()` decide se a equipe pode ser obrigada ao 2FA.
+   *
+   * A tela de Segurança recusa "exigir de todos" quando o remetente é o
+   * de sandbox, porque ele só entrega para uma pessoa. Se este
+   * classificador errar para **menos**, a recusa não acontece e a
+   * equipe é trancada para fora — o pior desfecho do sistema inteiro.
+   * Por isso ele é conferido caso a caso, e não por inspeção.
+   */
+  const CASOS_DE_REMETENTE: [string, boolean][] = [
+    ["CW Reputação <onboarding@resend.dev>", true],
+    ["onboarding@resend.dev", true],
+    ["x@mail.resend.dev", true],
+    ["CW <nao-responda@cardapioweb.com>", false],
+    ["nao-responda@avisos.cardapioweb.com", false],
+    // O nome de exibição não pode mandar na decisão.
+    ["resend.dev <nao-responda@cardapioweb.com>", false],
+  ];
+
+  const original = process.env.EMAIL_REMETENTE;
+
+  const erradas = CASOS_DE_REMETENTE.filter(
+    ([valor, esperado]) => {
+      process.env.EMAIL_REMETENTE = valor;
+      return remetenteEhSandbox() !== esperado;
+    }
+  );
+
+  if (original === undefined) {
+    delete process.env.EMAIL_REMETENTE;
+  } else {
+    process.env.EMAIL_REMETENTE = original;
+  }
+
+  console.log("");
+
+  if (erradas.length === 0) {
+    ok(
+      "o classificador de sandbox acerta os 6 casos",
+      "é ele que impede exigir 2FA de todos com um remetente que entrega para um só"
+    );
+  } else {
+    falhar(
+      "o classificador de sandbox acerta os 6 casos",
+      `errou em: ${erradas.map(([v]) => `"${v}"`).join(", ")}`
     );
   }
 

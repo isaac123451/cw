@@ -8,8 +8,10 @@ import type { Modulo } from "@/lib/auth/modules";
 import { getSession } from "@/lib/auth/session";
 
 import {
+  enviarEmail,
   podeEnviarEmail,
   provedorAtivo,
+  remetenteEhSandbox,
 } from "@/lib/email/enviar";
 
 import { lerConfiguracao } from "@/lib/auth/two-factor";
@@ -29,6 +31,17 @@ export interface RetratoDaSeguranca {
   /** Dá para enviar e-mail neste ambiente? */
   podeEnviar: boolean;
   provedor: string;
+
+  /**
+   * O remetente é o de sandbox do Resend?
+   *
+   * Muda o que a tela pode oferecer: com ele o envio funciona, mas só
+   * para uma pessoa — o dono da conta do Resend. Ligar para si é
+   * legítimo; exigir de todos trancaria a equipe para fora, e o
+   * servidor recusa. A tela precisa saber para dizer isso antes, e não
+   * depois do erro.
+   */
+  remetenteDeSandbox: boolean;
 
   /** Quantas pessoas já pediram a segunda etapa para si. */
   pessoasComSegundaEtapa: number;
@@ -67,6 +80,7 @@ export async function lerSeguranca(): Promise<
     tentativas: config.maxAttempts,
     podeEnviar: podeEnviarEmail(),
     provedor: provedorAtivo(),
+    remetenteDeSandbox: remetenteEhSandbox(),
     pessoasComSegundaEtapa: comSegundaEtapa,
     totalDePessoas: total,
   };
@@ -102,6 +116,25 @@ export async function salvarSeguranca(
   if (entrada.exigirParaTodos && !podeEnviarEmail()) {
     return {
       erro: "Configure o envio de e-mail (RESEND_API_KEY) antes de exigir a verificação em duas etapas — sem ele ninguém receberia o código.",
+    };
+  }
+
+  /**
+   * A mesma trava, para um caso que passa pela anterior.
+   *
+   * Com o remetente de sandbox do Resend o envio **funciona** — só que
+   * exclusivamente para o e-mail dono da conta do Resend. Ou seja,
+   * `podeEnviarEmail()` responde que sim e a exigência global trancaria
+   * a equipe inteira para fora, menos uma pessoa.
+   *
+   * O sandbox é uma ponte legítima enquanto o domínio não é verificado:
+   * dá para ligar a verificação **para si**, e a ação de ligar prova o
+   * envio antes de gravar. O que ele não sustenta é a exigência para
+   * todos, e é exatamente isso que esta recusa separa.
+   */
+  if (entrada.exigirParaTodos && remetenteEhSandbox()) {
+    return {
+      erro: "O remetente atual é o de sandbox do Resend, que só entrega para o e-mail dono da conta — exigir de todos trancaria a equipe para fora. Verifique um domínio próprio no Resend e aponte EMAIL_REMETENTE para ele. Enquanto isso, cada pessoa que receber e-mail pode ligar a verificação na própria conta.",
     };
   }
 
@@ -166,6 +199,60 @@ export async function definirSegundaEtapaPropria(
     return {
       erro: "Configure o envio de e-mail antes de ligar a verificação em duas etapas.",
     };
+  }
+
+  /**
+   * Ligar só depois de **provar** que o código chega neste endereço.
+   *
+   * Ter provedor configurado não é a mesma coisa que conseguir entregar
+   * para esta pessoa, e a diferença aparece no pior momento possível —
+   * no próximo login dela, com a senha já digitada e nenhum código na
+   * caixa de entrada. O conserto exigiria abrir o banco na mão.
+   *
+   * O caso concreto que motivou isto: com o remetente de sandbox do
+   * Resend, o envio funciona, `podeEnviarEmail()` diz que sim, e mesmo
+   * assim **só uma pessoa** recebe — o dono da conta do Resend. Quem
+   * ligasse a verificação para si seria trancado para fora sem nenhum
+   * aviso.
+   *
+   * Em vez de uma regra especial para o sandbox, a ação passou a
+   * exercer o caminho de verdade: manda um e-mail agora, para este
+   * endereço, e só grava se ele saiu. Isso cobre o sandbox e também
+   * todo mau ajuste futuro — domínio que caiu, chave revogada,
+   * endereço recusado.
+   */
+  if (ligar) {
+
+    const pessoa = await ctx.prisma.user.findUnique({
+      where: { id: sessao.id },
+      select: { email: true, name: true },
+    });
+
+    if (!pessoa) {
+      return { erro: "Conta não encontrada." };
+    }
+
+    const teste = await enviarEmail({
+      para: pessoa.email,
+      assunto:
+        "CW Reputação — verificação em duas etapas ligada",
+      texto: [
+        `${pessoa.name || "Olá"},`,
+        "",
+        "A verificação em duas etapas foi ligada na sua conta do CW Reputação.",
+        "",
+        "Este e-mail existe para provar que o código de seis dígitos consegue",
+        "chegar até você. Se ele chegou, o próximo login vai funcionar.",
+        "",
+        "Se você não fez isso, entre em contato com quem administra o sistema.",
+      ].join("\n"),
+    });
+
+    if (!teste.ok) {
+      return {
+        erro: `Não liguei a verificação: o e-mail de confirmação não chegou a sair para ${pessoa.email}. ${teste.erro ?? ""} Ligar assim trancaria você para fora no próximo login.`,
+      };
+    }
   }
 
   await ctx.prisma.user.update({

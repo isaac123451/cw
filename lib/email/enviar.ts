@@ -71,6 +71,34 @@ export function podeEnviarEmail() {
   return provedorAtivo() !== "nenhum";
 }
 
+/**
+ * O envio está saindo pelo remetente de sandbox do Resend?
+ *
+ * `resend.dev` é o remetente emprestado que funciona sem verificar
+ * domínio nenhum — e por isso o Resend **só entrega para o e-mail dono
+ * da conta**. É o que permite ligar a verificação em duas etapas para
+ * uma pessoa antes do DNS ficar pronto.
+ *
+ * Quem precisa saber disto é a tela de Segurança: com o sandbox,
+ * exigir a verificação de **todo mundo** trancaria todo mundo, menos
+ * uma pessoa, para fora. A trava mora lá; aqui só se responde a
+ * pergunta, porque é aqui que o remetente é decidido.
+ */
+export function remetenteEhSandbox() {
+
+  const dominio = remetente()
+    .split("@")
+    .pop()
+    ?.replace(">", "")
+    .trim()
+    .toLowerCase();
+
+  return (
+    dominio === "resend.dev" ||
+    Boolean(dominio?.endsWith(".resend.dev"))
+  );
+}
+
 export interface ResultadoDoEnvio {
   ok: boolean;
   provedor: Provedor;
