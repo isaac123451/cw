@@ -6,6 +6,7 @@ import {
   CalendarCheck,
   CalendarX,
   ChevronDown,
+  CircleAlert,
   ExternalLink,
   Lock,
   Pencil,
@@ -444,6 +445,38 @@ export default function GoogleCalendarCard() {
           </div>
         }
       >
+
+        {/*
+          A conta está ligada, mas sem permissão de ler e-mail.
+
+          É o estado de todo mundo que conectou o Google antes de a
+          entrada automática de reclamações existir: escopo novo não se
+          aplica a autorização antiga, e o token segue válido para a
+          agenda enquanto recusa o Gmail com 403.
+
+          Sem este aviso, a consequência era invisível — reclamação
+          simplesmente não chegava, e o único lugar onde o motivo
+          aparecia era o JSON da rotina agendada. Aqui, ao lado do botão
+          que resolve, ele chega a quem pode agir.
+        */}
+        {status.podeLerEmail === false && (
+          <div className="mb-3 flex items-start gap-2.5 rounded-xl bg-amber-50 px-3.5 py-3 text-sm text-amber-800 ring-1 ring-inset ring-amber-100">
+            <CircleAlert
+              size={16}
+              className="mt-0.5 shrink-0"
+            />
+            <span>
+              <strong className="font-semibold">
+                Sem permissão para ler o e-mail.
+              </strong>{" "}
+              A agenda funciona, mas as reclamações do Reclame Aqui não
+              entram sozinhas — elas chegam pelo aviso que o portal manda
+              por e-mail. Desconecte e conecte a conta de novo para
+              conceder a leitura; nada é marcado, movido ou apagado na
+              sua caixa.
+            </span>
+          </div>
+        )}
 
         {/* Período */}
         <div className="mb-3 flex flex-wrap items-center gap-1.5">

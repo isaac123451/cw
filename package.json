@@ -64,7 +64,8 @@
     "check:dossie": "tsx scripts/check-dossie.ts",
     "check:notas-nps": "tsx scripts/check-notas-nps.ts",
     "check:agente": "tsx scripts/check-agente.ts",
-    "check:email": "tsx --conditions=react-server scripts/check-email.ts"
+    "check:email": "tsx --conditions=react-server scripts/check-email.ts",
+    "check:email-ra": "tsx scripts/check-email-ra.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",

@@ -14,9 +14,27 @@
  * agenda nem a ver contatos. `userinfo.email` existe só para mostrar na
  * tela qual conta foi conectada; sem isso a pessoa não tem como
  * conferir se ligou a conta certa.
+ *
+ * `gmail.readonly` entrou para a entrada automática de reclamações: o
+ * Reclame Aqui manda um e-mail a cada uma nova, e ler esse aviso é o
+ * único caminho que faz o caso aparecer com o navegador **fechado** —
+ * a extensão só funciona com a aba aberta, e o RA não tem API pública.
+ *
+ * **É `readonly`, e é o mais estreito que resolve.** Não existe escopo
+ * do Gmail limitado a um remetente; o filtro por remetente acontece do
+ * nosso lado, na consulta. Também não pedimos escrita: a rotina lê,
+ * cria a reclamação e não toca na caixa — nada é marcado, movido nem
+ * apagado. Quem quiser conferir o que foi lido tem a consulta escrita
+ * em `gmail.service.ts`, em uma linha.
+ *
+ * **Quem ligar a conta vai ver esse pedido.** Um escopo novo obriga a
+ * reautorizar: quem já conectou o Google precisa conectar de novo, e a
+ * tela de Integrações diz isso. Sem reautorizar, a agenda continua
+ * funcionando e a leitura de e-mail simplesmente não liga.
  */
 export const GOOGLE_SCOPES = [
   "https://www.googleapis.com/auth/calendar.events",
+  "https://www.googleapis.com/auth/gmail.readonly",
   "https://www.googleapis.com/auth/userinfo.email",
 ].join(" ");
 

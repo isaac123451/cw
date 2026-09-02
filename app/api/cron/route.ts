@@ -1,3 +1,5 @@
+import { importarAvisosDoRA } from "@/lib/services/raEmail.import";
+
 import { revalidateTag } from "next/cache";
 
 import { Prisma, PrismaClient } from "@prisma/client";
@@ -103,6 +105,7 @@ export async function GET(request: Request) {
     vinculos,
     desafios,
     wootric,
+    avisosDoRA,
   ] = await Promise.all([
     encerrarNpsAbandonado(prisma),
     avisarMovimentacoesAtrasadas(prisma),
@@ -138,6 +141,20 @@ export async function GET(request: Request) {
      * na janela.
      */
     importarNpsRecente(prisma),
+
+    /**
+     * As reclamações que chegaram por e-mail.
+     *
+     * O Reclame Aqui não tem API pública e a página é protegida por
+     * Cloudflare; a extensão resolve com a aba aberta, mas reclamação
+     * de madrugada ficava esperando alguém ligar o computador. O aviso
+     * por e-mail é o único sinal que chega com todo mundo desconectado,
+     * e é aqui que ele vira caso no quadro.
+     *
+     * Não lança: conta desconectada ou Gmail fora do ar viram campo no
+     * resultado, e as outras cinco tarefas seguem.
+     */
+    importarAvisosDoRA(prisma),
   ]);
 
   /**
@@ -152,7 +169,8 @@ export async function GET(request: Request) {
     movimentacoes.avisadas > 0 ||
     vinculos.vinculados > 0 ||
     (wootric.novas ?? 0) > 0 ||
-    (wootric.atualizadas ?? 0) > 0
+    (wootric.atualizadas ?? 0) > 0 ||
+    avisosDoRA.criadas > 0
   ) {
     revalidateTag(WORKSPACE_TAG, "max");
   }
@@ -166,6 +184,7 @@ export async function GET(request: Request) {
     vinculos,
     desafiosApagados: desafios,
     wootric,
+    avisosDoRA,
   });
 }
 

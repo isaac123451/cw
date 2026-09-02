@@ -13,6 +13,8 @@ import {
   validAccessToken,
 } from "@/lib/services/google.service";
 
+import { podeLerEmail as podeLerEmailNoGmail } from "@/lib/services/gmail.service";
+
 import {
   GoogleEvent,
   GoogleEventDraft,
@@ -48,6 +50,20 @@ export interface GoogleStatus {
   configurado: boolean;
   conectado: boolean;
   email?: string;
+
+  /**
+   * A conta tem permissao de ler e-mail?
+   *
+   * O escopo `gmail.readonly` entrou depois que a integracao ja
+   * existia, e um escopo novo nao se aplica a quem ja autorizou: o
+   * token antigo continua valendo para agenda e recusa o Gmail com
+   * 403. Sem este campo, a entrada automatica de reclamacoes
+   * simplesmente nao acontecia, e o unico lugar onde isso aparecia era
+   * o JSON da rotina agendada, que ninguem abre.
+   *
+   * `undefined` quando nao ha conta conectada: nao ha o que responder.
+   */
+  podeLerEmail?: boolean;
 }
 
 export async function getGoogleStatus(): Promise<GoogleStatus> {
@@ -66,10 +82,32 @@ export async function getGoogleStatus(): Promise<GoogleStatus> {
     }
   );
 
+  if (!conta) {
+    return { configurado, conectado: false };
+  }
+
+  /*
+    A permissao e conferida contra o Google, nao deduzida do banco.
+
+    Guardar "pedimos o escopo tal" na hora de conectar diria o que foi
+    pedido, nao o que foi concedido — e sao coisas diferentes quando o
+    administrador do Workspace restringe. Uma chamada minima responde a
+    pergunta certa: este token, agora, consegue ler?
+  */
+  const token = await validAccessToken(
+    ctx.prisma,
+    ctx.userId
+  );
+
+  const leitura = token
+    ? await podeLerEmailNoGmail(token)
+    : { ok: false as const };
+
   return {
     configurado,
-    conectado: Boolean(conta),
-    email: conta?.email,
+    conectado: true,
+    email: conta.email,
+    podeLerEmail: leitura.ok,
   };
 }
 
