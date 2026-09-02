@@ -22,10 +22,44 @@
  * prova que ela **existe**, que é o degrau que faltava. O comportamento
  * de cada uma é conferido em `check:extensao` e `check:cron`.
  */
-import { readFileSync, readdirSync, statSync } from "node:fs";
-import { join, relative, resolve } from "node:path";
+import {
+  existsSync,
+  readFileSync,
+  readdirSync,
+  statSync,
+} from "node:fs";
+import {
+  dirname,
+  join,
+  relative,
+  resolve,
+} from "node:path";
 
 const RAIZ = resolve(__dirname, "..");
+
+/**
+ * Lê o arquivo e descarta o BOM.
+ *
+ * **O silêncio que isto conserta.** Quatro arquivos de `lib/actions`
+ * começavam com BOM — os três bytes invisíveis que alguns editores do
+ * Windows põem no início. Com eles, o teste da diretiva `use server`
+ * falhava: a linha não começa pela aspa, começa pelo BOM.
+ *
+ * A consequência não era um erro. Era o `continue` da auditoria de
+ * actions: os arquivos eram **pulados**, e `cases.ts`, `registry.ts`,
+ * `transfer.ts` e `workspace.ts` nunca apareceram no relatório. O
+ * verificador ficava verde porque não estava olhando.
+ *
+ * Os BOMs foram removidos daqueles arquivos, mas a leitura passa a
+ * tolerá-los de qualquer jeito: o próximo editor que puser um de volta
+ * não pode desligar a auditoria de novo.
+ */
+function ler(caminho: string) {
+  return readFileSync(caminho, "utf8").replace(
+    /^﻿/,
+    ""
+  );
+}
 
 let falhas = 0;
 
@@ -105,7 +139,7 @@ for (const caminho of rotas) {
     caminho
   ).replace(/\\/g, "/");
 
-  const fonte = readFileSync(caminho, "utf8");
+  const fonte = ler(caminho);
 
   const especial = SEM_DONO[nome];
 
@@ -221,7 +255,7 @@ for (const caminho of acoes) {
     caminho
   );
 
-  const fonte = readFileSync(caminho, "utf8");
+  const fonte = ler(caminho);
 
   // Arquivo sem "use server" não expõe endpoint nenhum.
   if (!/^["']use server["']/m.test(fonte)) continue;
@@ -291,7 +325,7 @@ for (const caminho of [
   ...arquivos(resolve(RAIZ, "lib"), /\.tsx?$/),
   ...arquivos(resolve(RAIZ, "components"), /\.tsx?$/),
 ]) {
-  for (const m of readFileSync(caminho, "utf8").matchAll(
+  for (const m of ler(caminho).matchAll(
     /process\.env\.(NEXT_PUBLIC_[A-Z0-9_]+)/g
   )) {
     publicas.add(m[1]);
@@ -322,7 +356,7 @@ const clientesComChave = [
   ...arquivos(resolve(RAIZ, "lib"), /\.tsx?$/),
 ]
   .filter((caminho) => {
-    const fonte = readFileSync(caminho, "utf8");
+    const fonte = ler(caminho);
     return (
       /^["']use client["']/m.test(fonte) &&
       /process\.env\.(?!NEXT_PUBLIC_)[A-Z0-9_]*(KEY|SECRET|TOKEN|URL|PASSWORD)/.test(
@@ -338,6 +372,154 @@ reportar(
   clientesComChave.length === 0
     ? ""
     : clientesComChave.join(", ")
+);
+
+/**
+ * Nenhum componente de cliente pode alcançar o Prisma.
+ *
+ * **O acidente que motivou isto.** `assistant.service` passou a importar
+ * `assistant.agent` para o assistente responder sem modelo. O agente
+ * importava `ia.service` → `iaConfig.service` → `lib/prisma` → `pg`, e
+ * como a tela do assistente é um componente de cliente, o `pg` foi parar
+ * no pacote do navegador. Ele pede `dns`, `net`, `tls` e `fs`, que lá
+ * não existem: **21 telas passaram a responder 500**.
+ *
+ * O que torna isso perigoso é como ele se esconde. `tsc` passa, o lint
+ * passa, o arquivo importado parece inocente, e o import fatal está a
+ * quatro saltos de distância. Só abrir a página revela — e só se alguém
+ * abrir a página certa.
+ *
+ * Então a cadeia é percorrida a partir de cada arquivo com
+ * `"use client"`, seguindo os imports relativos e os `@/`, até achar
+ * `lib/prisma` ou um pacote de banco. O caminho inteiro é impresso na
+ * falha, porque saber *qual* import puxou é metade do conserto.
+ */
+const PROIBIDOS =
+  /(^|\/)lib\/prisma|@prisma\/(client|adapter-pg)|(^|['"])pg(['"]|\/)/;
+
+/**
+ * Os imports que **viram código** no pacote.
+ *
+ * `import type` é apagado na compilação e não arrasta nada; contá-lo
+ * encheria o relatório de caminhos que não existem em tempo de
+ * execução.
+ */
+function importesDe(fonte: string) {
+  return [
+    ...fonte.matchAll(
+      /(?:^|\n)\s*import\s+(?!type\s)[^;]*?from\s+["']([^"']+)["']/g
+    ),
+  ].map((m) => m[1]);
+}
+
+function resolverImport(
+  deArquivo: string,
+  especificador: string
+) {
+
+  let base: string;
+
+  if (especificador.startsWith("@/")) {
+    base = resolve(RAIZ, especificador.slice(2));
+  } else if (especificador.startsWith(".")) {
+    base = resolve(dirname(deArquivo), especificador);
+  } else {
+    return null;
+  }
+
+  for (const sufixo of [
+    ".ts",
+    ".tsx",
+    "/index.ts",
+    "/index.tsx",
+  ]) {
+    if (existsSync(base + sufixo)) return base + sufixo;
+  }
+
+  return existsSync(base) ? base : null;
+}
+
+/** O caminho de imports até o Prisma, ou `null` se não houver. */
+function caminhoAtePrisma(
+  entrada: string,
+  vistos = new Set<string>(),
+  primeiro = entrada
+): string[] | null {
+
+  if (vistos.has(entrada)) return null;
+  vistos.add(entrada);
+
+  let fonte: string;
+
+  try {
+    fonte = ler(entrada);
+  } catch {
+    return null;
+  }
+
+  /**
+   * `"use server"` é uma fronteira, e a travessia para aqui.
+   *
+   * Importar um módulo de server action de um componente de cliente não
+   * traz o código dele para o navegador: o Next troca a importação por
+   * uma chamada de rede. É por isso que `UserMenu` pode importar
+   * `lib/auth/actions`, que fala com o Prisma, sem quebrar nada.
+   *
+   * Sem esta parada, a varredura acusava justamente esse caminho — um
+   * alarme falso na primeira execução, no verificador que deveria ser
+   * confiável. Alarme falso ensina a ignorar o próximo.
+   */
+  if (
+    entrada !== primeiro &&
+    /^["']use server["']/m.test(fonte)
+  ) {
+    return null;
+  }
+
+  for (const especificador of importesDe(fonte)) {
+
+    if (PROIBIDOS.test(especificador)) {
+      return [relative(RAIZ, entrada), especificador];
+    }
+
+    const alvo = resolverImport(entrada, especificador);
+
+    if (!alvo) continue;
+
+    const adiante = caminhoAtePrisma(
+      alvo,
+      vistos,
+      primeiro
+    );
+
+    if (adiante) {
+      return [relative(RAIZ, entrada), ...adiante];
+    }
+  }
+
+  return null;
+}
+
+const clientesComBanco = [
+  ...arquivos(resolve(RAIZ, "app"), /\.tsx?$/),
+  ...arquivos(resolve(RAIZ, "components"), /\.tsx?$/),
+]
+  .filter((caminho) =>
+    /^["']use client["']/m.test(
+      ler(caminho)
+    )
+  )
+  .map((caminho) => caminhoAtePrisma(caminho))
+  .filter((c): c is string[] => c !== null);
+
+reportar(
+  clientesComBanco.length === 0,
+  "nenhum componente de cliente alcança o Prisma",
+  clientesComBanco.length === 0
+    ? ""
+    : clientesComBanco
+        .map((c) => c.join("  →  "))
+        .join("\n       ")
 );
 
 /* ============================================================

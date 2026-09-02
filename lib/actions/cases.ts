@@ -1,4 +1,4 @@
-﻿"use server";
+"use server";
 
 import { after } from "next/server";
 import { unstable_cache, updateTag } from "next/cache";
@@ -8,7 +8,10 @@ import { CASES_TAG } from "@/lib/actions/tags";
 import { Case } from "@/lib/models/case";
 
 import { getPrisma } from "@/lib/prisma";
-import { requireRole } from "@/lib/auth/guard";
+import {
+  requireRole,
+  tryRole,
+} from "@/lib/auth/guard";
 import type { Modulo } from "@/lib/auth/modules";
 
 import {
@@ -52,6 +55,31 @@ async function autorizado() {
 }
 
 /**
+ * A mesma porta, para quem só lê.
+ *
+ * **Estas três leituras estavam abertas.** `listCases`,
+ * `loadCaseDescription` e `loadDossie` chamavam `getPrisma()` direto e
+ * devolviam a operação inteira — nome do consumidor, relato, dossiê —
+ * para qualquer chamada da server action, sem sessão. Esconder a tela
+ * não fecha nada: o endpoint da action é público no navegador.
+ *
+ * O buraco existia desde sempre e o `check:seguranca` não apontava,
+ * porque um BOM no começo do arquivo fazia o script pular `cases.ts`
+ * inteiro. Foi tirando o BOM que ele apareceu.
+ *
+ * `tryRole` e não `requireRole`: ler sem sessão não é erro a ser
+ * gritado, é conteúdo a ser negado. Cada leitura devolve o seu vazio —
+ * lista sem itens, texto sem texto —, que é o que a tela já sabe
+ * mostrar quando não há banco.
+ */
+async function podeLer() {
+
+  const ctx = await tryRole("LEITURA", MODULO);
+
+  return ctx?.prisma ?? null;
+}
+
+/**
  * Leitura das reclamações, com cache no servidor.
  *
  * A consulta custa 650 ms morna e 2,2 s fria contra o Supabase em São
@@ -77,6 +105,8 @@ const lerDoBanco = unstable_cache(
 );
 
 export async function listCases(): Promise<Case[]> {
+
+  if (!(await podeLer())) return [];
 
   /**
    * **Sem banco, nenhuma reclamação — nunca dado inventado.**
@@ -106,7 +136,7 @@ export async function loadCaseDescription(
   protocol: string
 ): Promise<string> {
 
-  const prisma = getPrisma();
+  const prisma = await podeLer();
 
   if (!prisma) return "";
 
@@ -123,7 +153,7 @@ export async function loadCaseDescription(
  */
 export async function loadDossie(protocol: string) {
 
-  const prisma = getPrisma();
+  const prisma = await podeLer();
 
   if (!prisma) return null;
 

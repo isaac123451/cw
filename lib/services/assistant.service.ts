@@ -23,10 +23,18 @@ import { isOpen } from "@/lib/services/case.service";
 import { parseElapsedText } from "@/lib/services/case.mapper";
 import { slugify } from "@/lib/services/slug";
 
+/*
+  Do catálogo, não do agente.
+
+  `assistant.agent` importa Prisma e o serviço de IA; este arquivo é
+  usado pela tela do assistente, que roda no navegador. Importar de lá
+  arrastou `pg` para o pacote do cliente e derrubou 21 telas com 500.
+  O catálogo é a metade sem servidor, e é dela que a tela precisa.
+*/
 import {
   escolherMedicoesLocalmente,
   medir,
-} from "./assistant.agent";
+} from "./assistant.catalogo";
 
 export interface AssistantLink {
   label: string;

@@ -1,4 +1,4 @@
-﻿"use server";
+"use server";
 
 import * as XLSX from "xlsx";
 

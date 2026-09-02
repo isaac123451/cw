@@ -197,6 +197,77 @@ async function main() {
 
   console.log(`\n  ACESSO — tentando entrar em ${base}\n`);
 
+  /**
+   * O servidor está no ar? Se não, pare aqui.
+   *
+   * Sem esta parada, cada rota respondia "sem resposta" e virava uma
+   * FALHA — e o resumo final dizia **"35 portas abriram para quem não
+   * devia"**. A frase é assustadora, precisa no formato e errada no
+   * motivo: nenhuma porta abriu, o prédio é que estava fechado.
+   *
+   * Um verificador que grita sobre segurança quando o problema é
+   * `npm run dev` desligado ensina a ignorar o vermelho dele. E o
+   * vermelho deste aqui é o que ninguém pode aprender a ignorar.
+   */
+  try {
+
+    await fetch(base, {
+      redirect: "manual",
+      cache: "no-store",
+      signal: AbortSignal.timeout(10_000),
+    });
+
+  } catch {
+
+    console.error(
+      [
+        `  Nada respondeu em ${base}.`,
+        "",
+        "  Isto não é uma falha de segurança — é o servidor fora do ar.",
+        "  Suba com `npm run dev` e rode de novo, ou aponte para outro",
+        "  endereço com CW_BASE=http://localhost:3200 npm run check:acesso",
+        "",
+      ].join("\n")
+    );
+
+    await prisma.$disconnect();
+    process.exit(1);
+  }
+
+  /**
+   * O banco responde? Se não, pare aqui também.
+   *
+   * Mesma armadilha do servidor desligado, por outro caminho. O pooler
+   * do Supabase cai por alguns segundos de vez em quando; quando isso
+   * acontece no meio da varredura, as rotas devolvem 500 e o script
+   * anuncia **"13 porta(s) abriram para quem não devia"** — uma frase
+   * de invasão para o que é uma queda de conexão.
+   *
+   * O número inclusive mudava a cada tentativa, conforme o momento da
+   * queda. Um alarme de segurança que varia de tamanho sozinho é um
+   * alarme que ninguém vai levar a sério na vez em que estiver certo.
+   */
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+  } catch (erro) {
+
+    console.error(
+      [
+        "  O banco não respondeu.",
+        "",
+        "  Isto não é uma falha de segurança — é conexão. O pooler do",
+        "  Supabase cai por alguns segundos de vez em quando; rode de",
+        "  novo. Se insistir, confira DATABASE_URL e DIRECT_URL.",
+        "",
+        `  ${erro instanceof Error ? erro.message.split("\n")[0] : erro}`,
+        "",
+      ].join("\n")
+    );
+
+    await prisma.$disconnect();
+    process.exit(1);
+  }
+
   const admin = await prisma.user.findFirst({
     where: { active: true, role: "ADMIN" },
     select: {

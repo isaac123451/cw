@@ -67,7 +67,8 @@ workspace junto com os outros cadastros.
 | `npm run check:busca-texto` | Prova o campo Buscar da tela: telefone, documento, e-mail e texto, contra a base real |
 | `npm run check:calculadora` | Mexe em cada campo do cenário sobre a base real e exige que ele mova a nota, para o lado certo — e que nenhuma combinação saia de 0–10 |
 | `npm run check:duas-etapas` | Onze defesas do código por e-mail, cada uma provada recusando o que deve: código errado, vencido, gasto, sem palpites, reenviado |
-| `npm run check:email` | Pergunta ao Resend, antes de alguém precisar: a chave vale? o remetente sai de domínio verificado? Com `-- --enviar voce@empresa.com`, manda um de verdade e traduz o erro se falhar |
+| `npm run check:email` | Pergunta ao provedor, antes de alguém precisar: a credencial vale? o remetente alcança a equipe? Com `-- --enviar voce@empresa.com`, manda um de verdade e traduz o erro se falhar |
+| `npm run check:agente` | Roda as 17 medições contra a base e confere que o número do agente é o da tela; depois mede o acerto do seletor local sobre 92 perguntas rotuladas — separando as da operação das que ele **deve** recusar |
 | `npm run extensao:icones` | Regera os PNGs do ícone da extensão |
 
 ---
@@ -144,12 +145,21 @@ entrega:
 10. ~~**Análise do NPS** e **Dashboard**: melhorar.~~ Entregue em
     23/08 — ver abaixo.
 
-**A fila acabou.** O que sobra é o que depende de você: **verificar
-`cardapioweb.com` no Resend** (registros de DNS, com quem administra o
-domínio) para a verificação em duas etapas ligar — a chave já existe e
-o envio já foi provado, `npm run check:email` mostra o estado —, e
-preencher o link do Crisp e o WhatsApp do NPS no cadastro dos
-estabelecimentos para os dois botões aparecerem na extensão.
+**A fila acabou.** O que sobra depende de você, e é pouco:
+
+1. **Um clique para exigir o 2FA de todos** — Configurações → Segurança
+   → *Exigir código por e-mail de todo mundo* → Salvar. O clique é seu
+   porque as credenciais do SMTP vivem na Vercel: a ação dispara um
+   envio real antes de gravar e só grava se ele sair. Se falhar, nada
+   muda e a tela mostra a resposta do provedor.
+2. **Preencher o link do Crisp e o WhatsApp do NPS** no cadastro dos
+   estabelecimentos, para os dois botões aparecerem na extensão.
+3. **Decidir sobre `conferencia-tela@cardapioweb.com`** — conta ADMIN
+   ativa com cara de sobra de teste. Com o 2FA exigido de todos, uma
+   conta cuja caixa não existe é uma conta que ninguém consegue usar.
+4. **Opcional:** verificar um domínio próprio no Resend (DNS, com quem
+   administra `cardapioweb.com`). Não é mais bloqueio — o SMTP entrega
+   para a equipe hoje. É o que tiraria o remetente da conta pessoal.
 
 O `SpeedInsights` saiu daqui em 23/08 — ligado, com sua autorização.
 

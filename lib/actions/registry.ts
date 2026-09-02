@@ -1,4 +1,4 @@
-﻿"use server";
+"use server";
 
 import { updateTag } from "next/cache";
 import { WORKSPACE_TAG } from "@/lib/actions/tags";

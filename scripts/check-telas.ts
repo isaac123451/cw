@@ -133,6 +133,39 @@ async function abrir(
 
 async function main() {
 
+  /**
+   * O servidor está no ar? Se não, pare aqui.
+   *
+   * Mesma correção de `check-acesso`: sem esta parada, todas as telas
+   * respondiam "fetch failed" e o resumo dizia "35 tela(s) com
+   * problema" — verdade no formato, mentira no motivo. As telas estão
+   * bem; o servidor é que não subiu.
+   */
+  try {
+
+    await fetch(base, {
+      redirect: "manual",
+      cache: "no-store",
+      signal: AbortSignal.timeout(10_000),
+    });
+
+  } catch {
+
+    console.error(
+      [
+        `\n  Nada respondeu em ${base}.`,
+        "",
+        "  As telas não estão quebradas — o servidor não está no ar.",
+        "  Suba com `npm run dev`, ou aponte para outro endereço com",
+        "  CW_BASE=http://localhost:3200 npm run check:telas",
+        "",
+      ].join("\n")
+    );
+
+    await prisma.$disconnect();
+    process.exit(1);
+  }
+
   const admin = await prisma.user.findFirst({
     where: { active: true, role: "ADMIN" },
     select: {

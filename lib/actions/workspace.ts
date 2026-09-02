@@ -1,4 +1,4 @@
-﻿"use server";
+"use server";
 
 import { unstable_cache } from "next/cache";
 
@@ -11,6 +11,7 @@ import type {
 import { WORKSPACE_TAG } from "@/lib/actions/tags";
 
 import { getPrisma } from "@/lib/prisma";
+import { tryRole } from "@/lib/auth/guard";
 
 import {
   CategoryOption,
@@ -203,6 +204,22 @@ const lerWorkspace = unstable_cache(
 );
 
 export async function loadWorkspace(): Promise<Workspace> {
+
+  /**
+   * Esta leitura estava aberta.
+   *
+   * `loadWorkspace` devolve a configuracao inteira da operacao —
+   * fluxos, categorias, etiquetas, checklists, regras de SLA — e
+   * checava apenas se havia banco. Server action e endpoint publico no
+   * navegador: sem sessao, qualquer um obtinha o mapa da casa.
+   *
+   * O `check:seguranca` nao apontava porque um BOM no inicio do
+   * arquivo fazia o script pular `workspace.ts` inteiro.
+   *
+   * `tryRole` devolve `null` em vez de lancar: sem sessao a resposta e
+   * o `VAZIO` que a tela ja sabe exibir quando nao ha banco.
+   */
+  if (!(await tryRole("LEITURA"))) return VAZIO;
 
   if (!getPrisma()) return VAZIO;
 
