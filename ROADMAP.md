@@ -117,6 +117,21 @@ o canal da página. Falta **só** o importador, e ele depende do arquivo.
 
 ### 2. Aberto, sem decisão pela frente — é só trabalho
 
+**A nota oficial do Reclame Aqui, pela extensão (01/09/2026).** Pedido:
+o agente saber a nota que o RA publica, para responder "o que eu calculo
+bate com o que eles mostram?". O servidor **não consegue** ler — a
+página e a API respondem com desafio do Cloudflare, e contornar proteção
+anti-robô está fora de questão. A extensão consegue, legitimamente: ela
+já tem permissão para `*.reclameaqui.com.br` e roda no navegador de quem
+já abre a página todo dia.
+
+O que falta para construir: a estrutura da página. Ler número de um DOM
+que nunca se viu é adivinhação, e um número errado aqui é pior que
+número nenhum — ele contradiz o painel com a mesma confiança. O caminho
+é abrir a página com a extensão instalada e capturar o trecho relevante
+uma vez; a partir dele o resto (rota, gravação, medição no catálogo do
+agente comparando com a nota calculada) é trabalho direto.
+
 Fila pedida pelo Isaac em 23/08, depois da auditoria. Em ordem de
 entrega:
 
@@ -208,6 +223,33 @@ Definir a variável na Vercel é o que a liga lá.
 
 ### 4. Armadilhas já medidas — não redescobrir
 
+- **BOM no começo do arquivo desliga verificação em silêncio
+  (01/09/2026).** Quatro arquivos de `lib/actions` começavam com os três
+  bytes invisíveis do BOM. Com eles, `/^["']use server["']/m` falha — a
+  linha não começa pela aspa —, e o `continue` do `check:seguranca`
+  **pulava o arquivo inteiro**. `cases.ts`, `registry.ts`, `transfer.ts`
+  e `workspace.ts` nunca apareceram na auditoria de server actions, e o
+  verificador ficava verde por não estar olhando. Ao tirar os BOMs
+  apareceram **quatro actions abertas**: `listCases`,
+  `loadCaseDescription`, `loadDossie` e `loadWorkspace` devolviam a
+  operação e a configuração inteiras sem sessão. A leitura do script
+  agora descarta o BOM, então o próximo editor que puser um de volta não
+  desliga a auditoria.
+- **Import a quatro saltos derruba metade das telas (01/09/2026).**
+  `assistant.service` é usado pela tela do assistente, que é componente
+  de cliente. Ao importar `assistant.agent`, a cadeia arrastou
+  `ia.service` → `iaConfig.service` → `lib/prisma` → `pg`, que pede
+  `dns`, `net`, `tls` e `fs` — inexistentes no navegador. **21 telas
+  passaram a responder 500**, com `tsc` e lint limpos. Por isso o agente
+  é dois arquivos: `assistant.catalogo.ts` (sem servidor, o que a tela
+  pode usar) e `assistant.agent.ts` (Prisma e IA). `check:seguranca`
+  percorre a cadeia de imports a partir de cada `"use client"` e reprova
+  se ela alcançar o Prisma.
+- **O Reclame Aqui bloqueia leitura por servidor.** A página pública e a
+  API respondem com desafio do Cloudflare. Não há como buscar a nota
+  oficial do servidor, e contornar proteção anti-robô está fora de
+  questão. O caminho legítimo é a extensão, que roda no navegador de
+  quem já abre a página — ver "A fazer".
 - **O service worker do Manifest V3 morre em segundos.** Cache em `Map`
   não existe na prática; usar `chrome.storage.session`.
 - **Dependência dura mata o painel.** Montar primeiro, checar depois —
