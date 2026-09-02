@@ -556,10 +556,26 @@ export function scoreFrom(
     wouldReturn,
   } = raw;
 
+  /**
+   * A média das avaliações, presa na escala 0–10.
+   *
+   * O corte existe como última linha, e não porque o cálculo acima
+   * erre: ele protege contra dado de entrada que viole a escala — uma
+   * importação que grave nota 12, um `scoreSum` somado com avaliação
+   * que não deveria contar. Sem ele, um número desses atravessa a
+   * ponderação inteira e sai como nota de reputação acima de 10, que a
+   * tela exibe com a mesma naturalidade das notas verdadeiras.
+   *
+   * Quem produz o número tem de garanti-lo; quem o exibe não pode
+   * confiar que garantiu.
+   */
   const consumerScore =
     evaluated === 0
       ? 0
-      : Math.round((scoreSum / evaluated) * 100) / 100;
+      : Math.min(
+          Math.round((scoreSum / evaluated) * 100) / 100,
+          10
+        );
 
   const responseIndex = pct(answered, received);
   const solutionIndex = pct(resolved, evaluated);
@@ -989,8 +1005,27 @@ export function simulate(
 
     evaluated,
 
-    scoreSum: naoNegativo(
-      base.scoreSum + somaAceita - notasRemovidas
+    /**
+     * A soma das notas tem teto, e o teto é `10 × avaliações`.
+     *
+     * Sem ele o cenário produzia **nota 10,1** — fora da escala que a
+     * própria tela declara. O caminho: remover avaliações tira uma
+     * unidade do denominador, mas só tira do numerador a nota que
+     * aquela avaliação tinha. Quando a avaliação removida não carrega
+     * nota que conte (nota desconsiderada, avaliação sem pontuação
+     * gravada), o denominador encolhe e o numerador não — e a média
+     * sobe acima do máximo possível.
+     *
+     * `naoNegativo` já cuidava do outro lado. Este é o mesmo cuidado no
+     * extremo de cima: nenhuma avaliação vale mais de 10, então a soma
+     * de N avaliações não pode passar de 10N. O corte mantém o cenário
+     * dentro do que o Reclame Aqui consegue devolver.
+     */
+    scoreSum: Math.min(
+      naoNegativo(
+        base.scoreSum + somaAceita - notasRemovidas
+      ),
+      evaluated * 10
     ),
 
     /**

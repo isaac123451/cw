@@ -117,6 +117,22 @@ o canal da página. Falta **só** o importador, e ele depende do arquivo.
 
 ### 2. Aberto, sem decisão pela frente — é só trabalho
 
+**A reclamação chegando sozinha (02/09/2026).** Entregue e ligada à
+rotina agendada: o RA manda um e-mail a cada reclamação nova, e ler esse
+aviso é o único sinal que chega com o navegador fechado. O escopo
+`gmail.readonly` entrou no OAuth que já existia para a agenda; a rotina
+lê, cria o que ainda não existe, e não toca na caixa.
+
+**Falta uma amostra**, e o `check:email-ra` reprova até ela existir. Os
+padrões de extração são o formato presumido; sem um aviso real, nada
+provou que o protocolo lido é o certo — e é isso que vai criar
+reclamação sozinho. Ver `scripts/amostras/LEIA-ME.md`.
+
+**E falta reconectar a conta do Google.** Escopo novo não se aplica a
+autorização antiga: quem conectou antes segue com token válido para a
+agenda e 403 no Gmail. O card do Google Agenda diz isso e o botão que
+resolve está ao lado.
+
 **A nota oficial do Reclame Aqui, pela extensão (01/09/2026).** Pedido:
 o agente saber a nota que o RA publica, para responder "o que eu calculo
 bate com o que eles mostram?". O servidor **não consegue** ler — a
