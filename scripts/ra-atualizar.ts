@@ -85,7 +85,54 @@ const DO_PORTAL = [
   "resolved",
   "wouldDoBusiness",
   "evaluatedAt",
+
+  /**
+   * A coluna do quadro **é** fato do portal, para reclamacao do RA.
+   *
+   * Eu a tinha deixado de fora tratando-a como decisao da operacao, e o
+   * Isaac corrigiu: na importacao ela ja nasce de `mapStatus`, que
+   * traduz o status do Reclame Aqui. Uma reclamacao respondida la e
+   * "Novo" aqui nao e´ escolha de ninguem — e´ dado velho, e era a
+   * origem das "21 pendentes que nem tem isso tudo".
+   *
+   * Entra com duas travas, abaixo: nada anda para tras, e coluna que a
+   * operacao inventou nao e´ tocada.
+   */
+  "status",
 ] as const;
+
+/**
+ * As colunas que o portal conhece.
+ *
+ * Se a operacao moveu o caso para uma coluna propria — "Em analise
+ * juridica", "Aguardando o parceiro" —, o portal nao tem opiniao sobre
+ * ela e esta atualizacao passa longe. Puxar de volta seria desfazer uma
+ * decisao que o Reclame Aqui nem sabe que existe.
+ */
+const COLUNAS_DO_PORTAL = new Set([
+  "Novo",
+  "Aguardando nossa réplica",
+  "Aguardando avaliação",
+  "Resolvido",
+  "Não resolvido",
+]);
+
+/**
+ * Colunas de onde nao se volta.
+ *
+ * Uma reclamacao avaliada nao desavalia. Se um export mais **velho** do
+ * que o banco for importado por engano — coisa de um clique no arquivo
+ * errado —, sem esta trava o quadro inteiro andaria para tras e a
+ * operacao perderia o rastro do que ja tinha fechado.
+ *
+ * Medido nesta planilha: das 349, oito mudariam de coluna e as oito
+ * para frente. A trava nao barrou nada hoje; ela existe para o dia do
+ * arquivo errado.
+ */
+const COLUNAS_FINAIS = new Set([
+  "Resolvido",
+  "Não resolvido",
+]);
 
 /*
   Tempo de resposta e de solucao ficam de fora.
@@ -136,6 +183,7 @@ async function main() {
       resolved: true,
       wouldDoBusiness: true,
       evaluatedAt: true,
+      status: true,
     },
   });
 
@@ -209,11 +257,30 @@ async function main() {
         continue;
       }
 
-      const velho = (
+
+      const velhoBruto = (
         atual as unknown as Record<string, unknown>
       )[campo];
 
-      const a = comparavel(velho);
+      const a = comparavel(velhoBruto);
+
+      /* As duas travas da coluna do quadro. */
+      if (campo === "status") {
+
+        const atualStatus = String(velhoBruto ?? "");
+
+        if (!COLUNAS_DO_PORTAL.has(atualStatus)) {
+          continue;
+        }
+
+        if (
+          COLUNAS_FINAIS.has(atualStatus) &&
+          !COLUNAS_FINAIS.has(String(novo))
+        ) {
+          continue;
+        }
+      }
+
 
       const b =
         campo === "publicResponseAt" ||
@@ -301,7 +368,13 @@ async function main() {
   }
 
   console.log(
-    `\n  ${paraGravar.length} reclamação(ões) atualizadas. Coluna do quadro, responsável, time, etiquetas e rascunho ficaram como estavam.\n`
+    [
+      "",
+      `  ${paraGravar.length} reclamação(ões) atualizadas.`,
+      "  Responsável, time, etiquetas, prioridade e rascunho ficaram como estavam.",
+      "  A coluna do quadro só andou para frente, e só nas colunas que o portal conhece.",
+      "",
+    ].join("\n")
   );
 
   await prisma.$disconnect();
