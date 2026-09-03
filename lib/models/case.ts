@@ -85,6 +85,21 @@ export interface Case {
   publicResponse?: string;
 
   /**
+   * Quando a resposta pública foi publicada no portal.
+   *
+   * **Existia no banco e ninguém gravava.** A planilha do Reclame Aqui
+   * traz "Data de Resposta", e o leitor da importação já a lia — para
+   * calcular o tempo de resposta e depois descartá-la. O resultado: 329
+   * reclamações com resposta pública e **zero** com a data dela.
+   *
+   * Só apareceu quando o dossiê estruturado foi montar a linha do
+   * tempo: o evento mais importante depois da abertura — "a empresa
+   * respondeu" — não tinha onde entrar na cronologia. Num documento que
+   * sustenta pedido de moderação, isso não é detalhe.
+   */
+  publicResponseAt?: string;
+
+  /**
    * Rascunho da resposta, ainda não publicado no portal.
    *
    * Nunca conta para o índice de resposta — quem conta é a

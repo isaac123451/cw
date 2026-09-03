@@ -178,6 +178,28 @@ function tagsOf(item: Case) {
 }
 
 /** Converte o conteúdo de um .xlsx do Reclame Aqui em reclamações. */
+/**
+ * Textos que o leitor **inventa** quando a planilha nao traz o conteudo.
+ *
+ * O export "Base de dados do Reclame Aqui" diz *se* a empresa
+ * respondeu, e nao *o que* ela respondeu. Para a reclamacao nao nascer
+ * com o campo vazio — o que faria o indice de resposta contar errado —
+ * o leitor grava um marcador.
+ *
+ * **Sao marcadores, nao conteudo, e a diferenca custa caro.** Uma
+ * atualizacao ingenua a partir dessa planilha substituiria a resposta
+ * de verdade, de 600 caracteres, por estes 38. Foram 334 reclamacoes a
+ * um passo disso; a simulacao do `ra:atualizar` mostrou antes.
+ *
+ * Exportados para que quem for gravar por cima saiba reconhece-los e
+ * recusa-los.
+ */
+export const RESPOSTA_SINTETICA =
+  "Resposta pública registrada no portal.";
+
+export const RELATO_SINTETICO =
+  "Reclamação registrada no Reclame Aqui.";
+
 export function parseReclameAqui(
   data: ArrayBuffer | Buffer | Uint8Array,
   { keepPii = false }: ImportOptions = {}
@@ -342,9 +364,9 @@ export function parseReclameAqui(
           row[col("Título")] ?? "Sem título"
         ).trim() || "Sem título",
       description:
-        texto || "Reclamação registrada no Reclame Aqui.",
+        texto || RELATO_SINTETICO,
       publicResponse: answered
-        ? "Resposta pública registrada no portal."
+        ? RESPOSTA_SINTETICA
         : "",
       score: score ?? undefined,
       evaluated,
@@ -353,6 +375,11 @@ export function parseReclameAqui(
       wouldDoBusiness,
       responseTime: elapsed(created, answeredAt),
       solutionTime: elapsed(created, evaluatedAt),
+
+      /* A data que o leitor ja lia para o tempo e nao guardava. */
+      publicResponseAt:
+        toIso(row[col("Data de Resposta")]) ?? undefined,
+
       sla: resolved ? "Concluído" : "48h",
       createdAt: toIso(
         row[col("Data Reclamação")]

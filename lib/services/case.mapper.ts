@@ -104,6 +104,7 @@ export function toCaseModel(row: {
   title: string;
   description: string | null;
   publicResponse: string | null;
+  publicResponseAt: Date | null;
   draftResponse: string | null;
   /**
    * Opcional porque a lista **não** o carrega.
@@ -186,6 +187,8 @@ export function toCaseModel(row: {
     title: row.title,
     description: row.description ?? "",
     publicResponse: row.publicResponse ?? undefined,
+    publicResponseAt:
+      row.publicResponseAt?.toISOString() ?? undefined,
     draftResponse: row.draftResponse ?? undefined,
     dossier: row.dossier ?? undefined,
     dossierAt:
@@ -285,6 +288,9 @@ export function toCaseColumns(item: Case) {
     title: item.title,
     description: item.description || null,
     publicResponse: item.publicResponse || null,
+    publicResponseAt: item.publicResponseAt
+      ? new Date(item.publicResponseAt)
+      : null,
     draftResponse: item.draftResponse || null,
 
     /*

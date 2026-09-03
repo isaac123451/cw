@@ -996,6 +996,38 @@ function acharEstabelecimento(
     if (doNps) return doNps;
   }
 
+  /**
+   * O vínculo que já existe vence todos os palpites.
+   *
+   * **O defeito que isto conserta.** Este casador tentava telefone,
+   * e-mail e nome — e nunca olhava o `establishmentId` que a própria
+   * reclamação carrega. Esse campo é o vínculo por CPF ou CNPJ que
+   * `persistCase` monta na entrada: é a única ligação **confirmada**
+   * entre reclamação e restaurante, e estava sendo ignorada em favor
+   * de comparações que adivinham.
+   *
+   * O resultado prático era o botão do portal da Cardápio Web nunca
+   * aparecer. O último degrau comparava `caso.company` com o nome do
+   * estabelecimento, e em reclamação vinda do Reclame Aqui o `company`
+   * guarda o **nome do consumidor** — o export trata o reclamante como
+   * a empresa. Nome de pessoa jamais casa com nome de restaurante, e a
+   * conta do cliente ficava a um clique que não existia.
+   *
+   * Vem logo depois do NPS e antes de tudo mais porque é o único
+   * degrau que não é palpite: os outros comparam dados mascarados ou
+   * texto digitado à mão.
+   */
+  for (const caso of casos) {
+
+    if (!caso.establishmentId) continue;
+
+    const vinculado = lista.find(
+      (item) => item.id === caso.establishmentId
+    );
+
+    if (vinculado) return vinculado;
+  }
+
   if (alvo.telefone) {
     const porTelefone = lista.find((item) =>
       compararTelefone(

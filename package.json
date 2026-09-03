@@ -33,6 +33,7 @@
     "check:vinculo": "tsx scripts/check-vinculo.ts",
     "db:backup": "tsx scripts/backup-base.ts",
     "ra:completo": "tsx scripts/import-ra-completo.ts",
+    "ra:atualizar": "tsx scripts/ra-atualizar.ts",
     "check:whatsapp": "node scripts/check-whatsapp.js",
     "check:busca-texto": "tsx scripts/check-busca-texto.ts",
     "check:incremental": "tsx scripts/check-incremental.ts",
@@ -65,7 +66,8 @@
     "check:notas-nps": "tsx scripts/check-notas-nps.ts",
     "check:agente": "tsx scripts/check-agente.ts",
     "check:email": "tsx --conditions=react-server scripts/check-email.ts",
-    "check:email-ra": "tsx scripts/check-email-ra.ts"
+    "check:email-ra": "tsx scripts/check-email-ra.ts",
+    "check:dossie-estrutura": "tsx scripts/check-dossie-estrutura.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",

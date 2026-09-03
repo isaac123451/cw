@@ -655,6 +655,211 @@ async function main() {
     null
   );
 
+
+  /* ==========================================================
+     O BOTÃO DO PORTAL, E O NOME QUE NÃO CASA SOZINHO
+
+     Os dois últimos pedidos da fila da extensão. Estavam
+     construídos e sem conferência nenhuma — que é o estado em que
+     um recurso volta a quebrar sem ninguém notar.
+  ========================================================== */
+
+  console.log("\n  O portal da Cardápio Web\n");
+
+  /**
+   * O link do portal chega ao painel?
+   *
+   * O botão só aparece quando `contexto` devolve `portal`, e esse
+   * campo sai do `portalUrl` do estabelecimento. Duas coisas quebram
+   * em silêncio aqui: o campo sumir da resposta (o botão some, e a
+   * pessoa acha que o restaurante não tem conta) e o campo vir
+   * preenchido para quem não tem cadastro (o botão leva a lugar
+   * nenhum).
+   */
+  const comPortal = await prisma.establishment.findFirst({
+    where: { NOT: { portalUrl: null } },
+    select: { id: true, name: true, portalUrl: true },
+  });
+
+  const casoDoPortal = comPortal
+    ? await prisma.case.findFirst({
+        where: {
+          establishmentId: comPortal.id,
+          NOT: { phone: null },
+        },
+        select: { phone: true, customer: true },
+      })
+    : null;
+
+  if (!comPortal) {
+    console.log(
+      "  --   nenhum estabelecimento tem portalUrl preenchido — nada a conferir"
+    );
+  } else if (!casoDoPortal?.phone) {
+    console.log(
+      `  --   "${comPortal.name}" tem portal, mas nenhuma reclamação com telefone para consultar`
+    );
+  } else {
+
+    const r = await pegar("/api/extensao/contexto", {
+      telefone: casoDoPortal.phone,
+      canal: "reclame-aqui",
+    });
+
+    const est = (
+      r.corpo as {
+        estabelecimento?: { portal?: string | null };
+      }
+    ).estabelecimento;
+
+    conferir(
+      "o link do portal chega ao painel",
+      est?.portal ?? null,
+      comPortal.portalUrl
+    );
+  }
+
+  /**
+   * E não chega inventado para quem não tem.
+   *
+   * Um endereço montado a partir do nome ou do id levaria a uma conta
+   * que não existe, ou pior, à conta de outro restaurante.
+   */
+  const semPortal = await prisma.establishment.findFirst({
+    where: { portalUrl: null },
+    select: { id: true, name: true },
+  });
+
+  const casoSemPortal = semPortal
+    ? await prisma.case.findFirst({
+        where: {
+          establishmentId: semPortal.id,
+          NOT: { phone: null },
+        },
+        select: { phone: true },
+      })
+    : null;
+
+  if (casoSemPortal?.phone) {
+
+    const r = await pegar("/api/extensao/contexto", {
+      telefone: casoSemPortal.phone,
+      canal: "reclame-aqui",
+    });
+
+    const est = (
+      r.corpo as {
+        estabelecimento?: { portal?: string | null };
+      }
+    ).estabelecimento;
+
+    conferir(
+      "e não vem inventado para quem não tem cadastro no portal",
+      est?.portal ?? null,
+      null
+    );
+  }
+
+  console.log(
+    "\n  O nome confirma, mas não acha sozinho\n"
+  );
+
+  /**
+   * A regra que o Isaac pediu: achar pelo número do cliente, com o
+   * nome servindo só para conferir.
+   *
+   * **Por que ela importa.** O nome que a extensão lê vem da agenda do
+   * celular de quem atende — "João Pizzaria", "Maria RA". Casar por ele
+   * mostrava, às vezes, a reclamação de outra família para quem estava
+   * no WhatsApp. O prejuízo é assimétrico: não achar custa uma busca à
+   * mão; achar errado é dado de terceiro na tela de quem não devia ver.
+   *
+   * Três perguntas, e a primeira é a que protege.
+   */
+  const comNomeETelefone = await prisma.case.findFirst({
+    where: {
+      NOT: [{ phone: null }, { customer: "" }],
+    },
+    select: { phone: true, customer: true },
+  });
+
+  if (!comNomeETelefone?.phone) {
+    console.log(
+      "  --   nenhuma reclamação com nome e telefone para conferir"
+    );
+  } else {
+
+    const soNome = await pegar(
+      "/api/extensao/contexto",
+      {
+        nome: comNomeETelefone.customer,
+        canal: "reclame-aqui",
+      }
+    );
+
+    const casosPeloNome = (
+      soNome.corpo as { casos?: unknown[] }
+    ).casos;
+
+    conferir(
+      "o nome sozinho não acha reclamação nenhuma",
+      (casosPeloNome ?? []).length,
+      0
+    );
+
+    const comAmbos = await pegar(
+      "/api/extensao/contexto",
+      {
+        telefone: comNomeETelefone.phone,
+        nome: comNomeETelefone.customer,
+        canal: "reclame-aqui",
+      }
+    );
+
+    const achou =
+      ((comAmbos.corpo as { casos?: unknown[] }).casos ?? [])
+        .length > 0;
+
+    conferir(
+      "o telefone acha, e o nome certo junto confirma",
+      achou,
+      true
+    );
+
+    const comNomeErrado = await pegar(
+      "/api/extensao/contexto",
+      {
+        telefone: comNomeETelefone.phone,
+        nome: "Nome Que Nao Existe Na Base",
+        canal: "reclame-aqui",
+      }
+    );
+
+    const porQueErrado = (
+      comNomeErrado.corpo as { porQue?: string }
+    ).porQue;
+
+    /**
+     * O nome errado não pode aparecer como motivo.
+     *
+     * Uma primeira versão desta conferência exigia que a confiança
+     * deixasse de ser "exata" — e estava errada. Telefone conferindo
+     * **por inteiro** é prova exata sozinho; o nome não entra nessa
+     * conta, nem deveria. Exigir o contrário teria me feito piorar um
+     * código que estava certo.
+     *
+     * O que de fato não pode é a tela **atribuir ao nome** uma
+     * confirmação que ele não deu: é a frase do motivo que alguém lê
+     * antes de decidir tratar o resultado sem conferir. Então a
+     * pergunta certa é sobre o texto, não sobre o grau.
+     */
+    conferir(
+      "nome errado não entra como motivo do casamento",
+      /nome/i.test(porQueErrado ?? ""),
+      false
+    );
+  }
+
   await prisma.$disconnect();
 
   console.log(
