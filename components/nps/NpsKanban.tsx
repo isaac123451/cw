@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react";
 
+import { nomeDoCliente } from "@/lib/models/nps";
+
 import {
   emAndamento,
   isEncerrado,
@@ -268,7 +270,7 @@ function Cartao({
         </span>
 
         <p className="min-w-0 flex-1 truncate text-xs font-medium text-zinc-800">
-          {item.customer}
+          {nomeDoCliente(item)}
         </p>
 
         {humor && (

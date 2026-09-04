@@ -10,11 +10,13 @@ import {
   LayoutGrid,
   List,
   Plus,
+  Search,
   SlidersHorizontal,
   Star,
   ThumbsDown,
   Upload,
   Users,
+  X,
 } from "lucide-react";
 
 import MainLayout from "@/components/layout/MainLayout";
@@ -94,6 +96,33 @@ type Filtro =
   | "estourados"
   | "sem-tratativa";
 
+/**
+ * Sem acento, minúsculo, espaços colapsados.
+ *
+ * A busca compara nome digitado com nome gravado, e "José" e "Jose"
+ * precisam ser a mesma coisa — quem procura raramente digita o acento.
+ */
+function simplificar(texto: string) {
+  return texto
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Só os dígitos.
+ *
+ * O telefone é gravado como veio: "(11) 98765-4321" numa resposta,
+ * "11987654321" noutra. Comparar texto puro acharia uma e não a outra,
+ * e quem procura pelo número que apareceu no WhatsApp digita sem
+ * máscara.
+ */
+function somenteDigitos(valor: string) {
+  return valor.replace(/\D/g, "");
+}
+
 export default function NpsPage() {
 
   const {
@@ -112,6 +141,23 @@ export default function NpsPage() {
   const session = useSession();
 
   const [filtro, setFiltro] = useState<Filtro>("abertos");
+
+  /**
+   * A busca, por e-mail, telefone ou nome.
+   *
+   * **Por que os três juntos e não um campo por vez.** Quem atende chega
+   * com uma coisa só na mão: o e-mail que o Wootric mostrou, o número
+   * que apareceu no WhatsApp, ou o nome que a pessoa disse ao telefone.
+   * Obrigar a escolher em qual campo procurar é obrigar a saber a
+   * resposta antes de perguntar.
+   *
+   * O identificador do Wootric entra na busca junto — é o que aparece
+   * na tela hoje, e quem já o conhece vai digitá-lo.
+   */
+  const [busca, setBusca] = useState("");
+
+  /** O que foi digitado, pronto para comparar. */
+  const termo = simplificar(busca);
   const [kindFiltro, setKindFiltro] = useState("");
 
   /** Recorte por segmento — o que os três indicadores do topo acionam. */
@@ -203,6 +249,40 @@ export default function NpsPage() {
         return false;
       }
 
+      /**
+       * A busca corta antes dos recortes, e ignora acento e máscara.
+       *
+       * O telefone é gravado como veio — "(11) 98765-4321" numa
+       * resposta, "11987654321" noutra — então comparar texto puro
+       * acharia uma e não a outra. Só os dígitos são comparados quando
+       * o que foi digitado é número.
+       */
+      if (termo) {
+
+        const alvos = [
+          item.customerName,
+          item.customer,
+          item.email,
+          item.company,
+        ]
+          .filter(Boolean)
+          .map((v) => simplificar(String(v)));
+
+        const digitados = somenteDigitos(termo);
+
+        const achouTexto = alvos.some((a) =>
+          a.includes(termo)
+        );
+
+        const achouTelefone =
+          digitados.length >= 4 &&
+          somenteDigitos(item.phone ?? "").includes(
+            digitados
+          );
+
+        if (!achouTexto && !achouTelefone) return false;
+      }
+
       if (filtro === "abertos") {
         return !isEncerrado(item.status);
       }
@@ -218,7 +298,14 @@ export default function NpsPage() {
       return true;
     });
 
-  }, [responses, filtro, kindFiltro, segmento, comentario]);
+  }, [
+    responses,
+    filtro,
+    kindFiltro,
+    segmento,
+    comentario,
+    termo,
+  ]);
 
   /**
    * Quantos casos cada recorte tem.
@@ -796,6 +883,49 @@ export default function NpsPage() {
             </div>
           }
         >
+
+          {/*
+            A busca fica acima das duas visões, e não dentro de uma.
+
+            Ela filtra `visiveis`, que alimenta tanto o quadro quanto a
+            lista — pôr o campo dentro de uma das duas faria o resultado
+            mudar ao trocar de visão, sem ninguém entender por quê.
+          */}
+          <div className="border-b border-zinc-100 p-3">
+
+            <div className="relative">
+
+              <Search
+                size={15}
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400"
+              />
+
+              <input
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                placeholder="Buscar por nome, e-mail ou telefone"
+                className="h-10 w-full rounded-xl border border-zinc-200 pl-9 pr-9 text-sm outline-none transition-colors focus:border-violet-400"
+              />
+
+              {busca && (
+                <button
+                  onClick={() => setBusca("")}
+                  title="Limpar a busca"
+                  className="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+
+            {busca && (
+              <p className="mt-2 text-xs text-zinc-500">
+                {visiveis.length === 0
+                  ? "Nenhum ciclo com esse nome, e-mail ou telefone. O telefone só existe em 77 das respostas — o Wootric não o envia."
+                  : `${visiveis.length} ciclo(s) encontrado(s).`}
+              </p>
+            )}
+          </div>
 
           {loading ? (
 

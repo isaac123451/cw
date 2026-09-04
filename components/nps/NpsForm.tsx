@@ -71,6 +71,19 @@ export default function NpsForm({
     editing?.customer ?? ""
   );
 
+  /**
+   * O nome de gente.
+   *
+   * Separado do campo acima porque são coisas diferentes: `customer` é
+   * o identificador que vem do Wootric — em 500 de 500 respostas
+   * conferidas, o pedaço do e-mail antes do @ — e este é o nome de
+   * quem está do outro lado da linha. A tela chamava o cliente de
+   * "esphirrasdeliveryjp" porque os dois eram o mesmo campo.
+   */
+  const [customerName, setCustomerName] = useState(
+    editing?.customerName ?? ""
+  );
+
   const [email, setEmail] = useState(
     editing?.email ?? ""
   );
@@ -127,6 +140,8 @@ export default function NpsForm({
                 comment: comment.trim(),
                 respondedAt: `${respondedAt}T12:00:00.000Z`,
                 customer: customer.trim(),
+                customerName:
+                  customerName.trim() || undefined,
                 email: email.trim() || undefined,
                 phone: phone.trim() || undefined,
                 company: company.trim() || undefined,
@@ -198,7 +213,26 @@ export default function NpsForm({
 
         <div className="grid gap-3 sm:grid-cols-2">
 
-          <Field label="Cliente">
+          <Field label="Nome do cliente">
+            <input
+              value={customerName}
+              onChange={(e) =>
+                setCustomerName(e.target.value)
+              }
+              placeholder="Como a pessoa se chama"
+              className={inputClass}
+            />
+          </Field>
+
+          {/*
+            O identificador do Wootric continua editável, e rotulado
+            pelo que ele é.
+
+            Ele é a chave que a importação usa para casar a resposta;
+            escondê-lo faria a tela parecer mais limpa e deixaria quem
+            precisa conferir sem para onde olhar.
+          */}
+          <Field label="Identificador no Wootric">
             <input
               value={customer}
               onChange={(e) =>

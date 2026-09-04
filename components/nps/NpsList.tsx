@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react";
 
+import { nomeDoCliente } from "@/lib/models/nps";
+
 import {
   ArrowDown,
   ArrowUp,
@@ -62,7 +64,8 @@ const ORDENAVEIS: Record<
   (item: NpsResponseView) => number | string
 > = {
   Nota: (item) => item.score,
-  Cliente: (item) => item.customer.toLowerCase(),
+  Cliente: (item) =>
+    nomeDoCliente(item).toLowerCase(),
   Respondido: (item) => item.respondedAt,
   Prazo: (item) => item.firstContactDueAt,
 };
@@ -232,7 +235,7 @@ export default function NpsList({
 
                 <td className="px-5 py-3">
                   <p className="max-w-[220px] truncate text-sm font-medium text-zinc-800">
-                    {item.customer}
+                    {nomeDoCliente(item)}
                   </p>
                   {item.company && (
                     <p className="max-w-[220px] truncate text-xs text-zinc-500">

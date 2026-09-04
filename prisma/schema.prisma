@@ -940,10 +940,36 @@ model NpsResponse {
   /// inclusive uma nota apagada de lá.
   wootricNotes String[] @default([])
 
-  /// Cliente por nome, como no resto da aplicação.
+  /// O identificador que o Wootric entrega — **não é um nome**.
+  ///
+  /// Medido em 04/09/2026: em 500 de 500 respostas conferidas,
+  /// `customer` é exatamente o pedaço do e-mail antes do @ —
+  /// "aldomarconds", "deliciasdatoca9". O comentário anterior dizia
+  /// "cliente por nome, como no resto da aplicação", e isso nunca foi
+  /// verdade aqui: a API do Wootric manda `end_user` com e-mail,
+  /// `external_id` e `properties`, e a única propriedade que chega é
+  /// `company_id`. Nome não existe do lado de lá.
+  ///
+  /// Fica como está porque é a chave que a importação usa e o que
+  /// aparece no Wootric. Quem quer o nome de verdade usa
+  /// `customerName`.
   customer String
-  email    String?
-  phone    String?
+
+  /// O nome do cliente, escrito por quem atende.
+  ///
+  /// **Por que digitado e não importado.** Não há de onde puxar: o
+  /// Wootric não tem nome, o cruzamento por e-mail com as reclamações
+  /// recupera 4 de 1252, e o cadastro de clientes não tem e-mail
+  /// preenchido. Inventar um nome a partir do handle — virar
+  /// "Deliciasdatoca9" em "Delicias Da Toca" — produziria um nome
+  /// plausível e falso, que é pior que campo vazio numa tela onde
+  /// alguém vai ligar para a pessoa.
+  ///
+  /// Nulo é "ninguém preencheu". A tela mostra o handle nesse caso, e
+  /// diz que é o handle.
+  customerName String?
+  email        String?
+  phone        String?
 
   /// Estabelecimento, quando dá para vincular.
   company         String?

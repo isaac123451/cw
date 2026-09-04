@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import { nomeDoCliente } from "@/lib/models/nps";
+
 import {
   Check,
   CircleAlert,
@@ -219,7 +221,7 @@ export default function NpsDrawer({
   return (
     <Modal
       open
-      title={item.customer}
+      title={nomeDoCliente(item)}
       description={[
         `Nota ${item.score}`,
         segmento.label,

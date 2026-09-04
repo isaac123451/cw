@@ -38,6 +38,7 @@
     "metricas:preencher": "tsx scripts/metricas-preencher.ts",
     "check:whatsapp": "node scripts/check-whatsapp.js",
     "check:busca-texto": "tsx scripts/check-busca-texto.ts",
+    "check:busca-nps": "tsx scripts/check-busca-nps.ts",
     "check:incremental": "tsx scripts/check-incremental.ts",
     "check:reputacao": "tsx scripts/check-reputacao.ts",
     "check:persistencia": "tsx scripts/check-persistencia.ts",

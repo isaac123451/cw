@@ -525,13 +525,46 @@ export const JANELA_TENTATIVAS_DIAS = 7;
 /** Sem qualquer resposta do cliente, encerra sozinho. */
 export const ABANDONO_DIAS = 30;
 
+/**
+ * Como chamar o cliente na tela.
+ *
+ * O nome quando alguém o escreveu; o identificador do Wootric quando
+ * não. **Nunca inventa**: transformar "deliciasdatoca9" em "Delicias Da
+ * Toca" produziria um nome plausível e falso numa tela onde alguém vai
+ * ligar para a pessoa e chamá-la por ele.
+ */
+export function nomeDoCliente(item: {
+  customerName?: string;
+  customer: string;
+}) {
+  return item.customerName?.trim() || item.customer;
+}
+
+/** O identificador só aparece como legenda quando há nome de verdade. */
+export function temNomeProprio(item: {
+  customerName?: string;
+}) {
+  return Boolean(item.customerName?.trim());
+}
+
 export interface NpsResponseView {
   id: string;
   score: number;
   comment: string;
   respondedAt: string;
 
+  /** O handle do Wootric — o pedaço do e-mail antes do @. */
   customer: string;
+
+  /**
+   * O nome do cliente, quando alguém o escreveu.
+   *
+   * Separado de `customer` porque são coisas diferentes: aquele é
+   * identificador vindo do Wootric, este é nome de gente. Confundir os
+   * dois é o que fazia a tela chamar o cliente de "esphirrasdeliveryjp".
+   */
+  customerName?: string;
+
   email?: string;
   phone?: string;
   company?: string;

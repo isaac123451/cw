@@ -66,6 +66,8 @@ export interface NpsDraft {
   comment: string;
   respondedAt: string;
   customer: string;
+  /** O nome de gente, quando alguem o escreveu. */
+  customerName?: string;
   email?: string;
   phone?: string;
   company?: string;
@@ -99,6 +101,7 @@ export async function listNpsResponses(): Promise<
     comment: r.comment,
     respondedAt: r.respondedAt.toISOString(),
     customer: r.customer,
+    customerName: r.customerName ?? undefined,
     email: r.email ?? undefined,
     phone: r.phone ?? undefined,
     company: r.company ?? undefined,
@@ -343,6 +346,10 @@ export async function saveNpsResponse(
     comment: input.comment,
     respondedAt,
     customer: input.customer,
+
+    /* Vazio vira null: "ninguem preencheu" nao e´ o mesmo que "". */
+    customerName: input.customerName?.trim() || null,
+
     email: input.email || null,
     phone: input.phone || null,
     company: input.company || null,
