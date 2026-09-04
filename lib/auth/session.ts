@@ -1,6 +1,6 @@
 import "server-only";
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { SignJWT, jwtVerify } from "jose";
 import { getPrisma } from "@/lib/prisma";
 
@@ -57,7 +57,30 @@ export async function getSession(): Promise<SessionUser | null> {
 
   const store = await cookies();
 
-  const token = store.get(SESSION_COOKIE)?.value;
+  let token = store.get(SESSION_COOKIE)?.value;
+
+  /**
+   * A extensao manda a mesma sessao pelo cabecalho.
+   *
+   * **O que isto conserta.** As leituras do painel — reclamacoes,
+   * cadastros — ganharam guarda de sessao ao serem fechadas, e a guarda
+   * lia so o cookie. A extensao nao manda cookie: ela roda em outro
+   * site e envia o token em `x-cw-sessao`. O resultado foi o painel
+   * receber lista vazia de estabelecimentos, e o botao do portal da
+   * Cardapio Web nunca aparecer.
+   *
+   * **Nao ha confianca nova aqui.** E´ o mesmo JWT assinado com o mesmo
+   * segredo, verificado logo abaixo pelo mesmo `jwtVerify`. Muda o
+   * envelope, nao a prova: um cabecalho com token invalido continua nao
+   * autenticando nada. As rotas da extensao ja aceitavam exatamente
+   * este cabecalho por `autenticar()`; o que faltava era a sessao do
+   * servidor enxergar o que elas ja enxergavam.
+   */
+  if (!token) {
+    const cabecalhos = await headers();
+    token =
+      cabecalhos.get("x-cw-sessao")?.trim() || undefined;
+  }
 
   if (!token) return null;
 
