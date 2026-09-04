@@ -42,6 +42,7 @@
     "check:reputacao": "tsx scripts/check-reputacao.ts",
     "check:persistencia": "tsx scripts/check-persistencia.ts",
     "check:desempenho": "tsx scripts/check-desempenho.ts",
+    "check:carga": "tsx scripts/check-carga.ts",
     "check:seguranca": "tsx scripts/check-seguranca.ts",
     "check:telas": "tsx scripts/check-telas.ts",
     "check:fiacao": "tsx scripts/check-fiacao.ts",

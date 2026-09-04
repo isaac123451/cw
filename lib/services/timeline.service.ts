@@ -1,4 +1,7 @@
-import { Case } from "@/lib/models/case";
+import {
+  Case,
+  respondida,
+} from "@/lib/models/case";
 import { CaseMovement } from "@/lib/models/movement";
 
 import { movementsOf } from "@/lib/services/movement.service";
@@ -90,7 +93,7 @@ export function buildTimeline(
     }
   }
 
-  if ((item.publicResponse ?? "").trim() !== "") {
+  if (respondida(item)) {
     entries.push({
       id: "resposta",
       title: "Resposta pública publicada",

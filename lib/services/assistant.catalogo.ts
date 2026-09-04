@@ -1,4 +1,7 @@
-import { Case } from "@/lib/models/case";
+import {
+  Case,
+  respondida,
+} from "@/lib/models/case";
 
 import {
   caminhoParaNota,
@@ -335,7 +338,7 @@ export const CATALOGO: Medicao[] = [
 
         if (
           isReclameAqui(item) &&
-          (item.publicResponse ?? "").trim() === ""
+          !respondida(item)
         ) {
           atual.semResposta += 1;
         }
@@ -380,7 +383,7 @@ export const CATALOGO: Medicao[] = [
       );
 
       const respondidas = recentes.filter(
-        (item) => (item.publicResponse ?? "").trim() !== ""
+        (item) => respondida(item)
       ).length;
 
       return [
@@ -459,7 +462,7 @@ export const CATALOGO: Medicao[] = [
 
           const semResposta = doNivel.filter(
             (item) =>
-              (item.publicResponse ?? "").trim() === ""
+              !respondida(item)
           ).length;
 
           return `${nivel}: ${doNivel.length} (${semResposta} sem resposta)`;
@@ -579,7 +582,7 @@ export const CATALOGO: Medicao[] = [
       const paradas = cases
         .filter(
           (item) =>
-            (item.publicResponse ?? "").trim() === ""
+            !respondida(item)
         )
         .sort((a, b) =>
           a.createdAt.localeCompare(b.createdAt)
@@ -625,7 +628,7 @@ export const CATALOGO: Medicao[] = [
       }
 
       const semResposta = emRisco.filter(
-        (item) => (item.publicResponse ?? "").trim() === ""
+        (item) => !respondida(item)
       ).length;
 
       return [
@@ -661,7 +664,7 @@ export const CATALOGO: Medicao[] = [
 
         atual.total += 1;
 
-        if ((item.publicResponse ?? "").trim() === "") {
+        if (!respondida(item)) {
           atual.semResposta += 1;
         }
 

@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+
+import { respondida } from "@/lib/models/case";
 import { useRouter } from "next/navigation";
 
 import { useMemo } from "react";
@@ -68,7 +70,7 @@ export default function MetricsBar() {
 
     const minutos = noPeriodo
       .filter(
-        (item) => (item.publicResponse ?? "").trim() !== ""
+        (item) => respondida(item)
       )
       .map((item) => parseElapsedText(item.responseTime))
       .filter((valor): valor is number => valor !== null)

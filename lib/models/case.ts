@@ -100,6 +100,23 @@ export interface Case {
   publicResponseAt?: string;
 
   /**
+   * Esta reclamacao foi respondida publicamente?
+   *
+   * **O fato, separado do texto.** Cinquenta e quatro lugares
+   * perguntavam isso escrevendo `(publicResponse ?? "").trim() !== ""`
+   * — o que obriga a carregar o texto inteiro para responder um
+   * booleano. Sao 250 kB de resposta publica na lista de reclamacoes,
+   * que nenhuma tela da lista mostra, e a consulta caia de 119 ms para
+   * 770 ms so por causa disso.
+   *
+   * Agora a lista traz o fato e nao o texto; a tela de detalhe, que e´
+   * a unica que exibe a resposta, busca o texto quando abre. Quem tiver
+   * o texto em maos continua podendo deriva-lo — ver `respondida()`
+   * em case.service.
+   */
+  respondida?: boolean;
+
+  /**
    * Rascunho da resposta, ainda não publicado no portal.
    *
    * Nunca conta para o índice de resposta — quem conta é a
@@ -158,4 +175,28 @@ export interface Case {
   lastInteraction?: string;
 
   tags?: string[];
+}
+
+/**
+ * A reclamacao foi respondida publicamente?
+ *
+ * **Uma pergunta, um lugar.** Ela era feita em cinquenta e quatro
+ * pontos como `(publicResponse ?? "").trim() !== ""`, e essa forma
+ * obriga a ter o texto em maos para responder um booleano — 250 kB
+ * atravessando a rede em toda abertura da aplicacao, para uma resposta
+ * que a lista nem mostra.
+ *
+ * Agora a lista carrega `respondida` e nao o texto. O `??` no fim
+ * mantem quem tem o texto — a tela de detalhe, a extensao, um script —
+ * funcionando exatamente como antes, sem duas verdades sobre a mesma
+ * coisa.
+ */
+export function respondida(item: {
+  respondida?: boolean;
+  publicResponse?: string;
+}) {
+  return (
+    item.respondida ??
+    (item.publicResponse ?? "").trim() !== ""
+  );
 }

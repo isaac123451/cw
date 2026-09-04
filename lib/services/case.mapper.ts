@@ -105,6 +105,16 @@ export function toCaseModel(row: {
   description: string | null;
   publicResponse: string | null;
   publicResponseAt: Date | null;
+
+  /**
+   * O fato, quando quem chama tem o fato e nao o texto.
+   *
+   * A lista de reclamacoes deixou de trazer `publicResponse` — sao
+   * 250 kB que nenhuma tela dela mostra — e passa este booleano no
+   * lugar. Opcional porque quem tem o texto (a tela de detalhe, a
+   * extensao) continua derivando dele.
+   */
+  respondida?: boolean;
   draftResponse: string | null;
   /**
    * Opcional porque a lista **não** o carrega.
@@ -187,6 +197,11 @@ export function toCaseModel(row: {
     title: row.title,
     description: row.description ?? "",
     publicResponse: row.publicResponse ?? undefined,
+
+    /* O fato vem pronto quando o texto ficou para tras. */
+    respondida:
+      row.respondida ??
+      ((row.publicResponse ?? "").trim() !== ""),
     publicResponseAt:
       row.publicResponseAt?.toISOString() ?? undefined,
     draftResponse: row.draftResponse ?? undefined,

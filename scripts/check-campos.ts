@@ -59,6 +59,17 @@ const INTERNAS: Record<string, string[]> = {
     "*",
   ],
   NpsResponse: ["*"],
+
+  /*
+    O historico diario tem carga propria, como a reclamacao.
+
+    Ele nao vem no workspace: a tela de Analytics le por `lerMetricas`,
+    um mes de cada vez, porque carregar duzentos e quarenta e seis dias
+    na abertura da aplicacao seria pagar por um dado que quase ninguem
+    abre — e a carga do quadro acabou de ser cortada de 701 ms para
+    139 ms justamente tirando de la o que a tela nao mostra.
+  */
+  MetricaDiaria: ["*"],
   NpsAttempt: ["*"],
 
   /**

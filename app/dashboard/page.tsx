@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+
+import { respondida } from "@/lib/models/case";
 import { useRouter } from "next/navigation";
 import { useMemo } from "react";
 
@@ -123,7 +125,7 @@ export default function DashboardPage() {
     const semResposta = cases.filter(
       (item) =>
         isReclameAqui(item) &&
-        (item.publicResponse ?? "").trim() === ""
+        !respondida(item)
     );
 
     /*

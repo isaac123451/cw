@@ -1,4 +1,7 @@
-import { Case } from "@/lib/models/case";
+import {
+  Case,
+  respondida,
+} from "@/lib/models/case";
 
 /**
  * O fuso da operação. A base inteira é brasileira, e o dia útil de quem
@@ -540,7 +543,7 @@ export function getRawCounts(
     responseSamples: tempos.length,
 
     answered: cases.filter(
-      (item) => (item.publicResponse ?? "").trim() !== ""
+      (item) => respondida(item)
     ).length,
 
     evaluated: evaluatedCases.length,
@@ -1338,11 +1341,11 @@ export function getBacklog(
 ): BacklogAlert[] {
 
   const unanswered = cases.filter(
-    (item) => (item.publicResponse ?? "").trim() === ""
+    (item) => !respondida(item)
   ).length;
 
   const stale = cases.filter((item) => {
-    if ((item.publicResponse ?? "").trim() !== "")
+    if (respondida(item))
       return false;
 
     return item.createdAt < shift(hojeNaOperacao(), -7);
@@ -1350,7 +1353,7 @@ export function getBacklog(
 
   const awaitingRating = cases.filter(
     (item) =>
-      (item.publicResponse ?? "").trim() !== "" &&
+      respondida(item) &&
       !item.evaluated
   ).length;
 

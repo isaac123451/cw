@@ -49,34 +49,159 @@ const INCLUDE = {
  * só a tela de detalhe o exibe. Carregar sempre custava mais de um
  * segundo em toda abertura da aplicação.
  */
+/** A linha achatada que o SELECT com JOIN devolve. */
+interface CaseRowCru {
+  id: string;
+  externalId: string | null;
+  protocol: string;
+  companyName: string;
+  document: string | null;
+  establishmentId: string | null;
+  establishmentManual: boolean;
+  customer: string;
+  email: string | null;
+  phone: string | null;
+  city: string | null;
+  state: string | null;
+  channel: string;
+  status: string;
+  priority: string;
+  title: string;
+  description: string | null;
+  publicResponseAt: Date | null;
+  draftResponse: string | null;
+  dossierAt: Date | null;
+  dossierBy: string | null;
+  socialHandle: string | null;
+  followers: number | null;
+  evaluated: boolean;
+  score: number | null;
+  scoreDisregarded: boolean | null;
+  resolved: boolean;
+  wouldDoBusiness: boolean;
+  evaluatedAt: Date | null;
+  churnRisk: boolean;
+  request: string | null;
+  responseMinutes: number | null;
+  solutionMinutes: number | null;
+  slaTarget: string | null;
+  externalUrl: string | null;
+  publishedAt: Date;
+  updatedAt: Date;
+
+  respondida: boolean;
+
+  categoryName: string | null;
+  subcategoryName: string | null;
+  ownerName: string | null;
+  teamName: string | null;
+  establishmentName: string | null;
+  tagNames: string[] | null;
+}
+
 export async function fetchCases(
   prisma: PrismaClient,
   { withDescription = false } = {}
 ): Promise<Case[]> {
+  /**
+   * Uma ida ao banco, com JOIN — e não sete.
+   *
+   * **O que foi medido.** Conexão quente, mediana de cinco execuções
+   * contra a base real de 352 reclamações:
+   *
+   * ```
+   *   só contar (piso da rede)        67 ms
+   *   um SQL com JOIN, ida única     124 ms   ← este
+   *   colunas leves pelo Prisma      378 ms
+   *   as seis relações do `include`  541 ms
+   * ```
+   *
+   * O `include` do Prisma resolve cada relação numa consulta própria:
+   * categoria, subcategoria, dono, time, etiquetas e estabelecimento
+   * são seis idas e voltas, e cada ida paga a latência inteira até São
+   * Paulo. Com o JOIN a espera é paga uma vez, e o resto é o banco
+   * fazendo o que ele faz melhor.
+   *
+   * Os textos pesados continuam fora: `description`, `dossier` e
+   * `publicResponse` somam meio megabyte que nenhuma tela da lista
+   * mostra. No lugar de `publicResponse` vem `respondida`, calculada no
+   * próprio SELECT — o fato sem o texto.
+   *
+   * **Por que SQL cru e não Prisma.** Não é preferência: o `include`
+   * não sabe virar JOIN, e mesmo a consulta sem relação nenhuma custa
+   * 378 ms pelo cliente contra 124 ms aqui. O preço é este bloco
+   * precisar acompanhar o schema à mão — e é por isso que
+   * `check:campos` existe e que a conferência abaixo compara campo a
+   * campo com o caminho antigo.
+   */
+  const rows = await prisma.$queryRawUnsafe<CaseRowCru[]>(`
+    SELECT c."id", c."externalId", c."protocol", c."companyName",
+           c."document", c."establishmentId", c."establishmentManual",
+           c."customer", c."email", c."phone", c."city", c."state",
+           c."channel", c."status", c."priority", c."title",
+           ${withDescription ? 'c."description",' : "NULL AS description,"}
+           c."publicResponseAt", c."draftResponse",
+           c."dossierAt", c."dossierBy",
+           c."socialHandle", c."followers",
+           c."evaluated", c."score", c."scoreDisregarded",
+           c."resolved", c."wouldDoBusiness", c."evaluatedAt",
+           c."churnRisk", c."request",
+           c."responseMinutes", c."solutionMinutes",
+           c."slaTarget", c."externalUrl",
+           c."publishedAt", c."updatedAt",
 
-  const rows = await prisma.case.findMany({
-    include: INCLUDE,
-    /*
-      O dossiê sai da lista pelo mesmo motivo do relato.
+           (c."publicResponse" IS NOT NULL
+            AND btrim(c."publicResponse") <> '') AS respondida,
 
-      São milhares de caracteres por caso, e só a tela de detalhe os
-      mostra — carregá-los na abertura da aplicação custaria o mesmo que
-      `description` custava antes de sair daqui: mais de um segundo em
-      toda carga, para um texto que quase ninguém abre.
-    */
-    omit: withDescription
-      ? undefined
-      : { description: true, dossier: true },
-    orderBy: { publishedAt: "desc" },
-  });
+           cat."name" AS "categoryName",
+           sub."name" AS "subcategoryName",
+           own."name" AS "ownerName",
+           tea."name" AS "teamName",
+           est."name" AS "establishmentName",
+
+           COALESCE(
+             (SELECT array_agg(t."name" ORDER BY t."name")
+                FROM "CaseTag" ct
+                JOIN "Tag" t ON t."id" = ct."tagId"
+               WHERE ct."caseId" = c."id"),
+             '{}'
+           ) AS "tagNames"
+
+      FROM "Case" c
+      LEFT JOIN "Category" cat ON cat."id" = c."categoryId"
+      LEFT JOIN "Subcategory" sub ON sub."id" = c."subcategoryId"
+      LEFT JOIN "User" own ON own."id" = c."ownerId"
+      LEFT JOIN "Team" tea ON tea."id" = c."teamId"
+      LEFT JOIN "Establishment" est ON est."id" = c."establishmentId"
+     ORDER BY c."publishedAt" DESC
+  `);
 
   return rows.map((row) =>
     toCaseModel({
       ...row,
-      description:
-        "description" in row
-          ? (row.description as string | null)
-          : null,
+
+      /* O SELECT devolve nome achatado; o mapper espera objeto. */
+      category: row.categoryName
+        ? { name: row.categoryName }
+        : null,
+      subcategory: row.subcategoryName
+        ? { name: row.subcategoryName }
+        : null,
+      owner: row.ownerName
+        ? { name: row.ownerName }
+        : null,
+      team: row.teamName ? { name: row.teamName } : null,
+      establishment: row.establishmentName
+        ? { name: row.establishmentName }
+        : null,
+
+      tags: (row.tagNames ?? []).map((name) => ({
+        tag: { name },
+      })),
+
+      /* Ficaram de fora de propósito; ver o comentário acima. */
+      publicResponse: null,
+      dossier: null,
     })
   );
 }

@@ -1,4 +1,7 @@
-import { Case } from "@/lib/models/case";
+import {
+  Case,
+  respondida,
+} from "@/lib/models/case";
 
 import { getPrisma } from "@/lib/prisma";
 
@@ -95,7 +98,7 @@ export function toPublicCase(item: Case): PublicCase {
     responseTime: item.responseTime,
     solutionTime: item.solutionTime,
     answered:
-      (item.publicResponse ?? "").trim() !== "",
+      respondida(item),
     createdAt: item.createdAt,
     updatedAt: item.updatedAt,
     tags: item.tags ?? [],

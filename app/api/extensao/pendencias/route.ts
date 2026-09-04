@@ -1,3 +1,5 @@
+import { respondida } from "@/lib/models/case";
+
 import {
   autenticar,
   responder,
@@ -135,7 +137,7 @@ export async function POST(request: Request) {
 
     const falta: string[] = [];
 
-    if ((caso.publicResponse ?? "").trim() === "") {
+    if (!respondida(caso)) {
       falta.push("sem resposta pública no portal");
     }
 
@@ -198,7 +200,7 @@ export async function POST(request: Request) {
       peso:
         (sla.situation === "estourado" ? 100 : 0) +
         (caso.churnRisk ? 50 : 0) +
-        ((caso.publicResponse ?? "").trim() === ""
+        (!respondida(caso)
           ? 40
           : 0) +
         falta.length,

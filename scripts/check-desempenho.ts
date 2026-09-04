@@ -48,6 +48,43 @@ let falhas = 0;
  * mediria o aquecimento. A média seria puxada por qualquer engasgo de
  * rede — a mediana de três é o número que se repete.
  */
+/**
+ * O piso da rede, medido uma vez por execucao.
+ *
+ * **Por que o teto fixo nao servia.** Da maquina de quem programa ate o
+ * Supabase em Sao Paulo, o "ola" ao banco custa entre 57 e 300 ms — e
+ * muda com a hora do dia. Medido em duas rodadas seguidas, a mesma
+ * carga deu 139 ms e 619 ms sem uma linha de codigo mudar entre elas.
+ *
+ * Um teto fixo nessa condicao reprova a operadora, nao a consulta. E um
+ * verificador que falha por causa do ambiente ensina a ignorar o
+ * vermelho dele — que e´ o pior estrago que ele pode causar.
+ *
+ * Somar o piso ao teto torna a medida comparavel em qualquer lugar: na
+ * Vercel, com funcao e banco na mesma regiao, o piso e´ de poucos
+ * milissegundos e o teto vale quase inteiro.
+ */
+let pisoDaRede = 0;
+
+async function medirPiso(prisma: PrismaClient) {
+
+  const tempos: number[] = [];
+
+  /* A primeira paga o aperto de mao; nao entra na conta. */
+  await prisma.case.count();
+
+  for (let i = 0; i < 3; i += 1) {
+    const t = Date.now();
+    await prisma.case.count();
+    tempos.push(Date.now() - t);
+  }
+
+  tempos.sort((a, b) => a - b);
+  pisoDaRede = tempos[1];
+
+  return pisoDaRede;
+}
+
 async function medir<T>(
   rotulo: string,
   teto: number,
@@ -66,7 +103,11 @@ async function medir<T>(
   tempos.sort((a, b) => a - b);
 
   const ms = tempos[1];
-  const ok = ms <= teto;
+
+  /* O teto anda com a rede — ver `medirPiso`. */
+  const tetoReal = teto + pisoDaRede;
+
+  const ok = ms <= tetoReal;
 
   if (!ok) falhas += 1;
 
@@ -75,7 +116,7 @@ async function medir<T>(
     : "";
 
   console.log(
-    `${ok ? "  ok  " : "FALHA "} ${rotulo.padEnd(38)} ${String(ms).padStart(5)} ms   teto ${teto} ms   ${quantos}`
+    `${ok ? "  ok  " : "FALHA "} ${rotulo.padEnd(38)} ${String(ms).padStart(5)} ms   teto ${tetoReal} ms   ${quantos}`
   );
 
   return ultimo;
@@ -102,7 +143,25 @@ async function main() {
    * tela do caso abre. Sem essa omissão, as 340 descrições inteiras
    * viajariam a cada abertura do quadro.
    */
-  await medir("carga do quadro (fetchCases)", 1500, () =>
+  /*
+    O teto caiu de 1500 para 500 ms.
+
+    Era generoso porque a carga custava mais de um segundo e um teto
+    apertado reprovaria toda execucao. Com o `include` trocado por um
+    SELECT com JOIN — uma ida ao banco no lugar de sete — a mediana
+    passou a 139 ms, e um teto tres vezes maior que o valor real deixa
+    de alarmar: daria para a carga triplicar sem ninguem notar.
+
+    500 ms e´ o numero que o Isaac pediu, e agora ele cabe.
+  */
+  const piso = await medirPiso(prisma);
+
+  console.log(
+    `  piso da rede: ${piso} ms — os tetos abaixo já o incluem
+`
+  );
+
+  await medir("carga do quadro (fetchCases)", 500, () =>
     fetchCases(prisma)
   );
 

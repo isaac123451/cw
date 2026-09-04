@@ -1,4 +1,7 @@
-import { Case } from "@/lib/models/case";
+import {
+  Case,
+  respondida,
+} from "@/lib/models/case";
 import { ANY_CATEGORY, SlaRule } from "@/lib/models/sla";
 
 import { hojeNaOperacao } from "@/lib/services/reputation.service";
@@ -122,7 +125,7 @@ export function slaStatus(
   }
 
   const respondido =
-    (item.publicResponse ?? "").trim() !== "";
+    respondida(item);
 
   const prazo = respondido
     ? rule.solutionHours

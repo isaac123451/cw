@@ -1,4 +1,7 @@
-import { Case } from "@/lib/models/case";
+import {
+  Case,
+  respondida,
+} from "@/lib/models/case";
 import { parseElapsedText } from "@/lib/services/case.mapper";
 
 import {
@@ -410,7 +413,7 @@ export function getTimeSeries(
       received: items.length,
       answered: items.filter(
         (item) =>
-          (item.publicResponse ?? "").trim() !== ""
+          respondida(item)
       ).length,
       evaluated: items.filter((item) => item.evaluated)
         .length,
@@ -515,7 +518,7 @@ export function getDistribuicaoDeResposta(
   );
 
   const respondidas = naJanela.filter(
-    (item) => (item.publicResponse ?? "").trim() !== ""
+    (item) => respondida(item)
   );
 
   const minutos = respondidas

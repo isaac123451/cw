@@ -12,7 +12,10 @@ import { Prisma } from "@prisma/client";
 import { getPrisma } from "@/lib/prisma";
 import { fetchCandidateCases } from "@/lib/services/case.repository";
 
-import { Case } from "@/lib/models/case";
+import {
+  Case,
+  respondida,
+} from "@/lib/models/case";
 import { Establishment } from "@/lib/models/establishment";
 
 import {
@@ -41,7 +44,6 @@ import {
   compararTelefone,
   Confianca,
   lerTelefone,
-  normalizarNome,
   TelefoneLido,
 } from "@/lib/services/contato.service";
 
@@ -942,7 +944,7 @@ function resumir(
     criadoEm: item.createdAt,
     aberto: isOpen(item),
     respondido:
-      (item.publicResponse ?? "").trim() !== "",
+      respondida(item),
     avaliado: Boolean(item.evaluated),
     nota: item.score,
     resolvido: item.resolved,

@@ -1,4 +1,7 @@
-import { Case } from "@/lib/models/case";
+import {
+  Case,
+  respondida,
+} from "@/lib/models/case";
 import { AgendaTask } from "@/lib/models/agenda";
 import { ImpactRecord } from "@/lib/models/impact";
 import { SlaRule } from "@/lib/models/sla";
@@ -711,7 +714,7 @@ const skills: Skill[] = [
       const minutos = janela
         .filter(
           (item) =>
-            (item.publicResponse ?? "").trim() !== ""
+            respondida(item)
         )
         .map((item) =>
           parseElapsedText(item.responseTime)

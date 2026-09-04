@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+import { respondida } from "@/lib/models/case";
+
 import { tryRole } from "@/lib/auth/guard";
 import { getPrisma } from "@/lib/prisma";
 import { loadWorkspace } from "@/lib/actions/workspace";
@@ -145,7 +147,7 @@ export async function POST(request: Request) {
   const ra = casos.filter(isReclameAqui).filter(isOpen);
 
   const raSemResposta = ra.filter(
-    (c) => (c.publicResponse ?? "").trim() === ""
+    (c) => !respondida(c)
   );
 
   const raSemDono = ra.filter((c) => !c.owner);
