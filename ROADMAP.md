@@ -332,7 +332,35 @@ Definir a variável na Vercel é o que a liga lá.
 
 ## Dívida técnica
 
-### Nenhuma aberta (22/08/2026)
+### `publicResponse` na carga do quadro (03/09/2026)
+
+`check:desempenho` reprova a carga do quadro, e a medição diz por quê:
+
+```
+tudo, sem relato e dossiê     4870 ms   699 kB
+também sem publicResponse     1681 ms   431 kB
+
+peso dos textos: relato 269 kB · resposta 250 kB
+```
+
+**Tirar o texto da resposta corta o tempo a um terço.** É o mesmo
+defeito que `description` já teve e que foi resolvido do mesmo jeito:
+250 kB de texto que a lista carrega e não mostra. A lista precisa saber
+**se** houve resposta, não **qual** foi.
+
+**Por que não foi feito junto.** `publicResponse` é lido em 45 lugares,
+em doze arquivos — `reputation.service` conta respondidas por ele,
+`case.service` decide "sem resposta", `charts`, `sla`, `timeline` e o
+catálogo do agente também. A troca certa é um booleano no modelo, com o
+texto carregado sob demanda como o relato; feita às pressas, ela quebra
+a nota de reputação em silêncio.
+
+**O que segura enquanto isso:** `unstable_cache` de 60 s à frente da
+consulta. O custo aparece uma vez por minuto por instância, e é ele que
+o usuário sente como "às vezes demora".
+
+**O que não fazer:** subir o teto do `check:desempenho` para o vermelho
+sumir. Ele está certo.
 
 A única que havia — treze formulários preenchendo os campos num efeito
 — foi paga, e a regra do `eslint.config.mjs` voltou de `warn` para
