@@ -330,6 +330,35 @@ Definir a variável na Vercel é o que a liga lá.
 
 ---
 
+### A função rodava nos EUA e o banco em São Paulo (03/09/2026)
+
+O sintoma foi: "o banco ou demora para carregar ou nem carrega; no
+painel do Supabase tudo carrega certinho". Duas causas, e as duas
+medidas.
+
+**1. O cliente do banco era descartado a cada chamada em produção.**
+`getPrisma()` só guardava o cliente quando `NODE_ENV !== "production"`
+— a linha do exemplo clássico do Next, cujo objetivo é o hot reload não
+criar dezenas de clientes em desenvolvimento. Em serverless o efeito se
+inverte. Cada chamada reconstruía cliente e pool, e reconectava:
+**1.494 ms de aperto de mão contra 114 ms** de consulta reaproveitada,
+medido por `npm run check:banco`.
+
+**2. A função executava em `iad1`.** O cabeçalho `X-Vercel-Id` da
+produção dizia `gru1::iad1` — borda em São Paulo, execução em
+Washington. O Supabase está em `sa-east-1`, São Paulo. Toda consulta
+cruzava o continente e voltava, e uma tela que dispara dezessete
+consultas pagava o trajeto dezessete vezes.
+
+Foi o que sobrou depois da primeira correção: a mesma página pública
+respondendo entre **0,6 s e 5,0 s** sem nada mudar entre as medições,
+enquanto o mesmo build local servia em 0,04 s. `"regions": ["gru1"]` no
+`vercel.json` põe função e banco na mesma região.
+
+**Como conferir se voltou a acontecer:** `curl -sD - -o /dev/null
+https://<app>/login | grep -i x-vercel-id`. O segundo código é onde a
+função rodou; se não for `gru1`, o continente voltou para o meio.
+
 ## Dívida técnica
 
 ### `publicResponse` na carga do quadro (03/09/2026)

@@ -1,5 +1,28 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+
+  "//": [
+    "A função roda ao lado do banco, e não do outro lado do continente.",
+    "",
+    "Medido em 03/09/2026, pelo cabeçalho X-Vercel-Id: gru1::iad1 — a",
+    "borda que atendeu foi São Paulo, mas a função executou em iad1,",
+    "Washington. O Supabase está em sa-east-1, São Paulo. Ou seja: cada",
+    "consulta saía do Brasil, cruzava o continente, batia no banco em São",
+    "Paulo e voltava. Uma tela que dispara dezessete consultas pagava esse",
+    "trajeto dezessete vezes.",
+    "",
+    "É a explicação do sintoma que sobrou depois de consertar o",
+    "reaproveitamento do cliente: 'ou demora para carregar ou nem",
+    "carrega', com a mesma página pública respondendo entre 0,6 s e 5,0 s",
+    "sem nada ter mudado entre uma medição e outra. Localmente, o mesmo",
+    "build servia em 0,04 s — porque ali não havia continente no meio.",
+    "",
+    "gru1 é São Paulo. Com função e banco na mesma região, a ida e volta",
+    "cai de ~150 ms para poucos milissegundos, e o ganho multiplica pelo",
+    "número de consultas de cada tela."
+  ],
+  "regions": ["gru1"],
+
   "crons": [
     {
       "path": "/api/cron",
