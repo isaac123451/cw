@@ -35,6 +35,7 @@
     "db:backup": "tsx scripts/backup-base.ts",
     "ra:completo": "tsx scripts/import-ra-completo.ts",
     "ra:atualizar": "tsx scripts/ra-atualizar.ts",
+    "metricas:preencher": "tsx scripts/metricas-preencher.ts",
     "check:whatsapp": "node scripts/check-whatsapp.js",
     "check:busca-texto": "tsx scripts/check-busca-texto.ts",
     "check:incremental": "tsx scripts/check-incremental.ts",

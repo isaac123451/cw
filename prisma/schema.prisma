@@ -424,7 +424,6 @@ model Case {
   @@index([channel, publishedAt])
   @@index([status])
   @@index([companyName])
-
   /// A extensão busca por documento — igualdade, então índice serve.
   ///
   /// Telefone e e-mail ficam de fora: a busca deles é `contains`, que
@@ -1374,4 +1373,68 @@ model LoginChallenge {
   createdAt DateTime @default(now())
 
   @@index([userId, createdAt])
+}
+
+/// Uma linha por dia, com o retrato da reputação naquele dia.
+///
+/// **Por que gravar em vez de calcular na hora.** A nota do Reclame
+/// Aqui é sempre calculada sobre a janela vigente de seis meses — ela
+/// responde "como estamos agora", e não "como estávamos em 12 de
+/// agosto". Perguntar hoje qual era a nota naquele dia dá a resposta
+/// errada: a janela já andou, reclamações entraram e saíram dela.
+///
+/// A planilha que a operação mantinha à mão resolvia isso do jeito
+/// certo — anotando o número do dia, no dia. Esta tabela é essa
+/// planilha, preenchida sozinha.
+///
+/// **Dois grupos de campos, e a separação é o ponto.** Os que o sistema
+/// calcula da própria base, e os que só existem no portal do Reclame
+/// Aqui — visualizações, selo, reclamações desativadas pela moderação.
+/// Os segundos ficam nulos até alguém preencher, e nulo aqui quer dizer
+/// "não sei", nunca zero. Um zero inventado num histórico vira gráfico
+/// com um buraco que parece queda.
+model MetricaDiaria {
+  /// `AAAA-MM-DD` na hora da operação. É a chave: um dia, uma linha.
+  dia String @id
+
+  /// ---- O que sai da base ----
+
+  /// Reclamações do RA que entraram no mês, até este dia.
+  entrantes       Int
+  /// Nota de reputação na janela vigente, naquele dia.
+  notaReputacao   Float
+  /// Quantas do mês já tinham resposta pública.
+  respondidas     Int
+  /// Quantas seguiam sem resposta pública.
+  naoRespondidas  Int
+  /// Média das notas dadas pelos consumidores.
+  notaConsumidor  Float
+  /// Percentual que voltaria a fazer negócio.
+  voltariam       Float
+  /// Percentual de resolvidas entre as avaliadas.
+  resolvidasPct   Float
+  /// Tempo médio até a primeira resposta, em horas.
+  tempoMedioHoras Float
+
+  /// Casos marcados como risco de cancelamento.
+  churn   Int
+  /// Casos em que a tratativa evitou o cancelamento.
+  retidos Int
+
+  /// ---- O que só o portal sabe ----
+  ///
+  /// Nulo é "ninguém preencheu", e é diferente de zero.
+  visualizacoes   Int?
+  ciclosComSelo   Int?
+  desativadas     Int?
+  resolvidasCiclo Int?
+
+  /// Quem preencheu a parte manual, quando alguém preencheu.
+  preenchidoPor String?
+  preenchidoEm  DateTime?
+
+  /// Quando a linha automática foi gravada ou regravada.
+  medidoEm DateTime @default(now())
+
+  @@index([dia])
 }

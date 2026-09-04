@@ -47,6 +47,30 @@ export function hojeNaOperacao(): string {
   return FORMATO_DO_DIA.format(new Date());
 }
 
+/**
+ * Qualquer instante, no dia de parede da operacao.
+ *
+ * **Por que nao serve `toISOString().slice(0, 10)`.** Sao Paulo esta
+ * tres horas atras de UTC: uma reclamacao registrada as 21h30 de uma
+ * terca vira, em UTC, meia-noite e meia de quarta. Contar por UTC joga
+ * esse caso para o dia seguinte, e num historico diario isso aparece
+ * como reclamacao que entrou no dia errado — foi a divergencia entre a
+ * reconstrucao automatica e a planilha que a operacao mantinha a mao.
+ *
+ * O mesmo formatador de `hojeNaOperacao`, para os dois nunca
+ * discordarem sobre que dia e´ hoje.
+ */
+export function diaNaOperacao(
+  valor: Date | string
+): string {
+
+  const d = valor instanceof Date ? valor : new Date(valor);
+
+  return Number.isNaN(d.getTime())
+    ? String(valor).slice(0, 10)
+    : FORMATO_DO_DIA.format(d);
+}
+
 export type PeriodKey =
   | "30d"
   | "3m"

@@ -1,5 +1,13 @@
 import { importarAvisosDoRA } from "@/lib/services/raEmail.import";
 
+import {
+  gravarDia,
+  medirDia,
+} from "@/lib/services/metricas.service";
+
+import { getApiCases } from "@/lib/api/source";
+import { hojeNaOperacao } from "@/lib/services/reputation.service";
+
 import { revalidateTag } from "next/cache";
 
 import { Prisma, PrismaClient } from "@prisma/client";
@@ -106,6 +114,7 @@ export async function GET(request: Request) {
     desafios,
     wootric,
     avisosDoRA,
+    metricasDeHoje,
   ] = await Promise.all([
     encerrarNpsAbandonado(prisma),
     avisarMovimentacoesAtrasadas(prisma),
@@ -155,6 +164,19 @@ export async function GET(request: Request) {
      * resultado, e as outras cinco tarefas seguem.
      */
     importarAvisosDoRA(prisma),
+
+    /**
+     * O retrato de hoje, gravado hoje.
+     *
+     * A nota do Reclame Aqui e´ sempre calculada sobre a janela vigente
+     * de seis meses: ela responde "como estamos agora", nao "como
+     * estavamos em 12 de agosto". Perguntar depois qual era a nota
+     * naquele dia da a resposta errada, porque a janela andou.
+     *
+     * A planilha que a operacao mantinha a mao resolvia isso anotando o
+     * numero do dia, no dia. Esta linha e´ essa planilha.
+     */
+    medirHoje(prisma),
   ]);
 
   /**
@@ -185,6 +207,7 @@ export async function GET(request: Request) {
     desafiosApagados: desafios,
     wootric,
     avisosDoRA,
+    metricasDeHoje,
   });
 }
 
@@ -598,4 +621,53 @@ async function vincularPorCnpj(prisma: PrismaClient) {
   }
 
   return { vinculados, semCadastro };
+}
+
+
+/* ============================================================
+   O RETRATO DIARIO
+============================================================ */
+
+/**
+ * Mede e grava o dia de hoje.
+ *
+ * **Nunca lanca.** Uma falha aqui nao pode derrubar a rotina, que
+ * tambem encerra NPS, avisa atraso, reenvia webhook e le os avisos do
+ * Reclame Aqui. O erro vira campo no resultado.
+ *
+ * **Regravar e´ seguro.** Os campos automaticos sao recalculados; os
+ * manuais — visualizacoes do RA, selo, desativadas — ficam intocados.
+ * Quem digitou o numero do portal nao o perde porque a rotina rodou.
+ */
+async function medirHoje(prisma: PrismaClient) {
+
+  try {
+
+    const cases = await getApiCases("all");
+
+    const impactos = await prisma.impactRecord.findMany({
+      select: { date: true, wouldHaveChurned: true },
+    });
+
+    const m = medirDia(
+      cases,
+      impactos,
+      hojeNaOperacao()
+    );
+
+    await gravarDia(prisma, m);
+
+    return {
+      dia: m.dia,
+      nota: m.notaReputacao,
+      entrantes: m.entrantes,
+      naoRespondidas: m.naoRespondidas,
+    };
+
+  } catch (erro) {
+    return {
+      erro:
+        erro instanceof Error ? erro.message : String(erro),
+    };
+  }
 }
