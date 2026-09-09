@@ -55,6 +55,8 @@
     "check:duas-etapas": "tsx --conditions=react-server scripts/check-duas-etapas.ts",
     "zerar:processos": "tsx scripts/zerar-processos.ts",
     "check:mortos": "tsx scripts/check-mortos.ts",
+    "check:imports": "tsx scripts/check-imports.ts",
+    "check:vercel": "tsx scripts/check-vercel.ts",
     "check:assistente": "tsx scripts/check-assistente.ts",
     "check:canais": "tsx scripts/check-canais.ts",
     "check:whatsapp-numero": "tsx scripts/check-whatsapp-numero.ts",

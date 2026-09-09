@@ -330,6 +330,36 @@ Definir a variável na Vercel é o que a liga lá.
 
 ---
 
+### Um comentário no vercel.json parou o deploy por seis dias (09/09/2026)
+
+Em 03/09 acrescentei um bloco de explicação ao `vercel.json`, numa
+chave `"//"` — a convenção que se usa em JSON, que não tem comentário.
+
+O schema da Vercel declara **`additionalProperties: false`**. Qualquer
+chave que ele não conheça invalida o arquivo e **derruba o build**.
+
+O estrago não foi o build falhar. Foi o que acontece depois:
+
+- três deploys seguidos com Error, de 3 a 9 de setembro;
+- a Vercel continuou servindo a **versão anterior**, sem avisar;
+- a produção passou seis dias com código velho — sem a carga 5× mais
+  rápida, sem a região `gru1`, sem nada do que foi feito depois;
+- e o sintoma chegou como **"os dados não carregam"**, três vezes,
+  enquanto tudo que dava para medir localmente estava certo: banco de
+  pé, código compilando, imports em ordem, lockfile em dia.
+
+**Nada no fluxo local vê um `vercel.json` inválido.** O `tsc` não olha,
+o `next build` não olha, o lint não olha. Só a Vercel olha — e ela olha
+do outro lado do push.
+
+`npm run check:vercel` traz esse olhar para cá: baixa o schema oficial
+e valida o arquivo contra ele. Também confere os limites do plano Hobby
+— uma região, duas rotinas agendadas —, porque passar deles faz o
+deploy falhar **antes** do build, do mesmo jeito silencioso.
+
+**A regra que fica:** explicação vai no ROADMAP, nunca dentro de um JSON
+de configuração.
+
 ### A função rodava nos EUA e o banco em São Paulo (03/09/2026)
 
 O sintoma foi: "o banco ou demora para carregar ou nem carrega; no
