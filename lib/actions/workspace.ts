@@ -11,7 +11,8 @@ import type {
 import { WORKSPACE_TAG } from "@/lib/actions/tags";
 
 import { getPrisma } from "@/lib/prisma";
-import { tryRole } from "@/lib/auth/guard";
+import { motivoDaRecusa,
+  tryRole } from "@/lib/auth/guard";
 
 import {
   CategoryOption,
@@ -33,6 +34,7 @@ import {
 } from "@/lib/models/client";
 import { Project } from "@/lib/models/project";
 import { Macro } from "@/lib/models/macro";
+import type { MotivoDaFalha } from "@/lib/models/leitura";
 import {
   PLANOS_PADRAO,
   PlanOption,
@@ -120,6 +122,20 @@ export interface Workspace {
    * Reclame Aqui.
    */
   reputationGoals: Record<string, number>;
+
+  /**
+   * Este retrato veio do banco, ou é o vazio de emergência?
+   *
+   * `loadWorkspace` devolvia `VAZIO` em quatro situações — sem
+   * sessão, sem banco, sem permissão, leitura falhada — e as quatro
+   * chegavam à tela iguais a um cadastro genuinamente vazio: sem
+   * etapas no quadro, sem categorias, sem regra de prazo. Uma
+   * plataforma inteira em branco, sem uma palavra de explicação.
+   *
+   * O motivo vem junto agora. `undefined` quer dizer que veio do
+   * banco e está tudo certo.
+   */
+  indisponivel?: MotivoDaFalha;
 
   /**
    * O que a operação preencheu por cima do cliente vindo do export —
@@ -219,11 +235,37 @@ export async function loadWorkspace(): Promise<Workspace> {
    * `tryRole` devolve `null` em vez de lancar: sem sessao a resposta e
    * o `VAZIO` que a tela ja sabe exibir quando nao ha banco.
    */
-  if (!(await tryRole("LEITURA"))) return VAZIO;
+  if (!(await tryRole("LEITURA"))) {
+    return {
+      ...VAZIO,
+      indisponivel: await motivoDaRecusa("LEITURA"),
+    };
+  }
 
-  if (!getPrisma()) return VAZIO;
+  if (!getPrisma()) {
+    return { ...VAZIO, indisponivel: "sem-banco" };
+  }
 
-  return (await lerWorkspace()) ?? VAZIO;
+  /*
+    Exceção aqui é o banco recusando, não cadastro vazio.
+
+    Sem o `catch`, a falha subia e cada uma das treze telas que
+    dependem desta carga quebrava sozinha, com a mensagem genérica
+    do Next. Com ele, a tela abre e **diz** o que houve.
+  */
+  try {
+    const carregado = await lerWorkspace();
+
+    if (!carregado) {
+      return { ...VAZIO, indisponivel: "sem-banco" };
+    }
+
+    return carregado;
+  } catch (erro) {
+    console.error("[workspace] leitura falhou", erro);
+
+    return { ...VAZIO, indisponivel: "banco-recusou" };
+  }
 }
 
 async function carregarDoBanco(): Promise<Workspace | null> {

@@ -5,6 +5,7 @@ import { PrismaClient } from "@prisma/client";
 import { getPrisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth/session";
 import type { Modulo } from "@/lib/auth/modules";
+import type { MotivoDaFalha } from "@/lib/models/leitura";
 
 /**
  * Reexportados de `lib/auth/modules.ts`, que não é `server-only`.
@@ -207,6 +208,63 @@ export async function can(
  * Gravação continua em `requireRole`: ali o silêncio esconderia uma
  * recusa que a pessoa precisa ver.
  */
+/**
+ * Por que `tryRole` disse não.
+ *
+ * `tryRole` devolve `null` por quatro razões diferentes, e quem chama
+ * recebia as quatro iguais. Numa gravação isso bastava — recusou,
+ * recusou. Numa **leitura** não: "a sessão expirou", "sua conta perdeu
+ * acesso" e "o banco não respondeu" pedem coisas diferentes de quem
+ * está na frente da tela, e todas as três chegavam como uma lista
+ * vazia, sem palavra nenhuma.
+ *
+ * Roda **só no caminho da recusa**, refazendo as mesmas perguntas na
+ * mesma ordem. Repete duas consultas baratas para nomear o motivo, e
+ * repete de propósito: a alternativa era mudar a assinatura de
+ * `tryRole` e com ela os quarenta lugares que a chamam.
+ */
+export async function motivoDaRecusa(
+  minimo: Role = "LEITURA",
+  modulo?: Modulo
+): Promise<MotivoDaFalha> {
+
+  const prisma = getPrisma();
+
+  if (!prisma) return "sem-banco";
+
+  const session = await getSession();
+
+  if (!session) return "sem-sessao";
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: session.id },
+      select: { role: true, active: true },
+    });
+
+    if (!user || !user.active) return "sem-permissao";
+
+    const role = await papelNoModulo(
+      prisma,
+      session.id,
+      user.role as Role,
+      modulo
+    );
+
+    return NIVEL[role] < NIVEL[minimo]
+      ? "sem-permissao"
+      : /*
+           Passou em tudo agora e tinha falhado há um instante: foi o
+           banco oscilando entre as duas chamadas. É a resposta certa,
+           e é a única que sobra.
+         */
+        "banco-recusou";
+  } catch {
+    /* A consulta em si estourou: não é permissão, é conexão. */
+    return "banco-recusou";
+  }
+}
+
 export async function tryRole(
   minimo: Role = "LEITURA",
   modulo?: Modulo

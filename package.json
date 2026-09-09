@@ -1,6 +1,6 @@
 {
   "name": "cw-reputacao",
-  "version": "0.43.0",
+  "version": "0.44.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -75,7 +75,8 @@
     "check:email-ra": "tsx scripts/check-email-ra.ts",
     "check:dossie-estrutura": "tsx scripts/check-dossie-estrutura.ts",
     "check:atalho": "tsx scripts/check-atalho.ts",
-    "check:publicado": "tsx scripts/check-publicado.ts"
+    "check:publicado": "tsx scripts/check-publicado.ts",
+    "check:silencio": "tsx scripts/check-silencio.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",

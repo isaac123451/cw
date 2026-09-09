@@ -469,6 +469,65 @@ function conferirFiacao() {
     else falhar(titulo, detalhe);
   }
 
+  /* ---- a janela não pode ficar girando ---- */
+
+  /**
+   * O defeito que fez o atalho "não funcionar" no primeiro dia.
+   *
+   * `carregar` descartava a resposta quando o **contato** tinha
+   * mudado entre o pedido e a volta. Parece prudente e é o contrário:
+   * o contato muda exatamente nessa janela de tempo, porque o painel
+   * está resolvendo quem é aquele telefone ao mesmo tempo — e quando
+   * ele responde, o nome deixa de ser o apelido da agenda e passa a
+   * ser o do cadastro. Ou seja, o caso mais comum de todos.
+   *
+   * Descartada a resposta, ninguém trocava o "Buscando os textos…"
+   * que `abrir` tinha desenhado. A janela ficava girando para sempre.
+   *
+   * A pergunta certa é "esta resposta ainda é a mais nova?", que se
+   * responde com um número de pedido — nunca com o contato.
+   */
+  const descartaPorContato =
+    /if\s*\(\s*!?\s*aberto\s*\|\|\s*chave\s*!==\s*chaveDoContexto\(\)/.test(
+      script
+    );
+
+  if (!descartaPorContato && script.includes("meu !== pedido")) {
+    ok(
+      "a resposta é descartada por ser velha, não por ser de outro contato",
+      "contato diferente pede a lista de novo; não trava a janela"
+    );
+  } else {
+    falhar(
+      "a resposta é descartada por ser velha, não por ser de outro contato",
+      "voltou a comparar o contexto para decidir se desenha — é o que deixava a janela em 'Buscando os textos…' para sempre"
+    );
+  }
+
+  /**
+   * E, aconteça o que acontecer, o "carregando" tem fim.
+   *
+   * Rede que não volta, caminho de código que sai calado: o sintoma é
+   * o mesmo, e é o pior possível — a janela gira sem dizer nada para
+   * quem está com o cliente na linha. O relógio não conserta a causa;
+   * garante que a tela **diga** que não conseguiu.
+   */
+  if (
+    script.includes("function esperando(") &&
+    script.includes("esperando(true)") &&
+    script.includes("esperando(false)")
+  ) {
+    ok(
+      "o 'carregando' tem prazo e vira mensagem",
+      "nenhum caminho deixa a janela girando calada"
+    );
+  } else {
+    falhar(
+      "o 'carregando' tem prazo e vira mensagem",
+      "sem a rede de segurança, qualquer caminho calado prende a janela em 'Buscando os textos…'"
+    );
+  }
+
   /* ---- as três camadas da colagem ---- */
 
   const camadas = [

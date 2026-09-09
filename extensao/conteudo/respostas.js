@@ -89,6 +89,14 @@
   /** Endereço da Base de Conhecimento, dito pelo servidor. */
   let enderecoDaBase = "";
 
+  /**
+   * Quantos pedidos já saíram daqui.
+   *
+   * Só o último manda. É o que substitui a comparação por contato
+   * que travava a janela — ver `carregar`.
+   */
+  let pedido = 0;
+
   /* ============================================================
      CONTEXTO
   ============================================================ */
@@ -408,16 +416,51 @@
      */
     if (chave === chaveDaLista && lista.length > 0) {
       desenhar();
+      esperando(false);
     } else {
       lista = [];
       desenhar("carregando");
+      esperando(true);
     }
 
-    await carregar(chave);
+    await carregar();
+  }
+
+  /**
+   * "Buscando os textos…" não pode ser um estado final.
+   *
+   * A rede pode não voltar, e um caminho de código pode sair calado —
+   * foi o que aconteceu com a comparação por contato em `carregar`. Nos
+   * dois casos o sintoma é o mesmo e é o pior possível: a janela fica
+   * girando, sem dizer nada, e quem está com o cliente na linha não tem
+   * o que fazer além de desistir.
+   *
+   * Este relógio é a rede embaixo. Ele não conserta nada — só garante
+   * que a tela **diga** que não conseguiu, com um botão para tentar de
+   * novo, em vez de mentir que ainda está tentando.
+   */
+  const ESPERA_MAXIMA = 12_000;
+
+  let relogioDaEspera = null;
+
+  function esperando(sim) {
+    clearTimeout(relogioDaEspera);
+
+    if (!sim) return;
+
+    relogioDaEspera = setTimeout(() => {
+      if (!aberto || lista.length > 0) return;
+
+      desenhar(
+        "Demorou demais e eu não sei por quê. Feche e abra o atalho para tentar de novo — se insistir, confira o endereço nas Opções da extensão."
+      );
+    }, ESPERA_MAXIMA);
   }
 
   function fechar() {
     aberto = false;
+
+    esperando(false);
 
     if (botao) {
       botao.setAttribute("aria-expanded", "false");
@@ -428,7 +471,11 @@
     }
   }
 
-  async function carregar(chave) {
+  async function carregar() {
+    const meu = (pedido += 1);
+
+    const chave = chaveDoContexto();
+
     const { cliente, protocolo } = contexto();
 
     const resposta = await CW.enviar({
@@ -440,8 +487,29 @@
       },
     });
 
-    /* A pessoa fechou enquanto carregava, ou trocou de conversa. */
-    if (!aberto || chave !== chaveDoContexto()) return;
+    /**
+     * Descarta pedido **velho**, não pedido de contato velho.
+     *
+     * Aqui morava o defeito que deixava a janela em "Buscando os
+     * textos…" para sempre. A comparação era com o contexto: se o
+     * contato tivesse mudado entre o pedido e a resposta, esta função
+     * saía calada — e a tela ficava no "carregando" que `abrir`
+     * desenhou, sem ninguém para trocá-lo.
+     *
+     * E o contato **muda mesmo**, exatamente nessa janela de tempo: o
+     * painel está resolvendo quem é aquele telefone ao mesmo tempo, e
+     * quando ele responde o nome deixa de ser o apelido da agenda e
+     * passa a ser o do cadastro do consumidor. Ou seja, o caso mais
+     * comum de todos — abrir o atalho logo depois de entrar numa
+     * conversa — caía direto no caminho que travava.
+     *
+     * A pergunta certa não é "o contato ainda é o mesmo?", e sim "esta
+     * resposta ainda é a mais nova?". Contato diferente não é motivo
+     * para descartar: é motivo para pedir de novo, ali embaixo.
+     */
+    if (meu !== pedido || !aberto) return;
+
+    esperando(false);
 
     if (!resposta.ok) {
       lista = [];
@@ -458,6 +526,18 @@
 
     marcado = 0;
     desenhar();
+
+    /**
+     * O painel identificou o contato enquanto isto viajava.
+     *
+     * Os textos vieram preenchidos com o que se sabia antes — sem o
+     * nome do cadastro, sem protocolo. Vale pedir de novo, agora com o
+     * que o painel descobriu.
+     *
+     * Não vira laço: a segunda volta grava `chaveDaLista` com a chave
+     * nova, e a comparação passa a dar igual.
+     */
+    if (chaveDoContexto() !== chaveDaLista) carregar();
   }
 
   /** Minúsculas e sem acento — a busca não pode depender da digitação. */

@@ -7,8 +7,15 @@ import { CASES_TAG } from "@/lib/actions/tags";
 
 import { Case } from "@/lib/models/case";
 
+import {
+  falhou,
+  leu,
+  type Leitura,
+} from "@/lib/models/leitura";
+
 import { getPrisma } from "@/lib/prisma";
 import {
+  motivoDaRecusa,
   requireRole,
   tryRole,
 } from "@/lib/auth/guard";
@@ -104,27 +111,55 @@ const lerDoBanco = unstable_cache(
   { tags: [CASES_TAG], revalidate: 60 }
 );
 
-export async function listCases(): Promise<Case[]> {
+/**
+ * As reclamações, **ou o motivo de não terem vindo.**
+ *
+ * **Sem banco, nenhuma reclamação — nunca dado inventado.** Até
+ * 23/08/2026 aqui havia `?? mockCases`, e o `??` disparava quando a
+ * *leitura falhava*, não só quando não havia banco. Uma queda de
+ * conexão com o Supabase — coisa de segundos, que acontece — fazia a
+ * plataforma inteira exibir 334 reclamações inventadas, com nomes de
+ * consumidores que não existem, indistinguíveis das reais.
+ *
+ * A troca foi por lista vazia, e resolveu o perigo. Sobrou o **outro**
+ * defeito, que levou mais tempo para aparecer porque parece inofensivo:
+ * vazio por falha e vazio de verdade viraram a mesma tela. Zero em
+ * todos os contadores, quadro em branco, nenhuma palavra. Foi o que
+ * chegou como "os dados não carregam" quatro vezes em duas semanas —
+ * sempre igual, e cada vez por uma causa diferente.
+ *
+ * Agora a resposta carrega qual dos dois foi. Devolvida e não lançada:
+ * erro atirado de server action chega ao navegador sanitizado em
+ * produção, e perderia justamente esta informação.
+ */
+export async function listCases(): Promise<
+  Leitura<Case[]>
+> {
 
-  if (!(await podeLer())) return [];
+  if (!(await podeLer())) {
+    return falhou(
+      await motivoDaRecusa("LEITURA", MODULO)
+    );
+  }
 
   /**
-   * **Sem banco, nenhuma reclamação — nunca dado inventado.**
+   * `null` daqui é falha de leitura, não ausência de reclamação.
    *
-   * Até 23/08/2026 estas duas linhas eram
-   * `if (!getPrisma()) return mockCases` e
-   * `return (await lerDoBanco()) ?? mockCases`. A segunda é a grave: o
-   * `??` disparava quando a **leitura falhava**, não só quando não
-   * havia banco. Uma queda de conexão com o Supabase — coisa de
-   * segundos, que acontece — fazia a plataforma inteira exibir 334
-   * reclamações inventadas, com nomes de consumidores que não existem,
-   * indistinguíveis das reais. Ninguém teria como perceber.
-   *
-   * Lista vazia é uma resposta ruim; lista falsa é uma resposta
-   * perigosa. A tela vazia diz "não consegui carregar"; a tela cheia de
-   * ficção diz "aqui está a sua operação".
+   * `lerDoBanco` só devolve `null` quando não há Prisma; qualquer outra
+   * coisa que dê errado vira exceção, e o `catch` abaixo a nomeia. Uma
+   * lista genuinamente vazia chega como `[]`, e passa reto.
    */
-  return (await lerDoBanco()) ?? [];
+  try {
+    const linhas = await lerDoBanco();
+
+    if (linhas === null) return falhou("sem-banco");
+
+    return leu(linhas);
+  } catch (erro) {
+    console.error("[casos] leitura falhou", erro);
+
+    return falhou("banco-recusou");
+  }
 }
 
 /**

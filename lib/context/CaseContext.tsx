@@ -215,6 +215,16 @@ interface CaseContextType {
 
   /** Última falha de leitura/gravação no banco, se houve. */
   syncError: string | null;
+
+  /**
+   * Quando os dados que estão na tela chegaram do banco.
+   *
+   * Existe porque a pergunta que ninguém conseguia responder era
+   * "isto que estou vendo é de agora?". Sem a hora, uma tela
+   * carregada às 8h e esquecida aberta até as 18h parece tão atual
+   * quanto uma recém-aberta — e as decisões saem de cima dela.
+   */
+  carregadoEm: Date | null;
 }
 
 const CaseContext =
@@ -264,16 +274,34 @@ export function CaseProvider({
     string | null
   >(null);
 
+  const [carregadoEm, setCarregadoEm] =
+    useState<Date | null>(null);
+
   /** Relê do banco. Chamado depois de importar uma planilha. */
   async function recarregar() {
 
     if (!hasDatabase) return;
 
     try {
-      const rows = await listCases();
-      baseRef.current = rows;
-      setCases(rows);
+      const leitura = await listCases();
+
+      /*
+        Falha não vira lista vazia.
+
+        Antes, qualquer motivo — sessão expirada, conta sem acesso,
+        banco fora do ar — chegava como `[]` e a tela zerava sem dizer
+        nada. Agora o motivo vem junto e some da tela só quando a
+        leitura der certo.
+      */
+      if (!leitura.ok) {
+        setSyncError(leitura.recado);
+        return;
+      }
+
+      baseRef.current = leitura.dados;
+      setCases(leitura.dados);
       setSyncError(null);
+      setCarregadoEm(new Date());
     } catch (error) {
       console.error("[casos] recarga falhou", error);
       setSyncError(
@@ -328,11 +356,19 @@ export function CaseProvider({
     let ativo = true;
 
     listCases()
-      .then((rows) => {
+      .then((leitura) => {
 
         if (!ativo) return;
 
+        if (!leitura.ok) {
+          setSyncError(leitura.recado);
+          return;
+        }
+
+        const rows = leitura.dados;
+
         baseRef.current = rows;
+        setCarregadoEm(new Date());
 
         if (hasDatabase) {
           setCases(rows);
@@ -643,6 +679,8 @@ export function CaseProvider({
       hasDatabase,
 
       syncError,
+
+      carregadoEm,
     }),
     [
       cases,
@@ -651,13 +689,60 @@ export function CaseProvider({
       loading,
       hasDatabase,
       syncError,
+      carregadoEm,
     ]
   );
 
   return (
     <CaseContext.Provider value={value}>
+      {/*
+        O aviso mora aqui, e não em cada tela.
+
+        `syncError` existia, era preenchido corretamente em toda falha
+        de carga — e **nenhum componente o lia**. O erro era registrado
+        e não tinha para onde ir: a tela mostrava zero em tudo, quadro
+        em branco, nenhuma palavra. É por isso que "os dados não
+        carregam" apareceu quatro vezes em duas semanas, sempre com a
+        mesma cara e cada vez por uma causa diferente.
+
+        No provider, cobre de uma vez todas as telas que dependem de
+        reclamação — e não dá para uma tela nova esquecer de mostrar.
+      */}
+      {syncError && <AvisoDeLeitura recado={syncError} />}
+
       {children}
     </CaseContext.Provider>
+  );
+}
+
+/**
+ * A faixa que diz que os dados não são o que a tela parece mostrar.
+ *
+ * Fixa no topo e por cima de tudo, de propósito: quem abriu a tela
+ * precisa saber **antes** de tirar conclusão dos números. Um aviso
+ * discreto no rodapé seria a mesma omissão de antes, com mais trabalho.
+ */
+function AvisoDeLeitura({ recado }: { recado: string }) {
+  return (
+    <div
+      role="alert"
+      className="fixed inset-x-0 top-0 z-[100] flex items-start justify-center gap-3 border-b border-amber-300 bg-amber-50 px-4 py-2.5 text-[13px] text-amber-900 shadow-sm dark:border-amber-700/50 dark:bg-amber-950 dark:text-amber-100"
+    >
+      <span className="max-w-3xl">
+        <strong className="font-semibold">
+          Os números abaixo não são a sua operação.
+        </strong>{" "}
+        {recado}
+      </span>
+
+      <button
+        type="button"
+        onClick={() => window.location.reload()}
+        className="shrink-0 rounded-lg border border-amber-400 px-2 py-0.5 text-xs font-medium transition-colors hover:bg-amber-100 dark:border-amber-600 dark:hover:bg-amber-900"
+      >
+        Recarregar
+      </button>
+    </div>
   );
 }
 

@@ -7,6 +7,7 @@ import {
   BarChart3,
   LayoutGrid,
   Plus,
+  RefreshCw,
   Search,
   Settings2,
   Table,
@@ -15,6 +16,7 @@ import {
 } from "lucide-react";
 
 import { useScopedCases } from "@/lib/context/useScopedCases";
+import { useCases } from "@/lib/context/CaseContext";
 import { useSettings } from "@/lib/context/SettingsContext";
 import { useOwners } from "@/lib/hooks/useOwners";
 
@@ -81,6 +83,39 @@ export default function Toolbar({
     applyFilters,
     clearFilters,
   } = useScopedCases("reclame-aqui");
+
+  /**
+   * A recarga vem do contexto inteiro, não do recorte do módulo.
+   *
+   * `useScopedCases` entrega os casos já filtrados por canal — é o que
+   * a barra usa para montar as listas. Reler é operação da carga, e a
+   * carga é uma só: recarregar aqui atualiza também o NPS e as Redes
+   * Sociais, que leem do mesmo lugar.
+   */
+  const {
+    cases: todos,
+    recarregar,
+    loading,
+    carregadoEm,
+  } = useCases();
+
+  const [atualizando, setAtualizando] = useState(false);
+
+  /**
+   * A hora da carga, sem segundos.
+   *
+   * Formatada no fuso da operação e não no do navegador: quem abre a
+   * plataforma de fora do horário de Brasília precisa ler a mesma hora
+   * que aparece nos prazos e nas datas dos casos, senão a comparação
+   * "carregou depois que fulano moveu?" não fecha.
+   */
+  const quando = carregadoEm
+    ? carregadoEm.toLocaleTimeString("pt-BR", {
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZone: "America/Sao_Paulo",
+      })
+    : "";
 
   const { tags } = useSettings();
 
@@ -353,6 +388,48 @@ export default function Toolbar({
             </button>
 
           </div>
+
+          {/*
+            Atualizar, e dizer de quando são os dados.
+
+            Pedido do Isaac depois da quarta vez que a tela apareceu
+            zerada: "preciso de algum botão de atualizar como o do NPS
+            para atualizar quando abrir a página e dar a informação".
+
+            As duas metades importam, e a segunda mais: um botão que
+            recarrega sem dizer nada deixa a mesma dúvida de antes —
+            "recarregou e continua zero, ou nem tentou?". Por isso a
+            hora fica ao lado dele, e a contagem de reclamações junto:
+            "353 · 14:32" responde de uma vez se veio e se é de agora.
+          */}
+          <button
+            onClick={() => {
+              setAtualizando(true);
+              recarregar().finally(() =>
+                setAtualizando(false)
+              );
+            }}
+            disabled={atualizando || loading}
+            title="Reler as reclamações do banco agora"
+            className="flex h-10 items-center gap-2 rounded-xl border border-zinc-200 px-3.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-50"
+          >
+            <RefreshCw
+              size={16}
+              className={
+                atualizando || loading
+                  ? "animate-spin"
+                  : ""
+              }
+            />
+
+            <span className="hidden lg:inline">
+              {atualizando || loading
+                ? "Atualizando..."
+                : quando
+                  ? `${todos.length} · ${quando}`
+                  : "Atualizar"}
+            </span>
+          </button>
 
           <button
             onClick={() => setTransferOpen(true)}
