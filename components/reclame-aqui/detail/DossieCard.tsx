@@ -66,25 +66,44 @@ export default function DossieCard({
    * a barra "Salvar" aparecer só de abrir o caso, anunciando uma
    * alteração que ninguém fez.
    */
-  const [guardado, setGuardado] = useState<{
+  /**
+   * O que o servidor devolveu quando o dossiê **não** veio na carga.
+   *
+   * Só isto é estado. O caso que já chega com dossiê é lido direto da
+   * propriedade, logo abaixo — copiá-lo para cá dentro de um efeito era
+   * guardar duas vezes o mesmo dado, e o segundo sempre um render
+   * atrasado em relação ao primeiro.
+   */
+  const [doServidor, setDoServidor] = useState<{
     dossier: string;
     dossierAt?: string;
     dossierBy?: string;
   } | null>(null);
+
+  /**
+   * O dossiê que a tela mostra: o da carga na frente do buscado.
+   *
+   * Derivado, não copiado. A versão anterior fazia `setGuardado({...})`
+   * no começo do efeito quando `data.dossier` existia — e isso é o
+   * defeito que a regra `set-state-in-effect` aponta: um render inteiro
+   * acontece com `guardado` ainda em `null`, o cartão devolve `null` e
+   * **some da tela**, e só no render seguinte ele aparece. Piscava a
+   * cada carga de caso que já tinha dossiê.
+   */
+  const guardado = data.dossier
+    ? {
+        dossier: data.dossier,
+        dossierAt: data.dossierAt,
+        dossierBy: data.dossierBy,
+      }
+    : doServidor;
 
   const buscado = useRef<string>("");
 
   useEffect(() => {
 
     /* Já veio na carga (a extensão acabou de gravar): não busca. */
-    if (data.dossier) {
-      setGuardado({
-        dossier: data.dossier,
-        dossierAt: data.dossierAt,
-        dossierBy: data.dossierBy,
-      });
-      return;
-    }
+    if (data.dossier) return;
 
     if (buscado.current === data.protocol) return;
 
@@ -114,7 +133,7 @@ export default function DossieCard({
         */
         if (buscado.current !== pedido) return;
 
-        if (achado) setGuardado(achado);
+        if (achado) setDoServidor(achado);
       })
       .catch((erro: unknown) => {
         console.error(
@@ -123,12 +142,14 @@ export default function DossieCard({
         );
       });
 
-  }, [
-    data.protocol,
-    data.dossier,
-    data.dossierAt,
-    data.dossierBy,
-  ]);
+    /*
+      `dossierAt` e `dossierBy` saíram das dependências junto com o
+      `setGuardado` que os lia. O efeito agora só busca, e busca por
+      duas coisas: qual caso está na tela, e se ele já veio com dossiê.
+      Manter os outros dois aqui refaria a busca quando só o carimbo de
+      quem salvou mudasse.
+    */
+  }, [data.protocol, data.dossier]);
 
   if (!guardado || apagado) return null;
 

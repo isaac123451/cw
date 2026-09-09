@@ -261,6 +261,29 @@ async function chamar(caminho, parametros = {}, corpo) {
       detalhe = "";
     }
 
+    /**
+     * 404 numa rota que a extensão conhece tem **um** significado.
+     *
+     * Todos os caminhos daqui saem de `CAMINHOS`, e `check:fiacao`
+     * confere que cada um existe no repositório. Então, se o servidor
+     * responde 404 num deles, o arquivo existe aqui e não lá: a
+     * aplicação no ar é mais antiga que esta extensão — falta um push,
+     * ou o deploy falhou.
+     *
+     * Foi exatamente isto em 09/09/2026, com o atalho de respostas
+     * rápidas: a rota estava no repositório, a extensão já a chamava, a
+     * produção ainda não a tinha. E a mensagem que aparecia era
+     * "A aplicação respondeu 404." — que não diz nada e manda procurar
+     * defeito no lugar errado.
+     */
+    if (resposta.status === 404) {
+      throw new FalhaNaChamada(
+        "versao",
+        `A aplicação em ${base} ainda não tem esta função. A extensão está na frente do que está no ar — falta publicar a versão nova (git push, e o deploy passar).`,
+        { base, status: 404 }
+      );
+    }
+
     throw new FalhaNaChamada(
       "http",
       detalhe ||

@@ -1085,6 +1085,9 @@
     http: "a aplicação recusou",
     sessao: "sessão expirada — entre no CW",
     recarregue: "recarregue esta página",
+
+    /* A extensão está na frente do que está publicado. */
+    versao: "a aplicação no ar é mais antiga",
   };
 
   /* ============================================================
@@ -1812,6 +1815,13 @@
       )}">Entrar no CW Reputação</button>`,
       rede: `<button class="acao" data-acao="recarregar">Tentar de novo</button>`,
       resposta: `<button class="acao" data-acao="opcoes">Conferir o endereço</button>`,
+
+      /*
+        Nada a configurar aqui: o endereço está certo e a sessão
+        também. O que falta é publicar. Oferecer "Conferir o endereço"
+        mandaria mexer no lugar errado.
+      */
+      versao: `<button class="acao" data-acao="recarregar">Tentar de novo</button>`,
     };
 
     vazio(

@@ -6,12 +6,137 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useState,
+  useSyncExternalStore,
 } from "react";
 
 export type Tema = "auto" | "claro" | "escuro";
 
 const CHAVE = "cw:tema";
+
+const CONSULTA = "(prefers-color-scheme: dark)";
+
+/* ============================================================
+   AS DUAS FONTES DE FORA DO REACT
+
+   O tema mora no `localStorage` e a preferência do sistema no
+   `matchMedia`. Nenhum dos dois é estado do React — são coisas que já
+   existem, que mudam por conta própria, e que o React precisa apenas
+   **ler e acompanhar**.
+
+   Era `useState` + um efeito de montagem que fazia `setTema(guardado)`
+   — ou seja, uma **cópia** do valor de fora, mantida à mão e sempre um
+   render atrasada em relação à fonte. É o que a regra
+   `set-state-in-effect` aponta, e o motivo é esse: cópia de estado
+   externo desanda quando a fonte muda por um caminho que o efeito não
+   observa.
+
+   `useSyncExternalStore` existe para isto. Ele lê a fonte, não uma
+   cópia; sabe o que responder durante a hidratação, sem descasar o
+   HTML; e trouxe de graça a **sincronia entre abas** — mudar o tema
+   numa aba passou a valer nas outras, o que a versão anterior não
+   fazia.
+
+   **O que ele não resolve, e é honesto dizer:** a primeira pintura
+   ainda sai clara para quem escolheu escuro. O servidor não tem como
+   saber o que está no `localStorage` de ninguém, então o HTML entregue
+   é sempre o do tema automático e a correção vem depois da hidratação.
+   Acabar com esse piscar exige um `<script>` bloqueante no `<head>`,
+   que é outra decisão — e mais cara do que parece, porque é código
+   fora do React mexendo na classe do `<html>`.
+============================================================ */
+
+/**
+ * Ouvintes desta aba.
+ *
+ * O evento `storage` do navegador só avisa as **outras** abas — quem
+ * escreveu não recebe nada. Sem esta lista, escolher um tema não
+ * mudaria a tela de quem escolheu.
+ */
+const ouvintes = new Set<() => void>();
+
+function avisar() {
+  for (const ouvinte of ouvintes) ouvinte();
+}
+
+function assinarTema(aoMudar: () => void) {
+  ouvintes.add(aoMudar);
+  window.addEventListener("storage", aoMudar);
+
+  return () => {
+    ouvintes.delete(aoMudar);
+    window.removeEventListener("storage", aoMudar);
+  };
+}
+
+/**
+ * A escolha desta aba, para quando o armazenamento recusa.
+ *
+ * Sem isto, num navegador com `localStorage` bloqueado o clique no tema
+ * não mudaria nada: a gravação falharia calada, a releitura devolveria
+ * o valor de antes, e a tela ficaria igual. O tema não sobrevive ao
+ * recarregar nesse caso — mas vale agora, que é o que a pessoa pediu.
+ *
+ * O `localStorage` continua tendo a última palavra quando responde: é
+ * ele que carrega a escolha feita em outra aba.
+ */
+let naMemoria: Tema | null = null;
+
+function lerTema(): Tema {
+  try {
+    const guardado = localStorage.getItem(CHAVE);
+
+    if (
+      guardado === "claro" ||
+      guardado === "escuro" ||
+      guardado === "auto"
+    ) {
+      return guardado;
+    }
+  } catch {
+    /* Armazenamento bloqueado: sobra a escolha desta aba. */
+  }
+
+  return naMemoria ?? "auto";
+}
+
+/**
+ * O que o servidor tem como dizer.
+ *
+ * Ele não sabe o que está guardado no navegador de ninguém, então diz
+ * "auto" — e é por isso que o HTML entregue nunca discorda de si
+ * mesmo. O React usa este retrato durante a hidratação e troca pelo de
+ * verdade assim que ela termina.
+ */
+const noServidor = (): Tema => "auto";
+
+/**
+ * A consulta ao sistema, criada uma vez.
+ *
+ * Preguiçosa porque `window` não existe no servidor, e guardada porque
+ * `lerSistema` roda a cada render — `matchMedia` devolveria um objeto
+ * novo toda vez, sem necessidade nenhuma.
+ */
+let consultaDoSistema: MediaQueryList | null = null;
+
+function doSistema() {
+  consultaDoSistema ??= window.matchMedia(CONSULTA);
+  return consultaDoSistema;
+}
+
+function assinarSistema(aoMudar: () => void) {
+  const consulta = doSistema();
+
+  consulta.addEventListener("change", aoMudar);
+
+  return () =>
+    consulta.removeEventListener("change", aoMudar);
+}
+
+function lerSistema(): "claro" | "escuro" {
+  return doSistema().matches ? "escuro" : "claro";
+}
+
+const claroNoServidor = (): "claro" | "escuro" => "claro";
 
 interface Valor {
   /** O que a pessoa escolheu. */
@@ -45,50 +170,17 @@ export function ThemeProvider({
   children: React.ReactNode;
 }) {
 
-  /**
-   * Começa em "auto" e corrige no primeiro efeito.
-   *
-   * Ler o `localStorage` durante o render quebraria a hidratação: o
-   * servidor não tem como saber o que está guardado no navegador, e o
-   * primeiro HTML sairia diferente do que o cliente monta.
-   */
-  const [tema, setTema] = useState<Tema>("auto");
+  const tema = useSyncExternalStore(
+    assinarTema,
+    lerTema,
+    noServidor
+  );
 
-  const [doSistema, setDoSistema] = useState<
-    "claro" | "escuro"
-  >("claro");
-
-  useEffect(() => {
-
-    try {
-      const guardado = localStorage.getItem(CHAVE);
-
-      if (
-        guardado === "claro" ||
-        guardado === "escuro" ||
-        guardado === "auto"
-      ) {
-        setTema(guardado);
-      }
-    } catch {
-      /* Navegador com armazenamento bloqueado: fica no automático. */
-    }
-
-    const consulta = window.matchMedia(
-      "(prefers-color-scheme: dark)"
-    );
-
-    const aplicar = () =>
-      setDoSistema(consulta.matches ? "escuro" : "claro");
-
-    aplicar();
-
-    consulta.addEventListener("change", aplicar);
-
-    return () =>
-      consulta.removeEventListener("change", aplicar);
-
-  }, []);
+  const doSistema = useSyncExternalStore(
+    assinarSistema,
+    lerSistema,
+    claroNoServidor
+  );
 
   const efetivo =
     tema === "auto" ? doSistema : tema;
@@ -108,15 +200,28 @@ export function ThemeProvider({
 
   }, [efetivo]);
 
+  /**
+   * Escreve na fonte e avisa quem está lendo.
+   *
+   * A ordem importa: gravar primeiro, avisar depois — o aviso faz cada
+   * assinante reler o `localStorage`, e ler antes da escrita devolveria
+   * o valor anterior.
+   *
+   * `avisar()` acontece mesmo quando a gravação falha. Num navegador
+   * com armazenamento bloqueado o tema não sobrevive ao recarregar, mas
+   * precisa valer **agora**, nesta aba: um clique que não muda nada na
+   * tela é pior do que uma preferência que não persiste.
+   */
   const definir = useCallback((t: Tema) => {
-
-    setTema(t);
+    naMemoria = t;
 
     try {
       localStorage.setItem(CHAVE, t);
     } catch {
-      /* Sem armazenamento, vale só nesta aba. */
+      /* Sem armazenamento, vale só nesta aba e só até recarregar. */
     }
+
+    avisar();
   }, []);
 
   const valor = useMemo(

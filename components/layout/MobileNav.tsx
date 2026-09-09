@@ -31,9 +31,27 @@ export default function MobileNav() {
   const [aberta, setAberta] = useState(false);
   const pathname = usePathname();
 
-  useEffect(() => {
+  /**
+   * O fechar acontece **no render**, não num efeito.
+   *
+   * Era `useEffect(() => setAberta(false), [pathname])`, e a diferença
+   * é visível: o efeito só roda **depois** de a tela nova ter sido
+   * pintada, então existe um quadro em que a rota já mudou e a gaveta
+   * ainda está por cima dela. Ajustar durante o render faz o React
+   * descartar o resultado e refazer antes de mostrar qualquer coisa —
+   * a gaveta nunca chega à tela aberta sobre a página errada.
+   *
+   * É o padrão que o React documenta para "acertar estado quando uma
+   * propriedade muda", e o que a regra `set-state-in-effect` empurra
+   * para cá.
+   */
+  const [rotaDesenhada, setRotaDesenhada] =
+    useState(pathname);
+
+  if (rotaDesenhada !== pathname) {
+    setRotaDesenhada(pathname);
     setAberta(false);
-  }, [pathname]);
+  }
 
   /**
    * Gaveta aberta trava a rolagem do que está atrás.

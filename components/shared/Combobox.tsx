@@ -122,9 +122,26 @@ export default function Combobox({
     ? [{ value: "", label: emptyLabel }, ...visiveis]
     : visiveis;
 
-  useEffect(() => {
+  /**
+   * Digitou, abriu ou fechou: o destaque volta para o primeiro.
+   *
+   * No render, e não num efeito. Era `useEffect(() => setAtivo(0), …)`,
+   * que só corrige **depois** de a lista nova ter sido pintada — existe
+   * um quadro em que a busca já filtrou e o destaque ainda está no
+   * índice de antes, apontando para outro item. Quem navega com o
+   * teclado e aperta Enter rápido escolhe o item errado.
+   *
+   * Ajustar durante o render faz o React refazer antes de mostrar.
+   */
+  const chaveDaLista = `${term}|${open}`;
+
+  const [chaveDesenhada, setChaveDesenhada] =
+    useState(chaveDaLista);
+
+  if (chaveDesenhada !== chaveDaLista) {
+    setChaveDesenhada(chaveDaLista);
     setAtivo(0);
-  }, [term, open]);
+  }
 
   /**
    * O item destacado precisa estar visível.

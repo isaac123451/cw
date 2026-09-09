@@ -330,6 +330,87 @@ Definir a variável na Vercel é o que a liga lá.
 
 ---
 
+### Quatro estados copiados dentro de efeitos (09/09/2026)
+
+`eslint .` acusava quatro erros de `setState` síncrono dentro de
+efeito. O `next build` não roda o lint desde a 15, então eles estavam
+ali havia tempo, calados. Não são estilo: cada um tinha um sintoma.
+
+- **`MobileNav`** fechava a gaveta num efeito com `[pathname]`. Efeito
+  roda **depois** da pintura, então existia um quadro com a rota nova
+  atrás da gaveta velha.
+- **`Combobox`** zerava o item destacado num efeito com `[term, open]`.
+  Havia um quadro em que a busca já filtrou e o destaque ainda apontava
+  para o índice de antes — quem navega com o teclado e aperta Enter
+  rápido escolhia o item errado.
+- **`DossieCard`** copiava `data.dossier` para o estado no começo do
+  efeito. O render anterior a essa cópia devolvia `null`, e o cartão
+  **sumia da tela** por um quadro em toda carga de caso que já tinha
+  dossiê.
+- **`ThemeContext`** lia o `localStorage` num efeito de montagem.
+
+Os três primeiros viraram ajuste **durante o render** — o padrão que o
+React documenta para "acertar estado quando uma propriedade muda". O
+React descarta o resultado e refaz antes de mostrar qualquer coisa, e
+os quadros intermediários deixam de existir. No `DossieCard` nem isso
+foi preciso: o valor vem da propriedade, então é derivado, não estado.
+
+O tema foi para **`useSyncExternalStore`**, que é o que existe para
+ler coisa de fora do React. O ganho medido no navegador, além do
+erro sumir:
+
+| | |
+| --- | --- |
+| escolha "claro" num sistema escuro | a classe `dark` não entra ✓ |
+| outra aba muda o tema | esta acompanha **na hora**, sem recarregar ✓ |
+
+A sincronia entre abas é nova: a versão com efeito não tinha como
+saber. E há um caso que o `try/catch` antigo escondia — navegador com
+armazenamento bloqueado. Ali a gravação falha, a releitura devolveria
+o valor de antes, e **o clique não mudaria nada na tela**. Por isso a
+escolha da aba fica também numa variável de módulo: o tema não
+sobrevive ao recarregar nesse navegador, mas vale agora.
+
+**O que continua igual, e é honesto dizer:** a primeira pintura ainda
+sai clara para quem escolheu escuro. O servidor não tem como saber o
+que está no `localStorage` de ninguém. Acabar com o piscar exige um
+`<script>` bloqueante no `<head>`, que é outra decisão.
+
+
+### A extensão anda na frente da produção (09/09/2026)
+
+O botão "Respostas rápidas" apareceu no WhatsApp, abriu, e a lista
+veio com erro. Tudo daqui estava certo: a rota existia, `check:atalho`
+e `check:extensao` passavam, o build subia.
+
+```
+/api/extensao/sessao      200
+/api/extensao/contexto    401
+/api/extensao/respostas   404   ← não estava publicada
+```
+
+**A extensão é carregada do disco; a aplicação roda de um deploy.**
+Então ela anda na frente sempre que algo é feito e não é empurrado —
+e o sintoma some no meio do trabalho, porque a mensagem que aparecia
+era "A aplicação respondeu 404.".
+
+Duas correções, e nenhuma delas é a rota:
+
+1. **404 numa rota conhecida virou mensagem própria.** Todos os
+   caminhos saem de `CAMINHOS`, e `check:fiacao` já garante que cada um
+   existe no repositório. Se o servidor devolve 404 num deles, a
+   conclusão é única: a aplicação no ar é mais antiga que a extensão. É
+   isso que a tela passa a dizer, em vez de mandar conferir o endereço
+   — que está certo.
+2. **`npm run check:publicado`** pergunta ao endereço de produção se
+   ele tem cada uma das 18 rotas. 401 e 405 contam como sim: as duas
+   dizem que o arquivo está publicado, e só 404 diz que não.
+
+É a terceira vez que uma distância entre o repositório e o que está no
+ar chega como "não está funcionando" — depois do `vercel.json` e da
+grafia de import. As três eram invisíveis daqui, e agora as três têm
+onde ser vistas antes.
+
 ### RCE crítico no Next 16.3.2 (09/09/2026)
 
 `npm audit` acusou **execução remota de código sem autenticação** no
