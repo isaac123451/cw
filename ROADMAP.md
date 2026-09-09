@@ -330,6 +330,42 @@ Definir a variável na Vercel é o que a liga lá.
 
 ---
 
+### RCE crítico no Next 16.3.2 (09/09/2026)
+
+`npm audit` acusou **execução remota de código sem autenticação** no
+Next.js — CVSS 9.0, faixa 16.0.0 a 16.3.2, e a aplicação estava
+exatamente na 16.3.2. São dois avisos: um que atinge servidor
+hospedado em Windows, e outro na API de otimização de imagem quando há
+arquivo AVIF. O `sharp`, que vem dentro do Next, carregava junto um
+aviso alto de libheif.
+
+Corrigido na **16.3.4** — dois patches, mesma minor.
+
+**A instalação foi `next@^16.3.4`, e não `npm update`.** A faixa
+declarada era `^16.3.2`, que já permitia a 16.3.4: um `npm update`
+resolveria hoje e deixaria a porta aberta — qualquer regeneração do
+lockfile poderia voltar para dentro da faixa vulnerável sem ninguém
+ver. Subir o piso da faixa fecha isso.
+
+O que **não** foi junto, de propósito: o `npm audit fix` levaria o CLI
+do Prisma de 7.9.1 para 7.10.0 sem levar o `@prisma/client`, que está
+em `^7.9.0` — motor e cliente em versões diferentes é a forma clássica
+de o Prisma parar de funcionar. E não compraria nada: o aviso do
+`mysql2` continua na 7.10, e ele já está aceito com motivo escrito
+(o banco daqui é Postgres; aquele driver não está em caminho nenhum
+da aplicação).
+
+Conferido depois da subida: `tsc`, build, as 30 telas abrindo com
+conteúdo e o contrato da extensão inteiro, contra a aplicação no ar.
+`check:dependencias` ficou sem nenhum crítico e com os quatro altos
+restantes todos justificados por escrito.
+
+**Sobrou uma dívida, e ela é anterior a isto:** `eslint .` acusa
+quatro erros de `setState` síncrono dentro de efeito — em `MobileNav`,
+`DossieCard`, `Combobox` e `ThemeContext`. O `next build` não roda o
+lint desde a 15, então eles passam despercebidos; é o mesmo defeito
+que o `setCarregando(true)` das métricas tinha.
+
 ### "Respostas rápidas", e a variável que não pode sumir (09/09/2026)
 
 Os textos aprovados já apareciam na gaveta do painel. O pedido foi
