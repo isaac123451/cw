@@ -115,10 +115,32 @@ function erroSemLeitor() {
        * lá, exposto e tipado, e mesmo assim nenhuma tela o desenhava.
        * Ser exportado não é ser mostrado.
        */
+      /*
+        Um nível de apelido conta.
+
+        O estado pode não ir cru para o JSX: `falhaDeLeitura` passa por
+        `const aviso = ...`, que é quem decide se a faixa aparece.
+        Exigir o nome original dentro da marcação reprovaria justamente
+        a versão correta — e empurraria de volta para a errada.
+      */
+      const apelidos = [
+        nome,
+        ...[
+          ...fonte.matchAll(
+            new RegExp(
+              `const (\\w+)\\s*=[^;]*\\b${nome}\\b[^;]*;`,
+              "g"
+            )
+          ),
+        ].map((m) => m[1]),
+      ];
+
       const mostrado = interfaces.some(({ fonte: outro }) =>
-        new RegExp(
-          `\\{[^}]*\\b${nome}\\b[^}]*\\}\\s*(?:&&|\\?|<|\\})|<[A-Z]\\w*[^>]*\\b\\w+=\\{${nome}\\}`
-        ).test(outro)
+        apelidos.some((alvo) =>
+          new RegExp(
+            `\\{[^}]*\\b${alvo}\\b[^}]*\\}\\s*(?:&&|\\?|<|\\})|<[A-Z]\\w*[^>]*\\b\\w+=\\{${alvo}\\}`
+          ).test(outro)
+        )
       );
 
       if (!mostrado) {
@@ -280,7 +302,7 @@ function oAvisoExiste() {
   const pontos: [string, boolean, string][] = [
     [
       "o provider desenha o aviso",
-      /\{syncError && <AvisoDeLeitura/.test(contexto),
+      /\{aviso && <AvisoDeLeitura/.test(contexto),
       "sem isto, cada tela teria de lembrar de mostrar — e a que esquecer volta a mentir",
     ],
     [
@@ -297,6 +319,36 @@ function oAvisoExiste() {
       "a hora da carga chega à tela",
       /carregadoEm/.test(contexto),
       'sem ela ninguém responde "isto que estou vendo é de agora?"',
+    ],
+
+    /*
+      As três regras que impedem o aviso de virar ruído.
+
+      A primeira versão da faixa apareceu na tela de **login**, por cima
+      do formulário de entrar, anunciando "sua sessão expirou" — ali não
+      existe sessão por definição, e nada tinha falhado.
+
+      Isso não é um detalhe estético: aviso que aparece quando não devia
+      ensina quem trabalha a ignorá-lo, e aí ele deixa de servir
+      justamente na vez em que importa. Um alarme que toca sozinho é
+      pior do que alarme nenhum, porque dá a impressão de que existe
+      vigilância.
+    */
+    [
+      "o aviso não aparece onde não há sessão por definição",
+      /naAutenticacao/.test(contexto) &&
+        /login\|cadastro/.test(contexto),
+      "sem esta porta, a faixa volta a acusar expiração em /login e /cadastro",
+    ],
+    [
+      "falha de leitura só avisa se a tela ficou sem dados",
+      /cases\.length === 0/.test(contexto),
+      "recarga falhada com os dados anteriores ainda na tela não muda o que se está olhando — alarmar ali é ruído",
+    ],
+    [
+      "falha de gravação avisa sempre",
+      /syncError \?\?/.test(contexto),
+      "é sobre algo que a pessoa acabou de fazer: o que ela escreveu não foi salvo, e a tela cheia não muda isso",
     ],
   ];
 

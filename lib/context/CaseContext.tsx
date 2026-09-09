@@ -10,6 +10,8 @@ import {
   ReactNode,
 } from "react";
 
+import { usePathname } from "next/navigation";
+
 import { Case } from "@/lib/models/case";
 
 
@@ -269,13 +271,34 @@ export function CaseProvider({
    */
   const [restaurado, setRestaurado] = useState(false);
 
-  /** Última falha de gravação, para a tela poder avisar. */
+  /** Última falha de **gravação**, para a tela poder avisar. */
   const [syncError, setSyncError] = useState<
+    string | null
+  >(null);
+
+  /**
+   * Última falha de **leitura**. Estado próprio, e não o mesmo.
+   *
+   * As duas falhas parecem a mesma coisa e têm regras opostas. A de
+   * gravação é sobre algo que a pessoa acabou de fazer: tem de
+   * aparecer sempre, mesmo com a tela cheia, porque o que ela
+   * escreveu não foi salvo. A de leitura só importa quando deixou a
+   * tela **sem nada** — uma recarga que falhou com os dados
+   * anteriores ainda na tela não muda o que se está olhando.
+   *
+   * Estavam na mesma variável, e o resultado foi a faixa aparecendo
+   * na tela de login: ali não existe sessão por definição, a leitura
+   * recusa por "sem-sessao", e o aviso anunciava uma expiração que
+   * nunca houve.
+   */
+  const [falhaDeLeitura, setFalhaDeLeitura] = useState<
     string | null
   >(null);
 
   const [carregadoEm, setCarregadoEm] =
     useState<Date | null>(null);
+
+  const pathname = usePathname();
 
   /** Relê do banco. Chamado depois de importar uma planilha. */
   async function recarregar() {
@@ -294,17 +317,17 @@ export function CaseProvider({
         leitura der certo.
       */
       if (!leitura.ok) {
-        setSyncError(leitura.recado);
+        setFalhaDeLeitura(leitura.recado);
         return;
       }
 
       baseRef.current = leitura.dados;
       setCases(leitura.dados);
-      setSyncError(null);
+      setFalhaDeLeitura(null);
       setCarregadoEm(new Date());
     } catch (error) {
       console.error("[casos] recarga falhou", error);
-      setSyncError(
+      setFalhaDeLeitura(
         "Não foi possível recarregar as reclamações."
       );
     }
@@ -361,7 +384,7 @@ export function CaseProvider({
         if (!ativo) return;
 
         if (!leitura.ok) {
-          setSyncError(leitura.recado);
+          setFalhaDeLeitura(leitura.recado);
           return;
         }
 
@@ -400,7 +423,7 @@ export function CaseProvider({
           "[casos] carga falhou",
           error
         );
-        setSyncError(
+        setFalhaDeLeitura(
           "Não foi possível carregar as reclamações."
         );
       })
@@ -693,22 +716,53 @@ export function CaseProvider({
     ]
   );
 
+  /**
+   * As telas onde não ter sessão é o funcionamento normal.
+   *
+   * O provider monta no layout raiz, então roda também em `/login` e
+   * `/cadastro` — onde não existe sessão **por definição**. A leitura
+   * recusa ali com "sem-sessao", que é a verdade e não é uma falha; sem
+   * esta porta, a faixa anunciava uma expiração que nunca aconteceu,
+   * por cima da própria tela de entrar.
+   */
+  const naAutenticacao = /^\/(login|cadastro|recuperar|convite)/.test(
+    pathname ?? ""
+  );
+
+  /**
+   * Quando a faixa aparece — e as duas regras são opostas de propósito.
+   *
+   * **Gravação sempre.** É sobre algo que a pessoa acabou de fazer, e o
+   * que ela escreveu não foi salvo. Esconder isso porque a tela está
+   * cheia seria esconder justamente o que ela precisa saber.
+   *
+   * **Leitura só quando a tela ficou sem nada.** Foi o que o Isaac
+   * apontou: "tem que aparecer somente quando não ter dados". Uma
+   * recarga que falhou com as reclamações anteriores ainda na tela não
+   * muda o que se está olhando — o alarme ali seria ruído, e ruído
+   * ensina a ignorar o aviso justamente antes da vez em que ele importa.
+   */
+  const aviso =
+    syncError ??
+    (falhaDeLeitura &&
+    !naAutenticacao &&
+    cases.length === 0
+      ? falhaDeLeitura
+      : null);
+
   return (
     <CaseContext.Provider value={value}>
       {/*
         O aviso mora aqui, e não em cada tela.
 
-        `syncError` existia, era preenchido corretamente em toda falha
-        de carga — e **nenhum componente o lia**. O erro era registrado
-        e não tinha para onde ir: a tela mostrava zero em tudo, quadro
-        em branco, nenhuma palavra. É por isso que "os dados não
-        carregam" apareceu quatro vezes em duas semanas, sempre com a
-        mesma cara e cada vez por uma causa diferente.
-
-        No provider, cobre de uma vez todas as telas que dependem de
-        reclamação — e não dá para uma tela nova esquecer de mostrar.
+        O motivo de estar no provider: ele era preenchido corretamente
+        em toda falha de carga e **nenhum componente o lia**. O erro era
+        registrado e não tinha para onde ir — a tela mostrava zero em
+        tudo, quadro em branco, nenhuma palavra. Aqui, cobre de uma vez
+        todas as telas que dependem de reclamação, e nenhuma tela nova
+        pode esquecer de mostrar.
       */}
-      {syncError && <AvisoDeLeitura recado={syncError} />}
+      {aviso && <AvisoDeLeitura recado={aviso} />}
 
       {children}
     </CaseContext.Provider>
