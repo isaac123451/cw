@@ -38,6 +38,7 @@ const CAMINHOS = {
   pendencias: "/api/extensao/pendencias",
   salvarDossie: "/api/extensao/salvar-dossie",
   whatsapp: "/api/extensao/whatsapp",
+  respostas: "/api/extensao/respostas",
 };
 
 /**
@@ -435,6 +436,46 @@ async function tratar(mensagem) {
    * Limpa o cache porque a anotação entra na linha do tempo que o
    * painel mostra logo abaixo dela.
    */
+  /**
+   * Os textos aprovados, para o atalho ao lado da caixa de mensagem.
+   *
+   * Sem cache, e de propósito. A lista muda por duas vias que um
+   * retrato guardado não veria: alguém edita um texto na Base de
+   * Conhecimento, e o próprio atalho conta o uso — que é o que
+   * reordena a lista. Guardar congelaria o topo justamente naquilo
+   * que a ordenação existe para corrigir.
+   *
+   * É uma consulta por clique, não por conversa: a lista só é buscada
+   * quando alguém abre o atalho.
+   */
+  if (mensagem?.tipo === "respostas") {
+
+    const dados = await chamar(
+      CAMINHOS.respostas,
+      mensagem.consulta ?? {}
+    );
+
+    return { ok: true, dados };
+  }
+
+  /**
+   * O texto foi colado na caixa: conta o uso.
+   *
+   * Chamada solta, sem ninguém esperando — o texto já está na tela de
+   * quem clicou. Falhar aqui não pode desfazer nem atrapalhar a
+   * inserção, então quem chama ignora o retorno.
+   */
+  if (mensagem?.tipo === "usarResposta") {
+
+    const dados = await chamar(
+      CAMINHOS.respostas,
+      {},
+      { id: mensagem.id }
+    );
+
+    return { ok: true, dados };
+  }
+
   if (mensagem?.tipo === "anotar") {
 
     const dados = await chamar(

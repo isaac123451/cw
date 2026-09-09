@@ -44,16 +44,18 @@
   --sombra: 0 14px 40px rgba(0, 0, 0, .5);
 `;
 
-  CW.CSS = `
-:host {
-  all: initial;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-.raiz {
+  /**
+   * Cores e tipografia, sem posicionamento nenhum.
+   *
+   * Extraído de dentro de `.raiz` para o atalho de respostas poder
+   * usar a mesma paleta sem herdar o posicionamento do painel — ele
+   * mora **dentro** do rodapé do WhatsApp, e `position: fixed;
+   * inset: 0` ali cobriria a tela inteira.
+   *
+   * A interpolação devolve o mesmo texto que estava escrito à mão
+   * antes, então o CSS do painel não mudou uma vírgula.
+   */
+  const CORES = `
   /* ---- marca ---- */
   --roxo: #5B2A86;
   --violeta: #7B3FBF;
@@ -76,6 +78,19 @@
   --fonte: "CW Geist", ui-sans-serif, -apple-system,
     BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI",
     Roboto, Helvetica, Arial, sans-serif;
+`;
+
+  CW.CSS = `
+:host {
+  all: initial;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.raiz {
+${CORES}
 
   /**
    * A viewport inteira, e não uma faixa na direita.
@@ -993,5 +1008,276 @@
   accent-color: var(--violeta);
   cursor: pointer;
 }
+`;
+
+  /**
+   * Estilo do atalho de respostas prontas.
+   *
+   * Duas superfícies, e por isso duas raízes: `.gatilho-atalho` mora
+   * **dentro** do rodapé do WhatsApp, em fluxo com os botões deles; a
+   * `.janela-atalho` é fixa na tela, ancorada ao botão. Se fossem uma
+   * só, ou o botão herdaria o `position: fixed` da janela, ou a janela
+   * ficaria presa ao recorte do rodapé.
+   *
+   * Cores e tipografia vêm de `CORES`, a mesma paleta do painel.
+   */
+  CW.CSS_ATALHO = `
+:host { all: initial; }
+
+* { box-sizing: border-box; }
+
+.tema {
+${CORES}
+  font-family: var(--fonte);
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--texto);
+  font-synthesis-weight: none;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+@media (prefers-color-scheme: dark) {
+  .tema[data-tema="auto"] { ${ESCURO} }
+}
+
+.tema[data-tema="escuro"] { ${ESCURO} }
+
+/* ---------- o botão no rodapé ---------- */
+
+.gatilho-atalho {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 32px;
+  padding: 0 11px;
+  margin: 0 2px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--violeta) 12%, transparent);
+  color: var(--violeta);
+  font-family: var(--fonte);
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background .12s, border-color .12s;
+}
+
+.gatilho-atalho:hover {
+  background: color-mix(in srgb, var(--violeta) 20%, transparent);
+  border-color: color-mix(in srgb, var(--violeta) 35%, transparent);
+}
+
+.gatilho-atalho[aria-expanded="true"] {
+  background: var(--violeta);
+  color: #fff;
+}
+
+/**
+ * O rodapé pode ser estreito — janela dividida, tela pequena.
+ * Abaixo de 520px o rótulo sai e sobra o raio, que continua clicável.
+ */
+@media (max-width: 520px) {
+  .gatilho-atalho .rotulo { display: none; }
+  .gatilho-atalho { padding: 0 8px; }
+}
+
+/* ---------- a janela ---------- */
+
+.janela-atalho {
+  position: fixed;
+  z-index: 2147483001;
+  width: 400px;
+  max-width: calc(100vw - 24px);
+  max-height: min(460px, calc(100vh - 120px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--borda);
+  border-radius: 16px;
+  background: var(--elevado);
+  box-shadow: var(--sombra);
+}
+
+.janela-atalho header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 13px 9px;
+  border-bottom: 1px solid var(--borda);
+}
+
+.janela-atalho header .titulo {
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.janela-atalho header .para {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11.5px;
+  color: var(--fraco);
+}
+
+.janela-atalho .fechar {
+  border: 0;
+  background: transparent;
+  color: var(--fraco);
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
+.janela-atalho .fechar:hover { color: var(--texto); }
+
+.janela-atalho .procura { padding: 9px 11px; }
+
+.janela-atalho .procura input {
+  width: 100%;
+  height: 34px;
+  padding: 0 11px;
+  border: 1px solid var(--borda);
+  border-radius: 10px;
+  background: var(--fundo);
+  color: var(--texto);
+  font-family: var(--fonte);
+  font-size: 13px;
+  outline: none;
+}
+
+.janela-atalho .procura input:focus { border-color: var(--violeta); }
+
+.janela-atalho .lista {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 7px 7px;
+}
+
+.janela-atalho .item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-radius: 11px;
+  padding: 8px 9px;
+  background: transparent;
+  color: inherit;
+  font-family: var(--fonte);
+  cursor: pointer;
+}
+
+.janela-atalho .item:hover,
+.janela-atalho .item[data-marcado="sim"] {
+  background: color-mix(in srgb, var(--violeta) 10%, transparent);
+}
+
+.janela-atalho .item .linha {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.janela-atalho .item .nome {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12.8px;
+  font-weight: 600;
+}
+
+.janela-atalho .item .previa {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-top: 2px;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--fraco);
+  white-space: pre-wrap;
+}
+
+.etiqueta {
+  flex-shrink: 0;
+  border-radius: 999px;
+  padding: 1px 7px;
+  font-size: 10px;
+  font-weight: 600;
+  background: var(--superficie);
+  color: var(--suave);
+  border: 1px solid var(--borda);
+}
+
+.etiqueta.canal {
+  background: color-mix(in srgb, var(--violeta) 12%, transparent);
+  border-color: transparent;
+  color: var(--violeta);
+}
+
+/* O que a inserção **não** preenche. Cor de aviso, não de erro. */
+.etiqueta.falta {
+  background: color-mix(in srgb, var(--atencao) 14%, transparent);
+  border-color: transparent;
+  color: var(--atencao);
+}
+
+.janela-atalho .vazio {
+  padding: 26px 16px;
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--fraco);
+}
+
+.janela-atalho footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--borda);
+  font-size: 11px;
+  color: var(--fraco);
+}
+
+.janela-atalho footer .dica { flex: 1; }
+
+.janela-atalho footer button {
+  border: 0;
+  background: transparent;
+  color: var(--violeta);
+  font-family: var(--fonte);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+.janela-atalho footer button:hover { text-decoration: underline; }
+
+/* ---------- o aviso depois de colar ---------- */
+
+.aviso-atalho {
+  position: fixed;
+  z-index: 2147483002;
+  max-width: 300px;
+  padding: 9px 13px;
+  border-radius: 11px;
+  background: var(--elevado);
+  border: 1px solid var(--borda);
+  box-shadow: var(--sombra);
+  font-family: var(--fonte);
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--texto);
+}
+
+.aviso-atalho.ruim { border-color: var(--perigo); color: var(--perigo); }
+.aviso-atalho.atencao { border-color: var(--atencao); }
 `;
 })();

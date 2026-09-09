@@ -6458,6 +6458,38 @@ const ORIGENS = [
     },
 
     /**
+     * O que o painel sabe do contato agora.
+     *
+     * Existe para o atalho de respostas prontas, que fica ao lado da
+     * caixa de mensagem e não tem detector próprio: quem lê a conversa
+     * é o `whatsapp.js`, e quem guarda o que o servidor respondeu sobre
+     * aquele contato é este painel. Duplicar a leitura ali produziria
+     * duas verdades sobre quem está do outro lado.
+     *
+     * Só leitura, e só do que já está na memória: nada aqui consulta o
+     * servidor nem lê a página de novo.
+     */
+    contextoAtual() {
+      return {
+        /* O nome do cabeçalho — apelido da agenda, quando houver. */
+        nome: consulta?.nome ?? "",
+        telefone: consulta?.telefone ?? "",
+
+        /* O nome do cadastro do consumidor, quando houve casamento. */
+        cliente: ultimoDado?.cliente?.nome ?? "",
+
+        /**
+         * O caso mais recente do contato.
+         *
+         * `casos` já vem ordenado pela rota, e é o que a gaveta
+         * mostra no topo. É o protocolo que uma mensagem de cobrança
+         * de avaliação precisa citar.
+         */
+        protocolo: ultimoDado?.casos?.[0]?.protocolo ?? "",
+      };
+    },
+
+    /**
      * Autoriza o painel a abrir sozinho neste site.
      *
      * Só o `whatsapp.js` chama. É o que impede a gaveta de pular na

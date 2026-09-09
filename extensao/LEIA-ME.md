@@ -158,6 +158,49 @@ busca.
 alertas do dia e tem uma busca por telefone, nome ou protocolo — serve
 no meio de uma ligação, sem precisar abrir a aplicação.
 
+## Respostas rápidas ao lado da caixa de mensagem
+
+No WhatsApp Web, ao lado do campo onde se escreve, aparece um botão
+**Respostas rápidas** (ou `Ctrl + /` com o cursor no campo). Ele abre a lista
+inteira dos textos aprovados da Base de Conhecimento, com busca — e
+**escreve o texto escolhido dentro da caixa**.
+
+Isso não substitui o bloco de macros da gaveta; resolve o que ele não
+resolvia. A gaveta mostra no máximo três, filtradas pela categoria do
+caso, e não mostra nada quando o contato não tem reclamação — e o
+botão de lá é "copiar", que deixa a colagem por conta de quem está
+com o cliente na linha.
+
+**O que já vem preenchido.** `{{cliente}}` com o nome do cadastro do
+consumidor (o do portal, não o apelido da agenda), `{{responsavel}}`
+com **quem está logado** — é você que está falando na conversa, então
+não é o dono do caso —, `{{protocolo}}` e `{{estabelecimento}}` com os
+do caso mais recente daquele contato.
+
+**O que não vem, e aparece dito.** Variável sem valor **continua
+visível** no texto, e o item traz a etiqueta do que falta. Sem caso
+não há protocolo; sem plano cadastrado não há tabela de preços.
+Trocar por vazio produziria a pior falha possível aqui: uma mensagem
+inteira, sem aviso nenhum, saindo com um buraco no meio
+("Reclamação: ") na frente do consumidor.
+
+Os trechos entre colchetes — `[NOME]`, `[SEU NOME]`, `[NOTA]` — são
+pedidos de escrita que o autor do texto deixou de propósito. O atalho
+conta quantos são e avisa depois de colar.
+
+**A ordem melhora sozinha.** Primeiro os textos de WhatsApp, depois os
+do NPS — que também são mensagens de WhatsApp, porque a pesquisa fala
+com o cliente por um número próprio —, depois Instagram e por fim as
+respostas públicas do portal. Dentro de cada grupo, o mais usado na
+frente: cada inserção conta um uso no banco.
+
+**Ele não envia.** O texto entra no campo e para ali; quem aperta
+enviar é você, sempre. E se a caixa recusar a escrita — o WhatsApp
+muda a marcação sem avisar —, o atalho diz que não conseguiu e deixa o
+texto na área de transferência, em vez de fingir que colou.
+
+`npm run check:atalho` prova isso tudo contra as macros do banco.
+
 ## O detalhe que decide o casamento por telefone
 
 O telefone gravado na base está **mascarado**: `(27)•••••-4053`. Só DDD e
@@ -195,6 +238,13 @@ coisas saem: a **consulta** (um telefone, um nome ou um protocolo — nunca
 uma conversa) e, quando você confirma na prévia, a **reclamação do
 portal** que vai virar caso.
 
+A única coisa que a extensão **escreve** numa página alheia é o texto
+de uma resposta pronta, dentro da caixa de mensagem do WhatsApp, e só
+quando alguém escolhe uma na lista. Nem isso é escrito no DOM: o
+editor deles é avisado pelos mesmos eventos que uma pessoa digitando
+geraria — escrever no `innerText` mudaria a tela sem o editor saber, e
+a mensagem sumiria no primeiro Enter.
+
 Sobre bloqueio de conta no WhatsApp: o risco está ligado a comportamento
 de **envio** — volume, mensagem repetida, lista fria. A extensão não
 envia mensagem nenhuma, em site nenhum; a única escrita que existe é no
@@ -211,9 +261,11 @@ extensao/
   fontes/Geist-Variable.woff2  a fonte da marca, empacotada
   conteudo/
     nucleo.js            utilidades + registro da fonte
-    estilo.js            CSS do painel (vai para dentro do Shadow DOM)
+    estilo.js            CSS do painel e do atalho (vai para dentro
+                         do Shadow DOM)
     painel.js            a gaveta, o tema, a captura — igual nas três
     whatsapp.js          detector do WhatsApp Web
+    respostas.js         o botão "Respostas rápidas", no rodapé do WhatsApp
     ra-campos.js         leitores da página do RA, puros e testáveis
     hugme.js             detector do Hugme / Reclame Aqui
     manychat.js          detector do ManyChat
@@ -232,10 +284,15 @@ app/api/extensao/contexto/        o retrato do cliente
 app/api/extensao/resumo/          nota, contadores e alertas do dia
 app/api/extensao/caso/            cria a reclamação capturada
 app/api/extensao/nps/             tentativa e pós-contato do NPS
+app/api/extensao/respostas/       os textos prontos, já preenchidos;
+                                  e a contagem de uso
+lib/services/respostas.service.ts a substituição de variáveis, com a
+                                  regra de deixar à vista o que faltou
 lib/services/nps.repository.ts    a regra do pós-contato, compartilhada
                                   com as server actions da tela
 scripts/check-contato.ts          a prova do casamento contra o banco
 scripts/check-ra.js               a prova dos leitores da página do RA
+scripts/check-atalho.ts           a prova do atalho de respostas
 ```
 
 ## Por que endpoints novos, e não a API que já existia

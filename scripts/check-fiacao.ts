@@ -31,6 +31,31 @@ const worker = readFileSync(
   "utf8"
 );
 
+/**
+ * Todo mundo que fala com o service worker, junto.
+ *
+ * Era só o `painel.js`, e por muito tempo isso bastou: a gaveta era a
+ * única coisa da extensão que pedia dado. Quando o atalho de respostas
+ * ganhou os recados dele, a varredura passou a acusar dois tratadores
+ * "sem quem chame" — apontando para código que estava sendo chamado.
+ *
+ * Um alarme falso aqui custa caro: é uma conferência que se lê antes
+ * de subir, e a que mente uma vez deixa de ser lida.
+ */
+const quemChama = [
+  "extensao/conteudo/painel.js",
+  "extensao/conteudo/respostas.js",
+  "extensao/conteudo/whatsapp.js",
+  "extensao/conteudo/hugme.js",
+  "extensao/conteudo/manychat.js",
+  "extensao/popup/popup.js",
+  "extensao/opcoes/opcoes.js",
+]
+  .map((caminho) => resolve(RAIZ, caminho))
+  .filter((caminho) => existsSync(caminho))
+  .map((caminho) => readFileSync(caminho, "utf8"))
+  .join("\n");
+
 let falhas = 0;
 
 function reportar(titulo: string, faltando: string[]) {
@@ -99,7 +124,7 @@ reportar(
  * mensagem sem tratador, que foi o primeiro alarme falso daqui.
  */
 const enviados = unicos(
-  painel,
+  quemChama,
   /CW\.enviar\(\{\s*tipo:\s*"([a-zA-Z]+)"/g
 );
 

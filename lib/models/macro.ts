@@ -6,16 +6,31 @@
  * aprovados que o time insere na resposta pública sem reescrever do zero.
  */
 /**
- * Os dois destinos de um texto pronto.
+ * Os destinos de um texto pronto.
  *
  * "Reclame Aqui" é a resposta pública, que o portal formata sozinho.
  * "WhatsApp" é a conversa direta, onde `*negrito*` funciona e emoji é
  * esperado — e é por lá que a operação cobra avaliação, porque o portal
  * não deixa cobrar dentro da própria reclamação.
+ *
+ * **"NPS" e "Instagram" estavam faltando aqui, e existiam no banco.**
+ * Nove dos vinte e dois textos cadastrados usam esses dois canais —
+ * são as mensagens da pesquisa e as do direct. Sem eles na lista, o
+ * seletor do formulário abria **em branco** ao editar um desses
+ * textos, e o primeiro clique dentro dele trocava o canal calado. O
+ * atalho de respostas do WhatsApp também ordena por este campo, e
+ * canal que o código não conhece cai para o fim da lista.
+ *
+ * "NPS" fica junto do WhatsApp na ordem do atalho, e não é etiqueta:
+ * os seis textos da pesquisa são mensagens de WhatsApp — falam "me
+ * chama por aqui" —, porque a pesquisa fala com o cliente por um
+ * número próprio.
  */
 export const MACRO_CHANNELS = [
   "Reclame Aqui",
   "WhatsApp",
+  "NPS",
+  "Instagram",
 ] as const;
 
 export type MacroChannel =

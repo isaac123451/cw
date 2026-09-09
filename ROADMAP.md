@@ -330,6 +330,51 @@ Definir a variável na Vercel é o que a liga lá.
 
 ---
 
+### "Respostas rápidas", e a variável que não pode sumir (09/09/2026)
+
+Os textos aprovados já apareciam na gaveta do painel. O pedido foi
+outro: **ao lado da caixa de mensagem do WhatsApp**. Não é a mesma
+coisa dita de outro jeito — a gaveta mostrava três, filtradas pela
+categoria do caso, e nenhuma quando o contato não tinha reclamação; e
+o botão de lá era "copiar", que deixa a colagem por conta de quem está
+com o cliente na linha.
+
+Agora é a lista inteira, com busca, a um clique do campo — e ela
+**escreve dentro dele**.
+
+**A decisão que interessa é sobre a variável que não tem valor.** O
+caminho fácil é trocar `{{protocolo}}` por string vazia quando não há
+caso. Isso produz o pior tipo de defeito que este projeto pode ter:
+uma mensagem gramaticalmente inteira, sem aviso nenhum, saindo com um
+buraco no meio — `Reclamação: ` — na frente do consumidor.
+
+Então não existe substituição por vazio. Ou o valor existe, ou o
+marcador **fica na tela** e o item entra na lista com a etiqueta do
+que falta. Vale para os seis: sem plano cadastrado, `{{planos}}`
+também é falta, não tabela vazia.
+
+A mesma regra na outra ponta: a caixa do WhatsApp é um editor rico, e
+escrever no `innerText` dela muda a tela **sem o editor saber** — a
+mensagem some no primeiro Enter, depois de parecer que funcionou.
+Ninguém escreve no DOM ali; o editor é avisado por evento, como uma
+pessoa digitando faria. São três camadas, e a terceira é honesta: se
+nenhuma pegar, o atalho **diz** que não conseguiu e deixa o texto na
+área de transferência.
+
+**O que apareceu no caminho.** `MACRO_CHANNELS` tinha dois canais e o
+banco tinha quatro: nove dos vinte e dois textos são de "NPS" ou
+"Instagram". O seletor do formulário abria **em branco** ao editar um
+desses, e o primeiro clique dentro dele trocava o canal calado.
+
+`npm run check:atalho` prova a substituição contra as macros reais, e
+vai a vermelho quando a regra é quebrada — testado trocando o marcador
+por vazio de propósito. `check:extensao` prova a rota contra a
+aplicação no ar, incluindo a contagem de uso indo e voltando do banco.
+
+**O que fica por conferir com o WhatsApp aberto:** o botão encaixando
+no rodapé e a colagem chegando ao campo. Isso pede a conta logada, e
+aqui não dá para testar.
+
 ### Um comentário no vercel.json parou o deploy por seis dias (09/09/2026)
 
 Em 03/09 acrescentei um bloco de explicação ao `vercel.json`, numa

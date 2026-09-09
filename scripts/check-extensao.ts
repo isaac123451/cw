@@ -860,6 +860,160 @@ async function main() {
     );
   }
 
+  /* ============================================================
+     RESPOSTAS PRONTAS — o atalho ao lado da caixa de mensagem
+  ============================================================ */
+
+  console.log(
+    "\n-- respostas prontas (atalho do WhatsApp) --\n"
+  );
+
+  {
+    const semCaso = await pegar(
+      "/api/extensao/respostas",
+      { canal: "WhatsApp", cliente: "Vinícius Weber" }
+    );
+
+    conferir(
+      "a lista responde 200",
+      semCaso.status,
+      200
+    );
+
+    const itens = (semCaso.corpo.itens ?? []) as Array<{
+      titulo: string;
+      canal: string;
+      texto: string;
+      faltando: string[];
+      preencher: string[];
+    }>;
+
+    conferir(
+      "a lista vem com textos",
+      itens.length > 0,
+      true
+    );
+
+    /*
+      A ordem é o que o atalho promete: o que se manda por WhatsApp
+      primeiro. Sem isto a primeira tela do atalho seria resposta
+      pública do portal, que não se manda por conversa nenhuma.
+    */
+    conferir(
+      "o primeiro da lista é de WhatsApp",
+      itens[0]?.canal,
+      "WhatsApp"
+    );
+
+    /*
+      O nome do consumidor sai preenchido — é a diferença entre o
+      atalho e o botão "copiar" que já existia na gaveta.
+    */
+    conferir(
+      "o nome do consumidor entra no texto",
+      itens.some((item) =>
+        item.texto.includes("Vinícius Weber")
+      ),
+      true
+    );
+
+    /*
+      Sem caso não há protocolo. O marcador tem de continuar à vista,
+      e a resposta tem de dizer que ele ficou faltando: substituir por
+      vazio mandaria "Reclamação: " ao consumidor.
+    */
+    const comProtocolo = itens.filter((item) =>
+      item.texto.includes("{{protocolo}}")
+    );
+
+    conferir(
+      "sem caso, quem usa protocolo avisa que falta",
+      comProtocolo.every((item) =>
+        item.faltando.includes("{{protocolo}}")
+      ),
+      true
+    );
+
+    conferir(
+      "e nenhum texto sai com o buraco calado",
+      itens.some((item) =>
+        /Reclamação:\s*$/m.test(item.texto)
+      ),
+      false
+    );
+
+    /* A busca é o que faz vinte e dois textos caberem numa janela. */
+    const buscados = await pegar(
+      "/api/extensao/respostas",
+      { canal: "WhatsApp", busca: "avaliacao" }
+    );
+
+    const achados = (buscados.corpo.itens ??
+      []) as unknown[];
+
+    conferir(
+      "a busca sem acento acha e filtra",
+      achados.length > 0 &&
+        achados.length < itens.length,
+      true
+    );
+  }
+
+  /*
+    A contagem de uso, ida e volta contra o banco.
+
+    É ela que ordena a lista por "mais usado", então precisa gravar
+    mesmo — e é escrita, então o que sobe aqui volta ao valor
+    anterior no fim.
+  */
+  {
+    const antes = await prisma.macro.findFirst({
+      where: { channel: "WhatsApp" },
+      select: { id: true, uses: true, title: true },
+    });
+
+    if (!antes) {
+      console.log(
+        "  --   nenhuma macro de WhatsApp no banco; contagem não conferida"
+      );
+    } else {
+      const resposta = await fetch(
+        `${base}/api/extensao/respostas`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CW-Sessao": sessao,
+          },
+          body: JSON.stringify({ id: antes.id }),
+        }
+      );
+
+      conferir(
+        "contar o uso responde 200",
+        resposta.status,
+        200
+      );
+
+      const depois = await prisma.macro.findUnique({
+        where: { id: antes.id },
+        select: { uses: true },
+      });
+
+      conferir(
+        "o uso subiu um no banco",
+        depois?.uses,
+        antes.uses + 1
+      );
+
+      /* Devolve o contador ao que era: a conferência não suja a base. */
+      await prisma.macro.update({
+        where: { id: antes.id },
+        data: { uses: antes.uses },
+      });
+    }
+  }
+
   await prisma.$disconnect();
 
   console.log(
