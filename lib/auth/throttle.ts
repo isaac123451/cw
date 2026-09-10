@@ -8,11 +8,18 @@ import "server-only";
  * para varrer senhas fracas sem obstáculo. O bcrypt encarece cada
  * tentativa, mas não limita quantas.
  *
- * **Em memória, de propósito.** A aplicação roda em uma instância na
- * Vercel; um contador compartilhado exigiria Redis, que ainda não
- * existe aqui. Numa frota de instâncias o limite passa a valer por
- * instância — continua reduzindo muito a taxa, mas está registrado no
- * ROADMAP como o próximo passo se o volume crescer.
+ * **Em memória — e isso é mais fraco do que parecia.** A premissa
+ * original era "a aplicação roda em uma instância na Vercel", e ela não
+ * vale: as funções da Vercel escalam em várias instâncias e nascem
+ * frias com frequência, cada uma com este mapa vazio. O limite vale por
+ * instância e some a cada instância nova.
+ *
+ * O que segura a porta hoje é o código de duas etapas, exigido para
+ * todas as contas desde 02/09/2026 (`SecurityConfig.twoFactorRequired`):
+ * acertar a senha só leva até o código, e o código tem validade de dez
+ * minutos e três tentativas **gravadas no banco**. O passo certo para
+ * este freio é o mesmo — guardar as falhas no banco —, e está anotado
+ * como pendência da revisão de 10/09/2026.
  */
 
 const TENTATIVAS_MAX = 5;

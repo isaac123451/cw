@@ -106,6 +106,37 @@ export async function GET(request: Request) {
 
   const inicio = Date.now();
 
+  /**
+   * Toda etapa protegida — não só as que lembraram de se proteger.
+   *
+   * As oito rodavam num `Promise.all`, e só três tinham `try/catch`
+   * próprio. Os comentários de cada uma diziam "nunca derruba o cron",
+   * e isso valia para essas três: se o encerramento do NPS, o aviso de
+   * movimentação, o reenvio de webhook, o vínculo por CNPJ ou a faxina
+   * de códigos lançassem, o `Promise.all` rejeitava, a rota devolvia 500
+   * sem dizer o que tinha rodado, e a limpeza de cache do fim não
+   * acontecia. Achado na revisão de 10/09/2026.
+   *
+   * Recebe a função, e não a promessa, para pegar também o que lança
+   * antes do primeiro `await`.
+   */
+  const falhas: string[] = [];
+
+  async function protegida<T>(
+    nome: string,
+    etapa: () => Promise<T>
+  ): Promise<T | { erro: string }> {
+    try {
+      return await etapa();
+    } catch (erro) {
+      console.error(`[cron] etapa "${nome}" falhou`, erro);
+      falhas.push(nome);
+      return {
+        erro: erro instanceof Error ? erro.message : String(erro),
+      };
+    }
+  }
+
   const [
     nps,
     movimentacoes,
@@ -116,10 +147,12 @@ export async function GET(request: Request) {
     avisosDoRA,
     metricasDeHoje,
   ] = await Promise.all([
-    encerrarNpsAbandonado(prisma),
-    avisarMovimentacoesAtrasadas(prisma),
-    reenviarWebhooksFalhados(prisma),
-    vincularPorCnpj(prisma),
+    protegida("nps", () => encerrarNpsAbandonado(prisma)),
+    protegida("movimentacoes", () =>
+      avisarMovimentacoesAtrasadas(prisma)
+    ),
+    protegida("reenvios", () => reenviarWebhooksFalhados(prisma)),
+    protegida("vinculos", () => vincularPorCnpj(prisma)),
     /**
      * Faxina dos códigos de verificação vencidos.
      *
@@ -127,7 +160,7 @@ export async function GET(request: Request) {
      * perto mais do que precisa, e sem faxina a tabela só cresce
      * guardando o que ninguém mais vai usar.
      */
-    limparDesafiosVelhos(),
+    protegida("desafios", () => limparDesafiosVelhos()),
 
     /**
      * Traz o que respondeu o NPS desde ontem.
@@ -149,7 +182,7 @@ export async function GET(request: Request) {
      * duplicar, e uma hora a mais é barato contra o risco de um buraco
      * na janela.
      */
-    importarNpsRecente(prisma),
+    protegida("wootric", () => importarNpsRecente(prisma)),
 
     /**
      * As reclamações que chegaram por e-mail.
@@ -163,7 +196,7 @@ export async function GET(request: Request) {
      * Não lança: conta desconectada ou Gmail fora do ar viram campo no
      * resultado, e as outras cinco tarefas seguem.
      */
-    importarAvisosDoRA(prisma),
+    protegida("avisosDoRA", () => importarAvisosDoRA(prisma)),
 
     /**
      * O retrato de hoje, gravado hoje.
@@ -176,7 +209,7 @@ export async function GET(request: Request) {
      * A planilha que a operacao mantinha a mao resolvia isso anotando o
      * numero do dia, no dia. Esta linha e´ essa planilha.
      */
-    medirHoje(prisma),
+    protegida("metricasDeHoje", () => medirHoje(prisma)),
   ]);
 
   /**
@@ -186,29 +219,48 @@ export async function GET(request: Request) {
    * invalidar dentro de cada uma faria três recargas em cascata para o
    * primeiro que abrisse a tela depois.
    */
+  /* Quanto uma etapa mexeu — zero para a que falhou. */
+  const contou = (resultado: unknown, campo: string) => {
+    const valor = (resultado as Record<string, unknown> | null)?.[
+      campo
+    ];
+    return typeof valor === "number" ? valor : 0;
+  };
+
   if (
-    nps.encerrados > 0 ||
-    movimentacoes.avisadas > 0 ||
-    vinculos.vinculados > 0 ||
-    (wootric.novas ?? 0) > 0 ||
-    (wootric.atualizadas ?? 0) > 0 ||
-    avisosDoRA.criadas > 0
+    contou(nps, "encerrados") > 0 ||
+    contou(movimentacoes, "avisadas") > 0 ||
+    contou(vinculos, "vinculados") > 0 ||
+    contou(wootric, "novas") > 0 ||
+    contou(wootric, "atualizadas") > 0 ||
+    contou(avisosDoRA, "criadas") > 0
   ) {
     revalidateTag(WORKSPACE_TAG, "max");
   }
 
-  return Response.json({
-    ok: true,
-    duracaoMs: Date.now() - inicio,
-    nps,
-    movimentacoes,
-    reenvios,
-    vinculos,
-    desafiosApagados: desafios,
-    wootric,
-    avisosDoRA,
-    metricasDeHoje,
-  });
+  /*
+    O relatório vai inteiro mesmo quando algo falhou, e a falha aparece.
+
+    500 quando alguma etapa caiu: é o que a Vercel lê para marcar a
+    execução como falha nos logs do cron. O corpo continua dizendo o
+    que cada uma das outras fez — antes, uma falha apagava tudo.
+  */
+  return Response.json(
+    {
+      ok: falhas.length === 0,
+      falhas,
+      duracaoMs: Date.now() - inicio,
+      nps,
+      movimentacoes,
+      reenvios,
+      vinculos,
+      desafiosApagados: desafios,
+      wootric,
+      avisosDoRA,
+      metricasDeHoje,
+    },
+    { status: falhas.length === 0 ? 200 : 500 }
+  );
 }
 
 /* ============================================================
