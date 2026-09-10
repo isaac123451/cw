@@ -118,8 +118,14 @@ const TETO_POR_RODADA = Number(
  * O que a importação **não** sobrescreve: status, tipo, causa raiz,
  * responsável, tentativas e todo o pós-contato. Isso é trabalho da
  * operação — reimportar a mesma janela não pode desfazer uma tratativa.
+ * Nem o **contato digitado**: vazio do Wootric não apaga telefone nem
+ * e-mail que já estão aqui — ver `semApagarContato`.
+ *
+ * Exportada para `check:nps-importacao` provar isso contra o banco sem
+ * chamar a API do Wootric. Este arquivo não é `"use server"`: exportar
+ * não abre endpoint.
  */
-async function gravarLote(
+export async function gravarLote(
   prisma: PrismaClient,
   itens: RespostaImportada[]
 ) {
@@ -179,7 +185,7 @@ async function gravarLote(
           const atual =
             await prisma.npsResponse.update({
               where: { externalId: item.externalId },
-              data: doWootric,
+              data: semApagarContato(doWootric),
               select: {
                 id: true,
                 status: true,
@@ -263,6 +269,42 @@ async function gravarLote(
  * Sem isso, cada rodada da rotina diária inflaria a contagem — e é ela
  * que decide se o ciclo encerra por "sem retorno".
  */
+/**
+ * Numa resposta que já existe, vazio do Wootric não apaga o que está aqui.
+ *
+ * **O defeito.** A atualização gravava `phone: item.phone || null`, e o
+ * Wootric manda o telefone **nulo em 100% das respostas** (medido em
+ * 23/08). Os 77 telefones que o NPS tem foram digitados pela operação —
+ * e toda reimportação que passasse por eles os apagava. A rotina diária
+ * só reimporta a última hora; a recarga de 30 dias, 6 meses ou 1 ano da
+ * tela apagaria todos de uma vez. Achado na revisão de 10/09/2026.
+ *
+ * Vale para os quatro campos de contato e empresa: o que o Wootric
+ * manda preenchido, grava; o que manda vazio, fica como estava. Nota,
+ * comentário, data e anotações continuam vindo inteiros, porque ali o
+ * Wootric é a fonte e vazio quer dizer vazio.
+ */
+function semApagarContato<
+  T extends Record<string, unknown>,
+>(dados: T): T {
+  const saida: Record<string, unknown> = { ...dados };
+
+  for (const campo of [
+    "email",
+    "phone",
+    "company",
+    "externalCompanyId",
+  ]) {
+    const valor = saida[campo];
+
+    if (valor === null || valor === undefined || valor === "") {
+      delete saida[campo];
+    }
+  }
+
+  return saida as T;
+}
+
 async function refletirContato(
   prisma: PrismaClient,
   ciclo: {
