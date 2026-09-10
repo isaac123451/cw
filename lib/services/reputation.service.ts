@@ -62,16 +62,54 @@ export function hojeNaOperacao(): string {
  *
  * O mesmo formatador de `hojeNaOperacao`, para os dois nunca
  * discordarem sobre que dia e´ hoje.
+ *
+ * **Dia que ja e´ dia passa reto — e isto foi um defeito grave.** A
+ * primeira versao convertia tudo, inclusive `"2026-09-08"`. Texto so
+ * de data e´ lido pelo JavaScript como meia-noite **UTC**, que em Sao
+ * Paulo e´ 21h da vespera — e a funcao devolvia `"2026-09-07"`. Como o
+ * modelo de caso entrega as datas assim, as metricas diarias contaram
+ * **toda** reclamacao, resposta e avaliacao um dia antes, e as do dia
+ * 1o caiam no mes anterior. Gravado assim, todo dia, pela rotina.
+ *
+ * Medido em 10/09/2026: das 353 reclamacoes, **nenhuma** tem hora — as
+ * 353 datas de publicacao, 334 de resposta e 215 de avaliacao estao
+ * cravadas em 00:00:00Z. A "reclamacao das 21h30" do paragrafo acima
+ * nao existe nessas colunas; ela existe no NPS, onde 98 de 1.398
+ * respostas chegaram entre 21h e 23h59.
+ *
+ * Por isso duas entradas nao sao convertidas:
+ *
+ * - texto `AAAA-MM-DD` — ja e´ o dia, sem fuso nenhum;
+ * - instante cravado em 00:00:00.000Z — e´ assim que uma coluna so de
+ *   data volta do banco (`fromIsoDay`). Um instante real cair nesse
+ *   milissegundo exato e´ uma chance em oitenta e seis milhoes por dia;
+ *   no NPS, zero de 1.398.
+ *
+ * Todo o resto — hora de verdade — vira o dia de parede em Sao Paulo.
+ * `npm run check:dia` prova as tres regras contra o banco.
  */
+const SO_DATA = /^\d{4}-\d{2}-\d{2}$/;
+
 export function diaNaOperacao(
   valor: Date | string
 ): string {
 
+  if (typeof valor === "string" && SO_DATA.test(valor)) {
+    return valor;
+  }
+
   const d = valor instanceof Date ? valor : new Date(valor);
 
-  return Number.isNaN(d.getTime())
-    ? String(valor).slice(0, 10)
-    : FORMATO_DO_DIA.format(d);
+  if (Number.isNaN(d.getTime())) {
+    return String(valor).slice(0, 10);
+  }
+
+  /* Coluna só de data, lida do banco: o dia UTC é o dia. */
+  if (d.getTime() % 86_400_000 === 0) {
+    return d.toISOString().slice(0, 10);
+  }
+
+  return FORMATO_DO_DIA.format(d);
 }
 
 export type PeriodKey =
@@ -123,9 +161,19 @@ const periodMonths: Record<PeriodKey, number> = {
 /** Dias corridos de "30 dias" — não é janela de mês fechado. */
 const ROLLING_DAYS = 30;
 
+/*
+  Em UTC, como `monthStart` e `monthEnd` logo abaixo.
+
+  Era `new Date(\`${date}T00:00:00\`)` — sem o `Z` —, que monta a data
+  no fuso de quem abre a tela. No Brasil dava certo por sorte: a
+  meia-noite local vira 03:00Z do mesmo dia, e o corte de dez caracteres
+  devolve o dia certo. Em qualquer navegador a leste de Greenwich a
+  meia-noite local cai no dia anterior em UTC, e os períodos da nota
+  andavam um dia para trás.
+*/
 function shift(date: string, days: number) {
-  const base = new Date(`${date}T00:00:00`);
-  base.setDate(base.getDate() + days);
+  const base = new Date(`${date}T00:00:00Z`);
+  base.setUTCDate(base.getUTCDate() + days);
   return base.toISOString().slice(0, 10);
 }
 

@@ -17,6 +17,7 @@ import {
   lerTelefone,
 } from "@/lib/services/contato.service";
 import { pedirEstruturado } from "@/lib/services/ia.service";
+import { diaNaOperacao } from "@/lib/services/reputation.service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -299,8 +300,8 @@ export async function POST(request: Request) {
         })
       : [];
 
-  const dia = (d: Date) =>
-    d.toISOString().slice(0, 10);
+  /* Movimentação tem hora: a das 22h é do dia em que aconteceu. */
+  const dia = (d: Date) => diaNaOperacao(d);
 
   /**
    * O histórico do contato inteiro: NPS e os outros casos dele.

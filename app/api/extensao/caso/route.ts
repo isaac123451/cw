@@ -14,6 +14,7 @@ import {
   RECLAME_AQUI,
   SOCIAL_SOURCES,
 } from "@/lib/services/case.service";
+import { hojeNaOperacao } from "@/lib/services/reputation.service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -245,7 +246,8 @@ export async function POST(request: Request) {
     entrada.criadoEm ?? ""
   )
     ? (entrada.criadoEm as string)
-    : new Date().toISOString().slice(0, 10);
+    : /* Hoje em São Paulo: depois das 21h, UTC já é amanhã. */
+      hojeNaOperacao();
 
   const protocolo = `${sigla}-${idPortal}`;
 

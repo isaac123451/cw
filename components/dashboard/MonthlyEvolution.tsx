@@ -4,7 +4,10 @@ import { useMemo, useState } from "react";
 
 import { useCases } from "@/lib/context/CaseContext";
 import { getMonthlyTrend } from "@/lib/services/case.service";
-import { inRange } from "@/lib/services/reputation.service";
+import {
+  hojeNaOperacao,
+  inRange,
+} from "@/lib/services/reputation.service";
 
 import SurfaceCard from "@/components/shared/SurfaceCard";
 import TrendChart from "@/components/shared/TrendChart";
@@ -47,12 +50,25 @@ export default function MonthlyEvolution() {
      * gráfico abre com uma coluna baixa que parece queda de volume
      * quando é só o pedaço de mês que sobrou.
      */
-    const limite = new Date();
+    /*
+      Conta de mês em UTC, a partir do dia da operação.
 
-    limite.setMonth(limite.getMonth() - meses + 1);
-    limite.setDate(1);
+      Era `setMonth` e depois `setDate(1)`, e a ordem importa: num dia
+      31, `setMonth` para um mês de 30 dias transborda para o seguinte
+      — 31 de março menos um mês vira "31 de fevereiro", que o
+      JavaScript resolve como 3 de março —, e o `setDate(1)` depois
+      disso fecha a janela no mês errado. Nos dias 29 a 31 o gráfico
+      abria um mês inteiro atrasado.
+    */
+    const [ano, mes] = hojeNaOperacao()
+      .split("-")
+      .map(Number);
 
-    const inicio = limite.toISOString().slice(0, 10);
+    const inicio = new Date(
+      Date.UTC(ano, mes - 1 - (meses - 1), 1)
+    )
+      .toISOString()
+      .slice(0, 10);
 
     return getMonthlyTrend(
       cases.filter((item) =>

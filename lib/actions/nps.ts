@@ -44,6 +44,7 @@ import {
   importarDoWootric,
   ResultadoImportacao,
 } from "@/lib/services/wootric.import";
+import { hojeNaOperacao } from "@/lib/services/reputation.service";
 
 /** O módulo a que estas ações pertencem — ver lib/auth/modules.ts. */
 const MODULO: Modulo = "nps";
@@ -974,7 +975,7 @@ export async function exportNps(ids?: string[]): Promise<{
 
   return {
     arquivo: buffer.toString("base64"),
-    nome: `cw-nps-${new Date().toISOString().slice(0, 10)}.xlsx`,
+    nome: `cw-nps-${hojeNaOperacao()}.xlsx`,
     total: linhas.length,
   };
 }

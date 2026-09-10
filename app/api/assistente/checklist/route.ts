@@ -15,7 +15,10 @@ import {
 } from "@/lib/services/case.service";
 
 import { slaStatus } from "@/lib/services/sla.service";
-import { hojeNaOperacao } from "@/lib/services/reputation.service";
+import {
+  diaNaOperacao,
+  hojeNaOperacao,
+} from "@/lib/services/reputation.service";
 
 import { isEncerrado, segmentOf } from "@/lib/models/nps";
 import { slaState } from "@/lib/services/nps.service";
@@ -235,7 +238,7 @@ export async function POST(request: Request) {
     agenda: {
       tarefasPendentes: tarefas.length,
       atrasadas: tarefas.filter(
-        (t) => t.dueDate.toISOString().slice(0, 10) < hoje
+        (t) => diaNaOperacao(t.dueDate) < hoje
       ).length,
     },
   };

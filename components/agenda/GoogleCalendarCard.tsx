@@ -42,6 +42,7 @@ import {
 } from "@/lib/models/google";
 
 import { useToast } from "@/lib/context/ToastContext";
+import { hojeNaOperacao } from "@/lib/services/reputation.service";
 
 const DIAS = [
   "Domingo",
@@ -53,8 +54,9 @@ const DIAS = [
   "Sábado",
 ];
 
+/* Hoje em São Paulo: depois das 21h, UTC já é amanhã. */
 function hojeIso() {
-  return new Date().toISOString().slice(0, 10);
+  return hojeNaOperacao();
 }
 
 /** Hoje/Amanhã em vez da data crua: é a leitura que a operação faz. */

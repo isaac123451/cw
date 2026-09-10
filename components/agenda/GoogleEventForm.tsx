@@ -16,6 +16,7 @@ import {
   REPEAT_LABELS,
   RepeatKind,
 } from "@/lib/models/google";
+import { hojeNaOperacao } from "@/lib/services/reputation.service";
 
 interface Props {
   open: boolean;
@@ -51,7 +52,7 @@ export default function GoogleEventForm({
   const [date, setDate] = useState(
     editing?.date ??
       presetDate ??
-      new Date().toISOString().slice(0, 10)
+      hojeNaOperacao()
   );
 
   const [time, setTime] = useState(editing?.time ?? "");

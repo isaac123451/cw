@@ -9,7 +9,10 @@ import {
 
 import { WORKSPACE_TAG } from "@/lib/actions/tags";
 import { getPrisma } from "@/lib/prisma";
-import { hojeNaOperacao } from "@/lib/services/reputation.service";
+import {
+  diaNaOperacao,
+  hojeNaOperacao,
+} from "@/lib/services/reputation.service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -162,7 +165,7 @@ export async function GET(request: Request) {
 
   const itens = linhas.map((item) => {
 
-    const dia = item.dueDate.toISOString().slice(0, 10);
+    const dia = diaNaOperacao(item.dueDate);
 
     return {
       id: item.id,

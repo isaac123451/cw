@@ -13,6 +13,7 @@ import {
   tipoPorNome,
   TIPOS_PADRAO,
 } from "@/lib/models/nps";
+import { diaNaOperacao } from "@/lib/services/reputation.service";
 
 /* ============================================================
    PRAZO EM HORAS ÚTEIS
@@ -383,7 +384,12 @@ export function trendByMonth(
 
   for (const item of itens) {
 
-    const chave = item.respondedAt.slice(0, 7);
+    /*
+      O mês de São Paulo. `respondedAt` é ISO em UTC: cortar o texto
+      punha a resposta do último dia do mês, dada depois das 21h, no mês
+      seguinte da tendência.
+    */
+    const chave = diaNaOperacao(item.respondedAt).slice(0, 7);
 
     const lista = porMes.get(chave);
 

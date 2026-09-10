@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 
 import { isEncerrado } from "@/lib/models/nps";
+import { diaNaOperacao } from "@/lib/services/reputation.service";
 
 /**
  * Acesso ao banco para a tratativa do NPS.
@@ -104,8 +105,16 @@ export interface RetratoNps {
 
 export function retratoNps(linha: LinhaNps): RetratoNps {
 
+  /*
+    No dia de São Paulo, não no de UTC.
+
+    As datas do NPS têm hora de verdade — 98 das 1.398 respostas
+    chegaram entre 21h e 23h59, e o corte em UTC as punha no dia
+    seguinte: resposta de sexta à noite aparecia como de sábado, e o
+    prazo de primeiro contato, um dia mais folgado do que é.
+  */
   const dia = (valor: Date | null) =>
-    valor ? valor.toISOString().slice(0, 10) : undefined;
+    valor ? diaNaOperacao(valor) : undefined;
 
   return {
     id: linha.id,

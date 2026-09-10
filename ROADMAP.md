@@ -330,6 +330,62 @@ Definir a variável na Vercel é o que a liga lá.
 
 ---
 
+### As métricas diárias contavam tudo um dia antes (10/09/2026)
+
+Achado na revisão crítica, e o defeito era meu. `diaNaOperacao` foi
+criada para jogar no dia de São Paulo o que acontece depois das 21h, e
+convertia **também** texto que já era dia: `"2026-09-08"` é lido pelo
+JavaScript como meia-noite UTC, que em São Paulo é 21h da véspera. A
+função devolvia `"2026-09-07"`.
+
+O modelo de caso entrega as datas exatamente assim, então as métricas
+diárias contaram **toda** reclamação, resposta e avaliação um dia antes
+— e as do dia 1º caíam no mês anterior. A rotina diária gravou isso na
+tabela, todo dia: **245 dos 247 dias gravados estavam errados**, na
+contagem de entradas, nas respondidas e na própria nota.
+
+A premissa estava errada desde o começo. Medido no banco:
+
+| coluna | total | cravadas em 00:00:00Z |
+| --- | --- | --- |
+| `Case.publishedAt` | 353 | 353 |
+| `Case.publicResponseAt` | 334 | 334 |
+| `Case.evaluatedAt` | 215 | 215 |
+| `NpsResponse.respondedAt` | 1.398 | 0 — e 98 entre 21h e 23h59 |
+
+A "reclamação das 21h30" que motivou a função não existe nas colunas
+de caso. Existe no NPS — onde a função **não** estava sendo usada, e o
+corte ingênuo em UTC punha a resposta de sexta à noite no sábado, e a
+do último dia do mês no mês seguinte da tendência.
+
+- **`diaNaOperacao`**: texto `AAAA-MM-DD` e instante cravado em
+  00:00:00.000Z passam reto; só hora de verdade vira o dia de São Paulo.
+- **Os 253 dias foram regravados** pelo `metricas:preencher`. Nenhum
+  tinha campo do portal digitado à mão, e o script preserva esses
+  campos de qualquer jeito. Conferido depois: zero divergências, e as
+  entradas do último dia de cada mês batem com a contagem do mês na
+  base (maio 19, junho 22, julho 15, agosto 25).
+- **NPS**: retrato da extensão, tendência por mês, formulário de edição
+  e o intervalo da importação passam pelo dia de São Paulo.
+- **Bordas**: caso capturado pela extensão depois das 21h nascia com a
+  data de amanhã; formulários de NPS, agenda e estabelecimento abriam
+  com amanhã como padrão; a linha do tempo do resumo do caso punha a
+  movimentação das 22h no dia seguinte.
+- **`MonthlyEvolution`**: `setMonth` antes de `setDate(1)`. Num dia
+  31, "menos um mês" transborda — 31 de março vira "31 de fevereiro",
+  que o JavaScript resolve como 3 de março —, e nos dias 29 a 31 o
+  gráfico abria um mês inteiro atrasado.
+- **`shift()`** montava a data sem o `Z`: funcionava no Brasil por
+  sorte, e andava um dia em qualquer navegador a leste de Greenwich.
+
+`npm run check:dia` prova as três regras contra o banco, e pega a
+função antiga em cinco pontos — inclusive "a métrica diária conta a
+reclamação no dia em que entrou", que é o que estava errado.
+
+**A lição que fica:** a correção foi escrita para um caso que ninguém
+mediu. Uma consulta de dez segundos teria mostrado que ele não existia.
+
+
 ### Quatro estados copiados dentro de efeitos (09/09/2026)
 
 `eslint .` acusava quatro erros de `setState` síncrono dentro de

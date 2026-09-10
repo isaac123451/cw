@@ -24,6 +24,7 @@ import {
   ESTABLISHMENT_SEGMENTS,
   ESTABLISHMENT_STATUSES,
 } from "@/lib/models/establishment";
+import { hojeNaOperacao } from "@/lib/services/reputation.service";
 
 const UFS = [
   "AC", "AL", "AM", "AP", "BA", "CE", "DF", "ES", "GO",
@@ -126,7 +127,7 @@ export default function EstablishmentForm({
   /** Cadastro novo começa hoje: é o que quem cadastra vai digitar. */
   const [startedAt, setStartedAt] = useState(
     editing?.startedAt ??
-      new Date().toISOString().slice(0, 10)
+      hojeNaOperacao()
   );
   const [phone, setPhone] = useState(
     editing?.phone ?? ""

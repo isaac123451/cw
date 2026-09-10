@@ -20,6 +20,10 @@ import {
 import { NpsDraft } from "@/lib/actions/nps";
 
 import { prazoPrimeiroContato } from "@/lib/services/nps.service";
+import {
+  diaNaOperacao,
+  hojeNaOperacao,
+} from "@/lib/services/reputation.service";
 
 interface Props {
   open: boolean;
@@ -34,8 +38,9 @@ interface Props {
   onManageCauses?: () => void;
 }
 
+/* Hoje em São Paulo: depois das 21h, UTC já é amanhã. */
 function hojeIso() {
-  return new Date().toISOString().slice(0, 10);
+  return hojeNaOperacao();
 }
 
 /**
@@ -64,7 +69,9 @@ export default function NpsForm({
   );
 
   const [respondedAt, setRespondedAt] = useState(
-    editing?.respondedAt?.slice(0, 10) ?? hojeIso()
+    (editing?.respondedAt
+      ? diaNaOperacao(editing.respondedAt)
+      : undefined) ?? hojeIso()
   );
 
   const [customer, setCustomer] = useState(

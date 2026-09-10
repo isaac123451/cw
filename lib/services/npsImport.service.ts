@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import * as XLSX from "xlsx";
 
 import { segmentOf } from "@/lib/models/nps";
+import { diaNaOperacao } from "@/lib/services/reputation.service";
 
 /**
  * Leitura de uma planilha de NPS.
@@ -418,12 +419,10 @@ export function parseNpsPlanilha(
     itens,
     ignoradas,
     de: datas.length
-      ? new Date(datas[0]).toISOString().slice(0, 10)
+      ? diaNaOperacao(new Date(datas[0]))
       : undefined,
     ate: datas.length
-      ? new Date(datas[datas.length - 1])
-          .toISOString()
-          .slice(0, 10)
+      ? diaNaOperacao(new Date(datas[datas.length - 1]))
       : undefined,
   };
 }
