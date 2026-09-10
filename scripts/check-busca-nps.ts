@@ -28,6 +28,9 @@ import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 
+import { compararNome } from "../lib/services/contato.service";
+import { condicoesPorNome } from "../lib/services/nps.repository";
+
 const url =
   process.env.DIRECT_URL || process.env.DATABASE_URL;
 
@@ -321,6 +324,75 @@ async function main() {
       "busca vazia mostra tudo",
       "limpar o campo estaria escondendo ciclos"
     );
+  }
+
+  /* ---------------- a busca da extensão, pelo nome da agenda ---------------- */
+
+  /**
+   * O painel no WhatsApp acha o ciclo pelo nome do contato?
+   *
+   * É outro caminho, e ele estava morto: a rota da extensão quebrava o
+   * nome com `.split(/s+/)` — sem a barra, perdida numa edição por linha
+   * de comando —, ou seja, **na letra s**. "Maria Silva" virava um pedaço
+   * só, procurado num campo que guarda `maria.silva`.
+   *
+   * O teste usa identificadores reais de duas partes (`maria.silva`,
+   * `joao_pedro`), monta o nome como ele apareceria na agenda ("Maria
+   * Silva") e passa pela mesma função que a rota usa, com o mesmo teto
+   * de 60 linhas. Cada um tem de voltar, e com casamento exato.
+   */
+  console.log("");
+
+  const deDuasPartes = todos
+    .map((r) => r.customer)
+    .filter((c) => /^[a-z]{3,}[._][a-z]{3,}$/.test(c))
+    .slice(0, 25);
+
+  if (deDuasPartes.length === 0) {
+    console.log(
+      "  --     nenhum identificador de duas partes para testar a busca por nome"
+    );
+  } else {
+    const perdidos: string[] = [];
+
+    for (const identificador of deDuasPartes) {
+      const nomeNaAgenda = identificador
+        .split(/[._]/)
+        .map((p) => p[0].toUpperCase() + p.slice(1))
+        .join(" ");
+
+      const achados = await prisma.npsResponse.findMany({
+        where: { OR: condicoesPorNome(nomeNaAgenda) },
+        select: { customer: true },
+        orderBy: { respondedAt: "desc" },
+        take: 60,
+      });
+
+      const voltou = achados.some(
+        (a) =>
+          a.customer === identificador &&
+          compararNome(nomeNaAgenda, a.customer) === "exata"
+      );
+
+      if (!voltou) {
+        perdidos.push(`"${nomeNaAgenda}" não achou ${identificador}`);
+      }
+    }
+
+    if (perdidos.length === 0) {
+      ok(
+        "a extensão acha o ciclo pelo nome da agenda",
+        `${deDuasPartes.length} identificador(es) reais, todos achados com casamento exato`
+      );
+    } else {
+      falhar(
+        "a extensão acha o ciclo pelo nome da agenda",
+        [
+          `${perdidos.length} de ${deDuasPartes.length} não voltaram:`,
+          ...perdidos.slice(0, 4),
+        ].join("\n         ")
+      );
+    }
   }
 
   console.log(

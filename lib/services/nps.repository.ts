@@ -1,6 +1,9 @@
 import { PrismaClient } from "@prisma/client";
 
+import type { Prisma } from "@prisma/client";
+
 import { isEncerrado } from "@/lib/models/nps";
+import { normalizarNome } from "@/lib/services/contato.service";
 import { diaNaOperacao } from "@/lib/services/reputation.service";
 
 /**
@@ -39,6 +42,7 @@ export const SELECAO_NPS = {
   status: true,
   kind: true,
   customer: true,
+  customerName: true,
   phone: true,
   email: true,
   establishmentId: true,
@@ -59,6 +63,7 @@ interface LinhaNps {
   status: string;
   kind: string | null;
   customer: string;
+  customerName?: string | null;
   phone?: string | null;
   email?: string | null;
   establishmentId: string | null;
@@ -103,6 +108,61 @@ export interface RetratoNps {
   posContatoPor?: string;
 }
 
+/**
+ * As condições para achar um ciclo pelo nome da pessoa.
+ *
+ * **Todas as partes exigidas, e por quê.** O filtro que vem depois só
+ * aceita nome exato — os mesmos pedaços, sem acento e sem pontuação —,
+ * então exigir cada parte aqui nunca exclui um acerto possível. Com
+ * OU, "Maria" sozinha virava condição, e sessenta Marias quaisquer
+ * ocupariam as sessenta vagas antes da pessoa certa.
+ *
+ * **Duas colunas, duas formas.** `customer` guarda o identificador do
+ * Wootric — a parte do e-mail antes do @, sem acento —, então as partes
+ * vão sem acento. `customerName` guarda o nome digitado na tela, com
+ * acento, e o `ILIKE` do Postgres não ignora acento: as partes vão como
+ * foram digitadas.
+ *
+ * Partes de menos de três letras ("da", "de") ficam de fora: estão em
+ * meia base e não distinguem ninguém.
+ */
+export function condicoesPorNome(
+  nome: string
+): Prisma.NpsResponseWhereInput[] {
+
+  const semAcento = normalizarNome(nome)
+    .split(" ")
+    .filter((p) => p.length >= 3);
+
+  const comoDigitado = nome
+    .trim()
+    .split(/\s+/)
+    .filter((p) => p.length >= 3);
+
+  const condicoes: Prisma.NpsResponseWhereInput[] = [];
+
+  if (semAcento.length > 0) {
+    condicoes.push({
+      AND: semAcento.map((parte) => ({
+        customer: { contains: parte, mode: "insensitive" as const },
+      })),
+    });
+  }
+
+  if (comoDigitado.length > 0) {
+    condicoes.push({
+      AND: comoDigitado.map((parte) => ({
+        customerName: {
+          contains: parte,
+          mode: "insensitive" as const,
+        },
+      })),
+    });
+  }
+
+  return condicoes;
+}
+
 export function retratoNps(linha: LinhaNps): RetratoNps {
 
   /*
@@ -121,7 +181,14 @@ export function retratoNps(linha: LinhaNps): RetratoNps {
     nota: linha.score,
     status: linha.status,
     tipo: linha.kind ?? undefined,
-    cliente: linha.customer,
+
+    /*
+      O nome digitado na tela do NPS, quando existe; senão o
+      identificador do Wootric. É a mesma regra da própria tela do NPS
+      (`nomeDoCliente` em lib/models/nps.ts) — a extensão mostrava só o
+      identificador, e o nome cadastrado nunca chegava ao painel.
+    */
+    cliente: linha.customerName?.trim() || linha.customer,
     respondidoEm: dia(linha.respondedAt),
     prazoPrimeiroContato: dia(linha.firstContactDueAt),
     primeiroContatoEm: dia(linha.firstContactAt),

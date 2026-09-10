@@ -32,6 +32,7 @@ import {
 import { slugify } from "@/lib/services/slug";
 import { hojeNaOperacao } from "@/lib/services/reputation.service";
 import {
+  condicoesPorNome,
   retratoNps,
   SELECAO_NPS,
 } from "@/lib/services/nps.repository";
@@ -1130,15 +1131,19 @@ async function buscarNpsTodos(alvo: Alvo) {
     });
   }
 
+  /*
+    O nome, pela função que a conferência também usa.
+
+    Aqui havia `.split(/s+/)` — sem a barra, perdida numa edição feita
+    por linha de comando. A expressão quebrava o nome **na letra s**,
+    não no espaço: "Maria Silva" virava um pedaço só, procurado num
+    campo que guarda `maria.silva`. Nunca casava — a busca do NPS por
+    nome estava morta, e o painel só achava ciclo pelo telefone ou pelo
+    domínio do e-mail. `npm run check:busca-nps` prova a busca contra os
+    identificadores reais da base.
+  */
   if (alvo.nome) {
-    for (const parte of alvo.nome
-      .trim()
-      .split(/s+/)
-      .filter((p) => p.length >= 3)) {
-      ou.push({
-        customer: { contains: parte, mode: "insensitive" },
-      });
-    }
+    ou.push(...condicoesPorNome(alvo.nome));
   }
 
   if (ou.length === 0) return [];
@@ -1171,7 +1176,9 @@ async function buscarNpsTodos(alvo: Alvo) {
 
     return Boolean(
       alvo.nome &&
-        compararNome(alvo.nome, linha.customer) === "exata"
+        (compararNome(alvo.nome, linha.customer) === "exata" ||
+          compararNome(alvo.nome, linha.customerName) ===
+            "exata")
     );
   });
 
