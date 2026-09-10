@@ -203,7 +203,7 @@ export async function signIn(
    * A chave é o e-mail: protege a conta alvo mesmo quando as tentativas
    * vêm de IPs diferentes, que é o caso do ataque distribuído.
    */
-  const trava = checarBloqueio(email);
+  const trava = await checarBloqueio(email);
 
   if (trava.bloqueado) {
     return {
@@ -219,7 +219,7 @@ export async function signIn(
   const invalid = { error: "E-mail ou senha inválidos." };
 
   if (!user) {
-    registrarFalha(email);
+    await registrarFalha(email);
     return invalid;
   }
 
@@ -239,7 +239,7 @@ export async function signIn(
   );
 
   if (!ok) {
-    registrarFalha(email);
+    await registrarFalha(email);
     return invalid;
   }
 
@@ -254,7 +254,7 @@ export async function signIn(
     };
   }
 
-  limparFalhas(email);
+  await limparFalhas(email);
 
   /**
    * A senha bateu. A partir daqui, ou a sessão sai agora, ou sai

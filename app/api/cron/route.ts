@@ -28,6 +28,7 @@ import { movementStatus } from "@/lib/services/movement.service";
 import { deliverWebhook } from "@/lib/services/webhook.service";
 
 import { limparDesafiosVelhos } from "@/lib/auth/two-factor";
+import { limparTentativasVelhas } from "@/lib/auth/throttle";
 
 import { importarDoWootric } from "@/lib/services/wootric.import";
 import { temWootric } from "@/lib/services/wootric.service";
@@ -143,6 +144,7 @@ export async function GET(request: Request) {
     reenvios,
     vinculos,
     desafios,
+    tentativas,
     wootric,
     avisosDoRA,
     metricasDeHoje,
@@ -161,6 +163,9 @@ export async function GET(request: Request) {
      * guardando o que ninguém mais vai usar.
      */
     protegida("desafios", () => limparDesafiosVelhos()),
+
+    /* Senhas erradas de mais de quinze minutos: não contam mais para nada. */
+    protegida("tentativas", () => limparTentativasVelhas()),
 
     /**
      * Traz o que respondeu o NPS desde ontem.
@@ -255,6 +260,7 @@ export async function GET(request: Request) {
       reenvios,
       vinculos,
       desafiosApagados: desafios,
+      tentativasApagadas: tentativas,
       wootric,
       avisosDoRA,
       metricasDeHoje,

@@ -1367,6 +1367,27 @@ model SecurityConfig {
   updatedBy String?
 }
 
+/// Senhas erradas por conta, para o freio de tentativas de login.
+///
+/// Era um `Map` em memória, com o comentário "a aplicação roda em uma
+/// instância na Vercel". Não roda: as funções escalam em várias
+/// instâncias e nascem frias toda hora, cada uma com o mapa vazio — o
+/// limite de cinco tentativas valia por instância e sumia a cada nova.
+/// Aqui ele vale para a conta, onde quer que a tentativa caia.
+///
+/// A chave é o e-mail, não o IP: protege a conta alvo mesmo quando as
+/// tentativas vêm de lugares diferentes, que é o ataque distribuído.
+model TentativaDeLogin {
+  chave String @id
+
+  falhas Int @default(0)
+
+  /// Início da janela de quinze minutos. Falha depois dela recomeça a conta.
+  primeiraEm DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+}
+
 /// Um código de verificação em duas etapas: em uso, gasto ou vencido.
 ///
 /// Fica no banco, e não na memória do processo como o freio de
