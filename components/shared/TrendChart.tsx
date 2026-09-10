@@ -39,9 +39,9 @@ const LARGURA_POR_ROTULO = 70;
  *
  * SVG e não uma biblioteca de gráficos: o desenho é o mesmo no servidor
  * e no cliente, sem medir o DOM, e portanto sem risco de divergência na
- * hidratação. O `recharts` está no projeto e não é usado por nenhum
- * gráfico — trocar por ele traria 90 kB ao pacote para resolver o que
- * cem linhas resolvem.
+ * hidratação. O `recharts` chegou a estar nas dependências sem ser
+ * usado por gráfico nenhum, e saiu em 10/09/2026 — trocar por ele
+ * traria 90 kB ao pacote para resolver o que cem linhas resolvem.
  *
  * **Três defeitos consertados em 23/08**, todos reportados pelo Isaac:
  *
