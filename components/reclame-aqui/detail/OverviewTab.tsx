@@ -6,7 +6,7 @@ import { Mail, Phone, Send, User } from "lucide-react";
 
 import { Case } from "@/lib/models/case";
 
-import { loadCaseDescription } from "@/lib/actions/cases";
+import { loadCaseTexts } from "@/lib/actions/cases";
 import {
   addCaseNote,
   CaseNote,
@@ -69,8 +69,16 @@ export default function OverviewTab({
    */
   useEffect(() => {
 
+    /*
+      Busca se falta **algum** dos dois textos.
+
+      Era `if (data.description)`: com o relato já presente — o caso
+      recém-criado, por exemplo —, a busca era pulada, e a resposta
+      pública, que nunca vem na lista, ficaria sem carregar.
+    */
     if (
-      data.description ||
+      (data.description &&
+        data.publicResponse !== undefined) ||
       buscado.current === data.protocol
     ) {
       return;
@@ -97,13 +105,25 @@ export default function OverviewTab({
       desenvolvimento), o que é pior: o defeito só aparecia onde a gente
       confere as coisas.
     */
-    loadCaseDescription(pedido)
-      .then((texto) => {
+    loadCaseTexts(pedido)
+      .then((textos) => {
         if (buscado.current !== pedido) return;
 
-        if (texto) {
-          onLoad({ description: texto });
-        }
+        /*
+          Os dois textos que a lista não traz, no rascunho **sem sujá-lo**.
+
+          A resposta pública entra junto do relato desde 10/09/2026.
+          Sem ela a aba Avaliação mostrava a resposta vazia em toda
+          reclamação, e o botão de publicar o rascunho — que junta
+          "resposta existente + rascunho" — gravava só o rascunho por
+          cima da resposta de verdade.
+        */
+        onLoad({
+          ...(textos.description
+            ? { description: textos.description }
+            : {}),
+          publicResponse: textos.publicResponse,
+        });
       })
       .catch((error: unknown) => {
         console.error(
@@ -117,7 +137,12 @@ export default function OverviewTab({
         }
       });
 
-  }, [data.protocol, data.description, onLoad]);
+  }, [
+    data.protocol,
+    data.description,
+    data.publicResponse,
+    onLoad,
+  ]);
 
   /**
    * As anotações vêm do banco — as mesmas que a extensão grava.

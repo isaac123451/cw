@@ -113,6 +113,16 @@ const INTERNAS: Record<string, string[]> = {
   WootricSync: ["*"],
 
   /**
+   * Freio de tentativas de login.
+   *
+   * Uma linha por e-mail que errou a senha, lida só pelo `signIn`. Não
+   * vai para tela nenhuma de propósito: a lista de endereços que alguém
+   * tentou não é informação para exibir, e a rotina diária a apaga
+   * depois de quinze minutos.
+   */
+  TentativaDeLogin: ["*"],
+
+  /**
    * Configuração de acesso, com carga própria (`lerSeguranca`).
    *
    * Fora do workspace de propósito: ela só interessa a quem administra,

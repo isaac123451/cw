@@ -330,6 +330,50 @@ Definir a variável na Vercel é o que a liga lá.
 
 ---
 
+### Arrastar um cartão apagava o relato e a resposta (10/09/2026)
+
+Estava **armado em produção** desde o deploy de 09/09, e foi achado
+antes de disparar: conferido no banco que só uma reclamação tinha sido
+alterada depois do deploy (e ela nunca teve relato), e nenhuma
+movimentação registrada.
+
+A causa foi a otimização de desempenho de 03/09. Para a carga do quadro
+caber em 500 ms, cada reclamação passou a vir **sem** o relato e **sem**
+a resposta pública — a lista traz só `respondida`, o fato sem o texto.
+A gravação não mudou: `persistCase` manda o caso inteiro, e
+transformava os dois textos ausentes em nulo.
+
+| ação na tela | o que apagava |
+| --- | --- |
+| arrastar o cartão para outra coluna | relato e resposta pública |
+| ligar ou desligar uma etiqueta | relato e resposta pública |
+| salvar qualquer campo na tela do caso | a resposta pública |
+| publicar o rascunho | a resposta existente, trocada só pelo rascunho |
+
+A última linha é a mais traiçoeira: publicar faz "resposta existente +
+rascunho", e como a tela não carregava a resposta, achava que não havia
+nenhuma. A aba Avaliação mostrava a resposta vazia em toda reclamação.
+
+O comentário do `persistCase` dizia que "a tela e a extensão carregam o
+caso inteiro" — premissa que a otimização quebrou sem ninguém revisar
+quem dependia dela. O dossiê já tinha sido tirado da gravação pelo
+mesmo motivo, e o raciocínio não foi estendido aos outros dois.
+
+- **No servidor:** a atualização de caso não apaga relato nem resposta
+  com vazio (`semApagarVazios`), venha de onde vier.
+- **Na tela:** `loadCaseTexts` traz relato **e** resposta ao abrir o
+  caso, no rascunho sem sujá-lo.
+
+`npm run check:gravacao` grava a cópia exata que o quadro tem, numa
+reclamação descartável, pelos caminhos do arrasto e da etiqueta. Sem a
+trava, zera os dois textos.
+
+**A lição, que é a mesma da métrica deslocada:** uma otimização mudou o
+formato do dado, e o código que gravava de volta continuou supondo o
+formato antigo. Toda vez que a leitura deixar de trazer um campo, a
+pergunta seguinte é quem grava esse campo a partir da leitura.
+
+
 ### O botão Importar desfazia o trabalho da operação (10/09/2026)
 
 O achado mais grave da revisão crítica. O botão **Importar** da tela

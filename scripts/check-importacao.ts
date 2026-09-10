@@ -210,6 +210,16 @@ async function funcao(prisma: PrismaClient) {
   };
 
   try {
+    /*
+      Sobra de uma rodada interrompida sai antes de começar.
+
+      Sem isto, uma rodada que morreu no meio deixava a reclamação
+      descartável no banco, e a seguinte a tratava como existente — e
+      falhava por um motivo que não tinha nada a ver com a regra.
+    */
+    await prisma.caseTag.deleteMany({ where: { case: { protocol: PROTOCOLO } } });
+    await prisma.case.deleteMany({ where: { protocol: PROTOCOLO } });
+
     /* nasce pela importação, como uma reclamação nova da planilha */
     const primeira = await importCasesBulk(prisma, [nova]);
 

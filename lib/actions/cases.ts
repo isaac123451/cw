@@ -22,7 +22,7 @@ import {
 import type { Modulo } from "@/lib/auth/modules";
 
 import {
-  fetchCaseDescription,
+  fetchCaseTexts,
   fetchCaseDossier,
   fetchCases,
   persistCase,
@@ -163,19 +163,20 @@ export async function listCases(): Promise<
 }
 
 /**
- * Relato completo de um caso.
+ * Relato e resposta pública de um caso.
  *
- * Fica fora da listagem por peso; a tela de detalhe busca ao abrir.
+ * Ficam fora da listagem por peso; a tela de detalhe busca ao abrir.
+ * Era só o relato — ver `fetchCaseTexts` para o que isso custava.
  */
-export async function loadCaseDescription(
+export async function loadCaseTexts(
   protocol: string
-): Promise<string> {
+): Promise<{ description: string; publicResponse: string }> {
 
   const prisma = await podeLer();
 
-  if (!prisma) return "";
+  if (!prisma) return { description: "", publicResponse: "" };
 
-  return fetchCaseDescription(prisma, protocol);
+  return fetchCaseTexts(prisma, protocol);
 }
 
 /**

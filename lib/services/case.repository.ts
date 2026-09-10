@@ -2,6 +2,7 @@ import {
   mudancasDoPortal,
   SELECAO_DO_PORTAL,
 } from "@/lib/services/atualizacaoDoPortal";
+import { semApagarVazios } from "@/lib/services/semApagar";
 import { Case } from "@/lib/models/case";
 import {
   Prisma,
@@ -231,17 +232,30 @@ export async function fetchCases(
 }
 
 /** Texto do relato, buscado só quando a tela de detalhe abre. */
-export async function fetchCaseDescription(
+/**
+ * Os dois textos que a lista não traz: o relato e a resposta pública.
+ *
+ * Era só o relato. A resposta pública também saiu da carga do quadro em
+ * 03/09 e ninguém a buscava de volta — a aba Avaliação da tela do caso
+ * mostrava a resposta **vazia em todas as reclamações**, e o botão de
+ * publicar o rascunho, que junta "resposta existente + rascunho",
+ * gravava só o rascunho por cima da resposta de verdade. Achado na
+ * revisão de 10/09/2026.
+ */
+export async function fetchCaseTexts(
   prisma: PrismaClient,
   protocol: string
 ) {
 
   const row = await prisma.case.findUnique({
     where: { protocol },
-    select: { description: true },
+    select: { description: true, publicResponse: true },
   });
 
-  return row?.description ?? "";
+  return {
+    description: row?.description ?? "",
+    publicResponse: row?.publicResponse ?? "",
+  };
 }
 
 /**
@@ -843,7 +857,27 @@ export async function persistCase(
    */
   const salvo = await prisma.case.upsert({
     where: { protocol: item.protocol },
-    update: dados,
+
+    /*
+      Relato e resposta pública: vazio **não** apaga.
+
+      A premissa do comentário acima — "a tela e a extensão carregam o
+      caso inteiro" — deixou de valer em 03/09, quando a carga do quadro
+      passou a trazer cada reclamação **sem** esses dois textos, para
+      caber em 500 ms. A lista chega com o relato vazio e a resposta
+      indefinida, e esta gravação transformava os dois em nulo: arrastar
+      um cartão, ligar uma etiqueta ou salvar qualquer campo na tela do
+      caso **apagava o relato e a resposta pública** daquela reclamação.
+      Estava no ar desde o deploy de 09/09; conferido em 10/09 que
+      ninguém tinha mexido ainda — nenhuma se perdeu. Achado na revisão
+      crítica.
+
+      É a mesma decisão que já tirava o dossiê daqui, e pelo mesmo
+      motivo: campo que a tela não carrega para reenviar não pode virar
+      nulo no banco. Na criação, vazio é o valor certo.
+    */
+    update: semApagarVazios(dados, ["description", "publicResponse"]),
+
     create: { protocol: item.protocol, ...dados },
     select: { id: true },
   });
