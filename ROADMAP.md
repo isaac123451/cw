@@ -330,6 +330,56 @@ Definir a variável na Vercel é o que a liga lá.
 
 ---
 
+### O botão Importar desfazia o trabalho da operação (10/09/2026)
+
+O achado mais grave da revisão crítica. O botão **Importar** da tela
+regravava a linha inteira de toda reclamação em que algum campo da
+planilha diferisse do banco — e a planilha não conhece o trabalho da
+operação. Medido sem gravar nada, com a última planilha, um clique:
+
+| efeito | reclamações |
+| --- | --- |
+| entrariam na regravação | 149 |
+| **resposta pública real trocada pelo marcador de 38 caracteres** | **142** |
+| **responsável retirado** | **141** |
+| etiquetas apagadas e recriadas só pela planilha | 71 |
+
+O marcador é o texto que o leitor põe quando a planilha diz que a
+empresa respondeu mas não traz o que respondeu. O `ra:atualizar` já
+recusava o marcador e tocava só campos do portal desde 03/09 — era a
+lição das 334 respostas quase apagadas. O botão ficou no caminho antigo.
+
+E qualquer conta podia apertá-lo: a ação só conferia "tem sessão", não
+o papel. A conta `carlosisaac@`, de leitura, importaria.
+
+- **Uma regra, dois chamadores.** `lib/services/atualizacaoDoPortal.ts`
+  diz o que a planilha pode mudar numa reclamação existente: resposta
+  pública e data, avaliação, nota, resolvida, voltaria — e a coluna do
+  quadro, só se for uma das que o portal conhece e nunca voltando de
+  uma coluna final. Contato só completa o que está vazio ou mascarado.
+  O script e o botão chamam a mesma `mudancasDoPortal`.
+- **Reclamação nova entra inteira**, pelo caminho de sempre.
+- **Importar exige AGENTE no módulo**, como toda gravação de caso.
+  Exportar, LEITURA no módulo — o arquivo leva e-mail e telefone de
+  todos os consumidores.
+
+Achado junto: a **exportação saía com a coluna "Resposta pública" vazia**
+nas 353 reclamações. A carga rápida do quadro devolvia a resposta como
+nula sempre, inclusive no modo que a exportação usa. Uma exportação
+guardada como cópia de segurança perdia exatamente o trabalho de
+resposta.
+
+E um cuidado de desempenho: os marcadores saíram do leitor de planilha
+(`raImport.service`, que carrega a biblioteca `xlsx`) para
+`raMarcadores`. Sem isso, a regra nova arrastaria a planilha para toda
+função que grava caso — inclusive a rota da extensão, a cada conversa.
+
+`npm run check:importacao` prova a regra e roda `importCasesBulk` de
+verdade numa reclamação descartável que recebe trabalho da operação e
+depois é reimportada. Pelo caminho antigo, falha nos sete pontos do
+estrago medido.
+
+
 ### Reclamação nova do Reclame Aqui, sem API (10/09/2026)
 
 O pedido: "uma forma de importar os casos do Reclame Aqui sem o uso da

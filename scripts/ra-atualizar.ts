@@ -4,28 +4,19 @@
  *   npm run ra:atualizar -- --base <arquivo.xlsx>            (simula)
  *   npm run ra:atualizar -- --base <arquivo.xlsx> --gravar
  *
- * **O buraco que isto fecha.** A importação incremental cria o que
- * falta e **não regrava o que já existe** — de propósito, para não
- * desfazer o que a operação moveu no quadro. Mas isso deixa um vazio:
- * uma reclamação que já estava aqui e foi respondida, avaliada ou
- * resolvida **no portal** continua aparecendo como se nada tivesse
- * acontecido. Foi o sintoma que o Isaac descreveu: "ta dando 21
- * pendentes e nem tem isso tudo".
+ * **O buraco que isto fecha.** Uma reclamação que já estava aqui e foi
+ * respondida, avaliada ou resolvida **no portal** continuava aparecendo
+ * como se nada tivesse acontecido. Foi o sintoma que o Isaac descreveu:
+ * "ta dando 21 pendentes e nem tem isso tudo".
  *
- * **A regra que separa uma coisa da outra.** Existem dois donos para os
- * campos de uma reclamação:
- *
- * - O **portal** é dono do que o consumidor e o público fizeram:
- *   resposta pública e sua data, avaliação, nota, se foi resolvida, se
- *   voltaria a fazer negócio. Isso a operação não inventa e não deveria
- *   editar — quem manda é o Reclame Aqui.
- * - A **operação** é dona do que ela decidiu: coluna do quadro,
- *   responsável, time, etiquetas, prioridade, rascunho, dossiê.
- *
- * Este script toca **apenas o primeiro grupo**, e a lista está escrita
- * abaixo como código, não como intenção. Regravar o segundo grupo
- * apagaria trabalho — e é exatamente por isso que a importação
- * incremental se recusa a atualizar qualquer coisa.
+ * **A regra mora em `lib/services/atualizacaoDoPortal.ts`**, e não mais
+ * aqui. Até 10/09/2026 este script tinha a regra certa e o botão
+ * Importar da tela tinha outra — regravava a linha inteira. Medido com a
+ * mesma planilha: o botão teria trocado 142 respostas públicas reais
+ * pelo marcador, e tirado o responsável de 141 reclamações. Agora os
+ * dois chamam `mudancasDoPortal`: o portal é dono do que o consumidor e
+ * o público fizeram, a operação é dona do que ela decidiu, e a lista
+ * do que o portal pode tocar é uma só.
  *
  * **Sem `--gravar` ele só mostra.** Cada mudança aparece campo a campo,
  * com o valor de antes e o de depois, para dar para conferir antes de
@@ -38,11 +29,12 @@ import { readFileSync } from "node:fs";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 
+import { parseReclameAqui } from "../lib/services/raImport.service";
+
 import {
-  parseReclameAqui,
-  RELATO_SINTETICO,
-  RESPOSTA_SINTETICA,
-} from "../lib/services/raImport.service";
+  mudancasDoPortal,
+  SELECAO_DO_PORTAL,
+} from "../lib/services/atualizacaoDoPortal";
 
 const url =
   process.env.DIRECT_URL || process.env.DATABASE_URL;
@@ -69,94 +61,6 @@ if (!args.includes("--base") || !arquivo) {
   process.exit(1);
 }
 
-/**
- * Os campos do portal. Nada fora desta lista é tocado.
- *
- * Escrita como constante e não embutida no código de gravação porque é
- * a decisão de segurança deste script: alguém que acrescente um campo
- * aqui está declarando "o portal é dono disto", e é uma linha que se lê
- * numa revisão.
- */
-const DO_PORTAL = [
-  "publicResponse",
-  "publicResponseAt",
-  "evaluated",
-  "score",
-  "resolved",
-  "wouldDoBusiness",
-  "evaluatedAt",
-
-  /**
-   * A coluna do quadro **é** fato do portal, para reclamacao do RA.
-   *
-   * Eu a tinha deixado de fora tratando-a como decisao da operacao, e o
-   * Isaac corrigiu: na importacao ela ja nasce de `mapStatus`, que
-   * traduz o status do Reclame Aqui. Uma reclamacao respondida la e
-   * "Novo" aqui nao e´ escolha de ninguem — e´ dado velho, e era a
-   * origem das "21 pendentes que nem tem isso tudo".
-   *
-   * Entra com duas travas, abaixo: nada anda para tras, e coluna que a
-   * operacao inventou nao e´ tocada.
-   */
-  "status",
-] as const;
-
-/**
- * As colunas que o portal conhece.
- *
- * Se a operacao moveu o caso para uma coluna propria — "Em analise
- * juridica", "Aguardando o parceiro" —, o portal nao tem opiniao sobre
- * ela e esta atualizacao passa longe. Puxar de volta seria desfazer uma
- * decisao que o Reclame Aqui nem sabe que existe.
- */
-const COLUNAS_DO_PORTAL = new Set([
-  "Novo",
-  "Aguardando nossa réplica",
-  "Aguardando avaliação",
-  "Resolvido",
-  "Não resolvido",
-]);
-
-/**
- * Colunas de onde nao se volta.
- *
- * Uma reclamacao avaliada nao desavalia. Se um export mais **velho** do
- * que o banco for importado por engano — coisa de um clique no arquivo
- * errado —, sem esta trava o quadro inteiro andaria para tras e a
- * operacao perderia o rastro do que ja tinha fechado.
- *
- * Medido nesta planilha: das 349, oito mudariam de coluna e as oito
- * para frente. A trava nao barrou nada hoje; ela existe para o dia do
- * arquivo errado.
- */
-const COLUNAS_FINAIS = new Set([
-  "Resolvido",
-  "Não resolvido",
-]);
-
-/*
-  Tempo de resposta e de solucao ficam de fora.
-
-  Nao por descuido: sao **derivados** das datas acima, e no banco moram
-  em outras colunas (`responseMinutes`, `solutionMinutes`, em numero).
-  Gravar os dois lados abriria a porta para eles discordarem — uma data
-  dizendo uma coisa e o tempo, outra. Com as datas certas, o tempo se
-  recalcula; sem elas, o tempo sozinho nao prova nada.
-*/
-
-type CampoDoPortal = (typeof DO_PORTAL)[number];
-
-function comparavel(valor: unknown) {
-
-  if (valor === null || valor === undefined) return "";
-
-  if (valor instanceof Date) {
-    return valor.toISOString();
-  }
-
-  return String(valor).trim();
-}
-
 async function main() {
 
   console.log(
@@ -172,19 +76,7 @@ async function main() {
   );
 
   const noBanco = await prisma.case.findMany({
-    select: {
-      id: true,
-      protocol: true,
-      externalId: true,
-      publicResponse: true,
-      publicResponseAt: true,
-      evaluated: true,
-      score: true,
-      resolved: true,
-      wouldDoBusiness: true,
-      evaluatedAt: true,
-      status: true,
-    },
+    select: SELECAO_DO_PORTAL,
   });
 
   const porChave = new Map<string, (typeof noBanco)[number]>();
@@ -215,96 +107,7 @@ async function main() {
       continue;
     }
 
-    const dados: Record<string, unknown> = {};
-    const diferencas: string[] = [];
-
-    for (const campo of DO_PORTAL) {
-
-      const novo = (
-        doArquivo as unknown as Record<
-          CampoDoPortal,
-          unknown
-        >
-      )[campo];
-
-      /*
-        Campo ausente no arquivo não apaga o que está no banco.
-
-        A planilha às vezes vem sem uma coluna; tratar ausência como
-        "vazio" transformaria um relatório incompleto numa limpeza de
-        dados que ninguém pediu.
-      */
-      if (novo === undefined || novo === null || novo === "") {
-        continue;
-      }
-
-      /**
-       * Marcador nao substitui conteudo.
-       *
-       * Esta planilha diz **se** a empresa respondeu, nao **o que** ela
-       * respondeu — o leitor preenche com um texto sintetico para o
-       * indice de resposta nao contar errado. Grava-lo por cima trocaria
-       * a resposta de verdade, de 600 caracteres, pelos 38 do marcador.
-       *
-       * A simulacao pegou isso em 334 reclamacoes antes de qualquer
-       * escrita. Sem esta recusa, o modo `--gravar` teria apagado o
-       * trabalho de meses de atendimento numa linha de comando.
-       */
-      if (
-        novo === RESPOSTA_SINTETICA ||
-        novo === RELATO_SINTETICO
-      ) {
-        continue;
-      }
-
-
-      const velhoBruto = (
-        atual as unknown as Record<string, unknown>
-      )[campo];
-
-      const a = comparavel(velhoBruto);
-
-      /* As duas travas da coluna do quadro. */
-      if (campo === "status") {
-
-        const atualStatus = String(velhoBruto ?? "");
-
-        if (!COLUNAS_DO_PORTAL.has(atualStatus)) {
-          continue;
-        }
-
-        if (
-          COLUNAS_FINAIS.has(atualStatus) &&
-          !COLUNAS_FINAIS.has(String(novo))
-        ) {
-          continue;
-        }
-      }
-
-
-      const b =
-        campo === "publicResponseAt" ||
-        campo === "evaluatedAt"
-          ? comparavel(new Date(String(novo)))
-          : comparavel(novo);
-
-      if (a === b) continue;
-
-      dados[campo] =
-        campo === "publicResponseAt" ||
-        campo === "evaluatedAt"
-          ? new Date(String(novo))
-          : novo;
-
-      diferencas.push(
-        `${campo}: ${a.slice(0, 30) || "(vazio)"} → ${b.slice(0, 30)}`
-      );
-
-      porCampo.set(
-        campo,
-        (porCampo.get(campo) ?? 0) + 1
-      );
-    }
+    const { dados, diferencas } = mudancasDoPortal(doArquivo, atual);
 
     if (diferencas.length === 0) {
       semMudanca += 1;
@@ -313,10 +116,13 @@ async function main() {
 
     mudariam += 1;
 
+    for (const d of diferencas) {
+      const campo = d.split(":")[0];
+      porCampo.set(campo, (porCampo.get(campo) ?? 0) + 1);
+    }
+
     if (mudariam <= 12) {
-      console.log(
-        `  ${doArquivo.protocol}`
-      );
+      console.log(`  ${doArquivo.protocol}`);
       for (const d of diferencas) {
         console.log(`      ${d}`);
       }

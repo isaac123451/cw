@@ -192,13 +192,15 @@ function tagsOf(item: Case) {
  * um passo disso; a simulacao do `ra:atualizar` mostrou antes.
  *
  * Exportados para que quem for gravar por cima saiba reconhece-los e
- * recusa-los.
+ * recusa-los. Moram em `raMarcadores`, que é leve: quem só precisa
+ * reconhecê-los não tem por que carregar a biblioteca de planilha.
  */
-export const RESPOSTA_SINTETICA =
-  "Resposta pública registrada no portal.";
+import {
+  RELATO_SINTETICO,
+  RESPOSTA_SINTETICA,
+} from "@/lib/services/raMarcadores";
 
-export const RELATO_SINTETICO =
-  "Reclamação registrada no Reclame Aqui.";
+export { RELATO_SINTETICO, RESPOSTA_SINTETICA };
 
 export function parseReclameAqui(
   data: ArrayBuffer | Buffer | Uint8Array,

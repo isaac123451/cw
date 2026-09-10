@@ -1,6 +1,6 @@
 {
   "name": "cw-reputacao",
-  "version": "0.45.1",
+  "version": "0.45.2",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -78,7 +78,8 @@
     "check:publicado": "tsx scripts/check-publicado.ts",
     "check:silencio": "tsx scripts/check-silencio.ts",
     "check:dia": "tsx scripts/check-dia.ts",
-    "check:freio": "tsx --conditions=react-server scripts/check-freio.ts"
+    "check:freio": "tsx --conditions=react-server scripts/check-freio.ts",
+    "check:importacao": "tsx scripts/check-importacao.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",

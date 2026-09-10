@@ -1,3 +1,7 @@
+import {
+  mudancasDoPortal,
+  SELECAO_DO_PORTAL,
+} from "@/lib/services/atualizacaoDoPortal";
 import { Case } from "@/lib/models/case";
 import {
   Prisma,
@@ -10,7 +14,6 @@ import {
 } from "@/lib/models/establishment";
 
 import {
-  parseElapsedText,
   toCaseColumns,
   toCaseModel,
 } from "@/lib/services/case.mapper";
@@ -68,6 +71,8 @@ interface CaseRowCru {
   priority: string;
   title: string;
   description: string | null;
+  /** Só vem no modo com textos (exportação); nulo na carga do quadro. */
+  publicResponse: string | null;
   publicResponseAt: Date | null;
   draftResponse: string | null;
   dossierAt: Date | null;
@@ -139,7 +144,21 @@ export async function fetchCases(
            c."document", c."establishmentId", c."establishmentManual",
            c."customer", c."email", c."phone", c."city", c."state",
            c."channel", c."status", c."priority", c."title",
-           ${withDescription ? 'c."description",' : "NULL AS description,"}
+           ${
+             /*
+               O modo com textos traz também a resposta pública.
+
+               Ele existe para a exportação da base, e a exportação
+               saía com a coluna "Resposta pública" vazia nas 353
+               reclamações: esta consulta devolvia \`publicResponse:
+               null\` sempre, inclusive aqui. Uma exportação usada como
+               cópia de segurança perdia justamente o trabalho de
+               resposta. Achado na revisão de 10/09/2026.
+             */
+             withDescription
+               ? 'c."description", c."publicResponse",'
+               : 'NULL AS description, NULL AS "publicResponse",'
+           }
            c."publicResponseAt", c."draftResponse",
            c."dossierAt", c."dossierBy",
            c."socialHandle", c."followers",
@@ -199,8 +218,13 @@ export async function fetchCases(
         tag: { name },
       })),
 
-      /* Ficaram de fora de propósito; ver o comentário acima. */
-      publicResponse: null,
+      /*
+        Fora da lista de propósito — ver o comentário acima —, e dentro
+        no modo com textos, que é o da exportação.
+      */
+      publicResponse: withDescription
+        ? row.publicResponse ?? null
+        : null,
       dossier: null,
     })
   );
@@ -898,97 +922,86 @@ async function emParalelo<T>(
  * **uma vez cada** e o resto vai em transações agrupadas.
  */
 /**
- * Campos que a planilha manda. Mudou algum, o registro é regravado.
+ * Importação da planilha: o que é novo entra inteiro; o que já existe
+ * recebe só o que o portal pode mudar.
  *
- * Trabalho da operação — responsável, etiquetas aplicadas na tela — fica
- * de fora: o export não os conhece, e compará-los marcaria como alterado
- * um caso que a planilha nem toca.
+ * **Era o contrário, e era o defeito mais destrutivo da plataforma.**
+ * Esta função regravava a linha inteira de toda reclamação em que
+ * qualquer campo da planilha diferisse do banco — e a planilha não
+ * conhece o trabalho da operação. Medido em 10/09/2026 com a última
+ * planilha, sem gravar nada: um clique no botão Importar teria trocado
+ * **142 respostas públicas reais** pelo marcador de 38 caracteres que o
+ * leitor põe no lugar do texto, **tirado o responsável de 141**
+ * reclamações e refeito as etiquetas de 71 só com as da planilha.
+ *
+ * O script `ra:atualizar` já tinha a regra certa desde 03/09; o botão
+ * ficou no caminho antigo. Agora os dois usam `mudancasDoPortal`, em
+ * `lib/services/atualizacaoDoPortal.ts` — uma regra, dois chamadores.
+ *
+ * A chave casa pelo protocolo e pelo `externalId`, como o script: uma
+ * reclamação capturada pela extensão e depois exportada pelo portal é a
+ * mesma, ainda que um dos dois lados a tenha registrado pelo outro.
  */
-function mudouNaPlanilha(novo: Case, atual: Case) {
-  return (
-    novo.title !== atual.title ||
-    novo.status !== atual.status ||
-    novo.category !== atual.category ||
-    (novo.subcategory ?? "") !==
-      (atual.subcategory ?? "") ||
-    novo.priority !== atual.priority ||
-    novo.customer !== atual.customer ||
-    novo.company !== atual.company ||
-    /**
-     * Contato entra na comparação.
-     *
-     * Ficava de fora, e isso escondia duas coisas: um consumidor que
-     * troca de telefone entre um export e outro nunca era atualizado, e
-     * — o caso que apareceu de verdade — uma base gravada com telefone
-     * mascarado continuava mascarada mesmo reimportando o arquivo com o
-     * número inteiro, porque todo o resto da linha estava igual.
-     */
-    (novo.email ?? "") !== (atual.email ?? "") ||
-    (novo.phone ?? "") !== (atual.phone ?? "") ||
-    (novo.city ?? "") !== (atual.city ?? "") ||
-    (novo.state ?? "") !== (atual.state ?? "") ||
-    Boolean(novo.evaluated) !==
-      Boolean(atual.evaluated) ||
-    (novo.score ?? null) !== (atual.score ?? null) ||
-    Boolean(novo.scoreDisregarded) !==
-      Boolean(atual.scoreDisregarded) ||
-    novo.resolved !== atual.resolved ||
-    novo.wouldDoBusiness !== atual.wouldDoBusiness ||
-    (novo.evaluatedAt ?? "") !==
-      (atual.evaluatedAt ?? "") ||
-    // Em minutos, não no texto: o importador escreve "3h" e o banco
-    // devolve "3 horas" — mesma duração, textos diferentes.
-    parseElapsedText(novo.responseTime) !==
-      parseElapsedText(atual.responseTime) ||
-    parseElapsedText(novo.solutionTime) !==
-      parseElapsedText(atual.solutionTime) ||
-    novo.createdAt !== atual.createdAt
-  );
-}
-
 export async function importCasesBulk(
   prisma: PrismaClient,
   cases: Case[]
 ) {
 
-  /**
-   * Só o que mudou é regravado.
-   *
-   * A planilha é reexportada inteira toda vez, mas o histórico não muda:
-   * reimportar as 334 linhas leva ~45 s, e quase tudo seria escrita
-   * inútil. Comparando antes, uma reimportação semanal grava só as
-   * novidades e termina em segundos.
-   */
-  const atuais = new Map(
-    (await fetchCases(prisma)).map((item) => [
-      item.protocol,
-      item,
-    ])
-  );
-
-  const pendentes = cases.filter((item) => {
-
-    const atual = atuais.get(item.protocol);
-
-    return !atual || mudouNaPlanilha(item, atual);
+  const noBanco = await prisma.case.findMany({
+    select: SELECAO_DO_PORTAL,
   });
 
-  const inalteradas = cases.length - pendentes.length;
+  const porChave = new Map<string, (typeof noBanco)[number]>();
 
-  if (pendentes.length === 0) {
-    return {
-      gravadas: 0,
-      inalteradas,
-      novas: 0,
-    };
+  for (const c of noBanco) {
+    porChave.set(c.protocol, c);
+    if (c.externalId) porChave.set(c.externalId, c);
   }
 
+  const novas = cases.filter((item) => !porChave.has(item.protocol));
+
+  const atualizacoes: {
+    id: string;
+    dados: Record<string, unknown>;
+  }[] = [];
+
+  let inalteradas = 0;
+
+  for (const item of cases) {
+
+    const atual = porChave.get(item.protocol);
+
+    if (!atual) continue;
+
+    const { dados } = mudancasDoPortal(item, atual);
+
+    if (Object.keys(dados).length === 0) {
+      inalteradas += 1;
+      continue;
+    }
+
+    atualizacoes.push({ id: atual.id, dados });
+  }
+
+  /*
+    Novas passam pelo caminho completo, que resolve categoria,
+    subcategoria, etiquetas e vínculo — é lá que elas nascem inteiras.
+  */
+  const criadas =
+    novas.length > 0 ? (await gravarLote(prisma, novas)).gravadas : 0;
+
+  await emParalelo(atualizacoes, 5, ({ id, dados }) =>
+    prisma.case.update({
+      where: { id },
+      data: dados,
+      select: { id: true },
+    })
+  );
+
   return {
-    ...(await gravarLote(prisma, pendentes)),
+    gravadas: criadas + atualizacoes.length,
     inalteradas,
-    novas: pendentes.filter(
-      (item) => !atuais.has(item.protocol)
-    ).length,
+    novas: criadas,
   };
 }
 

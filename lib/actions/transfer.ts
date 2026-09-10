@@ -7,7 +7,8 @@ import { updateTag } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { CASES_TAG } from "@/lib/actions/tags";
 import { WORKSPACE_TAG } from "@/lib/actions/tags";
-import { getSession } from "@/lib/auth/session";
+import { requireRole } from "@/lib/auth/guard";
+import type { Modulo } from "@/lib/auth/modules";
 
 import {
   fetchCases,
@@ -18,6 +19,10 @@ import {
   ImportFormatError,
   parseReclameAqui,
 } from "@/lib/services/raImport.service";
+import { hojeNaOperacao } from "@/lib/services/reputation.service";
+
+/** O módulo destas ações — ver lib/auth/modules.ts. */
+const MODULO: Modulo = "reclame-aqui";
 
 /**
  * Importação e exportação da base de reclamações.
@@ -39,7 +44,21 @@ export interface ImportSummary {
   ate?: string | null;
 }
 
-async function exigirSessao() {
+/**
+ * A porta das duas ações, com o papel certo para cada uma.
+ *
+ * **Era só "tem sessão".** Qualquer conta ativa passava — inclusive as de
+ * leitura —, enquanto toda outra gravação de reclamação exige pelo menos
+ * AGENTE no módulo. E importar é a gravação mais pesada que existe: mexe
+ * em centenas de reclamações de uma vez. Achado na revisão de 10/09/2026.
+ *
+ * Exportar fica com LEITURA no módulo, e não mais "qualquer sessão": o
+ * arquivo leva e-mail e telefone de todos os consumidores, e quem não
+ * tem acesso ao módulo do Reclame Aqui não deveria levar a base dele.
+ */
+async function exigirPapel(
+  minimo: "AGENTE" | "LEITURA"
+) {
 
   const prisma = getPrisma();
 
@@ -49,13 +68,10 @@ async function exigirSessao() {
     );
   }
 
-  const session = await getSession();
+  /* requireRole lança SemPermissao com a frase certa para cada recusa. */
+  const ctx = await requireRole(minimo, MODULO);
 
-  if (!session) {
-    throw new Error("Sessão expirada. Entre novamente.");
-  }
-
-  return prisma;
+  return ctx?.prisma ?? prisma;
 }
 
 /**
@@ -73,7 +89,7 @@ export async function importCases(
   let prisma;
 
   try {
-    prisma = await exigirSessao();
+    prisma = await exigirPapel("AGENTE");
   } catch (error) {
     return {
       error:
@@ -154,7 +170,7 @@ export async function exportCases(): Promise<{
   let prisma;
 
   try {
-    prisma = await exigirSessao();
+    prisma = await exigirPapel("LEITURA");
   } catch (error) {
     return {
       error:
@@ -220,9 +236,8 @@ export async function exportCases(): Promise<{
 
   return {
     arquivo: buffer.toString("base64"),
-    nome: `cw-reputacao-${new Date()
-      .toISOString()
-      .slice(0, 10)}.xlsx`,
+    /* Hoje em São Paulo: depois das 21h, UTC já é amanhã. */
+    nome: `cw-reputacao-${hojeNaOperacao()}.xlsx`,
     total: cases.length,
   };
 }
