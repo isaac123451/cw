@@ -8,7 +8,10 @@ import {
   generateSecret,
 } from "@/lib/services/webhook.service";
 
-import { WebhookEvent } from "@/lib/models/webhook";
+import {
+  problemaNaUrlDoWebhook,
+  WebhookEvent,
+} from "@/lib/models/webhook";
 
 /** O módulo a que estas ações pertencem — ver lib/auth/modules.ts. */
 const MODULO: Modulo = "configuracoes";
@@ -75,6 +78,19 @@ export async function saveWebhookConfig(input: {
 
   if (!prisma) {
     throw new Error("Banco não configurado.");
+  }
+
+  /*
+    Recusa devolvida, e não lançada: erro de server action chega à tela
+    sanitizado em produção, e a pessoa não saberia que foi o endereço.
+  */
+  const problema = problemaNaUrlDoWebhook(
+    input.url,
+    process.env.NODE_ENV === "production"
+  );
+
+  if (problema) {
+    return { erro: problema };
   }
 
   if (input.id) {

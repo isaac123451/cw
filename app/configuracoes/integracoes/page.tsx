@@ -16,6 +16,7 @@ import MainLayout from "@/components/layout/MainLayout";
 import PageHeading from "@/components/shared/PageHeading";
 import SurfaceCard from "@/components/shared/SurfaceCard";
 import IaCard from "@/components/configuracoes/IaCard";
+import { notifyGlobal } from "@/lib/context/ToastContext";
 
 import {
   ConfirmDelete,
@@ -163,12 +164,27 @@ export default function IntegracoesPage() {
   function salvar() {
     startTransition(async () => {
 
-      await saveWebhookConfig({
+      const r = await saveWebhookConfig({
         id: webhook?.id,
         url: url.trim(),
         active,
         events,
       });
+
+      /*
+        O servidor recusa endereço sem https, interno ou com senha na
+        URL — e diz por quê. Antes a tela nem olhava o retorno: salvava
+        qualquer coisa, e o único webhook cadastrado era
+        "teste.com/webhook", sem protocolo, falhando em silêncio.
+      */
+      if (r && "erro" in r && r.erro) {
+        notifyGlobal({
+          tone: "error",
+          title: "Webhook não salvo.",
+          detail: r.erro,
+        });
+        return;
+      }
 
       await recarregar();
     });

@@ -98,6 +98,17 @@ export async function deliverWebhook(
       },
       body,
       signal: AbortSignal.timeout(TIMEOUT_MS),
+
+      /*
+        Redirecionamento vira falha, e não destino novo.
+
+        Seguir redirecionamento deixaria o endereço cadastrado — validado
+        como https e externo — mandar o servidor para qualquer outro
+        lugar, inclusive interno. Quem recebe webhook responde no próprio
+        endereço; um 301 aqui é configuração a corrigir, e aparece no log
+        de entregas como tal.
+      */
+      redirect: "error",
     });
 
     ok = res.ok;
