@@ -192,7 +192,25 @@ const GUARDA_DIRETO =
  * Repete até o conjunto parar de crescer, que é o ponto em que todos os
  * elos alcançáveis já foram seguidos.
  */
-function auxiliaresQueGuardam(fonte: string) {
+/**
+ * Guarda que confere **papel**, e não só se há sessão.
+ *
+ * `getSession` e `tryRole` bastam para ler. Para gravar, não: a ação de
+ * importar planilha conferia só "tem sessão", e qualquer conta ativa —
+ * inclusive as de leitura — podia regravar centenas de reclamações de
+ * uma vez. Esta conferência aprovava, porque `getSession(` estava na
+ * lista de guardas. Achado na revisão de 10/09/2026.
+ */
+const GUARDA_COM_PAPEL = /requireRole\s*\(|can\s*\(/;
+
+/** O que conta como gravação no corpo de uma action. */
+const GRAVA =
+  /\.(?:create|createMany|update|updateMany|upsert|delete|deleteMany)\s*\(|\$executeRaw|importCasesBulk\s*\(|persistCase\s*\(|removeCaseByProtocol\s*\(/;
+
+function auxiliaresQueGuardam(
+  fonte: string,
+  guarda: RegExp = GUARDA_DIRETO
+) {
 
   const funcoes: { nome: string; corpo: string }[] = [];
 
@@ -215,7 +233,7 @@ function auxiliaresQueGuardam(fonte: string) {
 
   const guardam = new Set(
     funcoes
-      .filter((f) => GUARDA_DIRETO.test(f.corpo))
+      .filter((f) => guarda.test(f.corpo))
       .map((f) => f.nome)
   );
 
@@ -296,12 +314,45 @@ for (const caminho of acoes) {
     );
   });
 
+  /*
+    Segunda pergunta, só para quem grava: o guarda confere papel?
+
+    O corpo da action é olhado inteiro, e também o dos auxiliares que
+    ela chama — gravar dentro de um auxiliar ainda é gravar.
+  */
+  const comPapel = auxiliaresQueGuardam(fonte, GUARDA_COM_PAPEL);
+
+  const chamaComPapel = comPapel.length
+    ? new RegExp(`(?:await\\s+)?(?:${comPapel.join("|")})\\s*\\(`)
+    : null;
+
+  const gravamSemPapel = exportadas.filter((funcao) => {
+
+    const i = fonte.indexOf(`export async function ${funcao}`);
+
+    const proxima = fonte.indexOf("\nexport async function ", i + 10);
+
+    const corpo = fonte.slice(i, proxima === -1 ? fonte.length : proxima);
+
+    if (!GRAVA.test(corpo)) return false;
+
+    return (
+      !GUARDA_COM_PAPEL.test(corpo) &&
+      !(chamaComPapel?.test(corpo) ?? false)
+    );
+  });
+
   reportar(
-    semGuarda.length === 0,
+    semGuarda.length === 0 && gravamSemPapel.length === 0,
     `${nome.padEnd(24)} ${exportadas.length} action(s)`,
-    semGuarda.length === 0
-      ? ""
-      : `sem checagem: ${semGuarda.join(", ")}`
+    [
+      semGuarda.length ? `sem checagem: ${semGuarda.join(", ")}` : "",
+      gravamSemPapel.length
+        ? `grava só com sessão, sem conferir papel: ${gravamSemPapel.join(", ")}`
+        : "",
+    ]
+      .filter(Boolean)
+      .join(" · ")
   );
 }
 
