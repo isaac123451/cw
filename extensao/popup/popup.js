@@ -20,7 +20,10 @@ const escapar = (valor) =>
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+    .replace(/"/g, "&quot;")
+    /* Aspas simples também: o CW.escapar do painel já escapava, e um
+       atributo entre aspas simples é tudo que falta para escapar dele. */
+    .replace(/'/g, "&#39;");
 
 const enviar = (mensagem) =>
   new Promise((resolver) => {
@@ -345,7 +348,7 @@ function falhar(resposta) {
       <br /><br />
       ${
         rotulo
-          ? `<button class="acao" id="ir-opcoes" type="button">${rotulo}</button>`
+          ? `<button class="acao" id="ir-opcoes" type="button">${escapar(rotulo)}</button>`
           : resposta.codigo === "sessao"
             ? `<button class="acao" id="ir-login" type="button">Entrar no CW Reputação</button>`
             : `<button class="acao" id="tentar" type="button">Tentar de novo</button>`
@@ -411,7 +414,7 @@ async function buscar(termo) {
     <div class="resultado">
       <div class="titulo-caso">${escapar(cliente.nome)}</div>
       <div class="sub">
-        ${cliente.total} caso(s) · ${cliente.abertos} aberto(s) ·
+        ${Number(cliente.total ?? 0)} caso(s) · ${Number(cliente.abertos ?? 0)} aberto(s) ·
         ${escapar(dados.porQue ?? "")}
       </div>
       ${dados.casos

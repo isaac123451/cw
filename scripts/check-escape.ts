@@ -24,15 +24,155 @@
  * vai para `textContent`; `captura.cliente` é argumento de `vazio()`,
  * que escapa. Nenhum caminho até `innerHTML` passa sem tratamento.
  */
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const RAIZ = resolve(__dirname, "..");
 
+/**
+ * Todos os scripts da extensão que montam HTML — e não só dois.
+ *
+ * A primeira versão olhava `painel.js` e `nucleo.js`. Ficavam de fora o
+ * atalho de respostas (`respostas.js`, que monta HTML com título e
+ * corpo das macros), os detectores de cada site, o popup e as opções.
+ * Arquivo novo que monte HTML entra sozinho: a lista é lida da pasta.
+ */
 const ARQUIVOS = [
-  "extensao/conteudo/painel.js",
-  "extensao/conteudo/nucleo.js",
+  ...readdirSync(resolve(RAIZ, "extensao/conteudo"))
+    .filter((nome) => nome.endsWith(".js"))
+    .map((nome) => `extensao/conteudo/${nome}`),
+  "extensao/popup/popup.js",
+  "extensao/opcoes/opcoes.js",
 ];
+
+/**
+ * Campo que carrega texto de terceiro.
+ *
+ * **O buraco que isto fecha.** A varredura original olhava só o valor
+ * atribuído **diretamente** ao `innerHTML`. Mas o painel monta quase
+ * todo o HTML em funções auxiliares — `desenharCaso`, `blocoDossie` —
+ * que devolvem texto, junta num array e faz
+ * `corpo.innerHTML = partes.join("")`, que não tem `${}` nenhum para
+ * conferir. A maior parte do HTML da extensão nunca era olhada.
+ *
+ * Conferir **toda** interpolação de todo HTML devolveu cem suspeitas,
+ * quase todas número e constante interna — o mesmo excesso que fez a
+ * primeira versão desta varredura mirar só o sumidouro. A pergunta com
+ * sinal alto é mais estreita: um campo com **nome de texto** — título,
+ * nome, relato, e-mail — entrou num HTML sem escape? É o erro que se
+ * comete de verdade, e no código de 10/09/2026 ela não dá nenhum
+ * alarme falso.
+ */
+/*
+  Só campo de objeto (`x.titulo`), e não variável solta (`titulo`).
+
+  Medido em 10/09/2026: incluir variável solta deu 26 alarmes, todos
+  falsos — o objeto `cliente` casava em `cliente.total`, e os nomes de
+  segmento e de rótulo dos formulários são literais. O preço conhecido
+  é que `const titulo = caso.titulo` seguido de `${titulo}` passa sem
+  ser visto: texto de terceiro em variável solta precisa passar por
+  `CW.escapar` na hora de copiar, e isso fica por conta de quem revisa.
+*/
+const CAMPO_DE_TEXTO =
+  /\.(titulo|nome|texto|relato|cliente|email|telefone|descricao|mensagem|resposta|erro|aviso|categoria|subcategoria|etiqueta|responsavel|estabelecimento|cidade|comentario|motivo|dica|url|rotulo)\b(?!\s*\()/i;
+
+/** Todo literal de template, respeitando comentário, string e `${}` aninhado. */
+function templates(fonte: string) {
+  const saida: { texto: string; linha: number }[] = [];
+
+  let i = 0;
+
+  while (i < fonte.length) {
+    const c = fonte[i];
+
+    if (c === "/" && fonte[i + 1] === "/") {
+      i = fonte.indexOf("\n", i);
+      if (i < 0) break;
+      continue;
+    }
+
+    if (c === "/" && fonte[i + 1] === "*") {
+      i = fonte.indexOf("*/", i + 2) + 2;
+      continue;
+    }
+
+    if (c === '"' || c === "'") {
+      i += 1;
+      while (i < fonte.length && fonte[i] !== c) {
+        if (fonte[i] === "\\") i += 1;
+        i += 1;
+      }
+      i += 1;
+      continue;
+    }
+
+    /*
+      Expressão regular literal, que pode ter aspas dentro.
+
+      Sem isto, o `.replace(/"/g, "&quot;")` da função de escape do
+      popup abria uma "string" na aspa da expressão, e o leitor se
+      perdia pelo resto do arquivo — contava zero HTML num arquivo com
+      sete injeções. A barra é expressão quando vem depois de um
+      operador ou de abertura; depois de um valor, é divisão.
+    */
+    if (c === "/") {
+      let k = i - 1;
+      while (k >= 0 && /\s/.test(fonte[k])) k -= 1;
+
+      if (k < 0 || /[(,=:[!&|?{};+\-*%<>~^]/.test(fonte[k])) {
+        i += 1;
+        let classe = false;
+        while (i < fonte.length) {
+          if (fonte[i] === "\\") {
+            i += 2;
+            continue;
+          }
+          if (fonte[i] === "[") classe = true;
+          else if (fonte[i] === "]") classe = false;
+          else if (fonte[i] === "/" && !classe) break;
+          else if (fonte[i] === "\n") break;
+          i += 1;
+        }
+        i += 1;
+        continue;
+      }
+    }
+
+    if (c === "`") {
+      const inicio = i;
+      let nivel = 0;
+      i += 1;
+
+      while (i < fonte.length) {
+        if (fonte[i] === "\\") {
+          i += 2;
+          continue;
+        }
+        if (nivel === 0 && fonte[i] === "`") break;
+        if (fonte[i] === "$" && fonte[i + 1] === "{") {
+          nivel += 1;
+          i += 2;
+          continue;
+        }
+        if (nivel > 0 && fonte[i] === "{") nivel += 1;
+        if (nivel > 0 && fonte[i] === "}") nivel -= 1;
+        i += 1;
+      }
+
+      saida.push({
+        texto: fonte.slice(inicio + 1, i),
+        linha: fonte.slice(0, inicio).split("\n").length,
+      });
+
+      i += 1;
+      continue;
+    }
+
+    i += 1;
+  }
+
+  return saida;
+}
 
 let falhas = 0;
 
@@ -45,6 +185,8 @@ let falhas = 0;
 const SEGURAS: RegExp[] = [
   /^CW\.escapar\(/,
   /CW\.escapar\(/,
+  /* O popup tem a sua própria, com o mesmo nome e fora do `CW`. */
+  /^escapar\(/,
   /^(?:Math\.|Number\(|parseInt|parseFloat)/,
   /^[A-Z_][A-Z0-9_]*$/,
   /^\d+(?:\.\d+)?$/,
@@ -86,6 +228,73 @@ const DECLARADAS: { expressao: string; porque: string }[] =
  */
 const LITERAL_CONDICIONAL =
   /\?\s*'<[\s\S]*>'\s*:\s*""$/;
+
+/**
+ * A interpolação é segura?
+ *
+ * **HTML aninhado é examinado por dentro, e antes de tudo.** O padrão
+ * `lista.map((x) => `<li>${...}</li>`).join("")` é o jeito comum de
+ * montar lista, e a regra de forma `/CW\.escapar\(/` casava com a
+ * expressão **inteira** assim que um único campo lá dentro estivesse
+ * escapado — um `.map` com o título escapado e o nome cru passava. Aqui
+ * cada interpolação do HTML de dentro responde por si, e o que sobra do
+ * lado de fora não pode carregar campo de texto.
+ */
+function segura(
+  expr: string,
+  chamaSegura: RegExp | null,
+  /**
+   * Dentro de HTML aninhado, só campo de texto precisa de escape.
+   *
+   * Exigir forma segura de toda interpolação interna — `${item.tom}`,
+   * `${i + 1}` — traria de volta as cem suspeitas que esta varredura
+   * existe para não ter.
+   */
+  soTexto = false
+): boolean {
+
+  if (soTexto && !CAMPO_DE_TEXTO.test(expr)) return true;
+
+  if (expr.includes("`")) {
+
+    const internos = templates(expr);
+
+    let fora = expr;
+    for (const t of internos) fora = fora.replace(t.texto, "");
+
+    /*
+      O que sobra do lado de fora e **vai para a tela**.
+
+      Campo usado só como teste não aparece: em
+      `caso.responsavel ? ` · ${CW.escapar(caso.responsavel)}` : ""` o
+      campo cru decide, e o que sai está escapado. Por isso a condição
+      de um ternário e o lado esquerdo de um `&&` saem da conta — mas só
+      quando são feitos de nome e ponto, para `x.titulo + (a ? … : …)`
+      não perder o `x.titulo`, que é saída.
+    */
+    const saidas = fora
+      .replace(/(?:CW\.)?escapar\((?:[^()]|\([^()]*\))*\)/g, "")
+      .replace(/\?\./g, ".")
+      .replace(/\?\?/g, " OU ")
+      .replace(/^\s*!?[\w.[\]\s]*\?/, "")
+      .replace(/!?[\w.[\]]+\s*&&/g, "");
+
+    if (CAMPO_DE_TEXTO.test(saidas)) return false;
+
+    return internos.every((t) =>
+      interpolacoes(t.texto).every((dentro) =>
+        segura(dentro, chamaSegura, true)
+      )
+    );
+  }
+
+  return (
+    SEGURAS.some((re) => re.test(expr)) ||
+    Boolean(chamaSegura?.test(expr)) ||
+    declarada(expr) ||
+    LITERAL_CONDICIONAL.test(expr)
+  );
+}
 
 function declarada(expressao: string) {
 
@@ -227,10 +436,7 @@ for (const relativo of ARQUIVOS) {
 
     for (const expr of interpolacoes(valor)) {
 
-      if (SEGURAS.some((re) => re.test(expr))) continue;
-      if (chamaSegura?.test(expr)) continue;
-      if (declarada(expr)) continue;
-      if (LITERAL_CONDICIONAL.test(expr)) continue;
+      if (segura(expr, chamaSegura)) continue;
 
       suspeitas += 1;
       falhas += 1;
@@ -241,8 +447,35 @@ for (const relativo of ARQUIVOS) {
     }
   }
 
+  /*
+    Segunda passada: todo HTML montado no arquivo, onde quer que ele
+    vá parar — não só o que é atribuído ali mesmo ao innerHTML.
+  */
+  let htmlMontado = 0;
+
+  for (const t of templates(fonte)) {
+
+    if (!/<[a-z][\w-]*[\s>/]/i.test(t.texto)) continue;
+
+    htmlMontado += 1;
+
+    for (const expr of interpolacoes(t.texto)) {
+
+      if (!CAMPO_DE_TEXTO.test(expr)) continue;
+
+      if (segura(expr, chamaSegura)) continue;
+
+      suspeitas += 1;
+      falhas += 1;
+
+      console.log(
+        `FALHA  ${relativo}:${t.linha}\n         texto de terceiro sem escape: ${expr.replace(/\s+/g, " ").slice(0, 60)}`
+      );
+    }
+  }
+
   console.log(
-    `  ${suspeitas === 0 ? "ok  " : "    "} ${relativo.padEnd(34)} ${sumidouros.length} injeção(ões) de HTML${suspeitas === 0 ? ", todas tratadas" : ""}`
+    `  ${suspeitas === 0 ? "ok  " : "    "} ${relativo.padEnd(34)} ${sumidouros.length} injeção(ões), ${htmlMontado} HTML montado(s)${suspeitas === 0 ? ", tudo tratado" : ""}`
   );
 }
 

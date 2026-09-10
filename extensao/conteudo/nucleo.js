@@ -113,12 +113,22 @@
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#39;");
 
+  /**
+   * `AAAA-MM-DD` → `DD/MM/AAAA`, sempre pronto para HTML.
+   *
+   * O que não tem cara de data volta **escapado**, e não cru. A função
+   * é usada em oito lugares que montam HTML com data vinda do servidor,
+   * e a conferência de escape a trata como segura pela forma — então o
+   * texto que ela devolve precisa ser seguro de fato, para qualquer
+   * entrada. Uma data real não tem nada a escapar: nada muda na tela.
+   */
   CW.data = (iso) => {
     if (!iso) return "";
     const partes = String(iso).slice(0, 10).split("-");
-    return partes.length === 3
+    return partes.length === 3 &&
+      partes.every((p) => /^\d+$/.test(p))
       ? `${partes[2]}/${partes[1]}/${partes[0]}`
-      : iso;
+      : CW.escapar(iso);
   };
 
   CW.dinheiro = (valor) =>
