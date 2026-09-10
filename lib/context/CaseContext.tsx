@@ -30,6 +30,8 @@ import {
   SituacaoDoCaso,
 } from "@/lib/services/case.service";
 import type { Gravacao } from "@/lib/context/sync";
+import { carregarWorkspace } from "@/lib/context/useWorkspace";
+import { RECADO } from "@/lib/models/leitura";
 
 const STORAGE_KEY = "cw:casos";
 
@@ -299,6 +301,53 @@ export function CaseProvider({
     useState<Date | null>(null);
 
   const pathname = usePathname();
+
+  /**
+   * O cadastro também pode não ter vindo — e isso também era mudo.
+   *
+   * `loadWorkspace` passou a devolver `indisponivel` com o motivo, e
+   * na primeira versão **ninguém lia o campo**: o mesmo defeito do
+   * `syncError`, repetido no dia em que ele foi corrigido. O quadro
+   * podia mostrar 353 reclamações e nenhuma coluna para elas, sem uma
+   * palavra.
+   *
+   * A carga é a mesma promessa memoizada que os treze providers já
+   * compartilham — ler daqui não abre conexão nova.
+   */
+  const [falhaDoCadastro, setFalhaDoCadastro] = useState<
+    string | null
+  >(null);
+
+  useEffect(() => {
+    let ativo = true;
+
+    carregarWorkspace()
+      .then((workspace) => {
+        if (!ativo) return;
+
+        setFalhaDoCadastro(
+          workspace.indisponivel
+            ? RECADO[workspace.indisponivel]
+            : null
+        );
+      })
+      .catch(() => {
+        /*
+          A chamada inteira caiu — rede, função encerrada no meio.
+
+          `useWorkspaceSlice` só registra isso no console, e cada
+          pedaço do cadastro fica no valor inicial, vazio. Sem este
+          aviso, é tela em branco sem explicação de novo.
+        */
+        if (ativo) {
+          setFalhaDoCadastro(RECADO["banco-recusou"]);
+        }
+      });
+
+    return () => {
+      ativo = false;
+    };
+  }, []);
 
   /** Relê do banco. Chamado depois de importar uma planilha. */
   async function recarregar() {
@@ -742,13 +791,22 @@ export function CaseProvider({
    * muda o que se está olhando — o alarme ali seria ruído, e ruído
    * ensina a ignorar o aviso justamente antes da vez em que ele importa.
    */
+  const avisoDeLeitura =
+    falhaDeLeitura && cases.length === 0
+      ? falhaDeLeitura
+      : null;
+
+  /*
+    O cadastro não tem a condição da tela vazia porque ele **é** o
+    vazio: quando falha, chega o retrato de emergência, sem etapa, sem
+    categoria, sem regra de prazo. As reclamações podem ter vindo — o
+    quadro diz "353" — e mesmo assim não há coluna onde pô-las.
+  */
   const aviso =
     syncError ??
-    (falhaDeLeitura &&
-    !naAutenticacao &&
-    cases.length === 0
-      ? falhaDeLeitura
-      : null);
+    (naAutenticacao
+      ? null
+      : avisoDeLeitura ?? falhaDoCadastro);
 
   return (
     <CaseContext.Provider value={value}>

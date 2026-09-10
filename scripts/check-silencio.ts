@@ -116,27 +116,43 @@ function erroSemLeitor() {
        * Ser exportado não é ser mostrado.
        */
       /*
-        Um nível de apelido conta.
+        Os apelidos contam, em qualquer profundidade.
 
-        O estado pode não ir cru para o JSX: `falhaDeLeitura` passa por
-        `const aviso = ...`, que é quem decide se a faixa aparece.
-        Exigir o nome original dentro da marcação reprovaria justamente
-        a versão correta — e empurraria de volta para a errada.
+        O estado raramente vai cru para o JSX: `falhaDeLeitura` passa
+        por `avisoDeLeitura`, que passa por `aviso`, que é quem decide
+        se a faixa aparece. A primeira versão desta conferência seguia
+        um nível só e reprovou a versão correta — o que empurraria quem
+        lê o erro de volta para a errada.
+
+        A pergunta não é de profundidade, é "o valor chega à marcação?".
+        Então as atribuições são seguidas até o conjunto parar de
+        crescer.
       */
-      const apelidos = [
-        nome,
-        ...[
-          ...fonte.matchAll(
-            new RegExp(
-              `const (\\w+)\\s*=[^;]*\\b${nome}\\b[^;]*;`,
-              "g"
-            )
-          ),
-        ].map((m) => m[1]),
-      ];
+      const atribuicoes = [
+        ...fonte.matchAll(/const (\w+)\s*=([^;]*);/g),
+      ].map((m) => ({ nome: m[1], expressao: m[2] }));
+
+      const apelidos = new Set([nome]);
+
+      for (let mudou = true; mudou; ) {
+        mudou = false;
+
+        for (const { nome: alvo, expressao } of atribuicoes) {
+          if (apelidos.has(alvo)) continue;
+
+          const cita = [...apelidos].some((conhecido) =>
+            new RegExp(`\\b${conhecido}\\b`).test(expressao)
+          );
+
+          if (cita) {
+            apelidos.add(alvo);
+            mudou = true;
+          }
+        }
+      }
 
       const mostrado = interfaces.some(({ fonte: outro }) =>
-        apelidos.some((alvo) =>
+        [...apelidos].some((alvo) =>
           new RegExp(
             `\\{[^}]*\\b${alvo}\\b[^}]*\\}\\s*(?:&&|\\?|<|\\})|<[A-Z]\\w*[^>]*\\b\\w+=\\{${alvo}\\}`
           ).test(outro)
@@ -281,6 +297,47 @@ function falhaQueViraVazio() {
         `${funcao} diz por que não trouxe nada`,
         `${saidasMudas} saída(s) devolvem vazio sem motivo junto`
       );
+    }
+
+    /**
+     * E alguém lê o motivo.
+     *
+     * Dizer não basta: `loadWorkspace` passou a devolver `indisponivel`
+     * no mesmo dia em que o `syncError` foi corrigido — e **nenhum
+     * arquivo lia o campo**. Esta conferência aprovava assim mesmo,
+     * porque só perguntava se a função dizia. O defeito era idêntico ao
+     * que ela existe para pegar, só que num campo de resposta em vez de
+     * num estado.
+     *
+     * Chamada de função (`falhou(`) não entra aqui: o tipo `Leitura`
+     * obriga quem chama a abrir o resultado, e o `tsc` já cobra isso.
+     * Campo opcional, não — `indisponivel?` pode ser ignorado em
+     * silêncio para sempre.
+     */
+    if (!marca.endsWith("(")) {
+      const leitores = [
+        ...arquivos(resolve(RAIZ, "lib/context")),
+        ...arquivos(resolve(RAIZ, "components")),
+        ...arquivos(resolve(RAIZ, "app")),
+      ].filter((caminho) =>
+        new RegExp(`\\.${marca}\\b`).test(
+          readFileSync(caminho, "utf8")
+        )
+      );
+
+      if (leitores.length > 0) {
+        ok(
+          `alguém lê o "${marca}" de ${funcao}`,
+          leitores
+            .map((caminho) => relative(RAIZ, caminho))
+            .join(", ")
+        );
+      } else {
+        falhar(
+          `alguém lê o "${marca}" de ${funcao}`,
+          "o motivo é devolvido e nenhuma tela o abre — é o syncError de novo, em outro lugar"
+        );
+      }
     }
   }
 }
