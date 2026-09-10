@@ -158,7 +158,14 @@ const NUMA_LINHA = PAGINA.split("\n")
    CARGA
 ============================================================ */
 
-const contexto = { window: { CWReputacao: {} } };
+/*
+  `URL` entra na caixa porque o navegador sempre tem.
+
+  Sem ele, `codigosDosLinks` lançava ReferenceError dentro do próprio
+  `try` e devolvia lista vazia — a conferência reprovaria um leitor
+  certo por uma diferença entre a caixa e a página de verdade.
+*/
+const contexto = { window: { CWReputacao: {} }, URL };
 
 vm.createContext(contexto);
 
@@ -534,6 +541,53 @@ conferir(
   "email",
   ra.email(NUMA_LINHA),
   "marina.lopes@exemplo.com"
+);
+
+/*
+  Os códigos a partir dos links de uma lista.
+
+  É o que a extensão usa para perceber reclamação que ainda não está na
+  plataforma, com o portal aberto. Os três primeiros endereços são reais
+  — copiados da coluna externalUrl da base em 10/09/2026 —, nos dois
+  formatos que o portal usa. Os negativos são o que mais aparece numa
+  página do portal e não é reclamação: a página da empresa, a lista, o
+  cabeçalho da área da empresa, outro site, link morto.
+*/
+console.log("\nCódigos das reclamações linkadas numa lista\n");
+
+const LINKS = [
+  "https://www.reclameaqui.com.br/area-da-empresa/reclamacoes/NsdEChv5c5jf349B/",
+  "https://www.reclameaqui.com.br/cardapio-web-servicos-de-tecnologia/acesso-via-hugme_hUnn1oWcUHLp7quf/",
+  "https://www.reclameaqui.com.br/cardapio-web-servicos-de-tecnologia/falha-na-impresso-de-pedidos-em-horrio-de-pico-causa-atrasos-significativos_r72QQCpOtF-sFwCZ",
+  /* código com sublinhado dentro, como o protocolo real RA-82F71I_D7zoE4MyB */
+  "/cardapio-web-servicos-de-tecnologia/pedido-nao-chegou_82F71I_D7zoE4MyB/",
+  /* relativo, e com consulta e âncora */
+  "/area-da-empresa/reclamacoes/uPDvBFKmssmEmxVa?origem=lista#topo",
+  /* repetido: a lista costuma linkar a mesma reclamação duas vezes */
+  "https://www.reclameaqui.com.br/area-da-empresa/reclamacoes/NsdEChv5c5jf349B/",
+];
+
+const NAO_SAO = [
+  "https://www.reclameaqui.com.br/empresa/cardapio-web-servicos-de-tecnologia/",
+  "https://www.reclameaqui.com.br/cardapio-web-servicos-de-tecnologia/lista-reclamacoes/",
+  "https://www.reclameaqui.com.br/area-da-empresa/reclamacoes/",
+  "https://www.reclameaqui.com.br/area-da-empresa/painel/",
+  "https://outro-site.com.br/area-da-empresa/reclamacoes/NsdEChv5c5jf349B/",
+  "javascript:void(0)",
+  "#",
+  "",
+];
+
+conferir(
+  "códigos dos links",
+  ra.codigosDosLinks(LINKS).join(" "),
+  "NsdEChv5c5jf349B hUnn1oWcUHLp7quf r72QQCpOtF-sFwCZ 82F71I_D7zoE4MyB uPDvBFKmssmEmxVa"
+);
+
+conferir(
+  "o que não é reclamação",
+  ra.codigosDosLinks(NAO_SAO).join(" "),
+  ""
 );
 
 console.log(

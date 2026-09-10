@@ -84,9 +84,21 @@ export default async function RootLayout({
   const session = await getSessionViva();
 
   return (
+    /*
+      `suppressHydrationWarning` por causa do script de tema abaixo.
+
+      Ele põe a classe `dark` no `<html>` antes de o React hidratar — é
+      o que evita o clarão —, e o React via o atributo diferente do que
+      o servidor mandou e registrava um erro de hidratação em **toda**
+      carga de página (era o "1 Issue" do indicador do Next). É o padrão
+      que a documentação do React descreve para script de tema, e vale
+      só para os atributos deste elemento: nada abaixo dele deixa de ser
+      conferido.
+    */
     <html
       lang="pt-BR"
       className={`${GeistSans.variable} ${GeistMono.variable}`}
+      suppressHydrationWarning
     >
 
       {/*

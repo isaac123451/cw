@@ -282,6 +282,245 @@
     });
   }
 
+  /* ============================================================
+     RECLAMAÇÕES NOVAS NA LISTA
+  ============================================================ */
+
+  /**
+   * Quais reclamações desta página ainda não estão na plataforma.
+   *
+   * **O pedido.** "Preciso de uma forma de importar os casos do Reclame
+   * Aqui sem o uso da API. Talvez a aplicação abrisse a página do
+   * Reclame Aqui e verificasse se houve um novo caso."
+   *
+   * Quem abre a página é a pessoa, logada, no navegador dela — o
+   * servidor não entra no portal, que é protegido contra robô e pediria
+   * a senha. O que a extensão faz é o que qualquer um faria olhando a
+   * lista: vê quais reclamações estão ali e confere se já estão no
+   * quadro. A diferença é que confere todas, em um segundo.
+   *
+   * **Lê os links, não a lista.** A marcação das linhas muda sem aviso;
+   * o link de cada reclamação carrega o código dela, porque é assim que
+   * a lista funciona. `CW.ra.codigosDosLinks` é a regra, provada em
+   * `check:ra` contra os endereços reais da base.
+   *
+   * **Só avisa; não grava.** Importar continua sendo abrir a reclamação
+   * e clicar em "Criar no Kanban" — o mesmo fluxo de sempre, com a
+   * prévia que deixa conferir antes. Uma varredura que gravasse sozinha
+   * cada link de uma página seria a extensão escrevendo no quadro sem
+   * ninguém olhar.
+   */
+  let codigosPerguntados = "";
+  let novos = [];
+  let hospedeiroNovas = null;
+  let listaAberta = false;
+
+  /** Título de cada código, tirado do próprio link. */
+  function titulosDosLinks() {
+
+    const titulos = new Map();
+
+    for (const a of document.querySelectorAll("a[href]")) {
+
+      const [codigo] = CW.ra.codigosDosLinks([a.href]);
+
+      if (!codigo || titulos.has(codigo)) continue;
+
+      const texto = (
+        a.getAttribute("title") ||
+        a.textContent ||
+        ""
+      )
+        .replace(/\s+/g, " ")
+        .trim();
+
+      titulos.set(codigo, {
+        titulo: texto.slice(0, 110),
+        href: a.href,
+      });
+    }
+
+    return titulos;
+  }
+
+  async function varrerLista() {
+
+    const titulos = titulosDosLinks();
+
+    const codigos = [...titulos.keys()].sort();
+
+    const chave = codigos.join(",");
+
+    /* Mesma lista de antes: nada a perguntar. */
+    if (chave === codigosPerguntados) return;
+
+    codigosPerguntados = chave;
+
+    if (codigos.length === 0) {
+      novos = [];
+      desenharNovas(titulos);
+      return;
+    }
+
+    const resposta = await CW.enviar({
+      tipo: "raNovas",
+      codigos,
+    });
+
+    /* Falhou (sem sessão, fora do ar): cala, e tenta na próxima mudança. */
+    if (!resposta.ok || !Array.isArray(resposta.dados?.novos)) {
+      codigosPerguntados = "";
+      return;
+    }
+
+    novos = resposta.dados.novos;
+
+    desenharNovas(titulos);
+  }
+
+  /**
+   * O aviso, montado com DOM e não com HTML em texto.
+   *
+   * O título vem da página do portal — é texto de consumidor. Com
+   * `textContent` ele nunca vira marcação, e não depende de lembrar de
+   * escapar.
+   */
+  function desenharNovas(titulos) {
+
+    if (novos.length === 0) {
+      hospedeiroNovas?.remove();
+      hospedeiroNovas = null;
+      listaAberta = false;
+      return;
+    }
+
+    if (!hospedeiroNovas || !hospedeiroNovas.isConnected) {
+
+      hospedeiroNovas = document.createElement("div");
+      hospedeiroNovas.id = "cw-reputacao-novas";
+      document.documentElement.appendChild(hospedeiroNovas);
+
+      const sombra = hospedeiroNovas.attachShadow({ mode: "open" });
+
+      const estilo = document.createElement("style");
+
+      /* Canto oposto ao botão da gaveta, que fica à direita. */
+      estilo.textContent = `
+        :host { all: initial; }
+        .caixa {
+          position: fixed; left: 18px; bottom: 24px; z-index: 2147483646;
+          font: 13px/1.4 "CW Geist", system-ui, sans-serif;
+          max-width: 360px;
+        }
+        .pilula {
+          display: flex; align-items: center; gap: 8px; cursor: pointer;
+          border: 0; border-radius: 999px; padding: 9px 14px;
+          background: #5B2A86; color: #fff; font: inherit; font-weight: 600;
+          box-shadow: 0 8px 24px -8px rgba(40, 10, 70, .45);
+        }
+        .pilula:hover { background: #7B3FBF; }
+        .ponto { width: 8px; height: 8px; border-radius: 50%; background: #F9A11B; }
+        .lista {
+          margin: 0 0 8px; padding: 6px; list-style: none;
+          max-height: 320px; overflow-y: auto;
+          background: #fff; color: #1f1f24; border-radius: 14px;
+          box-shadow: 0 12px 32px -12px rgba(16, 24, 40, .35);
+        }
+        .lista li { display: flex; gap: 8px; align-items: center; padding: 7px 8px; border-radius: 9px; }
+        .lista li:hover { background: #f4effb; }
+        .titulo { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .abrir { color: #5B2A86; font-weight: 600; text-decoration: none; }
+        .rodape { padding: 6px 8px 2px; color: #6b6b76; font-size: 11.5px; }
+        @media (prefers-color-scheme: dark) {
+          .lista { background: #1e1f25; color: #f1f1f4; }
+          .lista li:hover { background: #2a2433; }
+          .abrir { color: #c9a6f0; }
+          .rodape { color: #9a9ba5; }
+        }
+      `;
+
+      sombra.appendChild(estilo);
+
+      const caixa = document.createElement("div");
+      caixa.className = "caixa";
+      sombra.appendChild(caixa);
+    }
+
+    const caixa =
+      hospedeiroNovas.shadowRoot.querySelector(".caixa");
+
+    caixa.replaceChildren();
+
+    if (listaAberta) {
+
+      const lista = document.createElement("ul");
+      lista.className = "lista";
+
+      for (const codigo of novos) {
+
+        const dado = titulos.get(codigo);
+
+        const item = document.createElement("li");
+
+        const titulo = document.createElement("span");
+        titulo.className = "titulo";
+        titulo.textContent = dado?.titulo || codigo;
+        titulo.title = dado?.titulo || codigo;
+
+        const abrir = document.createElement("a");
+        abrir.className = "abrir";
+        abrir.textContent = "abrir";
+        abrir.href = dado?.href ?? "#";
+
+        item.append(titulo, abrir);
+        lista.appendChild(item);
+      }
+
+      const rodape = document.createElement("li");
+      rodape.className = "rodape";
+      rodape.textContent =
+        "Abra cada uma e use “Criar no Kanban” no painel para importar.";
+      lista.appendChild(rodape);
+
+      caixa.appendChild(lista);
+    }
+
+    const pilula = document.createElement("button");
+    pilula.type = "button";
+    pilula.className = "pilula";
+
+    const ponto = document.createElement("span");
+    ponto.className = "ponto";
+
+    const rotulo = document.createElement("span");
+    rotulo.textContent =
+      novos.length === 1
+        ? "1 reclamação nesta página não está na plataforma"
+        : `${novos.length} reclamações nesta página não estão na plataforma`;
+
+    pilula.append(ponto, rotulo);
+
+    pilula.addEventListener("click", () => {
+      listaAberta = !listaAberta;
+      desenharNovas(titulos);
+    });
+
+    caixa.appendChild(pilula);
+  }
+
+  /**
+   * Voltar para a aba pergunta de novo.
+   *
+   * Enquanto a pessoa importava numa aba, esta continuava achando que
+   * as reclamações eram novas. Esquecer a última pergunta ao voltar faz
+   * a próxima volta do laço conferir com o banco de agora.
+   */
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      codigosPerguntados = "";
+    }
+  });
+
   /**
    * Como reler sob demanda.
    *
@@ -315,6 +554,11 @@
     } catch (erro) {
       console.warn("[CW] detector falhou nesta volta", erro);
     }
+
+    /* A varredura tem rede própria: uma falha nela não cala o painel. */
+    varrerLista().catch((erro) => {
+      console.warn("[CW] varredura da lista falhou nesta volta", erro);
+    });
   }
 
   setInterval(verificarComRede, INTERVALO);

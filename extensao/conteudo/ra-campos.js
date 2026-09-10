@@ -698,6 +698,84 @@
     return "";
   };
 
+  /* ============================================================
+     OS LINKS DE UMA LISTA
+  ============================================================ */
+
+  /**
+   * O código de 16 caracteres de cada reclamação linkada na página.
+   *
+   * **Por que pelos links, e não pelo texto.** Para achar reclamação
+   * nova numa lista não é preciso ler a lista — é preciso saber quais
+   * reclamações ela aponta. Toda lista do portal é feita de links, e o
+   * link carrega o código: é assim que a lista funciona, então é o que
+   * menos muda quando o portal troca de visual. A marcação das linhas,
+   * o texto e a ordem das colunas mudam sem aviso.
+   *
+   * **Os dois formatos, medidos contra os endereços gravados na base:**
+   *
+   * - área da empresa — `/area-da-empresa/reclamacoes/NsdEChv5c5jf349B/`
+   *   — o código é o segmento inteiro;
+   * - página pública — `/<empresa>/<titulo>_hUnn1oWcUHLp7quf/` — o código
+   *   são os **16 últimos** caracteres, depois de um `_`.
+   *
+   * Não dá para partir no último `_`: o próprio código pode ter um
+   * (`82F71I_D7zoE4MyB` é um protocolo real da base). Por isso a regra é
+   * "os 16 últimos, com um `_` logo antes" — título de reclamação vira
+   * endereço com hífen, nunca com sublinhado.
+   *
+   * Recebe os `href`, e não o documento: é o que deixa `check:ra`
+   * provar a regra sem navegador.
+   */
+  const CODIGO = /^[A-Za-z0-9_-]{16}$/;
+
+  ra.codigosDosLinks = (hrefs) => {
+
+    const codigos = new Set();
+
+    for (const bruto of hrefs ?? []) {
+
+      let url;
+
+      try {
+        url = new URL(String(bruto), "https://www.reclameaqui.com.br");
+      } catch {
+        continue;
+      }
+
+      if (!/(^|\.)reclameaqui\.com\.br$/i.test(url.hostname)) {
+        continue;
+      }
+
+      const partes = url.pathname.split("/").filter(Boolean);
+
+      const ultima = partes[partes.length - 1] ?? "";
+
+      /* Área da empresa: /area-da-empresa/reclamacoes/<código>/ */
+      if (
+        partes.length === 3 &&
+        partes[0] === "area-da-empresa" &&
+        partes[1] === "reclamacoes" &&
+        CODIGO.test(ultima)
+      ) {
+        codigos.add(ultima);
+        continue;
+      }
+
+      /* Pública: /<empresa>/<titulo>_<código>/ */
+      if (
+        partes.length === 2 &&
+        ultima.length > 17 &&
+        ultima[ultima.length - 17] === "_" &&
+        CODIGO.test(ultima.slice(-16))
+      ) {
+        codigos.add(ultima.slice(-16));
+      }
+    }
+
+    return [...codigos];
+  };
+
   ra.linhas = linhas;
 
   CW.ra = ra;

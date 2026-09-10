@@ -39,6 +39,7 @@ const CAMINHOS = {
   salvarDossie: "/api/extensao/salvar-dossie",
   whatsapp: "/api/extensao/whatsapp",
   respostas: "/api/extensao/respostas",
+  raNovas: "/api/extensao/ra-novas",
 };
 
 /**
@@ -488,6 +489,25 @@ async function tratar(mensagem) {
    * quem clicou. Falhar aqui não pode desfazer nem atrapalhar a
    * inserção, então quem chama ignora o retorno.
    */
+  /**
+   * Quais reclamações desta página do portal ainda não estão aqui.
+   *
+   * Sem cache: a resposta muda no instante em que alguém importa uma
+   * delas, e mostrar "nova" para o que já entrou faria a pessoa
+   * capturar de novo. A varredura só pergunta quando o conjunto de
+   * links da página muda, então o custo é baixo.
+   */
+  if (mensagem?.tipo === "raNovas") {
+
+    const dados = await chamar(
+      CAMINHOS.raNovas,
+      {},
+      { codigos: mensagem.codigos ?? [] }
+    );
+
+    return { ok: true, dados };
+  }
+
   if (mensagem?.tipo === "usarResposta") {
 
     const dados = await chamar(

@@ -1014,6 +1014,108 @@ async function main() {
     }
   }
 
+  /* ---------------- reclamações novas numa lista do portal ---------------- */
+
+  console.log(
+    "\n-- reclamações novas numa lista do portal --\n"
+  );
+
+  {
+    /*
+      Um código de cada tipo, tirados da base de agora: um protocolo
+      comum; um dos que têm código diferente no endereço (a rota tem de
+      reconhecê-lo pelo endereço, senão ele apareceria como novo toda
+      vez); um inventado; e lixo, que a rota tem de descartar calada.
+    */
+    const comum = await prisma.case.findFirst({
+      where: { protocol: { startsWith: "RA-" } },
+      select: { protocol: true },
+    });
+
+    const casos = await prisma.case.findMany({
+      where: { externalUrl: { contains: "reclameaqui.com.br" } },
+      select: { protocol: true, externalUrl: true },
+    });
+
+    /*
+      Só endereço de reclamação — área da empresa ou `_<código>` no fim.
+      Cortar os 16 últimos caracteres de qualquer endereço do portal
+      pegava a página da empresa e produzia um "código" inválido, que a
+      rota descarta, e o teste media outra coisa.
+    */
+    const FORMATO =
+      /(?:\/area-da-empresa\/reclamacoes\/|_)([A-Za-z0-9_-]{16})\/?$/;
+
+    const divergente = casos
+      .map((c) => ({
+        protocolo: c.protocol,
+        doEndereco:
+          (c.externalUrl ?? "").split(/[?#]/)[0].match(FORMATO)?.[1] ??
+          "",
+      }))
+      .find(
+        (c) => c.doEndereco && `RA-${c.doEndereco}` !== c.protocolo
+      );
+
+    const INVENTADO = "ZzZzNovaDoPortal";
+
+    const codigos = [
+      comum?.protocol.slice(3),
+      divergente?.doEndereco,
+      INVENTADO,
+      "<script>",
+    ].filter(Boolean);
+
+    const resposta = await fetch(`${base}/api/extensao/ra-novas`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CW-Sessao": sessao,
+      },
+      body: JSON.stringify({ codigos }),
+    });
+
+    const corpo = (await resposta.json().catch(() => ({}))) as {
+      novos?: string[];
+      conhecidos?: number;
+      total?: number;
+    };
+
+    conferir("a rota responde 200", resposta.status, 200);
+
+    conferir(
+      "só o inventado volta como novo",
+      JSON.stringify(corpo.novos),
+      JSON.stringify([INVENTADO])
+    );
+
+    conferir(
+      "o de código divergente é reconhecido pelo endereço",
+      divergente
+        ? !(corpo.novos ?? []).includes(divergente.doEndereco)
+        : true,
+      true
+    );
+
+    conferir(
+      "o lixo é descartado, não conta",
+      corpo.total,
+      codigos.length - 1
+    );
+
+    const semSessao = await fetch(`${base}/api/extensao/ra-novas`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ codigos: [INVENTADO] }),
+    });
+
+    conferir(
+      "sem sessão, a rota não responde",
+      semSessao.status,
+      401
+    );
+  }
+
   await prisma.$disconnect();
 
   console.log(

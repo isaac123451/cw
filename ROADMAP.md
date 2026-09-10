@@ -330,6 +330,64 @@ Definir a variável na Vercel é o que a liga lá.
 
 ---
 
+### Reclamação nova do Reclame Aqui, sem API (10/09/2026)
+
+O pedido: "uma forma de importar os casos do Reclame Aqui sem o uso da
+API. Talvez a aplicação abrisse a página do Reclame Aqui e verificasse
+se houve um novo caso."
+
+**O servidor não abre o portal, e de propósito.** A página do Reclame
+Aqui é protegida contra robô (Cloudflare) e só abre com login. Fazer a
+aplicação entrar exigiria guardar a senha do portal e contornar a
+proteção deles. Ficam dois caminhos, que se completam:
+
+1. **O aviso por e-mail — automático, 24 horas.** Já existia:
+   `importarAvisosDoRA`, na rotina diária, lê o Gmail ligado e cria o
+   caso. **Estava parado sem ninguém saber.** A conta Google foi ligada
+   antes de o escopo `gmail.readonly` existir, e renovar o token mantém
+   os escopos antigos: o Gmail responde 403 "insufficient authentication
+   scopes" toda madrugada, e o erro ficava dentro do JSON da rotina. O
+   aviso existe no cartão do Google, na Agenda. **Destrava com uma ação:
+   desconectar e conectar a conta de novo.**
+
+2. **A lista do portal, com a aba aberta — novo.** Na página de lista
+   do Reclame Aqui, a extensão lê os links das reclamações, pergunta ao
+   servidor quais ainda não estão na plataforma, e mostra "N
+   reclamações nesta página não estão na plataforma", com o link de
+   cada uma. Importar continua sendo abrir e clicar em "Criar no
+   Kanban": a varredura avisa, não grava.
+
+**Pelos links, não pelo texto.** A marcação das linhas muda sem aviso;
+o link de cada reclamação carrega o código dela. Os dois formatos:
+
+- área da empresa — `/area-da-empresa/reclamacoes/<código>/`;
+- página pública — `/<empresa>/<titulo>_<código>/` — os **16 últimos**
+  caracteres, porque o código pode ter `_` dentro
+  (`82F71I_D7zoE4MyB` é protocolo real).
+
+Provado contra a base: dos 297 endereços do portal gravados, **295
+devolvem exatamente o código do protocolo**. Os outros 2 são
+reclamações cujo código no endereço é diferente do código no protocolo
+— dado assim na origem —, e a rota `/api/extensao/ra-novas` confere
+pelas duas colunas, senão as duas apareceriam como novas toda vez.
+
+A rota devolve só "nova" ou "conhecida": nenhum dado de reclamação sai
+dela. O aviso na página é montado com `textContent`, não com HTML em
+texto — conferido no navegador com um título `<img onerror>`, que
+aparece como texto e não executa.
+
+**O que não foi feito, e por quê:** a extensão abrir sozinha a lista
+numa aba de fundo, de tempos em tempos. Abas pulando na frente de quem
+trabalha, permissão de abas a mais, e ainda dependeria do login da
+pessoa — o e-mail resolve o "de madrugada" sem nada disso.
+
+**Falta, e depende da página de verdade:** o formato dos links da lista
+do Hugme (`hugme.com.br`). A regra cobre os endereços do
+`reclameaqui.com.br`, que é de onde vêm os 297 gravados. Se a lista do
+Hugme usar outro formato, o aviso não aparece lá — e o botão "copiar o
+texto lido" do painel é o que traz a amostra para ajustar.
+
+
 ### As métricas diárias contavam tudo um dia antes (10/09/2026)
 
 Achado na revisão crítica, e o defeito era meu. `diaNaOperacao` foi

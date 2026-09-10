@@ -36,13 +36,12 @@ const CONSULTA = "(prefers-color-scheme: dark)";
    numa aba passou a valer nas outras, o que a versão anterior não
    fazia.
 
-   **O que ele não resolve, e é honesto dizer:** a primeira pintura
-   ainda sai clara para quem escolheu escuro. O servidor não tem como
-   saber o que está no `localStorage` de ninguém, então o HTML entregue
-   é sempre o do tema automático e a correção vem depois da hidratação.
-   Acabar com esse piscar exige um `<script>` bloqueante no `<head>`,
-   que é outra decisão — e mais cara do que parece, porque é código
-   fora do React mexendo na classe do `<html>`.
+   **A primeira pintura não é deste arquivo.** O servidor não tem como
+   saber o que está no `localStorage` de ninguém; quem acerta a classe
+   do `<html>` antes do navegador desenhar é o script bloqueante
+   `TEMA_ANTES_DA_PINTURA`, em `app/layout.tsx`, que lê a mesma chave
+   `cw:tema`. Este contexto assume dali em diante. (Uma versão anterior
+   deste comentário dizia que o script não existia — existia.)
 ============================================================ */
 
 /**
