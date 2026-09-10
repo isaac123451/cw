@@ -45,6 +45,7 @@ import {
   ResultadoImportacao,
 } from "@/lib/services/wootric.import";
 import { hojeNaOperacao } from "@/lib/services/reputation.service";
+import { semApagarVazios } from "@/lib/services/semApagar";
 
 /** O módulo a que estas ações pertencem — ver lib/auth/modules.ts. */
 const MODULO: Modulo = "nps";
@@ -785,9 +786,28 @@ export async function importNpsPlanilha(
         };
 
         if (existente) {
+          /*
+            Coluna que a planilha não traz não apaga o que está aqui.
+
+            Gravava `daPlanilha` inteira, com `?? null` em cada campo — e
+            uma planilha sem as colunas de tipo e causa raiz apagava a
+            **análise que a operação tinha feito**, além do telefone
+            digitado. E trocava a origem para "Planilha" até de resposta
+            que veio do Wootric. Achado na revisão de 10/09/2026.
+          */
+          const { source: _origem, ...semOrigem } = daPlanilha;
+          void _origem;
+
           await ctx.prisma.npsResponse.update({
             where: { id: existente.id },
-            data: daPlanilha,
+            data: semApagarVazios(semOrigem, [
+              "email",
+              "phone",
+              "company",
+              "kind",
+              "rootCause",
+              "comment",
+            ]),
           });
           atualizadas += 1;
           return;

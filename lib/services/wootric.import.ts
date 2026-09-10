@@ -1,5 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 
+import { semApagarVazios } from "@/lib/services/semApagar";
+
 import {
   listarRespostas,
   RespostaImportada,
@@ -286,23 +288,13 @@ export async function gravarLote(
  */
 function semApagarContato<
   T extends Record<string, unknown>,
->(dados: T): T {
-  const saida: Record<string, unknown> = { ...dados };
-
-  for (const campo of [
+>(dados: T) {
+  return semApagarVazios(dados, [
     "email",
     "phone",
     "company",
     "externalCompanyId",
-  ]) {
-    const valor = saida[campo];
-
-    if (valor === null || valor === undefined || valor === "") {
-      delete saida[campo];
-    }
-  }
-
-  return saida as T;
+  ]);
 }
 
 async function refletirContato(
