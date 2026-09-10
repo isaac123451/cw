@@ -21,6 +21,40 @@ export interface Gravacao {
 }
 
 /**
+ * A frase que a pessoa lê quando uma gravação falha.
+ *
+ * **Em produção o servidor não manda o motivo.** Erro lançado de server
+ * action chega ao navegador com uma mensagem genérica, em inglês — "An
+ * error occurred in the Server Components render. The specific message
+ * is omitted in production builds…" — e um `digest`, que é o código do
+ * erro no log do servidor. É proposital: a documentação do Next diz que
+ * o texto original pode vazar detalhe interno.
+ *
+ * Mostrar a frase genérica crua era pior que nada: em inglês, e sem
+ * dizer o que fazer. Aqui ela vira as causas que de fato aparecem nesta
+ * operação e o código, que é o que acha a falha no log da Vercel.
+ *
+ * Em desenvolvimento a mensagem original chega, e passa reto.
+ */
+export function motivoDaFalha(error: unknown): string {
+
+  const digest = (error as { digest?: unknown } | null)?.digest;
+
+  const texto =
+    error instanceof Error ? error.message : "";
+
+  const generica =
+    typeof digest === "string" &&
+    /omitted in production|Server Components render/i.test(texto);
+
+  if (generica) {
+    return `O servidor recusou a alteração. As causas mais comuns são sessão expirada (entre de novo) ou conta sem permissão para editar este módulo. Código para o suporte: ${digest}.`;
+  }
+
+  return texto || "Falha ao gravar no banco.";
+}
+
+/**
  * Devolve o resultado, além de avisar na tela.
  *
  * Quem chama por conta própria continua ignorando o retorno — é o
@@ -44,10 +78,7 @@ export function sincronizar(
 
     (error: unknown): Gravacao => {
 
-      const mensagem =
-        error instanceof Error
-          ? error.message
-          : "Falha ao gravar no banco.";
+      const mensagem = motivoDaFalha(error);
 
       console.error(
         "[cadastro] gravação falhou",
@@ -59,9 +90,9 @@ export function sincronizar(
        *
        * O caso mais comum aqui é permissão: quem tem acesso de leitura
        * via a mudança aplicada na tela e ela sumia no reload, sem
-       * nenhuma explicação. Agora o motivo aparece — e o texto vem do
-       * servidor, que é quem sabe se foi permissão, sessão expirada ou
-       * falha de rede.
+       * nenhuma explicação. Em desenvolvimento o texto vem do servidor;
+       * em produção o Next o esconde, e `motivoDaFalha` diz as causas
+       * prováveis e o código do log.
        */
       notifyGlobal({
         tone: "error",

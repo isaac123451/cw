@@ -29,7 +29,10 @@ import {
   seteDiasAtras,
   SituacaoDoCaso,
 } from "@/lib/services/case.service";
-import type { Gravacao } from "@/lib/context/sync";
+import {
+  motivoDaFalha,
+  type Gravacao,
+} from "@/lib/context/sync";
 import { carregarWorkspace } from "@/lib/context/useWorkspace";
 import { RECADO } from "@/lib/models/leitura";
 
@@ -408,10 +411,8 @@ export function CaseProvider({
       },
       (error: unknown): Gravacao => {
 
-        const mensagem =
-          error instanceof Error
-            ? error.message
-            : "Falha ao gravar no banco.";
+        /* Em produção o Next esconde o motivo — ver motivoDaFalha. */
+        const mensagem = motivoDaFalha(error);
 
         console.error("[casos] gravação falhou", error);
         setSyncError(mensagem);
