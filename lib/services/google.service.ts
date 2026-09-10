@@ -72,9 +72,11 @@ function secret() {
 /**
  * `state` assinado, com o id de quem pediu.
  *
- * Impede que alguém induza a vítima a completar um fluxo iniciado por
- * outra pessoa (CSRF de OAuth) e diz de quem é o token que voltou —
- * sem precisar de tabela para guardar nonce.
+ * Prova quem **iniciou** o fluxo, e expira em dez minutos. Sozinho ele
+ * **não** impede o CSRF de OAuth, ao contrário do que este comentário
+ * dizia: quem iniciou pode mandar a URL para outra pessoa completar. A
+ * outra metade — conferir que quem completa é quem iniciou — mora no
+ * retorno, em `app/api/google/callback/route.ts`.
  */
 export async function createState(userId: string) {
   return new SignJWT({ userId })

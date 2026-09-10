@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { getPrisma } from "@/lib/prisma";
+import { getSessionViva } from "@/lib/auth/session";
 
 import {
   exchangeCode,
@@ -59,6 +60,32 @@ export async function GET(request: Request) {
   if (!userId) {
     return volta(
       "Pedido expirado ou inválido. Tente conectar de novo."
+    );
+  }
+
+  /**
+   * Quem completa tem de ser quem começou.
+   *
+   * O `state` assinado prova quem **iniciou** a conexão — e só isso.
+   * Sem esta conferência, o retorno gravava os tokens na conta do
+   * `state`, fosse quem fosse que tivesse aprovado no Google. O ataque
+   * era de vinculação de conta: alguém com acesso à plataforma clicava
+   * em "Conectar Google", copiava a URL de consentimento (com o `state`
+   * dele) e mandava para um colega. O colega via a tela legítima do
+   * Google para o CW Reputação, aprovava — e a agenda e o **Gmail** dele
+   * ficavam ligados à conta de quem mandou o link. Os escopos incluem
+   * `gmail.readonly` e `calendar.events`.
+   *
+   * O retorno do Google é uma navegação de primeiro nível, então o
+   * cookie de sessão (SameSite=Lax) chega aqui. Sessão de outra pessoa,
+   * ou nenhuma, recusa. `getSessionViva` também recusa conta desativada
+   * entre o clique e a volta.
+   */
+  const sessao = await getSessionViva();
+
+  if (!sessao || sessao.id !== userId) {
+    return volta(
+      "Este pedido de conexão foi iniciado por outra conta. Entre com a sua e conecte o Google de novo."
     );
   }
 

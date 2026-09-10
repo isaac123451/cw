@@ -613,6 +613,106 @@ async function main() {
     String(semSenha),
     "0"
   );
+
+  /* ==========================================================
+     5. A PORTA DO GOOGLE
+  ========================================================== */
+
+  /**
+   * Quem completa a conexão com o Google tem de ser quem a começou.
+   *
+   * O `state` do OAuth é assinado com o id de quem clicou em "Conectar"
+   * — e o retorno confiava nele sem olhar a sessão. Quem tivesse conta
+   * na plataforma podia mandar a própria URL de consentimento a um
+   * colega: o colega aprovava na tela legítima do Google, e a agenda e o
+   * Gmail dele ficavam ligados à conta de quem mandou. Achado na revisão
+   * de 10/09/2026.
+   *
+   * O terceiro caso importa tanto quanto os dois primeiros: a trava não
+   * pode barrar a própria pessoa. Com a sessão certa, o retorno passa
+   * da trava e só falha adiante, ao trocar um código inventado no
+   * Google — que é o que prova que a trava deixou passar.
+   */
+  console.log("\n  A porta do Google\n");
+
+  const ativos = await prisma.user.findMany({
+    where: { active: true },
+    select: { id: true, email: true, name: true, role: true },
+    take: 2,
+  });
+
+  if (ativos.length < 2) {
+    console.log(
+      "  --   menos de duas contas ativas: não dá para simular uma pessoa completando o pedido de outra"
+    );
+    return;
+  }
+
+  const [quemPediu, quemCompleta] = ativos;
+
+  const state = await assinar({ userId: quemPediu.id });
+
+  const sessaoDe = (u: (typeof ativos)[number]) =>
+    assinar({ id: u.id, email: u.email, name: u.name, role: u.role });
+
+  /** O motivo que o retorno devolve na URL, ou o que houve. */
+  async function motivoDoGoogle(cookie?: string) {
+    try {
+      const r = await fetch(
+        `${base}/api/google/callback?code=codigo-inventado&state=${encodeURIComponent(state)}`,
+        {
+          headers: cookie ? { Cookie: `cw_session=${cookie}` } : {},
+          redirect: "manual",
+          cache: "no-store",
+        }
+      );
+
+      const destino = r.headers.get("location") ?? "";
+
+      return (
+        new URL(destino, base).searchParams.get("motivo") ??
+        `HTTP ${r.status} ${destino}`
+      );
+    } catch {
+      return "sem resposta";
+    }
+  }
+
+  const OUTRA_CONTA = "iniciado por outra conta";
+
+  const deOutra = await motivoDoGoogle(
+    await sessaoDe(quemCompleta)
+  );
+
+  conferir(
+    "outra pessoa não completa a conexão de quem pediu",
+    deOutra.includes(OUTRA_CONTA) ? "recusou" : deOutra,
+    "recusou"
+  );
+
+  const semSessao = await motivoDoGoogle();
+
+  conferir(
+    "sem sessão também não completa",
+    semSessao.includes(OUTRA_CONTA) ? "recusou" : semSessao,
+    "recusou"
+  );
+
+  const daPropria = await motivoDoGoogle(
+    await sessaoDe(quemPediu)
+  );
+
+  if (daPropria.includes("não configurada")) {
+    console.log(
+      "  --   a integração com o Google não está configurada aqui: o terceiro caso não tem como ser testado"
+    );
+  } else {
+    conferir(
+      "a própria pessoa passa pela trava",
+      daPropria.includes(OUTRA_CONTA) ? "barrou" : "passou",
+      "passou"
+    );
+  }
 }
 
 main()
