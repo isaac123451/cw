@@ -78,12 +78,12 @@ export const PADROES = {
   lembretes: true,
 
   /**
-   * O vigia do Reclame Aqui.
+   * O vigia do Reclame Aqui: ler o portal ao abrir a plataforma.
    *
    * Ligado por padrão, porque é o que faz a reclamação nova chegar ao
-   * quadro sem ninguém importar planilha. Desligar serve para quem só
-   * consulta — e para quem estiver numa conexão cara: cada volta lê a
-   * lista do portal, perto de 230 KB, a cada quinze minutos.
+   * quadro sem ninguém importar planilha. Desligado, a leitura só sai
+   * pelo botão — para quem só consulta, ou está numa conexão cara (cada
+   * leitura baixa a lista do portal, perto de 230 KB).
    */
   vigia: true,
 };

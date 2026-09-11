@@ -27,6 +27,8 @@ import { MacrosProvider } from "@/lib/context/MacrosContext";
 import { ToastProvider } from "@/lib/context/ToastContext";
 import { GoogleEventsProvider } from "@/lib/context/GoogleEventsContext";
 import { NpsProvider } from "@/lib/context/NpsContext";
+import { PortalProvider } from "@/lib/context/PortalContext";
+import { CompletarProvider } from "@/components/reclame-aqui/completar/CompletarProvider";
 import ToastHost from "@/components/shared/ToastHost";
 
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -151,9 +153,13 @@ export default async function RootLayout({
                                     enabled={hasDatabase() && hasGoogle()}
                                   >
                                   <NpsProvider enabled={hasDatabase()}>
+                                  <PortalProvider>
+                                  <CompletarProvider>
 
                                     {children}
 
+                                  </CompletarProvider>
+                                  </PortalProvider>
                                   </NpsProvider>
                                   </GoogleEventsProvider>
                                   </DocsProvider>

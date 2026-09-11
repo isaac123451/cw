@@ -323,6 +323,70 @@ Definir a variável na Vercel é o que a liga lá.
 
 ---
 
+### O vigia só ao abrir a plataforma, e o botão Completar (11/09/2026)
+
+O Isaac, depois da primeira versão: "preciso que você só verifique a
+página do Reclame Aqui da Cardápio somente quando eu abra a plataforma,
+crie um botão de atualizar/leitura. Os casos que foram adicionados não
+estarão com as informações completas: quero um botão tanto no Kanban e
+lista para completar as informações abrindo uma aba rápida. Preciso que
+apareça nas notificações e outros lugares".
+
+**A leitura.** Saiu o relógio de quinze minutos (e o alarme é apagado de
+quem instalou a 0.46.0 — alarme de extensão sobrevive à atualização).
+Ficam duas portas: ao abrir a plataforma, uma vez por carregamento, e o
+botão **Ler o Reclame Aqui** na barra do quadro. A plataforma não fala
+com a extensão sozinha; quem liga as duas é `conteudo/ponte.js`,
+registrado pelo service worker só no endereço das Opções (permissão
+`scripting`), que repassa dois pedidos e nada mais. Abrir de novo em
+menos de dez minutos reaproveita a última leitura; o botão sempre lê.
+Nada no portal dispara leitura sozinho — o aviso da lista e a abertura
+de uma reclamação também deixaram de disparar.
+
+**O que falta.** `faltaNoCadastro` (em `lib/models/case.ts`) é a régua
+única: sem nome, sem contato (telefone **ou** e-mail) ou sem CPF/CNPJ —
+só para o Reclame Aqui. Medido antes de escrever: das 349 da base,
+nenhuma sem nome ou contato, e uma sem documento; o aviso nasce quase
+apagado e acende com o que o vigia trouxer.
+
+**Onde aparece:** botão **Completar** no cartão, na linha da lista e na
+tela do caso; aviso no alto do quadro com o atalho de cada uma; o sino
+(e o popup da extensão, que usa a mesma lista) com a preferência nova em
+Conta → Notificações; item "Completar os dados do consumidor" no
+checklist do dia; e o aviso de reclamação nova já diz que ela chega sem
+os dados.
+
+**Como completa.** O painel rápido tem dois caminhos:
+
+- **pela área da empresa** — abre a reclamação lá; a extensão confere o
+  que falta, mostra o que a página tem e oferece **Completar no quadro**.
+  Só grava depois do clique, e só onde o quadro está vazio; com o
+  documento, liga ao estabelecimento. Voltando para a aba, o painel relê.
+- **à mão** — com Salvar e confirmação mostrando o antes e o depois, e
+  validação de CPF/CNPJ, telefone, e-mail e UF.
+
+**Dois defeitos achados antes de testar, no painel:** guardar o
+formulário inteiro na abertura congelava os valores (a extensão
+completava o telefone e um Salvar depois o apagava), e mandar o
+formulário inteiro apagaria telefone mascarado que ninguém editou. Só o
+campo editado vai para a gravação.
+
+**Provas:** `check:vigia-volta` (32) roda o service worker inteiro:
+registra a ponte, apaga o alarme antigo, reaproveita a leitura ao abrir
+de novo, não lê desligado mas lê pelo botão, e completa pela rota real —
+nome, telefone, CPF e a ligação ao estabelecimento, sem sobrescrever no
+segundo clique e sem gravar com acesso de leitura. Na tela, com uma
+reclamação descartável: botão no cartão, na lista e no caso, aviso do
+quadro, sino, painel, validação, confirmação e gravação conferida no
+banco. O botão "Ler o Reclame Aqui" foi conferido com a resposta da
+extensão simulada na página — o navegador de teste não carrega extensão.
+
+**Achado no caminho:** o servidor de desenvolvimento ficou com a tabela
+de rotas velha e respondia 404 em todas as `/api/extensao/*` depois de
+reiniciar; mexer na pasta das rotas o fez reler. Se o `check:extensao`
+ou o `check:vigia-volta` disserem 404 com o arquivo no lugar, é isso.
+
+
 ### O vigia do Reclame Aqui (11/09/2026)
 
 O pedido: "queria que você ficasse verificando na página da Cardápio Web
@@ -953,8 +1017,10 @@ contexto para `useCallback`.
   pedido do Isaac ("ficasse verificando na página ... para adicionar as
   reclamações"), o vigia do Reclame Aqui cria sem prévia — limitado a
   reclamações da página pública da Cardápio Web, e a completar o que o
-  portal é dono ou o que está vazio. Mensagem ela não envia em site
-  nenhum, e isso não muda.
+  portal é dono ou o que está vazio. O vigia lê **só ao abrir a
+  plataforma ou pelo botão** — nada em segundo plano. Completar o
+  contato pela área da empresa é sempre depois do clique. Mensagem ela
+  não envia em site nenhum, e isso não muda.
 - **Promotor calado não abre ciclo de NPS.** Entra na base (o indicador
   precisa dele) com `[Encerrado] Sem tratativa`. São ~790 respostas por
   mês; abrir tratativa para cada nota 10 enterraria os detratores.

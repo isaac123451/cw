@@ -40,6 +40,7 @@ function retrato(parcial: {
       riscoDeCancelamento: 0,
       avaliadosComoNaoResolvido: 0,
       semRegraDeSla: false,
+      semDadosDoConsumidor: 0,
       ...parcial.reclameAqui,
     },
     redesSociais: { emAberto: 0, semResponsavel: 0, ...parcial.redesSociais },
@@ -81,6 +82,17 @@ conferir(
 conferir(
   "só entra o que tem o que fazer",
   cheio.itens.every((i) => i.quantos > 0)
+);
+
+const incompletas = checklistPelasRegras(
+  retrato({ reclameAqui: { semDadosDoConsumidor: 3, semResponsavel: 5 } })
+);
+
+conferir(
+  "reclamação sem o consumidor vira item, antes da distribuição",
+  incompletas.itens.map((i) => i.titulo).slice(0, 2).join(" | ") ===
+    "Completar os dados do consumidor | Distribuir as reclamações sem responsável",
+  incompletas.itens.map((i) => i.titulo).slice(0, 2).join(" | ")
 );
 
 const semSla = checklistPelasRegras(

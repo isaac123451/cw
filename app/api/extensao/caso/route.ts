@@ -274,6 +274,8 @@ export async function POST(request: Request) {
       document: true,
       city: true,
       state: true,
+      establishmentId: true,
+      establishmentManual: true,
     },
   });
 

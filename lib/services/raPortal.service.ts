@@ -8,7 +8,17 @@ import {
   SELECAO_DO_PORTAL,
 } from "@/lib/services/atualizacaoDoPortal";
 
-import { criarSeNova } from "@/lib/services/case.repository";
+import {
+  criarSeNova,
+  resolverEstabelecimento,
+} from "@/lib/services/case.repository";
+
+import {
+  faltaNoCadastro,
+  type FaltaNoCadastro,
+  semNome,
+  semValor,
+} from "@/lib/models/case";
 import { classificarPorProblema } from "@/lib/services/raClassify";
 
 import {
@@ -582,10 +592,71 @@ export async function gravarDoPortal(
    CONTATO, PELA ÁREA DA EMPRESA
 ============================================================ */
 
-/** O que a planilha e o vigia gravam quando não sabem o nome. */
-const SEM_NOME = new Set(["", "não informado", "nao informado"]);
+/** O que a extensão e a rota precisam ler de uma reclamação para completá-la. */
+export const SELECAO_DE_CONTATO = {
+  id: true,
+  protocol: true,
+  channel: true,
+  customer: true,
+  companyName: true,
+  email: true,
+  phone: true,
+  document: true,
+  city: true,
+  state: true,
+  establishmentId: true,
+  establishmentManual: true,
+} as const;
 
-const MASCARA = /•/;
+/** A mesma régua da tela (`faltaNoCadastro`), sobre a linha do banco. */
+export function faltasDoBanco(linha: {
+  channel: string;
+  customer: string;
+  email: string | null;
+  phone: string | null;
+  document: string | null;
+}): FaltaNoCadastro[] {
+  return faltaNoCadastro({
+    source: linha.channel === "RECLAME_AQUI" ? "Reclame Aqui" : linha.channel,
+    customer: linha.customer,
+    email: linha.email ?? undefined,
+    phone: linha.phone ?? undefined,
+    document: linha.document ?? undefined,
+  });
+}
+
+/**
+ * A reclamação aberta na área da empresa, pelo código ou pelo número.
+ *
+ * A área da empresa mostra o COD (o mesmo do protocolo) e o ID
+ * numérico; o Hugme às vezes só o número. Qualquer um dos dois acha.
+ */
+export async function acharParaCompletar(
+  prisma: PrismaClient,
+  cod: string,
+  numero?: string
+) {
+  const ou: Prisma.CaseWhereInput[] = [];
+
+  if (CODIGO_DO_PORTAL.test(cod)) {
+    ou.push(
+      { protocol: `RA-${cod}` },
+      { externalId: cod },
+      { externalUrl: { contains: cod } }
+    );
+  }
+
+  if (numero && /^\d{6,12}$/.test(numero)) {
+    ou.push({ protocol: `RA-${numero}` }, { externalId: numero });
+  }
+
+  if (ou.length === 0) return null;
+
+  return prisma.case.findFirst({
+    where: { OR: ou },
+    select: SELECAO_DE_CONTATO,
+  });
+}
 
 /**
  * Completa, numa reclamação que já existe, o contato que está vazio.
@@ -613,6 +684,8 @@ export async function completarContato(
     document: string | null;
     city: string | null;
     state: string | null;
+    establishmentId: string | null;
+    establishmentManual: boolean;
   },
   lido: {
     cliente: string;
@@ -624,23 +697,18 @@ export async function completarContato(
   }
 ) {
 
-  const vazio = (valor: string | null) =>
-    !valor || valor.trim() === "" || MASCARA.test(valor);
+  const vazio = (valor: string | null) => semValor(valor);
 
-  const real = (valor: string) =>
-    valor.trim() !== "" && !MASCARA.test(valor);
+  const real = (valor: string) => !semValor(valor);
 
   const dados: Record<string, string> = {};
   const campos: string[] = [];
 
-  if (
-    real(lido.cliente) &&
-    SEM_NOME.has(atual.customer.trim().toLowerCase())
-  ) {
+  if (real(lido.cliente) && semNome(atual.customer)) {
     dados.customer = lido.cliente;
     campos.push("nome");
 
-    if (SEM_NOME.has(atual.companyName.trim().toLowerCase())) {
+    if (semNome(atual.companyName)) {
       dados.companyName = lido.cliente;
     }
   }
@@ -658,6 +726,23 @@ export async function completarContato(
   if (lido.documento && !atual.document) {
     dados.document = lido.documento;
     campos.push("documento");
+
+    /*
+      O documento é o vínculo: com ele, a reclamação encontra o
+      estabelecimento sozinha — a mesma regra do `persistCase`. Vínculo
+      escolhido à mão não é tocado.
+    */
+    if (!atual.establishmentId && !atual.establishmentManual) {
+      const estabelecimento = await resolverEstabelecimento(
+        prisma,
+        lido.documento
+      );
+
+      if (estabelecimento) {
+        dados.establishmentId = estabelecimento;
+        campos.push("estabelecimento");
+      }
+    }
   }
 
   if (real(lido.cidade) && vazio(atual.city)) {

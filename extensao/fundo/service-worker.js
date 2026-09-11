@@ -49,6 +49,7 @@ const CAMINHOS = {
   respostas: "/api/extensao/respostas",
   raNovas: "/api/extensao/ra-novas",
   raVigia: "/api/extensao/ra-vigia",
+  completar: "/api/extensao/completar",
 };
 
 /**
@@ -518,13 +519,16 @@ async function tratar(mensagem) {
   }
 
   /**
-   * "Conferir agora", do popup, e o aviso de uma página do portal.
+   * A leitura do portal: pelo botão ("manual") ou ao abrir a plataforma.
    *
-   * A página não manda o vigia rodar a cada abertura — a equipe abre o
-   * portal o dia inteiro, e cada abertura viraria uma volta. Ela só
-   * adianta a volta quando o vigia está parado por causa do portal (a
-   * verificação de navegador, que abrir a aba costuma resolver) ou
-   * quando a última volta já passou do ciclo.
+   * **Só estas duas portas, por pedido do Isaac:** "só verifique a
+   * página do Reclame Aqui da Cardápio somente quando eu abra a
+   * plataforma, crie um botão de atualizar/leitura". Não há mais relógio
+   * lendo o portal em segundo plano.
+   *
+   * Abrir a plataforma várias vezes seguidas — outra aba, um F5 — não
+   * vira várias leituras: dentro do intervalo mínimo devolve a última.
+   * O botão sempre lê.
    */
   if (mensagem?.tipo === "vigiaAgora") {
 
@@ -537,16 +541,45 @@ async function tratar(mensagem) {
 
     const vale =
       mensagem.motivo === "manual" ||
-      (mensagem.motivo === "lista" && idade > 60_000) ||
       parado ||
-      idade > CICLO_VIGIA_MIN * 60_000;
+      idade > INTERVALO_MINIMO_MIN * 60_000;
 
     return {
       ok: true,
       dados: vale
-        ? await vigiar(mensagem.motivo === "manual" ? "manual" : "pagina")
-        : estado,
+        ? await vigiar(mensagem.motivo === "manual" ? "manual" : "plataforma")
+        : { ...(estado ?? {}), reaproveitada: true },
     };
+  }
+
+  /**
+   * O que falta a esta reclamação no quadro.
+   *
+   * Perguntado quando a área da empresa mostra uma reclamação: o painel
+   * só oferece "Completar no quadro" se falta algo que a página tem.
+   */
+  if (mensagem?.tipo === "completarPergunta") {
+
+    const dados = await chamar(CAMINHOS.completar, {
+      cod: mensagem.cod,
+      id: mensagem.id,
+    });
+
+    return { ok: true, dados };
+  }
+
+  /** Completa, depois do clique — só o que estava vazio. */
+  if (mensagem?.tipo === "completarNoQuadro") {
+
+    const dados = await chamar(
+      CAMINHOS.completar,
+      {},
+      mensagem.dados ?? {}
+    );
+
+    await limparCache();
+
+    return { ok: true, dados };
   }
 
   if (mensagem?.tipo === "vigiaEstado") {
@@ -1085,19 +1118,31 @@ async function cobrarEtapas() {
  * consumidor avalia semanas depois, e a reclamação avaliada já saiu da
  * primeira página há muito tempo.
  *
+ * **Quando:** ao abrir a plataforma (pela ponte, `conteudo/ponte.js`) e
+ * no botão "Ler o Reclame Aqui" da barra do quadro ou "Conferir agora"
+ * do popup. Não há leitura em segundo plano — a 0.46.0 tinha um relógio
+ * de quinze minutos, e o Isaac pediu que fosse só ao abrir.
+ *
  * **O que ele não faz:** atravessar a verificação do Cloudflare. Se o
- * portal pedir, a volta para, o popup diz o que aconteceu, e abrir o
- * portal numa aba resolve.
+ * portal pedir, a volta para, a plataforma e o popup dizem o que
+ * aconteceu, e abrir o portal numa aba resolve.
  */
-
-const ALARME_VIGIA = "cw-vigia-ra";
 
 /**
- * Quinze minutos: a Cardápio Web recebe perto de uma reclamação por
- * dia, e o prazo que importa (a primeira resposta) é contado em horas.
- * Mais frequente só gastaria a página do portal — 230 KB por leitura.
+ * O alarme de quinze minutos da 0.46.0, que saiu.
+ *
+ * O nome fica para ser **apagado**: alarme de extensão sobrevive à
+ * atualização, e quem instalou a 0.46.0 continuaria lendo o portal de
+ * quinze em quinze minutos sem ninguém pedir.
  */
-const CICLO_VIGIA_MIN = 15;
+const ALARME_VIGIA_ANTIGO = "cw-vigia-ra";
+
+/**
+ * Abrir a plataforma de novo dentro deste intervalo reaproveita a
+ * última leitura. Dez minutos cobrem o F5 e a segunda aba sem esconder
+ * uma reclamação que chegou de manhã de quem abre à tarde.
+ */
+const INTERVALO_MINIMO_MIN = 10;
 
 /** Páginas da lista numa volta comum; cada uma traz cinco. */
 const PAGINAS_POR_VOLTA = 4;
@@ -1439,23 +1484,95 @@ function agendar() {
     periodInMinutes: CICLO_LEMBRETE_MIN,
   });
 
-  chrome.alarms.create(ALARME_VIGIA, {
-    delayInMinutes: 1,
-    periodInMinutes: CICLO_VIGIA_MIN,
-  });
+  chrome.alarms.clear(ALARME_VIGIA_ANTIGO);
+}
+
+/* ============================================================
+   PONTE COM A PLATAFORMA
+============================================================ */
+
+const PONTE = "cw-ponte";
+
+/**
+ * Põe `conteudo/ponte.js` nas páginas da própria plataforma.
+ *
+ * É o que deixa a plataforma pedir "leia o Reclame Aqui" — ao abrir, e
+ * no botão da barra do quadro. A página não fala com a extensão sozinha:
+ * ela não sabe o id da extensão, e o id de uma extensão descompactada
+ * muda de máquina para máquina.
+ *
+ * Registrada **em tempo de execução**, e não no manifesto, porque o
+ * endereço da plataforma é configurado nas Opções — o manifesto só
+ * conhece o `localhost`. Sem permissão para o endereço, não registra:
+ * a ponte segue a mesma permissão que todo o resto.
+ */
+async function registrarPonte() {
+
+  try {
+    await chrome.scripting.unregisterContentScripts({ ids: [PONTE] });
+  } catch {
+    /* não estava registrada */
+  }
+
+  const config = await lerConfig();
+  const base = normalizarBase(config.base);
+
+  if (!base) return;
+
+  const origem = padraoDeOrigem(base);
+
+  if (!(await chrome.permissions.contains({ origins: [origem] }))) return;
+
+  await chrome.scripting.registerContentScripts([
+    {
+      id: PONTE,
+      matches: [origem],
+      js: ["conteudo/ponte.js"],
+      runAt: "document_start",
+      persistAcrossSessions: true,
+    },
+  ]);
+
+  /*
+    Abas da plataforma que já estavam abertas não recebem script
+    registrado depois. Injetar nelas evita o "atualize a página" logo
+    depois de instalar ou de trocar o endereço.
+  */
+  try {
+    const abas = await chrome.tabs.query({ url: origem });
+
+    for (const aba of abas) {
+      if (aba.id === undefined) continue;
+      chrome.scripting
+        .executeScript({ target: { tabId: aba.id }, files: ["conteudo/ponte.js"] })
+        .catch(() => {});
+    }
+  } catch {
+    /* sem abas, ou sem acesso a elas: a próxima abertura recebe */
+  }
 }
 
 chrome.runtime.onInstalled.addListener(() => {
   agendar();
   atualizarEmSilencio();
+  registrarPonte();
 });
 
-chrome.runtime.onStartup.addListener(agendar);
+chrome.runtime.onStartup.addListener(() => {
+  agendar();
+  registrarPonte();
+});
+
+/* Trocar o endereço nas Opções move a ponte junto. */
+chrome.storage.onChanged.addListener((mudancas, area) => {
+  if (area === "sync" && mudancas["cw-reputacao-config"]) registrarPonte();
+});
+
+chrome.permissions.onAdded.addListener(() => registrarPonte());
 
 chrome.alarms.onAlarm.addListener((alarme) => {
   if (alarme.name === ALARME) atualizarEmSilencio();
   if (alarme.name === ALARME_LEMBRETE) cobrarEtapas();
-  if (alarme.name === ALARME_VIGIA) vigiar("alarme");
 });
 
 chrome.notifications.onClicked.addListener(async (id) => {

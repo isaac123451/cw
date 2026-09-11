@@ -200,3 +200,74 @@ export function respondida(item: {
     (item.publicResponse ?? "").trim() !== ""
   );
 }
+
+/* ============================================================
+   DADOS DO CONSUMIDOR QUE FALTAM
+============================================================ */
+
+/**
+ * O que falta para uma reclamação do Reclame Aqui ter o consumidor.
+ *
+ * **Por que existe.** O vigia da extensão cria a reclamação pela página
+ * pública do portal, e lá o nome, o telefone, o e-mail e o CPF/CNPJ não
+ * aparecem — só na área da empresa. Ela entra no quadro com "Não
+ * informado" e sem contato, e sem esta regra ninguém saberia quais
+ * precisam ser completadas.
+ *
+ * Três faltas, e não uma por campo: telefone **ou** e-mail basta para
+ * falar com a pessoa, e cobrar os dois acenderia o aviso em reclamação
+ * que já dá para tratar. O documento entra à parte porque é ele que
+ * liga a reclamação ao estabelecimento.
+ *
+ * Medido em 11/09/2026, antes do vigia: das 349 reclamações da base,
+ * nenhuma sem nome ou sem contato, e uma sem documento. O aviso nasce
+ * quase apagado e acende só com o que o portal trouxer.
+ *
+ * Só vale para o Reclame Aqui. Nas conversas a identidade é outra — o
+ * @ do perfil, o número do WhatsApp —, e cobrar CPF de um comentário no
+ * Instagram seria aviso sem sentido.
+ */
+export type FaltaNoCadastro = "nome" | "contato" | "documento";
+
+export const ROTULO_DA_FALTA: Record<FaltaNoCadastro, string> = {
+  nome: "nome",
+  contato: "telefone ou e-mail",
+  documento: "CPF/CNPJ",
+};
+
+/** O que a planilha e o vigia gravam quando não sabem o nome. */
+export function semNome(valor?: string | null) {
+  return ["", "não informado", "nao informado"].includes(
+    String(valor ?? "").trim().toLowerCase()
+  );
+}
+
+/** Vazio, ou mascarado na importação (`(11)•••••-1234`). */
+export function semValor(valor?: string | null) {
+  const limpo = String(valor ?? "").trim();
+  return limpo === "" || limpo.includes("•");
+}
+
+export function faltaNoCadastro(
+  item: Pick<Case, "source" | "customer" | "email" | "phone" | "document">
+): FaltaNoCadastro[] {
+
+  if (item.source !== "Reclame Aqui") return [];
+
+  const faltas: FaltaNoCadastro[] = [];
+
+  if (semNome(item.customer)) faltas.push("nome");
+  if (semValor(item.email) && semValor(item.phone)) faltas.push("contato");
+  if (semValor(item.document)) faltas.push("documento");
+
+  return faltas;
+}
+
+/** "nome, telefone ou e-mail e CPF/CNPJ" — a lista em português. */
+export function descreverFaltas(faltas: FaltaNoCadastro[]) {
+  const nomes = faltas.map((falta) => ROTULO_DA_FALTA[falta]);
+
+  return nomes.length <= 1
+    ? nomes.join("")
+    : `${nomes.slice(0, -1).join(", ")} e ${nomes[nomes.length - 1]}`;
+}

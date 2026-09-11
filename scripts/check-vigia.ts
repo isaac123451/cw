@@ -553,6 +553,8 @@ async function travas(prisma: PrismaClient) {
       document: true,
       city: true,
       state: true,
+      establishmentId: true,
+      establishmentManual: true,
     },
   });
 
@@ -578,6 +580,8 @@ async function travas(prisma: PrismaClient) {
       document: true,
       city: true,
       state: true,
+      establishmentId: true,
+      establishmentManual: true,
     },
   });
 

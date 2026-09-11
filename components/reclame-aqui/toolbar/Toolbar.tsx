@@ -24,6 +24,7 @@ import { countCriteria } from "@/lib/models/savedFilter";
 
 import CreateCaseModal from "@/components/reclame-aqui/modals/CreateCaseModal";
 import TransferModal from "@/components/reclame-aqui/toolbar/TransferModal";
+import LerPortalButton from "@/components/reclame-aqui/toolbar/LerPortalButton";
 import SavedFilters from "@/components/reclame-aqui/toolbar/SavedFilters";
 import SearchSelect from "@/components/shared/SearchSelect";
 import { hojeNaOperacao } from "@/lib/services/reputation.service";
@@ -402,6 +403,8 @@ export default function Toolbar({
             hora fica ao lado dele, e a contagem de reclamações junto:
             "353 · 14:32" responde de uma vez se veio e se é de agora.
           */}
+          <LerPortalButton />
+
           <button
             onClick={() => {
               setAtualizando(true);

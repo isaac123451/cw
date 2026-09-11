@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { respondida } from "@/lib/models/case";
+import { faltaNoCadastro, respondida } from "@/lib/models/case";
 
 import { tryRole } from "@/lib/auth/guard";
 import { getPrisma } from "@/lib/prisma";
@@ -224,6 +224,9 @@ export async function POST(request: Request) {
       riscoDeCancelamento: raRisco.length,
       avaliadosComoNaoResolvido: raNaoResolvidos,
       semRegraDeSla: workspace.slaRules.length === 0,
+      semDadosDoConsumidor: ra.filter(
+        (c) => faltaNoCadastro(c).length > 0
+      ).length,
     },
 
     redesSociais: {
@@ -272,6 +275,7 @@ export async function POST(request: Request) {
       ? "- nenhuma regra de SLA cadastrada, então nada pode ser apontado como fora do prazo"
       : `- ${retrato.reclameAqui.foraDoPrazo} fora do prazo`,
     `- ${retrato.reclameAqui.riscoDeCancelamento} marcadas como risco de cancelamento`,
+    `- ${retrato.reclameAqui.semDadosDoConsumidor} com dados do consumidor incompletos (sem nome, contato ou CPF/CNPJ — o vigia traz as novas da página pública do portal, que não mostra esses dados)`,
     `- ${retrato.reclameAqui.avaliadosComoNaoResolvido} avaliadas como NÃO resolvida (fechadas para o fluxo, mas puxando o índice de solução)`,
     "",
     "REDES SOCIAIS",

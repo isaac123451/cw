@@ -248,6 +248,8 @@
 
     ultimaChave = chave;
 
+    fecharCompletar();
+
     const lida = lerReclamacao(conteudo);
 
     if (!lida.id && !lida.cliente) {
@@ -280,6 +282,214 @@
         ? `protocolo ${lida.id}`
         : lida.cliente,
     });
+
+    oferecerCompletar(lida).catch((erro) => {
+      console.warn("[CW] não deu para conferir o que falta no quadro", erro);
+    });
+  }
+
+  /* ============================================================
+     COMPLETAR NO QUADRO
+  ============================================================ */
+
+  /**
+   * Completa no quadro o que esta página mostra e lá está faltando.
+   *
+   * **O pedido.** "Os casos que foram adicionados não estarão com as
+   * informações completas. Quero um botão no Kanban e na lista para
+   * completar abrindo uma aba rápida." O botão da plataforma abre esta
+   * reclamação na área da empresa; aqui a extensão mostra o que leu e
+   * oferece gravar.
+   *
+   * **Só depois do clique, e com o que vai ser gravado à vista.** O
+   * leitor da página é aproximado por natureza; mostrar nome, telefone
+   * e documento antes de gravar é a mesma prévia da captura, em
+   * miniatura. E o servidor só preenche o que está vazio.
+   */
+  const perguntadas = new Set();
+  let hospedeiroCompletar = null;
+
+  /** A página tem o que falta? */
+  function temNaPagina(lida, falta) {
+    if (falta === "nome") return Boolean(lida.cliente);
+    if (falta === "contato") return Boolean(lida.telefone || lida.email);
+    if (falta === "documento") return Boolean(lida.documento);
+    return false;
+  }
+
+  function fecharCompletar() {
+    hospedeiroCompletar?.remove();
+    hospedeiroCompletar = null;
+  }
+
+  /** "nome, telefone e documento". */
+  function juntar(lista) {
+    return lista.length <= 1
+      ? lista.join("")
+      : `${lista.slice(0, -1).join(", ")} e ${lista[lista.length - 1]}`;
+  }
+
+  async function oferecerCompletar(lida) {
+
+    const chave = lida.cod || lida.id;
+
+    if (!chave || perguntadas.has(chave)) return;
+
+    perguntadas.add(chave);
+
+    const resposta = await CW.enviar({
+      tipo: "completarPergunta",
+      cod: lida.cod,
+      id: lida.id,
+    });
+
+    const dados = resposta?.ok ? resposta.dados : null;
+
+    if (!dados?.existe || !dados.podeGravar) return;
+
+    const supriveis = (dados.faltam ?? []).filter((falta) =>
+      temNaPagina(lida, falta)
+    );
+
+    /* A reclamação mudou enquanto a pergunta ia e voltava. */
+    if (supriveis.length === 0 || ultimaChave.split("#").pop() !== String(lida.id ?? "")) {
+      return;
+    }
+
+    desenharCompletar(lida, dados);
+  }
+
+  /** Montado com DOM, e o texto com `textContent`: é dado de consumidor. */
+  function desenharCompletar(lida, dados) {
+
+    fecharCompletar();
+
+    hospedeiroCompletar = document.createElement("div");
+    hospedeiroCompletar.id = "cw-reputacao-completar";
+    document.documentElement.appendChild(hospedeiroCompletar);
+
+    const sombra = hospedeiroCompletar.attachShadow({ mode: "open" });
+
+    const estilo = document.createElement("style");
+
+    /* Acima do aviso de reclamações novas, que mora no mesmo canto. */
+    estilo.textContent = `
+      :host { all: initial; }
+      .caixa {
+        position: fixed; left: 18px; bottom: 82px; z-index: 2147483646;
+        width: 340px; max-width: calc(100vw - 36px);
+        font: 13px/1.45 "CW Geist", system-ui, sans-serif;
+        background: #fff; color: #1f1f24; border-radius: 14px; padding: 13px 14px;
+        border: 1px solid #eadcf8;
+        box-shadow: 0 14px 34px -14px rgba(40, 10, 70, .45);
+      }
+      .titulo { font-weight: 600; margin: 0 0 2px; }
+      .sub { color: #6b6b76; font-size: 12px; margin: 0 0 8px; }
+      dl { margin: 0 0 10px; display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; font-size: 12px; }
+      dt { color: #6b6b76; }
+      dd { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .acoes { display: flex; gap: 8px; }
+      button { font: inherit; font-weight: 600; border-radius: 9px; padding: 7px 12px; cursor: pointer; }
+      .sim { background: #5B2A86; color: #fff; border: 0; }
+      .sim:hover { background: #7B3FBF; }
+      .sim:disabled { opacity: .6; cursor: default; }
+      .nao { background: transparent; color: #6b6b76; border: 1px solid #e4e4e7; }
+      .ok { color: #15803d; font-weight: 600; margin: 0; }
+      .erro { color: #b91c1c; margin: 0; }
+      @media (prefers-color-scheme: dark) {
+        .caixa { background: #1e1f25; color: #f1f1f4; border-color: #3b2e4d; }
+        .sub, dt { color: #9a9ba5; }
+        .nao { color: #c9c9d1; border-color: #31333c; }
+        .ok { color: #4ade80; }
+        .erro { color: #f87171; }
+      }
+    `;
+
+    const caixa = document.createElement("div");
+    caixa.className = "caixa";
+
+    const titulo = document.createElement("p");
+    titulo.className = "titulo";
+    titulo.textContent = `No quadro, ${dados.protocolo} está sem ${dados.descricao}.`;
+
+    const sub = document.createElement("p");
+    sub.className = "sub";
+    sub.textContent = "Esta página mostra — confira antes de gravar. Só entra o que está vazio no quadro.";
+
+    const lista = document.createElement("dl");
+
+    const linhas = [
+      ["Nome", lida.cliente],
+      ["Telefone", lida.telefone],
+      ["E-mail", lida.email],
+      ["CPF/CNPJ", lida.documento],
+    ].filter(([, valor]) => valor);
+
+    for (const [rotulo, valor] of linhas) {
+      const dt = document.createElement("dt");
+      dt.textContent = rotulo;
+      const dd = document.createElement("dd");
+      dd.textContent = valor;
+      dd.title = valor;
+      lista.append(dt, dd);
+    }
+
+    const acoes = document.createElement("div");
+    acoes.className = "acoes";
+
+    const sim = document.createElement("button");
+    sim.type = "button";
+    sim.className = "sim";
+    sim.textContent = "Completar no quadro";
+
+    const nao = document.createElement("button");
+    nao.type = "button";
+    nao.className = "nao";
+    nao.textContent = "Agora não";
+
+    nao.addEventListener("click", fecharCompletar);
+
+    sim.addEventListener("click", async () => {
+
+      sim.disabled = true;
+      sim.textContent = "Gravando…";
+
+      const resposta = await CW.enviar({
+        tipo: "completarNoQuadro",
+        dados: {
+          cod: lida.cod,
+          id: lida.id,
+          cliente: lida.cliente,
+          email: lida.email,
+          telefone: lida.telefone,
+          documento: lida.documento,
+          cidade: lida.cidade,
+          estado: lida.estado,
+        },
+      });
+
+      const resultado = document.createElement("p");
+
+      if (resposta?.ok && Array.isArray(resposta.dados?.completou)) {
+        const completou = resposta.dados.completou;
+        resultado.className = "ok";
+        resultado.textContent = completou.length > 0
+          ? `Completei ${juntar(completou)}. Pode fechar esta aba.`
+          : "Nada a completar: o quadro já tinha esses dados.";
+        setTimeout(fecharCompletar, 6000);
+      } else {
+        resultado.className = "erro";
+        resultado.textContent = resposta?.erro ?? "Não deu para gravar agora.";
+        sim.disabled = false;
+        sim.textContent = "Tentar de novo";
+      }
+
+      acoes.replaceWith(resultado);
+    });
+
+    acoes.append(sim, nao);
+    caixa.append(titulo, sub, lista, acoes);
+    sombra.append(estilo, caixa);
   }
 
   /* ============================================================
@@ -304,12 +514,11 @@
    * a lista funciona. `CW.ra.codigosDosLinks` é a regra, provada em
    * `check:ra` contra os endereços reais da base.
    *
-   * **Esta varredura só avisa; quem grava é o vigia.** Desde 11/09/2026
-   * o service worker confere a lista pública sozinho, a cada quinze
-   * minutos, e põe no quadro o que falta (`fundo/service-worker.js`,
-   * seção VIGIA). Quando esta página mostra uma reclamação nova, ela
-   * adianta a volta do vigia em vez de esperar o relógio — e o aviso
-   * some quando a reclamação entra.
+   * **Esta varredura só avisa; quem grava é o vigia**, que lê a lista
+   * pública quando a plataforma é aberta ou pelo botão "Ler o Reclame
+   * Aqui" (`fundo/service-worker.js`, seção VIGIA). Por pedido do
+   * Isaac, nada aqui dispara leitura sozinho — "somente quando eu abra a
+   * plataforma".
    */
   let codigosPerguntados = "";
   let novos = [];
@@ -377,18 +586,6 @@
     novos = resposta.dados.novos;
 
     desenharNovas(titulos);
-
-    /*
-      Achou nova: o vigia vem buscar agora, sem esperar o relógio.
-
-      Depois da volta, a próxima conferência pergunta de novo — e o
-      aviso some sozinho quando a reclamação já entrou no quadro.
-    */
-    if (novos.length > 0) {
-      CW.enviar({ tipo: "vigiaAgora", motivo: "lista" }).then(() => {
-        codigosPerguntados = "";
-      });
-    }
   }
 
   /**
@@ -492,7 +689,7 @@
       const rodape = document.createElement("li");
       rodape.className = "rodape";
       rodape.textContent =
-        "O vigia da extensão já está trazendo estas para o quadro. Se alguma continuar aqui, abra e use “Criar no Kanban”.";
+        "Na plataforma, “Ler o Reclame Aqui” traz estas para o quadro. Ou abra uma e use “Criar no Kanban”.";
       lista.appendChild(rodape);
 
       caixa.appendChild(lista);
@@ -577,16 +774,4 @@
   setInterval(verificarComRede, INTERVALO);
 
   verificarComRede();
-
-  /*
-    Abrir o portal pode destravar o vigia.
-
-    Quando o Reclame Aqui pede a verificação de navegador, o vigia para
-    e espera. Esta aba aberta é justamente o que costuma resolver — e o
-    service worker só adianta a volta se estava parado ou atrasado, então
-    abrir o portal o dia inteiro não vira uma volta por página.
-  */
-  if (/(^|\.)reclameaqui\.com\.br$/i.test(location.hostname)) {
-    CW.enviar({ tipo: "vigiaAgora", motivo: "pagina" });
-  }
 })();

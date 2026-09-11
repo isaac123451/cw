@@ -53,7 +53,10 @@ const DA_AMOSTRA = [
   "ZzAvaliada000005",
 ];
 
-const PROTOCOLOS = DA_AMOSTRA.map((c) => `RA-${c}`);
+/* A reclamação que o vigia traria sem o consumidor, para completar. */
+const INCOMPLETA = "ZzCompletarVolta";
+
+const PROTOCOLOS = [...DA_AMOSTRA, INCOMPLETA].map((c) => `RA-${c}`);
 
 let falhas = 0;
 
@@ -145,14 +148,18 @@ let sessao = "";
 type Ouvinte = (mensagem: unknown, remetente: unknown, responder: (r: unknown) => void) => void;
 
 let ouvinteDeMensagem: Ouvinte | null = null;
-let ouvinteDeAlarme: ((alarme: { name: string }) => void) | null = null;
+let ouvinteDeInstalacao: (() => void) | null = null;
+
+const alarmesApagados: string[] = [];
+const alarmesCriados: string[] = [];
+const scriptsRegistrados: { id: string; matches: string[]; js: string[] }[] = [];
 
 const notificacoes: { id: string; title: string; message: string }[] = [];
 
 (globalThis as unknown as { chrome: unknown }).chrome = {
-  storage: { local, sync, session: area() },
+  storage: { local, sync, session: area(), onChanged: { addListener() {} } },
   cookies: { get: async () => (sessao ? { value: sessao } : null) },
-  permissions: { contains: async () => true },
+  permissions: { contains: async () => true, onAdded: { addListener() {} } },
   notifications: {
     create: (id: string, opcoes: { title: string; message: string }) => {
       notificacoes.push({ id, ...opcoes });
@@ -160,12 +167,25 @@ const notificacoes: { id: string; title: string; message: string }[] = [];
     onClicked: { addListener() {} },
   },
   alarms: {
-    create() {},
-    onAlarm: { addListener: (f: typeof ouvinteDeAlarme) => (ouvinteDeAlarme = f) },
+    create: (nome: string) => alarmesCriados.push(nome),
+    clear: async (nome: string) => {
+      alarmesApagados.push(nome);
+      return true;
+    },
+    onAlarm: { addListener() {} },
+  },
+  scripting: {
+    unregisterContentScripts: async () => {
+      scriptsRegistrados.length = 0;
+    },
+    registerContentScripts: async (lista: { id: string; matches: string[]; js: string[] }[]) => {
+      scriptsRegistrados.push(...lista);
+    },
+    executeScript: async () => [],
   },
   runtime: {
     onMessage: { addListener: (f: Ouvinte) => (ouvinteDeMensagem = f) },
-    onInstalled: { addListener() {} },
+    onInstalled: { addListener: (f: () => void) => (ouvinteDeInstalacao = f) },
     onStartup: { addListener() {} },
     getURL: (caminho: string) => `chrome-extension://roteiro/${caminho}`,
     openOptionsPage() {},
@@ -175,7 +195,7 @@ const notificacoes: { id: string; title: string; message: string }[] = [];
     setBadgeBackgroundColor: async () => {},
     setTitle: async () => {},
   },
-  tabs: { create() {} },
+  tabs: { create() {}, query: async () => [] },
 };
 
 const fetchDeVerdade = globalThis.fetch;
@@ -194,6 +214,12 @@ type Estado = {
   criadas?: { protocolo: string; titulo: string }[];
   completadas?: number;
   ligado?: boolean;
+  reaproveitada?: boolean;
+  /* as respostas de completar */
+  existe?: boolean;
+  faltam?: string[];
+  podeGravar?: boolean;
+  completou?: string[];
 };
 
 function enviar(mensagem: unknown) {
@@ -257,6 +283,19 @@ async function main() {
       select: { protocol: true, updatedAt: true },
     });
 
+    /* --- instalar: a ponte com a plataforma e o fim do relógio --- */
+
+    ouvinteDeInstalacao?.();
+    await new Promise((r) => setTimeout(r, 300));
+
+    conferir(
+      "instalar registra a ponte no endereço da plataforma",
+      scriptsRegistrados.map((s) => [s.id, s.matches, s.js]),
+      [["cw-ponte", [`${BASE}/*`], ["conteudo/ponte.js"]]]
+    );
+    conferir("e apaga o alarme de 15 minutos da 0.46.0", alarmesApagados, ["cw-vigia-ra"]);
+    conferir("sem criar outro relógio para o portal", alarmesCriados.includes("cw-vigia-ra"), false);
+
     const antes = await enviar({ tipo: "vigiaEstado" });
 
     conferir("antes da primeira volta: ligado, sem data", [antes.dados?.ligado, antes.dados?.em], [true, undefined]);
@@ -266,14 +305,19 @@ async function main() {
     const primeira = await enviar({ tipo: "vigiaAgora", motivo: "manual" });
 
     conferir("a volta termina bem", [primeira.ok, primeira.dados?.ok, primeira.dados?.erro], [true, true, undefined]);
+    const daLista = DA_AMOSTRA.map((c) => `RA-${c}`);
+
+    /* Instalar também dispara o aviso diário da nota; aqui contam só as do vigia. */
+    const doVigia = () => notificacoes.filter((n) => n.id.startsWith("cw-vigia-"));
+
     conferir(
       "as cinco da lista entram no quadro",
       (primeira.dados?.criadas ?? []).map((c) => c.protocolo).sort(),
-      [...PROTOCOLOS].sort()
+      [...daLista].sort()
     );
-    conferir("e estão no banco", await prisma.case.count({ where: { protocol: { in: PROTOCOLOS } } }), 5);
-    conferir("uma notificação só, não uma por reclamação", notificacoes.length, 1);
-    conferir("dizendo quantas", notificacoes[0]?.title, "5 reclamações novas no Reclame Aqui");
+    conferir("e estão no banco", await prisma.case.count({ where: { protocol: { in: daLista } } }), 5);
+    conferir("uma notificação só, não uma por reclamação", doVigia().length, 1);
+    conferir("dizendo quantas", doVigia()[0]?.title, "5 reclamações novas no Reclame Aqui");
 
     const tentadas = ((await local.get("vigiaTentadas")).vigiaTentadas ?? {}) as Record<string, number>;
     const pendentesReais = Object.keys(tentadas).length;
@@ -304,7 +348,7 @@ async function main() {
     const segunda = await enviar({ tipo: "vigiaAgora", motivo: "manual" });
 
     conferir("a segunda volta não cria nada", segunda.dados?.criadas?.length, 0);
-    conferir("nem notifica de novo", notificacoes.length, 1);
+    conferir("nem notifica de novo", doVigia().length, 1);
     conferir(
       "a pendente que falhou espera um dia, não volta a cada 15 min",
       pedidosAoPortal.filter((u) => !u.includes("/empresa/")).length,
@@ -316,12 +360,16 @@ async function main() {
       1
     );
 
-    /* --- a página do portal não dispara volta à toa --- */
+    /* --- abrir a plataforma de novo não relê à toa --- */
 
     const emAntes = segunda.dados?.em;
-    const pagina = await enviar({ tipo: "vigiaAgora", motivo: "pagina" });
+    const plataforma = await enviar({ tipo: "vigiaAgora", motivo: "plataforma" });
 
-    conferir("abrir o portal logo depois de uma volta não roda outra", pagina.dados?.em, emAntes);
+    conferir(
+      "abrir a plataforma logo depois reaproveita a última leitura",
+      [plataforma.dados?.em, plataforma.dados?.reaproveitada],
+      [emAntes, true]
+    );
 
     /* --- a verificação de navegador --- */
 
@@ -334,9 +382,9 @@ async function main() {
 
     humorDoPortal = "normal";
 
-    const destravada = await enviar({ tipo: "vigiaAgora", motivo: "pagina" });
+    const destravada = await enviar({ tipo: "vigiaAgora", motivo: "plataforma" });
 
-    conferir("abrir o portal destrava na hora", destravada.dados?.ok, true);
+    conferir("depois da verificação, abrir a plataforma lê de novo", destravada.dados?.ok, true);
 
     /* --- o portal mudou de formato --- */
 
@@ -354,18 +402,96 @@ async function main() {
 
     await sync.set({ "cw-reputacao-config": { base: BASE, vigia: false } });
 
+    /* A última volta falhou por formato: sem a chave, abrir a plataforma leria. */
     const emDesligado = ((await local.get("vigia")).vigia as Estado).em;
 
-    ouvinteDeAlarme?.({ name: "cw-vigia-ra" });
-    await new Promise((r) => setTimeout(r, 1500));
+    await enviar({ tipo: "vigiaAgora", motivo: "plataforma" });
 
-    conferir("desligado: o alarme toca e a volta não sai", ((await local.get("vigia")).vigia as Estado).em, emDesligado);
+    conferir(
+      "desligado: abrir a plataforma não lê",
+      ((await local.get("vigia")).vigia as Estado).em,
+      emDesligado
+    );
 
     const estadoDesligado = await enviar({ tipo: "vigiaEstado" });
 
     conferir("e o popup sabe que está desligado", estadoDesligado.dados?.ligado, false);
 
+    const peloBotao = await enviar({ tipo: "vigiaAgora", motivo: "manual" });
+
+    conferir("mas o botão lê mesmo desligado", peloBotao.dados?.ok, true);
+
     await sync.set({ "cw-reputacao-config": { base: BASE, vigia: true } });
+
+    /* --- completar pela área da empresa --- */
+
+    await prisma.case.create({
+      data: {
+        protocol: `RA-${INCOMPLETA}`,
+        externalId: INCOMPLETA,
+        companyName: "Não informado",
+        customer: "Não informado",
+        title: "Reclamação descartável sem o consumidor",
+        status: "Novo",
+        publishedAt: new Date("2026-09-11T00:00:00Z"),
+      },
+    });
+
+    const pergunta = await enviar({ tipo: "completarPergunta", cod: INCOMPLETA });
+
+    conferir(
+      "a página pergunta o que falta no quadro",
+      [pergunta.dados?.existe, pergunta.dados?.faltam, pergunta.dados?.podeGravar],
+      [true, ["nome", "contato", "documento"], true]
+    );
+
+    /* Um documento de estabelecimento de verdade, para provar o vínculo. */
+    const estabelecimento = await prisma.establishment.findFirst({
+      where: { document: { not: null } },
+      select: { id: true, document: true },
+    });
+
+    const documento = estabelecimento?.document?.replace(/\D/g, "") || "12345678909";
+
+    const completou = await enviar({
+      tipo: "completarNoQuadro",
+      dados: {
+        cod: INCOMPLETA,
+        cliente: "Maria Lopes",
+        telefone: "11 98765-4321",
+        email: "",
+        documento,
+      },
+    });
+
+    conferir(
+      "o clique completa o que estava vazio",
+      completou.dados?.completou?.filter((c) => c !== "estabelecimento"),
+      ["nome", "telefone", "documento"]
+    );
+    conferir("e o que falta passa a ser nada", completou.dados?.faltam, []);
+
+    const gravada = await prisma.case.findUniqueOrThrow({
+      where: { protocol: `RA-${INCOMPLETA}` },
+      select: { customer: true, phone: true, document: true, establishmentId: true },
+    });
+
+    conferir(
+      "no banco: nome, telefone e documento",
+      [gravada.customer, gravada.phone, gravada.document],
+      ["Maria Lopes", "11 98765-4321", documento]
+    );
+
+    if (estabelecimento) {
+      conferir("o documento liga ao estabelecimento", gravada.establishmentId, estabelecimento.id);
+    }
+
+    const deNovo = await enviar({
+      tipo: "completarNoQuadro",
+      dados: { cod: INCOMPLETA, cliente: "Outra Pessoa", telefone: "21 90000-0000" },
+    });
+
+    conferir("clicar de novo não sobrescreve nada", deNovo.dados?.completou, []);
 
     /* --- quem só lê --- */
 
@@ -377,6 +503,13 @@ async function main() {
       const soLe = await enviar({ tipo: "vigiaAgora", motivo: "manual" });
 
       conferir("acesso de leitura: o vigia não grava", soLe.dados?.codigo, "leitura");
+
+      const soLeCompleta = await enviar({
+        tipo: "completarNoQuadro",
+        dados: { cod: INCOMPLETA, cliente: "Alguém" },
+      });
+
+      conferir("nem completa", soLeCompleta.ok, false);
     } else {
       console.log("  --   sem usuário LEITURA ativo para provar a recusa");
     }

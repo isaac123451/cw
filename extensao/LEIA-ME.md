@@ -65,11 +65,17 @@ estava vazio, mascarado ou "Não informado".
 
 ## O vigia do Reclame Aqui
 
-A cada 15 minutos, com o Chrome aberto, a extensão confere a lista
-pública da Cardápio Web no Reclame Aqui e põe no quadro, na coluna
-*Novo*, as reclamações que ainda não estão lá. Chega uma notificação
-por volta ("2 reclamações novas no Reclame Aqui"), e o popup mostra a
-última conferência, com o botão **Conferir agora**.
+**Quando a plataforma é aberta**, a extensão confere a lista pública da
+Cardápio Web no Reclame Aqui e põe no quadro, na coluna *Novo*, as
+reclamações que ainda não estão lá. Também lê no botão **Ler o Reclame
+Aqui**, na barra do quadro, e no **Conferir agora** do popup. Não há
+leitura em segundo plano: abrir a plataforma de novo em menos de dez
+minutos reaproveita a última leitura.
+
+Quem liga a plataforma à extensão é `conteudo/ponte.js`, que o service
+worker registra só no endereço configurado nas Opções (permissão
+`scripting`). A página não fala com a extensão sozinha — ela não sabe o
+id da extensão, que numa descompactada muda de máquina para máquina.
 
 Na mesma volta ele completa o que o portal sabe e o quadro não: a
 resposta pública que ficou sem texto, e a avaliação do consumidor
@@ -84,9 +90,9 @@ atrás de avaliação nova em reclamação antiga.
   recusada; existente nunca é recriada nem sobrescrita — só recebe o que
   o portal é dono, e texto só onde o banco está vazio; a mesma
   reclamação com outro número (o Hugme numera diferente) é reconhecida.
-- **Se o portal pedir a verificação de navegador**, a volta para e o
-  popup diz. Abrir o portal numa aba resolve, e a extensão adianta a
-  volta sozinha.
+- **Se o portal pedir a verificação de navegador**, a leitura para, e o
+  botão da barra fica âmbar com o motivo. Abrir o portal numa aba
+  resolve; a próxima abertura da plataforma lê de novo.
 - **Só grava com acesso AGENTE ou ADMIN.** Quem só lê vê o motivo no
   popup.
 - Desliga em **Opções → Vigia do Reclame Aqui**.
@@ -94,6 +100,20 @@ atrás de avaliação nova em reclamação antiga.
 `npm run check:vigia` prova o leitor contra a estrutura real das
 páginas e as travas contra o banco; `npm run check:vigia-volta` roda o
 service worker inteiro contra a aplicação no ar.
+
+### Completar o que o vigia trouxe sem o consumidor
+
+O vigia cria com "Não informado", sem contato e sem CPF/CNPJ — o portal
+não mostra isso em público. Na plataforma, essas reclamações ganham o
+botão **Completar** (cartão, lista, tela do caso e aviso no alto do
+quadro), que abre um painel com o atalho para a reclamação na área da
+empresa.
+
+Nessa página, a extensão confere o que falta no quadro e, se a página
+tem, mostra o que leu (nome, telefone, e-mail, CPF/CNPJ) com o botão
+**Completar no quadro**. **Só grava depois do clique**, e só onde o
+quadro está vazio. Com o documento, a reclamação se liga ao
+estabelecimento sozinha.
 
 Criar caso exige perfil **AGENTE** ou **ADMIN** — quem tem acesso de
 leitura vê o painel, mas o botão recusa.
@@ -301,6 +321,8 @@ extensao/
   comum/config.js        endereço e preferências, em um lugar só
   comum/portal-ra.js     leitor das páginas públicas do RA, sem DOM
                          (o vigia usa no service worker)
+  conteudo/ponte.js      a ponte com a página da plataforma (ler o
+                         portal ao abrir e no botão)
   fundo/service-worker.js  o único que fala com a rede e lê o cookie
   fontes/Geist-Variable.woff2  a fonte da marca, empacotada
   conteudo/
@@ -329,6 +351,7 @@ app/api/extensao/resumo/          nota, contadores e alertas do dia
 app/api/extensao/caso/            cria a reclamação capturada
 app/api/extensao/ra-novas/        quais da lista são novas ou atrasadas
 app/api/extensao/ra-vigia/        o que o vigia deve buscar; e grava
+app/api/extensao/completar/       o que falta à reclamação; e completa
 lib/services/raPortal.service.ts  as travas do vigia
 app/api/extensao/nps/             tentativa e pós-contato do NPS
 app/api/extensao/respostas/       os textos prontos, já preenchidos;

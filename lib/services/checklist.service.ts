@@ -27,6 +27,8 @@ export interface RetratoDoDia {
     riscoDeCancelamento: number;
     avaliadosComoNaoResolvido: number;
     semRegraDeSla: boolean;
+    /** Em aberto sem nome, contato ou documento — ver `faltaNoCadastro`. */
+    semDadosDoConsumidor: number;
   };
 
   redesSociais: {
@@ -101,6 +103,13 @@ export function checklistPelasRegras(
         "Sem resposta no portal, cada uma conta contra o índice de resposta da nota do Reclame Aqui.",
       frente: "reclame-aqui",
       quantos: ra.semRespostaPublica,
+    },
+    {
+      titulo: "Completar os dados do consumidor",
+      porque:
+        "Sem nome, contato ou documento não dá para falar com a pessoa nem ligar a reclamação ao estabelecimento.",
+      frente: "reclame-aqui",
+      quantos: ra.semDadosDoConsumidor,
     },
     {
       titulo: "Tratar as reclamações com risco de cancelamento",

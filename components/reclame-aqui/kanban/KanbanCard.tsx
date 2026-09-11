@@ -16,6 +16,7 @@ import {
 import { Case } from "@/lib/models/case";
 import { TagChips } from "@/components/shared/TagPicker";
 import { ConfirmDelete } from "@/components/shared/Modal";
+import BotaoCompletar from "@/components/reclame-aqui/completar/BotaoCompletar";
 
 import { useCases } from "@/lib/context/CaseContext";
 import { useOwners } from "@/lib/hooks/useOwners";
@@ -148,6 +149,8 @@ export default function KanbanCard({
       <p className="mt-1.5 truncate text-xs text-zinc-500">
         {item.company} · {item.customer}
       </p>
+
+      <BotaoCompletar item={item} className="mt-2" />
 
       <div className="mt-2 flex items-center gap-3 text-[11px] text-zinc-400">
 

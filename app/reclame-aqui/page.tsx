@@ -15,6 +15,7 @@ import LoadingPanel from "@/components/shared/LoadingPanel";
 import { useCases } from "@/lib/context/CaseContext";
 import ModuleNav from "@/components/reclame-aqui/ModuleNav";
 import FiltroDaUrl from "@/components/reclame-aqui/FiltroDaUrl";
+import AvisoIncompletas from "@/components/reclame-aqui/completar/AvisoIncompletas";
 
 export default function ReclameAquiPage() {
   const [view, setView] = useState<"kanban" | "list">("kanban");
@@ -57,6 +58,8 @@ export default function ReclameAquiPage() {
           view={view}
           onChangeView={setView}
         />
+
+        <AvisoIncompletas />
 
         {/* Altura definida: sem isso as colunas ou espremem ou esticam
             a página inteira em vez de rolarem por dentro. */}

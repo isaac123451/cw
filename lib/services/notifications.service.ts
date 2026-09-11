@@ -1,10 +1,16 @@
-import { Case } from "@/lib/models/case";
+import {
+  Case,
+  descreverFaltas,
+  faltaNoCadastro,
+  type FaltaNoCadastro,
+} from "@/lib/models/case";
 import { AgendaTask } from "@/lib/models/agenda";
 import { CaseMovement } from "@/lib/models/movement";
 import { GoogleEvent } from "@/lib/models/google";
 
 import { hojeNaOperacao } from "@/lib/services/reputation.service";
 import { lateMovements } from "@/lib/services/movement.service";
+import { isOpen } from "@/lib/services/case.service";
 
 export type NotificationTone =
   | "danger"
@@ -27,6 +33,7 @@ export interface NotificationPrefs {
   naoResolvido: boolean;
   movimentacao: boolean;
   agenda: boolean;
+  cadastroIncompleto: boolean;
 }
 
 export const defaultPrefs: NotificationPrefs = {
@@ -35,6 +42,7 @@ export const defaultPrefs: NotificationPrefs = {
   naoResolvido: true,
   movimentacao: true,
   agenda: true,
+  cadastroIncompleto: true,
 };
 
 export const prefLabels: Record<
@@ -60,6 +68,10 @@ export const prefLabels: Record<
   agenda: {
     label: "Atividades da agenda",
     hint: "Avisa sobre atividades vencidas e as que vencem hoje.",
+  },
+  cadastroIncompleto: {
+    label: "Reclamações com dados do consumidor incompletos",
+    hint: "Avisa quando uma reclamação do Reclame Aqui está sem nome, telefone ou e-mail, ou CPF/CNPJ — o caso das que o vigia traz da página pública, onde esses dados não aparecem.",
   },
 };
 
@@ -265,6 +277,49 @@ export function buildNotifications(
           : eventosHoje[0].title,
         href: "/agenda",
         count: eventosHoje.length,
+      });
+    }
+  }
+
+  /**
+   * Reclamações que entraram sem o consumidor.
+   *
+   * O vigia lê a página pública do portal, onde nome, contato e
+   * documento não aparecem. Sem este aviso elas ficariam no quadro com
+   * "Não informado" até alguém esbarrar — e ninguém consegue responder
+   * a quem não sabe quem é.
+   *
+   * Só as em aberto: completar uma reclamação já avaliada não muda o
+   * que se faz com ela.
+   */
+  if (prefs.cadastroIncompleto) {
+
+    const incompletas = cases.filter(
+      (item) => isOpen(item) && faltaNoCadastro(item).length > 0
+    );
+
+    if (incompletas.length > 0) {
+
+      /* A falta mais comum é a que o detalhe cita. */
+      const vezes = new Map<FaltaNoCadastro, number>();
+
+      for (const item of incompletas) {
+        for (const falta of faltaNoCadastro(item)) {
+          vezes.set(falta, (vezes.get(falta) ?? 0) + 1);
+        }
+      }
+
+      const faltas = [...vezes.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .map(([falta]) => falta);
+
+      list.push({
+        id: "cadastro-incompleto",
+        tone: "warning",
+        title: `${incompletas.length} reclamação(ões) com dados do consumidor incompletos`,
+        detail: `Falta ${descreverFaltas(faltas)}. Use "Completar" no quadro.`,
+        href: "/reclame-aqui",
+        count: incompletas.length,
       });
     }
   }

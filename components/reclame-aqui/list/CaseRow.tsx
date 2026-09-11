@@ -12,6 +12,7 @@ import { Case } from "@/lib/models/case";
 
 import { TagChips } from "@/components/shared/TagPicker";
 import StatusPicker from "@/components/reclame-aqui/shared/StatusPicker";
+import BotaoCompletar from "@/components/reclame-aqui/completar/BotaoCompletar";
 
 import { useCases } from "@/lib/context/CaseContext";
 import { useEstablishments } from "@/lib/context/EstablishmentsContext";
@@ -142,7 +143,10 @@ export default function CaseRow({
       </td>
 
       <td className="px-5 text-zinc-700">
-        {data.customer}
+        <span className="flex items-center gap-2">
+          <span className="truncate">{data.customer}</span>
+          <BotaoCompletar item={data} />
+        </span>
       </td>
 
       <td className="px-5 text-zinc-600">

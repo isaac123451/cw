@@ -497,7 +497,7 @@ async function resolverRelacoes(
  * a cada caso salvo custaria uma ida ao banco para confirmar a mesma
  * ausência.
  */
-async function resolverEstabelecimento(
+export async function resolverEstabelecimento(
   prisma: PrismaClient,
   documento?: string | null
 ) {

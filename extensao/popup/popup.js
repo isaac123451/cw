@@ -371,7 +371,7 @@ function linhaDoVigia(estado) {
   if (!estado.em) {
     return {
       tom: "",
-      texto: "Ainda não conferiu. A primeira volta sai em até 15 minutos.",
+      texto: "Ainda não leu. A leitura sai quando a plataforma é aberta, ou no botão ao lado.",
     };
   }
 

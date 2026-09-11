@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "CW Reputação — painel de contexto",
-  "version": "0.46.0",
+  "version": "0.47.0",
   "description": "Mostra o cliente do CW Reputacao ao lado do WhatsApp Web, do Hugme/Reclame Aqui e do ManyChat, poe os textos aprovados ao lado da caixa de mensagem e captura reclamacoes para o Kanban.",
   "icons": {
     "16": "icones/icone-16.png",
@@ -31,7 +31,8 @@
     "storage",
     "cookies",
     "alarms",
-    "notifications"
+    "notifications",
+    "scripting"
   ],
   "host_permissions": [
     "http://localhost:3000/*",

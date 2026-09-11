@@ -35,6 +35,7 @@ import StatusPicker from "@/components/reclame-aqui/shared/StatusPicker";
 import BarraDeSalvar from "@/components/shared/BarraDeSalvar";
 import { ConfirmDelete } from "@/components/shared/Modal";
 import CaseActions from "./CaseActions";
+import BotaoCompletar from "@/components/reclame-aqui/completar/BotaoCompletar";
 
 import OverviewTab from "./OverviewTab";
 import InvestigationTab from "./InvestigationTab";
@@ -291,15 +292,16 @@ export default function CaseDetail({
               {data.title}
             </h1>
 
-            <p className="mt-2 text-sm text-zinc-500">
-              {data.customer} ·{" "}
+            <p className="mt-2 flex flex-wrap items-center gap-x-1 gap-y-1 text-sm text-zinc-500">
+              <span>{data.customer} ·</span>
               <span
                 className="font-mono"
                 title={idLabel(data)}
               >
                 {idExterno(data)}
-              </span>{" "}
-              · {br(data.createdAt)}
+              </span>
+              <span>· {br(data.createdAt)}</span>
+              <BotaoCompletar item={data} className="ml-1" />
             </p>
 
             <div className="mt-3 flex flex-wrap items-center gap-2">
