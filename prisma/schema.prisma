@@ -452,6 +452,13 @@ model CaseComment {
   authorId String?
   author   User?   @relation(fields: [authorId], references: [id])
 
+  /// O nome de quem escreveu, guardado além da relação.
+  ///
+  /// Excluir uma conta não pode apagar a autoria do histórico: sem isto,
+  /// cada comentário dela passaria a mostrar "—". É o mesmo motivo do
+  /// `actor` da anotação de NPS.
+  authorName String?
+
   body      String
   createdAt DateTime @default(now())
 }

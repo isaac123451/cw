@@ -13,6 +13,7 @@ import {
 import SurfaceCard from "@/components/shared/SurfaceCard";
 import StateForm from "@/components/conta/StateForm";
 import { ConfirmDelete } from "@/components/shared/Modal";
+import ExcluirConta from "@/components/conta/ExcluirConta";
 
 import {
   AccessData,
@@ -63,6 +64,9 @@ export default function AccessAdmin({
     id: string;
     email: string;
   }>();
+
+  /** A conta cuja exclusão está sendo conferida. */
+  const [excluindo, setExcluindo] = useState<AccessData["users"][number]>();
 
   return (
     <div className="space-y-6">
@@ -224,7 +228,7 @@ export default function AccessAdmin({
       <SurfaceCard
         title="Contas da plataforma"
         description="Quem já criou acesso, com papel e situação."
-        hint="Revogar o e-mail não derruba quem já criou conta — para isso, desative a conta aqui."
+        hint="Revogar o e-mail não derruba quem já criou conta — para isso, desative a conta aqui. Excluir tira a conta de vez e pergunta para quem vai o que ela tem em aberto."
       >
 
         {data.users.length === 0 ? (
@@ -332,6 +336,19 @@ export default function AccessAdmin({
                     )}
                   </button>
 
+                  <button
+                    onClick={() => setExcluindo(user)}
+                    disabled={pending || eu}
+                    title={
+                      eu
+                        ? "Você não pode excluir a própria conta"
+                        : "Excluir conta"
+                    }
+                    className="shrink-0 rounded-lg border border-zinc-200 p-2 text-zinc-400 transition-colors hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Trash2 size={15} />
+                  </button>
+
                 </li>
               );
             })}
@@ -341,6 +358,15 @@ export default function AccessAdmin({
         )}
 
       </SurfaceCard>
+
+      {excluindo && (
+        <ExcluirConta
+          key={excluindo.id}
+          alvo={excluindo}
+          pessoas={data.users}
+          onClose={() => setExcluindo(undefined)}
+        />
+      )}
 
       <ConfirmDelete
         open={Boolean(revoking)}

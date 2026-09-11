@@ -1,6 +1,14 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
+
+import { CASES_TAG, WORKSPACE_TAG } from "@/lib/actions/tags";
+
+import {
+  excluirUsuario,
+  previaDaExclusao,
+  type PreviaDaExclusao,
+} from "@/lib/services/contas.service";
 
 import bcrypt from "bcryptjs";
 
@@ -259,6 +267,84 @@ export async function toggleUserActive(id: string) {
   });
 
   revalidatePath("/conta");
+}
+
+/**
+ * O que excluir esta conta vai fazer, antes de fazer.
+ *
+ * A tela mostra os números e pergunta para quem vai o que está em
+ * aberto — excluir sem saber que a pessoa tinha doze reclamações nas
+ * mãos seria descobrir depois, com elas paradas.
+ */
+export async function previaExcluirConta(
+  id: string
+): Promise<{ previa?: PreviaDaExclusao; erro?: string }> {
+
+  if (!(await requireAdmin())) {
+    return { erro: "Apenas administradores excluem contas." };
+  }
+
+  const prisma = getPrisma();
+
+  if (!prisma) return { erro: SEM_BANCO };
+
+  const previa = await previaDaExclusao(prisma, id);
+
+  return previa ? { previa } : { erro: "Esta conta não existe mais." };
+}
+
+/**
+ * Exclui a conta — com destino para o que ela tinha nas mãos.
+ *
+ * O erro volta como valor, e não como exceção: em produção o Next troca
+ * a mensagem de uma exceção de server action por um texto genérico, e
+ * "você não pode excluir o último administrador" viraria "algo deu
+ * errado". Ver `lib/services/contas.service.ts` para cada destino.
+ */
+export async function excluirConta(
+  id: string,
+  destinoId: string | null
+): Promise<{ erro?: string; resumo?: string }> {
+
+  const session = await requireAdmin();
+
+  if (!session) {
+    return { erro: "Apenas administradores excluem contas." };
+  }
+
+  const prisma = getPrisma();
+
+  if (!prisma) return { erro: SEM_BANCO };
+
+  const resultado = await excluirUsuario(prisma, {
+    alvoId: id,
+    executorId: session.id,
+    destinoId,
+  });
+
+  if (!resultado.ok) return { erro: resultado.erro };
+
+  /* Responsáveis mudaram: o quadro e a lista de pessoas relêem. */
+  updateTag(CASES_TAG);
+  updateTag(WORKSPACE_TAG);
+  revalidatePath("/conta");
+
+  const { reclamacoes, nps, tarefas } = resultado.transferidas;
+
+  const movidas = [
+    reclamacoes && `${reclamacoes} reclamação(ões)`,
+    nps && `${nps} ciclo(s) de NPS`,
+    tarefas && `${tarefas} tarefa(s)`,
+  ].filter(Boolean);
+
+  return {
+    resumo:
+      movidas.length === 0
+        ? `Conta de ${resultado.nome} excluída.`
+        : resultado.destino
+          ? `Conta de ${resultado.nome} excluída. ${movidas.join(", ")} passaram para ${resultado.destino}.`
+          : `Conta de ${resultado.nome} excluída. ${movidas.join(", ")} ficaram sem responsável.`,
+  };
 }
 
 export interface AccessData {

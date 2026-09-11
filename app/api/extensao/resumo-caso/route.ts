@@ -426,7 +426,7 @@ export async function POST(request: Request) {
   const linhaDoTempo = [
     ...anotacoes.map((item) => ({
       quando: item.createdAt,
-      texto: `${dia(item.createdAt)} — anotação de ${item.author?.name ?? "alguém"}: ${item.body}`,
+      texto: `${dia(item.createdAt)} — anotação de ${item.author?.name ?? item.authorName ?? "alguém"}: ${item.body}`,
     })),
     ...movimentacoes.map((item) => ({
       quando: item.startedAt,
@@ -648,7 +648,7 @@ export async function POST(request: Request) {
       tipo: "Anotação interna",
       origem: "CW Reputação",
       quando: nota.createdAt.toISOString(),
-      autor: nota.author?.name ?? undefined,
+      autor: nota.author?.name ?? nota.authorName ?? undefined,
       trecho: nota.body.slice(0, 400),
     });
   }

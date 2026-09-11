@@ -147,7 +147,7 @@ export async function GET(request: Request) {
     anotacoes: comentarios.map((item) => ({
       id: item.id,
       texto: item.body,
-      autor: item.author?.name ?? "—",
+      autor: item.author?.name ?? item.authorName ?? "—",
       quando: item.createdAt.toISOString(),
     })),
 

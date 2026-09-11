@@ -354,7 +354,7 @@ export async function montarDossie(
 
     eventos.push({
       quando,
-      evento: `Anotação interna registrada por ${c.author?.name ?? "autor não identificado"}`,
+      evento: `Anotação interna registrada por ${c.author?.name ?? c.authorName ?? "autor não identificado"}`,
       canal: "Interno",
       evidencia: anexar({
         data: quando,

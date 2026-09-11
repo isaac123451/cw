@@ -32,7 +32,7 @@ export interface CaseMetrics {
  * está com o consumidor. "Resolvido" e "Não resolvido" são os dois
  * estados terminais do ciclo real do Reclame Aqui.
  */
-const CLOSED_STATUS = [
+export const CLOSED_STATUS = [
   "Aguardando avaliação",
   "Resolvido",
   "Não resolvido",

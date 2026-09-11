@@ -323,6 +323,46 @@ Definir a variável na Vercel é o que a liga lá.
 
 ---
 
+### Excluir conta da plataforma (11/09/2026)
+
+O Isaac: "opções de excluir contas da plataforma é importante". Havia só
+desativar, e a base tem conta duplicada (carlosisaac@, só leitura) e uma
+conta de teste com papel de administrador (conferencia-tela@).
+
+Em **Conta → Acessos**, cada conta ganhou o botão de excluir. A janela
+mostra antes o que a pessoa tem nas mãos e pergunta para quem vai:
+
+- **em aberto** (reclamações, ciclos de NPS, tarefas) passa para quem o
+  administrador escolher, ou fica sem responsável;
+- **encerrado** fica sem responsável — atribuir a outra pessoa um caso
+  que ela não tratou mentiria nos números por responsável;
+- **comentários** guardam o nome de quem escreveu (coluna nova
+  `CaseComment.authorName`, aplicada no banco); as anotações do NPS já
+  guardavam;
+- **filtros pessoais** são apagados, os compartilhados ficam;
+- **o e-mail sai da lista de liberados**, senão a pessoa criaria a conta
+  de novo.
+
+Travas: ninguém exclui a própria conta; a última conta de administrador
+ativa não sai; o trabalho não vai para quem só tem leitura; e é preciso
+digitar o e-mail para confirmar. A janela lembra que, para quem saiu mas
+tem histórico, desativar é o certo.
+
+`npm run check:exclusao` prova cada destino contra o banco em contas
+descartáveis, e a trava do último administrador num banco de roteiro;
+três travas estragadas de propósito acenderam vermelho. Na tela: conta
+descartável excluída pela janela.
+
+**Achado na tela:** quando a ação falhava de um jeito inesperado, a
+janela ficava para sempre em "Excluindo…". Agora mostra o motivo. (A
+falha era o servidor de desenvolvimento rodando com o cliente do Prisma
+de antes da coluna nova; o build da Vercel regera o cliente, então não
+se repete lá.)
+
+**Para você decidir:** as contas carlosisaac@ e conferencia-tela@ não
+foram excluídas — o botão está lá.
+
+
 ### O vigia só ao abrir a plataforma, e o botão Completar (11/09/2026)
 
 O Isaac, depois da primeira versão: "preciso que você só verifique a

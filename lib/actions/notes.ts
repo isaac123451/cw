@@ -48,7 +48,7 @@ export async function listCaseNotes(
   return linhas.map((item) => ({
     id: item.id,
     text: item.body,
-    author: item.author?.name ?? "—",
+    author: item.author?.name ?? item.authorName ?? "—",
     createdAt: item.createdAt.toISOString(),
   }));
 }
