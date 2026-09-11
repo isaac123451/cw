@@ -6,6 +6,7 @@ import type { Modulo } from "@/lib/auth/modules";
 import {
   invalidarConfigDeIA,
   lerConfigDeIA,
+  MODELO_RESERVA,
   type Perfil,
   PERFIS,
   perfilPorId,
@@ -105,8 +106,20 @@ export async function saveIaConfig(
 
   const perfil = perfilPorId(input.perfil);
 
-  const limpo = (valor?: string) =>
-    (valor ?? "").trim() || null;
+  /**
+   * O nome igual ao do perfil **não é gravado**.
+   *
+   * A tela manda de volta os modelos que está mostrando, e mostrar é
+   * sempre o do perfil. Gravar isso transformava "escolhi Rápido" em
+   * "fixei o apelido `gemini-flash-lite-latest` para sempre": quando o
+   * apelido entrou em fila e o perfil passou a apontar para versões
+   * fixas, a instalação continuou presa ao nome velho. Só o que difere
+   * do perfil é escolha de alguém.
+   */
+  const limpo = (valor: string | undefined, doPerfil: string) => {
+    const nome = (valor ?? "").trim();
+    return nome === "" || nome === doPerfil ? null : nome;
+  };
 
   /**
    * Um prazo de dois segundos desliga a IA sem dizer que desligou.
@@ -129,9 +142,9 @@ export async function saveIaConfig(
   const dados = {
     provider: input.provedorPreferido,
     speed: perfil.id,
-    model: limpo(input.modelo),
-    modelFast: limpo(input.modeloRapido),
-    modelFallback: limpo(input.modeloReserva),
+    model: limpo(input.modelo, perfil.modelo),
+    modelFast: limpo(input.modeloRapido, perfil.modeloRapido),
+    modelFallback: limpo(input.modeloReserva, MODELO_RESERVA),
 
     // Zero é válido: desliga a corrida de propósito.
     hedgeSeconds: dentro(

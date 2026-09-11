@@ -37,19 +37,23 @@ export interface PerfilDeVelocidade {
 /**
  * Os três perfis, com os números que os justificam.
  *
- * Medidos no mesmo minuto, com o mesmo pedido de 52 tokens, na camada
- * gratuita do Gemini:
+ * Medidos em 11/09/2026, no mesmo minuto, com o mesmo pedido de uma
+ * linha, na camada gratuita do Gemini:
  *
- * | modelo                     | tempo    |
- * | -------------------------- | -------- |
- * | `gemini-flash-latest`      | estourou |
- * | `gemini-3.6-flash`         | 10,4 s   |
- * | `gemini-flash-lite-latest` | 0,98 s   |
+ * | modelo                          | tempo           |
+ * | ------------------------------- | --------------- |
+ * | `gemini-flash-lite-latest`      | não veio em 25 s |
+ * | `gemini-flash-latest`           | 503 em 6 s      |
+ * | `gemini-3.6-flash`              | não veio em 25 s |
+ * | `gemini-3.5-flash`              | 1,4 s           |
+ * | `gemini-3.5-flash-lite`         | 1,1 s           |
+ * | `gemini-3.1-flash-lite-preview` | 1,0 s           |
  *
- * O apelido (`-latest` do flash) não entra como principal em perfil
- * nenhum: ele concentra a demanda de quem não fixou versão e é o
- * primeiro a entrar em fila. Ele é a **reserva contra o 404**, que é o
- * defeito que só ele nunca tem.
+ * Em 22/08 o `gemini-flash-lite-latest` era o de 1 s. **Apelido não é
+ * modelo, é endereço**: ele muda de dono quando sai versão nova e
+ * concentra a demanda de todo mundo que não fixou versão. Nenhum perfil
+ * começa por apelido; o `gemini-flash-latest` fica como última reserva,
+ * contra o 404 que só ele nunca tem.
  */
 export const PERFIS: PerfilDeVelocidade[] = [
   {
@@ -58,8 +62,8 @@ export const PERFIS: PerfilDeVelocidade[] = [
     resumo:
       "Responde quase na hora. Julga menos — bom para resumir, raso para decidir.",
     medido: "~1 s no pedido de referência.",
-    modelo: "gemini-flash-lite-latest",
-    modeloRapido: "gemini-flash-lite-latest",
+    modelo: "gemini-3.5-flash-lite",
+    modeloRapido: "gemini-3.5-flash-lite",
     hedgeSegundos: 4,
     timeoutSegundos: 20,
     esforco: "low",
@@ -69,9 +73,9 @@ export const PERFIS: PerfilDeVelocidade[] = [
     nome: "Equilibrado",
     resumo:
       "O padrão. Modelo maior para decidir, menor para resumir, e um corre atrás do outro quando demora.",
-    medido: "~10 s para triagem, ~1 s para resumo.",
-    modelo: "gemini-3.6-flash",
-    modeloRapido: "gemini-flash-lite-latest",
+    medido: "~1,5 s para triagem, ~1 s para resumo.",
+    modelo: "gemini-3.5-flash",
+    modeloRapido: "gemini-3.5-flash-lite",
     hedgeSegundos: 6,
     timeoutSegundos: 30,
     esforco: "medium",
@@ -82,13 +86,33 @@ export const PERFIS: PerfilDeVelocidade[] = [
     resumo:
       "Deixa o modelo pensar até o fim, sem correr atrás. Mais lento, e é o que se quer quando a decisão custa caro.",
     medido: "Sem teto de corrida; até 60 s de espera.",
-    modelo: "gemini-3.6-flash",
-    modeloRapido: "gemini-3.6-flash",
+    modelo: "gemini-3.5-flash",
+    modeloRapido: "gemini-3.5-flash",
     // Zero desliga a corrida: aqui a pressa é o que atrapalha.
     hedgeSegundos: 0,
     timeoutSegundos: 60,
     esforco: "high",
   },
+];
+
+/**
+ * Versões fixas que entram na cadeia depois dos modelos do perfil.
+ *
+ * São a diferença entre "o Gemini está congestionado" e uma resposta em
+ * um segundo: a fila da camada gratuita é **por modelo**, e quase nunca
+ * pega todos ao mesmo tempo. Ficam em ordem de velocidade medida.
+ *
+ * Nome que o Google aposentar devolve 404 em meio segundo, vai para o
+ * fim da fila por doze horas, e o `check:ia` passa a mostrá-lo como
+ * morto — é o sinal para trocar a lista.
+ */
+/** O apelido, último da cadeia: o único nome que nunca vira 404. */
+export const MODELO_RESERVA = "gemini-flash-latest";
+
+export const SUPLENTES_GEMINI = [
+  "gemini-3.5-flash-lite",
+  "gemini-3.1-flash-lite-preview",
+  "gemini-3.5-flash",
 ];
 
 export function perfilPorId(id?: string | null) {
@@ -211,7 +235,7 @@ async function montar(): Promise<ConfigDeIA> {
     modeloReserva:
       linha?.modelFallback ||
       doAmbiente("GEMINI_MODELO_RESERVA") ||
-      "gemini-flash-latest",
+      MODELO_RESERVA,
 
     hedgeMs:
       (linha?.hedgeSeconds ??

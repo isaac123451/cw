@@ -330,6 +330,59 @@ Definir a variável na Vercel é o que a liga lá.
 
 ---
 
+### O checklist do dia parava em "Gemini congestionado" (11/09/2026)
+
+O Isaac mandou a tela: o card mostrava só "O Gemini está congestionado
+neste momento", e nada mais.
+
+**Medido no mesmo minuto**, com o mesmo pedido de uma linha, modelo a
+modelo: os dois apelidos que a instalação usava (`gemini-flash-lite-latest`
+e `gemini-flash-latest`) não responderam em 25 s, enquanto
+`gemini-3.5-flash`, `gemini-3.5-flash-lite` e
+`gemini-3.1-flash-lite-preview` responderam em ~1 s. Vinte minutos depois
+o quadro tinha virado: o apelido respondia em 1,7 s e um dos fixos
+travava. **A fila da camada gratuita troca de modelo a cada minuto** —
+não existe "o modelo bom" para fixar.
+
+Três defeitos juntos:
+
+1. **No perfil "Rápido" não havia reserva nenhuma.** Principal e rápido
+   tinham o mesmo nome, e a corrida entre os dois se desligava sozinha
+   (`reserva === principal`): uma chamada, a um apelido, sem plano B.
+2. **Escolher um perfil fixava os nomes dele para sempre.** A tela
+   devolvia os modelos que mostrava, e o banco gravava — então mudar o
+   perfil no código não chegava à instalação.
+3. **O checklist jogava fora os números** quando a IA falhava, e eles
+   já estavam contados.
+
+O que mudou:
+
+- **Cadeia de modelos** (`emCadeia` em `ia.service.ts`): até quatro
+  modelos distintos — os do perfil, depois versões fixas
+  (`SUPLENTES_GEMINI`), por último o apelido. O próximo parte na hora
+  em que o anterior falha, ou quando passa do tempo de corrida sem
+  responder. O prazo é da chamada inteira, não de cada modelo. Quem
+  falhou há pouco vai para o fim da fila por alguns minutos.
+- **O fluxo do assistente** passa pela mesma cadeia, e o relógio do
+  primeiro pedaço agora começa **antes** do `fetch`: congestionado, o
+  Gemini segura a requisição sem mandar nem o cabeçalho, e essa espera
+  não tinha teto.
+- **Nome igual ao do perfil não é gravado** (`saveIaConfig`). A linha que
+  está no banco ainda prende os dois apelidos; **clicar em Rápido e
+  Salvar em Configurações → Integrações** solta. Até lá, a cadeia cobre.
+- **Checklist pelas regras** (`checklist.service.ts`): se nenhum modelo
+  responde, a lista sai com os mesmos números, na ordem de consequência,
+  e a tela diz que foi montada sem a IA.
+
+Provado contra o banco e o Gemini de verdade: numa volta a IA respondeu
+pela cadeia (12 s); na seguinte os quatro estavam em fila e a lista saiu
+pelas regras, com os 53 detratores sem contato em primeiro.
+`npm run check:cadeia` prova a regra sem rede, com um Gemini de roteiro
+que trava, falha e recusa — e fica vermelho com a cadeia de um modelo só
+que estava em produção. `npm run check:checklist` prova a lista das
+regras. `npm run check:ia` passou a medir cada modelo da cadeia.
+
+
 ### Arrastar um cartão apagava o relato e a resposta (10/09/2026)
 
 Estava **armado em produção** desde o deploy de 09/09, e foi achado

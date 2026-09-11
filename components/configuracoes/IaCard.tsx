@@ -448,11 +448,13 @@ export default function IaCard() {
                 />
 
                 <span className="mt-1 block text-[11px] leading-snug text-zinc-500">
-                  Depois disso, um segundo modelo parte em
-                  paralelo e vale quem chegar bem primeiro.
+                  Depois disso, o próximo modelo da cadeia
+                  parte em paralelo e vale quem chegar bem
+                  primeiro.
                   <strong className="font-medium">
                     {" "}
-                    Zero desliga a corrida
+                    Com zero, o próximo só parte se o anterior
+                    falhar
                   </strong>{" "}
                   — é o que o perfil Profundo faz.
                 </span>

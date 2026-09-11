@@ -9,6 +9,11 @@ import { fetchCases } from "@/lib/services/case.repository";
 import { pedirEstruturado } from "@/lib/services/ia.service";
 
 import {
+  checklistPelasRegras,
+  type RetratoDoDia,
+} from "@/lib/services/checklist.service";
+
+import {
   isOpen,
   isReclameAqui,
   isSocial,
@@ -208,7 +213,7 @@ export async function POST(request: Request) {
 
   /* --------------------------------------------- retrato ---- */
 
-  const retrato = {
+  const retrato: RetratoDoDia = {
     dia: hoje,
 
     reclameAqui: {
@@ -290,10 +295,28 @@ export async function POST(request: Request) {
     rapido: entrada.rapido === true,
   });
 
+  /**
+   * A IA não respondeu: a lista sai pelas regras, com o motivo ao lado.
+   *
+   * Antes a tela recebia só o erro, e "o Gemini está congestionado" era
+   * tudo o que o card mostrava — com os números já contados logo acima,
+   * jogados fora. O motivo continua indo, como `aviso`, para ninguém
+   * achar que a lista de regras é a do modelo.
+   */
+  if (resultado.erro || !resultado.dados) {
+    return NextResponse.json({
+      retrato,
+      checklist: checklistPelasRegras(retrato),
+      origem: "regras",
+      aviso:
+        resultado.erro ?? "A IA respondeu sem conteúdo.",
+    });
+  }
+
   return NextResponse.json({
     retrato,
-    checklist: resultado.dados ?? null,
-    erro: resultado.erro,
+    checklist: resultado.dados,
+    origem: "ia",
     provedor: resultado.provedor,
   });
 }

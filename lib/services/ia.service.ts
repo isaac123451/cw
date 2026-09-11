@@ -3,6 +3,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import {
   type ConfigDeIA,
   lerConfigDeIA,
+  SUPLENTES_GEMINI,
 } from "@/lib/services/iaConfig.service";
 
 /**
@@ -146,6 +147,8 @@ export interface RespostaDeIA {
   /** 422 para recusa/limite do modelo, 502 para falha de infraestrutura. */
   status?: number;
   provedor: Provedor;
+  /** Qual modelo respondeu (ou falhou) — o `check:ia` imprime. */
+  modelo?: string;
   uso?: { entrada: number; saida: number };
 }
 
@@ -440,158 +443,292 @@ async function peloGemini(
   pedido: PedidoDeIA,
   config: ConfigDeIA
 ): Promise<RespostaDeIA> {
-
-  /**
-   * As duas se cobrem.
-   *
-   * Quem pede rápido começa pelo menor e tem o maior como reserva; quem
-   * não pede começa pelo maior e tem o menor como reserva. Nos dois
-   * casos a reserva é um modelo **medido como saudável**, e não o
-   * apelido que costuma estar em fila.
-   */
-  const principal = pedido.rapido
-    ? config.modeloRapido
-    : config.modelo;
-
-  const reserva = pedido.rapido
-    ? config.modelo
-    : config.modeloRapido;
-
-  const resultado = await comReserva(
+  return emCadeia(
     pedido,
-    principal,
-    reserva,
+    cadeiaDeModelos(config, pedido.rapido === true),
     config
   );
-
-  /**
-   * Modelo aposentado é a única falha que o apelido resolve.
-   *
-   * Ele é o que nunca vira 404 — e é exatamente por isso que não serve
-   * de principal: quem nunca 404 é quem todo mundo chama.
-   */
-  if (
-    resultado.erro &&
-    resultado.status === 502 &&
-    resultado.erro.includes("não existe mais")
-  ) {
-    return chamarGemini(
-      pedido,
-      config.modeloReserva,
-      config
-    );
-  }
-
-  return resultado;
 }
 
-function espera(ms: number) {
-  return new Promise<void>((resolver) =>
-    setTimeout(resolver, ms)
-  );
+/* ============================================================
+   A CADEIA DE MODELOS
+============================================================ */
+
+/**
+ * Quanto tempo um modelo que falhou fica no fim da fila.
+ *
+ * **Por que existe.** Em 11/09/2026 o checklist do dia só devolvia "o
+ * Gemini está congestionado". Medido no mesmo minuto, com o mesmo
+ * pedido de uma linha: os dois apelidos que a instalação usava não
+ * responderam em 25 s, e três versões fixas responderam em ~1 s. Havia
+ * modelo sobrando — a plataforma é que só sabia pedir aos dois piores.
+ *
+ * O castigo é por instância e curto de propósito: congestionamento
+ * passa, e um modelo que se recuperou volta à frente sozinho. Modelo
+ * aposentado (404) não volta, e fica atrás por meio dia.
+ */
+const QUARENTENA_MS: Record<number, number> = {
+  503: 3 * 60_000,
+  429: 10 * 60_000,
+  502: 3 * 60_000,
+};
+
+const APOSENTADO_MS = 12 * 60 * 60_000;
+
+/**
+ * Quantos modelos uma chamada chega a tentar.
+ *
+ * Quatro cobre um provedor inteiro em fila com folga: cada falha rápida
+ * custa meio segundo, e a camada gratuita conta cota por modelo — tentar
+ * a lista inteira gastaria a cota de todos numa hora ruim.
+ */
+const TENTATIVAS = 4;
+
+const quarentena = new Map<string, number>();
+
+function castigar(modelo: string, resposta: RespostaDeIA) {
+  const aposentado = resposta.erro?.includes("não existe mais");
+
+  const duracao = aposentado
+    ? APOSENTADO_MS
+    : QUARENTENA_MS[resposta.status ?? 0];
+
+  if (duracao) quarentena.set(modelo, Date.now() + duracao);
+}
+
+function castigado(modelo: string) {
+  return (quarentena.get(modelo) ?? 0) > Date.now();
 }
 
 /**
- * A primeira que responder **bem** ganha; nula se nenhuma responder.
+ * A ordem em que os modelos são tentados, sem repetição.
  *
- * Erro não vence corrida: um 404 que volta em 300 ms não pode
- * atropelar a chamada boa que ainda está a caminho.
+ * Primeiro os dois do perfil — o que a tela escolheu —, depois as
+ * versões fixas medidas como saudáveis, e por último o apelido, que é o
+ * único que nunca vira 404. Quem falhou há pouco vai para o fim, sem
+ * sair da lista.
+ *
+ * **O defeito que isto corrige.** No perfil "Rápido" o modelo principal
+ * e o rápido eram o mesmo nome, e a corrida entre os dois se desligava
+ * sozinha (`reserva === principal`): uma chamada, para um apelido, sem
+ * reserva nenhuma. Foi essa a tela que parou.
+ *
+ * Exportada para o `check:ia` imprimir a cadeia que está valendo.
  */
-function primeiraBoa(
-  tentativas: Promise<RespostaDeIA>[]
-): Promise<RespostaDeIA | null> {
+export function cadeiaDeModelos(
+  config: ConfigDeIA,
+  rapido: boolean
+) {
+  const doPerfil = rapido
+    ? [config.modeloRapido, config.modelo]
+    : [config.modelo, config.modeloRapido];
+
+  const todos = [
+    ...new Set(
+      [
+        ...doPerfil,
+        ...SUPLENTES_GEMINI,
+        config.modeloReserva,
+      ].filter((modelo) => modelo && modelo.trim() !== "")
+    ),
+  ];
+
+  return [
+    ...todos.filter((modelo) => !castigado(modelo)),
+    ...todos.filter((modelo) => castigado(modelo)),
+  ].slice(0, TENTATIVAS);
+}
+
+/**
+ * Tenta os modelos em cascata; vale a primeira resposta boa.
+ *
+ * O primeiro sai sozinho. O próximo parte quando o anterior **falha** —
+ * na hora, sem esperar relógio nenhum — ou quando ele passa do
+ * `hedgeMs` sem responder, e aí sem cancelar quem já está a caminho. É
+ * a corrida que já existia entre dois modelos, estendida à cadeia.
+ *
+ * **O prazo é da chamada inteira, não de cada tentativa.** Somar um
+ * prazo por modelo transformaria quatro tentativas em dois minutos de
+ * tela parada; cada uma recebe só o que falta do `prazoMs`.
+ *
+ * Recusa do modelo (422) não passa adiante: é o conteúdo que foi
+ * recusado, e o próximo modelo diria o mesmo.
+ *
+ * `chamar` é trocável só para o `check:ia` provar a regra com
+ * chamadas que travam, falham e recusam na hora que ele manda — a fila
+ * de verdade muda de modelo a cada minuto e não serve de prova.
+ */
+export function emCadeia(
+  pedido: PedidoDeIA,
+  modelos: string[],
+  config: Pick<ConfigDeIA, "hedgeMs" | "prazoMs">,
+  chamar: (
+    pedido: PedidoDeIA,
+    modelo: string,
+    prazoMs: number
+  ) => Promise<RespostaDeIA> = chamarGemini
+): Promise<RespostaDeIA> {
+
+  const limite = Date.now() + config.prazoMs;
 
   return new Promise((resolver) => {
 
-    let restantes = tentativas.length;
+    const erros: RespostaDeIA[] = [];
 
-    const desistir = () => {
-      restantes -= 1;
-      if (restantes === 0) resolver(null);
+    let proximo = 0;
+    let emVoo = 0;
+    let acabou = false;
+    let relogio: ReturnType<typeof setTimeout> | undefined;
+
+    const encerrar = (resposta: RespostaDeIA) => {
+      if (acabou) return;
+      acabou = true;
+      clearTimeout(relogio);
+      resolver(resposta);
     };
 
-    for (const tentativa of tentativas) {
-      tentativa
-        .then((resposta) => {
-          if (!resposta.erro) return resolver(resposta);
-          desistir();
-        })
-        .catch(desistir);
+    const desistir = () => {
+      if (emVoo > 0 || proximo < modelos.length) return;
+
+      encerrar(juntarErros(erros, modelos.length));
+    };
+
+    const lancar = () => {
+
+      clearTimeout(relogio);
+
+      if (acabou || proximo >= modelos.length) return;
+
+      const restante = limite - Date.now();
+
+      /* Sem tempo para mais uma: quem já saiu decide. */
+      if (restante < 1500 && proximo > 0) {
+        proximo = modelos.length;
+        desistir();
+        return;
+      }
+
+      const modelo = modelos[proximo];
+
+      proximo += 1;
+      emVoo += 1;
+
+      if (config.hedgeMs > 0) {
+        relogio = setTimeout(lancar, config.hedgeMs);
+      }
+
+      chamar(
+        pedido,
+        modelo,
+        Math.max(restante, 1500)
+      ).then((resposta) => {
+
+        emVoo -= 1;
+
+        if (!resposta.erro) {
+          encerrar({ ...resposta, modelo });
+          return;
+        }
+
+        castigar(modelo, resposta);
+
+        erros.push({ ...resposta, modelo });
+
+        if (resposta.status === 422) {
+          encerrar({ ...resposta, modelo });
+          return;
+        }
+
+        lancar();
+        desistir();
+      });
+    };
+
+    if (modelos.length === 0) {
+      encerrar({
+        provedor: "gemini",
+        status: 503,
+        erro: "Nenhum modelo do Gemini configurado.",
+      });
+      return;
     }
+
+    lancar();
   });
 }
 
 /**
- * Chamada com reserva em paralelo.
+ * Um erro só, quando a cadeia inteira falhou.
  *
- * A principal sai na frente sozinha. Se ela responder bem dentro do
- * `HEDGE_MS`, acabou — o caminho feliz custa uma chamada, como antes.
- * Se demorar (ou falhar rápido), a reserva parte **sem cancelar a
- * primeira**, e vale quem chegar bem primeiro.
- *
- * A alternativa que estava aqui era sequencial: esperar a principal
- * estourar os 30 s e só então tentar a reserva — os 40 segundos que a
- * operação sentia. Somar prazos onde dava para sobrepor é o que
- * transformava uma fila do provedor em espera do atendente.
+ * Se todos estavam em fila, a frase diz isso com o número — "nenhum
+ * dos quatro respondeu" explica o que "congestionado" escondia, que
+ * havia outros modelos e eles também foram tentados. Qualquer outra
+ * mistura devolve o erro do primeiro, que é o do modelo escolhido na
+ * tela e o que faz sentido investigar.
  */
-async function comReserva(
-  pedido: PedidoDeIA,
-  principal: string,
-  reserva: string,
-  config: ConfigDeIA
-): Promise<RespostaDeIA> {
+function juntarErros(
+  erros: RespostaDeIA[],
+  tentados: number
+): RespostaDeIA {
 
-  const daPrincipal = chamarGemini(
-    pedido,
-    principal,
-    config
+  const emFila = erros.every(
+    (erro) => erro.status === 503 || erro.status === 429
   );
 
-  /**
-   * Corrida desligada é uma escolha, não um caso degenerado.
-   *
-   * O perfil "Profundo" zera o `hedgeMs` de propósito: ali a pressa é
-   * o que atrapalha, e chamar um modelo menor no meio do caminho
-   * entregaria justamente a resposta rasa que se estava evitando.
-   */
-  if (reserva === principal || config.hedgeMs <= 0) {
-    return daPrincipal;
+  if (erros.length > 1 && emFila) {
+    return {
+      provedor: "gemini",
+      status: 503,
+      erro: `O Gemini está em fila: ${tentados} modelos tentados, nenhum respondeu a tempo. Tente de novo em alguns minutos.`,
+    };
   }
 
-  const cedo = await Promise.race([
-    daPrincipal,
-    espera(config.hedgeMs).then(
-      () => "demorou" as const
-    ),
-  ]);
+  return (
+    erros[0] ?? {
+      provedor: "gemini",
+      status: 503,
+      erro: "Falha ao falar com o Gemini.",
+    }
+  );
+}
 
-  if (cedo !== "demorou" && !cedo.erro) return cedo;
+/**
+ * Um modelo, sozinho, com um pedido mínimo — para o `check:ia`.
+ *
+ * Fora da cadeia de propósito: a cadeia esconde quem falhou, que é
+ * justamente o que se quer ver quando se mede.
+ */
+export async function sondarGemini(
+  modelo: string,
+  prazoMs: number
+) {
+  const marca = Date.now();
 
-  const daReserva = chamarGemini(
-    pedido,
-    reserva,
-    config
+  const resposta = await chamarGemini(
+    {
+      sistema: "Responda em português do Brasil.",
+      prompt: "Diga ok.",
+      esquema: {
+        type: "object",
+        properties: { resposta: { type: "string" } },
+        required: ["resposta"],
+      },
+    },
+    modelo,
+    prazoMs
   );
 
-  const boa = await primeiraBoa([
-    daPrincipal,
-    daReserva,
-  ]);
-
-  /**
-   * Nenhuma deu certo: vale o erro da principal.
-   *
-   * É o que descreve a instalação — chave errada, cota estourada,
-   * esquema inválido. O erro da reserva costuma ser o mesmo motivo
-   * dito de outro jeito.
-   */
-  return boa ?? (await daPrincipal);
+  return {
+    ms: Date.now() - marca,
+    status: resposta.status,
+    erro: resposta.erro,
+  };
 }
 
 async function chamarGemini(
   pedido: PedidoDeIA,
   modelo: string,
-  config: ConfigDeIA
+  prazoMs: number
 ): Promise<RespostaDeIA> {
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent`;
@@ -619,7 +756,7 @@ async function chamarGemini(
           responseSchema: paraGemini(pedido.esquema),
         },
       }),
-      signal: AbortSignal.timeout(config.prazoMs),
+      signal: AbortSignal.timeout(prazoMs),
     });
 
     if (!resposta.ok) {
@@ -726,7 +863,7 @@ async function chamarGemini(
       provedor: "gemini",
       status: expirou ? 503 : 502,
       erro: expirou
-        ? `O Gemini não respondeu em ${Math.round(config.prazoMs / 1000)} segundos. A camada gratuita fica em fila nos horários de pico.`
+        ? `O Gemini não respondeu em ${Math.round(prazoMs / 1000)} segundos. A camada gratuita fica em fila nos horários de pico.`
         : "Falha ao falar com o Gemini.",
     };
   }
@@ -904,10 +1041,14 @@ async function* conversarNaAnthropic(
  * demora muito".
  *
  * Agora a régua é o **primeiro pedaço de texto**. Se ele não chega no
- * `HEDGE_MS`, a chamada é abortada e refeita no modelo menor — que
- * responde em um segundo. Como nada tinha sido escrito na tela ainda,
- * a troca é invisível: ninguém vê meia resposta de um modelo emendada
- * na metade do outro.
+ * `HEDGE_MS`, a chamada é abortada e refeita no próximo modelo da
+ * cadeia — a mesma do pedido estruturado, com quem falhou há pouco no
+ * fim. Como nada tinha sido escrito na tela ainda, a troca é
+ * invisível: ninguém vê meia resposta de um modelo emendada na metade
+ * do outro.
+ *
+ * Aqui é em fila, e não em corrida: dois fluxos abertos ao mesmo tempo
+ * escreveriam dois textos na mesma tela.
  */
 async function* conversarNoGemini(
   pedido: {
@@ -917,58 +1058,63 @@ async function* conversarNoGemini(
   config: ConfigDeIA
 ): AsyncGenerator<PedacoDaConversa> {
 
-  /**
-   * Com a corrida desligada, o prazo do primeiro pedaço é o prazo
-   * inteiro: o perfil "Profundo" pede para deixar o modelo pensar, e
-   * trocar de modelo aos seis segundos seria o contrário disso.
-   */
-  const prazoDoPrimeiro =
-    config.hedgeMs > 0 ? config.hedgeMs : config.prazoMs;
+  const modelos = cadeiaDeModelos(config, false);
 
-  const principal = await abrirFluxoGemini(
-    pedido,
-    config.modelo,
-    prazoDoPrimeiro
-  );
+  const limite = Date.now() + config.prazoMs;
 
-  if (principal.fluxo) {
-    yield* principal.fluxo;
-    return;
-  }
+  let primeiroErro: string | undefined;
 
-  if (config.hedgeMs <= 0) {
-    yield {
-      tipo: "erro",
-      mensagem:
-        principal.erro ??
-        "Falha ao falar com o Gemini.",
-    };
-    return;
-  }
+  for (const [posicao, modelo] of modelos.entries()) {
 
-  const reserva = await abrirFluxoGemini(
-    pedido,
-    config.modeloRapido,
-    config.prazoMs
-  );
+    const restante = limite - Date.now();
 
-  if (reserva.fluxo) {
-    yield* reserva.fluxo;
-    return;
+    if (restante < 1500) break;
+
+    const ultimo = posicao === modelos.length - 1;
+
+    /**
+     * Com a corrida desligada, o prazo do primeiro pedaço é o que
+     * sobra: o perfil "Profundo" pede para deixar o modelo pensar, e
+     * trocar de modelo aos seis segundos seria o contrário disso. Ele
+     * só passa adiante quando o modelo **falha**.
+     */
+    const prazoDoPrimeiro =
+      config.hedgeMs > 0 && !ultimo
+        ? Math.min(config.hedgeMs, restante)
+        : restante;
+
+    const aberto = await abrirFluxoGemini(
+      pedido,
+      modelo,
+      prazoDoPrimeiro
+    );
+
+    if (aberto.fluxo) {
+      yield* aberto.fluxo;
+      return;
+    }
+
+    castigar(modelo, {
+      provedor: "gemini",
+      status: aberto.status,
+      erro: aberto.erro,
+    });
+
+    primeiroErro ??= aberto.erro;
   }
 
   yield {
     tipo: "erro",
     mensagem:
-      reserva.erro ??
-      principal.erro ??
-      "Falha ao falar com o Gemini.",
+      primeiroErro ?? "Falha ao falar com o Gemini.",
   };
 }
 
 interface FluxoAberto {
   fluxo?: AsyncGenerator<PedacoDaConversa>;
   erro?: string;
+  /** Mesma régua do pedido estruturado, para a quarentena. */
+  status?: number;
 }
 
 /**
@@ -995,6 +1141,26 @@ async function abrirFluxoGemini(
 
   const controle = new AbortController();
 
+  /**
+   * O relógio começa **antes** do fetch, não depois dos cabeçalhos.
+   *
+   * Congestionado, o Gemini segura a requisição sem responder nem o
+   * cabeçalho — medido em 11/09: 25 s sem nada, em três modelos. Com o
+   * relógio ligado só depois do `fetch`, essa espera não tinha teto, e
+   * a cadeia nunca chegava ao modelo seguinte.
+   */
+  let demorou = false;
+
+  const relogio = setTimeout(() => {
+    demorou = true;
+    controle.abort();
+  }, prazoDoPrimeiro);
+
+  const naoComecou = {
+    status: 503,
+    erro: `O Gemini não começou a responder em ${Math.round(prazoDoPrimeiro / 1000)} segundos.`,
+  };
+
   let resposta: Response;
 
   try {
@@ -1018,14 +1184,22 @@ async function abrirFluxoGemini(
       signal: controle.signal,
     });
   } catch {
-    return { erro: "Falha ao falar com o Gemini." };
+    clearTimeout(relogio);
+    return demorou
+      ? naoComecou
+      : { status: 502, erro: "Falha ao falar com o Gemini." };
   }
 
   if (!resposta.ok || !resposta.body) {
 
+    clearTimeout(relogio);
     controle.abort();
 
     return {
+      status:
+        resposta.status === 503 || resposta.status === 429
+          ? resposta.status
+          : 502,
       erro:
         resposta.status === 503
           ? "O Gemini está congestionado neste momento. Tente de novo em alguns segundos."
@@ -1039,24 +1213,20 @@ async function abrirFluxoGemini(
 
   const pedacos = lerEventos(resposta.body.getReader());
 
-  const primeiro = await Promise.race([
-    pedacos.next(),
-    espera(prazoDoPrimeiro).then(
-      () => "demorou" as const
-    ),
-  ]);
+  /* O mesmo relógio vale até o primeiro pedaço; abortar encerra a leitura. */
+  const primeiro = await pedacos.next().catch(() => null);
 
-  if (primeiro === "demorou") {
+  clearTimeout(relogio);
 
+  if (demorou || primeiro === null) {
     controle.abort();
-
-    return {
-      erro: `O Gemini não começou a responder em ${Math.round(prazoDoPrimeiro / 1000)} segundos.`,
-    };
+    return demorou
+      ? naoComecou
+      : { status: 502, erro: "Falha ao falar com o Gemini." };
   }
 
   if (primeiro.done) {
-    return { erro: "O Gemini respondeu sem conteúdo." };
+    return { status: 502, erro: "O Gemini respondeu sem conteúdo." };
   }
 
   // Numa const: dentro do gerador o estreitamento de `primeiro` se perde.

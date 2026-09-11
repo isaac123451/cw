@@ -13,10 +13,12 @@
 import "dotenv/config";
 
 import {
+  cadeiaDeModelos,
   lerEventos,
   pedirEstruturado,
   provedorReserva,
   provedorDeIA,
+  sondarGemini,
 } from "../lib/services/ia.service";
 import { lerConfigDeIA } from "../lib/services/iaConfig.service";
 
@@ -102,7 +104,7 @@ async function main() {
     "Reserva:       ",
     reserva
       ? `${reserva} — se ${provedor} falhar por infraestrutura, a chamada é refeita nele`
-      : `NENHUMA. Com só ${provedor} configurado, um 503 dele derruba o recurso. Configure a outra chave.`
+      : `NENHUMA outra chave. A cadeia abaixo cobre a fila de um modelo; se o ${provedor} inteiro cair, o recurso cai junto.`
   );
 
   if (!provedor) {
@@ -110,6 +112,53 @@ async function main() {
       "\n  O resumo de conversa fica desligado até uma das chaves existir.\n"
     );
     process.exit(1);
+  }
+
+  /**
+   * A cadeia, modelo a modelo, antes da chamada de verdade.
+   *
+   * Em 11/09 o checklist parou com "congestionado" enquanto três
+   * versões fixas respondiam em um segundo — e só se soube medindo cada
+   * nome à mão. Esta tabela é essa medição, feita toda vez: um modelo
+   * que morreu (404) ou vive em fila aparece aqui antes de alguém
+   * reclamar da tela.
+   */
+  if (provedor === "gemini") {
+
+    console.log("\nCadeia do Gemini — cada modelo, sozinho\n");
+
+    const cadeia = [
+      ...new Set([
+        ...cadeiaDeModelos(config, false),
+        ...cadeiaDeModelos(config, true),
+      ]),
+    ];
+
+    const medidas = await Promise.all(
+      cadeia.map(async (modelo) => ({
+        modelo,
+        ...(await sondarGemini(modelo, 15_000)),
+      }))
+    );
+
+    for (const medida of medidas) {
+      console.log(
+        `  ${medida.erro ? "falha" : "  ok "}  ${medida.modelo.padEnd(32)} ${String(medida.ms).padStart(6)} ms  ${medida.erro ?? ""}`
+      );
+    }
+
+    console.log(
+      `\n  triagem tenta: ${cadeiaDeModelos(config, false).join(" → ")}`
+    );
+    console.log(
+      `  resumo tenta:  ${cadeiaDeModelos(config, true).join(" → ")}`
+    );
+
+    if (medidas.every((medida) => medida.erro)) {
+      console.log(
+        "\n  NENHUM modelo da cadeia respondeu — aí não é fila de um modelo, é a conta ou a rede."
+      );
+    }
   }
 
   console.log(
@@ -183,7 +232,7 @@ async function main() {
 
   console.log(
     "  tempo:   ",
-    `${(msDaPadrao / 1000).toFixed(1)} s`
+    `${(msDaPadrao / 1000).toFixed(1)} s${resultado.modelo ? ` · respondeu ${resultado.modelo}` : ""}`
   );
 
   /**
@@ -204,7 +253,7 @@ async function main() {
     "\n  pela via rápida:",
     rapido.erro
       ? `FALHOU — ${rapido.erro}`
-      : `${((Date.now() - marcaRapida) / 1000).toFixed(1)} s · ${JSON.stringify(rapido.dados)}`
+      : `${((Date.now() - marcaRapida) / 1000).toFixed(1)} s · ${rapido.modelo ?? ""} · ${JSON.stringify(rapido.dados)}`
   );
 
   const dados = resultado.dados ?? {};

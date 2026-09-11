@@ -63,6 +63,9 @@ export default function ChecklistDoDia() {
   const [checklist, setChecklist] =
     useState<Checklist | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+
+  /** Preenchido quando a lista veio das regras porque a IA não respondeu. */
+  const [semIa, setSemIa] = useState<string | null>(null);
   const [feitos, setFeitos] = useState<Set<number>>(
     new Set()
   );
@@ -71,6 +74,7 @@ export default function ChecklistDoDia() {
 
     setCarregando(true);
     setErro(null);
+    setSemIa(null);
 
     try {
 
@@ -87,7 +91,7 @@ export default function ChecklistDoDia() {
 
       const d = await r.json();
 
-      if (!r.ok || d.erro) {
+      if (!r.ok || d.erro || !d.checklist) {
         setErro(
           d.erro ?? "Não deu para montar o checklist."
         );
@@ -95,6 +99,7 @@ export default function ChecklistDoDia() {
       }
 
       setChecklist(d.checklist);
+      setSemIa(d.origem === "regras" ? (d.aviso ?? "") : null);
       setFeitos(new Set());
 
     } catch {
@@ -120,7 +125,7 @@ export default function ChecklistDoDia() {
             ? "Lendo as três frentes…"
             : checklist
               ? "Refazer"
-              : "Montar (~30 s)"}
+              : "Montar"}
         </button>
       }
     >
@@ -144,6 +149,25 @@ export default function ChecklistDoDia() {
       {checklist && (
 
         <div className="space-y-4">
+
+          {/*
+            A lista das regras diz que é das regras.
+
+            Ela tem a mesma forma da lista da IA, e sem este aviso
+            ninguém saberia que a ordem é fixa — nem que vale clicar em
+            Refazer daqui a pouco para ter a leitura do modelo.
+          */}
+          {semIa !== null && (
+            <p className="flex items-start gap-2 rounded-xl bg-zinc-50 px-3.5 py-2.5 text-xs leading-relaxed text-zinc-600 ring-1 ring-inset ring-zinc-200">
+              <CircleAlert size={14} className="mt-0.5 shrink-0 text-zinc-400" />
+              <span>
+                Montado pelas regras, sem a IA
+                {semIa ? ` — ${semIa}` : "."} Os números são os
+                mesmos; o que falta é a leitura do modelo. Clique em
+                Refazer daqui a pouco.
+              </span>
+            </p>
+          )}
 
           <p className="text-sm leading-relaxed text-zinc-700">
             {checklist.abertura}
