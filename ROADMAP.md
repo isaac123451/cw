@@ -117,21 +117,14 @@ o canal da página. Falta **só** o importador, e ele depende do arquivo.
 
 ### 2. Aberto, sem decisão pela frente — é só trabalho
 
-**A reclamação chegando sozinha (02/09/2026).** Entregue e ligada à
-rotina agendada: o RA manda um e-mail a cada reclamação nova, e ler esse
-aviso é o único sinal que chega com o navegador fechado. O escopo
-`gmail.readonly` entrou no OAuth que já existia para a agenda; a rotina
-lê, cria o que ainda não existe, e não toca na caixa.
-
-**Falta uma amostra**, e o `check:email-ra` reprova até ela existir. Os
-padrões de extração são o formato presumido; sem um aviso real, nada
-provou que o protocolo lido é o certo — e é isso que vai criar
-reclamação sozinho. Ver `scripts/amostras/LEIA-ME.md`.
-
-**E falta reconectar a conta do Google.** Escopo novo não se aplica a
-autorização antiga: quem conectou antes segue com token válido para a
-agenda e 403 no Gmail. O card do Google Agenda diz isso e o botão que
-resolve está ao lado.
+**A reclamação chegando pelo e-mail — retirada em 11/09/2026.** O
+Isaac não quis a plataforma lendo a caixa de ninguém: "você quer ler os
+meus e-mails para adicionar o que for identificado como reclamação? não
+achei interessante". Saíram o escopo `gmail.readonly` do OAuth, a
+etapa da rotina diária, o aviso no card do Google Agenda (que ele viu e
+não entendeu) e o código. Ela nunca chegou a funcionar: o Gmail
+respondia 403 toda madrugada. A reclamação nova entra pelo vigia da
+extensão, que confere a lista do portal.
 
 **A nota oficial do Reclame Aqui, pela extensão (01/09/2026).** Pedido:
 o agente saber a nota que o RA publica, para responder "o que eu calculo
@@ -496,6 +489,8 @@ proteção deles. Ficam dois caminhos, que se completam:
    scopes" toda madrugada, e o erro ficava dentro do JSON da rotina. O
    aviso existe no cartão do Google, na Agenda. **Destrava com uma ação:
    desconectar e conectar a conta de novo.**
+
+   > **Retirado em 11/09/2026**, a pedido do Isaac — ver *2. Aberto*.
 
 2. **A lista do portal, com a aba aberta — novo.** Na página de lista
    do Reclame Aqui, a extensão lê os links das reclamações, pergunta ao

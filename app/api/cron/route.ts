@@ -1,4 +1,3 @@
-import { importarAvisosDoRA } from "@/lib/services/raEmail.import";
 
 import {
   gravarDia,
@@ -146,7 +145,6 @@ export async function GET(request: Request) {
     desafios,
     tentativas,
     wootric,
-    avisosDoRA,
     metricasDeHoje,
   ] = await Promise.all([
     protegida("nps", () => encerrarNpsAbandonado(prisma)),
@@ -190,20 +188,6 @@ export async function GET(request: Request) {
     protegida("wootric", () => importarNpsRecente(prisma)),
 
     /**
-     * As reclamações que chegaram por e-mail.
-     *
-     * O Reclame Aqui não tem API pública e a página é protegida por
-     * Cloudflare; a extensão resolve com a aba aberta, mas reclamação
-     * de madrugada ficava esperando alguém ligar o computador. O aviso
-     * por e-mail é o único sinal que chega com todo mundo desconectado,
-     * e é aqui que ele vira caso no quadro.
-     *
-     * Não lança: conta desconectada ou Gmail fora do ar viram campo no
-     * resultado, e as outras cinco tarefas seguem.
-     */
-    protegida("avisosDoRA", () => importarAvisosDoRA(prisma)),
-
-    /**
      * O retrato de hoje, gravado hoje.
      *
      * A nota do Reclame Aqui e´ sempre calculada sobre a janela vigente
@@ -237,8 +221,7 @@ export async function GET(request: Request) {
     contou(movimentacoes, "avisadas") > 0 ||
     contou(vinculos, "vinculados") > 0 ||
     contou(wootric, "novas") > 0 ||
-    contou(wootric, "atualizadas") > 0 ||
-    contou(avisosDoRA, "criadas") > 0
+    contou(wootric, "atualizadas") > 0
   ) {
     revalidateTag(WORKSPACE_TAG, "max");
   }
@@ -262,7 +245,6 @@ export async function GET(request: Request) {
       desafiosApagados: desafios,
       tentativasApagadas: tentativas,
       wootric,
-      avisosDoRA,
       metricasDeHoje,
     },
     { status: falhas.length === 0 ? 200 : 500 }

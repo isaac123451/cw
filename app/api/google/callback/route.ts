@@ -72,9 +72,9 @@ export async function GET(request: Request) {
    * era de vinculação de conta: alguém com acesso à plataforma clicava
    * em "Conectar Google", copiava a URL de consentimento (com o `state`
    * dele) e mandava para um colega. O colega via a tela legítima do
-   * Google para o CW Reputação, aprovava — e a agenda e o **Gmail** dele
-   * ficavam ligados à conta de quem mandou o link. Os escopos incluem
-   * `gmail.readonly` e `calendar.events`.
+   * Google para o CW Reputação, aprovava — e a agenda dele ficava ligada
+   * à conta de quem mandou o link. Na época o escopo incluía também
+   * `gmail.readonly`; hoje é só `calendar.events`.
    *
    * O retorno do Google é uma navegação de primeiro nível, então o
    * cookie de sessão (SameSite=Lax) chega aqui. Sessão de outra pessoa,

@@ -1,6 +1,6 @@
 {
   "name": "cw-reputacao",
-  "version": "0.45.7",
+  "version": "0.45.8",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -72,7 +72,6 @@
     "check:notas-nps": "tsx scripts/check-notas-nps.ts",
     "check:agente": "tsx scripts/check-agente.ts",
     "check:email": "tsx --conditions=react-server scripts/check-email.ts",
-    "check:email-ra": "tsx scripts/check-email-ra.ts",
     "check:dossie-estrutura": "tsx scripts/check-dossie-estrutura.ts",
     "check:atalho": "tsx scripts/check-atalho.ts",
     "check:publicado": "tsx scripts/check-publicado.ts",
