@@ -893,6 +893,48 @@ export async function persistCase(
   return salvo.id;
 }
 
+/**
+ * Cria a reclamação **só se ela não existir** — nunca atualiza.
+ *
+ * É o caminho do vigia do Reclame Aqui, que grava sem ninguém olhar.
+ * `persistCase` é um upsert: se duas extensões abertas percebessem a
+ * mesma reclamação nova no mesmo minuto, a segunda gravação viraria
+ * atualização e passaria por cima de tudo o que a operação tivesse feito
+ * no intervalo — responsável, etiqueta, coluna. Aqui a segunda esbarra
+ * no protocolo único e volta `null`, sem tocar em nada.
+ */
+export async function criarSeNova(
+  prisma: PrismaClient,
+  item: Case
+): Promise<string | null> {
+
+  const relacoes = await resolverRelacoes(prisma, item);
+
+  try {
+    const salvo = await prisma.case.create({
+      data: {
+        protocol: item.protocol,
+        ...toCaseColumns(item),
+        ...relacoes,
+      },
+      select: { id: true },
+    });
+
+    await sincronizarTags(prisma, salvo.id, item.tags ?? []);
+
+    return salvo.id;
+  } catch (erro) {
+    if (
+      erro instanceof Prisma.PrismaClientKnownRequestError &&
+      erro.code === "P2002"
+    ) {
+      return null;
+    }
+
+    throw erro;
+  }
+}
+
 export async function removeCaseByProtocol(
   prisma: PrismaClient,
   protocol: string

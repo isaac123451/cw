@@ -280,6 +280,43 @@
       .alerta .titulo { font-weight: 600; font-size: 12.5px; }
       .alerta .detalhe { font-size: 11.5px; color: var(--fraco); }
 
+      .vigia {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid var(--borda);
+        border-radius: 9px;
+        padding: 8px 10px;
+        background: var(--superficie);
+      }
+
+      .vigia.problema { border-color: var(--atencao); }
+
+      .vigia .texto {
+        flex: 1;
+        min-width: 0;
+        font-size: 11.5px;
+        color: var(--fraco);
+      }
+
+      .vigia.problema .texto { color: var(--atencao); }
+
+      .vigia button {
+        border: 1px solid var(--borda);
+        border-radius: 8px;
+        padding: 5px 9px;
+        background: var(--fundo);
+        color: var(--texto);
+        font-size: 11.5px;
+        font-weight: 600;
+        font-family: inherit;
+        white-space: nowrap;
+        cursor: pointer;
+      }
+
+      .vigia button:hover { border-color: var(--violeta); }
+      .vigia button:disabled { opacity: 0.6; cursor: default; }
+
       .busca { display: flex; gap: 6px; }
 
       .busca input {

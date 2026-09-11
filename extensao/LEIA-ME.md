@@ -56,6 +56,45 @@ status ela está e com quem, e não toca em nada. Verificado contra o
 banco: um caso movido para "Em tratativa" continuou lá depois de uma
 segunda captura do mesmo protocolo.
 
+A única exceção é **completar o contato vazio**. O vigia (abaixo) cria a
+reclamação com "Não informado", porque o portal não mostra o nome do
+consumidor em público. Abrindo a mesma reclamação na área da empresa e
+clicando em **Criar no Kanban**, o painel responde que ela já estava lá
+e completa nome, e-mail, telefone, documento, cidade e UF — só o que
+estava vazio, mascarado ou "Não informado".
+
+## O vigia do Reclame Aqui
+
+A cada 15 minutos, com o Chrome aberto, a extensão confere a lista
+pública da Cardápio Web no Reclame Aqui e põe no quadro, na coluna
+*Novo*, as reclamações que ainda não estão lá. Chega uma notificação
+por volta ("2 reclamações novas no Reclame Aqui"), e o popup mostra a
+última conferência, com o botão **Conferir agora**.
+
+Na mesma volta ele completa o que o portal sabe e o quadro não: a
+resposta pública que ficou sem texto, e a avaliação do consumidor
+quando ela chega. Uma vez por dia a lista vai mais fundo (30 páginas),
+atrás de avaliação nova em reclamação antiga.
+
+- **Por que na extensão, e não no servidor:** o Cloudflare do portal
+  responde "Just a moment…" a qualquer cliente que não seja navegador.
+  O Chrome de quem está logado passa.
+- **Quem decide o que grava é o servidor**
+  (`lib/services/raPortal.service.ts`): reclamação de outra empresa é
+  recusada; existente nunca é recriada nem sobrescrita — só recebe o que
+  o portal é dono, e texto só onde o banco está vazio; a mesma
+  reclamação com outro número (o Hugme numera diferente) é reconhecida.
+- **Se o portal pedir a verificação de navegador**, a volta para e o
+  popup diz. Abrir o portal numa aba resolve, e a extensão adianta a
+  volta sozinha.
+- **Só grava com acesso AGENTE ou ADMIN.** Quem só lê vê o motivo no
+  popup.
+- Desliga em **Opções → Vigia do Reclame Aqui**.
+
+`npm run check:vigia` prova o leitor contra a estrutura real das
+páginas e as travas contra o banco; `npm run check:vigia-volta` roda o
+service worker inteiro contra a aplicação no ar.
+
 Criar caso exige perfil **AGENTE** ou **ADMIN** — quem tem acesso de
 leitura vê o painel, mas o botão recusa.
 
@@ -231,12 +270,15 @@ rótulo vira "confirmado" sem mudar uma linha de código.
 - **Hugme / Reclame Aqui:** dígitos do endereço da página; o texto da
   tela só como segunda tentativa. Ao clicar em "Ler e adicionar ao
   Kanban", também o título, a data, o local e o relato — para a prévia.
+- **Página pública da Cardápio Web no Reclame Aqui**, pelo vigia: a
+  lista de reclamações e a página de cada uma que falta no quadro. É a
+  mesma página que qualquer pessoa vê sem login.
 - **ManyChat:** um telefone visível, quando existe.
 
-Nada sai da máquina a não ser para o seu próprio CW Reputação, e só duas
+Nada sai da máquina a não ser para o seu próprio CW Reputação, e só três
 coisas saem: a **consulta** (um telefone, um nome ou um protocolo — nunca
-uma conversa) e, quando você confirma na prévia, a **reclamação do
-portal** que vai virar caso.
+uma conversa), a **reclamação do portal** que você confirma na prévia,
+e o que o **vigia** leu da página pública do Reclame Aqui.
 
 A única coisa que a extensão **escreve** numa página alheia é o texto
 de uma resposta pronta, dentro da caixa de mensagem do WhatsApp, e só
@@ -257,6 +299,8 @@ WhatsApp Web há anos.
 extensao/
   manifest.json          o que a extensão pede e onde injeta
   comum/config.js        endereço e preferências, em um lugar só
+  comum/portal-ra.js     leitor das páginas públicas do RA, sem DOM
+                         (o vigia usa no service worker)
   fundo/service-worker.js  o único que fala com a rede e lê o cookie
   fontes/Geist-Variable.woff2  a fonte da marca, empacotada
   conteudo/
@@ -283,6 +327,9 @@ app/api/extensao/sessao/          quem sou eu
 app/api/extensao/contexto/        o retrato do cliente
 app/api/extensao/resumo/          nota, contadores e alertas do dia
 app/api/extensao/caso/            cria a reclamação capturada
+app/api/extensao/ra-novas/        quais da lista são novas ou atrasadas
+app/api/extensao/ra-vigia/        o que o vigia deve buscar; e grava
+lib/services/raPortal.service.ts  as travas do vigia
 app/api/extensao/nps/             tentativa e pós-contato do NPS
 app/api/extensao/respostas/       os textos prontos, já preenchidos;
                                   e a contagem de uso
@@ -293,6 +340,8 @@ lib/services/nps.repository.ts    a regra do pós-contato, compartilhada
 scripts/check-contato.ts          a prova do casamento contra o banco
 scripts/check-ra.js               a prova dos leitores da página do RA
 scripts/check-atalho.ts           a prova do atalho de respostas
+scripts/check-vigia.ts            a prova do leitor e das travas do vigia
+scripts/check-vigia-volta.ts      a volta do vigia, com o service worker
 ```
 
 ## Por que endpoints novos, e não a API que já existia

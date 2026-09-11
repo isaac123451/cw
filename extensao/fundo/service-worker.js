@@ -5,6 +5,14 @@ import {
   padraoDeOrigem,
 } from "../comum/config.js";
 
+import {
+  ehDesafio,
+  enderecoDaLista,
+  enderecoDaReclamacao,
+  lerLista,
+  lerReclamacao,
+} from "../comum/portal-ra.js";
+
 /**
  * O service worker é o único que fala com o CW Reputação.
  *
@@ -40,6 +48,7 @@ const CAMINHOS = {
   whatsapp: "/api/extensao/whatsapp",
   respostas: "/api/extensao/respostas",
   raNovas: "/api/extensao/ra-novas",
+  raVigia: "/api/extensao/ra-vigia",
 };
 
 /**
@@ -506,6 +515,53 @@ async function tratar(mensagem) {
     );
 
     return { ok: true, dados };
+  }
+
+  /**
+   * "Conferir agora", do popup, e o aviso de uma página do portal.
+   *
+   * A página não manda o vigia rodar a cada abertura — a equipe abre o
+   * portal o dia inteiro, e cada abertura viraria uma volta. Ela só
+   * adianta a volta quando o vigia está parado por causa do portal (a
+   * verificação de navegador, que abrir a aba costuma resolver) ou
+   * quando a última volta já passou do ciclo.
+   */
+  if (mensagem?.tipo === "vigiaAgora") {
+
+    const { estado } = await lerEstadoDoVigia();
+
+    const idade = estado?.em ? Date.now() - estado.em : Infinity;
+
+    const parado =
+      estado && !estado.ok && String(estado.codigo ?? "").startsWith("portal");
+
+    const vale =
+      mensagem.motivo === "manual" ||
+      (mensagem.motivo === "lista" && idade > 60_000) ||
+      parado ||
+      idade > CICLO_VIGIA_MIN * 60_000;
+
+    return {
+      ok: true,
+      dados: vale
+        ? await vigiar(mensagem.motivo === "manual" ? "manual" : "pagina")
+        : estado,
+    };
+  }
+
+  if (mensagem?.tipo === "vigiaEstado") {
+
+    const config = await lerConfig();
+    const { estado } = await lerEstadoDoVigia();
+
+    return {
+      ok: true,
+      dados: {
+        ...(estado ?? {}),
+        ligado: config.vigia !== false,
+        emCurso: vigiaEmCurso !== null,
+      },
+    };
   }
 
   if (mensagem?.tipo === "usarResposta") {
@@ -999,6 +1055,358 @@ async function cobrarEtapas() {
 }
 
 /* ============================================================
+   VIGIA DO RECLAME AQUI
+============================================================ */
+
+/**
+ * Confere a lista pública da Cardápio Web no Reclame Aqui e põe no
+ * quadro o que ainda não está lá.
+ *
+ * **O pedido.** "Queria que você ficasse verificando na página da
+ * Cardápio Web no Reclame Aqui para adicionar as reclamações." O
+ * servidor não consegue: o Cloudflare do portal barra quem não é
+ * navegador. O Chrome de quem está logado passa — medido em
+ * 11/09/2026, a mesma página que o servidor recebe como "Just a
+ * moment…" chega aqui inteira, em 60 ms.
+ *
+ * **O que uma volta faz:**
+ *
+ * 1. pergunta ao servidor se pode gravar e quais reclamações estão sem
+ *    texto (`GET /ra-vigia`);
+ * 2. lê a lista do portal, página a página, até achar uma reclamação
+ *    conhecida — e pergunta ao servidor quais são novas e quais o
+ *    portal já passou à frente (respondida lá, avaliada lá);
+ * 3. abre a página de cada uma dessas, até doze por volta;
+ * 4. manda o que leu (`POST /ra-vigia`). O servidor decide o que
+ *    grava: nova entra inteira, existente só recebe o que o portal é
+ *    dono, e nada é sobrescrito.
+ *
+ * Uma vez por dia a lista vai mais fundo — trinta páginas —, porque o
+ * consumidor avalia semanas depois, e a reclamação avaliada já saiu da
+ * primeira página há muito tempo.
+ *
+ * **O que ele não faz:** atravessar a verificação do Cloudflare. Se o
+ * portal pedir, a volta para, o popup diz o que aconteceu, e abrir o
+ * portal numa aba resolve.
+ */
+
+const ALARME_VIGIA = "cw-vigia-ra";
+
+/**
+ * Quinze minutos: a Cardápio Web recebe perto de uma reclamação por
+ * dia, e o prazo que importa (a primeira resposta) é contado em horas.
+ * Mais frequente só gastaria a página do portal — 230 KB por leitura.
+ */
+const CICLO_VIGIA_MIN = 15;
+
+/** Páginas da lista numa volta comum; cada uma traz cinco. */
+const PAGINAS_POR_VOLTA = 4;
+
+/** Páginas na volta funda, uma vez por dia. */
+const PAGINAS_NA_FUNDA = 30;
+
+/** Páginas de reclamação abertas por volta; o resto espera na fila. */
+const ABERTAS_POR_VOLTA = 12;
+
+/**
+ * Pendente que o portal não completou espera um dia para ser tentada
+ * de novo — senão uma reclamação que saiu do ar ocuparia um lugar da
+ * volta para sempre.
+ */
+const ESPERA_DA_PENDENTE_MS = 24 * 60 * 60_000;
+
+/** Uma volta por vez: o alarme e o "Conferir agora" não correm juntos. */
+let vigiaEmCurso = null;
+
+function esperar(ms) {
+  return new Promise((resolver) => setTimeout(resolver, ms));
+}
+
+async function doPortal(url) {
+
+  let resposta;
+
+  try {
+    resposta = await fetch(url, {
+      credentials: "include",
+      cache: "no-store",
+    });
+  } catch (erro) {
+    throw new FalhaNaChamada(
+      "portal-rede",
+      "Não foi possível abrir o Reclame Aqui — a internet caiu, ou o portal está fora do ar.",
+      { detalhe: String(erro?.message ?? erro) }
+    );
+  }
+
+  const html = await resposta.text();
+
+  if (ehDesafio(resposta.status, html)) {
+    throw new FalhaNaChamada(
+      "portal-desafio",
+      "O Reclame Aqui pediu a verificação de navegador. Abra o portal numa aba — a próxima volta do vigia segue sozinha."
+    );
+  }
+
+  if (!resposta.ok) {
+    throw new FalhaNaChamada(
+      "portal-http",
+      `O Reclame Aqui respondeu ${resposta.status}.`,
+      { status: resposta.status }
+    );
+  }
+
+  return html;
+}
+
+async function lerEstadoDoVigia() {
+
+  const guardado = await chrome.storage.local.get([
+    "vigia",
+    "vigiaFila",
+    "vigiaTentadas",
+    "vigiaFunda",
+  ]);
+
+  return {
+    estado: guardado.vigia ?? null,
+    fila: Array.isArray(guardado.vigiaFila) ? guardado.vigiaFila : [],
+    tentadas: guardado.vigiaTentadas ?? {},
+    funda: guardado.vigiaFunda ?? "",
+  };
+}
+
+async function salvarVigia(estado, extra = {}) {
+  await chrome.storage.local.set({ vigia: estado, ...extra });
+  return estado;
+}
+
+function vigiar(motivo) {
+
+  if (!vigiaEmCurso) {
+    vigiaEmCurso = umaVolta(motivo).finally(() => {
+      vigiaEmCurso = null;
+    });
+  }
+
+  return vigiaEmCurso;
+}
+
+function falhaDoVigia(erro, agora, fila) {
+  return {
+    em: agora,
+    ok: false,
+    codigo: erro?.codigo ?? "erro",
+    erro: erro?.message ?? String(erro),
+    naFila: fila.length,
+  };
+}
+
+async function umaVolta(motivo) {
+
+  const config = await lerConfig();
+
+  const {
+    estado: anterior,
+    fila: guardada,
+    tentadas,
+    funda,
+  } = await lerEstadoDoVigia();
+
+  /* Desligado nas opções: o alarme segue vivo, a volta não sai. */
+  if (config.vigia === false && motivo !== "manual") {
+    return anterior;
+  }
+
+  const agora = Date.now();
+
+  let plano;
+
+  try {
+    plano = await chamar(CAMINHOS.raVigia);
+  } catch (erro) {
+    return salvarVigia(falhaDoVigia(erro, agora, guardada));
+  }
+
+  if (!plano?.podeGravar) {
+    return salvarVigia({
+      em: agora,
+      ok: false,
+      codigo: "leitura",
+      erro: "Seu acesso é somente leitura — o vigia só grava com acesso de agente.",
+      naFila: 0,
+    });
+  }
+
+  /* O dia de Brasília, e não o UTC: depois das 21h o UTC já é amanhã. */
+  const hoje = new Date(agora).toLocaleDateString("sv-SE", {
+    timeZone: "America/Sao_Paulo",
+  });
+
+  const fundaHoje = funda !== hoje;
+
+  const novas = [];
+  const atrasadas = [];
+  let total = null;
+
+  try {
+
+    const paginas = fundaHoje ? PAGINAS_NA_FUNDA : PAGINAS_POR_VOLTA;
+
+    for (let pagina = 1; pagina <= paginas; pagina += 1) {
+
+      const lista = lerLista(await doPortal(enderecoDaLista(pagina)));
+
+      if (!lista) {
+        throw new FalhaNaChamada(
+          "portal-formato",
+          "A lista do Reclame Aqui mudou de formato e o vigia não a reconhece mais. Nada foi gravado."
+        );
+      }
+
+      total ??= lista.total;
+
+      if (lista.itens.length === 0) break;
+
+      const resposta = await chamar(
+        CAMINHOS.raNovas,
+        {},
+        { itens: lista.itens }
+      );
+
+      novas.push(...(resposta?.novos ?? []));
+      atrasadas.push(...(resposta?.atrasadas ?? []));
+
+      /*
+        Na volta comum, a primeira conhecida encerra a leitura: a lista
+        vem da mais nova para a mais velha, e o resto já passou por
+        aqui. A funda segue, atrás de avaliação nova em reclamação velha.
+      */
+      if (
+        !fundaHoje &&
+        (resposta?.novos ?? []).length < lista.itens.length
+      ) {
+        break;
+      }
+
+      await esperar(300);
+    }
+  } catch (erro) {
+    return salvarVigia(falhaDoVigia(erro, agora, guardada));
+  }
+
+  const pedidas = (plano.pendentes ?? []).filter(
+    (codigo) => agora - (tentadas[codigo] ?? 0) > ESPERA_DA_PENDENTE_MS
+  );
+
+  /* Novas primeiro: é a que tem prazo correndo. */
+  const fila = [
+    ...new Set([...novas, ...atrasadas, ...guardada, ...pedidas]),
+  ];
+
+  const agoraAbrir = fila.slice(0, ABERTAS_POR_VOLTA);
+
+  const lidas = [];
+  const abertas = new Set();
+
+  for (const codigo of agoraAbrir) {
+
+    try {
+      const lida = lerReclamacao(
+        await doPortal(enderecoDaReclamacao(codigo))
+      );
+
+      abertas.add(codigo);
+
+      if (lida) lidas.push(lida);
+    } catch (erro) {
+      /* A verificação vale para a volta inteira: para aqui. */
+      if (erro?.codigo === "portal-desafio") break;
+      abertas.add(codigo);
+    }
+
+    await esperar(400);
+  }
+
+  let resultado = { criadas: [], completadas: [], inalteradas: 0 };
+
+  if (lidas.length > 0) {
+    try {
+      resultado = await chamar(
+        CAMINHOS.raVigia,
+        {},
+        { reclamacoes: lidas }
+      );
+    } catch (erro) {
+      /* Não gravou: a fila fica inteira para a próxima volta. */
+      return salvarVigia(falhaDoVigia(erro, agora, fila), {
+        vigiaFila: fila.filter((c) => !pedidas.includes(c)).slice(0, 200),
+      });
+    }
+  }
+
+  /* Pendente tentada espera um dia; tentativa com mais de um dia é esquecida. */
+  const tentadasAgora = Object.fromEntries(
+    Object.entries(tentadas).filter(
+      ([, quando]) => agora - quando < ESPERA_DA_PENDENTE_MS
+    )
+  );
+
+  for (const codigo of abertas) {
+    if (pedidas.includes(codigo)) tentadasAgora[codigo] = agora;
+  }
+
+  /*
+    O que ficou para depois. As pendentes não entram: o servidor as
+    devolve na próxima volta, e guardá-las aqui as faria furar a espera
+    de um dia.
+  */
+  const restante = fila
+    .filter((c) => !abertas.has(c) && !pedidas.includes(c))
+    .slice(0, 200);
+
+  const estado = {
+    em: agora,
+    ok: true,
+    criadas: resultado.criadas ?? [],
+    completadas: (resultado.completadas ?? []).length,
+    naFila: restante.length,
+    total,
+    funda: fundaHoje,
+  };
+
+  await salvarVigia(estado, {
+    vigiaFila: restante,
+    vigiaTentadas: tentadasAgora,
+    ...(fundaHoje ? { vigiaFunda: hoje } : {}),
+  });
+
+  if (estado.criadas.length > 0) avisarNovas(estado.criadas);
+
+  return estado;
+}
+
+/** Uma notificação por volta, não uma por reclamação. */
+function avisarNovas(criadas) {
+
+  chrome.notifications.create(`cw-vigia-${Date.now()}`, {
+    type: "basic",
+    iconUrl: chrome.runtime.getURL("icones/icone-128.png"),
+    title:
+      criadas.length === 1
+        ? "1 reclamação nova no Reclame Aqui"
+        : `${criadas.length} reclamações novas no Reclame Aqui`,
+    message: criadas
+      .slice(0, 3)
+      .map((c) => c.titulo)
+      .join("\n")
+      .slice(0, 240),
+    contextMessage: "Já estão no quadro, na coluna Novo",
+    priority: 2,
+  });
+}
+
+/* ============================================================
    ROTINA
 ============================================================ */
 
@@ -1030,6 +1438,11 @@ function agendar() {
     delayInMinutes: 1,
     periodInMinutes: CICLO_LEMBRETE_MIN,
   });
+
+  chrome.alarms.create(ALARME_VIGIA, {
+    delayInMinutes: 1,
+    periodInMinutes: CICLO_VIGIA_MIN,
+  });
 }
 
 chrome.runtime.onInstalled.addListener(() => {
@@ -1042,6 +1455,7 @@ chrome.runtime.onStartup.addListener(agendar);
 chrome.alarms.onAlarm.addListener((alarme) => {
   if (alarme.name === ALARME) atualizarEmSilencio();
   if (alarme.name === ALARME_LEMBRETE) cobrarEtapas();
+  if (alarme.name === ALARME_VIGIA) vigiar("alarme");
 });
 
 chrome.notifications.onClicked.addListener(async (id) => {
@@ -1051,10 +1465,11 @@ chrome.notifications.onClicked.addListener(async (id) => {
 
   if (!base) return;
 
-  // Cobrança de etapa leva ao quadro; o resto, ao painel do dia.
+  // Cobrança de etapa e reclamação nova levam ao quadro; o resto, ao painel do dia.
   chrome.tabs.create({
-    url: id.startsWith("cw-etapa-")
-      ? `${base}/reclame-aqui`
-      : `${base}/dashboard`,
+    url:
+      id.startsWith("cw-etapa-") || id.startsWith("cw-vigia-")
+        ? `${base}/reclame-aqui`
+        : `${base}/dashboard`,
   });
 });

@@ -304,11 +304,12 @@
    * a lista funciona. `CW.ra.codigosDosLinks` é a regra, provada em
    * `check:ra` contra os endereços reais da base.
    *
-   * **Só avisa; não grava.** Importar continua sendo abrir a reclamação
-   * e clicar em "Criar no Kanban" — o mesmo fluxo de sempre, com a
-   * prévia que deixa conferir antes. Uma varredura que gravasse sozinha
-   * cada link de uma página seria a extensão escrevendo no quadro sem
-   * ninguém olhar.
+   * **Esta varredura só avisa; quem grava é o vigia.** Desde 11/09/2026
+   * o service worker confere a lista pública sozinho, a cada quinze
+   * minutos, e põe no quadro o que falta (`fundo/service-worker.js`,
+   * seção VIGIA). Quando esta página mostra uma reclamação nova, ela
+   * adianta a volta do vigia em vez de esperar o relógio — e o aviso
+   * some quando a reclamação entra.
    */
   let codigosPerguntados = "";
   let novos = [];
@@ -376,6 +377,18 @@
     novos = resposta.dados.novos;
 
     desenharNovas(titulos);
+
+    /*
+      Achou nova: o vigia vem buscar agora, sem esperar o relógio.
+
+      Depois da volta, a próxima conferência pergunta de novo — e o
+      aviso some sozinho quando a reclamação já entrou no quadro.
+    */
+    if (novos.length > 0) {
+      CW.enviar({ tipo: "vigiaAgora", motivo: "lista" }).then(() => {
+        codigosPerguntados = "";
+      });
+    }
   }
 
   /**
@@ -479,7 +492,7 @@
       const rodape = document.createElement("li");
       rodape.className = "rodape";
       rodape.textContent =
-        "Abra cada uma e use “Criar no Kanban” no painel para importar.";
+        "O vigia da extensão já está trazendo estas para o quadro. Se alguma continuar aqui, abra e use “Criar no Kanban”.";
       lista.appendChild(rodape);
 
       caixa.appendChild(lista);
@@ -564,4 +577,16 @@
   setInterval(verificarComRede, INTERVALO);
 
   verificarComRede();
+
+  /*
+    Abrir o portal pode destravar o vigia.
+
+    Quando o Reclame Aqui pede a verificação de navegador, o vigia para
+    e espera. Esta aba aberta é justamente o que costuma resolver — e o
+    service worker só adianta a volta se estava parado ou atrasado, então
+    abrir o portal o dia inteiro não vira uma volta por página.
+  */
+  if (/(^|\.)reclameaqui\.com\.br$/i.test(location.hostname)) {
+    CW.enviar({ tipo: "vigiaAgora", motivo: "pagina" });
+  }
 })();

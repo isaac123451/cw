@@ -266,6 +266,9 @@ async function carregar() {
       </div>
     </div>`);
 
+  /* Preenchido depois, pelo estado que o service worker guarda. */
+  partes.push(`<div class="bloco" id="vigia-bloco"></div>`);
+
   partes.push(tendencia(dados.tendencia ?? []));
   partes.push(blocoNps(dados.nps));
 
@@ -304,6 +307,8 @@ async function carregar() {
 
   conteudo.innerHTML = partes.join("");
 
+  desenharVigia();
+
   for (const alerta of conteudo.querySelectorAll(".alerta")) {
     alerta.addEventListener("click", () =>
       abrir(alerta.dataset.url)
@@ -328,6 +333,118 @@ async function carregar() {
   });
 
   campo.focus();
+}
+
+/* ============================================================
+   VIGIA DO RECLAME AQUI
+============================================================ */
+
+function hora(em) {
+  return new Date(em).toLocaleTimeString("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "America/Sao_Paulo",
+  });
+}
+
+/**
+ * Uma linha que diz o que o vigia fez por último.
+ *
+ * O vigia grava sem ninguém olhar; esta linha é o que permite olhar.
+ * "Nada novo" também é resposta — é o que diferencia um vigia que
+ * conferiu e não achou de um vigia parado.
+ */
+function linhaDoVigia(estado) {
+
+  if (!estado) {
+    return { tom: "problema", texto: "Não deu para ler o estado do vigia." };
+  }
+
+  if (estado.emCurso) {
+    return { tom: "", texto: "Conferindo o portal…" };
+  }
+
+  if (!estado.ligado) {
+    return { tom: "", texto: "Desligado nas Opções." };
+  }
+
+  if (!estado.em) {
+    return {
+      tom: "",
+      texto: "Ainda não conferiu. A primeira volta sai em até 15 minutos.",
+    };
+  }
+
+  if (!estado.ok) {
+    return { tom: "problema", texto: `${hora(estado.em)} · ${estado.erro}` };
+  }
+
+  const novas = estado.criadas?.length ?? 0;
+  const completadas = estado.completadas ?? 0;
+
+  const partes = [];
+
+  if (novas === 1) partes.push("1 reclamação nova entrou no quadro");
+  if (novas > 1) partes.push(`${novas} reclamações novas entraram no quadro`);
+  if (completadas === 1) partes.push("1 completada com o portal");
+  if (completadas > 1) partes.push(`${completadas} completadas com o portal`);
+  if (estado.naFila > 0) partes.push(`mais ${estado.naFila} na fila`);
+
+  return {
+    tom: "",
+    texto: `Conferido às ${hora(estado.em)} · ${partes.length > 0 ? partes.join(", ") : "nada novo"}`,
+  };
+}
+
+/** Montado com DOM: o título de reclamação é texto de consumidor. */
+function pintarVigia(bloco, estado) {
+
+  const { tom, texto } = linhaDoVigia(estado);
+
+  const rotulo = document.createElement("p");
+  rotulo.className = "rotulo";
+  rotulo.textContent = "Vigia do Reclame Aqui";
+
+  const caixa = document.createElement("div");
+  caixa.className = `vigia ${tom}`.trim();
+
+  const linha = document.createElement("span");
+  linha.className = "texto";
+  linha.textContent = texto;
+
+  const botao = document.createElement("button");
+  botao.type = "button";
+  botao.textContent = "Conferir agora";
+  botao.disabled = Boolean(estado?.emCurso);
+
+  botao.addEventListener("click", async () => {
+    botao.disabled = true;
+    linha.textContent = "Conferindo o portal…";
+
+    const volta = await enviar({ tipo: "vigiaAgora", motivo: "manual" });
+    const atual = await enviar({ tipo: "vigiaEstado" });
+
+    pintarVigia(bloco, atual?.ok ? atual.dados : null);
+
+    if (!volta?.ok) {
+      bloco.querySelector(".texto").textContent =
+        volta?.erro ?? "Não deu para conferir agora.";
+    }
+  });
+
+  caixa.append(linha, botao);
+  bloco.replaceChildren(rotulo, caixa);
+}
+
+async function desenharVigia() {
+
+  const bloco = document.getElementById("vigia-bloco");
+
+  if (!bloco) return;
+
+  const resposta = await enviar({ tipo: "vigiaEstado" });
+
+  pintarVigia(bloco, resposta?.ok ? resposta.dados : null);
 }
 
 function falhar(resposta) {

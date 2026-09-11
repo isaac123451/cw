@@ -7,6 +7,11 @@ import {
   classificarPorProblema,
 } from "@/lib/services/raClassify";
 
+import {
+  decorrido as elapsed,
+  prioridadePeloPortal as priorityOf,
+} from "@/lib/services/raRegras";
+
 /**
  * Leitura do export "Dados do Reclame Aqui" (HugMe).
  *
@@ -59,23 +64,6 @@ function toDate(value: unknown) {
   );
 }
 
-/** Diferença entre duas datas, no formato que as telas exibem. */
-function elapsed(from: Date | null, to: Date | null) {
-  if (!from || !to) return "-";
-
-  const minutes = Math.round(
-    (to.getTime() - from.getTime()) / 60000
-  );
-
-  if (minutes < 0) return "-";
-  if (minutes < 60) return `${minutes}min`;
-
-  const hours = Math.round(minutes / 60);
-  if (hours < 48) return `${hours}h`;
-
-  return `${Math.round(hours / 24)} dias`;
-}
-
 function maskEmail(value: unknown, keepPii: boolean) {
   if (!value) return undefined;
   if (keepPii) return String(value);
@@ -125,29 +113,6 @@ function mapStatus(statusRa: unknown) {
     default:
       return "Novo";
   }
-}
-
-function priorityOf(info: {
-  score: number | null;
-  resolved: boolean;
-  evaluated: boolean;
-  answered: boolean;
-}): Case["priority"] {
-
-  if (!info.answered) return "Crítica";
-  if (info.evaluated && !info.resolved) return "Alta";
-
-  if (
-    info.evaluated &&
-    info.score !== null &&
-    info.score <= 4
-  ) {
-    return "Alta";
-  }
-
-  if (!info.evaluated) return "Média";
-
-  return "Baixa";
 }
 
 /** Etiquetas coerentes com o estado real do caso. */

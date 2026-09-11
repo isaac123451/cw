@@ -76,6 +76,16 @@ export const PADROES = {
    * precisar desconfigurar o quadro inteiro.
    */
   lembretes: true,
+
+  /**
+   * O vigia do Reclame Aqui.
+   *
+   * Ligado por padrão, porque é o que faz a reclamação nova chegar ao
+   * quadro sem ninguém importar planilha. Desligar serve para quem só
+   * consulta — e para quem estiver numa conexão cara: cada volta lê a
+   * lista do portal, perto de 230 KB, a cada quinze minutos.
+   */
+  vigia: true,
 };
 
 export const CHAVE = "cw-reputacao-config";

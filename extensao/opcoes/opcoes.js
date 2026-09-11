@@ -24,6 +24,7 @@ const caixas = {
   contador: document.getElementById("contador"),
   aviso: document.getElementById("aviso-diario"),
   lembretes: document.getElementById("lembretes"),
+  vigia: document.getElementById("vigia"),
 };
 
 function mostrar(texto, tipo = "ok") {
@@ -79,6 +80,7 @@ async function carregar() {
   caixas.contador.checked = Boolean(config.contador);
   caixas.aviso.checked = Boolean(config.aviso);
   caixas.lembretes.checked = Boolean(config.lembretes);
+  caixas.vigia.checked = config.vigia !== false;
 
   aplicarTema(config.tema);
 }

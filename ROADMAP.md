@@ -323,6 +323,81 @@ Definir a variável na Vercel é o que a liga lá.
 
 ---
 
+### O vigia do Reclame Aqui (11/09/2026)
+
+O pedido: "queria que você ficasse verificando na página da Cardápio Web
+no Reclame Aqui para adicionar as reclamações". Ler o e-mail ele recusou
+(ver *2. Aberto*).
+
+**Medido antes de escrever:**
+
+- O servidor não entra: o Cloudflare do portal responde "Just a
+  moment…" (403) a quem não é navegador — até `curl` de uma máquina
+  comum. O Chrome passa sem desafio nenhum: a mesma lista chega inteira
+  num `fetch` comum, em 60 ms.
+- A **lista** (`/empresa/cardapio-web-servicos-de-tecnologia/lista-reclamacoes/`)
+  é Next.js: cinco reclamações por página em `__NEXT_DATA__` →
+  `complaints.LAST`, com `?pagina=N`, e o total do portal.
+- A **reclamação** é Astro: o objeto inteiro no `props` de uma
+  `astro-island` — relato completo, cidade, respostas (`ANSWER` e
+  `COMPANY_REPLY` são da empresa; `REPLY` e `FINAL_ANSWER`, do
+  consumidor) e avaliação. O portal abre pelo código mesmo com o título
+  errado no endereço (`x_<código>`).
+- O nome do consumidor **não é público**.
+- O portal tinha **355** reclamações; o banco, **349**. As 6 que faltam
+  são de 04/09 a 10/09 — tudo depois da última planilha (02/09).
+
+**Como funciona.** A cada 15 minutos, com o Chrome aberto, o service
+worker lê a lista até achar uma conhecida, pergunta ao servidor quais
+são novas e em quais o portal está à frente (respondida lá e sem
+resposta aqui, avaliada lá e não aqui), abre a página de até doze e
+manda para `/api/extensao/ra-vigia`. Uma notificação por volta; o popup
+mostra a última conferência e tem **Conferir agora**. Uma vez por dia a
+lista vai 30 páginas fundo, atrás de avaliação em reclamação antiga.
+
+**As travas ficam no servidor** (`raPortal.service.ts`), não na
+extensão: outra empresa é recusada; a nova é criada só se não existir
+(`criarSeNova` esbarra no protocolo único em vez de sobrescrever, se
+duas extensões chegarem juntas); a existente recebe só o que o portal é
+dono, pela mesma `mudancasDoPortal` da planilha, e **resposta e relato
+só onde o banco está vazio**; ninguém volta para "Novo"; a mesma
+reclamação com outro número (o Hugme numera diferente) é reconhecida
+pelo número antigo e pelo título na mesma data. Se o portal pedir a
+verificação de navegador, a volta para e o popup diz — o vigia não tenta
+atravessar.
+
+**O contato** entra depois: quem abre a reclamação na área da empresa e
+clica em "Criar no Kanban" completa nome, e-mail, telefone, documento,
+cidade e UF — só o que estava vazio ou "Não informado".
+
+**Provas:**
+
+- `check:vigia` — o leitor contra amostras com a estrutura exata das
+  páginas (textos de consumidor trocados), a tradução, e as travas
+  contra o banco em reclamações descartáveis. Cinco travas estragadas de
+  propósito, uma de cada vez: todas acenderam vermelho.
+- `check:vigia-volta` — o `service-worker.js` inteiro rodando no Node
+  contra a aplicação no ar e o banco real; só o Chrome e o portal são de
+  roteiro. Cria uma vez, notifica uma vez, respeita a espera, para no
+  desafio, destrava ao abrir o portal, não grava com acesso de leitura.
+- O código do leitor, sem mudar nada, rodou no portal de verdade e leu
+  as 11 que interessam em 13 s. Simulado contra o banco sem gravar: 6
+  seriam criadas na coluna Novo e as 5 respondidas sem texto,
+  completadas — duas delas já avaliadas no portal com nota 9.
+
+**Achado no caminho:** o Astro serializa `undefined` como `[0]`. É como
+"voltaria a fazer negócio" chega quando a página mostra "Não", e o mesmo
+`[0]` numa nota viraria `Number([0])` = 0.
+
+**Para funcionar:** push, e recarregar a extensão em
+`chrome://extensions` — ela pede uma permissão nova, a do
+`www.reclameaqui.com.br`, para o service worker ler o portal.
+
+**Limites:** só roda com o Chrome aberto em alguma máquina da equipe;
+cada volta lê ~230 KB do portal; cada pessoa com a extensão roda o seu
+vigia (o servidor não duplica, mas o portal é lido por todos).
+
+
 ### O checklist do dia parava em "Gemini congestionado" (11/09/2026)
 
 O Isaac mandou a tela: o card mostrava só "O Gemini está congestionado
@@ -522,6 +597,10 @@ aparece como texto e não executa.
 numa aba de fundo, de tempos em tempos. Abas pulando na frente de quem
 trabalha, permissão de abas a mais, e ainda dependeria do login da
 pessoa — o e-mail resolve o "de madrugada" sem nada disso.
+
+> **Revisto em 11/09/2026.** O e-mail saiu, e o vigia entrou sem aba
+> nenhuma: o service worker busca a página pública com `fetch`, que o
+> Cloudflare deixa passar vindo do Chrome. Ver *O vigia do Reclame Aqui*.
 
 **Falta, e depende da página de verdade:** o formato dos links da lista
 do Hugme (`hugme.com.br`). A regra cobre os endereços do
@@ -868,10 +947,14 @@ contexto para `useCallback`.
 - **A importação grava PII** (e-mail e telefone reais) porque o destino é
   o banco. O dataset do repositório (`lib/data/mockCases.ts`) continua
   mascarado — ele está no git.
-- **A extensão escreve, mas só sob confirmação.** Nasceu somente leitura;
-  hoje cria caso a partir do que leu no portal ou de uma conversa,
-  sempre depois de a pessoa conferir a prévia. Mensagem ela não envia em
-  site nenhum, e isso não muda.
+- **A extensão escreve, e só o vigia escreve sem prévia.** Nasceu
+  somente leitura; cria caso a partir do que leu no portal ou de uma
+  conversa, depois de a pessoa conferir a prévia. Desde 11/09/2026, a
+  pedido do Isaac ("ficasse verificando na página ... para adicionar as
+  reclamações"), o vigia do Reclame Aqui cria sem prévia — limitado a
+  reclamações da página pública da Cardápio Web, e a completar o que o
+  portal é dono ou o que está vazio. Mensagem ela não envia em site
+  nenhum, e isso não muda.
 - **Promotor calado não abre ciclo de NPS.** Entra na base (o indicador
   precisa dele) com `[Encerrado] Sem tratativa`. São ~790 respostas por
   mês; abrir tratativa para cada nota 10 enterraria os detratores.

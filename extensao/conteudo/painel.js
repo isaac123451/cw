@@ -6404,6 +6404,14 @@ const ORIGENS = [
       r?.jaExistia
         ? [
             `${r.protocolo} está em "${r.status}"${r.responsavel ? ` com ${r.responsavel}` : ""}. Nada foi sobrescrito.`,
+            /*
+              O vigia cria sem nome e sem contato — o portal não os mostra
+              em público. Esta página mostra, e o servidor completou o
+              que estava vazio. Dizer o quê é o que faz alguém confiar.
+            */
+            Array.isArray(r.completou) && r.completou.length > 0
+              ? `Completei ${juntarCampos(r.completou)} com o que esta página mostra.`
+              : "",
             // Duplicata pega pelo conteúdo merece a explicação do porquê.
             r.aviso ?? "",
           ]
@@ -6417,6 +6425,14 @@ const ORIGENS = [
 
     // O retrato do servidor mudou: a próxima consulta tem de ser nova.
     setTimeout(() => consultar(true), 900);
+  }
+
+  /** "nome, telefone e e-mail" — a lista em português. */
+  function juntarCampos(campos) {
+    const lista = campos.map(String);
+    return lista.length <= 1
+      ? lista.join("")
+      : `${lista.slice(0, -1).join(", ")} e ${lista[lista.length - 1]}`;
   }
 
   CW.painel = {

@@ -10,6 +10,7 @@ import { Case } from "@/lib/models/case";
 import { digitosDoDocumento } from "@/lib/models/establishment";
 
 import { persistCase } from "@/lib/services/case.repository";
+import { completarContato } from "@/lib/services/raPortal.service";
 import {
   RECLAME_AQUI,
   SOCIAL_SOURCES,
@@ -34,9 +35,10 @@ export const dynamic = "force-dynamic";
  * 1. **Exige AGENTE.** Quem tem acesso de leitura vê o painel, mas não
  *    cria caso — mesma régua das server actions.
  * 2. **Nunca sobrescreve.** Protocolo que já existe volta como
- *    `jaExistia`, com o estado atual, sem tocar em nada. Sem isto,
- *    clicar duas vezes jogaria um caso "Em tratativa" de volta para
- *    "Novo" e apagaria o responsável.
+ *    `jaExistia`, com o estado atual. Sem isto, clicar duas vezes
+ *    jogaria um caso "Em tratativa" de volta para "Novo" e apagaria o
+ *    responsável. A única escrita nesse caso é **completar o contato
+ *    vazio** — ver `completarContato`.
  * 3. **Só o que veio da tela.** Nada de nota, avaliação ou resposta
  *    pública: uma reclamação recém-lida não tem nenhum desses, e
  *    inventá-los sujaria o indicador.
@@ -265,16 +267,33 @@ export async function POST(request: Request) {
       externalId: true,
       status: true,
       owner: { select: { name: true } },
+      customer: true,
+      companyName: true,
+      email: true,
+      phone: true,
+      document: true,
+      city: true,
+      state: true,
     },
   });
 
   if (existente) {
+    const completou = await completarContato(prisma, existente, {
+      cliente,
+      email: limpo(entrada.email, 160),
+      telefone: limpo(entrada.telefone, 40),
+      documento: digitosDoDocumento(entrada.documento),
+      cidade: limpo(entrada.cidade, 80),
+      estado: limpo(entrada.estado, 4),
+    });
+
     return responder(request, {
       jaExistia: true,
       protocolo,
       id: existente.externalId ?? existente.id,
       status: existente.status,
       responsavel: existente.owner?.name,
+      completou,
     });
   }
 

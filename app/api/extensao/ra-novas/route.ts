@@ -7,6 +7,11 @@ import {
 
 import { getPrisma } from "@/lib/prisma";
 
+import {
+  atrasadasNaLista,
+  type ItemDaLista,
+} from "@/lib/services/raPortal.service";
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -24,15 +29,15 @@ export const dynamic = "force-dynamic";
  * extensão, que já roda ali, lê os links das reclamações da lista e
  * pergunta aqui quais são novas.
  *
- * **Só responde "nova" ou "conhecida".** Nenhum dado de reclamação sai
- * daqui: a extensão manda códigos que leu na página que a pessoa está
- * vendo, e recebe de volta os que faltam. Importar continua sendo abrir
- * a reclamação e capturar, pelo fluxo que já existe.
+ * **Só responde "nova", "conhecida" ou "atrasada".** Nenhum dado de
+ * reclamação sai daqui: a extensão manda códigos que leu na lista do
+ * portal, e recebe de volta os que faltam — e, quando manda também o
+ * estado de cada um (`itens`), os que o portal já passou à frente:
+ * respondidos lá e sem resposta aqui, avaliados lá e não aqui.
  *
- * O aviso por e-mail (`importarAvisosDoRA`, na rotina diária) é o outro
- * caminho, o que funciona de madrugada. Os dois se completam: o e-mail
- * pega o que chega com todo mundo desconectado, e esta varredura pega
- * o que o e-mail não trouxe.
+ * Dois chamadores: o aviso na página de lista (`hugme.js`, só códigos)
+ * e o vigia do service worker, que lê a lista pública sozinho de tempos
+ * em tempos e grava pelo `/api/extensao/ra-vigia`.
  */
 
 /** O código de 16 caracteres do portal. */
@@ -49,17 +54,36 @@ export async function POST(request: Request) {
     return semSessao(request);
   }
 
-  let corpo: { codigos?: unknown } = {};
+  let corpo: { codigos?: unknown; itens?: unknown } = {};
 
   try {
-    corpo = (await request.json()) as { codigos?: unknown };
+    corpo = (await request.json()) as {
+      codigos?: unknown;
+      itens?: unknown;
+    };
   } catch {
     return responder(request, { erro: "Corpo inválido." }, 400);
   }
 
+  /* O estado que a lista mostra, quando quem chama é o vigia. */
+  const itens: ItemDaLista[] = (Array.isArray(corpo.itens) ? corpo.itens : [])
+    .slice(0, TETO)
+    .map((i) => {
+      const item = (i ?? {}) as Record<string, unknown>;
+      return {
+        codigo: String(item.codigo ?? "").trim(),
+        status: String(item.status ?? "").slice(0, 30),
+        avaliada: item.avaliada === true,
+      };
+    })
+    .filter((i) => CODIGO.test(i.codigo));
+
   const codigos = [
     ...new Set(
-      (Array.isArray(corpo.codigos) ? corpo.codigos : [])
+      [
+        ...(Array.isArray(corpo.codigos) ? corpo.codigos : []),
+        ...itens.map((i) => i.codigo),
+      ]
         .map((c) => String(c ?? "").trim())
         .filter((c) => CODIGO.test(c))
     ),
@@ -68,6 +92,7 @@ export async function POST(request: Request) {
   if (codigos.length === 0) {
     return responder(request, {
       novos: [],
+      atrasadas: [],
       conhecidos: 0,
       total: 0,
     });
@@ -79,6 +104,7 @@ export async function POST(request: Request) {
   if (!prisma) {
     return responder(request, {
       novos: [],
+      atrasadas: [],
       conhecidos: 0,
       total: codigos.length,
       erro: "Sem banco configurado.",
@@ -137,8 +163,12 @@ export async function POST(request: Request) {
 
   const novos = codigos.filter((c) => !conhecidos.has(c));
 
+  const atrasadas =
+    itens.length > 0 ? await atrasadasNaLista(prisma, itens) : [];
+
   return responder(request, {
     novos,
+    atrasadas,
     conhecidos: codigos.length - novos.length,
     total: codigos.length,
   });
