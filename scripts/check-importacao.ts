@@ -154,7 +154,7 @@ function regra() {
     daPlanilha({
       status: "Aguardando avaliação",
       owner: "Outra pessoa",
-      priority: "Baixa",
+      priority: "Urgente",
       category: "Outra categoria",
       draftResponse: "",
       churnRisk: false,
@@ -247,7 +247,7 @@ async function funcao(prisma: PrismaClient) {
       {
         ...nova,
         status: "Aguardando avaliação",
-        priority: "Baixa",
+        priority: "Urgente",
         category: `${modelo.category} (outra)`,
         publicResponse: RESPOSTA_SINTETICA,
         evaluated: true,

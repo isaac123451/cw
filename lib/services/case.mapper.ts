@@ -1,4 +1,7 @@
-import { Case } from "@/lib/models/case";
+import {
+  Case,
+  prioridadeNormalizada,
+} from "@/lib/models/case";
 
 import { digitosDoDocumento } from "@/lib/models/establishment";
 
@@ -55,21 +58,29 @@ const ORIGEM_PARA_CANAL: Record<string, string> = {
   ManyChat: "MANYCHAT",
 };
 
+/**
+ * O enum do banco e os nomes da documentação.
+ *
+ * O enum ficou com os quatro valores antigos — trocá-lo exigiria
+ * regravar 357 linhas por uma diferença que é só de nome. Média e Baixa
+ * chegam à tela como Normal; ao salvar, Normal grava MEDIA. Uma
+ * reclamação "Baixa" que alguém salve vira "Média" no banco, e as duas
+ * são o mesmo Normal da documentação.
+ */
 const ENUM_PARA_PRIORIDADE: Record<
   string,
   Case["priority"]
 > = {
-  CRITICA: "Crítica",
+  CRITICA: "Urgente",
   ALTA: "Alta",
-  MEDIA: "Média",
-  BAIXA: "Baixa",
+  MEDIA: "Normal",
+  BAIXA: "Normal",
 };
 
-const PRIORIDADE_PARA_ENUM: Record<string, string> = {
-  "Crítica": "CRITICA",
+const PRIORIDADE_PARA_ENUM: Record<Case["priority"], string> = {
+  Urgente: "CRITICA",
   Alta: "ALTA",
-  "Média": "MEDIA",
-  Baixa: "BAIXA",
+  Normal: "MEDIA",
 };
 
 /** Data ISO curta (YYYY-MM-DD), que é a precisão usada nas telas. */
@@ -152,6 +163,22 @@ export function toCaseModel(row: {
   externalUrl: string | null;
   publishedAt: Date;
   updatedAt: Date;
+
+  /*
+    Opcionais porque há leitores antigos — scripts, amostras — que não
+    selecionam as colunas de 12/09/2026. Ausente é "não se sabe".
+  */
+  recebidaEm?: Date | null;
+  triadaEm?: Date | null;
+  triadaPor?: string | null;
+  criterios?: string[] | null;
+  primeiroContatoEm?: Date | null;
+  primeiroContatoCanal?: string | null;
+  primeiroContatoPor?: string | null;
+  ultimoContatoEm?: Date | null;
+  ultimaRespostaEm?: Date | null;
+  tentativasSemResposta?: number | null;
+
   category?: { name: string } | null;
   subcategory?: { name: string } | null;
   owner?: { name: string } | null;
@@ -197,7 +224,21 @@ export function toCaseModel(row: {
       row.category?.name ?? "Não classificado",
     subcategory: row.subcategory?.name ?? undefined,
     priority:
-      ENUM_PARA_PRIORIDADE[row.priority] ?? "Média",
+      ENUM_PARA_PRIORIDADE[row.priority] ?? "Normal",
+    triadaEm: row.triadaEm?.toISOString() ?? undefined,
+    triadaPor: row.triadaPor ?? undefined,
+    criterios:
+      row.criterios && row.criterios.length > 0
+        ? row.criterios
+        : undefined,
+    recebidaEm: row.recebidaEm?.toISOString() ?? undefined,
+    primeiroContatoEm:
+      row.primeiroContatoEm?.toISOString() ?? undefined,
+    primeiroContatoCanal: row.primeiroContatoCanal ?? undefined,
+    primeiroContatoPor: row.primeiroContatoPor ?? undefined,
+    ultimoContatoEm: row.ultimoContatoEm?.toISOString() ?? undefined,
+    ultimaRespostaEm: row.ultimaRespostaEm?.toISOString() ?? undefined,
+    tentativasSemResposta: row.tentativasSemResposta ?? undefined,
     status: row.status,
     owner: row.owner?.name ?? undefined,
     department: row.team?.name ?? undefined,
@@ -306,9 +347,25 @@ export function toCaseColumns(item: Case) {
     phone: item.phone ?? null,
     city: item.city ?? null,
     state: item.state ?? null,
-    priority: (PRIORIDADE_PARA_ENUM[item.priority] ??
-      "MEDIA") as never,
+    priority: (PRIORIDADE_PARA_ENUM[
+      prioridadeNormalizada(item.priority)
+    ] ?? "MEDIA") as never,
     status: item.status,
+
+    /*
+      A hora da publicação entra, mas nunca sai.
+
+      `undefined` faz o Prisma pular o campo: a tela não conhece esta
+      coluna e não pode apagá-la ao salvar. Quem a preenche é quem sabe —
+      a planilha, o vigia do portal — na criação, ou pela regra de
+      completar em `atualizacaoDoPortal`.
+
+      Triagem e contatos ficam de fora pelo mesmo motivo do dossiê: têm
+      ações próprias, que carimbam quem e quando.
+    */
+    recebidaEm: item.recebidaEm
+      ? new Date(item.recebidaEm)
+      : undefined,
     title: item.title,
     description: item.description || null,
     publicResponse: item.publicResponse || null,

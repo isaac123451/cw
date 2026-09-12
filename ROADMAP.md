@@ -323,6 +323,52 @@ Definir a variável na Vercel é o que a liga lá.
 
 ---
 
+### Rumo à 1.0 — a documentação de reputação vira o funcionamento (12/09/2026)
+
+O Isaac mandou a documentação nova do time (agosto/2026, responsável
+Thais Portela: Reclame Aqui, NPS, Google, Redes Sociais, Ofertas,
+Rotina do Agente, Ferramentas e Acessos, Entendendo a Reputação) e
+pediu a 1.0 seguindo ela. O plano inteiro, com diagnóstico e ordem de
+entrega, está publicado como página ("Roadmap CW Reputação 1.0"). Dez
+fases; esta seção registra cada uma quando entra.
+
+**Fase 1 — o relógio certo (0.48.0).** Os prazos do documento são em
+tempo útil ("até 4h úteis", "1 dia útil") e a plataforma não sabia
+medi-los: contava dias corridos, sem hora — as 357 reclamações estavam
+às 00:00 —, e nenhuma regra de SLA existia desde o zeramento de 23/08.
+
+- `lib/services/horasUteis.ts`: um relógio para todas as frentes.
+  Segunda a sexta, expediente configurável (padrão 08h–18h), feriados
+  nacionais e pontos facultativos **calculados** pela Páscoa. 24h úteis
+  é um dia útil (mesma hora do dia útil seguinte); prazo menor conta só
+  dentro do expediente. O NPS passou a usar o mesmo relógio — o dele
+  lia o dia da semana em UTC e errava na borda de sexta à noite.
+- **Hora da publicação** (`Case.recebidaEm`): o vigia grava a hora do
+  portal, e a planilha também. Reimportar a planilha completa a hora das
+  357 antigas, sem trocar a que já existir. Sem hora, o relógio parte da
+  abertura do expediente e a tela avisa.
+- **Criticidade no vocabulário do documento**: Urgente, Alta e Normal
+  (o enum do banco ficou; Média e Baixa aparecem como Normal). Triagem
+  do Passo 1 com os critérios da tabela — marcar os critérios sugere o
+  nível —, e caso aberto sem triagem mostra "a triar". Reclamação nova
+  entra Normal e a triar: a prioridade não sai mais do estado do portal.
+- **Prazos da documentação com um clique** em Processos e SLA, com a
+  tabela à vista antes de salvar (Reclame Aqui por criticidade; Redes
+  Sociais 4h úteis e 1h para mais de 10 mil seguidores). Regras ganharam
+  frente e alcance mínimo.
+- **1º contato como fato** e o registro de contatos (`CaseContato`):
+  falei, tentei sem sucesso, atualização, pedido de avaliação,
+  validação. O chip do relógio no cartão e na lista abre o registro; o
+  aviso diz se a meta foi cumprida e com quanta folga.
+
+Provas: `check:horas-uteis` (feriados de 2026, sexta à noite, 7 de
+setembro) e `check:tratativa` (relógio, planilha e contatos contra o
+banco, num caso descartável), com três sabotagens acendendo vermelho.
+
+**Um clique seu:** Processos e SLA → "Usar os prazos da documentação" →
+Salvar. Até lá os relógios mostram "sem prazo".
+
+
 ### Excluir conta da plataforma (11/09/2026)
 
 O Isaac: "opções de excluir contas da plataforma é importante". Havia só

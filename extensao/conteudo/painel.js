@@ -1459,7 +1459,7 @@
       criadoEm: "",
       categoria: "",
       subcategoria: "",
-      prioridade: "Alta",
+      prioridade: "Normal",
       documento: "",
       formulario: [],
       formularioRecolhido: false,
@@ -5924,7 +5924,8 @@
      CAPTURA — LER A RECLAMAÇÃO E CRIAR NO KANBAN
   ============================================================ */
 
-  const PRIORIDADES = ["Crítica", "Alta", "Média", "Baixa"];
+  /* Os três níveis da documentação de agosto/2026 — Urgente, Alta, Normal. */
+  const PRIORIDADES = ["Urgente", "Alta", "Normal"];
 
 /**
  * Canais que a extensão sabe criar.
@@ -6053,7 +6054,7 @@ const ORIGENS = [
             "prioridade",
             "Prioridade",
             PRIORIDADES,
-            captura.prioridade ?? "Alta"
+            captura.prioridade ?? "Normal"
           )}
         </div>
 

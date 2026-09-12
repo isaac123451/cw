@@ -502,7 +502,7 @@
       telefone: conversa.telefone,
       titulo: "",
       texto: "",
-      prioridade: "Média",
+      prioridade: "Normal",
     });
 
     CW.painel.definirContexto({

@@ -28,31 +28,19 @@ export function decorrido(de: Date | null, ate: Date | null) {
 }
 
 /**
- * Prioridade pelo que o portal diz da reclamação.
+ * A prioridade com que uma reclamação do portal **entra**: Normal.
  *
- * Sem resposta é o mais urgente que existe: cada dia conta contra o
- * índice de resposta. Avaliada como não resolvida, ou com nota baixa,
- * vem logo depois — já está pesando na nota.
+ * Até 12/09/2026 ela saía do estado do portal — sem resposta era
+ * Crítica, avaliada como não resolvida era Alta. Isso é urgência de
+ * resposta, que já tem indicador próprio ("sem resposta pública"), e não
+ * o que a documentação chama de criticidade: esta vem do impacto do caso
+ * — risco jurídico, operação parada, cobrança indevida — e quem decide é
+ * a triagem do Passo 1. O portal não sabe nada disso.
+ *
+ * Então toda reclamação nova entra Normal e sem triagem, e aparece na
+ * fila "a triar". Reclamação que já existe não é tocada: prioridade não
+ * está entre os campos do portal (`DO_PORTAL`).
  */
-export function prioridadePeloPortal(info: {
-  score: number | null;
-  resolved: boolean;
-  evaluated: boolean;
-  answered: boolean;
-}): Case["priority"] {
-
-  if (!info.answered) return "Crítica";
-  if (info.evaluated && !info.resolved) return "Alta";
-
-  if (
-    info.evaluated &&
-    info.score !== null &&
-    info.score <= 4
-  ) {
-    return "Alta";
-  }
-
-  if (!info.evaluated) return "Média";
-
-  return "Baixa";
+export function prioridadePeloPortal(): Case["priority"] {
+  return "Normal";
 }

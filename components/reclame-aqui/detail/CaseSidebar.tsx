@@ -13,15 +13,9 @@ import { Case } from "@/lib/models/case";
 import { useTeams } from "@/lib/context/TeamsContext";
 import { useEstablishments } from "@/lib/context/EstablishmentsContext";
 import { useSession } from "@/lib/context/SessionContext";
-import { useSla } from "@/lib/context/SlaContext";
 
-import {
-  slaStatus,
-  toneOfSla,
-} from "@/lib/services/sla.service";
-
-import { formatHours } from "@/lib/models/sla";
 import Combobox from "@/components/shared/Combobox";
+import PrazoECriticidade from "@/components/reclame-aqui/tratativa/PrazoECriticidade";
 import { idExterno, idLabel } from "@/lib/services/case.service";
 
 interface Props {
@@ -38,6 +32,9 @@ interface Props {
    * leva ao único que existe.
    */
   onEditarAvaliacao?: () => void;
+
+  /** O que a triagem e os contatos mudaram no servidor — ver PrazoECriticidade. */
+  aoMudarNoServidor?: (patch: Partial<Case>) => void;
 }
 
 function Block({
@@ -73,12 +70,10 @@ export default function CaseSidebar({
   owners,
   onChange,
   onEditarAvaliacao,
+  aoMudarNoServidor,
 }: Props) {
 
   const { people } = useTeams();
-  const { rules } = useSla();
-
-  const sla = slaStatus(data, rules);
   const { establishments } = useEstablishments();
 
   const sessao = useSession();
@@ -307,88 +302,12 @@ export default function CaseSidebar({
 
       </Block>
 
-      <Block title="SLA">
-
-        {/* Prazo vem da regra por categoria, não mais de um texto fixo. */}
-        <span
-          className={`inline-block rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${toneOfSla(
-            sla.situation
-          )}`}
-        >
-          {sla.label}
-        </span>
-
-        {sla.rule ? (
-
-          <>
-            <p className="mt-3 text-sm leading-relaxed text-zinc-500">
-              {sla.situation === "estourado"
-                ? `Passou ${Math.abs(
-                    Math.round(sla.remainingHours)
-                  )}h do prazo.`
-                : sla.situation === "concluido"
-                ? "Caso encerrado — o relógio parou."
-                : `Restam ${Math.round(
-                    sla.remainingHours
-                  )}h no prazo.`}
-            </p>
-
-            <dl className="mt-3 space-y-2 border-t border-zinc-100 pt-3">
-
-              {[
-                [
-                  "Resposta",
-                  formatHours(sla.rule.responseHours),
-                ],
-                [
-                  "Solução",
-                  formatHours(sla.rule.solutionHours),
-                ],
-                ["Time", sla.rule.team ?? "—"],
-              ].map(([label, value]) => (
-
-                <div
-                  key={label}
-                  className="flex items-center justify-between"
-                >
-
-                  <dt className="text-xs text-zinc-500">
-                    {label}
-                  </dt>
-
-                  <dd className="text-xs font-medium text-zinc-800">
-                    {value}
-                  </dd>
-
-                </div>
-
-              ))}
-
-            </dl>
-
-            <Link
-              href="/processos"
-              className="mt-3 block text-xs font-medium text-violet-700 hover:underline"
-            >
-              Ver regra em Processos
-            </Link>
-          </>
-
-        ) : (
-
-          <p className="mt-3 text-sm leading-relaxed text-zinc-500">
-            Nenhuma regra de SLA cobre esta categoria.{" "}
-            <Link
-              href="/processos"
-              className="font-medium text-violet-700 hover:underline"
-            >
-              Cadastrar regra
-            </Link>
-          </p>
-
-        )}
-
-      </Block>
+      {/*
+        Era o bloco "SLA": "Restam 48h", contado em dias corridos desde a
+        meia-noite. Virou o bloco da documentação — criticidade, o
+        relógio em tempo útil e os contatos que o fazem parar.
+      */}
+      <PrazoECriticidade data={data} aoMudarNoServidor={aoMudarNoServidor} />
 
       <Block title="Reclame Aqui">
 

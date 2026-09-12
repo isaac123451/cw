@@ -95,6 +95,17 @@ interface CaseRowCru {
   publishedAt: Date;
   updatedAt: Date;
 
+  recebidaEm: Date | null;
+  triadaEm: Date | null;
+  triadaPor: string | null;
+  criterios: string[] | null;
+  primeiroContatoEm: Date | null;
+  primeiroContatoCanal: string | null;
+  primeiroContatoPor: string | null;
+  ultimoContatoEm: Date | null;
+  ultimaRespostaEm: Date | null;
+  tentativasSemResposta: number | null;
+
   respondida: boolean;
 
   categoryName: string | null;
@@ -169,6 +180,11 @@ export async function fetchCases(
            c."responseMinutes", c."solutionMinutes",
            c."slaTarget", c."externalUrl",
            c."publishedAt", c."updatedAt",
+
+           c."recebidaEm", c."triadaEm", c."triadaPor", c."criterios",
+           c."primeiroContatoEm", c."primeiroContatoCanal",
+           c."primeiroContatoPor", c."ultimoContatoEm",
+           c."ultimaRespostaEm", c."tentativasSemResposta",
 
            (c."publicResponse" IS NOT NULL
             AND btrim(c."publicResponse") <> '') AS respondida,

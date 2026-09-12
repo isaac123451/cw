@@ -26,12 +26,8 @@ interface Props {
   onSave: (data: Case) => void;
 }
 
-const PRIORIDADES: Case["priority"][] = [
-  "Crítica",
-  "Alta",
-  "Média",
-  "Baixa",
-];
+/* Os três níveis da documentação — ver `CRITERIOS` em lib/models/case. */
+const PRIORIDADES: Case["priority"][] = ["Urgente", "Alta", "Normal"];
 
 /** "@fulano", "fulano" e a URL do perfil chegam ao mesmo lugar. */
 function arrobaLimpa(valor: string) {
@@ -129,7 +125,14 @@ export default function SocialCaseForm({
   );
   const [priority, setPriority] = useState<
     Case["priority"]
-  >(editing?.priority ?? "Média");
+  >(
+    /*
+      Alta por padrão: "o caso entra com prioridade elevada por padrão,
+      não como demanda comum" — documentação das Redes Sociais. Quem
+      recorre à rede quase sempre já tentou outro canal.
+    */
+    editing?.priority ?? "Alta"
+  );
   const [status, setStatus] = useState(
     editing?.status ?? etapas[0]?.name ?? "Novo"
   );

@@ -1,6 +1,6 @@
 {
   "name": "cw-reputacao",
-  "version": "0.47.2",
+  "version": "0.48.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -85,7 +85,9 @@
     "check:checklist": "tsx scripts/check-checklist.ts",
     "check:vigia": "tsx scripts/check-vigia.ts",
     "check:vigia-volta": "tsx scripts/check-vigia-volta.ts",
-    "check:exclusao": "tsx scripts/check-exclusao.ts"
+    "check:exclusao": "tsx scripts/check-exclusao.ts",
+    "check:horas-uteis": "tsx scripts/check-horas-uteis.ts",
+    "check:tratativa": "tsx scripts/check-tratativa.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",

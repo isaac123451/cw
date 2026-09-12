@@ -24,6 +24,8 @@ import { ConfirmDelete } from "@/components/shared/Modal";
 import SlaRuleForm from "@/components/processos/SlaRuleForm";
 import MovementRuleForm from "@/components/processos/MovementRuleForm";
 import OrphanCategories from "@/components/processos/OrphanCategories";
+import PrazosDaDocumentacaoModal from "@/components/processos/PrazosDaDocumentacaoModal";
+import ExpedienteCard from "@/components/processos/ExpedienteCard";
 
 import { useCases } from "@/lib/context/CaseContext";
 import {
@@ -56,6 +58,7 @@ import {
   formatHours,
   SlaRule,
 } from "@/lib/models/sla";
+import { descreverPrazo } from "@/lib/services/horasUteis";
 
 import { MovementRule } from "@/lib/models/movement";
 
@@ -65,11 +68,14 @@ export default function ProcessosPage() {
 
   const {
     rules,
+    expediente,
     createRule,
     updateRule,
     removeRule,
     toggleRule,
   } = useSla();
+
+  const [documentacaoAberta, setDocumentacaoAberta] = useState(false);
 
   const {
     movements,
@@ -100,8 +106,8 @@ export default function ProcessosPage() {
    * correndo, e misturá-los fazia a tabela divergir do indicador.
    */
   const linhas = useMemo(
-    () => coverage(abertos, rules),
-    [abertos, rules]
+    () => coverage(abertos, rules, { expediente }),
+    [abertos, rules, expediente]
   );
 
   const metrics = useMemo(() => {
@@ -112,7 +118,7 @@ export default function ProcessosPage() {
 
     for (const item of abertos) {
 
-      const status = slaStatus(item, rules);
+      const status = slaStatus(item, rules, { expediente });
 
       if (status.situation === "estourado") estourado++;
       if (status.situation === "atencao") atencao++;
@@ -121,7 +127,7 @@ export default function ProcessosPage() {
 
     return { estourado, atencao, semRegra };
 
-  }, [abertos, rules]);
+  }, [abertos, rules, expediente]);
 
   /** Casos abertos fora do prazo, do mais atrasado para o menos. */
   const atrasados = useMemo(
@@ -129,7 +135,7 @@ export default function ProcessosPage() {
       abertos
         .map((item) => ({
           item,
-          status: slaStatus(item, rules),
+          status: slaStatus(item, rules, { expediente }),
         }))
         .filter(
           (row) => row.status.situation === "estourado"
@@ -140,7 +146,7 @@ export default function ProcessosPage() {
             b.status.remainingHours
         )
         .slice(0, 8),
-    [abertos, rules]
+    [abertos, rules, expediente]
   );
 
   const cargaPorDestino = useMemo(
@@ -188,8 +194,16 @@ export default function ProcessosPage() {
         <PageHeading
           eyebrow="Conhecimento"
           title="Processos e SLA"
-          description="Prazo de resposta e de solução por tipo de caso, e prazo de retorno das movimentações internas."
+          description="Prazo do 1º contato e da solução por criticidade, em tempo útil, e prazo de retorno das movimentações internas."
         >
+          <button
+            onClick={() => setDocumentacaoAberta(true)}
+            className="flex items-center gap-2 rounded-xl border border-violet-200 bg-white px-4 py-2.5 text-sm font-medium text-violet-700 transition-colors hover:bg-violet-50"
+          >
+            <BookOpenCheck size={16} />
+            Usar os prazos da documentação
+          </button>
+
           <button
             onClick={() => {
               setEditing(undefined);
@@ -274,12 +288,14 @@ export default function ProcessosPage() {
 
         </div>
 
+        <ExpedienteCard />
+
         <OrphanCategories />
 
         <SurfaceCard
           title="Regras de SLA"
-          description="A regra mais específica vence: categoria e prioridade, depois categoria, depois prioridade, e por fim o padrão."
-          hint="Sem essa ordem, uma regra genérica cadastrada depois passaria por cima de uma específica já existente."
+          description="A regra mais específica vence: categoria, depois prioridade, depois alcance do perfil, depois a frente."
+          hint="Sem essa ordem, uma regra genérica cadastrada depois passaria por cima de uma específica já existente. Os prazos contam só tempo útil — ver Expediente."
           bodyClassName="p-0"
         >
 
@@ -293,7 +309,7 @@ export default function ProcessosPage() {
 
                   {[
                     "Aplica-se a",
-                    "Resposta",
+                    "1º contato",
                     "Solução",
                     "Time",
                     "Em aberto hoje",
@@ -332,9 +348,15 @@ export default function ProcessosPage() {
                         Enquanto não houver regra, nenhum
                         caso é marcado como fora do prazo —
                         não há prazo contra o que comparar.
-                        Comece por uma regra padrão em
-                        &ldquo;Nova regra&rdquo;.
                       </p>
+                      <button
+                        type="button"
+                        onClick={() => setDocumentacaoAberta(true)}
+                        className="mt-4 inline-flex items-center gap-2 rounded-xl bg-violet-700 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-violet-800"
+                      >
+                        <BookOpenCheck size={15} />
+                        Usar os prazos da documentação
+                      </button>
                     </td>
                   </tr>
                 )}
@@ -355,9 +377,21 @@ export default function ProcessosPage() {
                           ? "Todas as categorias"
                           : rule.category}
 
+                        {rule.canal && (
+                          <span className="ml-2 rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-semibold text-violet-700">
+                            {rule.canal}
+                          </span>
+                        )}
+
                         {rule.priority && (
                           <span className="ml-2 rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-semibold text-zinc-600">
                             {rule.priority}
+                          </span>
+                        )}
+
+                        {rule.seguidoresMin && (
+                          <span className="ml-2 rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-semibold text-zinc-600">
+                            {rule.seguidoresMin.toLocaleString("pt-BR")}+ seguidores
                           </span>
                         )}
 
@@ -377,11 +411,11 @@ export default function ProcessosPage() {
                     </td>
 
                     <td className="whitespace-nowrap px-5 py-3.5 font-medium tabular-nums text-zinc-700">
-                      {formatHours(rule.responseHours)}
+                      {descreverPrazo(rule.responseHours)}
                     </td>
 
                     <td className="whitespace-nowrap px-5 py-3.5 font-medium tabular-nums text-zinc-700">
-                      {formatHours(rule.solutionHours)}
+                      {rule.solutionHours > 0 ? descreverPrazo(rule.solutionHours) : "sem prazo"}
                     </td>
 
                     <td className="whitespace-nowrap px-5 py-3.5 text-zinc-600">
@@ -776,16 +810,11 @@ export default function ProcessosPage() {
                       className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-inset ${toneOfSla(
                         status.situation
                       )}`}
-                      title={`Prazo da regra: ${formatHours(
+                      title={`Prazo da regra: 1º contato em até ${descreverPrazo(
                         status.rule?.responseHours ?? 0
-                      )} para resposta`}
+                      )}${status.rule?.solutionHours ? `, solução em até ${descreverPrazo(status.rule.solutionHours)}` : ""}. Contado em tempo útil.`}
                     >
-                      {Math.abs(
-                        Math.round(
-                          status.remainingHours / 24
-                        )
-                      )}{" "}
-                      dia(s) de atraso
+                      {status.label}
                     </span>
 
                   </Link>
@@ -837,6 +866,10 @@ export default function ProcessosPage() {
           setMovDeleting(undefined);
         }}
       />
+
+      {documentacaoAberta && (
+        <PrazosDaDocumentacaoModal onClose={() => setDocumentacaoAberta(false)} />
+      )}
 
       <ConfirmDelete
         open={Boolean(deleting)}

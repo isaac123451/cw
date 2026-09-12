@@ -1,3 +1,72 @@
+/* ============================================================
+   CRITICIDADE — a tabela da documentação do Reclame Aqui
+============================================================ */
+
+export type Prioridade = "Urgente" | "Alta" | "Normal";
+
+export const PRIORIDADES: Prioridade[] = ["Urgente", "Alta", "Normal"];
+
+/**
+ * O nome de hoje para qualquer grafia que já circulou.
+ *
+ * Quatro níveis viraram três em 12/09/2026. A extensão antiga, uma
+ * regra de SLA gravada antes e a planilha ainda falam "Crítica",
+ * "Média" e "Baixa" — e todos continuam sendo entendidos.
+ */
+export function prioridadeNormalizada(valor?: string | null): Prioridade {
+
+  const limpo = String(valor ?? "")
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .trim()
+    .toLowerCase();
+
+  if (["urgente", "critica", "critico"].includes(limpo)) return "Urgente";
+  if (limpo === "alta") return "Alta";
+
+  return "Normal";
+}
+
+export interface Criterio {
+  id: string;
+  texto: string;
+  prioridade: Exclude<Prioridade, "Normal">;
+}
+
+/**
+ * Os critérios de criticidade, na letra da documentação.
+ *
+ * Marcar qualquer um de Urgente sugere Urgente; sem nenhum desses e com
+ * algum de Alta, Alta; sem nenhum, Normal — "dúvidas operacionais,
+ * solicitações de informação, reclamações sem impacto operacional
+ * imediato". É sugestão: quem tria decide.
+ */
+export const CRITERIOS: Criterio[] = [
+  { id: "juridico", texto: "Risco jurídico ou regulatório", prioridade: "Urgente" },
+  { id: "exposicao", texto: "Grande exposição pública ou viralização", prioridade: "Urgente" },
+  { id: "operacao-parada", texto: "Operação do cliente totalmente paralisada", prioridade: "Urgente" },
+  { id: "estrategico", texto: "Cliente estratégico ou de alto ticket", prioridade: "Urgente" },
+  { id: "reincidencia", texto: "Reincidência de erro", prioridade: "Urgente" },
+  { id: "cancelamento", texto: "Risco concreto de cancelamento", prioridade: "Urgente" },
+  { id: "financeiro", texto: "Impacto financeiro direto (cobrança indevida, erro de valores)", prioridade: "Alta" },
+  { id: "funcionalidade", texto: "Funcionalidade crítica indisponível", prioridade: "Alta" },
+  { id: "prazo-descumprido", texto: "Prazo combinado anteriormente não cumprido", prioridade: "Alta" },
+];
+
+export function prioridadePelosCriterios(ids: string[]): Prioridade {
+
+  const marcados = CRITERIOS.filter((c) => ids.includes(c.id));
+
+  if (marcados.some((c) => c.prioridade === "Urgente")) return "Urgente";
+  if (marcados.some((c) => c.prioridade === "Alta")) return "Alta";
+
+  return "Normal";
+}
+
+/** A frase do documento para o nível sem critério nenhum. */
+export const CRITERIO_NORMAL =
+  "Dúvidas operacionais, solicitações de informação, reclamações sem impacto operacional imediato.";
+
 export interface Case {
   id: string;
 
@@ -66,7 +135,40 @@ export interface Case {
 
   subcategory?: string;
 
-  priority: "Crítica" | "Alta" | "Média" | "Baixa";
+  /**
+   * A criticidade, com os nomes da documentação: Urgente, Alta, Normal.
+   *
+   * Eram quatro — Crítica, Alta, Média e Baixa — contra as três do
+   * documento. O banco guarda o enum antigo; a tradução mora em
+   * `case.mapper`, e "Média" e "Baixa" chegam aqui como Normal.
+   */
+  priority: Prioridade;
+
+  /** Quando alguém fez a triagem do Passo 1 — ver `CRITERIOS`. */
+  triadaEm?: string;
+  triadaPor?: string;
+  /** Os critérios do documento marcados na triagem (ids de `CRITERIOS`). */
+  criterios?: string[];
+
+  /**
+   * O instante da publicação, com hora, quando se sabe.
+   *
+   * `createdAt` é o dia; este é o que o relógio de horas úteis usa. Sem
+   * ele, o prazo parte da abertura do dia útil — ver `inicioDoRelogio`.
+   */
+  recebidaEm?: string;
+
+  /** A "meta de 1º contato" cumprida: quando, por onde, por quem. */
+  primeiroContatoEm?: string;
+  primeiroContatoCanal?: string;
+  primeiroContatoPor?: string;
+
+  /** O contato mais recente feito pela operação. */
+  ultimoContatoEm?: string;
+  /** A última vez que o cliente respondeu. */
+  ultimaRespostaEm?: string;
+  /** Tentativas seguidas sem resposta desde a última resposta. */
+  tentativasSemResposta?: number;
 
   status: string;
 

@@ -14,42 +14,24 @@ import {
   TIPOS_PADRAO,
 } from "@/lib/models/nps";
 import { diaNaOperacao } from "@/lib/services/reputation.service";
+import {
+  EXPEDIENTE_PADRAO,
+  type Expediente,
+  prazoUtil,
+} from "@/lib/services/horasUteis";
 
 /* ============================================================
    PRAZO EM HORAS ÚTEIS
 ============================================================ */
 
-/**
- * Sábado e domingo não contam.
- *
- * "24 horas úteis" é lido como 24 horas de relógio que caem em dia
- * útil — a interpretação mais simples de explicar para a operação e de
- * conferir num caso concreto. Feriado não entra: exigiria um calendário
- * mantido à mão, que envelheceria calado.
- */
-function ehDiaUtil(d: Date) {
-  const dia = d.getUTCDay();
-  return dia !== 0 && dia !== 6;
-}
+/*
+  O relógio mora em `lib/services/horasUteis.ts` desde 12/09/2026.
 
-/** Soma horas úteis a partir de uma data, pulando fim de semana. */
-export function prazoUtil(
-  inicio: Date,
-  horasUteis: number
-): Date {
-
-  const cursor = new Date(inicio.getTime());
-
-  let restantes = Math.max(horasUteis, 0);
-
-  // Passo de uma hora: simples de auditar e barato no volume desta tela.
-  while (restantes > 0) {
-    cursor.setUTCHours(cursor.getUTCHours() + 1);
-    if (ehDiaUtil(cursor)) restantes -= 1;
-  }
-
-  return cursor;
-}
+  Este arquivo tinha o seu: horas de relógio que caíam em dia útil,
+  com o dia da semana lido em UTC — uma resposta das 22h de sexta, em
+  Brasília, já contava como sábado —, e sem feriado nenhum. Agora o NPS,
+  o Reclame Aqui e as redes contam o mesmo tempo útil.
+*/
 
 /**
  * Prazo do primeiro contato: o do tipo, quando existe; senão o do
@@ -63,7 +45,8 @@ export function prazoPrimeiroContato(
   respondedAt: Date,
   score: number,
   kind?: string | null,
-  tipos: NpsKindOption[] = TIPOS_PADRAO
+  tipos: NpsKindOption[] = TIPOS_PADRAO,
+  expediente: Expediente = EXPEDIENTE_PADRAO
 ): Date {
 
   const regra = tipoPorNome(tipos, kind);
@@ -72,7 +55,7 @@ export function prazoPrimeiroContato(
     regra?.ownDeadlineHours ??
     segmentOf(score).slaHoursUteis;
 
-  return prazoUtil(respondedAt, horas);
+  return prazoUtil(respondedAt, horas, expediente);
 }
 
 /* ============================================================

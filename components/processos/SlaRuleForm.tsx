@@ -21,16 +21,12 @@ import { SlaRuleDraft } from "@/lib/context/SlaContext";
 
 import {
   ANY_CATEGORY,
-  formatHours,
+  CANAIS_DO_PRAZO,
+  canalDoCaso,
   SlaRule,
 } from "@/lib/models/sla";
-
-const PRIORIDADES = [
-  "Crítica",
-  "Alta",
-  "Média",
-  "Baixa",
-] as const;
+import { PRIORIDADES } from "@/lib/models/case";
+import { descreverPrazo } from "@/lib/services/horasUteis";
 
 interface Props {
   open: boolean;
@@ -63,8 +59,14 @@ export default function SlaRuleForm({
   const [category, setCategory] = useState(
     editing?.category ?? ANY_CATEGORY
   );
-  const [priority, setPriority] = useState(
+  const [priority, setPriority] = useState<string>(
     editing?.priority ?? ""
+  );
+  const [canal, setCanal] = useState<string>(
+    editing?.canal ?? ""
+  );
+  const [seguidoresMin, setSeguidoresMin] = useState(
+    editing?.seguidoresMin ? String(editing.seguidoresMin) : ""
   );
   const [responseHours, setResponseHours] = useState(
     editing ? String(editing.responseHours) : "48"
@@ -102,18 +104,25 @@ export default function SlaRuleForm({
 
   const resposta = Number(responseHours);
   const solucao = Number(solutionHours);
+  const alcanceMin = seguidoresMin.trim() === "" ? 0 : Number(seguidoresMin);
 
+  /*
+    Solução zero é permitida: é "a documentação não fixa prazo de
+    solução", como nas Redes Sociais. Primeiro contato zero não é.
+  */
   const horasValidas =
     Number.isFinite(resposta) &&
     resposta > 0 &&
     Number.isFinite(solucao) &&
-    solucao > 0;
+    solucao >= 0;
 
-  // Não faz sentido exigir a solução antes da primeira resposta.
+  // Não faz sentido exigir a solução antes do 1º contato.
   const ordemValida =
-    !horasValidas || solucao >= resposta;
+    !horasValidas || solucao === 0 || solucao >= resposta;
 
-  const valido = horasValidas && ordemValida;
+  const alcanceValido = Number.isFinite(alcanceMin) && alcanceMin >= 0;
+
+  const valido = horasValidas && ordemValida && alcanceValido;
 
   /** Quantos casos da base esta regra passaria a governar. */
   const alcance = useMemo(
@@ -123,9 +132,11 @@ export default function SlaRuleForm({
           (category === ANY_CATEGORY ||
             item.category === category) &&
           (priority === "" ||
-            item.priority === priority)
+            item.priority === priority) &&
+          (canal === "" || canalDoCaso(item.source) === canal) &&
+          (!alcanceMin || (item.followers ?? 0) >= alcanceMin)
       ).length,
-    [cases, category, priority]
+    [cases, category, priority, canal, alcanceMin]
   );
 
   function salvar() {
@@ -137,6 +148,8 @@ export default function SlaRuleForm({
       priority: priority
         ? (priority as SlaRule["priority"])
         : undefined,
+      canal: canal ? (canal as SlaRule["canal"]) : undefined,
+      seguidoresMin: alcanceMin > 0 ? alcanceMin : undefined,
       responseHours: resposta,
       solutionHours: solucao,
       team: team.trim() || undefined,
@@ -156,7 +169,7 @@ export default function SlaRuleForm({
       title={
         editing ? "Editar regra de SLA" : "Nova regra de SLA"
       }
-      description="Define o prazo de resposta e de solução conforme o tipo de caso."
+      description="O prazo do 1º contato com o cliente e o da solução, em tempo útil — contados só dentro do expediente."
       onClose={onClose}
       footer={
         <>
@@ -249,10 +262,49 @@ export default function SlaRuleForm({
         <div className="grid gap-4 sm:grid-cols-2">
 
           <Field
-            label="Prazo de resposta (horas)"
+            label="Frente"
+            hint="Reclame Aqui e Redes Sociais têm prazos diferentes na documentação."
+          >
+            <select
+              value={canal}
+              onChange={(e) => setCanal(e.target.value)}
+              className={inputClass}
+            >
+              <option value="">Todas as frentes</option>
+              {CANAIS_DO_PRAZO.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+          </Field>
+
+          <Field
+            label="Só a partir de (seguidores)"
+            hint={
+              alcanceValido
+                ? "Vazio vale para qualquer perfil. A documentação usa 10.000 nas Redes Sociais."
+                : "Informe um número inteiro."
+            }
+          >
+            <input
+              value={seguidoresMin}
+              onChange={(e) => setSeguidoresMin(e.target.value.replace(/\D/g, ""))}
+              inputMode="numeric"
+              placeholder="Ex.: 10000"
+              className={inputClass}
+            />
+          </Field>
+
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+
+          <Field
+            label="1º contato (horas úteis)"
             hint={
               horasValidas
-                ? `Equivale a ${formatHours(resposta)}.`
+                ? `Equivale a ${descreverPrazo(resposta)}. Múltiplos de 24 contam em dias úteis.`
                 : "Informe um número maior que zero."
             }
           >
@@ -267,13 +319,15 @@ export default function SlaRuleForm({
           </Field>
 
           <Field
-            label="Prazo de solução (horas)"
+            label="Solução (horas úteis)"
             hint={
               !ordemValida
-                ? "A solução não pode vencer antes da resposta."
+                ? "A solução não pode vencer antes do 1º contato."
                 : horasValidas
-                ? `Equivale a ${formatHours(solucao)}.`
-                : "Informe um número maior que zero."
+                ? solucao === 0
+                  ? "Zero: sem prazo de solução — o relógio para no 1º contato."
+                  : `Equivale a ${descreverPrazo(solucao)}.`
+                : "Informe zero ou mais."
             }
           >
             <input

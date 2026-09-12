@@ -123,7 +123,7 @@ export async function POST(request: Request) {
     const sla = slaStatus(
       caso,
       workspace.slaRules,
-      hojeNaOperacao()
+      { expediente: workspace.expediente }
     );
 
     const movimento = openMovementOf(

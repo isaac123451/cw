@@ -43,6 +43,7 @@ model User {
   npsNotes      NpsNote[]        @relation("NpsNoteAuthor")
   moduleRoles   UserModuleRole[]
   challenges    LoginChallenge[]
+  caseContatos  CaseContato[]
 
   /// Exige código por e-mail no login desta pessoa, mesmo que a
   /// exigência global esteja desligada.
@@ -413,6 +414,41 @@ model Case {
   updatedAt   DateTime @updatedAt
   createdAt   DateTime @default(now())
 
+  /// O instante em que a reclamação foi publicada, **com a hora**.
+  ///
+  /// `publishedAt` é só data, e tem de continuar sendo: dezenas de
+  /// contas por período cortam o dia dele, e uma hora ali empurraria a
+  /// reclamação das 21h para o dia seguinte. Os prazos da documentação,
+  /// porém, são em horas úteis — "até 4h úteis" —, e sem a hora não
+  /// existe como medi-los. As 357 reclamações anteriores a 12/09/2026
+  /// não têm hora; o relógio delas parte da abertura do dia útil.
+  recebidaEm DateTime?
+
+  /// A triagem do Passo 1: alguém olhou e decidiu a criticidade.
+  ///
+  /// Até aqui a prioridade saía do estado do portal ("sem resposta" era
+  /// Crítica), que não é o que o documento chama de criticidade — lá ela
+  /// vem do impacto: risco jurídico, operação parada, cobrança indevida.
+  triadaEm  DateTime?
+  triadaPor String?
+  /// Os critérios do documento marcados na triagem.
+  criterios String[] @default([])
+
+  /// O primeiro contato com o cliente — a "meta de 1º contato".
+  ///
+  /// Guardado no caso, e não só na lista de contatos, porque é o que o
+  /// quadro inteiro mostra: a lista não carrega o histórico de cada um.
+  primeiroContatoEm    DateTime?
+  primeiroContatoCanal String?
+  primeiroContatoPor   String?
+
+  /// O contato mais recente que a operação fez, de qualquer tipo.
+  ultimoContatoEm DateTime?
+  /// A última vez que o cliente respondeu.
+  ultimaRespostaEm DateTime?
+  /// Tentativas seguidas sem resposta, desde a última resposta.
+  tentativasSemResposta Int @default(0)
+
   tags      CaseTag[]
   comments  CaseComment[]
   events    CaseEvent[]
@@ -420,6 +456,7 @@ model Case {
   impacts   ImpactRecord[]
   tasks     AgendaTask[]
   movements CaseMovement[]
+  contatos  CaseContato[]
 
   @@index([channel, publishedAt])
   @@index([status])
@@ -461,6 +498,41 @@ model CaseComment {
 
   body      String
   createdAt DateTime @default(now())
+}
+
+/// Cada contato com o cliente de um caso — feito ou tentado.
+///
+/// **Por que existe.** A documentação do Reclame Aqui e a das Redes
+/// Sociais exigem registrar cada interação: o 1º contato, cada tentativa
+/// sem retorno ("até 5 ligações em 7 dias"), cada atualização enquanto a
+/// área interna trabalha, cada pedido de avaliação. A base tinha 2
+/// anotações e nenhum evento em 357 reclamações — o registro não tinha
+/// onde acontecer. O NPS já tinha o seu (`NpsAttempt`); este é o dos
+/// casos.
+model CaseContato {
+  id     String @id @default(cuid())
+  caseId String
+  case   Case   @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  /// contato · tentativa · atualizacao · pedido-avaliacao · validacao
+  tipo String
+  /// WhatsApp · Telefone · E-mail · Portal RA · Instagram · Crisp …
+  canal String
+  /// respondeu · sem-resposta · nao-atendeu · caixa-postal · enviado
+  resultado String?
+  nota      String?
+
+  /// Quando aconteceu — pode ser registrado depois do fato.
+  em DateTime
+
+  autorId String?
+  autor   User?   @relation(fields: [autorId], references: [id], onDelete: SetNull)
+  /// O nome, além da relação: excluir a conta não apaga a autoria.
+  autorNome String
+
+  createdAt DateTime @default(now())
+
+  @@index([caseId, em])
 }
 
 /// Linha do tempo: alimenta a rastreabilidade do caso.
@@ -601,6 +673,12 @@ model SlaRule {
   category      String
   /// Refina a regra para uma prioridade específica.
   priority      String?
+  /// "Reclame Aqui" ou "Redes Sociais"; vazio vale para os dois.
+  canal         String?
+  /// A regra só vale para perfil com pelo menos este alcance —
+  /// "mais de 10 mil seguidores: 1 hora", nas Redes Sociais.
+  seguidoresMin Int?
+  /// Nos prazos da documentação: o do 1º contato com o cliente.
   responseHours Int
   solutionHours Int
   team          String?
@@ -1288,6 +1366,26 @@ model IaConfig {
   timeoutSeconds Int?
 
   updatedAt DateTime @updatedAt
+}
+
+/// Como a operação trabalha: o expediente que dá sentido a "hora útil".
+///
+/// Singleton, como `IaConfig`. Sem linha gravada vale o padrão de
+/// `lib/services/horasUteis.ts` — segunda a sexta, 08h às 18h, feriados
+/// nacionais e pontos facultativos fora.
+model OperacaoConfig {
+  id String @id @default("unico")
+
+  /// Minutos desde a meia-noite: 480 é 08h00.
+  expedienteInicio Int   @default(480)
+  expedienteFim    Int   @default(1080)
+  /// 0 domingo … 6 sábado.
+  diasUteis        Int[] @default([1, 2, 3, 4, 5])
+  /// Carnaval e Corpus Christi não contam como dia útil.
+  pularFacultativos Boolean @default(true)
+
+  updatedAt DateTime @updatedAt
+  updatedBy String?
 }
 
 model WebhookConfig {

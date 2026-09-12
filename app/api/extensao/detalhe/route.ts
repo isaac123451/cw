@@ -11,7 +11,6 @@ import { loadWorkspace } from "@/lib/actions/workspace";
 import { fetchCaseByProtocol } from "@/lib/services/case.repository";
 import { isOpen } from "@/lib/services/case.service";
 import { slaStatus } from "@/lib/services/sla.service";
-import { hojeNaOperacao } from "@/lib/services/reputation.service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -85,7 +84,7 @@ export async function GET(request: Request) {
   const sla = slaStatus(
     caso,
     workspace.slaRules,
-    hojeNaOperacao()
+    { expediente: workspace.expediente }
   );
 
   /**

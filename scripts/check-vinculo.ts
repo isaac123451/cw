@@ -155,7 +155,7 @@ function casoDeTeste(
     document: documento,
     source: "Reclame Aqui",
     category: "Não classificado",
-    priority: "Média",
+    priority: "Normal",
     status: "Novo",
     title: `Vínculo ${marca}`,
     description:

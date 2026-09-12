@@ -921,7 +921,7 @@ function resumir(
   origem: string
 ): CasoResumo {
 
-  const sla = slaStatus(item, workspace.slaRules, hojeNaOperacao());
+  const sla = slaStatus(item, workspace.slaRules, { expediente: workspace.expediente });
 
   const movimento = openMovementOf(
     item.id,

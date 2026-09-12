@@ -34,10 +34,21 @@ const schema = readFileSync(
   "utf8"
 );
 
-const workspace = readFileSync(
-  resolve(RAIZ, "lib/actions/workspace.ts"),
-  "utf8"
-);
+/*
+  A carga do workspace e os tradutores que ela chama.
+
+  Desde 12/09/2026 a regra de SLA e o expediente são traduzidos fora do
+  arquivo — `slaRuleDoBanco` e `expedienteDoBanco` —, porque a ação que
+  grava os prazos da documentação devolve a mesma forma. Ler só o
+  workspace daria as colunas por perdidas quando elas chegam à tela.
+*/
+const workspace = [
+  "lib/actions/workspace.ts",
+  "lib/models/sla.ts",
+  "lib/services/operacao.service.ts",
+]
+  .map((arquivo) => readFileSync(resolve(RAIZ, arquivo), "utf8"))
+  .join("\n");
 
 let falhas = 0;
 
@@ -147,6 +158,16 @@ const INTERNAS: Record<string, string[]> = {
   NpsRootCause: ["*"],
   ReputationGoal: ["*"],
   CaseMovement: ["caseId", "lateNotifiedAt"],
+
+  /**
+   * Contatos de um caso: carga própria (`listarContatos`), aberta
+   * com a tela do caso — como `CaseComment`. O resumo que o quadro
+   * precisa (1º contato, último, tentativas) mora no próprio caso.
+   */
+  CaseContato: ["*"],
+
+  /** Quem mudou o expediente por último — registro, não conteúdo. */
+  OperacaoConfig: ["updatedBy"],
 };
 
 

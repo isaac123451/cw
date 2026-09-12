@@ -56,7 +56,7 @@ const COLUNAS = [
   "Resolvido",
   "Voltaria",
   "Status",
-  "SLA",
+  "Prazo",
   "Responsável",
   "Contato",
 ];

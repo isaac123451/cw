@@ -132,7 +132,7 @@ export function getMetrics(cases: Case[]): CaseMetrics {
     open: cases.filter(isOpen).length,
 
     critical: cases.filter(
-      (item) => item.priority === "Crítica"
+      (item) => item.priority === "Urgente"
     ).length,
 
     resolved,
@@ -260,7 +260,7 @@ export function getCriticalCases(cases: Case[]) {
     .filter(
       (item) =>
         isOpen(item) &&
-        (item.priority === "Crítica" || item.churnRisk)
+        (item.priority === "Urgente" || item.churnRisk)
     )
     .sort((a, b) =>
       b.updatedAt && a.updatedAt

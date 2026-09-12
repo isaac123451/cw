@@ -8,6 +8,10 @@ import {
 } from "react";
 
 import { SlaRule } from "@/lib/models/sla";
+import {
+  EXPEDIENTE_PADRAO,
+  type Expediente,
+} from "@/lib/services/horasUteis";
 
 import {
   removeSlaRule,
@@ -21,6 +25,15 @@ export type SlaRuleDraft = Omit<SlaRule, "id">;
 
 interface SlaContextType {
   rules: SlaRule[];
+
+  /** O expediente que dá sentido a "hora útil" em todos os relógios. */
+  expediente: Expediente;
+
+  /** Troca o expediente na tela depois que o servidor confirmou. */
+  setExpediente: (valor: Expediente) => void;
+
+  /** Troca as regras na tela depois que o servidor confirmou. */
+  setRules: (valor: SlaRule[]) => void;
 
   /** Carga inicial ainda em andamento. */
   loading: boolean;
@@ -45,10 +58,18 @@ export function SlaProvider({
     [] as SlaRule[]
   );
 
+  const [expediente, setExpediente] = useWorkspaceSlice(
+    (dados) => dados.expediente ?? EXPEDIENTE_PADRAO,
+    EXPEDIENTE_PADRAO
+  );
+
   const value = useMemo<SlaContextType>(
     () => ({
       rules,
       loading,
+      expediente,
+      setExpediente: (valor) => setExpediente(valor),
+      setRules: (valor) => setRules(valor),
 
       createRule: (data) => {
 
@@ -99,7 +120,7 @@ export function SlaProvider({
         sincronizar(() => saveSlaRule(alterado));
       },
     }),
-    [rules, loading, setRules]
+    [rules, loading, setRules, expediente, setExpediente]
   );
 
   return (

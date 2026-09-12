@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useState } from "react";
 
 import {
-  Clock3,
   GripVertical,
   MapPin,
   Star,
@@ -17,6 +16,8 @@ import { Case } from "@/lib/models/case";
 import { TagChips } from "@/components/shared/TagPicker";
 import { ConfirmDelete } from "@/components/shared/Modal";
 import BotaoCompletar from "@/components/reclame-aqui/completar/BotaoCompletar";
+import ChipPrioridade from "@/components/reclame-aqui/tratativa/ChipPrioridade";
+import RelogioDoCaso from "@/components/reclame-aqui/tratativa/RelogioDoCaso";
 
 import { useCases } from "@/lib/context/CaseContext";
 import { useOwners } from "@/lib/hooks/useOwners";
@@ -27,13 +28,6 @@ interface Props {
   onDragStart: (id: string) => void;
   onDragEnd: () => void;
 }
-
-const priorityTone: Record<string, string> = {
-  Crítica: "bg-rose-50 text-rose-700 ring-rose-100",
-  Alta: "bg-orange-50 text-orange-700 ring-orange-100",
-  Média: "bg-amber-50 text-amber-700 ring-amber-100",
-  Baixa: "bg-zinc-100 text-zinc-600 ring-zinc-200",
-};
 
 export default function KanbanCard({
   item,
@@ -91,14 +85,7 @@ export default function KanbanCard({
 
         <div className="flex shrink-0 items-center gap-1">
 
-          <span
-            className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ring-inset ${
-              priorityTone[item.priority] ??
-              "bg-zinc-100 text-zinc-600 ring-zinc-200"
-            }`}
-          >
-            {item.priority}
-          </span>
+          <ChipPrioridade item={item} />
 
           {/*
             Excluir a reclamação, do próprio quadro.
@@ -152,6 +139,16 @@ export default function KanbanCard({
 
       <BotaoCompletar item={item} className="mt-2" />
 
+      {/*
+        O relógio do caso no lugar do "48h" fixo.
+
+        O texto que ficava aqui era `slaTarget` — a string que a
+        importação gravava igual em toda reclamação e nunca mudava. Agora
+        é o relógio de verdade, em tempo útil, e clicar nele registra o
+        1º contato quando é isso que falta.
+      */}
+      <RelogioDoCaso item={item} esconderSemRegra className="mt-2" />
+
       <div className="mt-2 flex items-center gap-3 text-[11px] text-zinc-400">
 
         {(item.city || item.state) && (
@@ -162,11 +159,6 @@ export default function KanbanCard({
               .join("/")}
           </span>
         )}
-
-        <span className="flex items-center gap-1">
-          <Clock3 size={11} />
-          {item.sla}
-        </span>
 
         <span className="flex items-center gap-1">
           <Star

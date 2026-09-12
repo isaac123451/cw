@@ -273,6 +273,11 @@ export async function saveSlaRule(item: SlaRule) {
   const dados = {
     category: item.category,
     priority: item.priority ?? null,
+    canal: item.canal ?? null,
+    seguidoresMin:
+      typeof item.seguidoresMin === "number" && item.seguidoresMin > 0
+        ? Math.round(item.seguidoresMin)
+        : null,
     responseHours: item.responseHours,
     solutionHours: item.solutionHours,
     team: item.team ?? null,

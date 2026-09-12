@@ -347,7 +347,7 @@ function prioridadeDe(info: {
   respondida: boolean;
 }): Case["priority"] {
 
-  if (!info.respondida) return "Crítica";
+  if (!info.respondida) return "Urgente";
   if (info.avaliada && !info.resolvida) return "Alta";
 
   if (
@@ -358,7 +358,7 @@ function prioridadeDe(info: {
     return "Alta";
   }
 
-  return info.avaliada ? "Baixa" : "Média";
+  return "Normal";
 }
 
 function etiquetasDe(item: Case) {

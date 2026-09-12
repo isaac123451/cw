@@ -22,7 +22,12 @@ import {
   TeamOption,
 } from "@/lib/models/settings";
 import { WorkflowStatus } from "@/lib/models/workflow";
-import { SlaRule } from "@/lib/models/sla";
+import { SlaRule, slaRuleDoBanco } from "@/lib/models/sla";
+import {
+  EXPEDIENTE_PADRAO,
+  type Expediente,
+} from "@/lib/services/horasUteis";
+import { expedienteDoBanco } from "@/lib/services/operacao.service";
 import {
   CaseMovement,
   MovementRule,
@@ -124,6 +129,9 @@ export interface Workspace {
    */
   reputationGoals: Record<string, number>;
 
+  /** O expediente que dá sentido a "hora útil" — ver horasUteis. */
+  expediente: Expediente;
+
   /**
    * Este retrato veio do banco, ou é o vazio de emergência?
    *
@@ -196,6 +204,7 @@ const VAZIO: Workspace = {
     id: `padrao-plano-${i}`,
   })),
   reputationGoals: {},
+  expediente: EXPEDIENTE_PADRAO,
   clientEnrichment: {},
   manualClients: [],
 };
@@ -309,6 +318,7 @@ async function carregarDoBanco(): Promise<Workspace | null> {
     journeyPlacements,
     reputationGoals,
     clientProfiles,
+    operacao,
   ] = await Promise.all([
     prisma.workflowStatus.findMany({
       orderBy: { order: "asc" },
@@ -398,6 +408,7 @@ async function carregarDoBanco(): Promise<Workspace | null> {
     prisma.clientProfile.findMany({
       orderBy: { createdAt: "desc" },
     }),
+    prisma.operacaoConfig.findUnique({ where: { id: "unico" } }),
   ]);
 
   return {
@@ -456,17 +467,8 @@ async function carregarDoBanco(): Promise<Workspace | null> {
       active: r.active,
     })),
 
-    slaRules: slaRules.map((r) => ({
-      id: r.id,
-      category: r.category,
-      priority:
-        (r.priority as SlaRule["priority"]) ?? undefined,
-      responseHours: r.responseHours,
-      solutionHours: r.solutionHours,
-      team: r.team ?? undefined,
-      note: r.note ?? undefined,
-      active: r.active,
-    })),
+    /* Regra gravada antes de 12/09/2026 diz "Crítica" ou "Média". */
+    slaRules: slaRules.map(slaRuleDoBanco),
 
     movementRules: movementRules.map((r) => ({
       id: r.id,
@@ -574,6 +576,8 @@ async function carregarDoBanco(): Promise<Workspace | null> {
     reputationGoals: Object.fromEntries(
       reputationGoals.map((r) => [r.indicator, r.target])
     ),
+
+    expediente: expedienteDoBanco(operacao),
 
     /**
      * As duas metades saem da mesma tabela.

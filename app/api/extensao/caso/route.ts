@@ -6,7 +6,7 @@ import {
 } from "@/lib/api/extensao";
 
 import { getPrisma } from "@/lib/prisma";
-import { Case } from "@/lib/models/case";
+import { Case, prioridadeNormalizada } from "@/lib/models/case";
 import { digitosDoDocumento } from "@/lib/models/establishment";
 
 import { persistCase } from "@/lib/services/case.repository";
@@ -115,13 +115,6 @@ const SIGLA: Record<string, string> = {
   Instagram: "IG",
   Facebook: "FB",
 };
-
-const PRIORIDADES: Case["priority"][] = [
-  "Crítica",
-  "Alta",
-  "Média",
-  "Baixa",
-];
 
 function limpo(valor?: string, teto = 300) {
   return (valor ?? "").replace(/\s+/g, " ").trim().slice(0, teto);
@@ -347,11 +340,13 @@ export async function POST(request: Request) {
     });
   }
 
-  const prioridade = PRIORIDADES.includes(
-    entrada.prioridade as Case["priority"]
-  )
-    ? (entrada.prioridade as Case["priority"])
-    : "Alta";
+  /*
+    Qualquer grafia vale — a extensão antiga manda "Crítica" e "Média".
+
+    Sem prioridade escolhida, Normal: a criticidade é decisão da triagem
+    (Passo 1 da documentação), e o caso entra na fila "a triar".
+  */
+  const prioridade = prioridadeNormalizada(entrada.prioridade);
 
   const novo: Case = {
     id: idPortal,

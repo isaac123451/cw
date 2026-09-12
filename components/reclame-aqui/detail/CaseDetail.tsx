@@ -186,6 +186,18 @@ export default function CaseDetail({
   }
 
   /**
+   * O que a triagem e os contatos gravaram direto no servidor.
+   *
+   * Sem edição aberta, a lista em memória já traz o valor novo e o
+   * rascunho o acompanha sozinho. Com edição aberta, o rascunho guarda
+   * uma cópia inteira do caso — e a prioridade antiga, que o "Salvar"
+   * regravaria por cima da triagem. Então ela entra na cópia.
+   */
+  function doServidor(changes: Partial<Case>) {
+    if (rascunho.sujo) rascunho.alterar(data.id, changes);
+  }
+
+  /**
    * O que o servidor entrega depois, sem virar edição.
    *
    * O Isaac: "sempre quando abro uma reclamação está aparecendo para
@@ -571,6 +583,7 @@ export default function CaseDetail({
               owners={owners}
               onChange={patch}
               onEditarAvaliacao={() => setTab("avaliacao")}
+              aoMudarNoServidor={doServidor}
             />
           )}
 
@@ -586,6 +599,7 @@ export default function CaseDetail({
             owners={owners}
             onChange={patch}
             onEditarAvaliacao={() => setTab("avaliacao")}
+            aoMudarNoServidor={doServidor}
           />
         )}
 

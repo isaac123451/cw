@@ -21,6 +21,7 @@ import {
 import { ProjectStage } from "@/lib/models/project";
 
 import { prazoPrimeiroContato } from "@/lib/services/nps.service";
+import { lerExpediente } from "@/lib/services/operacao.service";
 import {
   aplicarPosContato,
   registrarTentativa,
@@ -384,7 +385,9 @@ export async function saveNpsResponse(
       firstContactDueAt: prazoPrimeiroContato(
         respondedAt,
         input.score,
-        input.kind
+        input.kind,
+        undefined,
+        await lerExpediente(ctx.prisma)
       ),
     },
     select: { id: true },
@@ -753,6 +756,8 @@ export async function importNpsPlanilha(
   let novas = 0;
   let atualizadas = 0;
 
+  const expediente = await lerExpediente(ctx.prisma);
+
   /**
    * Cinco por vez, como a importação do Wootric.
    *
@@ -821,7 +826,9 @@ export async function importNpsPlanilha(
             firstContactDueAt: prazoPrimeiroContato(
               item.respondedAt,
               item.score,
-              item.kind
+              item.kind,
+              undefined,
+              expediente
             ),
 
             status: item.exigeTratativa

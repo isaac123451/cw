@@ -85,7 +85,8 @@ const MASCARA = /•/;
 
 export type CampoDoPortal =
   | (typeof DO_PORTAL)[number]
-  | (typeof CONTATO)[number];
+  | (typeof CONTATO)[number]
+  | "recebidaEm";
 
 /**
  * As colunas que o portal conhece.
@@ -130,6 +131,7 @@ export interface NoBancoDoPortal {
   phone: string | null;
   city: string | null;
   state: string | null;
+  recebidaEm?: Date | null;
 }
 
 function comparavel(valor: unknown) {
@@ -245,6 +247,20 @@ export function mudancasDoPortal(
     );
   }
 
+  /*
+    A hora da publicação: completa, e nunca troca.
+
+    As 357 reclamações anteriores a 12/09/2026 foram gravadas sem hora, e
+    os prazos da documentação são em horas úteis. Reimportar a planilha
+    — que traz "10/09/2026 21:43" — preenche a hora de todas de uma vez.
+    Uma hora já gravada fica: veio do mesmo portal, e duas fontes
+    discordando por um minuto não justificam reescrever o relógio.
+  */
+  if (doArquivo.recebidaEm && !atual.recebidaEm) {
+    dados.recebidaEm = new Date(doArquivo.recebidaEm);
+    diferencas.push(`recebidaEm: (vazio) → ${doArquivo.recebidaEm.slice(0, 16)}`);
+  }
+
   return { dados, diferencas };
 }
 
@@ -265,4 +281,5 @@ export const SELECAO_DO_PORTAL = {
   phone: true,
   city: true,
   state: true,
+  recebidaEm: true,
 } as const;

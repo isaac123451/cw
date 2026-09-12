@@ -78,7 +78,7 @@ export default function NewCaseForm() {
     source: "Reclame Aqui",
     category: "",
     subcategory: "",
-    priority: "Média" as Case["priority"],
+    priority: "Normal" as Case["priority"],
     status: "",
     owner: "",
     title: "",
@@ -438,10 +438,9 @@ export default function NewCaseForm() {
             }
             className={campo}
           >
-            <option>Baixa</option>
-            <option>Média</option>
+            <option>Normal</option>
             <option>Alta</option>
-            <option>Crítica</option>
+            <option>Urgente</option>
           </select>
         </div>
 

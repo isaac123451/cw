@@ -1,6 +1,7 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
 
 import { Case } from "@/lib/models/case";
+import { instanteDeParede } from "@/lib/services/horasUteis";
 
 import {
   COLUNAS_DO_PORTAL,
@@ -324,12 +325,7 @@ export function casoDoPortal(r: ReclamacaoDoPortal): Case {
     category: categoria,
     subcategory: subcategoria,
 
-    priority: prioridadePeloPortal({
-      score: nota,
-      resolved: r.resolvida,
-      evaluated: r.avaliada,
-      answered: resposta !== "",
-    }),
+    priority: prioridadePeloPortal(),
 
     status: statusPeloPortal(r) ?? "Novo",
 
@@ -359,6 +355,7 @@ export function casoDoPortal(r: ReclamacaoDoPortal): Case {
     raUrl: endereco,
 
     createdAt: criada,
+    recebidaEm: instanteDeParede(r.criadaEm)?.toISOString() ?? undefined,
     updatedAt: diaDoPortal(ultima?.em ?? "") ?? criada,
     lastInteraction: diaDoPortal(ultima?.em ?? "") ?? criada,
 

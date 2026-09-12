@@ -27,12 +27,8 @@ interface Props {
   onClose: () => void;
 }
 
-const PRIORIDADES: Case["priority"][] = [
-  "Crítica",
-  "Alta",
-  "Média",
-  "Baixa",
-];
+/* Os três níveis da documentação — ver `CRITERIOS` em lib/models/case. */
+const PRIORIDADES: Case["priority"][] = ["Urgente", "Alta", "Normal"];
 
 /** Lista ordenada, sem repetição e sem vazios. */
 function uniao(...listas: (string | undefined)[][]) {
@@ -126,7 +122,7 @@ export default function CreateCaseModal({
   const [category, setCategory] = useState("");
   const [subcategory, setSubcategory] = useState("");
   const [priority, setPriority] =
-    useState<Case["priority"]>("Média");
+    useState<Case["priority"]>("Normal");
   const [status, setStatus] = useState("");
   const [owner, setOwner] = useState(
     session?.name ?? ""

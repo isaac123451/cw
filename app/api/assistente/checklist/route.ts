@@ -162,7 +162,7 @@ export async function POST(request: Request) {
 
   const raForaDoPrazo = ra.filter(
     (c) =>
-      slaStatus(c, workspace.slaRules, hoje).situation ===
+      slaStatus(c, workspace.slaRules, { expediente: workspace.expediente }).situation ===
       "estourado"
   );
 

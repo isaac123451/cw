@@ -13,6 +13,8 @@ import { Case } from "@/lib/models/case";
 import { TagChips } from "@/components/shared/TagPicker";
 import StatusPicker from "@/components/reclame-aqui/shared/StatusPicker";
 import BotaoCompletar from "@/components/reclame-aqui/completar/BotaoCompletar";
+import ChipPrioridade from "@/components/reclame-aqui/tratativa/ChipPrioridade";
+import RelogioDoCaso from "@/components/reclame-aqui/tratativa/RelogioDoCaso";
 
 import { useCases } from "@/lib/context/CaseContext";
 import { useEstablishments } from "@/lib/context/EstablishmentsContext";
@@ -210,8 +212,12 @@ export default function CaseRow({
 
       </td>
 
-      <td className="px-5 text-zinc-600">
-        {data.sla}
+      <td className="px-5">
+        {/* A criticidade e o relógio que está correndo, em tempo útil. */}
+        <span className="flex max-w-[220px] flex-wrap items-center gap-1">
+          <ChipPrioridade item={data} />
+          <RelogioDoCaso item={data} esconderSemRegra />
+        </span>
       </td>
 
       <td className="px-5 text-zinc-600">

@@ -593,6 +593,19 @@
   --color-teal-50: #12292A;
   --color-teal-100: #1A3A3C;
   --color-teal-700: #5FD9D2;
+
+  /*
+    O degrau 800 das cores de aviso.
+
+    As caixas de erro usam `bg-rose-50 text-rose-800`, e a triagem marca
+    o nível escolhido com o 800 da própria cor. Sem inversão, o texto
+    ficava cor de vinho sobre a tintura escura — ilegível justamente na
+    mensagem que explica o que deu errado.
+  */
+  --color-rose-800: #FFB3BC;
+  --color-emerald-800: #86E3B8;
+  --color-orange-800: #F6B98A;
+  --color-sky-800: #92D5F6;
 }
 
 /* E os fundos cheios dessas famílias continuam cheios. */

@@ -227,7 +227,8 @@ function traducao(lida: Lida | null) {
   conferir("tempo de resposta pela mesma régua da planilha", caso.responseTime, "7 dias");
   conferir("avaliação", [caso.evaluated, caso.score, caso.resolved, caso.wouldDoBusiness], [true, 10, true, true]);
   conferir("subcategoria é o problema do portal", caso.subcategory, "Cobrança indevida");
-  conferir("resolvida com nota 10 é prioridade baixa", caso.priority, "Baixa");
+  /* Desde 12/09/2026 a criticidade é da triagem (Passo 1), não do estado do portal. */
+  conferir("resolvida com nota 10 entra Normal — quem decide é a triagem", caso.priority, "Normal");
   conferir("nome não é público: Não informado", caso.customer, "Não informado");
   conferir("endereço com o título de verdade", caso.raUrl?.endsWith("/titulo-da-amostra_Zz_Amostra-Rica1/"), true);
 
@@ -254,7 +255,8 @@ function traducao(lida: Lida | null) {
 
   const nova = casoDoPortal(base());
 
-  conferir("pendente nova é crítica, sem resposta", [nova.priority, nova.publicResponse], ["Crítica", ""]);
+  conferir("pendente nova entra Normal e a triar, sem resposta", [nova.priority, nova.publicResponse], ["Normal", ""]);
+  conferir("a reclamação nova chega com a hora do portal", Boolean(nova.recebidaEm), true);
 
   conferir(
     "HTML de terceiro vira texto, não marcação",

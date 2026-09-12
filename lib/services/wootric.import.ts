@@ -10,6 +10,7 @@ import {
 } from "@/lib/services/wootric.service";
 
 import { prazoPrimeiroContato } from "@/lib/services/nps.service";
+import { lerExpediente } from "@/lib/services/operacao.service";
 import { STATUS_SEM_TRATATIVA } from "@/lib/models/nps";
 
 /**
@@ -136,6 +137,8 @@ export async function gravarLote(
   let atualizadas = 0;
   let semTratativa = 0;
 
+  const expediente = await lerExpediente(prisma);
+
   const existentes = new Set(
     (
       await prisma.npsResponse.findMany({
@@ -209,7 +212,9 @@ export async function gravarLote(
             firstContactDueAt: prazoPrimeiroContato(
               item.respondedAt,
               item.score,
-              null
+              null,
+              undefined,
+              expediente
             ),
 
             status: item.exigeTratativa

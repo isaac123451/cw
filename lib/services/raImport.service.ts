@@ -1,6 +1,7 @@
 import * as XLSX from "xlsx";
 
 import { Case } from "@/lib/models/case";
+import { instanteDeParede } from "@/lib/services/horasUteis";
 
 import {
   classificar,
@@ -319,12 +320,7 @@ export function parseReclameAqui(
       source: "Reclame Aqui",
       category: categoria,
       subcategory: subcategoria,
-      priority: priorityOf({
-        score,
-        resolved,
-        evaluated,
-        answered,
-      }),
+      priority: priorityOf(),
       status: mapStatus(statusRa),
       title:
         String(
@@ -351,6 +347,12 @@ export function parseReclameAqui(
       createdAt: toIso(
         row[col("Data Reclamação")]
       ) as string,
+
+      /* A hora que o `toIso` descarta — os prazos são em horas úteis. */
+      recebidaEm:
+        instanteDeParede(
+          String(row[col("Data Reclamação")] ?? "")
+        )?.toISOString() ?? undefined,
       updatedAt:
         toIso(row[col("Data Avaliacao")]) ??
         toIso(row[col("Data de Resposta")]) ??

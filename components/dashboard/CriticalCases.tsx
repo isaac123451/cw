@@ -67,7 +67,7 @@ export default function CriticalCases() {
 
                 <span
                   className={`h-9 w-1 shrink-0 rounded-full ${
-                    item.priority === "Crítica"
+                    item.priority === "Urgente"
                       ? "bg-rose-500"
                       : "bg-amber-500"
                   }`}
