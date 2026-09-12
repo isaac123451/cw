@@ -1,5 +1,7 @@
 "use client";
 
+import { hojeNaOperacao } from "@/lib/services/reputation.service";
+
 import {
   createContext,
   useContext,
@@ -172,9 +174,8 @@ export function ClientsProvider({
           ...data,
           id: crypto.randomUUID(),
           slug,
-          createdAt: new Date()
-            .toISOString()
-            .slice(0, 10),
+          /* O dia de Brasília: depois das 21h o UTC já é amanhã. */
+          createdAt: hojeNaOperacao(),
         };
 
         setManual((prev) => [created, ...prev]);

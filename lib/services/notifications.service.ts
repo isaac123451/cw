@@ -254,9 +254,12 @@ export function buildNotifications(
      * da agenda de verdade, e comparar com a data fixa da operação
      * esconderia tudo.
      */
-    const hojeReal = new Date()
-      .toISOString()
-      .slice(0, 10);
+    /*
+      O dia de Brasília. `new Date().toISOString()` virava o dia às 21h:
+      à noite, o sino dizia "nenhum compromisso hoje" olhando os de
+      amanhã.
+    */
+    const hojeReal = hojeNaOperacao();
 
     const eventosHoje = googleEvents.filter(
       (item) => item.date === hojeReal

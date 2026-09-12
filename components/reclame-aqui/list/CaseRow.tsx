@@ -17,29 +17,44 @@ import BotaoCompletar from "@/components/reclame-aqui/completar/BotaoCompletar";
 import { useCases } from "@/lib/context/CaseContext";
 import { useEstablishments } from "@/lib/context/EstablishmentsContext";
 import { idExterno } from "@/lib/services/case.service";
+import {
+  diaNaOperacao,
+  hojeNaOperacao,
+} from "@/lib/services/reputation.service";
 
 interface Props {
   data: Case;
   onClick: () => void;
 }
 
-const DIA = new Intl.DateTimeFormat("pt-BR", {
-  day: "2-digit",
-  month: "2-digit",
-  year: "2-digit",
-});
+/**
+ * O dia da reclamação, em Brasília, sem passar pelo fuso do navegador.
+ *
+ * Era `Intl.DateTimeFormat("pt-BR")` sobre `new Date("2026-09-10")`: a
+ * data sem hora é lida como meia-noite UTC, que em Brasília é 21h da
+ * véspera — e a lista mostrava **toda** reclamação um dia antes do dia
+ * em que ela entrou. A tela do caso, que corta o texto, mostrava o dia
+ * certo; as duas discordavam sobre a mesma reclamação.
+ */
+function diaDaReclamacao(iso: string) {
+  const [ano, mes, dia] = diaNaOperacao(iso).split("-");
+  return { curto: `${dia}/${mes}/${ano.slice(2)}`, longo: `${dia}/${mes}/${ano}` };
+}
 
 /**
  * "há 3 dias", "hoje", "há 4 meses".
  *
  * A idade responde a pergunta que se faz olhando a lista; a data
  * absoluta responde a que se faz depois de escolher o caso, e por isso
- * ela fica no `title`.
+ * ela fica no `title`. Contada entre dias de Brasília, e não entre
+ * instantes: às 22h, a reclamação de hoje não pode virar "ontem".
  */
 function idadeEmDias(iso: string) {
 
-  const dias = Math.floor(
-    (Date.now() - new Date(iso).getTime()) / 86400000
+  const dias = Math.round(
+    (Date.parse(`${hojeNaOperacao()}T00:00:00Z`) -
+      Date.parse(`${diaNaOperacao(iso)}T00:00:00Z`)) /
+      86400000
   );
 
   if (dias <= 0) return "hoje";
@@ -107,14 +122,10 @@ export default function CaseRow({
 
         {data.createdAt ? (
 
-          <span
-            title={new Date(
-              data.createdAt
-            ).toLocaleString("pt-BR")}
-          >
+          <span title={diaDaReclamacao(data.createdAt).longo}>
 
             <span className="block text-xs font-medium text-zinc-700 tabular-nums">
-              {DIA.format(new Date(data.createdAt))}
+              {diaDaReclamacao(data.createdAt).curto}
             </span>
 
             <span className="mt-0.5 block text-[11px] text-zinc-400">

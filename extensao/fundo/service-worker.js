@@ -957,9 +957,24 @@ async function avisar(resumo, graves, config) {
 
   const agora = new Date();
 
-  if (agora.getHours() < 8) return;
+  /*
+    A hora e o dia de Brasília, e não os do relógio do computador nem o
+    UTC: `toISOString()` virava o dia às 21h, e o aviso "uma vez por
+    dia" podia sair duas vezes na mesma noite.
+  */
+  const hora = Number(
+    agora.toLocaleString("en-US", {
+      hour: "numeric",
+      hourCycle: "h23",
+      timeZone: "America/Sao_Paulo",
+    })
+  );
 
-  const hoje = agora.toISOString().slice(0, 10);
+  if (hora < 8) return;
+
+  const hoje = agora.toLocaleDateString("sv-SE", {
+    timeZone: "America/Sao_Paulo",
+  });
 
   const { ultimoAviso } = await chrome.storage.local.get(
     "ultimoAviso"

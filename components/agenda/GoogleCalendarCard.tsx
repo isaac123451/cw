@@ -63,9 +63,14 @@ function rotuloDia(iso: string) {
 
   const hoje = hojeIso();
 
-  const amanha = new Date(Date.now() + 86400000)
-    .toISOString()
-    .slice(0, 10);
+  /*
+    Amanhã a partir de hoje em Brasília, e não de agora mais 24h em UTC:
+    depois das 21h aquela conta já apontava para depois de amanhã, e o
+    compromisso de amanhã aparecia com a data crua.
+  */
+  const base = new Date(`${hoje}T00:00:00Z`);
+  base.setUTCDate(base.getUTCDate() + 1);
+  const amanha = base.toISOString().slice(0, 10);
 
   if (iso === hoje) return "Hoje";
   if (iso === amanha) return "Amanhã";

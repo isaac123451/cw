@@ -9,6 +9,7 @@ import type {
 } from "@/lib/models/playbook";
 
 import { WORKSPACE_TAG } from "@/lib/actions/tags";
+import { diaNaOperacao } from "@/lib/services/reputation.service";
 
 import { getPrisma } from "@/lib/prisma";
 import { motivoDaRecusa,
@@ -199,9 +200,17 @@ const VAZIO: Workspace = {
   manualClients: [],
 };
 
+/**
+ * O dia de Brasília de uma coluna do banco.
+ *
+ * Cortar o ISO em dez caracteres dava o dia UTC: tarefa criada, cliente
+ * atualizado ou movimentação aberta depois das 21h aparecia com a data
+ * de amanhã. `diaNaOperacao` deixa passar reto a coluna que já é só
+ * data (meia-noite UTC) e converte a que tem hora.
+ */
 function dia(value?: Date | null) {
   return value
-    ? value.toISOString().slice(0, 10)
+    ? diaNaOperacao(value)
     : undefined;
 }
 

@@ -1,5 +1,7 @@
 "use client";
 
+import { hojeNaOperacao } from "@/lib/services/reputation.service";
+
 import { useState } from "react";
 
 import { Save, X } from "lucide-react";
@@ -105,9 +107,8 @@ export default function ProjectForm({
       owner: owner.trim(),
       progress:
         stage === "Concluído" ? 100 : progress,
-      updatedAt: new Date()
-        .toISOString()
-        .slice(0, 10),
+      /* O dia de Brasília: depois das 21h o UTC já é amanhã. */
+      updatedAt: hojeNaOperacao(),
       tags,
     };
 

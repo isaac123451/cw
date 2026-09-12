@@ -1,5 +1,7 @@
 "use client";
 
+import { hojeNaOperacao } from "@/lib/services/reputation.service";
+
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -119,9 +121,8 @@ export default function NewCaseForm() {
 
     setSalvando(true);
 
-    const agora = new Date()
-      .toISOString()
-      .slice(0, 10);
+    /* O dia de Brasília: depois das 21h o UTC já é amanhã. */
+    const agora = hojeNaOperacao();
 
     /**
      * O protocolo nasce aqui, com marca de origem manual.

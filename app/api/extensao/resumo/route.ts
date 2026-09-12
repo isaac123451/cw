@@ -14,6 +14,7 @@ import {
 } from "@/lib/services/notifications.service";
 
 import {
+  diaNaOperacao,
   displayBand,
   getRange,
   getReputation,
@@ -80,7 +81,7 @@ async function resumoDoNps(desde: Date) {
     detratores: s.detratores,
     abertos: s.abertos,
     estourados: s.estourados,
-    desde: desde.toISOString().slice(0, 10),
+    desde: diaNaOperacao(desde),
   };
 }
 

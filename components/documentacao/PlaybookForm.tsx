@@ -1,5 +1,7 @@
 "use client";
 
+import { hojeNaOperacao } from "@/lib/services/reputation.service";
+
 import { useState } from "react";
 
 import {
@@ -142,9 +144,8 @@ export default function PlaybookForm({
       scope,
       owner: owner.trim(),
       version: version.trim() || "1.0",
-      updatedAt: new Date()
-        .toISOString()
-        .slice(0, 10),
+      /* O dia de Brasília: depois das 21h o UTC já é amanhã. */
+      updatedAt: hojeNaOperacao(),
       confluenceUrl: confluenceUrl.trim() || undefined,
       steps: steps.filter(
         (item) => item.title.trim() !== ""

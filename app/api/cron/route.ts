@@ -5,7 +5,10 @@ import {
 } from "@/lib/services/metricas.service";
 
 import { getApiCases } from "@/lib/api/source";
-import { hojeNaOperacao } from "@/lib/services/reputation.service";
+import {
+  diaNaOperacao,
+  hojeNaOperacao,
+} from "@/lib/services/reputation.service";
 
 import { revalidateTag } from "next/cache";
 
@@ -430,9 +433,8 @@ async function avisarMovimentacoesAtrasadas(
         destination: item.destination,
         reason: item.reason,
         actor: item.actor,
-        startedAt: item.startedAt
-          .toISOString()
-          .slice(0, 10),
+        /* Movimentação aberta às 22h começou hoje, e não amanhã. */
+        startedAt: diaNaOperacao(item.startedAt),
         dueHours: item.dueHours,
         returnedAt: undefined,
         outcome: undefined,

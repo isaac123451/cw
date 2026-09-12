@@ -2,7 +2,10 @@ import { Case } from "@/lib/models/case";
 
 import { digitosDoDocumento } from "@/lib/models/establishment";
 
-import { formatElapsed } from "@/lib/services/reputation.service";
+import {
+  diaNaOperacao,
+  formatElapsed,
+} from "@/lib/services/reputation.service";
 
 /**
  * Tradução entre a reclamação do banco e o modelo que as telas usam.
@@ -70,9 +73,15 @@ const PRIORIDADE_PARA_ENUM: Record<string, string> = {
 };
 
 /** Data ISO curta (YYYY-MM-DD), que é a precisão usada nas telas. */
+/**
+ * O dia de Brasília de uma coluna do banco — ver `diaNaOperacao`.
+ *
+ * As colunas só de data (`publishedAt`, `evaluatedAt`) passam reto; o
+ * `updatedAt`, que tem hora, deixa de virar amanhã depois das 21h.
+ */
 export function toIsoDay(value?: Date | null) {
   return value
-    ? value.toISOString().slice(0, 10)
+    ? diaNaOperacao(value)
     : undefined;
 }
 
