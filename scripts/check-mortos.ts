@@ -65,7 +65,8 @@ function listar(dir: string): string[] {
         )
       : "";
 
-    if (IGNORAR.includes(rel)) continue;
+    /* `.next-*`: a pasta de build de um segundo servidor (CW_DIST_DIR). */
+    if (IGNORAR.includes(rel) || rel.startsWith(".next-")) continue;
 
     const caminho = join(dir, nome);
 

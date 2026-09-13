@@ -32,7 +32,7 @@ import { pushTaskToGoogle } from "@/lib/actions/google";
 
 import { AgendaTask } from "@/lib/models/agenda";
 import { hojeNaOperacao } from "@/lib/services/reputation.service";
-import ChecklistDoDia from "@/components/agenda/ChecklistDoDia";
+import RotinaNaAgenda from "@/components/rotina/RotinaNaAgenda";
 
 const typeTone: Record<string, string> = {
   "Follow-up": "bg-sky-50 text-sky-700 ring-sky-100",
@@ -276,14 +276,14 @@ export default function AgendaPage() {
         )}
 
         {/*
-          O checklist antes da lista de tarefas.
+          A rotina de hoje antes da lista de tarefas.
 
-          A agenda mostra o que alguém marcou; o checklist mostra o que
-          está aberto e ninguém marcou. Vem antes porque é a metade do
-          dia que some — a marcada já está garantida por ter sido
-          marcada.
+          A agenda mostra o que alguém marcou; a rotina mostra o que o
+          documento pede todo dia, com o que está aberto em cada frente.
+          Vem antes porque é a metade do dia que some — a marcada já
+          está garantida por ter sido marcada.
         */}
-        <ChecklistDoDia />
+        <RotinaNaAgenda />
 
         <GoogleCalendarCard />
 

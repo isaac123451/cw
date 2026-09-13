@@ -139,6 +139,7 @@ export async function listNpsResponses(): Promise<
       : undefined,
     source: r.source,
     externalId: r.externalId ?? undefined,
+    externalCompanyId: r.externalCompanyId ?? undefined,
     churnRisk: r.churnRisk,
     wootricNotes: r.wootricNotes,
     notes: r.notes.map((n) => ({

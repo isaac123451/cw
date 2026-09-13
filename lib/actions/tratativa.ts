@@ -675,6 +675,12 @@ export interface RetratoDoCliente {
   outrasReclamacoes: { protocolo: string; titulo: string; status: string; dia: string; nota?: number }[];
   redes: { protocolo: string; titulo: string; status: string; dia: string; canal: string }[];
   nps: { nota: number; status: string; dia: string; comentario: string }[];
+  /**
+   * As avaliações do Google desta conta — ligadas a um dos casos, ao NPS
+   * dela ou ao estabelecimento. É a quarta frente: o que o cliente disse
+   * em público, fora do Reclame Aqui.
+   */
+  google: { id: string; estrelas: number; status: string; dia: string; texto: string }[];
   /** A fase quando não há estabelecimento vinculado — só pelo que o caso diz. */
   faseSemCadastro?: string;
 }
@@ -718,6 +724,8 @@ export async function retratoDoCliente(protocol: string): Promise<RetratoDoClien
 
   const vinculoNps: Prisma.NpsResponseWhereInput[] = [];
   if (est) vinculoNps.push({ establishmentId: est.id });
+  /* O Wootric manda o id da conta no CW Engine; é o mesmo `externalId` do cadastro. */
+  if (est?.externalId) vinculoNps.push({ externalCompanyId: est.externalId });
   if (email) vinculoNps.push({ email });
 
   const [casos, nps] = await Promise.all([
@@ -725,7 +733,7 @@ export async function retratoDoCliente(protocol: string): Promise<RetratoDoClien
       ? Promise.resolve([])
       : ctx.prisma.case.findMany({
           where: { id: { not: caso.id }, OR: vinculo },
-          select: { protocol: true, title: true, status: true, publishedAt: true, score: true, evaluated: true, channel: true },
+          select: { id: true, protocol: true, title: true, status: true, publishedAt: true, score: true, evaluated: true, channel: true },
           orderBy: { publishedAt: "desc" },
           take: 20,
         }),
@@ -733,11 +741,24 @@ export async function retratoDoCliente(protocol: string): Promise<RetratoDoClien
       ? Promise.resolve([])
       : ctx.prisma.npsResponse.findMany({
           where: { OR: vinculoNps },
-          select: { score: true, status: true, respondedAt: true, comment: true },
+          select: { id: true, score: true, status: true, respondedAt: true, comment: true },
           orderBy: { respondedAt: "desc" },
           take: 10,
         }),
   ]);
+
+  const vinculoGoogle: Prisma.AvaliacaoGoogleWhereInput[] = [
+    { caseId: { in: [caso.id, ...casos.map((c) => c.id)] } },
+  ];
+  if (est) vinculoGoogle.push({ establishmentId: est.id });
+  if (nps.length) vinculoGoogle.push({ npsResponseId: { in: nps.map((r) => r.id) } });
+
+  const google = await ctx.prisma.avaliacaoGoogle.findMany({
+    where: { OR: vinculoGoogle },
+    select: { id: true, estrelas: true, notaAtualizada: true, status: true, publicadaEm: true, texto: true },
+    orderBy: { publicadaEm: "desc" },
+    take: 10,
+  });
 
   const dia = (d: Date) => d.toISOString().slice(0, 10);
 
@@ -792,6 +813,13 @@ export async function retratoDoCliente(protocol: string): Promise<RetratoDoClien
       status: r.status,
       dia: diaNaOperacao(r.respondedAt),
       comentario: r.comment.slice(0, 160),
+    })),
+    google: google.map((a) => ({
+      id: a.id,
+      estrelas: a.notaAtualizada ?? a.estrelas,
+      status: a.status,
+      dia: diaNaOperacao(a.publicadaEm),
+      texto: (a.texto ?? "").slice(0, 160),
     })),
   };
 }

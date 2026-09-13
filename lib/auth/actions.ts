@@ -137,7 +137,7 @@ export async function signUp(
       role: adotado.role,
     });
 
-    redirect("/dashboard");
+    redirect("/meu-dia");
   }
 
   /**
@@ -168,7 +168,7 @@ export async function signUp(
     role: user.role,
   });
 
-  redirect("/dashboard");
+  redirect("/meu-dia");
 }
 
 export async function signIn(
@@ -300,7 +300,7 @@ export async function signIn(
     role: user.role,
   });
 
-  redirect("/dashboard");
+  redirect("/meu-dia");
 }
 
 /**
@@ -380,7 +380,7 @@ export async function verifyCode(
     role: user.role,
   });
 
-  redirect("/dashboard");
+  redirect("/meu-dia");
 }
 
 /** Manda outro código, respeitando a espera entre envios. */

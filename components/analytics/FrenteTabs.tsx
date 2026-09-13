@@ -8,13 +8,15 @@ import {
   AtSign,
   Layers,
   MessageSquareWarning,
+  Star,
 } from "lucide-react";
 
 export type Frente =
   | "tudo"
   | "reclame-aqui"
   | "social"
-  | "nps";
+  | "nps"
+  | "google";
 
 const ABAS: {
   id: Frente;
@@ -26,7 +28,7 @@ const ABAS: {
     id: "tudo",
     label: "Tudo",
     icone: Layers,
-    hint: "Reclame Aqui e Redes Sociais no mesmo recorte.",
+    hint: "Reclame Aqui e Redes Sociais no mesmo recorte. NPS e Google têm análise própria, nas abas ao lado.",
   },
   {
     id: "reclame-aqui",
@@ -45,6 +47,12 @@ const ABAS: {
     label: "NPS",
     icone: Gauge,
     hint: "A pesquisa do portal — outra base, outros indicadores.",
+  },
+  {
+    id: "google",
+    label: "Google",
+    icone: Star,
+    hint: "As avaliações do perfil — nota de 1 a 5, com os indicadores do documento do Google.",
   },
 ];
 
@@ -86,18 +94,18 @@ export default function FrenteTabs({
           const ativa = aba.id === atual;
 
           /*
-            A aba do NPS é um link, não um botão.
+            As abas do NPS e do Google são links, não botões.
 
-            As outras três recortam a mesma lista e ficam nesta tela; o
-            NPS tem análise própria e completa. Fingir que é uma aba
+            As outras três recortam a mesma lista e ficam nesta tela; NPS
+            e Google têm análise própria e completa. Fingir que é uma aba
             igual às outras — e mostrar meia análise — seria pior do que
             levar até a inteira.
           */
-          if (aba.id === "nps") {
+          if (aba.id === "nps" || aba.id === "google") {
             return (
               <Link
                 key={aba.id}
-                href="/nps/analise"
+                href={aba.id === "nps" ? "/nps/analise" : "/google"}
                 title={aba.hint}
                 className="flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
               >

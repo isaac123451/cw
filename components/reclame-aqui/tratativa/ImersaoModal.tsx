@@ -271,6 +271,28 @@ export default function ImersaoModal({ item, onClose, onSalvo }: Props) {
             )}
           </section>
 
+          <section>
+            <h4 className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+              Google ({retrato.google.length})
+            </h4>
+            {retrato.google.length === 0 ? (
+              <p className="mt-1.5 text-xs text-zinc-500">Nenhuma avaliação do Google ligada a esta conta.</p>
+            ) : (
+              <ul className="mt-2 space-y-1.5">
+                {retrato.google.slice(0, 4).map((a) => (
+                  <li key={a.id} className="flex gap-2 text-xs">
+                    <span className={`shrink-0 rounded-md px-1.5 font-semibold tabular-nums ${a.estrelas <= 2 ? "bg-rose-50 text-rose-700" : a.estrelas === 3 ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>
+                      {a.estrelas}★
+                    </span>
+                    <a href={`/google?avaliacao=${a.id}`} className="min-w-0 text-zinc-600 hover:text-violet-700 hover:underline">
+                      <span className="font-mono text-zinc-400">{br(a.dia)}</span> · {a.texto || "sem comentário"}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
           <p className="rounded-xl bg-zinc-50 px-3.5 py-2.5 text-xs leading-relaxed text-zinc-600 ring-1 ring-inset ring-zinc-200">
             Falta aqui o histórico do suporte — chamados e conversas vivem no CW Engine e no Crisp. Confira
             por lá antes de ligar: o documento pede para chegar ao 1º contato pronto para todas as perguntas.

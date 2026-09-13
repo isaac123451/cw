@@ -7,6 +7,7 @@ import {
   Gauge,
   LayoutDashboard,
   BookOpenCheck,
+  CalendarCheck2,
   LibraryBig,
   MessageSquareWarning,
   MessagesSquare,
@@ -42,6 +43,12 @@ export interface MenuItem {
 }
 
 export const menuItems: MenuItem[] = [
+  {
+    title: "Meu dia",
+    href: "/meu-dia",
+    icon: CalendarCheck2,
+    group: "Operação",
+  },
   {
     title: "Dashboard",
     href: "/dashboard",

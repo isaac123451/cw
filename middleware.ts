@@ -64,7 +64,7 @@ export async function middleware(request: NextRequest) {
 
   if (logged && isPublic) {
     return NextResponse.redirect(
-      new URL("/dashboard", request.url)
+      new URL("/meu-dia", request.url)
     );
   }
 

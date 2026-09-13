@@ -1,3 +1,4 @@
+import { FRENTES_DA_OPERACAO, type FrenteId } from "@/lib/models/frentes";
 import { paredeDe } from "@/lib/services/horasUteis";
 
 /**
@@ -11,16 +12,10 @@ import { paredeDe } from "@/lib/services/horasUteis";
  * tudo?
  */
 
-export type Frente = "Reclame Aqui" | "Redes Sociais" | "NPS" | "Google";
+/** As frentes, na ordem e com as cores do cadastro único — ver lib/models/frentes.ts. */
+export type Frente = FrenteId;
 
-export const FRENTES: Frente[] = ["Reclame Aqui", "Redes Sociais", "NPS", "Google"];
-
-export const COR_DA_FRENTE: Record<Frente, string> = {
-  "Reclame Aqui": "#7B3FBF",
-  "Redes Sociais": "#0EA5E9",
-  NPS: "#F59E0B",
-  Google: "#16A34A",
-};
+export const FRENTES: Frente[] = FRENTES_DA_OPERACAO.map((f) => f.id);
 
 export interface RegistroDeCausa {
   frente: Frente;
@@ -42,7 +37,7 @@ export interface LinhaDaTendencia {
 const DIA = 86_400_000;
 
 function zerado(): Record<Frente, number> {
-  return { "Reclame Aqui": 0, "Redes Sociais": 0, NPS: 0, Google: 0 };
+  return { "reclame-aqui": 0, redes: 0, nps: 0, google: 0 };
 }
 
 /**

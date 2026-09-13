@@ -36,6 +36,7 @@ import {
   ManualClientDraft,
   useClients,
 } from "@/lib/context/ClientsContext";
+import NasQuatroFrentes from "@/components/shared/NasQuatroFrentes";
 import { useEstablishments } from "@/lib/context/EstablishmentsContext";
 import { useImpact } from "@/lib/context/ImpactContext";
 import { useToast } from "@/lib/context/ToastContext";
@@ -402,6 +403,12 @@ export default function ClientDetail({
         />
 
       </div>
+
+      {/* O que esta pessoa tem em cada frente — pelo e-mail e pelo nome. */}
+      <NasQuatroFrentes
+        alvo={{ emails: client.email ? [client.email] : [], nomes: [client.name] }}
+        descricao="Pelo e-mail e pelo nome: o NPS só cruza pelo e-mail, e o Google pelo nome de quem avaliou ou pelo vínculo feito à mão."
+      />
 
       <div className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
 

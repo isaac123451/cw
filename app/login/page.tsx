@@ -13,7 +13,7 @@ export const metadata = {
 
 export default async function LoginPage() {
 
-  if (await getSession()) redirect("/dashboard");
+  if (await getSession()) redirect("/meu-dia");
 
   return (
     <AuthShell

@@ -1,6 +1,6 @@
 {
   "name": "cw-reputacao",
-  "version": "0.51.0",
+  "version": "0.52.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -82,7 +82,6 @@
     "check:nps-importacao": "tsx scripts/check-nps-importacao.ts",
     "check:gravacao": "tsx scripts/check-gravacao.ts",
     "check:cadeia": "tsx scripts/check-cadeia.ts",
-    "check:checklist": "tsx scripts/check-checklist.ts",
     "check:vigia": "tsx scripts/check-vigia.ts",
     "check:vigia-volta": "tsx scripts/check-vigia-volta.ts",
     "check:exclusao": "tsx scripts/check-exclusao.ts",
@@ -96,6 +95,7 @@
     "check:google": "tsx scripts/check-google.ts",
     "check:nps-guia": "tsx scripts/check-nps-guia.ts",
     "check:causa-raiz": "tsx scripts/check-causa-raiz.ts",
+    "check:rotina": "tsx scripts/check-rotina.ts",
     "conferir:fila": "tsx scripts/conferir-fila-avaliacao.ts"
   },
   "dependencies": {

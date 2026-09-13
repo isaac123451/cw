@@ -70,7 +70,7 @@ export default function Sidebar() {
       <div className="flex h-16 items-center border-b border-zinc-200/80 px-5">
 
         <Link
-          href="/dashboard"
+          href="/meu-dia"
           className="flex items-center gap-2.5"
         >
           <BrandMark size={32} />

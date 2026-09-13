@@ -6,8 +6,8 @@ import { useMemo, useState } from "react";
 
 import {
   Frown,
+  Layers,
   LayoutGrid,
-  MessagesSquare,
   Pencil,
   Plus,
   Repeat,
@@ -33,25 +33,34 @@ import StageForm from "@/components/jornada/StageForm";
 
 import { JourneyStage } from "@/lib/models/journey";
 
+import IconeDaFrente from "@/components/shared/IconeDaFrente";
+
 import { useCases } from "@/lib/context/CaseContext";
 import { useJourney } from "@/lib/context/JourneyContext";
+import { useNps } from "@/lib/context/NpsContext";
 import { useSession } from "@/lib/context/SessionContext";
+import { useAvaliacoesGoogle } from "@/lib/context/useAvaliacoesGoogle";
 
-import { buildJourneys } from "@/lib/services/journey.service";
-import { byChannel, Channel,
-  caseHref,
-} from "@/lib/services/case.service";
+import { montarJornadas } from "@/lib/services/journey.service";
+import { descreverRegistro } from "@/lib/services/horasUteis";
 import { slugify } from "@/lib/services/slug";
+import { FRENTES_DA_OPERACAO, frente as frenteDaOperacao, type FrenteId } from "@/lib/models/frentes";
 
-const channels: { id: Channel; label: string }[] = [
-  { id: "all", label: "Todos os canais" },
-  { id: "reclame-aqui", label: "Reclame Aqui" },
-  { id: "social", label: "Redes Sociais" },
+/*
+  As quatro frentes, na ordem do documento. Era "Todos os canais,
+  Reclame Aqui, Redes Sociais" — o NPS e o Google não entravam na
+  jornada de ninguém.
+*/
+const channels: { id: FrenteId | "all"; label: string }[] = [
+  { id: "all", label: "Todas as frentes" },
+  ...FRENTES_DA_OPERACAO.map((f) => ({ id: f.id, label: f.nome })),
 ];
 
 export default function JornadaPage() {
 
   const { cases } = useCases();
+  const { responses } = useNps();
+  const { avaliacoes } = useAvaliacoesGoogle();
 
   const {
     stages,
@@ -71,7 +80,7 @@ export default function JornadaPage() {
 
   const session = useSession();
 
-  const [channel, setChannel] = useState<Channel>("all");
+  const [channel, setChannel] = useState<FrenteId | "all">("all");
 
   const [view, setView] = useState<"quadro" | "lista">(
     "quadro"
@@ -81,9 +90,15 @@ export default function JornadaPage() {
     null
   );
 
+  const todas = useMemo(
+    () => montarJornadas({ casos: cases, nps: responses, google: avaliacoes }),
+    [cases, responses, avaliacoes]
+  );
+
+  /* O recorte mostra quem tem ao menos um registro na frente — com a história inteira. */
   const journeys = useMemo(
-    () => buildJourneys(byChannel(cases, channel)),
-    [cases, channel]
+    () => (channel === "all" ? todas : todas.filter((j) => j.porFrente[channel] > 0)),
+    [todas, channel]
   );
 
   const current =
@@ -111,7 +126,7 @@ export default function JornadaPage() {
         <PageHeading
           eyebrow="Clientes"
           title="Jornada do Cliente"
-          description="Ciclo de vida, histórico e pontos críticos de cada cliente, por canal."
+          description="Ciclo de vida, histórico e pontos críticos de cada cliente — no Reclame Aqui, nas redes, no NPS e no Google."
         >
 
           <div className="flex items-center rounded-xl border border-zinc-200 bg-white p-1">
@@ -159,9 +174,7 @@ export default function JornadaPage() {
                   : "text-zinc-600 hover:bg-zinc-100"
               }`}
             >
-              {item.id === "social" && (
-                <MessagesSquare size={15} />
-              )}
+              {item.id === "all" ? <Layers size={15} /> : <IconeDaFrente frente={item.id} size={15} herdarCor={channel === item.id} />}
               {item.label}
             </button>
 
@@ -173,16 +186,16 @@ export default function JornadaPage() {
 
           <StatTile
             label="Clientes acompanhados"
-            description="Clientes com ao menos um caso no canal selecionado."
+            description="Clientes com ao menos um registro na frente escolhida. No NPS, entram as respostas que abriram ciclo — o promotor calado fica na análise do NPS."
             value={journeys.length}
-            hint="no canal selecionado"
+            hint={channel === "all" ? "nas quatro frentes" : `com registro em ${frenteDaOperacao(channel).nome}`}
             icon={Users}
             tone="info"
           />
 
           <StatTile
             label="Risco de cancelamento"
-            description="Clientes que demonstraram intenção de encerrar o contrato."
+            description="Clientes marcados como risco de cancelamento, numa reclamação ou no NPS."
             value={atRisk}
             hint="precisam de ação"
             icon={TriangleAlert}
@@ -191,16 +204,16 @@ export default function JornadaPage() {
 
           <StatTile
             label="Reincidentes"
-            description="Clientes com mais de uma ocorrência — sinal de problema recorrente."
+            description="Clientes com mais de um registro, somando as frentes — sinal de problema recorrente."
             value={recurring}
-            hint="mais de um caso"
+            hint="mais de um registro"
             icon={Repeat}
             tone="warning"
           />
 
           <StatTile
             label="Detratores"
-            description="Clientes com nota média abaixo de 5."
+            description="Nota média abaixo de 5, somando as frentes na escala de 0 a 10: a do Reclame Aqui e a do NPS como vêm, a do Google em dobro."
             value={detractors}
             hint="nota média abaixo de 5"
             icon={Frown}
@@ -356,7 +369,7 @@ export default function JornadaPage() {
                         </span>
 
                         <span className="mt-0.5 block truncate text-xs text-zinc-500">
-                          {stage?.name} · {item.total} casos ·
+                          {stage?.name} · {item.total} registro(s) ·
                           nota {item.averageScore}
                         </span>
 
@@ -394,7 +407,7 @@ export default function JornadaPage() {
 
             <SurfaceCard
               title={current.company}
-              description={`${current.customers.length} contato(s) · última interação ${current.lastInteraction}`}
+              description={`${current.customers.length} nome(s) · última interação ${current.lastInteraction.split("-").reverse().join("/")}`}
               hint="Abra o perfil completo para ver o histórico, o estabelecimento vinculado e as notas dadas por esta pessoa."
               action={
                 <span
@@ -415,41 +428,27 @@ export default function JornadaPage() {
               }
             >
 
-              <div className="mb-5 grid grid-cols-2 gap-3">
-
+              <div className="mb-3 grid grid-cols-2 gap-3">
                 {[
-                  { label: "Casos", value: current.total },
-                  {
-                    label: "Em aberto",
-                    value: current.open,
-                  },
-                  {
-                    label: "Reclame Aqui",
-                    value: current.reclameAqui,
-                  },
-                  {
-                    label: "Redes sociais",
-                    value: current.social,
-                  },
+                  { label: "Registros", value: current.total },
+                  { label: "Em aberto", value: current.open },
                 ].map((stat) => (
-
-                  <div
-                    key={stat.label}
-                    className="rounded-xl bg-zinc-50 px-3 py-2.5"
-                  >
-
-                    <p className="text-[11px] uppercase tracking-wide text-zinc-400">
-                      {stat.label}
-                    </p>
-
-                    <p className="mt-0.5 text-lg font-semibold tabular-nums text-zinc-900">
-                      {stat.value}
-                    </p>
-
+                  <div key={stat.label} className="rounded-xl bg-zinc-50 px-3 py-2.5">
+                    <p className="text-[11px] uppercase tracking-wide text-zinc-400">{stat.label}</p>
+                    <p className="mt-0.5 text-lg font-semibold tabular-nums text-zinc-900">{stat.value}</p>
                   </div>
-
                 ))}
+              </div>
 
+              {/* As quatro frentes, sempre as quatro — o zero também diz alguma coisa. */}
+              <div className="mb-5 grid grid-cols-4 gap-2">
+                {FRENTES_DA_OPERACAO.map((f) => (
+                  <div key={f.id} title={f.nome} className="rounded-xl bg-zinc-50 px-2 py-2 text-center">
+                    <IconeDaFrente frente={f.id} size={14} className="mx-auto" />
+                    <p className="mt-1 text-base font-semibold tabular-nums text-zinc-900">{current.porFrente[f.id]}</p>
+                    <p className="truncate text-[10px] text-zinc-500">{f.curto}</p>
+                  </div>
+                ))}
               </div>
 
               {/* Liga a jornada ao perfil criado em Clientes. */}
@@ -469,30 +468,33 @@ export default function JornadaPage() {
 
               <ol className="relative max-h-[420px] space-y-4 overflow-y-auto pr-1 before:absolute before:left-[5px] before:top-2 before:h-[calc(100%-1rem)] before:w-px before:bg-zinc-200 before:content-['']">
 
-                {current.cases.map((item) => (
+                {current.pontos.map((ponto) => (
 
-                  <li key={item.id} className="relative pl-6">
+                  <li key={ponto.id} className="relative pl-6">
 
                     <span
                       className={`absolute left-0 top-1.5 h-2.5 w-2.5 rounded-full ring-4 ring-white ${
-                        item.resolved
+                        ponto.estado === "resolvido"
                           ? "bg-emerald-500"
-                          : item.churnRisk
+                          : ponto.estado === "risco"
                           ? "bg-rose-500"
-                          : "bg-amber-500"
+                          : ponto.estado === "aberto"
+                          ? "bg-amber-500"
+                          : "bg-zinc-300"
                       }`}
                     />
 
                     <Link
-                      href={caseHref(item)}
+                      href={ponto.href}
                       className="text-sm font-medium text-zinc-800 hover:text-violet-700 hover:underline"
                     >
-                      {item.title}
+                      {ponto.titulo}
                     </Link>
 
-                    <p className="mt-0.5 text-xs text-zinc-500">
-                      {item.createdAt} · {item.category} ·{" "}
-                      {item.source}
+                    <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-zinc-500">
+                      <IconeDaFrente frente={ponto.frente} size={11} />
+                      {frenteDaOperacao(ponto.frente).curto} · {descreverRegistro(ponto.em)}
+                      {ponto.detalhe ? ` · ${ponto.detalhe}` : ""}
                     </p>
 
                   </li>

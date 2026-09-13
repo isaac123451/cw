@@ -181,6 +181,15 @@ const INTERNAS: Record<string, string[]> = {
    */
   AvaliacaoGoogle: ["*"],
 
+  /**
+   * A rotina do agente: carga própria (`listarRotina` e `lerMeuDia`, em
+   * `lib/actions/rotina.ts`), aberta pelo Meu dia e pela Agenda. As
+   * marcas são de cada pessoa e só chegam como "feita ou não" — o
+   * `feitaEm` é registro.
+   */
+  AtividadeDaRotina: ["*"],
+  MarcaDaRotina: ["*"],
+
   /** Quem mudou o expediente por último — registro, não conteúdo. */
   OperacaoConfig: ["updatedBy"],
 };

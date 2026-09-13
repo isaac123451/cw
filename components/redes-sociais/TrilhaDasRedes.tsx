@@ -75,7 +75,7 @@ export default function TrilhaDasRedes({ data, aoMudarNoServidor, irParaAreas, m
   const opcoes = { aoSalvar: aoMudarNoServidor };
 
   const [contatos, setContatos] = useState<ContatoView[] | null>(null);
-  const [historico, setHistorico] = useState<{ ra: number; redes: number; nps: number } | null>(null);
+  const [historico, setHistorico] = useState<{ ra: number; redes: number; nps: number; google: number } | null>(null);
   const [encerrando, setEncerrando] = useState<string | null>(null);
   const [reabrindo, setReabrindo] = useState(false);
   const [relato, setRelato] = useState<{ protocolo: string; texto: string } | null>(null);
@@ -103,7 +103,7 @@ export default function TrilhaDasRedes({ data, aoMudarNoServidor, irParaAreas, m
   useEffect(() => {
     let ativo = true;
     retratoDoCliente(data.protocol)
-      .then((r) => ativo && setHistorico(r ? { ra: r.outrasReclamacoes.length, redes: r.redes.length, nps: r.nps.length } : null))
+      .then((r) => ativo && setHistorico(r ? { ra: r.outrasReclamacoes.length, redes: r.redes.length, nps: r.nps.length, google: r.google.length } : null))
       .catch(() => undefined);
     return () => {
       ativo = false;
@@ -238,7 +238,7 @@ export default function TrilhaDasRedes({ data, aoMudarNoServidor, irParaAreas, m
         </p>
       )}
 
-      {historico && historico.ra + historico.redes + historico.nps > 0 && (
+      {historico && historico.ra + historico.redes + historico.nps + historico.google > 0 && (
         <p className="mt-3 flex items-start gap-2 rounded-xl bg-amber-50 px-3.5 py-2.5 text-xs leading-relaxed text-amber-900 ring-1 ring-inset ring-amber-100">
           <History size={14} className="mt-0.5 shrink-0 text-amber-600" />
           <span>
@@ -247,6 +247,7 @@ export default function TrilhaDasRedes({ data, aoMudarNoServidor, irParaAreas, m
               historico.ra ? `${historico.ra} reclamação(ões) no Reclame Aqui` : null,
               historico.redes ? `${historico.redes} atendimento(s) em rede social` : null,
               historico.nps ? `${historico.nps} resposta(s) de NPS` : null,
+              historico.google ? `${historico.google} avaliação(ões) no Google` : null,
             ]
               .filter(Boolean)
               .join(", ")}

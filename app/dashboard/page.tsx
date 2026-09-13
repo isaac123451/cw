@@ -292,10 +292,10 @@ export default function DashboardPage() {
         </div>
 
         {/*
-          As três frentes, antes de qualquer gráfico.
+          As quatro frentes, antes de qualquer gráfico.
 
           O painel abria direto na nota do Reclame Aqui, e o resto da
-          operação — NPS e redes sociais — não aparecia em lugar nenhum.
+          operação — redes sociais, NPS e Google — não aparecia.
           Este cartão responde "onde está o trabalho hoje" antes de
           entrar no detalhe de uma frente só.
         */}

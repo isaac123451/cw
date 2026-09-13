@@ -38,6 +38,7 @@ import EstablishmentForm from "@/components/estabelecimentos/EstablishmentForm";
 import ImpactForm from "@/components/impacto/ImpactForm";
 
 import { useCases } from "@/lib/context/CaseContext";
+import NasQuatroFrentes from "@/components/shared/NasQuatroFrentes";
 import { useClients } from "@/lib/context/ClientsContext";
 import { useImpact } from "@/lib/context/ImpactContext";
 import { useToast } from "@/lib/context/ToastContext";
@@ -373,6 +374,15 @@ export default function EstablishmentDetail({
         />
 
       </div>
+
+      {/* As quatro frentes desta conta: a reclamação é só uma delas. */}
+      <NasQuatroFrentes
+        alvo={{
+          establishmentId: establishment.id,
+          contaCwEngine: establishment.externalId,
+          emails: establishment.email ? [establishment.email] : [],
+        }}
+      />
 
       <div className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
 

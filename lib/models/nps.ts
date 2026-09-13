@@ -616,6 +616,13 @@ export interface NpsResponseView {
   externalId?: string;
 
   /**
+   * A conta no CW Engine, como o Wootric manda — o mesmo `externalId` do
+   * cadastro de estabelecimentos. É por ela que a resposta encontra o
+   * restaurante quando ninguém fez o vínculo à mão.
+   */
+  externalCompanyId?: string;
+
+  /**
    * O cliente falou em cancelar — a conta precisa de retenção.
    *
    * O mesmo campo da reclamação. No NPS o aviso chega antes: um

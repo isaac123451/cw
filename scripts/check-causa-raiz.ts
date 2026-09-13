@@ -35,13 +35,13 @@ const r = (frente: RegistroDeCausa["frente"], causa: string, em: string): Regist
 const agora = new Date(br("2026-09-14 12:00"));
 
 const registros = [
-  r("Reclame Aqui", "Cobrança", "2026-09-10 10:00"),
-  r("NPS", "cobrança ", "2026-09-11 10:00"),
-  r("Google", "Cobrança", "2026-09-12 10:00"),
-  r("Redes Sociais", "Bug", "2026-09-13 10:00"),
-  r("Reclame Aqui", "Bug", "2026-07-01 10:00"),
-  r("NPS", "Bug", "2026-03-01 10:00"),
-  r("NPS", "Atendimento", "2026-09-20 10:00"),
+  r("reclame-aqui", "Cobrança", "2026-09-10 10:00"),
+  r("nps", "cobrança ", "2026-09-11 10:00"),
+  r("google", "Cobrança", "2026-09-12 10:00"),
+  r("redes", "Bug", "2026-09-13 10:00"),
+  r("reclame-aqui", "Bug", "2026-07-01 10:00"),
+  r("nps", "Bug", "2026-03-01 10:00"),
+  r("nps", "Atendimento", "2026-09-20 10:00"),
 ];
 
 console.log("\n— Tendência somada —");
@@ -49,13 +49,13 @@ const t90 = tendenciaCruzada(registros, { agora, dias: 90 });
 confere("Cobrança soma as três frentes, com o nome normalizado", t90[0], {
   causa: "Cobrança",
   total: 3,
-  porFrente: { "Reclame Aqui": 1, "Redes Sociais": 0, NPS: 1, Google: 1 },
+  porFrente: { "reclame-aqui": 1, redes: 0, nps: 1, google: 1 },
   ultimos30: 3,
 });
 confere("Bug: o de março fica fora dos 90 dias; o de julho entra, mas não nos últimos 30", t90[1], {
   causa: "Bug",
   total: 2,
-  porFrente: { "Reclame Aqui": 1, "Redes Sociais": 1, NPS: 0, Google: 0 },
+  porFrente: { "reclame-aqui": 1, redes: 1, nps: 0, google: 0 },
   ultimos30: 1,
 });
 confere("registro no futuro não conta", t90.some((l) => l.causa === "Atendimento"), false);
@@ -63,8 +63,8 @@ confere("janela de 240 dias alcança março", tendenciaCruzada(registros, { agor
 
 console.log("\n— Reincidência: 3 em 30 dias, somando canais —");
 const rein = reincidenciasCruzadas(registros, agora);
-confere("só Cobrança passa (uma em cada canal, três no total)", rein.map((x) => [x.causa, x.registros.length, x.frentes]), [["Cobrança", 3, ["Reclame Aqui", "NPS", "Google"]]]);
-confere("o mais recente primeiro na lista do item", rein[0].registros.map((x) => x.frente), ["Google", "NPS", "Reclame Aqui"]);
+confere("só Cobrança passa (uma em cada canal, três no total)", rein.map((x) => [x.causa, x.registros.length, x.frentes]), [["Cobrança", 3, ["reclame-aqui", "nps", "google"]]]);
+confere("o mais recente primeiro na lista do item", rein[0].registros.map((x) => x.frente), ["google", "nps", "reclame-aqui"]);
 confere("duas não é reincidência", reincidenciasCruzadas(registros.slice(0, 2), agora), []);
 
 console.log("\n— A marca do item em Projetos —");

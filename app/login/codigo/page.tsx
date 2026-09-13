@@ -38,7 +38,7 @@ function mascarar(email: string) {
 
 export default async function CodigoPage() {
 
-  if (await getSession()) redirect("/dashboard");
+  if (await getSession()) redirect("/meu-dia");
 
   const pendente = await getPendingLogin();
 

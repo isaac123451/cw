@@ -543,6 +543,55 @@ redes, e a unificação gravando de verdade —, tudo apagado depois.
 **Depende de você:** reiniciar o `npm run dev` para o cliente do banco
 conhecer a coluna nova do print da denúncia do Google.
 
+**Fase 5, parte 1 — as quatro frentes juntas e o Meu dia (0.52.0).** O
+Isaac: a Jornada do Cliente só tinha Reclame Aqui e redes, e "as frentes
+precisam estar todas unidas nos lugares"; o checklist da agenda tinha de
+seguir a Gestão de Rotinas, com atividades semanais configuráveis; e
+"ajuda para organizar como vou fazer tais atividades conforme a
+quantidade de demandas e urgências, pode ser algo com IA".
+
+- **Uma lista de frentes** (`lib/models/frentes.ts`): nome, atalho e a
+  prioridade do documento (Reclame Aqui → Redes → NPS → Google), usada
+  em todo lugar que mostra frente. A **Jornada do Cliente** passou a
+  somar as quatro — filtro "Todas as frentes" ou uma delas, os números
+  por frente e a linha do tempo com cada contato. O Google entrou no
+  Dashboard (nota média), nas abas do Analytics, na Imersão do caso, no
+  histórico das redes e na causa raiz; o NPS entrou na Imersão também
+  pelo ID da empresa. Estabelecimento e Cliente ganharam o bloco "Nas
+  quatro frentes".
+- **Meu dia** (`/meu-dia`, a tela de entrada depois do login): a rotina
+  do documento — onze diárias, quatro semanais (indicadores na segunda,
+  processos na quarta, sprint na quinta, relatório na sexta) e as
+  contínuas —, cada uma com o que tem hoje em cada frente, contado no
+  banco (1º contato, FUP, moderação, pedido de avaliação, ligação da
+  persistência, área atrasada…). Marcar é por pessoa, com Salvar; a
+  sequência de dias conta quem fez tudo.
+- **Configurar a rotina**: nome, frequência, dias da semana, horário,
+  duração e categoria; atividade nova; Salvar com o resumo. Tirar da
+  lista desativa — as marcas antigas são histórico.
+- **Plano do dia**: a rotina que falta encaixada no expediente que sobra,
+  em pedaços por frente — o fora do prazo primeiro, depois a ordem do
+  documento; horário marcado fica no horário; o que não cabe inteiro
+  entra em parte ("vão 20 de 47") e o resto aparece em "Não cabe". A IA,
+  a pedido, lê o plano e diz por onde começar e o que adiar; sem IA, a
+  mesma leitura sai pelas regras, e a tela avisa.
+- **Checkpoint com a gestão** pronto para o Slack: ontem (contado no
+  banco), hoje (o plano) e os riscos. A Agenda mostra a rotina no lugar
+  do checklist antigo, que saiu.
+
+Achados no caminho: o NPS acumulado (122 parados há mais de 5 dias)
+entrava como "novos de hoje" e fazia o dia pedir 23 horas — agora é
+acumulado, com o atalho para a triagem; FUP e ligação contavam o mesmo
+cliente duas vezes; atividade com horário se sobrepunha a outro bloco;
+um bloco atrasado maior que o expediente era pulado inteiro; o Reclame
+Aqui ficava depois do NPS quando os dois estavam na mesma atividade.
+
+Provas: `check:rotina` (as contagens, o plano com expediente, fim de
+semana, horário marcado, pedaços por frente, encaixe parcial e o texto
+do checkpoint), com sabotagens acendendo vermelho. Conferido na tela
+numa sexta simulada; marcar e desmarcar gravando no banco, e o que o
+teste criou foi apagado depois.
+
 
 ### Excluir conta da plataforma (11/09/2026)
 

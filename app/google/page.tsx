@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Clock3, MessageSquareReply, Plus, Siren, Star, TrendingUp } from "lucide-react";
 
@@ -23,7 +23,8 @@ import {
   minutosUteisEntre,
 } from "@/lib/services/horasUteis";
 
-import { listarAvaliacoesGoogle, type AvaliacaoGoogleView } from "@/lib/actions/avaliacoesGoogle";
+import type { AvaliacaoGoogleView } from "@/lib/actions/avaliacoesGoogle";
+import { aplicarAvaliacaoGoogle, retirarAvaliacaoGoogle, useAvaliacoesGoogle } from "@/lib/context/useAvaliacoesGoogle";
 import { useSla } from "@/lib/context/SlaContext";
 import { useAgora } from "@/lib/hooks/useAgora";
 
@@ -49,20 +50,15 @@ export default function GooglePage() {
   const { expediente } = useSla();
   const agora = useAgora();
 
-  const [lista, setLista] = useState<AvaliacaoGoogleView[] | null>(null);
+  /* A mesma lista do painel e do Meu dia: gravar aqui atualiza lá. */
+  const { avaliacoes, carregando } = useAvaliacoesGoogle();
+  const lista = carregando ? null : avaliacoes;
   const [filtro, setFiltro] = useState<Filtro>("abertas");
   const [registrando, setRegistrando] = useState(false);
-  const [aberta, setAberta] = useState<string | null>(null);
-
-  useEffect(() => {
-    let ativo = true;
-    listarAvaliacoesGoogle()
-      .then((l) => ativo && setLista(l))
-      .catch(() => ativo && setLista([]));
-    return () => {
-      ativo = false;
-    };
-  }, []);
+  /* `?avaliacao=<id>` abre a avaliação direto — é o link da Jornada do Cliente. */
+  const [aberta, setAberta] = useState<string | null>(() =>
+    typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("avaliacao")
+  );
 
   const indicadores = useMemo(() => indicadoresGoogle(lista ?? [], expediente), [lista, expediente]);
 
@@ -85,10 +81,7 @@ export default function GooglePage() {
   const selecionada = lista?.find((a) => a.id === aberta);
 
   function trocar(a: AvaliacaoGoogleView) {
-    setLista((atual) => {
-      const l = atual ?? [];
-      return l.some((x) => x.id === a.id) ? l.map((x) => (x.id === a.id ? a : x)) : [a, ...l];
-    });
+    aplicarAvaliacaoGoogle(a);
   }
 
   function prazo(a: AvaliacaoGoogleView) {
@@ -252,7 +245,7 @@ export default function GooglePage() {
           avaliacao={selecionada}
           onClose={() => setAberta(null)}
           onSalvo={trocar}
-          onApagado={(id) => setLista((atual) => (atual ?? []).filter((x) => x.id !== id))}
+          onApagado={retirarAvaliacaoGoogle}
         />
       )}
 

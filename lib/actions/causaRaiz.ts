@@ -13,6 +13,7 @@ import {
   type Frente,
   type RegistroDeCausa,
 } from "@/lib/models/causaRaiz";
+import { frente as frenteDaOperacao } from "@/lib/models/frentes";
 import { ProjectStage } from "@/lib/models/project";
 import { descreverRegistro } from "@/lib/services/horasUteis";
 import { SOCIAL_SOURCES } from "@/lib/services/case.service";
@@ -70,12 +71,12 @@ export async function abrirProjetoDeReincidencia(entrada: {
 
     const registros: RegistroDeCausa[] = [
       ...casos.map((c) => {
-        const frente: Frente = SOCIAL_SOURCES.includes(CANAL_PARA_ORIGEM[c.channel] ?? "") ? "Redes Sociais" : "Reclame Aqui";
+        const frente: Frente = SOCIAL_SOURCES.includes(CANAL_PARA_ORIGEM[c.channel] ?? "") ? "redes" : "reclame-aqui";
         const em = (c.recebidaEm ?? c.publishedAt).toISOString();
-        return { frente, causa, em, rotulo: `${frente === "Reclame Aqui" ? "RA" : CANAL_PARA_ORIGEM[c.channel]} ${c.externalId ?? c.protocol} — ${c.title}` };
+        return { frente, causa, em, rotulo: `${frente === "reclame-aqui" ? "RA" : CANAL_PARA_ORIGEM[c.channel]} ${c.externalId ?? c.protocol} — ${c.title}` };
       }),
-      ...nps.map((n) => ({ frente: "NPS" as const, causa, em: n.respondedAt.toISOString(), rotulo: `NPS — ${n.customerName ?? n.customer}, nota ${n.score}` })),
-      ...google.map((g) => ({ frente: "Google" as const, causa, em: g.publicadaEm.toISOString(), rotulo: `Google — ${g.autor}, ${g.estrelas} estrela(s)` })),
+      ...nps.map((n) => ({ frente: "nps" as const, causa, em: n.respondedAt.toISOString(), rotulo: `NPS — ${n.customerName ?? n.customer}, nota ${n.score}` })),
+      ...google.map((g) => ({ frente: "google" as const, causa, em: g.publicadaEm.toISOString(), rotulo: `Google — ${g.autor}, ${g.estrelas} estrela(s)` })),
     ];
 
     const [achada] = reincidenciasCruzadas(registros, agora);
@@ -102,7 +103,7 @@ export async function abrirProjetoDeReincidencia(entrada: {
         origem,
         title: `Reincidência: ${causa} (${achada.registros.length} em ${REINCIDENCIA_DIAS} dias)`,
         description: [
-          `Aberto a partir do Analytics: ${achada.registros.length} registros de "${causa}" nos últimos ${REINCIDENCIA_DIAS} dias, somando ${achada.frentes.join(", ")}.`,
+          `Aberto a partir do Analytics: ${achada.registros.length} registros de "${causa}" nos últimos ${REINCIDENCIA_DIAS} dias, somando ${achada.frentes.map((f) => frenteDaOperacao(f).nome).join(", ")}.`,
           "O problema que se repete em vários clientes é do produto ou do processo — o documento de reputação pede transformar esse feedback em melhoria.",
           "",
           "Registros:",
@@ -115,7 +116,7 @@ export async function abrirProjetoDeReincidencia(entrada: {
         stage: "Ideia" satisfies ProjectStage,
         owner: pessoa?.name ?? "",
         impact: "Alto",
-        tags: ["Reincidência", causa, ...achada.frentes],
+        tags: ["Reincidência", causa, ...achada.frentes.map((f) => frenteDaOperacao(f).nome)],
       },
       select: { id: true, title: true },
     });

@@ -1799,3 +1799,49 @@ model MetricaDiaria {
 
   @@index([dia])
 }
+
+/// Uma atividade da rotina do agente — o documento "Gestão de Rotinas".
+///
+/// Cadastro, e não lista fixa: o documento diz que as demandas e a ordem
+/// "podem ser alteradas", e o Isaac pediu para configurar as semanais.
+/// Banco vazio devolve as do documento (ver lib/models/rotina.ts).
+model AtividadeDaRotina {
+  id           String   @id @default(cuid())
+  titulo       String
+  descricao    String?
+  /// diaria · semanal · continua
+  frequencia   String
+  /// 1 = segunda … 7 = domingo. Só vale para a semanal.
+  diasDaSemana Int[]    @default([])
+  /// "09:30" — a hora sugerida; vazia é "ao longo do dia".
+  horario      String?
+  /// Minutos da atividade por si; o plano do dia soma os itens em cima.
+  duracaoMin   Int      @default(15)
+  /// Operacional · Organização · Demandas Internas · Gestão
+  categoria    String   @default("Operacional")
+  /// A contagem viva que a plataforma sabe fazer; vazia é marcada à mão.
+  chave        String?
+  link         String?
+  ordem        Int      @default(0)
+  ativa        Boolean  @default(true)
+
+  marcas MarcaDaRotina[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// A atividade feita num dia, por quem — o progresso do Meu dia e a
+/// sequência de dias com a rotina completa.
+model MarcaDaRotina {
+  id          String            @id @default(cuid())
+  atividadeId String
+  atividade   AtividadeDaRotina @relation(fields: [atividadeId], references: [id], onDelete: Cascade)
+  userId      String
+  /// AAAA-MM-DD em Brasília.
+  dia         String
+  feitaEm     DateTime          @default(now())
+
+  @@unique([atividadeId, userId, dia])
+  @@index([userId, dia])
+}

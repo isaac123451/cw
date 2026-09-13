@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { FolderPlus, Loader2, Repeat } from "lucide-react";
 
 import SurfaceCard from "@/components/shared/SurfaceCard";
 
+import { frente as frenteDaOperacao } from "@/lib/models/frentes";
 import {
-  COR_DA_FRENTE,
   FRENTES,
   reincidenciasCruzadas,
   REINCIDENCIA_DIAS,
@@ -21,7 +21,7 @@ import { isSocial } from "@/lib/services/case.service";
 import { nomeDoCliente } from "@/lib/models/nps";
 
 import { abrirProjetoDeReincidencia } from "@/lib/actions/causaRaiz";
-import { listarAvaliacoesGoogle, type AvaliacaoGoogleView } from "@/lib/actions/avaliacoesGoogle";
+import { useAvaliacoesGoogle } from "@/lib/context/useAvaliacoesGoogle";
 import { useCases } from "@/lib/context/CaseContext";
 import { useNps } from "@/lib/context/NpsContext";
 import { useToast } from "@/lib/context/ToastContext";
@@ -47,36 +47,27 @@ export default function CausaRaizCruzada() {
   const agora = useAgora();
 
   const [dias, setDias] = useState(90);
-  const [google, setGoogle] = useState<AvaliacaoGoogleView[]>([]);
   const [abrindo, setAbrindo] = useState<string | null>(null);
   const [confirmando, setConfirmando] = useState<string | null>(null);
   const [abertos, setAbertos] = useState<Record<string, { id: string; title: string }>>({});
 
-  useEffect(() => {
-    let ativo = true;
-    listarAvaliacoesGoogle()
-      .then((l) => ativo && setGoogle(l))
-      .catch(() => undefined);
-    return () => {
-      ativo = false;
-    };
-  }, []);
+  const { avaliacoes: google } = useAvaliacoesGoogle();
 
   /* Todo registro das quatro frentes, com ou sem causa — a cobertura precisa dos dois. */
   const todos = useMemo(() => {
     const lista: (Omit<RegistroDeCausa, "causa"> & { causa?: string })[] = [];
     for (const c of cases) {
-      const frente: Frente = isSocial(c) ? "Redes Sociais" : "Reclame Aqui";
+      const frente: Frente = isSocial(c) ? "redes" : "reclame-aqui";
       lista.push({ frente, causa: c.causaRaiz, em: c.recebidaEm ?? `${c.createdAt}T12:00:00Z`, rotulo: `${c.id} — ${c.title}` });
     }
     for (const r of responses) {
       /* O promotor calado não tem o que classificar; contá-lo esconderia a cobertura real. */
       if (!r.rootCause && !r.comment.trim()) continue;
-      lista.push({ frente: "NPS", causa: r.rootCause, em: r.respondedAt, rotulo: `NPS — ${nomeDoCliente(r)}, nota ${r.score}` });
+      lista.push({ frente: "nps", causa: r.rootCause, em: r.respondedAt, rotulo: `NPS — ${nomeDoCliente(r)}, nota ${r.score}` });
     }
     for (const g of google) {
       if (g.status === "denunciada") continue;
-      lista.push({ frente: "Google", causa: g.causaRaiz, em: g.publicadaEm, rotulo: `Google — ${g.autor}, ${g.estrelas} estrela(s)` });
+      lista.push({ frente: "google", causa: g.causaRaiz, em: g.publicadaEm, rotulo: `Google — ${g.autor}, ${g.estrelas} estrela(s)` });
     }
     return lista;
   }, [cases, responses, google]);
@@ -142,8 +133,8 @@ export default function CausaRaizCruzada() {
       <div className="mb-4 flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-zinc-600">
         {FRENTES.map((f) => (
           <span key={f} className="inline-flex items-center gap-1.5">
-            <i className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: COR_DA_FRENTE[f] }} />
-            {f}
+            <i className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: frenteDaOperacao(f).cor }} />
+            {frenteDaOperacao(f).nome}
           </span>
         ))}
       </div>
@@ -168,14 +159,14 @@ export default function CausaRaizCruzada() {
               <div
                 className="flex h-2.5 overflow-hidden rounded-full bg-zinc-100"
                 role="img"
-                aria-label={FRENTES.filter((f) => l.porFrente[f]).map((f) => `${f}: ${l.porFrente[f]}`).join(", ")}
+                aria-label={FRENTES.filter((f) => l.porFrente[f]).map((f) => `${frenteDaOperacao(f).nome}: ${l.porFrente[f]}`).join(", ")}
               >
                 {FRENTES.map((f) =>
                   l.porFrente[f] ? (
                     <span
                       key={f}
-                      title={`${f}: ${l.porFrente[f]}`}
-                      style={{ width: `${(l.porFrente[f] / maior) * 100}%`, background: COR_DA_FRENTE[f] }}
+                      title={`${frenteDaOperacao(f).nome}: ${l.porFrente[f]}`}
+                      style={{ width: `${(l.porFrente[f] / maior) * 100}%`, background: frenteDaOperacao(f).cor }}
                     />
                   ) : null
                 )}
@@ -191,7 +182,7 @@ export default function CausaRaizCruzada() {
         {cobertura.map((c, i) => (
           <span key={c.frente}>
             {i > 0 && " · "}
-            {c.frente} <strong className="tabular-nums text-zinc-700">{c.comCausa}</strong> de {c.total}
+            {frenteDaOperacao(c.frente).curto} <strong className="tabular-nums text-zinc-700">{c.comCausa}</strong> de {c.total}
           </span>
         ))}
         . O que fica sem causa não aparece no gráfico.
@@ -209,7 +200,7 @@ export default function CausaRaizCruzada() {
                 <li key={r.causa} className="rounded-xl bg-rose-50/60 px-3.5 py-2.5 ring-1 ring-inset ring-rose-100">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="text-sm text-rose-950">
-                      <strong className="font-semibold">{r.causa}</strong>: {r.registros.length} registros ({r.frentes.join(", ")})
+                      <strong className="font-semibold">{r.causa}</strong>: {r.registros.length} registros ({r.frentes.map((f) => frenteDaOperacao(f).nome).join(", ")})
                     </span>
                     {aberto ? (
                       <Link href="/projetos" className="text-xs font-medium text-violet-700 hover:underline">

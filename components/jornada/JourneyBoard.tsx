@@ -3,16 +3,17 @@
 import { useState } from "react";
 
 import {
-  MessagesSquare,
   Star,
   TriangleAlert,
 } from "lucide-react";
 
-import { CustomerJourney } from "@/lib/services/journey.service";
+import type { JornadaNasFrentes } from "@/lib/services/journey.service";
+import { FRENTES_DA_OPERACAO } from "@/lib/models/frentes";
+import IconeDaFrente from "@/components/shared/IconeDaFrente";
 import { JourneyStage } from "@/lib/models/journey";
 
 interface Props {
-  journeys: CustomerJourney[];
+  journeys: JornadaNasFrentes[];
   stages: JourneyStage[];
   placement: Record<string, string>;
   selected: string | null;
@@ -22,7 +23,7 @@ interface Props {
 
 /** Etapa efetiva: ajuste manual tem precedência sobre a sugestão. */
 export function stageOf(
-  journey: CustomerJourney,
+  journey: JornadaNasFrentes,
   stages: JourneyStage[],
   placement: Record<string, string>
 ) {
@@ -155,7 +156,7 @@ export default function JourneyBoard({
                       onClick={() =>
                         onSelect(journey.company)
                       }
-                      title={`${journey.company} — ${journey.total} caso(s)`}
+                      title={`${journey.company} — ${journey.total} registro(s) nas frentes`}
                       className={`w-full cursor-grab rounded-xl border bg-white p-3 text-left transition-all active:cursor-grabbing hover:-translate-y-0.5 hover:shadow-[0_8px_20px_-8px_rgba(91,42,134,0.3)] ${
                         selected === journey.company
                           ? "border-violet-400 ring-2 ring-violet-100"
@@ -188,7 +189,7 @@ export default function JourneyBoard({
                           {journey.averageScore}
                         </span>
 
-                        <span>{journey.total} casos</span>
+                        <span>{journey.total} registro(s)</span>
 
                         {journey.open > 0 && (
                           <span className="text-amber-600">
@@ -198,27 +199,17 @@ export default function JourneyBoard({
 
                       </div>
 
-                      <div className="mt-2 flex items-center gap-1.5">
-
-                        {journey.reclameAqui > 0 && (
+                      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                        {FRENTES_DA_OPERACAO.filter((f) => journey.porFrente[f.id] > 0).map((f) => (
                           <span
-                            className="rounded-md bg-violet-50 px-1.5 py-0.5 text-[10px] font-medium text-violet-700"
-                            title="Casos do Reclame Aqui"
+                            key={f.id}
+                            className="flex items-center gap-1 rounded-md bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-700"
+                            title={`${journey.porFrente[f.id]} em ${f.nome}`}
                           >
-                            RA {journey.reclameAqui}
+                            <IconeDaFrente frente={f.id} size={9} />
+                            {journey.porFrente[f.id]}
                           </span>
-                        )}
-
-                        {journey.social > 0 && (
-                          <span
-                            className="flex items-center gap-1 rounded-md bg-sky-50 px-1.5 py-0.5 text-[10px] font-medium text-sky-700"
-                            title="Casos de redes sociais"
-                          >
-                            <MessagesSquare size={9} />
-                            {journey.social}
-                          </span>
-                        )}
-
+                        ))}
                       </div>
 
                     </button>

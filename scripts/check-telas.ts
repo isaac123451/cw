@@ -99,7 +99,7 @@ async function abrir(
    * Nem todo redirecionamento é defeito — depende de para onde.
    *
    * Duas rotas desta aplicação redirecionam de propósito: `/` manda
-   * para `/dashboard`, e `/empresas` manda para `/estabelecimentos`,
+   * para `/meu-dia`, e `/empresas` manda para `/estabelecimentos`,
    * que é a URL nova do módulo renomeado. Contar isso como falha é o
    * que a primeira versão deste script fazia, e alarme falso repetido
    * é alarme desligado.
@@ -209,6 +209,7 @@ async function main() {
 
   const fixas = [
     "/",
+    "/meu-dia",
     "/dashboard",
     "/reclame-aqui",
     "/reclame-aqui/analytics",
