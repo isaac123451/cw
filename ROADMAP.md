@@ -435,6 +435,51 @@ acender, os textos da própria plataforma, repetição), com sabotagens
 acendendo vermelho. Conferido na tela com um caso descartável do
 recebimento à finalização, apagado depois.
 
+**Fase 3 — ofertas e renegociação (0.50.0).** O documento dá autonomia
+com limite e uma fórmula exata; nada disso tinha onde ficar registrado.
+
+- **`Negociacao`** (tabela nova, aditiva): oferta ou renegociação ligada
+  ao caso e ao estabelecimento, com o custo, o que justificou, quem
+  validou, a validade e o status. Apagar o caso não apaga a negociação —
+  é registro financeiro. **Sem dado bancário**: a chave Pix vai do
+  cliente direto ao financeiro pelo Slack.
+- **Oferta na hora certa**, no bloco "Ofertas e negociações" da lateral
+  do caso: antes da triagem e do 1º contato o botão diz o que falta
+  ("nunca como primeira abordagem", conferido também no servidor).
+  Depois, a sugestão da criticidade — Urgente, 1 mês gratuito; Alta, 10%
+  por 3 meses — com o custo pela mensalidade do estabelecimento. Outro
+  modelo, caso Normal ou valor acima do custo do modelo é "fora do
+  padrão" e pede "validado por". A justificativa (falha operacional,
+  ruído de comunicação, demora, risco de agravamento) é obrigatória. A
+  mensagem ao cliente sai pronta, para o canal privado.
+- **Calculadora de renegociação**: os campos do modelo, o cálculo passo a
+  passo — valor por dia em centavos × dias não utilizados, menos 30% —,
+  a proposta com as condições (Pix, cartão sem estorno parcial,
+  excepcionalidade, validade) e "autorizado por" obrigatório. Depois, o
+  checklist do documento até o recebimento confirmado (pedir ao
+  financeiro só depois do aceite) e o pedido à Gabriela Drebs pronto,
+  com portal e valor.
+- **Aceita, vira custo em Impacto**, ligada ao caso, com as duas
+  perguntas que separam retenção de cortesia (teria cancelado? como
+  ficou?). **O limite do mês à vista**: o contador na calculadora e o
+  cartão "Ofertas e renegociações do mês" no Impacto, com o aviso a
+  partir da segunda renegociação e os clientes retidos.
+
+Achados no caminho: o resultado líquido do Impacto somava como custo só
+o tipo "Oferta concedida" e como entrada só os quatro tipos de partida —
+agora soma pelo sinal. As anotações do caso ficavam em "Carregando…"
+para sempre no modo de desenvolvimento (o mesmo defeito que o relato já
+tinha tido e corrigido). Conta da renegociação decidida com o documento:
+arredondar o valor por dia antes de multiplicar, para a proposta fechar
+quando o cliente refaz a conta.
+
+Provas: `check:negociacao` (plano anual e mensal feitos à mão, datas
+impossíveis, valores digitados, o "fora do padrão" em cada criticidade,
+o que a proposta e o pedido ao financeiro têm de dizer, a virada do mês
+em Brasília), com sabotagens acendendo vermelho. Conferido na tela com
+um caso descartável: oferta, aceite, renegociação, checklist, contador
+e Impacto; tudo apagado depois.
+
 
 ### Excluir conta da plataforma (11/09/2026)
 

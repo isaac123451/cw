@@ -1,6 +1,6 @@
 {
   "name": "cw-reputacao",
-  "version": "0.49.0",
+  "version": "0.50.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -90,6 +90,7 @@
     "check:tratativa": "tsx scripts/check-tratativa.ts",
     "check:lgpd": "tsx scripts/check-lgpd.ts",
     "check:trilha": "tsx scripts/check-trilha.ts",
+    "check:negociacao": "tsx scripts/check-negociacao.ts",
     "conferir:fila": "tsx scripts/conferir-fila-avaliacao.ts"
   },
   "dependencies": {

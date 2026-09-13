@@ -166,6 +166,14 @@ const INTERNAS: Record<string, string[]> = {
    */
   CaseContato: ["*"],
 
+  /**
+   * Ofertas e renegociações: carga própria (`listarNegociacoes` na
+   * lateral do caso, `resumoDoMes` no Impacto), como os contatos. Todas
+   * as colunas chegam à tela por lá — `paraView` em
+   * `lib/actions/negociacao.ts` — e não pela carga do quadro.
+   */
+  Negociacao: ["*"],
+
   /** Quem mudou o expediente por último — registro, não conteúdo. */
   OperacaoConfig: ["updatedBy"],
 };

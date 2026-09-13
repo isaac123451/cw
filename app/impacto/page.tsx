@@ -27,6 +27,7 @@ import { ConfirmDelete } from "@/components/shared/Modal";
 import ImpactForm from "@/components/impacto/ImpactForm";
 import ImpactTypesCard from "@/components/impacto/ImpactTypesCard";
 import PlanosDoImpacto from "@/components/impacto/PlanosDoImpacto";
+import NegociacoesDoMes from "@/components/impacto/NegociacoesDoMes";
 
 import {
   ImpactDraft,
@@ -53,6 +54,8 @@ const typeTone: Record<string, string> = {
   "Valor recuperado":
     "bg-amber-50 text-amber-700 ring-amber-100",
   "Oferta concedida":
+    "bg-rose-50 text-rose-700 ring-rose-100",
+  Renegociação:
     "bg-rose-50 text-rose-700 ring-rose-100",
 };
 
@@ -94,14 +97,30 @@ export default function ImpactoPage() {
 
     const generated = soma(["Módulo contratado"]);
     const recovered = soma(["Valor recuperado"]);
-    const granted = soma(["Oferta concedida"]);
+
+    /*
+      Entradas e concessões pelo sinal, e não pelo nome do tipo.
+
+      Somava só "Oferta concedida" como custo e só os quatro tipos de
+      partida como entrada: uma renegociação aceita (13/09/2026) ou um
+      tipo de receita criado na tela ficavam fora do resultado líquido.
+      Custo entra negativo desde o formulário; o sinal é a regra.
+    */
+    const entradas = records
+      .filter((item) => item.amount > 0)
+      .reduce((sum, item) => sum + item.amount, 0);
+
+    const granted = records
+      .filter((item) => item.amount < 0)
+      .reduce((sum, item) => sum + item.amount, 0);
 
     return {
       preserved,
       generated,
       recovered,
       granted,
-      net: preserved + generated + recovered + granted,
+      entradas,
+      net: entradas + granted,
       recoveredClients: records.filter(
         (item) => item.type === "Cliente recuperado"
       ).length,
@@ -254,11 +273,7 @@ export default function ImpactoPage() {
               </p>
 
               <p className="mt-1 text-xl font-semibold tabular-nums text-emerald-800">
-                {money.format(
-                  metrics.preserved +
-                    metrics.generated +
-                    metrics.recovered
-                )}
+                {money.format(metrics.entradas)}
               </p>
 
             </div>
@@ -266,7 +281,7 @@ export default function ImpactoPage() {
             <div className="rounded-xl bg-rose-50/60 p-4 ring-1 ring-inset ring-rose-100">
 
               <p className="text-[11px] font-semibold uppercase tracking-wide text-rose-700">
-                Ofertas concedidas
+                Ofertas e renegociações
               </p>
 
               <p className="mt-1 text-xl font-semibold tabular-nums text-rose-800">
@@ -290,6 +305,8 @@ export default function ImpactoPage() {
           </div>
 
         </SurfaceCard>
+
+        <NegociacoesDoMes />
 
         <div className="grid gap-6 lg:grid-cols-2">
 

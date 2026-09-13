@@ -480,6 +480,7 @@ model Case {
   tasks     AgendaTask[]
   movements CaseMovement[]
   contatos  CaseContato[]
+  negociacoes Negociacao[]
 
   @@index([channel, publishedAt])
   @@index([status])
@@ -556,6 +557,66 @@ model CaseContato {
   createdAt DateTime @default(now())
 
   @@index([caseId, em])
+}
+
+/// Ofertas e renegociações — o documento "Ofertas, Descontos e
+/// Negociações".
+///
+/// **Por que existe.** O documento dá autonomia com limite: oferta pela
+/// criticidade (Urgente, 1 mês gratuito; Alta, 10% por 3 meses), só
+/// depois da condução do caso, e fora do padrão com validação prévia; a
+/// renegociação é "exceção máxima", com autorização da gestão e uma
+/// fórmula exata. Nada disso tinha onde ficar registrado — nem quem
+/// validou, nem quantas renegociações o mês já teve.
+///
+/// **Sem dado bancário.** A chave Pix e os dados da conta do cliente vão
+/// direto para o financeiro pelo Slack; aqui fica o valor e o rastro.
+///
+/// Apagar o caso não apaga a negociação: é registro financeiro.
+model Negociacao {
+  id String @id @default(cuid())
+
+  caseId String?
+  case   Case?   @relation(fields: [caseId], references: [id], onDelete: SetNull)
+
+  establishmentId String?
+  /// Nome do cliente ou do estabelecimento, guardado além do vínculo.
+  cliente String
+
+  /// oferta · renegociacao
+  tipo String
+  /// mes-gratis · desconto-10-3m · personalizada · renegociacao
+  modelo String
+
+  descricao String
+  /// Custo estimado da oferta, ou o valor final a restituir, em centavos.
+  valorCents Int
+  /// As situações do documento que justificam a oferta.
+  motivos String[] @default([])
+  /// O cálculo da renegociação, campo a campo (ver lib/models/negociacao.ts).
+  calculo Json?
+
+  /// Quem validou a condição fora do padrão, ou o gestor que autorizou.
+  validadoPor String?
+  /// Até quando a proposta vale.
+  validaAte DateTime?
+
+  /// proposta · aceita · recusada · concluida
+  status String @default("proposta")
+  respondidaEm DateTime?
+  /// Os itens do checklist da renegociação já cumpridos.
+  checklist String[] @default([])
+
+  /// O lançamento em Impacto criado quando o cliente aceita.
+  impactoId String?       @unique
+  impacto   ImpactRecord? @relation(fields: [impactoId], references: [id], onDelete: SetNull)
+
+  autorNome String
+  criadoEm  DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tipo, criadoEm])
+  @@index([caseId])
 }
 
 /// Linha do tempo: alimenta a rastreabilidade do caso.
@@ -640,6 +701,9 @@ model ImpactRecord {
   /// `null` é "não se sabe" — diferente de `false`. Quem não perguntou
   /// não deve ser contado como quem perguntou e ouviu não.
   wouldHaveChurned Boolean?
+
+  /// A oferta ou renegociação que gerou este lançamento, se veio de uma.
+  negociacao Negociacao?
 }
 
 model AgendaTask {

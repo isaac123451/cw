@@ -17,6 +17,7 @@ import { useSession } from "@/lib/context/SessionContext";
 
 import Combobox from "@/components/shared/Combobox";
 import PrazoECriticidade from "@/components/reclame-aqui/tratativa/PrazoECriticidade";
+import NegociacoesDoCaso from "@/components/reclame-aqui/negociacao/NegociacoesDoCaso";
 import { useTratativa } from "@/components/reclame-aqui/tratativa/TratativaProvider";
 import { idExterno, idLabel, isSocial } from "@/lib/services/case.service";
 import { descreverRegistro } from "@/lib/services/horasUteis";
@@ -312,6 +313,12 @@ export default function CaseSidebar({
         relógio em tempo útil e os contatos que o fazem parar.
       */}
       <PrazoECriticidade data={data} aoMudarNoServidor={aoMudarNoServidor} />
+
+      {/*
+        Ofertas e renegociações logo abaixo do prazo: a criticidade que
+        decide o prazo é a mesma que decide a oferta do documento.
+      */}
+      {!isSocial(data) && <NegociacoesDoCaso data={data} />}
 
       <Block title="Reclame Aqui">
 

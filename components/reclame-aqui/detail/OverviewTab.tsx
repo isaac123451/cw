@@ -158,13 +158,22 @@ export default function OverviewTab({
 
     notasDe.current = data.protocol;
 
-    let ativo = true;
+    const pedido = data.protocol;
 
     setCarregandoNotas(true);
 
-    listCaseNotes(data.protocol)
+    /*
+      Confere o protocolo, e não um booleano de "ainda montado" — o
+      mesmo conserto do relato, logo acima, que ficou faltando aqui.
+
+      Com `let ativo` zerado na limpeza e o `ref` de "já busquei", a
+      montagem dupla do modo de desenvolvimento jogava fora a resposta:
+      "Carregando anotações…" para sempre, com a lista no banco. Achado
+      na conferência da Fase 3, em 13/09/2026.
+    */
+    listCaseNotes(pedido)
       .then((lista) => {
-        if (ativo) setComments(lista);
+        if (notasDe.current === pedido) setComments(lista);
       })
       .catch((error: unknown) => {
         console.error(
@@ -173,12 +182,8 @@ export default function OverviewTab({
         );
       })
       .finally(() => {
-        if (ativo) setCarregandoNotas(false);
+        if (notasDe.current === pedido) setCarregandoNotas(false);
       });
-
-    return () => {
-      ativo = false;
-    };
 
   }, [data.protocol]);
 
