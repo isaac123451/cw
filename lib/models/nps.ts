@@ -176,7 +176,7 @@ export const KINDS: KindRule[] = [
     label: "Falta de Retorno",
     emoji: "⚪",
     color: "#71717A",
-    acao: "Mínimo de 3 tentativas em até 7 dias, registrando cada uma.",
+    acao: "Mínimo de 5 tentativas em até 7 dias (e-mail, telefone, WhatsApp), registrando cada uma.",
     finais: ["[Encerrado] Sem Retorno"],
     exigeConfirmacao: false,
   },
@@ -519,6 +519,17 @@ export function moodOf(value?: number | null) {
 /** Tentativas mínimas antes de encerrar por falta de retorno. */
 export const TENTATIVAS_MINIMAS = 3;
 
+/**
+ * "Falta de Retorno" pede mais: "mínimo de 5 tentativas de contato em
+ * até 7 dias (e-mail, telefone, WhatsApp)". A Reclamação fica nas 3 do
+ * guia. O texto do tipo no cadastro é da operação; a regra mora aqui.
+ */
+export const TENTATIVAS_FALTA_DE_RETORNO = 5;
+
+export function tentativasMinimas(kind?: string | null) {
+  return kind === "Falta de Retorno" ? TENTATIVAS_FALTA_DE_RETORNO : TENTATIVAS_MINIMAS;
+}
+
 /** Janela para as três tentativas. */
 export const JANELA_TENTATIVAS_DIAS = 7;
 
@@ -584,6 +595,21 @@ export interface NpsResponseView {
   reviewAsked: boolean;
   testimonialAsked: boolean;
   referralAsked: boolean;
+
+  /**
+   * O resultado das três ações do promotor.
+   *
+   * Pedir é metade; o guia mede o que voltou — "Nº de indicações" e
+   * "Nº de avaliações no Google". Vazio é "ainda não se sabe", e não
+   * "não": o promotor que ainda não publicou não é um promotor que
+   * recusou.
+   */
+  reviewFeita?: boolean;
+  aceitaCase?: boolean;
+  indicacoes?: number;
+
+  /** A avaliação do Google que este promotor publicou, quando ligada. */
+  avaliacaoGoogle?: { estrelas: number; publicadaEm: string };
 
   /** "Manual" ou "Wootric". */
   source: string;

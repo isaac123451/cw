@@ -6,11 +6,12 @@ import { updateTag } from "next/cache";
 
 import { PrismaClient } from "@prisma/client";
 
-import { requireRole, tryRole } from "@/lib/auth/guard";
+import { requireRole, SemPermissao, tryRole } from "@/lib/auth/guard";
 import type { Modulo } from "@/lib/auth/modules";
-import { WORKSPACE_TAG } from "@/lib/actions/tags";
+import { CASES_TAG, WORKSPACE_TAG } from "@/lib/actions/tags";
 
 import {
+  KINDS,
   NpsResponseView,
   moodOf,
   ROOT_CAUSES,
@@ -94,6 +95,11 @@ export async function listNpsResponses(): Promise<
       owner: { select: { name: true } },
       attempts: { orderBy: { createdAt: "asc" } },
       notes: { orderBy: { createdAt: "asc" } },
+      avaliacoesGoogle: {
+        select: { estrelas: true, publicadaEm: true },
+        orderBy: { publicadaEm: "desc" },
+        take: 1,
+      },
     },
     orderBy: { respondedAt: "desc" },
   });
@@ -122,6 +128,15 @@ export async function listNpsResponses(): Promise<
     reviewAsked: r.reviewAsked,
     testimonialAsked: r.testimonialAsked,
     referralAsked: r.referralAsked,
+    reviewFeita: r.reviewFeita ?? undefined,
+    aceitaCase: r.aceitaCase ?? undefined,
+    indicacoes: r.indicacoes ?? undefined,
+    avaliacaoGoogle: r.avaliacoesGoogle[0]
+      ? {
+          estrelas: r.avaliacoesGoogle[0].estrelas,
+          publicadaEm: r.avaliacoesGoogle[0].publicadaEm.toISOString(),
+        }
+      : undefined,
     source: r.source,
     externalId: r.externalId ?? undefined,
     churnRisk: r.churnRisk,
@@ -256,6 +271,23 @@ export async function saveNpsRootCause(
       where: { rootCause: anterior.name },
       data: { rootCause: nome },
     });
+
+    /*
+      Desde 13/09/2026 a lista é única para as quatro frentes: os casos
+      (Reclame Aqui e redes) e as avaliações do Google guardam o mesmo
+      nome, e renomear arrasta os três.
+    */
+    await ctx.prisma.case.updateMany({
+      where: { causaRaiz: anterior.name },
+      data: { causaRaiz: nome },
+    });
+
+    await ctx.prisma.avaliacaoGoogle.updateMany({
+      where: { causaRaiz: anterior.name },
+      data: { causaRaiz: nome },
+    });
+
+    updateTag(CASES_TAG);
   }
 
   updateTag(WORKSPACE_TAG);
@@ -300,9 +332,14 @@ export async function removeNpsRootCause(id: string) {
 
   if (!alvo) return;
 
-  const emUso = await ctx.prisma.npsResponse.count({
-    where: { rootCause: alvo.name },
-  });
+  /* Em uso em qualquer frente — a lista é a mesma para as quatro. */
+  const [noNps, nosCasos, noGoogle] = await Promise.all([
+    ctx.prisma.npsResponse.count({ where: { rootCause: alvo.name } }),
+    ctx.prisma.case.count({ where: { causaRaiz: alvo.name } }),
+    ctx.prisma.avaliacaoGoogle.count({ where: { causaRaiz: alvo.name } }),
+  ]);
+
+  const emUso = noNps + nosCasos + noGoogle;
 
   /**
    * Causa já usada é **desativada**, não apagada. Apagar reescreveria o
@@ -374,6 +411,15 @@ export async function saveNpsResponse(
       data: dados,
     });
 
+    /*
+      Classificar como Erro Processual na edição também gera a revisão.
+
+      Só a criação gerava — e quase toda resposta chega pelo Wootric e
+      é classificada depois, numa edição. O "toda ocorrência" do guia
+      ficava valendo só para o registro manual.
+    */
+    await gerarRevisaoDeProcesso(ctx.prisma, input, input.id);
+
     updateTag(WORKSPACE_TAG);
 
     return input.id;
@@ -420,8 +466,25 @@ async function gerarRevisaoDeProcesso(
 
   if (input.kind !== "Erro Processual") return;
 
+  /* Uma revisão por resposta: salvar de novo não cria outra. */
+  const origem = `nps:${npsId}`;
+
+  /* As revisões de antes de `origem` existir se reconhecem pela descrição. */
+  const existente = await prisma.project.findFirst({
+    where: {
+      OR: [
+        { origem },
+        { description: { contains: `Registro NPS: ${npsId}` } },
+      ],
+    },
+    select: { id: true },
+  });
+
+  if (existente) return;
+
   await prisma.project.create({
     data: {
+      origem,
       title: `Revisão de processo — ${input.customer}`,
       description: `Aberto automaticamente por um NPS classificado como Erro Processual (nota ${input.score}).\n\nRelato do cliente: ${input.comment || "(sem comentário)"}\n\nRegistro NPS: ${npsId}`,
       /**
@@ -523,29 +586,164 @@ export async function confirmNpsResolution(
   updateTag(WORKSPACE_TAG);
 }
 
-/** Marcações do pós-elogio: review pública, depoimento, indicação. */
-export async function setNpsAdvocacy(
-  id: string,
-  campo: "review" | "testimonial" | "referral",
-  valor: boolean
-) {
+type Falha = { ok: false; erro: string };
 
-  const ctx = await requireRole("AGENTE", MODULO);
+/**
+ * A sessão e o papel, com o erro em português em vez de exceção.
+ *
+ * As ações antigas deste arquivo devolvem `void` e a tela diz "salvo"
+ * de qualquer jeito; as novas devolvem o que aconteceu, e o aviso só
+ * sai depois da resposta. As antigas entram na mesma regra na 10.4.
+ */
+async function agente() {
+  try {
+    const ctx = await requireRole("AGENTE", MODULO);
+    if (!ctx) return { erro: "Sem banco configurado — nada é gravado no modo demonstração." } as const;
+    return { ctx } as const;
+  } catch (erro) {
+    return {
+      erro: erro instanceof SemPermissao ? erro.message : "Não foi possível confirmar sua sessão. Entre de novo.",
+    } as const;
+  }
+}
 
-  if (!ctx) return;
+export interface AcoesDoPromotor {
+  id: string;
+  reviewAsked: boolean;
+  testimonialAsked: boolean;
+  referralAsked: boolean;
+  /** `null` é "ainda não se sabe" — diferente de "não". */
+  reviewFeita: boolean | null;
+  aceitaCase: boolean | null;
+  indicacoes: number | null;
+}
 
-  const coluna = {
-    review: "reviewAsked",
-    testimonial: "testimonialAsked",
-    referral: "referralAsked",
-  }[campo];
+/**
+ * As três ações do promotor e o que voltou delas.
+ *
+ * "Direcionar para review pública (Google), perguntar se aceita ser
+ * case, pedir indicação." Registrar o resultado sem o pedido não faz
+ * sentido — quem publicou a review foi convidado —, então o resultado
+ * marca o pedido junto.
+ */
+export async function salvarAcoesDoPromotor(
+  entrada: AcoesDoPromotor
+): Promise<{ ok: true; acoes: AcoesDoPromotor } | Falha> {
 
-  await ctx.prisma.npsResponse.update({
-    where: { id },
-    data: { [coluna]: valor },
-  });
+  const indicacoes = entrada.indicacoes;
+
+  if (indicacoes !== null && !(Number.isInteger(indicacoes) && indicacoes >= 0 && indicacoes <= 500)) {
+    return { ok: false, erro: "Indicações é um número inteiro, de 0 a 500." };
+  }
+
+  const quem = await agente();
+  if ("erro" in quem) return { ok: false, erro: quem.erro! };
+
+  const dados = {
+    reviewAsked: entrada.reviewAsked || entrada.reviewFeita !== null,
+    testimonialAsked: entrada.testimonialAsked || entrada.aceitaCase !== null,
+    referralAsked: entrada.referralAsked || (indicacoes ?? 0) > 0,
+    reviewFeita: entrada.reviewFeita,
+    aceitaCase: entrada.aceitaCase,
+    indicacoes,
+  };
+
+  try {
+    const atual = await quem.ctx.prisma.npsResponse.findUnique({ where: { id: entrada.id }, select: { score: true } });
+    if (!atual) return { ok: false, erro: "Esta resposta não existe mais." };
+    if (atual.score < 9) return { ok: false, erro: "As ações de promotor valem para nota 9 ou 10." };
+
+    await quem.ctx.prisma.npsResponse.update({ where: { id: entrada.id }, data: dados });
+  } catch (erro) {
+    console.error("[nps] ações do promotor", erro);
+    return { ok: false, erro: "O banco não aceitou a gravação agora. Tente de novo em instantes." };
+  }
 
   updateTag(WORKSPACE_TAG);
+
+  return { ok: true, acoes: { id: entrada.id, ...dados } };
+}
+
+/**
+ * A triagem em lote do que está parado.
+ *
+ * Duas operações que valem para dezenas de ciclos de uma vez: assumir
+ * (o responsável passa a ser quem clicou) e classificar o tipo. O resto
+ * — contato, pós-contato, encerramento — é um a um, na ficha, porque
+ * cada um é uma conversa.
+ *
+ * Classificar como Erro Processual abre a revisão de processo de cada
+ * um, como o guia exige de "toda ocorrência".
+ */
+export async function triarNpsEmLote(entrada: {
+  ids: string[];
+  tipo?: string;
+  assumir?: boolean;
+}): Promise<{ ok: true; atualizados: number; revisoes: number; responsavel?: string } | Falha> {
+
+  const ids = [...new Set(entrada.ids)].filter(Boolean);
+
+  if (ids.length === 0) return { ok: false, erro: "Selecione ao menos um ciclo." };
+  if (ids.length > 300) return { ok: false, erro: "No máximo 300 ciclos por vez." };
+  if (!entrada.tipo && !entrada.assumir) return { ok: false, erro: "Escolha o que aplicar: um tipo, ou assumir." };
+
+  const quem = await agente();
+  if ("erro" in quem) return { ok: false, erro: quem.erro! };
+
+  const prisma = quem.ctx.prisma;
+
+  try {
+    if (entrada.tipo) {
+      const cadastrado = await prisma.npsKind.findFirst({ where: { name: entrada.tipo, active: true }, select: { name: true } });
+      const doGuia = KINDS.some((k) => k.label === entrada.tipo);
+      if (!cadastrado && !doGuia) return { ok: false, erro: `O tipo "${entrada.tipo}" não está cadastrado.` };
+    }
+
+    const pessoa = entrada.assumir
+      ? await prisma.user.findUnique({ where: { id: quem.ctx.userId }, select: { id: true, name: true } })
+      : null;
+
+    const r = await prisma.npsResponse.updateMany({
+      where: { id: { in: ids } },
+      data: {
+        ...(entrada.tipo ? { kind: entrada.tipo } : {}),
+        ...(pessoa ? { ownerId: pessoa.id } : {}),
+      },
+    });
+
+    let revisoes = 0;
+
+    if (entrada.tipo === "Erro Processual") {
+      const linhas = await prisma.npsResponse.findMany({
+        where: { id: { in: ids } },
+        select: { id: true, customer: true, score: true, comment: true, respondedAt: true, owner: { select: { name: true } } },
+      });
+
+      for (const l of linhas) {
+        const antes = await prisma.project.count({ where: { origem: `nps:${l.id}` } });
+        await gerarRevisaoDeProcesso(
+          prisma,
+          {
+            score: l.score,
+            comment: l.comment,
+            respondedAt: l.respondedAt.toISOString(),
+            customer: l.customer,
+            kind: "Erro Processual",
+            owner: l.owner?.name,
+          },
+          l.id
+        );
+        if ((await prisma.project.count({ where: { origem: `nps:${l.id}` } })) > antes) revisoes += 1;
+      }
+    }
+
+    updateTag(WORKSPACE_TAG);
+
+    return { ok: true, atualizados: r.count, revisoes, responsavel: pessoa?.name };
+  } catch (erro) {
+    console.error("[nps] triagem em lote", erro);
+    return { ok: false, erro: "O banco não aceitou a gravação agora. Aplicar de novo é seguro: o mesmo tipo e o mesmo responsável não duplicam nada." };
+  }
 }
 
 export async function deleteNpsResponse(id: string) {
@@ -925,8 +1123,24 @@ export async function exportNps(ids?: string[]): Promise<{
     orderBy: { respondedAt: "desc" },
   });
 
+  /*
+    Hora de Brasília, "13/09/2026 14:05" — como a planilha do time
+    escreve e como a importação lê de volta. Era o relógio UTC em
+    "2026-09-13 17:05": três horas adiantado para quem abria o arquivo.
+  */
   const quando = (v?: Date | null) =>
-    v ? v.toISOString().slice(0, 16).replace("T", " ") : "";
+    v
+      ? v
+          .toLocaleString("pt-BR", {
+            timeZone: "America/Sao_Paulo",
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          })
+          .replace(",", "")
+      : "";
 
   const planilha = linhas.map((r) => ({
     Nota: r.score,
@@ -965,8 +1179,11 @@ export async function exportNps(ids?: string[]): Promise<{
     "Encerrado em": quando(r.closedAt),
     Desfecho: r.outcome ?? "",
     "Review pedida": r.reviewAsked ? "Sim" : "Não",
+    "Review publicada": r.reviewFeita === null ? "" : r.reviewFeita ? "Sim" : "Não",
     "Depoimento pedido": r.testimonialAsked ? "Sim" : "Não",
+    "Aceita ser case": r.aceitaCase === null ? "" : r.aceitaCase ? "Sim" : "Não",
     "Indicação": r.referralAsked ? "Sim" : "Não",
+    "Indicações recebidas": r.indicacoes ?? "",
     Origem: r.source,
     "Id na origem": r.externalId ?? "",
   }));

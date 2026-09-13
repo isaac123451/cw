@@ -4,6 +4,7 @@ import * as XLSX from "xlsx";
 
 import { segmentOf } from "@/lib/models/nps";
 import { diaNaOperacao } from "@/lib/services/reputation.service";
+import { instanteDeParede } from "@/lib/services/horasUteis";
 
 /**
  * Leitura de uma planilha de NPS.
@@ -152,6 +153,17 @@ function paraData(valor: unknown): Date | null {
   );
 
   if (brasileira) {
+
+    /*
+      Com hora, é a hora de Brasília: é assim que a exportação daqui
+      escreve desde 13/09/2026. Antes ela gravava o relógio UTC em
+      "aaaa-mm-dd hh:mm" — três horas adiantado para quem lia a planilha —,
+      e esse formato antigo continua caindo no `new Date` lá embaixo, como
+      sempre caiu, para reimportar um arquivo velho não mudar de horário.
+    */
+    const comHora = instanteDeParede(bruto);
+
+    if (comHora) return comHora;
 
     const [, dia, mes, ano] = brasileira;
 

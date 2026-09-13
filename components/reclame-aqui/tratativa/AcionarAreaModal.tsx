@@ -65,6 +65,7 @@ export default function AcionarAreaModal({ item, onClose, onSalvo }: Props) {
   const [tratativa, setTratativa] = useState("");
   const [adicionais, setAdicionais] = useState("");
   const [papel, setPapel] = useState("");
+  const [chamado, setChamado] = useState("");
   const [editada, setEditada] = useState<string | null>(null);
 
   const [salvando, setSalvando] = useState(false);
@@ -105,7 +106,7 @@ export default function AcionarAreaModal({ item, onClose, onSalvo }: Props) {
     setErro(null);
 
     try {
-      const r = await acionarArea({ protocol: item.protocol, area, tratativa });
+      const r = await acionarArea({ protocol: item.protocol, area, tratativa, chamado });
 
       if (!r.ok) {
         setErro(r.erro);
@@ -199,17 +200,30 @@ export default function AcionarAreaModal({ item, onClose, onSalvo }: Props) {
             />
           </label>
 
-          <label className="block">
-            <span className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
-              Quem é o contato
-            </span>
-            <select value={papel} onChange={(e) => setPapel(e.target.value)} className={`mt-1.5 ${inputClass}`}>
-              <option value="">Não sei</option>
-              {PAPEIS.map((p) => (
-                <option key={p} value={p}>{p}</option>
-              ))}
-            </select>
-          </label>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block">
+              <span className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+                Quem é o contato
+              </span>
+              <select value={papel} onChange={(e) => setPapel(e.target.value)} className={`mt-1.5 ${inputClass}`}>
+                <option value="">Não sei</option>
+                {PAPEIS.map((p) => (
+                  <option key={p} value={p}>{p}</option>
+                ))}
+              </select>
+            </label>
+            <label className="block">
+              <span className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+                Nº do chamado (se houver)
+              </span>
+              <input
+                value={chamado}
+                onChange={(e) => setChamado(e.target.value)}
+                placeholder="Ex.: #48213"
+                className={`mt-1.5 ${inputClass}`}
+              />
+            </label>
+          </div>
 
           <p className="text-xs leading-relaxed text-zinc-500">
             A documentação também pede para acionar as lideranças e, se possível, o consultor de

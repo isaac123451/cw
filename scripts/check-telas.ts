@@ -219,6 +219,7 @@ async function main() {
     "/reclame-aqui/novo",
     "/redes-sociais",
     "/nps",
+    "/google",
     "/nps/analise",
     "/agenda",
     "/analytics",

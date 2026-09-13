@@ -427,6 +427,7 @@ export default function OverviewTab({
                     year: "2-digit",
                     hour: "2-digit",
                     minute: "2-digit",
+                    timeZone: "America/Sao_Paulo",
                   })}
                 </p>
 

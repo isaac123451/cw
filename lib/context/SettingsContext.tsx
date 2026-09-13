@@ -56,6 +56,18 @@ interface SettingsContextType {
   saveCategory: (data: CategoryOption) => Promise<Gravacao>;
   removeCategory: (id: string) => Promise<Gravacao>;
 
+  /**
+   * Troca as listas pelas que o servidor acabou de devolver.
+   *
+   * É o caminho da unificação de categorias (`unificarCategorias`), que
+   * mexe em várias categorias e subcategorias de uma vez e devolve o
+   * resultado pronto.
+   */
+  aplicarCategorias: (
+    categorias: CategoryOption[],
+    subcategorias: SubcategoryOption[]
+  ) => void;
+
   saveSubcategory: (
     data: SubcategoryOption
   ) => Promise<Gravacao>;
@@ -139,6 +151,11 @@ export function SettingsProvider({
       saveCategory: (data) => {
         setCategories((prev) => upsert(prev, data));
         return sincronizar(() => gravarCategoria(data));
+      },
+
+      aplicarCategorias: (novasCategorias, novasSubcategorias) => {
+        setCategories(novasCategorias);
+        setSubcategories(novasSubcategorias);
       },
 
       removeCategory: (id) => {

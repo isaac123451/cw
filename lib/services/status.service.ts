@@ -18,6 +18,15 @@ export const STATUS_TONE: Record<string, string> = {
     "bg-emerald-50 text-emerald-700 ring-emerald-100",
 
   "Não resolvido": "bg-rose-50 text-rose-700 ring-rose-100",
+
+  /* As etapas das Redes Sociais — ver lib/models/redes.ts. */
+  Recebido: "bg-violet-50 text-violet-700 ring-violet-100",
+  "Em análise": "bg-sky-50 text-sky-700 ring-sky-100",
+  "1º contato": "bg-amber-50 text-amber-700 ring-amber-100",
+  "Em tratativa": "bg-orange-50 text-orange-700 ring-orange-100",
+  "Validação": "bg-teal-50 text-teal-700 ring-teal-100",
+  "Sem contato": "bg-zinc-100 text-zinc-600 ring-zinc-200",
+  "Sem identificação": "bg-zinc-100 text-zinc-500 ring-zinc-200",
 };
 
 export function toneOf(status: string) {

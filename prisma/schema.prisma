@@ -472,6 +472,21 @@ model Case {
   moderacaoResultado    String?
   moderacaoRespondidaEm DateTime?
 
+  /// A causa raiz, da mesma lista do NPS (`NpsRootCause`, pelo nome).
+  ///
+  /// Uma lista só para todas as frentes — Reclame Aqui, redes, NPS e
+  /// Google —, para a tendência de causa cruzar os canais. Renomear na
+  /// lista renomeia aqui também.
+  causaRaiz String?
+
+  /// O encerramento do documento das Redes Sociais: quando, e a solução
+  /// aplicada. O resultado (resolvido, sem contato, sem identificação) é
+  /// a etapa final do caso.
+  encerradoEm     DateTime?
+  solucaoAplicada String?
+  /// Quantas vezes o caso foi reaberto — "reaberto com o mesmo registro".
+  reaberturas     Int       @default(0)
+
   tags      CaseTag[]
   comments  CaseComment[]
   events    CaseEvent[]
@@ -481,6 +496,7 @@ model Case {
   movements CaseMovement[]
   contatos  CaseContato[]
   negociacoes Negociacao[]
+  avaliacoesGoogle AvaliacaoGoogle[]
 
   @@index([channel, publishedAt])
   @@index([status])
@@ -557,6 +573,72 @@ model CaseContato {
   createdAt DateTime @default(now())
 
   @@index([caseId, em])
+}
+
+/// Avaliações do perfil da Cardápio Web no Google — o documento "Google".
+///
+/// **Por que existe.** "A nota média (estrelas) tratada como indicador
+/// ativo de reputação, e não apenas como número de vitrine." Não havia
+/// onde registrar uma avaliação, a classificação, a resposta pública, a
+/// tratativa privada e se a nota foi atualizada — e sem isso os quatro
+/// indicadores do documento (nota média, % respondidas, tempo médio de
+/// resposta, % de negativas revertidas) não têm de onde sair.
+///
+/// Registro manual por enquanto: a API do Perfil da Empresa exige
+/// credencial própria do Google, que a operação ainda não tem.
+model AvaliacaoGoogle {
+  id String @id @default(cuid())
+
+  estrelas Int
+  autor    String
+  texto    String?
+  link     String?
+  /// Quando foi publicada no Google — com hora, quando se sabe.
+  publicadaEm DateTime
+  /// O perfil tinha nome real? "Sem identificação" encerra só com a resposta pública.
+  identificado Boolean @default(true)
+
+  /// positiva · neutra · negativa — pela nota e pelo texto.
+  classificacao String
+  /// Normal · Alta · Urgente
+  criticidade   String
+  /// juridico · cobranca · reincidencia — o que fez virar Urgente.
+  motivosDeUrgencia String[] @default([])
+
+  resposta     String?
+  respondidaEm DateTime?
+
+  /// Tratativa privada: canal, resultado e se a nota foi atualizada.
+  tratativaCanal     String?
+  tratativaResultado String?
+  notaAtualizada     Int?
+
+  /// A mesma lista do NPS e dos casos.
+  causaRaiz String?
+
+  /// aberta · respondida · sem-identificacao · sem-retorno · denunciada
+  status String @default("aberta")
+  /// ofensiva · falsa · nao-cliente — o fluxo de denúncia do documento.
+  excecao String?
+  /// Link do print guardado antes de denunciar (Drive, Slack…). O documento
+  /// pede o print: a avaliação pode sumir do Google e a prova vai junto.
+  printDaDenuncia String?
+
+  establishmentId String?
+  /// O caso aberto no canal de tratativa, quando a avaliação revela problema não resolvido.
+  caseId String?
+  case   Case?   @relation(fields: [caseId], references: [id], onDelete: SetNull)
+
+  /// O promotor do NPS que foi convidado e deixou esta avaliação.
+  npsResponseId String?
+  npsResponse   NpsResponse? @relation(fields: [npsResponseId], references: [id], onDelete: SetNull)
+
+  registradaPor String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([publicadaEm])
+  @@index([status])
 }
 
 /// Ofertas e renegociações — o documento "Ofertas, Descontos e
@@ -819,6 +901,10 @@ model CaseMovement {
   /// escalonado para o gestor da respectiva área").
   escalonadoEm DateTime?
 
+  /// O número do chamado aberto na área — "ao acionar área interna,
+  /// registrar o número do chamado no caso" (documento das Redes).
+  chamado String?
+
   createdAt DateTime @default(now())
 
   @@index([caseId, startedAt])
@@ -1007,8 +1093,17 @@ model Project {
   impact      String
   progress    Int      @default(0)
   tags        String[] @default([])
+
+  /// De onde o item nasceu, quando nasceu sozinho — "nps:<id>" para a
+  /// revisão de processo que todo Erro Processual do NPS gera. Quem cria
+  /// confere antes (`lib/actions/nps.ts`): a mesma resposta salva duas
+  /// vezes não cria dois itens.
+  origem String?
+
   updatedAt   DateTime @updatedAt
   createdAt   DateTime @default(now())
+
+  @@index([origem])
 }
 
 /// Passo a passo operacional documentado.
@@ -1184,6 +1279,18 @@ model NpsResponse {
   reviewAsked      Boolean @default(false)
   testimonialAsked Boolean @default(false)
   referralAsked    Boolean @default(false)
+
+  /// O resultado de cada pedido — nulo enquanto não se sabe.
+  ///
+  /// Pedir era registrado; o que aconteceu depois, não. E são os
+  /// resultados que o documento mede: "Número de Indicações" e "Número
+  /// de Avaliações no Google".
+  reviewFeita Boolean?
+  aceitaCase  Boolean?
+  indicacoes  Int?
+
+  /// As avaliações do Google que este promotor deixou.
+  avaliacoesGoogle AvaliacaoGoogle[]
 
   /// De onde a resposta veio: "Manual" ou "Wootric".
   source String @default("Manual")

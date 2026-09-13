@@ -116,6 +116,10 @@ interface CaseRowCru {
   moderacaoMotivo: string | null;
   moderacaoResultado: string | null;
   moderacaoRespondidaEm: Date | null;
+  causaRaiz: string | null;
+  encerradoEm: Date | null;
+  solucaoAplicada: string | null;
+  reaberturas: number | null;
 
   respondida: boolean;
 
@@ -201,6 +205,8 @@ export async function fetchCases(
            c."cwEngineEm", c."cwEnginePor",
            c."moderacaoPedidaEm", c."moderacaoMotivo",
            c."moderacaoResultado", c."moderacaoRespondidaEm",
+           c."causaRaiz", c."encerradoEm", c."solucaoAplicada",
+           c."reaberturas",
 
            (c."publicResponse" IS NOT NULL
             AND btrim(c."publicResponse") <> '') AS respondida,

@@ -399,6 +399,7 @@ export default function NpsForm({
                 month: "2-digit",
                 hour: "2-digit",
                 minute: "2-digit",
+                timeZone: "America/Sao_Paulo",
               })}
             </strong>{" "}
             — {segmento.slaHoursUteis} h úteis, contando só

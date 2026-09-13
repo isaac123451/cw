@@ -17,6 +17,13 @@ interface Props {
   columns: Column[];
   /** Move o caso para outro status ao soltar o cartão. */
   onMove: (id: string, status: string) => void;
+  /**
+   * Em que coluna o caso aparece — o status, por padrão.
+   *
+   * As Redes Sociais leem "Novo" (das etapas antigas) como "Recebido":
+   * sem isto, os casos de antes do fluxo próprio sumiriam do quadro.
+   */
+  colunaDe?: (item: Case) => string;
 }
 
 /**
@@ -27,6 +34,7 @@ export default function MiniKanban({
   cases,
   columns,
   onMove,
+  colunaDe = (item) => item.status,
 }: Props) {
 
   const [over, setOver] = useState<string | null>(null);
@@ -39,7 +47,7 @@ export default function MiniKanban({
         {columns.map((column) => {
 
           const items = cases.filter(
-            (item) => item.status === column.name
+            (item) => colunaDe(item) === column.name
           );
 
           const isOver = over === column.name;

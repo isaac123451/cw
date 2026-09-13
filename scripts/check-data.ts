@@ -141,6 +141,22 @@ for (const pasta of ["app", "lib", "components"]) {
   }
 }
 
+/**
+ * Datas fixas que são **marcos**, e não "hoje" disfarçado.
+ *
+ * O defeito que este check caça é a data de referência congelada — o
+ * "hoje" escrito à mão que para de andar. Um marco histórico é outra
+ * coisa: o dia a partir do qual a plataforma passou a registrar algo, e
+ * antes do qual a ausência do registro não é falha. Esse dia não anda,
+ * e não deve andar. Cada um entra aqui com o motivo.
+ */
+const MARCOS: Record<string, string> = {
+  INICIO_DA_TRILHA:
+    "12/09/2026, quando a trilha dos 8 passos passou a ser gravada; caso anterior mostra os passos deduzidos, e não vermelhos.",
+  INICIO_DO_REGISTRO_DE_CONTATO:
+    "12/09/2026, quando o 1º contato virou fato gravado; caso anterior sem contato não conta como meta perdida.",
+};
+
 /** Atribuição em coluna zero: só escopo de módulo tem indentação zero. */
 const CONGELADA =
   /^(?:const|let|var)\s+\w+\s*=\s*hojeNaOperacao\(\)/gm;
@@ -167,6 +183,8 @@ for (const p of arquivos) {
   );
 
   for (const achado of antiga ?? []) {
+    const nome = achado.match(/const\s+([A-Z_]+)/)?.[1] ?? "";
+    if (MARCOS[nome]) continue;
     constantesAntigas.push(`${rel} — ${achado.trim()}`);
   }
 }

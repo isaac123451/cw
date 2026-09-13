@@ -9,7 +9,7 @@ import {
   segmentOf,
   SEGMENTS,
   STATUS_AGUARDANDO,
-  TENTATIVAS_MINIMAS,
+  tentativasMinimas,
   tipoPorNome,
   TIPOS_PADRAO,
 } from "@/lib/models/nps";
@@ -17,6 +17,8 @@ import { diaNaOperacao } from "@/lib/services/reputation.service";
 import {
   EXPEDIENTE_PADRAO,
   type Expediente,
+  minutosUteisEntre,
+  paredeDe,
   prazoUtil,
 } from "@/lib/services/horasUteis";
 
@@ -82,10 +84,17 @@ export function slaState(
 
   if (agora > prazo) return "estourado";
 
-  const horas =
-    (prazo.getTime() - agora.getTime()) / 3600000;
+  /*
+    "Vence hoje" é o dia de Brasília, e não as próximas 24 horas.
 
-  return horas <= 24 ? "vence-hoje" : "no-prazo";
+    Era a diferença em horas corridas: um prazo de amanhã às 10h, olhado
+    hoje às 11h, aparecia como "Vence hoje" — e na sexta à tarde, um que
+    vencia na segunda às 9h também, porque a conta passava por cima do
+    fim de semana sem saber que ele existe.
+  */
+  return paredeDe(prazo).dia === paredeDe(agora).dia
+    ? "vence-hoje"
+    : "no-prazo";
 }
 
 /**
@@ -111,7 +120,7 @@ export function deveEncerrarSemRetorno(
     (a) => dias(a.createdAt) <= JANELA_TENTATIVAS_DIAS
   );
 
-  if (naJanela.length >= TENTATIVAS_MINIMAS) {
+  if (naJanela.length >= tentativasMinimas(item.kind)) {
     return {
       deve: true,
       motivo: `${naJanela.length} tentativas em ${JANELA_TENTATIVAS_DIAS} dias, sem resposta.`,
@@ -540,4 +549,174 @@ export function byRootCause(itens: NpsResponseView[]) {
             ) / 10,
     }))
     .sort((a, b) => b.value - a.value);
+}
+
+/* ============================================================
+   OS INDICADORES DO GUIA
+============================================================ */
+
+export interface IndicadoresDoGuia {
+  detratores: number;
+  /** Detratores com primeiro contato (tentativa ou conversa registrada). */
+  detratoresContatados: number;
+  percentualContatados: number | null;
+  /** Detratores com a régua de humor registrada depois do contato. */
+  detratoresComHumor: number;
+  /** Média da régua (1 a 5) entre esses. */
+  humorMedioDoDetrator: number | null;
+  /** Detratores que saíram do contato satisfeitos ou encantados (4 e 5). */
+  detratoresRecuperados: number;
+  promotores: number;
+  indicacoes: number;
+  indicacoesPedidas: number;
+  reviewsNoGoogle: number;
+  reviewsPedidas: number;
+  aceitaramCase: number;
+  casesPedidos: number;
+}
+
+/**
+ * A tabela de indicadores do guia, calculada.
+ *
+ * "% de detratores contatados" conta a primeira tentativa, que é o que o
+ * SLA do segmento mede. "Humor do detrator após resolução" é a régua de
+ * quem teve pós-contato — sobre esses, e não sobre a base, pelo mesmo
+ * motivo de `recuperacao`. Indicações e avaliações no Google são o que
+ * **voltou** das ações do promotor, e não o que foi pedido.
+ */
+export function indicadoresDoGuia(itens: NpsResponseView[]): IndicadoresDoGuia {
+
+  const detratores = itens.filter((i) => segmentOf(i.score).label === "Detrator");
+  const promotores = itens.filter((i) => segmentOf(i.score).label === "Promotor");
+
+  const contatados = detratores.filter((i) => i.firstContactAt).length;
+  const comHumor = detratores.filter((i) => typeof i.moodAfter === "number");
+
+  return {
+    detratores: detratores.length,
+    detratoresContatados: contatados,
+    percentualContatados: detratores.length ? Math.round((contatados / detratores.length) * 100) : null,
+    detratoresComHumor: comHumor.length,
+    humorMedioDoDetrator: comHumor.length
+      ? Math.round((comHumor.reduce((s, i) => s + (i.moodAfter ?? 0), 0) / comHumor.length) * 10) / 10
+      : null,
+    detratoresRecuperados: comHumor.filter((i) => (i.moodAfter ?? 0) >= 4).length,
+    promotores: promotores.length,
+    indicacoes: itens.reduce((s, i) => s + (i.indicacoes ?? 0), 0),
+    indicacoesPedidas: itens.filter((i) => i.referralAsked).length,
+    reviewsNoGoogle: itens.filter((i) => i.reviewFeita === true).length,
+    reviewsPedidas: itens.filter((i) => i.reviewAsked).length,
+    aceitaramCase: itens.filter((i) => i.aceitaCase === true).length,
+    casesPedidos: itens.filter((i) => i.testimonialAsked).length,
+  };
+}
+
+/* ============================================================
+   TRIAGEM DO QUE ESTÁ PARADO
+============================================================ */
+
+export type NivelDeTriagem = "detrator-critico" | "detrator" | "neutro" | "promotor";
+
+export const ROTULO_DA_TRIAGEM: Record<NivelDeTriagem, string> = {
+  "detrator-critico": "Detratores críticos",
+  detrator: "Detratores",
+  neutro: "Neutros",
+  promotor: "Promotores",
+};
+
+const ORDEM_DA_TRIAGEM: NivelDeTriagem[] = ["detrator-critico", "detrator", "neutro", "promotor"];
+
+/** "Vou cancelar", "trocar de sistema", "concorrente" — o aviso que chega no comentário. */
+const FALA_EM_SAIR = /\bcancel|\bdesist|\btrocar de (sistema|plataforma)|\boutro sistema\b|\bconcorrente|\bparar de usar\b|\bencerrar (a |minha )?conta\b|\bsair d[ao] (card[áa]pio|sistema|plataforma)/i;
+
+export interface ItemDeTriagem {
+  item: NpsResponseView;
+  nivel: NivelDeTriagem;
+  /** Por que está neste nível — o que a tela mostra ao lado do nome. */
+  motivos: string[];
+  /** Minutos úteis até o prazo do 1º contato; negativo quando estourou. */
+  folgaMin: number;
+  /**
+   * O prazo passou — pelo instante, e não pela folga.
+   *
+   * Visto no fim de semana, um prazo que venceu no sábado tem folga de
+   * zero minuto útil (não há expediente entre os dois), e "zero" se lia
+   * "vence agora". Estourado é o relógio de parede; a folga só mede.
+   */
+  estourado: boolean;
+  /** A conta vinculada não está ativa: fica no fim do nível. */
+  contaInativa: boolean;
+}
+
+/**
+ * A fila do que está parado, na ordem da rotina.
+ *
+ * "Identificação de detratores críticos na base ativa; após isso seguir
+ * para neutros" — o documento de acompanhamento do agente. Parado é o
+ * ciclo aberto sem primeiro contato. Crítico é o detrator que falou em
+ * cancelar (marcado ou escrito), deu nota de 0 a 3, ou relatou erro no
+ * sistema — que o guia manda tratar como urgente para detrator.
+ *
+ * "Base ativa": a conta vinculada que não está ativa vai para o fim do
+ * seu nível. Sem vínculo, a resposta conta como ativa — o NPS só é
+ * respondido de dentro do portal, por quem ainda usa.
+ *
+ * Dentro do nível, o mais estourado primeiro.
+ */
+export function filaDeTriagem(
+  itens: NpsResponseView[],
+  opcoes: {
+    agora?: Date;
+    expediente?: Expediente;
+    situacaoDaConta?: (establishmentId: string) => string | undefined;
+  } = {}
+): ItemDeTriagem[] {
+
+  const agora = opcoes.agora ?? new Date();
+  const expediente = opcoes.expediente ?? EXPEDIENTE_PADRAO;
+
+  const fila: ItemDeTriagem[] = [];
+
+  for (const item of itens) {
+
+    if (isEncerrado(item.status) || item.firstContactAt) continue;
+
+    const segmento = segmentOf(item.score).label;
+    const motivos: string[] = [];
+
+    let nivel: NivelDeTriagem =
+      segmento === "Detrator" ? "detrator" : segmento === "Passivo" ? "neutro" : "promotor";
+
+    if (nivel === "detrator") {
+      if (item.churnRisk) motivos.push("marcado como risco de cancelamento");
+      else if (FALA_EM_SAIR.test(item.comment)) motivos.push("fala em cancelar ou trocar");
+      if (item.score <= 3) motivos.push(`nota ${item.score}`);
+      if (item.kind === "Erro no Sistema") motivos.push("erro no sistema");
+      if (motivos.length > 0) nivel = "detrator-critico";
+    }
+
+    const situacao = item.establishmentId ? opcoes.situacaoDaConta?.(item.establishmentId) : undefined;
+    const contaInativa = Boolean(situacao && !/^ativ/i.test(situacao));
+    if (contaInativa) motivos.push(`conta ${situacao!.toLowerCase()}`);
+
+    const prazo = new Date(item.firstContactDueAt);
+
+    fila.push({
+      item,
+      nivel,
+      motivos,
+      folgaMin: minutosUteisEntre(agora, prazo, expediente),
+      estourado: agora.getTime() > prazo.getTime(),
+      contaInativa,
+    });
+  }
+
+  return fila.sort(
+    (a, b) =>
+      ORDEM_DA_TRIAGEM.indexOf(a.nivel) - ORDEM_DA_TRIAGEM.indexOf(b.nivel) ||
+      Number(a.contaInativa) - Number(b.contaInativa) ||
+      Number(b.estourado) - Number(a.estourado) ||
+      a.folgaMin - b.folgaMin ||
+      a.item.score - b.item.score
+  );
 }

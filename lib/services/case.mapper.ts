@@ -41,7 +41,7 @@ function mesmoNome(a?: string | null, b?: string | null) {
   return um !== "" && um === limpar(b);
 }
 
-const CANAL_PARA_ORIGEM: Record<string, string> = {
+export const CANAL_PARA_ORIGEM: Record<string, string> = {
   RECLAME_AQUI: "Reclame Aqui",
   INSTAGRAM: "Instagram",
   FACEBOOK: "Facebook",
@@ -189,6 +189,10 @@ export function toCaseModel(row: {
   moderacaoMotivo?: string | null;
   moderacaoResultado?: string | null;
   moderacaoRespondidaEm?: Date | null;
+  causaRaiz?: string | null;
+  encerradoEm?: Date | null;
+  solucaoAplicada?: string | null;
+  reaberturas?: number | null;
 
   category?: { name: string } | null;
   subcategory?: { name: string } | null;
@@ -262,6 +266,10 @@ export function toCaseModel(row: {
     moderacaoResultado:
       (row.moderacaoResultado as Case["moderacaoResultado"]) ?? undefined,
     moderacaoRespondidaEm: row.moderacaoRespondidaEm?.toISOString() ?? undefined,
+    causaRaiz: row.causaRaiz ?? undefined,
+    encerradoEm: row.encerradoEm?.toISOString() ?? undefined,
+    solucaoAplicada: row.solucaoAplicada ?? undefined,
+    reaberturas: row.reaberturas ?? undefined,
     status: row.status,
     owner: row.owner?.name ?? undefined,
     department: row.team?.name ?? undefined,
@@ -391,6 +399,13 @@ export function toCaseColumns(item: Case) {
       : undefined,
     title: item.title,
     description: item.description || null,
+
+    /*
+      A causa raiz é campo da tela (Investigação, Rede social) e grava
+      por aqui. Encerramento e reabertura das redes, não: têm ação
+      própria, que carimba quando — e ficam fora, como a triagem.
+    */
+    causaRaiz: item.causaRaiz || null,
     publicResponse: item.publicResponse || null,
     publicResponseAt: item.publicResponseAt
       ? new Date(item.publicResponseAt)

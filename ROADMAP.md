@@ -480,6 +480,69 @@ em Brasília), com sabotagens acendendo vermelho. Conferido na tela com
 um caso descartável: oferta, aceite, renegociação, checklist, contador
 e Impacto; tudo apagado depois.
 
+**Fase 4 — Redes Sociais, Google e NPS (0.51.0).** As outras três
+frentes no padrão do Reclame Aqui: o fluxo de cada documento, o relógio
+único e a mesma causa raiz.
+
+- **Redes Sociais com o fluxo do documento** (`lib/models/redes.ts`):
+  etapas próprias (Recebido, Em análise, 1º contato, Em tratativa,
+  Validação) e os três finais — Resolvido exige validação, solução e
+  causa raiz; Sem contato exige as 3 tentativas; só Resolvido conta como
+  resolvido. Reabrir preserva o registro e conta a reabertura. A cadência
+  das 3 tentativas (2ª em 24h úteis, 3ª em 48h por canal alternativo),
+  o nº do chamado interno ao acionar área, "já tentou outro canal" pelo
+  histórico e o alerta de crise (perfil grande, Procon, processo,
+  imprensa, 3 da mesma falha em 48h). A lateral do caso de rede mostra a
+  etapa, e não a avaliação do Reclame Aqui.
+- **Google Avaliações** (`/google`, tabela nova `AvaliacaoGoogle`):
+  registro com a classificação da tabela do documento — positiva,
+  neutra (3 estrelas ou elogio com ressalva), negativa (1–2 ou problema
+  aberto), Urgente com jurídico, cobrança indevida ou reincidência —,
+  prazo de 4h/24h/48h úteis, a régua da resposta pública (genérica,
+  repetida, sem o nome, promessa, tom defensivo, dado pessoal), a
+  tratativa privada, o vínculo com o caso e com o promotor do NPS que foi
+  convidado, a denúncia com o link do print e os quatro indicadores
+  (nota média com a nota atualizada, % respondidas, tempo mediano em
+  horas úteis, % de negativas revertidas).
+- **NPS**: as ações do promotor com o resultado (review publicada,
+  aceita ser case, indicações), com Salvar — eram caixas que gravavam no
+  clique sem avisar. Na análise, a tabela do guia: % de detratores
+  contatados, humor do detrator depois, indicações e avaliações no
+  Google. **Triagem em lote** do que está parado, na ordem da rotina —
+  detratores críticos (falou em cancelar, nota 0–3, erro no sistema)
+  primeiro, conta inativa no fim do nível —, com classificar e assumir
+  para vários de uma vez. Erro Processual abre a revisão também quando é
+  classificado depois. "Falta de Retorno" pede 5 tentativas, como o guia.
+- **Uma causa raiz só**: a lista do NPS vale no caso (aba Investigação),
+  no encerramento das redes e no Google; renomear arrasta as quatro
+  frentes. No Analytics, a tendência somada por frente, a cobertura (o
+  que ficou sem causa) e a **reincidência** — 3 no mesmo problema em 30
+  dias, somando canais — com o botão que abre o item em Projetos com os
+  registros listados. **Unificação de categorias** (Configurar fluxo →
+  Categorias → Unificar): as duplicadas com a contagem, a prévia e o
+  Salvar; subcategoria de mesmo nome se funde, a origem fica desativada.
+
+Achados no caminho: "vence hoje" no NPS eram as próximas 24 horas
+corridas (um prazo de amanhã às 10h aparecia como "vence hoje"); a
+exportação do NPS escrevia o relógio UTC e a importação jogava fora a
+hora da planilha; seis datas na tela e no dossiê sem o fuso de Brasília
+(o dossiê saía 3h adiantado no servidor); "o processo de cadastro"
+virava risco jurídico e "não falta nada" virava avaliação neutra; no
+tema escuro, o hover dos botões principais ficava lilás claro com texto
+branco e o botão desabilitado continuava roxo; itens que o servidor cria
+em Projetos só apareciam depois de um F5; o quadro das Redes dizia
+"nenhum atendimento" enquanto ainda carregava.
+
+Provas: `check:redes`, `check:google`, `check:nps-guia`,
+`check:causa-raiz` e `check:categorias`, com sabotagens acendendo
+vermelho; `check:nps-planilha` ganhou a hora de Brasília. Conferido na
+tela com dados descartáveis — triagem, promotor, reincidência até
+Projetos, Google do registro à exclusão, encerramento e reabertura nas
+redes, e a unificação gravando de verdade —, tudo apagado depois.
+
+**Depende de você:** reiniciar o `npm run dev` para o cliente do banco
+conhecer a coluna nova do print da denúncia do Google.
+
 
 ### Excluir conta da plataforma (11/09/2026)
 

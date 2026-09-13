@@ -14,6 +14,7 @@ import { Case } from "@/lib/models/case";
 import SurfaceCard from "@/components/shared/SurfaceCard";
 
 import { useSettings } from "@/lib/context/SettingsContext";
+import { useNps } from "@/lib/context/NpsContext";
 import Combobox from "@/components/shared/Combobox";
 
 interface Props {
@@ -28,6 +29,8 @@ export default function InvestigationTab({
 
   const { categories, subcategories, teams, checklist } =
     useSettings();
+
+  const { rootCauses } = useNps();
 
   const active = useMemo(
     () => checklist.filter((item) => item.active),
@@ -239,7 +242,7 @@ export default function InvestigationTab({
 
         </div>
 
-        <div className="mt-5 grid gap-4 sm:grid-cols-3">
+        <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
 
           <div>
 
@@ -301,6 +304,43 @@ export default function InvestigationTab({
                 options={teams
                   .filter((item) => item.active)
                   .map((item) => item.name)}
+              />
+            </div>
+
+          </div>
+
+          {/*
+            A causa raiz, da lista única das quatro frentes.
+
+            A categoria diz do que o cliente reclamou; a causa raiz diz
+            por que aconteceu — e é a mesma lista do NPS e do Google, para
+            a tendência cruzar os canais.
+          */}
+          <div>
+
+            <label
+              className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400"
+              title="A mesma lista do NPS e do Google — edite em NPS → Causas raiz."
+            >
+              Causa raiz
+            </label>
+
+            <div className="mt-1.5">
+              <Combobox
+                value={data.causaRaiz ?? ""}
+                onChange={(causaRaiz) =>
+                  onChange({ causaRaiz: causaRaiz || undefined })
+                }
+                emptyLabel="Não definida"
+                placeholder="Não definida"
+                options={[
+                  ...new Set([
+                    ...rootCauses
+                      .filter((item) => item.active)
+                      .map((item) => item.name),
+                    ...(data.causaRaiz ? [data.causaRaiz] : []),
+                  ]),
+                ]}
               />
             </div>
 

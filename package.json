@@ -1,6 +1,6 @@
 {
   "name": "cw-reputacao",
-  "version": "0.50.0",
+  "version": "0.51.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -91,6 +91,11 @@
     "check:lgpd": "tsx scripts/check-lgpd.ts",
     "check:trilha": "tsx scripts/check-trilha.ts",
     "check:negociacao": "tsx scripts/check-negociacao.ts",
+    "check:categorias": "tsx scripts/check-categorias.ts",
+    "check:redes": "tsx scripts/check-redes.ts",
+    "check:google": "tsx scripts/check-google.ts",
+    "check:nps-guia": "tsx scripts/check-nps-guia.ts",
+    "check:causa-raiz": "tsx scripts/check-causa-raiz.ts",
     "conferir:fila": "tsx scripts/conferir-fila-avaliacao.ts"
   },
   "dependencies": {

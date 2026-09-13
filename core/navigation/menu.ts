@@ -12,6 +12,7 @@ import {
   MessagesSquare,
   Route,
   Settings,
+  Star,
   TrendingUp,
   UserRound,
   Wallet,
@@ -86,6 +87,12 @@ export const menuItems: MenuItem[] = [
     title: "NPS",
     href: "/nps",
     icon: Gauge,
+    group: "Operação",
+  },
+  {
+    title: "Google",
+    href: "/google",
+    icon: Star,
     group: "Operação",
   },
   {

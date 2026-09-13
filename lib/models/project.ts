@@ -22,4 +22,7 @@ export interface Project {
   updatedAt: string;
 
   tags: string[];
+
+  /** De onde nasceu sozinho — "nps:<id>" para a revisão de um Erro Processual. */
+  origem?: string;
 }

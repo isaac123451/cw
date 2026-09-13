@@ -191,6 +191,14 @@ export interface Case {
   moderacaoResultado?: "pendente" | "aceita" | "negada";
   moderacaoRespondidaEm?: string;
 
+  /** A causa raiz, da lista única do NPS — ver `NpsRootCause`. */
+  causaRaiz?: string;
+
+  /** Redes Sociais: quando encerrou, a solução aplicada e as reaberturas. */
+  encerradoEm?: string;
+  solucaoAplicada?: string;
+  reaberturas?: number;
+
   status: string;
 
   owner?: string;

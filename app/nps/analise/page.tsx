@@ -10,7 +10,11 @@ import {
   Gauge,
   HeartHandshake,
   MessageSquareText,
+  PhoneCall,
+  Smile,
+  Star,
   Timer,
+  UsersRound,
 } from "lucide-react";
 
 import MainLayout from "@/components/layout/MainLayout";
@@ -38,6 +42,7 @@ import {
   byMood,
   byRootCause,
   bySegment,
+  indicadoresDoGuia,
   recuperacao,
   slaState,
   summarize,
@@ -150,6 +155,15 @@ export default function NpsAnalisePage() {
 
   const recuperados = useMemo(
     () => recuperacao(noPeriodo),
+    [noPeriodo]
+  );
+
+  /*
+    A tabela de indicadores do guia, sobre o mesmo recorte. Ela mede o
+    ciclo (contatar, reverter, aproveitar o promotor), e não a nota.
+  */
+  const guia = useMemo(
+    () => indicadoresDoGuia(noPeriodo),
     [noPeriodo]
   );
 
@@ -281,6 +295,63 @@ export default function NpsAnalisePage() {
               />
 
             </div>
+
+            <section aria-labelledby="indicadores-do-guia" className="space-y-3">
+
+              <div>
+                <h2 id="indicadores-do-guia" className="text-sm font-semibold text-zinc-800">
+                  Os indicadores do guia
+                </h2>
+                <p className="text-xs text-zinc-500">
+                  A tabela do Guia de Encerramento do Ciclo do NPS, calculada sobre o mesmo recorte.
+                </p>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+
+                <StatTile
+                  label="Detratores contatados"
+                  description="Detratores com primeiro contato registrado — tentativa ou conversa. É o SLA de 24h úteis do segmento, visto pelo resultado."
+                  value={guia.percentualContatados === null ? "—" : `${guia.percentualContatados}%`}
+                  hint={`${guia.detratoresContatados} de ${guia.detratores} detrator(es)`}
+                  icon={PhoneCall}
+                  tone="danger"
+                />
+
+                <StatTile
+                  label="Humor do detrator depois"
+                  description="A régua de humor (1 a 5) dos detratores com pós-contato registrado. A nota do NPS é de antes; esta diz se o contato mudou alguma coisa."
+                  value={guia.humorMedioDoDetrator === null ? "—" : `${ptBR(guia.humorMedioDoDetrator)} de 5`}
+                  hint={
+                    guia.detratoresComHumor === 0
+                      ? "nenhum pós-contato de detrator"
+                      : `${guia.detratoresRecuperados} de ${guia.detratoresComHumor} saíram satisfeitos`
+                  }
+                  icon={Smile}
+                  tone="success"
+                />
+
+                <StatTile
+                  label="Indicações"
+                  description="Indicações que os promotores trouxeram, registradas na ficha. O pedido sozinho não conta."
+                  value={guia.indicacoes}
+                  hint={`${guia.indicacoesPedidas} promotor(es) convidados · ${guia.aceitaramCase} aceitaram ser case`}
+                  icon={UsersRound}
+                  tone="primary"
+                />
+
+                <StatTile
+                  label="Avaliações no Google"
+                  description="Promotores que publicaram a review — marcado na ficha, ou ligado sozinho quando a avaliação é registrada em Google Avaliações com o mesmo nome."
+                  value={guia.reviewsNoGoogle}
+                  hint={`de ${guia.reviewsPedidas} pedida(s)`}
+                  icon={Star}
+                  tone="warning"
+                />
+
+              </div>
+
+            </section>
 
             <SurfaceCard
               title="Tendência"

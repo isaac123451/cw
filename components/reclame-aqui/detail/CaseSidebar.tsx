@@ -21,6 +21,7 @@ import NegociacoesDoCaso from "@/components/reclame-aqui/negociacao/NegociacoesD
 import { useTratativa } from "@/components/reclame-aqui/tratativa/TratativaProvider";
 import { idExterno, idLabel, isSocial } from "@/lib/services/case.service";
 import { descreverRegistro } from "@/lib/services/horasUteis";
+import { eFinalDasRedes, etapaDasRedes } from "@/lib/models/redes";
 
 interface Props {
   data: Case;
@@ -111,9 +112,37 @@ export default function CaseSidebar({
 
   const avaliada = data.evaluated;
 
+  /*
+    Atendimento de rede social não tem avaliação do Reclame Aqui. O bloco
+    dizia "Aguardando avaliação — cliente ainda não avaliou no Reclame
+    Aqui" num caso de Instagram; nas redes o que importa é a etapa do
+    fluxo do documento e, no fim, se resolveu ou não.
+  */
+  const social = isSocial(data);
+  const etapa = social ? etapaDasRedes(data.status) : undefined;
+  const finalDasRedes = social && eFinalDasRedes(data.status);
+
   return (
     <div className="space-y-4">
 
+      {social ? (
+        <Block title="Etapa">
+          <span
+            className="inline-block rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset"
+            style={{ color: etapa?.cor, background: `${etapa?.cor ?? "#71717A"}1a`, boxShadow: "none" }}
+          >
+            {etapa?.nome ?? data.status}
+          </span>
+          <p className="mt-3 text-sm leading-relaxed text-zinc-500">
+            {finalDasRedes && data.encerradoEm
+              ? `Encerrado em ${descreverRegistro(data.encerradoEm)}.${data.status === "Resolvido" ? "" : " Não conta como resolvido."}`
+              : etapa?.dica ?? "Etapa fora do fluxo das redes — mova para uma das etapas do documento."}
+          </p>
+          {(data.reaberturas ?? 0) > 0 && (
+            <p className="mt-1.5 text-xs text-amber-700">Reaberto {data.reaberturas}× — o registro anterior foi preservado.</p>
+          )}
+        </Block>
+      ) : (
       <Block
         title="Status"
         action={
@@ -156,6 +185,7 @@ export default function CaseSidebar({
         </p>
 
       </Block>
+      )}
 
       <Block
         title="Responsável"
@@ -264,10 +294,9 @@ export default function CaseSidebar({
         />
 
         <p className="mt-2 text-xs leading-relaxed text-zinc-500">
-          O Reclame Aqui não informa o estabelecimento. O
-          vínculo se faz sozinho pelo CPF ou CNPJ da
-          reclamação; escolher aqui à mão passa na frente
-          e não é desfeito pela próxima varredura.
+          {social
+            ? `O ${data.source} não traz CPF nem CNPJ: o vínculo é à mão, pela conta que o cliente citar ou pelo que a análise inicial encontrar.`
+            : "O Reclame Aqui não informa o estabelecimento. O vínculo se faz sozinho pelo CPF ou CNPJ da reclamação; escolher aqui à mão passa na frente e não é desfeito pela próxima varredura."}
         </p>
 
       </Block>
@@ -275,7 +304,7 @@ export default function CaseSidebar({
       <Block
         title="Situação"
         action={
-          onEditarAvaliacao ? (
+          onEditarAvaliacao && !social ? (
             <button
               type="button"
               onClick={onEditarAvaliacao}
@@ -302,7 +331,11 @@ export default function CaseSidebar({
         <p className="mt-3 text-sm leading-relaxed text-zinc-500">
           {data.resolved
             ? "A tratativa foi concluída e registrada."
-            : "A reclamação continua em andamento ativo."}
+            : finalDasRedes
+              ? "Encerrado sem resolução: sem contato ou sem identificação."
+              : social
+                ? "O atendimento continua em andamento."
+                : "A reclamação continua em andamento ativo."}
         </p>
 
       </Block>
@@ -320,10 +353,10 @@ export default function CaseSidebar({
       */}
       {!isSocial(data) && <NegociacoesDoCaso data={data} />}
 
-      <Block title="Reclame Aqui">
+      <Block title={isSocial(data) ? `Interação no ${data.source}` : "Reclame Aqui"}>
 
         <p className="text-sm text-zinc-500">
-          Publicado em{" "}
+          {isSocial(data) ? "Recebido em " : "Publicado em "}
           {data.createdAt
             .split("-")
             .reverse()
@@ -351,12 +384,17 @@ export default function CaseSidebar({
               raUrl: e.target.value.trim() || undefined,
             })
           }
-          placeholder="Cole o link da reclamação no portal"
+          placeholder={
+            isSocial(data)
+              ? "Cole o link da postagem, do comentário ou do print"
+              : "Cole o link da reclamação no portal"
+          }
           className="mt-3 h-11 w-full rounded-xl border border-zinc-200 px-3 text-sm outline-none transition-colors focus:border-violet-400"
         />
 
         {/* O export do HugMe não traz a URL — o botão só aparece
-            depois que alguém colar o link do caso. */}
+            depois que alguém colar o link do caso. Nas redes, o
+            documento pede o link ou o print da interação no registro. */}
         {data.raUrl && (
           <a
             href={data.raUrl}
@@ -365,8 +403,15 @@ export default function CaseSidebar({
             className="mt-2 flex items-center justify-center gap-2 rounded-xl border border-violet-200 px-4 py-2.5 text-sm font-medium text-violet-700 transition-colors hover:bg-violet-50"
           >
             <ExternalLink size={15} />
-            Abrir no Reclame Aqui
+            {isSocial(data) ? "Abrir a interação" : "Abrir no Reclame Aqui"}
           </a>
+        )}
+
+        {isSocial(data) && data.solucaoAplicada && (
+          <div className="mt-3 border-t border-zinc-100 pt-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">Solução aplicada</p>
+            <p className="mt-1 whitespace-pre-wrap text-xs leading-relaxed text-zinc-600">{data.solucaoAplicada}</p>
+          </div>
         )}
 
         {/*

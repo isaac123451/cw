@@ -3,7 +3,8 @@
 import { updateTag } from "next/cache";
 import { WORKSPACE_TAG } from "@/lib/actions/tags";
 
-import { requireRole, Role } from "@/lib/auth/guard";
+import { requireRole, Role, tryRole } from "@/lib/auth/guard";
+import { diaNaOperacao } from "@/lib/services/reputation.service";
 import type { Modulo } from "@/lib/auth/modules";
 
 import {
@@ -1151,4 +1152,36 @@ export async function saveJourneyPlacement(
   });
 
   updateTag(WORKSPACE_TAG);
+}
+
+/**
+ * Os projetos de novo, lidos do banco.
+ *
+ * O quadro de Projetos carrega uma vez, com o workspace, na abertura da
+ * aplicação. Itens que o servidor cria sozinho — a revisão do Erro
+ * Processual, a reincidência do Analytics — não passavam por ele, e só
+ * apareciam depois de um F5. A tela chama isto depois dessas ações.
+ */
+export async function listarProjetos(): Promise<Project[]> {
+
+  const ctx = await tryRole("LEITURA", "projetos");
+
+  if (!ctx) return [];
+
+  const linhas = await ctx.prisma.project.findMany({
+    orderBy: { updatedAt: "desc" },
+  });
+
+  return linhas.map((r) => ({
+    id: r.id,
+    title: r.title,
+    description: r.description,
+    stage: r.stage as Project["stage"],
+    owner: r.owner,
+    impact: r.impact as Project["impact"],
+    progress: r.progress,
+    updatedAt: diaNaOperacao(r.updatedAt),
+    tags: r.tags,
+    origem: r.origem ?? undefined,
+  }));
 }

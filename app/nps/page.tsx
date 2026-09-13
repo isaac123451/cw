@@ -33,11 +33,12 @@ import NpsList from "@/components/nps/NpsList";
 import NpsKanban from "@/components/nps/NpsKanban";
 import RootCauseManager from "@/components/nps/RootCauseManager";
 import StageManager from "@/components/nps/StageManager";
+import TriagemNps from "@/components/nps/TriagemNps";
 import NpsSheetImport from "@/components/nps/NpsSheetImport";
 import WootricImport from "@/components/nps/WootricImport";
 
 import { useNps } from "@/lib/context/NpsContext";
-import { invalidarWorkspace } from "@/lib/context/useWorkspace";
+import { useProjects } from "@/lib/context/ProjectsContext";
 import { useToast } from "@/lib/context/ToastContext";
 import { useSession } from "@/lib/context/SessionContext";
 import { sincronizar } from "@/lib/context/sync";
@@ -56,7 +57,6 @@ import {
   removeNpsRootCause,
   saveNpsResponse,
   saveNpsRootCause,
-  setNpsAdvocacy,
   setNpsStatus,
 } from "@/lib/actions/nps";
 
@@ -138,6 +138,7 @@ export default function NpsPage() {
   } = useNps();
 
   const { notify } = useToast();
+  const { recarregar: recarregarProjetos } = useProjects();
   const session = useSession();
 
   const [filtro, setFiltro] = useState<Filtro>("abertos");
@@ -182,7 +183,16 @@ export default function NpsPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editando, setEditando] =
     useState<NpsResponseView>();
-  const [aberto, setAberto] = useState<string>();
+  /*
+    `?resposta=<id>` abre a tratativa direto — é o link da revisão de
+    processo em Projetos. A gaveta só aparece quando a lista chega, então
+    ler o endereço já no primeiro estado não diverge do servidor.
+  */
+  const [aberto, setAberto] = useState<string | undefined>(() =>
+    typeof window === "undefined"
+      ? undefined
+      : (new URLSearchParams(window.location.search).get("resposta") ?? undefined)
+  );
   const [salvando, setSalvando] = useState(false);
 
   const [exportando, setExportando] = useState(false);
@@ -373,12 +383,12 @@ export default function NpsPage() {
       await recarregar();
 
       /**
-       * Erro Processual abre um item em Projetos, e a carga do
-       * workspace é memoizada no módulo — sem descartar, a revisão só
-       * apareceria depois de um F5.
+       * Erro Processual abre um item em Projetos — na criação e, desde a
+       * Fase 4, também na edição. O quadro de Projetos carrega uma vez;
+       * sem reler, a revisão só apareceria depois de um F5.
        */
-      if (dados.kind === "Erro Processual" && !dados.id) {
-        invalidarWorkspace();
+      if (dados.kind === "Erro Processual") {
+        await recarregarProjetos();
       }
 
       setFormOpen(false);
@@ -746,6 +756,16 @@ export default function NpsPage() {
 
         </div>
 
+        <TriagemNps
+          itens={responses}
+          tipos={kinds}
+          onOpen={(item) => setAberto(item.id)}
+          onAplicado={async (abriuRevisao) => {
+            await recarregar();
+            if (abriuRevisao) await recarregarProjetos();
+          }}
+        />
+
         <SurfaceCard
           title="Respostas"
           description="Clique para abrir a tratativa e fechar o ciclo."
@@ -1085,15 +1105,16 @@ export default function NpsPage() {
               detail: selecionado.customer,
             });
           }}
-          onAdvocacy={async (campo, valor) => {
+          onPromotor={(acoes) => {
+            /* O que o servidor gravou — o aviso já saiu da própria ficha. */
             aplicarLocal(selecionado.id, {
-              [`${campo}Asked`]: valor,
-            } as Partial<NpsResponseView>);
-            await setNpsAdvocacy(
-              selecionado.id,
-              campo,
-              valor
-            );
+              reviewAsked: acoes.reviewAsked,
+              testimonialAsked: acoes.testimonialAsked,
+              referralAsked: acoes.referralAsked,
+              reviewFeita: acoes.reviewFeita ?? undefined,
+              aceitaCase: acoes.aceitaCase ?? undefined,
+              indicacoes: acoes.indicacoes ?? undefined,
+            });
           }}
           onContato={async (dados) => {
 

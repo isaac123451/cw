@@ -27,9 +27,11 @@ import MiniKanban from "@/components/shared/MiniKanban";
 import { ConfirmDelete } from "@/components/shared/Modal";
 
 import SocialCaseForm from "@/components/redes-sociais/SocialCaseForm";
+import EncerrarRedesModal from "@/components/redes-sociais/EncerrarRedesModal";
 
 import { useScopedCases } from "@/lib/context/useScopedCases";
-import { useWorkflow } from "@/lib/context/WorkflowContext";
+import { useCases } from "@/lib/context/CaseContext";
+import { ETAPAS_DAS_REDES, eFinalDasRedes, etapaDasRedes } from "@/lib/models/redes";
 import { groupBy, isOpen } from "@/lib/services/case.service";
 
 import { Case } from "@/lib/models/case";
@@ -78,7 +80,7 @@ function RedesSociaisConteudo() {
 
   const recorte = categoriaFiltrada || statusFiltrado;
 
-  const { workflow } = useWorkflow();
+  const { setCases, loading } = useCases();
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Case>();
@@ -89,28 +91,48 @@ function RedesSociaisConteudo() {
     [todosOsSociais]
   );
 
+  /* "Novo" (das etapas antigas) conta como "Recebido". */
   const byStatus = useMemo(
-    () => groupBy(todosOsSociais, "status"),
+    () =>
+      groupBy(
+        todosOsSociais.map((c) => ({ ...c, status: etapaDasRedes(c.status)?.nome ?? c.status })),
+        "status"
+      ),
     [todosOsSociais]
   );
 
+  /*
+    As etapas do documento das Redes, e não as do Reclame Aqui.
+
+    O quadro usava o fluxo do portal: um direct do Instagram ia para
+    "Aguardando avaliação". Agora são as seis do documento, com os três
+    finais — e só "Resolvido" conta como resolvido.
+  */
   const colunas = useMemo(
-    () =>
-      workflow
-        .filter((item) => item.active)
-        .sort((a, b) => a.order - b.order)
-        .map((item) => ({
-          name: item.name,
-          color: item.color,
-        })),
-    [workflow]
+    () => ETAPAS_DAS_REDES.map((e) => ({ name: e.nome, color: e.cor })),
+    []
   );
 
   const open = social.filter(isOpen).length;
 
   const resolved = social.filter(
-    (item) => item.resolved
+    (item) => item.status === "Resolvido"
   ).length;
+
+  const semSolucao = social.filter(
+    (item) => item.status === "Sem contato" || item.status === "Sem identificação"
+  ).length;
+
+  const [encerrando, setEncerrando] = useState<{ item: Case; status: string } | null>(null);
+
+  function mover(id: string, status: string) {
+    if (eFinalDasRedes(status)) {
+      const item = todosOsSociais.find((c) => c.id === id);
+      if (item) setEncerrando({ item, status });
+      return;
+    }
+    moveCase(id, status);
+  }
 
   function salvar(data: Case) {
 
@@ -129,7 +151,7 @@ function RedesSociaisConteudo() {
         <PageHeading
           eyebrow="Atendimento"
           title="Redes Sociais"
-          description="Conversas recebidas pelo Instagram, registradas e acompanhadas pela operação."
+          description="Instagram, Facebook, WhatsApp e ManyChat, no fluxo do documento das Redes: 1º contato em 4 horas úteis (1 hora acima de 10 mil seguidores)."
         >
           <button
             onClick={() => {
@@ -180,7 +202,7 @@ function RedesSociaisConteudo() {
 
           <StatTile
             label="Total de casos"
-            description="Conversas registradas vindas do Instagram."
+            description="Atendimentos registrados vindos do Instagram, Facebook, WhatsApp e ManyChat."
             value={social.length}
             hint="registrados"
             icon={MessagesSquare}
@@ -198,25 +220,32 @@ function RedesSociaisConteudo() {
 
           <StatTile
             label="Resolvidos"
-            description="Conversas encerradas com solução confirmada."
+            description="Encerrados com a solução confirmada pelo cliente — o único final que conta como resolvido."
             value={resolved}
-            hint="encerrados com sucesso"
+            hint="validados com o cliente"
             icon={CheckCircle2}
             tone="success"
           />
 
           <StatTile
-            label="Categorias"
-            description="Assuntos distintos tratados no canal."
-            value={byCategory.length}
-            hint="assuntos distintos"
+            label="Sem contato ou identificação"
+            description="Encerrados sem solução: três tentativas sem resposta, ou cliente que não se identificou. Não contam como resolvidos."
+            value={semSolucao}
+            hint="não contam como resolvidos"
             icon={Camera}
             tone="info"
           />
 
         </div>
 
-        {social.length === 0 ? (
+        {loading && social.length === 0 ? (
+
+          /* Sem isto, o quadro dizia "nenhum atendimento" enquanto a lista ainda chegava. */
+          <SurfaceCard>
+            <p className="py-14 text-center text-sm text-zinc-400">Carregando os atendimentos…</p>
+          </SurfaceCard>
+
+        ) : social.length === 0 ? (
 
           <SurfaceCard>
 
@@ -227,13 +256,13 @@ function RedesSociaisConteudo() {
               </span>
 
               <p className="mt-4 text-sm font-semibold text-zinc-800">
-                Nenhum atendimento do Instagram registrado.
+                {recorte ? "Nenhum atendimento neste recorte." : "Nenhum atendimento de rede social registrado."}
               </p>
 
               <p className="mt-1 max-w-sm text-sm text-zinc-500">
-                Os dados importados do Reclame Aqui não incluem
-                redes sociais. Registre aqui as conversas do
-                direct para acompanhá-las junto da operação.
+                {recorte
+                  ? "O filtro que veio pelo link não tem atendimentos. Use Ver todos, acima, para voltar ao quadro inteiro."
+                  : "Registre aqui as conversas do Instagram, Facebook, WhatsApp e ManyChat: elas entram no fluxo do documento das Redes, com o relógio de 4 horas úteis."}
               </p>
 
               <button
@@ -299,7 +328,8 @@ function RedesSociaisConteudo() {
               <MiniKanban
                 cases={social}
                 columns={colunas}
-                onMove={moveCase}
+                onMove={mover}
+                colunaDe={(c) => etapaDasRedes(c.status)?.nome ?? c.status}
               />
             </SurfaceCard>
 
@@ -397,6 +427,19 @@ function RedesSociaisConteudo() {
             setEditing(undefined);
           }}
           onSave={salvar}
+        />
+      )}
+
+      {encerrando && (
+        <EncerrarRedesModal
+          item={encerrando.item}
+          resultadoInicial={encerrando.status}
+          onClose={() => setEncerrando(null)}
+          onSalvo={(patch) =>
+            setCases((prev) =>
+              prev.map((c) => (c.protocol === encerrando.item.protocol ? { ...c, ...patch } : c))
+            )
+          }
         />
       )}
 

@@ -48,6 +48,9 @@ import CaseTimeline from "./CaseTimeline";
 import DossieCard from "./DossieCard";
 import LembretesCard from "./LembretesCard";
 import TrilhaDoCaso from "@/components/reclame-aqui/tratativa/TrilhaDoCaso";
+import TrilhaDasRedes from "@/components/redes-sociais/TrilhaDasRedes";
+import EncerrarRedesModal from "@/components/redes-sociais/EncerrarRedesModal";
+import { ETAPAS_DAS_REDES, eFinalDasRedes, etapaDasRedes } from "@/lib/models/redes";
 import { idExterno, idLabel } from "@/lib/services/case.service";
 
 type Tab =
@@ -119,6 +122,7 @@ export default function CaseDetail({
 
   const {
     cases,
+    setCases,
     updateCase,
     toggleTag,
     moveCase,
@@ -130,6 +134,9 @@ export default function CaseDetail({
   /** Diálogo de exclusão aberto. Apagar reclamação não tem desfazer. */
   const [confirmandoExclusao, setConfirmandoExclusao] =
     useState(false);
+
+  /** O final das redes escolhido no seletor de etapa — abre o encerramento. */
+  const [encerrandoRedes, setEncerrandoRedes] = useState<string | null>(null);
 
   /**
    * A edição vive num rascunho; o botão Salvar grava.
@@ -322,31 +329,50 @@ export default function CaseDetail({
             <div className="mt-3 flex flex-wrap items-center gap-2">
 
               <StatusPicker
-                value={data.status}
-                onChange={(status) =>
-                  moveCase(data.id, status)
+                value={
+                  canal === "social"
+                    ? (etapaDasRedes(data.status)?.nome ?? data.status)
+                    : data.status
                 }
+                etapas={canal === "social" ? ETAPAS_DAS_REDES : undefined}
+                onChange={(status) => {
+                  /*
+                    Nas redes, os finais passam pelo encerramento: o
+                    documento pede solução e causa registradas, e "sem
+                    contato" só depois das três tentativas.
+                  */
+                  if (canal === "social" && eFinalDasRedes(status)) {
+                    setEncerrandoRedes(status);
+                    return;
+                  }
+                  moveCase(data.id, status);
+                }}
               />
 
-              <span className="flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-100">
-                <Star
-                  size={11}
-                  className="fill-amber-400 text-amber-400"
-                />
-                Nota{" "}
-                {data.evaluated ? data.score ?? 0 : "—"}
-              </span>
+              {/* Nota e "voltaria" são do portal: no atendimento social não existem. */}
+              {canal === "reclame-aqui" && (
+                <>
+                  <span className="flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-100">
+                    <Star
+                      size={11}
+                      className="fill-amber-400 text-amber-400"
+                    />
+                    Nota{" "}
+                    {data.evaluated ? data.score ?? 0 : "—"}
+                  </span>
 
-              <span
-                className={`rounded-full px-3 py-1 text-xs font-medium ring-1 ring-inset ${
-                  data.wouldDoBusiness
-                    ? "bg-emerald-50 text-emerald-700 ring-emerald-100"
-                    : "bg-rose-50 text-rose-700 ring-rose-100"
-                }`}
-              >
-                Voltaria:{" "}
-                {data.wouldDoBusiness ? "Sim" : "Não"}
-              </span>
+                  <span
+                    className={`rounded-full px-3 py-1 text-xs font-medium ring-1 ring-inset ${
+                      data.wouldDoBusiness
+                        ? "bg-emerald-50 text-emerald-700 ring-emerald-100"
+                        : "bg-rose-50 text-rose-700 ring-rose-100"
+                    }`}
+                  >
+                    Voltaria:{" "}
+                    {data.wouldDoBusiness ? "Sim" : "Não"}
+                  </span>
+                </>
+              )}
 
               {/*
                 Sinalizar retenção, e não só ler o sinal.
@@ -436,11 +462,11 @@ export default function CaseDetail({
                 href={data.raUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                title="Abrir esta reclamação no portal"
+                title={canal === "social" ? "Abrir a interação original" : "Abrir esta reclamação no portal"}
                 className="flex items-center gap-2 rounded-xl border border-violet-200 px-4 py-2.5 text-sm font-medium text-violet-700 transition-colors hover:bg-violet-50"
               >
                 <ExternalLink size={15} />
-                Reclame Aqui
+                {canal === "social" ? data.source : "Reclame Aqui"}
               </a>
             )}
 
@@ -494,7 +520,7 @@ export default function CaseDetail({
         com que se abre uma reclamação. Só no Reclame Aqui: as redes
         sociais têm o fluxo delas.
       */}
-      {canal === "reclame-aqui" && (
+      {canal === "reclame-aqui" ? (
         <div className={drawer ? "px-6" : ""}>
           <TrilhaDoCaso
             data={data}
@@ -503,6 +529,27 @@ export default function CaseDetail({
             irParaAreas={() => setTab("atendimento")}
           />
         </div>
+      ) : (
+        <div className={drawer ? "px-6" : ""}>
+          <TrilhaDasRedes
+            data={data}
+            aoMudarNoServidor={doServidor}
+            irParaAreas={() => setTab("atendimento")}
+            mover={(status) => moveCase(data.id, status)}
+          />
+        </div>
+      )}
+
+      {encerrandoRedes && (
+        <EncerrarRedesModal
+          item={data}
+          resultadoInicial={encerrandoRedes}
+          onClose={() => setEncerrandoRedes(null)}
+          onSalvo={(changes) => {
+            setCases((prev) => prev.map((c) => (c.protocol === data.protocol ? { ...c, ...changes } : c)));
+            doServidor(changes);
+          }}
+        />
       )}
 
       <div

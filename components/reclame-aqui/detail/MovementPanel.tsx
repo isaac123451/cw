@@ -204,6 +204,7 @@ export default function MovementPanel({
                   Acionado por {aberta.actor} em {descreverRegistro(aberta.startedAt)} · prazo de{" "}
                   {descreverPrazo(aberta.dueHours)}
                   {aberta.prioridade ? ` (caso ${aberta.prioridade})` : ""} · vence {quandoVence(status.prazo)}
+                  {aberta.chamado ? ` · chamado ${aberta.chamado}` : ""}
                 </p>
               </div>
 

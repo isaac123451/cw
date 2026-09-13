@@ -501,6 +501,7 @@ async function carregarDoBanco(): Promise<Workspace | null> {
       outcome: r.outcome ?? undefined,
       prioridade: r.prioridade ?? undefined,
       escalonadoEm: r.escalonadoEm?.toISOString(),
+      chamado: r.chamado ?? undefined,
     })),
 
     establishments: establishments.map((r) => ({
@@ -538,6 +539,7 @@ async function carregarDoBanco(): Promise<Workspace | null> {
       progress: r.progress,
       updatedAt: dia(r.updatedAt) as string,
       tags: r.tags,
+      origem: r.origem ?? undefined,
     })),
 
     macros: macros.map((r) => ({

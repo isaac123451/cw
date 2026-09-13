@@ -328,6 +328,23 @@ export default function ProjetosPage() {
 
                           )}
 
+                          {/*
+                            O item que nasceu sozinho diz de onde veio.
+
+                            A revisão de processo de um Erro Processual
+                            leva ao NPS que a originou — é lá que está o
+                            relato do cliente e quem tratou.
+                          */}
+                          {item.origem?.startsWith("nps:") && (
+                            <a
+                              href={`/nps?resposta=${encodeURIComponent(item.origem.slice(4))}`}
+                              draggable={false}
+                              className="mt-2 inline-block text-[11px] font-medium text-violet-700 hover:underline"
+                            >
+                              Aberto por um NPS de Erro Processual
+                            </a>
+                          )}
+
                           <div className="mt-3 flex items-center justify-between border-t border-zinc-100 pt-2.5">
 
                             <p className="truncate text-[11px] text-zinc-400">

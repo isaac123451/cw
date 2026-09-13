@@ -13,6 +13,7 @@ import {
 } from "@/lib/models/project";
 
 import {
+  listarProjetos,
   removeProject,
   saveProject,
 } from "@/lib/actions/registry";
@@ -34,6 +35,15 @@ interface ProjectsContextType {
   updateProject: (data: Project) => void;
   removeProject: (id: string) => void;
   moveProject: (id: string, stage: ProjectStage) => void;
+
+  /**
+   * Relê os projetos do banco.
+   *
+   * Para depois das ações em que o **servidor** cria o item — a revisão
+   * do Erro Processual, a reincidência do Analytics. Sem isto a carga
+   * única do workspace só os mostrava depois de um F5.
+   */
+  recarregar: () => Promise<void>;
 }
 
 const ProjectsContext =
@@ -111,6 +121,14 @@ export function ProjectsProvider({
         );
 
         sincronizar(() => saveProject(movido));
+      },
+
+      recarregar: async () => {
+        try {
+          setProjects(await listarProjetos());
+        } catch (erro) {
+          console.error("[projetos] recarga falhou", erro);
+        }
       },
     }),
     [projects, loading, setProjects]

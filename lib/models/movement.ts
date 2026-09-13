@@ -52,6 +52,9 @@ export interface CaseMovement {
 
   /** Quando o atraso foi escalonado ao gestor da área. */
   escalonadoEm?: string;
+
+  /** O número do chamado aberto na área, quando ela abre um. */
+  chamado?: string;
 }
 
 /** Prazo de retorno das áreas por criticidade, em horas úteis. */

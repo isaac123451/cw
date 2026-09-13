@@ -681,3 +681,74 @@
 .dark .hover\:bg-orange-700:hover {
   background-color: #C2410C;
 }
+
+/**
+ * O hover e o desabilitado dos botões de fundo cheio.
+ *
+ * As regras acima devolvem o tom cheio ao **fundo** (`bg-violet-700`),
+ * mas o hover usa outra classe — `hover:bg-violet-800` —, que lê a
+ * variável clareada para texto. No escuro, passar o mouse no botão
+ * principal o pintava de lilás claro com o texto branco por cima (1,6:1),
+ * em 51 botões. E o `.dark .bg-violet-700` vencia o
+ * `disabled:bg-zinc-200`: o botão desabilitado continuava roxo, com cara
+ * de clicável.
+ *
+ * Os tons daqui são os do claro, um passo mais escuros no hover — o
+ * mesmo gesto do tema claro.
+ */
+.dark .bg-violet-900 {
+  background-color: #4C1D95;
+}
+
+.dark .bg-emerald-700 {
+  background-color: #047857;
+}
+
+.dark .bg-emerald-800 {
+  background-color: #065F46;
+}
+
+.dark .bg-amber-700 {
+  background-color: #B45309;
+}
+
+.dark .bg-orange-700 {
+  background-color: #C2410C;
+}
+
+.dark .hover\:bg-violet-700:hover {
+  background-color: #6D28D9;
+}
+
+.dark .hover\:bg-violet-800:hover {
+  background-color: #5B21B6;
+}
+
+.dark .hover\:bg-violet-900:hover {
+  background-color: #4C1D95;
+}
+
+.dark .hover\:bg-rose-700:hover {
+  background-color: #BE123C;
+}
+
+.dark .hover\:bg-emerald-800:hover {
+  background-color: #065F46;
+}
+
+.dark .hover\:bg-amber-700:hover {
+  background-color: #B45309;
+}
+
+.dark .hover\:bg-zinc-900:hover {
+  background-color: #34343D;
+}
+
+/* Depois dos hovers: desabilitado com o mouse em cima continua desabilitado. */
+.dark .disabled\:bg-zinc-200:disabled {
+  background-color: var(--color-zinc-200);
+}
+
+.dark .disabled\:bg-zinc-50:disabled {
+  background-color: var(--color-zinc-50);
+}

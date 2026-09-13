@@ -448,6 +448,7 @@ function movimentoView(r: {
   outcome: string | null;
   prioridade: string | null;
   escalonadoEm: Date | null;
+  chamado: string | null;
   case: { externalId: string | null; id: string };
 }): CaseMovement {
   return {
@@ -462,6 +463,7 @@ function movimentoView(r: {
     outcome: r.outcome ?? undefined,
     prioridade: r.prioridade ?? undefined,
     escalonadoEm: r.escalonadoEm?.toISOString(),
+    chamado: r.chamado ?? undefined,
   };
 }
 
@@ -483,10 +485,13 @@ export async function acionarArea(entrada: {
   protocol: string;
   area: string;
   tratativa: string;
+  /** O número do chamado, quando a área abre um — o documento das Redes pede. */
+  chamado?: string;
 }): Promise<{ ok: true; movimento: CaseMovement } | Falha> {
 
   const area = entrada.area.trim();
   const tratativa = entrada.tratativa.trim();
+  const chamado = entrada.chamado?.trim().slice(0, 60) || null;
 
   if (!area) return { ok: false, erro: "Escolha a área que vai tratar o caso." };
   if (tratativa.length < 8) {
@@ -535,6 +540,7 @@ export async function acionarArea(entrada: {
         startedAt: new Date(),
         dueHours: horas,
         prioridade,
+        chamado,
       },
       include: { case: { select: { externalId: true, id: true } } },
     });

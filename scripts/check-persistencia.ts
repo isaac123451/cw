@@ -113,6 +113,12 @@ const EXCECOES: {
       "Põe na lista o acionamento, o retorno ou o escalonamento que a action da tratativa acabou de gravar e devolver.",
   },
   {
+    contexto: "SettingsContext",
+    funcao: "aplicarCategorias",
+    motivo:
+      "Troca as listas pelas que unificarCategorias acabou de gravar e devolver (UnificarCategorias).",
+  },
+  {
     contexto: "MovementsContext",
     funcao: "retirarMovimento",
     motivo:

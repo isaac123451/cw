@@ -2,15 +2,21 @@
 
 import { useState } from "react";
 
-import { Plus, Search, Trash2 } from "lucide-react";
+import { Combine, Plus, Search, Trash2 } from "lucide-react";
 
+import { useSession } from "@/lib/context/SessionContext";
 import { useSettings } from "@/lib/context/SettingsContext";
 import { useRascunho } from "@/lib/hooks/useRascunho";
 
 import SurfaceCard from "@/components/shared/SurfaceCard";
 import BarraDeSalvar from "@/components/shared/BarraDeSalvar";
 
+import UnificarCategorias from "./UnificarCategorias";
+
 export default function CategoriesSettings() {
+
+  const sessao = useSession();
+  const [unificando, setUnificando] = useState(false);
 
   const {
     categories,
@@ -66,13 +72,25 @@ export default function CategoriesSettings() {
       title="Categorias"
       description="Agrupam as reclamações por tipo de problema. Mantenha nomes claros e descrição enxuta."
       action={
-        <button
-          onClick={addCategory}
-          className="flex shrink-0 items-center gap-2 rounded-xl border border-violet-200 px-3.5 py-2 text-sm font-medium text-violet-700 transition-colors hover:bg-violet-50"
-        >
-          <Plus size={15} />
-          Nova categoria
-        </button>
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          {sessao?.role === "ADMIN" && (
+            <button
+              onClick={() => setUnificando(true)}
+              title="Juntar categorias que dizem a mesma coisa, com prévia"
+              className="flex items-center gap-2 rounded-xl border border-zinc-200 px-3.5 py-2 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-50"
+            >
+              <Combine size={15} />
+              Unificar
+            </button>
+          )}
+          <button
+            onClick={addCategory}
+            className="flex items-center gap-2 rounded-xl border border-violet-200 px-3.5 py-2 text-sm font-medium text-violet-700 transition-colors hover:bg-violet-50"
+          >
+            <Plus size={15} />
+            Nova categoria
+          </button>
+        </div>
       }
       bodyClassName="p-0"
     >
@@ -248,6 +266,7 @@ export default function CategoriesSettings() {
 
       />
 
+      {unificando && <UnificarCategorias onClose={() => setUnificando(false)} />}
 
     </SurfaceCard>
   );

@@ -174,6 +174,13 @@ const INTERNAS: Record<string, string[]> = {
    */
   Negociacao: ["*"],
 
+  /**
+   * Avaliações do Google: carga própria (`listarAvaliacoesGoogle`, na
+   * tela `/google`), com `paraView` em `lib/actions/avaliacoesGoogle.ts`
+   * levando cada coluna — como as negociações.
+   */
+  AvaliacaoGoogle: ["*"],
+
   /** Quem mudou o expediente por último — registro, não conteúdo. */
   OperacaoConfig: ["updatedBy"],
 };

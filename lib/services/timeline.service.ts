@@ -170,8 +170,11 @@ export function buildTimeline(
       detail: [
         movement.reason,
         movement.prioridade ? `caso ${movement.prioridade}, retorno em até ${descreverPrazo(movement.dueHours)}` : `retorno em até ${descreverPrazo(movement.dueHours)}`,
+        movement.chamado ? `chamado ${movement.chamado}` : null,
         `por ${movement.actor}`,
-      ].join(" · "),
+      ]
+        .filter(Boolean)
+        .join(" · "),
       at: movement.startedAt,
       tone: "movimentacao",
     });

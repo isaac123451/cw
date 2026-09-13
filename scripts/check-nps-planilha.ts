@@ -141,6 +141,16 @@ conferir(
   "2026-08-20"
 );
 
+/*
+  A hora do export é a de Brasília: 11:21 lá é 14:21 no relógio UTC.
+  O leitor jogava a hora fora e gravava meio-dia UTC em toda linha.
+*/
+conferir(
+  "a hora de Brasília chega inteira",
+  exportado.itens[0].respondedAt.toISOString(),
+  "2026-08-20T14:21:00.000Z"
+);
+
 conferir(
   "tipo e causa raiz vêm junto",
   [

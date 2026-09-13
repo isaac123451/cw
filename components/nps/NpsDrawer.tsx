@@ -8,7 +8,6 @@ import {
   Check,
   CircleAlert,
   ExternalLink,
-  Megaphone,
   Phone,
   ShieldAlert,
   Store,
@@ -16,7 +15,9 @@ import {
 } from "lucide-react";
 
 import Combobox from "@/components/shared/Combobox";
+import AcoesDoPromotor from "@/components/nps/AcoesDoPromotor";
 import NpsNotas from "@/components/nps/NpsNotas";
+import type { AcoesDoPromotor as AcoesDoPromotorGravadas } from "@/lib/actions/nps";
 
 import { useEstablishments } from "@/lib/context/EstablishmentsContext";
 import { linkDoPortal } from "@/lib/models/establishment";
@@ -31,6 +32,8 @@ import Modal, {
 import {
   CHANNELS,
   finaisDoTipo,
+  JANELA_TENTATIVAS_DIAS,
+  tentativasMinimas,
   isEncerrado,
   moodOf,
   MOODS,
@@ -61,10 +64,8 @@ interface Props {
   ) => Promise<void>;
   onConfirm: (valor: boolean) => Promise<void>;
   onStatus: (status: string) => Promise<void>;
-  onAdvocacy: (
-    campo: "review" | "testimonial" | "referral",
-    valor: boolean
-  ) => Promise<void>;
+  /** O que o servidor gravou nas ações do promotor, para a lista refletir. */
+  onPromotor: (acoes: AcoesDoPromotorGravadas) => void;
   onPostContact: (dados: {
     mood?: number | null;
     resolved?: boolean | null;
@@ -105,6 +106,7 @@ function quando(iso?: string) {
         year: "2-digit",
         hour: "2-digit",
         minute: "2-digit",
+        timeZone: "America/Sao_Paulo",
       })
     : "—";
 }
@@ -124,7 +126,7 @@ export default function NpsDrawer({
   onAttempt,
   onConfirm,
   onStatus,
-  onAdvocacy,
+  onPromotor,
   onPostContact,
   onContato,
   onRetencao,
@@ -499,6 +501,9 @@ export default function NpsDrawer({
 
           <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
             Tentativas de contato ({item.attempts.length})
+            <span className="ml-1.5 font-normal normal-case tracking-normal text-zinc-400">
+              · o guia pede {tentativasMinimas(item.kind)} em até {JANELA_TENTATIVAS_DIAS} dias antes de encerrar sem retorno
+            </span>
           </p>
 
           {item.attempts.length > 0 && (
@@ -691,49 +696,16 @@ export default function NpsDrawer({
 
         </div>
 
-        {/* Elogio de promotor: o guia pede as três ações */}
-        {item.kind === "Elogio" &&
-          segmento.label === "Promotor" && (
+        {/*
+          As ações do promotor, em todo promotor que não seja engano.
 
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-3.5">
-
-              <p className="mb-2 flex items-center gap-2 text-xs font-semibold text-emerald-800">
-                <Megaphone size={14} />
-                Aproveitar enquanto o sentimento está
-                positivo
-              </p>
-
-              <div className="space-y-1.5">
-                {(
-                  [
-                    ["review", "Direcionado para review pública (Google)", item.reviewAsked],
-                    ["testimonial", "Perguntado se aceita ser case/depoimento", item.testimonialAsked],
-                    ["referral", "Pedida indicação de outros clientes", item.referralAsked],
-                  ] as const
-                ).map(([campo, label, valor]) => (
-                  <label
-                    key={campo}
-                    className="flex cursor-pointer items-center gap-2 text-sm text-emerald-900"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={valor}
-                      onChange={(e) =>
-                        onAdvocacy(
-                          campo,
-                          e.target.checked
-                        )
-                      }
-                      className="h-4 w-4 accent-emerald-600"
-                    />
-                    {label}
-                  </label>
-                ))}
-              </div>
-
-            </div>
-
-          )}
+          O guia as põe no Elogio; o promotor que mandou uma sugestão
+          continua sendo alguém disposto a falar bem — e a review que ele
+          publica conta igual.
+        */}
+        {segmento.label === "Promotor" && item.kind !== "Engano" && (
+          <AcoesDoPromotor key={item.id} item={item} onSalvo={onPromotor} />
+        )}
 
         {/* Confirmação do cliente */}
         {regra?.requiresConfirmation && !encerrado && (
