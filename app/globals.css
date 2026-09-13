@@ -646,3 +646,38 @@
 .dark .bg-white\/60 {
   background-color: color-mix(in srgb, var(--cw-card) 60%, transparent);
 }
+
+.dark .bg-white\/70 {
+  background-color: color-mix(in srgb, var(--cw-card) 70%, transparent);
+}
+
+.dark .bg-white\/80 {
+  background-color: color-mix(in srgb, var(--cw-card) 80%, transparent);
+}
+
+/**
+ * Os avisos da trilha do Reclame Aqui (13/09/2026).
+ *
+ * A cadência de persistência, o "cliente sem notícia" e a conferência
+ * da resposta pública escrevem com o 900 da cor sobre a tintura 50 —
+ * "fundo discreto, texto forte". O 900 não estava na inversão, e o
+ * texto saía marrom sobre marrom: o aviso existia e não se lia.
+ */
+.dark {
+  --color-amber-900: #F8D9A0;
+  --color-orange-900: #F9CBA5;
+  --color-rose-900: #FFC7CE;
+  --color-rose-950: #FFE0E4;
+  --color-emerald-900: #A8EBCB;
+  --color-violet-900: #DCCBFF;
+  /* O trecho marcado da resposta: tintura de rosa, e não pastel aceso. */
+  --color-rose-200: #6B2E3A;
+}
+
+.dark .bg-orange-600 {
+  background-color: #EA580C;
+}
+
+.dark .hover\:bg-orange-700:hover {
+  background-color: #C2410C;
+}

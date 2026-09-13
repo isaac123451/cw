@@ -368,6 +368,73 @@ banco, num caso descartável), com três sabotagens acendendo vermelho.
 **Um clique seu:** Processos e SLA → "Usar os prazos da documentação" →
 Salvar. Até lá os relógios mostram "sem prazo".
 
+**Fase 2 — o Reclame Aqui passo a passo (0.49.0).** O documento descreve
+oito passos e uma finalização; a ficha mostrava abas, e quem abria o
+caso tinha de lembrar a ordem. O passo esquecido era sempre o mesmo:
+validar antes de responder, pedir a avaliação de novo, atualizar o CW
+Engine.
+
+- **A trilha no topo do caso** (`lib/models/trilha.ts`): os nove passos
+  por fase, cada um um botão que abre o seu diálogo, e o passo atual com
+  a ação na frente. Cada passo se marca pelo que o banco sabe; o que só a
+  pessoa sabe (imersão, CW Engine) é um clique com data e autor. O
+  legado não fica vermelho: reclamação anterior ao registro aparece com
+  os passos "deduzidos" pelo que o fim do caso prova. Respondida há mais
+  de 6 meses sem nota encerra o follow-up. "Aguardando nossa réplica"
+  reabre a resposta em vez de pedir nota.
+- **Imersão** (Passo 2): o retrato do cliente — conta, fase
+  (implantação, uso ativo, risco, cancelado), outras reclamações,
+  atendimentos em rede social e NPS — antes de qualquer mensagem.
+- **Acionar área** no modelo da documentação para
+  `#incidentes-experiencia-do-cliente`, com o prazo pela criticidade
+  (Urgente 4h, Alta 1 dia útil, Normal 2 dias úteis, editável em
+  Processos e SLA) congelado no acionamento. Retorno com Salvar;
+  vencido, a mensagem de escalonamento ao gestor e o registro dele;
+  enquanto isso, o aviso de atualização ao cliente. As cinco áreas do
+  documento entram na carga de Processos mesmo sem regra cadastrada. O
+  relógio das áreas conta tempo útil. Os caminhos antigos
+  (`saveMovement`, "Encaminhar") gravavam sem esperar o servidor e
+  saíram.
+- **Cadências** (`lib/models/cadencia.ts`): persistência (5 tentativas
+  em 7 dias, uma por dia útil, no terço do expediente menos tentado;
+  esgotada, a mensagem pública transparente pronta), cliente sem notícia
+  (2 dias úteis desde o último contato, com chip no cartão) e pedido de
+  avaliação (2 dias depois da resposta e a cada 2 dias; depois semanal,
+  por até 6 meses).
+- **Fila "Pedir avaliação"** (`/reclame-aqui/avaliacoes`): para hoje (o
+  mais atrasado primeiro) e próximos dias, com o que a fila vale na nota
+  — medido na base em 13/09: 46 para hoje, 37 no período da nota, 8,7 →
+  9,1 se avaliarem com 10 (`npm run conferir:fila`). A mensagem muda de
+  tom a cada lembrete e aceita o gancho do histórico.
+- **Resposta pública conferida enquanto é escrita**
+  (`lib/services/lgpd.ts`): CPF (com dígito verificador), CNPJ, e-mail,
+  telefone, valor e condição negociada marcados no texto; semelhança
+  com as 400 últimas respostas publicadas acima de 60% avisa "mensagem
+  pronta". Sem validação registrada, copiar ou marcar como publicada
+  pede confirmação. A data da resposta passou a ser gravada
+  (`publicResponseAt`) — "Respondida em" mostrava a última edição.
+- **Moderação** na lateral (motivo, pedida em, decisão do Reclame Aqui)
+  e **finalização** em quatro checks. O histórico do caso conta a trilha
+  inteira, com autor e hora de Brasília.
+- **Próximo passo no cartão e na lista**, clicável sem sair do quadro.
+
+Achados no caminho: a ficha **desfazia na tela** o relato editado e a
+resposta publicada logo depois do Salvar (a camada do que foi carregado
+ao abrir vencia o que acabara de ser gravado; o banco estava certo) —
+corrigido em `useRascunho`. A aba Atendimento abria a página inicial do
+Reclame Aqui em vez da reclamação e montava link de WhatsApp com
+telefone mascarado. Pedido de avaliação contava como 1º contato. Datas
+só de dia (planilha) recuavam um dia no fuso. Os avisos com o tom 900
+não se liam no tema escuro. Em 375 px o "Excluir" do cabeçalho saía da
+tela.
+
+Provas: `check:trilha` (a trilha passo a passo, legado, cadências com
+fim de semana, resumo dos contatos, linha do tempo, relógio das áreas,
+modelo de acionamento) e `check:lgpd` (cada padrão, o que não pode
+acender, os textos da própria plataforma, repetição), com sabotagens
+acendendo vermelho. Conferido na tela com um caso descartável do
+recebimento à finalização, apagado depois.
+
 
 ### Excluir conta da plataforma (11/09/2026)
 

@@ -10,6 +10,7 @@ import {
   LineChart,
   LucideIcon,
   Settings2,
+  Star,
 } from "lucide-react";
 
 interface Item {
@@ -25,6 +26,12 @@ const items: Item[] = [
     href: "/reclame-aqui",
     icon: LayoutGrid,
     hint: "Kanban e lista das reclamações",
+  },
+  {
+    label: "Pedir avaliação",
+    href: "/reclame-aqui/avaliacoes",
+    icon: Star,
+    hint: "Quem pedir a avaliação hoje, na cadência da documentação",
   },
   {
     label: "Analytics",

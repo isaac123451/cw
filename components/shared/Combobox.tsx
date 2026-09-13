@@ -61,7 +61,7 @@ interface Props {
 const MOSTRAR = 80;
 
 /** Os diacríticos combinantes do Unicode — o que "NFD" separa da letra. */
-const ACENTOS = /[̀-ͯ]/g;
+const ACENTOS = /[\u0300-\u036f]/g;
 
 function normalizar(v: string) {
   return v

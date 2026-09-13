@@ -101,7 +101,7 @@ function normalizar(valor: unknown) {
     .normalize("NFD")
     // Os acentos separados pelo NFD, por código: colados no arquivo
     // eles somem em qualquer editor que normalize o texto de volta.
-    .replace(/[̀-ͯ]/g, "")
+    .replace(/[\u0300-\u036f]/g, "")
     .replace(/\s+/g, " ")
     .trim()
     .toLowerCase();

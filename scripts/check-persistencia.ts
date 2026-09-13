@@ -88,6 +88,36 @@ const EXCECOES: {
     motivo:
       "Só expõe a sessão que o layout resolveu no servidor.",
   },
+  {
+    contexto: "SlaContext",
+    funcao: "setExpediente",
+    motivo:
+      "Recebe o expediente que salvarExpediente acabou de gravar e devolver (ExpedienteCard). Gravar aqui seria a segunda escrita.",
+  },
+  {
+    contexto: "SlaContext",
+    funcao: "setRules",
+    motivo:
+      "Recebe as regras que aplicarPrazosDaDocumentacao acabou de gravar e devolver (PrazosDaDocumentacaoModal).",
+  },
+  {
+    contexto: "MovementsContext",
+    funcao: "setPrazosDeArea",
+    motivo:
+      "Recebe os prazos que salvarPrazosDeArea acabou de gravar e devolver (PrazosDeAreaCard).",
+  },
+  {
+    contexto: "MovementsContext",
+    funcao: "aplicarMovimento",
+    motivo:
+      "Põe na lista o acionamento, o retorno ou o escalonamento que a action da tratativa acabou de gravar e devolver.",
+  },
+  {
+    contexto: "MovementsContext",
+    funcao: "retirarMovimento",
+    motivo:
+      "Tira da lista o acionamento que apagarMovimento acabou de apagar no banco.",
+  },
 ];
 
 function temExcecao(contexto: string, funcao: string) {

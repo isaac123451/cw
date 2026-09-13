@@ -20,6 +20,7 @@ import { Case } from "@/lib/models/case";
 
 import { useCases } from "@/lib/context/CaseContext";
 import { useMovements } from "@/lib/context/MovementsContext";
+import { useSla } from "@/lib/context/SlaContext";
 import { useRascunho } from "@/lib/hooks/useRascunho";
 
 import {
@@ -46,6 +47,7 @@ import CaseSidebar from "./CaseSidebar";
 import CaseTimeline from "./CaseTimeline";
 import DossieCard from "./DossieCard";
 import LembretesCard from "./LembretesCard";
+import TrilhaDoCaso from "@/components/reclame-aqui/tratativa/TrilhaDoCaso";
 import { idExterno, idLabel } from "@/lib/services/case.service";
 
 type Tab =
@@ -153,6 +155,7 @@ export default function CaseDetail({
   const emEdicao = rascunho.itens[0] ?? data;
 
   const { movements } = useMovements();
+  const { expediente } = useSla();
 
   const [tab, setTab] = useState<Tab>("visao-geral");
 
@@ -164,7 +167,7 @@ export default function CaseDetail({
   const movimentacao = openMovementOf(data.id, movements);
 
   const movimentacaoStatus = movimentacao
-    ? movementStatus(movimentacao)
+    ? movementStatus(movimentacao, { expediente })
     : undefined;
 
   const drawer = variant === "drawer";
@@ -416,7 +419,12 @@ export default function CaseDetail({
 
           </div>
 
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
+          {/*
+            `max-w-full`, e não `shrink-0`: sem teto de largura, o grupo
+            ficava do tamanho da fila inteira de botões e nunca quebrava —
+            em 375 px o "Excluir" saía da tela.
+          */}
+          <div className="flex max-w-full flex-wrap items-center gap-2">
 
             <TagPicker
               selected={data.tags ?? []}
@@ -478,6 +486,24 @@ export default function CaseDetail({
         </div>
 
       </div>
+
+      {/*
+        A trilha do documento, entre o cabeçalho e as abas.
+
+        É o que responde "o que eu faço agora neste caso" — a pergunta
+        com que se abre uma reclamação. Só no Reclame Aqui: as redes
+        sociais têm o fluxo delas.
+      */}
+      {canal === "reclame-aqui" && (
+        <div className={drawer ? "px-6" : ""}>
+          <TrilhaDoCaso
+            data={data}
+            aoMudarNoServidor={doServidor}
+            irParaResposta={() => setTab("avaliacao")}
+            irParaAreas={() => setTab("atendimento")}
+          />
+        </div>
+      )}
 
       <div
         className={
@@ -570,7 +596,11 @@ export default function CaseDetail({
           {tabAtiva === "atendimento" && <ServiceTab data={data} />}
 
           {tabAtiva === "avaliacao" && (
-            <EvaluationTab data={emEdicao} onChange={patch} />
+            <EvaluationTab
+              data={emEdicao}
+              onChange={patch}
+              aoMudarNoServidor={doServidor}
+            />
           )}
 
           {tabAtiva === "rede-social" && (

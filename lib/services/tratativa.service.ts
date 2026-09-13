@@ -37,6 +37,9 @@ function colunasDoResumo(r: ResumoDosContatos) {
     ultimoContatoEm: r.ultimoContatoEm ? new Date(r.ultimoContatoEm) : null,
     ultimaRespostaEm: r.ultimaRespostaEm ? new Date(r.ultimaRespostaEm) : null,
     tentativasSemResposta: r.tentativasSemResposta,
+    validadoEm: r.validadoEm ? new Date(r.validadoEm) : null,
+    ultimoPedidoAvaliacaoEm: r.ultimoPedidoAvaliacaoEm ? new Date(r.ultimoPedidoAvaliacaoEm) : null,
+    pedidosDeAvaliacao: r.pedidosDeAvaliacao,
   };
 }
 

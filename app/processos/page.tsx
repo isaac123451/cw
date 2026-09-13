@@ -26,6 +26,7 @@ import MovementRuleForm from "@/components/processos/MovementRuleForm";
 import OrphanCategories from "@/components/processos/OrphanCategories";
 import PrazosDaDocumentacaoModal from "@/components/processos/PrazosDaDocumentacaoModal";
 import ExpedienteCard from "@/components/processos/ExpedienteCard";
+import PrazosDeAreaCard from "@/components/processos/PrazosDeAreaCard";
 
 import { useCases } from "@/lib/context/CaseContext";
 import {
@@ -61,6 +62,10 @@ import {
 import { descreverPrazo } from "@/lib/services/horasUteis";
 
 import { MovementRule } from "@/lib/models/movement";
+import { AREAS_INTERNAS } from "@/lib/models/mensagens";
+
+/** Prefixo das linhas das áreas do documento, que não têm regra própria. */
+const AREA_DO_DOCUMENTO = "area-do-documento:";
 
 export default function ProcessosPage() {
 
@@ -149,21 +154,43 @@ export default function ProcessosPage() {
     [abertos, rules, expediente]
   );
 
+  /*
+    As cinco áreas do documento entram na tabela mesmo sem cadastro.
+
+    Elas são acionadas pelo modelo da documentação, com o prazo pela
+    criticidade — não precisam de regra. Sem esta linha, um caso parado
+    com o Financeiro não aparecia na carga de ninguém.
+  */
+  const destinos = useMemo<MovementRule[]>(
+    () => [
+      ...AREAS_INTERNAS.filter(
+        (a) => !movementRules.some((r) => r.destination === a.nome)
+      ).map((a) => ({
+        id: `${AREA_DO_DOCUMENTO}${a.nome}`,
+        destination: a.nome,
+        hours: 0,
+        active: true,
+      })),
+      ...movementRules,
+    ],
+    [movementRules]
+  );
+
   const cargaPorDestino = useMemo(
-    () => loadByDestination(movements, movementRules),
-    [movements, movementRules]
+    () => loadByDestination(movements, destinos, { expediente }),
+    [movements, destinos, expediente]
   );
 
   /** Movimentações pendentes fora do prazo, com o caso de cada uma. */
   const movimentacoesAtrasadas = useMemo(
     () =>
-      lateMovements(movements).map((row) => ({
+      lateMovements(movements, { expediente }).map((row) => ({
         ...row,
         caso: cases.find(
           (item) => item.id === row.movement.caseId
         ),
       })),
-    [movements, cases]
+    [movements, cases, expediente]
   );
 
   function salvar(data: SlaRuleDraft | SlaRule) {
@@ -498,10 +525,12 @@ export default function ProcessosPage() {
 
         </SurfaceCard>
 
+        <PrazosDeAreaCard />
+
         <SurfaceCard
-          title="Movimentações internas"
-          description="Prazo que cada área tem para devolver o caso à Reputação."
-          hint="Relógio separado do prazo público: o caso pode estar no prazo com o consumidor e parado com uma área interna. O prazo fica congelado no registro, então editar o destino aqui não reescreve o histórico."
+          title="Destinos das movimentações"
+          description="Os destinos que aparecem ao acionar. As cinco áreas do documento usam o prazo pela criticidade, acima; os demais, o prazo daqui."
+          hint="Relógio separado do prazo do 1º contato: o caso pode estar em dia com o cliente e parado com uma área interna. O prazo fica congelado no registro, então editar o destino aqui não reescreve o histórico."
           action={
             <button
               onClick={() => {
@@ -598,7 +627,9 @@ export default function ProcessosPage() {
                       </td>
 
                       <td className="whitespace-nowrap px-5 py-3.5 font-medium tabular-nums text-zinc-700">
-                        {formatHours(rule.hours)}
+                        {AREAS_INTERNAS.some((a) => a.nome === rule.destination)
+                          ? "Pela criticidade"
+                          : formatHours(rule.hours)}
                       </td>
 
                       <td className="whitespace-nowrap px-5 py-3.5">
@@ -630,6 +661,9 @@ export default function ProcessosPage() {
 
                       <td className="whitespace-nowrap px-5 py-3.5">
 
+                        {rule.id.startsWith(AREA_DO_DOCUMENTO) ? (
+                          <p className="text-right text-xs text-zinc-400">Área do documento</p>
+                        ) : (
                         <div className="flex items-center justify-end gap-1">
 
                           <button
@@ -670,6 +704,7 @@ export default function ProcessosPage() {
                           </button>
 
                         </div>
+                        )}
 
                       </td>
 

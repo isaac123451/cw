@@ -53,7 +53,7 @@ export function falaDeContato(nota: string) {
   const texto = nota
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "");
+    .replace(/[\u0300-\u036f]/g, "");
 
   return [
     "contato",

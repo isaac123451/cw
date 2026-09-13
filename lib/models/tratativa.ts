@@ -108,6 +108,11 @@ export interface ResumoDosContatos {
   ultimoContatoEm?: string;
   ultimaRespostaEm?: string;
   tentativasSemResposta: number;
+  /** O Passo 6 registrado: a última validação do cliente. */
+  validadoEm?: string;
+  /** Passo 8: o pedido de avaliação mais recente, e quantos foram. */
+  ultimoPedidoAvaliacaoEm?: string;
+  pedidosDeAvaliacao: number;
 }
 
 /**
@@ -123,9 +128,19 @@ export function resumirContatos(
 
   const ordenados = [...contatos].sort((a, b) => a.em.localeCompare(b.em));
 
-  if (ordenados.length === 0) return { tentativasSemResposta: 0 };
+  if (ordenados.length === 0) {
+    return { tentativasSemResposta: 0, pedidosDeAvaliacao: 0 };
+  }
 
-  const primeiro = ordenados[0];
+  /*
+    O pedido de avaliação não é o 1º contato.
+
+    Numa reclamação antiga, respondida antes de a plataforma registrar
+    contatos, o primeiro registro costuma ser justamente o lembrete de
+    avaliar — meses depois. Contá-lo como 1º contato poria meses no
+    "tempo até o 1º contato" de um caso que foi atendido no dia.
+  */
+  const primeiro = ordenados.find((c) => c.tipo !== "pedido-avaliacao");
   const ultimo = ordenados[ordenados.length - 1];
 
   const respostas = ordenados.filter((c) => c.resultado === "respondeu");
@@ -138,12 +153,33 @@ export function resumirContatos(
       (!ultimaResposta || c.em > ultimaResposta.em)
   ).length;
 
+  const validacoes = ordenados.filter((c) => c.tipo === "validacao");
+  const pedidos = ordenados.filter((c) => c.tipo === "pedido-avaliacao");
+
   return {
-    primeiroContatoEm: primeiro.em,
-    primeiroContatoCanal: primeiro.canal,
-    primeiroContatoPor: primeiro.autor,
+    primeiroContatoEm: primeiro?.em,
+    primeiroContatoCanal: primeiro?.canal,
+    primeiroContatoPor: primeiro?.autor,
     ultimoContatoEm: ultimo.em,
     ultimaRespostaEm: ultimaResposta?.em,
     tentativasSemResposta,
+    validadoEm: validacoes[validacoes.length - 1]?.em,
+    ultimoPedidoAvaliacaoEm: pedidos[pedidos.length - 1]?.em,
+    pedidosDeAvaliacao: pedidos.length,
+  };
+}
+
+/** O resumo como campos do caso — para a tela acompanhar o que o servidor gravou. */
+export function patchDoResumo(r: ResumoDosContatos) {
+  return {
+    primeiroContatoEm: r.primeiroContatoEm,
+    primeiroContatoCanal: r.primeiroContatoCanal,
+    primeiroContatoPor: r.primeiroContatoPor,
+    ultimoContatoEm: r.ultimoContatoEm,
+    ultimaRespostaEm: r.ultimaRespostaEm,
+    tentativasSemResposta: r.tentativasSemResposta,
+    validadoEm: r.validadoEm,
+    ultimoPedidoAvaliacaoEm: r.ultimoPedidoAvaliacaoEm,
+    pedidosDeAvaliacao: r.pedidosDeAvaliacao,
   };
 }

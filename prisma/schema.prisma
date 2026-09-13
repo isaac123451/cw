@@ -449,6 +449,29 @@ model Case {
   /// Tentativas seguidas sem resposta, desde a última resposta.
   tentativasSemResposta Int @default(0)
 
+  /// Passo 6: o cliente confirmou que tudo voltou a funcionar.
+  /// Resumo do contato de tipo "validacao" — a lista é a fonte.
+  validadoEm DateTime?
+
+  /// Passo 8: pedidos de avaliação feitos depois da resposta pública.
+  ultimoPedidoAvaliacaoEm DateTime?
+  pedidosDeAvaliacao      Int       @default(0)
+
+  /// Passo 2: a imersão no histórico, antes do 1º contato.
+  imersaoEm  DateTime?
+  imersaoPor String?
+
+  /// Finalização: "atualiza as informações no CW Engine".
+  cwEngineEm  DateTime?
+  cwEnginePor String?
+
+  /// Rotina diária, item 6: pedido de moderação ao Reclame Aqui.
+  moderacaoPedidaEm     DateTime?
+  moderacaoMotivo       String?
+  /// pendente · aceita · negada
+  moderacaoResultado    String?
+  moderacaoRespondidaEm DateTime?
+
   tags      CaseTag[]
   comments  CaseComment[]
   events    CaseEvent[]
@@ -723,6 +746,14 @@ model CaseMovement {
   /// um alerta que se repete sozinho é um alerta que se aprende a
   /// ignorar.
   lateNotifiedAt DateTime?
+
+  /// A criticidade do caso no acionamento — congelada, como o prazo.
+  prioridade String?
+
+  /// Quando o atraso foi escalonado ao gestor da área, como a
+  /// documentação pede ("o não cumprimento do prazo deve ser
+  /// escalonado para o gestor da respectiva área").
+  escalonadoEm DateTime?
 
   createdAt DateTime @default(now())
 
@@ -1383,6 +1414,13 @@ model OperacaoConfig {
   diasUteis        Int[] @default([1, 2, 3, 4, 5])
   /// Carnaval e Corpus Christi não contam como dia útil.
   pularFacultativos Boolean @default(true)
+
+  /// Prazo de retorno das áreas internas por criticidade, em horas
+  /// úteis: "Urgente (4 horas), Alta (1 dia útil), Normal (2 dias
+  /// úteis)" — Reclame Aqui, Recebimento e Tratativa de Outras Áreas.
+  prazoAreaUrgente Int @default(4)
+  prazoAreaAlta    Int @default(24)
+  prazoAreaNormal  Int @default(48)
 
   updatedAt DateTime @updatedAt
   updatedBy String?

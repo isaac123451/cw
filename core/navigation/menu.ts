@@ -55,6 +55,10 @@ export const menuItems: MenuItem[] = [
     children: [
       { title: "Quadro", href: "/reclame-aqui" },
       {
+        title: "Pedir avaliação",
+        href: "/reclame-aqui/avaliacoes",
+      },
+      {
         title: "Analytics",
         href: "/reclame-aqui/analytics",
       },

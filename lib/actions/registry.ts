@@ -15,10 +15,7 @@ import {
 import { WorkflowStatus } from "@/lib/models/workflow";
 import { CaseTag } from "@/lib/models/tag";
 import { SlaRule } from "@/lib/models/sla";
-import {
-  CaseMovement,
-  MovementRule,
-} from "@/lib/models/movement";
+import { MovementRule } from "@/lib/models/movement";
 import { slugify } from "@/lib/services/slug";
 
 import {
@@ -334,53 +331,15 @@ export async function removeMovementRule(id: string) {
   updateTag(WORKSPACE_TAG);
 }
 
-export async function saveMovement(item: CaseMovement) {
-  const prisma = await autorizado();
-  if (!prisma) return;
+/*
+  Os acionamentos de área não passam mais por aqui.
 
-  // A tela endereça o caso pelo id do portal; o banco usa cuid.
-  const caso = await prisma.case.findFirst({
-    where: {
-      OR: [
-        { externalId: item.caseId },
-        { id: item.caseId },
-      ],
-    },
-    select: { id: true },
-  });
-
-  if (!caso) {
-    throw new Error("Caso não encontrado.");
-  }
-
-  const dados = {
-    caseId: caso.id,
-    destination: item.destination,
-    reason: item.reason,
-    actor: item.actor,
-    startedAt: dia(item.startedAt) as Date,
-    dueHours: item.dueHours,
-    returnedAt: dia(item.returnedAt),
-    outcome: item.outcome ?? null,
-  };
-
-  await prisma.caseMovement.upsert({
-    where: { id: item.id },
-    update: dados,
-    create: { id: item.id, ...dados },
-  });
-
-  updateTag(WORKSPACE_TAG);
-}
-
-export async function removeMovement(id: string) {
-  const prisma = await autorizado();
-  if (!prisma) return;
-
-  await prisma.caseMovement.delete({ where: { id } });
-
-  updateTag(WORKSPACE_TAG);
-}
+  `saveMovement` e `removeMovement` gravavam o registro inteiro que a
+  tela mandava, sem esperar resposta nem validar prazo. Desde 13/09/2026
+  acionar, retornar, escalonar e apagar são ações de
+  `lib/actions/tratativa.ts`, que tiram o prazo da criticidade do caso
+  e devolvem o registro gravado.
+*/
 
 /* ============================================================
    CADASTROS

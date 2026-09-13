@@ -24,10 +24,17 @@ export interface CaseMovement {
   /** Quem encaminhou. */
   actor: string;
 
+  /**
+   * O instante do acionamento, em ISO.
+   *
+   * Era só o dia; o prazo das áreas é em horas úteis ("Urgente: 4
+   * horas"), e sem a hora não existe como medir. Um dia sem hora ainda é
+   * aceito — ver `instanteDoMovimento`.
+   */
   startedAt: string;
 
   /**
-   * Prazo em horas, congelado no momento do encaminhamento.
+   * Prazo em horas úteis, congelado no momento do encaminhamento.
    *
    * Guardado no registro e não lido da regra: editar a regra depois não
    * pode reescrever o histórico e transformar em atraso o que estava no
@@ -39,7 +46,27 @@ export interface CaseMovement {
 
   /** O que a área respondeu. Só existe depois do retorno. */
   outcome?: string;
+
+  /** A criticidade do caso no acionamento, congelada como o prazo. */
+  prioridade?: string;
+
+  /** Quando o atraso foi escalonado ao gestor da área. */
+  escalonadoEm?: string;
 }
+
+/** Prazo de retorno das áreas por criticidade, em horas úteis. */
+export interface PrazosDeArea {
+  Urgente: number;
+  Alta: number;
+  Normal: number;
+}
+
+/** "Urgente (4 horas), Alta (1 dia útil), Normal (2 dias úteis)". */
+export const PRAZOS_DE_AREA_PADRAO: PrazosDeArea = {
+  Urgente: 4,
+  Alta: 24,
+  Normal: 48,
+};
 
 /**
  * Prazo padrão de retorno por destino.

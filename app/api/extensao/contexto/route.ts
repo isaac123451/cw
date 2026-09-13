@@ -929,7 +929,7 @@ function resumir(
   );
 
   const situacaoMovimento = movimento
-    ? movementStatus(movimento, hojeNaOperacao())
+    ? movementStatus(movimento, { expediente: workspace.expediente })
     : null;
 
   return {

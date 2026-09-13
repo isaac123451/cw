@@ -1,6 +1,11 @@
 import type { PrismaClient } from "@prisma/client";
 
 import {
+  PRAZOS_DE_AREA_PADRAO,
+  type PrazosDeArea,
+} from "@/lib/models/movement";
+
+import {
   EXPEDIENTE_PADRAO,
   Expediente,
   expedienteValido,
@@ -30,6 +35,22 @@ export function expedienteDoBanco(
     dias: r.diasUteis,
     pularFacultativos: r.pularFacultativos,
   });
+}
+
+/** Os prazos das áreas internas por criticidade — ver `PRAZOS_DE_AREA_PADRAO`. */
+export function prazosDeAreaDoBanco(
+  r?: { prazoAreaUrgente: number; prazoAreaAlta: number; prazoAreaNormal: number } | null
+): PrazosDeArea {
+
+  if (!r) return PRAZOS_DE_AREA_PADRAO;
+
+  const valido = (n: number, padrao: number) => (Number.isFinite(n) && n > 0 && n <= 24 * 30 ? n : padrao);
+
+  return {
+    Urgente: valido(r.prazoAreaUrgente, PRAZOS_DE_AREA_PADRAO.Urgente),
+    Alta: valido(r.prazoAreaAlta, PRAZOS_DE_AREA_PADRAO.Alta),
+    Normal: valido(r.prazoAreaNormal, PRAZOS_DE_AREA_PADRAO.Normal),
+  };
 }
 
 let guardado: { valor: Expediente; ate: number } | null = null;

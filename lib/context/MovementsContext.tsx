@@ -10,22 +10,17 @@ import {
 import {
   CaseMovement,
   MovementRule,
+  PRAZOS_DE_AREA_PADRAO,
+  type PrazosDeArea,
 } from "@/lib/models/movement";
 
 import {
-  removeMovement,
   removeMovementRule,
-  saveMovement,
   saveMovementRule,
 } from "@/lib/actions/registry";
 
 import { useWorkspaceSlice } from "@/lib/context/useWorkspace";
 import { sincronizar } from "@/lib/context/sync";
-
-export type MovementDraft = Omit<
-  CaseMovement,
-  "id" | "returnedAt" | "outcome"
->;
 
 export type MovementRuleDraft = Omit<MovementRule, "id">;
 
@@ -33,20 +28,26 @@ interface MovementsContextType {
   movements: CaseMovement[];
   rules: MovementRule[];
 
+  /** Prazo de retorno das áreas por criticidade, em horas úteis. */
+  prazosDeArea: PrazosDeArea;
+  setPrazosDeArea: (valor: PrazosDeArea) => void;
+
+  /**
+   * Põe na lista o que o servidor acabou de gravar.
+   *
+   * Acionar área, registrar retorno e escalonar gravam por ação própria
+   * (`lib/actions/tratativa.ts`) e devolvem o registro pronto — a lista
+   * só acompanha, sem segunda ida ao banco. Até 13/09/2026 a tela
+   * gravava por `createMovement`/`closeMovement`, sem esperar resposta:
+   * um acionamento recusado pelo servidor ficava na tela como feito.
+   */
+  aplicarMovimento: (movimento: CaseMovement) => void;
+
+  /** Tira da lista o que o servidor acabou de apagar. */
+  retirarMovimento: (id: string) => void;
+
   /** Carga inicial ainda em andamento. */
   loading: boolean;
-
-  /** Encaminha o caso para uma área ou para o cliente. */
-  createMovement: (data: MovementDraft) => void;
-
-  /** Fecha o relógio: a área respondeu. */
-  closeMovement: (
-    id: string,
-    outcome: string,
-    returnedAt: string
-  ) => void;
-
-  removeMovement: (id: string) => void;
 
   createRule: (data: MovementRuleDraft) => void;
   updateRule: (data: MovementRule) => void;
@@ -74,51 +75,29 @@ export function MovementsProvider({
     [] as MovementRule[]
   );
 
+  const [prazosDeArea, setPrazosDeArea] = useWorkspaceSlice(
+    (dados) => dados.prazosDeArea ?? PRAZOS_DE_AREA_PADRAO,
+    PRAZOS_DE_AREA_PADRAO
+  );
+
   const value = useMemo<MovementsContextType>(
     () => ({
       movements,
       rules,
       loading,
+      prazosDeArea,
+      setPrazosDeArea: (valor) => setPrazosDeArea(valor),
 
-      createMovement: (data) => {
-
-        const novo: CaseMovement = {
-          ...data,
-          id: crypto.randomUUID(),
-        };
-
-        setMovements((prev) => [novo, ...prev]);
-        sincronizar(() => saveMovement(novo));
+      aplicarMovimento: (movimento) => {
+        setMovements((prev) =>
+          prev.some((m) => m.id === movimento.id)
+            ? prev.map((m) => (m.id === movimento.id ? movimento : m))
+            : [movimento, ...prev]
+        );
       },
 
-      closeMovement: (id, outcome, returnedAt) => {
-
-        const atual = movements.find(
-          (item) => item.id === id
-        );
-
-        if (!atual) return;
-
-        const fechada = {
-          ...atual,
-          outcome,
-          returnedAt,
-        };
-
-        setMovements((prev) =>
-          prev.map((item) =>
-            item.id === id ? fechada : item
-          )
-        );
-
-        sincronizar(() => saveMovement(fechada));
-      },
-
-      removeMovement: (id) => {
-        setMovements((prev) =>
-          prev.filter((item) => item.id !== id)
-        );
-        sincronizar(() => removeMovement(id));
+      retirarMovimento: (id) => {
+        setMovements((prev) => prev.filter((m) => m.id !== id));
       },
 
       createRule: (data) => {
@@ -170,7 +149,7 @@ export function MovementsProvider({
         sincronizar(() => saveMovementRule(alterado));
       },
     }),
-    [movements, rules, loading, setMovements, setRules]
+    [movements, rules, loading, setMovements, setRules, prazosDeArea, setPrazosDeArea]
   );
 
   return (

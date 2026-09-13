@@ -178,6 +178,17 @@ export function toCaseModel(row: {
   ultimoContatoEm?: Date | null;
   ultimaRespostaEm?: Date | null;
   tentativasSemResposta?: number | null;
+  validadoEm?: Date | null;
+  ultimoPedidoAvaliacaoEm?: Date | null;
+  pedidosDeAvaliacao?: number | null;
+  imersaoEm?: Date | null;
+  imersaoPor?: string | null;
+  cwEngineEm?: Date | null;
+  cwEnginePor?: string | null;
+  moderacaoPedidaEm?: Date | null;
+  moderacaoMotivo?: string | null;
+  moderacaoResultado?: string | null;
+  moderacaoRespondidaEm?: Date | null;
 
   category?: { name: string } | null;
   subcategory?: { name: string } | null;
@@ -239,6 +250,18 @@ export function toCaseModel(row: {
     ultimoContatoEm: row.ultimoContatoEm?.toISOString() ?? undefined,
     ultimaRespostaEm: row.ultimaRespostaEm?.toISOString() ?? undefined,
     tentativasSemResposta: row.tentativasSemResposta ?? undefined,
+    validadoEm: row.validadoEm?.toISOString() ?? undefined,
+    ultimoPedidoAvaliacaoEm: row.ultimoPedidoAvaliacaoEm?.toISOString() ?? undefined,
+    pedidosDeAvaliacao: row.pedidosDeAvaliacao ?? undefined,
+    imersaoEm: row.imersaoEm?.toISOString() ?? undefined,
+    imersaoPor: row.imersaoPor ?? undefined,
+    cwEngineEm: row.cwEngineEm?.toISOString() ?? undefined,
+    cwEnginePor: row.cwEnginePor ?? undefined,
+    moderacaoPedidaEm: row.moderacaoPedidaEm?.toISOString() ?? undefined,
+    moderacaoMotivo: row.moderacaoMotivo ?? undefined,
+    moderacaoResultado:
+      (row.moderacaoResultado as Case["moderacaoResultado"]) ?? undefined,
+    moderacaoRespondidaEm: row.moderacaoRespondidaEm?.toISOString() ?? undefined,
     status: row.status,
     owner: row.owner?.name ?? undefined,
     department: row.team?.name ?? undefined,

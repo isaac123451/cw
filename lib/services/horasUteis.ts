@@ -133,6 +133,33 @@ export function paredeDe(instante: Date): Parede {
   };
 }
 
+/**
+ * O dia de um registro, e se ele tem hora.
+ *
+ * A planilha e o portal gravam alguns campos só com o dia — a data da
+ * resposta pública, a da avaliação —, e o banco guarda esse dia como
+ * meia-noite UTC. Lido como instante, `2026-08-21T00:00:00Z` vira 20/08
+ * às 21h em Brasília: um dia antes, e com uma hora que ninguém anotou.
+ * Meia-noite UTC exata é tratada como "só o dia".
+ */
+export function diaDoRegistro(iso: string): { dia: string; min?: number } {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(iso) || /T00:00:00(?:\.000)?Z$/.test(iso)) {
+    return { dia: iso.slice(0, 10) };
+  }
+  const { dia, min } = paredeDe(new Date(iso));
+  return { dia, min };
+}
+
+/** "21/08" ou "21/08 14:05" — o registro como a tela mostra. */
+export function descreverRegistro(iso?: string | null) {
+  if (!iso) return "";
+  const { dia, min } = diaDoRegistro(iso);
+  const [, m, d] = dia.split("-");
+  return min === undefined
+    ? `${d}/${m}`
+    : `${d}/${m} ${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
+}
+
 export function instanteDe(dia: string, min: number): Date {
   return new Date(
     Date.parse(`${dia}T00:00:00Z`) +

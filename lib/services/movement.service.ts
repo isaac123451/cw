@@ -3,8 +3,28 @@ import {
   MovementRule,
 } from "@/lib/models/movement";
 
-import { SlaSituation } from "@/lib/services/sla.service";
-import { hojeNaOperacao } from "@/lib/services/reputation.service";
+import type { SlaSituation } from "@/lib/services/sla.service";
+import {
+  descreverMinutosUteis,
+  EXPEDIENTE_PADRAO,
+  Expediente,
+  minutosUteisEntre,
+  paredeDe,
+  prazoUtil,
+} from "@/lib/services/horasUteis";
+
+/**
+ * O relógio das áreas internas.
+ *
+ * A documentação do Reclame Aqui dá prazo de retorno às áreas pela
+ * criticidade do caso — "Urgente (4 horas), Alta (1 dia útil), Normal
+ * (2 dias úteis)" — e manda escalonar ao gestor da área quando vence.
+ * O prazo fica congelado no acionamento (`dueHours`): mudar a regra
+ * depois não reescreve o compromisso que a área já tinha.
+ *
+ * Até 12/09/2026 este relógio contava dias corridos a partir da
+ * meia-noite. Agora conta tempo útil, do instante do acionamento.
+ */
 
 /** Regra ativa de um destino. */
 export function ruleFor(
@@ -16,90 +36,97 @@ export function ruleFor(
   );
 }
 
-/**
- * Horas entre duas datas ISO.
- *
- * As datas do app têm precisão de dia — o export do Reclame Aqui não
- * traz hora —, então o resultado sempre cai em múltiplos de 24. É a
- * mesma granularidade que `sla.service` usa no relógio público.
- */
-export function hoursBetween(from: string, to: string) {
-  return Math.max(
-    0,
-    Math.round(
-      (Date.parse(`${to}T00:00:00Z`) -
-        Date.parse(`${from}T00:00:00Z`)) /
-        3600000
-    )
-  );
+/** Um instante a partir do que a tela guarda — instante ISO ou dia antigo. */
+export function instanteDoMovimento(valor: string) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(valor)
+    ? new Date(`${valor}T11:00:00Z`)
+    : new Date(valor);
 }
 
 export interface MovementStatus {
   situation: SlaSituation;
 
-  /** Horas decorridas desde o encaminhamento. */
+  /** Horas úteis desde o acionamento. */
   elapsedHours: number;
 
-  /** Horas restantes até o prazo. Negativo quando estourou. */
+  /** Horas úteis até o prazo. Negativo quando estourou. */
   remainingHours: number;
 
+  /** Minutos úteis até o prazo — a precisão que o chip mostra. */
+  restanteMin: number;
+
+  /** Minutos úteis desde o acionamento (até o retorno, se houve). */
+  decorridoMin: number;
+
+  /** Quando vence, em ISO. */
+  prazo: string;
+
   label: string;
+}
+
+export interface OpcoesDoMovimento {
+  agora?: Date;
+  expediente?: Expediente;
 }
 
 /**
  * Situação de uma movimentação frente ao próprio prazo.
  *
- * Reaproveita o vocabulário de `SlaSituation` para as duas telas de
- * prazo falarem a mesma língua (e usarem as mesmas cores, via
- * `toneOfSla`). "sem-regra" não acontece aqui: o prazo fica congelado no
- * registro, então toda movimentação tem um.
+ * Reaproveita o vocabulário de `SlaSituation` para as telas de prazo
+ * falarem a mesma língua (e usarem as mesmas cores, via `toneOfSla`).
+ * Aceita, no segundo parâmetro, o "hoje" em texto que as chamadas
+ * antigas passavam; ele é ignorado.
  */
 export function movementStatus(
   movement: CaseMovement,
-  today = hojeNaOperacao()
+  opcoes: OpcoesDoMovimento | string = {}
 ): MovementStatus {
 
-  const fim = movement.returnedAt ?? today;
+  const { agora = new Date(), expediente = EXPEDIENTE_PADRAO } =
+    typeof opcoes === "string" ? {} : opcoes;
 
-  const elapsedHours = hoursBetween(
-    movement.startedAt,
-    fim
-  );
+  const inicio = instanteDoMovimento(movement.startedAt);
+  const prazo = prazoUtil(inicio, movement.dueHours, expediente);
+  const fim = movement.returnedAt ? instanteDoMovimento(movement.returnedAt) : agora;
 
-  const remainingHours = movement.dueHours - elapsedHours;
+  const decorrido = Math.max(0, minutosUteisEntre(inicio, fim, expediente));
+  const restanteMin = minutosUteisEntre(fim, prazo, expediente);
+
+  const base = {
+    elapsedHours: Math.round(decorrido / 60),
+    remainingHours: Math.round(restanteMin / 60),
+    restanteMin,
+    decorridoMin: decorrido,
+    prazo: prazo.toISOString(),
+  };
 
   if (movement.returnedAt) {
     return {
+      ...base,
       situation: "concluido",
-      elapsedHours,
-      remainingHours,
       label:
-        remainingHours < 0
+        fim.getTime() > prazo.getTime()
           ? "Retornou fora do prazo"
           : "Retornou no prazo",
     };
   }
 
-  if (remainingHours < 0) {
+  if (agora.getTime() > prazo.getTime()) {
     return {
+      ...base,
       situation: "estourado",
-      elapsedHours,
-      remainingHours,
-      label: `Atrasada com ${movement.destination}`,
+      label: `${movement.destination} atrasada ${descreverMinutosUteis(restanteMin, expediente)}`,
     };
   }
 
-  // Últimos 25% do prazo já pedem atenção — mesmo corte do SLA público.
-  const atencao =
-    remainingHours <= movement.dueHours * 0.25;
+  const total = Math.max(1, minutosUteisEntre(inicio, prazo, expediente));
+  const venceHoje = paredeDe(prazo).dia === paredeDe(agora).dia;
+  const atencao = restanteMin <= total * 0.25 || venceHoje;
 
   return {
+    ...base,
     situation: atencao ? "atencao" : "dentro",
-    elapsedHours,
-    remainingHours,
-    label: atencao
-      ? `Vence logo em ${movement.destination}`
-      : `No prazo com ${movement.destination}`,
+    label: `${movement.destination}: retorno em ${descreverMinutosUteis(restanteMin, expediente)}`,
   };
 }
 
@@ -123,7 +150,7 @@ export function movementsOf(
 /**
  * A movimentação em aberto do caso.
  *
- * Só uma por vez: encaminhar de novo sem registrar o retorno anterior
+ * Só uma por vez: acionar de novo sem registrar o retorno anterior
  * deixaria dois relógios correndo sobre o mesmo caso, e nenhum dos dois
  * diria quem está com a bola.
  */
@@ -137,18 +164,18 @@ export function openMovementOf(
 /** Pendentes fora do prazo, da mais atrasada para a menos. */
 export function lateMovements(
   movements: CaseMovement[],
-  today = hojeNaOperacao()
+  opcoes: OpcoesDoMovimento | string = {}
 ) {
   return movements
     .filter(isPending)
     .map((item) => ({
       movement: item,
-      status: movementStatus(item, today),
+      status: movementStatus(item, opcoes),
     }))
     .filter((row) => row.status.situation === "estourado")
     .sort(
       (a, b) =>
-        a.status.remainingHours - b.status.remainingHours
+        a.status.restanteMin - b.status.restanteMin
     );
 }
 
@@ -156,7 +183,7 @@ export interface DestinationLoad {
   rule: MovementRule;
   abertas: number;
   atrasadas: number;
-  /** Média de horas até o retorno, entre as já concluídas. */
+  /** Média de horas úteis até o retorno, entre as já concluídas. */
   mediaRetorno?: number;
 }
 
@@ -164,7 +191,7 @@ export interface DestinationLoad {
 export function loadByDestination(
   movements: CaseMovement[],
   rules: MovementRule[],
-  today = hojeNaOperacao()
+  opcoes: OpcoesDoMovimento | string = {}
 ): DestinationLoad[] {
 
   return rules.map((rule) => {
@@ -177,8 +204,7 @@ export function loadByDestination(
 
     const atrasadas = pendentes.filter(
       (item) =>
-        movementStatus(item, today).situation ===
-        "estourado"
+        movementStatus(item, opcoes).situation === "estourado"
     );
 
     const concluidas = doDestino.filter(
@@ -190,12 +216,7 @@ export function loadByDestination(
         ? undefined
         : Math.round(
             concluidas.reduce(
-              (soma, item) =>
-                soma +
-                hoursBetween(
-                  item.startedAt,
-                  item.returnedAt as string
-                ),
+              (soma, item) => soma + movementStatus(item, opcoes).elapsedHours,
               0
             ) / concluidas.length
           );

@@ -212,6 +212,7 @@ async function main() {
     "/dashboard",
     "/reclame-aqui",
     "/reclame-aqui/analytics",
+    "/reclame-aqui/avaliacoes",
     "/reclame-aqui/calculadora",
     "/reclame-aqui/configuracoes",
     "/reclame-aqui/graficos",

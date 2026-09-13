@@ -343,6 +343,39 @@ export function useRascunho<T extends { id: string }>(
         return [...editada, ...novos];
       });
 
+      /*
+        O que foi gravado passa a ser o "completado" também.
+
+        A camada do servidor guarda o relato e a resposta como estavam ao
+        abrir. Sem esta troca, ela continuava vencendo a base depois do
+        Salvar: a resposta recém-publicada sumia da tela, e um relato
+        corrigido voltava ao texto antigo — com o banco certo e a tela
+        errada até recarregar. Achado na conferência da Fase 2, em
+        13/09/2026.
+      */
+      setCarregados((prev) => {
+
+        let mudou = false;
+        const proximo = { ...prev };
+
+        for (const [id, salvo] of Object.entries(edicoes)) {
+
+          const camada = prev[id];
+          if (!camada) continue;
+
+          const atualizada = { ...camada };
+
+          for (const chave of Object.keys(camada) as (keyof T)[]) {
+            atualizada[chave] = salvo[chave];
+          }
+
+          proximo[id] = atualizada;
+          mudou = true;
+        }
+
+        return mudou ? proximo : prev;
+      });
+
       setEdicoes({});
       setNovos([]);
     }

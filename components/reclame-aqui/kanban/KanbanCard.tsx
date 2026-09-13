@@ -18,6 +18,7 @@ import { ConfirmDelete } from "@/components/shared/Modal";
 import BotaoCompletar from "@/components/reclame-aqui/completar/BotaoCompletar";
 import ChipPrioridade from "@/components/reclame-aqui/tratativa/ChipPrioridade";
 import RelogioDoCaso from "@/components/reclame-aqui/tratativa/RelogioDoCaso";
+import ProximoPasso from "@/components/reclame-aqui/tratativa/ProximoPasso";
 
 import { useCases } from "@/lib/context/CaseContext";
 import { useOwners } from "@/lib/hooks/useOwners";
@@ -148,6 +149,8 @@ export default function KanbanCard({
         1º contato quando é isso que falta.
       */}
       <RelogioDoCaso item={item} esconderSemRegra className="mt-2" />
+
+      <ProximoPasso item={item} className="mt-1.5" />
 
       <div className="mt-2 flex items-center gap-3 text-[11px] text-zinc-400">
 

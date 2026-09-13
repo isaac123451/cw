@@ -17,7 +17,7 @@ export function prioridadeNormalizada(valor?: string | null): Prioridade {
 
   const limpo = String(valor ?? "")
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
+    .replace(/[\u0300-\u036f]/g, "")
     .trim()
     .toLowerCase();
 
@@ -169,6 +169,27 @@ export interface Case {
   ultimaRespostaEm?: string;
   /** Tentativas seguidas sem resposta desde a última resposta. */
   tentativasSemResposta?: number;
+
+  /** Passo 6: a validação do cliente, quando registrada. */
+  validadoEm?: string;
+
+  /** Passo 8: o último pedido de avaliação e quantos foram feitos. */
+  ultimoPedidoAvaliacaoEm?: string;
+  pedidosDeAvaliacao?: number;
+
+  /** Passo 2: a imersão no histórico antes do 1º contato. */
+  imersaoEm?: string;
+  imersaoPor?: string;
+
+  /** Finalização: o CW Engine atualizado. */
+  cwEngineEm?: string;
+  cwEnginePor?: string;
+
+  /** Rotina diária, item 6: o pedido de moderação ao Reclame Aqui. */
+  moderacaoPedidaEm?: string;
+  moderacaoMotivo?: string;
+  moderacaoResultado?: "pendente" | "aceita" | "negada";
+  moderacaoRespondidaEm?: string;
 
   status: string;
 

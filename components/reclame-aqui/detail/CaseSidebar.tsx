@@ -6,6 +6,7 @@ import {
   ArrowUpRight,
   ExternalLink,
   Pencil,
+  Scale,
   UserCheck,
 } from "lucide-react";
 
@@ -16,7 +17,9 @@ import { useSession } from "@/lib/context/SessionContext";
 
 import Combobox from "@/components/shared/Combobox";
 import PrazoECriticidade from "@/components/reclame-aqui/tratativa/PrazoECriticidade";
-import { idExterno, idLabel } from "@/lib/services/case.service";
+import { useTratativa } from "@/components/reclame-aqui/tratativa/TratativaProvider";
+import { idExterno, idLabel, isSocial } from "@/lib/services/case.service";
+import { descreverRegistro } from "@/lib/services/horasUteis";
 
 interface Props {
   data: Case;
@@ -75,6 +78,7 @@ export default function CaseSidebar({
 
   const { people } = useTeams();
   const { establishments } = useEstablishments();
+  const { abrirModeracao } = useTratativa();
 
   const sessao = useSession();
 
@@ -356,6 +360,66 @@ export default function CaseSidebar({
             <ExternalLink size={15} />
             Abrir no Reclame Aqui
           </a>
+        )}
+
+        {/*
+          A moderação, item 6 da rotina diária.
+
+          O pedido é feito no portal; aqui fica o motivo, a data e a
+          decisão. Sem o registro, moderação pedida vira moderação
+          esquecida — e a nota baixa continua pesando enquanto ninguém
+          confere a resposta do Reclame Aqui.
+        */}
+        {!isSocial(data) && (
+          <div className="mt-4 border-t border-zinc-100 pt-3">
+
+            <div className="flex items-center justify-between gap-2">
+              <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+                <Scale size={12} /> Moderação
+              </p>
+              <button
+                type="button"
+                onClick={() => abrirModeracao(data, { aoSalvar: aoMudarNoServidor })}
+                className="rounded-lg px-2 py-1 text-xs font-medium text-violet-700 transition-colors hover:bg-violet-50"
+              >
+                {data.moderacaoPedidaEm ? "Atualizar" : "Registrar pedido"}
+              </button>
+            </div>
+
+            {data.moderacaoPedidaEm ? (
+              <>
+                <p className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs text-zinc-600">
+                  Pedida em {descreverRegistro(data.moderacaoPedidaEm)}
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[10.5px] font-semibold ring-1 ring-inset ${
+                      data.moderacaoResultado === "aceita"
+                        ? "bg-emerald-50 text-emerald-700 ring-emerald-100"
+                        : data.moderacaoResultado === "negada"
+                          ? "bg-rose-50 text-rose-700 ring-rose-100"
+                          : "bg-amber-50 text-amber-700 ring-amber-100"
+                    }`}
+                  >
+                    {data.moderacaoResultado === "aceita"
+                      ? "Aceita"
+                      : data.moderacaoResultado === "negada"
+                        ? "Negada"
+                        : "Aguardando o Reclame Aqui"}
+                  </span>
+                </p>
+                {data.moderacaoMotivo && (
+                  <p className="mt-1.5 line-clamp-3 text-xs leading-relaxed text-zinc-500" title={data.moderacaoMotivo}>
+                    {data.moderacaoMotivo}
+                  </p>
+                )}
+              </>
+            ) : (
+              <p className="mt-1.5 text-xs leading-relaxed text-zinc-500">
+                Duplicada, de quem não é cliente ou resolvida por outro canal antes da publicação? Pode
+                ser moderada — e sai da nota.
+              </p>
+            )}
+
+          </div>
         )}
 
       </Block>

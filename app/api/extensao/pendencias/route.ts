@@ -132,7 +132,7 @@ export async function POST(request: Request) {
     );
 
     const situacaoDoMovimento = movimento
-      ? movementStatus(movimento, hojeNaOperacao())
+      ? movementStatus(movimento, { expediente: workspace.expediente })
       : null;
 
     const falta: string[] = [];

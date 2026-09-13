@@ -16,7 +16,15 @@ import {
 import type { ContatoView, ResumoDosContatos } from "@/lib/models/tratativa";
 
 import { expedienteValido, type Expediente } from "@/lib/services/horasUteis";
-import { esquecerExpediente } from "@/lib/services/operacao.service";
+import type { Prisma } from "@prisma/client";
+import type { Prioridade } from "@/lib/models/case";
+import { linkDoPortal } from "@/lib/models/establishment";
+import type { CaseMovement, PrazosDeArea } from "@/lib/models/movement";
+import { AREAS_INTERNAS } from "@/lib/models/mensagens";
+import { LIMITE_DE_REPETICAO, semelhanca } from "@/lib/services/lgpd";
+import { RESPOSTA_SINTETICA } from "@/lib/services/raMarcadores";
+import { diaNaOperacao } from "@/lib/services/reputation.service";
+import { esquecerExpediente, prazosDeAreaDoBanco } from "@/lib/services/operacao.service";
 import {
   contatosDoCaso,
   gravarContato,
@@ -303,4 +311,526 @@ export async function salvarExpediente(
   } catch (erro) {
     return falha(erro, "expediente");
   }
+}
+
+/* ============================================================
+   PASSOS MARCADOS À MÃO — imersão e CW Engine
+============================================================ */
+
+/**
+ * Marca (ou desmarca) um passo que só a pessoa sabe que fez.
+ *
+ * A imersão (Passo 2) e a atualização do CW Engine (finalização) não
+ * deixam rastro em lugar nenhum que a plataforma leia. O clique carimba
+ * quem e quando — e desmarcar existe porque clique errado acontece.
+ */
+export async function marcarPasso(entrada: {
+  protocol: string;
+  passo: "imersao" | "cw-engine";
+  desfazer?: boolean;
+}): Promise<{ ok: true; em?: string; por?: string } | Falha> {
+
+  const quem = await quemGrava("AGENTE", MODULO);
+  if ("erro" in quem) return { ok: false, erro: quem.erro! };
+
+  try {
+    const agora = new Date();
+    const valor = entrada.desfazer ? null : agora;
+    const por = entrada.desfazer ? null : quem.nome;
+
+    await quem.ctx.prisma.case.update({
+      where: { protocol: entrada.protocol },
+      data:
+        entrada.passo === "imersao"
+          ? { imersaoEm: valor, imersaoPor: por }
+          : { cwEngineEm: valor, cwEnginePor: por },
+      select: { id: true },
+    });
+
+    updateTag(CASES_TAG);
+
+    return entrada.desfazer
+      ? { ok: true }
+      : { ok: true, em: agora.toISOString(), por: quem.nome };
+  } catch (erro) {
+    return falha(erro, `passo ${entrada.passo}`);
+  }
+}
+
+/* ============================================================
+   MODERAÇÃO
+============================================================ */
+
+export async function registrarModeracao(entrada: {
+  protocol: string;
+  motivo?: string;
+  resultado?: "pendente" | "aceita" | "negada";
+  limpar?: boolean;
+}): Promise<
+  | {
+      ok: true;
+      moderacaoPedidaEm?: string;
+      moderacaoMotivo?: string;
+      moderacaoResultado?: "pendente" | "aceita" | "negada";
+      moderacaoRespondidaEm?: string;
+    }
+  | Falha
+> {
+
+  const quem = await quemGrava("AGENTE", MODULO);
+  if ("erro" in quem) return { ok: false, erro: quem.erro! };
+
+  try {
+    if (entrada.limpar) {
+      await quem.ctx.prisma.case.update({
+        where: { protocol: entrada.protocol },
+        data: { moderacaoPedidaEm: null, moderacaoMotivo: null, moderacaoResultado: null, moderacaoRespondidaEm: null },
+        select: { id: true },
+      });
+      updateTag(CASES_TAG);
+      return { ok: true };
+    }
+
+    const atual = await quem.ctx.prisma.case.findUnique({
+      where: { protocol: entrada.protocol },
+      select: { moderacaoPedidaEm: true, moderacaoMotivo: true },
+    });
+
+    if (!atual) return { ok: false, erro: `O caso ${entrada.protocol} não existe mais.` };
+
+    const motivo = (entrada.motivo ?? atual.moderacaoMotivo ?? "").trim();
+
+    if (!atual.moderacaoPedidaEm && motivo.length < 10) {
+      return { ok: false, erro: "Descreva o motivo do pedido de moderação — é ele que o Reclame Aqui vai avaliar." };
+    }
+
+    const resultado = entrada.resultado ?? "pendente";
+    const pedida = atual.moderacaoPedidaEm ?? new Date();
+    const respondida = resultado === "pendente" ? null : new Date();
+
+    await quem.ctx.prisma.case.update({
+      where: { protocol: entrada.protocol },
+      data: {
+        moderacaoPedidaEm: pedida,
+        moderacaoMotivo: motivo.slice(0, 2000),
+        moderacaoResultado: resultado,
+        moderacaoRespondidaEm: respondida,
+      },
+      select: { id: true },
+    });
+
+    updateTag(CASES_TAG);
+
+    return {
+      ok: true,
+      moderacaoPedidaEm: pedida.toISOString(),
+      moderacaoMotivo: motivo,
+      moderacaoResultado: resultado,
+      moderacaoRespondidaEm: respondida?.toISOString(),
+    };
+  } catch (erro) {
+    return falha(erro, "moderação");
+  }
+}
+
+/* ============================================================
+   ÁREAS INTERNAS
+============================================================ */
+
+function movimentoView(r: {
+  id: string;
+  destination: string;
+  reason: string;
+  actor: string;
+  startedAt: Date;
+  dueHours: number;
+  returnedAt: Date | null;
+  outcome: string | null;
+  prioridade: string | null;
+  escalonadoEm: Date | null;
+  case: { externalId: string | null; id: string };
+}): CaseMovement {
+  return {
+    id: r.id,
+    caseId: r.case.externalId ?? r.case.id,
+    destination: r.destination,
+    reason: r.reason,
+    actor: r.actor,
+    startedAt: r.startedAt.toISOString(),
+    dueHours: r.dueHours,
+    returnedAt: r.returnedAt?.toISOString(),
+    outcome: r.outcome ?? undefined,
+    prioridade: r.prioridade ?? undefined,
+    escalonadoEm: r.escalonadoEm?.toISOString(),
+  };
+}
+
+const PRIORIDADE_DO_ENUM: Record<string, Prioridade> = {
+  CRITICA: "Urgente",
+  ALTA: "Alta",
+  MEDIA: "Normal",
+  BAIXA: "Normal",
+};
+
+/**
+ * Aciona uma área interna, com o prazo da documentação.
+ *
+ * O prazo sai da criticidade do caso — Urgente 4h, Alta 1 dia útil,
+ * Normal 2 dias úteis — e fica congelado no acionamento. Destino que não
+ * é área (o próprio cliente, por exemplo) usa a regra cadastrada dele.
+ */
+export async function acionarArea(entrada: {
+  protocol: string;
+  area: string;
+  tratativa: string;
+}): Promise<{ ok: true; movimento: CaseMovement } | Falha> {
+
+  const area = entrada.area.trim();
+  const tratativa = entrada.tratativa.trim();
+
+  if (!area) return { ok: false, erro: "Escolha a área que vai tratar o caso." };
+  if (tratativa.length < 8) {
+    return { ok: false, erro: "Diga o que a área precisa fazer — é o que ela vai ler primeiro." };
+  }
+
+  const quem = await quemGrava("AGENTE", MODULO);
+  if ("erro" in quem) return { ok: false, erro: quem.erro! };
+
+  try {
+    const caso = await quem.ctx.prisma.case.findUnique({
+      where: { protocol: entrada.protocol },
+      select: { id: true, priority: true },
+    });
+
+    if (!caso) return { ok: false, erro: `O caso ${entrada.protocol} não existe mais.` };
+
+    const aberta = await quem.ctx.prisma.caseMovement.findFirst({
+      where: { caseId: caso.id, returnedAt: null },
+      select: { destination: true },
+    });
+
+    if (aberta) {
+      return {
+        ok: false,
+        erro: `O caso ainda está com ${aberta.destination}. Registre o retorno antes de acionar outra área — dois relógios no mesmo caso não dizem quem está com a bola.`,
+      };
+    }
+
+    const prioridade = PRIORIDADE_DO_ENUM[caso.priority] ?? "Normal";
+
+    const [operacao, regra] = await Promise.all([
+      quem.ctx.prisma.operacaoConfig.findUnique({ where: { id: "unico" } }),
+      quem.ctx.prisma.movementRule.findFirst({ where: { destination: area, active: true } }),
+    ]);
+
+    const ehArea = AREAS_INTERNAS.some((a) => a.nome === area);
+    const horas = ehArea || !regra ? prazosDeAreaDoBanco(operacao)[prioridade] : regra.hours;
+
+    const criado = await quem.ctx.prisma.caseMovement.create({
+      data: {
+        caseId: caso.id,
+        destination: area,
+        reason: tratativa.slice(0, 2000),
+        actor: quem.nome,
+        startedAt: new Date(),
+        dueHours: horas,
+        prioridade,
+      },
+      include: { case: { select: { externalId: true, id: true } } },
+    });
+
+    updateTag(WORKSPACE_TAG);
+
+    return { ok: true, movimento: movimentoView(criado) };
+  } catch (erro) {
+    return falha(erro, "acionar área");
+  }
+}
+
+export async function registrarRetornoDaArea(entrada: {
+  id: string;
+  retorno: string;
+}): Promise<{ ok: true; movimento: CaseMovement } | Falha> {
+
+  const retorno = entrada.retorno.trim();
+
+  if (retorno.length < 8) {
+    return { ok: false, erro: "Registre o que a área fez — a solução ou o parecer técnico. É o que se valida com o cliente depois." };
+  }
+
+  const quem = await quemGrava("AGENTE", MODULO);
+  if ("erro" in quem) return { ok: false, erro: quem.erro! };
+
+  try {
+    const salvo = await quem.ctx.prisma.caseMovement.update({
+      where: { id: entrada.id },
+      data: { returnedAt: new Date(), outcome: retorno.slice(0, 4000) },
+      include: { case: { select: { externalId: true, id: true } } },
+    });
+
+    updateTag(WORKSPACE_TAG);
+
+    return { ok: true, movimento: movimentoView(salvo) };
+  } catch (erro) {
+    return falha(erro, "retorno da área");
+  }
+}
+
+export async function registrarEscalonamento(
+  id: string
+): Promise<{ ok: true; movimento: CaseMovement } | Falha> {
+
+  const quem = await quemGrava("AGENTE", MODULO);
+  if ("erro" in quem) return { ok: false, erro: quem.erro! };
+
+  try {
+    const salvo = await quem.ctx.prisma.caseMovement.update({
+      where: { id },
+      data: { escalonadoEm: new Date() },
+      include: { case: { select: { externalId: true, id: true } } },
+    });
+
+    updateTag(WORKSPACE_TAG);
+
+    return { ok: true, movimento: movimentoView(salvo) };
+  } catch (erro) {
+    return falha(erro, "escalonamento");
+  }
+}
+
+/** Apaga um acionamento feito por engano — com a resposta do servidor. */
+export async function apagarMovimento(
+  id: string
+): Promise<{ ok: true } | Falha> {
+
+  const quem = await quemGrava("AGENTE", MODULO);
+  if ("erro" in quem) return { ok: false, erro: quem.erro! };
+
+  try {
+    await quem.ctx.prisma.caseMovement.delete({ where: { id }, select: { id: true } });
+    updateTag(WORKSPACE_TAG);
+    return { ok: true };
+  } catch (erro) {
+    return falha(erro, "apagar acionamento");
+  }
+}
+
+export async function salvarPrazosDeArea(
+  entrada: PrazosDeArea
+): Promise<{ ok: true; prazos: PrazosDeArea } | Falha> {
+
+  const quem = await quemGrava("ADMIN");
+  if ("erro" in quem) return { ok: false, erro: quem.erro! };
+
+  const valores = [entrada.Urgente, entrada.Alta, entrada.Normal];
+
+  if (valores.some((n) => !Number.isInteger(n) || n <= 0 || n > 24 * 30)) {
+    return { ok: false, erro: "Cada prazo precisa ser um número inteiro de horas úteis, entre 1 e 720." };
+  }
+
+  if (!(entrada.Urgente <= entrada.Alta && entrada.Alta <= entrada.Normal)) {
+    return { ok: false, erro: "O prazo de Urgente não pode ser maior que o de Alta, nem o de Alta maior que o de Normal." };
+  }
+
+  try {
+    await quem.ctx.prisma.operacaoConfig.upsert({
+      where: { id: "unico" },
+      update: { prazoAreaUrgente: entrada.Urgente, prazoAreaAlta: entrada.Alta, prazoAreaNormal: entrada.Normal, updatedBy: quem.nome },
+      create: { id: "unico", prazoAreaUrgente: entrada.Urgente, prazoAreaAlta: entrada.Alta, prazoAreaNormal: entrada.Normal, updatedBy: quem.nome },
+    });
+
+    updateTag(WORKSPACE_TAG);
+
+    return { ok: true, prazos: entrada };
+  } catch (erro) {
+    return falha(erro, "prazos das áreas");
+  }
+}
+
+/* ============================================================
+   QUEM É ESTE CLIENTE — o Passo 2
+============================================================ */
+
+export interface RetratoDoCliente {
+  estabelecimento?: {
+    nome: string;
+    slug: string;
+    plano?: string;
+    situacao?: string;
+    fase: string;
+    responsavel?: string;
+    mrr?: number;
+    cidade?: string;
+    desde?: string;
+    portal?: string;
+    crisp?: string;
+    notas?: string;
+  };
+  outrasReclamacoes: { protocolo: string; titulo: string; status: string; dia: string; nota?: number }[];
+  redes: { protocolo: string; titulo: string; status: string; dia: string; canal: string }[];
+  nps: { nota: number; status: string; dia: string; comentario: string }[];
+  /** A fase quando não há estabelecimento vinculado — só pelo que o caso diz. */
+  faseSemCadastro?: string;
+}
+
+/**
+ * O retrato para a imersão: conta, fase e jornada de atendimento.
+ *
+ * "Localize a conta… Em qual fase o cliente está? (Implantação, uso
+ * ativo, solicitação de cancelamento)… Verifique se ele já abriu
+ * chamados, se passou por falhas de comunicação ou experiências
+ * negativas anteriores." Tudo o que a plataforma sabe, num lugar só.
+ */
+export async function retratoDoCliente(protocol: string): Promise<RetratoDoCliente | null> {
+
+  const ctx = await tryRole("LEITURA", MODULO);
+  if (!ctx) return null;
+
+  const caso = await ctx.prisma.case.findUnique({
+    where: { protocol },
+    select: {
+      id: true,
+      document: true,
+      email: true,
+      phone: true,
+      churnRisk: true,
+      establishment: true,
+    },
+  });
+
+  if (!caso) return null;
+
+  const est = caso.establishment;
+  const digitos = (caso.phone ?? "").replace(/\D/g, "");
+  const email = caso.email && !caso.email.includes("•") ? caso.email : null;
+
+  const vinculo: Prisma.CaseWhereInput[] = [];
+  if (est) vinculo.push({ establishmentId: est.id });
+  if (caso.document) vinculo.push({ document: caso.document });
+  if (email) vinculo.push({ email });
+  if (digitos.length >= 10) vinculo.push({ phone: { contains: digitos.slice(-8) } });
+
+  const vinculoNps: Prisma.NpsResponseWhereInput[] = [];
+  if (est) vinculoNps.push({ establishmentId: est.id });
+  if (email) vinculoNps.push({ email });
+
+  const [casos, nps] = await Promise.all([
+    vinculo.length === 0
+      ? Promise.resolve([])
+      : ctx.prisma.case.findMany({
+          where: { id: { not: caso.id }, OR: vinculo },
+          select: { protocol: true, title: true, status: true, publishedAt: true, score: true, evaluated: true, channel: true },
+          orderBy: { publishedAt: "desc" },
+          take: 20,
+        }),
+    vinculoNps.length === 0
+      ? Promise.resolve([])
+      : ctx.prisma.npsResponse.findMany({
+          where: { OR: vinculoNps },
+          select: { score: true, status: true, respondedAt: true, comment: true },
+          orderBy: { respondedAt: "desc" },
+          take: 10,
+        }),
+  ]);
+
+  const dia = (d: Date) => d.toISOString().slice(0, 10);
+
+  /* A fase do cliente, como a documentação pergunta. */
+  const desde = est?.startedAt ? dia(est.startedAt) : undefined;
+  const recente = desde ? Date.now() - Date.parse(`${desde}T00:00:00Z`) < 60 * 86_400_000 : false;
+
+  const fase = !est
+    ? caso.churnRisk
+      ? "Risco de cancelamento"
+      : "Sem cadastro vinculado"
+    : est.status === "Cancelado"
+      ? "Cancelado"
+      : caso.churnRisk || est.status === "Em risco"
+        ? "Risco de cancelamento"
+        : est.status === "Trial" || recente
+          ? "Implantação"
+          : "Uso ativo";
+
+  return {
+    estabelecimento: est
+      ? {
+          nome: est.name,
+          slug: est.slug,
+          plano: est.plan,
+          situacao: est.status,
+          fase,
+          responsavel: est.owner ?? undefined,
+          mrr: est.mrrCents === null ? undefined : est.mrrCents / 100,
+          cidade: [est.city, est.state].filter(Boolean).join("/") || undefined,
+          desde,
+          portal: linkDoPortal({ portalUrl: est.portalUrl ?? undefined, portalId: est.portalId ?? undefined }) || undefined,
+          crisp: est.crispUrl ?? undefined,
+          notas: est.notes ?? undefined,
+        }
+      : undefined,
+    faseSemCadastro: est ? undefined : fase,
+    outrasReclamacoes: casos
+      .filter((c) => c.channel === "RECLAME_AQUI")
+      .map((c) => ({
+        protocolo: c.protocol,
+        titulo: c.title,
+        status: c.status,
+        dia: dia(c.publishedAt),
+        nota: c.evaluated ? (c.score ?? undefined) : undefined,
+      })),
+    redes: casos
+      .filter((c) => c.channel !== "RECLAME_AQUI")
+      .map((c) => ({ protocolo: c.protocol, titulo: c.title, status: c.status, dia: dia(c.publishedAt), canal: c.channel })),
+    nps: nps.map((r) => ({
+      nota: r.score,
+      status: r.status,
+      dia: diaNaOperacao(r.respondedAt),
+      comentario: r.comment.slice(0, 160),
+    })),
+  };
+}
+
+/* ============================================================
+   RESPOSTA REPETIDA — a regra de ouro sem macros
+============================================================ */
+
+/**
+ * A resposta pública mais parecida com este texto, entre as publicadas.
+ *
+ * "Esqueça respostas padronizadas, mensagens prontas ou linguagem
+ * corporativa fria. Cada cliente vivenciou um problema único." Compara
+ * com as últimas 400 respostas publicadas.
+ */
+export async function respostaParecida(entrada: {
+  protocol: string;
+  texto: string;
+}): Promise<{ protocolo: string; titulo: string; percentual: number } | null> {
+
+  const ctx = await tryRole("LEITURA", MODULO);
+  if (!ctx || entrada.texto.trim().length < 80) return null;
+
+  const outras = await ctx.prisma.case.findMany({
+    where: {
+      protocol: { not: entrada.protocol },
+      publicResponse: { not: null },
+    },
+    select: { protocol: true, title: true, publicResponse: true },
+    orderBy: { publishedAt: "desc" },
+    take: 400,
+  });
+
+  let melhor: { protocolo: string; titulo: string; percentual: number } | null = null;
+
+  for (const o of outras) {
+    const texto = o.publicResponse ?? "";
+    if (!texto || texto === RESPOSTA_SINTETICA) continue;
+
+    const p = semelhanca(entrada.texto, texto);
+
+    if (!melhor || p > melhor.percentual) {
+      melhor = { protocolo: o.protocol, titulo: o.title, percentual: p };
+    }
+  }
+
+  return melhor && melhor.percentual >= LIMITE_DE_REPETICAO ? melhor : null;
 }

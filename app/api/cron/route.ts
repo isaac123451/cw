@@ -5,10 +5,7 @@ import {
 } from "@/lib/services/metricas.service";
 
 import { getApiCases } from "@/lib/api/source";
-import {
-  diaNaOperacao,
-  hojeNaOperacao,
-} from "@/lib/services/reputation.service";
+import { hojeNaOperacao } from "@/lib/services/reputation.service";
 
 import { revalidateTag } from "next/cache";
 
@@ -27,6 +24,7 @@ import {
 import { deveEncerrarSemRetorno } from "@/lib/services/nps.service";
 
 import { movementStatus } from "@/lib/services/movement.service";
+import { lerExpediente } from "@/lib/services/operacao.service";
 import { deliverWebhook } from "@/lib/services/webhook.service";
 
 import { limparDesafiosVelhos } from "@/lib/auth/two-factor";
@@ -424,21 +422,26 @@ async function avisarMovimentacoesAtrasadas(
     take: 200,
   });
 
+  const expediente = await lerExpediente(prisma);
+
   const atrasadas = pendentes
     .filter((item) => {
 
-      const estado = movementStatus({
-        id: item.id,
-        caseId: item.caseId,
-        destination: item.destination,
-        reason: item.reason,
-        actor: item.actor,
-        /* Movimentação aberta às 22h começou hoje, e não amanhã. */
-        startedAt: diaNaOperacao(item.startedAt),
-        dueHours: item.dueHours,
-        returnedAt: undefined,
-        outcome: undefined,
-      });
+      /* O instante do acionamento: o prazo das áreas é em horas úteis. */
+      const estado = movementStatus(
+        {
+          id: item.id,
+          caseId: item.caseId,
+          destination: item.destination,
+          reason: item.reason,
+          actor: item.actor,
+          startedAt: item.startedAt.toISOString(),
+          dueHours: item.dueHours,
+          returnedAt: undefined,
+          outcome: undefined,
+        },
+        { expediente }
+      );
 
       return estado.situation === "estourado";
     })

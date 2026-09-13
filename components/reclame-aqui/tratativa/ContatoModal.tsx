@@ -9,6 +9,7 @@ import Modal, { GhostButton, inputClass, textareaClass } from "@/components/shar
 import type { Case } from "@/lib/models/case";
 import {
   CANAIS_DE_CONTATO,
+  patchDoResumo,
   ROTULO_DO_RESULTADO,
   TIPOS_DE_CONTATO,
   tipoDeContato,
@@ -116,14 +117,7 @@ export default function ContatoModal({ item, tipoInicial, onClose, onSalvo }: Pr
         return;
       }
 
-      onSalvo({
-        primeiroContatoEm: r.resumo.primeiroContatoEm,
-        primeiroContatoCanal: r.resumo.primeiroContatoCanal,
-        primeiroContatoPor: r.resumo.primeiroContatoPor,
-        ultimoContatoEm: r.resumo.ultimoContatoEm,
-        ultimaRespostaEm: r.resumo.ultimaRespostaEm,
-        tentativasSemResposta: r.resumo.tentativasSemResposta,
-      });
+      onSalvo(patchDoResumo(r.resumo));
 
       /*
         O aviso diz o que o registro significou para o prazo.

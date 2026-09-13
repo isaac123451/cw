@@ -8,6 +8,7 @@ import { Loader2, PhoneCall, ShieldCheck, Trash2 } from "lucide-react";
 
 import { Case, CRITERIOS } from "@/lib/models/case";
 import {
+  patchDoResumo,
   ROTULO_DO_RESULTADO,
   tipoDeContato,
   type ContatoView,
@@ -96,14 +97,7 @@ export default function PrazoECriticidade({ data, aoMudarNoServidor }: Props) {
         return;
       }
 
-      const patch: Partial<Case> = {
-        primeiroContatoEm: r.resumo.primeiroContatoEm,
-        primeiroContatoCanal: r.resumo.primeiroContatoCanal,
-        primeiroContatoPor: r.resumo.primeiroContatoPor,
-        ultimoContatoEm: r.resumo.ultimoContatoEm,
-        ultimaRespostaEm: r.resumo.ultimaRespostaEm,
-        tentativasSemResposta: r.resumo.tentativasSemResposta,
-      };
+      const patch: Partial<Case> = patchDoResumo(r.resumo);
 
       setCases((prev) =>
         prev.map((c) => (c.protocol === data.protocol ? { ...c, ...patch } : c))

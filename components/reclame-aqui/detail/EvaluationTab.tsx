@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import {
   BadgeAlert,
@@ -12,16 +12,23 @@ import {
 } from "lucide-react";
 
 import { Case } from "@/lib/models/case";
+import { INICIO_DA_TRILHA } from "@/lib/models/trilha";
 
 import { useWorkflow } from "@/lib/context/WorkflowContext";
+import { descreverRegistro } from "@/lib/services/horasUteis";
+import { dadosSensiveis, resumoDosAchados } from "@/lib/services/lgpd";
 import { hojeNaOperacao } from "@/lib/services/reputation.service";
 
 import SurfaceCard from "@/components/shared/SurfaceCard";
 import MacroPicker from "@/components/reclame-aqui/detail/MacroPicker";
+import ConferenciaDaResposta from "@/components/reclame-aqui/tratativa/ConferenciaDaResposta";
+import { useTratativa } from "@/components/reclame-aqui/tratativa/TratativaProvider";
 
 interface Props {
   data: Case;
   onChange: (patch: Partial<Case>) => void;
+  /** O que a validação gravou no servidor, para o rascunho aberto acompanhar. */
+  aoMudarNoServidor?: (patch: Partial<Case>) => void;
 }
 
 const scores = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
@@ -184,13 +191,59 @@ function SituacaoPicker({
 export default function EvaluationTab({
   data,
   onChange,
+  aoMudarNoServidor,
 }: Props) {
 
+  const { abrirContato } = useTratativa();
+
   const [copiado, setCopiado] = useState(false);
+
+  /**
+   * O que falta conferir antes de copiar ou de marcar como publicada.
+   *
+   * Nenhum dos dois bloqueia: dado pessoal é detectado por padrão (um
+   * "0800" da própria empresa também acende) e a validação pode ter sido
+   * impossível — o cliente que não respondeu às cinco tentativas recebe a
+   * mensagem pública transparente sem validar nada. Mas o clique passa a
+   * ser uma decisão, e não um reflexo.
+   */
+  const [confirmando, setConfirmando] = useState<"copiar" | "publicar" | null>(null);
 
   const rascunho = (data.draftResponse ?? "").trim();
 
   const publicada = (data.publicResponse ?? "").trim();
+
+  const achados = useMemo(() => dadosSensiveis(rascunho), [rascunho]);
+
+  /* Reclamação anterior ao registro de contatos não tem validação para mostrar. */
+  const semValidacao = !data.validadoEm && data.createdAt >= INICIO_DA_TRILHA;
+
+  const pendencias = [
+    semValidacao ? "o cliente ainda não confirmou a solução (Passo 6)" : null,
+    achados.length > 0 ? `o texto tem ${resumoDosAchados(achados)}` : null,
+  ].filter((p): p is string => Boolean(p));
+
+  function copiar() {
+    navigator.clipboard?.writeText(rascunho).then(() => {
+      setCopiado(true);
+      setConfirmando(null);
+      setTimeout(() => setCopiado(false), 1800);
+    });
+  }
+
+  function publicar() {
+    onChange({
+      publicResponse:
+        publicada === ""
+          ? rascunho
+          : `${data.publicResponse}\n\n${rascunho}`,
+      draftResponse: undefined,
+      respondida: true,
+      /* A primeira publicação data a resposta; complementos não mudam a data. */
+      publicResponseAt: data.publicResponseAt ?? new Date().toISOString(),
+    });
+    setConfirmando(null);
+  }
 
   return (
     <div className="grid gap-5 lg:grid-cols-2">
@@ -217,32 +270,67 @@ export default function EvaluationTab({
           }
         >
 
+          {semValidacao && (
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-amber-50 px-3.5 py-2.5 text-xs leading-relaxed text-amber-900 ring-1 ring-inset ring-amber-100">
+              <span className="min-w-0 flex-1">
+                <strong>O Passo 6 vem antes:</strong> confirme com o cliente que tudo voltou a funcionar e só
+                depois publique. Sem a confirmação, a resposta pública promete o que ninguém conferiu.
+              </span>
+              <button
+                type="button"
+                onClick={() => abrirContato(data, "validacao", { aoSalvar: aoMudarNoServidor })}
+                className="shrink-0 rounded-lg bg-white px-2.5 py-1.5 font-medium text-amber-800 ring-1 ring-inset ring-amber-200 transition-colors hover:bg-amber-100"
+              >
+                Cliente confirmou a solução
+              </button>
+            </div>
+          )}
+
           <textarea
             value={data.draftResponse ?? ""}
             onChange={(e) =>
               onChange({ draftResponse: e.target.value })
             }
             rows={7}
-            placeholder="Escreva aqui a resposta antes de publicar no portal. Use as respostas prontas no botão acima."
+            placeholder="Comece pelo que só este caso tem: o nome, o problema que a pessoa viveu, o que foi feito. Sem dado pessoal e sem condição negociada."
             className="w-full resize-y rounded-xl border border-zinc-200 p-3 text-sm leading-relaxed outline-none transition-colors placeholder:text-zinc-400 focus:border-violet-400"
           />
+
+          <ConferenciaDaResposta texto={rascunho} protocol={data.protocol} achados={achados} />
+
+          {confirmando && pendencias.length > 0 && (
+            <div className="mt-3 rounded-xl bg-zinc-50 px-3.5 py-3 text-xs leading-relaxed text-zinc-700 ring-1 ring-inset ring-zinc-200">
+              <p>
+                {confirmando === "copiar" ? "Copiar mesmo assim?" : "Marcar como publicada mesmo assim?"}{" "}
+                {pendencias.join("; ").replace(/^./, (c) => c.toUpperCase())}.
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => (confirmando === "copiar" ? copiar() : publicar())}
+                  className="rounded-lg bg-zinc-800 px-3 py-1.5 font-medium text-white transition-colors hover:bg-zinc-900"
+                >
+                  {confirmando === "copiar" ? "Revisei, copiar" : "Publiquei assim"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmando(null)}
+                  className="rounded-lg px-3 py-1.5 font-medium text-zinc-600 ring-1 ring-inset ring-zinc-200 transition-colors hover:bg-white"
+                >
+                  Voltar ao texto
+                </button>
+              </div>
+            </div>
+          )}
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
 
             <button
               type="button"
               disabled={rascunho === ""}
-              onClick={() => {
-                navigator.clipboard
-                  ?.writeText(rascunho)
-                  .then(() => {
-                    setCopiado(true);
-                    setTimeout(
-                      () => setCopiado(false),
-                      1800
-                    );
-                  });
-              }}
+              onClick={() =>
+                achados.length > 0 ? setConfirmando("copiar") : copiar()
+              }
               className="flex h-9 items-center gap-1.5 rounded-xl px-3 text-xs font-medium text-zinc-600 ring-1 ring-inset ring-zinc-200 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {copiado ? (
@@ -269,13 +357,7 @@ export default function EvaluationTab({
               type="button"
               disabled={rascunho === ""}
               onClick={() =>
-                onChange({
-                  publicResponse:
-                    publicada === ""
-                      ? rascunho
-                      : `${data.publicResponse}\n\n${rascunho}`,
-                  draftResponse: undefined,
-                })
+                pendencias.length > 0 ? setConfirmando("publicar") : publicar()
               }
               className="flex h-9 items-center gap-1.5 rounded-xl bg-violet-800 px-3.5 text-xs font-medium text-white transition-colors hover:bg-violet-900 disabled:cursor-not-allowed disabled:opacity-40"
             >
@@ -287,9 +369,9 @@ export default function EvaluationTab({
 
           <p className="mt-2.5 text-xs leading-relaxed text-zinc-400">
             Copie, cole no Reclame Aqui e volte aqui para
-            marcar. Esta tela não publica no portal — quem
-            publica é você, e o registro só vale depois
-            disso.
+            marcar — depois, Salvar. Esta tela não publica no
+            portal: quem publica é você, e o registro só vale
+            depois disso.
           </p>
 
         </SurfaceCard>
@@ -304,17 +386,30 @@ export default function EvaluationTab({
           <textarea
             value={data.publicResponse ?? ""}
             onChange={(e) =>
-              onChange({ publicResponse: e.target.value })
+              onChange({
+                publicResponse: e.target.value,
+                respondida: e.target.value.trim() !== "",
+              })
             }
             rows={6}
             placeholder="Ainda sem resposta publicada."
             className="w-full resize-y rounded-xl border border-zinc-200 p-3 text-sm leading-relaxed outline-none transition-colors placeholder:text-zinc-400 focus:border-violet-400"
           />
 
+          {/*
+            A data é a da primeira publicação, e não a da última edição.
+
+            Mostrava `updatedAt` — que muda a cada etiqueta ou arrasto de
+            cartão. "Respondida em" dizia quando alguém mexeu no caso pela
+            última vez, e o lembrete de avaliação (dois dias depois da
+            resposta) não tinha de onde partir.
+          */}
           <p className="mt-3 text-xs leading-relaxed text-zinc-400">
             {publicada === ""
               ? "Sem resposta pública — este é o fator de maior peso no índice de resposta."
-              : `Respondida em ${data.updatedAt ?? data.createdAt}.`}
+              : data.publicResponseAt
+                ? `Respondida em ${descreverRegistro(data.publicResponseAt)}.`
+                : "Respondida — a data da publicação não foi registrada."}
           </p>
 
         </SurfaceCard>

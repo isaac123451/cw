@@ -27,10 +27,15 @@ import {
   EXPEDIENTE_PADRAO,
   type Expediente,
 } from "@/lib/services/horasUteis";
-import { expedienteDoBanco } from "@/lib/services/operacao.service";
+import {
+  expedienteDoBanco,
+  prazosDeAreaDoBanco,
+} from "@/lib/services/operacao.service";
 import {
   CaseMovement,
   MovementRule,
+  PRAZOS_DE_AREA_PADRAO,
+  type PrazosDeArea,
 } from "@/lib/models/movement";
 import { Establishment } from "@/lib/models/establishment";
 import {
@@ -132,6 +137,9 @@ export interface Workspace {
   /** O expediente que dá sentido a "hora útil" — ver horasUteis. */
   expediente: Expediente;
 
+  /** O prazo de retorno das áreas internas por criticidade. */
+  prazosDeArea: PrazosDeArea;
+
   /**
    * Este retrato veio do banco, ou é o vazio de emergência?
    *
@@ -205,6 +213,7 @@ const VAZIO: Workspace = {
   })),
   reputationGoals: {},
   expediente: EXPEDIENTE_PADRAO,
+  prazosDeArea: PRAZOS_DE_AREA_PADRAO,
   clientEnrichment: {},
   manualClients: [],
 };
@@ -485,10 +494,13 @@ async function carregarDoBanco(): Promise<Workspace | null> {
       destination: r.destination,
       reason: r.reason,
       actor: r.actor,
-      startedAt: dia(r.startedAt) as string,
+      /* O instante, e não o dia: o prazo das áreas é em horas úteis. */
+      startedAt: r.startedAt.toISOString(),
       dueHours: r.dueHours,
-      returnedAt: dia(r.returnedAt),
+      returnedAt: r.returnedAt?.toISOString(),
       outcome: r.outcome ?? undefined,
+      prioridade: r.prioridade ?? undefined,
+      escalonadoEm: r.escalonadoEm?.toISOString(),
     })),
 
     establishments: establishments.map((r) => ({
@@ -578,6 +590,7 @@ async function carregarDoBanco(): Promise<Workspace | null> {
     ),
 
     expediente: expedienteDoBanco(operacao),
+    prazosDeArea: prazosDeAreaDoBanco(operacao),
 
     /**
      * As duas metades saem da mesma tabela.
