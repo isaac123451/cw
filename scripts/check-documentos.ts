@@ -23,7 +23,9 @@ import {
   porqueDoContato,
   porqueDoTipoNps,
 } from "../lib/documentos/porques";
-import { blocosDoMarkdown, marcarTermo, textoPuro, trechosDaLinha, type Bloco } from "../lib/models/markdown";
+import { ATALHOS_DO_DOCUMENTO } from "../lib/documentos/atalhosDoDocumento";
+import { enderecoValido, normalizarEndereco } from "../lib/models/atalho";
+import { blocosDoMarkdown, dobrar, marcarTermo, textoPuro, trechosDaLinha, type Bloco } from "../lib/models/markdown";
 import { markdownDosPassos, secoesDoDocumento } from "../lib/models/playbook";
 
 let falhas = 0;
@@ -164,6 +166,29 @@ confere(
   [PORQUE_DO_PASSO_RA, PORQUE_DO_PASSO_NPS, PORQUE_DO_PASSO_REDES].flatMap((m) => Object.values(m)).filter((c) => !(c in PORQUES)),
   []
 );
+
+console.log("\n— Ferramentas e Acessos —");
+confere("as chaves dos atalhos não se repetem", new Set(ATALHOS_DO_DOCUMENTO.map((a) => a.chave)).size, ATALHOS_DO_DOCUMENTO.length);
+confere(
+  "todo endereço do documento é aceito",
+  ATALHOS_DO_DOCUMENTO.filter((a) => !enderecoValido(a.url)).map((a) => a.chave),
+  []
+);
+const ferramentasDoTexto = DOCUMENTOS_DO_TIME.find((d) => d.slug === "cintcw-ferramentas-e-acessos")!.conteudo;
+const tabelaDeFerramentas = blocosDoMarkdown(ferramentasDoTexto).find((b) => b.tipo === "tabela");
+const nomes = tabelaDeFerramentas && tabelaDeFerramentas.tipo === "tabela" ? tabelaDeFerramentas.linhas.map((l) => l[0]) : [];
+const semAtalho = nomes
+  .filter((n) => !/planilhas internas/i.test(n))
+  .flatMap((n) => n.split(" / "))
+  .filter((n) => !ATALHOS_DO_DOCUMENTO.some((a) => dobrar(a.nome).includes(dobrar(n.replace(/\s*\(.*\)$/, "")))));
+confere("cada ferramenta da tabela do documento tem o seu atalho", semAtalho, []);
+confere(
+  "endereço perigoso não passa",
+  ["javascript:alert(1)", "data:text/html,oi", "//site.com", "ftp://x.com"].map(enderecoValido),
+  [false, false, false, false]
+);
+confere("caminho da plataforma passa", enderecoValido("/relatorio"), true);
+confere("sem esquema ganha https", normalizarEndereco("www.hugme.com.br/login"), "https://www.hugme.com.br/login");
 
 console.log(falhas ? `\n${falhas} conferência(s) falharam.\n` : "\nTudo certo.\n");
 process.exit(falhas ? 1 : 0);

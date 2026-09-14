@@ -31,6 +31,33 @@ import { summarize } from "@/lib/services/nps.service";
 import { provedorDeIA } from "@/lib/services/ia.service";
 
 /**
+ * Os atalhos de Ferramentas e Acessos, para o popup.
+ *
+ * Só os ativos e com endereço — o que está "sem endereço" na página não
+ * tem para onde levar. O caminho da própria plataforma ("/relatorio")
+ * sai com o endereço dela na frente, porque o popup abre em aba nova.
+ * Sem a tabela (servidor com o cliente do banco antigo), o popup só não
+ * mostra o bloco.
+ */
+async function atalhosDoPopup(origem: string) {
+  const prisma = getPrisma();
+  if (!prisma) return [];
+  try {
+    const linhas = await prisma.atalho.findMany({
+      where: { ativo: true, NOT: { url: "" } },
+      orderBy: [{ ordem: "asc" }, { nome: "asc" }],
+      select: { chave: true, nome: true, url: true, grupo: true },
+    });
+    return linhas
+      .filter((a) => a.url.startsWith("/") || /^https?:\/\//i.test(a.url))
+      .map((a) => ({ chave: a.chave, nome: a.nome, grupo: a.grupo, url: a.url.startsWith("/") ? `${origem}${a.url}` : a.url }));
+  } catch (erro) {
+    console.error("[extensao/resumo] atalhos", erro);
+    return [];
+  }
+}
+
+/**
  * O NPS do mês corrido, para o popup.
  *
  * Consulta o Prisma direto pelo mesmo motivo de `contexto/route.ts`: a
@@ -157,6 +184,8 @@ export async function GET(request: Request) {
 
   const origem = new URL(request.url).origin;
 
+  const atalhos = await atalhosDoPopup(origem);
+
   return responder(request, {
     usuario: usuario
       ? { nome: usuario.nome, papel: usuario.papel }
@@ -195,6 +224,9 @@ export async function GET(request: Request) {
     })),
 
     nps,
+
+    /** Ferramentas e Acessos: os mesmos atalhos da página, só os com endereço. */
+    atalhos,
 
     /**
      * Os quatro números que o painel mostra — e que agora abrem lista.

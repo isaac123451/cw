@@ -197,6 +197,13 @@ const INTERNAS: Record<string, string[]> = {
    */
   RelatorioDoCiclo: ["*"],
 
+  /**
+   * Os atalhos de Ferramentas e Acessos: carga própria (`listarAtalhos`,
+   * em `lib/actions/atalhos.ts`) na página e no resumo da extensão —
+   * fora do workspace, que toda tela recebe.
+   */
+  Atalho: ["*"],
+
   /** Quem mudou o expediente por último — registro, não conteúdo. */
   OperacaoConfig: ["updatedBy"],
 };

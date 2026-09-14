@@ -232,6 +232,7 @@ async function main() {
     "/clientes",
     "/empresas",
     "/documentacao",
+    "/ferramentas",
     "/base-conhecimento",
     "/processos",
     "/projetos",

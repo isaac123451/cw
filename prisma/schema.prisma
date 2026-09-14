@@ -1130,6 +1130,33 @@ model Playbook {
   updatedAt     DateTime @updatedAt
 }
 
+/// Um atalho de "Ferramentas e Acessos": a ferramenta ou planilha do
+/// documento, com o endereço que a gestão configurar. A mesma lista
+/// aparece no popup da extensão. Nenhuma senha passa por aqui — só o
+/// endereço e o lembrete de acesso do documento.
+model Atalho {
+  id            String   @id @default(cuid())
+  /// "whatsapp-web", "hugme"… — estável: é por ela que a importação do
+  /// documento sabe o que já existe. Os criados à mão ganham uma do nome.
+  chave         String   @unique
+  nome          String
+  /// Vazio enquanto ninguém configurou (o documento diz "link fornecido
+  /// pela gestão"). Aceita http(s) ou um caminho da própria plataforma.
+  url           String   @default("")
+  /// "ferramenta" ou "planilha".
+  grupo         String   @default("ferramenta")
+  descricao     String   @default("")
+  /// O lembrete de acesso do documento — "não salvar senha no navegador".
+  acesso        String   @default("")
+  ordem         Int      @default(0)
+  ativo         Boolean  @default(true)
+  atualizadoPor String?
+  criadoEm      DateTime @default(now())
+  atualizadoEm  DateTime @updatedAt
+
+  @@index([ordem])
+}
+
 /// Resposta pronta inserida na réplica pública.
 model Macro {
   id       String @id @default(cuid())

@@ -9,6 +9,7 @@ import {
   BookOpenCheck,
   CalendarCheck2,
   FileBarChart,
+  KeyRound,
   LibraryBig,
   MessageSquareWarning,
   MessagesSquare,
@@ -161,6 +162,12 @@ export const menuItems: MenuItem[] = [
     title: "Documentação",
     href: "/documentacao",
     icon: BookOpenCheck,
+    group: "Conhecimento",
+  },
+  {
+    title: "Ferramentas e acessos",
+    href: "/ferramentas",
+    icon: KeyRound,
     group: "Conhecimento",
   },
   {

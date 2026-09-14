@@ -391,6 +391,22 @@
         text-decoration: none;
         cursor: pointer;
       }
+
+      /* Ferramentas e Acessos: os mesmos atalhos da página da plataforma. */
+      .atalhos { display: flex; flex-wrap: wrap; gap: 6px; }
+      .atalho {
+        border: 1px solid var(--borda);
+        border-radius: 999px;
+        padding: 5px 10px;
+        background: var(--superficie);
+        color: var(--texto);
+        font-size: 12px;
+        font-family: inherit;
+        cursor: pointer;
+      }
+      .atalho:hover { border-color: var(--violeta); color: var(--violeta); }
+      .atalho.planilha { border-style: dashed; }
+      .rotulo .todos { float: right; color: var(--violeta); cursor: pointer; font-weight: 600; text-transform: none; letter-spacing: 0; }
     </style>
   </head>
 

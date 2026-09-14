@@ -783,6 +783,40 @@ seu trecho e que todo passo das trilhas tem o seu — com uma sabotagem
 telas abrindo; conferido na tela no caso do Reclame Aqui (trilha e
 diálogo de pedir avaliação).
 
+**Fase 6, parte 3 — Ferramentas e Acessos, a um clique (0.57.0).**
+
+- **`/ferramentas`** (menu Conhecimento): as ferramentas e planilhas do
+  documento como cartões com "Abrir", o domínio à vista e o jeito certo
+  de entrar em cada uma; no topo, os lembretes de segurança do documento
+  (não salvar senha no navegador, acesso individual, portal pessoal e
+  intransferível, o celular do WhatsApp com a gestão), com o "por quê?".
+- **Importação com prévia** das 16 do documento — já importadas. Vêm com
+  endereço só as que o documento dá (portal, Central de Ajuda, Reclame
+  Aqui) e as públicas (WhatsApp Web, Gmail, Meet, Slack); HugMe, Wootric,
+  CW Engine, Meetime, o canal #incidentes e as três planilhas chegam
+  **sem endereço**, porque o documento diz "link fornecido pela gestão" —
+  o cartão oferece "Configurar o endereço". O relatório do ciclo aponta
+  para `/relatorio`.
+- **Editar atalhos**: edição no próprio cartão (nome, endereço, para que
+  serve, como acessar), subir/descer, esconder e excluir, cada um com
+  resposta do servidor. O endereço aceita só http(s) ou um caminho da
+  plataforma; "www.hugme.com.br" ganha o https sozinho.
+- **No popup da extensão**: o bloco "Ferramentas" com os mesmos atalhos
+  (só os com endereço), pelo `/api/extensao/resumo`, e o link "ver
+  acessos" para a página.
+- Tabela nova `Atalho` (RLS em 57 de 57).
+
+Provas: `check:documentos` ganhou a parte de Ferramentas e Acessos —
+cada ferramenta da tabela do documento tem o seu atalho, os endereços do
+documento são aceitos, `javascript:`, `data:` e `//site` não passam.
+`check:telas` com `/ferramentas`; `check:extensao` com o contrato de pé.
+Conferido na tela: importar, criar um atalho descartável (endereço sem
+https corrigido, `javascript:` barrado), subir, excluir (apagado).
+
+**Depende de você:** reiniciar o `npm run dev` (tabela nova), recarregar
+a extensão e preencher os endereços que só a gestão tem (HugMe, Wootric,
+CW Engine, Meetime, #incidentes e as planilhas).
+
 
 ### Excluir conta da plataforma (11/09/2026)
 

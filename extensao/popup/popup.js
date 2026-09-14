@@ -293,6 +293,26 @@ async function carregar() {
       </div>`);
   }
 
+  /*
+    Ferramentas e Acessos — os atalhos que a gestão configurou na página
+    da plataforma. Só vêm os que têm endereço; abrem em aba nova.
+  */
+  const atalhos = Array.isArray(dados.atalhos) ? dados.atalhos : [];
+  if (atalhos.length > 0) {
+    partes.push(`
+      <div class="bloco">
+        <p class="rotulo">Ferramentas <span class="todos" data-url="${escapar(`${base}/ferramentas`)}">ver acessos</span></p>
+        <div class="atalhos">
+          ${atalhos
+            .map(
+              (a) =>
+                `<button type="button" class="atalho ${a.grupo === "planilha" ? "planilha" : ""}" data-url="${escapar(a.url)}" title="${escapar(a.url)}">${escapar(a.nome)}</button>`
+            )
+            .join("")}
+        </div>
+      </div>`);
+  }
+
   partes.push(`
     <div class="bloco">
       <p class="rotulo">Buscar cliente</p>
@@ -313,6 +333,14 @@ async function carregar() {
     alerta.addEventListener("click", () =>
       abrir(alerta.dataset.url)
     );
+  }
+
+  for (const botao of conteudo.querySelectorAll(".atalho, .rotulo .todos")) {
+    botao.addEventListener("click", () => {
+      const url = botao.dataset.url ?? "";
+      /* Só http(s): o endereço vem do banco, e o popup não abre outra coisa. */
+      if (/^https?:\/\//i.test(url)) abrir(url);
+    });
   }
 
   // O bloco de NPS abre a tela da tratativa, que é onde se encerra.
