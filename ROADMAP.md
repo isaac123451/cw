@@ -877,6 +877,34 @@ excluir (apagada; 0 conversas no banco).
 
 **Depende de você:** reiniciar o `npm run dev` (tabelas novas).
 
+**Fase 7, parte 2 — "Guardar a conversa" na extensão (0.60.0).**
+
+- No painel do WhatsApp Web, ao lado do resumo: **"Guardar a conversa na
+  plataforma"**. Nada vai antes do segundo clique: o botão pergunta
+  quantas mensagens visíveis vão e avisa que dado bancário é omitido; o
+  "Guardar" manda; o painel mostra quantas entraram, quantas já estavam
+  e o link para abrir a conversa na plataforma.
+- **Guardar de novo acrescenta só as novas**, pelo id que o WhatsApp dá a
+  cada mensagem. A conversa é a do telefone (os oito últimos dígitos):
+  se já existe, as mensagens entram nela. O caso que o painel reconheceu
+  vira vínculo — só quando é um só, e só se a conversa ainda não tiver.
+- A extensão e o arquivo exportado se juntam sem repetir: guardar pela
+  extensão e depois importar o .txt da mesma conversa acrescentou só a
+  mensagem que faltava — inclusive a que tinha dado bancário (a prévia
+  agora compara também com o texto já omitido).
+- `/api/extensao/guardar-conversa`, com o papel do módulo "Conversas"
+  (somente leitura não guarda). O leitor do WhatsApp passou a devolver o
+  id, o carimbo com a data e o autor de cada mensagem.
+
+Provas: `check:conversas` (o carimbo nos dois formatos), `check:extensao`
+com o contrato de pé e `check:fiacao` com a rota nova. Conferido com um
+contato descartável: guardar pela rota da extensão (3 novas, 1 cartão
+omitido), guardar de novo com uma a mais (1 nova, 3 já estavam),
+importar o arquivo da mesma conversa (1 nova, 4 já estavam) e excluir
+(0 conversas no banco).
+
+**Depende de você:** recarregar a extensão em chrome://extensions.
+
 
 ### Excluir conta da plataforma (11/09/2026)
 

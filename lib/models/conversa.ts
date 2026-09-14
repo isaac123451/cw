@@ -212,9 +212,15 @@ export function assinatura(m: { de: string; em?: string | null; texto: string })
 
 /** O carimbo da extensão ("10:32, 14/09/2026") como instante de Brasília. */
 export function instanteDoCarimbo(carimbo?: string | null): string | null {
-  const m = String(carimbo ?? "").match(/(\d{1,2}):(\d{2})(?::\d{2})?,?\s+(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
-  if (!m) return null;
-  const [, h, min, d, mes, a] = m;
+  const texto = String(carimbo ?? "");
+  /* "10:32, 14/09/2026" (o WhatsApp Web em português) ou "14/09/2026, 10:32". */
+  const horaPrimeiro = texto.match(/(\d{1,2}):(\d{2})(?::\d{2})?,?\s+(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+  const dataPrimeiro = texto.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4}),?\s+(\d{1,2}):(\d{2})/);
+  let partes: [string, string, string, string, string] | null = null;
+  if (horaPrimeiro) partes = [horaPrimeiro[1], horaPrimeiro[2], horaPrimeiro[3], horaPrimeiro[4], horaPrimeiro[5]];
+  else if (dataPrimeiro) partes = [dataPrimeiro[4], dataPrimeiro[5], dataPrimeiro[1], dataPrimeiro[2], dataPrimeiro[3]];
+  if (!partes) return null;
+  const [h, min, d, mes, a] = partes;
   return instanteDe(`${ano(a)}-${mes.padStart(2, "0")}-${d.padStart(2, "0")}`, Number(h) * 60 + Number(min)).toISOString();
 }
 

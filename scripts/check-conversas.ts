@@ -105,6 +105,7 @@ const brasilia = (iso: string) => {
   confere("a chave do arquivo é estável", chaveDoConteudo(comuns[1]), chaveDoConteudo({ ...comuns[1] }));
   confere("outra mensagem, outra chave", chaveDoConteudo(comuns[1]) === chaveDoConteudo(comuns[4]), false);
   confere("carimbo inválido não inventa hora", instanteDoCarimbo("ontem"), null);
+  confere("carimbo com a data antes da hora", instanteDoCarimbo("14/09/2026, 10:32"), instanteDoCarimbo("10:32, 14/09/2026"));
 
   console.log(falhas ? `\n${falhas} conferência(s) falharam.\n` : "\nTudo certo.\n");
   process.exit(falhas ? 1 : 0);

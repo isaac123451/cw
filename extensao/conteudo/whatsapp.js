@@ -399,6 +399,14 @@
         de: deQuemE(linha),
         texto: texto.slice(0, 1200),
         hora: (carimbo.match(/\[([^\],]+)/)?.[1] ?? "").trim(),
+        /*
+          Para "Guardar a conversa": o id do WhatsApp (é por ele que
+          guardar de novo acrescenta só as novas), o carimbo inteiro
+          ("10:32, 14/09/2026" — a data vem junto) e o autor.
+        */
+        id,
+        carimbo: (carimbo.match(/\[([^\]]+)\]/)?.[1] ?? "").trim(),
+        autor: (carimbo.match(/\]\s*([^:]+):/)?.[1] ?? "").trim(),
         /** Linha com telefone no id é mensagem; sem, é aviso ou data. */
         parecemensagem: !id || id.includes("@"),
       });
@@ -420,7 +428,7 @@
       preferidas.length > 0 ? preferidas : brutas;
 
     const mensagens = usadas.map(
-      ({ de, texto, hora }) => ({ de, texto, hora })
+      ({ de, texto, hora, id, carimbo, autor }) => ({ de, texto, hora, id, carimbo, autor })
     );
 
     return {

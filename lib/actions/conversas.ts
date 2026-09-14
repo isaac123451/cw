@@ -12,7 +12,7 @@ import {
   somenteDigitosDoTelefone,
 } from "@/lib/services/conversas.service";
 
-import { assinatura, chaveDoConteudo, type ConversaResumo, type ConversaView, type MensagemRecebida } from "@/lib/models/conversa";
+import { assinatura, chaveDoConteudo, omitirDadosBancarios, type ConversaResumo, type ConversaView, type MensagemRecebida } from "@/lib/models/conversa";
 
 /**
  * Conversas do WhatsApp guardadas: a tela de conversas e a importação do
@@ -78,7 +78,13 @@ export async function previaDaGravacao(entrada: {
       const existentes = await ctx.prisma.mensagemDaConversa.findMany({ where: { conversaId: c.id }, select: { chave: true, de: true, em: true, texto: true } });
       const chaves = new Set(existentes.map((e) => e.chave));
       const assinaturas = new Set(existentes.map((e) => assinatura({ de: e.de, em: e.em?.toISOString(), texto: e.texto })));
-      const novas = entrada.mensagens.filter((m) => !chaves.has(m.chave || chaveDoConteudo(m)) && !assinaturas.has(assinatura(m))).length;
+      /* O gravado está sem o dado bancário: compara também com o texto já omitido, como a gravação faz. */
+      const novas = entrada.mensagens.filter(
+        (m) =>
+          !chaves.has(m.chave || chaveDoConteudo(m)) &&
+          !assinaturas.has(assinatura(m)) &&
+          !assinaturas.has(assinatura({ ...m, texto: omitirDadosBancarios(m.texto).texto }))
+      ).length;
       resultado.push({ id: c.id, contatoNome: c.contatoNome, telefone: c.telefone ?? undefined, mensagens: c._count.mensagens, novas });
     }
     return { ok: true, candidatas: resultado };

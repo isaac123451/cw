@@ -104,6 +104,13 @@
   let ultimoDado = null;
 
   /**
+   * "Guardar a conversa": null (o botão), { confirmar: n } (a pergunta,
+   * com quantas mensagens vão), "gravando", ou o resultado do servidor.
+   * Volta ao começo quando o contato muda.
+   */
+  let guardarConversa = null;
+
+  /**
    * Canal escolhido no rodapé: "todos", "reclame-aqui", "nps", "social".
    *
    * Entra na chave da consulta — trocar de aba tem de refazer a busca,
@@ -431,6 +438,16 @@
       }
       if (acao === "resumir") resumirConversa(alvo);
       if (acao === "resumir-caso") resumirCaso(alvo);
+
+      if (acao === "guardar-conversa") confirmarGuardarConversa();
+      if (acao === "guardar-conversa-sim") executarGuardarConversa();
+      if (acao === "guardar-conversa-nao") {
+        guardarConversa = null;
+        redesenharComResumo();
+      }
+      if (acao === "abrir-url" && /^https?:\/\//.test(alvo.dataset.url ?? "")) {
+        CW.enviar({ tipo: "abrir", url: alvo.dataset.url });
+      }
 
       if (acao === "resumir-pendencias") {
         resumirPendencias(alvo);
@@ -1342,6 +1359,9 @@
 
     // E o resumo da conversa anterior não descreve esta.
     resumo = null;
+
+    // Nem o "guardada" dela vale para esta.
+    guardarConversa = null;
 
     marcarSelo(null);
 
@@ -2400,8 +2420,118 @@
     else desenharResumo();
   }
 
-  /** O bloco do resumo, usado pelas duas telas que podem mostrá-lo. */
+  /** O bloco do resumo e o de guardar a conversa, nas telas que podem mostrá-los. */
   function blocoResumo() {
+    return blocoSoDoResumo() + blocoGuardarConversa();
+  }
+
+  /**
+   * "Guardar a conversa na plataforma."
+   *
+   * Três tempos, e nada vai antes do segundo clique: o botão; a pergunta,
+   * que diz quantas mensagens visíveis vão e que dado bancário é omitido;
+   * e o resultado do servidor — quantas entraram, quantas já estavam, e
+   * o link para abrir a conversa na plataforma. Guardar de novo leva só
+   * as mensagens novas, pelo id que o WhatsApp dá a cada uma.
+   */
+  function blocoGuardarConversa() {
+
+    if (!lerConversa) return "";
+
+    if (guardarConversa === "gravando") {
+      return '<div class="bloco"><p class="sub">Guardando a conversa…</p></div>';
+    }
+
+    if (guardarConversa?.confirmar) {
+      return [
+        '<div class="bloco">',
+        '  <div class="cartao">',
+        `    <p class="sub" style="margin:0 0 8px">Guardar as <strong>${guardarConversa.confirmar}</strong> mensagens visíveis desta conversa na plataforma? Dados bancários e de cartão são omitidos. Se ela já foi guardada, entram só as novas.</p>`,
+        '    <div class="linha" style="gap:6px;justify-content:flex-end">',
+        '      <button class="passo" data-acao="guardar-conversa-nao">cancelar</button>',
+        '      <button class="copiar" data-acao="guardar-conversa-sim">Guardar</button>',
+        '    </div>',
+        '  </div>',
+        '</div>',
+      ].join("");
+    }
+
+    if (guardarConversa?.id) {
+      const r = guardarConversa;
+      return [
+        '<div class="bloco">',
+        '  <div class="linha">',
+        `    <span class="sub"><span class="tag ok">guardada</span> ${r.novas} ${r.novas === 1 ? "mensagem nova" : "mensagens novas"}${r.repetidas ? ` · ${r.repetidas} já estavam` : ""}${r.omitidos ? ` · ${r.omitidos} dado(s) bancário(s) omitido(s)` : ""}</span>`,
+        `    <button class="passo" data-acao="abrir-url" data-url="${CW.escapar(r.url ?? "")}">abrir</button>`,
+        '  </div>',
+        '</div>',
+      ].join("");
+    }
+
+    return [
+      '<div class="bloco">',
+      '  <button class="passo" data-acao="guardar-conversa" style="width:100%;padding:7px">Guardar a conversa na plataforma</button>',
+      '</div>',
+    ].join("");
+  }
+
+  async function confirmarGuardarConversa() {
+
+    if (!lerConversa) return;
+
+    const leitura = lerConversa();
+    const mensagens = Array.isArray(leitura) ? leitura : (leitura?.mensagens ?? []);
+
+    if (mensagens.length === 0) {
+      avisar("Não consegui ler as mensagens desta conversa. Role a conversa para cima e tente de novo.", "atencao");
+      return;
+    }
+
+    guardarConversa = { confirmar: mensagens.length };
+    redesenharComResumo();
+  }
+
+  async function executarGuardarConversa() {
+
+    const leitura = lerConversa?.();
+    const mensagens = Array.isArray(leitura) ? leitura : (leitura?.mensagens ?? []);
+
+    guardarConversa = "gravando";
+    redesenharComResumo();
+
+    /*
+      O caso que o painel reconheceu vai como vínculo — só quando é um só:
+      com dois, escolher um seria chute, e o vínculo se faz na plataforma.
+    */
+    const casos = ultimoDado?.casos ?? [];
+
+    const resposta = await CW.enviar({
+      tipo: "guardarConversa",
+      corpo: {
+        contato: { nome: consulta?.nome, telefone: consulta?.telefone },
+        mensagens: mensagens.map((m) => ({ id: m.id, de: m.de, texto: m.texto, carimbo: m.carimbo, autor: m.autor })),
+        protocolo: casos.length === 1 ? casos[0].protocolo : undefined,
+      },
+    });
+
+    if (!resposta.ok || resposta.dados?.erro || !resposta.dados?.id) {
+      guardarConversa = null;
+      redesenharComResumo();
+      avisar(resposta.dados?.erro ?? resposta.erro ?? "A conversa não foi guardada.", "perigo");
+      return;
+    }
+
+    guardarConversa = resposta.dados;
+    redesenharComResumo();
+  }
+
+  /** Redesenha a tela atual, que é onde o bloco do resumo aparece. */
+  function redesenharComResumo() {
+    if (ultimoDado) render(ultimoDado);
+    else desenharResumo();
+  }
+
+  function blocoSoDoResumo() {
 
     if (!lerConversa) return "";
 

@@ -45,6 +45,7 @@ const CAMINHOS = {
   resumoCaso: "/api/extensao/resumo-caso",
   pendencias: "/api/extensao/pendencias",
   salvarDossie: "/api/extensao/salvar-dossie",
+  guardarConversa: "/api/extensao/guardar-conversa",
   whatsapp: "/api/extensao/whatsapp",
   respostas: "/api/extensao/respostas",
   raNovas: "/api/extensao/ra-novas",
@@ -857,6 +858,23 @@ async function tratar(mensagem) {
       CAMINHOS.conversa,
       {},
       mensagem.conversa ?? {}
+    );
+
+    return { ok: true, dados };
+  }
+
+  /**
+   * "Guardar a conversa" — só depois de a pessoa confirmar no painel.
+   *
+   * Leva as mensagens visíveis, cada uma com o id do WhatsApp; o
+   * servidor acrescenta só as que ainda não tinha. Sem cache: é escrita.
+   */
+  if (mensagem?.tipo === "guardarConversa") {
+
+    const dados = await chamar(
+      CAMINHOS.guardarConversa,
+      {},
+      mensagem.corpo ?? {}
     );
 
     return { ok: true, dados };
