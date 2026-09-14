@@ -100,6 +100,7 @@ export default function ImersaoModal({ item, onClose, onSalvo }: Props) {
   return (
     <Modal
       open
+      porque={item.source === "Reclame Aqui" ? "ra.imersao" : "redes.analise"}
       size="wide"
       title={`Quem é este cliente — ${item.protocol}`}
       description="Passo 2: conta, fase e jornada de atendimento, antes de qualquer mensagem."

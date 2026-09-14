@@ -102,6 +102,7 @@ export default function PedidoAvaliacaoModal({ item, onClose, onSalvo }: Props) 
   return (
     <Modal
       open
+      porque="ra.follow-up"
       title={`Pedir a avaliação — ${item.protocol}`}
       description={cadencia.ativo ? `${cadencia.resumo} Tom gentil, perguntando se o sistema continua rodando bem.` : cadencia.resumo}
       onClose={onClose}

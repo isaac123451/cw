@@ -19,6 +19,7 @@ import { descreverMinutos } from "@/components/rotina/formato";
 
 import type { useMeuDia } from "@/components/rotina/useMeuDia";
 
+import PorQue from "@/components/shared/PorQue";
 type MeuDia = ReturnType<typeof useMeuDia>;
 
 interface Props {
@@ -261,7 +262,10 @@ export default function RotinaDoDia({ dia, compacto = false, onConfigurar, rascu
 
       {!compacto && dia.continuas.length > 0 && (
         <div className="mt-5 border-t border-zinc-100 pt-4">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">Contínuas — conforme a demanda</p>
+          <div className="flex items-center gap-1">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">Contínuas — conforme a demanda</p>
+            <PorQue chave="rotina.prioridade" rotulo="prioridade" />
+          </div>
           <ul className="mt-2 flex flex-wrap gap-2">
             {dia.continuas.map((a) => (
               <li key={a.id}>

@@ -70,6 +70,7 @@ export default function ClassificarNpsModal({ item, onClose }: { item: NpsRespon
   return (
     <Modal
       open
+      porque="nps.tipos"
       size="wide"
       title="Classificar o feedback"
       description={`${segmentOf(item.score).label}, nota ${item.score}. O tipo decide o prazo, o que o guia pede e como o ciclo pode terminar.`}

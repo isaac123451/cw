@@ -78,6 +78,7 @@ export default function EncerrarNpsModal({ item, onClose }: { item: NpsResponseV
   return (
     <Modal
       open
+      porque="nps.checklist"
       size="wide"
       title="Encerrar o ciclo"
       description={item.kind ? `Os finais que o tipo ${item.kind} aceita.` : "Classifique o tipo primeiro — é ele que diz como o ciclo pode terminar."}

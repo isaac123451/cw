@@ -27,6 +27,7 @@ import ChipPrioridade from "./ChipPrioridade";
 import RelogioDoCaso, { quandoVence } from "./RelogioDoCaso";
 import { useTratativa } from "./TratativaProvider";
 
+import PorQue from "@/components/shared/PorQue";
 interface Props {
   data: Case;
   /**
@@ -117,7 +118,10 @@ export default function PrazoECriticidade({ data, aoMudarNoServidor }: Props) {
     <section className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
 
       <div className="flex items-start justify-between gap-3">
-        <h3 className="text-base font-semibold text-zinc-900">Criticidade e prazo</h3>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <h3 className="text-base font-semibold text-zinc-900">Criticidade e prazo</h3>
+          <PorQue chave={data.source === "Reclame Aqui" ? "ra.criticidade" : "redes.primeiro-contato"} />
+        </div>
         <button
           type="button"
           onClick={() => abrirTriagem(data, opcoes)}

@@ -165,6 +165,7 @@ export default function ConfigurarRotina({ atividades, onClose, onSalvo }: Props
   return (
     <Modal
       open
+      porque="rotina.diaria"
       size="xl"
       title="Configurar a rotina"
       description="A rotina do documento é o ponto de partida. Escolha uma atividade para ajustar dia, horário e duração, ou crie as que o time tem."

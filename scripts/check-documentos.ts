@@ -15,6 +15,14 @@ import {
   ORIGEM_DOS_DOCUMENTOS,
 } from "../lib/documentos/documentosDoTime";
 import { ORIGEM_DOS_DOCUMENTOS_DO_TIME, SLUGS_DOS_DOCUMENTOS_DO_TIME } from "../lib/documentos/indice";
+import {
+  PORQUE_DO_PASSO_NPS,
+  PORQUE_DO_PASSO_RA,
+  PORQUE_DO_PASSO_REDES,
+  PORQUES,
+  porqueDoContato,
+  porqueDoTipoNps,
+} from "../lib/documentos/porques";
 import { blocosDoMarkdown, marcarTermo, textoPuro, trechosDaLinha, type Bloco } from "../lib/models/markdown";
 import { markdownDosPassos, secoesDoDocumento } from "../lib/models/playbook";
 
@@ -136,6 +144,26 @@ confere(
   ["Etapas", "1. Receber", "2. Responder", "Regras da operação"]
 );
 confere("responsável e prazo em uma linha", convertido.includes("**Responsável:** Reputação · **Prazo:** 2h úteis"), true);
+
+console.log("\n— O \"por quê?\" aponta para um trecho que existe —");
+const secoesPorDoc = new Map(DOCUMENTOS_DO_TIME.map((d) => [d.slug, new Set(secoesDoDocumento(d.conteudo).map((s) => s.ancora))]));
+const quebrados = Object.entries(PORQUES)
+  .filter(([, p]) => !secoesPorDoc.get(p.doc)?.has(p.ancora))
+  .map(([chave, p]) => `${chave} → ${p.doc}#${p.ancora}`);
+confere(`as ${Object.keys(PORQUES).length} regras têm a seção no documento`, quebrados, []);
+confere(
+  "cada tipo do NPS abre o trecho do próprio tipo",
+  ["Reclamação", "Sugestão", "Elogio", "Engano", "Erro no Sistema", "Erro Processual", "Falta de Retorno"].map(porqueDoTipoNps),
+  ["nps.reclamacao", "nps.sugestao", "nps.elogio", "nps.engano", "nps.erro-no-sistema", "nps.erro-processual", "nps.falta-de-retorno"]
+);
+confere("tipo que o documento não tem cai no geral", porqueDoTipoNps("Outro"), "nps.tipos");
+confere("a tentativa do Reclame Aqui é a persistência do passo 4", porqueDoContato("tentativa", "ra"), "ra.persistencia");
+confere("a tentativa nas redes é a ausência de contato", porqueDoContato("tentativa", "redes"), "redes.sem-contato");
+confere(
+  "todo passo das trilhas tem um trecho",
+  [PORQUE_DO_PASSO_RA, PORQUE_DO_PASSO_NPS, PORQUE_DO_PASSO_REDES].flatMap((m) => Object.values(m)).filter((c) => !(c in PORQUES)),
+  []
+);
 
 console.log(falhas ? `\n${falhas} conferência(s) falharam.\n` : "\nTudo certo.\n");
 process.exit(falhas ? 1 : 0);

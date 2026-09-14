@@ -3,6 +3,9 @@
 import { ArrowRight, Check, CircleAlert, PartyPopper, PhoneOff, Route } from "lucide-react";
 
 import BotaoCopiar from "@/components/shared/BotaoCopiar";
+import PorQue from "@/components/shared/PorQue";
+
+import { PORQUE_DO_PASSO_NPS, porqueDoTipoNps } from "@/lib/documentos/porques";
 
 import type { NpsResponseView } from "@/lib/models/nps";
 import { mensagemDeReengajamento, type AcaoDoNps, type PassoDoNps } from "@/lib/models/trilhaNps";
@@ -125,7 +128,11 @@ export default function TrilhaDoNps({ item, passos, executar }: Props) {
               {atual.alerta && <CircleAlert size={12} />}
               Agora · passo {atual.numero}
             </p>
-            <p className="mt-0.5 text-sm font-semibold text-zinc-900">{atual.titulo}</p>
+            <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-sm font-semibold text-zinc-900">
+              {atual.titulo}
+              {/* O retorno segue o tipo do feedback: cada um tem o seu trecho no guia. */}
+              <PorQue chave={atual.id === "retorno" ? porqueDoTipoNps(item.kind) : PORQUE_DO_PASSO_NPS[atual.id]} />
+            </p>
             {atual.detalhe && <p className="mt-0.5 text-xs leading-relaxed text-zinc-600">{atual.detalhe}</p>}
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-2">

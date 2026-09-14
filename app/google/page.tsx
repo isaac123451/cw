@@ -28,6 +28,7 @@ import { aplicarAvaliacaoGoogle, retirarAvaliacaoGoogle, useAvaliacoesGoogle } f
 import { useSla } from "@/lib/context/SlaContext";
 import { useAgora } from "@/lib/hooks/useAgora";
 
+import PorQue from "@/components/shared/PorQue";
 type Filtro = "abertas" | "encerradas" | "todas";
 
 const TOM: Record<string, string> = {
@@ -167,18 +168,21 @@ export default function GooglePage() {
           title="Avaliações"
           description="Clique para responder, registrar a tratativa privada e encerrar."
           action={
-            <div className="flex shrink-0 rounded-xl border border-zinc-200 p-1">
-              {(["abertas", "encerradas", "todas"] as Filtro[]).map((f) => (
-                <button
-                  key={f}
-                  onClick={() => setFiltro(f)}
-                  className={`rounded-lg px-3 py-1.5 text-xs font-medium capitalize transition-colors ${
-                    filtro === f ? "bg-violet-700 text-white" : "text-zinc-600 hover:bg-zinc-100"
-                  }`}
-                >
-                  {f}
-                </button>
-              ))}
+            <div className="flex shrink-0 flex-wrap items-center gap-2">
+              <PorQue chave="google.classificacao" rotulo="como classificar" />
+              <div className="flex shrink-0 rounded-xl border border-zinc-200 p-1">
+                {(["abertas", "encerradas", "todas"] as Filtro[]).map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => setFiltro(f)}
+                    className={`rounded-lg px-3 py-1.5 text-xs font-medium capitalize transition-colors ${
+                      filtro === f ? "bg-violet-700 text-white" : "text-zinc-600 hover:bg-zinc-100"
+                    }`}
+                  >
+                    {f}
+                  </button>
+                ))}
+              </div>
             </div>
           }
           bodyClassName="p-0"

@@ -17,6 +17,7 @@ import { formatElapsed, ptBR, RA1000_MINIMO_DE_AVALIACOES, RA1000_TARGETS } from
 import { descreverRegistro } from "@/lib/services/horasUteis";
 import type { AbaDoRelatorio } from "@/lib/services/relatorio.service";
 
+import PorQue from "@/components/shared/PorQue";
 /** "01/09/25" — com o ano: a aba de 12 meses atravessa a virada. */
 const br = (d: string) => { const [a, m, dd] = d.split("-"); return `${dd}/${m}/${a.slice(2)}`; };
 
@@ -248,7 +249,7 @@ export default function RelatorioDoCiclo() {
         ))}
       </div>
 
-      <SurfaceCard title="Indicadores do Reclame Aqui" description={`Cada aba como o portal apura — meses fechados. Em vermelho, o que está abaixo da meta do RA1000. A próxima aba é a que vira vigente no dia 1º — é nela que o trabalho de hoje conta.`}>
+      <SurfaceCard title="Indicadores do Reclame Aqui" action={<PorQue chave="ra.indicadores" />} description={`Cada aba como o portal apura — meses fechados. Em vermelho, o que está abaixo da meta do RA1000. A próxima aba é a que vira vigente no dia 1º — é nela que o trabalho de hoje conta.`}>
         <div className="-mx-2 overflow-x-auto px-2">
           <table className="w-full min-w-[640px] text-sm tabular-nums">
             <thead>

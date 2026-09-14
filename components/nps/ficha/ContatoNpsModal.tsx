@@ -126,6 +126,7 @@ export default function ContatoNpsModal({
   return (
     <Modal
       open
+      porque="nps.segmentacao"
       title={modo === "contato" ? (primeiro ? "Registrar o 1º contato" : "Registrar o retorno") : "Registrar tentativa sem sucesso"}
       description={`${nomeDoCliente(item)} · ${segmento.label}, nota ${item.score}`}
       onClose={onClose}

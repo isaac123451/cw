@@ -153,6 +153,7 @@ export default function TratarAvaliacaoModal({ avaliacao: a, onClose, onSalvo, o
   return (
     <Modal
       open
+      porque="google.resposta"
       size="wide"
       title={`Avaliação de ${a.autor}`}
       description={`${ROTULO_DO_STATUS_GOOGLE[a.status]} · publicada em ${descreverRegistro(a.publicadaEm)} · registrada por ${a.registradaPor}`}

@@ -114,6 +114,7 @@ export default function TriagemModal({ item, onClose, onSalvo }: Props) {
   return (
     <Modal
       open
+      porque="ra.criticidade"
       size="wide"
       title={`Triar ${item.protocol}`}
       description="Passo 1 da documentação: classificar a criticidade antes do 1º contato. Os critérios sugerem o nível; você decide."

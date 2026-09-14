@@ -41,6 +41,7 @@ import { useAgora } from "@/lib/hooks/useAgora";
 import OfertaModal from "./OfertaModal";
 import RenegociacaoModal from "./RenegociacaoModal";
 
+import PorQue from "@/components/shared/PorQue";
 const TOM_DO_STATUS: Record<NegociacaoView["status"], string> = {
   proposta: "bg-sky-50 text-sky-700 ring-sky-100",
   aceita: "bg-emerald-50 text-emerald-700 ring-emerald-100",
@@ -178,7 +179,10 @@ export default function NegociacoesDoCaso({ data }: { data: Case }) {
     <section className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
 
       <div className="flex items-start justify-between gap-3">
-        <h3 className="text-base font-semibold text-zinc-900">Ofertas e negociações</h3>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <h3 className="text-base font-semibold text-zinc-900">Ofertas e negociações</h3>
+          <PorQue chave="ofertas.quando" />
+        </div>
       </div>
 
       <div className="mt-3 flex flex-wrap gap-2">

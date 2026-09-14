@@ -135,6 +135,7 @@ export default function AcionarAreaModal({ item, onClose, onSalvo }: Props) {
   return (
     <Modal
       open
+      porque="areas.prazos"
       size="wide"
       title={`Acionar área — ${item.protocol}`}
       description={`O modelo da documentação, pronto para ${CANAL_DE_INCIDENTES}. O relógio da área começa agora, com o prazo da criticidade do caso.`}

@@ -152,6 +152,7 @@ export default function RenegociacaoModal({ item, onClose, onSalvo }: Props) {
   return (
     <Modal
       open
+      porque="ofertas.calculo"
       size="wide"
       title={`Renegociação — ${item.protocol}`}
       description="Exceção máxima, sempre com autorização expressa da gestão. Trate como se esta opção não existisse na rotina."

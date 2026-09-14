@@ -97,6 +97,7 @@ export default function EncerrarRedesModal({ item, resultadoInicial, onClose, on
   return (
     <Modal
       open
+      porque="redes.registro"
       title={`Encerrar atendimento — ${item.protocol}`}
       description="O registro do documento: resultado final, solução aplicada e causa raiz."
       onClose={onClose}

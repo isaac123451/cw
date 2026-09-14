@@ -13,6 +13,9 @@ import {
 } from "lucide-react";
 
 import TextoEditavel, { CopiarOuEditar } from "@/components/shared/TextoEditavel";
+import PorQue from "@/components/shared/PorQue";
+
+import { PORQUE_DO_PASSO_RA } from "@/lib/documentos/porques";
 
 import type { Case } from "@/lib/models/case";
 import {
@@ -241,7 +244,10 @@ export default function TrilhaDoCaso({ data, aoMudarNoServidor, irParaResposta, 
             <p className="text-[11px] font-semibold uppercase tracking-wide text-violet-700">
               Agora · passo {atual.numero}
             </p>
-            <p className="mt-0.5 text-sm font-semibold text-zinc-900">{atual.titulo}</p>
+            <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-sm font-semibold text-zinc-900">
+              {atual.titulo}
+              {PORQUE_DO_PASSO_RA[atual.id] && <PorQue chave={PORQUE_DO_PASSO_RA[atual.id]} />}
+            </p>
             {atual.detalhe && <p className="mt-0.5 text-xs leading-relaxed text-zinc-600">{atual.detalhe}</p>}
             {atual.id === "pedir-avaliacao" && avaliacao?.ativo && (
               <p className={`mt-1 text-xs font-medium ${avaliacao.vencido ? "text-violet-800" : "text-zinc-500"}`}>

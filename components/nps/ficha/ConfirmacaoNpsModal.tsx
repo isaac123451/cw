@@ -85,6 +85,7 @@ export default function ConfirmacaoNpsModal({ item, onClose }: { item: NpsRespon
   return (
     <Modal
       open
+      porque="nps.checklist"
       title="Confirmação do cliente"
       description={confirmado ? `Confirmado em ${descreverRegistro(item.confirmedAt)}.` : "Sem a confirmação, o ciclo não encerra como resolvido."}
       onClose={onClose}

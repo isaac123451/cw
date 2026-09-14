@@ -11,6 +11,7 @@ import {
 
 import { respostaParecida } from "@/lib/actions/tratativa";
 
+import PorQue from "@/components/shared/PorQue";
 interface Props {
   texto: string;
   protocol: string;
@@ -67,7 +68,8 @@ export default function ConferenciaDaResposta({ texto, protocol, achados }: Prop
             <ShieldAlert size={14} className="mt-0.5 shrink-0 text-rose-600" />
             <span>
               Revise antes de publicar: {resumoDosAchados(achados)}. A resposta pública fica no ar para
-              qualquer pessoa e é indexada — dado pessoal e condição negociada ficam no canal privado.
+              qualquer pessoa e é indexada — dado pessoal e condição negociada ficam no canal privado.{" "}
+              <PorQue chave="ra.resposta-publica" />
             </span>
           </p>
           <p className="mt-2 max-h-40 overflow-y-auto whitespace-pre-wrap rounded-lg bg-white/80 px-3 py-2 text-zinc-700 ring-1 ring-inset ring-rose-100">
@@ -81,7 +83,8 @@ export default function ConferenciaDaResposta({ texto, protocol, achados }: Prop
           <Copy size={14} className="mt-0.5 shrink-0 text-amber-600" />
           <span>
             <strong>{repetida.percentual}% igual à resposta de {repetida.protocolo}</strong> ({repetida.titulo}).
-            A regra de ouro da documentação: sem mensagem pronta — comece pelo que só este caso tem.
+            A regra de ouro da documentação: sem mensagem pronta — comece pelo que só este caso tem.{" "}
+            <PorQue chave="ra.regra-de-ouro" />
           </span>
         </p>
       )}

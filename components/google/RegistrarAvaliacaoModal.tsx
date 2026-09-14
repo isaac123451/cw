@@ -94,6 +94,7 @@ export default function RegistrarAvaliacaoModal({ onClose, onSalvo }: Props) {
   return (
     <Modal
       open
+      porque="google.classificacao"
       title="Registrar avaliação do Google"
       description="Nota, data e link, como no perfil. A classificação e o prazo de resposta saem da tabela do documento."
       onClose={onClose}

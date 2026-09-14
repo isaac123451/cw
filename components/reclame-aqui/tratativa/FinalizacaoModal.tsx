@@ -79,6 +79,7 @@ export default function FinalizacaoModal({ item, onClose, onSalvo }: Props) {
   return (
     <Modal
       open
+      porque="ra.finalizacao"
       title={`Finalização — ${item.protocol}`}
       description="Os quatro passos que a documentação pede depois do retorno da área interna."
       onClose={onClose}

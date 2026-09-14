@@ -134,6 +134,7 @@ export default function OfertaModal({ item, onClose, onSalvo }: Props) {
   return (
     <Modal
       open
+      porque="ofertas.autonomia"
       size="wide"
       title={`Oferta — ${item.protocol}`}
       description="Estratégia de reversão, depois da condução do caso — nunca como primeira abordagem."

@@ -748,6 +748,41 @@ que fica texto e a busca sem acento. Conferido na tela: importar, abrir
 por link de seção, buscar, criar, editar e excluir um documento
 descartável (apagado).
 
+**Fase 6, parte 2 — o "por quê?" no lugar da regra (0.56.0).**
+
+- **`PorQue`** (`components/shared/PorQue.tsx`): um "por quê?" pequeno ao
+  lado da regra, que abre um balão com o trecho do documento e o link
+  "Ler no documento" (`/documentacao?doc=…#…`). O texto vem da
+  Documentação importada — quem editar o documento muda também o balão.
+  Sem os documentos importados, o balão diz onde importar; se a seção
+  mudar de nome, abre o documento inteiro.
+- **Onde aparece**: no passo da vez das trilhas do Reclame Aqui e do NPS
+  (no NPS, o retorno abre o trecho do tipo do feedback — Reclamação,
+  Erro no Sistema, Falta de Retorno…); em cada passo do fluxo das redes
+  e no alerta de crise; no cabeçalho dos diálogos de cada passo (triar,
+  imersão, contato — o trecho muda com o tipo e a frente —, acionar área,
+  finalização, pedir avaliação, oferta, renegociação, encerrar redes,
+  registrar e tratar avaliação do Google, classificar, contato,
+  confirmação e encerramento do NPS, configurar a rotina); em
+  Criticidade e prazo, Ofertas e negociações, na conferência da resposta
+  (dado pessoal e texto repetido — a regra de ouro), na rotina contínua
+  do Meu dia, nos indicadores do relatório e da análise do NPS e na lista
+  do Google.
+- `lib/documentos/porques.ts` é o mapa: 52 regras, cada uma com o
+  documento e a seção.
+
+O balão vai para o fim da página (portal) com posição fixa: dentro de um
+cartão com `overflow-hidden` ele era cortado, e dentro de um `<p>` o
+texto do documento seria HTML inválido. O Esc fecha o balão sem fechar o
+diálogo em que ele está.
+
+Provas: `check:documentos` confere que cada uma das 52 regras aponta para
+uma seção que existe no texto dos documentos, que cada tipo do NPS abre o
+seu trecho e que todo passo das trilhas tem o seu — com uma sabotagem
+(um endereço trocado) acendendo vermelho. `check:telas` com todas as
+telas abrindo; conferido na tela no caso do Reclame Aqui (trilha e
+diálogo de pedir avaliação).
+
 
 ### Excluir conta da plataforma (11/09/2026)
 

@@ -4,6 +4,10 @@ import { useEffect, useRef, ReactNode } from "react";
 
 import { GripHorizontal, X } from "lucide-react";
 
+import PorQue from "@/components/shared/PorQue";
+
+import type { ChaveDoPorQue } from "@/lib/documentos/porques";
+
 interface Props {
   open: boolean;
   title: string;
@@ -13,6 +17,8 @@ interface Props {
   footer?: ReactNode;
   /** Largura do painel. `wide` para formulários com duas colunas; `xl` para lista e detalhe lado a lado. */
   size?: "default" | "wide" | "xl";
+  /** O trecho do documento que explica este passo — o "por quê?" ao lado do título. */
+  porque?: ChaveDoPorQue;
 }
 
 export default function Modal({
@@ -23,6 +29,7 @@ export default function Modal({
   children,
   footer,
   size = "default",
+  porque,
 }: Props) {
 
   // Esc fecha e o fundo trava o scroll enquanto o painel está aberto.
@@ -124,10 +131,14 @@ export default function Modal({
 
           <div className="min-w-0">
 
-            <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight text-zinc-900">
-              <GripHorizontal size={15} className="hidden shrink-0 text-zinc-300 sm:block" aria-hidden />
-              {title}
-            </h2>
+            {/* O "por quê?" fica ao lado do título, fora dele: o nome do diálogo é só o título. */}
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight text-zinc-900">
+                <GripHorizontal size={15} className="hidden shrink-0 text-zinc-300 sm:block" aria-hidden />
+                {title}
+              </h2>
+              {porque && <PorQue chave={porque} />}
+            </div>
 
             {description && (
               <p className="mt-1 text-sm text-zinc-500">

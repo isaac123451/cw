@@ -28,6 +28,7 @@ import { registrarContato } from "@/lib/actions/tratativa";
 import { useSla } from "@/lib/context/SlaContext";
 import { useToast } from "@/lib/context/ToastContext";
 
+import { porqueDoContato } from "@/lib/documentos/porques";
 interface Props {
   item: Case;
   /** Abre já no tipo certo — "Fiz o 1º contato" chega como `contato`. */
@@ -154,6 +155,7 @@ export default function ContatoModal({ item, tipoInicial, onClose, onSalvo }: Pr
   return (
     <Modal
       open
+      porque={porqueDoContato(tipo, item.source === "Reclame Aqui" ? "ra" : "redes")}
       title={primeiro ? `Registrar o 1º contato — ${item.protocol}` : `Registrar contato — ${item.protocol}`}
       description={
         primeiro

@@ -49,6 +49,7 @@ import {
   trendByMonth,
 } from "@/lib/services/nps.service";
 
+import PorQue from "@/components/shared/PorQue";
 /** Janelas que a tela oferece, em meses. */
 const JANELAS = [
   { meses: 3, label: "3 meses" },
@@ -299,9 +300,12 @@ export default function NpsAnalisePage() {
             <section aria-labelledby="indicadores-do-guia" className="space-y-3">
 
               <div>
-                <h2 id="indicadores-do-guia" className="text-sm font-semibold text-zinc-800">
-                  Os indicadores do guia
-                </h2>
+                <div className="flex items-center gap-1.5">
+                  <h2 id="indicadores-do-guia" className="text-sm font-semibold text-zinc-800">
+                    Os indicadores do guia
+                  </h2>
+                  <PorQue chave="nps.indicadores" />
+                </div>
                 <p className="text-xs text-zinc-500">
                   A tabela do Guia de Encerramento do Ciclo do NPS, calculada sobre o mesmo recorte.
                 </p>

@@ -32,6 +32,9 @@ import { useMovements } from "@/lib/context/MovementsContext";
 import { useSla } from "@/lib/context/SlaContext";
 import { useToast } from "@/lib/context/ToastContext";
 
+import PorQue from "@/components/shared/PorQue";
+import { PORQUE_DO_PASSO_REDES } from "@/lib/documentos/porques";
+
 import { quandoVence } from "@/components/reclame-aqui/tratativa/RelogioDoCaso";
 import { useTratativa } from "@/components/reclame-aqui/tratativa/TratativaProvider";
 
@@ -233,7 +236,7 @@ export default function TrilhaDasRedes({ data, aoMudarNoServidor, irParaAreas, m
           <Siren size={15} className="mt-0.5 shrink-0 text-rose-600" />
           <span>
             <strong>Risco de exposição: {crise.map((s) => s.motivo).join("; ")}.</strong> O documento pede acionar a
-            liderança agora — e nenhuma resposta pública sem alinhamento prévio.
+            liderança agora — e nenhuma resposta pública sem alinhamento prévio. <PorQue chave="redes.crise" />
           </span>
         </p>
       )}
@@ -272,6 +275,7 @@ export default function TrilhaDasRedes({ data, aoMudarNoServidor, irParaAreas, m
             <p className={`flex items-center gap-1.5 text-xs font-semibold ${p.feito ? "text-emerald-800" : p === atual ? "text-violet-800" : "text-zinc-500"}`}>
               {p.feito ? <Check size={12} strokeWidth={3} /> : <span className="tabular-nums">{i + 1}</span>}
               {p.titulo}
+              {PORQUE_DO_PASSO_REDES[p.id] && <PorQue chave={PORQUE_DO_PASSO_REDES[p.id]} compacto className="-my-0.5 ml-auto" />}
             </p>
             <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-zinc-500">{p.detalhe}</p>
           </li>
