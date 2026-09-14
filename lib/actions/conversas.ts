@@ -2,15 +2,21 @@
 
 import { requireRole, SemPermissao, tryRole } from "@/lib/auth/guard";
 
+import { updateTag } from "next/cache";
+
+import { CASES_TAG } from "@/lib/actions/tags";
 import { pedirEstruturado } from "@/lib/services/ia.service";
 import {
   candidatas,
+  conversasDoRegistro,
   gravarMensagens,
   ler,
   listar,
   MAXIMO_DE_MENSAGENS,
   somenteDigitosDoTelefone,
+  type ConversaDoRegistro,
 } from "@/lib/services/conversas.service";
+import { gravarContato, problemaDoContato } from "@/lib/services/tratativa.service";
 
 import { assinatura, chaveDoConteudo, omitirDadosBancarios, type ConversaResumo, type ConversaView, type MensagemRecebida } from "@/lib/models/conversa";
 
@@ -246,6 +252,93 @@ export async function salvarResumo(id: string, resumo: string): Promise<{ ok: tr
   } catch (erro) {
     console.error("[conversas] salvar resumo", erro);
     return { ok: false, erro: "O banco não aceitou o resumo agora." };
+  }
+}
+
+/**
+ * A conversa marca o passo que ela prova, no caso ligado.
+ *
+ * "contato": o 1º contato, com a hora da nossa mensagem que teve
+ * resposta; "validacao": o cliente confirmou, com a hora da mensagem
+ * dele. Grava pelo mesmo caminho do "Registrar contato" da ficha — o
+ * relógio do caso e a trilha mudam juntos —, com a mensagem citada na
+ * anotação.
+ */
+export async function registrarEvidencia(entrada: {
+  conversaId: string;
+  mensagemId: string;
+  tipo: "contato" | "validacao";
+}): Promise<{ ok: true; protocolo: string } | Falha> {
+  const quem = await agente();
+  if ("erro" in quem) return { ok: false, erro: quem.erro! };
+  const prisma = quem.ctx.prisma;
+
+  try {
+    const conversa = await prisma.conversa.findUnique({
+      where: { id: entrada.conversaId },
+      select: { caseId: true, case: { select: { protocol: true, primeiroContatoEm: true, validadoEm: true } } },
+    });
+    if (!conversa) return { ok: false, erro: "Esta conversa não existe mais." };
+    if (!conversa.caseId || !conversa.case) return { ok: false, erro: "Vincule a conversa a um caso antes de marcar o passo." };
+    if (entrada.tipo === "contato" && conversa.case.primeiroContatoEm) return { ok: false, erro: "O caso já tem o 1º contato registrado." };
+    if (entrada.tipo === "validacao" && conversa.case.validadoEm) return { ok: false, erro: "O caso já tem a validação do cliente registrada." };
+
+    const msg = await prisma.mensagemDaConversa.findFirst({
+      where: { id: entrada.mensagemId, conversaId: entrada.conversaId },
+      select: { de: true, texto: true, em: true },
+    });
+    if (!msg) return { ok: false, erro: "A mensagem não existe mais nesta conversa." };
+    if (!msg.em) return { ok: false, erro: "Esta mensagem não tem a hora — registre o passo pela ficha do caso." };
+    if (entrada.tipo === "contato" && msg.de !== "nos") return { ok: false, erro: "O 1º contato é uma mensagem nossa." };
+    if (entrada.tipo === "validacao" && msg.de !== "cliente") return { ok: false, erro: "A validação é uma mensagem do cliente." };
+
+    const nota = `Pela conversa do WhatsApp guardada na plataforma: "${msg.texto.replace(/\s+/g, " ").slice(0, 300)}"`;
+    const entradaDoContato = { tipo: entrada.tipo, canal: "WhatsApp", resultado: "respondeu", em: msg.em.toISOString(), nota };
+    const problema = problemaDoContato(entradaDoContato);
+    if (problema) return { ok: false, erro: problema };
+
+    await gravarContato(prisma, { caseId: conversa.caseId, entrada: entradaDoContato, autorId: quem.ctx.userId, autorNome: await nomeDe(quem.ctx) });
+    updateTag(CASES_TAG);
+    return { ok: true, protocolo: conversa.case.protocol };
+  } catch (erro) {
+    console.error("[conversas] evidência", erro);
+    return { ok: false, erro: "O banco não aceitou o registro agora. Tente de novo em instantes." };
+  }
+}
+
+/** O que a conversa ligada a um caso prova, e o que o caso já tem — para a tela oferecer só o que falta. */
+export async function evidenciaDoCaso(conversaId: string): Promise<
+  { ok: true; caso: { protocolo: string; frente: string; primeiroContatoEm?: string; validadoEm?: string } | null } | Falha
+> {
+  const ctx = await tryRole("LEITURA", "conversas");
+  if (!ctx) return { ok: false, erro: "Sem sessão." };
+  const c = await ctx.prisma.conversa
+    .findUnique({ where: { id: conversaId }, select: { case: { select: { protocol: true, channel: true, primeiroContatoEm: true, validadoEm: true } } } })
+    .catch(() => null);
+  if (!c) return { ok: false, erro: "Esta conversa não existe mais." };
+  return {
+    ok: true,
+    caso: c.case
+      ? {
+          protocolo: c.case.protocol,
+          frente: c.case.channel === "RECLAME_AQUI" ? "Reclame Aqui" : "Redes Sociais",
+          primeiroContatoEm: c.case.primeiroContatoEm?.toISOString(),
+          validadoEm: c.case.validadoEm?.toISOString(),
+        }
+      : null,
+  };
+}
+
+/** As conversas guardadas de um caso ou de um ciclo de NPS — para a ficha e o pedido de avaliação. */
+export async function conversasGuardadasDe(alvo: { protocolo?: string; npsId?: string }): Promise<{ ok: true; conversas: ConversaDoRegistro[] } | Falha> {
+  const ctx = await tryRole("LEITURA", "conversas");
+  if (!ctx) return { ok: true, conversas: [] };
+  try {
+    const caso = alvo.protocolo ? await ctx.prisma.case.findUnique({ where: { protocol: alvo.protocolo }, select: { id: true } }) : null;
+    return { ok: true, conversas: await conversasDoRegistro(ctx.prisma, { caseId: caso?.id ?? null, npsResponseId: alvo.npsId ?? null }) };
+  } catch (erro) {
+    console.error("[conversas] do registro", erro);
+    return { ok: false, erro: "Não foi possível ler as conversas guardadas." };
   }
 }
 

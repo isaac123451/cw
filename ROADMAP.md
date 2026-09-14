@@ -905,6 +905,34 @@ importar o arquivo da mesma conversa (1 nova, 4 já estavam) e excluir
 
 **Depende de você:** recarregar a extensão em chrome://extensions.
 
+**Fase 7, parte 3 — a conversa como evidência (0.61.0).** Fecha a Fase 7.
+
+- **Marca os passos que ela prova**: com a conversa ligada a um caso
+  (Reclame Aqui ou redes), a seção "O que esta conversa prova" oferece
+  só o que o caso ainda não tem — o **1º contato** (a nossa primeira
+  mensagem que teve resposta; mensagem sem resposta é tentativa, não
+  contato) e a **validação** (a fala do cliente com "voltou",
+  "funcionou", "obrigado"…, depois de uma nossa). Qualquer balão pode ser
+  marcado à mão ("é a confirmação", "é o 1º contato"). Grava pelo mesmo
+  caminho do "Registrar contato" da ficha, com a hora da mensagem e o
+  trecho citado — o relógio e a trilha do caso mudam juntos.
+- **Gancho do pedido de avaliação**: no Passo 8, a última fala do
+  cliente na conversa guardada aparece com "Usar como gancho" ("Na nossa
+  conversa do dia 14/09 você comentou: … Segue tudo certo por aí?").
+- **Entra no dossiê**: o dossiê do caso (extensão) lê as conversas
+  guardadas do caso e do mesmo número — no texto e como peça ("Conversa
+  do WhatsApp", com o link). Sem caso e sem transcrição do Crisp, a
+  conversa guardada já basta para montar o dossiê.
+- **Na ficha**: o cartão "Conversas do WhatsApp" na lateral do caso e do
+  NPS, com a última fala do cliente e o link — some quando não há.
+
+Provas: `check:conversas` ganhou a evidência (o 1º contato é a mensagem
+com resposta, mensagem sem resposta não é contato, "funcionou" antes de
+qualquer mensagem nossa não é validação). Conferido com um caso
+descartável: ligar a conversa, registrar o 1º contato (08:30) e a
+validação (09:15) — as horas das mensagens —, e apagar o caso e a
+conversa depois.
+
 
 ### Excluir conta da plataforma (11/09/2026)
 

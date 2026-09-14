@@ -14,6 +14,7 @@ import {
   assinatura,
   chaveDoConteudo,
   contatoDoNomeDoArquivo,
+  evidenciaDaConversa,
   instanteDoCarimbo,
   lerExportDoWhatsApp,
   mensagensDoArquivo,
@@ -106,6 +107,18 @@ const brasilia = (iso: string) => {
   confere("outra mensagem, outra chave", chaveDoConteudo(comuns[1]) === chaveDoConteudo(comuns[4]), false);
   confere("carimbo inválido não inventa hora", instanteDoCarimbo("ontem"), null);
   confere("carimbo com a data antes da hora", instanteDoCarimbo("14/09/2026, 10:32"), instanteDoCarimbo("10:32, 14/09/2026"));
+
+  console.log("\n— A conversa como evidência —");
+  const lista = comuns.map((m, k) => ({ id: String(k), de: m.de, texto: m.texto, em: m.em ?? undefined, origem: "arquivo" as const }));
+  const ev = evidenciaDaConversa(lista);
+  confere("o 1º contato é a nossa mensagem que teve resposta", ev.primeiroContato?.texto, "Olá, Maria! Aqui é da Cardápio Web.");
+  confere("sem confirmação clara, não sugere validação", ev.validacaoSugerida, null);
+  const comConfirmacao = [...lista, { id: "9", de: "cliente" as const, texto: "Voltou sim, obrigada!", em: "2026-09-14T14:10:00.000Z", origem: "arquivo" as const }];
+  confere("\"voltou, obrigada\" depois de nós é a validação provável", evidenciaDaConversa(comConfirmacao).validacaoSugerida?.id, "9");
+  const soNos = lista.filter((m) => m.de !== "cliente");
+  confere("mensagem nossa sem resposta é tentativa, não 1º contato", evidenciaDaConversa(soNos).primeiroContato, null);
+  const clientePrimeiro = [{ id: "a", de: "cliente" as const, texto: "obrigado, funcionou", em: "2026-09-14T13:00:00.000Z", origem: "arquivo" as const }];
+  confere("\"funcionou\" antes de qualquer mensagem nossa não é validação", evidenciaDaConversa(clientePrimeiro).validacaoSugerida, null);
 
   console.log(falhas ? `\n${falhas} conferência(s) falharam.\n` : "\nTudo certo.\n");
   process.exit(falhas ? 1 : 0);

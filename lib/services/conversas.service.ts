@@ -147,6 +147,79 @@ export async function gravarMensagens(
 }
 
 /* ============================================================
+   AS CONVERSAS DE UM REGISTRO (caso, NPS) E DO DOSSIÊ
+============================================================ */
+
+export interface ConversaDoRegistro {
+  id: string;
+  contatoNome: string;
+  mensagens: number;
+  ultimaEm?: string;
+  /** A última mensagem do cliente — o gancho do pedido de avaliação. */
+  ultimaDoCliente?: { texto: string; em?: string };
+  resumo?: string;
+}
+
+/** As conversas guardadas ligadas a um caso ou a um ciclo de NPS. */
+export async function conversasDoRegistro(prisma: Db, alvo: { caseId?: string | null; npsResponseId?: string | null }): Promise<ConversaDoRegistro[]> {
+  const ou: object[] = [];
+  if (alvo.caseId) ou.push({ caseId: alvo.caseId });
+  if (alvo.npsResponseId) ou.push({ npsResponseId: alvo.npsResponseId });
+  if (ou.length === 0) return [];
+  const linhas = await prisma.conversa.findMany({
+    where: { OR: ou },
+    orderBy: { atualizadoEm: "desc" },
+    take: 5,
+    select: {
+      id: true,
+      contatoNome: true,
+      telefone: true,
+      resumo: true,
+      _count: { select: { mensagens: true } },
+      mensagens: { orderBy: [{ em: "desc" }, { criadoEm: "desc" }], take: 30, select: { de: true, texto: true, em: true } },
+    },
+  });
+  return linhas.map((c) => {
+    const ultimaDoCliente = c.mensagens.find((m) => m.de === "cliente");
+    return {
+      id: c.id,
+      contatoNome: c.contatoNome || (c.telefone ? `+${c.telefone}` : "Contato"),
+      mensagens: c._count.mensagens,
+      ultimaEm: c.mensagens[0]?.em?.toISOString(),
+      ultimaDoCliente: ultimaDoCliente ? { texto: ultimaDoCliente.texto.slice(0, 280), em: ultimaDoCliente.em?.toISOString() } : undefined,
+      resumo: c.resumo ?? undefined,
+    };
+  });
+}
+
+/**
+ * As conversas que entram no dossiê: as ligadas ao caso e, quando o
+ * painel sabe o telefone inteiro do WhatsApp, as do mesmo número. Cada
+ * uma com as últimas mensagens, na ordem em que aconteceram.
+ */
+export async function conversasParaODossie(prisma: Db, alvo: { caseId?: string | null; telefone?: string | null }) {
+  const ou: object[] = [];
+  if (alvo.caseId) ou.push({ caseId: alvo.caseId });
+  const fone = somenteDigitosDoTelefone(alvo.telefone);
+  if (fone) ou.push({ telefone: { endsWith: fone.slice(-8) } });
+  if (ou.length === 0) return [];
+  const linhas = await prisma.conversa.findMany({
+    where: { OR: ou },
+    orderBy: { atualizadoEm: "desc" },
+    take: 3,
+    select: {
+      id: true,
+      contatoNome: true,
+      resumo: true,
+      guardadaPor: true,
+      _count: { select: { mensagens: true } },
+      mensagens: { orderBy: [{ em: "desc" }, { criadoEm: "desc" }], take: 120, select: { de: true, texto: true, em: true } },
+    },
+  });
+  return linhas.map((c) => ({ ...c, mensagens: [...c.mensagens].reverse() }));
+}
+
+/* ============================================================
    LEITURA
 ============================================================ */
 

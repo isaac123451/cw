@@ -13,6 +13,8 @@ import { mensagemDePedidoDeAvaliacao } from "@/lib/models/mensagens";
 import { patchDoResumo } from "@/lib/models/tratativa";
 
 import { registrarContato } from "@/lib/actions/tratativa";
+import { useConversasGuardadas } from "@/components/conversas/ConversasGuardadas";
+import { descreverRegistro } from "@/lib/services/horasUteis";
 import { useSession } from "@/lib/context/SessionContext";
 import { useToast } from "@/lib/context/ToastContext";
 
@@ -52,6 +54,20 @@ export default function PedidoAvaliacaoModal({ item, onClose, onSalvo }: Props) 
   });
 
   const mensagem = editada ?? gerada;
+
+  /*
+    O gancho da conversa guardada: a última fala do cliente, com o dia.
+    A frase é sugestão — entra no campo de gancho, editável, só no clique.
+  */
+  const conversas = useConversasGuardadas({ protocolo: item.protocol });
+  const ultimaFala = conversas.find((c) => c.ultimaDoCliente)?.ultimaDoCliente;
+  const ganchoDaConversa = ultimaFala
+    ? {
+        texto: ultimaFala.texto.slice(0, 140),
+        quando: ultimaFala.em ? descreverRegistro(ultimaFala.em).split(" ")[0] : "",
+        frase: `Na nossa conversa${ultimaFala.em ? ` do dia ${descreverRegistro(ultimaFala.em).split(" ")[0]}` : ""} você comentou: "${ultimaFala.texto.slice(0, 120)}". Segue tudo certo por aí?`,
+      }
+    : null;
 
   const digitos = (item.phone ?? "").replace(/\D/g, "");
   const whatsapp = digitos.length >= 10 && !(item.phone ?? "").includes("•")
@@ -153,6 +169,25 @@ export default function PedidoAvaliacaoModal({ item, onClose, onSalvo }: Props) 
             A documentação usa contatos recentes com Suporte ou Implantação como gancho para chamar a atenção.
           </span>
         </label>
+
+        {/* A conversa guardada deste caso: a última fala do cliente é o gancho mais concreto que existe. */}
+        {ganchoDaConversa && gancho !== ganchoDaConversa.frase && (
+          <div className="flex flex-wrap items-start justify-between gap-2 rounded-xl bg-emerald-50/70 px-3.5 py-2.5 text-xs leading-5 text-emerald-900 ring-1 ring-inset ring-emerald-100">
+            <span className="min-w-0 flex-1">
+              <strong>Da conversa do WhatsApp guardada</strong> ({ganchoDaConversa.quando}): &ldquo;{ganchoDaConversa.texto}&rdquo;
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setGancho(ganchoDaConversa.frase);
+                setEditada(null);
+              }}
+              className="shrink-0 rounded-lg bg-white px-2.5 py-1 font-semibold text-emerald-800 ring-1 ring-inset ring-emerald-200 hover:bg-emerald-50"
+            >
+              Usar como gancho
+            </button>
+          </div>
+        )}
 
         <label className="block">
           <span className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">Mensagem</span>

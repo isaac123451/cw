@@ -10,7 +10,8 @@ import PageHeading from "@/components/shared/PageHeading";
 import { ConfirmDelete } from "@/components/shared/Modal";
 import { ErroDoServidor, RodapeDeSalvar } from "@/components/shared/Rodape";
 
-import Baloes from "@/components/conversas/Baloes";
+import Baloes, { type BalaoDaConversa } from "@/components/conversas/Baloes";
+import EvidenciaDaConversa, { useEvidencia } from "@/components/conversas/EvidenciaDaConversa";
 import ImportarConversa from "@/components/conversas/ImportarConversa";
 
 import { useToast } from "@/lib/context/ToastContext";
@@ -235,11 +236,44 @@ function DetalheDaConversa({
   onExcluir: () => void;
 }) {
   const fim = useRef<HTMLDivElement>(null);
+  const { caso, gravando, marcar } = useEvidencia(c);
 
   /* Abre no fim, como o WhatsApp: o que importa é a última mensagem. */
   useEffect(() => {
     fim.current?.scrollIntoView({ block: "end" });
   }, [c.id]);
+
+  /* Nossas mensagens que tiveram resposta depois: só elas podem ser o 1º contato. */
+  const comResposta = new Set<string>();
+  let clienteDepois = false;
+  for (let i = c.lista.length - 1; i >= 0; i--) {
+    const m = c.lista[i];
+    if (m.de === "cliente") clienteDepois = true;
+    else if (m.de === "nos" && clienteDepois && m.em) comResposta.add(m.id);
+  }
+
+  const acoes = caso
+    ? (m: BalaoDaConversa) => {
+        const msg = c.lista.find((x) => x.id === m.id);
+        if (!msg || !msg.em) return null;
+        const botao = "whitespace-nowrap rounded-lg px-2 py-1 text-[11px] font-medium ring-1 ring-inset disabled:opacity-50";
+        if (msg.de === "cliente" && !caso.validadoEm) {
+          return (
+            <button type="button" disabled={gravando === msg.id} onClick={() => marcar(msg, "validacao")} className={`${botao} bg-white text-emerald-700 ring-emerald-200 hover:bg-emerald-50`}>
+              é a confirmação
+            </button>
+          );
+        }
+        if (msg.de === "nos" && !caso.primeiroContatoEm && comResposta.has(msg.id)) {
+          return (
+            <button type="button" disabled={gravando === msg.id} onClick={() => marcar(msg, "contato")} className={`${botao} bg-white text-violet-700 ring-violet-200 hover:bg-violet-50`}>
+              é o 1º contato
+            </button>
+          );
+        }
+        return null;
+      }
+    : undefined;
 
   return (
     <article className="overflow-hidden rounded-3xl border border-zinc-200/80 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
@@ -257,10 +291,11 @@ function DetalheDaConversa({
       </header>
 
       <Vinculos conversa={c} onMudou={onMudou} />
+      <EvidenciaDaConversa conversa={c} caso={caso} gravando={gravando} marcar={marcar} />
       <Resumo conversa={c} onMudou={onMudou} />
 
       <div className="max-h-[60vh] overflow-y-auto bg-zinc-50/70 px-4 py-4">
-        <Baloes mensagens={c.lista} destaque={destaque} />
+        <Baloes mensagens={c.lista} destaque={destaque} acoes={acoes} />
         <div ref={fim} />
       </div>
     </article>

@@ -22,6 +22,7 @@ import { useTratativa } from "@/components/reclame-aqui/tratativa/TratativaProvi
 import { idExterno, idLabel, isSocial } from "@/lib/services/case.service";
 import { descreverRegistro } from "@/lib/services/horasUteis";
 import { eFinalDasRedes, etapaDasRedes } from "@/lib/models/redes";
+import ConversasGuardadas from "@/components/conversas/ConversasGuardadas";
 
 interface Props {
   data: Case;
@@ -124,6 +125,9 @@ export default function CaseSidebar({
 
   return (
     <div className="space-y-4">
+
+      {/* As conversas do WhatsApp guardadas deste caso — some quando não há. */}
+      <ConversasGuardadas protocolo={data.protocol} />
 
       {social ? (
         <Block title="Etapa">

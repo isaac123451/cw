@@ -20,6 +20,7 @@ import { checklist } from "@/lib/services/nps.service";
 import { descreverRegistro } from "@/lib/services/horasUteis";
 
 import { Rotulo } from "@/components/shared/Rodape";
+import ConversasGuardadas from "@/components/conversas/ConversasGuardadas";
 
 /**
  * A coluna da direita: quem é, como está classificado, o que falta.
@@ -110,6 +111,9 @@ export default function LateralDoNps({ item, classificar }: { item: NpsResponseV
 
   return (
     <aside className="min-w-0 space-y-5">
+
+      {/* As conversas do WhatsApp guardadas deste ciclo — some quando não há. */}
+      <ConversasGuardadas npsId={item.id} />
 
       <SurfaceCard title="Cliente e conta">
         <div className="space-y-3.5">

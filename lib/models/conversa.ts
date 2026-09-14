@@ -225,6 +225,49 @@ export function instanteDoCarimbo(carimbo?: string | null): string | null {
 }
 
 /* ============================================================
+   A CONVERSA COMO EVIDÊNCIA
+============================================================ */
+
+export interface EvidenciaDaConversa {
+  /**
+   * A nossa primeira mensagem que teve resposta do cliente depois — o
+   * 1º contato "de verdade" que o documento pede (conversa, não
+   * tentativa). Mensagem nossa sem resposta nenhuma depois é tentativa.
+   */
+  primeiroContato: MensagemView | null;
+  /**
+   * A confirmação provável: a última mensagem do cliente depois de uma
+   * nossa, com palavras de "voltou", "funcionou", "resolveu", "obrigado".
+   * É sugestão — quem decide que é a validação é a pessoa.
+   */
+  validacaoSugerida: MensagemView | null;
+}
+
+const PARECE_CONFIRMACAO = /\b(voltou|funcionou|funcionando|resolv|deu certo|tudo certo|normalizou|obrigad|valeu|perfeito|consegui)/i;
+
+export function evidenciaDaConversa(lista: MensagemView[]): EvidenciaDaConversa {
+  const comHora = lista.filter((m) => m.em && m.de !== "sistema");
+  let primeiroContato: MensagemView | null = null;
+  for (let i = 0; i < comHora.length; i++) {
+    if (comHora[i].de !== "nos") continue;
+    if (comHora.slice(i + 1).some((m) => m.de === "cliente")) {
+      primeiroContato = comHora[i];
+      break;
+    }
+  }
+
+  let validacaoSugerida: MensagemView | null = null;
+  for (let i = comHora.length - 1; i >= 0; i--) {
+    const m = comHora[i];
+    if (m.de !== "cliente" || !PARECE_CONFIRMACAO.test(m.texto)) continue;
+    if (comHora.slice(0, i).some((o) => o.de === "nos")) validacaoSugerida = m;
+    break;
+  }
+
+  return { primeiroContato, validacaoSugerida };
+}
+
+/* ============================================================
    O QUE NÃO SE GUARDA
 ============================================================ */
 

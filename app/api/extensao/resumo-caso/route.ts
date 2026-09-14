@@ -18,6 +18,8 @@ import {
 } from "@/lib/services/contato.service";
 import { pedirEstruturado } from "@/lib/services/ia.service";
 import { diaNaOperacao } from "@/lib/services/reputation.service";
+import { conversasParaODossie } from "@/lib/services/conversas.service";
+import { paredeDe } from "@/lib/services/horasUteis";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -222,18 +224,24 @@ export async function POST(request: Request) {
    * na transcrição e no contato. Sem caso **e** sem transcrição não há
    * o que resumir, e aí a recusa é honesta — não há material nenhum.
    */
-  if (!protocolo && !transcricao) {
+  const prisma = getPrisma();
+
+  /* Sem caso e sem transcrição, a conversa do WhatsApp guardada deste número ainda é material. */
+  const temConversaGuardada =
+    !protocolo && !transcricao && prisma && contato.telefone
+      ? (await conversasParaODossie(prisma, { telefone: contato.telefone }).catch(() => [])).length > 0
+      : false;
+
+  if (!protocolo && !transcricao && !temConversaGuardada) {
     return responder(
       request,
       {
-        erro: "Sem caso e sem transcrição não há o que resumir.",
-        dica: "Cole a transcrição do atendimento no Crisp, ou abra um caso deste cliente.",
+        erro: "Sem caso, sem transcrição e sem conversa guardada não há o que resumir.",
+        dica: "Guarde a conversa (botão no painel), cole a transcrição do Crisp, ou abra um caso deste cliente.",
       },
       400
     );
   }
-
-  const prisma = getPrisma();
 
   if (!prisma && protocolo) {
     return responder(
@@ -302,6 +310,37 @@ export async function POST(request: Request) {
 
   /* Movimentação tem hora: a das 22h é do dia em que aconteceu. */
   const dia = (d: Date) => diaNaOperacao(d);
+
+  /**
+   * As conversas do WhatsApp guardadas na plataforma (Fase 7).
+   *
+   * Entram no dossiê as ligadas a este caso e as do mesmo número, quando
+   * o painel sabe o telefone inteiro. É o que aconteceu no canal
+   * privado — o 1º contato, o que foi combinado, a confirmação —, e
+   * diferente da transcrição do Crisp, ela já está guardada: não precisa
+   * ser colada de novo.
+   */
+  const conversasGuardadas = prisma
+    ? await conversasParaODossie(prisma, { caseId: caso?.id ?? null, telefone: contato.telefone || null }).catch(() => [])
+    : [];
+
+  const hora = (d: Date | null) => {
+    if (!d) return "";
+    const { dia: diaDaParede, min } = paredeDe(d);
+    return `${diaDaParede.slice(8, 10)}/${diaDaParede.slice(5, 7)} ${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
+  };
+
+  const blocosDasConversas = conversasGuardadas.map((c) =>
+    [
+      `\n--- CONVERSA DO WHATSAPP GUARDADA NA PLATAFORMA (${c.contatoNome || "contato"}, ${c._count.mensagens} mensagens; as últimas ${c.mensagens.length} abaixo) ---`,
+      c.resumo ? `Resumo salvo: ${c.resumo}` : "",
+      ...c.mensagens.map((m) => `${hora(m.em)} ${m.de === "nos" ? "Nós" : m.de === "sistema" ? "Sistema" : "Cliente"}: ${m.texto.slice(0, 600)}`),
+      "--- fim da conversa ---",
+    ]
+      .filter(Boolean)
+      .join("\n")
+      .slice(0, 20_000)
+  );
 
   /**
    * O histórico do contato inteiro: NPS e os outros casos dele.
@@ -549,6 +588,8 @@ export async function POST(request: Request) {
     transcricao
       ? `\n--- TRANSCRIÇÃO DO ATENDIMENTO NO CRISP (arquivo importado pelo atendente) ---\n${transcricao}\n--- fim da transcrição ---`
       : "",
+
+    ...blocosDasConversas,
   ]
     .filter(Boolean)
     .join("\n");
@@ -696,6 +737,18 @@ export async function POST(request: Request) {
         entrada.arquivoDaTranscricao ?? ""
       ).slice(0, 200),
       trecho: `${transcricao.length.toLocaleString("pt-BR")} caracteres de atendimento, lidos para este dossiê. Não são guardados — ver a rota de salvar.`,
+    });
+  }
+
+  for (const c of conversasGuardadas) {
+    const ultima = c.mensagens[c.mensagens.length - 1];
+    const primeira = c.mensagens[0];
+    pecas.push({
+      tipo: "Conversa do WhatsApp",
+      origem: "WhatsApp (guardada na plataforma)",
+      quando: ultima?.em?.toISOString(),
+      autor: c.guardadaPor,
+      trecho: c.resumo?.slice(0, 400) || `${c._count.mensagens} mensagens${primeira?.em && ultima?.em ? `, de ${hora(primeira.em)} a ${hora(ultima.em)}` : ""}. Abrir em /conversas?id=${c.id}`,
     });
   }
 
