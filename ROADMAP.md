@@ -592,6 +592,70 @@ do checkpoint), com sabotagens acendendo vermelho. Conferido na tela
 numa sexta simulada; marcar e desmarcar gravando no banco, e o que o
 teste criou foi apagado depois.
 
+**A ficha do NPS, o Wootric e as telas que se usam (0.53.0).** Três
+pedidos do Isaac na mesma noite: a ficha do NPS "tão bonita e intuitiva"
+quanto a do Reclame Aqui e das redes; "quando um caso de nps é
+finalizado… precisa enviar como uma nota os detalhes do caso para a
+wootric e também finalizar por lá"; e, sobre o Configurar a rotina,
+"não faça telas deste tipo… usabilidade 0", com os textos gerados
+editáveis antes de copiar.
+
+- **O ciclo do NPS tem página própria** (`/nps/[id]`), no desenho das
+  outras frentes: a nota grande na cor do segmento, o relógio do 1º
+  contato, a **trilha do guia** (`lib/models/trilhaNps.ts`: segmento,
+  classificar com a causa quando o tipo pede, 1º contato no prazo,
+  retorno com a régua de humor, confirmação quando o tipo pede, ações
+  do promotor, status final) com o "Agora" e a ação na frente; a linha
+  do tempo dos contatos; a lateral com cliente e conta (telefone e
+  restaurante num Salvar só), classificação, checklist e origem; e o
+  cliente nas quatro frentes. O modal comprido saiu; os links antigos
+  (`?resposta=`) levam à página.
+- **O encerramento é conferido no servidor** (`motivoParaNaoEncerrar`):
+  só os finais que o tipo aceita; Resolvido com o checklist do guia —
+  que ganhou "solução ou retorno registrado"; Sem Retorno com as
+  tentativas do tipo em 7 dias (ou 30 dias sem resposta); Engano só com
+  o tipo. O quadro, que arrastava para qualquer coluna, também passa por
+  aí. Todas as gravações do NPS devolvem o que aconteceu, com a autoria
+  vinda da sessão.
+- **Encerrar devolve ao Wootric** (`lib/services/wootric.escrita.ts`): a
+  nota com os detalhes — como terminou, tipo, causa, contato no prazo,
+  tentativas, retorno, confirmação, retenção — e a resposta concluída
+  lá (o "Mark Complete"). A ficha mostra a prévia exata antes de
+  encerrar, o resultado depois e o botão Reenviar; reabrir desfaz a
+  conclusão lá; o cron manda o que ficou pendente. Veja `WOOTRIC_USUARIO`
+  em Variáveis de ambiente: sem ela, a nota fica pendente.
+- **Painéis sem desfoque e arrastáveis** pelo cabeçalho (todos os
+  diálogos). **Configurar a rotina** virou uma linha por atividade,
+  agrupada em diárias, semanais e contínuas, com o liga-desliga na
+  própria linha e os campos só da escolhida ao lado.
+- **Texto gerado é editável antes de copiar** (`TextoEditavel`): o
+  checkpoint do Slack, a pergunta de reengajamento, a mensagem pública
+  transparente, o aviso ao cliente, a mensagem ao gestor, o pedido ao
+  financeiro e a proposta de renegociação. "Voltar ao texto gerado"
+  desfaz.
+
+Achados no caminho: o cron encerrava "Falta de Retorno" com 3 tentativas
+(não lia o tipo; o guia pede 5); tentativas de **antes** de uma conversa
+contavam como falta de retorno, e o cron fecharia como Sem Retorno um
+ciclo em que o cliente tinha respondido; registrar um contato de
+acompanhamento sem marcar "resolveu" apagava a confirmação já dada; o
+chip dizia "vence em 0min" no fim de semana; o plano do dia mostrava a
+barra cheia num domingo sem nada a fazer; os tipos do Classificar não
+tinham nome acessível.
+
+Provas: `check:trilha-nps` (cada situação do guia, as travas de cada
+final, as tentativas depois da conversa, o prazo dito em palavras, a
+pergunta sem inventar nome), com cinco sabotagens acendendo vermelho.
+Conferido na tela com três ciclos descartáveis — classificar, tentar,
+retorno, pergunta enviada, confirmação, encerrar; e um "do Wootric" com
+id inexistente lá, para ver a devolução inteira sem tocar em resposta
+real: a nota ficou pendente pela falta do login e a conclusão chegou ao
+Wootric, que respondeu "The record could not be found" (a rota existe).
+Tudo apagado depois.
+
+**Depende de você:** `WOOTRIC_USUARIO` e `WOOTRIC_SENHA` no `.env` e na
+Vercel, e reiniciar o `npm run dev` (colunas novas no NPS).
+
 
 ### Excluir conta da plataforma (11/09/2026)
 
@@ -1573,6 +1637,28 @@ Key*. Começa com `sk-ant-`. É paga por uso, com valor pré-carregado.
 **O que ela destrava:** o perfil **Profundo** da tela de IA. Ele existe
 hoje, mas sem chave paga não vale a pena — o piso continua sendo a fila
 da camada gratuita.
+
+---
+
+### `WOOTRIC_USUARIO` e `WOOTRIC_SENHA` — **a nota do encerramento**
+
+**O que são:** o login (e-mail e senha) de um usuário do Wootric. Desde
+0.53.0, encerrar um ciclo do NPS manda ao Wootric uma nota com os
+detalhes do caso e marca a resposta como concluída. A conclusão vai com
+a chave de integração que já existe (`WOOTRIC_CLIENT_ID`/`SECRET`); a
+**nota não**: o Wootric responde *"Cannot create, update or delete notes
+when logged in with credentials"* — nota só com login de usuário
+(conferido em 13/09/2026, sem gravar nada lá).
+
+**Sem elas:** o ciclo encerra aqui, a resposta é concluída lá, e a ficha
+mostra "A nota precisa de um login de usuário do Wootric" com o botão
+Reenviar. Configuradas, o cron manda sozinho as notas que ficaram para
+trás (só dos encerramentos a partir de 14/09/2026 — os antigos não viram
+enxurrada de notas).
+
+**Qual conta:** de preferência uma conta do time só para isto (a nota
+aparece no Wootric com o e-mail dela). A senha é sua de digitar: vai no
+`.env` local e na Vercel, nos três ambientes.
 
 ---
 

@@ -22,6 +22,7 @@ import {
   NpsResponseView,
 } from "@/lib/models/nps";
 import { deveEncerrarSemRetorno } from "@/lib/services/nps.service";
+import { devolverEncerramentoAoWootric, pendentesNoWootric } from "@/lib/services/wootric.escrita";
 
 import { movementStatus } from "@/lib/services/movement.service";
 import { lerExpediente } from "@/lib/services/operacao.service";
@@ -148,7 +149,15 @@ export async function GET(request: Request) {
     wootric,
     metricasDeHoje,
   ] = await Promise.all([
-    protegida("nps", () => encerrarNpsAbandonado(prisma)),
+    /*
+      Depois de encerrar, o Wootric: o que fechou agora e o que a ficha
+      não conseguiu mandar antes. Em sequência, e não em paralelo — as
+      duas etapas lado a lado mandariam a mesma nota duas vezes.
+    */
+    protegida("nps", async () => ({
+      ...(await encerrarNpsAbandonado(prisma)),
+      wootric: await devolverPendentesAoWootric(prisma),
+    })),
     protegida("movimentacoes", () =>
       avisarMovimentacoesAtrasadas(prisma)
     ),
@@ -329,6 +338,23 @@ export const POST = GET;
  * rotina discordarem sobre o mesmo ciclo, e a operação descobriria isso
  * na forma de um registro que fecha sozinho e reabre no dia seguinte.
  */
+/**
+ * Os encerramentos que ainda não chegaram ao Wootric — os automáticos
+ * desta rodada e os que a ficha não conseguiu mandar. Vinte por rodada:
+ * cada um são duas chamadas, e o teto de lá é de cem por minuto.
+ */
+async function devolverPendentesAoWootric(
+  prisma: NonNullable<ReturnType<typeof getPrisma>>
+) {
+  const ids = await pendentesNoWootric(prisma, 20);
+  const estados: Record<string, number> = {};
+  for (const id of ids) {
+    const r = await devolverEncerramentoAoWootric(prisma, id, "rotina automática");
+    estados[r.estado] = (estados[r.estado] ?? 0) + 1;
+  }
+  return { tentados: ids.length, ...estados };
+}
+
 async function encerrarNpsAbandonado(
   prisma: NonNullable<ReturnType<typeof getPrisma>>
 ) {
@@ -349,6 +375,9 @@ async function encerrarNpsAbandonado(
       id: linha.id,
       vista: {
         status: linha.status,
+        /* Sem o tipo, a Falta de Retorno fechava com 3 tentativas — o guia pede 5. */
+        kind: linha.kind ?? undefined,
+        postContactAt: linha.postContactAt?.toISOString(),
         respondedAt: linha.respondedAt.toISOString(),
         confirmedAt:
           linha.confirmedAt?.toISOString(),

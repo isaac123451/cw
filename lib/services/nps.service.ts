@@ -98,10 +98,31 @@ export function slaState(
 }
 
 /**
+ * As tentativas que contam para "sem retorno": as dos últimos 7 dias,
+ * feitas depois da última conversa com o cliente.
+ *
+ * Tentativa de antes da conversa não é falta de retorno — o cliente
+ * respondeu. Contá-las fazia um ciclo em que já se falou com a pessoa
+ * (e se esperava a confirmação) aparecer como "3 tentativas sem
+ * resposta", e o encerramento automático o fecharia como Sem Retorno.
+ */
+export function tentativasNaJanela(
+  item: Pick<NpsResponseView, "attempts" | "postContactAt">,
+  agora = new Date()
+) {
+  const desde = item.postContactAt ? Date.parse(item.postContactAt) : 0;
+  return item.attempts.filter((a) => {
+    const t = Date.parse(a.createdAt);
+    return t > desde && (agora.getTime() - t) / 86400000 <= JANELA_TENTATIVAS_DIAS;
+  });
+}
+
+/**
  * Deve encerrar sozinho por falta de retorno?
  *
- * Duas portas, as duas do guia: três tentativas dentro da janela de 7
- * dias, ou 30 dias sem qualquer resposta do cliente.
+ * Duas portas, as duas do guia: as tentativas mínimas do tipo dentro da
+ * janela de 7 dias, ou 30 dias sem qualquer resposta do cliente —
+ * contados da pesquisa, ou da última conversa, se houve.
  */
 export function deveEncerrarSemRetorno(
   item: NpsResponseView,
@@ -116,9 +137,7 @@ export function deveEncerrarSemRetorno(
   // Cliente já confirmou algo — não é falta de retorno.
   if (item.confirmedAt) return { deve: false };
 
-  const naJanela = item.attempts.filter(
-    (a) => dias(a.createdAt) <= JANELA_TENTATIVAS_DIAS
-  );
+  const naJanela = tentativasNaJanela(item, agora);
 
   if (naJanela.length >= tentativasMinimas(item.kind)) {
     return {
@@ -127,7 +146,7 @@ export function deveEncerrarSemRetorno(
     };
   }
 
-  if (dias(item.respondedAt) >= ABANDONO_DIAS) {
+  if (dias(item.postContactAt ?? item.respondedAt) >= ABANDONO_DIAS) {
     return {
       deve: true,
       motivo: `${ABANDONO_DIAS} dias sem qualquer resposta.`,
@@ -135,6 +154,50 @@ export function deveEncerrarSemRetorno(
   }
 
   return { deve: false };
+}
+
+/**
+ * Por que este final ainda não pode ser aplicado — ou `null`, se pode.
+ *
+ * A mesma regra na ficha (o botão diz o que falta) e no servidor (a
+ * gravação recusa). Antes só a tela travava, e só o "Resolvido": o
+ * quadro e qualquer chamada direta encerravam sem lastro.
+ *
+ * - **Sem Retorno** pede o critério do guia: as tentativas mínimas do
+ *   tipo em 7 dias, ou 30 dias sem resposta.
+ * - **Engano** pede só o tipo: é controle interno.
+ * - Os outros finais pedem o checklist do guia — tipo, causa raiz quando
+ *   o tipo exige, o cliente contatado e, quando o tipo exige, a
+ *   confirmação de que resolveu.
+ */
+export function motivoParaNaoEncerrar(
+  item: NpsResponseView,
+  final: string,
+  tipos: NpsKindOption[] = TIPOS_PADRAO,
+  agora = new Date()
+): string | null {
+
+  if (!isEncerrado(final)) return null;
+
+  if (final === "[Encerrado] Sem tratativa") {
+    return "\"Sem tratativa\" é só do promotor que chega calado pela importação.";
+  }
+
+  if (!item.kind) return "Classifique o tipo antes de encerrar.";
+
+  if (/^\[Encerrado\]\s*Sem Retorno/i.test(final)) {
+    if (deveEncerrarSemRetorno(item, agora).deve) return null;
+    const feitas = tentativasNaJanela(item, agora).length;
+    return `O guia pede ${tentativasMinimas(item.kind)} tentativas em ${JANELA_TENTATIVAS_DIAS} dias sem resposta (ou ${ABANDONO_DIAS} dias sem retorno). Até agora: ${feitas}.`;
+  }
+
+  if (/^\[Encerrado\]\s*Engano/i.test(final)) return null;
+
+  const falta = checklist(item, tipos)
+    .filter((c) => c.obrigatorio && !c.ok)
+    .map((c) => c.label.toLowerCase());
+
+  return falta.length ? `Falta: ${falta.join("; ")}.` : null;
 }
 
 /* ============================================================
@@ -171,6 +234,10 @@ export function checklist(
    */
   const precisaCausa = Boolean(regra?.requiresRootCause);
 
+  /* Engano é controle interno; Falta de Retorno é justamente o contato que não aconteceu. */
+  const engano = item.kind === "Engano";
+  const faltaDeRetorno = item.kind === "Falta de Retorno";
+
   return [
     {
       label: "Segmento de NPS identificado",
@@ -191,7 +258,18 @@ export function checklist(
     {
       label: "Cliente contatado",
       ok: Boolean(item.firstContactAt),
-      obrigatorio: true,
+      obrigatorio: !engano,
+    },
+    {
+      /*
+        "A solução ou retorno foi registrado no sistema?" — item do
+        checklist do guia que faltava: sem ele, uma tentativa sem
+        resposta (que já conta como contato) bastava para encerrar
+        como resolvido.
+      */
+      label: "Solução ou retorno registrado",
+      ok: Boolean(item.postContactAt),
+      obrigatorio: !engano && !faltaDeRetorno,
     },
     {
       label: "Responsável definido",

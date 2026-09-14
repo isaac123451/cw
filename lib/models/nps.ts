@@ -654,6 +654,11 @@ export interface NpsResponseView {
 
   /** As anotações escritas aqui, com autor e data. */
   notes: NpsNoteView[];
+
+  /** O encerramento devolvido ao Wootric: a nota, a conclusão e o que foi recusado. */
+  wootricNotaEm?: string;
+  wootricConcluidoEm?: string;
+  wootricErro?: string;
 }
 
 export interface NpsNoteView {

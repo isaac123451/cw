@@ -249,7 +249,7 @@ export function montarJornadas(entrada: {
           titulo: `Nota ${r.score} no NPS${r.comment.trim() ? ` — “${trecho(r.comment)}”` : ""}`,
           detalhe: [r.kind, r.status.replace(/^\[Encerrado\]\s*/, "")].filter(Boolean).join(" · "),
           em: r.respondedAt,
-          href: `/nps?resposta=${r.id}`,
+          href: `/nps/${r.id}`,
           estado: r.churnRisk ? "risco" : isEncerrado(r.status) ? "resolvido" : "aberto",
         })),
         ...g.google.map((a): PontoDaJornada => ({

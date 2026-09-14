@@ -110,7 +110,7 @@ export default function NasQuatroFrentes({
         id: r.id,
         titulo: `Nota ${r.score}${r.comment.trim() ? ` — ${r.comment.trim()}` : ""} · ${nomeDoCliente(r)}`,
         em: r.respondedAt,
-        href: `/nps?resposta=${r.id}`,
+        href: `/nps/${r.id}`,
         aberto: !isEncerrado(r.status),
       })),
       google: google.map((a) => ({

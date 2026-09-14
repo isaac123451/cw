@@ -82,7 +82,11 @@ export default function RenegociacaoModal({ item, onClose, onSalvo }: Props) {
     return m ? `${br(m[1])} às ${m[2]}` : "[data e hora limite]";
   })();
 
-  const proposta = valido ? textoDaProposta({ nome: item.customer, plano, calculo: valido, validaAte: validadeTexto }) : "";
+  const calculada = valido ? textoDaProposta({ nome: item.customer, plano, calculo: valido, validaAte: validadeTexto }) : "";
+
+  /* A proposta calculada é o ponto de partida; o texto final é de quem manda ("se der para editar o texto, para digitar"). */
+  const [editada, setEditada] = useState<string | null>(null);
+  const proposta = editada ?? calculada;
 
   const nomeDoMes = doMes ? MESES[Number(doMes.mes.slice(5, 7)) - 1] : "";
 
@@ -257,11 +261,18 @@ export default function RenegociacaoModal({ item, onClose, onSalvo }: Props) {
         <div>
           <span className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">Proposta ao cliente</span>
           <textarea
-            readOnly
-            value={proposta || "Preencha as datas e o valor pago: a proposta do documento se monta aqui, com o cálculo e as condições."}
+            value={proposta}
+            onChange={(e) => setEditada(e.target.value)}
+            disabled={!calculada}
+            placeholder="Preencha as datas e o valor pago: a proposta do documento se monta aqui, com o cálculo e as condições."
             rows={20}
             className={`mt-1.5 font-mono text-xs ${textareaClass}`}
           />
+          {editada !== null && editada !== calculada && (
+            <button type="button" onClick={() => setEditada(null)} className="mt-1 text-xs font-medium text-violet-700 hover:underline">
+              Voltar à proposta calculada (se os valores mudaram ou a edição saiu errada)
+            </button>
+          )}
           <p className="mt-1.5 text-xs leading-relaxed text-zinc-500">
             Pix com os dados bancários que o cliente enviar — eles vão direto ao financeiro e não ficam na
             plataforma.

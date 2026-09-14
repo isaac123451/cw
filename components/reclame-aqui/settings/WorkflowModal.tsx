@@ -106,7 +106,7 @@ export default function WorkflowModal({
     <>
       <div
         onClick={onClose}
-        className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
+        className="fixed inset-0 z-40 bg-zinc-900/25"
       />
 
       {/*

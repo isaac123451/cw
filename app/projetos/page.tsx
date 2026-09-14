@@ -337,7 +337,7 @@ export default function ProjetosPage() {
                           */}
                           {item.origem?.startsWith("nps:") && (
                             <a
-                              href={`/nps?resposta=${encodeURIComponent(item.origem.slice(4))}`}
+                              href={`/nps/${encodeURIComponent(item.origem.slice(4))}`}
                               draggable={false}
                               className="mt-2 inline-block text-[11px] font-medium text-violet-700 hover:underline"
                             >

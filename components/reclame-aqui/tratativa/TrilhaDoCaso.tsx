@@ -12,7 +12,7 @@ import {
   Route,
 } from "lucide-react";
 
-import BotaoCopiar from "@/components/shared/BotaoCopiar";
+import TextoEditavel, { CopiarOuEditar } from "@/components/shared/TextoEditavel";
 
 import type { Case } from "@/lib/models/case";
 import {
@@ -299,14 +299,13 @@ export default function TrilhaDoCaso({ data, aoMudarNoServidor, irParaResposta, 
             <>
               <p className="font-medium">{cadencia.resumo}</p>
               {cadencia.esgotada && (
-                <div className="mt-2 space-y-2">
-                  <p className="rounded-lg bg-white/70 px-3 py-2 text-zinc-700 ring-1 ring-inset ring-amber-100">
-                    {mensagemPublicaTransparente({ nome: data.customer })}
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    <BotaoCopiar texto={mensagemPublicaTransparente({ nome: data.customer })} rotulo="Copiar a mensagem pública" className="bg-white" />
-                  </div>
-                </div>
+                <TextoEditavel
+                  gerado={mensagemPublicaTransparente({ nome: data.customer })}
+                  rotulo="Copiar a mensagem pública"
+                  linhasMinimas={3}
+                  className="mt-2"
+                />
+
               )}
             </>
           )}
@@ -324,7 +323,7 @@ export default function TrilhaDoCaso({ data, aoMudarNoServidor, irParaResposta, 
             </span>
           </p>
           <div className="flex shrink-0 gap-2">
-            <BotaoCopiar
+            <CopiarOuEditar
               texto={mensagemDeAtualizacao({
                 nome: data.customer,
                 area: aberta?.destination,

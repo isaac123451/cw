@@ -1,9 +1,7 @@
 "use client";
 
-import { MessageSquareText } from "lucide-react";
-
 import SurfaceCard from "@/components/shared/SurfaceCard";
-import BotaoCopiar from "@/components/shared/BotaoCopiar";
+import TextoEditavel from "@/components/shared/TextoEditavel";
 
 import type { ResumoDeOntem } from "@/lib/actions/rotina";
 import type { Contagem, PlanoDoDia } from "@/lib/models/meuDia";
@@ -80,13 +78,9 @@ export default function CheckpointDoDia(props: Parameters<typeof textoDoCheckpoi
   return (
     <SurfaceCard
       title="Checkpoint com a gestão"
-      description="Ontem, hoje e os riscos — contado no banco. Copie e cole no Slack; nada é enviado pela plataforma."
-      action={<BotaoCopiar texto={texto} rotulo="Copiar para o Slack" />}
+      description="Ontem, hoje e os riscos — contado no banco. Acrescente o que só você sabe, copie e cole no Slack; nada é enviado pela plataforma."
     >
-      <pre className="flex gap-2 whitespace-pre-wrap rounded-xl bg-zinc-50 px-3.5 py-3 font-sans text-[13px] leading-relaxed text-zinc-700 ring-1 ring-inset ring-zinc-200">
-        <MessageSquareText size={15} className="mt-0.5 shrink-0 text-zinc-400" />
-        <span className="min-w-0">{texto}</span>
-      </pre>
+      <TextoEditavel gerado={texto} rotulo="Copiar para o Slack" linhasMinimas={6} />
     </SurfaceCard>
   );
 }

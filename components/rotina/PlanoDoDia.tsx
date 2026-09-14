@@ -46,7 +46,11 @@ export default function PlanoDoDia({ plano, atividades }: { plano: Plano | null;
   }
 
   const sobra = plano.minutosDisponiveis - plano.minutosNecessarios;
-  const cheio = plano.minutosDisponiveis === 0 ? 100 : Math.min(100, Math.round((plano.minutosNecessarios / plano.minutosDisponiveis) * 100));
+  /* Sem expediente e sem nada a fazer (fim de semana), a barra fica vazia — e não cheia. */
+  const cheio =
+    plano.minutosDisponiveis === 0
+      ? plano.minutosNecessarios > 0 ? 100 : 0
+      : Math.min(100, Math.round((plano.minutosNecessarios / plano.minutosDisponiveis) * 100));
   const linkDe = (id: string) => atividades.find((a) => a.id === id)?.link;
 
   async function pedirLeitura() {

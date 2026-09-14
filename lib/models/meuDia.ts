@@ -175,7 +175,7 @@ export function contarRotina(
         frente: "nps" as const,
         titulo: `Nota ${r.score}${r.comment.trim() ? ` — ${r.comment.trim().slice(0, 60)}` : ""}`,
         detalhe: r.customerName || r.customer,
-        href: `/nps?resposta=${r.id}`,
+        href: `/nps/${r.id}`,
         atrasado: agora.getTime() > Date.parse(r.firstContactDueAt),
       })),
     ...dados.google
@@ -207,7 +207,7 @@ export function contarRotina(
         frente: "nps" as const,
         titulo: `Nota ${r.score} · ${r.kind ?? "sem tipo"}`,
         detalhe: r.customerName || r.customer,
-        href: `/nps?resposta=${r.id}`,
+        href: `/nps/${r.id}`,
       })),
     ...dados.google
       .filter((a) => a.status === "aberta" && a.respondidaEm && a.classificacao === "negativa")
@@ -248,7 +248,7 @@ export function contarRotina(
         frente: "nps" as const,
         titulo: `Nota ${r.score} · falta a confirmação do cliente`,
         detalhe: r.customerName || r.customer,
-        href: `/nps?resposta=${r.id}`,
+        href: `/nps/${r.id}`,
       })),
   ];
 
@@ -285,7 +285,7 @@ export function contarRotina(
       frente: "nps" as const,
       titulo: `Tentativa ${r.attempts.length + 1} de ${tentativasMinimas(r.kind)} · nota ${r.score}`,
       detalhe: r.customerName || r.customer,
-      href: `/nps?resposta=${r.id}`,
+      href: `/nps/${r.id}`,
     }));
   const ligacoes = [...(dados.ligacoes ?? []), ...ligacoesNps];
 
@@ -307,7 +307,7 @@ export function contarRotina(
         frente: "nps" as const,
         titulo: `Nota ${r.score} · checklist completo`,
         detalhe: `${r.customerName || r.customer} — pronto para encerrar`,
-        href: `/nps?resposta=${r.id}`,
+        href: `/nps/${r.id}`,
       })),
     ...dados.google
       .filter((a) => a.status === "aberta" && (a.tratativaResultado === "resolvido" || a.tratativaResultado === "sem-retorno"))

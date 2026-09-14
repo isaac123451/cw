@@ -14,11 +14,11 @@
  * já existia inteiro (os sete tipos, o SLA por segmento, as três
  * tentativas); o que faltava era a resposta chegar sozinha.
  *
- * **Só lê.** Puxa respostas e o contato de quem respondeu; não escreve
- * no Wootric, não dispara pesquisa, não altera nota. A tratativa —
- * humor pós-contato, causa raiz, encerramento — vive aqui e não volta
- * para lá. São dois papéis diferentes, e misturá-los criaria duas
- * verdades para manter sincronizadas.
+ * **Este arquivo só lê.** Puxa respostas e o contato de quem respondeu.
+ * A única escrita — o encerramento devolvido ao Wootric, com a nota dos
+ * detalhes e o "concluído" — mora em `wootric.escrita.ts`, pedida pelo
+ * Isaac em 13/09/2026. A tratativa continua vivendo aqui; o que vai para
+ * lá é o resumo dela, no fim.
  *
  * Documentação: https://docs.wootric.com/api/
  *
@@ -154,6 +154,10 @@ async function token(): Promise<string> {
 
   return cache.token;
 }
+
+/** Para a escrita (`wootric.escrita.ts`): a mesma região e o mesmo token de integração. */
+export const baseDoWootric = base;
+export const tokenDeIntegracao = token;
 
 /* ============================================================
    CHAMADA

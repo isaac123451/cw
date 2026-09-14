@@ -262,7 +262,7 @@ export async function aplicarPosContato(
 
   const atual = await prisma.npsResponse.findUnique({
     where: { id: input.id },
-    select: { firstContactAt: true, status: true },
+    select: { firstContactAt: true, status: true, confirmedAt: true },
   });
 
   if (!atual) return null;
@@ -276,8 +276,18 @@ export async function aplicarPosContato(
       postContactAt: agora,
       postContactBy: input.actor || null,
 
+      /*
+        "Resolveu" confirma; "não resolveu" desfaz; sem resposta, fica
+        como estava. Era `null` em qualquer caso que não fosse "sim" —
+        registrar um contato de acompanhamento sem marcar nada apagava a
+        confirmação que o cliente já tinha dado.
+      */
       confirmedAt:
-        input.resolved === true ? agora : null,
+        input.resolved === true
+          ? (atual.confirmedAt ?? agora)
+          : input.resolved === false
+            ? null
+            : atual.confirmedAt,
 
       /**
        * Registrar o pós-contato **é** ter falado com o cliente. Sem

@@ -53,9 +53,14 @@ export default function NpsNotas({
     if (texto.trim() === "" || gravando) return;
 
     setGravando(true);
-    await onAdd(texto.trim());
-    setGravando(false);
-    setTexto("");
+    try {
+      await onAdd(texto.trim());
+      setTexto("");
+    } catch {
+      /* O aviso do erro já saiu; o texto fica, para tentar de novo. */
+    } finally {
+      setGravando(false);
+    }
   }
 
   return (

@@ -11,7 +11,7 @@ import {
   Trash2,
 } from "lucide-react";
 
-import BotaoCopiar from "@/components/shared/BotaoCopiar";
+import { CopiarOuEditar } from "@/components/shared/TextoEditavel";
 import { ConfirmDelete } from "@/components/shared/Modal";
 
 import type { Case } from "@/lib/models/case";
@@ -378,7 +378,7 @@ export default function NegociacoesDoCaso({ data }: { data: Case }) {
 
                   {n.tipo === "renegociacao" && (n.status === "aceita" || n.status === "concluida") && (
                     <div className="mt-2">
-                      <BotaoCopiar
+                      <CopiarOuEditar
                         className="!px-2.5 !py-1.5 !text-xs bg-white"
                         rotulo="Copiar pedido ao financeiro"
                         texto={mensagemAoFinanceiro({

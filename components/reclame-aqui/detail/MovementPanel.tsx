@@ -40,7 +40,7 @@ import {
 } from "@/lib/services/horasUteis";
 
 import SurfaceCard from "@/components/shared/SurfaceCard";
-import BotaoCopiar from "@/components/shared/BotaoCopiar";
+import { CopiarOuEditar } from "@/components/shared/TextoEditavel";
 import { ConfirmDelete, textareaClass } from "@/components/shared/Modal";
 
 import { quandoVence } from "@/components/reclame-aqui/tratativa/RelogioDoCaso";
@@ -238,7 +238,7 @@ export default function MovementPanel({
                       <AlarmClock size={13} /> O prazo venceu: a documentação pede para escalonar ao gestor da área.
                     </p>
                     <div className="mt-2 flex flex-wrap gap-2">
-                      <BotaoCopiar
+                      <CopiarOuEditar
                         className="bg-white"
                         rotulo="Copiar mensagem ao gestor"
                         texto={mensagemDeEscalonamento({
@@ -272,7 +272,7 @@ export default function MovementPanel({
                 Não deixe o cliente no vácuo: avise que {aberta.destination} está analisando.
               </span>
               <span className="flex shrink-0 gap-2">
-                <BotaoCopiar
+                <CopiarOuEditar
                   className="bg-white !px-2.5 !py-1.5 !text-xs"
                   rotulo="Copiar aviso"
                   texto={mensagemDeAtualizacao({

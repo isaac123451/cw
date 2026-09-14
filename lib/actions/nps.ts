@@ -11,17 +11,24 @@ import type { Modulo } from "@/lib/auth/modules";
 import { CASES_TAG, WORKSPACE_TAG } from "@/lib/actions/tags";
 
 import {
+  CHANNELS,
+  ETAPAS_PADRAO,
+  isEncerrado,
   KINDS,
+  NpsKindOption,
   NpsResponseView,
+  NpsStageOption,
   moodOf,
   ROOT_CAUSES,
   RootCauseOption,
+  rotuloDeEtapa,
   segmentOf,
   STATUS_SEM_TRATATIVA,
+  TIPOS_PADRAO,
 } from "@/lib/models/nps";
 import { ProjectStage } from "@/lib/models/project";
 
-import { prazoPrimeiroContato } from "@/lib/services/nps.service";
+import { motivoParaNaoEncerrar, prazoPrimeiroContato } from "@/lib/services/nps.service";
 import { lerExpediente } from "@/lib/services/operacao.service";
 import {
   aplicarPosContato,
@@ -34,6 +41,11 @@ import {
 } from "@/lib/services/npsImport.service";
 
 import { temWootric } from "@/lib/services/wootric.service";
+import {
+  devolverEncerramentoAoWootric,
+  reabrirNoWootric,
+  type ResultadoNoWootric,
+} from "@/lib/services/wootric.escrita";
 
 /*
   A importação em si mora fora deste arquivo.
@@ -142,6 +154,9 @@ export async function listNpsResponses(): Promise<
     externalCompanyId: r.externalCompanyId ?? undefined,
     churnRisk: r.churnRisk,
     wootricNotes: r.wootricNotes,
+    wootricNotaEm: dia(r.wootricNotaEm),
+    wootricConcluidoEm: dia(r.wootricConcluidoEm),
+    wootricErro: r.wootricErro ?? undefined,
     notes: r.notes.map((n) => ({
       id: n.id,
       body: n.body,
@@ -363,13 +378,38 @@ export async function removeNpsRootCause(id: string) {
   return emUso;
 }
 
+/**
+ * Registra ou edita uma resposta.
+ *
+ * Devolve o que aconteceu — o id e se abriu revisão de processo —, e o
+ * erro em português. A tela só diz "salvo" depois desta resposta.
+ */
 export async function saveNpsResponse(
   input: NpsDraft
-) {
+): Promise<{ ok: true; id: string } | Falha> {
 
-  const ctx = await requireRole("AGENTE", MODULO);
+  if (!Number.isInteger(input.score) || input.score < 0 || input.score > 10) {
+    return { ok: false, erro: "A nota vai de 0 a 10." };
+  }
+  if (!input.customer?.trim()) return { ok: false, erro: "Diga quem respondeu." };
+  if (Number.isNaN(Date.parse(input.respondedAt))) return { ok: false, erro: "Data da resposta inválida." };
 
-  if (!ctx) return null;
+  const quem = await agente();
+  if ("erro" in quem) return { ok: false, erro: quem.erro! };
+
+  try {
+    const id = await gravarResposta(quem.ctx.prisma, input);
+    updateTag(WORKSPACE_TAG);
+    return { ok: true, id };
+  } catch (erro) {
+    console.error("[nps] salvar resposta", erro);
+    return { ok: false, erro: "O banco não aceitou a gravação agora. Tente de novo em instantes." };
+  }
+}
+
+async function gravarResposta(prisma: PrismaClient, input: NpsDraft) {
+
+  const ctx = { prisma };
 
   const respondedAt = new Date(input.respondedAt);
 
@@ -421,8 +461,6 @@ export async function saveNpsResponse(
     */
     await gerarRevisaoDeProcesso(ctx.prisma, input, input.id);
 
-    updateTag(WORKSPACE_TAG);
-
     return input.id;
   }
 
@@ -445,8 +483,6 @@ export async function saveNpsResponse(
     input,
     criado.id
   );
-
-  updateTag(WORKSPACE_TAG);
 
   return criado.id;
 }
@@ -502,44 +538,277 @@ async function gerarRevisaoDeProcesso(
   });
 }
 
+/** O nome de quem está logado, como a tela mostra — a autoria vem do servidor. */
+async function nomeDe(prisma: PrismaClient, userId: string) {
+  const u = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
+  return u?.name ?? "";
+}
+
+/**
+ * Uma tentativa de contato. A primeira é o 1º contato (ver o repositório).
+ *
+ * A autoria vem da sessão, e não da tela: a tela mandava o nome que
+ * tinha em memória, e uma aba aberta com outra conta assinava por ela.
+ */
 export async function registerNpsAttempt(input: {
   responseId: string;
   channel: string;
   note: string;
-  actor: string;
-}) {
+}): Promise<{ ok: true } | Falha> {
 
-  const ctx = await requireRole("AGENTE", MODULO);
+  const note = input.note.trim().slice(0, 1000);
+  if (!CHANNELS.includes(input.channel)) return { ok: false, erro: "Escolha o canal: e-mail, telefone ou WhatsApp." };
+  if (!note) return { ok: false, erro: "Diga o que aconteceu na tentativa." };
 
-  if (!ctx) return;
+  const quem = await agente();
+  if ("erro" in quem) return { ok: false, erro: quem.erro! };
 
-  await registrarTentativa(ctx.prisma, input);
+  try {
+    const existe = await quem.ctx.prisma.npsResponse.findUnique({ where: { id: input.responseId }, select: { status: true } });
+    if (!existe) return { ok: false, erro: "Esta resposta não existe mais." };
+    if (isEncerrado(existe.status)) return { ok: false, erro: "O ciclo já está encerrado." };
+
+    await registrarTentativa(quem.ctx.prisma, {
+      responseId: input.responseId,
+      channel: input.channel,
+      note,
+      actor: await nomeDe(quem.ctx.prisma, quem.ctx.userId),
+    });
+  } catch (erro) {
+    console.error("[nps] tentativa", erro);
+    return { ok: false, erro: "O banco não aceitou a gravação agora. Tente de novo em instantes." };
+  }
 
   updateTag(WORKSPACE_TAG);
+  return { ok: true };
 }
 
+/**
+ * Os tipos e as etapas cadastrados — ou os do guia, com o banco vazio.
+ * O servidor confere o encerramento com a mesma lista que a tela mostra.
+ */
+async function cadastroDoNps(prisma: PrismaClient) {
+  const [kinds, stages] = await Promise.all([prisma.npsKind.findMany(), prisma.npsStage.findMany()]);
+  const tipos: NpsKindOption[] = kinds.length
+    ? kinds.map((r) => ({
+        id: r.id,
+        name: r.name,
+        emoji: r.emoji,
+        color: r.color,
+        action: r.action,
+        requiresConfirmation: r.requiresConfirmation,
+        requiresRootCause: r.requiresRootCause,
+        opensProcessReview: r.opensProcessReview,
+        ownDeadlineHours: r.ownDeadlineHours ?? undefined,
+        order: r.order,
+        active: r.active,
+      }))
+    : TIPOS_PADRAO;
+  const etapas: NpsStageOption[] = stages.length
+    ? stages.map((r) => ({
+        id: r.id,
+        name: r.name,
+        description: r.description ?? undefined,
+        color: r.color,
+        order: r.order,
+        active: r.active,
+        final: r.final,
+        kinds: r.kinds,
+      }))
+    : ETAPAS_PADRAO;
+  return { tipos, etapas };
+}
+
+/**
+ * Move o ciclo de etapa — e encerra, quando a etapa é final.
+ *
+ * **O encerramento é conferido aqui.** Só a ficha travava, e só o
+ * "Resolvido"; o quadro e qualquer chamada direta encerravam sem lastro.
+ * Agora o final precisa ser um que o tipo aceita, e cumprir o que o
+ * guia pede para ele (`motivoParaNaoEncerrar`).
+ */
 export async function setNpsStatus(
   id: string,
   status: string,
   outcome?: string
-) {
+): Promise<{ ok: true; status: string; wootric?: ResultadoNoWootric; avisoDoWootric?: string } | Falha> {
 
-  const ctx = await requireRole("AGENTE", MODULO);
+  const quem = await agente();
+  if ("erro" in quem) return { ok: false, erro: quem.erro! };
+  const prisma = quem.ctx.prisma;
 
-  if (!ctx) return;
+  const encerrando = isEncerrado(status);
+  let estavaEncerrado = false;
 
-  const encerrando = status.startsWith("[Encerrado]");
+  try {
+    const { tipos, etapas } = await cadastroDoNps(prisma);
 
-  await ctx.prisma.npsResponse.update({
-    where: { id },
-    data: {
-      status,
-      outcome: outcome ?? (encerrando ? status : null),
-      closedAt: encerrando ? new Date() : null,
-    },
-  });
+    const etapa = etapas.find((e) => e.name === status && e.active);
+    if (!etapa && status !== STATUS_SEM_TRATATIVA) return { ok: false, erro: `A etapa "${status}" não está cadastrada.` };
+
+    const linha = await prisma.npsResponse.findUnique({
+      where: { id },
+      include: { attempts: { select: { id: true, channel: true, note: true, actor: true, createdAt: true } }, owner: { select: { name: true } } },
+    });
+    if (!linha) return { ok: false, erro: "Esta resposta não existe mais." };
+
+    estavaEncerrado = isEncerrado(linha.status);
+
+    if (encerrando) {
+      if (etapa && etapa.kinds.length > 0 && (!linha.kind || !etapa.kinds.includes(linha.kind))) {
+        return { ok: false, erro: `"${rotuloDeEtapa(status)}" não é um final do tipo ${linha.kind ? `"${linha.kind}"` : "— classifique o tipo antes"}.` };
+      }
+
+      const motivo = motivoParaNaoEncerrar(
+        {
+          ...linha,
+          respondedAt: linha.respondedAt.toISOString(),
+          firstContactDueAt: linha.firstContactDueAt.toISOString(),
+          firstContactAt: dia(linha.firstContactAt),
+          confirmedAt: dia(linha.confirmedAt),
+          postContactAt: dia(linha.postContactAt),
+          kind: linha.kind ?? undefined,
+          rootCause: linha.rootCause ?? undefined,
+          owner: linha.owner?.name ?? undefined,
+          attempts: linha.attempts.map((a) => ({ ...a, createdAt: a.createdAt.toISOString() })),
+        } as unknown as NpsResponseView,
+        status,
+        tipos
+      );
+      if (motivo) return { ok: false, erro: motivo };
+    }
+
+    await prisma.npsResponse.update({
+      where: { id },
+      data: {
+        status,
+        outcome: outcome?.trim() || (encerrando ? status : null),
+        closedAt: encerrando ? new Date() : null,
+      },
+    });
+  } catch (erro) {
+    console.error("[nps] etapa", erro);
+    return { ok: false, erro: "O banco não aceitou a gravação agora. Tente de novo em instantes." };
+  }
+
+  /*
+    Depois de gravado aqui, o Wootric: encerrar manda a nota com os
+    detalhes e conclui a resposta lá; reabrir desfaz a conclusão. Uma
+    falha lá não desfaz o que foi gravado — volta como aviso.
+  */
+  let wootric: ResultadoNoWootric | undefined;
+  let avisoDoWootric: string | undefined;
+
+  if (encerrando) {
+    wootric = await devolverEncerramentoAoWootric(prisma, id, await nomeDe(prisma, quem.ctx.userId)).catch((e) => {
+      console.error("[nps] devolver ao Wootric", e);
+      return {
+        estado: "pendente" as const,
+        nota: "falhou" as const,
+        concluido: "falhou" as const,
+        erro: "Não deu para falar com o Wootric agora.",
+      };
+    });
+  } else if (estavaEncerrado) {
+    avisoDoWootric = await reabrirNoWootric(prisma, id).catch(() => "Não deu para reabrir no Wootric.");
+  }
 
   updateTag(WORKSPACE_TAG);
+  return { ok: true, status, wootric, avisoDoWootric };
+}
+
+/**
+ * Tenta de novo mandar ao Wootric o encerramento que ficou para trás —
+ * o botão da ficha quando a nota ou a conclusão foram recusadas.
+ */
+export async function reenviarAoWootric(id: string): Promise<{ ok: true; wootric: ResultadoNoWootric } | Falha> {
+  const quem = await agente();
+  if ("erro" in quem) return { ok: false, erro: quem.erro! };
+
+  try {
+    const wootric = await devolverEncerramentoAoWootric(quem.ctx.prisma, id, await nomeDe(quem.ctx.prisma, quem.ctx.userId));
+    if (wootric.estado === "fora") return { ok: false, erro: "Este ciclo não veio do Wootric, ou não está encerrado." };
+    updateTag(WORKSPACE_TAG);
+    return { ok: true, wootric };
+  } catch (erro) {
+    console.error("[nps] reenviar ao Wootric", erro);
+    return { ok: false, erro: "Não deu para falar com o Wootric agora. Tente de novo em instantes." };
+  }
+}
+
+/**
+ * Classifica o ciclo: o tipo, a causa raiz e, se pedido, quem assume.
+ *
+ * Existia só dentro do formulário inteiro de edição (que regrava nome,
+ * nota e comentário) ou na triagem em lote (que não tem causa). A ficha
+ * nova classifica com três campos e um Salvar.
+ */
+export async function classificarNps(entrada: {
+  id: string;
+  tipo: string;
+  causa?: string | null;
+  assumir?: boolean;
+}): Promise<{ ok: true; revisao: boolean; responsavel?: string } | Falha> {
+
+  if (!entrada.tipo) return { ok: false, erro: "Escolha o tipo." };
+
+  const quem = await agente();
+  if ("erro" in quem) return { ok: false, erro: quem.erro! };
+  const prisma = quem.ctx.prisma;
+
+  try {
+    const { tipos } = await cadastroDoNps(prisma);
+    const regra = tipos.find((t) => t.name === entrada.tipo && t.active);
+    if (!regra) return { ok: false, erro: `O tipo "${entrada.tipo}" não está cadastrado.` };
+
+    const causa = entrada.causa?.trim() || null;
+    if (regra.requiresRootCause && !causa) return { ok: false, erro: `${regra.name} pede a causa raiz.` };
+    if (causa) {
+      const cadastrada = await prisma.npsRootCause.findFirst({ where: { name: causa }, select: { id: true } });
+      if (!cadastrada && !ROOT_CAUSES.includes(causa)) return { ok: false, erro: `A causa "${causa}" não está cadastrada.` };
+    }
+
+    const linha = await prisma.npsResponse.findUnique({
+      where: { id: entrada.id },
+      select: { id: true, score: true, comment: true, respondedAt: true, customer: true, owner: { select: { name: true } } },
+    });
+    if (!linha) return { ok: false, erro: "Esta resposta não existe mais." };
+
+    const responsavel = entrada.assumir ? await nomeDe(prisma, quem.ctx.userId) : undefined;
+
+    await prisma.npsResponse.update({
+      where: { id: entrada.id },
+      data: {
+        kind: regra.name,
+        rootCause: causa,
+        ...(entrada.assumir ? { ownerId: quem.ctx.userId } : {}),
+      },
+    });
+
+    let revisao = false;
+    if (regra.opensProcessReview || regra.name === "Erro Processual") {
+      const antes = await prisma.project.count({ where: { origem: `nps:${linha.id}` } });
+      await gerarRevisaoDeProcesso(
+        prisma,
+        {
+          score: linha.score,
+          comment: linha.comment,
+          respondedAt: linha.respondedAt.toISOString(),
+          customer: linha.customer,
+          kind: "Erro Processual",
+          owner: responsavel ?? linha.owner?.name,
+        },
+        linha.id
+      );
+      revisao = (await prisma.project.count({ where: { origem: `nps:${linha.id}` } })) > antes;
+    }
+
+    updateTag(WORKSPACE_TAG);
+    return { ok: true, revisao, responsavel };
+  } catch (erro) {
+    console.error("[nps] classificar", erro);
+    return { ok: false, erro: "O banco não aceitou a gravação agora. Tente de novo em instantes." };
+  }
 }
 
 /**
@@ -555,36 +824,61 @@ export async function registerPostContact(input: {
   mood?: number | null;
   resolved?: boolean | null;
   note?: string;
-  actor?: string;
-}) {
+}): Promise<{ ok: true } | Falha> {
 
-  const ctx = await requireRole("AGENTE", MODULO);
+  if (input.mood != null && !(Number.isInteger(input.mood) && input.mood >= 1 && input.mood <= 5)) {
+    return { ok: false, erro: "Humor inválido." };
+  }
 
-  if (!ctx) return;
+  const quem = await agente();
+  if ("erro" in quem) return { ok: false, erro: quem.erro! };
 
-  await aplicarPosContato(ctx.prisma, input);
+  try {
+    const r = await aplicarPosContato(quem.ctx.prisma, {
+      ...input,
+      note: input.note?.slice(0, 2000),
+      actor: await nomeDe(quem.ctx.prisma, quem.ctx.userId),
+    });
+    if (!r) return { ok: false, erro: "Esta resposta não existe mais." };
+  } catch (erro) {
+    console.error("[nps] pós-contato", erro);
+    return { ok: false, erro: "O banco não aceitou a gravação agora. Tente de novo em instantes." };
+  }
 
   updateTag(WORKSPACE_TAG);
+  return { ok: true };
 }
 
-/** Registra a confirmação do cliente de que a questão foi resolvida. */
+/**
+ * Registra (ou desfaz) a confirmação do cliente de que resolveu.
+ *
+ * A pergunta enviada, sem resposta ainda, não é isto: é a etapa
+ * [Aguardando Resposta], por `setNpsStatus`.
+ */
 export async function confirmNpsResolution(
   id: string,
   confirmado: boolean
-) {
+): Promise<{ ok: true } | Falha> {
 
-  const ctx = await requireRole("AGENTE", MODULO);
+  const quem = await agente();
+  if ("erro" in quem) return { ok: false, erro: quem.erro! };
 
-  if (!ctx) return;
+  try {
+    const atual = await quem.ctx.prisma.npsResponse.findUnique({ where: { id }, select: { status: true } });
+    if (!atual) return { ok: false, erro: "Esta resposta não existe mais." };
+    if (isEncerrado(atual.status)) return { ok: false, erro: "O ciclo já está encerrado." };
 
-  await ctx.prisma.npsResponse.update({
-    where: { id },
-    data: {
-      confirmedAt: confirmado ? new Date() : null,
-    },
-  });
+    await quem.ctx.prisma.npsResponse.update({
+      where: { id },
+      data: { confirmedAt: confirmado ? new Date() : null },
+    });
+  } catch (erro) {
+    console.error("[nps] confirmação", erro);
+    return { ok: false, erro: "O banco não aceitou a gravação agora. Tente de novo em instantes." };
+  }
 
   updateTag(WORKSPACE_TAG);
+  return { ok: true };
 }
 
 type Falha = { ok: false; erro: string };
@@ -747,16 +1041,27 @@ export async function triarNpsEmLote(entrada: {
   }
 }
 
-export async function deleteNpsResponse(id: string) {
+export async function deleteNpsResponse(id: string): Promise<{ ok: true } | Falha> {
 
   // Apagar resposta de pesquisa altera indicador: é ato de ADMIN.
-  const ctx = await requireRole("ADMIN", MODULO);
+  let ctx;
+  try {
+    ctx = await requireRole("ADMIN", MODULO);
+  } catch (erro) {
+    return { ok: false, erro: erro instanceof SemPermissao ? erro.message : "Não foi possível confirmar sua sessão. Entre de novo." };
+  }
 
-  if (!ctx) return;
+  if (!ctx) return { ok: false, erro: "Sem banco configurado — nada é gravado no modo demonstração." };
 
-  await ctx.prisma.npsResponse.delete({ where: { id } });
+  try {
+    await ctx.prisma.npsResponse.delete({ where: { id } });
+  } catch (erro) {
+    console.error("[nps] excluir", erro);
+    return { ok: false, erro: "Não deu para excluir agora. Tente de novo em instantes." };
+  }
 
   updateTag(WORKSPACE_TAG);
+  return { ok: true };
 }
 
 /* ============================================================
@@ -1270,46 +1575,50 @@ export async function exportNps(ids?: string[]): Promise<{
 export async function addNpsNote(input: {
   id: string;
   texto: string;
-  /** Nome de quem escreveu, como a tela o exibe. */
-  actor: string;
-}) {
-
-  const ctx = await requireRole("AGENTE", MODULO);
-
-  if (!ctx) return null;
+}): Promise<{ ok: true; id: string; createdAt: string; actor: string } | Falha> {
 
   const texto = input.texto.trim().slice(0, 4000);
 
-  if (texto === "") return null;
+  if (texto === "") return { ok: false, erro: "A anotação está vazia." };
 
-  const criada = await ctx.prisma.npsNote.create({
-    data: {
-      responseId: input.id,
-      body: texto,
-      authorId: ctx.userId,
-      actor: input.actor.trim(),
-    },
-    select: { id: true, createdAt: true },
-  });
+  const quem = await agente();
+  if ("erro" in quem) return { ok: false, erro: quem.erro! };
 
-  updateTag(WORKSPACE_TAG);
+  try {
+    const actor = await nomeDe(quem.ctx.prisma, quem.ctx.userId);
+    const criada = await quem.ctx.prisma.npsNote.create({
+      data: {
+        responseId: input.id,
+        body: texto,
+        authorId: quem.ctx.userId,
+        actor,
+      },
+      select: { id: true, createdAt: true },
+    });
 
-  return {
-    id: criada.id,
-    createdAt: criada.createdAt.toISOString(),
-    actor: input.actor.trim(),
-  };
+    updateTag(WORKSPACE_TAG);
+
+    return { ok: true, id: criada.id, createdAt: criada.createdAt.toISOString(), actor };
+  } catch (erro) {
+    console.error("[nps] anotação", erro);
+    return { ok: false, erro: "O banco não aceitou a gravação agora. Tente de novo em instantes." };
+  }
 }
 
-export async function removeNpsNote(id: string) {
+export async function removeNpsNote(id: string): Promise<{ ok: true } | Falha> {
 
-  const ctx = await requireRole("AGENTE", MODULO);
+  const quem = await agente();
+  if ("erro" in quem) return { ok: false, erro: quem.erro! };
 
-  if (!ctx) return;
-
-  await ctx.prisma.npsNote.delete({ where: { id } });
+  try {
+    await quem.ctx.prisma.npsNote.delete({ where: { id } });
+  } catch (erro) {
+    console.error("[nps] apagar anotação", erro);
+    return { ok: false, erro: "Não deu para apagar a anotação agora. Tente de novo em instantes." };
+  }
 
   updateTag(WORKSPACE_TAG);
+  return { ok: true };
 }
 
 /**
@@ -1328,51 +1637,71 @@ export async function removeNpsNote(id: string) {
 export async function setNpsChurnRisk(input: {
   id: string;
   valor: boolean;
-}) {
+}): Promise<{ ok: true } | Falha> {
 
-  const ctx = await requireRole("AGENTE", MODULO);
+  const quem = await agente();
+  if ("erro" in quem) return { ok: false, erro: quem.erro! };
 
-  if (!ctx) return;
-
-  await ctx.prisma.npsResponse.update({
-    where: { id: input.id },
-    data: { churnRisk: input.valor },
-  });
+  try {
+    await quem.ctx.prisma.npsResponse.update({
+      where: { id: input.id },
+      data: { churnRisk: input.valor },
+    });
+  } catch (erro) {
+    console.error("[nps] retenção", erro);
+    return { ok: false, erro: "O banco não aceitou a marca agora. Tente de novo em instantes." };
+  }
 
   updateTag(WORKSPACE_TAG);
+  return { ok: true };
 }
 
 export async function updateNpsContato(input: {
   id: string;
   phone?: string | null;
   establishmentId?: string | null;
-}) {
+}): Promise<{ ok: true } | Falha> {
 
-  const ctx = await requireRole("AGENTE", MODULO);
+  const digitos = (input.phone ?? "").replace(/\D/g, "");
+  if (input.phone?.trim() && (digitos.length < 10 || digitos.length > 13)) {
+    return { ok: false, erro: "Telefone com DDD: de 10 a 13 dígitos." };
+  }
 
-  if (!ctx) return;
+  const quem = await agente();
+  if ("erro" in quem) return { ok: false, erro: quem.erro! };
 
-  await ctx.prisma.npsResponse.update({
-    where: { id: input.id },
-    data: {
-      /*
-        `undefined` não toca no campo; `null` limpa.
+  try {
+    if (input.establishmentId) {
+      const existe = await quem.ctx.prisma.establishment.findUnique({ where: { id: input.establishmentId }, select: { id: true } });
+      if (!existe) return { ok: false, erro: "Este estabelecimento não existe mais." };
+    }
 
-        A distinção importa: a tela grava um campo por vez, e sem ela
-        salvar o telefone apagaria o estabelecimento.
-      */
-      ...(input.phone !== undefined
-        ? { phone: input.phone?.trim() || null }
-        : {}),
+    await quem.ctx.prisma.npsResponse.update({
+      where: { id: input.id },
+      data: {
+        /*
+          `undefined` não toca no campo; `null` limpa.
 
-      ...(input.establishmentId !== undefined
-        ? {
-            establishmentId:
-              input.establishmentId || null,
-          }
-        : {}),
-    },
-  });
+          A distinção importa: a tela pode gravar um campo só, e sem ela
+          salvar o telefone apagaria o estabelecimento.
+        */
+        ...(input.phone !== undefined
+          ? { phone: input.phone?.trim() || null }
+          : {}),
+
+        ...(input.establishmentId !== undefined
+          ? {
+              establishmentId:
+                input.establishmentId || null,
+            }
+          : {}),
+      },
+    });
+  } catch (erro) {
+    console.error("[nps] contato", erro);
+    return { ok: false, erro: "O banco não aceitou a gravação agora. Tente de novo em instantes." };
+  }
 
   updateTag(WORKSPACE_TAG);
+  return { ok: true };
 }

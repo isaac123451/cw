@@ -1,6 +1,8 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
+
+import { useRouter } from "next/navigation";
 
 import {
   CircleAlert,
@@ -28,7 +30,6 @@ import SurfaceCard from "@/components/shared/SurfaceCard";
 import { ConfirmDelete } from "@/components/shared/Modal";
 
 import NpsForm from "@/components/nps/NpsForm";
-import NpsDrawer from "@/components/nps/NpsDrawer";
 import NpsList from "@/components/nps/NpsList";
 import NpsKanban from "@/components/nps/NpsKanban";
 import RootCauseManager from "@/components/nps/RootCauseManager";
@@ -44,16 +45,9 @@ import { useSession } from "@/lib/context/SessionContext";
 import { sincronizar } from "@/lib/context/sync";
 
 import {
-  confirmNpsResolution,
   deleteNpsResponse,
   exportNps,
   NpsDraft,
-  registerNpsAttempt,
-  addNpsNote,
-  registerPostContact,
-  removeNpsNote,
-  setNpsChurnRisk,
-  updateNpsContato,
   removeNpsRootCause,
   saveNpsResponse,
   saveNpsRootCause,
@@ -64,7 +58,6 @@ import {
   isEncerrado,
   NpsResponseView,
   RootCauseOption,
-  STATUS_EM_TRATATIVA,
   NpsSegment,
   segmentOf,
   SEGMENTS,
@@ -183,16 +176,21 @@ export default function NpsPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editando, setEditando] =
     useState<NpsResponseView>();
+  const router = useRouter();
+
+  /** A ficha do ciclo tem endereço próprio — o cartão e a lista levam para lá. */
+  const abrir = (id: string) => router.push(`/nps/${id}`);
+
   /*
-    `?resposta=<id>` abre a tratativa direto — é o link da revisão de
-    processo em Projetos. A gaveta só aparece quando a lista chega, então
-    ler o endereço já no primeiro estado não diverge do servidor.
+    `?resposta=<id>` era o link da tratativa quando ela abria num modal
+    por cima desta lista — Projetos, a extensão antiga e o que alguém
+    guardou nos favoritos ainda apontam para ele. Leva à ficha.
   */
-  const [aberto, setAberto] = useState<string | undefined>(() =>
-    typeof window === "undefined"
-      ? undefined
-      : (new URLSearchParams(window.location.search).get("resposta") ?? undefined)
-  );
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("resposta");
+    if (id) router.replace(`/nps/${id}`);
+  }, [router]);
+
   const [salvando, setSalvando] = useState(false);
 
   const [exportando, setExportando] = useState(false);
@@ -368,18 +366,19 @@ export default function NpsPage() {
     return mapa;
   }, [responses]);
 
-  /** O item aberto vem da lista, para refletir a última gravação. */
-  const selecionado = responses.find(
-    (r) => r.id === aberto
-  );
-
   async function salvar(dados: NpsDraft) {
 
     setSalvando(true);
 
     try {
 
-      await saveNpsResponse(dados);
+      const r = await saveNpsResponse(dados);
+
+      if (!r.ok) {
+        notify({ tone: "error", title: "Não foi possível salvar.", detail: r.erro });
+        return;
+      }
+
       await recarregar();
 
       /**
@@ -759,7 +758,7 @@ export default function NpsPage() {
         <TriagemNps
           itens={responses}
           tipos={kinds}
-          onOpen={(item) => setAberto(item.id)}
+          onOpen={(item) => abrir(item.id)}
           onAplicado={async (abriuRevisao) => {
             await recarregar();
             if (abriuRevisao) await recarregarProjetos();
@@ -960,13 +959,24 @@ export default function NpsPage() {
                 itens={visiveis}
                 etapas={stages}
                 tipos={kinds}
-                onOpen={(item) => setAberto(item.id)}
+                onOpen={(item) => abrir(item.id)}
                 onMove={async (item, status) => {
 
                   // Otimista: o cartão muda de coluna na hora do solto.
                   aplicarLocal(item.id, { status });
 
-                  await setNpsStatus(item.id, status);
+                  const r = await setNpsStatus(item.id, status);
+
+                  /* Recusado, o cartão volta para onde estava — e a tela diz por quê. */
+                  if (!r.ok) {
+                    aplicarLocal(item.id, { status: item.status });
+                    notify({ tone: "error", title: "O ciclo não mudou de etapa.", detail: r.erro });
+                    return;
+                  }
+
+                  if (r.avisoDoWootric) {
+                    notify({ tone: "error", title: "Reaberto aqui; no Wootric continua concluído.", detail: r.avisoDoWootric });
+                  }
 
                   startTransition(() => {
                     recarregar();
@@ -980,7 +990,7 @@ export default function NpsPage() {
             <NpsList
               itens={visiveis}
               podeExcluir={session?.role === "ADMIN"}
-              onOpen={(item) => setAberto(item.id)}
+              onOpen={(item) => abrir(item.id)}
               onEdit={(item) => {
                 setEditando(item);
                 setFormOpen(true);
@@ -1054,7 +1064,13 @@ export default function NpsPage() {
 
           startTransition(async () => {
 
-            await deleteNpsResponse(alvo.id);
+            const r = await deleteNpsResponse(alvo.id);
+
+            if (!r.ok) {
+              notify({ tone: "error", title: "Não foi excluído.", detail: r.erro });
+              return;
+            }
+
             await recarregar();
 
             notify({
@@ -1066,200 +1082,6 @@ export default function NpsPage() {
         }}
       />
 
-      {selecionado && (
-        <NpsDrawer
-          item={selecionado}
-          etapas={stages}
-          tipos={kinds}
-          onClose={() => setAberto(undefined)}
-          onAttempt={async (channel, note) => {
-            await registerNpsAttempt({
-              responseId: selecionado.id,
-              channel,
-              note,
-              actor: session?.name ?? "",
-            });
-            await recarregar();
-          }}
-          onConfirm={async (valor) => {
-            aplicarLocal(selecionado.id, {
-              confirmedAt: valor
-                ? new Date().toISOString()
-                : undefined,
-            });
-            await confirmNpsResolution(
-              selecionado.id,
-              valor
-            );
-            startTransition(() => {
-              recarregar();
-            });
-          }}
-          onStatus={async (status) => {
-            await setNpsStatus(selecionado.id, status);
-            await recarregar();
-            setAberto(undefined);
-            notify({
-              tone: "success",
-              title: status,
-              detail: selecionado.customer,
-            });
-          }}
-          onPromotor={(acoes) => {
-            /* O que o servidor gravou — o aviso já saiu da própria ficha. */
-            aplicarLocal(selecionado.id, {
-              reviewAsked: acoes.reviewAsked,
-              testimonialAsked: acoes.testimonialAsked,
-              referralAsked: acoes.referralAsked,
-              reviewFeita: acoes.reviewFeita ?? undefined,
-              aceitaCase: acoes.aceitaCase ?? undefined,
-              indicacoes: acoes.indicacoes ?? undefined,
-            });
-          }}
-          onContato={async (dados) => {
-
-            /*
-              Reflete na tela antes de ir ao banco.
-
-              É o mesmo padrão do resto desta tela: a ficha continua
-              aberta enquanto a gravação acontece, e sem o reflexo
-              local o campo voltaria ao valor antigo por um instante.
-            */
-            aplicarLocal(selecionado.id, {
-              ...(dados.phone !== undefined
-                ? { phone: dados.phone ?? undefined }
-                : {}),
-              ...(dados.establishmentId !== undefined
-                ? {
-                    establishmentId:
-                      dados.establishmentId ?? undefined,
-                  }
-                : {}),
-            });
-
-            await updateNpsContato({
-              id: selecionado.id,
-              ...dados,
-            });
-
-            startTransition(() => {
-              recarregar();
-            });
-
-            notify({
-              tone: "success",
-              title:
-                dados.phone !== undefined
-                  ? "Telefone gravado."
-                  : "Estabelecimento vinculado.",
-            });
-          }}
-
-          onAnotar={async (texto) => {
-
-            await addNpsNote({
-              id: selecionado.id,
-              texto,
-              actor: session?.name ?? "",
-            });
-
-            startTransition(() => {
-              recarregar();
-            });
-
-            notify({
-              tone: "success",
-              title: "Anotação gravada.",
-              detail: selecionado.customer,
-            });
-          }}
-
-          onApagarNota={async (id) => {
-
-            await removeNpsNote(id);
-
-            startTransition(() => {
-              recarregar();
-            });
-
-            notify({
-              tone: "success",
-              title: "Anotação apagada.",
-            });
-          }}
-
-          onRetencao={async (valor) => {
-
-            aplicarLocal(selecionado.id, {
-              churnRisk: valor,
-            });
-
-            await setNpsChurnRisk({
-              id: selecionado.id,
-              valor,
-            });
-
-            startTransition(() => {
-              recarregar();
-            });
-
-            notify({
-              tone: valor ? "info" : "success",
-              title: valor
-                ? "Marcado como caso de retenção."
-                : "Marca de retenção removida.",
-              detail: selecionado.customer,
-            });
-          }}
-
-          onPostContact={async (dados) => {
-
-            const agora = new Date().toISOString();
-
-            aplicarLocal(selecionado.id, {
-              moodAfter: dados.mood ?? undefined,
-              resolvedAfter:
-                dados.resolved ?? undefined,
-              postContactNote: dados.note,
-              postContactAt: agora,
-              postContactBy: session?.name,
-              // Registrar o pós-contato é ter falado com o cliente.
-              firstContactAt:
-                selecionado.firstContactAt ?? agora,
-              status: isEncerrado(selecionado.status)
-                ? selecionado.status
-                : STATUS_EM_TRATATIVA,
-              confirmedAt:
-                dados.resolved === true
-                  ? agora
-                  : undefined,
-            });
-
-            await registerPostContact({
-              id: selecionado.id,
-              mood: dados.mood,
-              resolved: dados.resolved,
-              note: dados.note,
-              actor: session?.name ?? "",
-            });
-
-            startTransition(() => {
-              recarregar();
-            });
-
-            notify({
-              tone: "success",
-              title: "Pós-contato registrado.",
-              detail:
-                dados.resolved === true
-                  ? "Marcado como resolvido — o checklist já conta a confirmação."
-                  : dados.resolved === false
-                    ? "Marcado como não resolvido."
-                    : selecionado.customer,
-            });
-          }}
-        />
-      )}
 
     </MainLayout>
   );

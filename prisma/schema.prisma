@@ -1215,6 +1215,20 @@ model NpsResponse {
   /// inclusive uma nota apagada de lá.
   wootricNotes String[] @default([])
 
+  /// O encerramento devolvido ao Wootric (pedido de 13/09/2026: "quando
+  /// um caso de nps é finalizado… precisa enviar como uma nota os
+  /// detalhes do caso para a wootric e também finalizar por lá").
+  ///
+  /// `wootricNotaEm`: quando a nota com os detalhes foi aceita lá.
+  /// `wootricConcluidoEm`: quando a resposta foi marcada como concluída
+  /// ("Mark Complete" do painel). `wootricErro`: o que o Wootric
+  /// recusou da última vez — a ficha mostra e oferece reenviar.
+  /// Reabrir o ciclo desfaz a conclusão lá e zera a nota, para o próximo
+  /// encerramento mandar os detalhes novos.
+  wootricNotaEm      DateTime?
+  wootricConcluidoEm DateTime?
+  wootricErro        String?
+
   /// O identificador que o Wootric entrega — **não é um nome**.
   ///
   /// Medido em 04/09/2026: em 500 de 500 respostas conferidas,

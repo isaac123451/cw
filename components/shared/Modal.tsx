@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, ReactNode } from "react";
+import { useEffect, useRef, ReactNode } from "react";
 
-import { X } from "lucide-react";
+import { GripHorizontal, X } from "lucide-react";
 
 interface Props {
   open: boolean;
@@ -11,8 +11,8 @@ interface Props {
   onClose: () => void;
   children: ReactNode;
   footer?: ReactNode;
-  /** Largura do painel. `wide` para formulários com duas colunas. */
-  size?: "default" | "wide";
+  /** Largura do painel. `wide` para formulários com duas colunas; `xl` para lista e detalhe lado a lado. */
+  size?: "default" | "wide" | "xl";
 }
 
 export default function Modal({
@@ -44,6 +44,51 @@ export default function Modal({
     };
   }, [open, onClose]);
 
+  /*
+    O painel se arrasta pelo cabeçalho, e o fundo não desfoca.
+
+    O Isaac, sobre as janelas flutuantes: "eu gosto da ideia, as vezes é
+    até interessante se der para mover e sem blur". Com o desfoque, o
+    que estava atrás — o caso, a lista — sumia justamente quando a
+    pessoa precisava consultar para preencher. Arrastar tira o painel
+    de cima do que se quer ler.
+
+    A posição vai direto no estilo do elemento, sem estado: arrastar não
+    redesenha o formulário a cada pixel, e fechar e abrir de novo volta
+    ao centro (o elemento é criado de novo). No celular o painel é uma
+    folha que sobe de baixo — ali não se arrasta.
+  */
+  const painel = useRef<HTMLDivElement>(null);
+  const arrasto = useRef<{ x0: number; y0: number; x: number; y: number } | null>(null);
+  const posicao = useRef({ x: 0, y: 0 });
+
+  function comecar(evento: React.PointerEvent<HTMLElement>) {
+    if (evento.button !== 0) return;
+    if ((evento.target as HTMLElement).closest("button, a, input, select, textarea")) return;
+    if (!window.matchMedia("(min-width: 640px)").matches) return;
+    arrasto.current = { x0: evento.clientX, y0: evento.clientY, x: posicao.current.x, y: posicao.current.y };
+    evento.currentTarget.setPointerCapture(evento.pointerId);
+  }
+
+  function mover(evento: React.PointerEvent<HTMLElement>) {
+    const a = arrasto.current;
+    const el = painel.current;
+    if (!a || !el) return;
+    /* Nunca some da tela: sobra sempre um pedaço do cabeçalho para pegar de volta. */
+    const limiteX = window.innerWidth / 2 + el.offsetWidth / 2 - 120;
+    const limiteY = window.innerHeight / 2 + el.offsetHeight / 2 - 60;
+    const x = Math.max(-limiteX, Math.min(limiteX, a.x + evento.clientX - a.x0));
+    const y = Math.max(-limiteY, Math.min(limiteY, a.y + evento.clientY - a.y0));
+    posicao.current = { x, y };
+    el.style.transform = `translate(${x}px, ${y}px)`;
+  }
+
+  function soltar(evento: React.PointerEvent<HTMLElement>) {
+    if (!arrasto.current) return;
+    arrasto.current = null;
+    evento.currentTarget.releasePointerCapture(evento.pointerId);
+  }
+
   if (!open) return null;
 
   return (
@@ -51,25 +96,36 @@ export default function Modal({
 
       <div
         onClick={onClose}
-        className="absolute inset-0 bg-zinc-900/40 backdrop-blur-[2px]"
+        className="absolute inset-0 bg-zinc-900/25"
       />
 
       <div
+        ref={painel}
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={`relative flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl ${
-          size === "wide"
-            ? "sm:max-w-3xl"
-            : "sm:max-w-lg"
+        className={`relative flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl ring-1 ring-zinc-900/5 sm:rounded-3xl ${
+          size === "xl"
+            ? "sm:max-w-5xl"
+            : size === "wide"
+              ? "sm:max-w-3xl"
+              : "sm:max-w-lg"
         }`}
       >
 
-        <header className="flex items-start justify-between gap-4 border-b border-zinc-100 px-6 py-5">
+        <header
+          onPointerDown={comecar}
+          onPointerMove={mover}
+          onPointerUp={soltar}
+          onPointerCancel={soltar}
+          title="Arraste para mover"
+          className="flex touch-none select-none items-start justify-between gap-4 border-b border-zinc-100 px-6 py-5 sm:cursor-move"
+        >
 
           <div className="min-w-0">
 
-            <h2 className="text-lg font-semibold tracking-tight text-zinc-900">
+            <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight text-zinc-900">
+              <GripHorizontal size={15} className="hidden shrink-0 text-zinc-300 sm:block" aria-hidden />
               {title}
             </h2>
 
