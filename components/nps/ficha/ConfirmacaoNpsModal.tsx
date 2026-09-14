@@ -12,7 +12,7 @@ import { STATUS_AGUARDANDO, STATUS_EM_TRATATIVA, type NpsResponseView } from "@/
 import { mensagemDeReengajamento } from "@/lib/models/trilhaNps";
 import { descreverRegistro } from "@/lib/services/horasUteis";
 
-import { ErroDoServidor, RodapeDeSalvar, Rotulo } from "./Rodape";
+import { ErroDoServidor, RodapeDeSalvar, Rotulo } from "@/components/shared/Rodape";
 
 type Escolha = "enviei" | "confirmou" | "desfazer" | "voltar";
 

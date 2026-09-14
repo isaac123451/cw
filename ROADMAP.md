@@ -702,6 +702,52 @@ o modelo grava), com sabotagens acendendo vermelho. Conferido na tela
 com os números reais; a análise da IA saiu com as ações do ciclo; o
 relatório salvo no teste foi apagado depois.
 
+**Fase 6, parte 1 — os documentos do time dentro da Documentação
+(0.55.0).**
+
+- **Importação com prévia** (Documentação → "Importar documentos do
+  time"): uma linha por documento, com o que é **novo** (já marcado), o
+  que já está **igual** e o que foi **editado aqui** — este só volta ao
+  texto original se a pessoa marcar, e a linha avisa que a edição se
+  perde. As seções de cada um aparecem antes de importar. O texto dos
+  nove é o dos documentos (Thais Portela, agosto/2026), com as linhas que
+  o PDF quebrou religadas e as tabelas refeitas — nenhuma regra
+  reescrita. Os nove já foram importados.
+- **A tela nova**: a lista à esquerda, por grupo e na ordem dos
+  documentos; o documento aberto abre as suas seções ali mesmo e o
+  índice acompanha a leitura. A **busca** procura dentro do texto, sem
+  depender de acento, mostra em que seção achou e marca o termo no
+  documento. Cada seção tem **endereço**
+  (`/documentacao?doc=cintcw-nps#7-falta-de-retorno`) e o ícone de link
+  no título copia. Os **modelos de mensagem** do documento (as citações
+  com `@setor` e `[Saudação]`) viram cartão com Copiar e Editar antes de
+  copiar.
+- **Editar na própria página**, não em janela: título, resumo, grupo,
+  responsável, versão, Confluence e o texto, com a barra que insere
+  seção, negrito, lista, modelo de mensagem e tabela, "Ver como fica" e
+  Ctrl+S. Salvar só confirma com a resposta do servidor; sair com
+  mudanças pede confirmação. Os três playbooks antigos, em etapas,
+  chegam ao editor escritos como texto e passam a ser lidos como os
+  outros ao salvar (as etapas continuam guardadas).
+- **Nada mais grava por trás**: criar, editar e excluir documento saíram
+  do `sincronizar` (que mostrava "salvo" antes do banco) para
+  `lib/actions/documentos.ts`, com `{ ok }`.
+
+Achados no caminho: no Chrome, uma rolagem suave na lista cancelava a
+rolagem suave do documento — o link para a seção parava no meio; o
+índice medido com `IntersectionObserver` contra a janela marcava seção
+já passada dentro de iframe/zoom (agora mede no contêiner que rola, e a
+seção pedida fica marcada até a pessoa rolar); a barra do editor, com a
+aba em segundo plano, devolvia o cursor ao começo do texto.
+
+Provas: `check:documentos` — os nove lidos com o código da tela, linha a
+linha (toda linha chega a um bloco, toda tabela tem as colunas do
+cabeçalho, nenhum negrito sem par, o índice e os títulos com os mesmos
+endereços), mais negrito/itálico, `javascript:` que não vira link, HTML
+que fica texto e a busca sem acento. Conferido na tela: importar, abrir
+por link de seção, buscar, criar, editar e excluir um documento
+descartável (apagado).
+
 
 ### Excluir conta da plataforma (11/09/2026)
 

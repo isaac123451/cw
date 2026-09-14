@@ -19,7 +19,7 @@ import { isEncerrado, STATUS_SEM_TRATATIVA, tipoPorNome, type NpsResponseView } 
 import { checklist } from "@/lib/services/nps.service";
 import { descreverRegistro } from "@/lib/services/horasUteis";
 
-import { Rotulo } from "./Rodape";
+import { Rotulo } from "@/components/shared/Rodape";
 
 /**
  * A coluna da direita: quem é, como está classificado, o que falta.

@@ -1119,6 +1119,14 @@ model Playbook {
   steps         Json     @default("[]")
   rules         String[] @default([])
   confluenceUrl String?
+  /// O documento inteiro, em markdown — os nove documentos do time
+  /// (agosto/2026) entram assim, com títulos, tabelas e tópicos, e as
+  /// seções viram âncoras para o "por quê?" das telas. Os playbooks
+  /// antigos, em passos, continuam com `steps` e sem conteúdo.
+  conteudo      String?
+  /// De onde veio: "documentos-agosto-2026" para os importados; nulo
+  /// para o que foi escrito aqui.
+  origem        String?
   updatedAt     DateTime @updatedAt
 }
 

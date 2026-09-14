@@ -124,6 +124,18 @@ const EXCECOES: {
     motivo:
       "Tira da lista o acionamento que apagarMovimento acabou de apagar no banco.",
   },
+  {
+    contexto: "DocsContext",
+    funcao: "aplicarDoServidor",
+    motivo:
+      "Põe na lista os documentos que importarDocumentosDoTime e salvarDocumento acabaram de gravar e devolver (Documentação).",
+  },
+  {
+    contexto: "DocsContext",
+    funcao: "retirarDaLista",
+    motivo:
+      "Tira da lista o documento que excluirDocumento acabou de apagar no banco.",
+  },
 ];
 
 function temExcecao(contexto: string, funcao: string) {

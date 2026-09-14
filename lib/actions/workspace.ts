@@ -675,6 +675,8 @@ async function carregarDoBanco(): Promise<Workspace | null> {
       steps: (r.steps ?? []) as unknown as PlaybookStep[],
       rules: r.rules,
       confluenceUrl: r.confluenceUrl ?? undefined,
+      conteudo: r.conteudo ?? undefined,
+      origem: r.origem ?? undefined,
       updatedAt: dia(r.updatedAt) as string,
     })),
 

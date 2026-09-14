@@ -10,38 +10,30 @@ import {
 // Só o tipo: os dados vêm do banco pela carga compartilhada.
 import type { Playbook } from "@/lib/models/playbook";
 
-import {
-  removePlaybook,
-  savePlaybook,
-} from "@/lib/actions/registry";
-
 import { useWorkspaceSlice } from "@/lib/context/useWorkspace";
-import { sincronizar } from "@/lib/context/sync";
 
-export type PlaybookDraft = Omit<Playbook, "id" | "slug">;
-
+/**
+ * Os documentos da operação.
+ *
+ * Até a 0.55 o contexto criava, editava e excluía na hora e mandava ao
+ * servidor por trás (`sincronizar`) — a tela mostrava "salvo" antes de o
+ * banco responder. Agora quem grava é a tela, pelas ações de
+ * `lib/actions/documentos.ts`, e o contexto só recebe o que o servidor
+ * devolveu: a lista nunca mostra um documento que o banco não tem.
+ */
 interface DocsContextType {
   playbooks: Playbook[];
 
   /** Carga inicial ainda em andamento. */
   loading: boolean;
-  createPlaybook: (data: PlaybookDraft) => string;
-  updatePlaybook: (data: Playbook) => void;
-  removePlaybook: (id: string) => void;
+  /** O que o servidor gravou (importação, edição do texto): entra ou substitui pelo id. */
+  aplicarDoServidor: (docs: Playbook[]) => void;
+  /** Tira da lista o documento que o servidor confirmou ter excluído. */
+  retirarDaLista: (id: string) => void;
 }
 
 const DocsContext =
   createContext<DocsContextType | null>(null);
-
-function toSlug(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 60);
-}
 
 export function DocsProvider({
   children,
@@ -60,41 +52,18 @@ export function DocsProvider({
       playbooks,
       loading,
 
-      createPlaybook: (data) => {
-
-        const id = crypto.randomUUID();
-
-        // Slug único: dois documentos podem ter o mesmo título.
-        const base = toSlug(data.title) || "documento";
-
-        const slug = playbooks.some(
-          (item) => item.slug === base
-        )
-          ? `${base}-${id.slice(0, 4)}`
-          : base;
-
-        const novo: Playbook = { ...data, id, slug };
-
-        setPlaybooks((prev) => [novo, ...prev]);
-        sincronizar(() => savePlaybook(novo));
-
-        return slug;
+      aplicarDoServidor: (docs) => {
+        setPlaybooks((prev) => {
+          const porId = new Map(prev.map((p) => [p.id, p]));
+          for (const d of docs) porId.set(d.id, d);
+          return [...porId.values()];
+        });
       },
 
-      updatePlaybook: (data) => {
-        setPlaybooks((prev) =>
-          prev.map((item) =>
-            item.id === data.id ? data : item
-          )
-        );
-        sincronizar(() => savePlaybook(data));
-      },
-
-      removePlaybook: (id) => {
+      retirarDaLista: (id) => {
         setPlaybooks((prev) =>
           prev.filter((item) => item.id !== id)
         );
-        sincronizar(() => removePlaybook(id));
       },
     }),
     [playbooks, loading, setPlaybooks]

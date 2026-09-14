@@ -40,7 +40,6 @@ import {
   ClientEnrichment,
   ManualClient,
 } from "@/lib/models/client";
-import type { Playbook } from "@/lib/models/playbook";
 
 /**
  * Gravação dos cadastros da operação.
@@ -504,39 +503,11 @@ export async function removeMacro(id: string) {
   updateTag(WORKSPACE_TAG);
 }
 
-export async function savePlaybook(item: Playbook) {
-  const prisma = await autorizado("AGENTE", "documentacao");
-  if (!prisma) return;
-
-  const dados = {
-    slug: item.slug,
-    title: item.title,
-    summary: item.summary,
-    scope: item.scope,
-    owner: item.owner,
-    version: item.version,
-    steps: item.steps as never,
-    rules: item.rules ?? [],
-    confluenceUrl: item.confluenceUrl ?? null,
-  };
-
-  await prisma.playbook.upsert({
-    where: { id: item.id },
-    update: dados,
-    create: { id: item.id, ...dados },
-  });
-
-  updateTag(WORKSPACE_TAG);
-}
-
-export async function removePlaybook(id: string) {
-  const prisma = await autorizado("AGENTE", "documentacao");
-  if (!prisma) return;
-
-  await prisma.playbook.delete({ where: { id } });
-
-  updateTag(WORKSPACE_TAG);
-}
+/*
+  Os documentos (Playbook) saíram daqui na 0.55: gravam por
+  `lib/actions/documentos.ts`, que responde `{ ok }` e só então a tela
+  confirma — aqui a gravação ia por trás, depois do "salvo".
+*/
 
 /* ============================================================
    AGENDA E IMPACTO

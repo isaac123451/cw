@@ -15,7 +15,7 @@ import { checklist, motivoParaNaoEncerrar } from "@/lib/services/nps.service";
 import { textoDaNota } from "@/lib/models/notaDoWootric";
 import { useSession } from "@/lib/context/SessionContext";
 
-import { ErroDoServidor, RodapeDeSalvar, Rotulo } from "./Rodape";
+import { ErroDoServidor, RodapeDeSalvar, Rotulo } from "@/components/shared/Rodape";
 
 /**
  * Encerrar o ciclo com o status final do tipo.

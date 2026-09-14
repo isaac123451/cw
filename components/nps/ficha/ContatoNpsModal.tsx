@@ -21,7 +21,7 @@ import {
 import { tentativasNaJanela } from "@/lib/services/nps.service";
 import { descreverMinutosUteis, minutosUteisEntre } from "@/lib/services/horasUteis";
 
-import { ErroDoServidor, RodapeDeSalvar, Rotulo } from "./Rodape";
+import { ErroDoServidor, RodapeDeSalvar, Rotulo } from "@/components/shared/Rodape";
 
 export type ModoDoContato = "contato" | "tentativa";
 

@@ -10,7 +10,7 @@ import { useProjects } from "@/lib/context/ProjectsContext";
 import { useToast } from "@/lib/context/ToastContext";
 import { segmentOf, tipoPorNome, type NpsResponseView } from "@/lib/models/nps";
 
-import { ErroDoServidor, RodapeDeSalvar, Rotulo } from "./Rodape";
+import { ErroDoServidor, RodapeDeSalvar, Rotulo } from "@/components/shared/Rodape";
 
 /**
  * Classificar o ciclo: o tipo do guia, a causa raiz e quem assume.

@@ -1,0 +1,141 @@
+/**
+ * Prova a leitura dos documentos do time.
+ *
+ *   npm run check:documentos
+ *
+ * Os nove documentos viraram markdown a partir do PDF, e é fácil uma
+ * linha sumir no caminho: uma tabela com célula a menos, um `**` sem
+ * par que aparece como asterisco na tela, uma seção cujo endereço muda
+ * e quebra o "por quê?" que aponta para ela. Esta varredura lê os nove
+ * com o mesmo código da tela e confere, linha por linha, que tudo o que
+ * estava no texto chegou a algum bloco. Sem banco.
+ */
+import {
+  DOCUMENTOS_DO_TIME,
+  ORIGEM_DOS_DOCUMENTOS,
+} from "../lib/documentos/documentosDoTime";
+import { ORIGEM_DOS_DOCUMENTOS_DO_TIME, SLUGS_DOS_DOCUMENTOS_DO_TIME } from "../lib/documentos/indice";
+import { blocosDoMarkdown, marcarTermo, textoPuro, trechosDaLinha, type Bloco } from "../lib/models/markdown";
+import { markdownDosPassos, secoesDoDocumento } from "../lib/models/playbook";
+
+let falhas = 0;
+
+function confere(nome: string, obtido: unknown, esperado: unknown) {
+  const ok = JSON.stringify(obtido) === JSON.stringify(esperado);
+  if (!ok) falhas += 1;
+  console.log(`${ok ? "ok  " : "FALHOU"}  ${nome}${ok ? "" : `\n        esperado ${JSON.stringify(esperado)}, veio ${JSON.stringify(obtido)}`}`);
+}
+
+console.log("\n— As duas listas dos documentos —");
+confere("os endereços da tela são os da importação, na mesma ordem", [...SLUGS_DOS_DOCUMENTOS_DO_TIME], DOCUMENTOS_DO_TIME.map((d) => d.slug));
+confere("a marca de origem é a mesma", ORIGEM_DOS_DOCUMENTOS_DO_TIME, ORIGEM_DOS_DOCUMENTOS);
+
+/** As linhas de texto que um bloco carrega, para somar contra o original. */
+function linhasDo(b: Bloco): string[] {
+  switch (b.tipo) {
+    case "titulo":
+      return [b.texto];
+    case "paragrafo":
+    case "citacao":
+      return b.linhas;
+    case "lista":
+      return b.itens;
+    case "tabela":
+      return [b.cabecalho.join("|"), ...b.linhas.map((l) => l.join("|"))];
+    case "separador":
+      return ["---"];
+  }
+}
+
+console.log("\n— Cada documento, lido como a tela lê —");
+for (const d of DOCUMENTOS_DO_TIME) {
+  const blocos = blocosDoMarkdown(d.conteudo);
+  const secoes = secoesDoDocumento(d.conteudo);
+  const ancorasDosBlocos = blocos.flatMap((b) => (b.tipo === "titulo" && b.ancora ? [b.ancora] : []));
+
+  confere(`${d.slug}: o índice e os títulos têm os mesmos endereços`, ancorasDosBlocos, secoes.map((s) => s.ancora));
+  confere(`${d.slug}: nenhum endereço repetido`, new Set(ancorasDosBlocos).size, ancorasDosBlocos.length);
+
+  /* Toda linha com texto vira parte de algum bloco (a divisória da tabela é a única que some). */
+  const originais = d.conteudo.split("\n").filter((l) => l.trim() && !/^\s*\|?\s*:?-{3,}/.test(l)).length;
+  const lidas = blocos.reduce((n, b) => n + (b.tipo === "tabela" ? 1 + b.linhas.length : b.tipo === "paragrafo" || b.tipo === "citacao" ? b.linhas.length : b.tipo === "lista" ? b.itens.length : 1), 0);
+  confere(`${d.slug}: as ${originais} linhas chegaram a algum bloco`, lidas, originais);
+
+  /* Tabela com célula a menos no original é defeito da conversão do PDF. */
+  const tortas = d.conteudo
+    .split("\n\n")
+    .filter((trecho) => /^\s*\|/.test(trecho))
+    .flatMap((t) => {
+      const linhas = t.split("\n").filter((l) => /^\s*\|/.test(l));
+      const colunas = (l: string) => l.trim().replace(/^\||\|$/g, "").split(/(?<!\\)\|/).length;
+      return linhas.filter((l) => colunas(l) !== colunas(linhas[0])).map((l) => l.slice(0, 60));
+    });
+  confere(`${d.slug}: toda linha de tabela tem as colunas do cabeçalho`, tortas, []);
+
+  /* Um `**` sem par aparece como asterisco na tela. */
+  const sobras = blocos.flatMap(linhasDo).filter((l) => textoPuro(l).includes("**")).map((l) => l.slice(0, 60));
+  confere(`${d.slug}: nenhum negrito sem par`, sobras, []);
+}
+
+console.log("\n— Dentro da linha —");
+confere("negrito", trechosDaLinha("um **dois** três"), [
+  { tipo: "texto", texto: "um " },
+  { tipo: "negrito", filhos: [{ tipo: "texto", texto: "dois" }] },
+  { tipo: "texto", texto: " três" },
+]);
+confere("asterisco escapado é asterisco", textoPuro("nota \\* obrigatória"), "nota * obrigatória");
+confere("itálico dentro de negrito", textoPuro("**muito *importante***"), "muito importante");
+confere("colchete de modelo não vira link", textoPuro("[Saudação]! O cliente [nome]"), "[Saudação]! O cliente [nome]");
+confere("link http vira link", trechosDaLinha("[ajuda](https://ajuda.cardapioweb.com)")[0].tipo, "link");
+confere("javascript: não vira link", trechosDaLinha("[x](javascript:alert(1))").some((t) => t.tipo === "link"), false);
+confere("HTML fica texto", textoPuro("<script>alert(1)</script>"), "<script>alert(1)</script>");
+
+console.log("\n— Blocos —");
+const tabela = blocosDoMarkdown("| A | B |\n| --- | --- |\n| 1 |\n| 2 | 3 | 4 |");
+confere("linha curta ganha célula vazia e a comprida perde o excesso", tabela[0].tipo === "tabela" ? tabela[0].linhas : null, [["1", ""], ["2", "3"]]);
+confere(
+  "lista numerada guarda o número de início",
+  blocosDoMarkdown("3. três\n4. quatro")[0],
+  { tipo: "lista", ordenada: true, inicio: 3, itens: ["três", "quatro"] }
+);
+confere(
+  "linha que continua o item de cima",
+  blocosDoMarkdown("- começa aqui\n  e termina aqui\n- outro")[0],
+  { tipo: "lista", ordenada: false, inicio: 1, itens: ["começa aqui e termina aqui", "outro"] }
+);
+confere(
+  "citação guarda as linhas (é modelo de mensagem)",
+  blocosDoMarkdown("> @setor\n> [Saudação]!")[0],
+  { tipo: "citacao", linhas: ["@setor", "[Saudação]!"] }
+);
+confere(
+  "título repetido ganha endereço próprio",
+  blocosDoMarkdown("## Exceções\n\ntexto\n\n## Exceções").map((b) => (b.tipo === "titulo" ? b.ancora : null)),
+  ["excecoes", null, "excecoes-2"]
+);
+
+console.log("\n— A busca —");
+confere(
+  "acha sem acento e sem caixa",
+  marcarTermo("Falta de Retorno às 18h", "retorno as").filter((p) => p.achou).map((p) => p.texto),
+  ["Retorno às"]
+);
+confere("com emoji antes, o índice não desanda", marcarTermo("🧭 O que é reputação?", "reputacao").filter((p) => p.achou).map((p) => p.texto), ["reputação"]);
+
+console.log("\n— O playbook em etapas vira texto —");
+const convertido = markdownDosPassos({
+  steps: [
+    { title: "1. Receber", owner: "Reputação", sla: "2h úteis", detail: "Ler a reclamação.", checklist: ["Classificar"] },
+    { title: "Responder", owner: "", detail: "" },
+  ],
+  rules: ["Nunca prometer prazo sem a área"],
+});
+confere(
+  "cada etapa é uma seção, e as regras fecham o texto",
+  secoesDoDocumento(convertido).map((s) => s.titulo),
+  ["Etapas", "1. Receber", "2. Responder", "Regras da operação"]
+);
+confere("responsável e prazo em uma linha", convertido.includes("**Responsável:** Reputação · **Prazo:** 2h úteis"), true);
+
+console.log(falhas ? `\n${falhas} conferência(s) falharam.\n` : "\nTudo certo.\n");
+process.exit(falhas ? 1 : 0);
