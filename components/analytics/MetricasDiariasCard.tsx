@@ -6,13 +6,14 @@ import {
   useTransition,
 } from "react";
 
-import { Loader2, Save, TableProperties } from "lucide-react";
+import { Download, Loader2, Save, TableProperties } from "lucide-react";
 
 import SurfaceCard from "@/components/shared/SurfaceCard";
 
 import { useToast } from "@/lib/context/ToastContext";
 
 import {
+  exportarMetricas,
   lerMetricas,
   salvarMetricaManual,
   type LinhaDeMetrica,
@@ -28,11 +29,13 @@ import {
  * porque a janela andou. Só serve o número anotado no dia — e é isso
  * que a rotina agendada grava.
  *
- * **As colunas cinzas são do portal.** Visualizações, selo, desativadas
- * e resolvidas por ciclo não existem na base: só o Reclame Aqui sabe.
- * Ficam editáveis e começam vazias, porque **vazio quer dizer "ninguém
- * preencheu"** — e um zero inventado no histórico vira gráfico com um
- * buraco que parece queda.
+ * **As colunas cinzas são do portal.** Visualizações e desativadas não
+ * existem na base: só o Reclame Aqui sabe. Ficam editáveis e começam
+ * vazias, porque **vazio quer dizer "ninguém preencheu"** — e um zero
+ * inventado no histórico vira gráfico com um buraco que parece queda.
+ * "Resolvidas no ciclo" e "ciclos com selo" eram cinzas também; desde a
+ * Fase 5 são calculadas — nas janelas do documento e pelo histórico da
+ * nota.
  */
 
 /** Campo numérico editável, que aceita ficar vazio. */
@@ -139,11 +142,7 @@ export default function MetricasDiariasCard() {
 
   function valorDe(
     linha: LinhaDeMetrica,
-    campo:
-      | "visualizacoes"
-      | "ciclosComSelo"
-      | "desativadas"
-      | "resolvidasCiclo"
+    campo: "visualizacoes" | "desativadas"
   ) {
     const edicao = edicoes[linha.dia];
 
@@ -167,12 +166,7 @@ export default function MetricasDiariasCard() {
         const r = await salvarMetricaManual({
           dia,
           visualizacoes: valorDe(base, "visualizacoes"),
-          ciclosComSelo: valorDe(base, "ciclosComSelo"),
           desativadas: valorDe(base, "desativadas"),
-          resolvidasCiclo: valorDe(
-            base,
-            "resolvidasCiclo"
-          ),
         });
 
         if (r.erro) {
@@ -219,13 +213,39 @@ export default function MetricasDiariasCard() {
     "Voltariam",
     "Resolvidas",
     "Tempo (h)",
+    "Resolv. no ciclo",
+    "Ciclos c/ selo",
     "Churn",
     "Retidos",
     "Visualizações",
-    "Selo",
     "Desativadas",
-    "Resolv./ciclo",
   ];
+
+  const [baixando, setBaixando] = useState(false);
+
+  async function baixar() {
+    setBaixando(true);
+    try {
+      const ultimo = new Date(Number(mes.slice(0, 4)), Number(mes.slice(5, 7)), 0).getDate();
+      const r = await exportarMetricas(`${mes}-01`, `${mes}-${String(ultimo).padStart(2, "0")}`);
+      if (!r.ok) {
+        notify({ tone: "error", title: "Não deu para gerar a planilha.", detail: r.erro });
+        return;
+      }
+      const bytes = Uint8Array.from(atob(r.arquivo), (c) => c.charCodeAt(0));
+      const url = URL.createObjectURL(new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = r.nome;
+      link.click();
+      URL.revokeObjectURL(url);
+      notify({ tone: "success", title: `Planilha de ${r.dias} dia(s) gerada.`, detail: r.nome });
+    } catch {
+      notify({ tone: "error", title: "Não deu para falar com o servidor." });
+    } finally {
+      setBaixando(false);
+    }
+  }
 
   return (
     <SurfaceCard
@@ -242,6 +262,17 @@ export default function MetricasDiariasCard() {
             }
             className="h-9 rounded-xl border border-zinc-200 px-2.5 text-sm outline-none transition-colors focus:border-violet-400"
           />
+
+          <button
+            type="button"
+            onClick={baixar}
+            disabled={baixando || linhas.length === 0}
+            title="A Planilha de Métricas Reputação do mês, em .xlsx"
+            className="flex h-9 items-center gap-1.5 rounded-xl border border-zinc-200 px-3 text-sm font-medium text-zinc-700 transition-colors hover:border-violet-300 hover:text-violet-700 disabled:opacity-50"
+          >
+            {baixando ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+            .xlsx
+          </button>
 
           {sujo && (
             <button
@@ -302,7 +333,7 @@ export default function MetricasDiariasCard() {
                     <th
                       key={c}
                       className={`sticky top-0 whitespace-nowrap border-b border-zinc-200 bg-white px-2 py-2 text-left font-semibold ${
-                        i >= 11
+                        i >= 13
                           ? "text-zinc-400"
                           : "text-zinc-600"
                       }`}
@@ -347,6 +378,12 @@ export default function MetricasDiariasCard() {
                       {l.tempoMedioHoras.toFixed(1)}
                     </td>
                     <td className="border-b border-zinc-100 px-2 py-1.5">
+                      {l.resolvidasCiclo ?? "—"}
+                    </td>
+                    <td className="border-b border-zinc-100 px-2 py-1.5" title="Ciclos seguidos com o selo RA1000 na aba de 6 meses">
+                      {l.ciclosComSelo ?? "—"}
+                    </td>
+                    <td className="border-b border-zinc-100 px-2 py-1.5">
                       {l.churn}
                     </td>
                     <td className="border-b border-zinc-100 px-2 py-1.5">
@@ -356,9 +393,7 @@ export default function MetricasDiariasCard() {
                     {(
                       [
                         "visualizacoes",
-                        "ciclosComSelo",
                         "desativadas",
-                        "resolvidasCiclo",
                       ] as const
                     ).map((campo) => (
                       <td
@@ -380,7 +415,7 @@ export default function MetricasDiariasCard() {
           </div>
 
           <p className="mt-3 text-xs leading-relaxed text-zinc-500">
-            As quatro últimas colunas só o Reclame Aqui sabe — o sistema
+            As duas últimas colunas só o Reclame Aqui sabe — o sistema
             não tem como calculá-las. Em branco significa{" "}
             <strong className="font-semibold">
               ninguém preencheu

@@ -22,15 +22,26 @@ export default function TextoEditavel({
   linhasMinimas = 4,
   className = "",
   aoCopiar,
+  editado: editadoDeFora,
+  onEditado,
 }: {
   gerado: string;
   rotulo?: string;
   linhasMinimas?: number;
   className?: string;
   aoCopiar?: () => void;
+  /**
+   * Para quem precisa do texto final — o relatório salva o que foi
+   * editado. Sem estes dois, a edição fica só aqui dentro.
+   */
+  editado?: string | null;
+  onEditado?: (texto: string | null) => void;
 }) {
 
-  const [editado, setEditado] = useState<string | null>(null);
+  const [editadoAqui, setEditadoAqui] = useState<string | null>(null);
+  const controlado = onEditado !== undefined;
+  const editado = controlado ? (editadoDeFora ?? null) : editadoAqui;
+  const setEditado = controlado ? onEditado : setEditadoAqui;
   const texto = editado ?? gerado;
   const mexeu = editado !== null && editado !== gerado;
 

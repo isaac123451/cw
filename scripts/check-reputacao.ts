@@ -35,6 +35,7 @@ import {
   getReputation,
   hasRA1000,
   inRange,
+  parseElapsed,
 } from "../lib/services/reputation.service";
 
 const url =
@@ -121,6 +122,26 @@ async function main() {
     "1. 5 dias e 18 horas volta como 5 dias e 18 horas",
     parseElapsedText(formatElapsed(8283)),
     8280
+  );
+
+  /**
+   * A leitura da **nota** também relê o que foi gravado.
+   *
+   * A nota e a métrica diária leem o tempo por `parseElapsed`, e não
+   * por `parseElapsedText`. Ela só entendia "12 dias" e "6h" — "3 dias
+   * e 20 horas" voltava nulo e saía da média. Auditoria de 13/09/2026:
+   * 11 de 100 tempos entravam na conta.
+   */
+  const perdidosNaNota = minutos.filter((m) => {
+    const volta = parseElapsed(formatElapsed(m));
+    const tolerancia = m < 60 ? 0 : 59;
+    return volta === null || Math.abs(volta - m) > tolerancia;
+  });
+
+  conferir(
+    "1. a nota relê todo tempo que o modelo grava",
+    perdidosNaNota,
+    []
   );
 
   /* ----------------------------------------------------------

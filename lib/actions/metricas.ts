@@ -7,6 +7,11 @@ import type { Modulo } from "@/lib/auth/modules";
 
 import { getSession } from "@/lib/auth/session";
 
+import * as XLSX from "xlsx";
+
+import { cicloDe } from "@/lib/models/ciclo";
+import { formatElapsed, hojeNaOperacao } from "@/lib/services/reputation.service";
+
 /**
  * Analytics não é módulo próprio na régua de permissões — a reputação
  * que ele mede é a do Reclame Aqui, e é esse acesso que faz sentido
@@ -91,7 +96,10 @@ export interface PreenchimentoManual {
 /**
  * Grava os campos que só o portal sabe.
  *
- * **Só estes quatro.** Os automáticos são recalculados pela rotina a
+ * **Só estes dois: visualizações e desativadas.** "Resolvidas por
+ * ciclo" e "ciclos com selo" passaram a ser calculados (Fase 5): o
+ * primeiro nas janelas do documento, o segundo pelo histórico da nota.
+ * Os automáticos são recalculados pela rotina a
  * partir da base; deixar a tela escrevê-los criaria dois donos para o
  * mesmo número, e o próximo cálculo apagaria o que alguém digitou sem
  * avisar.
@@ -134,9 +142,7 @@ export async function salvarMetricaManual(
     where: { dia: entrada.dia },
     data: {
       visualizacoes: limpo(entrada.visualizacoes),
-      ciclosComSelo: limpo(entrada.ciclosComSelo),
       desativadas: limpo(entrada.desativadas),
-      resolvidasCiclo: limpo(entrada.resolvidasCiclo),
       preenchidoPor: sessao?.name ?? null,
       preenchidoEm: new Date(),
     },
@@ -145,4 +151,64 @@ export async function salvarMetricaManual(
   revalidatePath("/analytics");
 
   return {};
+}
+
+/**
+ * A Planilha de Métricas Reputação, em .xlsx — a que o time preenchia à
+ * mão, agora saindo da base.
+ *
+ * As colunas seguem a tabela de indicadores do documento, na ordem dele.
+ * O tempo médio vai em horas (número, para somar e fazer gráfico) e no
+ * texto do portal ("15 dias e 14 horas"). Visualizações e desativadas
+ * saem em branco quando ninguém preencheu — em branco, e não zero.
+ */
+export async function exportarMetricas(
+  de: string,
+  ate: string
+): Promise<{ ok: true; arquivo: string; nome: string; dias: number } | { ok: false; erro: string }> {
+
+  if (!/^d{4}-d{2}-d{2}$/.test(de) || !/^d{4}-d{2}-d{2}$/.test(ate) || de > ate) {
+    return { ok: false, erro: "Intervalo de datas inválido." };
+  }
+
+  const linhas = await lerMetricas(de, ate);
+
+  if (linhas.length === 0) return { ok: false, erro: "Nenhum dia medido nesse intervalo." };
+
+  const planilha = linhas.map((l) => ({
+    Dia: l.dia.split("-").reverse().join("/"),
+    Ciclo: cicloDe(l.dia).rotulo,
+    "Reclamações entrantes (mês)": l.entrantes,
+    "Nota de reputação (6 meses)": l.notaReputacao,
+    "Respondidas (mês)": l.respondidas,
+    "Não respondidas (mês)": l.naoRespondidas,
+    "Nota média dos consumidores": l.notaConsumidor,
+    "Voltariam a fazer negócio (%)": l.voltariam,
+    "Resolvidas (%)": l.resolvidasPct,
+    "Tempo médio (horas)": l.tempoMedioHoras,
+    "Tempo médio": formatElapsed(l.tempoMedioHoras * 60),
+    "Resolvidas no ciclo": l.resolvidasCiclo ?? "",
+    "Ciclos com selo RA1000": l.ciclosComSelo ?? "",
+    "Casos churn": l.churn,
+    "Casos retidos": l.retidos,
+    "Visualizações (portal)": l.visualizacoes ?? "",
+    "Desativadas (portal)": l.desativadas ?? "",
+    "Preenchido por": l.preenchidoPor ?? "",
+  }));
+
+  const sheet = XLSX.utils.json_to_sheet(planilha);
+  sheet["!cols"] = Object.keys(planilha[0]).map((chave) => ({ wch: Math.max(chave.length + 2, 12) }));
+  sheet["!freeze"] = { xSplit: 0, ySplit: 1 };
+
+  const book = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(book, sheet, "Métricas Reputação");
+
+  const buffer = XLSX.write(book, { type: "buffer", bookType: "xlsx" }) as Buffer;
+
+  return {
+    ok: true,
+    arquivo: buffer.toString("base64"),
+    nome: `metricas-reputacao-${de}-a-${ate}-${hojeNaOperacao()}.xlsx`,
+    dias: linhas.length,
+  };
 }

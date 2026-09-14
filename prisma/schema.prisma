@@ -1847,6 +1847,25 @@ model AtividadeDaRotina {
 
 /// A atividade feita num dia, por quem — o progresso do Meu dia e a
 /// sequência de dias com a rotina completa.
+/// O Relatório de Reputação de um ciclo, como foi enviado à gestão.
+///
+/// A tela monta o relatório sozinha, a qualquer hora, com os números da
+/// base. Isto guarda o que a pessoa **mandou**: o texto final (com a
+/// análise que ela escreveu ou pediu à IA) e os números daquele dia —
+/// um ciclo relido um mês depois tem outra janela de seis meses, e o
+/// relatório daquela sexta tem de continuar dizendo o que dizia.
+model RelatorioDoCiclo {
+  id           String   @id @default(cuid())
+  /// "2026-09-c2" — o ciclo do documento (1–7, 8–14, 15–21, 22–28, 29–fim).
+  ciclo        String   @unique
+  texto        String
+  /// Os números do relatório naquele dia, para reler sem recalcular.
+  dados        Json
+  salvoPor     String?
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+}
+
 model MarcaDaRotina {
   id          String            @id @default(cuid())
   atividadeId String

@@ -656,6 +656,52 @@ Tudo apagado depois.
 **Depende de você:** `WOOTRIC_USUARIO` e `WOOTRIC_SENHA` no `.env` e na
 Vercel, e reiniciar o `npm run dev` (colunas novas no NPS).
 
+**Fase 5, parte 2 — o relatório do ciclo, a planilha e a auditoria do
+tempo (0.54.0).** Fecha a Fase 5.
+
+- **Relatório de Reputação** (`/relatorio`, no menu Inteligência): os
+  ciclos do documento (1–7, 8–14, 15–21, 22–28, 29–fim,
+  `lib/models/ciclo.ts`), o selo RA1000 em três abas — 6 meses vigente,
+  6 meses **próxima** (a que vira vigente no dia 1º, onde o trabalho de
+  hoje conta) e 12 meses —, com o que falta para o selo em cada uma
+  (respostas para os 90%, avaliações nota 10 resolvidas, o mínimo de 50
+  avaliações); a tabela dos indicadores com o que está abaixo da meta em
+  vermelho; o ciclo nas quatro frentes; os pontos de atenção, cada um com
+  o link de onde se resolve. O texto para o Slack sai editável; a IA
+  escreve a análise a pedido (pelas regras, se ela não responder);
+  **Salvar** guarda o texto enviado e os números daquele dia
+  (`RelatorioDoCiclo`), e o .xlsx leva indicadores, pontos e métricas
+  do ciclo. A atividade de sexta no Meu dia sabe se o relatório do ciclo
+  já foi salvo.
+- **A Planilha de Métricas sai sozinha**: .xlsx do mês em Analytics →
+  Métricas diárias, nas colunas do documento. "Resolvidas no ciclo" é
+  calculada nas janelas do documento; "ciclos com selo" pelo histórico
+  da nota (ciclos seguidos com o selo na aba vigente de 6 meses). Só
+  visualizações e desativadas continuam à mão — são do portal.
+- **Auditoria dos "17 dias e 14 horas"**: a leitura do tempo de resposta
+  só entendia "12 dias" e "6h"; o modelo grava "3 dias e 20 horas".
+  **11 de 100** tempos entravam na média — os de dia inteiro, que são os
+  antigos, importados sem hora e respondidos tarde. Com os cem: 15 dias
+  e 14 horas na aba vigente, **mediana de 7 dias**. O número alto é real,
+  mas é a cauda de respostas dadas semanas depois; o relatório mostra a
+  média e a mediana.
+
+Achados no caminho: "respondidas do mês" saía sempre 0 na planilha
+automática (olhava o texto da resposta, que a carga não traz); o índice
+de resposta de um dia passado contava reclamações respondidas depois; os
+atendimentos das redes entravam nas métricas do Reclame Aqui; o
+histórico usava seis meses "rolando até o dia", e não a aba do portal,
+que é de meses fechados; o selo RA1000 não conferia o mínimo de 50
+avaliações que o Reclame Aqui publica. O histórico de 257 dias foi
+regravado com as regras certas (só os campos automáticos).
+
+Provas: `check:ciclos` (os ciclos, fevereiro, as métricas do dia, o
+selo com o mínimo de 50, a janela de meses fechados, o relatório com a
+projeção da próxima aba) e `check:reputacao` (a nota relê todo tempo que
+o modelo grava), com sabotagens acendendo vermelho. Conferido na tela
+com os números reais; a análise da IA saiu com as ações do ciclo; o
+relatório salvo no teste foi apagado depois.
+
 
 ### Excluir conta da plataforma (11/09/2026)
 

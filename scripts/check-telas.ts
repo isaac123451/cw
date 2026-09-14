@@ -224,6 +224,7 @@ async function main() {
     "/nps/analise",
     "/agenda",
     "/analytics",
+    "/relatorio",
     "/impacto",
     "/assistente",
     "/jornada",

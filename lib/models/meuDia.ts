@@ -97,6 +97,8 @@ export interface DadosDoDia {
   metricaHoje?: LinhaDeMetrica | null;
   /** As ligações do dia, contadas no servidor pela cadência de cada caso. */
   ligacoes?: ItemDaRotina[];
+  /** O relatório do ciclo de hoje, e se já foi salvo. */
+  relatorio?: { ciclo: string; rotulo: string; salvo: boolean } | null;
 }
 
 function contagem(itens: ItemDaRotina[], resumo: string): Contagem {
@@ -351,10 +353,9 @@ export function contarRotina(
   const faltando = !m
     ? ["a medição de hoje"]
     : [
+        /* Resolvidas no ciclo e ciclos com selo são calculados desde a Fase 5: só o portal sabe estes dois. */
         m.visualizacoes === null ? "visualizações" : null,
         m.desativadas === null ? "desativadas" : null,
-        m.resolvidasCiclo === null ? "resolvidas no ciclo" : null,
-        m.ciclosComSelo === null ? "ciclos com selo" : null,
       ].filter((x): x is string => Boolean(x));
 
   const metricas = contagem(
@@ -382,7 +383,14 @@ export function contarRotina(
     areas: contagem(areas, areas.length ? `${areas.length} com as áreas, ${atrasadas.size} fora do prazo.` : "Nada com as áreas."),
     checkpoint: semItens("O texto de ontem, hoje e riscos sai pronto no fim desta tela."),
     indicadores: semItens("Analytics e as projeções da semana."),
-    relatorio: semItens("O relatório do ciclo, pronto para a gestão."),
+    relatorio: !dados.relatorio
+      ? semItens("O relatório do ciclo, pronto para a gestão.")
+      : dados.relatorio.salvo
+        ? semItens(`O relatório do ciclo ${dados.relatorio.rotulo} já foi salvo — dá para revisar e salvar de novo.`)
+        : contagem(
+            [{ id: dados.relatorio.ciclo, titulo: `Relatório do ciclo ${dados.relatorio.rotulo}`, detalhe: "montado com os números da base; falta a análise e o envio", href: "/relatorio" }],
+            `O relatório do ciclo ${dados.relatorio.rotulo} está pronto para revisar, analisar e enviar.`
+          ),
     processos: semItens("O que mudar nos processos a partir do que a semana mostrou."),
     sprint: semItens("As demandas da Sprint, em Projetos."),
   };

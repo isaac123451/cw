@@ -190,6 +190,13 @@ const INTERNAS: Record<string, string[]> = {
   AtividadeDaRotina: ["*"],
   MarcaDaRotina: ["*"],
 
+  /**
+   * O relatório do ciclo: carga própria (`lerRelatorio`, em
+   * `lib/actions/relatorio.ts`). O texto volta à tela; `dados` é o
+   * retrato daquele dia, guardado para reler sem recalcular.
+   */
+  RelatorioDoCiclo: ["*"],
+
   /** Quem mudou o expediente por último — registro, não conteúdo. */
   OperacaoConfig: ["updatedBy"],
 };

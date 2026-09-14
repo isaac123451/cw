@@ -1,12 +1,15 @@
 import type { PrismaClient } from "@prisma/client";
 
-import { Case } from "@/lib/models/case";
+import { Case, respondida } from "@/lib/models/case";
 
 import {
   diaNaOperacao,
   getRawCounts,
+  hasRA1000,
   scoreFrom,
 } from "@/lib/services/reputation.service";
+import { isReclameAqui } from "@/lib/services/case.service";
+import { cicloAnterior, cicloDe } from "@/lib/models/ciclo";
 
 /**
  * O retrato de cada dia, gravado no dia.
@@ -47,6 +50,10 @@ export interface MetricasDoDia {
   tempoMedioHoras: number;
   churn: number;
   retidos: number;
+  /** Resolvidas pelo consumidor no ciclo do dia (1–7, 8–14…), até aquele dia. */
+  resolvidasCiclo: number;
+  /** Ciclos seguidos com o selo RA1000 na aba de 6 meses, contando o do dia. */
+  ciclosComSelo: number;
 }
 
 /**
@@ -67,16 +74,6 @@ function inicioDoMes(data: string) {
   return `${data.slice(0, 7)}-01`;
 }
 
-/** A data de N meses antes, no mesmo dia. */
-function mesesAntes(data: string, meses: number) {
-
-  const d = new Date(`${data}T00:00:00Z`);
-
-  d.setUTCMonth(d.getUTCMonth() - meses);
-
-  return d.toISOString().slice(0, 10);
-}
-
 /**
  * O que era verdade num dia, para uma reclamação.
  *
@@ -87,8 +84,18 @@ function mesesAntes(data: string, meses: number) {
  */
 function comoEstavaEm(caso: Case, ate: string): Case {
 
+  /*
+    `respondida()`, e não o texto da resposta.
+
+    A carga da lista não traz o texto — traz o fato `respondida`, para
+    não carregar centenas de respostas longas. Olhar o texto fazia duas
+    coisas erradas ao mesmo tempo (auditoria de 13/09/2026): "respondidas
+    do mês" saía sempre 0 na planilha automática, e o fato `respondida`,
+    que ficava intacto no objeto, contava no índice de resposta de um dia
+    passado a reclamação respondida só depois dele.
+  */
   const respondeu =
-    Boolean(caso.publicResponse?.trim()) &&
+    respondida(caso) &&
     Boolean(caso.publicResponseAt) &&
     dia(caso.publicResponseAt!) <= ate;
 
@@ -100,6 +107,7 @@ function comoEstavaEm(caso: Case, ate: string): Case {
   return {
     ...caso,
 
+    respondida: respondeu,
     publicResponse: respondeu
       ? caso.publicResponse
       : "",
@@ -115,11 +123,92 @@ function comoEstavaEm(caso: Case, ate: string): Case {
   };
 }
 
+/** As reclamações do Reclame Aqui como estavam num dia — só as que já existiam. */
+function comoEstavamEm(cases: Case[], data: string) {
+  return cases
+    .filter((c) => dia(c.createdAt) <= data)
+    .map((c) => comoEstavaEm(c, data));
+}
+
+/**
+ * A janela de uma aba do portal num dia, em meses fechados.
+ *
+ * O Reclame Aqui apura sobre meses completos (ver `getRange`, conferido
+ * contra o HugMe): num dia de setembro, a aba vigente de 6 meses é março
+ * a agosto; a **próxima**, que vira vigente no dia 1º, é abril a
+ * setembro — e é nela que o que se faz hoje conta. O histórico diário
+ * usava seis meses "rolando até o dia", que não é aba nenhuma do portal
+ * (Fase 5, 13/09/2026).
+ */
+export function janelaDaAba(data: string, meses: 6 | 12, modo: "vigente" | "proximo" = "vigente") {
+  const [ano, mes] = data.split("-").map(Number);
+  const fimOffset = modo === "vigente" ? -1 : 0;
+  const inicio = new Date(Date.UTC(ano, mes - 1 + fimOffset - meses + 1, 1)).toISOString().slice(0, 10);
+  const fim = new Date(Date.UTC(ano, mes + fimOffset, 0)).toISOString().slice(0, 10);
+  return { inicio, fim };
+}
+
+/** O resumo da aba vigente de seis meses, como estava num dia. */
+function resumoDaJanela(existiam: Case[], data: string) {
+  const { inicio, fim } = janelaDaAba(data, 6);
+  return scoreFrom(
+    getRawCounts(existiam.filter((c) => dia(c.createdAt) >= inicio && dia(c.createdAt) <= fim))
+  );
+}
+
+/**
+ * Uma aba do portal (6 ou 12 meses, vigente ou próxima) como estava num
+ * dia — só Reclame Aqui, com o que já tinha sido respondido e avaliado
+ * até ali. É o que o relatório do ciclo lê.
+ */
+export function abaEm(cases: Case[], data: string, meses: 6 | 12, modo: "vigente" | "proximo" = "vigente") {
+  const existiam = comoEstavamEm(cases.filter(isReclameAqui), data);
+  const janela = janelaDaAba(data, meses, modo);
+  const casos = existiam.filter((c) => dia(c.createdAt) >= janela.inicio && dia(c.createdAt) <= janela.fim);
+  const raw = getRawCounts(casos);
+  return { casos, raw, resumo: scoreFrom(raw), janela };
+}
+
+/**
+ * Quantos ciclos seguidos com o selo RA1000, contando o do dia.
+ *
+ * "Ciclos com o selo ativo: número acumulado de ciclos que mantemos o
+ * selo" — mantemos, então a conta para no primeiro ciclo sem selo. Cada
+ * ciclo anterior é julgado pelo seu último dia, na aba de seis meses (a
+ * mesma da nota da planilha). `selos` guarda o que já foi medido: o
+ * histórico inteiro mede cada fim de ciclo uma vez só.
+ */
+function ciclosSeguidosComSelo(ra: Case[], data: string, selos: Map<string, boolean>) {
+  const seloEm = (d: string) => {
+    const guardado = selos.get(d);
+    if (guardado !== undefined) return guardado;
+    const tem = hasRA1000(resumoDaJanela(comoEstavamEm(ra, d), d));
+    selos.set(d, tem);
+    return tem;
+  };
+
+  if (!seloEm(data)) return 0;
+
+  const primeira = ra.reduce((min, c) => (dia(c.createdAt) < min ? dia(c.createdAt) : min), data);
+  let seguidos = 1;
+  let c = cicloAnterior(cicloDe(data));
+  while (c.fim >= primeira && seguidos < 500 && seloEm(c.fim)) {
+    seguidos += 1;
+    c = cicloAnterior(c);
+  }
+  return seguidos;
+}
+
 /**
  * Mede um dia a partir da base.
  *
- * `cases` são **todas** as reclamações; o recorte acontece aqui, para
- * a mesma leitura servir a trezentos dias sem trezentas consultas.
+ * `cases` pode vir com a base inteira: aqui entram só as do Reclame
+ * Aqui. Os atendimentos das redes sociais chegavam junto — três casos,
+ * dois deles de teste — e entravam na nota, no tempo e nas entrantes do
+ * mês como se fossem reclamações (achado na Fase 5, 13/09/2026).
+ *
+ * `selos` é opcional: quem mede muitos dias seguidos passa o mesmo mapa,
+ * e cada fim de ciclo é julgado uma vez só.
  */
 export function medirDia(
   cases: Case[],
@@ -127,13 +216,14 @@ export function medirDia(
     date: Date;
     wouldHaveChurned: boolean | null;
   }[],
-  data: string
+  data: string,
+  selos: Map<string, boolean> = new Map()
 ): MetricasDoDia {
 
+  const ra = cases.filter(isReclameAqui);
+
   /* Só o que já existia naquele dia. */
-  const existiam = cases
-    .filter((c) => dia(c.createdAt) <= data)
-    .map((c) => comoEstavaEm(c, data));
+  const existiam = comoEstavamEm(ra, data);
 
   /* ---- as do mês corrente, que é como a planilha conta ---- */
 
@@ -141,21 +231,23 @@ export function medirDia(
     (c) => dia(c.createdAt) >= inicioDoMes(data)
   );
 
-  const respondidas = doMes.filter((c) =>
-    Boolean(c.publicResponse?.trim())
-  ).length;
+  const respondidas = doMes.filter((c) => respondida(c)).length;
 
-  /* ---- a nota, na janela de seis meses que terminava ali ---- */
+  /* ---- a nota, na aba vigente de seis meses naquele dia ---- */
 
-  const desde = mesesAntes(data, 6);
+  const s = resumoDaJanela(existiam, data);
 
-  const naJanela = existiam.filter(
+  /* ---- resolvidas no ciclo: avaliadas como resolvidas entre o início do ciclo e o dia ---- */
+
+  const ciclo = cicloDe(data);
+  const resolvidasCiclo = existiam.filter(
     (c) =>
-      dia(c.createdAt) >= desde &&
-      dia(c.createdAt) <= data
-  );
-
-  const s = scoreFrom(getRawCounts(naJanela));
+      c.evaluated &&
+      c.resolved &&
+      Boolean(c.evaluatedAt) &&
+      dia(c.evaluatedAt!) >= ciclo.inicio &&
+      dia(c.evaluatedAt!) <= data
+  ).length;
 
   /* ---- impacto: churn e retenção até aquele dia ---- */
 
@@ -184,6 +276,9 @@ export function medirDia(
     */
     tempoMedioHoras:
       Math.round((s.responseMinutes / 60) * 100) / 100,
+
+    resolvidasCiclo,
+    ciclosComSelo: ciclosSeguidosComSelo(ra, data, selos),
 
     churn: existiam.filter((c) => c.churnRisk).length,
 
@@ -231,6 +326,8 @@ export async function gravarDia(
     voltariam: m.voltariam,
     resolvidasPct: m.resolvidasPct,
     tempoMedioHoras: m.tempoMedioHoras,
+    resolvidasCiclo: m.resolvidasCiclo,
+    ciclosComSelo: m.ciclosComSelo,
     churn: m.churn,
     retidos: m.retidos,
     medidoEm: new Date(),

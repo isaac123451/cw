@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   BookOpenCheck,
   CalendarCheck2,
+  FileBarChart,
   LibraryBig,
   MessageSquareWarning,
   MessagesSquare,
@@ -131,6 +132,12 @@ export const menuItems: MenuItem[] = [
     href: "/clientes",
     icon: UserRound,
     group: "Clientes",
+  },
+  {
+    title: "Relatório do ciclo",
+    href: "/relatorio",
+    icon: FileBarChart,
+    group: "Inteligência",
   },
   {
     title: "Analytics",

@@ -84,6 +84,9 @@ async function main() {
 
   const dias = diasEntre(de, ate);
 
+  /* Cada fim de ciclo é julgado uma vez só, para o selo de todos os dias. */
+  const selos = new Map<string, boolean>();
+
   console.log(
     "  dia          entram  resp.  s/resp   nota   consum.  volta%  resolv%  h méd  churn"
   );
@@ -95,7 +98,7 @@ async function main() {
 
   for (const d of dias) {
 
-    const m = medirDia(cases, impactos, d);
+    const m = medirDia(cases, impactos, d, selos);
 
     /* Só imprime linha por linha quando o intervalo cabe na tela. */
     if (dias.length <= 40) {

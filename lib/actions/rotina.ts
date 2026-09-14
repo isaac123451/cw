@@ -1,6 +1,7 @@
 "use server";
 
 import { requireRole, SemPermissao, tryRole } from "@/lib/auth/guard";
+import { cicloDe } from "@/lib/models/ciclo";
 import type { PrismaClient } from "@prisma/client";
 
 import {
@@ -216,6 +217,8 @@ export interface CargaDoMeuDia {
   metricaHoje: LinhaDeMetrica | null;
   ligacoes: ItemDaRotina[];
   ontem: ResumoDeOntem | null;
+  /** O relatório do ciclo de hoje: se já foi salvo. */
+  relatorio: { ciclo: string; rotulo: string; salvo: boolean } | null;
 }
 
 function diaUtilAnterior(dia: string, expediente: Parameters<typeof ehDiaUtil>[1]) {
@@ -240,7 +243,7 @@ function diaUtilAnterior(dia: string, expediente: Parameters<typeof ehDiaUtil>[1
 export async function lerMeuDia(): Promise<CargaDoMeuDia> {
 
   const ctx = await tryRole("LEITURA");
-  if (!ctx) return { marcas: [], metricaHoje: null, ligacoes: [], ontem: null };
+  if (!ctx) return { marcas: [], metricaHoje: null, ligacoes: [], ontem: null, relatorio: null };
 
   const prisma = ctx.prisma;
   const agora = new Date();
@@ -253,7 +256,9 @@ export async function lerMeuDia(): Promise<CargaDoMeuDia> {
   const ontemIni = new Date(Date.parse(`${ontem}T03:00:00Z`));
   const ontemFim = new Date(ontemIni.getTime() + 86_400_000);
 
-  const [marcas, metrica, emCadencia, contatosOntem, publicadasOntem, npsOntem, googleOntem] = await Promise.all([
+  const ciclo = cicloDe(hoje);
+
+  const [marcas, metrica, emCadencia, contatosOntem, publicadasOntem, npsOntem, googleOntem, relatorioSalvo] = await Promise.all([
     prisma.marcaDaRotina.findMany({ where: { userId: ctx.userId, dia: { gte: desde } }, select: { atividadeId: true, dia: true } }),
     prisma.metricaDiaria.findUnique({ where: { dia: hoje } }),
     prisma.case.findMany({
@@ -265,6 +270,7 @@ export async function lerMeuDia(): Promise<CargaDoMeuDia> {
     prisma.case.count({ where: { publicResponseAt: { gte: ontemIni, lt: ontemFim } } }),
     prisma.npsAttempt.count({ where: { createdAt: { gte: ontemIni, lt: ontemFim } } }),
     prisma.avaliacaoGoogle.count({ where: { respondidaEm: { gte: ontemIni, lt: ontemFim } } }),
+    prisma.relatorioDoCiclo.count({ where: { ciclo: ciclo.id } }),
   ]);
 
   const ligacoes: ItemDaRotina[] = [];
@@ -311,6 +317,7 @@ export async function lerMeuDia(): Promise<CargaDoMeuDia> {
         }
       : null,
     ligacoes,
+    relatorio: { ciclo: ciclo.id, rotulo: ciclo.rotulo, salvo: relatorioSalvo > 0 },
     ontem: {
       dia: ontem,
       contatos: contatosOntem.length,

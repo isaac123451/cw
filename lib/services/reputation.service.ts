@@ -374,11 +374,20 @@ export function bandOf(score: number): ScoreBand {
   );
 }
 
-/** O selo exige nota na faixa Ótimo **e** as quatro metas atingidas. */
+/**
+ * O selo pede, além das quatro metas, **50 avaliações ou mais** no
+ * período — critério publicado pelo Reclame Aqui e que esta função não
+ * conferia (achado na Fase 5, 13/09/2026). Cada aba de período (6 meses,
+ * 12 meses) tem o seu selo: vale a janela que for passada aqui.
+ */
+export const RA1000_MINIMO_DE_AVALIACOES = 50;
+
+/** O selo exige nota na faixa Ótimo, as quatro metas e o mínimo de avaliações. */
 export function hasRA1000(
   summary: ReputationSummary
 ): boolean {
   return (
+    summary.evaluated >= RA1000_MINIMO_DE_AVALIACOES &&
     summary.raScore >= 8 &&
     summary.responseIndex >= RA1000_TARGETS.resposta &&
     summary.consumerScore >= RA1000_TARGETS.consumidor &&
@@ -514,12 +523,24 @@ export interface ReputationRaw {
   wouldReturn: number;
 }
 
-/** "45min", "6h", "12 dias" → minutos. */
+/**
+ * "45min", "6h", "12 dias" — e "3 dias e 20 horas", "8 horas", "45
+ * minutos" — em minutos.
+ *
+ * **O texto composto é o que o próprio modelo grava.** O tempo sai do
+ * banco por `formatElapsed`, que escreve "3 dias e 20 horas"; esta
+ * leitura só aceitava os três formatos curtos, e devolvia `null` para
+ * todo o resto. Medido na auditoria de 13/09/2026: na janela de seis
+ * meses, **11 de 100** tempos entravam na média — só os de dia
+ * inteiro, que são os das reclamações antigas importadas sem hora e
+ * respondidas tarde. O "17 dias e 14 horas" do painel era a média de
+ * onze casos; com os cem, 15 dias e 20 horas, e mediana de 7 dias.
+ */
 export function parseElapsed(
   value?: string
 ): number | null {
 
-  if (!value || value === "-") return null;
+  if (!value || value === "-" || value === "—") return null;
 
   const minutes = value.match(/^(\d+)\s*min$/);
   if (minutes) return Number(minutes[1]);
@@ -530,7 +551,14 @@ export function parseElapsed(
   const days = value.match(/^(\d+)\s*dias?$/);
   if (days) return Number(days[1]) * 1440;
 
-  return null;
+  const texto = value.toLowerCase();
+  const d = texto.match(/(\d+)\s*dias?\b/);
+  const h = texto.match(/(\d+)\s*(?:h|horas?)\b/);
+  const m = texto.match(/(\d+)\s*min/);
+
+  if (!d && !h && !m) return null;
+
+  return (d ? Number(d[1]) * 1440 : 0) + (h ? Number(h[1]) * 60 : 0) + (m ? Number(m[1]) : 0);
 }
 
 /** Minutos → "19 dias e 17 horas", como o painel do Reclame Aqui. */
