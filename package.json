@@ -1,6 +1,6 @@
 {
   "name": "cw-reputacao",
-  "version": "0.61.0",
+  "version": "0.62.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -100,6 +100,7 @@
     "check:ciclos": "tsx scripts/check-ciclos.ts",
     "check:documentos": "tsx scripts/check-documentos.ts",
     "check:conversas": "tsx scripts/check-conversas.ts",
+    "check:periodo": "tsx scripts/check-periodo.ts",
     "conferir:fila": "tsx scripts/conferir-fila-avaliacao.ts"
   },
   "dependencies": {

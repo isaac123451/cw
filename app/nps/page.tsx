@@ -71,6 +71,9 @@ import {
   summarize,
 } from "@/lib/services/nps.service";
 
+import FiltroDePeriodo from "@/components/shared/FiltroDePeriodo";
+import { diaNoIntervalo, intervaloDoAtalho, type AtalhoDoPeriodo, type Intervalo } from "@/lib/models/periodo";
+import { diaNaOperacao, hojeNaOperacao } from "@/lib/services/reputation.service";
 /**
  * "Detrator" vira "Detratores"; "Passivo" vira "Passivos".
  *
@@ -205,24 +208,40 @@ export default function NpsPage() {
 
   const [, startTransition] = useTransition();
 
+  /*
+    O período: vale para tudo o que a tela conta — o NPS do topo, os
+    segmentos, a causa raiz, a triagem, a lista e a exportação. A data é
+    a da resposta no Wootric, no dia de Brasília.
+  */
+  const [atalhoDoPeriodo, setAtalhoDoPeriodo] = useState<AtalhoDoPeriodo>("tudo");
+  const [periodoPersonalizado, setPeriodoPersonalizado] = useState<Intervalo>({ de: null, ate: null });
+  const intervalo = useMemo(
+    () => intervaloDoAtalho(atalhoDoPeriodo, hojeNaOperacao(), periodoPersonalizado),
+    [atalhoDoPeriodo, periodoPersonalizado]
+  );
+  const doPeriodo = useMemo(
+    () => (intervalo.de || intervalo.ate ? responses.filter((r) => diaNoIntervalo(diaNaOperacao(r.respondedAt), intervalo)) : responses),
+    [responses, intervalo]
+  );
+
   const resumo = useMemo(
-    () => summarize(responses),
-    [responses]
+    () => summarize(doPeriodo),
+    [doPeriodo]
   );
 
   const segmentos = useMemo(
-    () => bySegment(responses),
-    [responses]
+    () => bySegment(doPeriodo),
+    [doPeriodo]
   );
 
   const causas = useMemo(
-    () => byRootCause(responses),
-    [responses]
+    () => byRootCause(doPeriodo),
+    [doPeriodo]
   );
 
   const visiveis = useMemo(() => {
 
-    return responses.filter((item) => {
+    return doPeriodo.filter((item) => {
 
       if (
         kindFiltro &&
@@ -307,7 +326,7 @@ export default function NpsPage() {
     });
 
   }, [
-    responses,
+    doPeriodo,
     filtro,
     kindFiltro,
     segmento,
@@ -325,18 +344,18 @@ export default function NpsPage() {
    */
   const contagens = useMemo(
     () => ({
-      abertos: responses.filter(
+      abertos: doPeriodo.filter(
         (item) => !isEncerrado(item.status)
       ).length,
-      estourados: responses.filter(
+      estourados: doPeriodo.filter(
         (item) => slaState(item) === "estourado"
       ).length,
-      "sem-tratativa": responses.filter(
+      "sem-tratativa": doPeriodo.filter(
         (item) => item.status === STATUS_SEM_TRATATIVA
       ).length,
-      todos: responses.length,
+      todos: doPeriodo.length,
     }),
-    [responses]
+    [doPeriodo]
   );
 
   /**
@@ -357,14 +376,14 @@ export default function NpsPage() {
       mapa[s.label] = { total: 0, comentarios: 0 };
     }
 
-    for (const item of responses) {
+    for (const item of doPeriodo) {
       const alvo = mapa[segmentOf(item.score).label];
       alvo.total += 1;
       if (item.comment.trim() !== "") alvo.comentarios += 1;
     }
 
     return mapa;
-  }, [responses]);
+  }, [doPeriodo]);
 
   async function salvar(dados: NpsDraft) {
 
@@ -609,6 +628,19 @@ export default function NpsPage() {
           </div>
         </PageHeading>
 
+        <FiltroDePeriodo
+          atalho={atalhoDoPeriodo}
+          personalizado={periodoPersonalizado}
+          intervalo={intervalo}
+          total={doPeriodo.length}
+          rotuloDoTotal={["resposta", "respostas"]}
+          onAtalho={setAtalhoDoPeriodo}
+          onPersonalizado={(i) => {
+            setPeriodoPersonalizado(i);
+            setAtalhoDoPeriodo("personalizado");
+          }}
+        />
+
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
 
           <StatTile
@@ -756,7 +788,7 @@ export default function NpsPage() {
         </div>
 
         <TriagemNps
-          itens={responses}
+          itens={doPeriodo}
           tipos={kinds}
           onOpen={(item) => abrir(item.id)}
           onAplicado={async (abriuRevisao) => {

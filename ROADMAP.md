@@ -933,6 +933,28 @@ descartável: ligar a conversa, registrar o 1º contato (08:30) e a
 validação (09:15) — as horas das mensagens —, e apagar o caso e a
 conversa depois.
 
+### Filtro por data no NPS (14/09/2026, 0.62.0)
+
+O Isaac: "na parte do nps não tem como colocar um filtro por data".
+
+- **Tela do NPS**: a linha **Período** no alto, com Tudo, Hoje, 7, 30 e
+  90 dias, Este mês, Mês passado e o "de … até …". Vale para **tudo** o
+  que a tela conta — o NPS do topo, promotores/passivos/detratores, fora
+  do prazo, distribuição, causa raiz, a triagem, as abas (em aberto, fora
+  do prazo…), a lista, o quadro e a exportação — e diz em palavras o que
+  está valendo ("de 16/08/2026 a 14/09/2026 · 758 respostas"). A data é a
+  da resposta, no dia de Brasília: a resposta das 23h30 de 31/08 é de
+  agosto.
+- **Análise do NPS**: além das janelas de 3, 6 e 12 meses, o "de … até
+  …"; com data preenchida, a janela fica desmarcada e a tendência mostra
+  os meses do período.
+- `lib/models/periodo.ts` é genérico (serve para as outras telas).
+
+Provas: `check:periodo` (os atalhos a partir de hoje, virada de mês e de
+ano, fevereiro, datas trocadas, as pontas e a resposta das 23h30).
+Conferido na tela com a base real: Tudo 1.507 respostas, mês passado
+712, 30 dias 758.
+
 
 ### Excluir conta da plataforma (11/09/2026)
 

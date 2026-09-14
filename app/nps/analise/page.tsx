@@ -50,6 +50,16 @@ import {
 } from "@/lib/services/nps.service";
 
 import PorQue from "@/components/shared/PorQue";
+import { diaNoIntervalo, intervaloDoAtalho, type Intervalo } from "@/lib/models/periodo";
+import { diaNaOperacao, hojeNaOperacao } from "@/lib/services/reputation.service";
+
+/** Quantos meses do começo do período até hoje — a tendência mostra os meses do período (até 24). */
+function mesesAteHoje(de: string | null) {
+  if (!de) return 24;
+  const hoje = hojeNaOperacao();
+  const n = (Number(hoje.slice(0, 4)) - Number(de.slice(0, 4))) * 12 + (Number(hoje.slice(5, 7)) - Number(de.slice(5, 7))) + 1;
+  return Math.min(24, Math.max(1, n));
+}
 /** Janelas que a tela oferece, em meses. */
 const JANELAS = [
   { meses: 3, label: "3 meses" },
@@ -87,6 +97,14 @@ export default function NpsAnalisePage() {
 
   const [meses, setMeses] = useState(12);
 
+  /*
+    O período por data, além das janelas. Com "de" ou "até" preenchido,
+    vale ele — e a janela de meses fica desmarcada.
+  */
+  const [porData, setPorData] = useState<Intervalo>({ de: null, ate: null });
+  const personalizado = Boolean(porData.de || porData.ate);
+  const intervalo = useMemo(() => intervaloDoAtalho("personalizado", hojeNaOperacao(), porData), [porData]);
+
   const [segmento, setSegmento] = useState<
     NpsSegment | ""
   >("");
@@ -100,8 +118,9 @@ export default function NpsAnalisePage() {
    */
   const noPeriodo = useMemo(() => {
 
-    const base =
-      meses === 0
+    const base = personalizado
+      ? responses.filter((item) => diaNoIntervalo(diaNaOperacao(item.respondedAt), intervalo))
+      : meses === 0
         ? responses
         : responses.filter((item) => {
 
@@ -122,7 +141,7 @@ export default function NpsAnalisePage() {
         )
       : base;
 
-  }, [responses, meses, segmento]);
+  }, [responses, meses, segmento, personalizado, intervalo]);
 
   const resumo = useMemo(
     () => summarize(noPeriodo),
@@ -130,8 +149,8 @@ export default function NpsAnalisePage() {
   );
 
   const tendencia = useMemo(
-    () => trendByMonth(noPeriodo, meses === 0 ? 24 : meses),
-    [noPeriodo, meses]
+    () => trendByMonth(noPeriodo, personalizado ? mesesAteHoje(intervalo.de) : meses === 0 ? 24 : meses),
+    [noPeriodo, meses, personalizado, intervalo.de]
   );
 
   const segmentos = useMemo(
@@ -207,12 +226,22 @@ export default function NpsAnalisePage() {
               {JANELAS.map((j) => (
                 <button
                   key={j.meses}
-                  onClick={() => setMeses(j.meses)}
-                  className={`rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${meses === j.meses ? "bg-white text-violet-700 shadow-sm" : "text-zinc-600 hover:text-zinc-800"}`}
+                  onClick={() => {
+                    setMeses(j.meses);
+                    setPorData({ de: null, ate: null });
+                  }}
+                  className={`rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${!personalizado && meses === j.meses ? "bg-white text-violet-700 shadow-sm" : "text-zinc-600 hover:text-zinc-800"}`}
                 >
                   {j.label}
                 </button>
               ))}
+            </div>
+
+            <div className="flex items-center gap-1.5 rounded-lg bg-zinc-100 px-2 py-1" title="Um período por data, no dia de Brasília">
+              <label htmlFor="analise-de" className="text-[11px] font-medium text-zinc-500">de</label>
+              <input id="analise-de" type="date" value={porData.de ?? ""} onChange={(e) => setPorData((p) => ({ ...p, de: e.target.value || null }))} className="h-7 rounded-md border border-zinc-200 bg-white px-1.5 text-xs text-zinc-700 outline-none focus:border-violet-400" />
+              <label htmlFor="analise-ate" className="text-[11px] font-medium text-zinc-500">até</label>
+              <input id="analise-ate" type="date" value={porData.ate ?? ""} onChange={(e) => setPorData((p) => ({ ...p, ate: e.target.value || null }))} className="h-7 rounded-md border border-zinc-200 bg-white px-1.5 text-xs text-zinc-700 outline-none focus:border-violet-400" />
             </div>
 
             <Link
