@@ -10,6 +10,7 @@ import PlanoDoDia from "@/components/rotina/PlanoDoDia";
 import CheckpointDoDia from "@/components/rotina/CheckpointDoDia";
 import ConfigurarRotina from "@/components/rotina/ConfigurarRotina";
 import { useMeuDia } from "@/components/rotina/useMeuDia";
+import CartaoDoPrimeiroAcesso from "@/components/primeiroAcesso/CartaoDoPrimeiroAcesso";
 
 /**
  * Meu dia — a primeira tela do dia.
@@ -48,6 +49,8 @@ export default function MeuDiaPage() {
           title="Meu dia"
           description={`${dataPorExtenso ? `${dataPorExtenso[0].toUpperCase()}${dataPorExtenso.slice(1)}. ` : ""}A rotina do documento com os números de hoje nas quatro frentes, o plano que cabe no expediente e o checkpoint com a gestão.`}
         />
+
+        <CartaoDoPrimeiroAcesso />
 
         <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
 

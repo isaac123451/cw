@@ -69,6 +69,12 @@ model UserPreference {
   notifications Json
   somenteMinhas Boolean @default(false)
 
+  /// O roteiro do primeiro acesso: `{ passos: { id: quando }, dispensadoEm? }`.
+  /// JSON pelo mesmo motivo dos avisos — passo novo no roteiro não pede
+  /// migração. O último passo (o primeiro caso tratado) não fica aqui:
+  /// sai do registro de contatos.
+  primeiroAcesso Json?
+
   updatedAt DateTime @updatedAt
 }
 

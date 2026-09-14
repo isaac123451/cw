@@ -817,6 +817,32 @@ https corrigido, `javascript:` barrado), subir, excluir (apagado).
 a extensão e preencher os endereços que só a gestão tem (HugMe, Wootric,
 CW Engine, Meetime, #incidentes e as planilhas).
 
+**Fase 6, parte 4 — o primeiro acesso guiado (0.58.0).** Fecha a Fase 6.
+
+- **`/primeiro-acesso`** (menu Conhecimento): oito passos em três partes
+  — *Entender* (o que é reputação, a rotina do agente, ferramentas e
+  acessos), *Conhecer as telas* (Meu dia, o quadro e a ficha do Reclame
+  Aqui, NPS, Redes e Google) e *Fazer de verdade* (o primeiro caso
+  tratado). Cada passo diz em duas linhas o que é aquilo, leva até lá,
+  tem o "por quê?" quando há regra e se marca com um clique, gravado com
+  resposta. O último **se marca sozinho**: pelo primeiro contato que a
+  pessoa registrou (Reclame Aqui, redes ou NPS), com o link para o caso.
+  Ao terminar: "Roteiro completo — boas-vindas ao time".
+- **No Meu dia**, uma linha no alto enquanto o roteiro não termina
+  ("Primeiro acesso · 3 de 8 · Próximo: …" e "Continuar o roteiro"); quem
+  já conhece esconde (gravado), e o roteiro continua no menu.
+- Coluna nova `UserPreference.primeiroAcesso` (JSON: as marcas e o
+  "escondido"), sempre da própria pessoa.
+
+Provas: `check:documentos` ganhou a parte do primeiro acesso — todo passo
+leva a uma tela que existe, só o último é automático, JSON estranho não
+quebra a tela, tudo marcado sem o primeiro contato não termina e com ele
+termina. `check:telas` com `/primeiro-acesso`. Conferido na tela: o
+cartão no Meu dia (1 de 8 — o seu primeiro contato já existia), marcar
+e desmarcar um passo (voltou ao que era).
+
+**Depende de você:** reiniciar o `npm run dev` (coluna nova).
+
 
 ### Excluir conta da plataforma (11/09/2026)
 

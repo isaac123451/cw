@@ -5,6 +5,7 @@ import {
   CalendarClock,
   FolderKanban,
   Gauge,
+  GraduationCap,
   LayoutDashboard,
   BookOpenCheck,
   CalendarCheck2,
@@ -168,6 +169,12 @@ export const menuItems: MenuItem[] = [
     title: "Ferramentas e acessos",
     href: "/ferramentas",
     icon: KeyRound,
+    group: "Conhecimento",
+  },
+  {
+    title: "Primeiro acesso",
+    href: "/primeiro-acesso",
+    icon: GraduationCap,
     group: "Conhecimento",
   },
   {

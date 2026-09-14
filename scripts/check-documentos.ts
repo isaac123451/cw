@@ -23,7 +23,11 @@ import {
   porqueDoContato,
   porqueDoTipoNps,
 } from "../lib/documentos/porques";
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
+
 import { ATALHOS_DO_DOCUMENTO } from "../lib/documentos/atalhosDoDocumento";
+import { lerEstadoGravado, progressoDoGuia, ROTEIRO } from "../lib/models/primeiroAcesso";
 import { enderecoValido, normalizarEndereco } from "../lib/models/atalho";
 import { blocosDoMarkdown, dobrar, marcarTermo, textoPuro, trechosDaLinha, type Bloco } from "../lib/models/markdown";
 import { markdownDosPassos, secoesDoDocumento } from "../lib/models/playbook";
@@ -189,6 +193,30 @@ confere(
 );
 confere("caminho da plataforma passa", enderecoValido("/relatorio"), true);
 confere("sem esquema ganha https", normalizarEndereco("www.hugme.com.br/login"), "https://www.hugme.com.br/login");
+
+console.log("\n— Primeiro acesso —");
+const semTela = ROTEIRO.flatMap((p) => [p.link, p.link2?.href].filter(Boolean) as string[])
+  .map((href) => href.split(/[?#]/)[0])
+  .filter((rota) => !existsSync(resolve(__dirname, "..", "app", `.${rota}`, "page.tsx")));
+confere("todo passo leva a uma tela que existe", semTela, []);
+confere("só o último passo se marca sozinho", ROTEIRO.filter((p) => p.automatico).map((p) => p.id), ["primeiro-caso"]);
+confere(
+  "o gravado estranho não quebra: passo desconhecido e o automático são ignorados",
+  lerEstadoGravado({ passos: { reputacao: "2026-09-14T12:00:00Z", inventado: "x", "primeiro-caso": "x", rotina: 3 }, dispensadoEm: 5 }),
+  { passos: { reputacao: "2026-09-14T12:00:00Z" }, dispensadoEm: undefined }
+);
+confere("JSON nulo vira roteiro vazio", lerEstadoGravado(null), { passos: {}, dispensadoEm: undefined });
+const todosMarcados = Object.fromEntries(ROTEIRO.filter((p) => !p.automatico).map((p) => [p.id, "2026-09-14T12:00:00Z"]));
+confere(
+  "tudo marcado sem o primeiro caso ainda não termina",
+  progressoDoGuia({ passos: todosMarcados, primeiroCaso: null }).proximo?.id,
+  "primeiro-caso"
+);
+confere(
+  "com o primeiro contato registrado, termina",
+  progressoDoGuia({ passos: todosMarcados, primeiroCaso: { quando: "2026-09-14T13:00:00Z", onde: "NPS", link: "/nps/x" } }).concluido,
+  true
+);
 
 console.log(falhas ? `\n${falhas} conferência(s) falharam.\n` : "\nTudo certo.\n");
 process.exit(falhas ? 1 : 0);
