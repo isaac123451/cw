@@ -13,6 +13,7 @@ import {
   KeyRound,
   LibraryBig,
   MessageSquareWarning,
+  MessageCircle,
   MessagesSquare,
   Route,
   Settings,
@@ -86,6 +87,12 @@ export const menuItems: MenuItem[] = [
         href: "/reclame-aqui/configuracoes",
       },
     ],
+  },
+  {
+    title: "Conversas do WhatsApp",
+    href: "/conversas",
+    icon: MessageCircle,
+    group: "Operação",
   },
   {
     title: "Redes Sociais",

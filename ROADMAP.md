@@ -843,6 +843,40 @@ e desmarcar um passo (voltou ao que era).
 
 **Depende de você:** reiniciar o `npm run dev` (coluna nova).
 
+**Fase 7, parte 1 — a tela de conversas e o arquivo exportado
+(0.59.0).**
+
+- **`/conversas`** (menu Operação): a lista busca por texto das
+  mensagens, contato, telefone, protocolo e estabelecimento; a conversa
+  aparece em balões (cliente à esquerda, nós à direita, avisos do
+  sistema no meio, divisória por dia, hora de Brasília), abre no fim.
+  **Vínculos** com o caso (RA ou redes), o ciclo de NPS e o
+  estabelecimento, por busca, com link para cada um. **Resumo por IA**
+  só para ler — editável — e gravado apenas no "Salvar resumo".
+- **Guardar pelo arquivo** do "Exportar conversa" (.txt ou .zip, formato
+  Android e iPhone): lido **no navegador** (o .zip com fotos não sobe),
+  com prévia — de quem é, qual é o nosso lado (dá para trocar), as
+  últimas mensagens e se ele se junta a uma conversa que já existe.
+  **Guardar de novo acrescenta só o que é novo**: cada mensagem tem a
+  chave dela, e entre extensão e arquivo quem segura a repetição é a
+  assinatura (lado + minuto de Brasília + texto).
+- **Dados bancários não se guardam**: cartão (com a conta de Luhn),
+  chave Pix, agência/conta e CVV viram "[dado bancário omitido]" antes
+  de gravar; a prévia avisa quantos, e o original fica só no WhatsApp.
+- Módulo de permissão novo, "Conversas do WhatsApp". Tabelas `Conversa`
+  e `MensagemDaConversa` (RLS em 59 de 59).
+
+Provas: `check:conversas` — os dois formatos, mensagem de várias
+linhas, aviso do sistema, marca invisível do iPhone, dois-pontos dentro
+do texto, o .zip comprimido e guardado, arquivo que não é zip, cada
+forma de dado bancário (e o número comprido que não é cartão) e a
+assinatura que casa a extensão com o arquivo. Conferido na tela com uma
+conversa descartável: guardar, guardar de novo com uma mensagem a mais
+(entrou só ela), vincular e desvincular um caso, resumo pela IA salvo,
+excluir (apagada; 0 conversas no banco).
+
+**Depende de você:** reiniciar o `npm run dev` (tabelas novas).
+
 
 ### Excluir conta da plataforma (11/09/2026)
 

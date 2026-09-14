@@ -503,6 +503,7 @@ model Case {
   contatos  CaseContato[]
   negociacoes Negociacao[]
   avaliacoesGoogle AvaliacaoGoogle[]
+  conversas Conversa[]
 
   @@index([channel, publishedAt])
   @@index([status])
@@ -993,6 +994,7 @@ model Establishment {
 
   npsResponses NpsResponse[]
   cases        Case[]
+  conversas    Conversa[]
 }
 
 /// Cliente — a pessoa que reclamou.
@@ -1161,6 +1163,60 @@ model Atalho {
   atualizadoEm  DateTime @updatedAt
 
   @@index([ordem])
+}
+
+/// Uma conversa de WhatsApp guardada — pela extensão ("Guardar a
+/// conversa") ou pelo arquivo que o próprio WhatsApp exporta. Só existe
+/// se alguém guardou: nada é lido nem gravado sozinho. Dados bancários e
+/// de cartão são omitidos antes de gravar.
+model Conversa {
+  id              String    @id @default(cuid())
+  canal           String    @default("whatsapp")
+  /// O telefone do contato, só dígitos, como o WhatsApp mostra.
+  telefone        String?
+  contatoNome     String    @default("")
+  /// O nosso lado no arquivo exportado (o nome da conta de Reputação).
+  nosNome         String?
+  caseId          String?
+  case            Case?          @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  npsResponseId   String?
+  npsResponse     NpsResponse?   @relation(fields: [npsResponseId], references: [id], onDelete: SetNull)
+  establishmentId String?
+  establishment   Establishment? @relation(fields: [establishmentId], references: [id], onDelete: SetNull)
+  /// O resumo por IA — gravado só quando alguém clica em Salvar.
+  resumo          String?
+  resumoEm        DateTime?
+  resumoPor       String?
+  guardadaPor     String
+  criadoEm        DateTime  @default(now())
+  atualizadoEm    DateTime  @updatedAt
+  mensagens       MensagemDaConversa[]
+
+  @@index([telefone])
+  @@index([caseId])
+  @@index([npsResponseId])
+  @@index([establishmentId])
+}
+
+/// Uma mensagem de uma conversa guardada.
+model MensagemDaConversa {
+  id         String    @id @default(cuid())
+  conversaId String
+  conversa   Conversa  @relation(fields: [conversaId], references: [id], onDelete: Cascade)
+  /// Para guardar de novo sem repetir: o id da mensagem no WhatsApp
+  /// (extensão) ou uma impressão do conteúdo (arquivo).
+  chave      String
+  /// "cliente", "nos" ou "sistema".
+  de         String
+  autor      String?
+  texto      String
+  em         DateTime?
+  /// "extensao" ou "arquivo".
+  origem     String
+  criadoEm   DateTime  @default(now())
+
+  @@unique([conversaId, chave])
+  @@index([conversaId, em])
 }
 
 /// Resposta pronta inserida na réplica pública.
@@ -1391,8 +1447,9 @@ model NpsResponse {
   postContactAt   DateTime?
   postContactBy   String?
 
-  attempts NpsAttempt[]
-  notes    NpsNote[]
+  attempts  NpsAttempt[]
+  notes     NpsNote[]
+  conversas Conversa[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -234,6 +234,7 @@ async function main() {
     "/documentacao",
     "/ferramentas",
     "/primeiro-acesso",
+    "/conversas",
     "/base-conhecimento",
     "/processos",
     "/projetos",

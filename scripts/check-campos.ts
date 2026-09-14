@@ -204,6 +204,14 @@ const INTERNAS: Record<string, string[]> = {
    */
   Atalho: ["*"],
 
+  /**
+   * As conversas do WhatsApp guardadas: carga própria (`listarConversas`
+   * e `lerConversa`, em `lib/actions/conversas.ts`) — o texto das
+   * conversas não viaja na carga que toda tela recebe.
+   */
+  Conversa: ["*"],
+  MensagemDaConversa: ["*"],
+
   /** Quem mudou o expediente por último — registro, não conteúdo. */
   OperacaoConfig: ["updatedBy"],
 };

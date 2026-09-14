@@ -47,6 +47,7 @@ export const MODULES = [
   "projetos",
   "documentacao",
   "base-conhecimento",
+  "conversas",
   "configuracoes",
 ] as const;
 
@@ -63,6 +64,7 @@ export const MODULE_LABELS: Record<Modulo, string> = {
   projetos: "Projetos e melhorias",
   documentacao: "Documentação",
   "base-conhecimento": "Respostas prontas",
+  conversas: "Conversas do WhatsApp",
   configuracoes: "Configurações",
 };
 
@@ -80,6 +82,8 @@ export const MODULE_HINTS: Record<Modulo, string> = {
   documentacao: "Playbooks da operação.",
   "base-conhecimento":
     "Respostas prontas do Reclame Aqui e do WhatsApp.",
+  conversas:
+    "Conversas guardadas pela extensão ou pelo arquivo exportado, com os vínculos e o resumo.",
   configuracoes:
     "Fluxo, categorias, times, integrações, IA e a tabela de planos.",
 };
