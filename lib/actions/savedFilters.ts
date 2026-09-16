@@ -1,5 +1,8 @@
 "use server";
 
+import { comResultado } from "@/lib/services/gravacao";
+import type { ResultadoDaGravacao } from "@/lib/models/resultadoDaGravacao";
+
 import { requireRole, tryRole } from "@/lib/auth/guard";
 import type { Modulo } from "@/lib/auth/modules";
 
@@ -124,15 +127,17 @@ export async function saveSavedFilter(input: {
   return criado.id;
 }
 
-export async function deleteSavedFilter(id: string) {
+export async function deleteSavedFilter(id: string): Promise<ResultadoDaGravacao> {
+  return comResultado("deleteSavedFilter", async () => {
 
-  const ctx = await contexto();
+    const ctx = await contexto();
 
-  if (!ctx) return;
+    if (!ctx) return;
 
-  // `deleteMany` com o dono no filtro: um id de outra pessoa não apaga
-  // nada, em vez de estourar erro ou apagar o que não é seu.
-  await ctx.prisma.savedFilter.deleteMany({
-    where: { id, ownerId: ctx.userId },
+    // `deleteMany` com o dono no filtro: um id de outra pessoa não apaga
+    // nada, em vez de estourar erro ou apagar o que não é seu.
+    await ctx.prisma.savedFilter.deleteMany({
+      where: { id, ownerId: ctx.userId },
+    });
   });
 }

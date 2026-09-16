@@ -1,5 +1,8 @@
 "use server";
 
+import { comResultado } from "@/lib/services/gravacao";
+import type { ResultadoDaGravacao } from "@/lib/models/resultadoDaGravacao";
+
 import { updateTag } from "next/cache";
 import { WORKSPACE_TAG } from "@/lib/actions/tags";
 
@@ -91,244 +94,272 @@ function dia(value?: string | null) {
 
 export async function saveWorkflowStatus(
   item: WorkflowStatus
-) {
-  const prisma = await autorizado("ADMIN");
-  if (!prisma) return;
+): Promise<ResultadoDaGravacao> {
+  return comResultado("saveWorkflowStatus", async () => {
+    const prisma = await autorizado("ADMIN");
+    if (!prisma) return;
 
-  const dados = {
-    name: item.name,
-    color: item.color,
-    order: item.order,
-    active: item.active,
-    wipLimit: item.limit ?? null,
-    reminderMinutes: item.reminderMinutes ?? null,
-  };
+    const dados = {
+      name: item.name,
+      color: item.color,
+      order: item.order,
+      active: item.active,
+      wipLimit: item.limit ?? null,
+      reminderMinutes: item.reminderMinutes ?? null,
+    };
 
-  await prisma.workflowStatus.upsert({
-    where: { id: item.id },
-    update: dados,
-    create: { id: item.id, ...dados },
+    await prisma.workflowStatus.upsert({
+      where: { id: item.id },
+      update: dados,
+      create: { id: item.id, ...dados },
+    });
+
+    updateTag(WORKSPACE_TAG);
   });
-
-  updateTag(WORKSPACE_TAG);
 }
 
-export async function removeWorkflowStatus(id: string) {
-  const prisma = await autorizado("ADMIN");
-  if (!prisma) return;
+export async function removeWorkflowStatus(id: string): Promise<ResultadoDaGravacao> {
+  return comResultado("removeWorkflowStatus", async () => {
+    const prisma = await autorizado("ADMIN");
+    if (!prisma) return;
 
-  await prisma.workflowStatus.delete({ where: { id } });
+    await prisma.workflowStatus.delete({ where: { id } });
 
-  updateTag(WORKSPACE_TAG);
+    updateTag(WORKSPACE_TAG);
+  });
 }
 
 export async function saveCategory(
   item: CategoryOption
-) {
-  const prisma = await autorizado("ADMIN");
-  if (!prisma) return;
+): Promise<ResultadoDaGravacao> {
+  return comResultado("saveCategory", async () => {
+    const prisma = await autorizado("ADMIN");
+    if (!prisma) return;
 
-  const dados = {
-    name: item.name,
-    description: item.description,
-    order: item.order,
-    active: item.active,
-    ceilingHours: item.ceilingHours ?? null,
-  };
+    const dados = {
+      name: item.name,
+      description: item.description,
+      order: item.order,
+      active: item.active,
+      ceilingHours: item.ceilingHours ?? null,
+    };
 
-  await prisma.category.upsert({
-    where: { id: item.id },
-    update: dados,
-    create: { id: item.id, ...dados },
+    await prisma.category.upsert({
+      where: { id: item.id },
+      update: dados,
+      create: { id: item.id, ...dados },
+    });
+
+    updateTag(WORKSPACE_TAG);
   });
-
-  updateTag(WORKSPACE_TAG);
 }
 
-export async function removeCategory(id: string) {
-  const prisma = await autorizado("ADMIN");
-  if (!prisma) return;
+export async function removeCategory(id: string): Promise<ResultadoDaGravacao> {
+  return comResultado("removeCategory", async () => {
+    const prisma = await autorizado("ADMIN");
+    if (!prisma) return;
 
-  await prisma.category.delete({ where: { id } });
+    await prisma.category.delete({ where: { id } });
 
-  updateTag(WORKSPACE_TAG);
+    updateTag(WORKSPACE_TAG);
+  });
 }
 
 export async function saveSubcategory(
   item: SubcategoryOption
-) {
-  const prisma = await autorizado("ADMIN");
-  if (!prisma) return;
+): Promise<ResultadoDaGravacao> {
+  return comResultado("saveSubcategory", async () => {
+    const prisma = await autorizado("ADMIN");
+    if (!prisma) return;
 
-  const categoria = await prisma.category.findUnique({
-    where: { name: item.category },
-    select: { id: true },
+    const categoria = await prisma.category.findUnique({
+      where: { name: item.category },
+      select: { id: true },
+    });
+
+    if (!categoria) {
+      throw new Error(
+        `Categoria "${item.category}" não existe.`
+      );
+    }
+
+    const dados = {
+      categoryId: categoria.id,
+      name: item.name,
+      description: item.description,
+      order: item.order,
+      active: item.active,
+    };
+
+    await prisma.subcategory.upsert({
+      where: { id: item.id },
+      update: dados,
+      create: { id: item.id, ...dados },
+    });
+
+    updateTag(WORKSPACE_TAG);
   });
-
-  if (!categoria) {
-    throw new Error(
-      `Categoria "${item.category}" não existe.`
-    );
-  }
-
-  const dados = {
-    categoryId: categoria.id,
-    name: item.name,
-    description: item.description,
-    order: item.order,
-    active: item.active,
-  };
-
-  await prisma.subcategory.upsert({
-    where: { id: item.id },
-    update: dados,
-    create: { id: item.id, ...dados },
-  });
-
-  updateTag(WORKSPACE_TAG);
 }
 
-export async function removeSubcategory(id: string) {
-  const prisma = await autorizado("ADMIN");
-  if (!prisma) return;
+export async function removeSubcategory(id: string): Promise<ResultadoDaGravacao> {
+  return comResultado("removeSubcategory", async () => {
+    const prisma = await autorizado("ADMIN");
+    if (!prisma) return;
 
-  await prisma.subcategory.delete({ where: { id } });
+    await prisma.subcategory.delete({ where: { id } });
 
-  updateTag(WORKSPACE_TAG);
-}
-
-export async function saveTag(item: CaseTag) {
-  const prisma = await autorizado("ADMIN");
-  if (!prisma) return;
-
-  const dados = {
-    name: item.name,
-    color: item.color,
-    description: item.description,
-    order: item.order,
-    active: item.active,
-  };
-
-  await prisma.tag.upsert({
-    where: { id: item.id },
-    update: dados,
-    create: { id: item.id, ...dados },
+    updateTag(WORKSPACE_TAG);
   });
-
-  updateTag(WORKSPACE_TAG);
 }
 
-export async function removeTag(id: string) {
-  const prisma = await autorizado("ADMIN");
-  if (!prisma) return;
+export async function saveTag(item: CaseTag): Promise<ResultadoDaGravacao> {
+  return comResultado("saveTag", async () => {
+    const prisma = await autorizado("ADMIN");
+    if (!prisma) return;
 
-  await prisma.tag.delete({ where: { id } });
+    const dados = {
+      name: item.name,
+      color: item.color,
+      description: item.description,
+      order: item.order,
+      active: item.active,
+    };
 
-  updateTag(WORKSPACE_TAG);
+    await prisma.tag.upsert({
+      where: { id: item.id },
+      update: dados,
+      create: { id: item.id, ...dados },
+    });
+
+    updateTag(WORKSPACE_TAG);
+  });
+}
+
+export async function removeTag(id: string): Promise<ResultadoDaGravacao> {
+  return comResultado("removeTag", async () => {
+    const prisma = await autorizado("ADMIN");
+    if (!prisma) return;
+
+    await prisma.tag.delete({ where: { id } });
+
+    updateTag(WORKSPACE_TAG);
+  });
 }
 
 export async function saveChecklistItem(
   item: ChecklistItem
-) {
-  const prisma = await autorizado("ADMIN");
-  if (!prisma) return;
+): Promise<ResultadoDaGravacao> {
+  return comResultado("saveChecklistItem", async () => {
+    const prisma = await autorizado("ADMIN");
+    if (!prisma) return;
 
-  const dados = {
-    label: item.label,
-    key: item.key,
-    required: item.required,
-    order: item.order,
-    active: item.active,
-  };
+    const dados = {
+      label: item.label,
+      key: item.key,
+      required: item.required,
+      order: item.order,
+      active: item.active,
+    };
 
-  await prisma.checklistItem.upsert({
-    where: { id: item.id },
-    update: dados,
-    create: { id: item.id, ...dados },
+    await prisma.checklistItem.upsert({
+      where: { id: item.id },
+      update: dados,
+      create: { id: item.id, ...dados },
+    });
+
+    updateTag(WORKSPACE_TAG);
   });
-
-  updateTag(WORKSPACE_TAG);
 }
 
-export async function removeChecklistItem(id: string) {
-  const prisma = await autorizado("ADMIN");
-  if (!prisma) return;
+export async function removeChecklistItem(id: string): Promise<ResultadoDaGravacao> {
+  return comResultado("removeChecklistItem", async () => {
+    const prisma = await autorizado("ADMIN");
+    if (!prisma) return;
 
-  await prisma.checklistItem.delete({ where: { id } });
+    await prisma.checklistItem.delete({ where: { id } });
 
-  updateTag(WORKSPACE_TAG);
+    updateTag(WORKSPACE_TAG);
+  });
 }
 
 /* ============================================================
    PRAZOS
 ============================================================ */
 
-export async function saveSlaRule(item: SlaRule) {
-  const prisma = await autorizado("ADMIN");
-  if (!prisma) return;
+export async function saveSlaRule(item: SlaRule): Promise<ResultadoDaGravacao> {
+  return comResultado("saveSlaRule", async () => {
+    const prisma = await autorizado("ADMIN");
+    if (!prisma) return;
 
-  const dados = {
-    category: item.category,
-    priority: item.priority ?? null,
-    canal: item.canal ?? null,
-    seguidoresMin:
-      typeof item.seguidoresMin === "number" && item.seguidoresMin > 0
-        ? Math.round(item.seguidoresMin)
-        : null,
-    responseHours: item.responseHours,
-    solutionHours: item.solutionHours,
-    team: item.team ?? null,
-    note: item.note ?? null,
-    active: item.active,
-  };
+    const dados = {
+      category: item.category,
+      priority: item.priority ?? null,
+      canal: item.canal ?? null,
+      seguidoresMin:
+        typeof item.seguidoresMin === "number" && item.seguidoresMin > 0
+          ? Math.round(item.seguidoresMin)
+          : null,
+      responseHours: item.responseHours,
+      solutionHours: item.solutionHours,
+      team: item.team ?? null,
+      note: item.note ?? null,
+      active: item.active,
+    };
 
-  await prisma.slaRule.upsert({
-    where: { id: item.id },
-    update: dados,
-    create: { id: item.id, ...dados },
+    await prisma.slaRule.upsert({
+      where: { id: item.id },
+      update: dados,
+      create: { id: item.id, ...dados },
+    });
+
+    updateTag(WORKSPACE_TAG);
   });
-
-  updateTag(WORKSPACE_TAG);
 }
 
-export async function removeSlaRule(id: string) {
-  const prisma = await autorizado("ADMIN");
-  if (!prisma) return;
+export async function removeSlaRule(id: string): Promise<ResultadoDaGravacao> {
+  return comResultado("removeSlaRule", async () => {
+    const prisma = await autorizado("ADMIN");
+    if (!prisma) return;
 
-  await prisma.slaRule.delete({ where: { id } });
+    await prisma.slaRule.delete({ where: { id } });
 
-  updateTag(WORKSPACE_TAG);
+    updateTag(WORKSPACE_TAG);
+  });
 }
 
 export async function saveMovementRule(
   item: MovementRule
-) {
-  const prisma = await autorizado("ADMIN");
-  if (!prisma) return;
+): Promise<ResultadoDaGravacao> {
+  return comResultado("saveMovementRule", async () => {
+    const prisma = await autorizado("ADMIN");
+    if (!prisma) return;
 
-  const dados = {
-    destination: item.destination,
-    hours: item.hours,
-    note: item.note ?? null,
-    active: item.active,
-  };
+    const dados = {
+      destination: item.destination,
+      hours: item.hours,
+      note: item.note ?? null,
+      active: item.active,
+    };
 
-  await prisma.movementRule.upsert({
-    where: { id: item.id },
-    update: dados,
-    create: { id: item.id, ...dados },
+    await prisma.movementRule.upsert({
+      where: { id: item.id },
+      update: dados,
+      create: { id: item.id, ...dados },
+    });
+
+    updateTag(WORKSPACE_TAG);
   });
-
-  updateTag(WORKSPACE_TAG);
 }
 
-export async function removeMovementRule(id: string) {
-  const prisma = await autorizado("ADMIN");
-  if (!prisma) return;
+export async function removeMovementRule(id: string): Promise<ResultadoDaGravacao> {
+  return comResultado("removeMovementRule", async () => {
+    const prisma = await autorizado("ADMIN");
+    if (!prisma) return;
 
-  await prisma.movementRule.delete({ where: { id } });
+    await prisma.movementRule.delete({ where: { id } });
 
-  updateTag(WORKSPACE_TAG);
+    updateTag(WORKSPACE_TAG);
+  });
 }
 
 /*
@@ -347,160 +378,172 @@ export async function removeMovementRule(id: string) {
 
 export async function saveEstablishment(
   item: Establishment
-) {
-  const prisma = await autorizado();
-  if (!prisma) return;
+): Promise<ResultadoDaGravacao> {
+  return comResultado("saveEstablishment", async () => {
+    const prisma = await autorizado();
+    if (!prisma) return;
 
-  const dados = {
-    slug: item.slug,
-    name: item.name,
-    document: item.document ?? null,
+    const dados = {
+      slug: item.slug,
+      name: item.name,
+      document: item.document ?? null,
+
+      /**
+       * `undefined` aqui não é descuido: o Prisma **pula** o campo no
+       * update e usa o padrão no create.
+       *
+       * Estes dois vêm do CW Engine pela carga, e o formulário da tela não
+       * os tem. Escrever `null` por ausência faria uma edição de nome
+       * apagar o id da conta e o link do portal — sem aviso, e com o
+       * sintoma aparecendo só no dia em que alguém fosse clicar no link.
+       */
+      externalId: item.externalId,
+      portalUrl: item.portalUrl,
+      portalId: item.portalId,
+
+      /*
+        Estes dois a tela edita, então null por ausência é a intenção:
+        apagar o campo no formulário tem de apagar no banco.
+      */
+      crispUrl: item.crispUrl?.trim() || null,
+      npsWhatsapp: item.npsWhatsapp?.trim() || null,
+
+      segment: item.segment ?? null,
+      city: item.city ?? null,
+      state: item.state ?? null,
+      plan: item.plan,
+      status: item.status,
+      mrrCents:
+        item.mrr === undefined
+          ? null
+          : Math.round(item.mrr * 100),
+      owner: item.owner ?? null,
+      startedAt: dia(item.startedAt),
+      phone: item.phone ?? null,
+      email: item.email ?? null,
+      notes: item.notes ?? null,
+    };
+
+    const salvo = await prisma.establishment.upsert({
+      where: { id: item.id },
+      update: dados,
+      create: { id: item.id, ...dados },
+      select: { id: true },
+    });
 
     /**
-     * `undefined` aqui não é descuido: o Prisma **pula** o campo no
-     * update e usa o padrão no create.
+     * Cadastrou com CNPJ: as reclamações que estavam esperando ligam agora.
      *
-     * Estes dois vêm do CW Engine pela carga, e o formulário da tela não
-     * os tem. Escrever `null` por ausência faria uma edição de nome
-     * apagar o id da conta e o link do portal — sem aviso, e com o
-     * sintoma aparecendo só no dia em que alguém fosse clicar no link.
+     * A extensão grava o CNPJ do RA Forms em toda reclamação que captura,
+     * inclusive de restaurante que ainda não existe aqui. Sem esta
+     * varredura, quem cadastrasse o estabelecimento depois teria de esperar
+     * o cron da madrugada para ver os casos aparecerem na ficha — e a
+     * conclusão natural seria que o vínculo não funciona.
+     *
+     * Só preenche o que está vazio. Reclamação já vinculada ficou assim por
+     * escolha de alguém, e sobrescrever seria discordar dessa escolha sem
+     * dizer nada.
      */
-    externalId: item.externalId,
-    portalUrl: item.portalUrl,
-    portalId: item.portalId,
+    const digitos = digitosDoDocumento(item.document);
 
-    /*
-      Estes dois a tela edita, então null por ausência é a intenção:
-      apagar o campo no formulário tem de apagar no banco.
-    */
-    crispUrl: item.crispUrl?.trim() || null,
-    npsWhatsapp: item.npsWhatsapp?.trim() || null,
+    if (digitos) {
+      await prisma.case.updateMany({
+        where: {
+          document: digitos,
+          establishmentId: null,
 
-    segment: item.segment ?? null,
-    city: item.city ?? null,
-    state: item.state ?? null,
-    plan: item.plan,
-    status: item.status,
-    mrrCents:
-      item.mrr === undefined
-        ? null
-        : Math.round(item.mrr * 100),
-    owner: item.owner ?? null,
-    startedAt: dia(item.startedAt),
-    phone: item.phone ?? null,
-    email: item.email ?? null,
-    notes: item.notes ?? null,
-  };
+          // Quem desvinculou na mão não é religado por cadastro novo.
+          establishmentManual: false,
+        },
+        data: { establishmentId: salvo.id },
+      });
+    }
 
-  const salvo = await prisma.establishment.upsert({
-    where: { id: item.id },
-    update: dados,
-    create: { id: item.id, ...dados },
-    select: { id: true },
+    updateTag(WORKSPACE_TAG);
   });
+}
 
-  /**
-   * Cadastrou com CNPJ: as reclamações que estavam esperando ligam agora.
-   *
-   * A extensão grava o CNPJ do RA Forms em toda reclamação que captura,
-   * inclusive de restaurante que ainda não existe aqui. Sem esta
-   * varredura, quem cadastrasse o estabelecimento depois teria de esperar
-   * o cron da madrugada para ver os casos aparecerem na ficha — e a
-   * conclusão natural seria que o vínculo não funciona.
-   *
-   * Só preenche o que está vazio. Reclamação já vinculada ficou assim por
-   * escolha de alguém, e sobrescrever seria discordar dessa escolha sem
-   * dizer nada.
-   */
-  const digitos = digitosDoDocumento(item.document);
+export async function removeEstablishment(id: string): Promise<ResultadoDaGravacao> {
+  return comResultado("removeEstablishment", async () => {
+    const prisma = await autorizado();
+    if (!prisma) return;
 
-  if (digitos) {
-    await prisma.case.updateMany({
-      where: {
-        document: digitos,
-        establishmentId: null,
+    await prisma.establishment.delete({ where: { id } });
 
-        // Quem desvinculou na mão não é religado por cadastro novo.
-        establishmentManual: false,
-      },
-      data: { establishmentId: salvo.id },
+    updateTag(WORKSPACE_TAG);
+  });
+}
+
+export async function saveProject(item: Project): Promise<ResultadoDaGravacao> {
+  return comResultado("saveProject", async () => {
+    const prisma = await autorizado();
+    if (!prisma) return;
+
+    const dados = {
+      title: item.title,
+      description: item.description,
+      stage: item.stage,
+      owner: item.owner,
+      impact: item.impact,
+      progress: item.progress,
+      tags: item.tags,
+    };
+
+    await prisma.project.upsert({
+      where: { id: item.id },
+      update: dados,
+      create: { id: item.id, ...dados },
     });
-  }
 
-  updateTag(WORKSPACE_TAG);
-}
-
-export async function removeEstablishment(id: string) {
-  const prisma = await autorizado();
-  if (!prisma) return;
-
-  await prisma.establishment.delete({ where: { id } });
-
-  updateTag(WORKSPACE_TAG);
-}
-
-export async function saveProject(item: Project) {
-  const prisma = await autorizado();
-  if (!prisma) return;
-
-  const dados = {
-    title: item.title,
-    description: item.description,
-    stage: item.stage,
-    owner: item.owner,
-    impact: item.impact,
-    progress: item.progress,
-    tags: item.tags,
-  };
-
-  await prisma.project.upsert({
-    where: { id: item.id },
-    update: dados,
-    create: { id: item.id, ...dados },
+    updateTag(WORKSPACE_TAG);
   });
-
-  updateTag(WORKSPACE_TAG);
 }
 
-export async function removeProject(id: string) {
-  const prisma = await autorizado();
-  if (!prisma) return;
+export async function removeProject(id: string): Promise<ResultadoDaGravacao> {
+  return comResultado("removeProject", async () => {
+    const prisma = await autorizado();
+    if (!prisma) return;
 
-  await prisma.project.delete({ where: { id } });
+    await prisma.project.delete({ where: { id } });
 
-  updateTag(WORKSPACE_TAG);
-}
-
-export async function saveMacro(item: Macro) {
-  const prisma = await autorizado("AGENTE", "base-conhecimento");
-  if (!prisma) return;
-
-  const dados = {
-    title: item.title,
-    body: item.body,
-    category: item.category,
-    channel: item.channel,
-    owner: item.owner,
-    tags: item.tags,
-    uses: item.uses,
-  };
-
-  await prisma.macro.upsert({
-    where: { id: item.id },
-    update: dados,
-    create: { id: item.id, ...dados },
+    updateTag(WORKSPACE_TAG);
   });
-
-  updateTag(WORKSPACE_TAG);
 }
 
-export async function removeMacro(id: string) {
-  const prisma = await autorizado("AGENTE", "base-conhecimento");
-  if (!prisma) return;
+export async function saveMacro(item: Macro): Promise<ResultadoDaGravacao> {
+  return comResultado("saveMacro", async () => {
+    const prisma = await autorizado("AGENTE", "base-conhecimento");
+    if (!prisma) return;
 
-  await prisma.macro.delete({ where: { id } });
+    const dados = {
+      title: item.title,
+      body: item.body,
+      category: item.category,
+      channel: item.channel,
+      owner: item.owner,
+      tags: item.tags,
+      uses: item.uses,
+    };
 
-  updateTag(WORKSPACE_TAG);
+    await prisma.macro.upsert({
+      where: { id: item.id },
+      update: dados,
+      create: { id: item.id, ...dados },
+    });
+
+    updateTag(WORKSPACE_TAG);
+  });
+}
+
+export async function removeMacro(id: string): Promise<ResultadoDaGravacao> {
+  return comResultado("removeMacro", async () => {
+    const prisma = await autorizado("AGENTE", "base-conhecimento");
+    if (!prisma) return;
+
+    await prisma.macro.delete({ where: { id } });
+
+    updateTag(WORKSPACE_TAG);
+  });
 }
 
 /*
@@ -554,123 +597,133 @@ async function casoPorReferencia(
   });
 }
 
-export async function saveAgendaTask(item: AgendaTask) {
-  const prisma = await autorizado();
-  if (!prisma) return;
+export async function saveAgendaTask(item: AgendaTask): Promise<ResultadoDaGravacao> {
+  return comResultado("saveAgendaTask", async () => {
+    const prisma = await autorizado();
+    if (!prisma) return;
 
-  // Responsável é texto na tela e relação no banco.
-  const dono = item.owner
-    ? await prisma.user.findFirst({
-        where: { name: item.owner },
-        select: { id: true },
-      })
-    : null;
+    // Responsável é texto na tela e relação no banco.
+    const dono = item.owner
+      ? await prisma.user.findFirst({
+          where: { name: item.owner },
+          select: { id: true },
+        })
+      : null;
 
-  const caso = item.relatedCase
-    ? await casoPorReferencia(prisma, item.relatedCase)
-    : null;
+    const caso = item.relatedCase
+      ? await casoPorReferencia(prisma, item.relatedCase)
+      : null;
 
-  const dados = {
-    title: item.title,
-    type: item.type,
-    priority: item.priority,
-    done: item.done,
-    dueDate: dia(item.dueDate) as Date,
-    time: item.time ?? null,
-    ownerId: dono?.id ?? null,
-    caseId: caso?.id ?? null,
-  };
+    const dados = {
+      title: item.title,
+      type: item.type,
+      priority: item.priority,
+      done: item.done,
+      dueDate: dia(item.dueDate) as Date,
+      time: item.time ?? null,
+      ownerId: dono?.id ?? null,
+      caseId: caso?.id ?? null,
+    };
 
-  await prisma.agendaTask.upsert({
-    where: { id: item.id },
-    update: dados,
-    create: { id: item.id, ...dados },
+    await prisma.agendaTask.upsert({
+      where: { id: item.id },
+      update: dados,
+      create: { id: item.id, ...dados },
+    });
+
+    updateTag(WORKSPACE_TAG);
   });
-
-  updateTag(WORKSPACE_TAG);
 }
 
-export async function removeAgendaTask(id: string) {
-  const prisma = await autorizado();
-  if (!prisma) return;
+export async function removeAgendaTask(id: string): Promise<ResultadoDaGravacao> {
+  return comResultado("removeAgendaTask", async () => {
+    const prisma = await autorizado();
+    if (!prisma) return;
 
-  await prisma.agendaTask.delete({ where: { id } });
+    await prisma.agendaTask.delete({ where: { id } });
 
-  updateTag(WORKSPACE_TAG);
+    updateTag(WORKSPACE_TAG);
+  });
 }
 
 export async function saveImpactRecord(
   item: ImpactRecord
-) {
-  const prisma = await autorizado();
-  if (!prisma) return;
+): Promise<ResultadoDaGravacao> {
+  return comResultado("saveImpactRecord", async () => {
+    const prisma = await autorizado();
+    if (!prisma) return;
 
-  const caso = item.relatedCase
-    ? await casoPorReferencia(prisma, item.relatedCase)
-    : null;
+    const caso = item.relatedCase
+      ? await casoPorReferencia(prisma, item.relatedCase)
+      : null;
 
-  const dados = {
-    type: item.type,
-    companyName: item.company,
-    description: item.description || null,
-    // Centavos no banco: reais em ponto flutuante acumulam erro.
-    amountCents: Math.round(item.amount * 100),
-    owner: item.owner || null,
-    date: dia(item.date) as Date,
-    establishmentId: item.establishmentId ?? null,
-    clientSlug: item.clientSlug ?? null,
-    caseId: caso?.id ?? null,
+    const dados = {
+      type: item.type,
+      companyName: item.company,
+      description: item.description || null,
+      // Centavos no banco: reais em ponto flutuante acumulam erro.
+      amountCents: Math.round(item.amount * 100),
+      owner: item.owner || null,
+      date: dia(item.date) as Date,
+      establishmentId: item.establishmentId ?? null,
+      clientSlug: item.clientSlug ?? null,
+      caseId: caso?.id ?? null,
 
-    /*
-      Os dois campos da retenção.
+      /*
+        Os dois campos da retenção.
 
-      `?? null` e não `|| null`: humor 0 não existe na régua, mas
-      `wouldHaveChurned: false` é resposta válida — "perguntei e ele não
-      ia sair" — e o `||` a transformaria em "não perguntei".
-    */
-    moodAfter: item.moodAfter ?? null,
-    wouldHaveChurned: item.wouldHaveChurned ?? null,
-  };
+        `?? null` e não `|| null`: humor 0 não existe na régua, mas
+        `wouldHaveChurned: false` é resposta válida — "perguntei e ele não
+        ia sair" — e o `||` a transformaria em "não perguntei".
+      */
+      moodAfter: item.moodAfter ?? null,
+      wouldHaveChurned: item.wouldHaveChurned ?? null,
+    };
 
-  await prisma.impactRecord.upsert({
-    where: { id: item.id },
-    update: dados,
-    create: { id: item.id, ...dados },
+    await prisma.impactRecord.upsert({
+      where: { id: item.id },
+      update: dados,
+      create: { id: item.id, ...dados },
+    });
+
+    updateTag(WORKSPACE_TAG);
   });
-
-  updateTag(WORKSPACE_TAG);
 }
 
-export async function removeImpactRecord(id: string) {
-  const prisma = await autorizado();
-  if (!prisma) return;
+export async function removeImpactRecord(id: string): Promise<ResultadoDaGravacao> {
+  return comResultado("removeImpactRecord", async () => {
+    const prisma = await autorizado();
+    if (!prisma) return;
 
-  await prisma.impactRecord.delete({ where: { id } });
+    await prisma.impactRecord.delete({ where: { id } });
 
-  updateTag(WORKSPACE_TAG);
+    updateTag(WORKSPACE_TAG);
+  });
 }
 
 export async function saveImpactType(
   item: ImpactTypeOption
-) {
-  const prisma = await autorizado("ADMIN");
-  if (!prisma) return;
+): Promise<ResultadoDaGravacao> {
+  return comResultado("saveImpactType", async () => {
+    const prisma = await autorizado("ADMIN");
+    if (!prisma) return;
 
-  const dados = {
-    name: item.name,
-    direction: item.direction,
-    description: item.description ?? null,
-    order: item.order,
-    active: item.active,
-  };
+    const dados = {
+      name: item.name,
+      direction: item.direction,
+      description: item.description ?? null,
+      order: item.order,
+      active: item.active,
+    };
 
-  await prisma.impactType.upsert({
-    where: { id: item.id },
-    update: dados,
-    create: { id: item.id, ...dados },
+    await prisma.impactType.upsert({
+      where: { id: item.id },
+      update: dados,
+      create: { id: item.id, ...dados },
+    });
+
+    updateTag(WORKSPACE_TAG);
   });
-
-  updateTag(WORKSPACE_TAG);
 }
 
 /**
@@ -678,38 +731,42 @@ export async function saveImpactType(
  * gravado como texto no registro, então o histórico segue legível mesmo
  * sem o tipo no cadastro.
  */
-export async function removeImpactType(id: string) {
-  const prisma = await autorizado("ADMIN");
-  if (!prisma) return;
+export async function removeImpactType(id: string): Promise<ResultadoDaGravacao> {
+  return comResultado("removeImpactType", async () => {
+    const prisma = await autorizado("ADMIN");
+    if (!prisma) return;
 
-  await prisma.impactType.delete({ where: { id } });
+    await prisma.impactType.delete({ where: { id } });
 
-  updateTag(WORKSPACE_TAG);
+    updateTag(WORKSPACE_TAG);
+  });
 }
 
 /* ============================================================
    TIMES
 ============================================================ */
 
-export async function saveTeam(item: Team) {
-  const prisma = await autorizado("ADMIN");
-  if (!prisma) return;
+export async function saveTeam(item: Team): Promise<ResultadoDaGravacao> {
+  return comResultado("saveTeam", async () => {
+    const prisma = await autorizado("ADMIN");
+    if (!prisma) return;
 
-  const dados = {
-    name: item.name,
-    description: item.description || null,
-    department: item.department || null,
-    leader: item.leader || null,
-    active: item.active,
-  };
+    const dados = {
+      name: item.name,
+      description: item.description || null,
+      department: item.department || null,
+      leader: item.leader || null,
+      active: item.active,
+    };
 
-  await prisma.team.upsert({
-    where: { id: item.id },
-    update: dados,
-    create: { id: item.id, ...dados },
+    await prisma.team.upsert({
+      where: { id: item.id },
+      update: dados,
+      create: { id: item.id, ...dados },
+    });
+
+    updateTag(WORKSPACE_TAG);
   });
-
-  updateTag(WORKSPACE_TAG);
 }
 
 /**
@@ -729,24 +786,26 @@ export async function saveTeam(item: Team) {
  * mudança na tela e não gravava nada. O que se cadastrava ali sumia no
  * recarregamento.
  */
-export async function saveTeamOption(item: TeamOption) {
-  const prisma = await autorizado("ADMIN");
-  if (!prisma) return;
+export async function saveTeamOption(item: TeamOption): Promise<ResultadoDaGravacao> {
+  return comResultado("saveTeamOption", async () => {
+    const prisma = await autorizado("ADMIN");
+    if (!prisma) return;
 
-  const dados = {
-    name: item.name,
-    legacyName: item.legacyValue || null,
-    order: item.order,
-    active: item.active,
-  };
+    const dados = {
+      name: item.name,
+      legacyName: item.legacyValue || null,
+      order: item.order,
+      active: item.active,
+    };
 
-  await prisma.team.upsert({
-    where: { id: item.id },
-    update: dados,
-    create: { id: item.id, ...dados },
+    await prisma.team.upsert({
+      where: { id: item.id },
+      update: dados,
+      create: { id: item.id, ...dados },
+    });
+
+    updateTag(WORKSPACE_TAG);
   });
-
-  updateTag(WORKSPACE_TAG);
 }
 
 /* ============================================================
@@ -780,45 +839,49 @@ function camposDeCliente(
 export async function saveClientEnrichment(
   slug: string,
   patch: ClientEnrichment
-) {
-  const prisma = await autorizado("AGENTE");
-  if (!prisma) return;
+): Promise<ResultadoDaGravacao> {
+  return comResultado("saveClientEnrichment", async () => {
+    const prisma = await autorizado("AGENTE");
+    if (!prisma) return;
 
-  const dados = camposDeCliente(patch);
+    const dados = camposDeCliente(patch);
 
-  await prisma.clientProfile.upsert({
-    where: { slug },
-    update: dados,
-    create: { slug, manual: false, ...dados },
+    await prisma.clientProfile.upsert({
+      where: { slug },
+      update: dados,
+      create: { slug, manual: false, ...dados },
+    });
+
+    updateTag(WORKSPACE_TAG);
   });
-
-  updateTag(WORKSPACE_TAG);
 }
 
 /** Cliente cadastrado à mão, sem reclamação de origem. */
 export async function saveManualClient(
   item: ManualClient
-) {
-  const prisma = await autorizado("AGENTE");
-  if (!prisma) return;
+): Promise<ResultadoDaGravacao> {
+  return comResultado("saveManualClient", async () => {
+    const prisma = await autorizado("AGENTE");
+    if (!prisma) return;
 
-  const dados = {
-    ...camposDeCliente(item),
-    manual: true,
-    name: item.name,
-    email: item.email || null,
-    phone: item.phone || null,
-    city: item.city || null,
-    state: item.state || null,
-  };
+    const dados = {
+      ...camposDeCliente(item),
+      manual: true,
+      name: item.name,
+      email: item.email || null,
+      phone: item.phone || null,
+      city: item.city || null,
+      state: item.state || null,
+    };
 
-  await prisma.clientProfile.upsert({
-    where: { slug: item.slug },
-    update: dados,
-    create: { slug: item.slug, ...dados },
+    await prisma.clientProfile.upsert({
+      where: { slug: item.slug },
+      update: dados,
+      create: { slug: item.slug, ...dados },
+    });
+
+    updateTag(WORKSPACE_TAG);
   });
-
-  updateTag(WORKSPACE_TAG);
 }
 
 /**
@@ -829,15 +892,17 @@ export async function saveManualClient(
  * linha de enriquecimento por engano perderia o vínculo com o
  * estabelecimento sem tirar ninguém da lista.
  */
-export async function removeManualClient(slug: string) {
-  const prisma = await autorizado("AGENTE");
-  if (!prisma) return;
+export async function removeManualClient(slug: string): Promise<ResultadoDaGravacao> {
+  return comResultado("removeManualClient", async () => {
+    const prisma = await autorizado("AGENTE");
+    if (!prisma) return;
 
-  await prisma.clientProfile.deleteMany({
-    where: { slug, manual: true },
+    await prisma.clientProfile.deleteMany({
+      where: { slug, manual: true },
+    });
+
+    updateTag(WORKSPACE_TAG);
   });
-
-  updateTag(WORKSPACE_TAG);
 }
 
 /* ============================================================
@@ -864,23 +929,25 @@ export async function saveReputationGoal(
   indicator: string,
   target: number,
   padrao: number
-) {
-  const prisma = await autorizado("ADMIN");
-  if (!prisma) return;
+): Promise<ResultadoDaGravacao> {
+  return comResultado("saveReputationGoal", async () => {
+    const prisma = await autorizado("ADMIN");
+    if (!prisma) return;
 
-  if (target === padrao) {
-    await prisma.reputationGoal.deleteMany({
-      where: { indicator },
-    });
-  } else {
-    await prisma.reputationGoal.upsert({
-      where: { indicator },
-      update: { target },
-      create: { indicator, target },
-    });
-  }
+    if (target === padrao) {
+      await prisma.reputationGoal.deleteMany({
+        where: { indicator },
+      });
+    } else {
+      await prisma.reputationGoal.upsert({
+        where: { indicator },
+        update: { target },
+        create: { indicator, target },
+      });
+    }
 
-  updateTag(WORKSPACE_TAG);
+    updateTag(WORKSPACE_TAG);
+  });
 }
 
 /** Devolve todos os indicadores aos critérios do RA1000. */
@@ -893,20 +960,22 @@ export async function resetReputationGoals() {
   updateTag(WORKSPACE_TAG);
 }
 
-export async function removeTeamRecord(id: string) {
-  const prisma = await autorizado("ADMIN");
-  if (!prisma) return;
+export async function removeTeamRecord(id: string): Promise<ResultadoDaGravacao> {
+  return comResultado("removeTeamRecord", async () => {
+    const prisma = await autorizado("ADMIN");
+    if (!prisma) return;
 
-  // Integrantes não são apagados junto: a pessoa continua existindo,
-  // só deixa de pertencer ao time.
-  await prisma.user.updateMany({
-    where: { teamId: id },
-    data: { teamId: null },
+    // Integrantes não são apagados junto: a pessoa continua existindo,
+    // só deixa de pertencer ao time.
+    await prisma.user.updateMany({
+      where: { teamId: id },
+      data: { teamId: null },
+    });
+
+    await prisma.team.delete({ where: { id } });
+
+    updateTag(WORKSPACE_TAG);
   });
-
-  await prisma.team.delete({ where: { id } });
-
-  updateTag(WORKSPACE_TAG);
 }
 
 /**
@@ -1010,96 +1079,108 @@ export async function unassignTeamMember(
 
 export async function saveJourneyStage(
   item: JourneyStage
-) {
-  const prisma = await autorizado("ADMIN");
-  if (!prisma) return;
+): Promise<ResultadoDaGravacao> {
+  return comResultado("saveJourneyStage", async () => {
+    const prisma = await autorizado("ADMIN");
+    if (!prisma) return;
 
-  const dados = {
-    name: item.name,
-    color: item.color,
-    description: item.description,
-    order: item.order,
-    active: item.active,
-  };
+    const dados = {
+      name: item.name,
+      color: item.color,
+      description: item.description,
+      order: item.order,
+      active: item.active,
+    };
 
-  await prisma.journeyStage.upsert({
-    where: { id: item.id },
-    update: dados,
-    create: { id: item.id, ...dados },
+    await prisma.journeyStage.upsert({
+      where: { id: item.id },
+      update: dados,
+      create: { id: item.id, ...dados },
+    });
+
+    updateTag(WORKSPACE_TAG);
   });
-
-  updateTag(WORKSPACE_TAG);
 }
 
-export async function removeJourneyStage(id: string) {
-  const prisma = await autorizado("ADMIN");
-  if (!prisma) return;
+export async function removeJourneyStage(id: string): Promise<ResultadoDaGravacao> {
+  return comResultado("removeJourneyStage", async () => {
+    const prisma = await autorizado("ADMIN");
+    if (!prisma) return;
 
-  await prisma.journeyStage.delete({ where: { id } });
+    await prisma.journeyStage.delete({ where: { id } });
 
-  updateTag(WORKSPACE_TAG);
+    updateTag(WORKSPACE_TAG);
+  });
 }
 
 export async function saveJourneyTopic(
   item: JourneyTopic
-) {
-  const prisma = await autorizado("ADMIN");
-  if (!prisma) return;
+): Promise<ResultadoDaGravacao> {
+  return comResultado("saveJourneyTopic", async () => {
+    const prisma = await autorizado("ADMIN");
+    if (!prisma) return;
 
-  const dados = {
-    name: item.name,
-    icon: item.icon,
-    color: item.color,
-    order: item.order,
-  };
+    const dados = {
+      name: item.name,
+      icon: item.icon,
+      color: item.color,
+      order: item.order,
+    };
 
-  await prisma.journeyTopic.upsert({
-    where: { id: item.id },
-    update: dados,
-    create: { id: item.id, ...dados },
+    await prisma.journeyTopic.upsert({
+      where: { id: item.id },
+      update: dados,
+      create: { id: item.id, ...dados },
+    });
+
+    updateTag(WORKSPACE_TAG);
   });
-
-  updateTag(WORKSPACE_TAG);
 }
 
-export async function removeJourneyTopic(id: string) {
-  const prisma = await autorizado("ADMIN");
-  if (!prisma) return;
+export async function removeJourneyTopic(id: string): Promise<ResultadoDaGravacao> {
+  return comResultado("removeJourneyTopic", async () => {
+    const prisma = await autorizado("ADMIN");
+    if (!prisma) return;
 
-  await prisma.journeyTopic.delete({ where: { id } });
+    await prisma.journeyTopic.delete({ where: { id } });
 
-  updateTag(WORKSPACE_TAG);
+    updateTag(WORKSPACE_TAG);
+  });
 }
 
 export async function saveJourneyEntry(
   item: JourneyEntry
-) {
-  const prisma = await autorizado();
-  if (!prisma) return;
+): Promise<ResultadoDaGravacao> {
+  return comResultado("saveJourneyEntry", async () => {
+    const prisma = await autorizado();
+    if (!prisma) return;
 
-  const dados = {
-    topicId: item.topicId,
-    company: item.company,
-    text: item.text,
-    author: item.author,
-  };
+    const dados = {
+      topicId: item.topicId,
+      company: item.company,
+      text: item.text,
+      author: item.author,
+    };
 
-  await prisma.journeyEntry.upsert({
-    where: { id: item.id },
-    update: dados,
-    create: { id: item.id, ...dados },
+    await prisma.journeyEntry.upsert({
+      where: { id: item.id },
+      update: dados,
+      create: { id: item.id, ...dados },
+    });
+
+    updateTag(WORKSPACE_TAG);
   });
-
-  updateTag(WORKSPACE_TAG);
 }
 
-export async function removeJourneyEntry(id: string) {
-  const prisma = await autorizado();
-  if (!prisma) return;
+export async function removeJourneyEntry(id: string): Promise<ResultadoDaGravacao> {
+  return comResultado("removeJourneyEntry", async () => {
+    const prisma = await autorizado();
+    if (!prisma) return;
 
-  await prisma.journeyEntry.delete({ where: { id } });
+    await prisma.journeyEntry.delete({ where: { id } });
 
-  updateTag(WORKSPACE_TAG);
+    updateTag(WORKSPACE_TAG);
+  });
 }
 
 /**
@@ -1112,17 +1193,19 @@ export async function removeJourneyEntry(id: string) {
 export async function saveJourneyPlacement(
   company: string,
   stageId: string
-) {
-  const prisma = await autorizado();
-  if (!prisma) return;
+): Promise<ResultadoDaGravacao> {
+  return comResultado("saveJourneyPlacement", async () => {
+    const prisma = await autorizado();
+    if (!prisma) return;
 
-  await prisma.journeyPlacement.upsert({
-    where: { company },
-    update: { stageId },
-    create: { company, stageId },
+    await prisma.journeyPlacement.upsert({
+      where: { company },
+      update: { stageId },
+      create: { company, stageId },
+    });
+
+    updateTag(WORKSPACE_TAG);
   });
-
-  updateTag(WORKSPACE_TAG);
 }
 
 /**

@@ -18,6 +18,8 @@ import {
   loadDossie,
 } from "@/lib/actions/cases";
 
+import { sincronizar } from "@/lib/context/sync";
+
 /**
  * O dossiê que a extensão salvou, na ficha do caso.
  *
@@ -323,7 +325,19 @@ export default function DossieCard({
 
               setApagando(true);
 
-              await limparDossie(data.protocol);
+              /*
+                Só some da tela se o servidor aceitou (Fase 10.4).
+
+                Antes o cartão sumia de qualquer jeito: uma recusa — sem
+                permissão, sessão vencida — deixava a pessoa achando que
+                tinha apagado, e o dossiê voltava no próximo acesso.
+              */
+              const resultado = await sincronizar(() => limparDossie(data.protocol));
+
+              if (!resultado.ok) {
+                setApagando(false);
+                return;
+              }
 
               /*
                 Some da tela na hora, e a recarga confirma.

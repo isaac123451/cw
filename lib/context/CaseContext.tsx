@@ -196,7 +196,8 @@ interface CaseContextType {
     React.SetStateAction<Case[]>
   >;
 
-  createCase: (data: Case) => void;
+  /** Devolve o resultado: a tela só diz "criada" depois do servidor. */
+  createCase: (data: Case) => Promise<Gravacao>;
 
   /**
    * Devolve o resultado da gravação.
@@ -423,7 +424,7 @@ export function CaseProvider({
         if (resposta && resposta.ok === false) {
           const aviso = resposta.conflito
             ? fraseDoConflito(resposta.conflito)
-            : "A gravação não foi aceita.";
+            : (resposta as { erro?: string }).erro ?? "A gravação não foi aceita.";
 
           setSyncError(aviso);
 
@@ -551,9 +552,24 @@ export function CaseProvider({
     setFilters(emptyFilters);
   }
 
-  function createCase(data: Case) {
+  /**
+   * Cria e devolve o que o servidor disse (Fase 10.4).
+   *
+   * Era "dispara e esquece": a tela avisava "Reclamação criada" e abria a
+   * ficha antes da resposta, e uma recusa deixava na lista um caso que
+   * não existia no banco — sumia no recarregar. Recusada, a linha sai da
+   * lista e a tela fica no formulário, com o que foi digitado.
+   */
+  async function createCase(data: Case): Promise<Gravacao> {
     setCases((prev) => [data, ...prev]);
-    sincronizar(() => saveCase(data));
+
+    const resultado = await sincronizar(() => saveCase(data));
+
+    if (!resultado.ok) {
+      setCases((prev) => prev.filter((item) => item.id !== data.id));
+    }
+
+    return resultado;
   }
 
   function updateCase(data: Case) {

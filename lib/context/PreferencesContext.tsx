@@ -20,6 +20,8 @@ import {
   savePreferences,
 } from "@/lib/actions/preferences";
 
+import { sincronizar } from "@/lib/context/sync";
+
 const STORAGE_KEY = "cw:preferencias";
 
 export interface Preferences {
@@ -137,12 +139,14 @@ export function PreferencesProvider({
       setPrefs(next);
 
       if (hasDatabase) {
-        savePreferences(next).catch((erro: unknown) => {
-          console.error(
-            "[preferências] gravação falhou",
-            erro
-          );
-        });
+        /*
+          Pelo `sincronizar`, e não por um `.catch` só com log (Fase 10.4).
+
+          A falha ia para o console e a tela seguia mostrando a caixa
+          marcada — que sumia no próximo acesso, sem ninguém saber por
+          quê. Agora a recusa vira aviso, com a frase do servidor.
+        */
+        sincronizar(() => savePreferences(next));
         return;
       }
 

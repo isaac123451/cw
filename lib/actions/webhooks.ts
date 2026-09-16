@@ -1,5 +1,8 @@
 "use server";
 
+import { comResultado } from "@/lib/services/gravacao";
+import type { ResultadoDaGravacao } from "@/lib/models/resultadoDaGravacao";
+
 import { can, requireRole } from "@/lib/auth/guard";
 import type { Modulo } from "@/lib/auth/modules";
 
@@ -130,13 +133,15 @@ export async function regenerateWebhookSecret(
   });
 }
 
-export async function deleteWebhookConfig(id: string) {
+export async function deleteWebhookConfig(id: string): Promise<ResultadoDaGravacao> {
+  return comResultado("deleteWebhookConfig", async () => {
 
-  const prisma = await autorizado();
+    const prisma = await autorizado();
 
-  if (!prisma) return;
+    if (!prisma) return;
 
-  await prisma.webhookConfig.delete({ where: { id } });
+    await prisma.webhookConfig.delete({ where: { id } });
+  });
 }
 
 export async function sendTestWebhook(id: string) {

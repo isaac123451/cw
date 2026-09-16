@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 16/09/2026. Aplicação **0.70.0**, extensão **0.70.0**.
+Atualizado em 16/09/2026. Aplicação **0.71.0**, extensão **0.71.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -49,6 +49,7 @@ workspace junto com os outros cadastros.
 | `npm run check:lugares` | Prova os leitores do Portal Cardápio Web, do Crisp e do Google Perfil da Empresa |
 | `npm run check:painel` | Prova que os sete arquivos do painel se encontram: nome sem dono, ordem de carga, atalho |
 | `npm run bancada:painel` | Abre o painel da extensão fora dela, com dados reais, em http://localhost:3999 (precisa do `npm run dev`) |
+| `npm run check:gravacoes` | Prova que toda ação de escrita responde `{ ok }` e que a tela trata a recusa como falha |
 | `npm run check:edicao` | Prova que duas pessoas no mesmo caso não apagam o trabalho uma da outra (contra o banco, com reclamação descartável) |
 | `npm run check:rascunho` | Prova a conferência do rascunho contra as regras do documento (nome, acolhimento, dado pessoal, macro, prazo) |
 | `npm run check:cadastros` | Prova que Times, Metas e Clientes sobrevivem ao recarregamento |
@@ -1098,6 +1099,37 @@ caracteres** antes e depois da divisão (contato 6.026, fila 3.289, NPS
 nenhum erro no console. `check:painel`, `check:fiacao`, `check:escape`,
 `check:dossie`, `check:respostas` e `check:atalho` de pé — as quatro
 últimas leem o painel como texto e passaram a ler os sete como um só.
+
+## Fase 10.4 — toda gravação diz o que aconteceu (16/09/2026, 0.71.0)
+
+As ações de cadastro devolviam nada e, quando algo dava errado,
+lançavam exceção. Em produção o Next esconde a mensagem, e a tela só
+podia chutar "sessão expirada ou sem permissão" — para um nome repetido,
+para uma etiqueta em uso, para um registro que outra pessoa já tinha
+apagado.
+
+- **46 ações** passaram a responder `{ ok }` ou `{ ok: false, erro }`
+  por `comResultado` (lib/services/gravacao.ts), com a frase certa para
+  cada erro previsto: sem permissão, nome repetido (P2002), em uso
+  (P2003), já excluído (P2025), texto comprido (P2000). O imprevisto vai
+  para o log com o nome da ação e volta como frase honesta, sem detalhe
+  interno.
+- **`sincronizar` lê a recusa.** Sem isso, uma recusa devolvida como
+  dado seria contada como sucesso.
+- **Criar reclamação só diz "criada" depois do servidor** — no
+  formulário, no modal do Reclame Aqui e nas Redes. Recusada, a linha
+  sai da lista e o formulário fica com o que foi digitado.
+- Preferências, apagar dossiê e excluir webhook deixaram de confirmar
+  antes da resposta.
+
+Ficam fora, com o motivo na própria conferência: as 10 ações que
+devolvem um valor usado pela tela (id criado, nota gravada, contagem de
+uso). Toda ação **nova** que devolva nada reprova.
+
+Provas: `check:gravacoes` (novo) — as 112 ações de escrita conferidas,
+a tela tratando recusa como falha, e cada erro previsto do Prisma
+virando a frase certa. `check:persistencia`, `check:silencio`,
+`check:cadastros` e `check:seguranca` de pé.
 
 ## Fase 10.1 — edição simultânea sem perda (16/09/2026, 0.70.0)
 

@@ -3,6 +3,7 @@
 import { notifyGlobal } from "@/lib/context/ToastContext";
 
 import type { ConflitoDeEdicao } from "@/lib/models/edicaoSimultanea";
+import { recusou } from "@/lib/models/resultadoDaGravacao";
 
 /**
  * Dispara a gravação sem travar a interface.
@@ -85,7 +86,31 @@ export function sincronizar(
 ): Promise<Gravacao> {
 
   return executar().then(
-    (): Gravacao => ({ ok: true }),
+    (resposta): Gravacao => {
+
+      /**
+       * A recusa agora chega como dado, e não como exceção (Fase 10.4).
+       *
+       * Era o contrário: a ação lançava, e em produção o Next escondia a
+       * mensagem — "nome repetido" e "está em uso" chegavam aqui como a
+       * mesma frase genérica. Resolvida com `{ ok: false, erro }`, a frase
+       * do servidor atravessa inteira. Sem ler isto aqui, uma recusa
+       * seria contada como sucesso: o pior dos dois mundos.
+       */
+      if (recusou(resposta)) {
+        notifyGlobal({
+          tone: "error",
+          title: "A alteração não foi salva.",
+          detail: resposta.erro,
+        });
+
+        aoFalhar?.(resposta.erro);
+
+        return { ok: false, erro: resposta.erro };
+      }
+
+      return { ok: true };
+    },
 
     (error: unknown): Gravacao => {
 

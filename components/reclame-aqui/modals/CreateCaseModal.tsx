@@ -152,10 +152,15 @@ export default function CreateCaseModal({
     customer.trim() !== "" &&
     createdAt !== "";
 
-  function salvar() {
+  async function salvar() {
     if (!valido) return;
 
-    createCase({
+    /*
+      Fecha só depois de o servidor aceitar (Fase 10.4). Fechar antes
+      jogava fora o que foi digitado justamente quando a gravação era
+      recusada — a pessoa tinha de redigitar tudo para tentar de novo.
+    */
+    const resultado = await createCase({
       id: crypto.randomUUID(),
       protocol,
       company: company.trim() || customer.trim(),
@@ -185,7 +190,7 @@ export default function CreateCaseModal({
       tags: [],
     });
 
-    onClose();
+    if (resultado.ok) onClose();
   }
 
   if (!open) return null;

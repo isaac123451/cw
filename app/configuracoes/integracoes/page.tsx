@@ -206,7 +206,18 @@ export default function IntegracoesPage() {
 
     startTransition(async () => {
 
-      await deleteWebhookConfig(webhook.id);
+      /* Só limpa a tela se o servidor aceitou (Fase 10.4). */
+      const r = await deleteWebhookConfig(webhook.id);
+
+      if (!r.ok) {
+        notifyGlobal({
+          tone: "error",
+          title: "O webhook não foi excluído.",
+          detail: r.erro,
+        });
+        setConfirmingDelete(false);
+        return;
+      }
 
       setWebhook(null);
       setUrl("");

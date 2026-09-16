@@ -1,5 +1,8 @@
 "use server";
 
+import { comResultado } from "@/lib/services/gravacao";
+import type { ResultadoDaGravacao } from "@/lib/models/resultadoDaGravacao";
+
 import { updateTag } from "next/cache";
 
 import { requireRole, tryRole } from "@/lib/auth/guard";
@@ -149,15 +152,17 @@ async function semearRestantes(
  * inserção da macro, então apagar não reescreve passado nenhum. Quem
  * quiser guardar o histórico desativa.
  */
-export async function removePlan(id: string) {
+export async function removePlan(id: string): Promise<ResultadoDaGravacao> {
+  return comResultado("removePlan", async () => {
 
-  const ctx = await requireRole("AGENTE", MODULO);
+    const ctx = await requireRole("AGENTE", MODULO);
 
-  if (!ctx || id.startsWith("padrao-")) return;
+    if (!ctx || id.startsWith("padrao-")) return;
 
-  await ctx.prisma.plan
-    .delete({ where: { id } })
-    .catch(() => {});
+    await ctx.prisma.plan
+      .delete({ where: { id } })
+      .catch(() => {});
 
-  updateTag(WORKSPACE_TAG);
+    updateTag(WORKSPACE_TAG);
+  });
 }

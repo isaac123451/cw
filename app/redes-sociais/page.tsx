@@ -134,10 +134,16 @@ function RedesSociaisConteudo() {
     moveCase(id, status);
   }
 
-  function salvar(data: Case) {
+  async function salvar(data: Case) {
 
-    if (editing) updateCase(data);
-    else createCase(data);
+    /*
+      O formulário fecha só se o servidor aceitou (Fase 10.4). Fechando
+      antes, uma recusa jogava fora o que foi digitado — e o aviso de
+      erro aparecia com o formulário já sumido.
+    */
+    const resultado = editing ? await updateCase(data) : await createCase(data);
+
+    if (!resultado.ok) return;
 
     setFormOpen(false);
     setEditing(undefined);

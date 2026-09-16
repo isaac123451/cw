@@ -1,5 +1,8 @@
 "use server";
 
+import { comResultado } from "@/lib/services/gravacao";
+import type { ResultadoDaGravacao } from "@/lib/models/resultadoDaGravacao";
+
 import { requireRole, tryRole } from "@/lib/auth/guard";
 
 import {
@@ -61,21 +64,23 @@ export async function getPreferences(): Promise<StoredPreferences | null> {
 
 export async function savePreferences(
   input: StoredPreferences
-) {
+): Promise<ResultadoDaGravacao> {
+  return comResultado("savePreferences", async () => {
 
-  const ctx = await contexto();
+    const ctx = await contexto();
 
-  if (!ctx) return;
+    if (!ctx) return;
 
-  const dados = {
-    notifications:
-      input.notifications as unknown as object,
-    somenteMinhas: input.somenteMinhas,
-  };
+    const dados = {
+      notifications:
+        input.notifications as unknown as object,
+      somenteMinhas: input.somenteMinhas,
+    };
 
-  await ctx.prisma.userPreference.upsert({
-    where: { userId: ctx.userId },
-    update: dados,
-    create: { userId: ctx.userId, ...dados },
+    await ctx.prisma.userPreference.upsert({
+      where: { userId: ctx.userId },
+      update: dados,
+      create: { userId: ctx.userId, ...dados },
+    });
   });
 }

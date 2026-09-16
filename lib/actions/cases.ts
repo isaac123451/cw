@@ -1,5 +1,8 @@
 "use server";
 
+import { comResultado, traduzirFalha } from "@/lib/services/gravacao";
+import type { ResultadoDaGravacao } from "@/lib/models/resultadoDaGravacao";
+
 import { after } from "next/server";
 import { unstable_cache, updateTag } from "next/cache";
 
@@ -198,7 +201,48 @@ export async function loadDossie(protocol: string) {
   return fetchCaseDossier(prisma, protocol);
 }
 
+/**
+ * Gravar um caso, e dizer o que aconteceu (Fases 10.1 e 10.4).
+ *
+ * Três respostas possíveis, todas como dado: aceito; recusado por
+ * edição simultânea, com os campos; ou recusado com a frase do motivo —
+ * sem permissão, protocolo repetido, banco fora. Exceção lançada daqui
+ * chega à tela sem mensagem em produção, e "criar reclamação" dizia
+ * "criada" antes de saber.
+ */
 export async function saveCase(
+  item: Case,
+  options?: {
+    syncTags?: boolean;
+    /**
+     * O retrato que a tela tinha quando carregou o caso (Fase 10.1).
+     *
+     * Com ele, a gravação escreve **só o que esta pessoa mudou** e
+     * recusa quando pisaria em cima de outra. Sem ele — criação,
+     * importação, extensão — vale o caminho de sempre, que grava o
+     * caso inteiro.
+     */
+    anterior?: Case;
+  }
+): Promise<
+  | { ok: true }
+  | { ok: false; conflito: ConflitoDeEdicao }
+  | { ok: false; erro: string }
+> {
+  try {
+    return await gravarCaso(item, options);
+  } catch (erro) {
+    const frase = traduzirFalha(erro);
+    if (frase) return { ok: false, erro: frase };
+    console.error("[casos] gravação falhou", erro);
+    return {
+      ok: false,
+      erro: "O banco não aceitou a gravação agora. Tente de novo em instantes.",
+    };
+  }
+}
+
+async function gravarCaso(
   item: Case,
   options?: {
     syncTags?: boolean;
@@ -299,17 +343,19 @@ export async function saveCase(
   return { ok: true };
 }
 
-export async function deleteCase(protocol: string) {
+export async function deleteCase(protocol: string): Promise<ResultadoDaGravacao> {
+  return comResultado("deleteCase", async () => {
 
-  const prisma = await autorizado();
+    const prisma = await autorizado();
 
-  if (!prisma) return;
+    if (!prisma) return;
 
-  await removeCaseByProtocol(prisma, protocol);
+    await removeCaseByProtocol(prisma, protocol);
 
-  // `updateTag` e não `revalidateTag`: garante que a própria sessão que
-  // gravou leia o valor novo na sequência, sem esperar o cache expirar.
-  updateTag(CASES_TAG);
+    // `updateTag` e não `revalidateTag`: garante que a própria sessão que
+    // gravou leia o valor novo na sequência, sem esperar o cache expirar.
+    updateTag(CASES_TAG);
+  });
 }
 
 /**
@@ -328,20 +374,22 @@ export async function deleteCase(protocol: string) {
  * pior do que nenhum. Apagar é barato: monta-se outro pela extensão em
  * quinze segundos.
  */
-export async function limparDossie(protocol: string) {
+export async function limparDossie(protocol: string): Promise<ResultadoDaGravacao> {
+  return comResultado("limparDossie", async () => {
 
-  const prisma = await autorizado();
+    const prisma = await autorizado();
 
-  if (!prisma) return;
+    if (!prisma) return;
 
-  await prisma.case.update({
-    where: { protocol },
-    data: {
-      dossier: null,
-      dossierAt: null,
-      dossierBy: null,
-    },
+    await prisma.case.update({
+      where: { protocol },
+      data: {
+        dossier: null,
+        dossierAt: null,
+        dossierBy: null,
+      },
+    });
+
+    updateTag(CASES_TAG);
   });
-
-  updateTag(CASES_TAG);
 }

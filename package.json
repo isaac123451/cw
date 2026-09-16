@@ -1,6 +1,6 @@
 {
   "name": "cw-reputacao",
-  "version": "0.70.0",
+  "version": "0.71.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -106,7 +106,8 @@
     "bancada:painel": "tsx scripts/bancada-painel.ts",
     "check:painel": "node scripts/check-painel.js",
     "check:rascunho": "tsx scripts/check-rascunho.ts",
-    "check:edicao": "tsx scripts/check-edicao.ts"
+    "check:edicao": "tsx scripts/check-edicao.ts",
+    "check:gravacoes": "tsx --conditions=react-server scripts/check-gravacoes.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",

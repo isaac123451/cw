@@ -161,7 +161,20 @@ export default function NewCaseForm() {
       tags: [],
     };
 
-    createCase(novo);
+    /*
+      Só diz "criada" depois do servidor (Fase 10.4).
+
+      Antes o aviso de sucesso e a navegação vinham antes da resposta:
+      uma recusa deixava a pessoa na ficha de um caso que não existia no
+      banco. Recusada, o aviso de erro já saiu pelo contexto e o
+      formulário fica como estava, para tentar de novo sem redigitar.
+    */
+    const resultado = await createCase(novo);
+
+    if (!resultado.ok) {
+      setSalvando(false);
+      return;
+    }
 
     notify({
       tone: "success",
