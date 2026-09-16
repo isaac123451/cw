@@ -127,6 +127,37 @@ conferir(
 
 for (const muda of mudas) console.log(`          ${muda}`);
 
+/*
+  Item novo tem de ser reconhecido como novo.
+
+  As telas de cadastro dão ao item acrescentado um id "novo-…" até ele
+  ser gravado. A causa raiz do NPS só reconhecia "padrao-…" como novo,
+  tentava **atualizar** um registro que não existia e estourava — era o
+  "dá erro ao salvar causa raiz". Toda gravação que decide "criar ou
+  atualizar" pelo prefixo tem de conhecer os dois.
+*/
+{
+  const decidem: string[] = [];
+  const esquecem: string[] = [];
+
+  for (const base of ["lib/actions", "lib/services"]) {
+    for (const nome of readdirSync(join(RAIZ, base)).filter((n) => n.endsWith(".ts"))) {
+      const fonte = readFileSync(join(RAIZ, base, nome), "utf8");
+      for (const m of fonte.matchAll(/const novo\s*=[\s\S]{0,400}?;/g)) {
+        if (!/padrao-/.test(m[0])) continue;
+        decidem.push(`${base}/${nome}`);
+        if (!/novo-/.test(m[0])) esquecem.push(`${base}/${nome}`);
+      }
+    }
+  }
+
+  conferir(
+    `${decidem.length} gravação(ões) que decidem criar pelo id reconhecem "novo-"`,
+    esquecem.length === 0,
+    esquecem.join(", ")
+  );
+}
+
 /* ============================================================
    2. A TELA LÊ A RECUSA
 ============================================================ */

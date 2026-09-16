@@ -132,12 +132,73 @@ export function desfazerAstro(valor) {
 }
 
 /**
+ * A lista no formato Astro (desde 16/09/2026).
+ *
+ * A ilha certa é a `ComplaintListIsland` — pelo nome do componente, e
+ * não por "tem reclamações nas props": a barra lateral da empresa também
+ * carrega uma contagem de `complaints`, e casar por ela leria números da
+ * reputação como se fossem a lista.
+ *
+ * `undefined` quando a página não tem essa ilha (é o formato antigo, ou
+ * outra página); `null` quando tem e não é da Cardápio Web, ou veio
+ * quebrada — aí não adianta tentar o formato antigo.
+ */
+function lerListaDoAstro(html) {
+  const ilha = String(html ?? "").match(
+    /<astro-island\b[^>]*component-url="[^"]*ComplaintListIsland[^"]*"[^>]*\sprops="([^"]*)"/
+  );
+
+  if (!ilha) return undefined;
+
+  let props;
+
+  try {
+    props = JSON.parse(desescapar(ilha[1]));
+  } catch {
+    return null;
+  }
+
+  if (desfazerAstro(props?.shortname) !== EMPRESA) return null;
+
+  const reclamacoes = desfazerAstro(props?.initialComplaints);
+
+  if (!Array.isArray(reclamacoes)) return null;
+
+  return {
+    total: Number(desfazerAstro(props?.initialCount)) || null,
+    itens: reclamacoes
+      .map((item) => ({
+        codigo: String(item?.id ?? ""),
+        status: String(item?.status ?? ""),
+        avaliada: item?.evaluated === true,
+        criadaEm: String(item?.created ?? ""),
+        titulo: String(item?.title ?? item?.titleMasked ?? ""),
+      }))
+      .filter((item) => CODIGO.test(item.codigo)),
+  };
+}
+
+/**
  * Uma página da lista: o que ela mostra de cada reclamação.
  *
  * `null` quando a página não é a lista da Cardápio Web — mudou de
  * formato, ou o portal redirecionou para outro lugar.
  */
 export function lerLista(html) {
+
+  /*
+    A lista virou Astro em 16/09/2026.
+
+    Era Next.js, com tudo num `__NEXT_DATA__`; a página da reclamação já
+    tinha migrado em 11/09, a lista migrou depois. Sem reconhecer o
+    formato novo, o vigia parava em "a lista mudou de formato" — o botão
+    "Ler o Reclame Aqui" não trazia nada. O formato antigo continua
+    aceito: o portal já voltou atrás numa migração antes.
+  */
+  const doAstro = lerListaDoAstro(html);
+
+  if (doAstro !== undefined) return doAstro;
+
   const bloco = String(html ?? "").match(
     /<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/
   );

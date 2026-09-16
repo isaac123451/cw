@@ -99,6 +99,42 @@ function leitor() {
     [["ANSWERED", false], ["ANSWERED", true]]
   );
 
+  /*
+    A lista em Astro, desde 16/09/2026.
+
+    O portal migrou a lista de Next.js para Astro e o leitor procurava o
+    `__NEXT_DATA__`, que deixou de existir: o vigia parava em "a lista
+    mudou de formato" e o "Ler o Reclame Aqui" não trazia nada. A amostra
+    tem a estrutura da página real daquele dia — a ilha da barra lateral,
+    com uma contagem de "complaints" que não é a lista, antes da ilha
+    certa — e dados fictícios.
+  */
+  const astro = lerLista(amostra("ra-portal-lista-astro.html")) as
+    | (Lista & { itens: { titulo: string }[] })
+    | null;
+
+  conferir("[astro] a lista é lida", astro !== null, true);
+  conferir("[astro] os quatro códigos do formato do portal", astro?.itens.length, 4);
+  conferir("[astro] e o total do portal", astro?.total, 356);
+  conferir(
+    "[astro] códigos com _ e - inteiros",
+    astro?.itens.map((i) => i.codigo).slice(0, 2),
+    ["ZzAstroAmostra01", "Zz-Astro_Amostr2"]
+  );
+  conferir(
+    "[astro] respondida e avaliada, como a lista mostra",
+    astro?.itens.map((i) => [i.status, i.avaliada]).slice(2),
+    [["ANSWERED", false], ["ANSWERED", true]]
+  );
+  conferir("[astro] título com & desfeito", astro?.itens[1]?.titulo, "Cobrança duplicada & sem retorno");
+
+  const astroDeOutra = amostra("ra-portal-lista-astro.html").replace(
+    "&quot;shortname&quot;:[0,&quot;cardapio-web-servicos-de-tecnologia&quot;]",
+    "&quot;shortname&quot;:[0,&quot;outra-empresa&quot;]"
+  );
+
+  conferir("[astro] lista de outra empresa não é lida", lerLista(astroDeOutra), null);
+
   const deOutra = amostra("ra-portal-lista.html").replace(
     '"shortname":"cardapio-web-servicos-de-tecnologia"',
     '"shortname":"outra-empresa"'

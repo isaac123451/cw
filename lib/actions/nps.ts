@@ -251,7 +251,15 @@ export async function saveNpsRootCause(
    * atualizar uma linha que não existe.
    */
   const novo =
-    !input.id || input.id.startsWith("padrao-");
+    !input.id ||
+    input.id.startsWith("padrao-") ||
+    /*
+      "novo-" é o id que a tela dá à causa acrescentada e ainda não
+      gravada. Sem reconhecê-lo, a gravação tentava **atualizar** um
+      registro que não existe e estourava — era o "dá erro ao salvar
+      causa raiz". Etapas, tipos e planos já tratavam os dois prefixos.
+    */
+    input.id.startsWith("novo-");
 
   if (novo) {
     const criado = await ctx.prisma.npsRootCause.create({

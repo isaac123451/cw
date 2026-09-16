@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 16/09/2026. Aplicação **0.71.0**, extensão **0.71.0**.
+Atualizado em 16/09/2026. Aplicação **0.72.0**, extensão **0.72.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1099,6 +1099,38 @@ caracteres** antes e depois da divisão (contato 6.026, fila 3.289, NPS
 nenhum erro no console. `check:painel`, `check:fiacao`, `check:escape`,
 `check:dossie`, `check:respostas` e `check:atalho` de pé — as quatro
 últimas leem o painel como texto e passaram a ler os sete como um só.
+
+### Três defeitos relatados (16/09/2026, 0.72.0)
+
+O Isaac: "quando vou salvar causa raiz dá erro", "o ler no reclame aqui
+não está funcionando e nem o wootric".
+
+- **Causa raiz nova dava erro ao salvar.** O cadastro dá à causa
+  acrescentada o id `novo-…`; o servidor só reconhecia `padrao-…` como
+  nova, tentava **atualizar** um registro que não existia e estourava.
+  Etapas, tipos e planos já tratavam os dois. Conferido na tela com uma
+  causa descartável (apagada depois); `check:gravacoes` passou a exigir
+  que toda gravação que decide "criar ou atualizar" pelo id conheça os
+  dois prefixos — e reprova sem a correção.
+- **"Ler o Reclame Aqui" não trazia nada.** O portal migrou a **lista**
+  de reclamações de Next.js para Astro — a página da reclamação já
+  tinha migrado em 11/09. O leitor procurava o `__NEXT_DATA__`, que
+  deixou de existir, e o vigia parava em "a lista mudou de formato".
+  Agora lê a ilha `ComplaintListIsland` (pelo nome do componente: a
+  barra lateral também tem uma contagem de "complaints") e continua
+  aceitando o formato antigo. Conferido contra a página pública de hoje,
+  pelo HTML cru que a extensão recebe: páginas 1 e 2, 5 reclamações cada,
+  total 356. `check:vigia` ganhou a amostra Astro (dados fictícios).
+  **A extensão precisa ser recarregada** — o leitor mora nela.
+- **Wootric.** Medido no banco: trazer respostas funciona (6 hoje) e
+  concluir lá funciona (14 marcadas). O que não sai é **a nota** com os
+  detalhes do caso — recusada 14 vezes porque o Wootric só aceita criar
+  nota com login de usuário, e `WOOTRIC_USUARIO`/`WOOTRIC_SENHA` não
+  estão configuradas. Não é código; é configuração da conta. Para não
+  ser mais "não funciona" sem explicação, **Configurações → Integrações**
+  ganhou o cartão Wootric, que separa as três coisas com os números do
+  banco e diz o passo exato que falta. O reenvio automático manda as
+  notas paradas assim que o login existir.
 
 ## Fase 10.4 — toda gravação diz o que aconteceu (16/09/2026, 0.71.0)
 
