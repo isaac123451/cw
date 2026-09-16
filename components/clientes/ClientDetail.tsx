@@ -25,6 +25,7 @@ import {
 import PageHeading from "@/components/shared/PageHeading";
 import StatTile from "@/components/shared/StatTile";
 import SurfaceCard from "@/components/shared/SurfaceCard";
+import VazioComSaida from "@/components/shared/VazioComSaida";
 import { ConfirmDelete } from "@/components/shared/Modal";
 import TagPicker, {
   TagChips,
@@ -754,9 +755,14 @@ export default function ClientDetail({
 
             {impactos.length === 0 ? (
 
-              <p className="rounded-xl border border-dashed border-zinc-200 py-8 text-center text-sm text-zinc-400">
-                Nenhum impacto registrado para este cliente.
-              </p>
+              <div className="rounded-xl border border-dashed border-zinc-200">
+                <VazioComSaida
+                  compacto
+                  titulo="Nenhum impacto registrado para este cliente."
+                  porque="Reembolso, crédito, desconto ou cancelamento evitado entram em Impacto no negócio, ligados ao caso."
+                  saidas={[{ rotulo: "Abrir Impacto no negócio", href: "/impacto" }]}
+                />
+              </div>
 
             ) : (
 

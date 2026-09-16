@@ -19,6 +19,7 @@ import MainLayout from "@/components/layout/MainLayout";
 import PageHeading from "@/components/shared/PageHeading";
 import StatTile from "@/components/shared/StatTile";
 import SurfaceCard from "@/components/shared/SurfaceCard";
+import VazioComSaida from "@/components/shared/VazioComSaida";
 
 import ClientForm from "@/components/clientes/ClientForm";
 
@@ -264,9 +265,19 @@ export default function ClientesPage() {
         {visible.length === 0 ? (
 
           <SurfaceCard>
-            <p className="py-12 text-center text-sm text-zinc-400">
-              Nenhum cliente encontrado para essa busca.
-            </p>
+            <VazioComSaida
+              titulo={clients.length === 0 ? "Nenhum cliente ainda." : "Nenhum cliente encontrado para essa busca."}
+              porque={
+                clients.length === 0
+                  ? "Os clientes nascem das reclamações (pelo documento) e do cadastro manual."
+                  : "A busca olha nome, cidade, e-mail e telefone, dentro do tipo escolhido."
+              }
+              saidas={
+                clients.length === 0
+                  ? [{ rotulo: "Ver as reclamações", href: "/reclame-aqui" }]
+                  : [{ rotulo: "Limpar a busca e o tipo", onClick: () => { setSearch(""); setKind("Todos"); } }]
+              }
+            />
           </SurfaceCard>
 
         ) : (

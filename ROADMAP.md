@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 16/09/2026. Aplicação **0.78.0**, extensão **0.78.0**.
+Atualizado em 16/09/2026. Aplicação **0.79.0**, extensão **0.79.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1100,6 +1100,34 @@ caracteres** antes e depois da divisão (contato 6.026, fila 3.289, NPS
 nenhum erro no console. `check:painel`, `check:fiacao`, `check:escape`,
 `check:dossie`, `check:respostas` e `check:atalho` de pé — as quatro
 últimas leem o painel como texto e passaram a ler os sete como um só.
+
+### Nenhuma tela sem saída (16/09/2026, 0.79.0)
+
+Roadmap 1.0, "Para dar vontade de usar": lista vazia explica o porquê e
+oferece o próximo passo.
+
+A varredura dos estados vazios (71 frases "Nenhum…") achou a maioria já
+com explicação ou botão (Agenda, Estabelecimentos, Redes, Conversas,
+Meu dia, Processos, Documentação). Sete listas principais só diziam a
+frase — sem dizer se era base vazia ou filtro, e sem saída. Elas
+passaram a usar um componente só, `VazioComSaida`:
+
+- **Respostas prontas:** base vazia → "Cadastrar a primeira"; busca →
+  "Limpar a busca e a categoria" ou "Cadastrar uma nova".
+- **Clientes:** "Limpar a busca e o tipo"; base vazia leva às
+  reclamações, de onde os clientes nascem.
+- **Reclame Aqui (lista):** "Limpar os filtros"; base vazia explica o
+  vigia da extensão.
+- **NPS (lista):** "Limpar o recorte" desfaz busca, tipo, segmento,
+  comentário e período de uma vez.
+- **Google:** base vazia → "Registrar avaliação" (e o botão da
+  extensão); filtro → "Ver todas".
+- **Análise do NPS:** "Ver tudo" (período e segmento); sem respostas,
+  leva ao NPS.
+- **Ficha do cliente, impacto:** leva a Impacto no negócio.
+
+Provas: `check:telas-sem-saida` (novo) e, na tela, a busca sem resultado
+em Clientes limpando com um clique.
 
 ### Tempo até o 1º contato como indicador (16/09/2026, 0.78.0)
 

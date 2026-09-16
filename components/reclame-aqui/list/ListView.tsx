@@ -5,13 +5,14 @@ import { useState } from "react";
 import { useScopedCases } from "@/lib/context/useScopedCases";
 
 import CasesTable from "./CasesTable";
+import VazioComSaida from "@/components/shared/VazioComSaida";
 import CaseDrawer from "../drawer/CaseDrawer";
 
 /** Mesmo lote do Kanban: cobre a rolagem inicial sem montar a base toda. */
 const LOTE = 50;
 
 export default function ListView() {
-  const { filteredCases } = useScopedCases("reclame-aqui");
+  const { cases, filteredCases, clearFilters } = useScopedCases("reclame-aqui");
 
   /**
    * Guarda o id, não o objeto: guardando o objeto o painel congelava
@@ -57,9 +58,15 @@ export default function ListView() {
 
         {filteredCases.length === 0 ? (
 
-          <p className="px-6 py-16 text-center text-sm text-zinc-400">
-            Nenhuma reclamação corresponde aos filtros aplicados.
-          </p>
+          <VazioComSaida
+            titulo={cases.length === 0 ? "Nenhuma reclamação na base ainda." : "Nenhuma reclamação corresponde aos filtros aplicados."}
+            porque={
+              cases.length === 0
+                ? "As reclamações chegam pelo vigia da extensão, quando alguém abre o Reclame Aqui no navegador, ou pelo botão de nova reclamação."
+                : "A busca, a etapa, a prioridade ou o período deixaram a lista vazia."
+            }
+            saidas={cases.length === 0 ? [{ rotulo: "Ferramentas e acessos", href: "/ferramentas" }] : [{ rotulo: "Limpar os filtros", onClick: clearFilters }]}
+          />
 
         ) : (
 

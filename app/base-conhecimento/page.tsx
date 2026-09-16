@@ -21,6 +21,7 @@ import MainLayout from "@/components/layout/MainLayout";
 import PageHeading from "@/components/shared/PageHeading";
 import StatTile from "@/components/shared/StatTile";
 import SurfaceCard from "@/components/shared/SurfaceCard";
+import VazioComSaida from "@/components/shared/VazioComSaida";
 import { ConfirmDelete } from "@/components/shared/Modal";
 
 import MacroForm from "@/components/base-conhecimento/MacroForm";
@@ -244,20 +245,23 @@ export default function BaseConhecimentoPage() {
 
           <SurfaceCard>
 
-            <div className="py-12 text-center">
-
-              <MessageSquareQuote
-                size={28}
-                className="mx-auto text-zinc-300"
-              />
-
-              <p className="mt-3 text-sm text-zinc-500">
-                {macros.length === 0
-                  ? "Nenhuma resposta pronta cadastrada."
-                  : "Nenhuma resposta encontrada para essa busca."}
-              </p>
-
-            </div>
+            <VazioComSaida
+              icone={<MessageSquareQuote size={28} />}
+              titulo={macros.length === 0 ? "Nenhuma resposta pronta cadastrada." : "Nenhuma resposta encontrada para essa busca."}
+              porque={
+                macros.length === 0
+                  ? "Cadastradas aqui, elas aparecem dentro da reclamação, na aba Avaliação RA, já com o nome do cliente e o protocolo."
+                  : "A busca olha o título, o texto e as etiquetas, dentro da categoria escolhida."
+              }
+              saidas={
+                macros.length === 0
+                  ? [{ rotulo: "Cadastrar a primeira", onClick: () => { setEditing(undefined); setFormOpen(true); } }]
+                  : [
+                      { rotulo: "Limpar a busca e a categoria", onClick: () => { setSearch(""); setCategory(""); } },
+                      { rotulo: "Cadastrar uma nova", onClick: () => { setEditing(undefined); setFormOpen(true); } },
+                    ]
+              }
+            />
 
           </SurfaceCard>
 

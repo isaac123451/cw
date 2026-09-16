@@ -19,6 +19,7 @@ import {
 
 import { slaState } from "@/lib/services/nps.service";
 import BotaoAbrirEmJanela from "@/components/janelas/BotaoAbrirEmJanela";
+import VazioComSaida from "@/components/shared/VazioComSaida";
 
 const slaTone: Record<string, string> = {
   estourado: "bg-rose-50 text-rose-700 ring-rose-100",
@@ -45,6 +46,8 @@ function dataCurta(iso: string) {
 
 interface Props {
   itens: NpsResponseView[];
+  /** Com a lista vazia por filtro, o que desfaz o recorte. */
+  onLimparRecorte?: () => void;
   onOpen: (item: NpsResponseView) => void;
   onEdit: (item: NpsResponseView) => void;
   onDelete: (item: NpsResponseView) => void;
@@ -87,6 +90,7 @@ const ORDENAVEIS: Record<
  */
 export default function NpsList({
   itens,
+  onLimparRecorte,
   onOpen,
   onEdit,
   onDelete,
@@ -327,9 +331,12 @@ export default function NpsList({
       </table>
 
       {itens.length === 0 && (
-        <p className="py-10 text-center text-sm text-zinc-400">
-          Nenhuma resposta neste recorte.
-        </p>
+        <VazioComSaida
+          compacto
+          titulo="Nenhuma resposta neste recorte."
+          porque="O período, a busca, o segmento, o tipo ou o filtro de comentário deixaram a lista vazia."
+          saidas={onLimparRecorte ? [{ rotulo: "Limpar o recorte", onClick: onLimparRecorte }] : []}
+        />
       )}
 
     </div>

@@ -1021,6 +1021,14 @@ export default function NpsPage() {
 
             <NpsList
               itens={visiveis}
+              onLimparRecorte={() => {
+                setBusca("");
+                setKindFiltro("");
+                setSegmento("");
+                setComentario("");
+                setAtalhoDoPeriodo("tudo");
+                setPeriodoPersonalizado({ de: null, ate: null });
+              }}
               podeExcluir={session?.role === "ADMIN"}
               onOpen={(item) => abrir(item.id)}
               onEdit={(item) => {

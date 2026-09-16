@@ -22,6 +22,7 @@ import MainLayout from "@/components/layout/MainLayout";
 import PageHeading from "@/components/shared/PageHeading";
 import StatTile from "@/components/shared/StatTile";
 import SurfaceCard from "@/components/shared/SurfaceCard";
+import VazioComSaida from "@/components/shared/VazioComSaida";
 import BarList from "@/components/shared/BarList";
 
 import NpsTrendChart from "@/components/nps/NpsTrendChart";
@@ -494,9 +495,16 @@ export default function NpsAnalisePage() {
                 </table>
 
                 {tendencia.length === 0 && (
-                  <p className="py-6 text-center text-sm text-zinc-400">
-                    Nenhuma resposta neste recorte.
-                  </p>
+                  <VazioComSaida
+                    compacto
+                    titulo="Nenhuma resposta neste recorte."
+                    porque={responses.length === 0 ? "As respostas chegam do Wootric pela sincronização, ou pela planilha na tela do NPS." : "O período ou o segmento escolhido não tem respostas."}
+                    saidas={
+                      responses.length === 0
+                        ? [{ rotulo: "Ir para o NPS", href: "/nps" }]
+                        : [{ rotulo: "Ver tudo", onClick: () => { setMeses(0); setPorData({ de: null, ate: null }); setSegmento(""); } }]
+                    }
+                  />
                 )}
 
               </div>

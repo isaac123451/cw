@@ -8,6 +8,7 @@ import MainLayout from "@/components/layout/MainLayout";
 import PageHeading from "@/components/shared/PageHeading";
 import StatTile from "@/components/shared/StatTile";
 import SurfaceCard from "@/components/shared/SurfaceCard";
+import VazioComSaida from "@/components/shared/VazioComSaida";
 
 import RegistrarAvaliacaoModal from "@/components/google/RegistrarAvaliacaoModal";
 import TratarAvaliacaoModal from "@/components/google/TratarAvaliacaoModal";
@@ -207,10 +208,19 @@ export default function GooglePage() {
               <p className="text-sm font-medium text-zinc-700">
                 {lista.length === 0 ? "Nenhuma avaliação registrada ainda." : `Nenhuma avaliação ${filtro === "abertas" ? "aberta" : "neste filtro"}.`}
               </p>
-              {lista.length === 0 && (
-                <p className="mx-auto mt-1.5 max-w-md text-sm text-zinc-500">
-                  Registre as avaliações do perfil conforme chegam: a classificação, o prazo e os indicadores saem daqui.
-                </p>
+              {lista.length === 0 ? (
+                <VazioComSaida
+                  compacto
+                  porque="Registre as avaliações do perfil conforme chegam: a classificação, o prazo e os indicadores saem daqui. Pela extensão, no Google Perfil da Empresa, cada avaliação ganha o botão Registrar no CW."
+                  saidas={[{ rotulo: "Registrar avaliação", onClick: () => setRegistrando(true) }]}
+                />
+              ) : (
+                <VazioComSaida
+                  compacto
+                  titulo=""
+                  porque={filtro === "abertas" ? "Tudo o que chegou já foi tratado." : "O filtro escolhido não tem avaliações."}
+                  saidas={[{ rotulo: "Ver todas", onClick: () => setFiltro("todas") }]}
+                />
               )}
             </div>
           ) : (
