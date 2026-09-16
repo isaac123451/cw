@@ -20,6 +20,7 @@ import {
   getReputation,
   getReputationTrend,
   hasRA1000,
+  hojeNaOperacao,
   inRange,
 } from "@/lib/services/reputation.service";
 
@@ -29,6 +30,7 @@ import { getPrisma } from "@/lib/prisma";
 import { NpsResponseView } from "@/lib/models/nps";
 import { summarize } from "@/lib/services/nps.service";
 import { provedorDeIA } from "@/lib/services/ia.service";
+import { slaStatus } from "@/lib/services/sla.service";
 
 /**
  * Os atalhos de Ferramentas e Acessos, para o popup.
@@ -127,6 +129,84 @@ export const dynamic = "force-dynamic";
  * o navegador aberto. O resumo que chega de manhã sem depender disso
  * continua precisando do cron da Vercel.
  */
+/**
+ * O "Meu dia" de bolso (Fase 8.4).
+ *
+ * As mesmas duas perguntas da tela de entrada, no tamanho do popup:
+ * quanto da rotina de hoje já foi marcado (por esta pessoa, neste
+ * dia) e quantos prazos vencem hoje ou já estouraram. O número do
+ * ícone sai daqui — é o que está estourando, não um contador de
+ * avisos.
+ */
+async function meuDiaDeBolso(
+  casos: Awaited<ReturnType<typeof getApiCases>>,
+  workspace: Awaited<ReturnType<typeof loadWorkspace>>,
+  userId: string | null
+) {
+  const prisma = getPrisma();
+  const hoje = hojeNaOperacao();
+
+  /* A rotina do dia: as atividades de hoje e o que esta pessoa já marcou. */
+  let rotina = { total: 0, feitas: 0 };
+
+  if (prisma) {
+    try {
+      const diaDaSemana = new Date(`${hoje}T12:00:00Z`).getUTCDay();
+      const atividades = await prisma.atividadeDaRotina.findMany({
+        where: { ativa: true },
+        select: { id: true, frequencia: true, diasDaSemana: true },
+      });
+      const doDia = atividades.filter(
+        (a) =>
+          a.frequencia === "diaria" ||
+          (a.diasDaSemana ?? []).includes(diaDaSemana)
+      );
+      const feitas = userId
+        ? await prisma.marcaDaRotina.count({
+            where: { userId, dia: hoje, atividadeId: { in: doDia.map((a) => a.id) } },
+          })
+        : 0;
+      rotina = { total: doDia.length, feitas };
+    } catch {
+      /* Sem rotina cadastrada o popup mostra os prazos do mesmo jeito. */
+    }
+  }
+
+  /* Os prazos: o que já estourou e o que vence ainda hoje. */
+  let estourados = 0;
+  let vencemHoje = 0;
+
+  for (const caso of casos) {
+    if (!isOpen(caso)) continue;
+    const sla = slaStatus(caso, workspace.slaRules, { expediente: workspace.expediente });
+    if (sla.situation === "estourado") estourados += 1;
+    else if (sla.prazo && diaNaOperacao(sla.prazo) === hoje) vencemHoje += 1;
+  }
+
+  /*
+    O NPS entra na mesma conta: o ciclo tem prazo de 1º contato por
+    segmento, e quem abre o popup quer saber o que está atrasado — não
+    o que está atrasado em um canal só.
+  */
+  if (prisma) {
+    try {
+      const ciclos = await prisma.npsResponse.findMany({
+        where: { firstContactAt: null, closedAt: null },
+        select: { firstContactDueAt: true },
+      });
+      const agora = Date.now();
+      for (const c of ciclos) {
+        if (c.firstContactDueAt.getTime() < agora) estourados += 1;
+        else if (diaNaOperacao(c.firstContactDueAt) === hoje) vencemHoje += 1;
+      }
+    } catch {
+      /* Sem NPS, os prazos são só os dos casos. */
+    }
+  }
+
+  return { dia: hoje, rotina, prazos: { estourados, vencemHoje } };
+}
+
 export async function GET(request: Request) {
 
   const { usuario, demonstracao } =
@@ -186,6 +266,11 @@ export async function GET(request: Request) {
 
   const atalhos = await atalhosDoPopup(origem);
 
+  const meuDia = await meuDiaDeBolso(casos, workspace, usuario?.id ?? null).catch((erro) => {
+    console.error("[extensao/resumo] meu dia", erro);
+    return null;
+  });
+
   return responder(request, {
     usuario: usuario
       ? { nome: usuario.nome, papel: usuario.papel }
@@ -227,6 +312,9 @@ export async function GET(request: Request) {
 
     /** Ferramentas e Acessos: os mesmos atalhos da página, só os com endereço. */
     atalhos,
+
+    /** O "Meu dia" de bolso: rotina marcada e prazos de hoje (Fase 8.4). */
+    meuDia,
 
     /**
      * Os quatro números que o painel mostra — e que agora abrem lista.

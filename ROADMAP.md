@@ -985,6 +985,23 @@ uma resposta já publicada, copiada para outro protocolo, voltou como
 100% igual, com o protocolo e o título da outra. `check:fiacao` com a
 rota nova.
 
+**Fase 8, parte 3 — o popup como "Meu dia" de bolso (0.66.0).**
+
+- O popup abre com o bloco **Meu dia**: quanto da rotina de hoje esta
+  pessoa já marcou (11 atividades hoje, por exemplo), quantos prazos
+  vencem hoje, quantos já estouraram e quantas atividades faltam marcar,
+  com o atalho para abrir a tela.
+- **O número no ícone passou a ser o de prazo estourando** — a conta
+  soma os casos abertos (pelo relógio do documento) e os ciclos de NPS
+  sem 1º contato. Era a soma dos alertas graves, que mistura naturezas
+  diferentes e sobe sem a pessoa saber por quê; prazo estourado se
+  explica sozinho e se resolve fazendo o que está atrasado. Contra uma
+  aplicação antiga, sem o bloco, volta a valer a conta anterior.
+
+Provas: conferido contra o servidor — 11 atividades na rotina de hoje,
+0 marcadas, e 157 prazos estourados (152 do NPS e 5 de casos), o mesmo
+número que a tela do NPS mostra.
+
 ### Exportar a conversa do WhatsApp (15/09/2026, 0.63.0)
 
 O Isaac: "é preciso ter a possibilidade de exportar uma conversa do

@@ -213,6 +213,32 @@ function blocoNps(nps) {
     </div>`;
 }
 
+/**
+ * O "Meu dia" de bolso: a rotina de hoje e os prazos.
+ *
+ * Vem antes dos alertas de propósito — é a pergunta que a pessoa faz
+ * ao abrir o popup no meio do dia: o que falta marcar e o que vence.
+ */
+function blocoDoDia(meuDia, base) {
+
+  if (!meuDia) return "";
+
+  const r = meuDia.rotina ?? { total: 0, feitas: 0 };
+  const p = meuDia.prazos ?? { estourados: 0, vencemHoje: 0 };
+  const falta = Math.max(0, r.total - r.feitas);
+
+  return [
+    `<div class="bloco">`,
+    `  <p class="rotulo">Meu dia <span class="todos" data-url="${escapar(`${base}/meu-dia`)}">abrir</span></p>`,
+    `  <div class="numeros">`,
+    `    <div class="numero"><b>${r.feitas}/${r.total}</b><span>rotina</span></div>`,
+    `    <div class="numero"><b>${p.vencemHoje}</b><span>vencem hoje</span></div>`,
+    `    <div class="numero"><b>${p.estourados}</b><span>estourados</span></div>`,
+    `    <div class="numero"><b>${falta}</b><span>a marcar</span></div>`,
+    `  </div>`,
+    `</div>`,
+  ].join("");
+}
 /* ============================================================
    RESUMO
 ============================================================ */
@@ -265,6 +291,8 @@ async function carregar() {
         <div class="numero"><b>${dados.contagens.risco}</b><span>risco</span></div>
       </div>
     </div>`);
+
+  partes.push(blocoDoDia(dados.meuDia, base));
 
   /* Preenchido depois, pelo estado que o service worker guarda. */
   partes.push(`<div class="bloco" id="vigia-bloco"></div>`);
