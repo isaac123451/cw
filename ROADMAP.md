@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 23/08/2026. Aplicação **0.29.0**, extensão **0.29.0**.
+Atualizado em 15/09/2026. Aplicação **0.67.0**, extensão **0.67.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -46,6 +46,7 @@ workspace junto com os outros cadastros.
 | `npm run check:busca` | Prova que a busca por candidatos não perdeu nenhum caso, e mede |
 | `npm run check:mover` | Prova o que acontece ao mover um caso de etapa |
 | `npm run check:ra` | Prova os leitores da página do Reclame Aqui contra o texto de uma reclamação real |
+| `npm run check:lugares` | Prova os leitores do Portal Cardápio Web, do Crisp e do Google Perfil da Empresa |
 | `npm run check:cadastros` | Prova que Times, Metas e Clientes sobrevivem ao recarregamento |
 | `npm run check:nps-etapas` | Prova as etapas e os tipos do NPS como cadastro, contra o banco |
 | `npm run check:nps-planilha` | Prova o leitor de planilha do NPS, com arquivos montados em memória |
@@ -1001,6 +1002,50 @@ rota nova.
 Provas: conferido contra o servidor — 11 atividades na rotina de hoje,
 0 marcadas, e 157 prazos estourados (152 do NPS e 5 de casos), o mesmo
 número que a tela do NPS mostra.
+
+**Fase 8, parte 4 — três lugares novos para a extensão (0.67.0).**
+
+Os lugares que o documento lista e a extensão não alcançava.
+
+- **Portal Cardápio Web** (`*.cardapioweb.com`, fora do site público): o
+  painel reconhece o estabelecimento da tela **pelo CPF/CNPJ** — pelo
+  rótulo primeiro, depois pelo texto visível — e responde ali mesmo "este
+  cliente já reclamou?". Nome e telefone entram só como reforço: dois
+  estabelecimentos com nome parecido são a mesma loja em duas cidades com
+  a mesma frequência com que não são.
+- **Crisp** (`app.crisp.chat`): o painel identifica quem está do outro
+  lado (e-mail, telefone, apelido) e ganhou o **leitor de conversa** — o
+  botão "Guardar a conversa na plataforma" funciona lá igual ao WhatsApp,
+  com o carimbo convertido para o horário de Brasília com `timeZone`
+  explícito e o id do Crisp como chave de repetição (`crisp:…`), para
+  guardar de novo trazer só as novas.
+- **Google Perfil da Empresa** (`business.google.com`): cada cartão de
+  avaliação ganha **"Registrar no CW"**, em dois tempos — o primeiro
+  clique mostra o que vai ser gravado (nota, autor, a data deduzida do
+  "há 2 semanas" e o tamanho do texto), o segundo grava. A mesma
+  avaliação apertada duas vezes não vira duas linhas.
+
+A regra do registro **saiu da action** para
+`lib/services/avaliacoesGoogle.service.ts`: a classificação da tabela do
+documento, a marca de "mesmo problema em avaliações recentes" e o
+casamento com o promotor do NPS convidado a avaliar agora têm uma versão
+só, usada pela tela e pela rota `/api/extensao/google-avaliacao`.
+
+Consertado no caminho: `check:fiacao` nomeava os arquivos da extensão um
+a um e por isso acusava dois tratadores "sem quem chame" que estavam
+sendo chamados — agora varre as pastas inteiras. E a tela do Google dizia
+"faltam 2 dias úteis **úteis**".
+
+Provas: `check:lugares` (novo) roda os três leitores como funções puras —
+CNPJ ganhando do CPF que mora dentro dele, o lado da mensagem no Crisp
+com "operator" ganhando de "user-agent", o carimbo UTC virando hora de
+Brasília, "Rated 1.0 out of 5" lendo 1 estrela e "há um mês" virando
+data. Contra o servidor: as quatro recusas da rota (nota fora da faixa,
+sem autor, data no futuro, link sem `https`), uma negativa com ameaça
+jurídica registrada como **negativa/Urgente/jurídico**, a mesma de novo
+voltando `repetida: true`, e a tela de Avaliações registrando pelo
+serviço novo. As três avaliações descartáveis foram apagadas; a que já
+estava na base ficou.
 
 ### Exportar a conversa do WhatsApp (15/09/2026, 0.63.0)
 

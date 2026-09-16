@@ -48,6 +48,7 @@ const CAMINHOS = {
   guardarConversa: "/api/extensao/guardar-conversa",
   tratativa: "/api/extensao/tratativa",
   conferirResposta: "/api/extensao/conferir-resposta",
+  googleAvaliacao: "/api/extensao/google-avaliacao",
   whatsapp: "/api/extensao/whatsapp",
   respostas: "/api/extensao/respostas",
   raNovas: "/api/extensao/ra-novas",
@@ -911,6 +912,25 @@ async function tratar(mensagem) {
 
     const dados = await chamar(
       CAMINHOS.conferirResposta,
+      {},
+      mensagem.corpo ?? {}
+    );
+
+    return { ok: true, dados };
+  }
+
+  /**
+   * Registrar a avaliação lida do Perfil da Empresa (Fase 8.1).
+   *
+   * É escrita: sem cache. A classificação, a marca de repetição e o
+   * casamento com o promotor do NPS são feitos pela aplicação, no
+   * mesmo serviço que a tela de Avaliações usa — a extensão só leva
+   * os quatro campos do cartão.
+   */
+  if (mensagem?.tipo === "registrarAvaliacaoGoogle") {
+
+    const dados = await chamar(
+      CAMINHOS.googleAvaliacao,
       {},
       mensagem.corpo ?? {}
     );

@@ -16,7 +16,7 @@
  * prova os três primeiros, sem precisar de servidor — é estático de
  * propósito, para rodar antes de subir.
  */
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 
 const RAIZ = resolve(__dirname, "..");
@@ -41,19 +41,21 @@ const worker = readFileSync(
  *
  * Um alarme falso aqui custa caro: é uma conferência que se lê antes
  * de subir, e a que mente uma vez deixa de ser lida.
+ *
+ * Por isso a lista deixou de ser lista: são **as pastas inteiras**. A
+ * versão que nomeava os arquivos um a um voltou a mentir na Fase 8.1,
+ * quando três detectores novos (`crisp.js`, `portal-cw.js`,
+ * `google-perfil.js`) passaram a chamar o worker sem estar nela. Uma
+ * conferência não pode depender de alguém lembrar de editá-la.
  */
-const quemChama = [
-  "extensao/conteudo/painel.js",
-  "extensao/conteudo/respostas.js",
-  "extensao/conteudo/whatsapp.js",
-  "extensao/conteudo/hugme.js",
-  "extensao/conteudo/manychat.js",
-  "extensao/popup/popup.js",
-  "extensao/opcoes/opcoes.js",
-]
-  .map((caminho) => resolve(RAIZ, caminho))
-  .filter((caminho) => existsSync(caminho))
-  .map((caminho) => readFileSync(caminho, "utf8"))
+const quemChama = ["extensao/conteudo", "extensao/popup", "extensao/opcoes"]
+  .map((pasta) => resolve(RAIZ, pasta))
+  .filter((pasta) => existsSync(pasta))
+  .flatMap((pasta) =>
+    readdirSync(pasta)
+      .filter((nome) => nome.endsWith(".js"))
+      .map((nome) => readFileSync(resolve(pasta, nome), "utf8"))
+  )
   .join("\n");
 
 let falhas = 0;

@@ -85,6 +85,17 @@ export default function GooglePage() {
     aplicarAvaliacaoGoogle(a);
   }
 
+  /**
+   * "4h" vira "4h úteis"; "2 dias úteis" fica como está.
+   *
+   * O sufixo era fixo, e o rótulo saía "faltam 2 dias úteis úteis"
+   * sempre que a folga passava de um dia — `descreverMinutosUteis` já
+   * escreve "dia útil"/"dias úteis" quando conta dias.
+   */
+  function comUteis(descricao: string) {
+    return /\b[úu]te(is|il)\b/i.test(descricao) ? descricao : `${descricao} úteis`;
+  }
+
   function prazo(a: AvaliacaoGoogleView) {
     if (!agora || a.status !== "aberta" || a.respondidaEm) return null;
     const vence = venceEm(a.publicadaEm, a.criticidade, expediente);
@@ -96,7 +107,7 @@ export default function GooglePage() {
     */
     return agora.getTime() > vence.getTime()
       ? { texto: resta < 0 ? `resposta atrasada ${descreverMinutosUteis(resta, expediente)}` : "resposta fora do prazo", tom: "bg-rose-50 text-rose-700 ring-rose-100" }
-      : { texto: `responder até ${descreverRegistro(vence.toISOString())} · faltam ${descreverMinutosUteis(resta, expediente)} úteis`, tom: "bg-sky-50 text-sky-700 ring-sky-100" };
+      : { texto: `responder até ${descreverRegistro(vence.toISOString())} · faltam ${comUteis(descreverMinutosUteis(resta, expediente))}`, tom: "bg-sky-50 text-sky-700 ring-sky-100" };
   }
 
   return (

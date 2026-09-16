@@ -38,6 +38,20 @@ interface MensagemDoPainel {
   autor?: string;
 }
 
+/**
+ * A chave de repetição da mensagem.
+ *
+ * O WhatsApp manda o id cru e ele vira `wa:<id>`. O Crisp já manda o
+ * dele prefixado (`crisp:<id>`), porque a numeração dos dois não tem
+ * nada a ver uma com a outra — prefixar de novo criaria `wa:crisp:…` e
+ * diria, na tabela, que aquela mensagem veio do WhatsApp.
+ */
+function chaveDaMensagem(id?: string) {
+  const bruto = String(id ?? "").trim();
+  if (!bruto) return undefined;
+  return (/^[a-z]+:/.test(bruto) ? bruto : `wa:${bruto}`).slice(0, 190);
+}
+
 export async function POST(request: Request) {
   const { usuario, demonstracao } = await autenticar(request);
   if (!usuario && !demonstracao) return semSessao(request);
@@ -63,14 +77,14 @@ export async function POST(request: Request) {
 
   const telefone = somenteDigitosDoTelefone(entrada.contato?.telefone);
   const nome = String(entrada.contato?.nome ?? "").trim().slice(0, 120);
-  if (!telefone && !nome) return responder(request, { erro: "Não sei de quem é esta conversa — abra a conversa no WhatsApp e tente de novo." }, 400);
+  if (!telefone && !nome) return responder(request, { erro: "Não sei de quem é esta conversa — abra a conversa no WhatsApp ou no Crisp e tente de novo." }, 400);
 
   const lados: Lado[] = ["cliente", "nos"];
   const mensagens: MensagemRecebida[] = (Array.isArray(entrada.mensagens) ? entrada.mensagens : [])
     .slice(-MAXIMO_DE_MENSAGENS)
     .filter((m) => typeof m?.texto === "string" && m.texto.trim() && lados.includes(m.de as Lado))
     .map((m) => ({
-      chave: m.id ? `wa:${String(m.id).slice(0, 190)}` : undefined,
+      chave: chaveDaMensagem(m.id),
       de: m.de as Lado,
       autor: m.autor ? String(m.autor).slice(0, 120) : null,
       texto: String(m.texto),

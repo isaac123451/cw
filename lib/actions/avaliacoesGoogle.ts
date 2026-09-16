@@ -9,14 +9,17 @@ import { requireRole, SemPermissao, tryRole } from "@/lib/auth/guard";
 
 import type { Prioridade } from "@/lib/models/case";
 import {
-  classificarAvaliacao,
   EXCECOES_GOOGLE,
   type Classificacao,
   type MotivoDeUrgencia,
   type StatusDaAvaliacao,
 } from "@/lib/models/avaliacoesGoogle";
-import { instanteDeParede } from "@/lib/services/horasUteis";
 import { semelhanca } from "@/lib/services/lgpd";
+import {
+  gravarAvaliacaoDoGoogle,
+  problemaDaAvaliacao,
+  type NovaAvaliacaoDoGoogle,
+} from "@/lib/services/avaliacoesGoogle.service";
 
 /**
  * Avaliações do Google: registrar, responder, tratar, encerrar.
@@ -111,10 +114,6 @@ function falha(erro: unknown, contexto: string): Falha {
   return { ok: false, erro: "O banco não aceitou a gravação agora. Tente de novo em instantes." };
 }
 
-function limpar(nome: string) {
-  return nome.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim();
-}
-
 /* ============================================================
    LEITURA
 ============================================================ */
@@ -143,88 +142,25 @@ export async function semelhancaComPublicadas(entrada: { id: string; texto: stri
    REGISTRO
 ============================================================ */
 
-export async function registrarAvaliacaoGoogle(entrada: {
-  estrelas: number;
-  autor: string;
-  texto?: string;
-  link?: string;
-  /** "2026-09-13T14:05" em Brasília, ou só "2026-09-13". */
-  publicadaEm: string;
-  identificado: boolean;
-}): Promise<{ ok: true; avaliacao: AvaliacaoGoogleView } | Falha> {
+export async function registrarAvaliacaoGoogle(
+  entrada: NovaAvaliacaoDoGoogle
+): Promise<{ ok: true; avaliacao: AvaliacaoGoogleView } | Falha> {
 
-  if (!Number.isInteger(entrada.estrelas) || entrada.estrelas < 1 || entrada.estrelas > 5) {
-    return { ok: false, erro: "A nota vai de 1 a 5 estrelas." };
-  }
-
-  const autor = entrada.autor.trim();
-  if (!autor) return { ok: false, erro: "Informe o nome de quem avaliou, como aparece no Google." };
-
-  const publicadaEm =
-    instanteDeParede(entrada.publicadaEm) ??
-    (/^\d{4}-\d{2}-\d{2}$/.test(entrada.publicadaEm) ? new Date(`${entrada.publicadaEm}T00:00:00Z`) : null);
-
-  if (!publicadaEm) return { ok: false, erro: "Informe quando a avaliação foi publicada." };
-  if (publicadaEm.getTime() > Date.now() + 5 * 60_000) return { ok: false, erro: "A data da avaliação não pode estar no futuro." };
-
-  const link = entrada.link?.trim() || null;
-  if (link && !/^https?:\/\//i.test(link)) return { ok: false, erro: "O link precisa começar com http:// ou https://." };
+  const problema = problemaDaAvaliacao(entrada);
+  if (problema) return { ok: false, erro: problema };
 
   const quem = await quemGrava();
   if ("erro" in quem) return { ok: false, erro: quem.erro! };
 
   try {
-    /*
-      "Repetição do mesmo problema em múltiplas avaliações recentes": duas
-      ou mais negativas nos últimos 14 dias com texto parecido com esta.
-    */
-    const recentes = await quem.ctx.prisma.avaliacaoGoogle.findMany({
-      where: { classificacao: "negativa", publicadaEm: { gte: new Date(publicadaEm.getTime() - 14 * 86_400_000) } },
-      select: { texto: true },
-    });
+    /* A regra mora no serviço: a extensão registra pelo mesmo caminho. */
+    const { criada, promotor } = await gravarAvaliacaoDoGoogle(
+      quem.ctx.prisma,
+      entrada,
+      quem.nome
+    );
 
-    const texto = entrada.texto?.trim() || "";
-    const parecidas = texto.length >= 40
-      ? recentes.filter((r) => semelhanca(texto, r.texto ?? "") >= 25).length
-      : 0;
-
-    const triagem = classificarAvaliacao(entrada.estrelas, texto, parecidas >= 2);
-
-    /*
-      O promotor do NPS que foi convidado a avaliar — pelo nome, entre os
-      que receberam o pedido de review. É o fluxo do documento: "deve
-      alimentar o monitoramento do Google, não competir com ele".
-    */
-    const promotores = await quem.ctx.prisma.npsResponse.findMany({
-      where: { score: { gte: 9 }, reviewAsked: true },
-      select: { id: true, customerName: true, customer: true },
-      take: 500,
-    });
-
-    const alvo = limpar(autor);
-    const promotor = promotores.find((p) => [p.customerName, p.customer].some((n) => n && limpar(n) === alvo));
-
-    const criada = await quem.ctx.prisma.avaliacaoGoogle.create({
-      data: {
-        estrelas: entrada.estrelas,
-        autor: autor.slice(0, 120),
-        texto: texto || null,
-        link,
-        publicadaEm,
-        identificado: entrada.identificado,
-        classificacao: triagem.classificacao,
-        criticidade: triagem.criticidade,
-        motivosDeUrgencia: triagem.motivos,
-        npsResponseId: promotor?.id ?? null,
-        registradaPor: quem.nome,
-      },
-      include: INCLUIR,
-    });
-
-    if (promotor) {
-      await quem.ctx.prisma.npsResponse.update({ where: { id: promotor.id }, data: { reviewFeita: true } });
-      updateTag(WORKSPACE_TAG);
-    }
+    if (promotor) updateTag(WORKSPACE_TAG);
 
     return { ok: true, avaliacao: paraView(criada) };
   } catch (erro) {

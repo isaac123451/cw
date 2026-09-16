@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "CW Reputação — painel de contexto",
-  "version": "0.66.0",
-  "description": "Mostra o cliente do CW Reputacao ao lado do WhatsApp Web, do Hugme/Reclame Aqui e do ManyChat, poe os textos aprovados ao lado da caixa de mensagem e captura reclamacoes para o Kanban.",
+  "version": "0.67.0",
+  "description": "Mostra o cliente do CW Reputacao ao lado do WhatsApp Web, do Hugme/Reclame Aqui, do ManyChat, do Crisp e do Portal Cardapio Web, poe os textos aprovados ao lado da caixa de mensagem, captura reclamacoes para o Kanban e registra avaliacoes do Google Perfil da Empresa.",
   "icons": {
     "16": "icones/icone-16.png",
     "32": "icones/icone-32.png",
@@ -82,6 +82,44 @@
         "conteudo/manychat.js"
       ],
       "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://*.cardapioweb.com/*"
+      ],
+      "js": [
+        "conteudo/nucleo.js",
+        "conteudo/estilo.js",
+        "conteudo/painel.js",
+        "conteudo/portal-cw.js"
+      ],
+      "run_at": "document_idle",
+      "exclude_matches": [
+        "https://www.cardapioweb.com/*",
+        "https://blog.cardapioweb.com/*"
+      ]
+    },
+    {
+      "matches": [
+        "https://app.crisp.chat/*"
+      ],
+      "js": [
+        "conteudo/nucleo.js",
+        "conteudo/estilo.js",
+        "conteudo/painel.js",
+        "conteudo/crisp.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://business.google.com/*"
+      ],
+      "js": [
+        "conteudo/nucleo.js",
+        "conteudo/google-perfil.js"
+      ],
+      "run_at": "document_idle"
     }
   ],
   "web_accessible_resources": [
@@ -93,7 +131,9 @@
         "https://web.whatsapp.com/*",
         "https://*.hugme.com.br/*",
         "https://*.reclameaqui.com.br/*",
-        "https://*.manychat.com/*"
+        "https://*.manychat.com/*",
+        "https://*.cardapioweb.com/*",
+        "https://app.crisp.chat/*"
       ]
     }
   ]
