@@ -30,6 +30,8 @@ import { NpsProvider } from "@/lib/context/NpsContext";
 import { PortalProvider } from "@/lib/context/PortalContext";
 import { CompletarProvider } from "@/components/reclame-aqui/completar/CompletarProvider";
 import { TratativaProvider } from "@/components/reclame-aqui/tratativa/TratativaProvider";
+import { JanelasProvider } from "@/lib/context/JanelasContext";
+import JanelasHost from "@/components/janelas/JanelasHost";
 import ToastHost from "@/components/shared/ToastHost";
 
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -157,8 +159,17 @@ export default async function RootLayout({
                                   <PortalProvider>
                                   <CompletarProvider>
                                   <TratativaProvider>
+                                  {/*
+                                    As mini-janelas moram aqui, dentro de todos os
+                                    contextos (elas leem casos, NPS, times e causas) e
+                                    fora das páginas: trocar de página não as fecha.
+                                  */}
+                                  <JanelasProvider>
 
                                     {children}
+
+                                    <JanelasHost />
+                                  </JanelasProvider>
 
                                   </TratativaProvider>
                                   </CompletarProvider>

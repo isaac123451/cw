@@ -22,7 +22,8 @@ import ProximoPasso from "@/components/reclame-aqui/tratativa/ProximoPasso";
 
 import { useCases } from "@/lib/context/CaseContext";
 import { useOwners } from "@/lib/hooks/useOwners";
-import { caseHref } from "@/lib/services/case.service";
+import { caseHref, isSocial } from "@/lib/services/case.service";
+import BotaoAbrirEmJanela from "@/components/janelas/BotaoAbrirEmJanela";
 
 interface Props {
   item: Case;
@@ -85,6 +86,14 @@ export default function KanbanCard({
         </span>
 
         <div className="flex shrink-0 items-center gap-1">
+
+          {/* A mini-janela: mexer no caso sem sair do quadro. */}
+          <BotaoAbrirEmJanela
+            frente={isSocial(item) ? "redes" : "reclame-aqui"}
+            referencia={item.id}
+            titulo={`${item.protocol} · ${item.customer}`}
+            className="p-0.5"
+          />
 
           <ChipPrioridade item={item} />
 

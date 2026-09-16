@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 16/09/2026. Aplicação **0.73.0**, extensão **0.73.0**.
+Atualizado em 16/09/2026. Aplicação **0.74.0**, extensão **0.74.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -50,6 +50,7 @@ workspace junto com os outros cadastros.
 | `npm run check:painel` | Prova que os sete arquivos do painel se encontram: nome sem dono, ordem de carga, atalho |
 | `npm run bancada:painel` | Abre o painel da extensão fora dela, com dados reais, em http://localhost:3999 (precisa do `npm run dev`) |
 | `npm run check:gravacoes` | Prova que toda ação de escrita responde `{ ok }` e que a tela trata a recusa como falha |
+| `npm run check:janelas` | Prova as mini-janelas: abrir, empilhar, voltar do F5, ficar na tela e gravar pelo caminho certo |
 | `npm run check:edicao` | Prova que duas pessoas no mesmo caso não apagam o trabalho uma da outra (contra o banco, com reclamação descartável) |
 | `npm run check:rascunho` | Prova a conferência do rascunho contra as regras do documento (nome, acolhimento, dado pessoal, macro, prazo) |
 | `npm run check:cadastros` | Prova que Times, Metas e Clientes sobrevivem ao recarregamento |
@@ -1099,6 +1100,47 @@ caracteres** antes e depois da divisão (contato 6.026, fila 3.289, NPS
 nenhum erro no console. `check:painel`, `check:fiacao`, `check:escape`,
 `check:dossie`, `check:respostas` e `check:atalho` de pé — as quatro
 últimas leem o painel como texto e passaram a ler os sete como um só.
+
+### Mini-janelas em cada frente (16/09/2026, 0.74.0)
+
+O Isaac: "em cada frente seja possível abrir uma mini janela para
+preencher as informações ou mudar status… quero que seja possível abrir
+mais de uma e navegar entre as páginas enquanto faço isso."
+
+- **O botão de janela** (ícone de janela) está no cartão do quadro e na
+  linha da lista do Reclame Aqui, no quadro e na lista das Redes, na
+  lista e no quadro do NPS e na lista do Google. Não navega: abre a
+  ficha por cima da página em que se está.
+- **Várias ao mesmo tempo**, até oito. A mesma ficha duas vezes não
+  duplica — a que já existe vem para a frente. A nona não abre e avisa;
+  nenhuma é fechada sozinha, para nenhum rascunho sumir.
+- **Sobrevivem à navegação e ao F5.** Moram no layout raiz, junto dos
+  contextos; o endereço de cada uma (qual ficha, onde na tela) fica na
+  sessão do navegador. O conteúdo vem sempre do banco.
+- **Arrastáveis, sem véu nem desfoque**, com minimizar para uma bandeja
+  no canto e botão para abrir a ficha completa. Minimizada continua
+  montada: o que foi digitado e não salvo sobrevive.
+- **O que cabe em cada uma** é o que se muda no meio do dia:
+  - Reclame Aqui e Redes: etapa, prioridade, responsável, categoria,
+    causa raiz, risco de cancelamento (Salvar grava **só o que mudou**,
+    com a proteção de edição simultânea) e anotação. Os finais das Redes
+    continuam pela ficha, que pede a validação do documento.
+  - NPS: mover de etapa, classificar (tipo, causa raiz, assumir),
+    registrar tentativa de contato, anotação e risco — cada um com o seu
+    botão, porque são registros com regras diferentes. Encerrar é pela
+    ficha.
+  - Google: resposta pública (com a conferência de nome, canal privado,
+    promessa, tom e dado pessoal) e tratativa privada.
+
+Achado ao conferir: guardar as janelas na sessão com um *ref* gravava
+"[]" por cima do guardado no mesmo ciclo da leitura; virou estado.
+
+Provas: `check:janelas` (novo). Na tela, com uma reclamação descartável
+(apagada no fim, com a anotação): janela aberta sem sair do quadro,
+prioridade e risco gravados, anotação gravada, navegação para o NPS com
+a janela aberta, uma janela de NPS e uma do Google abertas junto (só
+leitura — são respostas reais), F5 restaurando as duas e minimizar
+levando para a bandeja.
 
 ### Planos: a conta, o Impacto e a tabela falam do mesmo plano (16/09/2026, 0.73.0)
 

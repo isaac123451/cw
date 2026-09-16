@@ -29,6 +29,8 @@ import { useSla } from "@/lib/context/SlaContext";
 import { useAgora } from "@/lib/hooks/useAgora";
 
 import PorQue from "@/components/shared/PorQue";
+import BotaoAbrirEmJanela from "@/components/janelas/BotaoAbrirEmJanela";
+
 type Filtro = "abertas" | "encerradas" | "todas";
 
 const TOM: Record<string, string> = {
@@ -216,11 +218,11 @@ export default function GooglePage() {
               {visiveis.map((a) => {
                 const p = prazo(a);
                 return (
-                  <li key={a.id}>
+                  <li key={a.id} className="flex items-center pr-3 transition-colors hover:bg-zinc-50">
                     <button
                       type="button"
                       onClick={() => setAberta(a.id)}
-                      className="flex w-full flex-wrap items-center gap-3 px-6 py-3.5 text-left transition-colors hover:bg-zinc-50"
+                      className="flex min-w-0 flex-1 flex-wrap items-center gap-3 px-6 py-3.5 text-left"
                     >
                       <span className="flex shrink-0">
                         {[1, 2, 3, 4, 5].map((n) => (
@@ -243,6 +245,11 @@ export default function GooglePage() {
                         <span className="shrink-0 text-[11px] text-zinc-500">{ROTULO_DO_STATUS_GOOGLE[a.status]}</span>
                       )}
                     </button>
+                    <BotaoAbrirEmJanela
+                      frente="google"
+                      referencia={a.id}
+                      titulo={`${a.estrelas}★ · ${a.autor}`}
+                    />
                   </li>
                 );
               })}

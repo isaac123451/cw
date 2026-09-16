@@ -18,6 +18,7 @@ import {
 } from "@/lib/models/nps";
 
 import { slaState } from "@/lib/services/nps.service";
+import BotaoAbrirEmJanela from "@/components/janelas/BotaoAbrirEmJanela";
 
 const slaTone: Record<string, string> = {
   estourado: "bg-rose-50 text-rose-700 ring-rose-100",
@@ -234,8 +235,14 @@ export default function NpsList({
                 </td>
 
                 <td className="px-5 py-3">
-                  <p className="max-w-[220px] truncate text-sm font-medium text-zinc-800">
-                    {nomeDoCliente(item)}
+                  <p className="flex max-w-[240px] items-center gap-1 text-sm font-medium text-zinc-800">
+                    <span className="truncate">{nomeDoCliente(item)}</span>
+                    <BotaoAbrirEmJanela
+                      frente="nps"
+                      referencia={item.id}
+                      titulo={`NPS ${item.score} · ${nomeDoCliente(item)}`}
+                      className="p-0.5"
+                    />
                   </p>
                   {item.company && (
                     <p className="max-w-[220px] truncate text-xs text-zinc-500">

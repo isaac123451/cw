@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { Case } from "@/lib/models/case";
-import { caseHref } from "@/lib/services/case.service";
+import { caseHref, isSocial } from "@/lib/services/case.service";
+import BotaoAbrirEmJanela from "@/components/janelas/BotaoAbrirEmJanela";
 
 interface Column {
   name: string;
@@ -125,9 +126,17 @@ export default function MiniKanban({
                       className="block cursor-grab rounded-lg border border-zinc-200 bg-white p-2.5 transition-colors active:cursor-grabbing hover:border-violet-300 hover:bg-violet-50/40"
                     >
 
-                      <p className="line-clamp-2 text-[11px] font-medium leading-snug text-zinc-800">
-                        {item.title}
-                      </p>
+                      <div className="flex items-start gap-1">
+                        <p className="line-clamp-2 min-w-0 flex-1 text-[11px] font-medium leading-snug text-zinc-800">
+                          {item.title}
+                        </p>
+                        <BotaoAbrirEmJanela
+                          frente={isSocial(item) ? "redes" : "reclame-aqui"}
+                          referencia={item.id}
+                          titulo={`${item.protocol} · ${item.customer}`}
+                          className="-mr-1 -mt-0.5 p-0.5"
+                        />
+                      </div>
 
                       <p className="mt-1 truncate text-[10px] text-zinc-500">
                         {item.company} · {item.source}

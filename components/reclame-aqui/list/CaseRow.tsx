@@ -24,6 +24,7 @@ import {
   diaNaOperacao,
   hojeNaOperacao,
 } from "@/lib/services/reputation.service";
+import BotaoAbrirEmJanela from "@/components/janelas/BotaoAbrirEmJanela";
 
 interface Props {
   data: Case;
@@ -97,8 +98,16 @@ export default function CaseRow({
 
       <td className="px-5 py-3.5">
 
-        <span className="font-mono text-xs font-semibold text-violet-700">
-          {idExterno(data)}
+        <span className="flex items-center gap-1">
+          <span className="font-mono text-xs font-semibold text-violet-700">
+            {idExterno(data)}
+          </span>
+          <BotaoAbrirEmJanela
+            frente="reclame-aqui"
+            referencia={data.id}
+            titulo={`${data.protocol} · ${data.customer}`}
+            className="p-0.5"
+          />
         </span>
 
         <p className="mt-0.5 max-w-[220px] truncate text-xs text-zinc-500">

@@ -17,6 +17,7 @@ import {
 } from "@/lib/models/nps";
 
 import { slaState } from "@/lib/services/nps.service";
+import BotaoAbrirEmJanela from "@/components/janelas/BotaoAbrirEmJanela";
 
 interface Props {
   itens: NpsResponseView[];
@@ -272,6 +273,13 @@ function Cartao({
         <p className="min-w-0 flex-1 truncate text-xs font-medium text-zinc-800">
           {nomeDoCliente(item)}
         </p>
+
+        <BotaoAbrirEmJanela
+          frente="nps"
+          referencia={item.id}
+          titulo={`NPS ${item.score} · ${nomeDoCliente(item)}`}
+          className="-mt-0.5 p-0.5"
+        />
 
         {humor && (
           <span

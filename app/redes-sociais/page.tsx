@@ -35,6 +35,7 @@ import { ETAPAS_DAS_REDES, eFinalDasRedes, etapaDasRedes } from "@/lib/models/re
 import { groupBy, isOpen } from "@/lib/services/case.service";
 
 import { Case } from "@/lib/models/case";
+import BotaoAbrirEmJanela from "@/components/janelas/BotaoAbrirEmJanela";
 
 function RedesSociaisConteudo() {
 
@@ -374,6 +375,12 @@ function RedesSociaisConteudo() {
                       </p>
 
                     </Link>
+
+                    <BotaoAbrirEmJanela
+                      frente="redes"
+                      referencia={item.id}
+                      titulo={`${item.protocol} · ${item.customer}`}
+                    />
 
                     <span className="hidden shrink-0 rounded-full bg-zinc-100 px-2.5 py-1 text-[11px] font-medium text-zinc-600 sm:inline">
                       {item.status}
