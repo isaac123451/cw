@@ -1063,6 +1063,26 @@
       '  </div>',
 
       /*
+        A conferência do rascunho contra o documento (Fase 9.3).
+
+        Quem gerou o texto foi o modelo; quem diz se ele segue as regras
+        é o servidor, com a mesma função que confere o texto digitado à
+        mão. Aparece **antes** de copiar, que é o único momento em que
+        muda alguma coisa — depois de colado no portal, já foi.
+      */
+      (t.conferencia ?? []).length > 0
+        ? [
+            '  <div class="cartao" style="margin-top:7px">',
+            `    <div class="rotulo">${CW.escapar(t.resumoDaConferencia ?? "O documento pede ajustes")}</div>`,
+            ...t.conferencia.map(
+              (a) =>
+                `    <div class="sub" style="color:${a.tom === "perigo" ? "var(--perigo)" : "var(--suave)"}">• ${CW.escapar(a.texto)}</div>`
+            ),
+            '  </div>',
+          ].join("")
+        : '  <p class="sub" style="margin-top:6px">Conferido contra o documento: nome, acolhimento, dado pessoal e repetição — sem apontamentos.</p>',
+
+      /*
         Por qual via a leitura veio.
 
         A rápida acerta menos no julgamento, e quem lê o resultado

@@ -11,6 +11,11 @@ import {
   medir,
 } from "@/lib/services/assistant.agent";
 
+import {
+  trechosParaAPergunta,
+  trechosParaOPrompt,
+} from "@/lib/services/documentacao.service";
+
 import { getApiCases } from "@/lib/api/source";
 
 import { getSession } from "@/lib/auth/session";
@@ -167,6 +172,36 @@ export async function POST(request: Request) {
     console.error("[assistente] medições", erro);
   }
 
+  /**
+   * A documentação, procurada antes de responder (Fase 9.1).
+   *
+   * O assistente sabia os números da operação e não sabia as regras
+   * dela. Perguntado "qual o prazo de uma urgente?", respondia pelo que
+   * parece razoável — e o que parece razoável é justamente o que a
+   * documentação existe para substituir.
+   *
+   * As seções que casam com a pergunta vão **literalmente** para a
+   * instrução, com título e endereço. Não há resumo pelo caminho: o
+   * modelo lê o texto do documento. Nada casou? Nada vai — e a
+   * instrução manda dizer que a documentação não cobre aquilo.
+   */
+  let documentacao = "";
+
+  try {
+    const prisma = getPrisma();
+
+    if (prisma) {
+      const pergunta =
+        [...messages].reverse().find((m) => m.role === "user")?.content ?? "";
+
+      const trechos = await trechosParaAPergunta(prisma, pergunta);
+
+      if (trechos.length > 0) documentacao = trechosParaOPrompt(trechos);
+    }
+  } catch (erro) {
+    console.error("[assistente] documentação", erro);
+  }
+
   /*
     O retrato da operação entra na instrução de sistema.
 
@@ -189,6 +224,27 @@ sentido. Não recalcule nem arredonde.
 
 ${medicoes}`
       : ""
+  }${
+    documentacao
+      ? `
+
+--- A DOCUMENTAÇÃO DO TIME, SOBRE ESTA PERGUNTA ---
+Estes são trechos literais dos documentos guardados na plataforma.
+Quando a resposta vier de uma regra, ela sai daqui: cite a seção pelo
+nome ("Atendimento no Reclame Aqui → 2. Prazos e Classificação de
+Criticidade") e, se ajudar, o endereço entre parênteses. Não complete
+nem generalize uma regra que não esteja escrita abaixo — se o trecho
+não responde, diga o que ele cobre e o que ficou de fora.
+
+${documentacao}`
+      : `
+
+--- A DOCUMENTAÇÃO DO TIME ---
+Nenhuma seção dos documentos guardados casou com esta pergunta. Então
+não há regra documentada para citar: se a pergunta for sobre "o que o
+processo manda fazer", diga que a documentação da plataforma não cobre
+isso e sugira procurar em Documentação. Nunca invente uma regra, um
+prazo ou um limite.`
   }`;
 
   const encoder = new TextEncoder();

@@ -330,5 +330,7 @@ Regras ao responder:
 - Use exclusivamente os números do retrato da operação que acompanha a pergunta. Não estime, não arredonde para números "bonitos" e nunca invente um dado que não esteja ali.
 - Se a informação não estiver no retrato, diga que não está e aponte onde no sistema ela seria encontrada.
 - Cite protocolos quando forem úteis para a ação.
+- Sobre **regra, prazo, limite ou passo do processo**: responda só pelos trechos da documentação que vierem junto da pergunta, e cite a seção de onde saiu. Se não vier trecho nenhum, diga que a documentação da plataforma não cobre aquilo — não preencha com o que costuma ser verdade em outras operações.
+- Não misture as duas fontes sem dizer qual é qual: o número vem do retrato e da medição; a regra vem do documento.
 - Responda em português do Brasil, direto ao ponto, em prosa curta. Nada de recapitular a pergunta nem listar o que você vai fazer.
 - Termine com a recomendação prática mais relevante, quando houver uma.`;

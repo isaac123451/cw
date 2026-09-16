@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 15/09/2026. Aplicação **0.68.0**, extensão **0.68.0**.
+Atualizado em 16/09/2026. Aplicação **0.69.0**, extensão **0.69.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -49,6 +49,7 @@ workspace junto com os outros cadastros.
 | `npm run check:lugares` | Prova os leitores do Portal Cardápio Web, do Crisp e do Google Perfil da Empresa |
 | `npm run check:painel` | Prova que os sete arquivos do painel se encontram: nome sem dono, ordem de carga, atalho |
 | `npm run bancada:painel` | Abre o painel da extensão fora dela, com dados reais, em http://localhost:3999 (precisa do `npm run dev`) |
+| `npm run check:rascunho` | Prova a conferência do rascunho contra as regras do documento (nome, acolhimento, dado pessoal, macro, prazo) |
 | `npm run check:cadastros` | Prova que Times, Metas e Clientes sobrevivem ao recarregamento |
 | `npm run check:nps-etapas` | Prova as etapas e os tipos do NPS como cadastro, contra o banco |
 | `npm run check:nps-planilha` | Prova o leitor de planilha do NPS, com arquivos montados em memória |
@@ -1096,6 +1097,85 @@ caracteres** antes e depois da divisão (contato 6.026, fila 3.289, NPS
 nenhum erro no console. `check:painel`, `check:fiacao`, `check:escape`,
 `check:dossie`, `check:respostas` e `check:atalho` de pé — as quatro
 últimas leem o painel como texto e passaram a ler os sete como um só.
+
+## Fase 9 — o agente de IA (16/09/2026, 0.69.0)
+
+**9.1 — ele conhece a documentação, e cita a seção.**
+
+O assistente sabia os números da operação e não sabia as regras dela.
+Perguntado "qual o prazo de uma urgente?", respondia pelo que parece
+razoável — e o que parece razoável é justamente o que a documentação
+existe para substituir.
+
+Agora, antes de responder, a pergunta é comparada com as seções dos
+documentos guardados, e as que casam vão **literalmente** para a
+instrução, com título e endereço (`/documentacao?doc=…#seção`). A
+instrução manda citar a seção e recusar o que não estiver nela; quando
+nada casa, manda dizer que a documentação não cobre aquilo.
+
+A busca é local e sem modelo — contagem de termos sem acento, com as
+palavras vazias fora. Três decisões que mudaram o resultado:
+
+- **peso por raridade.** Sem ele, "qual o prazo de primeiro contato de
+  uma urgente?" trazia "Passo 3 — Primeiro Contato" das Redes Sociais na
+  frente de "2. Prazos e Classificação de Criticidade (SLA)": *primeiro*
+  e *contato* estão no título de meia dúzia de seções, *prazo* e
+  *urgente* em duas.
+- **título vale dez, corpo satura em três.** O título é a única parte
+  que alguém escreveu para dizer do que a seção trata.
+- **piso de relevância, relativo e absoluto.** "Qual a receita de bolo de
+  cenoura?" casava com a seção "Objetivo" do NPS, porque *receita*
+  também é o dinheiro que entra; e "qual o telefone do dentista?" casava
+  com a seção que tem "Telefone" no título. Um trecho irrelevante no
+  prompt é um convite para o modelo responder a partir dele.
+
+**9.2 — ele avisa antes de você perguntar.**
+
+Ao abrir o Assistente, as quatro perguntas de toda manhã já vêm
+respondidas: **o que vence hoje** (casos pelo relógio do documento mais
+os ciclos de NPS sem 1º contato), **quem está sem notícia** (mais de 2
+dias úteis sem mensagem nossa), **de quem pedir avaliação** e **se há
+sinal de crise** (órgão do consumidor, ação judicial, imprensa, perfil
+de grande alcance, casos simultâneos da mesma categoria).
+
+Cada aviso tem duas saídas e as duas resolvem: **Resolver** leva à tela
+— ou direto ao caso mais parado — e **Perguntar** joga a pergunta no
+chat. Sem nada pendente, a linha diz isso, em vez de um espaço em branco
+que faz duvidar se carregou. Os mesmos avisos vão junto no que o modelo
+recebe, para a resposta não contradizer a tela.
+
+Nenhuma conta nova: `slaStatus`, `semNoticia`, `filaDeAvaliacao` e
+`sinaisDeCrise` são as mesmas funções das telas.
+
+**9.3 — rascunhos que seguem as regras.**
+
+As regras do documento (nome, validar o sentimento, usar o histórico,
+nada de macro, nada de dado pessoal no público, nada de prazo
+inventado) entram na instrução **e** o texto que volta passa pela mesma
+conferência do texto digitado à mão — porque pedir no prompt melhora a
+média e não garante nada, e rascunho é feito para ser copiado.
+
+Vale na triagem do caso e nos três textos da conversa (a conferência é
+de cada um: o "Responder agora" pode estar impecável e o "Confirmar e
+encerrar" ter esquecido o nome). O painel mostra o que ela achou antes
+do botão de copiar. A análise do relatório do ciclo já existia desde a
+Fase 5.3 e continua.
+
+Achado na primeira chamada real: a conferência estava comparando o
+rascunho com `company`, que é o **estabelecimento**, e não com
+`customer`, que é quem reclamou — então passava limpo um texto que
+abria com "Olá!". Corrigido; na segunda chamada ela apontou
+`chame de "Rafael"`.
+
+Provas: `check:rascunho` (o texto bom passa limpo; cada regra sozinha;
+CPF barrado no público e permitido no privado; "o quanto antes" não é
+promessa de prazo; texto curto não vira cinco apontamentos; nome casa
+sem acento; e as duas rotas mandam as regras e conferem o que volta).
+`check:agente` ganhou a seção da documentação, rodada contra os 12
+documentos que estão no banco: cinco perguntas que **devem** achar a
+seção certa, três que **não devem** achar nada, acento indiferente e
+endereço em toda seção citada. Conferido na tela com a base real: o
+Assistente abriu mostrando 159 prazos estourados e 1 cliente sem notícia.
 
 ### Exportar a conversa do WhatsApp (15/09/2026, 0.63.0)
 

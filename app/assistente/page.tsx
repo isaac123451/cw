@@ -41,6 +41,13 @@ import {
 
 import { buildOperationSnapshot } from "@/lib/services/assistant.context";
 
+import {
+  aberturaParaOPrompt,
+  avisosDeAbertura,
+} from "@/lib/models/aberturaDoAgente";
+
+import AberturaDoAgente from "@/components/assistente/AberturaDoAgente";
+
 interface Turn {
   id: string;
   question: string;
@@ -79,7 +86,7 @@ export default function AssistentePage() {
 
   const { tasks } = useAgenda();
   const { records } = useImpact();
-  const { rules } = useSla();
+  const { rules, expediente } = useSla();
   const { responses } = useNps();
   const { establishments } = useEstablishments();
 
@@ -136,6 +143,25 @@ export default function AssistentePage() {
     [cases, responses, tasks, records, rules]
   );
 
+
+  /**
+   * O que o agente diz antes de alguém perguntar (Fase 9.2).
+   *
+   * As mesmas funções das telas — `slaStatus`, `semNoticia`,
+   * `filaDeAvaliacao` e `sinaisDeCrise`. Um aviso que discorda do painel
+   * ensina a desconfiar dos dois.
+   */
+  const abertura = useMemo(
+    () =>
+      avisosDeAbertura({
+        casos: cases,
+        regras: rules,
+        nps: responses,
+        expediente,
+      }),
+    [cases, rules, responses, expediente]
+  );
+
   async function perguntar(texto: string) {
 
     const pergunta = texto.trim();
@@ -189,13 +215,16 @@ export default function AssistentePage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          snapshot: buildOperationSnapshot({
+          snapshot: `${buildOperationSnapshot({
             cases,
             tasks,
             impacts: records,
             rules,
             establishments,
-          }),
+          })}
+
+O QUE ESTÁ PEDINDO AÇÃO AGORA (o mesmo que a tela mostra ao abrir):
+${aberturaParaOPrompt(abertura)}`,
           messages: [
             ...historico,
             { role: "user", content: pergunta },
@@ -356,6 +385,8 @@ export default function AssistentePage() {
           </div>
 
         )}
+
+        <AberturaDoAgente avisos={abertura} onPerguntar={perguntar} />
 
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
 

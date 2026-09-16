@@ -1314,6 +1314,24 @@
                   ? `    <p class="sub" style="margin:5px 0 0;color:var(--suave)">${CW.escapar(r.quando)}</p>`
                   : "",
                 `    <pre style="max-height:none">${CW.escapar(r.texto ?? "")}</pre>`,
+
+                /*
+                  A conferência deste texto contra o documento (Fase 9.3).
+
+                  É de cada um, e não do bloco: o "Responder agora" pode
+                  estar impecável e o "Confirmar e encerrar" ter esquecido
+                  o nome. Aparece antes de copiar — depois de enviado, já
+                  foi.
+                */
+                (r.conferencia ?? []).length > 0
+                  ? r.conferencia
+                      .map(
+                        (a) =>
+                          `    <p class="sub" style="margin:4px 0 0;color:${a.tom === "perigo" ? "var(--perigo)" : "var(--suave)"}">• ${CW.escapar(a.texto)}</p>`
+                      )
+                      .join("")
+                  : "",
+
                 '  </details>',
               ].join("")
             )

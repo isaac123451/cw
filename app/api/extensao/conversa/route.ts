@@ -47,6 +47,12 @@ interface Mensagem {
   hora?: string;
 }
 
+import {
+  conferirRascunho,
+  REGRAS_DO_RASCUNHO,
+  resumoDoRascunho,
+} from "@/lib/models/rascunho";
+
 interface Corpo {
   mensagens: Mensagem[];
   contato?: { nome?: string; telefone?: string };
@@ -71,7 +77,9 @@ Regras:
   Cada uma tem "quando" (uma frase dizendo em que situação usar) e "texto" (a mensagem pronta para revisar e enviar pelo WhatsApp).
 - Os três são para o atendente **escolher e enviar**: escreva-os prontos, no tom de mensagem de WhatsApp — curtos, sem assinatura, sem formalidade de e-mail. Nada é enviado automaticamente.
 - Nunca invente protocolo, valor, data ou nome que não apareça na conversa ou no contexto fornecido.
-- Se a conversa for curta ou irrelevante demais para concluir algo, diga isso no resumo em vez de preencher com suposição. Mesmo assim escreva os três textos com o que houver — quem atende revisa antes de enviar.`;
+- Se a conversa for curta ou irrelevante demais para concluir algo, diga isso no resumo em vez de preencher com suposição. Mesmo assim escreva os três textos com o que houver — quem atende revisa antes de enviar.
+
+${REGRAS_DO_RASCUNHO}`;
 
 const ESQUEMA = {
   type: "object",
@@ -268,8 +276,43 @@ ${transcricao}`,
     );
   }
 
+  /**
+   * Cada rascunho passa pela mesma conferência do texto digitado à mão.
+   *
+   * São três textos, e a conferência é de cada um: o "Responder agora"
+   * pode estar impecável e o "Confirmar e encerrar" ter esquecido o nome.
+   * Um aviso no bloco inteiro não diria de qual dos três está falando.
+   *
+   * Aqui a conversa é privada — dado pessoal pode circular entre a
+   * operação e o cliente —, então a conferência olha o nome, o
+   * acolhimento e a promessa de prazo, e não a LGPD da resposta pública.
+   */
+  const dados = resultado.dados as {
+    resposta?: string;
+    respostas?: { titulo?: string; quando?: string; texto?: string }[];
+  };
+
+  const conferir = (texto: string) =>
+    conferirRascunho(texto, { nome: corpo.contato?.nome, publico: false });
+
+  const respostas = Array.isArray(dados.respostas)
+    ? dados.respostas.map((r) => {
+        const conferencia = conferir(String(r.texto ?? ""));
+        return {
+          ...r,
+          conferencia,
+          resumoDaConferencia: resumoDoRascunho(conferencia),
+        };
+      })
+    : dados.respostas;
+
+  const conferencia = conferir(String(dados.resposta ?? ""));
+
   return responder(request, {
     ...resultado.dados,
+    respostas,
+    conferencia,
+    resumoDaConferencia: resumoDoRascunho(conferencia),
     mensagensLidas: mensagens.length,
 
     /**

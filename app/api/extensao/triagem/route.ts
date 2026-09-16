@@ -6,6 +6,12 @@ import {
 } from "@/lib/api/extensao";
 
 import { getPrisma } from "@/lib/prisma";
+
+import {
+  conferirRascunho,
+  REGRAS_DO_RASCUNHO,
+  resumoDoRascunho,
+} from "@/lib/models/rascunho";
 import { loadWorkspace } from "@/lib/actions/workspace";
 import { fetchCaseByProtocol } from "@/lib/services/case.repository";
 import { pedirEstruturado } from "@/lib/services/ia.service";
@@ -43,7 +49,9 @@ Regras:
 - "oQueFalta" só aparece quando a decisão é analisar, e lista o que precisa ser descoberto — cada item é uma coisa concreta de verificar, não um conselho.
 - "rascunho" é um texto para o atendente enviar depois de conferir. Mesmo quando a decisão é analisar, escreva o rascunho de acolhimento: o consumidor precisa de retorno dentro do prazo mesmo que a solução demore.
 - Nunca invente protocolo, valor, data, prazo ou nome que não apareça no material fornecido.
-- Não prometa prazo. Se o rascunho precisar falar de tempo, diga que a equipe retorna com a apuração, sem número.`;
+- Não prometa prazo. Se o rascunho precisar falar de tempo, diga que a equipe retorna com a apuração, sem número.
+
+${REGRAS_DO_RASCUNHO}`;
 
 const ESQUEMA = {
   type: "object",
@@ -237,8 +245,44 @@ export async function POST(request: Request) {
     );
   }
 
+  /**
+   * O rascunho passa pela mesma conferência do texto digitado à mão.
+   *
+   * Pedir as regras na instrução melhora a média e não garante nada: o
+   * texto sai bom nove vezes e na décima chega com o CPF que estava no
+   * relato, ou igual ao que já foi publicado em outro caso. E rascunho
+   * é feito para ser copiado — o erro atravessa direto para o ar.
+   *
+   * As respostas já publicadas vêm do próprio banco, porque "parece
+   * macro" só se sabe comparando com o que a operação já mandou.
+   */
+  const publicadas = (
+    await prisma.case.findMany({
+      where: { publicResponse: { not: null }, protocol: { not: caso.protocol } },
+      select: { publicResponse: true },
+      orderBy: { updatedAt: "desc" },
+      take: 200,
+    })
+  ).map((c) => c.publicResponse ?? "");
+
+  /*
+    `customer` é quem reclamou; `company` é o estabelecimento.
+
+    Trocar os dois faz a conferência cobrar o nome errado — ou não
+    cobrar nada, que foi o que aconteceu na primeira tentativa: o
+    rascunho abriu com "Olá!" e passou limpo porque estava sendo
+    comparado com o nome da loja.
+  */
+  const conferencia = conferirRascunho(String(resultado.dados.rascunho ?? ""), {
+    nome: caso.customer,
+    publicadas,
+    publico: false,
+  });
+
   return responder(request, {
     ...resultado.dados,
+    conferencia,
+    resumoDaConferencia: resumoDoRascunho(conferencia),
     protocolo: caso.protocol,
     provedor: resultado.provedor,
     /**

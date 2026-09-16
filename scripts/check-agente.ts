@@ -43,6 +43,8 @@ import {
 
 import { PERGUNTAS } from "./perguntas-do-agente";
 
+import { trechosDaDocumentacao } from "../lib/models/documentacao";
+
 import { fetchCases } from "../lib/services/case.repository";
 
 import {
@@ -613,9 +615,121 @@ async function main() {
     }
   }
 
+
+  /* ------------------------------ 4. a documentação ---- */
+
+  /*
+    O agente cita a documentação, ou diz que não há regra (Fase 9.1).
+
+    Duas metades, e as duas erram calado:
+
+    1. A pergunta sobre uma regra tem de trazer a **seção certa**. Se a
+       busca trouxer a seção errada, o modelo responde com confiança a
+       partir do trecho errado — e a resposta parece fundamentada.
+
+    2. A pergunta que a documentação não cobre tem de trazer **nada**.
+       Um trecho irrelevante no prompt é um convite para o modelo
+       responder a partir dele; vazio é o que faz o agente dizer "a
+       documentação não cobre isso".
+
+    Rodado contra os documentos que estão no banco agora, e não contra
+    um texto de exemplo: é a busca que vai rodar em produção.
+  */
+  console.log("\n  A documentação, procurada antes de responder\n");
+
+  const documentos = await prisma.playbook.findMany({
+    select: { slug: true, title: true, conteudo: true, steps: true, rules: true },
+  });
+
+  const paraProcurar = documentos.map((d) => ({
+    slug: d.slug,
+    title: d.title,
+    conteudo: d.conteudo,
+    steps: (d.steps ?? []) as never,
+    rules: d.rules ?? [],
+  }));
+
+  console.log(`  ${documentos.length} documento(s) guardado(s)\n`);
+
+  /** A pergunta, e um pedaço do título da seção que deve aparecer. */
+  const DEVE_ACHAR: [string, RegExp][] = [
+    ["qual o prazo de primeiro contato de uma reclamação urgente?", /prazos|primeiro contato/i],
+    ["posso colocar o CPF do cliente na resposta pública?", /resposta p[úu]blica/i],
+    ["o que fazer com uma avaliação negativa no Google?", /google|avalia/i],
+    ["quando posso oferecer um mês gratuito?", /oferta|desconto/i],
+    ["como funciona a cadência de tentativas de contato?", /persist[êe]ncia|aus[êe]ncia de contato/i],
+  ];
+
+  for (const [pergunta, esperado] of DEVE_ACHAR) {
+
+    const trechos = trechosDaDocumentacao(paraProcurar, pergunta);
+
+    const achou = trechos.some((t) => esperado.test(t.secao));
+
+    if (achou) {
+      ok(
+        `"${pergunta.slice(0, 46)}…"`,
+        trechos.map((t) => t.secao).join(" · ").slice(0, 80)
+      );
+    } else {
+      falhar(
+        `"${pergunta.slice(0, 46)}…"`,
+        trechos.length
+          ? `veio ${trechos.map((t) => t.secao).join(", ")}`
+          : "não veio seção nenhuma"
+      );
+    }
+  }
+
+  /* O que a documentação não cobre não pode trazer trecho nenhum. */
+  const NAO_DEVE_ACHAR = [
+    "qual a receita de bolo de cenoura?",
+    "quanto custa uma passagem para Lisboa?",
+    "qual o telefone do dentista?",
+  ];
+
+  for (const pergunta of NAO_DEVE_ACHAR) {
+
+    const trechos = trechosDaDocumentacao(paraProcurar, pergunta);
+
+    if (trechos.length === 0) {
+      ok(`"${pergunta}" → nenhuma seção`, "sem trecho, o agente diz que não há regra");
+    } else {
+      falhar(
+        `"${pergunta}" → nenhuma seção`,
+        `trouxe ${trechos.map((t) => `${t.secao} (${t.pontos})`).join(", ")}`
+      );
+    }
+  }
+
+  /* A busca ignora acento: quem digita rápido não acentua. */
+  {
+    const comAcento = trechosDaDocumentacao(paraProcurar, "qual a cadência de persistência no contato?");
+    const semAcento = trechosDaDocumentacao(paraProcurar, "qual a cadencia de persistencia no contato?");
+
+    const iguais =
+      comAcento.length > 0 &&
+      comAcento.map((t) => t.ancora).join("|") === semAcento.map((t) => t.ancora).join("|");
+
+    if (iguais) ok("acento não muda o resultado", `${comAcento.length} seção(ões) dos dois jeitos`);
+    else falhar("acento não muda o resultado", `${comAcento.length} com acento, ${semAcento.length} sem`);
+  }
+
+  /* Toda seção citada tem endereço — é o link que a resposta oferece. */
+  {
+    const trechos = trechosDaDocumentacao(paraProcurar, "qual o prazo de resposta de uma avaliação negativa no Google?");
+    const comEndereco = trechos.every((t) => t.slug && t.ancora);
+
+    if (trechos.length > 0 && comEndereco) {
+      ok("toda seção citada tem endereço", trechos.map((t) => `/documentacao?doc=${t.slug}#${t.ancora}`)[0]);
+    } else {
+      falhar("toda seção citada tem endereço", trechos.length ? "alguma veio sem slug ou âncora" : "nenhuma seção");
+    }
+  }
+
   console.log(
     falhas === 0
-      ? "\n  O agente mede o que a tela mede, e diz quando não sabe.\n"
+      ? "\n  O agente mede o que a tela mede, cita o documento, e diz quando não sabe.\n"
       : `\n  ${falhas} ponto(s) a corrigir.\n`
   );
 
