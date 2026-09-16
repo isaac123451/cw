@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 16/09/2026. Aplicação **0.76.1**, extensão **0.76.1**.
+Atualizado em 16/09/2026. Aplicação **0.77.0**, extensão **0.77.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1100,6 +1100,37 @@ caracteres** antes e depois da divisão (contato 6.026, fila 3.289, NPS
 nenhum erro no console. `check:painel`, `check:fiacao`, `check:escape`,
 `check:dossie`, `check:respostas` e `check:atalho` de pé — as quatro
 últimas leem o painel como texto e passaram a ler os sete como um só.
+
+### Urgência sugerida por dado, não por memória (16/09/2026, 0.77.0)
+
+Ideia do roadmap 1.0: o documento chama de Urgente o cliente de alto
+ticket, a reincidência e o risco de cancelamento — e a plataforma já
+sabe os três.
+
+- **Reincidência:** outra reclamação do mesmo CPF ou CNPJ nos 90 dias
+  anteriores (nunca pelo nome), com os protocolos e as datas.
+- **Alto ticket:** a mensalidade da conta no quartil de cima da base
+  (valor da conta ou preço do plano na tabela). Com menos de 8 contas
+  com mensalidade, ou todas iguais, não sugere — "alto" só existe
+  comparado.
+- **Risco de cancelamento:** a marca no caso, a conta "Em risco" no
+  cadastro, ou um detrator do NPS da conta marcado com risco nos 90
+  dias.
+
+Onde aparece: na triagem, o quadro "Os dados sugerem Urgente" com o
+motivo de cada sinal e o botão que marca os critérios (nada é marcado
+sem clique, e o nível continua sendo de quem tria); na ficha, uma linha
+em "Criticidade e prazo" quando a sugestão difere da prioridade atual,
+que abre a triagem.
+
+Na base real (só leitura): 358 casos, 27 com reincidência, 28 com risco
+de cancelamento, 50 com algum sinal; **nenhum alto ticket**, porque as
+contas não têm mensalidade conhecida (plano fora da tabela e sem valor
+da conta). Atribuir os planos em Estabelecimentos liga esse sinal.
+
+Provas: `check:urgencia` (novo — regra e base real) e, na tela, o caso
+RA--Sdrmmb-loDRHNMm sugerindo Urgente por duas reclamações anteriores
+do mesmo CPF (triagem fechada sem salvar).
 
 ### O sino contava o atraso das áreas pelo expediente padrão (16/09/2026, 0.76.1)
 

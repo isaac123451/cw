@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { Check, Loader2, TriangleAlert } from "lucide-react";
+import { Check, Loader2, Sparkles, TriangleAlert } from "lucide-react";
 
 import Modal, { GhostButton } from "@/components/shared/Modal";
 
@@ -18,6 +18,7 @@ import { descreverPrazo } from "@/lib/services/horasUteis";
 import { resolveRule } from "@/lib/services/sla.service";
 
 import { triarCaso } from "@/lib/actions/tratativa";
+import { useUrgenciaPorDado } from "./useUrgenciaPorDado";
 import { useSla } from "@/lib/context/SlaContext";
 import { useToast } from "@/lib/context/ToastContext";
 
@@ -56,6 +57,9 @@ export default function TriagemModal({ item, onClose, onSalvo }: Props) {
 
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+
+  const porDado = useUrgenciaPorDado(item);
+  const faltamMarcar = porDado.sinais.filter((s) => !criterios.includes(s.criterio));
 
   const sugerido = prioridadePelosCriterios(criterios);
   const nivel = escolhido ?? sugerido;
@@ -136,6 +140,32 @@ export default function TriagemModal({ item, onClose, onSalvo }: Props) {
     >
 
       <p className="line-clamp-2 text-sm font-medium text-zinc-800">{item.title}</p>
+
+      {porDado.sinais.length > 0 && (
+        <div className="mt-4 rounded-2xl border border-violet-200 bg-violet-50/60 p-3.5">
+          <p className="flex items-center gap-1.5 text-xs font-semibold text-violet-900">
+            <Sparkles size={13} /> Os dados sugerem {porDado.nivel}
+          </p>
+          <ul className="mt-1.5 space-y-1 text-xs leading-relaxed text-violet-900/90">
+            {porDado.sinais.map((s) => (
+              <li key={s.criterio}>
+                <strong className="font-semibold">{CRITERIOS.find((c) => c.id === s.criterio)?.texto}:</strong> {s.motivo}.
+              </li>
+            ))}
+          </ul>
+          {faltamMarcar.length > 0 ? (
+            <button
+              type="button"
+              onClick={() => setCriterios((atual) => [...atual, ...faltamMarcar.map((s) => s.criterio)])}
+              className="mt-2 rounded-lg bg-white px-2.5 py-1 text-xs font-medium text-violet-700 ring-1 ring-inset ring-violet-200 transition-colors hover:bg-violet-50"
+            >
+              Marcar {faltamMarcar.length === 1 ? "este critério" : `estes ${faltamMarcar.length} critérios`}
+            </button>
+          ) : (
+            <p className="mt-2 text-[11px] text-violet-700">Já marcados abaixo.</p>
+          )}
+        </div>
+      )}
 
       <div className="mt-4 grid gap-4 md:grid-cols-2">
 

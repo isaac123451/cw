@@ -4,7 +4,7 @@ import Link from "next/link";
 
 import { useCallback, useEffect, useState } from "react";
 
-import { Loader2, PhoneCall, ShieldCheck, Trash2 } from "lucide-react";
+import { Loader2, PhoneCall, ShieldCheck, Sparkles, Trash2 } from "lucide-react";
 
 import { Case, CRITERIOS } from "@/lib/models/case";
 import {
@@ -26,6 +26,7 @@ import { useAgora } from "@/lib/hooks/useAgora";
 import ChipPrioridade from "./ChipPrioridade";
 import RelogioDoCaso, { quandoVence } from "./RelogioDoCaso";
 import { useTratativa } from "./TratativaProvider";
+import { useUrgenciaPorDado } from "./useUrgenciaPorDado";
 
 import PorQue from "@/components/shared/PorQue";
 interface Props {
@@ -62,6 +63,7 @@ export default function PrazoECriticidade({ data, aoMudarNoServidor }: Props) {
   const { notify } = useToast();
   const sessao = useSession();
   const agora = useAgora();
+  const porDado = useUrgenciaPorDado(data);
 
   const [contatos, setContatos] = useState<ContatoView[] | null>(null);
   const [todos, setTodos] = useState(false);
@@ -147,6 +149,22 @@ export default function PrazoECriticidade({ data, aoMudarNoServidor }: Props) {
           Ainda sem triagem: a prioridade é a de entrada. O Passo 1 da documentação é classificar
           a criticidade — é ela que decide o prazo.
         </p>
+      )}
+
+      {porDado.sinais.length > 0 && porDado.nivel !== data.priority && (
+        <button
+          type="button"
+          onClick={() => abrirTriagem(data, opcoes)}
+          title={porDado.sinais.map((s) => s.motivo).join("\n")}
+          className="mt-2 flex w-full items-start gap-1.5 rounded-xl bg-violet-50 px-3 py-2 text-left text-xs leading-relaxed text-violet-900 ring-1 ring-inset ring-violet-200 transition-colors hover:bg-violet-100"
+        >
+          <Sparkles size={13} className="mt-0.5 shrink-0" />
+          <span>
+            <strong className="font-semibold">Os dados sugerem {porDado.nivel}</strong>
+            {" — "}
+            {porDado.sinais.map((s) => CRITERIOS.find((c) => c.id === s.criterio)?.texto.toLowerCase()).join("; ")}. Abrir a triagem para ver por quê.
+          </span>
+        </button>
       )}
 
       {status?.rule && (
