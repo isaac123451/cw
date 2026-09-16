@@ -1101,6 +1101,35 @@ nenhum erro no console. `check:painel`, `check:fiacao`, `check:escape`,
 `check:dossie`, `check:respostas` e `check:atalho` de pé — as quatro
 últimas leem o painel como texto e passaram a ler os sete como um só.
 
+### Meu dia: o que pede ação, o que move a nota e o que deu certo (16/09/2026, 0.75.0)
+
+O Isaac: "a parte do meu dia acho que tem margem para melhorar, veja
+possibilidades, quero que fique a seu critério."
+
+O topo do Meu dia ganhou três blocos, antes da rotina e do plano:
+
+- **Pede ação agora** — os mesmos avisos do agente (prazo, sem notícia,
+  avaliação, crise). Todo aviso tem saída: Resolver leva à tela; sem
+  notícia e crise abrem o caso direto numa mini-janela, sem sair do Meu
+  dia (o botão Janela também entrou nos avisos do assistente).
+- **O que move a nota** — "Responder as 13 sem resposta pública · nota
+  8,7 → 8,9 · índice de resposta 90,2% → 100,0%" e "Pedir avaliação às
+  46 da vez · 8,7 → 9,1 se avaliarem com 10". Na janela vigente de 6
+  meses, por `scoreFrom`/`simulate` — a mesma conta da calculadora e da
+  fila de avaliação.
+- **Conquistas de hoje** — só fato confirmado no banco, no dia de
+  Brasília: avaliação positiva que chegou, detrator que voltou resolvido
+  ou satisfeito depois do contato, selo RA1000 mantido, dia sem prazo
+  estourado.
+
+Achado ao conferir: o aviso "avaliações para pedir" filtrava só casos
+abertos, e "aguardando avaliação" não conta como aberto — o assistente
+dizia zero enquanto a tela Pedir avaliação mostrava 46. Agora os três
+lugares usam a fila de todas as reclamações do Reclame Aqui.
+
+Provas: `check:meu-dia` (novo) e, na tela, 46 no aviso, na projeção e na
+tela Pedir avaliação, com a mesma nota 8,7 → 9,1.
+
 ### Mini-janelas em cada frente (16/09/2026, 0.74.0)
 
 O Isaac: "em cada frente seja possível abrir uma mini janela para
