@@ -1,6 +1,6 @@
 {
   "name": "cw-reputacao",
-  "version": "0.67.0",
+  "version": "0.68.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -102,7 +102,9 @@
     "check:conversas": "tsx scripts/check-conversas.ts",
     "check:periodo": "tsx scripts/check-periodo.ts",
     "check:lugares": "node scripts/check-lugares.js",
-    "conferir:fila": "tsx scripts/conferir-fila-avaliacao.ts"
+    "conferir:fila": "tsx scripts/conferir-fila-avaliacao.ts",
+    "bancada:painel": "tsx scripts/bancada-painel.ts",
+    "check:painel": "node scripts/check-painel.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",

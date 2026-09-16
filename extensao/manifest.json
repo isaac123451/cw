@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "CW Reputação — painel de contexto",
-  "version": "0.67.0",
+  "version": "0.68.0",
   "description": "Mostra o cliente do CW Reputacao ao lado do WhatsApp Web, do Hugme/Reclame Aqui, do ManyChat, do Crisp e do Portal Cardapio Web, poe os textos aprovados ao lado da caixa de mensagem, captura reclamacoes para o Kanban e registra avaliacoes do Google Perfil da Empresa.",
   "icons": {
     "16": "icones/icone-16.png",
@@ -17,6 +17,15 @@
       "32": "icones/icone-32.png",
       "48": "icones/icone-48.png",
       "128": "icones/icone-128.png"
+    }
+  },
+  "commands": {
+    "alternar-painel": {
+      "suggested_key": {
+        "default": "Alt+Shift+C",
+        "mac": "Alt+Shift+C"
+      },
+      "description": "Abrir ou fechar o painel do CW Reputação"
     }
   },
   "background": {
@@ -50,7 +59,13 @@
       "js": [
         "conteudo/nucleo.js",
         "conteudo/estilo.js",
-        "conteudo/painel.js",
+        "conteudo/painel-base.js",
+        "conteudo/painel-contato.js",
+        "conteudo/painel-nps.js",
+        "conteudo/painel-caso.js",
+        "conteudo/painel-dia.js",
+        "conteudo/painel-etapas.js",
+        "conteudo/painel-captura.js",
         "conteudo/whatsapp.js",
         "conteudo/respostas.js"
       ],
@@ -64,7 +79,13 @@
       "js": [
         "conteudo/nucleo.js",
         "conteudo/estilo.js",
-        "conteudo/painel.js",
+        "conteudo/painel-base.js",
+        "conteudo/painel-contato.js",
+        "conteudo/painel-nps.js",
+        "conteudo/painel-caso.js",
+        "conteudo/painel-dia.js",
+        "conteudo/painel-etapas.js",
+        "conteudo/painel-captura.js",
         "conteudo/ra-campos.js",
         "conteudo/hugme.js",
         "conteudo/ra-resposta.js"
@@ -78,7 +99,13 @@
       "js": [
         "conteudo/nucleo.js",
         "conteudo/estilo.js",
-        "conteudo/painel.js",
+        "conteudo/painel-base.js",
+        "conteudo/painel-contato.js",
+        "conteudo/painel-nps.js",
+        "conteudo/painel-caso.js",
+        "conteudo/painel-dia.js",
+        "conteudo/painel-etapas.js",
+        "conteudo/painel-captura.js",
         "conteudo/manychat.js"
       ],
       "run_at": "document_idle"
@@ -90,7 +117,13 @@
       "js": [
         "conteudo/nucleo.js",
         "conteudo/estilo.js",
-        "conteudo/painel.js",
+        "conteudo/painel-base.js",
+        "conteudo/painel-contato.js",
+        "conteudo/painel-nps.js",
+        "conteudo/painel-caso.js",
+        "conteudo/painel-dia.js",
+        "conteudo/painel-etapas.js",
+        "conteudo/painel-captura.js",
         "conteudo/portal-cw.js"
       ],
       "run_at": "document_idle",
@@ -106,7 +139,13 @@
       "js": [
         "conteudo/nucleo.js",
         "conteudo/estilo.js",
-        "conteudo/painel.js",
+        "conteudo/painel-base.js",
+        "conteudo/painel-contato.js",
+        "conteudo/painel-nps.js",
+        "conteudo/painel-caso.js",
+        "conteudo/painel-dia.js",
+        "conteudo/painel-etapas.js",
+        "conteudo/painel-captura.js",
         "conteudo/crisp.js"
       ],
       "run_at": "document_idle"

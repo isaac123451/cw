@@ -56,3 +56,4 @@ scripts/_*.ts
 
 # a pasta de build do segundo servidor de conferência (ver next.config.ts)
 /.next-*/
+.bancada/

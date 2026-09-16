@@ -18,14 +18,16 @@
  * as peças em ordem de data, sem dizer quantas eram, de quando até
  * quando, nem de onde vinham — um monte de papel, não uma pasta.
  *
- * A verificação **executa a função real** recortada do `painel.js`, e
- * não uma cópia: uma cópia divergiria na primeira correção e passaria a
- * dar verde sobre código que não existe mais.
+ * A verificação **executa a função real** recortada dos arquivos do
+ * painel, e não uma cópia: uma cópia divergiria na primeira correção e
+ * passaria a dar verde sobre código que não existe mais.
  */
 
 import fs from "node:fs";
 
-const FONTE = "extensao/conteudo/painel.js";
+import { fonteDoPainel } from "./fonte-do-painel";
+
+
 
 let falhas = 0;
 
@@ -50,7 +52,7 @@ function main() {
     "\n  DOSSIÊ — a pasta tem capa, e aparece onde precisa\n"
   );
 
-  const fonte = fs.readFileSync(FONTE, "utf8");
+  const fonte = fonteDoPainel();
 
   /* ---------------------------------------- 1. onde aparece ---- */
 

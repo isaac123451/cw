@@ -21,10 +21,18 @@ import { resolve } from "node:path";
 
 const RAIZ = resolve(__dirname, "..");
 
-const painel = readFileSync(
-  resolve(RAIZ, "extensao/conteudo/painel.js"),
-  "utf8"
-);
+/**
+ * O painel, inteiro — hoje são sete arquivos.
+ *
+ * Era `painel.js`, um só. Depois da divisão da Fase 8.5, o que interessa
+ * a esta conferência (os `data-acao` dos botões e os tratadores deles)
+ * está espalhado entre `painel-base.js` e os outros seis. Ler a pasta
+ * evita a conferência voltar a mentir quando um arquivo novo aparecer.
+ */
+const painel = readdirSync(resolve(RAIZ, "extensao/conteudo"))
+  .filter((nome) => /^painel(-|\.)/.test(nome) && nome.endsWith(".js"))
+  .map((nome) => readFileSync(resolve(RAIZ, "extensao/conteudo", nome), "utf8"))
+  .join("\n");
 
 const worker = readFileSync(
   resolve(RAIZ, "extensao/fundo/service-worker.js"),

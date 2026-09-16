@@ -31,6 +31,8 @@
 import "dotenv/config";
 
 import { readFileSync } from "node:fs";
+
+import { fonteDoPainel } from "./fonte-do-painel";
 import { resolve } from "node:path";
 
 import { Macro } from "../lib/models/macro";
@@ -412,7 +414,7 @@ function conferirFiacao() {
   const worker = ler("extensao/fundo/service-worker.js");
   const manifesto = ler("extensao/manifest.json");
   const script = ler("extensao/conteudo/respostas.js");
-  const painel = ler("extensao/conteudo/painel.js");
+  const painel = fonteDoPainel();
   const estilo = ler("extensao/conteudo/estilo.js");
 
   const pontos: [string, boolean, string][] = [
@@ -443,7 +445,7 @@ function conferirFiacao() {
       manifesto.indexOf('"conteudo/respostas.js"') >
         manifesto.indexOf('"conteudo/estilo.js"') &&
         manifesto.indexOf('"conteudo/respostas.js"') >
-          manifesto.indexOf('"conteudo/painel.js"'),
+          manifesto.indexOf('"conteudo/painel-captura.js"'),
       "ele lê CW.CSS_ATALHO e CW.painel.contextoAtual()",
     ],
     [

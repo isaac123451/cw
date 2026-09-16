@@ -414,8 +414,16 @@ for (const relativo of ARQUIVOS) {
 
   const seguras = conscientes(fonte);
 
+  /*
+    O `P.` na frente é o objeto compartilhado do painel, que nasceu
+    quando o arquivo virou sete (Fase 8.5). `P.blocoDoCaso(...)` é a
+    mesma função de antes, com o mesmo corpo e o mesmo `CW.escapar`
+    dentro — sem aceitar o prefixo, a conferência passou a acusar como
+    "sem escape" uma chamada que ela mesma tinha reconhecido como segura
+    na véspera.
+  */
   const chamaSegura = seguras.size
-    ? new RegExp(`^(?:${[...seguras].join("|")})\\s*\\(`)
+    ? new RegExp(`^(?:P\\.)?(?:${[...seguras].join("|")})\\s*\\(`)
     : null;
 
   const sumidouros = [

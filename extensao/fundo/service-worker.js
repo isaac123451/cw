@@ -1661,6 +1661,35 @@ chrome.storage.onChanged.addListener((mudancas, area) => {
 
 chrome.permissions.onAdded.addListener(() => registrarPonte());
 
+/**
+ * O atalho de teclado do painel (Fase 8.5).
+ *
+ * `Alt+Shift+C` na aba da frente. Sai daqui, e não de um `keydown` dentro
+ * da página, porque o WhatsApp Web e o HugMe capturam teclas para os
+ * próprios atalhos — um ouvinte na página perderia a combinação conforme
+ * o foco, e um atalho que às vezes funciona é pior do que nenhum.
+ *
+ * Numa aba sem o painel (uma página qualquer), a mensagem não chega a
+ * ninguém e o erro é engolido: não há o que abrir ali.
+ */
+chrome.commands.onCommand.addListener(async (comando) => {
+
+  if (comando !== "alternar-painel") return;
+
+  try {
+    const [aba] = await chrome.tabs.query({
+      active: true,
+      currentWindow: true,
+    });
+
+    if (aba?.id) {
+      await chrome.tabs.sendMessage(aba.id, { tipo: "alternarPainel" });
+    }
+  } catch {
+    /* Aba sem script de conteúdo: nada a alternar. */
+  }
+});
+
 chrome.alarms.onAlarm.addListener((alarme) => {
   if (alarme.name === ALARME) atualizarEmSilencio();
   if (alarme.name === ALARME_LEMBRETE) cobrarEtapas();

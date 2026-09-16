@@ -329,12 +329,25 @@ extensao/
     nucleo.js            utilidades + registro da fonte
     estilo.js            CSS do painel e do atalho (vai para dentro
                          do Shadow DOM)
-    painel.js            a gaveta, o tema, a captura — igual nas três
+    painel-base.js       a gaveta, o tema, abrir e fechar, o atalho —
+                         e o objeto `P`, por onde os sete se falam
+    painel-contato.js    a tela do contato e o resumo da conversa
+    painel-nps.js        NPS, anotações e a fila do canal
+    painel-caso.js       a tela do caso, dentro do painel
+    painel-dia.js        painel do dia, atividades, fila do RA, agenda
+    painel-etapas.js     avançar e voltar etapa
+    painel-captura.js    ler a reclamação, criar no Kanban, e o que o
+                         painel expõe aos detectores (`CW.painel`)
     whatsapp.js          detector do WhatsApp Web
     respostas.js         o botão "Respostas rápidas", no rodapé do WhatsApp
     ra-campos.js         leitores da página do RA, puros e testáveis
+    ra-resposta.js       a conferência da resposta pública, na caixa
     hugme.js             detector do Hugme / Reclame Aqui
     manychat.js          detector do ManyChat
+    portal-cw.js         detector do Portal Cardápio Web (pelo CPF/CNPJ)
+    crisp.js             detector do Crisp, com leitor de conversa
+    google-perfil.js     "Registrar no CW" nos cartões do Perfil da
+                         Empresa (não monta painel)
   popup/                 o que o ícone abre
   opcoes/                endereço, permissão e preferências
   icones/                PNGs + o script que os gera

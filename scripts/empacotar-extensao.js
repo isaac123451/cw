@@ -108,7 +108,8 @@ const OBRIGATORIOS = [
   "extensao/manifest.json",
   "extensao/fundo/service-worker.js",
   "extensao/conteudo/nucleo.js",
-  "extensao/conteudo/painel.js",
+  "extensao/conteudo/painel-base.js",
+  "extensao/conteudo/painel-captura.js",
   "extensao/conteudo/whatsapp.js",
 ];
 

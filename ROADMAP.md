@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 15/09/2026. Aplicação **0.67.0**, extensão **0.67.0**.
+Atualizado em 15/09/2026. Aplicação **0.68.0**, extensão **0.68.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -47,6 +47,8 @@ workspace junto com os outros cadastros.
 | `npm run check:mover` | Prova o que acontece ao mover um caso de etapa |
 | `npm run check:ra` | Prova os leitores da página do Reclame Aqui contra o texto de uma reclamação real |
 | `npm run check:lugares` | Prova os leitores do Portal Cardápio Web, do Crisp e do Google Perfil da Empresa |
+| `npm run check:painel` | Prova que os sete arquivos do painel se encontram: nome sem dono, ordem de carga, atalho |
+| `npm run bancada:painel` | Abre o painel da extensão fora dela, com dados reais, em http://localhost:3999 (precisa do `npm run dev`) |
 | `npm run check:cadastros` | Prova que Times, Metas e Clientes sobrevivem ao recarregamento |
 | `npm run check:nps-etapas` | Prova as etapas e os tipos do NPS como cadastro, contra o banco |
 | `npm run check:nps-planilha` | Prova o leitor de planilha do NPS, com arquivos montados em memória |
@@ -1046,6 +1048,54 @@ jurídica registrada como **negativa/Urgente/jurídico**, a mesma de novo
 voltando `repetida: true`, e a tela de Avaliações registrando pelo
 serviço novo. As três avaliações descartáveis foram apagadas; a que já
 estava na base ficou.
+
+**Fase 8, parte 5 — o painel em sete arquivos, e o atalho (0.68.0).**
+
+O `painel.js` tinha 6.797 linhas num arquivo só. Virou sete, um por
+tela: `painel-base.js` (montagem, tema, abrir e fechar),
+`painel-contato.js`, `painel-nps.js`, `painel-caso.js`, `painel-dia.js`,
+`painel-etapas.js` e `painel-captura.js`. O que um arquivo precisa do
+outro passa por `P`, o objeto que a base cria — 103 nomes, a lista
+explícita do que atravessa a fronteira; o resto virou local de verdade.
+
+**A divisão foi feita com parser, não com recorte.** Um script leu o
+arquivo com o `@babel/parser`, perguntou ao escopo quais nomes passavam
+a ser usados de outro arquivo e trocou só o endereço deles, por
+deslocamento no texto: nenhuma linha mudou de conteúdo, nenhum comentário
+mudou de lugar.
+
+**`Alt+Shift+C` abre e fecha o painel**, declarado no manifesto e
+despachado pelo service worker — e não por um `keydown` nosso, que o
+WhatsApp Web e o HugMe engoliriam conforme o foco. Numa página em que o
+painel ainda não montou, o atalho monta e abre. A combinação se troca em
+`chrome://extensions/shortcuts`.
+
+Duas ferramentas nasceram para tornar a revisão possível:
+
+- **`npm run bancada:painel`** abre o painel **fora da extensão**, numa
+  página em `localhost:3999`, carregando os mesmos arquivos na ordem do
+  manifesto e respondendo com dados **reais** da aplicação. Era a peça
+  que ninguém conseguia abrir sem instalar a extensão, entrar no WhatsApp
+  e ter um cliente do outro lado — e por isso a menos exercitada do
+  repositório.
+- **`npm run check:painel`** prova, sem servidor, que os sete se
+  encontram: cada um compila, nenhum usa nome solto, todo `P.alguma` que
+  alguém lê é escrito por alguém, o manifesto carrega os sete com a base
+  na frente, e o atalho existe dos dois lados.
+
+**O bug que a revisão achou:** `gravarWhatsappDaFrente` terminava com
+`await recarregar()` — uma função que não existe em lugar nenhum. Depois
+de gravar o número e avisar "Número gravado", o painel estourava um
+`ReferenceError` e a tela ficava com o número velho até alguém trocar de
+aba. Agora chama `recarregarVista()`. A mesma varredura passou no resto
+da extensão (popup, opções, service worker, detectores) sem achar outro.
+
+Provas: a bancada desenhou as oito telas **com a mesma contagem de
+caracteres** antes e depois da divisão (contato 6.026, fila 3.289, NPS
+2.285, redes 3.290, painel 5.319, atividades 2.583, caso 8.489), sem
+nenhum erro no console. `check:painel`, `check:fiacao`, `check:escape`,
+`check:dossie`, `check:respostas` e `check:atalho` de pé — as quatro
+últimas leem o painel como texto e passaram a ler os sete como um só.
 
 ### Exportar a conversa do WhatsApp (15/09/2026, 0.63.0)
 

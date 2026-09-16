@@ -25,6 +25,8 @@ import "dotenv/config";
 
 import { readFileSync } from "node:fs";
 
+import { fonteDoPainel } from "./fonte-do-painel";
+
 import { SignJWT } from "jose";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
@@ -100,10 +102,7 @@ if (/"respostas",/.test(rota)) {
   );
 }
 
-const painel = readFileSync(
-  "extensao/conteudo/painel.js",
-  "utf8"
-);
+const painel = fonteDoPainel();
 
 if (
   /Array\.isArray\(resumo\.respostas\)/.test(painel) &&
