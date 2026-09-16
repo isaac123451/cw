@@ -168,7 +168,7 @@ export default function FichaDoNps({ id }: { id: string }) {
             </div>
 
             <div className="min-w-0 flex-1">
-              <h1 className="text-2xl font-semibold leading-snug tracking-tight text-zinc-900">{nomeDoCliente(ciclo)}</h1>
+              <h1 className="break-words text-2xl font-semibold leading-snug tracking-tight text-zinc-900 [overflow-wrap:anywhere]">{nomeDoCliente(ciclo)}</h1>
               <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-sm text-zinc-500">
                 {[
                   temNomeProprio(ciclo) ? ciclo.customer : null,

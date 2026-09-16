@@ -307,7 +307,7 @@ export default function CaseDetail({
           <div className="min-w-0 flex-1">
 
             <h1
-              className={`font-semibold leading-snug tracking-tight text-zinc-900 ${
+              className={`font-semibold leading-snug tracking-tight text-zinc-900 [overflow-wrap:anywhere] ${
                 drawer ? "text-lg" : "text-2xl"
               }`}
             >

@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 16/09/2026. Aplicação **0.79.0**, extensão **0.79.0**.
+Atualizado em 16/09/2026. Aplicação **0.80.0**, extensão **0.80.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1100,6 +1100,29 @@ caracteres** antes e depois da divisão (contato 6.026, fila 3.289, NPS
 nenhum erro no console. `check:painel`, `check:fiacao`, `check:escape`,
 `check:dossie`, `check:respostas` e `check:atalho` de pé — as quatro
 últimas leem o painel como texto e passaram a ler os sete como um só.
+
+### Fase 10.3 — celular, 375 px (16/09/2026, 0.80.0)
+
+Passada no navegador em 375 × 812 nas telas do roadmap — painel, quadro
+do Reclame Aqui, caso, NPS (lista e ficha), Meu dia, relatório — e
+também Redes, Conversas e Google. Em cada uma, dois detectores rodados
+na página: elemento passando da borda sem contêiner que role, e texto
+maior que a própria caixa. Nenhuma tela com rolagem horizontal da
+página; as tabelas largas (indicadores do relatório) rolam dentro do
+cartão.
+
+Dois defeitos achados e corrigidos:
+
+- **A mini-janela nascia 29 px além da borda esquerda.** A posição
+  inicial passava pelo limite do arrastar, que deixa meia janela para
+  fora de propósito. Agora nasce inteira na tela (conferido em 320, 375
+  e 414 px).
+- **Nome sem espaço cortado na ficha do NPS** — o handle
+  "vanessa.silva.cassiano…" passava da borda do cartão. O título da
+  ficha do NPS e o do caso agora quebram em qualquer ponto.
+
+Provas: `check:celular` (novo, com o detector guardado para repetir a
+passada no console) e `check:janelas`.
 
 ### Nenhuma tela sem saída (16/09/2026, 0.79.0)
 

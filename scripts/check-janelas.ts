@@ -96,6 +96,10 @@ console.log("— A regra —\n");
   const longe = limitarNaTela({ x: 5000, y: -300 }, TELA);
   conferir("arrastada para fora, volta com o cabeçalho à mão", [longe.x <= TELA.largura - 120, longe.y >= 8], [true, true]);
 
+  const celular = abrirJanela([], { frente: "reclame-aqui", ref: "c", titulo: "c" }, { largura: 375, altura: 812 });
+  const nova = celular.tipo === "aberta" ? celular.janelas[0] : null;
+  conferir("no celular (375 px) a janela nasce inteira na tela", [nova!.x >= 8, nova!.x + Math.min(380, 375 - 16) <= 375 - 8 + 1], [true, true]);
+
   const notebook = limitarNaTela({ x: 1800, y: 1000 }, { largura: 1280, altura: 720 });
   conferir("posição de monitor grande cabe no notebook", [notebook.x <= 1160, notebook.y <= 672], [true, true]);
 }

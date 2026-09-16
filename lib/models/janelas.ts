@@ -70,13 +70,14 @@ export function posicaoInicial(
 ) {
   const passos = Math.max(1, Math.floor((tela.altura - 360) / CASCATA));
   const n = abertas % passos;
-  return limitarNaTela(
-    {
-      x: tela.largura - LARGURA_DA_JANELA - 24 - n * CASCATA,
-      y: 80 + n * CASCATA,
-    },
-    tela
-  );
+  const largura = Math.min(LARGURA_DA_JANELA, tela.largura - 16);
+  /*
+    Nasce inteira na tela. `limitarNaTela` deixa a janela meio para fora
+    de propósito (é o limite do arrastar); ao nascer, num celular de
+    375 px, isso a punha 29 px além da borda esquerda.
+  */
+  const x = Math.max(8, Math.min(tela.largura - largura - 8, tela.largura - LARGURA_DA_JANELA - 24 - n * CASCATA));
+  return limitarNaTela({ x, y: 80 + n * CASCATA }, tela);
 }
 
 /**
