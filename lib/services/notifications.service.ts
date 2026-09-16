@@ -10,6 +10,7 @@ import { GoogleEvent } from "@/lib/models/google";
 
 import { hojeNaOperacao } from "@/lib/services/reputation.service";
 import { lateMovements } from "@/lib/services/movement.service";
+import type { Expediente } from "@/lib/services/horasUteis";
 import { isOpen } from "@/lib/services/case.service";
 
 export type NotificationTone =
@@ -97,7 +98,14 @@ export function buildNotifications(
   prefs: NotificationPrefs = defaultPrefs,
   owner?: string,
   movements: CaseMovement[] = [],
-  googleEvents: GoogleEvent[] = []
+  googleEvents: GoogleEvent[] = [],
+  /**
+   * O expediente configurado em Processos e SLA. Sem ele, o atraso das
+   * áreas era contado pelo padrão (08h–18h) e não pelo horário da
+   * operação: um retorno que vence às 18h num expediente até 17h aparecia
+   * em dia.
+   */
+  expediente?: Expediente
 ): Notification[] {
 
   const list: Notification[] = [];
@@ -175,7 +183,7 @@ export function buildNotifications(
 
   if (prefs.movimentacao) {
 
-    const atrasadas = lateMovements(movements, hoje);
+    const atrasadas = lateMovements(movements, { expediente });
 
     if (atrasadas.length > 0) {
 

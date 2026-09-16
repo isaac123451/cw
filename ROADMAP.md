@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 16/09/2026. Aplicação **0.76.0**, extensão **0.76.0**.
+Atualizado em 16/09/2026. Aplicação **0.76.1**, extensão **0.76.1**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1100,6 +1100,19 @@ caracteres** antes e depois da divisão (contato 6.026, fila 3.289, NPS
 nenhum erro no console. `check:painel`, `check:fiacao`, `check:escape`,
 `check:dossie`, `check:respostas` e `check:atalho` de pé — as quatro
 últimas leem o painel como texto e passaram a ler os sete como um só.
+
+### O sino contava o atraso das áreas pelo expediente padrão (16/09/2026, 0.76.1)
+
+Pendência de antes do roadmap: "o aviso de encaminhamento atrasado
+ainda usa horas corridas". Conferido: o relógio das áreas já é em horas
+úteis em todo lugar (ficha do caso, Processos, Meu dia, cron, extensão),
+mas o **sino de notificações** e o resumo do popup da extensão chamavam
+a conta sem o expediente configurado — valia o padrão de 08h às 18h, não
+o horário salvo em Processos e SLA. Agora os dois passam o expediente da
+operação, e a mesma movimentação aparece atrasada no sino, no Meu dia e
+em Processos ao mesmo tempo.
+
+Prova: `check:meu-dia` confere a fiação do sino e do resumo.
 
 ### Conversas do WhatsApp: quem espera, o vínculo pelo telefone e o lado certo (16/09/2026, 0.76.0)
 

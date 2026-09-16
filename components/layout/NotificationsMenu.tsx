@@ -14,6 +14,7 @@ import {
 import { useCases } from "@/lib/context/CaseContext";
 import { useAgenda } from "@/lib/context/AgendaContext";
 import { useMovements } from "@/lib/context/MovementsContext";
+import { useSla } from "@/lib/context/SlaContext";
 import { useSession } from "@/lib/context/SessionContext";
 import { usePreferences } from "@/lib/context/PreferencesContext";
 import { useGoogleEvents } from "@/lib/context/GoogleEventsContext";
@@ -49,6 +50,7 @@ export default function NotificationsMenu() {
   const session = useSession();
   const { prefs } = usePreferences();
   const { events: googleEvents } = useGoogleEvents();
+  const { expediente } = useSla();
 
   const [open, setOpen] = useState(false);
 
@@ -62,7 +64,8 @@ export default function NotificationsMenu() {
           ? session?.name
           : undefined,
         movements,
-        googleEvents
+        googleEvents,
+        expediente
       ),
     [
       cases,
@@ -71,6 +74,7 @@ export default function NotificationsMenu() {
       session,
       movements,
       googleEvents,
+      expediente,
     ]
   );
 

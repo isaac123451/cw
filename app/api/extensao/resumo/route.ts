@@ -229,7 +229,8 @@ export async function GET(request: Request) {
     // nome da sessão nem sempre é igual ao nome usado em "responsável".
     undefined,
     workspace.movements,
-    []
+    [],
+    workspace.expediente
   );
 
   /** Nota vigente de 6 meses — o recorte que o portal publica. */

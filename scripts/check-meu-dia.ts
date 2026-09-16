@@ -101,6 +101,14 @@ console.log("\n— A fiação —\n");
   const pagina = ler("app/meu-dia/page.tsx");
   conferir("o Meu dia mostra o bloco no topo", /<AgoraNoMeuDia \/>/.test(pagina), true);
 
+  const sino = ler("lib/services/notifications.service.ts");
+  conferir("o sino conta o atraso das áreas pelo expediente configurado", sino.includes("lateMovements(movements, { expediente })"), true);
+  conferir(
+    "e quem chama o sino passa o expediente",
+    /googleEvents,\s*expediente\s*\)/.test(ler("components/layout/NotificationsMenu.tsx")) && /workspace\.expediente\s*\)/.test(ler("app/api/extensao/resumo/route.ts")),
+    true
+  );
+
   const bloco = ler("components/rotina/AgoraNoMeuDia.tsx");
   conferir("todo aviso tem saída (Resolver, ou o plano abaixo)", /Resolver/.test(bloco) && /no plano abaixo/.test(bloco), true);
   conferir("todo bloco diz algo quando está vazio", (bloco.match(/length === 0 \?/g) ?? []).length, 3);
