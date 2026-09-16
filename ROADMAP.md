@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 16/09/2026. Aplicação **0.75.0**, extensão **0.75.0**.
+Atualizado em 16/09/2026. Aplicação **0.76.0**, extensão **0.76.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1100,6 +1100,46 @@ caracteres** antes e depois da divisão (contato 6.026, fila 3.289, NPS
 nenhum erro no console. `check:painel`, `check:fiacao`, `check:escape`,
 `check:dossie`, `check:respostas` e `check:atalho` de pé — as quatro
 últimas leem o painel como texto e passaram a ler os sete como um só.
+
+### Conversas do WhatsApp: quem espera, o vínculo pelo telefone e o lado certo (16/09/2026, 0.76.0)
+
+O Isaac: "conversas no whatsapp eu gostei mas também vejo margem pra
+melhoria." A critério; o que entrou:
+
+- **Quem espera, e há quanto tempo.** No alto da conversa: "Esperando a
+  gente há 2h40" (desde a primeira fala do cliente sem resposta, em
+  horas de expediente), ou "A última palavra foi nossa"; o tempo médio
+  que levamos para responder; quantas falas de cada lado.
+- **Recortes na lista:** Todas, Esperando a gente, Sem vínculo e Sem
+  resumo, com a contagem. A conversa em que o cliente falou por último
+  ganha a etiqueta "esperando a gente".
+- **Busca dentro da conversa**, com "3 de 7" e setas (Enter e
+  Shift+Enter) que levam até a mensagem. Começa pelo termo da lista.
+- **Vínculo sugerido pelo mesmo telefone:** casos, ciclos de NPS e
+  estabelecimentos (telefone ou WhatsApp do NPS) com o mesmo DDD e
+  número viram botões "+ vincular". Só pelo número — nunca pelo nome —,
+  e o mesmo final em outro DDD não conta.
+- **Corrigir os lados.** Com dois autores e todas as falas de um lado
+  só, a conversa abre a pergunta "qual autor é o nosso lado?", e o
+  Salvar regrava a direção pelo autor do carimbo. As linhas sem autor e
+  sem hora (aviso de criptografia, velocidade do áudio) podem virar
+  aviso. Nada é apagado.
+
+Achado ao conferir, na única conversa guardada: **as 18 mensagens
+estavam como do cliente**, inclusive as nossas, e o "1,0×" do player de
+áudio e o aviso de criptografia tinham virado mensagem. O WhatsApp Web
+tirou o `true_`/`false_` do `data-id` e a classe `message-out`. A
+extensão agora lê a direção também pelos tiques de entrega e pela
+"cauda" do balão, concilia pelo autor do carimbo (o contato do
+cabeçalho é o cliente; o outro autor, nós) e só guarda linhas com
+carimbo. **Recarregar a extensão.** A conversa já guardada se corrige
+na tela, com um clique em "Cardápio Web (Reputação)" e Salvar.
+
+Provas: `check:conversas-retrato` (novo), `check:whatsapp` com a
+marcação de setembro, e a correção gravada e conferida numa conversa
+descartável (apagada no fim). Na tela, a conversa real mostrou "há 6
+dias úteis", a sugestão do caso do Rafael pelo telefone e a pergunta
+dos lados — sem salvar, por ser dado real.
 
 ### Meu dia: o que pede ação, o que move a nota e o que deu certo (16/09/2026, 0.75.0)
 

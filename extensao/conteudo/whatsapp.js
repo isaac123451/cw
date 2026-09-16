@@ -248,26 +248,82 @@
    * das mudanças. A posição na tela é o último recurso, e é chute
    * informado: o WhatsApp alinha o que é nosso à direita.
    */
+  /*
+    Setembro de 2026: o `data-id` passou a vir sem o `true_`/`false_`
+    ("3EB0D950C9AEAA64914AE7") e a classe `message-out` sumiu. As 18
+    mensagens de uma conversa real foram guardadas como do cliente —
+    inclusive as nossas. Por isso a direção agora tem mais degraus e diz
+    se tem certeza: o que ficar sem certeza é conciliado depois, pelo
+    autor do carimbo (ver `conciliarLados`).
+  */
+  const MARCAS_NOSSAS =
+    '[data-icon="msg-check"], [data-icon="msg-dblcheck"], [data-icon="msg-dblcheck-ack"], [data-icon="msg-time"], [data-icon="tail-out"]';
+  const MARCAS_DELES = '[data-icon="tail-in"]';
+
   function deQuemE(linha) {
 
     const id = linha.getAttribute?.("data-id") ?? "";
 
-    if (id.startsWith("true_")) return "nos";
-    if (id.startsWith("false_")) return "cliente";
+    if (id.startsWith("true_")) return { de: "nos", certeza: true };
+    if (id.startsWith("false_")) return { de: "cliente", certeza: true };
 
-    if (linha.querySelector?.(".message-out")) return "nos";
-    if (linha.classList?.contains("message-out")) {
-      return "nos";
+    if (linha.classList?.contains("message-out") || linha.querySelector?.(".message-out")) {
+      return { de: "nos", certeza: true };
     }
 
-    if (linha.querySelector?.(".message-in")) {
-      return "cliente";
-    }
-    if (linha.classList?.contains("message-in")) {
-      return "cliente";
+    if (linha.classList?.contains("message-in") || linha.querySelector?.(".message-in")) {
+      return { de: "cliente", certeza: true };
     }
 
-    return "cliente";
+    /* Os tiques de entrega só existem no que nós mandamos. */
+    if (linha.querySelector?.(MARCAS_NOSSAS)) return { de: "nos", certeza: true };
+    if (linha.querySelector?.(MARCAS_DELES)) return { de: "cliente", certeza: true };
+
+    return { de: "cliente", certeza: false };
+  }
+
+  const digitos = (v) => String(v ?? "").replace(/\D/g, "");
+
+  /** O autor do carimbo é o contato da conversa aberta? Pelo nome, ou pelo número. */
+  function eOContato(autor, contato) {
+    if (!autor || !contato) return false;
+    if (contato.nome && autor.trim().toLowerCase() === contato.nome.trim().toLowerCase()) return true;
+    const a = digitos(autor);
+    const t = digitos(contato.telefone);
+    return a.length >= 8 && t.length >= 8 && a.slice(-8) === t.slice(-8);
+  }
+
+  /**
+   * Resolve as mensagens sem certeza de direção.
+   *
+   * 1. Um autor que já apareceu com certeza de um lado é daquele lado.
+   * 2. Numa conversa individual, o carimbo só tem dois autores: o
+   *    contato do cabeçalho e nós. Quem é o contato é cliente; quem não
+   *    é, é nosso — **desde que** algum carimbo tenha casado com o
+   *    contato, senão o formato do nome pode ser outro e o palpite vira
+   *    inversão.
+   */
+  function conciliarLados(mensagens, contato) {
+
+    const nossos = new Set();
+    const deles = new Set();
+
+    for (const m of mensagens) {
+      if (!m.certeza || !m.autor) continue;
+      (m.de === "nos" ? nossos : deles).add(m.autor);
+    }
+
+    const individual = contato && !contato.grupo;
+    const contatoApareceu = individual && mensagens.some((m) => eOContato(m.autor, contato));
+
+    for (const m of mensagens) {
+      if (m.certeza || !m.autor) continue;
+      if (nossos.has(m.autor)) m.de = "nos";
+      else if (deles.has(m.autor)) m.de = "cliente";
+      else if (contatoApareceu) m.de = eOContato(m.autor, contato) ? "cliente" : "nos";
+    }
+
+    return mensagens;
   }
 
   /**
@@ -321,6 +377,8 @@
   const RUIDO = [
     /^\s*\d{1,2}:\d{2}\s*$/,
     /^(Encaminhada|Editada|Entregue|Lida|Enviada|Reproduzir)$/i,
+    /* A velocidade do player de áudio ("1,0×", "1,5×", "2×"). */
+    /^\d(?:[,.]\d)?\s*[×x]$/i,
     /^\s*$/,
   ];
 
@@ -395,8 +453,11 @@
           .querySelector?.("[data-pre-plain-text]")
           ?.getAttribute("data-pre-plain-text") ?? "";
 
+      const direcao = deQuemE(linha);
+
       brutas.push({
-        de: deQuemE(linha),
+        de: direcao.de,
+        certeza: direcao.certeza,
         texto: texto.slice(0, 1200),
         hora: (carimbo.match(/\[([^\],]+)/)?.[1] ?? "").trim(),
         /*
@@ -412,9 +473,16 @@
       });
     }
 
-    const preferidas = brutas.filter(
-      (m) => m.parecemensagem
-    );
+    /*
+      Primeiro, as que têm carimbo: mensagem de texto de verdade sempre
+      tem. O aviso de criptografia, o divisor de data e o player de áudio
+      não — e com o id novo, sem "@", o filtro de baixo deixava todos
+      passarem. Sem nenhum carimbo na tela, vale o filtro do id.
+    */
+    const comCarimbo = brutas.filter((m) => m.carimbo);
+    const preferidas = comCarimbo.length > 0
+      ? comCarimbo
+      : brutas.filter((m) => m.parecemensagem);
 
     /**
      * O descarte não pode levar tudo.
@@ -427,7 +495,14 @@
     const usadas =
       preferidas.length > 0 ? preferidas : brutas;
 
-    const mensagens = usadas.map(
+    let contato = null;
+    try {
+      contato = lerConversa();
+    } catch {
+      contato = null;
+    }
+
+    const mensagens = conciliarLados(usadas, contato).map(
       ({ de, texto, hora, id, carimbo, autor }) => ({ de, texto, hora, id, carimbo, autor })
     );
 

@@ -37,10 +37,13 @@ function diaPorExtenso(dia: string) {
 export default function Baloes({
   mensagens,
   destaque = "",
+  foco,
   acoes,
 }: {
   mensagens: BalaoDaConversa[];
   destaque?: string;
+  /** A ocorrência da busca em que se está: ganha o anel forte e é para ela que a tela rola. */
+  foco?: string | null;
   /** Um botão pequeno ao lado de cada balão (ex.: "é a validação"). */
   acoes?: (m: BalaoDaConversa) => React.ReactNode;
 }) {
@@ -63,11 +66,11 @@ export default function Baloes({
                 <p className="max-w-md rounded-xl bg-amber-50 px-3 py-1.5 text-center text-[11px] leading-4 text-amber-800">{m.texto}</p>
               </li>
             ) : (
-              <li className={`group flex items-end gap-2 ${m.de === "nos" ? "flex-row-reverse" : ""}`}>
+              <li data-msg={m.id} className={`group flex items-end gap-2 ${m.de === "nos" ? "flex-row-reverse" : ""}`}>
                 <div
                   className={`max-w-[78%] rounded-2xl px-3.5 py-2 text-sm leading-6 shadow-[0_1px_1px_rgba(16,24,40,0.05)] ${
                     m.de === "nos" ? "rounded-br-md bg-violet-100 text-violet-950" : "rounded-bl-md bg-white text-zinc-800 ring-1 ring-inset ring-zinc-200"
-                  } ${achou ? "ring-2 ring-amber-300" : ""}`}
+                  } ${m.id === foco ? "ring-2 ring-amber-500" : achou ? "ring-2 ring-amber-200" : ""}`}
                 >
                   {m.autor && m.de === "cliente" && <p className="text-[11px] font-semibold text-violet-700">{m.autor}</p>}
                   <p className="whitespace-pre-wrap break-words">{m.texto}</p>

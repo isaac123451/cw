@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
-import { Building2, FileDown, FileSpreadsheet, FileUp, Link2, Loader2, MessageCircle, Search, Sparkles, Trash2, X } from "lucide-react";
+import { Building2, ChevronDown, ChevronUp, Clock, FileDown, FileSpreadsheet, FileUp, Link2, Loader2, MessageCircle, Phone, Search, Sparkles, Trash2, X } from "lucide-react";
 
 import PageHeading from "@/components/shared/PageHeading";
 import { ConfirmDelete } from "@/components/shared/Modal";
@@ -14,20 +14,38 @@ import Baloes, { type BalaoDaConversa } from "@/components/conversas/Baloes";
 import EvidenciaDaConversa, { useEvidencia } from "@/components/conversas/EvidenciaDaConversa";
 import ImportarConversa from "@/components/conversas/ImportarConversa";
 
+import { useSla } from "@/lib/context/SlaContext";
 import { useToast } from "@/lib/context/ToastContext";
+import { useAgora } from "@/lib/hooks/useAgora";
 
 import {
   buscarParaVincular,
+  corrigirLadosDaConversa,
   excluirConversa,
   exportarConversa,
   lerConversa,
   listarConversas,
   resumirConversa,
   salvarResumo,
+  sugestoesDeVinculo,
   vincularConversa,
 } from "@/lib/actions/conversas";
-import type { ConversaResumo, ConversaView } from "@/lib/models/conversa";
-import { descreverRegistro } from "@/lib/services/horasUteis";
+import { ladosDaConversa, retratoDaConversa, type ConversaResumo, type ConversaView } from "@/lib/models/conversa";
+import { descreverMinutosUteis, descreverRegistro } from "@/lib/services/horasUteis";
+
+/*
+  Os recortes da lista. "Esperando a gente" é o que mais importa: o
+  cliente falou por último e ninguém respondeu — é a conversa que vira
+  reclamação se ficar parada.
+*/
+const FILTROS = [
+  { chave: "todas", rotulo: "Todas", passa: () => true },
+  { chave: "esperando", rotulo: "Esperando a gente", passa: (c: ConversaResumo) => c.ultimaDe === "cliente" },
+  { chave: "sem-vinculo", rotulo: "Sem vínculo", passa: (c: ConversaResumo) => !c.caso && !c.nps && !c.estabelecimento },
+  { chave: "sem-resumo", rotulo: "Sem resumo", passa: (c: ConversaResumo) => !c.temResumo },
+] as const;
+
+type ChaveDoFiltro = (typeof FILTROS)[number]["chave"];
 
 /**
  * Conversas do WhatsApp guardadas.
@@ -52,6 +70,7 @@ export default function Conversas() {
   const [falhou, setFalhou] = useState<string | null>(null);
   const [importando, setImportando] = useState(false);
   const [excluindo, setExcluindo] = useState(false);
+  const [filtro, setFiltro] = useState<ChaveDoFiltro>("todas");
   const versao = useRef(0);
 
   const id = params.get("id");
@@ -92,6 +111,9 @@ export default function Conversas() {
   }, [id, notify]);
 
   const atual = aberta && aberta.id === id ? aberta : null;
+
+  const passa: (c: ConversaResumo) => boolean = FILTROS.find((x) => x.chave === filtro)!.passa;
+  const visiveis = lista?.filter(passa) ?? null;
 
   function abrir(novo: string) {
     router.replace(`/conversas?id=${encodeURIComponent(novo)}`, { scroll: false });
@@ -153,6 +175,27 @@ export default function Conversas() {
                 </button>
               )}
             </div>
+            {lista && lista.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1" role="group" aria-label="Recorte da lista">
+                {FILTROS.map((x) => {
+                  const n = lista.filter(x.passa).length;
+                  const ativo = filtro === x.chave;
+                  return (
+                    <button
+                      key={x.chave}
+                      type="button"
+                      aria-pressed={ativo}
+                      onClick={() => setFiltro(x.chave)}
+                      className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                        ativo ? "bg-violet-700 text-white" : x.chave === "esperando" && n > 0 ? "bg-amber-50 text-amber-800 hover:bg-amber-100" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+                      }`}
+                    >
+                      {x.rotulo} {x.chave !== "todas" && <span className="opacity-70">{n}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
             <ErroDoServidor erro={erroDaLista} />
             <ul className="mt-2 max-h-80 space-y-0.5 overflow-y-auto pr-1 lg:max-h-[calc(100vh-13rem)]">
               {lista === null && !erroDaLista && (
@@ -160,12 +203,20 @@ export default function Conversas() {
                   <Loader2 size={14} className="animate-spin" /> Carregando…
                 </li>
               )}
+              {lista && lista.length > 0 && visiveis?.length === 0 && (
+                <li className="px-3 py-8 text-center text-sm text-zinc-500">
+                  Nenhuma conversa neste recorte.{" "}
+                  <button type="button" onClick={() => setFiltro("todas")} className="font-medium text-violet-700 hover:underline">
+                    Ver todas
+                  </button>
+                </li>
+              )}
               {lista?.length === 0 && (
                 <li className="px-3 py-8 text-center text-sm text-zinc-500">
                   {termo ? "Nenhuma conversa fala disso." : "Nenhuma conversa guardada ainda. Guarde pela extensão (\"Guardar a conversa\") ou pelo arquivo exportado."}
                 </li>
               )}
-              {lista?.map((c) => (
+              {visiveis?.map((c) => (
                 <li key={c.id}>
                   <button
                     type="button"
@@ -182,6 +233,7 @@ export default function Conversas() {
                       {c.caso && <span className="rounded bg-violet-50 px-1.5 py-0.5 text-[10px] font-medium text-violet-700">{c.caso.protocolo}</span>}
                       {c.nps && <span className="rounded bg-sky-50 px-1.5 py-0.5 text-[10px] font-medium text-sky-700">NPS {c.nps.nota}</span>}
                       {c.estabelecimento && <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700">{c.estabelecimento.nome}</span>}
+                      {c.ultimaDe === "cliente" && <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">esperando a gente</span>}
                       <span className="text-[10px] text-zinc-400">{c.mensagens} msg</span>
                     </span>
                   </button>
@@ -237,12 +289,45 @@ function DetalheDaConversa({
   onExcluir: () => void;
 }) {
   const fim = useRef<HTMLDivElement>(null);
+  const rolagem = useRef<HTMLDivElement>(null);
   const { caso, gravando, marcar } = useEvidencia(c);
+  const { expediente } = useSla();
+  const agora = useAgora();
+
+  const retrato = useMemo(() => (agora ? retratoDaConversa(c.lista, new Date(agora), expediente) : null), [c.lista, agora, expediente]);
+
+  /*
+    Busca dentro da conversa. Começa pelo termo da lista (quem buscou
+    "reembolso" e abriu a conversa quer ver onde está), e as setas andam
+    entre as ocorrências — numa conversa de 300 mensagens, destacar sem
+    levar até lá é o mesmo que não achar.
+  */
+  const [buscaLocal, setBuscaLocal] = useState("");
+  const termoAtivo = buscaLocal.trim().length >= 2 ? buscaLocal.trim() : destaque.trim().length >= 2 ? destaque.trim() : "";
+  const ocorrencias = useMemo(
+    () => (termoAtivo ? c.lista.filter((m) => m.texto.toLowerCase().includes(termoAtivo.toLowerCase())).map((m) => m.id) : []),
+    [c.lista, termoAtivo]
+  );
+  const [navegacao, setNavegacao] = useState<{ termo: string; indice: number }>({ termo: "", indice: 0 });
+  /* Termo novo começa pela ocorrência mais recente, como a conversa começa pelo fim. */
+  const indice = navegacao.termo === termoAtivo ? Math.min(navegacao.indice, ocorrencias.length - 1) : ocorrencias.length - 1;
+  const foco = indice >= 0 ? ocorrencias[indice] : null;
+
+  function andar(passo: number) {
+    if (ocorrencias.length === 0) return;
+    setNavegacao({ termo: termoAtivo, indice: (indice + passo + ocorrencias.length) % ocorrencias.length });
+  }
 
   /* Abre no fim, como o WhatsApp: o que importa é a última mensagem. */
   useEffect(() => {
     fim.current?.scrollIntoView({ block: "end" });
   }, [c.id]);
+
+  /* Com uma ocorrência em foco, a tela vai até ela. */
+  useEffect(() => {
+    if (!foco) return;
+    rolagem.current?.querySelector(`[data-msg="${CSS.escape(foco)}"]`)?.scrollIntoView({ block: "center" });
+  }, [foco, c.id]);
 
   /* Nossas mensagens que tiveram resposta depois: só elas podem ser o 1º contato. */
   const comResposta = new Set<string>();
@@ -285,6 +370,28 @@ function DetalheDaConversa({
             {c.telefone ? `+${c.telefone} · ` : ""}
             {c.mensagens} mensagens · guardada por {c.guardadaPor}
           </p>
+          {retrato && (
+            <p className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
+              {retrato.esperandoDesde ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 font-medium text-amber-800 ring-1 ring-inset ring-amber-200" title="Contado no expediente, desde a primeira mensagem do cliente sem resposta">
+                  <Clock size={11} />
+                  {retrato.minutosEsperando
+                    ? `Esperando a gente há ${descreverMinutosUteis(retrato.minutosEsperando, expediente)} no expediente`
+                    : `Esperando a gente desde ${descreverRegistro(retrato.esperandoDesde)}`}
+                </span>
+              ) : retrato.ultimaDe === "nos" ? (
+                <span className="rounded-full bg-emerald-50 px-2 py-0.5 font-medium text-emerald-800 ring-1 ring-inset ring-emerald-200">A última palavra foi nossa</span>
+              ) : null}
+              {retrato.respostaMediaMin != null && (
+                <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-zinc-600" title="Da primeira fala do cliente até a nossa resposta, em horas de expediente">
+                  Respondemos em {descreverMinutosUteis(retrato.respostaMediaMin, expediente)}, em média ({retrato.respostas})
+                </span>
+              )}
+              <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-zinc-600">
+                {retrato.doCliente} do cliente · {retrato.nossas} nossas
+              </span>
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-1.5">
           <ExportarConversa conversa={c} />
@@ -295,11 +402,42 @@ function DetalheDaConversa({
       </header>
 
       <Vinculos conversa={c} onMudou={onMudou} />
+      <CorrigirLados key={c.id} conversa={c} onMudou={onMudou} />
       <EvidenciaDaConversa conversa={c} caso={caso} gravando={gravando} marcar={marcar} />
       <Resumo conversa={c} onMudou={onMudou} />
 
-      <div className="max-h-[60vh] overflow-y-auto bg-zinc-50/70 px-4 py-4">
-        <Baloes mensagens={c.lista} destaque={destaque} acoes={acoes} />
+      <div className="flex flex-wrap items-center gap-2 border-b border-zinc-100 bg-white px-5 py-2">
+        <div className="relative min-w-[12rem] flex-1">
+          <Search size={13} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-400" />
+          <input
+            value={buscaLocal}
+            onChange={(e) => setBuscaLocal(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                andar(e.shiftKey ? 1 : -1);
+              }
+            }}
+            placeholder={destaque.trim().length >= 2 ? `Buscar nesta conversa (agora: "${destaque.trim()}")` : "Buscar nesta conversa"}
+            aria-label="Buscar nesta conversa"
+            className="h-8 w-full rounded-lg border border-zinc-200 pl-8 pr-2 text-xs outline-none focus:border-violet-400"
+          />
+        </div>
+        {termoAtivo && (
+          <div className="flex items-center gap-1 text-[11px] text-zinc-500">
+            <span aria-live="polite">{ocorrencias.length === 0 ? "nenhuma" : `${indice + 1} de ${ocorrencias.length}`}</span>
+            <button type="button" onClick={() => andar(-1)} disabled={ocorrencias.length === 0} aria-label="Ocorrência anterior" title="Anterior (Enter)" className="rounded-md p-1 hover:bg-zinc-100 disabled:opacity-40">
+              <ChevronUp size={14} />
+            </button>
+            <button type="button" onClick={() => andar(1)} disabled={ocorrencias.length === 0} aria-label="Próxima ocorrência" title="Próxima (Shift+Enter)" className="rounded-md p-1 hover:bg-zinc-100 disabled:opacity-40">
+              <ChevronDown size={14} />
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div ref={rolagem} className="max-h-[60vh] overflow-y-auto bg-zinc-50/70 px-4 py-4">
+        <Baloes mensagens={c.lista} destaque={termoAtivo} foco={foco} acoes={acoes} />
         <div ref={fim} />
       </div>
     </article>
@@ -375,6 +513,26 @@ function Vinculos({ conversa: c, onMudou }: { conversa: ConversaView; onMudou: (
   const [busca, setBusca] = useState("");
   const [achados, setAchados] = useState<Awaited<ReturnType<typeof buscarParaVincular>> | null>(null);
   const [gravando, setGravando] = useState(false);
+  const [sugestoes, setSugestoes] = useState<{ para: string; dados: Awaited<ReturnType<typeof sugestoesDeVinculo>> } | null>(null);
+
+  /* A chave muda quando o vínculo muda: o que acabou de ser ligado sai da sugestão. */
+  const chaveDasSugestoes = `${c.id}|${c.caso?.id ?? ""}|${c.nps?.id ?? ""}|${c.estabelecimento?.id ?? ""}`;
+
+  useEffect(() => {
+    if (!c.telefone) return;
+    let vivo = true;
+    sugestoesDeVinculo(c.id)
+      .then((dados) => {
+        if (vivo) setSugestoes({ para: chaveDasSugestoes, dados });
+      })
+      .catch(() => undefined);
+    return () => {
+      vivo = false;
+    };
+  }, [c.id, c.telefone, chaveDasSugestoes]);
+
+  const sugeridas = sugestoes?.para === chaveDasSugestoes && sugestoes.dados.ok ? sugestoes.dados : null;
+  const totalSugerido = sugeridas ? sugeridas.casos.length + sugeridas.nps.length + sugeridas.estabelecimentos.length : 0;
 
   useEffect(() => {
     if (busca.trim().length < 2) return;
@@ -474,6 +632,123 @@ function Vinculos({ conversa: c, onMudou }: { conversa: ConversaView; onMudou: (
             </div>
           )}
         </div>
+      </div>
+      {totalSugerido > 0 && sugeridas && (
+        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
+          <span className="inline-flex items-center gap-1 text-zinc-500" title="Registros com o mesmo telefone (DDD e número) desta conversa">
+            <Phone size={11} /> Mesmo telefone:
+          </span>
+          {sugeridas.casos.map((x) => (
+            <button key={x.id} type="button" disabled={gravando} onClick={() => gravar({ caseId: x.id }, `Vinculada ao caso ${x.protocolo}`)} className="rounded-full bg-white px-2 py-0.5 font-medium text-violet-700 ring-1 ring-inset ring-violet-200 hover:bg-violet-50 disabled:opacity-50">
+              + {x.frente} {x.protocolo} · {x.cliente}
+            </button>
+          ))}
+          {sugeridas.nps.map((x) => (
+            <button key={x.id} type="button" disabled={gravando} onClick={() => gravar({ npsResponseId: x.id }, `Vinculada ao NPS de ${x.cliente}`)} className="rounded-full bg-white px-2 py-0.5 font-medium text-sky-700 ring-1 ring-inset ring-sky-200 hover:bg-sky-50 disabled:opacity-50">
+              + NPS {x.nota} · {x.cliente} ({descreverRegistro(x.quando)})
+            </button>
+          ))}
+          {sugeridas.estabelecimentos.map((x) => (
+            <button key={x.id} type="button" disabled={gravando} onClick={() => gravar({ establishmentId: x.id }, `Vinculada a ${x.nome}`)} className="rounded-full bg-white px-2 py-0.5 font-medium text-emerald-700 ring-1 ring-inset ring-emerald-200 hover:bg-emerald-50 disabled:opacity-50">
+              + {x.nome} <span className="font-normal opacity-70">({x.campo})</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+/**
+ * Qual autor é o nosso lado.
+ *
+ * Aberto sozinho quando a conversa tem dois autores e todas as falas de
+ * um lado só — a leitura errou a direção. Nos outros casos, fica um link
+ * discreto: quem vê o próprio texto do lado do cliente conserta sem
+ * precisar de ninguém.
+ */
+function CorrigirLados({ conversa: c, onMudou }: { conversa: ConversaView; onMudou: (c: ConversaView) => void }) {
+  const { notify } = useToast();
+  const lados = useMemo(() => ladosDaConversa(c.lista), [c.lista]);
+  const [aberto, setAberto] = useState(false);
+  const [nosso, setNosso] = useState<string | null>(null);
+  const [avisos, setAvisos] = useState(true);
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  if (lados.autores.length < 2) return null;
+
+  const mostrar = aberto || lados.suspeita;
+  const escolhido = nosso ?? lados.autores.find((a) => a.lado === "nos")?.nome ?? null;
+
+  async function salvar() {
+    if (!escolhido) return setErro("Escolha qual autor é o nosso lado.");
+    setSalvando(true);
+    setErro(null);
+    try {
+      const r = await corrigirLadosDaConversa(c.id, { nosso: escolhido, avisos: avisos && lados.semAutorESemHora > 0 });
+      if (!r.ok) return setErro(r.erro);
+      onMudou(r.conversa);
+      setAberto(false);
+      setNosso(null);
+      notify({
+        tone: "success",
+        title: "Lados corrigidos",
+        detail: `${r.nossas} nossa(s), ${r.deles} do cliente${r.avisos ? `, ${r.avisos} aviso(s)` : ""}.`,
+      });
+    } catch {
+      setErro("Sem resposta do servidor. Nada foi mudado.");
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  if (!mostrar) {
+    return (
+      <div className="border-b border-zinc-100 px-5 py-1.5 text-right">
+        <button type="button" onClick={() => setAberto(true)} className="text-[11px] text-zinc-400 hover:text-violet-700 hover:underline">
+          as mensagens estão do lado errado?
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <section aria-label="Corrigir os lados" className="space-y-2 border-b border-amber-100 bg-amber-50/50 px-5 py-3">
+      <p className="text-xs text-amber-900">
+        {lados.suspeita ? (
+          <>
+            <strong>Todas as falas estão de um lado só</strong>, mas há {lados.autores.length} autores — a leitura errou a direção. Qual deles é o nosso lado?
+          </>
+        ) : (
+          "Qual autor é o nosso lado? As mensagens dele ficam à direita; as dos outros, do cliente."
+        )}
+      </p>
+      <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Nosso lado">
+        {lados.autores.map((a) => (
+          <button
+            key={a.nome}
+            type="button"
+            role="radio"
+            aria-checked={escolhido === a.nome}
+            onClick={() => setNosso(a.nome)}
+            className={`rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset transition-colors ${
+              escolhido === a.nome ? "bg-violet-700 text-white ring-violet-700" : "bg-white text-zinc-700 ring-zinc-200 hover:bg-zinc-50"
+            }`}
+          >
+            {a.nome} <span className="opacity-70">({a.mensagens})</span>
+          </button>
+        ))}
+      </div>
+      {lados.semAutorESemHora > 0 && (
+        <label className="flex items-center gap-2 text-xs text-zinc-600">
+          <input type="checkbox" checked={avisos} onChange={(e) => setAvisos(e.target.checked)} />
+          Marcar como aviso as {lados.semAutorESemHora} linha(s) sem autor e sem hora (o aviso de criptografia, a velocidade do áudio) — não apaga nada
+        </label>
+      )}
+      <ErroDoServidor erro={erro} />
+      <div className="flex justify-end gap-2">
+        <RodapeDeSalvar salvando={salvando} desabilitado={!escolhido} rotulo="Salvar os lados" onSalvar={salvar} onCancelar={() => { setAberto(false); setNosso(null); setErro(null); }} />
       </div>
     </section>
   );

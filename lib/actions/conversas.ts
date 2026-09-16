@@ -9,12 +9,15 @@ import { pedirEstruturado } from "@/lib/services/ia.service";
 import {
   candidatas,
   conversasDoRegistro,
+  corrigirLados,
   gravarMensagens,
   ler,
   listar,
   MAXIMO_DE_MENSAGENS,
   somenteDigitosDoTelefone,
+  sugestoesPeloTelefone,
   type ConversaDoRegistro,
+  type SugestoesDeVinculo,
 } from "@/lib/services/conversas.service";
 import { gravarContato, problemaDoContato } from "@/lib/services/tratativa.service";
 
@@ -206,6 +209,49 @@ export async function buscarParaVincular(termo: string): Promise<
   } catch (erro) {
     console.error("[conversas] buscar vínculos", erro);
     return { ok: false, erro: "A busca não respondeu agora." };
+  }
+}
+
+/**
+ * Casos, ciclos de NPS e estabelecimentos com o mesmo telefone da
+ * conversa — só os que ela ainda não tem ligados.
+ */
+export async function sugestoesDeVinculo(id: string): Promise<({ ok: true } & SugestoesDeVinculo) | Falha> {
+  const ctx = await tryRole("LEITURA", "conversas");
+  if (!ctx) return { ok: false, erro: "Sem sessão." };
+  try {
+    const c = await ctx.prisma.conversa.findUnique({ where: { id }, select: { telefone: true, caseId: true, npsResponseId: true, establishmentId: true } });
+    if (!c) return { ok: false, erro: "Esta conversa não existe mais." };
+    const s = await sugestoesPeloTelefone(ctx.prisma, c.telefone);
+    return {
+      ok: true,
+      casos: s.casos.filter((x) => x.id !== c.caseId),
+      nps: s.nps.filter((x) => x.id !== c.npsResponseId),
+      estabelecimentos: s.estabelecimentos.filter((x) => x.id !== c.establishmentId),
+    };
+  } catch (erro) {
+    console.error("[conversas] sugestões de vínculo", erro);
+    return { ok: false, erro: "As sugestões não carregaram agora." };
+  }
+}
+
+/** Qual autor é o nosso lado — regrava a direção das mensagens (ver `corrigirLados`). */
+export async function corrigirLadosDaConversa(
+  id: string,
+  entrada: { nosso: string; avisos: boolean }
+): Promise<{ ok: true; conversa: ConversaView; nossas: number; deles: number; avisos: number } | Falha> {
+  const quem = await agente();
+  if ("erro" in quem) return { ok: false, erro: quem.erro! };
+  const nosso = String(entrada.nosso ?? "").trim();
+  if (!nosso) return { ok: false, erro: "Escolha qual autor é o nosso lado." };
+  try {
+    const r = await corrigirLados(quem.ctx.prisma, id, { nosso, avisos: Boolean(entrada.avisos) });
+    if (!r) return { ok: false, erro: "Esta conversa não existe mais." };
+    const conversa = await ler(quem.ctx.prisma, id);
+    return { ok: true, conversa: conversa!, ...r };
+  } catch (erro) {
+    console.error("[conversas] corrigir lados", erro);
+    return { ok: false, erro: "O banco não aceitou a correção agora. Nada foi mudado." };
   }
 }
 

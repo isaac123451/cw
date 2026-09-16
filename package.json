@@ -1,6 +1,6 @@
 {
   "name": "cw-reputacao",
-  "version": "0.75.0",
+  "version": "0.76.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -110,7 +110,8 @@
     "check:gravacoes": "tsx --conditions=react-server scripts/check-gravacoes.ts",
     "check:planos": "tsx scripts/check-planos.ts",
     "check:janelas": "tsx scripts/check-janelas.ts",
-    "check:meu-dia": "tsx scripts/check-meu-dia.ts"
+    "check:meu-dia": "tsx scripts/check-meu-dia.ts",
+    "check:conversas-retrato": "tsx scripts/check-conversas-retrato.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",

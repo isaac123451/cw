@@ -1,4 +1,4 @@
-import { instanteDe, paredeDe } from "@/lib/services/horasUteis";
+import { EXPEDIENTE_PADRAO, instanteDe, minutosUteisEntre, paredeDe, type Expediente } from "@/lib/services/horasUteis";
 
 /**
  * Conversas de WhatsApp guardadas.
@@ -43,6 +43,8 @@ export interface ConversaResumo {
   nps?: { id: string; cliente: string; nota: number };
   estabelecimento?: { id: string; nome: string; slug: string };
   temResumo: boolean;
+  /** Quem falou por último (sem os avisos do sistema) — "esperando a gente" na lista. */
+  ultimaDe?: "cliente" | "nos";
   guardadaPor: string;
   atualizadoEm: string;
 }
@@ -265,6 +267,143 @@ export function evidenciaDaConversa(lista: MensagemView[]): EvidenciaDaConversa 
   }
 
   return { primeiroContato, validacaoSugerida };
+}
+
+/* ============================================================
+   O RETRATO DA CONVERSA — quem espera, e há quanto tempo
+============================================================ */
+
+export interface RetratoDaConversa {
+  doCliente: number;
+  nossas: number;
+  primeiraEm?: string;
+  /** Quem falou por último, sem contar avisos do sistema. */
+  ultimaDe?: "cliente" | "nos";
+  /**
+   * A primeira mensagem do cliente que ainda não teve resposta nossa.
+   * É dela que se conta a espera — não da última: quem mandou três
+   * mensagens seguidas está esperando desde a primeira.
+   */
+  esperandoDesde?: string;
+  /** Minutos úteis de espera até `agora`, no relógio do expediente. */
+  minutosEsperando?: number;
+  /** Quantas vezes respondemos a uma fala do cliente (as que têm hora dos dois lados). */
+  respostas: number;
+  /** A média, em minutos úteis, entre a fala do cliente e a nossa resposta. */
+  respostaMediaMin?: number;
+}
+
+/**
+ * O que a conversa diz sem ninguém ler tudo: se o cliente está
+ * esperando a gente, desde quando, e quanto costumamos demorar.
+ *
+ * Conta em **minutos úteis** — a mesma régua dos prazos. Uma mensagem
+ * de sábado respondida na segunda às 8h05 é uma resposta de 5 minutos,
+ * não de dois dias. Mensagem sem hora (a extensão às vezes não acha o
+ * carimbo) fica fora das contas de tempo, mas conta nos totais.
+ */
+export function retratoDaConversa(
+  lista: Pick<MensagemView, "de" | "em">[],
+  agora: Date,
+  expediente: Expediente = EXPEDIENTE_PADRAO
+): RetratoDaConversa {
+  const falas = lista.filter((m) => m.de !== "sistema");
+  const doCliente = falas.filter((m) => m.de === "cliente").length;
+  const retrato: RetratoDaConversa = {
+    doCliente,
+    nossas: falas.length - doCliente,
+    primeiraEm: lista.find((m) => m.em)?.em,
+    ultimaDe: falas.length ? (falas[falas.length - 1].de as "cliente" | "nos") : undefined,
+    respostas: 0,
+  };
+
+  let inicioDoBloco: string | undefined;
+  let semHoraNoBloco = false;
+  let soma = 0;
+
+  for (const m of falas) {
+    if (m.de === "cliente") {
+      if (!inicioDoBloco && !semHoraNoBloco) {
+        if (m.em) inicioDoBloco = m.em;
+        else semHoraNoBloco = true;
+      }
+      continue;
+    }
+    /* Sem hora de um dos lados, a resposta existiu mas não entra na média. */
+    if (inicioDoBloco && m.em) {
+      retrato.respostas += 1;
+      soma += Math.max(0, minutosUteisEntre(new Date(inicioDoBloco), new Date(m.em), expediente));
+    }
+    inicioDoBloco = undefined;
+    semHoraNoBloco = false;
+  }
+
+  if (retrato.respostas > 0) retrato.respostaMediaMin = Math.round(soma / retrato.respostas);
+
+  if (retrato.ultimaDe === "cliente" && inicioDoBloco) {
+    retrato.esperandoDesde = inicioDoBloco;
+    retrato.minutosEsperando = Math.max(0, minutosUteisEntre(new Date(inicioDoBloco), agora, expediente));
+  }
+
+  return retrato;
+}
+
+export interface LadosDaConversa {
+  /** Os autores dos carimbos, do que mais escreveu para o que menos. */
+  autores: { nome: string; mensagens: number; lado: "cliente" | "nos" }[];
+  /** Dois autores ou mais, e todas as falas de um lado só: a leitura errou a direção. */
+  suspeita: boolean;
+  /** Linhas sem autor e sem hora que não estão como aviso — o "1,0×", a criptografia. */
+  semAutorESemHora: number;
+}
+
+/**
+ * Os lados da conversa, pelo autor gravado em cada mensagem.
+ *
+ * Uma conversa com dois autores e nenhuma fala nossa (ou nenhuma do
+ * cliente) não aconteceu assim: é a direção que foi lida errada. A tela
+ * mostra a correção aberta nesse caso.
+ */
+export function ladosDaConversa(lista: Pick<MensagemView, "de" | "autor" | "em">[]): LadosDaConversa {
+  const porAutor = new Map<string, { mensagens: number; nos: number }>();
+  let semAutorESemHora = 0;
+
+  for (const m of lista) {
+    if (m.de === "sistema") continue;
+    if (!m.autor) {
+      if (!m.em) semAutorESemHora += 1;
+      continue;
+    }
+    const atual = porAutor.get(m.autor) ?? { mensagens: 0, nos: 0 };
+    atual.mensagens += 1;
+    if (m.de === "nos") atual.nos += 1;
+    porAutor.set(m.autor, atual);
+  }
+
+  const autores = [...porAutor.entries()]
+    .map(([nome, x]) => ({ nome, mensagens: x.mensagens, lado: (x.nos * 2 > x.mensagens ? "nos" : "cliente") as "cliente" | "nos" }))
+    .sort((a, b) => b.mensagens - a.mensagens);
+
+  const falas = lista.filter((m) => m.de !== "sistema");
+  const umLadoSo = falas.length > 0 && (falas.every((m) => m.de === "cliente") || falas.every((m) => m.de === "nos"));
+
+  return { autores, suspeita: autores.length >= 2 && umLadoSo, semAutorESemHora };
+}
+
+/**
+ * A chave de um telefone para achar o mesmo número em outro cadastro:
+ * DDD + os 8 últimos dígitos.
+ *
+ * Sem o 55 do país (o WhatsApp põe, o cadastro às vezes não) e sem o 9
+ * da frente do celular (as bases antigas não têm). Oito dígitos sozinhos
+ * não bastam: o mesmo final em DDDs diferentes é outra pessoa, e sugerir
+ * o caso de outra pessoa é pior que não sugerir. Sem DDD, não há chave.
+ */
+export function chaveDoTelefone(valor?: string | null): string | null {
+  let d = String(valor ?? "").replace(/\D/g, "");
+  if (d.length >= 12 && d.startsWith("55")) d = d.slice(2);
+  if (d.length < 10 || d.length > 11) return null;
+  return d.slice(0, 2) + d.slice(-8);
 }
 
 /* ============================================================

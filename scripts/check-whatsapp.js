@@ -214,6 +214,29 @@ function comCitacao() {
   ]);
 }
 
+/**
+ * A marcação de setembro de 2026, tirada de uma conversa real: o
+ * data-id sem true_/false_ e sem @, nenhuma classe de direção. Só o
+ * carimbo diz quem escreveu. Entre as linhas, o aviso de criptografia e
+ * o 1,0× do player de áudio, sem carimbo.
+ */
+function marcacaoDeSetembro({ comTique }) {
+  const carimbo = (hora, autor) => ({ "data-pre-plain-text": `[${hora}, 09/09/2026] ${autor}: ` });
+  const linha = (id, hora, autor, texto, extra = []) =>
+    no("div", { "data-id": id }, [], [
+      no("div", carimbo(hora, autor), ["copyable-text"], [no("span", {}, ["selectable-text"], texto)]),
+      ...extra,
+    ]);
+  return no("div", { id: "main" }, [], [
+    no("header", {}, [], [no("span", { title: "+55 48 9909-5712" }, [], "+55 48 9909-5712")]),
+    no("div", { "data-id": "3A496FC276F0D709E6C9" }, [], [no("span", {}, [], "1,0×")]),
+    no("div", { "data-id": "3EB08298C6B7D89FD3FA" }, [], [no("span", {}, [], "As mensagens e ligações são protegidas com a criptografia de ponta a ponta.")]),
+    linha("3EB00BEA3F2915E6DB7B71", "20:07", "Cardápio Web (Reputação)", "Oi, Rafael! Sou o Carlos Isaac", comTique ? [no("span", { "data-icon": "msg-dblcheck" }, [], "")] : []),
+    linha("3AF3E5531DE8BDBB20E6", "20:34", "+55 48 9909-5712", "Olá , boa tarde !"),
+    linha("3EB02D3283AEAC2386DC68", "21:05", "Cardápio Web (Reputação)", "Estava verificando o histórico"),
+  ]);
+}
+
 /* ============================================================
    O LEITOR, CARREGADO DO ARQUIVO DA EXTENSÃO
 ============================================================ */
@@ -262,6 +285,12 @@ let lerMensagens = null;
  * por ele que o leitor chega até as conferências.
  */
 const CW = {
+  /* O núcleo de verdade lê o número do cabeçalho; aqui, só os dígitos. */
+  telefoneDoTexto: (v) => {
+    const d = String(v ?? "").replace(/\D/g, "");
+    return d.length >= 10 ? d : null;
+  },
+  texto: (el) => el?.innerText ?? "",
   painel: {
     montar() {},
     garantir() {},
@@ -423,6 +452,21 @@ conferir(
   typeof f.motivo === "string" && f.motivo.length > 10,
   true
 );
+
+/* ---- 7 e 8. a marcação de setembro ---- */
+
+console.log("\n  Marcação de setembro: id sem direção, só o carimbo");
+
+const g = ler(marcacaoDeSetembro({ comTique: true }));
+
+conferir("7. só as com carimbo (sem aviso nem 1,0×)", g.mensagens.map((m) => m.texto.slice(0, 12)), ["Oi, Rafael! ", "Olá , boa ta", "Estava verif"]);
+conferir("7. o tique marca a nossa", g.mensagens[0]?.de, "nos");
+conferir("7. o mesmo autor sem tique também é nosso", g.mensagens[2]?.de, "nos");
+conferir("7. o contato do cabeçalho é o cliente", g.mensagens[1]?.de, "cliente");
+
+const h = ler(marcacaoDeSetembro({ comTique: false }));
+
+conferir("8. sem tique, o carimbo decide pelo contato", h.mensagens.map((m) => m.de), ["nos", "cliente", "nos"]);
 
 console.log(
   falhas === 0

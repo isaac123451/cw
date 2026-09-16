@@ -5,6 +5,7 @@ import type { PrismaClient } from "@prisma/client";
 import {
   assinatura,
   chaveDoConteudo,
+  chaveDoTelefone,
   omitirDadosBancarios,
   type ConversaResumo,
   type ConversaView,
@@ -244,7 +245,7 @@ type LinhaDaConversa = {
   establishment: { id: string; name: string; slug: string } | null;
 };
 
-function resumoDe(c: LinhaDaConversa, total: number, ultima?: { em: Date | null; texto: string }): ConversaResumo {
+function resumoDe(c: LinhaDaConversa, total: number, ultima?: { em: Date | null; texto: string }, ultimaDe?: "cliente" | "nos"): ConversaResumo {
   return {
     id: c.id,
     contatoNome: c.contatoNome || (c.telefone ? `+${c.telefone}` : "Contato sem nome"),
@@ -255,10 +256,17 @@ function resumoDe(c: LinhaDaConversa, total: number, ultima?: { em: Date | null;
     caso: c.case ? { id: c.case.id, protocolo: c.case.protocol, frente: c.case.channel === "RECLAME_AQUI" ? "Reclame Aqui" : "Redes Sociais" } : undefined,
     nps: c.npsResponse ? { id: c.npsResponse.id, cliente: c.npsResponse.customerName || c.npsResponse.customer, nota: c.npsResponse.score } : undefined,
     estabelecimento: c.establishment ? { id: c.establishment.id, nome: c.establishment.name, slug: c.establishment.slug } : undefined,
+    ultimaDe,
     temResumo: Boolean(c.resumo),
     guardadaPor: c.guardadaPor,
     atualizadoEm: c.atualizadoEm.toISOString(),
   };
+}
+
+/** Da mais nova para a mais velha: o lado da primeira que não é aviso do sistema. */
+function ladoDaUltimaFala(maisNovasPrimeiro: { de: string }[]): "cliente" | "nos" | undefined {
+  const fala = maisNovasPrimeiro.find((m) => m.de === "cliente" || m.de === "nos");
+  return fala?.de as "cliente" | "nos" | undefined;
 }
 
 export async function listar(prisma: Db, termo: string) {
@@ -283,10 +291,11 @@ export async function listar(prisma: Db, termo: string) {
     include: {
       ...VINCULOS,
       _count: { select: { mensagens: true } },
-      mensagens: { orderBy: [{ em: "desc" }, { criadoEm: "desc" }], take: 1, select: { em: true, texto: true } },
+      /* Seis bastam para achar quem falou por último sem contar os avisos do sistema. */
+      mensagens: { orderBy: [{ em: "desc" }, { criadoEm: "desc" }], take: 6, select: { em: true, texto: true, de: true } },
     },
   });
-  return linhas.map((c) => resumoDe(c, c._count.mensagens, c.mensagens[0]));
+  return linhas.map((c) => resumoDe(c, c._count.mensagens, c.mensagens[0], ladoDaUltimaFala(c.mensagens)));
 }
 
 export async function ler(prisma: Db, id: string): Promise<ConversaView | null> {
@@ -305,11 +314,113 @@ export async function ler(prisma: Db, id: string): Promise<ConversaView | null> 
   }));
   const ultima = c.mensagens[c.mensagens.length - 1];
   return {
-    ...resumoDe(c, c.mensagens.length, ultima),
+    ...resumoDe(c, c.mensagens.length, ultima, ladoDaUltimaFala([...c.mensagens].reverse())),
     nosNome: c.nosNome ?? undefined,
     resumo: c.resumo ?? undefined,
     resumoEm: c.resumoEm?.toISOString(),
     resumoPor: c.resumoPor ?? undefined,
     lista,
   };
+}
+
+/* ============================================================
+   VÍNCULO SUGERIDO PELO TELEFONE
+============================================================ */
+
+export interface SugestoesDeVinculo {
+  casos: { id: string; protocolo: string; cliente: string; frente: string }[];
+  nps: { id: string; cliente: string; nota: number; quando: string }[];
+  estabelecimentos: { id: string; nome: string; campo: "telefone" | "WhatsApp do NPS" }[];
+}
+
+/**
+ * Os registros com o mesmo número do contato: casos, ciclos de NPS e
+ * estabelecimentos (pelo telefone e pelo WhatsApp do NPS).
+ *
+ * **Só pelo telefone, nunca pelo nome.** "Maria" casa com metade da base;
+ * o número, com DDD, é da pessoa (`chaveDoTelefone`). É sugestão: quem
+ * vincula é a pessoa, com um clique.
+ *
+ * A comparação é feita aqui e não no banco porque os telefones foram
+ * digitados de todo jeito — "(11) 9 8765-4321", "5511987654321",
+ * "11 98765 4321" — e a chave normaliza os três para o mesmo valor.
+ */
+export async function sugestoesPeloTelefone(prisma: Db, telefone?: string | null): Promise<SugestoesDeVinculo> {
+  const chave = chaveDoTelefone(telefone);
+  const vazio: SugestoesDeVinculo = { casos: [], nps: [], estabelecimentos: [] };
+  if (!chave) return vazio;
+
+  const final = chave.slice(-4);
+  const [casos, nps, estabelecimentos] = await Promise.all([
+    prisma.case.findMany({
+      where: { phone: { contains: final } },
+      orderBy: { updatedAt: "desc" },
+      take: 200,
+      select: { id: true, protocol: true, customer: true, channel: true, phone: true },
+    }),
+    prisma.npsResponse.findMany({
+      where: { phone: { contains: final } },
+      orderBy: { respondedAt: "desc" },
+      take: 200,
+      select: { id: true, customerName: true, customer: true, score: true, respondedAt: true, phone: true },
+    }),
+    prisma.establishment.findMany({
+      where: { OR: [{ phone: { contains: final } }, { npsWhatsapp: { contains: final } }] },
+      take: 200,
+      select: { id: true, name: true, phone: true, npsWhatsapp: true },
+    }),
+  ]);
+
+  return {
+    casos: casos
+      .filter((c) => chaveDoTelefone(c.phone) === chave)
+      .slice(0, 5)
+      .map((c) => ({ id: c.id, protocolo: c.protocol, cliente: c.customer, frente: c.channel === "RECLAME_AQUI" ? "Reclame Aqui" : "Redes Sociais" })),
+    nps: nps
+      .filter((n) => chaveDoTelefone(n.phone) === chave)
+      .slice(0, 5)
+      .map((n) => ({ id: n.id, cliente: n.customerName || n.customer, nota: n.score, quando: n.respondedAt.toISOString() })),
+    estabelecimentos: estabelecimentos
+      .flatMap((e): SugestoesDeVinculo["estabelecimentos"] =>
+        chaveDoTelefone(e.npsWhatsapp) === chave
+          ? [{ id: e.id, nome: e.name, campo: "WhatsApp do NPS" as const }]
+          : chaveDoTelefone(e.phone) === chave
+            ? [{ id: e.id, nome: e.name, campo: "telefone" as const }]
+            : []
+      )
+      .slice(0, 5),
+  };
+}
+
+/* ============================================================
+   CORRIGIR OS LADOS
+============================================================ */
+
+/**
+ * Diz qual autor é o nosso lado e regrava a direção das mensagens.
+ *
+ * Existe porque a leitura da extensão errou uma vez (o WhatsApp tirou a
+ * direção do `data-id`, em setembro de 2026) e guardar de novo não
+ * conserta: a mensagem que já existe é reconhecida e pulada. O autor do
+ * carimbo ficou gravado certo, e é por ele que se corrige.
+ *
+ * Com `avisos`, as linhas sem autor e sem hora — o aviso de criptografia,
+ * o "1,0×" do player de áudio — viram avisos do sistema: saem das contas
+ * de espera e de resposta, mas não são apagadas.
+ */
+export async function corrigirLados(prisma: Db, id: string, entrada: { nosso: string; avisos: boolean }) {
+  return prisma.$transaction(async (tx) => {
+    const existe = await tx.conversa.findUnique({ where: { id }, select: { id: true } });
+    if (!existe) return null;
+
+    const nossas = await tx.mensagemDaConversa.updateMany({ where: { conversaId: id, autor: entrada.nosso, NOT: { de: "sistema" } }, data: { de: "nos" } });
+    const deles = await tx.mensagemDaConversa.updateMany({ where: { conversaId: id, autor: { not: entrada.nosso }, NOT: { de: "sistema" } }, data: { de: "cliente" } });
+    const avisos = entrada.avisos
+      ? await tx.mensagemDaConversa.updateMany({ where: { conversaId: id, autor: null, em: null, NOT: { de: "sistema" } }, data: { de: "sistema" } })
+      : { count: 0 };
+
+    await tx.conversa.update({ where: { id }, data: { nosNome: entrada.nosso.slice(0, 120) } });
+
+    return { nossas: nossas.count, deles: deles.count, avisos: avisos.count };
+  });
 }
