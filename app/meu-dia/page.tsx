@@ -11,6 +11,7 @@ import CheckpointDoDia from "@/components/rotina/CheckpointDoDia";
 import ConfigurarRotina from "@/components/rotina/ConfigurarRotina";
 import { useMeuDia } from "@/components/rotina/useMeuDia";
 import CartaoDoPrimeiroAcesso from "@/components/primeiroAcesso/CartaoDoPrimeiroAcesso";
+import AgoraNoMeuDia from "@/components/rotina/AgoraNoMeuDia";
 
 /**
  * Meu dia — a primeira tela do dia.
@@ -51,6 +52,9 @@ export default function MeuDiaPage() {
         />
 
         <CartaoDoPrimeiroAcesso />
+
+        {/* O que pede ação, o que move a nota e o que já deu certo — antes da lista de tarefas. */}
+        <AgoraNoMeuDia />
 
         <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
 

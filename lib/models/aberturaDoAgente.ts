@@ -5,7 +5,7 @@ import type { SlaRule } from "@/lib/models/sla";
 import { filaDeAvaliacao, semNoticia } from "@/lib/models/cadencia";
 import { sinaisDeCrise } from "@/lib/models/redes";
 
-import { caseHref, isOpen } from "@/lib/services/case.service";
+import { caseHref, isOpen, isSocial } from "@/lib/services/case.service";
 import { diaNaOperacao } from "@/lib/services/reputation.service";
 import { slaStatus } from "@/lib/services/sla.service";
 
@@ -46,6 +46,11 @@ export interface AvisoDeAbertura {
   href: string;
   /** A pergunta que este aviso responde, para o chat. */
   pergunta: string;
+  /**
+   * O caso mais urgente, para abrir numa mini-janela sem sair da tela.
+   * Só quando o aviso aponta para **um** caso — prazo e avaliação são listas.
+   */
+  janela?: { frente: "reclame-aqui" | "redes"; ref: string; titulo: string };
 }
 
 export interface EntradaDaAbertura {
@@ -153,12 +158,26 @@ export function avisosDeAbertura(entrada: EntradaDaAbertura): AvisoDeAbertura[] 
       quantidade: semNoticias.length,
       href: caseHref(maisAntigo.c),
       pergunta: "Quem está sem notícia há mais tempo?",
+      janela: {
+        frente: isSocial(maisAntigo.c) ? "redes" : "reclame-aqui",
+        ref: maisAntigo.c.id,
+        titulo: `${maisAntigo.c.protocol} · ${maisAntigo.c.customer}`,
+      },
     });
   }
 
   /* ---------- 3. de quem pedir avaliação ---------- */
 
-  const fila = filaDeAvaliacao(abertos, agora);
+  /*
+    A fila de avaliação olha **todas** as reclamações, e não só as abertas.
+
+    "Aguardando avaliação" não conta como aberto para a operação — já foi
+    respondida —, e é exatamente quem está nessa etapa que precisa do
+    pedido. Filtrando por abertas, o aviso dizia zero enquanto a fila de
+    avaliação e o Meu dia mostravam 37 na vez. A própria fila descarta as
+    já avaliadas e as de fora da janela de 6 meses.
+  */
+  const fila = filaDeAvaliacao(casos.filter((c) => c.source === "Reclame Aqui"), agora);
 
   if (fila.hoje.length > 0) {
     avisos.push({
@@ -191,6 +210,11 @@ export function avisosDeAbertura(entrada: EntradaDaAbertura): AvisoDeAbertura[] 
       quantidade: emCrise.length,
       href: caseHref(emCrise[0].caso),
       pergunta: "Quais casos estão com sinal de crise?",
+      janela: {
+        frente: isSocial(emCrise[0].caso) ? "redes" : "reclame-aqui",
+        ref: emCrise[0].caso.id,
+        titulo: `${emCrise[0].caso.protocol} · ${emCrise[0].caso.customer}`,
+      },
     });
   }
 

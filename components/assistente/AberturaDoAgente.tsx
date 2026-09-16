@@ -3,6 +3,7 @@
 import Link from "next/link";
 
 import {
+  AppWindow,
   ArrowRight,
   CalendarClock,
   MessageSquareOff,
@@ -11,6 +12,7 @@ import {
 } from "lucide-react";
 
 import type { AvisoDeAbertura } from "@/lib/models/aberturaDoAgente";
+import { useJanelas } from "@/lib/context/JanelasContext";
 
 /**
  * O que o agente diz antes de alguém perguntar (Fase 9.2).
@@ -55,6 +57,8 @@ export default function AberturaDoAgente({
   avisos: AvisoDeAbertura[];
   onPerguntar: (pergunta: string) => void;
 }) {
+
+  const { abrir } = useJanelas();
 
   if (avisos.length === 0) {
     return (
@@ -102,6 +106,18 @@ export default function AberturaDoAgente({
             >
               Perguntar
             </button>
+
+            {aviso.janela && (
+              <button
+                type="button"
+                onClick={() => abrir(aviso.janela!)}
+                title="Abrir o caso numa mini-janela"
+                className="flex items-center gap-1 rounded-xl border border-current/20 bg-white/70 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-white"
+              >
+                <AppWindow size={13} />
+                Janela
+              </button>
+            )}
 
             <Link
               href={aviso.href}
