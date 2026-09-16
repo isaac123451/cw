@@ -11,6 +11,8 @@ import { listNpsResponses } from "@/lib/actions/nps";
 import { lerMetricas } from "@/lib/actions/metricas";
 import { cicloDe, cicloPorId, ciclosAte, type Ciclo } from "@/lib/models/ciclo";
 import { fetchCases } from "@/lib/services/case.repository";
+import { slaRuleDoBanco } from "@/lib/models/sla";
+import { lerExpediente } from "@/lib/services/operacao.service";
 import { formatElapsed, hojeNaOperacao, ptBR, RA1000_TARGETS } from "@/lib/services/reputation.service";
 import { montarRelatorio, textoDoRelatorio, type DadosDoRelatorio, type GoogleDoRelatorio } from "@/lib/services/relatorio.service";
 
@@ -44,12 +46,15 @@ export interface RelatorioLido {
 }
 
 async function montar(prisma: PrismaClient, ciclo: Ciclo) {
-  const [cases, nps, google] = await Promise.all([
+  const [cases, nps, google, regras, expediente] = await Promise.all([
     fetchCases(prisma),
     listNpsResponses(),
     prisma.avaliacaoGoogle.findMany({
       select: { id: true, estrelas: true, classificacao: true, publicadaEm: true, respondidaEm: true, notaAtualizada: true, status: true },
     }),
+    /* As regras e o expediente: é com eles que o 1º contato vira "no prazo". */
+    prisma.slaRule.findMany().then((linhas) => linhas.map(slaRuleDoBanco)),
+    lerExpediente(prisma),
   ]);
 
   const doGoogle: GoogleDoRelatorio[] = google.map((g) => ({
@@ -62,7 +67,7 @@ async function montar(prisma: PrismaClient, ciclo: Ciclo) {
     status: g.status as GoogleDoRelatorio["status"],
   }));
 
-  return montarRelatorio({ cases, nps, google: doGoogle, ciclo, hoje: hojeNaOperacao() });
+  return montarRelatorio({ cases, nps, google: doGoogle, ciclo, hoje: hojeNaOperacao(), regras, expediente });
 }
 
 /** O relatório de um ciclo — o corrente, quando nenhum é pedido. */
@@ -178,6 +183,11 @@ export async function exportarRelatorio(cicloId: string): Promise<{ ok: true; ar
     { Frente: "Google", Número: "Avaliações", Valor: d.google.total },
     { Frente: "Google", Número: "Nota média", Valor: d.google.notaMedia ?? "" },
     { Frente: "Google", Número: "% respondidas", Valor: d.google.percentualRespondidas ?? "" },
+    ...([["Reclame Aqui", d.primeiroContato.ra], ["Redes Sociais", d.primeiroContato.redes], ["NPS", d.primeiroContato.nps]] as const).flatMap(([frente, ind]) => [
+      { Frente: frente, Número: "1º contato: mediana (horas úteis)", Valor: ind.medianaMin !== null ? Math.round((ind.medianaMin / 60) * 10) / 10 : "" },
+      { Frente: frente, Número: "1º contato: % no prazo", Valor: ind.percentualNoPrazo ?? "" },
+      { Frente: frente, Número: "1º contato: contatados / medidos", Valor: `${ind.contatados}/${ind.total}` },
+    ]),
   ];
 
   const metricas = (await lerMetricas(d.ciclo.inicio, d.ateDia)).map((l) => ({

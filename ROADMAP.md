@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 16/09/2026. Aplicação **0.77.0**, extensão **0.77.0**.
+Atualizado em 16/09/2026. Aplicação **0.78.0**, extensão **0.78.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1100,6 +1100,33 @@ caracteres** antes e depois da divisão (contato 6.026, fila 3.289, NPS
 nenhum erro no console. `check:painel`, `check:fiacao`, `check:escape`,
 `check:dossie`, `check:respostas` e `check:atalho` de pé — as quatro
 últimas leem o painel como texto e passaram a ler os sete como um só.
+
+### Tempo até o 1º contato como indicador (16/09/2026, 0.78.0)
+
+Ideia do roadmap 1.0: o documento define a meta de 1º contato e não a
+mede. Agora ela é medida, com o mesmo relógio dos prazos:
+
+- **Mediana em horas úteis**, da publicação (ou da resposta do NPS) até
+  o 1º contato registrado. Mediana, para um caso esquecido não esconder
+  que o resto foi atendido rápido.
+- **% no prazo**, só entre o que já se decidiu: contatado, ou sem contato
+  com o prazo vencido. O de ontem, ainda no prazo, não pesa.
+- O que chegou **antes do registro de contato** (12/09) e não tem
+  registro fica fora da conta e é dito à parte — cobrar dele seria
+  cobrar o impossível. No NPS, o ciclo encerrado sem contato não entra.
+
+Onde aparece, no Relatório de Reputação: uma linha nova na tabela de
+indicadores (por aba), o cartão "Tempo até o 1º contato no ciclo" por
+frente (Reclame Aqui, Redes, NPS), a linha no texto do Slack, três
+linhas por frente na planilha e um ponto de atenção quando há vencido
+sem contato ou menos de 90% no prazo. O relatório passou a ler as
+regras de prazo e o expediente do banco.
+
+Na base real, no ciclo atual: NPS com mediana de 1 dia útil e 2h, 50% no
+prazo, 2 de 8 contatados; Reclame Aqui e Redes sem entrada no ciclo; as
+abas de 6 e 12 meses inteiras anteriores ao registro de contato.
+
+Prova: `check:primeiro-contato` (novo) e `check:ciclos`.
 
 ### Urgência sugerida por dado, não por memória (16/09/2026, 0.77.0)
 

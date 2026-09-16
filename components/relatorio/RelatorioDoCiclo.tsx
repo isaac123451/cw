@@ -14,7 +14,7 @@ import IconeDaFrente from "@/components/shared/IconeDaFrente";
 import { exportarRelatorio, lerRelatorio, salvarRelatorio, type RelatorioLido } from "@/lib/actions/relatorio";
 import { useToast } from "@/lib/context/ToastContext";
 import { formatElapsed, ptBR, RA1000_MINIMO_DE_AVALIACOES, RA1000_TARGETS } from "@/lib/services/reputation.service";
-import { descreverRegistro } from "@/lib/services/horasUteis";
+import { descreverMinutosUteis, descreverRegistro } from "@/lib/services/horasUteis";
 import type { AbaDoRelatorio } from "@/lib/services/relatorio.service";
 
 import PorQue from "@/components/shared/PorQue";
@@ -318,6 +318,27 @@ export default function RelatorioDoCiclo() {
                 ))}
                 <td className="py-2 text-zinc-500">—</td>
               </tr>
+              <tr>
+                <td className="py-2 pr-3 text-zinc-600">1º contato (horas úteis)</td>
+                {abaisTabela.map(({ aba, nome }) => {
+                  const ind = aba.primeiroContato;
+                  return (
+                    <td key={nome} className={`py-2 pr-3 ${ind.percentualNoPrazo !== null && ind.percentualNoPrazo < 90 ? "font-semibold text-rose-700" : "text-zinc-800"}`}>
+                      {ind.medianaMin !== null ? `mediana ${descreverMinutosUteis(ind.medianaMin)}` : "sem registro"}
+                      <span className="block text-[11px] font-normal text-zinc-500">
+                        {ind.total > 0 && (
+                          <>
+                            {ind.percentualNoPrazo !== null ? `${ind.percentualNoPrazo}% no prazo · ` : ""}
+                            {ind.contatados}/{ind.total} contatados
+                          </>
+                        )}
+                        {ind.semRegistro ? `${ind.total > 0 ? " · " : ""}${ind.semRegistro} de antes do registro de contato` : ""}
+                      </span>
+                    </td>
+                  );
+                })}
+                <td className="py-2 text-zinc-500">no prazo da criticidade</td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -379,6 +400,46 @@ export default function RelatorioDoCiclo() {
           </Link>
         ))}
       </div>
+
+      <SurfaceCard
+        title="Tempo até o 1º contato no ciclo"
+        description="Do que chegou no ciclo: da publicação (ou da resposta do NPS) ao 1º contato registrado, em horas de expediente. No prazo conta só o que já se decidiu — contatado, ou sem contato com o prazo vencido."
+      >
+        <div className="grid gap-3 sm:grid-cols-3">
+          {(
+            [
+              { frente: "reclame-aqui", titulo: "Reclame Aqui", ind: d.primeiroContato.ra },
+              { frente: "redes", titulo: "Redes Sociais", ind: d.primeiroContato.redes },
+              { frente: "nps", titulo: "NPS", ind: d.primeiroContato.nps },
+            ] as const
+          ).map(({ frente, titulo, ind }) => (
+            <div key={frente} className="rounded-2xl border border-zinc-200/80 p-4">
+              <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                <IconeDaFrente frente={frente} size={13} /> {titulo}
+              </p>
+              {ind.total === 0 ? (
+                <p className="mt-2 text-sm text-zinc-500">
+                  {ind.semRegistro ? `${ind.semRegistro} chegaram antes do registro de contato — sem como medir.` : "Nada chegou neste ciclo."}
+                </p>
+              ) : (
+                <>
+                  <p className="mt-2 text-2xl font-semibold tabular-nums text-zinc-900">
+                    {ind.medianaMin !== null ? descreverMinutosUteis(ind.medianaMin) : "—"}
+                    <span className="ml-1.5 text-xs font-normal text-zinc-500">mediana</span>
+                  </p>
+                  <p className={`mt-1 text-sm ${ind.percentualNoPrazo !== null && ind.percentualNoPrazo < 90 ? "font-semibold text-rose-700" : "text-zinc-700"}`}>
+                    {ind.percentualNoPrazo !== null ? `${ind.percentualNoPrazo}% no prazo` : "sem prazo decidido ainda"}
+                  </p>
+                  <p className="mt-0.5 text-xs text-zinc-500">
+                    {ind.contatados} de {ind.total} contatados
+                    {ind.vencidosSemContato ? ` · ${ind.vencidosSemContato} vencido(s) sem contato` : ""}
+                  </p>
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+      </SurfaceCard>
 
       <SurfaceCard title="Pontos de atenção" description="O que a gestão precisa saber, cada um com o lugar em que se resolve.">
         {d.pontos.length === 0 ? (

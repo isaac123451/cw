@@ -5,6 +5,14 @@ import { etapaDasRedes } from "@/lib/models/redes";
 import { isEncerrado, type NpsResponseView } from "@/lib/models/nps";
 import { indicadoresGoogle, type AvaliacaoParaIndicador } from "@/lib/models/avaliacoesGoogle";
 import { isReclameAqui, isSocial } from "@/lib/services/case.service";
+import type { SlaRule } from "@/lib/models/sla";
+import {
+  descreverIndicadorDoPrimeiroContato,
+  primeiroContatoDoNps,
+  primeiroContatoDosCasos,
+  type IndicadorDoPrimeiroContato,
+} from "@/lib/models/primeiroContato";
+import { descreverMinutosUteis, EXPEDIENTE_PADRAO, type Expediente } from "@/lib/services/horasUteis";
 import { abaEm, medirDia } from "@/lib/services/metricas.service";
 import { indicadoresDoGuia, summarize } from "@/lib/services/nps.service";
 import {
@@ -49,6 +57,8 @@ export interface AbaDoRelatorio {
   /** Avaliações nota 10, resolvidas e favoráveis, depois de responder as que faltam. */
   avaliacoesParaOSelo: { necessarias: number; alcancavel: boolean; motivo?: string };
   tempoMedianoMin: number | null;
+  /** Da publicação ao 1º contato registrado, nas reclamações da aba. */
+  primeiroContato: IndicadorDoPrimeiroContato;
 }
 
 export interface DadosDoRelatorio {
@@ -76,6 +86,8 @@ export interface DadosDoRelatorio {
   };
   redes: { entrantes: number; resolvidos: number; abertos: number };
   google: { total: number; notaMedia: number | null; percentualRespondidas: number | null; negativas: number; negativasSemResposta: number };
+  /** O tempo até o 1º contato do que chegou no ciclo, por frente — a meta do documento, medida. */
+  primeiroContato: { ra: IndicadorDoPrimeiroContato; redes: IndicadorDoPrimeiroContato; nps: IndicadorDoPrimeiroContato };
   pontos: { texto: string; href?: string }[];
 }
 
@@ -92,7 +104,13 @@ function mediana(xs: number[]) {
   return s.length % 2 ? s[m] : Math.round((s[m - 1] + s[m]) / 2);
 }
 
-function montarAba(cases: Case[], dia: string, meses: 6 | 12, modo: "vigente" | "proximo"): AbaDoRelatorio {
+interface Relogio {
+  regras: SlaRule[];
+  expediente: Expediente;
+  agora: Date;
+}
+
+function montarAba(cases: Case[], dia: string, meses: 6 | 12, modo: "vigente" | "proximo", relogio: Relogio): AbaDoRelatorio {
   const { casos, raw, resumo, janela } = abaEm(cases, dia, meses, modo);
 
   const alvo = Math.ceil((RA1000_TARGETS.resposta / 100) * raw.received);
@@ -125,6 +143,7 @@ function montarAba(cases: Case[], dia: string, meses: 6 | 12, modo: "vigente" | 
             : undefined,
     },
     tempoMedianoMin: mediana(tempos),
+    primeiroContato: primeiroContatoDosCasos(casos, relogio.regras, { de: janela.inicio, ate: janela.fim }, relogio.agora, relogio.expediente),
   };
 }
 
@@ -134,9 +153,14 @@ export function montarRelatorio(entrada: {
   google: GoogleDoRelatorio[];
   ciclo: Ciclo;
   hoje: string;
+  /** As regras de prazo e o expediente: sem eles, o 1º contato sai sem "no prazo". */
+  regras?: SlaRule[];
+  expediente?: Expediente;
+  agora?: Date;
 }): DadosDoRelatorio {
 
   const { cases, nps, google, ciclo, hoje } = entrada;
+  const relogio: Relogio = { regras: entrada.regras ?? [], expediente: entrada.expediente ?? EXPEDIENTE_PADRAO, agora: entrada.agora ?? new Date() };
   const corrente = hoje >= ciclo.inicio && hoje <= ciclo.fim;
   const ateDia = corrente ? hoje : ciclo.fim;
   const { inicio } = ciclo;
@@ -147,7 +171,7 @@ export function montarRelatorio(entrada: {
     fechados), a de 6 meses que vira vigente no dia 1º — é nela que o que
     se faz agora conta, e é dela a projeção do selo — e a de 12 meses.
   */
-  const abas = [montarAba(cases, ateDia, 6, "vigente"), montarAba(cases, ateDia, 6, "proximo"), montarAba(cases, ateDia, 12, "vigente")];
+  const abas = [montarAba(cases, ateDia, 6, "vigente", relogio), montarAba(cases, ateDia, 6, "proximo", relogio), montarAba(cases, ateDia, 12, "vigente", relogio)];
 
   const anteriorFim = cicloAnterior(ciclo).fim;
   const antes = abaEm(cases, anteriorFim, 6).resumo;
@@ -224,6 +248,11 @@ export function montarRelatorio(entrada: {
       negativas: ind.negativas,
       negativasSemResposta,
     },
+    primeiroContato: {
+      ra: primeiroContatoDosCasos(ra, relogio.regras, { de: inicio, ate: ateDia }, relogio.agora, relogio.expediente),
+      redes: primeiroContatoDosCasos(cases.filter(isSocial), relogio.regras, { de: inicio, ate: ateDia }, relogio.agora, relogio.expediente),
+      nps: primeiroContatoDoNps(nps, { de: inicio, ate: ateDia }, relogio.agora, (iso) => diaNaOperacao(iso), relogio.expediente),
+    },
     pontos: [],
   };
 
@@ -263,6 +292,15 @@ function pontosDeAtencao(d: DadosDoRelatorio, seis: AbaDoRelatorio, proxima: Aba
       texto: `Primeira resposta pública em ${formatElapsed(r.responseMinutes)} na média${seis.tempoMedianoMin !== null ? ` (mediana de ${formatElapsed(seis.tempoMedianoMin)})` : ""} — puxada pelas respondidas muito tarde.`,
       href: "/reclame-aqui/analytics",
     });
+  }
+
+  const frentes = [
+    { nome: "Reclame Aqui", ind: d.primeiroContato.ra, href: "/reclame-aqui" },
+    { nome: "redes", ind: d.primeiroContato.redes, href: "/redes-sociais" },
+  ];
+  for (const { nome, ind, href } of frentes) {
+    if (ind.vencidosSemContato > 0) p.push({ texto: `${ind.vencidosSemContato} atendimento(s) do ciclo em ${nome} sem 1º contato e com o prazo vencido.`, href: "/meu-dia" });
+    else if (ind.percentualNoPrazo !== null && ind.percentualNoPrazo < 90) p.push({ texto: `1º contato no prazo em ${ind.percentualNoPrazo}% dos casos do ciclo em ${nome}.`, href });
   }
 
   if (d.nps.abertosForaDoPrazo > 0) p.push({ texto: `${d.nps.abertosForaDoPrazo} ciclo(s) do NPS com o 1º contato fora do prazo.`, href: "/nps" });
@@ -316,6 +354,7 @@ export function textoDoRelatorio(d: DadosDoRelatorio, analise?: string) {
     `*Selo RA1000:* ${projecao}.`,
     `*No ciclo:* ${d.ra.noCiclo.entrantes} reclamação(ões) nova(s) · ${d.ra.noCiclo.respondidas} respondida(s) · ${d.ra.noCiclo.avaliadas} avaliada(s), ${d.ra.noCiclo.resolvidas} resolvida(s). Em aberto sem resposta: ${d.ra.abertas.semResposta}.`,
     `*NPS do ciclo:* ${d.nps.respostas} resposta(s)${d.nps.nps !== null ? ` · NPS ${d.nps.nps}` : ""} · ${d.nps.detratores} detrator(es)${d.nps.percentualContatados !== null ? `, ${d.nps.percentualContatados}% contatados` : ""}${d.nps.humorMedioDoDetrator !== null ? ` · humor do detrator depois do contato ${ptBR(d.nps.humorMedioDoDetrator)}/5` : ""} · ${d.nps.fechadosNoCiclo} ciclo(s) fechado(s).`,
+    `*1º contato no ciclo:* Reclame Aqui ${descreverIndicadorDoPrimeiroContato(d.primeiroContato.ra, (m) => descreverMinutosUteis(m))} · redes ${descreverIndicadorDoPrimeiroContato(d.primeiroContato.redes, (m) => descreverMinutosUteis(m))} · NPS ${descreverIndicadorDoPrimeiroContato(d.primeiroContato.nps, (m) => descreverMinutosUteis(m))}.`,
     `*Redes sociais:* ${d.redes.entrantes} atendimento(s) · ${d.redes.resolvidos} resolvido(s) · ${d.redes.abertos} em aberto.`,
     `*Google:* ${d.google.total} avaliação(ões)${d.google.notaMedia !== null ? ` · nota média ${ptBR(d.google.notaMedia)}` : ""}${d.google.percentualRespondidas !== null ? ` · ${d.google.percentualRespondidas}% respondidas` : ""}.`,
     "",
