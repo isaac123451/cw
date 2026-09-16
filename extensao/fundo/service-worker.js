@@ -47,6 +47,7 @@ const CAMINHOS = {
   salvarDossie: "/api/extensao/salvar-dossie",
   guardarConversa: "/api/extensao/guardar-conversa",
   tratativa: "/api/extensao/tratativa",
+  conferirResposta: "/api/extensao/conferir-resposta",
   whatsapp: "/api/extensao/whatsapp",
   respostas: "/api/extensao/respostas",
   raNovas: "/api/extensao/ra-novas",
@@ -892,6 +893,24 @@ async function tratar(mensagem) {
 
     const dados = await chamar(
       CAMINHOS.tratativa,
+      {},
+      mensagem.corpo ?? {}
+    );
+
+    return { ok: true, dados };
+  }
+
+  /**
+   * A conferência da resposta pública, antes de publicar (Fase 8.3).
+   *
+   * Manda o texto que está sendo escrito para a própria aplicação, que
+   * é onde moram as regras de dado pessoal e de texto repetido. Nada é
+   * gravado, e a chamada só acontece quando a pessoa para de digitar.
+   */
+  if (mensagem?.tipo === "conferirResposta") {
+
+    const dados = await chamar(
+      CAMINHOS.conferirResposta,
       {},
       mensagem.corpo ?? {}
     );

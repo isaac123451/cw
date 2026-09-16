@@ -961,6 +961,30 @@ com trilha e textos, registrar 1º contato e pedido de avaliação (o
 detalhe passou a mostrar os dois), tipo inventado devolve 400 e caso
 inexistente 404. O caso foi apagado depois.
 
+**Fase 8, parte 2 — a conferência da resposta no HugMe e no Reclame
+Aqui (0.65.0).**
+
+- Enquanto a resposta pública é escrita no portal, um aviso **acima da
+  caixa** diz o que revisar antes de publicar: **dado pessoal** no texto
+  (CPF com dígito verificador, CNPJ, e-mail, telefone, valor e condição
+  negociada) e **texto repetido** ("92% igual à resposta de RA-…"), a
+  regra de ouro do documento. Sem nada disso, ele diz que pode publicar.
+- O aviso traz também **o passo e o prazo** da reclamação aberta, lidos
+  do caso pelo protocolo da página.
+- As regras ficam no servidor (`/api/extensao/conferir-resposta`, com as
+  mesmas funções da ficha) — duas cópias divergiriam no primeiro ajuste.
+  A conferência sai só depois de a pessoa parar de digitar (1,2 s); nada
+  é gravado, nada é publicado.
+- `conteudo/ra-resposta.js` acha a caixa por quatro caminhos, do mais
+  específico ao mais genérico; sem casar nenhum, o aviso não aparece — em
+  vez de grudar no campo errado.
+
+Provas: conferido contra o servidor — um texto com CPF, valor e condição
+devolveu "1 CPF, 1 valor, 1 condição negociada"; um texto limpo, nada; e
+uma resposta já publicada, copiada para outro protocolo, voltou como
+100% igual, com o protocolo e o título da outra. `check:fiacao` com a
+rota nova.
+
 ### Exportar a conversa do WhatsApp (15/09/2026, 0.63.0)
 
 O Isaac: "é preciso ter a possibilidade de exportar uma conversa do
