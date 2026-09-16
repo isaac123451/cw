@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 16/09/2026. Aplicação **0.69.0**, extensão **0.69.0**.
+Atualizado em 16/09/2026. Aplicação **0.70.0**, extensão **0.70.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -49,6 +49,7 @@ workspace junto com os outros cadastros.
 | `npm run check:lugares` | Prova os leitores do Portal Cardápio Web, do Crisp e do Google Perfil da Empresa |
 | `npm run check:painel` | Prova que os sete arquivos do painel se encontram: nome sem dono, ordem de carga, atalho |
 | `npm run bancada:painel` | Abre o painel da extensão fora dela, com dados reais, em http://localhost:3999 (precisa do `npm run dev`) |
+| `npm run check:edicao` | Prova que duas pessoas no mesmo caso não apagam o trabalho uma da outra (contra o banco, com reclamação descartável) |
 | `npm run check:rascunho` | Prova a conferência do rascunho contra as regras do documento (nome, acolhimento, dado pessoal, macro, prazo) |
 | `npm run check:cadastros` | Prova que Times, Metas e Clientes sobrevivem ao recarregamento |
 | `npm run check:nps-etapas` | Prova as etapas e os tipos do NPS como cadastro, contra o banco |
@@ -1097,6 +1098,55 @@ caracteres** antes e depois da divisão (contato 6.026, fila 3.289, NPS
 nenhum erro no console. `check:painel`, `check:fiacao`, `check:escape`,
 `check:dossie`, `check:respostas` e `check:atalho` de pé — as quatro
 últimas leem o painel como texto e passaram a ler os sete como um só.
+
+## Fase 10.1 — edição simultânea sem perda (16/09/2026, 0.70.0)
+
+**O que acontecia.** A tela mandava o caso inteiro em cada gravação.
+Duas pessoas com o mesmo caso aberto: a primeira troca a etapa, a
+segunda — que abriu antes — marca retenção e manda junto a etapa
+**antiga**. O trabalho da primeira desaparecia sem aviso nenhum, e
+ninguém descobria, porque nada falhava.
+
+**O que passa a acontecer.** A tela manda também o retrato de quando
+carregou o caso. Com ele o servidor separa o que **eu** mudei do que
+**mudou no banco** enquanto eu editava:
+
+- **campos diferentes** — grava só os meus e o da outra pessoa fica de
+  pé;
+- **mesmo campo, valores diferentes** — não grava nada e diz quais
+  campos e quando ("Outra pessoa mudou etapa enquanto você editava.
+  Recarregue para ver o que ela fez — nada foi gravado, para não apagar
+  o trabalho dela");
+- **mesmo campo, mesmo valor** — não é conflito, é concordância;
+- **Salvar sem ter mudado nada** — não escreve nem invalida o cache de
+  ninguém.
+
+Vale para salvar a tela do caso, arrastar no quadro e ligar etiqueta. A
+comparação é feita no formato que vai para o banco (`toCaseColumns`),
+então não existe uma segunda tabela de "campo da tela → coluna" para
+ficar desatualizada.
+
+Dois furos achados antes de subir:
+
+- **categoria, subcategoria, responsável e área** moram na tela como
+  nome e no banco como id de outra tabela; fora da comparação, trocar a
+  categoria não aparecia como alteração e simplesmente não gravava
+  (`check:edicao`, primeira rodada);
+- **relato e resposta pública** não vêm na lista do quadro, então o
+  retrato de antes chega sem eles. Comparando assim, toda edição da
+  resposta pública seria recusada como conflito. Para esses dois o
+  retrato vazio quer dizer "não carreguei", e vazio do lado novo não
+  apaga.
+
+Provas: `check:edicao` (novo), contra o banco, numa reclamação
+descartável apagada no fim — campos diferentes mantêm as duas mudanças;
+mesmo campo é recusado, nomeia "etapa" e diz a hora; concordar passa;
+a resposta pública editada pela tela é aceita com a cópia do quadro, e
+gravar outro campo não a apaga. `check:gravacao` e `check:mover` de pé.
+Na tela, com outra reclamação descartável: a etapa foi trocada direto
+no banco ("Aguardando avaliação") enquanto a tela ainda mostrava
+"Novo", e tirar a marca de retenção pela tela gravou só a marca — a
+etapa da outra pessoa ficou.
 
 ## Fase 9 — o agente de IA (16/09/2026, 0.69.0)
 

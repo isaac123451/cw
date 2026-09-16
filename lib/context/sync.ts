@@ -2,6 +2,8 @@
 
 import { notifyGlobal } from "@/lib/context/ToastContext";
 
+import type { ConflitoDeEdicao } from "@/lib/models/edicaoSimultanea";
+
 /**
  * Dispara a gravação sem travar a interface.
  *
@@ -18,6 +20,15 @@ import { notifyGlobal } from "@/lib/context/ToastContext";
 export interface Gravacao {
   ok: boolean;
   erro?: string;
+
+  /**
+   * Alguém alterou o mesmo caso enquanto esta tela editava.
+   *
+   * Não é erro de banco: é a gravação se recusando a apagar o
+   * trabalho da outra pessoa (Fase 10.1). A tela diz quais campos e
+   * oferece recarregar, em vez de mostrar "não foi possível salvar".
+   */
+  conflito?: ConflitoDeEdicao;
 }
 
 /**

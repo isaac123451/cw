@@ -36,6 +36,11 @@ import {
 import { carregarWorkspace } from "@/lib/context/useWorkspace";
 import { RECADO } from "@/lib/models/leitura";
 
+import {
+  fraseDoConflito,
+  type ConflitoDeEdicao,
+} from "@/lib/models/edicaoSimultanea";
+
 const STORAGE_KEY = "cw:casos";
 
 interface CaseDiff {
@@ -397,7 +402,7 @@ export function CaseProvider({
    * no estado local, que é onde ela vive ali.
    */
   function sincronizar(
-    executar: () => Promise<void>
+    executar: () => Promise<void | { ok: boolean; conflito?: ConflitoDeEdicao }>
   ): Promise<Gravacao> {
 
     if (!hasDatabase) {
@@ -405,7 +410,26 @@ export function CaseProvider({
     }
 
     return executar().then(
-      (): Gravacao => {
+      (resposta): Gravacao => {
+
+        /**
+         * Recusa por edição simultânea não é falha de banco (Fase 10.1).
+         *
+         * A gravação se recusou a apagar o trabalho de outra pessoa, e
+         * quem está na tela precisa ler **isso**, e não "não foi
+         * possível salvar" — que manda tentar de novo e, tentando de
+         * novo, apagaria de novo.
+         */
+        if (resposta && resposta.ok === false) {
+          const aviso = resposta.conflito
+            ? fraseDoConflito(resposta.conflito)
+            : "A gravação não foi aceita.";
+
+          setSyncError(aviso);
+
+          return { ok: false, erro: aviso, conflito: resposta.conflito };
+        }
+
         setSyncError(null);
         return { ok: true };
       },
@@ -533,6 +557,22 @@ export function CaseProvider({
   }
 
   function updateCase(data: Case) {
+
+    /**
+     * O retrato de antes vai junto (Fase 10.1).
+     *
+     * `cases` ainda é o que esta sessão carregou — o `setCases` abaixo
+     * só roda depois. Com ele, o servidor separa o que **eu** mudei do
+     * que mudou no banco enquanto eu editava: sem conflito, grava só o
+     * meu e o da outra pessoa fica de pé; com conflito, não grava nada
+     * e diz quais campos.
+     *
+     * Era aqui que o trabalho sumia: a tela mandava o caso inteiro, e
+     * quem salvasse depois desfazia, em silêncio, o que o outro tinha
+     * feito.
+     */
+    const anterior = cases.find((item) => item.id === data.id);
+
     setCases((prev) =>
       prev.map((item) =>
         item.id === data.id
@@ -541,7 +581,7 @@ export function CaseProvider({
       )
     );
 
-    return sincronizar(() => saveCase(data));
+    return sincronizar(() => saveCase(data, { anterior }));
   }
 
   function deleteCase(id: string) {
@@ -588,8 +628,10 @@ export function CaseProvider({
 
     // Mover não mexe em etiqueta: pular a sincronização deixa o arraste
     // com uma ida ao banco em vez de três.
+    /* O retrato de antes vai junto: arrastar não pode desfazer o que
+       outra pessoa mudou no mesmo caso (Fase 10.1). */
     sincronizar(() =>
-      saveCase(movido, { syncTags: false })
+      saveCase(movido, { syncTags: false, anterior: atual })
     );
   }
 
@@ -615,7 +657,8 @@ export function CaseProvider({
       )
     );
 
-    sincronizar(() => saveCase(etiquetado));
+    /* Etiqueta também não pode desfazer o que outra pessoa mudou. */
+    sincronizar(() => saveCase(etiquetado, { anterior: atual }));
   }
 
   const filteredCases = useMemo(() => {

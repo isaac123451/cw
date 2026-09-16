@@ -3,6 +3,12 @@ import {
   SELECAO_DO_PORTAL,
 } from "@/lib/services/atualizacaoDoPortal";
 import { semApagarVazios } from "@/lib/services/semApagar";
+
+import {
+  compararEdicao,
+  rotuloDaColuna,
+  type ConflitoDeEdicao,
+} from "@/lib/models/edicaoSimultanea";
 import { Case } from "@/lib/models/case";
 import {
   Prisma,
@@ -929,6 +935,147 @@ export async function persistCase(
   }
 
   return salvo.id;
+}
+
+/**
+ * Grava **só o que esta pessoa mudou**, e recusa quando pisaria em
+ * cima de outra (Fase 10.1).
+ *
+ * `anterior` é o retrato que a tela tinha quando carregou o caso. Com
+ * ele dá para separar o que eu mudei do que mudou no banco enquanto eu
+ * editava, e as duas listas só se cruzam quando há conflito de verdade.
+ *
+ * - **Sem conflito:** grava as minhas colunas e deixa as dela de pé.
+ *   Duas pessoas no mesmo caso, uma no responsável e outra na
+ *   categoria, terminam com as duas mudanças — que era o que se perdia.
+ * - **Com conflito:** não grava nada e devolve os campos. Apagar o
+ *   trabalho de alguém em silêncio é pior do que pedir para tentar de
+ *   novo.
+ *
+ * As etiquetas entram como uma coluna de mentira (`tags`), porque elas
+ * também se perdiam: a lista inteira ia junto em toda gravação.
+ */
+export async function persistCaseParcial(
+  prisma: PrismaClient,
+  item: Case,
+  anterior: Case,
+  { syncTags = true } = {}
+): Promise<
+  | { ok: true; alterados: string[] }
+  | { ok: false; conflito: ConflitoDeEdicao }
+> {
+
+  const linha = await prisma.case.findUnique({
+    where: { protocol: item.protocol },
+    include: INCLUDE,
+  });
+
+  /* Caso que sumiu do banco: o caminho normal cria de novo. */
+  if (!linha) {
+    await persistCase(prisma, item, { syncTags });
+    return { ok: true, alterados: [] };
+  }
+
+  const atual = toCaseModel(linha);
+
+  /**
+   * As colunas, mais o que não é coluna.
+   *
+   * Categoria, subcategoria, responsável e time moram na tela como
+   * **nome** e no banco como id de outra tabela — `toCaseColumns` não
+   * os conhece. Sem incluí-los aqui, trocar a categoria não aparecia
+   * como alteração nenhuma, e a gravação parcial simplesmente não
+   * gravava (achado pelo `check:edicao`, na primeira rodada). As
+   * etiquetas entram pelo mesmo motivo: são tabela à parte.
+   */
+  const RELACOES = ["category", "subcategory", "owner", "department"] as const;
+
+  const comEtiquetas = (c: Case) => ({
+    ...toCaseColumns(c),
+    tags: [...(c.tags ?? [])].sort(),
+    category: c.category ?? "",
+    subcategory: c.subcategory ?? "",
+    owner: c.owner ?? "",
+    department: c.department ?? "",
+  });
+
+  const colAnterior: Record<string, unknown> = comEtiquetas(anterior);
+  const colNovo: Record<string, unknown> = comEtiquetas(item);
+  const colAtual: Record<string, unknown> = comEtiquetas(atual);
+
+  /*
+    Relato e resposta pública: a lista não traz, a tela busca à parte.
+
+    O retrato de antes vem do quadro, onde os dois chegam vazios; a tela
+    do caso os carrega depois, só no rascunho. Comparando assim, editar a
+    resposta pública parecia "mudou lá" (o banco tem texto, o retrato não)
+    e "mudei eu" ao mesmo tempo — e **toda** edição da resposta seria
+    recusada como conflito. Para esses dois, o retrato vazio quer dizer
+    "não carreguei", e a base de comparação passa a ser o banco.
+
+    E vazio do lado novo não apaga, pela mesma regra de `persistCase`:
+    quem não carregou o texto não pode transformá-lo em nulo.
+  */
+  for (const pesado of ["description", "publicResponse"]) {
+    if (!colAnterior[pesado]) colAnterior[pesado] = colAtual[pesado];
+    if (!colNovo[pesado]) colNovo[pesado] = undefined;
+  }
+
+  const comparacao = compararEdicao(colAnterior, colNovo, colAtual);
+
+  if (comparacao.conflito.length > 0) {
+    return {
+      ok: false,
+      conflito: {
+        campos: [
+          ...new Set(comparacao.conflito.map(rotuloDaColuna)),
+        ],
+        quando: linha.updatedAt?.toISOString(),
+      },
+    };
+  }
+
+  /* Nada a gravar: a tela clicou em Salvar sem ter mudado nada. */
+  if (comparacao.meus.length === 0) {
+    return { ok: true, alterados: [] };
+  }
+
+  const colunas = toCaseColumns(item) as Record<string, unknown>;
+
+  const dados: Record<string, unknown> = {};
+
+  for (const chave of comparacao.meus) {
+    /* `tags` e os nomes das relações não são colunas da tabela. */
+    if (chave === "tags") continue;
+    if ((RELACOES as readonly string[]).includes(chave)) continue;
+    dados[chave] = colunas[chave];
+  }
+
+  /*
+    As relações são resolvidas por nome e viram id — então basta uma
+    delas ter mudado para valer a ida ao banco que as resolve. O
+    estabelecimento entra junto porque `resolverRelacoes` também decide
+    o vínculo por documento.
+  */
+  const mexeuEmRelacao = comparacao.meus.some((c) =>
+    [...RELACOES, "companyName", "establishmentId", "document"].includes(c)
+  );
+
+  const relacoes = mexeuEmRelacao ? await resolverRelacoes(prisma, item) : {};
+
+  if (Object.keys(dados).length > 0 || mexeuEmRelacao) {
+    await prisma.case.update({
+      where: { protocol: item.protocol },
+      data: { ...dados, ...relacoes },
+      select: { id: true },
+    });
+  }
+
+  if (syncTags && comparacao.meus.includes("tags")) {
+    await sincronizarTags(prisma, linha.id, item.tags ?? []);
+  }
+
+  return { ok: true, alterados: comparacao.meus };
 }
 
 /**

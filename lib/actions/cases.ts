@@ -6,6 +6,7 @@ import { unstable_cache, updateTag } from "next/cache";
 import { CASES_TAG } from "@/lib/actions/tags";
 
 import { Case } from "@/lib/models/case";
+import type { ConflitoDeEdicao } from "@/lib/models/edicaoSimultanea";
 
 import {
   falhou,
@@ -26,6 +27,7 @@ import {
   fetchCaseDossier,
   fetchCases,
   persistCase,
+  persistCaseParcial,
   removeCaseByProtocol,
 } from "@/lib/services/case.repository";
 
@@ -198,12 +200,64 @@ export async function loadDossie(protocol: string) {
 
 export async function saveCase(
   item: Case,
-  options?: { syncTags?: boolean }
-) {
+  options?: {
+    syncTags?: boolean;
+    /**
+     * O retrato que a tela tinha quando carregou o caso (Fase 10.1).
+     *
+     * Com ele, a gravação escreve **só o que esta pessoa mudou** e
+     * recusa quando pisaria em cima de outra. Sem ele — criação,
+     * importação, extensão — vale o caminho de sempre, que grava o
+     * caso inteiro.
+     */
+    anterior?: Case;
+  }
+): Promise<{ ok: true } | { ok: false; conflito: ConflitoDeEdicao }> {
 
   const prisma = await autorizado();
 
-  if (!prisma) return;
+  if (!prisma) return { ok: true };
+
+  if (options?.anterior) {
+
+    const r = await persistCaseParcial(
+      prisma,
+      item,
+      options.anterior,
+      { syncTags: options.syncTags ?? true }
+    );
+
+    if (!r.ok) return r;
+
+    /*
+      Nada mudou de fato: não vale invalidar o cache de todo mundo nem
+      disparar webhook. Clicar em Salvar sem ter mexido em nada é
+      comum — a barra aparece por qualquer foco em campo.
+    */
+    if (r.alterados.length === 0) return { ok: true };
+
+    updateTag(CASES_TAG);
+
+    /*
+      O webhook de "caso.avaliado" também sai por aqui.
+
+      A avaliação do consumidor é um campo como outro qualquer na tela,
+      e quem escuta o webhook não tem por que saber por qual caminho a
+      gravação passou.
+    */
+    if (r.alterados.includes("evaluated") && item.evaluated) {
+      after(() =>
+        dispatchWebhookEvent(
+          prisma,
+          "caso.avaliado",
+          toPublicCase(item),
+          item.protocol
+        )
+      );
+    }
+
+    return { ok: true };
+  }
 
   /**
    * Lido antes de gravar só para saber se o caso é novo e se acabou de
@@ -241,6 +295,8 @@ export async function saveCase(
       )
     );
   }
+
+  return { ok: true };
 }
 
 export async function deleteCase(protocol: string) {
