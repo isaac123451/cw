@@ -11,6 +11,17 @@ import { loadWorkspace } from "@/lib/actions/workspace";
 import { fetchCaseByProtocol } from "@/lib/services/case.repository";
 import { isOpen } from "@/lib/services/case.service";
 import { slaStatus } from "@/lib/services/sla.service";
+import { contatosDoCaso } from "@/lib/services/tratativa.service";
+import { trilhaDoCaso } from "@/lib/models/trilha";
+import { pedidoDeAvaliacao } from "@/lib/models/cadencia";
+import {
+  AREAS_INTERNAS,
+  mensagemDeAcionamento,
+  mensagemDeAtualizacao,
+  mensagemDePedidoDeAvaliacao,
+  mensagemPublicaTransparente,
+} from "@/lib/models/mensagens";
+import { custoDoModelo, mensagemDeOferta, ofertaSugerida } from "@/lib/models/negociacao";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -101,6 +112,28 @@ export async function GET(request: Request) {
     take: 20,
   });
 
+  /*
+    O que a extensão precisa para **agir**, e não só para ler (Fase 8.2).
+
+    O passo da vez sai da mesma trilha da ficha (`trilhaDoCaso`), e os
+    textos saem dos mesmos modelos das telas — pedido de avaliação com o
+    lembrete certo da cadência, acionamento no formato do #incidentes,
+    atualização para quem está esperando e a mensagem pública
+    transparente da 5ª tentativa. Um texto montado no painel, por cópia,
+    divergiria do que a aplicação escreve no dia seguinte.
+  */
+  /*
+    O id do modelo é o do portal ("ZzTelaFase1"), não o do banco: os
+    contatos se buscam pela linha do Postgres, achada pelo protocolo.
+  */
+  const linhaDoCaso = await prisma.case.findUnique({ where: { protocol: caso.protocol }, select: { id: true } });
+  const contatos = linhaDoCaso ? await contatosDoCaso(prisma, linhaDoCaso.id).catch(() => []) : [];
+  const passos = trilhaDoCaso(caso, {});
+  const atual = passos.find((p) => p.estado === "atual") ?? null;
+  const cadencia = pedidoDeAvaliacao(caso);
+  const oferta = ofertaSugerida(caso.priority);
+  const quemAssina = usuario?.nome;
+
   return responder(request, {
     protocolo: caso.protocol,
     id: caso.id,
@@ -152,6 +185,51 @@ export async function GET(request: Request) {
 
     urlPortal: caso.raUrl,
     url: `${origem}/reclame-aqui/${caso.id}`,
+
+    /** O passo da vez, para o painel oferecer a ação dele. */
+    trilha: atual
+      ? { id: atual.id, numero: atual.numero, titulo: atual.titulo, detalhe: atual.detalhe ?? "", acao: atual.acao ?? "" }
+      : null,
+
+    /** O que já foi registrado — o painel não oferece o que já está feito. */
+    contatos: {
+      primeiroContatoEm: caso.primeiroContatoEm ?? null,
+      validadoEm: caso.validadoEm ?? null,
+      tentativasSemResposta: caso.tentativasSemResposta ?? 0,
+      pedidosDeAvaliacao: contatos.filter((c) => c.tipo === "pedido-avaliacao").length,
+      ultimoEm: contatos[0]?.em ?? null,
+    },
+
+    /** Os textos prontos, dos mesmos modelos das telas. */
+    textos: {
+      pedidoAvaliacao: mensagemDePedidoDeAvaliacao({
+        nome: caso.customer,
+        numero: Math.max(1, cadencia.numero),
+        raUrl: caso.raUrl,
+        agente: quemAssina,
+      }),
+      atualizacao: mensagemDeAtualizacao({ nome: caso.customer }),
+      publicaTransparente: mensagemPublicaTransparente({ nome: caso.customer }),
+      acionamento: mensagemDeAcionamento({
+        area: AREAS_INTERNAS[0].nome,
+        cliente: caso.customer,
+        estabelecimento: caso.company ?? undefined,
+        assunto: caso.title,
+        tratativa: "contato e solução",
+        prioridade: caso.priority,
+        prazo: sla.label,
+        telefone: caso.phone ?? undefined,
+        raUrl: caso.raUrl ?? undefined,
+      }),
+      oferta: oferta ? mensagemDeOferta({ nome: caso.customer, oferta: oferta.titulo, agente: quemAssina }) : "",
+    },
+
+    /** A oferta que a criticidade permite — quem registra é a aplicação. */
+    oferta: oferta
+      ? { id: oferta.id, titulo: oferta.titulo, custo: custoDoModelo(oferta, null) }
+      : null,
+
+    cadencia: { ativo: cadencia.ativo, numero: cadencia.numero, resumo: cadencia.resumo },
   });
 }
 

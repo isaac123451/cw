@@ -439,6 +439,7 @@
       if (acao === "resumir") resumirConversa(alvo);
       if (acao === "resumir-caso") resumirCaso(alvo);
 
+      if (acao === "tratativa") registrarTratativa(alvo);
       if (acao === "guardar-conversa") confirmarGuardarConversa();
       if (acao === "guardar-conversa-sim") executarGuardarConversa();
       if (acao === "guardar-conversa-nao") {
@@ -3647,6 +3648,115 @@
     }
   }
 
+  /**
+   * Os passos do documento, ao lado da conversa (Fase 8.2).
+   *
+   * O que o caso já tem não aparece: com o 1º contato registrado, o
+   * botão dele sai e fica o que vem depois. Os textos — pedido de
+   * avaliação com o lembrete certo da cadência, acionamento no formato
+   * do #incidentes, atualização e a oferta que a criticidade permite —
+   * vêm prontos do servidor, dos mesmos modelos das telas: um texto
+   * montado aqui divergiria do que a aplicação escreve amanhã.
+   *
+   * Registrar grava pelo mesmo caminho da ficha, então o relógio do
+   * caso e a trilha mudam junto.
+   */
+  function blocoPassosDoDocumento(d) {
+
+    if (!d || !d.protocolo || !podeEscrever(ultimoDado)) return "";
+
+    const c = d.contatos ?? {};
+    const textos = d.textos ?? {};
+
+    const passo = (tipo, rotulo, dica) =>
+      '  <button class="passo" data-acao="tratativa" data-tipo="' +
+      tipo +
+      '" data-protocolo="' +
+      CW.escapar(d.protocolo) +
+      '" title="' +
+      CW.escapar(dica) +
+      '" style="width:100%;margin-top:6px">' +
+      rotulo +
+      '</button>';
+
+    const texto = (rotulo, valor) =>
+      valor
+        ? '  <button class="copiar" data-acao="copiar" data-texto="' + CW.escapar(valor) + '" style="width:100%;margin-top:6px">' + rotulo + '</button>'
+        : "";
+
+    return [
+      '<div class="bloco">',
+      '  <div class="linha">',
+      '    <span class="rotulo">Passos do documento</span>',
+      d.trilha ? '    <span class="tag neutro">agora: ' + CW.escapar(d.trilha.titulo) + '</span>' : "",
+      '  </div>',
+      d.trilha && d.trilha.detalhe ? '  <p class="sub" style="margin:4px 0 2px">' + CW.escapar(d.trilha.detalhe) + '</p>' : "",
+
+      c.primeiroContatoEm
+        ? '  <p class="sub" style="margin:6px 0 0">1º contato registrado.' + (c.tentativasSemResposta ? ' ' + c.tentativasSemResposta + ' tentativa(s) sem resposta.' : "") + '</p>'
+        : passo("contato", "Fiz o 1º contato", "Registra o contato agora, pelo mesmo caminho da ficha"),
+
+      passo("tentativa", "Tentei, sem sucesso", "Entra na cadência de 5 tentativas em 7 dias"),
+      passo("atualizacao", "Mandei uma atualização", "O documento pede não deixar o cliente no vácuo"),
+      texto("Copiar a mensagem de atualização", textos.atualizacao),
+
+      c.validadoEm
+        ? '  <p class="sub" style="margin:6px 0 0">Cliente já confirmou a solução.</p>'
+        : passo("validacao", "Cliente confirmou a solução", "O Passo 6: tudo voltou a funcionar"),
+
+      passo("pedido-avaliacao", "Pedi a avaliação", "O Passo 8, na cadência da documentação"),
+      texto("Copiar o pedido de avaliação", textos.pedidoAvaliacao),
+      texto("Copiar o acionamento para o #incidentes", textos.acionamento),
+
+      (c.tentativasSemResposta ?? 0) >= 5 ? texto("Copiar a mensagem pública transparente", textos.publicaTransparente) : "",
+
+      d.oferta
+        ? '  <p class="sub" style="margin:8px 0 0">Oferta que a criticidade permite: <strong>' + CW.escapar(d.oferta.titulo) + '</strong>. Quem registra é a aplicação.</p>'
+        : "",
+      texto("Copiar a proposta de oferta", textos.oferta),
+
+      '</div>',
+    ]
+      .filter(Boolean)
+      .join("");
+  }
+
+  /** Registra o passo e recarrega o detalhe com o que o servidor devolveu. */
+  async function registrarTratativa(botao) {
+
+    const protocolo = botao.dataset.protocolo;
+    const tipo = botao.dataset.tipo;
+    if (!protocolo || !tipo) return;
+
+    const rotulo = botao.textContent;
+    botao.disabled = true;
+    botao.textContent = "registrando\u2026";
+
+    const resposta = await CW.enviar({
+      tipo: "tratativa",
+      corpo: { protocolo, tipo, canal: canalDoContato() },
+    });
+
+    botao.disabled = false;
+    botao.textContent = rotulo;
+
+    if (!resposta.ok || resposta.dados?.erro) {
+      avisar(resposta.dados?.erro ?? resposta.erro ?? "Não deu para registrar.", "perigo");
+      return;
+    }
+
+    avisar(resposta.dados.rotulo + " registrado em " + protocolo + ".", "ok");
+    abrirDetalhe(protocolo, true);
+  }
+
+  /** Por onde o contato aconteceu, pela página em que o painel está. */
+  function canalDoContato() {
+    const host = location.hostname;
+    if (host.includes("crisp")) return "Crisp";
+    if (host.includes("reclameaqui") || host.includes("hugme")) return "Portal RA";
+    if (host.includes("manychat")) return "Instagram";
+    return "WhatsApp";
+  }
   function desenharDetalhe(d) {
 
     const partes = [
@@ -3688,6 +3798,8 @@
       '  </div>',
       '</div>',
     ];
+
+    partes.push(blocoPassosDoDocumento(d));
 
     /* ---- resumo do caso ---- */
 

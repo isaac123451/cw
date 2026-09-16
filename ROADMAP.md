@@ -933,6 +933,34 @@ descartável: ligar a conversa, registrar o 1º contato (08:30) e a
 validação (09:15) — as horas das mensagens —, e apagar o caso e a
 conversa depois.
 
+**Fase 8, parte 1 — as ações do documento no painel (0.64.0).**
+
+- No painel da extensão, com o caso aberto, o bloco **Passos do
+  documento**: o passo da vez no alto e os botões que registram — "Fiz o
+  1º contato", "Tentei, sem sucesso", "Mandei uma atualização", "Cliente
+  confirmou a solução" e "Pedi a avaliação". Gravam pelo mesmo caminho da
+  ficha (`gravarContato`), então o relógio do caso, a trilha e a cadência
+  de tentativas mudam junto — não existe uma segunda contabilidade dentro
+  da extensão. O que o caso já tem não aparece como botão.
+- **Os textos prontos** vêm do servidor, dos mesmos modelos das telas:
+  pedido de avaliação com o lembrete certo da cadência, acionamento no
+  formato do #incidentes, mensagem de atualização, a pública transparente
+  (a partir da 5ª tentativa) e a proposta da oferta que a criticidade
+  permite. O painel copia; quem registra oferta é a aplicação.
+- Rotas: `/api/extensao/tratativa` (escrita, com o papel conferido) e o
+  `/api/extensao/detalhe` agora devolve trilha, contatos, textos, oferta
+  e cadência.
+
+Achado no caminho: o id do modelo `Case` é o do portal, não o do banco —
+os contatos vinham vazios no detalhe até a busca passar a ser pelo
+protocolo.
+
+Provas: `check:extensao` com o contrato de pé e `check:fiacao` com a
+rota nova. Conferido contra o servidor com um caso descartável: detalhe
+com trilha e textos, registrar 1º contato e pedido de avaliação (o
+detalhe passou a mostrar os dois), tipo inventado devolve 400 e caso
+inexistente 404. O caso foi apagado depois.
+
 ### Exportar a conversa do WhatsApp (15/09/2026, 0.63.0)
 
 O Isaac: "é preciso ter a possibilidade de exportar uma conversa do

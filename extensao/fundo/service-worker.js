@@ -46,6 +46,7 @@ const CAMINHOS = {
   pendencias: "/api/extensao/pendencias",
   salvarDossie: "/api/extensao/salvar-dossie",
   guardarConversa: "/api/extensao/guardar-conversa",
+  tratativa: "/api/extensao/tratativa",
   whatsapp: "/api/extensao/whatsapp",
   respostas: "/api/extensao/respostas",
   raNovas: "/api/extensao/ra-novas",
@@ -873,6 +874,24 @@ async function tratar(mensagem) {
 
     const dados = await chamar(
       CAMINHOS.guardarConversa,
+      {},
+      mensagem.corpo ?? {}
+    );
+
+    return { ok: true, dados };
+  }
+
+  /**
+   * Os passos do documento, registrados do painel (Fase 8.2).
+   *
+   * É escrita: sem cache. O painel recarrega o detalhe com a resposta,
+   * para o relógio e a trilha virem do servidor e não de uma conta
+   * feita dentro da extensão.
+   */
+  if (mensagem?.tipo === "tratativa") {
+
+    const dados = await chamar(
+      CAMINHOS.tratativa,
       {},
       mensagem.corpo ?? {}
     );
