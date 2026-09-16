@@ -15,10 +15,19 @@ export type EstablishmentStatus =
   | "Trial"
   | "Cancelado";
 
-export type EstablishmentPlan =
-  | "Essencial"
-  | "Premium"
-  | "Enterprise";
+/**
+ * O plano da conta: o **nome** de um plano da tabela configurada.
+ *
+ * Era uma lista fixa no código — "Essencial", "Premium", "Enterprise" —,
+ * enquanto a tabela de Configurações → Planos (a mesma do Impacto no
+ * Negócio e das respostas prontas) tem "Mesas", "Delivery" e "Premium".
+ * Duas listas de planos, e a do estabelecimento nunca batia com a que
+ * dá o preço: um cancelamento evitado não tinha de onde tirar o valor.
+ *
+ * Texto vazio é "não informado". Um nome que não está na tabela continua
+ * aparecendo, marcado como fora dela — a conta não perde o que tinha.
+ */
+export type EstablishmentPlan = string;
 
 export interface Establishment {
   id: string;
@@ -77,11 +86,6 @@ export interface Establishment {
   notes?: string;
 }
 
-export const ESTABLISHMENT_PLANS: EstablishmentPlan[] = [
-  "Essencial",
-  "Premium",
-  "Enterprise",
-];
 
 export const ESTABLISHMENT_STATUSES: EstablishmentStatus[] =
   ["Ativo", "Em risco", "Trial", "Cancelado"];
@@ -112,11 +116,80 @@ export const statusTone: Record<
   Cancelado: "bg-zinc-100 text-zinc-600 ring-zinc-200",
 };
 
-export const planTone: Record<EstablishmentPlan, string> = {
-  Essencial: "bg-zinc-100 text-zinc-600 ring-zinc-200",
-  Premium: "bg-violet-50 text-violet-700 ring-violet-100",
-  Enterprise: "bg-amber-50 text-amber-700 ring-amber-100",
-};
+/** O que a plataforma sabe do plano de uma conta, contra a tabela configurada. */
+export interface PlanoDaConta {
+  /** O plano da tabela, quando o nome casa. */
+  plano?: { name: string; priceCents: number };
+  /** "Delivery", "Plano não informado", "Essencial (fora da tabela)". */
+  rotulo: string;
+  situacao: "na-tabela" | "fora-da-tabela" | "nao-informado";
+  tom: string;
+}
+
+function mesmoNome(a: string, b: string) {
+  const limpo = (s: string) =>
+    s.normalize("NFD").replace(/\p{M}/gu, "").trim().toLowerCase();
+  return limpo(a) === limpo(b);
+}
+
+/**
+ * O plano da conta, casado com a tabela de Configurações → Planos.
+ *
+ * Só planos (`kind: "plano"`) entram: módulo é o que se soma por cima,
+ * não o que a conta contrata como base. O casamento ignora acento e
+ * maiúscula — "premium" digitado numa planilha é o Premium da tabela.
+ */
+export function planoDaConta(
+  nome: string | undefined,
+  planos: { name: string; priceCents: number; kind: string }[]
+): PlanoDaConta {
+
+  const texto = String(nome ?? "").trim();
+
+  if (!texto) {
+    return {
+      rotulo: "Plano não informado",
+      situacao: "nao-informado",
+      tom: "bg-zinc-50 text-zinc-500 ring-zinc-200",
+    };
+  }
+
+  const plano = planos.find((p) => p.kind === "plano" && mesmoNome(p.name, texto));
+
+  if (!plano) {
+    return {
+      rotulo: `${texto} (fora da tabela)`,
+      situacao: "fora-da-tabela",
+      tom: "bg-amber-50 text-amber-700 ring-amber-100",
+    };
+  }
+
+  return {
+    plano: { name: plano.name, priceCents: plano.priceCents },
+    rotulo: plano.name,
+    situacao: "na-tabela",
+    tom: "bg-violet-50 text-violet-700 ring-violet-100",
+  };
+}
+
+/**
+ * A mensalidade da conta — a informada, ou a da tabela.
+ *
+ * A informada vale mais: é o que a conta paga de fato, com desconto e
+ * tudo. Sem ela, o preço do plano na tabela é a melhor estimativa, e a
+ * origem vai junto para a tela nunca apresentar estimativa como fato.
+ */
+export function mensalidadeDaConta(
+  conta: { plan?: string; mrr?: number },
+  planos: { name: string; priceCents: number; kind: string }[]
+): { reais: number; origem: "conta" | "tabela" } | null {
+
+  if (conta.mrr && conta.mrr > 0) return { reais: conta.mrr, origem: "conta" };
+
+  const doPlano = planoDaConta(conta.plan, planos).plano;
+
+  return doPlano ? { reais: doPlano.priceCents / 100, origem: "tabela" } : null;
+}
 
 /**
  * Só os dígitos do documento, ou `undefined`.

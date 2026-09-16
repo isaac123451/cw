@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 16/09/2026. Aplicação **0.72.0**, extensão **0.72.0**.
+Atualizado em 16/09/2026. Aplicação **0.73.0**, extensão **0.73.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1099,6 +1099,36 @@ caracteres** antes e depois da divisão (contato 6.026, fila 3.289, NPS
 nenhum erro no console. `check:painel`, `check:fiacao`, `check:escape`,
 `check:dossie`, `check:respostas` e `check:atalho` de pé — as quatro
 últimas leem o painel como texto e passaram a ler os sete como um só.
+
+### Planos: a conta, o Impacto e a tabela falam do mesmo plano (16/09/2026, 0.73.0)
+
+O Isaac: "os planos no impacto no negócio estão desatualizados e não está
+sendo conforme as configurações".
+
+A tabela de Configurações → Planos e o Impacto já liam a mesma tabela. O
+que não batia era em volta dela:
+
+- **O estabelecimento tinha uma lista de planos fixa no código** —
+  "Essencial", "Premium", "Enterprise" — enquanto a tabela tem Mesas,
+  Delivery e Premium. As 239 contas importadas estavam como "Essencial",
+  um plano que a tabela não tem. Agora o plano da conta é escolhido da
+  tabela configurada (escolher preenche a mensalidade, se vazia); o que
+  não está nela aparece como "(fora da tabela)", sem ser apagado; e a
+  importação deixou de criar o plano fantasma.
+- **A receita recorrente dizia R$ 0** com a tabela preenchida: somava só
+  a mensalidade informada, vazia em todas. Passa a somar a informada ou,
+  sem ela, o preço do plano — e diz quantas contas são estimativa pela
+  tabela e quantas não têm plano nem mensalidade (hoje, as 239).
+- **O lançamento de impacto arredondava o preço para reais inteiros**:
+  Delivery R$ 209,99 virava 210, e doze meses 2.520 em vez de 2.519,88.
+  Agora vão os centavos, e o plano da conta aparece primeiro, marcado,
+  quando o lançamento sai de um estabelecimento.
+
+**O que fica com você:** o plano real de cada conta não está em planilha
+nenhuma; a tela mostra quais estão sem plano para serem corrigidas.
+
+Provas: `check:planos` (novo). Na tela: estabelecimentos com
+"Essencial (fora da tabela)" e "239 conta(s) sem plano nem mensalidade".
 
 ### Três defeitos relatados (16/09/2026, 0.72.0)
 

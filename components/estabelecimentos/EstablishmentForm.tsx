@@ -20,11 +20,12 @@ import {
   Establishment,
   EstablishmentPlan,
   EstablishmentStatus,
-  ESTABLISHMENT_PLANS,
   ESTABLISHMENT_SEGMENTS,
   ESTABLISHMENT_STATUSES,
 } from "@/lib/models/establishment";
 import { hojeNaOperacao } from "@/lib/services/reputation.service";
+import { usePlans } from "@/lib/hooks/usePlans";
+import { precoEmReais } from "@/lib/models/plan";
 
 const UFS = [
   "AC", "AL", "AM", "AP", "BA", "CE", "DF", "ES", "GO",
@@ -111,9 +112,26 @@ export default function EstablishmentForm({
   const [state, setState] = useState(
     editing?.state ?? ""
   );
+  /*
+    Vazio é "não informado". Era "Essencial" por padrão — um plano que não
+    existe na tabela configurada, e que as 239 contas importadas herdaram.
+  */
   const [plan, setPlan] = useState<EstablishmentPlan>(
-    editing?.plan ?? "Essencial"
+    editing?.plan ?? ""
   );
+
+  /** Os planos da tabela de Configurações → Planos — a mesma do Impacto. */
+  const [tabelaDePlanos] = usePlans();
+
+  const planosVendaveis = tabelaDePlanos
+    .filter((item) => item.kind === "plano" && item.active)
+    .sort((a, b) => a.order - b.order);
+
+  /* O plano que a conta já tinha e não está mais na tabela: continua escolhível. */
+  const planoForaDaTabela =
+    plan !== "" && !planosVendaveis.some((item) => item.name === plan)
+      ? plan
+      : "";
   const [status, setStatus] =
     useState<EstablishmentStatus>(
       editing?.status ?? "Ativo"
@@ -344,27 +362,43 @@ export default function EstablishmentForm({
 
         </div>
 
-        <Field label="Plano">
+        <Field
+          label="Plano"
+          hint={
+            planoForaDaTabela
+              ? `"${planoForaDaTabela}" não está na tabela de planos. Escolha um dos planos configurados — ou corrija a tabela em Configurações → Planos.`
+              : "Da tabela de Configurações → Planos, a mesma do Impacto no Negócio. Escolher um plano preenche a mensalidade, se ela estiver vazia."
+          }
+        >
 
-          <div className="flex items-center rounded-xl border border-zinc-200 p-1">
+          <select
+            value={plan}
+            onChange={(e) => {
+              const nome = e.target.value;
+              setPlan(nome);
 
-            {ESTABLISHMENT_PLANS.map((item) => (
+              /* Sem mensalidade informada, o preço da tabela entra como ponto de partida. */
+              const escolhido = planosVendaveis.find((item) => item.name === nome);
+              if (escolhido && mrr.trim() === "") {
+                setMrr((escolhido.priceCents / 100).toFixed(2).replace(".", ","));
+              }
+            }}
+            className={inputClass}
+          >
+            <option value="">Não informado</option>
 
-              <button
-                key={item}
-                onClick={() => setPlan(item)}
-                className={`flex-1 rounded-lg py-2 text-xs font-medium transition-colors ${
-                  plan === item
-                    ? "bg-violet-700 text-white"
-                    : "text-zinc-600 hover:bg-zinc-100"
-                }`}
-              >
-                {item}
-              </button>
-
+            {planosVendaveis.map((item) => (
+              <option key={item.id} value={item.name}>
+                {item.name} — {precoEmReais(item.priceCents)}/mês
+              </option>
             ))}
 
-          </div>
+            {planoForaDaTabela && (
+              <option value={planoForaDaTabela}>
+                {planoForaDaTabela} (fora da tabela)
+              </option>
+            )}
+          </select>
 
         </Field>
 

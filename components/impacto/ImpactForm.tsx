@@ -73,10 +73,22 @@ export default function ImpactForm({
    * desconto negociado existem —, e a diferença é que o número passa a
    * ter procedência.
    */
+  /*
+    O plano da conta vem primeiro, marcado.
+
+    Aberto a partir de um estabelecimento, o lançamento já sabe o plano
+    que a conta contrata — é o valor de um cancelamento evitado ali. Sem
+    destacar, a pessoa escolhia de memória entre os três.
+  */
+  const planoDaEstab = presetEstablishmentId
+    ? establishments.find((item) => item.id === presetEstablishmentId)?.plan ?? ""
+    : "";
+
   const vendaveis = planos
     .filter((item) => item.active)
     .sort(
       (a, b) =>
+        Number(b.name === planoDaEstab) - Number(a.name === planoDaEstab) ||
         a.kind.localeCompare(b.kind) || a.order - b.order
     );
 
@@ -120,7 +132,8 @@ export default function ImpactForm({
     editing?.description ?? ""
   );
   const [amount, setAmount] = useState(
-    editing ? String(Math.abs(editing.amount)) : ""
+    /* Com vírgula: o campo lê ponto como milhar, e "169.99" viraria 16.999. */
+    editing ? Math.abs(editing.amount).toFixed(2).replace(".", ",") : ""
   );
   const [date, setDate] = useState(
     editing?.date ?? preset?.createdAt ?? ""
@@ -202,7 +215,13 @@ export default function ImpactForm({
       type,
       company: company.trim(),
       description: description.trim(),
-      amount: Math.round(valor) * sinal,
+      /*
+        Centavos, e não reais inteiros. Era `Math.round(valor)`: o
+        Delivery de R$ 209,99 virava 210 e o contrato de doze meses 2.520
+        em vez de 2.519,88 — o total do Impacto nunca batia com a tabela
+        de planos, e o banco guarda centavos desde sempre.
+      */
+      amount: (Math.round(valor * 100) / 100) * sinal,
       owner: session?.name ?? "Operação",
       date,
       relatedCase: caseId.trim() || undefined,
@@ -342,6 +361,11 @@ export default function ImpactForm({
                         <span className="ml-1 text-[10px] uppercase tracking-wide text-zinc-400">
                           {item.kind}
                         </span>
+                        {item.kind === "plano" && item.name === planoDaEstab && (
+                          <span className="ml-1 rounded bg-violet-50 px-1 text-[10px] font-semibold text-violet-700">
+                            plano da conta
+                          </span>
+                        )}
                       </span>
 
                       <span className="flex shrink-0 items-center gap-1">
@@ -349,13 +373,7 @@ export default function ImpactForm({
                         <button
                           type="button"
                           onClick={() =>
-                            setAmount(
-                              String(
-                                Math.round(
-                                  item.priceCents / 100
-                                )
-                              )
-                            )
+                            setAmount((item.priceCents / 100).toFixed(2).replace(".", ","))
                           }
                           className="rounded-md border border-zinc-200 px-1.5 py-0.5 font-medium text-zinc-600 transition-colors hover:border-violet-300 hover:text-violet-700"
                         >
@@ -371,14 +389,7 @@ export default function ImpactForm({
                         <button
                           type="button"
                           onClick={() =>
-                            setAmount(
-                              String(
-                                Math.round(
-                                  (item.priceCents * 12) /
-                                    100
-                                )
-                              )
-                            )
+                            setAmount((item.priceCents * 12 / 100).toFixed(2).replace(".", ","))
                           }
                           className="rounded-md border border-zinc-200 px-1.5 py-0.5 font-medium text-zinc-600 transition-colors hover:border-violet-300 hover:text-violet-700"
                         >

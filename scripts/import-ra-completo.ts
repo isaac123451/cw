@@ -1129,12 +1129,13 @@ async function main() {
         portalUrl: e.portalUrl ?? null,
 
         /**
-         * Plano e situação não vêm de planilha nenhuma. "Ativo" e
-         * "Essencial" são o que o modelo exige; quem souber o real
-         * corrige na tela, e o valor de partida não finge precisão que
-         * não existe.
+         * Plano e situação não vêm de planilha nenhuma. "Ativo" é o que
+         * o modelo exige; o plano fica **vazio** ("não informado"). Era
+         * "Essencial", que não existe na tabela de Configurações → Planos
+         * — as 239 contas herdaram um plano fantasma que o Impacto não
+         * tinha como precificar. Quem souber o real escolhe na tela.
          */
-        plan: "Essencial",
+        plan: "",
         status: "Ativo",
 
         notes:

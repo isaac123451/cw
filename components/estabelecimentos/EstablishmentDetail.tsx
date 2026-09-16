@@ -57,9 +57,12 @@ import { ptBR } from "@/lib/services/reputation.service";
 
 import {
   Establishment,
-  planTone,
+  mensalidadeDaConta,
+  planoDaConta,
   statusTone,
 } from "@/lib/models/establishment";
+
+import { usePlans } from "@/lib/hooks/usePlans";
 
 import { kindTone } from "@/lib/models/client";
 
@@ -98,6 +101,10 @@ export default function EstablishmentDetail({
   }
   const { clients } = useClients();
   const { records, createRecord } = useImpact();
+
+  /** A tabela de Configurações → Planos — a mesma do Impacto no Negócio. */
+  const [planos] = usePlans();
+
 
   const {
     findEstablishment,
@@ -193,6 +200,9 @@ export default function EstablishmentDetail({
     );
   }
 
+  const plano = planoDaConta(establishment.plan, planos);
+  const mensalidade = mensalidadeDaConta(establishment, planos);
+
   function salvar(
     data: EstablishmentDraft | Establishment
   ) {
@@ -222,11 +232,11 @@ export default function EstablishmentDetail({
           }`
         : "—",
     ],
-    ["Plano", establishment.plan],
+    ["Plano", plano.rotulo],
     [
       "Mensalidade",
-      establishment.mrr
-        ? `${money.format(establishment.mrr)}/mês`
+      mensalidade
+        ? `${money.format(mensalidade.reais)}/mês${mensalidade.origem === "tabela" ? " (pela tabela de planos)" : ""}`
         : "—",
     ],
     ["Cliente desde", br(establishment.startedAt)],
@@ -300,11 +310,14 @@ export default function EstablishmentDetail({
         </span>
 
         <span
-          className={`rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${
-            planTone[establishment.plan]
-          }`}
+          className={`rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${plano.tom}`}
+          title={
+            plano.situacao === "fora-da-tabela"
+              ? "Este plano não está na tabela de Configurações → Planos. Edite a conta e escolha um plano configurado."
+              : undefined
+          }
         >
-          Plano {establishment.plan}
+          {plano.situacao === "na-tabela" ? `Plano ${plano.rotulo}` : plano.rotulo}
         </span>
 
         {establishment.phone && (

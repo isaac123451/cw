@@ -1,6 +1,6 @@
 {
   "name": "cw-reputacao",
-  "version": "0.72.0",
+  "version": "0.73.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -107,7 +107,8 @@
     "check:painel": "node scripts/check-painel.js",
     "check:rascunho": "tsx scripts/check-rascunho.ts",
     "check:edicao": "tsx scripts/check-edicao.ts",
-    "check:gravacoes": "tsx --conditions=react-server scripts/check-gravacoes.ts"
+    "check:gravacoes": "tsx --conditions=react-server scripts/check-gravacoes.ts",
+    "check:planos": "tsx scripts/check-planos.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",

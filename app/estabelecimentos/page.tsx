@@ -27,6 +27,7 @@ import EstablishmentForm from "@/components/estabelecimentos/EstablishmentForm";
 
 import { useCases } from "@/lib/context/CaseContext";
 import { useImpact } from "@/lib/context/ImpactContext";
+import { usePlans } from "@/lib/hooks/usePlans";
 import {
   EstablishmentDraft,
   useEstablishments,
@@ -38,7 +39,8 @@ import {
   Establishment,
   EstablishmentStatus,
   ESTABLISHMENT_STATUSES,
-  planTone,
+  mensalidadeDaConta,
+  planoDaConta,
   statusTone,
 } from "@/lib/models/establishment";
 
@@ -78,6 +80,9 @@ export default function EstabelecimentosPage() {
 
   const { cases } = useCases();
   const { records } = useImpact();
+
+  /** A tabela de Configurações → Planos: é dela que sai o plano e, sem mensalidade, o valor. */
+  const [planos] = usePlans();
 
   const {
     establishments,
@@ -168,24 +173,33 @@ export default function EstabelecimentosPage() {
       (item) => item.status === "Em risco"
     );
 
+    /*
+      A mensalidade informada, ou a da tabela de planos.
+
+      Somava só `mrr`, que está vazio nas 239 contas importadas — a
+      receita recorrente dizia R$ 0 com a tabela de planos preenchida ao
+      lado. Agora conta vale o que foi informado; sem isso, o preço do
+      plano; e a tela diz quanto do total é estimativa pela tabela.
+    */
+    const valor = (item: (typeof establishments)[number]) =>
+      mensalidadeDaConta(item, planos);
+
+    const naoCanceladas = establishments.filter((item) => item.status !== "Cancelado");
+
     return {
       ativos,
       emRisco: emRisco.length,
 
-      mrr: establishments
-        .filter((item) => item.status !== "Cancelado")
-        .reduce(
-          (sum, item) => sum + (item.mrr ?? 0),
-          0
-        ),
+      mrr: naoCanceladas.reduce((sum, item) => sum + (valor(item)?.reais ?? 0), 0),
 
-      mrrEmRisco: emRisco.reduce(
-        (sum, item) => sum + (item.mrr ?? 0),
-        0
-      ),
+      pelaTabela: naoCanceladas.filter((item) => valor(item)?.origem === "tabela").length,
+
+      semValor: naoCanceladas.filter((item) => !valor(item)).length,
+
+      mrrEmRisco: emRisco.reduce((sum, item) => sum + (valor(item)?.reais ?? 0), 0),
     };
 
-  }, [establishments]);
+  }, [establishments, planos]);
 
   const semVinculo = useMemo(
     () =>
@@ -248,9 +262,15 @@ export default function EstabelecimentosPage() {
 
           <StatTile
             label="Receita recorrente"
-            description="Soma da mensalidade das contas não canceladas."
+            description="Soma da mensalidade das contas não canceladas — a informada na conta ou, sem ela, o preço do plano na tabela de Configurações → Planos."
             value={money.format(metrics.mrr)}
-            hint="mensalidade somada"
+            hint={
+              metrics.semValor > 0
+                ? `${metrics.semValor} conta(s) sem plano nem mensalidade`
+                : metrics.pelaTabela > 0
+                  ? `${metrics.pelaTabela} pela tabela de planos`
+                  : "mensalidade somada"
+            }
             icon={PiggyBank}
             tone="success"
           />
@@ -483,14 +503,23 @@ export default function EstabelecimentosPage() {
                       {establishment.status}
                     </span>
 
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ring-inset ${
-                        planTone[establishment.plan]
-                      }`}
-                      title={`Plano contratado: ${establishment.plan}`}
-                    >
-                      {establishment.plan}
-                    </span>
+                    {(() => {
+                      const conta = planoDaConta(establishment.plan, planos);
+                      return (
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ring-inset ${conta.tom}`}
+                          title={
+                            conta.situacao === "fora-da-tabela"
+                              ? "Este plano não está na tabela de Configurações → Planos."
+                              : conta.situacao === "nao-informado"
+                                ? "Plano não informado nesta conta."
+                                : `Plano contratado: ${conta.rotulo}`
+                          }
+                        >
+                          {conta.rotulo}
+                        </span>
+                      );
+                    })()}
 
                     {establishment.mrr ? (
                       <span
