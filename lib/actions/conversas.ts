@@ -18,7 +18,19 @@ import {
 } from "@/lib/services/conversas.service";
 import { gravarContato, problemaDoContato } from "@/lib/services/tratativa.service";
 
-import { assinatura, chaveDoConteudo, omitirDadosBancarios, type ConversaResumo, type ConversaView, type MensagemRecebida } from "@/lib/models/conversa";
+import * as XLSX from "xlsx";
+
+import {
+  assinatura,
+  chaveDoConteudo,
+  omitirDadosBancarios,
+  planilhaDaConversa,
+  textoDaConversaExportada,
+  type ConversaResumo,
+  type ConversaView,
+  type MensagemRecebida,
+} from "@/lib/models/conversa";
+import { hojeNaOperacao } from "@/lib/services/reputation.service";
 
 /**
  * Conversas do WhatsApp guardadas: a tela de conversas e a importação do
@@ -339,6 +351,53 @@ export async function conversasGuardadasDe(alvo: { protocolo?: string; npsId?: s
   } catch (erro) {
     console.error("[conversas] do registro", erro);
     return { ok: false, erro: "Não foi possível ler as conversas guardadas." };
+  }
+}
+
+/**
+ * A conversa como arquivo: .txt no formato do WhatsApp ou .xlsx.
+ *
+ * O .txt é o mesmo formato do "Exportar conversa" — abre em qualquer
+ * lugar, dá para anexar num chamado ou num processo, e **volta para cá**
+ * pela importação, sem duplicar o que já está guardado. O .xlsx é para
+ * quem vai ler em planilha: uma mensagem por linha, com data, hora,
+ * quem falou e de onde a mensagem veio.
+ */
+export async function exportarConversa(
+  id: string,
+  formato: "txt" | "xlsx"
+): Promise<{ ok: true; arquivo: string; nome: string; mensagens: number } | Falha> {
+  const ctx = await tryRole("LEITURA", "conversas");
+  if (!ctx) return { ok: false, erro: "Sem sessão ou sem acesso às conversas." };
+
+  try {
+    const conversa = await ler(ctx.prisma, id);
+    if (!conversa) return { ok: false, erro: "Esta conversa não existe mais." };
+    if (conversa.lista.length === 0) return { ok: false, erro: "A conversa não tem mensagens para exportar." };
+
+    const usuario = await ctx.prisma.user.findUnique({ where: { id: ctx.userId }, select: { name: true } });
+    const quem = usuario?.name ?? "Operação";
+
+    /* O nome do arquivo é o do WhatsApp: é por ele que a importação reconhece o contato. */
+    const contato = (conversa.contatoNome || "contato").replace(/[\/:*?"<>|]/g, "-").slice(0, 60);
+    const base = `Conversa do WhatsApp com ${contato} — ${hojeNaOperacao()}`;
+
+    if (formato === "txt") {
+      const texto = textoDaConversaExportada(conversa, { exportadaPor: quem, exportadaEm: new Date().toISOString() });
+      return { ok: true, arquivo: Buffer.from(texto, "utf8").toString("base64"), nome: `${base}.txt`, mensagens: conversa.lista.length };
+    }
+
+    const sheet = XLSX.utils.json_to_sheet(planilhaDaConversa(conversa));
+    sheet["!cols"] = [{ wch: 12 }, { wch: 8 }, { wch: 10 }, { wch: 22 }, { wch: 90 }, { wch: 18 }];
+    sheet["!freeze"] = { xSplit: 0, ySplit: 1 };
+    const book = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(book, sheet, "Conversa");
+    const buffer = XLSX.write(book, { type: "buffer", bookType: "xlsx" }) as Buffer;
+
+    return { ok: true, arquivo: buffer.toString("base64"), nome: `${base}.xlsx`, mensagens: conversa.lista.length };
+  } catch (erro) {
+    console.error("[conversas] exportar", erro);
+    return { ok: false, erro: "Não foi possível montar o arquivo agora. Tente de novo em instantes." };
   }
 }
 

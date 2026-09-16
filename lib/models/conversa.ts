@@ -268,6 +268,73 @@ export function evidenciaDaConversa(lista: MensagemView[]): EvidenciaDaConversa 
 }
 
 /* ============================================================
+   EXPORTAR
+============================================================ */
+
+/** "14/09/2026 10:32" — o carimbo do arquivo que o WhatsApp gera. */
+function carimboDoExport(iso?: string | null) {
+  if (!iso) return "";
+  const { dia, min } = paredeDe(new Date(iso));
+  return `${dia.slice(8, 10)}/${dia.slice(5, 7)}/${dia.slice(0, 4)} ${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
+}
+
+/**
+ * A conversa como arquivo de texto, no formato do "Exportar conversa"
+ * do WhatsApp.
+ *
+ * É de propósito: além de ser o formato que todo mundo já sabe ler e
+ * que abre em qualquer lugar, ele **volta para cá** — a mesma tela que
+ * importa o arquivo do WhatsApp lê este, e a junção sem repetir
+ * reconhece as mensagens que já estão guardadas.
+ *
+ * O cabeçalho vem antes, separado por uma linha em branco: quem é o
+ * contato, os vínculos, o resumo salvo e quem exportou. A leitura do
+ * arquivo ignora linhas sem data no começo, então ele não atrapalha a
+ * volta.
+ */
+export function textoDaConversaExportada(
+  conversa: ConversaView,
+  contexto: { exportadaPor: string; exportadaEm: string }
+): string {
+  const nosso = conversa.nosNome?.trim() || "Reputação (CW)";
+  const doCliente = conversa.contatoNome?.trim() || (conversa.telefone ? `+${conversa.telefone}` : "Cliente");
+
+  const cabecalho = [
+    `Conversa do WhatsApp com ${doCliente}${conversa.telefone ? ` (+${conversa.telefone})` : ""}`,
+    `${conversa.mensagens} mensagem(ns) · guardada no CW Reputação por ${conversa.guardadaPor}`,
+    conversa.caso ? `Caso: ${conversa.caso.protocolo} (${conversa.caso.frente})` : "",
+    conversa.nps ? `NPS: ${conversa.nps.cliente} — nota ${conversa.nps.nota}` : "",
+    conversa.estabelecimento ? `Estabelecimento: ${conversa.estabelecimento.nome}` : "",
+    conversa.resumo ? `Resumo salvo: ${conversa.resumo.replace(/s+/g, " ")}` : "",
+    `Exportada por ${contexto.exportadaPor} em ${carimboDoExport(contexto.exportadaEm)}. Dados bancários e de cartão foram omitidos quando a conversa foi guardada.`,
+    "",
+  ].filter((l) => l !== "");
+
+  const linhas = conversa.lista.map((m) => {
+    const quem = m.de === "nos" ? nosso : m.de === "sistema" ? "" : m.autor?.trim() || doCliente;
+    const inicio = `${carimboDoExport(m.em) || carimboDoExport(conversa.atualizadoEm)} - `;
+    return `${inicio}${quem ? `${quem}: ` : ""}${m.texto}`;
+  });
+
+  return [...cabecalho, ...linhas].join("\n");
+}
+
+/** As linhas da planilha — uma mensagem por linha, com a hora de Brasília separada. */
+export function planilhaDaConversa(conversa: ConversaView) {
+  return conversa.lista.map((m) => {
+    const carimbo = carimboDoExport(m.em);
+    return {
+      Data: carimbo.slice(0, 10),
+      Hora: carimbo.slice(11),
+      Quem: m.de === "nos" ? "Nós" : m.de === "sistema" ? "Sistema" : "Cliente",
+      Autor: m.autor ?? "",
+      Mensagem: m.texto,
+      Origem: m.origem === "arquivo" ? "Arquivo exportado" : "Extensão",
+    };
+  });
+}
+
+/* ============================================================
    O QUE NÃO SE GUARDA
 ============================================================ */
 

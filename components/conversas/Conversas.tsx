@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
-import { Building2, FileUp, Link2, Loader2, MessageCircle, Search, Sparkles, Trash2, X } from "lucide-react";
+import { Building2, FileDown, FileSpreadsheet, FileUp, Link2, Loader2, MessageCircle, Search, Sparkles, Trash2, X } from "lucide-react";
 
 import PageHeading from "@/components/shared/PageHeading";
 import { ConfirmDelete } from "@/components/shared/Modal";
@@ -19,6 +19,7 @@ import { useToast } from "@/lib/context/ToastContext";
 import {
   buscarParaVincular,
   excluirConversa,
+  exportarConversa,
   lerConversa,
   listarConversas,
   resumirConversa,
@@ -285,9 +286,12 @@ function DetalheDaConversa({
             {c.mensagens} mensagens · guardada por {c.guardadaPor}
           </p>
         </div>
-        <button type="button" onClick={onExcluir} aria-label="Excluir a conversa" title="Excluir a conversa" className="rounded-xl p-2 text-zinc-400 transition-colors hover:bg-rose-50 hover:text-rose-600">
-          <Trash2 size={15} />
-        </button>
+        <div className="flex items-center gap-1.5">
+          <ExportarConversa conversa={c} />
+          <button type="button" onClick={onExcluir} aria-label="Excluir a conversa" title="Excluir a conversa" className="rounded-xl p-2 text-zinc-400 transition-colors hover:bg-rose-50 hover:text-rose-600">
+            <Trash2 size={15} />
+          </button>
+        </div>
       </header>
 
       <Vinculos conversa={c} onMudou={onMudou} />
@@ -299,6 +303,70 @@ function DetalheDaConversa({
         <div ref={fim} />
       </div>
     </article>
+  );
+}
+
+/**
+ * Baixar a conversa: .txt no formato do WhatsApp ou .xlsx.
+ *
+ * O .txt é o mesmo formato do "Exportar conversa" do WhatsApp — serve
+ * para anexar num chamado, mandar para o jurídico, e volta para cá pela
+ * importação sem duplicar nada. O arquivo é montado no servidor e baixa
+ * direto, sem passar por endereço público.
+ */
+function ExportarConversa({ conversa }: { conversa: ConversaView }) {
+  const { notify } = useToast();
+  const [baixando, setBaixando] = useState<"txt" | "xlsx" | null>(null);
+
+  async function baixar(formato: "txt" | "xlsx") {
+    setBaixando(formato);
+    try {
+      const r = await exportarConversa(conversa.id, formato);
+      if (!r.ok) return notify({ tone: "error", title: "Não deu para exportar", detail: r.erro });
+
+      const bytes = Uint8Array.from(atob(r.arquivo), (ch) => ch.charCodeAt(0));
+      const url = URL.createObjectURL(
+        new Blob([bytes], {
+          type: formato === "txt" ? "text/plain;charset=utf-8" : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        })
+      );
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = r.nome;
+      link.click();
+      URL.revokeObjectURL(url);
+
+      notify({ tone: "success", title: `${r.mensagens} mensagem(ns) exportada(s)`, detail: r.nome });
+    } catch {
+      notify({ tone: "error", title: "Sem resposta do servidor", detail: "O arquivo não foi gerado." });
+    } finally {
+      setBaixando(null);
+    }
+  }
+
+  const botao = "flex items-center gap-1.5 rounded-xl px-2.5 py-2 text-xs font-medium text-zinc-600 ring-1 ring-inset ring-zinc-200 transition-colors hover:bg-zinc-50 disabled:opacity-50";
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => baixar("txt")}
+        disabled={baixando !== null}
+        title="Baixa a conversa em .txt, no formato do “Exportar conversa” do WhatsApp"
+        className={botao}
+      >
+        {baixando === "txt" ? <Loader2 size={13} className="animate-spin" /> : <FileDown size={13} />} .txt
+      </button>
+      <button
+        type="button"
+        onClick={() => baixar("xlsx")}
+        disabled={baixando !== null}
+        title="Baixa a conversa em planilha, uma mensagem por linha"
+        className={botao}
+      >
+        {baixando === "xlsx" ? <Loader2 size={13} className="animate-spin" /> : <FileSpreadsheet size={13} />} .xlsx
+      </button>
+    </>
   );
 }
 

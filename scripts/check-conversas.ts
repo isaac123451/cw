@@ -16,10 +16,13 @@ import {
   contatoDoNomeDoArquivo,
   evidenciaDaConversa,
   instanteDoCarimbo,
+  planilhaDaConversa,
+  textoDaConversaExportada,
   lerExportDoWhatsApp,
   mensagensDoArquivo,
   omitirDadosBancarios,
   palpiteDoNosso,
+  type ConversaView,
 } from "../lib/models/conversa";
 import { textoDoZip } from "../lib/models/zipDoWhatsApp";
 import { paredeDe } from "../lib/services/horasUteis";
@@ -119,6 +122,54 @@ const brasilia = (iso: string) => {
   confere("mensagem nossa sem resposta é tentativa, não 1º contato", evidenciaDaConversa(soNos).primeiroContato, null);
   const clientePrimeiro = [{ id: "a", de: "cliente" as const, texto: "obrigado, funcionou", em: "2026-09-14T13:00:00.000Z", origem: "arquivo" as const }];
   confere("\"funcionou\" antes de qualquer mensagem nossa não é validação", evidenciaDaConversa(clientePrimeiro).validacaoSugerida, null);
+
+
+  console.log("\n— Exportar a conversa —");
+  const guardada: ConversaView = {
+    id: "c1",
+    contatoNome: "Maria Silva",
+    telefone: "5527999996862",
+    mensagens: 4,
+    temResumo: true,
+    guardadaPor: "Carlos Isaac",
+    atualizadoEm: "2026-09-14T14:00:00.000Z",
+    nosNome: "Reputação CW",
+    resumo: "Cardápio não abria; era o horário de funcionamento.",
+    caso: { id: "x", protocolo: "RA-123", frente: "Reclame Aqui" },
+    lista: [
+      { id: "1", de: "sistema", texto: "As mensagens são protegidas com a criptografia de ponta a ponta.", em: "2026-09-14T13:30:00.000Z", origem: "arquivo" },
+      { id: "2", de: "nos", texto: "Olá, Maria! Aqui é da Cardápio Web.", em: "2026-09-14T13:32:00.000Z", origem: "arquivo" },
+      { id: "3", de: "cliente", texto: "Oi! O cardápio não abre\ndesde ontem à noite.", em: "2026-09-14T13:40:00.000Z", origem: "extensao" },
+      { id: "4", de: "nos", texto: "Resolvido: era o horário de funcionamento.", em: "2026-09-14T14:05:00.000Z", origem: "extensao" },
+    ],
+  };
+
+  const exportado = textoDaConversaExportada(guardada, { exportadaPor: "Carlos Isaac", exportadaEm: "2026-09-15T12:00:00.000Z" });
+  confere(
+    "o cabeçalho diz de quem é e o que está ligado",
+    exportado.split("\n").slice(0, 3).join(" | "),
+    "Conversa do WhatsApp com Maria Silva (+5527999996862) | 4 mensagem(ns) · guardada no CW Reputação por Carlos Isaac | Caso: RA-123 (Reclame Aqui)"
+  );
+  confere(
+    "a mensagem sai no formato do WhatsApp",
+    exportado.split("\n").find((l) => l.includes("Olá, Maria")),
+    "14/09/2026 10:32 - Reputação CW: Olá, Maria! Aqui é da Cardápio Web."
+  );
+
+  /* A prova que importa: o arquivo exportado volta pela importação. */
+  const devolta = lerExportDoWhatsApp(exportado, "Conversa do WhatsApp com Maria Silva.txt");
+  confere("a volta tem as mesmas quatro mensagens", devolta.mensagens.length, 4);
+  confere("os lados voltam iguais", mensagensDoArquivo(devolta, "Reputação CW").map((m) => m.de), ["sistema", "nos", "cliente", "nos"]);
+  confere("as horas voltam iguais", mensagensDoArquivo(devolta, "Reputação CW").map((m) => m.em), guardada.lista.map((m) => m.em));
+  confere("a mensagem de duas linhas continua uma só", devolta.mensagens[2].texto, "Oi! O cardápio não abre\ndesde ontem à noite.");
+  confere("o cabeçalho não vira mensagem", devolta.ignoradas >= 3, true);
+
+  const planilha = planilhaDaConversa(guardada);
+  confere(
+    "a planilha separa data, hora, quem e de onde veio",
+    [planilha[1].Data, planilha[1].Hora, planilha[1].Quem, planilha[1].Origem],
+    ["14/09/2026", "10:32", "Nós", "Arquivo exportado"]
+  );
 
   console.log(falhas ? `\n${falhas} conferência(s) falharam.\n` : "\nTudo certo.\n");
   process.exit(falhas ? 1 : 0);

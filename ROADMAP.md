@@ -933,6 +933,31 @@ descartável: ligar a conversa, registrar o 1º contato (08:30) e a
 validação (09:15) — as horas das mensagens —, e apagar o caso e a
 conversa depois.
 
+### Exportar a conversa do WhatsApp (15/09/2026, 0.63.0)
+
+O Isaac: "é preciso ter a possibilidade de exportar uma conversa do
+whatsapp na plataforma".
+
+Na conversa aberta, dois botões no cabeçalho:
+
+- **.txt** — a conversa no **mesmo formato do "Exportar conversa" do
+  WhatsApp** ("15/09/2026 09:02 - Reputação CW: …"), com um cabeçalho
+  antes (contato, telefone, vínculos, resumo salvo e quem exportou).
+  Serve para anexar num chamado ou mandar para o jurídico — e **volta
+  para cá**: a própria importação lê este arquivo, e a junção sem
+  repetir reconhece o que já está guardado.
+- **.xlsx** — uma mensagem por linha, com data, hora (Brasília), quem
+  falou, autor, texto e de onde a mensagem veio (extensão ou arquivo).
+
+O arquivo é montado no servidor e baixa direto, como as outras
+exportações da plataforma; o nome sai pronto ("Conversa do WhatsApp com
+Fulano — 2026-09-15.txt").
+
+Provas: `check:conversas` ganhou a ida e volta — exportar e reimportar
+devolve as mesmas mensagens, com os mesmos lados e as mesmas horas, a
+mensagem de duas linhas continua uma só e o cabeçalho não vira mensagem.
+Conferido na tela com uma conversa descartável (apagada depois).
+
 ### Filtro por data no NPS (14/09/2026, 0.62.0)
 
 O Isaac: "na parte do nps não tem como colocar um filtro por data".
