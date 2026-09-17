@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 17/09/2026. Aplicação **1.10.0**, extensão **1.10.0**.
+Atualizado em 17/09/2026. Aplicação **1.11.0**, extensão **1.11.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,50 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### Casos das Redes pela planilha do Google e pelo Slack, pela extensão (17/09/2026, 1.11.0)
+
+O Isaac: "identificados os casos de uma planilha … e também casos do
+slack". Decisões dele: a planilha é lida pela extensão; o Slack, no canal
+aberto no navegador, sem token.
+
+- **Planilha (Google Sheets).** Com a planilha aberta, um botão discreto
+  no canto — *Ler para as Redes*. A grade do Sheets é canvas, sem texto
+  para ler; a extensão pede **a aba aberta** como CSV ao próprio Google,
+  com a sessão de quem está vendo. O painel mostra as colunas
+  reconhecidas, quantas linhas são **novas**, **já no CW**, **repetidas**
+  na própria planilha e **sem rede**, e as primeiras novas. *Gravar* cria
+  os atendimentos em Recebido, a triar, com a linha de origem no relato.
+- **Slack.** Cada mensagem do canal ganha, com o mouse em cima, *CW ·
+  Redes*: o painel mostra o que foi entendido (rede, @, seguidores, link)
+  e se já está no CW. O lançador *Ler o canal para as Redes* confere as
+  mensagens visíveis de uma vez.
+- **Uma regra para as duas** (`lib/models/capturaDasRedes.ts`): CSV com
+  aspas, quebra de linha e ponto e vírgula; colunas pelos nomes que se
+  usam ("Carimbo de data/hora", "Instagram do cliente", "Link do
+  perfil"); rede pelo nome ou pelo link; "18,4 mil" seguidores; data
+  brasileira em Brasília. A **chave de cada linha é o conteúdo**, não o
+  número da linha: reordenar a planilha não faz nada virar novo, e ler
+  duas vezes não duplica (o protocolo sai da chave; a segunda gravação
+  esbarra no único). O assunto só vira categoria se já existir.
+- **Nada grava por abrir.** A prévia é leitura; só o clique em *Gravar*
+  chama a gravação, somente leitura não grava, e a tela das Redes recebe
+  os novos na hora.
+- Painel pequeno, arrastável pelo cabeçalho, sem escurecer a página, em
+  Shadow DOM (o CSS do Sheets e do Slack não chega nele).
+
+Achado ao conferir: a quebra de linha do Windows dentro do relato ficava
+com o `\r` — o texto do caso nasceria com um caractere invisível.
+
+Provas: `check:captura-redes` (CSV, colunas, valores, chave estável,
+Slack, fiação); a rota no servidor de conferência com sessão local:
+prévia (1 nova, 1 repetida, 1 sem rede), gravação criando `IG-87C7CF6B`
+com rede, @, seguidores, link e data, segunda gravação sem duplicar,
+prévia de novo com a linha "já no CW" — e o caso de teste apagado no
+fim. Os dois painéis rodados numa página simulada (planilha e canal):
+prévia, gravação e resultado. **Falta a primeira leitura real**: a
+planilha e o canal de verdade não foram abertos daqui (são da conta do
+Isaac); os seletores do Slack são os do cliente web e podem mudar.
 
 ### Triagem das Redes em cinco perguntas, com as saídas claras (17/09/2026, 1.10.0)
 

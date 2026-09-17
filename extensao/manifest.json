@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "CW Reputação — painel de contexto",
-  "version": "1.10.0",
-  "description": "Mostra o cliente do CW Reputacao ao lado do WhatsApp Web, do Hugme/Reclame Aqui, do ManyChat, do Crisp e do Portal Cardapio Web, poe os textos aprovados ao lado da caixa de mensagem, captura reclamacoes para o Kanban e registra avaliacoes do Google Perfil da Empresa.",
+  "version": "1.11.0",
+  "description": "Mostra o cliente do CW Reputacao ao lado do WhatsApp Web, do Hugme/Reclame Aqui, do ManyChat, do Crisp e do Portal Cardapio Web, poe os textos aprovados ao lado da caixa de mensagem, captura reclamacoes para o Kanban e registra avaliacoes do Google Perfil da Empresa e leva para as Redes os casos da planilha do Google e do canal do Slack.",
   "icons": {
     "16": "icones/icone-16.png",
     "32": "icones/icone-32.png",
@@ -159,6 +159,28 @@
         "conteudo/google-perfil.js"
       ],
       "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://docs.google.com/spreadsheets/*"
+      ],
+      "js": [
+        "conteudo/nucleo.js",
+        "conteudo/captura-painel.js",
+        "conteudo/planilha.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://app.slack.com/*"
+      ],
+      "js": [
+        "conteudo/nucleo.js",
+        "conteudo/captura-painel.js",
+        "conteudo/slack.js"
+      ],
+      "run_at": "document_idle"
     }
   ],
   "web_accessible_resources": [
@@ -172,7 +194,9 @@
         "https://*.reclameaqui.com.br/*",
         "https://*.manychat.com/*",
         "https://*.cardapioweb.com/*",
-        "https://app.crisp.chat/*"
+        "https://app.crisp.chat/*",
+        "https://docs.google.com/*",
+        "https://app.slack.com/*"
       ]
     }
   ]

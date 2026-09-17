@@ -54,6 +54,7 @@ const CAMINHOS = {
   raNovas: "/api/extensao/ra-novas",
   raVigia: "/api/extensao/ra-vigia",
   completar: "/api/extensao/completar",
+  capturaRedes: "/api/extensao/captura-redes",
 };
 
 /**
@@ -936,6 +937,27 @@ async function tratar(mensagem) {
     );
 
     return { ok: true, dados };
+  }
+
+  /**
+   * Captura das Redes: a planilha aberta e a mensagem do Slack.
+   *
+   * Prévia e gravação passam pelo mesmo caminho; quem decide gravar é o
+   * clique no painel — abrir a planilha ou o canal só pede a prévia.
+   */
+  if (mensagem?.tipo === "capturaRedes") {
+    const dados = await chamar(CAMINHOS.capturaRedes, {}, mensagem.corpo ?? {});
+    return { ok: true, dados };
+  }
+
+  /* Abre uma tela da plataforma pelo caminho, no endereço configurado. */
+  if (mensagem?.tipo === "abrirNaPlataforma") {
+    const config = await lerConfig();
+    const base = normalizarBase(config.base);
+    if (!base) return { ok: false, erro: "Endereço do CW Reputação não configurado." };
+    const caminho = String(mensagem.caminho ?? "/").startsWith("/") ? String(mensagem.caminho ?? "/") : "/";
+    await chrome.tabs.create({ url: `${base}${caminho}` });
+    return { ok: true };
   }
 
   if (mensagem?.tipo === "abrir") {

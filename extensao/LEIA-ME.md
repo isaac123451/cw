@@ -294,6 +294,16 @@ rótulo vira "confirmado" sem mudar uma linha de código.
   lista de reclamações e a página de cada uma que falta no quadro. É a
   mesma página que qualquer pessoa vê sem login.
 - **ManyChat:** um telefone visível, quando existe.
+- **Google Sheets (planilha das Redes):** só quando alguém aperta *Ler
+  para as Redes*, a aba aberta como CSV — o mesmo arquivo de *Arquivo ›
+  Fazer download › CSV*, pedido ao Google com a sessão de quem está vendo
+  a planilha. A aplicação mostra a prévia (novas, já no CW, repetidas, sem
+  rede) e só *Gravar* cria os atendimentos.
+- **Slack (canal aberto no navegador):** o texto da mensagem em que se
+  clicou *CW · Redes*, ou das mensagens visíveis no lançador *Ler o canal
+  para as Redes*. Sem token nem app instalado no Slack; os seletores
+  (`data-item-key`, `data-qa="message-text"`) são os do cliente web e
+  podem mudar com ele.
 
 Nada sai da máquina a não ser para o seu próprio CW Reputação, e só três
 coisas saem: a **consulta** (um telefone, um nome ou um protocolo — nunca

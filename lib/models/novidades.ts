@@ -104,6 +104,14 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.11.0",
+    data: "2026-09-17",
+    titulo: "Casos das Redes pela planilha e pelo Slack",
+    texto: "Com a planilha das Redes aberta, Ler para as Redes mostra quantas linhas são novas, quantas já estão no CW e quantas se repetem; Gravar cria os atendimentos a triar. No Slack, cada mensagem ganha CW · Redes, e o lançador confere o canal inteiro. Nada é gravado por abrir.",
+    frentes: ["redes", "extensao"],
+    href: "/redes-sociais",
+  },
+  {
     versao: "1.10.0",
     data: "2026-09-17",
     titulo: "Triagem das Redes em cinco perguntas",

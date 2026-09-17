@@ -1,6 +1,6 @@
 {
   "name": "cw-reputacao",
-  "version": "1.10.0",
+  "version": "1.11.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -119,6 +119,7 @@
     "check:primeiro-contato": "tsx scripts/check-primeiro-contato.ts",
     "check:telas-sem-saida": "tsx scripts/check-telas-sem-saida.ts",
     "check:celular": "tsx scripts/check-celular.ts",
+    "check:captura-redes": "tsx scripts/check-captura-redes.ts",
     "check:carga-inicial": "tsx scripts/check-carga-inicial.ts",
     "check:busca-global": "tsx scripts/check-busca-global.ts",
     "check:nova-tentativa": "tsx scripts/check-nova-tentativa.ts",
