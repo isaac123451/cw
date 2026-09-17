@@ -64,16 +64,16 @@ export default function KanbanColumn({
 
         if (id) onDropCase(id, workflow.name);
       }}
-      className={`flex h-full w-[300px] shrink-0 flex-col rounded-2xl border transition-colors ${
+      className={`flex h-full w-[284px] shrink-0 flex-col rounded-xl transition-colors ${
         isOver
-          ? "border-violet-400 bg-violet-50/70"
+          ? "bg-violet-50 ring-2 ring-inset ring-violet-300"
           : isDragging
-          ? "border-dashed border-zinc-300 bg-zinc-50/80"
-          : "border-zinc-200/80 bg-zinc-50/80"
+          ? "bg-zinc-100 ring-1 ring-inset ring-zinc-300"
+          : "bg-zinc-100/70"
       }`}
     >
 
-      <div className="flex items-center justify-between gap-2 border-b border-zinc-200/80 px-4 py-3">
+      <div className="flex items-center justify-between gap-2 px-3 pb-2 pt-2.5">
 
         <div className="flex min-w-0 items-center gap-2.5">
 
@@ -82,17 +82,16 @@ export default function KanbanColumn({
             style={{ background: workflow.color }}
           />
 
-          <h3 className="truncate text-sm font-semibold text-zinc-800">
+          <h3 className="truncate text-[13px] font-semibold text-zinc-700">
             {workflow.name}
           </h3>
 
         </div>
 
         <span
-          className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums ${
-            overLimit
-              ? "bg-rose-100 text-rose-700"
-              : "bg-white text-zinc-600 ring-1 ring-inset ring-zinc-200"
+          title={overLimit ? `Acima do limite de ${workflow.limit} desta etapa` : undefined}
+          className={`shrink-0 rounded px-1.5 text-[11px] font-medium leading-5 tabular-nums ${
+            overLimit ? "bg-rose-100 text-rose-700" : "text-zinc-500"
           }`}
         >
           {items.length}
@@ -100,7 +99,7 @@ export default function KanbanColumn({
 
       </div>
 
-      <div className="flex-1 overflow-y-auto p-2.5">
+      <div className="rolagem-fina flex-1 overflow-y-auto px-2 pb-2">
 
         {items.length === 0 ? (
 
@@ -118,7 +117,7 @@ export default function KanbanColumn({
 
         ) : (
 
-          <div className="space-y-2.5">
+          <div className="space-y-2">
 
             {mostrados.map((item) => (
               <KanbanCard

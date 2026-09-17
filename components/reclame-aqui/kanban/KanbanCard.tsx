@@ -4,13 +4,7 @@ import Link from "next/link";
 
 import { useState } from "react";
 
-import {
-  GripVertical,
-  MapPin,
-  Star,
-  Trash2,
-  TriangleAlert,
-} from "lucide-react";
+import { Star, Trash2, TriangleAlert } from "lucide-react";
 
 import { Case } from "@/lib/models/case";
 import { TagChips } from "@/components/shared/TagPicker";
@@ -23,6 +17,7 @@ import ProximoPasso from "@/components/reclame-aqui/tratativa/ProximoPasso";
 import { useCases } from "@/lib/context/CaseContext";
 import { useOwners } from "@/lib/hooks/useOwners";
 import { caseHref, isSocial } from "@/lib/services/case.service";
+import { hojeNaOperacao } from "@/lib/services/reputation.service";
 import BotaoAbrirEmJanela from "@/components/janelas/BotaoAbrirEmJanela";
 
 interface Props {
@@ -31,6 +26,38 @@ interface Props {
   onDragEnd: () => void;
 }
 
+/** A etiqueta automática da captura é origem, não assunto: fica na ficha. */
+const ETIQUETA_DA_CAPTURA = "Capturada pela extensão";
+
+/** "hoje", "ontem", "3d", "5 sem", "2 mês", "1 ano" — pela data de publicação, no dia de Brasília. */
+export function idadeCurta(dia: string, hoje = hojeNaOperacao()) {
+  const dias = Math.round((Date.parse(`${hoje}T12:00:00Z`) - Date.parse(`${String(dia).slice(0, 10)}T12:00:00Z`)) / 86_400_000);
+  if (!Number.isFinite(dias) || dias <= 0) return "hoje";
+  if (dias === 1) return "ontem";
+  if (dias < 14) return `${dias}d`;
+  if (dias < 60) return `${Math.floor(dias / 7)} sem`;
+  if (dias < 365) return `${Math.floor(dias / 30)} mês`;
+  return `${Math.floor(dias / 365)} ano`;
+}
+
+/**
+ * O cartão do quadro (repaginado na Fase 11 do roadmap 2.0).
+ *
+ * O Isaac: "a parte do reclame aqui do kanban ta meio bagunçado". O
+ * cartão tinha onze elementos — protocolo, três ícones, "a triar",
+ * título, empresa e cliente, "Completar", cidade, estrelas sempre (com
+ * "-" quando não havia nota), a etiqueta da captura, o seletor de
+ * responsável e "Em aberto". Ficou o que decide o próximo passo:
+ *
+ * - **topo:** criticidade, protocolo e a idade ("3d", "2 mês");
+ * - **título** em até duas linhas e **quem** numa linha só;
+ * - **chips só do que pede ação:** o relógio, o próximo passo, completar;
+ * - **rodapé:** o responsável, e a nota ou o risco só quando existem.
+ *
+ * As ações (mini-janela, excluir) aparecem no hover, por cima do canto,
+ * sem roubar espaço do texto. Cidade e etiqueta de captura continuam na
+ * ficha e na mini-janela.
+ */
 export default function KanbanCard({
   item,
   onDragStart,
@@ -46,11 +73,9 @@ export default function KanbanCard({
   const owners = useOwners();
 
   /**
-   * Vazio é "sem responsável", não a string vazia.
-   *
-   * `Case.owner` é opcional; gravar `""` faria o cartão mostrar um
-   * responsável de nome em branco e o filtro por responsável ganharia
-   * uma opção invisível.
+   * Vazio é "sem responsável", não a string vazia: gravar `""` faria o
+   * cartão mostrar um nome em branco e o filtro ganharia uma opção
+   * invisível.
    */
   function atribuir(nome: string) {
     updateCase({
@@ -59,206 +84,141 @@ export default function KanbanCard({
     });
   }
 
+  const etiquetas = (item.tags ?? []).filter((t) => t !== ETIQUETA_DA_CAPTURA);
+
   return (
     <>
-    <Link
-      href={caseHref(item)}
-      draggable
-      onDragStart={(event) => {
-        event.dataTransfer.setData("text/plain", item.id);
-        event.dataTransfer.effectAllowed = "move";
-        setDragging(true);
-        onDragStart(item.id);
-      }}
-      onDragEnd={() => {
-        setDragging(false);
-        onDragEnd();
-      }}
-      className={`group block cursor-grab rounded-xl border border-zinc-200 bg-white p-3.5 shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-all duration-200 active:cursor-grabbing hover:-translate-y-0.5 hover:border-violet-300 hover:shadow-[0_8px_20px_-8px_rgba(91,42,134,0.35)] ${
-        dragging ? "opacity-40" : ""
-      }`}
-    >
+      <Link
+        href={caseHref(item)}
+        draggable
+        onDragStart={(event) => {
+          event.dataTransfer.setData("text/plain", item.id);
+          event.dataTransfer.effectAllowed = "move";
+          setDragging(true);
+          onDragStart(item.id);
+        }}
+        onDragEnd={() => {
+          setDragging(false);
+          onDragEnd();
+        }}
+        className={`group relative block cursor-grab rounded-lg border border-zinc-200 bg-white px-3 pb-2.5 pt-2 transition-[border-color,box-shadow] active:cursor-grabbing hover:border-zinc-300 hover:shadow-[0_2px_8px_-2px_rgba(16,24,40,0.12)] ${
+          dragging ? "opacity-40" : ""
+        }`}
+      >
+        <div className="flex items-center gap-1.5">
+          <ChipPrioridade item={item} ocultarNormal />
+          <span className="min-w-0 truncate font-mono text-[10.5px] text-zinc-400">{item.protocol}</span>
+          <span
+            className="ml-auto shrink-0 text-[11px] tabular-nums text-zinc-400"
+            title={`Publicada em ${String(item.createdAt).slice(0, 10).split("-").reverse().join("/")}`}
+          >
+            {idadeCurta(item.createdAt)}
+          </span>
+        </div>
 
-      <div className="flex items-start justify-between gap-2">
-
-        <span className="font-mono text-[10px] uppercase tracking-wide text-zinc-400">
-          {item.protocol}
-        </span>
-
-        <div className="flex shrink-0 items-center gap-1">
-
-          {/* A mini-janela: mexer no caso sem sair do quadro. */}
+        {/*
+          Ações no hover, por cima do canto. Excluir sempre pede
+          confirmação: o cartão é arrastável, e apagar não tem desfazer.
+        */}
+        <div className="absolute right-1.5 top-1.5 flex items-center gap-0.5 rounded-md bg-white opacity-0 shadow-sm ring-1 ring-zinc-200 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
           <BotaoAbrirEmJanela
             frente={isSocial(item) ? "redes" : "reclame-aqui"}
             referencia={item.id}
             titulo={`${item.protocol} · ${item.customer}`}
-            className="p-0.5"
+            className="p-1"
           />
-
-          <ChipPrioridade item={item} />
-
-          {/*
-            Excluir a reclamação, do próprio quadro.
-
-            O Isaac: "crie a opção de excluir uma reclamação pelo quadro
-            ou quando abrir ela". Existe porque a base recebe caso
-            criado por engano — duplicata de captura, teste, reclamação
-            aberta na frente errada — e o único jeito de tirar era pelo
-            banco.
-
-            **Só aparece no hover, e sempre pede confirmação.** O cartão
-            é arrastável: um botão de excluir sempre visível fica a
-            milímetros do gesto de mover, e apagar reclamação não tem
-            desfazer.
-          */}
           <button
             type="button"
             onClick={(e) => {
-              /*
-                O cartão inteiro é um link para o caso.
-
-                Sem parar a propagação, o clique em excluir abriria a
-                ficha por baixo do diálogo de confirmação.
-              */
+              /* O cartão é um link: sem isto, o clique abriria a ficha por baixo da confirmação. */
               e.preventDefault();
               e.stopPropagation();
               setConfirmando(true);
             }}
             title="Excluir esta reclamação"
-            className="rounded p-0.5 text-zinc-300 opacity-0 transition-all hover:bg-rose-50 hover:text-rose-600 focus-visible:opacity-100 group-hover:opacity-100"
+            aria-label={`Excluir ${item.protocol}`}
+            className="rounded p-1 text-zinc-400 hover:bg-rose-50 hover:text-rose-600"
           >
             <Trash2 size={13} />
           </button>
-
-          <GripVertical
-            size={13}
-            className="text-zinc-300 opacity-0 transition-opacity group-hover:opacity-100"
-          />
-
         </div>
 
-      </div>
+        <h3 className="mt-1 line-clamp-2 text-[13px] font-medium leading-snug text-zinc-900">
+          {item.title}
+        </h3>
 
-      <h3 className="mt-1.5 line-clamp-2 text-sm font-semibold leading-snug text-zinc-900">
-        {item.title}
-      </h3>
+        <p className="mt-0.5 truncate text-xs text-zinc-500">
+          {item.customer}
+          {item.company && item.company !== item.customer ? ` · ${item.company}` : ""}
+        </p>
 
-      <p className="mt-1.5 truncate text-xs text-zinc-500">
-        {item.company} · {item.customer}
-      </p>
+        <div className="mt-2 flex flex-wrap items-center gap-1 empty:hidden">
+          <RelogioDoCaso item={item} esconderSemRegra />
+          <ProximoPasso item={item} />
+          <BotaoCompletar item={item} />
+        </div>
 
-      <BotaoCompletar item={item} className="mt-2" />
-
-      {/*
-        O relógio do caso no lugar do "48h" fixo.
-
-        O texto que ficava aqui era `slaTarget` — a string que a
-        importação gravava igual em toda reclamação e nunca mudava. Agora
-        é o relógio de verdade, em tempo útil, e clicar nele registra o
-        1º contato quando é isso que falta.
-      */}
-      <RelogioDoCaso item={item} esconderSemRegra className="mt-2" />
-
-      <ProximoPasso item={item} className="mt-1.5" />
-
-      <div className="mt-2 flex items-center gap-3 text-[11px] text-zinc-400">
-
-        {(item.city || item.state) && (
-          <span className="flex items-center gap-1">
-            <MapPin size={11} />
-            {[item.city, item.state]
-              .filter(Boolean)
-              .join("/")}
-          </span>
+        {etiquetas.length > 0 && (
+          <div className="mt-1.5">
+            <TagChips tags={etiquetas} limit={2} />
+          </div>
         )}
 
-        <span className="flex items-center gap-1">
-          <Star
-            size={11}
-            className="fill-amber-400 text-amber-400"
-          />
-          {item.score ?? "-"}
-        </span>
-
-      </div>
-
-      {item.tags && item.tags.length > 0 && (
-        <div className="mt-2.5">
-          <TagChips tags={item.tags} />
-        </div>
-      )}
-
-      <div className="mt-3 flex items-center justify-between border-t border-zinc-100 pt-2.5">
-
-        {/*
-          Atribuir responsável sem sair do quadro.
-
-          Antes o nome era só texto: para pôr alguém num caso era
-          preciso abrir a tela do caso — e no Kanban, que é onde a
-          operação distribui o trabalho, não havia caminho nenhum.
-
-          O cartão inteiro é um link e é arrastável, então o seletor
-          precisa das três travas abaixo: `preventDefault` no clique
-          (senão navega), `stopPropagation` (senão o clique sobe para o
-          link) e `draggable={false}` (senão arrastar para abrir a lista
-          arrasta o cartão para outra coluna).
-        */}
-        <span
-          className="flex min-w-0 items-center gap-1.5 text-[11px] text-zinc-500"
-          draggable={false}
-          onDragStart={(event) => event.preventDefault()}
-        >
-
-          <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[9px] font-semibold ${item.owner ? "bg-violet-100 text-violet-700" : "bg-zinc-100 text-zinc-400"}`}>
-            {(item.owner ?? "?").slice(0, 1).toUpperCase()}
-          </span>
-
-          <select
-            value={item.owner ?? ""}
-            aria-label={`Responsável por ${item.protocol}`}
-            title="Atribuir responsável"
+        <div className="mt-2 flex items-center gap-2">
+          {/*
+            Atribuir responsável sem sair do quadro. As três travas —
+            preventDefault, stopPropagation e draggable={false} — impedem
+            que o seletor navegue, suba o clique ao link ou arraste o cartão.
+          */}
+          <span
+            className="flex min-w-0 items-center gap-1.5 text-[11px] text-zinc-500"
             draggable={false}
             onDragStart={(event) => event.preventDefault()}
-            onClick={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-            }}
-            onChange={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              atribuir(event.target.value);
-            }}
-            className={`-ml-1 max-w-[130px] cursor-pointer truncate rounded-md border border-transparent bg-transparent px-1 py-0.5 text-[11px] outline-none transition-colors hover:border-zinc-200 hover:bg-zinc-50 focus:border-violet-400 ${item.owner ? "text-zinc-600" : "text-zinc-400"}`}
           >
-            <option value="">Sem responsável</option>
-            {owners.map((nome) => (
-              <option key={nome} value={nome}>
-                {nome}
-              </option>
-            ))}
-          </select>
-
-        </span>
-
-        {item.churnRisk ? (
-          <span className="flex items-center gap-1 text-[10px] font-semibold text-rose-600">
-            <TriangleAlert size={11} />
-            Churn
+            <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[9px] font-semibold ${item.owner ? "bg-violet-100 text-violet-700" : "bg-zinc-100 text-zinc-400"}`}>
+              {(item.owner ?? "?").slice(0, 1).toUpperCase()}
+            </span>
+            <select
+              value={item.owner ?? ""}
+              aria-label={`Responsável por ${item.protocol}`}
+              title="Atribuir responsável"
+              draggable={false}
+              onDragStart={(event) => event.preventDefault()}
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+              }}
+              onChange={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                atribuir(event.target.value);
+              }}
+              className={`-ml-1 max-w-[140px] cursor-pointer appearance-none truncate rounded border border-transparent bg-transparent px-1 py-0.5 text-[11px] outline-none transition-colors hover:border-zinc-200 hover:bg-zinc-50 focus:border-violet-400 ${item.owner ? "text-zinc-600" : "text-zinc-400"}`}
+            >
+              <option value="">Sem responsável</option>
+              {owners.map((nome) => (
+                <option key={nome} value={nome}>
+                  {nome}
+                </option>
+              ))}
+            </select>
           </span>
-        ) : (
-          <span
-            className={`text-[10px] font-semibold ${
-              item.resolved
-                ? "text-emerald-600"
-                : "text-zinc-400"
-            }`}
-          >
-            {item.resolved ? "Resolvido" : "Em aberto"}
+
+          <span className="ml-auto flex shrink-0 items-center gap-2 text-[11px]">
+            {item.evaluated && item.score != null && (
+              <span className="flex items-center gap-0.5 tabular-nums text-zinc-500" title="Nota da avaliação">
+                <Star size={11} className="fill-amber-400 text-amber-400" />
+                {item.score}
+              </span>
+            )}
+            {item.churnRisk && (
+              <span className="flex items-center gap-1 font-medium text-rose-600" title="Risco de cancelamento">
+                <TriangleAlert size={11} />
+                Churn
+              </span>
+            )}
           </span>
-        )}
-
-      </div>
-
+        </div>
       </Link>
 
       <ConfirmDelete
@@ -270,7 +230,6 @@ export default function KanbanCard({
           setConfirmando(false);
         }}
       />
-
     </>
   );
 }

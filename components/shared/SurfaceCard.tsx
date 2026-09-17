@@ -34,7 +34,7 @@ export default function SurfaceCard({
   return (
     <section
       className={cn(
-        "min-w-0 rounded-2xl border border-zinc-200/80 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04),0_8px_24px_-12px_rgba(16,24,40,0.10)]",
+        "min-w-0 rounded-xl border border-zinc-200/80 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]",
         className
       )}
     >
@@ -55,13 +55,13 @@ export default function SurfaceCard({
       */}
       {(title || action) && (
 
-        <header className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3 border-b border-zinc-100 px-6 py-5">
+        <header className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3 border-b border-zinc-100 px-5 py-3.5">
 
           <div className="min-w-0">
 
             {title && (
 
-              <h2 className="flex items-center gap-1.5 text-base font-semibold tracking-tight text-zinc-900">
+              <h2 className="flex items-center gap-1.5 text-[15px] font-semibold tracking-tight text-zinc-900">
 
                 {title}
 
@@ -79,7 +79,7 @@ export default function SurfaceCard({
             )}
 
             {description && (
-              <p className="mt-1 text-sm text-zinc-500">
+              <p className="mt-0.5 text-[13px] text-zinc-500">
                 {description}
               </p>
             )}
@@ -106,7 +106,7 @@ export default function SurfaceCard({
       */}
       <div
         className={cn(
-          "min-w-0 overflow-x-auto p-5 sm:p-6",
+          "min-w-0 overflow-x-auto p-4 sm:p-5",
           bodyClassName
         )}
       >

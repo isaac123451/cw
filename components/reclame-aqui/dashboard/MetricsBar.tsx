@@ -90,7 +90,7 @@ export default function MetricsBar() {
   }, [noPeriodo]);
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
 
       {/* Nota de reputação em destaque */}
 
@@ -100,18 +100,18 @@ export default function MetricsBar() {
           range.start,
           range.end
         )} — clique para ver o detalhamento.`}
-        className="group relative overflow-hidden rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_28px_-14px_rgba(16,24,40,0.25)]"
+        className="group relative overflow-hidden rounded-xl border border-zinc-200/80 bg-white px-4 py-3.5 shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-colors hover:border-zinc-300"
       >
 
         <span
           aria-hidden
-          className="absolute inset-x-0 top-0 h-1"
+          className="absolute inset-y-0 left-0 w-[3px]"
           style={{ background: band.color }}
         />
 
         <div className="flex items-start justify-between gap-3">
 
-          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-400">
+          <p className="text-xs font-medium text-zinc-500">
             Reputação
           </p>
 
@@ -127,7 +127,7 @@ export default function MetricsBar() {
 
         </div>
 
-        <p className="mt-3 text-3xl font-semibold tracking-tight tabular-nums text-zinc-900">
+        <p className="mt-1.5 text-[26px] font-semibold leading-none tracking-tight tabular-nums text-zinc-900">
           {ptBR(reputacao.raScore)}
           <span className="ml-1 text-base font-normal text-zinc-400">
             /10

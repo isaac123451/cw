@@ -34,11 +34,11 @@ interface Props {
 }
 
 const tones: Record<Tone, string> = {
-  primary: "bg-violet-50 text-violet-600 ring-violet-100",
-  success: "bg-emerald-50 text-emerald-600 ring-emerald-100",
-  warning: "bg-amber-50 text-amber-600 ring-amber-100",
-  danger: "bg-rose-50 text-rose-600 ring-rose-100",
-  info: "bg-sky-50 text-sky-600 ring-sky-100",
+  primary: "text-violet-500",
+  success: "text-emerald-500",
+  warning: "text-amber-500",
+  danger: "text-rose-500",
+  info: "text-sky-500",
 };
 
 export default function StatTile({
@@ -62,32 +62,32 @@ export default function StatTile({
       type={onClick ? "button" : undefined}
       aria-pressed={onClick ? Boolean(ativo) : undefined}
       className={cn(
-        "group relative rounded-2xl border bg-white p-5 text-left shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-shadow hover:shadow-[0_1px_2px_rgba(16,24,40,0.04),0_12px_28px_-14px_rgba(16,24,40,0.18)]",
+        "group relative rounded-xl border bg-white px-4 py-3.5 text-left shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-colors",
         ativo
           ? "border-violet-300 ring-2 ring-violet-200"
           : "border-zinc-200/80",
-        onClick && "cursor-pointer w-full"
+        onClick && "cursor-pointer w-full hover:border-zinc-300"
       )}
     >
 
       <div className="flex items-start justify-between gap-3">
 
-        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-400">
+        <p className="text-xs font-medium text-zinc-500">
           {label}
         </p>
 
         <span
           className={cn(
-            "rounded-xl p-2 ring-1 ring-inset transition-transform group-hover:scale-105",
+            "shrink-0",
             tones[tone]
           )}
         >
-          <Icon size={16} strokeWidth={2.2} />
+          <Icon size={15} strokeWidth={2} />
         </span>
 
       </div>
 
-      <p className="mt-3 text-3xl font-semibold tracking-tight text-zinc-900 tabular-nums">
+      <p className="mt-1.5 text-[26px] font-semibold leading-none tracking-tight text-zinc-900 tabular-nums">
         {value}
       </p>
 

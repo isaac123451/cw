@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 17/09/2026. Aplicação **1.4.0**, extensão **1.4.0**.
+Atualizado em 17/09/2026. Aplicação **1.5.0**, extensão **1.5.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,33 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### Visual de ferramenta, começando pelo Reclame Aqui (17/09/2026, 1.5.0)
+
+O Isaac: "nada pode parecer que uma IA fez", "a parte do reclame aqui
+do kanban ta meio bagunçado".
+
+- **O cartão do quadro** tinha onze elementos. Ficou: criticidade (só
+  Urgente, Alta ou "a triar" — "Normal" era ruído), protocolo e a idade
+  ("3d", "2 mês"); o título em duas linhas; quem, numa linha; chips só do
+  que pede ação (relógio, próximo passo, completar); o responsável; a
+  nota e o risco só quando existem. Mini-janela e excluir aparecem no
+  hover, por cima do canto. A etiqueta automática "Capturada pela
+  extensão" e a cidade continuam na ficha.
+- **As colunas** perderam a borda e a barra de rolagem grossa; o número
+  da etapa é texto, e fica vermelho só acima do limite.
+- **Os componentes de todas as telas** — cabeçalho de página, cartão de
+  seção e cartão de indicador — ficaram mais sóbrios: sem rótulo roxo
+  em caixa alta, cantos menores, sombra de 1 px, título e números com
+  tamanho de ferramenta. Vale para as 37 telas que os usam.
+- **A barra de filtros** ficou mais baixa, e saíram dela os botões
+  Analytics e Fluxo, repetidos nas abas do módulo logo acima.
+- **O aviso de cadastro incompleto** virou uma linha: quantas, o que
+  falta, "Completar a mais recente" e "ver todas".
+
+Provas: `check:frentes`, `check:janelas`, `check:telas-sem-saida`,
+`check:celular`, `check:tratativa`, `check:trilha`; na tela, 1440 px e
+375 px sem estouro.
 
 ### Atalhos de teclado (17/09/2026, 1.4.0)
 

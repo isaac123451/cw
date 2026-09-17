@@ -4,12 +4,10 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 
 import {
-  BarChart3,
   LayoutGrid,
   Plus,
   RefreshCw,
   Search,
-  Settings2,
   Table,
   Upload,
   X,
@@ -36,7 +34,7 @@ interface Props {
 }
 
 const selectClass =
-  "h-10 rounded-xl border border-zinc-200 bg-white px-3 text-sm text-zinc-700 outline-none transition-colors focus:border-violet-400";
+  "h-9 rounded-lg border border-zinc-200 bg-white px-2.5 text-[13px] text-zinc-700 outline-none transition-colors focus:border-violet-400";
 
 /**
  * Os recortes de data que se pedem todo dia.
@@ -149,7 +147,7 @@ export default function Toolbar({
   const hasFilters = countCriteria(filters) > 0;
 
   return (
-    <div className="rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+    <div className="rounded-xl border border-zinc-200/80 bg-white p-3 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
 
       <div className="flex flex-wrap items-center justify-between gap-4">
 
@@ -168,7 +166,7 @@ export default function Toolbar({
                 setFilter("search", e.target.value)
               }
               placeholder="Buscar protocolo, cliente ou título..."
-              className="h-10 w-72 rounded-xl border border-zinc-200 pl-10 pr-4 text-sm outline-none transition-colors placeholder:text-zinc-400 focus:border-violet-400"
+              className="h-9 w-64 rounded-lg border border-zinc-200 pl-10 pr-4 text-sm outline-none transition-colors placeholder:text-zinc-400 focus:border-violet-400"
             />
 
           </div>
@@ -259,7 +257,7 @@ export default function Toolbar({
             existem porque digitar duas datas para ver os últimos 30
             dias é trabalho demais para a pergunta mais frequente.
           */}
-          <div className="flex shrink-0 items-center gap-1 rounded-xl border border-zinc-200 px-1">
+          <div className="flex shrink-0 items-center gap-1 rounded-lg border border-zinc-200 px-1">
 
             <input
               type="date"
@@ -305,7 +303,7 @@ export default function Toolbar({
                   setFilter("de", ativo ? "" : de);
                   setFilter("ate", ativo ? "" : ate);
                 }}
-                className={`h-10 rounded-xl px-3 text-sm font-medium transition-colors ${
+                className={`h-9 rounded-lg px-3 text-sm font-medium transition-colors ${
                   ativo
                     ? "bg-violet-50 text-violet-700 ring-1 ring-inset ring-violet-200"
                     : "text-zinc-600 hover:bg-zinc-100"
@@ -329,7 +327,7 @@ export default function Toolbar({
             <button
               onClick={() => setFilter("situacao", "")}
               title="Remover o recorte por situação e ver a fila inteira"
-              className="flex h-10 items-center gap-1.5 rounded-xl bg-violet-50 px-3 text-sm font-medium text-violet-700 ring-1 ring-inset ring-violet-200 transition-colors hover:bg-violet-100"
+              className="flex h-9 items-center gap-1.5 rounded-lg bg-violet-50 px-3 text-sm font-medium text-violet-700 ring-1 ring-inset ring-violet-200 transition-colors hover:bg-violet-100"
             >
               {ROTULO_DA_SITUACAO[filters.situacao]}
               <X size={14} />
@@ -344,7 +342,7 @@ export default function Toolbar({
           {hasFilters && (
             <button
               onClick={clearFilters}
-              className="flex h-10 items-center gap-1.5 rounded-xl px-3 text-sm font-medium text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-700"
+              className="flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-700"
             >
               <X size={15} />
               Limpar
@@ -362,7 +360,7 @@ export default function Toolbar({
         */}
         <div className="flex flex-wrap items-center gap-2">
 
-          <div className="flex items-center rounded-xl border border-zinc-200 p-1">
+          <div className="flex items-center rounded-lg border border-zinc-200 p-1">
 
             <button
               onClick={() => onChangeView("kanban")}
@@ -414,7 +412,7 @@ export default function Toolbar({
             }}
             disabled={atualizando || loading}
             title="Reler as reclamações do banco agora"
-            className="flex h-10 items-center gap-2 rounded-xl border border-zinc-200 px-3.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-50"
+            className="flex h-9 items-center gap-2 rounded-lg border border-zinc-200 px-3.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-50"
           >
             <RefreshCw
               size={16}
@@ -437,31 +435,17 @@ export default function Toolbar({
           <button
             onClick={() => setTransferOpen(true)}
             title="Importar a planilha do Reclame Aqui ou exportar a base atual"
-            className="flex h-10 items-center gap-2 rounded-xl border border-zinc-200 px-3.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
+            className="flex h-9 items-center gap-2 rounded-lg border border-zinc-200 px-3.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
           >
             <Upload size={16} />
             <span className="hidden lg:inline">Importar</span>
           </button>
 
-          <Link
-            href="/reclame-aqui/analytics"
-            className="flex h-10 items-center gap-2 rounded-xl border border-zinc-200 px-3.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
-          >
-            <BarChart3 size={16} />
-            <span className="hidden lg:inline">Analytics</span>
-          </Link>
-
-          <Link
-            href="/reclame-aqui/configuracoes"
-            className="flex h-10 items-center gap-2 rounded-xl border border-zinc-200 px-3.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
-          >
-            <Settings2 size={16} />
-            <span className="hidden lg:inline">Fluxo</span>
-          </Link>
+          {/* Analytics e Fluxo saíram daqui: já estão nas abas do módulo, logo acima. */}
 
           <button
             onClick={() => setCreateOpen(true)}
-            className="flex h-10 items-center gap-2 rounded-xl bg-violet-600 px-4 text-sm font-medium text-white shadow-sm transition-colors hover:bg-violet-700"
+            className="flex h-9 items-center gap-2 rounded-lg bg-violet-600 px-4 text-sm font-medium text-white shadow-sm transition-colors hover:bg-violet-700"
           >
             <Plus size={16} />
             Nova Reclamação

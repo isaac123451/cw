@@ -14,22 +14,22 @@ export default function PageHeading({
   children,
 }: Props) {
   return (
-    <div className="flex flex-wrap items-end justify-between gap-4">
+    <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
 
       <div>
 
         {eyebrow && (
-          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-violet-600">
+          <p className="text-xs font-medium text-zinc-500">
             {eyebrow}
           </p>
         )}
 
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-zinc-900">
+        <h1 className="mt-0.5 text-[22px] font-semibold leading-tight tracking-tight text-zinc-900">
           {title}
         </h1>
 
         {description && (
-          <p className="mt-1.5 max-w-2xl text-sm text-zinc-500">
+          <p className="mt-1 max-w-2xl text-[13px] leading-relaxed text-zinc-500">
             {description}
           </p>
         )}
@@ -37,7 +37,7 @@ export default function PageHeading({
       </div>
 
       {children && (
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {children}
         </div>
       )}

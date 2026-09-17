@@ -8,6 +8,8 @@ import { useTratativa } from "./TratativaProvider";
 interface Props {
   item: Case;
   className?: string;
+  /** No quadro, "Normal" já triado é ruído: só Urgente, Alta e "a triar" aparecem. */
+  ocultarNormal?: boolean;
 }
 
 const TOM: Record<Case["priority"], string> = {
@@ -24,7 +26,7 @@ const TOM: Record<Case["priority"], string> = {
  * ninguém. Clicar abre a triagem — com os critérios da documentação —
  * sem sair do quadro.
  */
-export default function ChipPrioridade({ item, className = "" }: Props) {
+export default function ChipPrioridade({ item, className = "", ocultarNormal = false }: Props) {
 
   const { abrirTriagem } = useTratativa();
 
@@ -39,6 +41,8 @@ export default function ChipPrioridade({ item, className = "" }: Props) {
         marcados.length > 0 ? `Critérios: ${marcados.map((c) => c.texto).join("; ")}.` : "Sem critério de Urgente ou Alta marcado.",
         "Clique para refazer a triagem.",
       ].join(" ");
+
+  if (ocultarNormal && !aTriar && item.priority === "Normal") return null;
 
   return (
     <button

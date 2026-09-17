@@ -34,7 +34,7 @@ export default function KanbanView() {
   return (
     <div className="h-full overflow-x-auto overflow-y-hidden pb-1">
 
-      <div className="flex h-full gap-4">
+      <div className="flex h-full gap-3">
 
         {sortedWorkflow.map((status) => (
 
