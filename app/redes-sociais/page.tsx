@@ -3,7 +3,7 @@
 import Link from "next/link";
 
 import { Suspense, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import {
   ArrowUpRight,
@@ -22,17 +22,26 @@ import MainLayout from "@/components/layout/MainLayout";
 import PageHeading from "@/components/shared/PageHeading";
 import StatTile from "@/components/shared/StatTile";
 import SurfaceCard from "@/components/shared/SurfaceCard";
-import BarList from "@/components/shared/BarList";
 import MiniKanban from "@/components/shared/MiniKanban";
 import { ConfirmDelete } from "@/components/shared/Modal";
 
 import SocialCaseForm from "@/components/redes-sociais/SocialCaseForm";
 import EncerrarRedesModal from "@/components/redes-sociais/EncerrarRedesModal";
+import SegmentosDasRedes from "@/components/redes-sociais/SegmentosDasRedes";
 
 import { useScopedCases } from "@/lib/context/useScopedCases";
 import { useCases } from "@/lib/context/CaseContext";
 import { ETAPAS_DAS_REDES, eFinalDasRedes, etapaDasRedes } from "@/lib/models/redes";
-import { groupBy, isOpen } from "@/lib/services/case.service";
+import { isOpen } from "@/lib/services/case.service";
+import { useEstablishments } from "@/lib/context/EstablishmentsContext";
+import {
+  alternarFiltro,
+  enderecoDosFiltros,
+  filtrosAtivos,
+  filtrosDoEndereco,
+  segmentar,
+  type DimensaoDasRedes,
+} from "@/lib/models/segmentosDasRedes";
 
 import { Case } from "@/lib/models/case";
 import BotaoAbrirEmJanela from "@/components/janelas/BotaoAbrirEmJanela";
@@ -62,47 +71,43 @@ function RedesSociaisConteudo() {
    */
   const params = useSearchParams();
 
-  const categoriaFiltrada = params.get("categoria") ?? "";
+  const router = useRouter();
+  const pathname = usePathname();
+  const { establishments } = useEstablishments();
+
   const statusFiltrado = params.get("status") ?? "";
 
-  const social = useMemo(
-    () =>
-      todosOsSociais
-        .filter(
-          (c) =>
-            !categoriaFiltrada ||
-            c.category === categoriaFiltrada
-        )
-        .filter(
-          (c) =>
-            !statusFiltrado ||
-            c.status === statusFiltrado
-        ),
-    [todosOsSociais, categoriaFiltrada, statusFiltrado]
+  /*
+    Os segmentos moram no endereço: o recorte vira link, e o
+    `?categoria=` que os gráficos de outras telas mandam continua
+    chegando como filtro de assunto.
+  */
+  const filtros = useMemo(() => filtrosDoEndereco(new URLSearchParams(params.toString())), [params]);
+
+  const nomes = useMemo(() => new Map(establishments.map((e) => [e.id, e.name])), [establishments]);
+
+  const segmentado = useMemo(
+    () => segmentar(todosOsSociais.filter((c) => !statusFiltrado || c.status === statusFiltrado), filtros, (id) => nomes.get(id)),
+    [todosOsSociais, statusFiltrado, filtros, nomes]
   );
 
-  const recorte = categoriaFiltrada || statusFiltrado;
+  const social = segmentado.casos;
+  const ativos = filtrosAtivos(filtros) + (statusFiltrado ? 1 : 0);
+
+  function trocarFiltros(novos: ReturnType<typeof filtrosDoEndereco>, manterStatus = true) {
+    const p = new URLSearchParams(enderecoDosFiltros(novos));
+    if (manterStatus && statusFiltrado) p.set("status", statusFiltrado);
+    const q = p.toString();
+    router.replace(q ? `${pathname}?${q}` : pathname, { scroll: false });
+  }
+
+  const recorte = ativos > 0;
 
   const { setCases, loading } = useCases();
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Case>();
   const [deleting, setDeleting] = useState<Case>();
-
-  const byCategory = useMemo(
-    () => groupBy(todosOsSociais, "category"),
-    [todosOsSociais]
-  );
-
-  /* "Novo" (das etapas antigas) conta como "Recebido". */
-  const byStatus = useMemo(
-    () =>
-      groupBy(
-        todosOsSociais.map((c) => ({ ...c, status: etapaDasRedes(c.status)?.nome ?? c.status })),
-        "status"
-      ),
-    [todosOsSociais]
-  );
 
   /*
     As etapas do documento das Redes, e não as do Reclame Aqui.
@@ -202,26 +207,26 @@ function RedesSociaisConteudo() {
           mesmo zero mudo do SLA e do teto: o número certo, a conclusão
           errada, e ninguém sabe por quê.
         */}
-        {recorte && (
+        {statusFiltrado && (
           <div className="flex flex-wrap items-center gap-2 rounded-xl bg-violet-50/60 px-4 py-3 text-sm ring-1 ring-inset ring-violet-100">
 
             <Filter size={15} className="text-violet-600" />
 
             <span className="text-zinc-700">
-              Mostrando só{" "}
+              Mostrando{" "}
               <strong className="font-semibold">
-                {categoriaFiltrada || statusFiltrado}
+                {social.length} de {todosOsSociais.length}
               </strong>{" "}
-              — {social.length} de{" "}
-              {todosOsSociais.length} atendimento(s).
+              atendimento(s){statusFiltrado ? ` na etapa ${statusFiltrado}` : ""}.
             </span>
 
-            <Link
-              href="/redes-sociais"
+            <button
+              type="button"
+              onClick={() => trocarFiltros({}, false)}
               className="ml-auto rounded-lg px-2.5 py-1 text-xs font-medium text-violet-700 transition-colors hover:bg-violet-100"
             >
               Ver todos
-            </Link>
+            </button>
 
           </div>
         )}
@@ -266,6 +271,18 @@ function RedesSociaisConteudo() {
 
         </div>
 
+        {/* Os segmentos ficam fora do vazio: um filtro que zerou a tela precisa continuar à mão para ser desfeito. */}
+        {todosOsSociais.length > 0 && (
+          <SegmentosDasRedes
+            facetas={segmentado.facetas}
+            total={todosOsSociais.length}
+            filtrados={social.length}
+            ativos={ativos}
+            onAlternar={(dimensao: DimensaoDasRedes, valor: string) => trocarFiltros(alternarFiltro(filtros, dimensao, valor))}
+            onLimpar={() => trocarFiltros({}, false)}
+          />
+        )}
+
         {loading && social.length === 0 ? (
 
           /* Sem isto, o quadro dizia "nenhum atendimento" enquanto a lista ainda chegava. */
@@ -289,7 +306,7 @@ function RedesSociaisConteudo() {
 
               <p className="mt-1 max-w-sm text-sm text-zinc-500">
                 {recorte
-                  ? "O filtro que veio pelo link não tem atendimentos. Use Ver todos, acima, para voltar ao quadro inteiro."
+                  ? "Nenhum atendimento passa por todos os filtros escolhidos. Tire um segmento acima, ou limpe os filtros."
                   : "Registre aqui as conversas do Instagram, Facebook, WhatsApp e ManyChat: elas entram no fluxo do documento das Redes, com o relógio de 4 horas úteis."}
               </p>
 
@@ -311,44 +328,6 @@ function RedesSociaisConteudo() {
         ) : (
 
           <>
-            <div className="grid gap-6 lg:grid-cols-2">
-
-              <SurfaceCard
-                title="Assuntos mais frequentes"
-                description="Categorias tratadas no canal."
-              >
-                {/*
-                  Clicar no assunto abre os casos dele.
-
-                  "quando eu clicar em um assunto frequente seja possível
-                  verificar os casos daquela categoria." Mesma leitura
-                  das outras telas: o número diz quantos, e a pergunta
-                  seguinte é sempre quais.
-                */}
-                <BarList
-                  data={byCategory}
-                  color="#EC4899"
-                  hrefDe={(categoria) =>
-                    `/redes-sociais?categoria=${encodeURIComponent(categoria)}`
-                  }
-                />
-              </SurfaceCard>
-
-              <SurfaceCard
-                title="Distribuição por status"
-                description="Como a fila do canal está hoje."
-              >
-                <BarList
-                  data={byStatus}
-                  color="#0EA5E9"
-                  hrefDe={(status) =>
-                    `/redes-sociais?status=${encodeURIComponent(status)}`
-                  }
-                />
-              </SurfaceCard>
-
-            </div>
-
             {aTriar.length > 0 && (
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-zinc-200/80 bg-white px-5 py-3">
                 <p className="text-sm text-zinc-700">

@@ -1,6 +1,6 @@
 {
   "name": "cw-reputacao",
-  "version": "1.11.0",
+  "version": "1.12.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -44,6 +44,7 @@
     "check:persistencia": "tsx scripts/check-persistencia.ts",
     "check:desempenho": "tsx scripts/check-desempenho.ts",
     "check:carga": "tsx scripts/check-carga.ts",
+    "check:segmentos-redes": "tsx scripts/check-segmentos-redes.ts",
     "check:seguranca": "tsx scripts/check-seguranca.ts",
     "check:telas": "tsx scripts/check-telas.ts",
     "check:fiacao": "tsx scripts/check-fiacao.ts",

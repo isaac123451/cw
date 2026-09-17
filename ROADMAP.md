@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 17/09/2026. Aplicação **1.11.0**, extensão **1.11.0**.
+Atualizado em 17/09/2026. Aplicação **1.12.0**, extensão **1.12.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,36 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### Segmentos das Redes no lugar dos dois gráficos (17/09/2026, 1.12.0)
+
+Fecha a Fase 14. Com a planilha e o Slack trazendo casos, a pergunta
+deixa de ser "quantos" e vira "quantos de quê".
+
+- **Seis segmentos**, cada um com a contagem ao lado: **origem**
+  (planilha, Slack ou registro manual — pela chave que a captura grava),
+  **rede**, **assunto**, **gravidade**, **alcance** do perfil (10 mil ou
+  mais, 1 a 10 mil, até 1 mil, sem o dado) e **estabelecimento**
+  (pelo vínculo, ou "sem vínculo").
+- **Clicar filtra o quadro, a lista e os indicadores do topo.** Vários
+  valores na mesma dimensão somam; dimensões diferentes cruzam.
+- **Facetas de verdade:** a contagem de cada dimensão ignora o próprio
+  filtro e respeita os outros — com Instagram escolhido, a linha Rede
+  ainda mostra o Facebook para trocar, e Gravidade já conta só o
+  Instagram. O número ao lado é o que o clique vai mostrar.
+- **O filtro que zerou a tela continua à mão**, ativo e com 0, e os
+  segmentos ficam fora do "nenhum atendimento" — dá para desfazer sem
+  procurar. "Limpar N filtro(s)" no cabeçalho.
+- **O recorte vira link** (`?rede=Instagram&origem=Slack`), e o
+  `?categoria=` que outras telas mandam chega como assunto.
+- Saíram "Assuntos mais frequentes" (virou a linha Assunto) e
+  "Distribuição por status" (o quadro já é a distribuição). A faixa
+  "Mostrando só…" ficou só para o filtro de etapa que chega por link.
+
+Provas: `check:segmentos-redes` (origem, alcance, facetas, filtro que
+zera, endereço); na tela, Instagram filtrando e indo para o endereço,
+`?rede=Facebook` zerando com o Facebook ativo e 0, e Limpar voltando ao
+quadro.
 
 ### Casos das Redes pela planilha do Google e pelo Slack, pela extensão (17/09/2026, 1.11.0)
 

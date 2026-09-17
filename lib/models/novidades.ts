@@ -104,6 +104,14 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.12.0",
+    data: "2026-09-17",
+    titulo: "Segmentos das Redes",
+    texto: "Origem, rede, assunto, gravidade, alcance do perfil e estabelecimento, cada um com a contagem ao lado. Clicar filtra o quadro, a lista e os indicadores, e o recorte vira link.",
+    frentes: ["redes"],
+    href: "/redes-sociais",
+  },
+  {
     versao: "1.11.0",
     data: "2026-09-17",
     titulo: "Casos das Redes pela planilha e pelo Slack",
