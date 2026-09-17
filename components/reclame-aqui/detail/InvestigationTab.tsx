@@ -5,17 +5,20 @@ import {
   tipoDeDocumento,
 } from "@/lib/models/establishment";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Building2, Check } from "lucide-react";
 
 import { Case } from "@/lib/models/case";
 
 import SurfaceCard from "@/components/shared/SurfaceCard";
+import SugestaoDoTexto from "@/components/shared/SugestaoDoTexto";
 
 import { useSettings } from "@/lib/context/SettingsContext";
 import { useNps } from "@/lib/context/NpsContext";
 import Combobox from "@/components/shared/Combobox";
+
+import { sugerirAssuntoDoRelato, type SugestaoComAcerto } from "@/lib/actions/sugestoes";
 
 interface Props {
   data: Case;
@@ -78,6 +81,34 @@ export default function InvestigationTab({
   const relatedSubcategories = subcategories.filter(
     (item) => item.category === data.category
   );
+
+  /*
+    Sugestão de assunto pelo relato (Fase 15 do roadmap 2.0). Só quando
+    ainda não há assunto — quem já classificou não precisa de palpite —
+    e com o texto pesado quieto por 600ms, para não bater no servidor a
+    cada tecla enquanto alguém edita a descrição.
+  */
+  const semAssunto = !data.category || data.category === "Não classificado";
+  const [sugestao, setSugestao] = useState<SugestaoComAcerto | null>(null);
+
+  useEffect(() => {
+    if (!semAssunto) return;
+    const texto = `${data.title} ${data.description}`.trim();
+    if (texto.length < 8) return;
+    let ativo = true;
+    const id = window.setTimeout(async () => {
+      const r = await sugerirAssuntoDoRelato({ texto, excluirProtocol: data.protocol });
+      if (ativo) setSugestao(r);
+    }, 600);
+    return () => {
+      ativo = false;
+      window.clearTimeout(id);
+    };
+  }, [semAssunto, data.title, data.description, data.protocol]);
+
+  /* `semAssunto` também esconde uma sugestão de uma rodada anterior, se a categoria voltar a ser escolhida. */
+  const assuntoSugerido =
+    semAssunto && sugestao?.sugestao && categories.some((c) => c.name === sugestao.sugestao!.valor) ? sugestao.sugestao : null;
 
   return (
     <div className="space-y-5">
@@ -347,6 +378,18 @@ export default function InvestigationTab({
           </div>
 
         </div>
+
+        {assuntoSugerido && (
+          <div className="mt-4">
+            <SugestaoDoTexto
+              rotulo="Categoria sugerida pelo relato"
+              valor={assuntoSugerido.valor}
+              motivo={assuntoSugerido.motivo || undefined}
+              acerto={sugestao?.acerto}
+              onUsar={() => onChange({ category: assuntoSugerido.valor, subcategory: "" })}
+            />
+          </div>
+        )}
 
       </SurfaceCard>
 

@@ -104,6 +104,14 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.13.0",
+    data: "2026-09-17",
+    titulo: "Sugestão de triagem pelo texto",
+    texto: "No Reclame Aqui, sem categoria ainda, o relato sugere uma — pelos casos parecidos e por regras, com o motivo à vista. No NPS, o comentário sugere o tipo e a causa raiz. A taxa de acerto só aparece com base suficiente para dizer algo (medida: 64,6% em 356 relatos, contra 50,3% de chutar a mais comum). Sempre um clique em Usar — nada marca sozinho.",
+    frentes: ["reclame-aqui", "nps"],
+    href: "/reclame-aqui",
+  },
+  {
     versao: "1.12.0",
     data: "2026-09-17",
     titulo: "Segmentos das Redes",

@@ -3,11 +3,13 @@
 import { useState } from "react";
 
 import Modal, { inputClass } from "@/components/shared/Modal";
+import SugestaoDoTexto from "@/components/shared/SugestaoDoTexto";
 
 import { classificarNps } from "@/lib/actions/nps";
 import { useNps } from "@/lib/context/NpsContext";
 import { useProjects } from "@/lib/context/ProjectsContext";
 import { useToast } from "@/lib/context/ToastContext";
+import { useSugestaoNps } from "@/lib/hooks/useSugestaoNps";
 import { segmentOf, tipoPorNome, type NpsResponseView } from "@/lib/models/nps";
 
 import { ErroDoServidor, RodapeDeSalvar, Rotulo } from "@/components/shared/Rodape";
@@ -36,6 +38,11 @@ export default function ClassificarNpsModal({ item, onClose }: { item: NpsRespon
   const causas = rootCauses.filter((c) => c.active || c.name === item.rootCause).sort((a, b) => a.order - b.order);
   const faltaCausa = Boolean(regra?.requiresRootCause) && !causa;
   const mudou = tipo !== (item.kind ?? "") || causa !== (item.rootCause ?? "") || assumir;
+
+  /* Sugestão pelo comentário: só enquanto o campo ainda não foi escolhido. */
+  const sugestao = useSugestaoNps(item.comment, item.score);
+  const tipoSugerido = !tipo && sugestao.tipo && ativos.some((k) => k.name === sugestao.tipo!.valor) ? sugestao.tipo : null;
+  const causaSugerida = !causa && sugestao.causa && causas.some((c) => c.name === sugestao.causa!.valor) ? sugestao.causa : null;
 
   async function salvar() {
     setSalvando(true);
@@ -85,6 +92,15 @@ export default function ClassificarNpsModal({ item, onClose }: { item: NpsRespon
           </blockquote>
         )}
 
+        {tipoSugerido && (
+          <SugestaoDoTexto
+            rotulo="Tipo sugerido pelo comentário"
+            valor={tipoSugerido.valor}
+            motivo={tipoSugerido.motivo || undefined}
+            onUsar={() => setTipo(tipoSugerido.valor)}
+          />
+        )}
+
         <div>
           <Rotulo>Tipo</Rotulo>
           <div className="mt-2 grid gap-2 sm:grid-cols-2">
@@ -123,6 +139,16 @@ export default function ClassificarNpsModal({ item, onClose }: { item: NpsRespon
               ))}
             </select>
             <span className="mt-1 block text-xs text-zinc-400">A mesma lista nas quatro frentes — é ela que mostra a tendência no Analytics.</span>
+            {causaSugerida && (
+              <div className="mt-2">
+                <SugestaoDoTexto
+                  rotulo="Causa sugerida pelo comentário"
+                  valor={causaSugerida.valor}
+                  motivo={causaSugerida.motivo || undefined}
+                  onUsar={() => setCausa(causaSugerida.valor)}
+                />
+              </div>
+            )}
           </label>
 
           <div>

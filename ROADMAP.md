@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 17/09/2026. Aplicação **1.12.0**, extensão **1.12.0**.
+Atualizado em 17/09/2026. Aplicação **1.13.0**, extensão **1.13.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,51 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### Sugestão de triagem pelo texto, com a taxa de acerto medida (17/09/2026, 1.13.0)
+
+Fecha a Fase 15. O Isaac: "a parte de triagem dos casos achei
+interessante, você pode enxergar margens que possa melhorar".
+
+- **Reclame Aqui — categoria pelo relato.** Na aba Investigação, sem
+  categoria ainda, o servidor sugere pelo relato: os casos mais
+  parecidos já classificados (TF-IDF e cosseno, sem serviço externo) e
+  regras por palavra de cobrança, sistema, implantação, cancelamento,
+  comercial e atendimento. Um clique em "Usar" aplica; nada marca
+  sozinho. O índice mora no servidor — os relatos são texto pesado que
+  a lista normal não carrega, e trazê-los ao navegador só para sugerir
+  pesaria a abertura da plataforma inteira.
+- **NPS — tipo e causa raiz pelo comentário**, na tela de classificar:
+  o comentário já está carregado (é o mesmo da citação), então a
+  sugestão roda no navegador, sem pedido a mais ao servidor.
+- **A taxa de acerto é medida, não prometida** (`medirAcerto`): cada
+  exemplo recente é tirado da base e sugerido pelos outros. Medido em
+  356 relatos do Reclame Aqui (17/09/2026): 64,6% de acerto cobrindo
+  97,5% das categorias, contra 50,3% de chutar sempre "Atendimento"
+  (`npm run medir:sugestao`). A tela só mostra o número com pelo menos
+  30 casos medidos — com poucos exemplos (o NPS tem hoje só 4
+  comentários com tipo, e 3 com causa), a sugestão continua por regra,
+  sem afirmar uma taxa que seria ruído.
+- **Aprende com a correção**: cada caso que alguém classifica e salva
+  vira exemplo para o próximo parecido — sem tabela nova, é a própria
+  base.
+
+Achado ao conferir na tela (não pelos testes, que não tocam o Next):
+`tryRole` lê `cookies()`, e o Next recusa isso dentro de uma função
+cacheada com `unstable_cache` — o cache vale para qualquer requisição,
+não para uma sessão. A leitura do índice ficou só com `getPrisma()`; a
+permissão se confere uma vez, fora do cache.
+
+Provas: `check:sugestao-texto` (tokenização, vizinho mais parecido,
+regra e vizinhos somados, `medirAcerto` sem inventar, as regras da
+documentação, o trecho apontado, e a fiação do cache); `medir:sugestao`
+roda a medição real sobre os 356 relatos. Na tela: um caso descartável
+com relato de cobrança dupla sugeriu "Financeiro" (motivo: parecido com
+6 casos + palavra de cobrança, acerto 65% de 347), Usar aplicou, Salvar
+gravou no banco (conferido pela consulta direta) — e o caso foi
+apagado no fim. No NPS, um ciclo real sem classificação sugeriu a causa
+"Cobrança" pela palavra "valores", com o motivo à vista e sem gravar
+nada (só conferência, sem tocar o registro real).
 
 ### Segmentos das Redes no lugar dos dois gráficos (17/09/2026, 1.12.0)
 
