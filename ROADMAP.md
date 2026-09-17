@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 16/09/2026. Aplicação **0.80.0**, extensão **0.80.0**.
+Atualizado em 17/09/2026. Aplicação **0.81.0**, extensão **0.81.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1100,6 +1100,38 @@ caracteres** antes e depois da divisão (contato 6.026, fila 3.289, NPS
 nenhum erro no console. `check:painel`, `check:fiacao`, `check:escape`,
 `check:dossie`, `check:respostas` e `check:atalho` de pé — as quatro
 últimas leem o painel como texto e passaram a ler os sete como um só.
+
+### Fase 10.2 — desempenho medido: a abertura numa ida só (17/09/2026, 0.81.0)
+
+**O que foi medido.** As consultas no banco estão dentro do teto
+(`check:desempenho`, base de 358 reclamações e 1.565 respostas de NPS:
+quadro 224 ms, NPS 229 ms, estabelecimentos 66 ms). O que pesava era o
+navegador: ao abrir qualquer página, os providers do layout raiz pediam
+sete leituras por server action — cadastro, casos, NPS, causas do NPS,
+preferências, filtros e Google — e **o Next executa as server actions de
+uma aba uma de cada vez**. Cada leitura esperava a anterior.
+
+Medido no painel, recarregando a página (dev):
+
+| | idas | até o último dado |
+|---|---|---|
+| antes | 14 em fila (7 × 2, StrictMode) | 5,6 s da primeira à última; 2,9 s por passada |
+| depois | 1 com os sete pedaços (223 kB) | 1,0 s |
+
+Sobrou à parte só o calendário do Google (3 kB), que depende de conta
+conectada.
+
+**Como.** `cargaInicial` roda as sete actions de sempre em paralelo no
+servidor, cada uma com a própria checagem de acesso, e devolve cada
+parte com `ok` — uma que falha não derruba as outras. No navegador, o
+primeiro provider dispara a ida e os outros pegam a sua parte. A parte
+só vale na abertura (10 s): recarregar depois de gravar volta ao caminho
+próprio, para não servir dado velho. Sem sessão, nada vai junto e cada
+provider mostra a recusa como antes.
+
+Conferido na tela: painel, NPS (1.572 respostas), Google e Meu dia com
+os dados. Provas: `check:carga-inicial` (novo), `check:seguranca`,
+`check:gravacoes`, `check:desempenho`.
 
 ### Fase 10.3 — celular, 375 px (16/09/2026, 0.80.0)
 

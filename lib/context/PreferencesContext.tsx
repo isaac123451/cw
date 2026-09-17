@@ -1,5 +1,6 @@
 "use client";
 
+import { daCargaInicial } from "@/lib/context/cargaInicial";
 import {
   createContext,
   useCallback,
@@ -78,7 +79,7 @@ export function PreferencesProvider({
 
     if (hasDatabase) {
 
-      getPreferences()
+      daCargaInicial("preferencias", getPreferences)
         .then((guardadas) => {
           // `null` = nunca salvou nada; o padrão já está no estado.
           if (ativo && guardadas) setPrefs(guardadas);

@@ -1,5 +1,6 @@
 "use client";
 
+import { daCargaInicial } from "@/lib/context/cargaInicial";
 import { useEffect, useState } from "react";
 
 import {
@@ -20,7 +21,8 @@ let pendente: Promise<Workspace> | null = null;
 export function carregarWorkspace() {
 
   if (!pendente) {
-    pendente = loadWorkspace().catch((error) => {
+    /* A primeira carga vem na ida única da abertura; as seguintes, direto. */
+    pendente = daCargaInicial("workspace", loadWorkspace).catch((error) => {
       // Falha não pode ficar em cache: a próxima montagem tenta de novo.
       pendente = null;
       throw error;

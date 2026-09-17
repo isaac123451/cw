@@ -1,5 +1,6 @@
 "use client";
 
+import { daCargaInicial } from "@/lib/context/cargaInicial";
 import {
   createContext,
   useContext,
@@ -453,7 +454,7 @@ export function CaseProvider({
 
     let ativo = true;
 
-    listCases()
+    daCargaInicial("casos", listCases)
       .then((leitura) => {
 
         if (!ativo) return;

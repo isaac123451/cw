@@ -1,5 +1,6 @@
 "use client";
 
+import { daCargaInicial } from "@/lib/context/cargaInicial";
 import { useEffect, useSyncExternalStore } from "react";
 
 import { listarAvaliacoesGoogle, type AvaliacaoGoogleView } from "@/lib/actions/avaliacoesGoogle";
@@ -24,7 +25,7 @@ function avisar() {
 
 function carregar(forcar = false) {
   if (pendente && !forcar) return pendente;
-  pendente = listarAvaliacoesGoogle()
+  pendente = (forcar ? listarAvaliacoesGoogle() : daCargaInicial("google", listarAvaliacoesGoogle))
     .then((l) => {
       lista = l;
       avisar();

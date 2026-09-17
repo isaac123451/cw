@@ -1,5 +1,6 @@
 "use client";
 
+import { daCargaInicial } from "@/lib/context/cargaInicial";
 import {
   createContext,
   useCallback,
@@ -154,8 +155,8 @@ export function NpsProvider({
     if (!enabled) return;
 
     Promise.all([
-      listNpsResponses(),
-      listNpsRootCauses(),
+      daCargaInicial("nps", listNpsResponses),
+      daCargaInicial("causasDoNps", listNpsRootCauses),
       carregarWorkspace(),
     ])
       .then(([lista, causas, workspace]) => {

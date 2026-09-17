@@ -1,5 +1,6 @@
 "use client";
 
+import { daCargaInicial } from "@/lib/context/cargaInicial";
 import {
   createContext,
   useCallback,
@@ -97,7 +98,7 @@ export function SavedFiltersProvider({
 
     if (hasDatabase) {
 
-      listSavedFilters()
+      daCargaInicial("filtros", listSavedFilters)
         .then((linhas) => {
           if (ativo) setMine(linhas.map(normalizar));
         })
