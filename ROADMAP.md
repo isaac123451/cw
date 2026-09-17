@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 17/09/2026. Aplicação **1.3.0**, extensão **1.3.0**.
+Atualizado em 17/09/2026. Aplicação **1.4.0**, extensão **1.4.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,18 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### Atalhos de teclado (17/09/2026, 1.4.0)
+
+"g" e depois uma letra vai para a tela: `g m` Meu dia, `g a` Agenda,
+`g d` Dashboard, `g r` Reclame Aqui, `g s` Redes, `g n` NPS, `g o`
+Google, `g w` Conversas, `g c` Clientes, `g e` Estabelecimentos, `g t`
+Relatório, `g i` Assistente. `n` abre um caso novo no Reclame Aqui, `?`
+mostra todos, `Ctrl K` ou `/` busca. Nenhum atalho vale enquanto se
+digita num campo, com Ctrl/Cmd/Alt apertado ou com um diálogo aberto.
+
+Prova: `check:atalhos` (novo) e, na tela, `g n` levando ao NPS e `?`
+abrindo a lista.
 
 ### Notificações que resolvem (17/09/2026, 1.3.0)
 

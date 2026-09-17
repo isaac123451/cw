@@ -9,6 +9,7 @@ import { useSession } from "@/lib/context/SessionContext";
 import ThemeToggle from "@/components/shared/ThemeToggle";
 import MobileNav from "./MobileNav";
 import BuscaGlobal from "@/components/busca/BuscaGlobal";
+import AtalhosDeTeclado from "@/components/busca/AtalhosDeTeclado";
 
 export default function Topbar() {
 
@@ -42,6 +43,7 @@ export default function Topbar() {
       <div className="flex items-center gap-3">
 
         <BuscaGlobal />
+        <AtalhosDeTeclado />
 
         <ThemeToggle />
 

@@ -353,7 +353,7 @@ function Paleta({ onFechar }: { onFechar: () => void }) {
           <span><kbd className="font-sans">↑↓</kbd> navegar</span>
           <span><kbd className="font-sans">Enter</kbd> abrir</span>
           <span><kbd className="font-sans">Shift+Enter</kbd> abrir em mini-janela</span>
-          <span className="ml-auto">Ctrl K ou / de qualquer tela</span>
+          <span className="ml-auto"><kbd className="font-sans">?</kbd> todos os atalhos</span>
         </div>
       </div>
     </div>
