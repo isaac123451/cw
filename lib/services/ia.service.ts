@@ -28,7 +28,23 @@ import {
  * leitura de `process.env`, que no navegador vem vazio.
  */
 
-export type Provedor = "anthropic" | "gemini";
+/**
+ * `"motor-proprio"` é o Fase 16: quando nenhum provedor externo está
+ * configurado ou os configurados falharam, algumas telas (o resumo de
+ * conversa é a primeira) respondem pelo motor sem IA de
+ * `lib/services/motorProprio.ts`. Ele nunca é escolhido por
+ * `provedorDeIA` — é o chamador que decide recorrer a ele depois que
+ * `pedirEstruturado` volta sem dados.
+ */
+export type Provedor = "anthropic" | "gemini" | "motor-proprio";
+
+/**
+ * Só os dois de fora — o que `provedorDeIA` escolhe e o que
+ * `provedorReserva` tenta no lugar dele. O motor próprio nunca é
+ * "escolhido": é o chamador que recorre a ele depois que os dois de
+ * fora falharam ou não existem.
+ */
+export type ProvedorExterno = Exclude<Provedor, "motor-proprio">;
 
 function chave(nome: string) {
   const valor = (process.env[nome] ?? "").trim();
@@ -60,7 +76,7 @@ export function provedorDeIA(
    * um script ou de uma tela que só quer saber "tem IA ligada?".
    */
   preferencia?: string
-): Provedor | null {
+): ProvedorExterno | null {
 
   const preferido = (
     preferencia ??
@@ -105,11 +121,11 @@ export function temIA() {
  * por isso que o `check:ia` diz na cara qual chave falta.
  */
 export function provedorReserva(
-  emUso: Provedor,
+  emUso: ProvedorExterno,
   preferencia?: string
-): Provedor | null {
+): ProvedorExterno | null {
 
-  const outro: Provedor =
+  const outro: ProvedorExterno =
     emUso === "gemini" ? "anthropic" : "gemini";
 
   /*

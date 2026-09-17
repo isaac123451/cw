@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 17/09/2026. Aplicação **1.13.0**, extensão **1.13.0**.
+Atualizado em 17/09/2026. Aplicação **1.14.0**, extensão **1.14.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,43 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### Motor próprio: o resumo de conversa não depende mais de nenhuma IA (17/09/2026, 1.14.0)
+
+Início da Fase 16. O Isaac: "quero algo gratuito, se o Anthropic for
+você pode utilizar, caso contrário trabalhe no agente de IA que você
+fez para eu utilizar na plataforma e melhorar."
+
+- **O estado de hoje.** A chave da Anthropic é o marcador do
+  `.env.example` (10 caracteres, `sk-ant-...`) — não está configurada de
+  verdade. A do Gemini está, mas tem camada gratuita: em 26/08/2026um
+  pedido voltou 503 "Gemini congestionado", e o resumo de conversa da
+  extensão simplesmente não saía. Groq e OpenRouter ainda não têm chave
+  (pendência sua).
+- **`lib/services/motorProprio.ts`**: lê a conversa sem IA nenhuma —
+  humor (léxico de tom em português, pesando mais a mensagem mais
+  recente do cliente), assunto (as mesmas regras da triagem do Reclame
+  Aqui), resumo (extrativo — a primeira e a última fala do cliente,
+  nunca inventado), pendência e próximo passo (pelo estado da última
+  mensagem) e três rascunhos prontos para revisar. Nunca escreve
+  protocolo, prazo ou nome que a conversa não tenha.
+- **A rota `/api/extensao/conversa`** não recusa mais de cara sem
+  provedor: quando `pedirEstruturado` não tem o que responder (sem
+  chave, ou o provedor caiu), o motor próprio entra no lugar, com o
+  mesmo formato de resposta e passando pela mesma conferência de
+  rascunho. O botão de resumir no painel da extensão passa a estar
+  sempre disponível.
+
+Provas: `check:motor-proprio` (humor, assunto, resumo, pendência,
+rascunhos, e a fiação da rota); no servidor de conferência, GET e POST
+reais em `/api/extensao/conversa` com sessão local — respondeu pelo
+Gemini de verdade (o caminho normal continua de pé) e a lógica do motor
+foi testada isoladamente para o caminho de queda.
+
+Fica para depois, dentro da mesma Fase 16: as chaves do Groq e do
+OpenRouter na cadeia (aguardando você criá-las) e o motor próprio em
+mais lugares do agente. O dossiê do cliente já é feito de dados do
+banco, sem IA — não precisou de motor novo.
 
 ### Sugestão de triagem pelo texto, com a taxa de acerto medida (17/09/2026, 1.13.0)
 

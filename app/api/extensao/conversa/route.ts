@@ -9,6 +9,7 @@ import {
   pedirEstruturado,
   provedorDeIA,
 } from "@/lib/services/ia.service";
+import { retratarConversaSemIA } from "@/lib/services/motorProprio";
 import { MOODS } from "@/lib/models/nps";
 
 export const runtime = "nodejs";
@@ -168,10 +169,18 @@ export async function GET(request: Request) {
     return semSessao(request);
   }
 
-  // O painel consulta isto para decidir se mostra o botão de resumir.
+  /*
+    O painel consulta isto para decidir se mostra o botão de resumir.
+
+    Sempre `true` desde o motor próprio (Fase 16 do roadmap 2.0): sem
+    nenhuma IA externa configurada — ou com as configuradas fora do ar —
+    a leitura ainda sai, pelas regras de `lib/services/motorProprio.ts`.
+    `provedor` continua dizendo qual delas responderia primeiro, para
+    quem olha o popup entender a diferença.
+  */
   return responder(request, {
-    disponivel: Boolean(provedorDeIA()),
-    provedor: provedorDeIA(),
+    disponivel: true,
+    provedor: provedorDeIA() ?? "motor-proprio",
     humores: MOODS.map((m) => ({
       valor: m.value,
       emoji: m.emoji,
@@ -187,16 +196,6 @@ export async function POST(request: Request) {
 
   if (!usuario && !demonstracao) {
     return semSessao(request);
-  }
-
-  if (!provedorDeIA()) {
-    return responder(
-      request,
-      {
-        erro: "Nenhuma IA configurada. Defina ANTHROPIC_API_KEY ou GEMINI_API_KEY (a do Gemini tem camada gratuita).",
-      },
-      503
-    );
   }
 
   let corpo: Corpo;
@@ -218,7 +217,7 @@ export async function POST(request: Request) {
     // As últimas: o fim da conversa é onde está o estado atual.
     .slice(-MAXIMO_MENSAGENS)
     .map((m) => ({
-      de: m.de === "nos" ? "nos" : "cliente",
+      de: m.de === "nos" ? ("nos" as const) : ("cliente" as const),
       texto: m.texto.trim().slice(0, MAXIMO_CARACTERES),
       hora: m.hora,
     }));
@@ -248,7 +247,7 @@ export async function POST(request: Request) {
     .filter(Boolean)
     .join("\n\n");
 
-  const resultado = await pedirEstruturado({
+  let resultado = await pedirEstruturado({
     sistema: SISTEMA,
     prompt: `${cabecalho ? `${cabecalho}
 
@@ -267,6 +266,22 @@ ${transcricao}`,
      */
     rapido: true,
   });
+
+  /*
+    Sem provedor configurado, ou os configurados fora do ar (o 503 do
+    Gemini congestionado é o caso real, medido em 26/08/2026): o motor
+    próprio entra no lugar do erro, com o mesmo formato de resposta —
+    resumo, assunto, humor, pendência, próximo passo e três rascunhos —
+    lido pelas regras de `lib/services/motorProprio.ts`. Nunca inventa o
+    que a conversa não diz; é mais raso que a IA, não menos confiável.
+  */
+  if (resultado.erro || !resultado.dados) {
+    resultado = {
+      provedor: "motor-proprio",
+      /* O retrato tem os oito campos do mesmo esquema que a IA preenche — só o tipo de `dados` é genérico. */
+      dados: retratarConversaSemIA(mensagens, { nome: corpo.contato?.nome }) as unknown as Record<string, unknown>,
+    };
+  }
 
   if (resultado.erro || !resultado.dados) {
     return responder(

@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.14.0",
+    data: "2026-09-17",
+    titulo: "Resumo de conversa sem depender de IA externa",
+    texto: "Quando nenhum provedor de IA responde (chave ausente, ou congestionado), o motor próprio da plataforma lê a conversa e devolve resumo, humor, pendência, próximo passo e três rascunhos prontos — pelas mesmas regras que a documentação já usa, sem inventar nada. O botão de resumir na extensão fica sempre disponível.",
+    frentes: ["extensao", "plataforma"],
+  },
+  {
     versao: "1.13.0",
     data: "2026-09-17",
     titulo: "Sugestão de triagem pelo texto",
