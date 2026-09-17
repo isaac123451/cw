@@ -56,7 +56,11 @@ for (const largura of [320, 375, 414]) {
 
 conferir("o nome longo quebra na ficha do NPS", /\[overflow-wrap:anywhere\][^>]*>\{nomeDoCliente\(ciclo\)\}/.test(ler("components/nps/ficha/FichaDoNps.tsx")), true);
 conferir("e o título na ficha do caso", ler("components/reclame-aqui/detail/CaseDetail.tsx").includes("[overflow-wrap:anywhere]"), true);
-conferir("a mini-janela nunca é mais larga que a tela", /min\(\$\{LARGURA_DA_JANELA\}px, calc\(100vw - 16px\)\)/.test(ler("components/janelas/JanelasHost.tsx")), true);
+conferir(
+  "a mini-janela (essencial ou completa) nunca é mais larga que a tela",
+  /min\(\$\{completa \? LARGURA_DA_FICHA_COMPLETA : LARGURA_DA_JANELA\}px, calc\(100vw - 16px\)\)/.test(ler("components/janelas/JanelasHost.tsx")),
+  true
+);
 
 console.log(falhas === 0 ? "\n  As telas principais cabem em 375 px.\n" : `\n  ${falhas} ponto(s) a corrigir.\n`);
 process.exit(falhas === 0 ? 0 : 1);
