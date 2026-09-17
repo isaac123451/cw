@@ -359,7 +359,7 @@ function oAvisoExiste() {
   const pontos: [string, boolean, string][] = [
     [
       "o provider desenha o aviso",
-      /\{aviso && <AvisoDeLeitura/.test(contexto),
+      /\{aviso && \(\s*<AvisoDeLeitura/.test(contexto),
       "sem isto, cada tela teria de lembrar de mostrar — e a que esquecer volta a mentir",
     ],
     [
@@ -371,6 +371,16 @@ function oAvisoExiste() {
       "e oferece recarregar",
       /Recarregar/.test(contexto),
       "dizer que falhou sem dar o que fazer é metade do trabalho",
+    ],
+    [
+      "e tenta de novo sem recarregar a página",
+      /Tentar de novo/.test(contexto) && /recarregarWorkspace\(\)/.test(contexto),
+      "o botão que só dava F5 fazia perder o que estava aberto — e as mini-janelas",
+    ],
+    [
+      "falha passageira tenta sozinha antes de avisar",
+      /comNovaTentativa\(/.test(contexto) && /leitura\.motivo === "banco-recusou"/.test(contexto),
+      "era isso que acendia a faixa em quase toda abertura",
     ],
     [
       "a hora da carga chega à tela",

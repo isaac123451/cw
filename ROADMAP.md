@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 17/09/2026. Aplicação **1.0.1**, extensão **1.0.1**.
+Atualizado em 17/09/2026. Aplicação **1.1.0**, extensão **1.1.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1100,6 +1100,47 @@ caracteres** antes e depois da divisão (contato 6.026, fila 3.289, NPS
 nenhum erro no console. `check:painel`, `check:fiacao`, `check:escape`,
 `check:dossie`, `check:respostas` e `check:atalho` de pé — as quatro
 últimas leem o painel como texto e passaram a ler os sete como um só.
+
+## Roadmap 2.0 — ter gosto de usar (17/09/2026)
+
+Pedido do Isaac depois da 1.0.1: busca que funciona, menu e visual de
+ferramenta (nada com cara de feito por IA), mini-janelas completas,
+Meu dia e Agenda com guia para finalizar, triagem das Redes clara e
+captação por Google Sheets e Slack, triagem melhor em cada frente, IA
+gratuita que não cai, extensão repaginada (humor do cliente, dossiê,
+resumo, resposta, avisos ao abrir a tela), conversas que se guardam
+sozinhas com mídia no Google Drive. Documento publicado:
+https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
+
+Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
+próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
+lida pela extensão; Slack lido pelo navegador, sem token.
+
+### Busca global e o aviso de falha discreto (17/09/2026, 1.1.0)
+
+- **A busca do topo funciona.** Era só um campo desenhado. Agora
+  `Ctrl+K`, `Cmd+K` ou `/` abre a paleta: casos (protocolo, cliente,
+  CPF/CNPJ, telefone, título), NPS, clientes, estabelecimentos,
+  conversas do WhatsApp e as telas — inclusive pelos nomes que as
+  pessoas usam ("sla" acha Processos e SLA, "planos", "permissões",
+  "macros"). Enter abre; **Shift+Enter abre o caso numa mini-janela**.
+  Mostra os abertos recentemente. Roda no navegador sobre o que já está
+  em memória: **5,8 ms por tecla** com 500 casos e 2.000 NPS; só as
+  conversas vão ao servidor, com pausa entre teclas. Termo curto só
+  casa começo de palavra ("sla" não acha "treSLAgoas").
+- **A faixa "Os números abaixo não são a sua operação — Recarregar"
+  saiu.** O Isaac: "sempre aparecendo a notificação para recarregar …
+  algo tão grande é feio". Aparecia por falha passageira da primeira
+  leitura (função acordando, conexão lenta). Agora a leitura do cadastro
+  e dos casos tenta de novo sozinha duas vezes (1,5 s e 4 s) antes de
+  avisar; o que sobra é um aviso do tamanho de um toast, no canto, com
+  "Tentar de novo" que relê **sem** recarregar a página (e avisa todos
+  os pedaços do cadastro que já estão na tela) e pode ser dispensado —
+  menos o de gravação, que não some por clique.
+
+Provas: `check:busca-global` (novo, com a medição de tempo),
+`check:nova-tentativa` (novo), `check:silencio` atualizado; na tela,
+"rafael", "9909-5712", "sla" e Shift+Enter abrindo a mini-janela.
 
 ### Verificação geral depois da 1.0 (17/09/2026, 1.0.1)
 

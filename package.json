@@ -1,6 +1,6 @@
 {
   "name": "cw-reputacao",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -116,7 +116,9 @@
     "check:primeiro-contato": "tsx scripts/check-primeiro-contato.ts",
     "check:telas-sem-saida": "tsx scripts/check-telas-sem-saida.ts",
     "check:celular": "tsx scripts/check-celular.ts",
-    "check:carga-inicial": "tsx scripts/check-carga-inicial.ts"
+    "check:carga-inicial": "tsx scripts/check-carga-inicial.ts",
+    "check:busca-global": "tsx scripts/check-busca-global.ts",
+    "check:nova-tentativa": "tsx scripts/check-nova-tentativa.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",

@@ -2,14 +2,13 @@
 
 import { usePathname } from "next/navigation";
 
-import { Search } from "lucide-react";
-
 import { menuItems } from "@/core/navigation/menu";
 import UserMenu from "./UserMenu";
 import NotificationsMenu from "./NotificationsMenu";
 import { useSession } from "@/lib/context/SessionContext";
 import ThemeToggle from "@/components/shared/ThemeToggle";
 import MobileNav from "./MobileNav";
+import BuscaGlobal from "@/components/busca/BuscaGlobal";
 
 export default function Topbar() {
 
@@ -42,19 +41,7 @@ export default function Topbar() {
 
       <div className="flex items-center gap-3">
 
-        <div className="relative hidden md:block">
-
-          <Search
-            className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400"
-            size={16}
-          />
-
-          <input
-            className="h-10 w-64 rounded-xl border border-zinc-200 bg-zinc-50/80 pl-10 pr-4 text-sm outline-none transition-colors placeholder:text-zinc-400 focus:border-violet-400 focus:bg-white"
-            placeholder="Buscar na plataforma..."
-          />
-
-        </div>
+        <BuscaGlobal />
 
         <ThemeToggle />
 

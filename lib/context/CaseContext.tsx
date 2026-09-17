@@ -34,7 +34,8 @@ import {
   motivoDaFalha,
   type Gravacao,
 } from "@/lib/context/sync";
-import { carregarWorkspace } from "@/lib/context/useWorkspace";
+import { carregarWorkspace, recarregarWorkspace } from "@/lib/context/useWorkspace";
+import { comNovaTentativa } from "@/lib/context/novaTentativa";
 import { RECADO } from "@/lib/models/leitura";
 
 import {
@@ -454,7 +455,11 @@ export function CaseProvider({
 
     let ativo = true;
 
-    daCargaInicial("casos", listCases)
+    comNovaTentativa(
+      (tentativa) => (tentativa === 0 ? daCargaInicial("casos", listCases) : listCases()),
+      /* Só o banco que não respondeu passa; sem sessão ou sem acesso, esperar não muda. */
+      (leitura) => !leitura.ok && leitura.motivo === "banco-recusou"
+    )
       .then((leitura) => {
 
         if (!ativo) return;
@@ -881,7 +886,21 @@ export function CaseProvider({
         todas as telas que dependem de reclamação, e nenhuma tela nova
         pode esquecer de mostrar.
       */}
-      {aviso && <AvisoDeLeitura recado={aviso} />}
+      {aviso && (
+        <AvisoDeLeitura
+          key={aviso}
+          recado={aviso}
+          gravacao={Boolean(syncError)}
+          onTentarDeNovo={async () => {
+            if (syncError) setSyncError(null);
+            if (falhaDoCadastro) {
+              const w = await recarregarWorkspace().catch(() => null);
+              setFalhaDoCadastro(!w ? RECADO["banco-recusou"] : w.indisponivel ? RECADO[w.indisponivel] : null);
+            }
+            if (falhaDeLeitura) await recarregar();
+          }}
+        />
+      )}
 
       {children}
     </CaseContext.Provider>
@@ -889,32 +908,75 @@ export function CaseProvider({
 }
 
 /**
- * A faixa que diz que os dados não são o que a tela parece mostrar.
+ * O aviso de que os dados não vieram — pequeno, no canto, e resolvendo.
  *
- * Fixa no topo e por cima de tudo, de propósito: quem abriu a tela
- * precisa saber **antes** de tirar conclusão dos números. Um aviso
- * discreto no rodapé seria a mesma omissão de antes, com mais trabalho.
+ * Era uma faixa fixa no topo, larga, com "Os números abaixo não são a
+ * sua operação" e um botão que recarregava a página inteira. O Isaac:
+ * "sempre aparecendo a notificação para recarregar … algo tão grande é
+ * feio". Aparecia quase toda abertura porque qualquer falha passageira
+ * da primeira leitura acendia a faixa; agora a leitura tenta de novo
+ * sozinha antes (ver `novaTentativa`), e o que sobra é um aviso do
+ * tamanho de um toast, que tenta de novo **sem** recarregar a página.
+ *
+ * Aviso de leitura pode ser dispensado. Aviso de gravação não some por
+ * clique: o que a pessoa escreveu não foi salvo, e ela precisa saber.
  */
-function AvisoDeLeitura({ recado }: { recado: string }) {
+function AvisoDeLeitura({
+  recado,
+  gravacao,
+  onTentarDeNovo,
+}: {
+  recado: string;
+  gravacao: boolean;
+  onTentarDeNovo: () => Promise<void>;
+}) {
+  const [tentando, setTentando] = useState(false);
+  const [dispensado, setDispensado] = useState(false);
+
+  if (dispensado) return null;
+
   return (
     <div
       role="alert"
-      className="fixed inset-x-0 top-0 z-[100] flex items-start justify-center gap-3 border-b border-amber-300 bg-amber-50 px-4 py-2.5 text-[13px] text-amber-900 shadow-sm dark:border-amber-700/50 dark:bg-amber-950 dark:text-amber-100"
+      className="fixed bottom-4 left-4 z-[100] flex w-[340px] max-w-[calc(100vw-2rem)] items-start gap-2.5 rounded-xl border border-amber-200 bg-white px-3.5 py-3 text-[13px] shadow-[0_10px_30px_-12px_rgba(16,24,40,0.3)] dark:border-amber-700/50 dark:bg-zinc-900"
     >
-      <span className="max-w-3xl">
-        <strong className="font-semibold">
-          Os números abaixo não são a sua operação.
-        </strong>{" "}
-        {recado}
-      </span>
-
-      <button
-        type="button"
-        onClick={() => window.location.reload()}
-        className="shrink-0 rounded-lg border border-amber-400 px-2 py-0.5 text-xs font-medium transition-colors hover:bg-amber-100 dark:border-amber-600 dark:hover:bg-amber-900"
-      >
-        Recarregar
-      </button>
+      <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-amber-500" aria-hidden />
+      <div className="min-w-0 flex-1">
+        <p className="font-medium text-zinc-900 dark:text-zinc-100">
+          {gravacao ? "Uma alteração não foi salva" : "Os dados não carregaram por completo"}
+        </p>
+        <p className="mt-0.5 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">{recado}</p>
+        <div className="mt-2 flex items-center gap-3 text-xs">
+          <button
+            type="button"
+            disabled={tentando}
+            onClick={async () => {
+              setTentando(true);
+              try {
+                await onTentarDeNovo();
+              } finally {
+                setTentando(false);
+              }
+            }}
+            className="font-medium text-violet-700 hover:underline disabled:opacity-60 dark:text-violet-300"
+          >
+            {tentando ? "Tentando…" : "Tentar de novo"}
+          </button>
+          <button type="button" onClick={() => window.location.reload()} className="text-zinc-500 hover:text-zinc-800 hover:underline dark:hover:text-zinc-200">
+            Recarregar a página
+          </button>
+        </div>
+      </div>
+      {!gravacao && (
+        <button
+          type="button"
+          onClick={() => setDispensado(true)}
+          aria-label="Dispensar o aviso"
+          className="-mr-1 -mt-0.5 rounded-md px-1 text-base leading-none text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800"
+        >
+          ×
+        </button>
+      )}
     </div>
   );
 }
