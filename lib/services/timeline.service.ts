@@ -79,8 +79,8 @@ function chave(at: string) {
  * Parte do que aparece aqui é derivado do próprio caso (registro,
  * classificação, resposta, avaliação, encerramento) e parte é registro
  * de verdade — triagem, contatos, áreas acionadas, escalonamentos,
- * moderação, CW Engine. É a trilha do documento contada na ordem em que
- * aconteceu, com quem fez cada passo.
+ * moderação. É a trilha do documento contada na ordem em que aconteceu,
+ * com quem fez cada passo.
  */
 export function buildTimeline(
   item: Case,
@@ -246,16 +246,6 @@ export function buildTimeline(
         item.createdAt,
       aproximado: !item.evaluatedAt,
       tone: "avaliacao",
-    });
-  }
-
-  if (item.cwEngineEm) {
-    entries.push({
-      id: "cw-engine",
-      title: "CW Engine atualizado",
-      detail: item.cwEnginePor ? `Finalização registrada por ${item.cwEnginePor}` : "Finalização registrada.",
-      at: item.cwEngineEm,
-      tone: "encerramento",
     });
   }
 

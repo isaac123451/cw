@@ -271,7 +271,7 @@ export default function IntegracoesPage() {
         <PageHeading
           eyebrow="Plataforma"
           title="Integrações"
-          description="Quem responde pela inteligência artificial, e o webhook disparado por evento para o CW Engine ser avisado em vez de só puxar via API."
+          description="Quem responde pela inteligência artificial, e o webhook disparado por evento para outro sistema ser avisado em vez de só puxar via API."
         />
 
         {/*

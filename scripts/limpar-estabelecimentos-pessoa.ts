@@ -22,7 +22,7 @@
  *
  * Como se reconhece o que foi inventado:
  *
- *  1. **Sem documento e sem id do CW Engine.** Tudo que veio da planilha
+ *  1. **Sem documento e sem id de conta.** Tudo que veio da planilha
  *     tem pelo menos um dos dois — 233 dos 239 têm documento. Um
  *     cadastro sem nenhuma das duas âncoras não veio de lá.
  *
@@ -110,7 +110,7 @@ async function main() {
     `  ${estabelecimentos.filter((e) => e.document?.trim()).length} com documento`
   );
   console.log(
-    `  ${estabelecimentos.filter((e) => e.externalId?.trim()).length} com id do CW Engine`
+    `  ${estabelecimentos.filter((e) => e.externalId?.trim()).length} com id de conta`
   );
   console.log("");
 
@@ -123,7 +123,7 @@ async function main() {
   }
 
   console.log(
-    `  ${suspeitos.length} cadastro(s) sem documento, sem id do CW Engine e com nome`
+    `  ${suspeitos.length} cadastro(s) sem documento, sem id de conta e com nome`
   );
   console.log("  igual ao de um consumidor da base:\n");
 

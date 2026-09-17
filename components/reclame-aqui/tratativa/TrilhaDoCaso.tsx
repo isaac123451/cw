@@ -58,7 +58,7 @@ interface Props {
   irParaAreas: () => void;
 }
 
-const FASES: PassoDaTrilha["fase"][] = ["Diagnóstico", "Conexão", "Validação", "Finalização"];
+const FASES: PassoDaTrilha["fase"][] = ["Diagnóstico", "Conexão", "Validação"];
 
 const ROTULO_DA_ACAO: Record<AcaoDoPasso, string> = {
   triar: "Triar o caso",
@@ -69,16 +69,15 @@ const ROTULO_DA_ACAO: Record<AcaoDoPasso, string> = {
   validacao: "Cliente confirmou a solução",
   resposta: "Escrever a resposta",
   "pedir-avaliacao": "Pedir a avaliação",
-  "cw-engine": "Finalizar",
 };
 
 /**
  * A trilha do Reclame Aqui no topo do caso: onde ele está e o que falta.
  *
- * O documento descreve oito passos e uma finalização; a ficha mostrava
- * abas. Quem abria o caso tinha de lembrar a ordem — e o passo que se
- * esquece é sempre o mesmo: validar com o cliente antes de responder,
- * pedir a avaliação de novo dois dias depois, atualizar o CW Engine.
+ * O documento descreve oito passos; a ficha mostrava abas. Quem abria
+ * o caso tinha de lembrar a ordem — e o passo que se esquece é sempre o
+ * mesmo: validar com o cliente antes de responder, pedir a avaliação de
+ * novo dois dias depois.
  *
  * Aqui cada passo é um botão, o passo atual vem com a ação dele na
  * frente, e os três ritmos que ninguém segue de cabeça (persistência,
@@ -155,8 +154,6 @@ export default function TrilhaDoCaso({ data, aoMudarNoServidor, irParaResposta, 
         return irParaResposta();
       case "pedir-avaliacao":
         return t.abrirPedidoAvaliacao(data, opcoes);
-      case "cw-engine":
-        return t.abrirFinalizacao(data, opcoes);
     }
   }
 

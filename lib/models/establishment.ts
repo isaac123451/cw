@@ -40,17 +40,18 @@ export interface Establishment {
   /** CPF ou CNPJ — a Cardápio Web cadastra restaurante das duas formas. */
   document?: string;
 
-  /** Id da conta no CW Engine. */
+  /** Id da conta usado para cruzar com outras frentes (o Wootric manda o mesmo id nas respostas do NPS). */
   externalId?: string;
 
-  /** Endereço da conta no portal, como o CW Engine entrega. */
+  /** Endereço da conta no portal. */
   portalUrl?: string;
 
   /**
    * O id que compõe `portal.cardapioweb.com/<id>`.
    *
-   * Não é o `externalId` — aquele é a conta no CW Engine, este é o do
-   * link do portal, e são números diferentes para o mesmo restaurante.
+   * Não é o `externalId` — aquele é o id da conta usado para cruzar com
+   * o NPS, este é o do link do portal, e são números diferentes para o
+   * mesmo restaurante.
    */
   portalId?: string;
 
@@ -263,8 +264,8 @@ export const PORTAL_BASE = "https://portal.cardapioweb.com";
  * verdade sobre onde aquela conta abre — inclusive quando o formato do
  * portal mudar e a montagem daqui ficar desatualizada.
  *
- * **Nunca monte com o `externalId`.** Aquele é o id da conta no CW
- * Engine, e são números diferentes para o mesmo restaurante: a conta
+ * **Nunca monte com o `externalId`.** Aquele é o id da conta usado
+ * para cruzar com o NPS, e são números diferentes para o mesmo restaurante: a conta
  * 27409 abre em /25681. Montar com o errado abre a ficha de outro
  * restaurante, e quem clica não tem como saber.
  */

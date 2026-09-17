@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 17/09/2026. Aplicação **1.14.0**, extensão **1.14.0**.
+Atualizado em 17/09/2026. Aplicação **1.15.0**, extensão **1.15.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,50 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### Fora a parte do CW Engine (17/09/2026, 1.15.0)
+
+Pedido do Isaac: "tire só a parte de CW Engine de tudo na plataforma."
+
+- **O passo "Atualizar o CW Engine" saiu da trilha do Reclame Aqui.**
+  Era o Passo 9, fase "Finalização" — a única marcação manual sem
+  correspondência no que o banco já sabe (a trilha volta a ter oito
+  passos, como o documento descreve). Foram junto: o modal
+  `FinalizacaoModal`, o botão e a ação em `TratativaProvider`,
+  `ProximoPasso` e `TrilhaDoCaso`, o item da fila "avaliada — falta
+  registrar no CW Engine" do Meu dia, o evento na linha do tempo do caso,
+  e a marcação em `lib/actions/tratativa.ts` (`marcarPasso` agora só
+  cobre a imersão). Os campos `Case.cwEngineEm`/`cwEnginePor` saíram do
+  modelo da aplicação; a coluna do banco continua existindo, sem uso —
+  não rodei migração, para não mexer em dado já gravado.
+- **O vínculo com o NPS continua de pé, só sem o nome.** O `externalId`
+  do estabelecimento — o id que o Wootric manda em cada resposta do NPS,
+  usado para achar o restaurante sozinho quando ninguém vinculou à mão —
+  **não foi removido**: é uma checagem real feita com o Isaac durante o
+  trabalho, porque tirar o campo pioraria esse casamento automático. Só
+  o rótulo mudou, de "Conta no CW Engine" para "Id da conta (cruza com o
+  NPS)", em toda a tela do estabelecimento, do NPS e nos comentários do
+  código.
+- **Textos e documentação**: o atalho de Ferramentas e Acessos para o
+  CW Engine saiu da lista; a documentação do time (Reclame Aqui,
+  Ferramentas e Acessos) não cita mais o passo nem a ferramenta; e as
+  menções em `README.md`, `API.md`, `extensao/LEIA-ME.md`, no
+  webhook e na API pública viraram "outro sistema" — sem inventar um
+  nome novo para quem consome de verdade.
+- **Fora do escopo, de propósito**: `scripts/import-ra-completo.ts` (a
+  carga histórica que lê a exportação chamada CW Engine de verdade —
+  renomear ali só teria custo, sem efeito na plataforma) e o texto já
+  gravado em estabelecimentos importados por aquela carga ("Criado pela
+  carga do Reclame Aqui, a partir da conta do CW Engine…") — é dado já
+  persistido, não código; mudar em massa pediria um script à parte, com
+  a sua confirmação.
+
+Provas: `check:trilha` (a trilha fecha em oito passos, "avaliado" já é
+"completa"), `check:fiacao`, `check:seguranca`, `check:escape`,
+`check:menu` e `check:janelas` sem regressão; typecheck e lint limpos.
+Na tela: um caso real mostrando os oito passos sem menção a CW Engine, e
+a ficha do estabelecimento com "Id da conta (cruza com o NPS)" no lugar
+do rótulo antigo.
 
 ### Motor próprio: o resumo de conversa não depende mais de nenhuma IA (17/09/2026, 1.14.0)
 

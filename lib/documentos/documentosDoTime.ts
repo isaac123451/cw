@@ -281,8 +281,7 @@ Após o retorno da área interna:
 
 1. O agente de reputação valida a solução com o cliente;
 2. Responde no Reclame Aqui;
-3. Solicita a avaliação no portal RA;
-4. Atualiza as informações no CW Engine.
+3. Solicita a avaliação no portal RA.
 
 ## 📊 Indicadores
 
@@ -809,7 +808,6 @@ Status final: [Encerrado] Respondida · [Encerrado] Sem Identificação · [Ence
 | Slack | Alinhamento com Suporte, Financeiro e Comercial |
 | Wootric | Acompanhamento de respostas de NPS |
 | HugMe | Relatórios, métricas e projeções do Reclame Aqui |
-| CW Engine | Acompanhamento de histórico dos clientes e abertura de chamados |
 | Planilhas internas | Preenchimento e acompanhamento da área (ver seção abaixo). |
 
 ## 🔐 Acessos
@@ -850,11 +848,6 @@ Status final: [Encerrado] Respondida · [Encerrado] Sem Identificação · [Ence
 
 1. Acesse o link com o login fornecido pela gestão.
 2. Segurança: não salvar senha no navegador; não repassar o acesso.
-
-### CW Engine
-
-1. Acesse o link com o login fornecido pela gestão.
-2. Entrar com Login Cardápio Web.
 
 ## 🔐 Planilhas
 

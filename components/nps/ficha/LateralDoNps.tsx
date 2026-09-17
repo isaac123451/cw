@@ -150,7 +150,7 @@ export default function LateralDoNps({ item, classificar }: { item: NpsResponseV
                 onClick={() => setEstabelecimentoId(porConta.id)}
                 className="mt-1.5 text-left text-xs font-medium text-violet-700 hover:underline"
               >
-                A conta do CW Engine é de {porConta.name} — usar este vínculo
+                A conta é de {porConta.name} — usar este vínculo
               </button>
             )}
           </div>
@@ -267,7 +267,7 @@ export default function LateralDoNps({ item, classificar }: { item: NpsResponseV
           </div>
           {item.externalCompanyId && (
             <div className="flex justify-between gap-3">
-              <dt className="text-zinc-500">Conta no CW Engine</dt>
+              <dt className="text-zinc-500">Id da conta</dt>
               <dd className="truncate text-right font-mono text-xs text-zinc-700">{item.externalCompanyId}</dd>
             </div>
           )}

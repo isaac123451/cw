@@ -7,12 +7,12 @@ import { pedidoDeAvaliacao } from "@/lib/models/cadencia";
  * Três fases e oito passos — Diagnóstico (recebimento e triagem,
  * imersão), Conexão (1º contato, persistência, resolução interna) e
  * Validação (validação com o cliente, resposta pública, follow-up de
- * avaliação) — e a finalização do fluxo interno: atualizar o CW Engine.
+ * avaliação).
  *
  * **Cada passo se marca pelo que o banco sabe.** A resposta pública
  * existe ou não; a avaliação chegou ou não; o 1º contato foi registrado.
- * O que só a pessoa sabe — "fiz a imersão", "atualizei o CW Engine" — é
- * um clique, com data e autor.
+ * O que só a pessoa sabe — "fiz a imersão" — é um clique, com data e
+ * autor.
  *
  * **O legado não fica vermelho.** Reclamação anterior ao registro, com
  * resposta pública, teve contato e validação que ninguém tinha onde
@@ -33,13 +33,12 @@ export type AcaoDoPasso =
   | "acionar-area"
   | "validacao"
   | "resposta"
-  | "pedir-avaliacao"
-  | "cw-engine";
+  | "pedir-avaliacao";
 
 export interface PassoDaTrilha {
   id: AcaoDoPasso | "persistencia" | "area";
   numero: number;
-  fase: "Diagnóstico" | "Conexão" | "Validação" | "Finalização";
+  fase: "Diagnóstico" | "Conexão" | "Validação";
   titulo: string;
   /** Curto, para o cartão: "Próximo: pedir avaliação". */
   curto: string;
@@ -249,21 +248,6 @@ export function trilhaDoCaso(
           ? `${item.pedidosDeAvaliacao} pedido(s) feito(s).`
           : "Lembretes a cada 2 dias depois da resposta; depois, semanais.",
     acao: "pedir-avaliacao",
-  });
-
-  empurrar({
-    id: "cw-engine",
-    numero: 9,
-    fase: "Finalização",
-    titulo: "Atualizar o CW Engine",
-    curto: "atualizar o CW Engine",
-    feito: Boolean(item.cwEngineEm) || (legado && encerrado),
-    deduzido: !item.cwEngineEm && legado && encerrado,
-    quando: item.cwEngineEm,
-    detalhe: item.cwEngineEm
-      ? item.cwEnginePor
-      : "O registro final do caso na conta do cliente.",
-    acao: "cw-engine",
   });
 
   /* O passo atual é o primeiro que falta — os opcionais não seguram a fila. */

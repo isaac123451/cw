@@ -84,7 +84,7 @@ scripts/        utilitários de banco e importação
   conhecidas. **Leia antes de mexer:** economiza redescobrir por que
   algo é do jeito que é.
 - **`DEPLOY.md`** — colocar no ar, do banco às variáveis.
-- **`API.md`** — a API de dados e o webhook, para o CW Engine consumir.
+- **`API.md`** — a API de dados e o webhook, para outro sistema consumir.
 
 ## Convenções
 

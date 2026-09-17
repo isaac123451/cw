@@ -392,7 +392,7 @@ export async function saveEstablishment(
        * `undefined` aqui não é descuido: o Prisma **pula** o campo no
        * update e usa o padrão no create.
        *
-       * Estes dois vêm do CW Engine pela carga, e o formulário da tela não
+       * Estes dois vêm da carga inicial, e o formulário da tela não
        * os tem. Escrever `null` por ausência faria uma edição de nome
        * apagar o id da conta e o link do portal — sem aviso, e com o
        * sintoma aparecendo só no dia em que alguém fosse clicar no link.

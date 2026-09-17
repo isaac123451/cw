@@ -183,8 +183,6 @@ export function toCaseModel(row: {
   pedidosDeAvaliacao?: number | null;
   imersaoEm?: Date | null;
   imersaoPor?: string | null;
-  cwEngineEm?: Date | null;
-  cwEnginePor?: string | null;
   moderacaoPedidaEm?: Date | null;
   moderacaoMotivo?: string | null;
   moderacaoResultado?: string | null;
@@ -259,8 +257,6 @@ export function toCaseModel(row: {
     pedidosDeAvaliacao: row.pedidosDeAvaliacao ?? undefined,
     imersaoEm: row.imersaoEm?.toISOString() ?? undefined,
     imersaoPor: row.imersaoPor ?? undefined,
-    cwEngineEm: row.cwEngineEm?.toISOString() ?? undefined,
-    cwEnginePor: row.cwEnginePor ?? undefined,
     moderacaoPedidaEm: row.moderacaoPedidaEm?.toISOString() ?? undefined,
     moderacaoMotivo: row.moderacaoMotivo ?? undefined,
     moderacaoResultado:

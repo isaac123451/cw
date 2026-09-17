@@ -6,7 +6,7 @@
  * (portal.cardapioweb.com/login, ajuda.cardapioweb.com,
  * reclameaqui.com.br) ou quando é o endereço público do serviço
  * (WhatsApp Web, Gmail, Meet, Slack). Os que o documento diz "link
- * fornecido pela gestão" — HugMe, Wootric, CW Engine — e as planilhas
+ * fornecido pela gestão" — HugMe, Wootric — e as planilhas
  * chegam vazios, para a gestão preencher: inventar um endereço aqui
  * mandaria o time para o lugar errado.
  */
@@ -70,14 +70,6 @@ export const ATALHOS_DO_DOCUMENTO: AtalhoDoDocumento[] = [
     grupo: "ferramenta",
     descricao: "Acompanhamento das respostas de NPS.",
     acesso: `Link e login fornecidos pela gestão. ${SEM_SENHA}`,
-  },
-  {
-    chave: "cw-engine",
-    nome: "CW Engine",
-    url: "",
-    grupo: "ferramenta",
-    descricao: "Histórico dos clientes e abertura de chamados.",
-    acesso: "Link fornecido pela gestão; entrar com o login Cardápio Web.",
   },
   {
     chave: "slack",

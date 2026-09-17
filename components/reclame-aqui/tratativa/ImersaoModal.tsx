@@ -295,7 +295,7 @@ export default function ImersaoModal({ item, onClose, onSalvo }: Props) {
           </section>
 
           <p className="rounded-xl bg-zinc-50 px-3.5 py-2.5 text-xs leading-relaxed text-zinc-600 ring-1 ring-inset ring-zinc-200">
-            Falta aqui o histórico do suporte — chamados e conversas vivem no CW Engine e no Crisp. Confira
+            Falta aqui o histórico do suporte — chamados vivem em outro sistema da operação, e conversas no Crisp. Confira
             por lá antes de ligar: o documento pede para chegar ao 1º contato pronto para todas as perguntas.
           </p>
 

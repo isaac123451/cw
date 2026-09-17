@@ -314,19 +314,19 @@ export async function salvarExpediente(
 }
 
 /* ============================================================
-   PASSOS MARCADOS À MÃO — imersão e CW Engine
+   PASSOS MARCADOS À MÃO — imersão
 ============================================================ */
 
 /**
  * Marca (ou desmarca) um passo que só a pessoa sabe que fez.
  *
- * A imersão (Passo 2) e a atualização do CW Engine (finalização) não
- * deixam rastro em lugar nenhum que a plataforma leia. O clique carimba
- * quem e quando — e desmarcar existe porque clique errado acontece.
+ * A imersão (Passo 2) não deixa rastro em lugar nenhum que a plataforma
+ * leia. O clique carimba quem e quando — e desmarcar existe porque
+ * clique errado acontece.
  */
 export async function marcarPasso(entrada: {
   protocol: string;
-  passo: "imersao" | "cw-engine";
+  passo: "imersao";
   desfazer?: boolean;
 }): Promise<{ ok: true; em?: string; por?: string } | Falha> {
 
@@ -340,10 +340,7 @@ export async function marcarPasso(entrada: {
 
     await quem.ctx.prisma.case.update({
       where: { protocol: entrada.protocol },
-      data:
-        entrada.passo === "imersao"
-          ? { imersaoEm: valor, imersaoPor: por }
-          : { cwEngineEm: valor, cwEnginePor: por },
+      data: { imersaoEm: valor, imersaoPor: por },
       select: { id: true },
     });
 
@@ -724,7 +721,7 @@ export async function retratoDoCliente(protocol: string): Promise<RetratoDoClien
 
   const vinculoNps: Prisma.NpsResponseWhereInput[] = [];
   if (est) vinculoNps.push({ establishmentId: est.id });
-  /* O Wootric manda o id da conta no CW Engine; é o mesmo `externalId` do cadastro. */
+  /* O Wootric manda o id da conta; é o mesmo `externalId` do cadastro do estabelecimento. */
   if (est?.externalId) vinculoNps.push({ externalCompanyId: est.externalId });
   if (email) vinculoNps.push({ email });
 

@@ -64,7 +64,6 @@ export default function ProximoPasso({ item, className = "" }: Props) {
       tentativa: () => t.abrirContato(item, "tentativa"),
       validacao: () => t.abrirContato(item, "validacao"),
       "pedir-avaliacao": () => t.abrirPedidoAvaliacao(item),
-      "cw-engine": () => t.abrirFinalizacao(item),
     };
 
     const dialogo = acao ? dialogos[acao] : undefined;

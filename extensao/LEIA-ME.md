@@ -393,7 +393,7 @@ scripts/check-vigia-volta.ts      a volta do vigia, com o service worker
 ## Por que endpoints novos, e não a API que já existia
 
 `/api/reputacao` e `/api/casos` devolvem dado **sem telefone e sem
-e-mail**, de propósito — foram feitos para o CW Engine consumir
+e-mail**, de propósito — foram feitos para outro sistema consumir
 indicadores, não para uma pessoa procurar um consumidor pelo número
 (`API.md`, "O que a API não devolve").
 

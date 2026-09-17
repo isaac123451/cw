@@ -20,8 +20,8 @@ import { fetchCases } from "@/lib/services/case.repository";
  *
  * **Sem banco, devolve vazio.** Havia um retorno de dados de
  * demonstração aqui, e este é o pior lugar possível para isso: quem
- * consome esta API é o **CW Engine**, outro sistema, que não tem como
- * saber que os dados são inventados. Ele integraria 334 reclamações de
+ * consome esta API é **outro sistema**, que não tem como saber que os
+ * dados são inventados. Ele integraria 334 reclamações de
  * consumidores que não existem e as trataria como operação real.
  *
  * Uma resposta vazia é um problema visível — some indicador, alguém

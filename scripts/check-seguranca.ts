@@ -103,7 +103,7 @@ function arquivos(dir: string, filtro: RegExp): string[] {
 /**
  * Os quatro guardas que existem, e o que cada um protege.
  *
- * `checkToken` — API pública, consumida pelo CW Engine.
+ * `checkToken` — API pública, consumida por outro sistema.
  * `checkCronToken` — rotina agendada.
  * `autenticar`/`semSessao` — extensão, que manda a sessão no cabeçalho.
  * `getSession` — telas, que mandam cookie.

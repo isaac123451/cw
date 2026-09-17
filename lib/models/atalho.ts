@@ -3,7 +3,7 @@
  *
  * A página e o popup da extensão leem a mesma lista. O endereço pode
  * ficar vazio — o documento diz "link fornecido pela gestão" para o
- * HugMe, o Wootric e o CW Engine — e a tela oferece configurar.
+ * HugMe e o Wootric — e a tela oferece configurar.
  */
 export interface Atalho {
   id: string;

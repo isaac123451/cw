@@ -23,7 +23,7 @@ import SurfaceCard from "@/components/shared/SurfaceCard";
  *
  * Soma ao que o caso diz de si (registro, resposta, avaliação) o que foi
  * registrado ao longo da trilha: triagem, contatos, áreas acionadas,
- * escalonamentos, moderação e CW Engine. Os contatos vêm do banco quando
+ * escalonamentos e moderação. Os contatos vêm do banco quando
  * a aba abre — a lista do quadro não os carrega.
  */
 export default function CaseTimeline({

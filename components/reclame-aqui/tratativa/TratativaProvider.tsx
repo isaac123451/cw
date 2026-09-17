@@ -18,7 +18,6 @@ import { useMovements } from "@/lib/context/MovementsContext";
 
 import AcionarAreaModal from "./AcionarAreaModal";
 import ContatoModal from "./ContatoModal";
-import FinalizacaoModal from "./FinalizacaoModal";
 import ImersaoModal from "./ImersaoModal";
 import ModeracaoModal from "./ModeracaoModal";
 import PedidoAvaliacaoModal from "./PedidoAvaliacaoModal";
@@ -48,13 +47,12 @@ interface TratativaContextType {
   abrirImersao: (item: Case, opcoes?: Opcoes) => void;
   abrirArea: (item: Case) => void;
   abrirPedidoAvaliacao: (item: Case, opcoes?: Opcoes) => void;
-  abrirFinalizacao: (item: Case, opcoes?: Opcoes) => void;
   abrirModeracao: (item: Case, opcoes?: Opcoes) => void;
 }
 
 const TratativaContext = createContext<TratativaContextType | null>(null);
 
-type Dialogo = "triagem" | "contato" | "imersao" | "area" | "pedido-avaliacao" | "finalizacao" | "moderacao";
+type Dialogo = "triagem" | "contato" | "imersao" | "area" | "pedido-avaliacao" | "moderacao";
 
 interface Aberto {
   tipo: Dialogo;
@@ -90,7 +88,6 @@ export function TratativaProvider({ children }: { children: ReactNode }) {
       abrirImersao: (item, opcoes) => setAberto({ tipo: "imersao", item, opcoes }),
       abrirArea: (item) => setAberto({ tipo: "area", item }),
       abrirPedidoAvaliacao: (item, opcoes) => setAberto({ tipo: "pedido-avaliacao", item, opcoes }),
-      abrirFinalizacao: (item, opcoes) => setAberto({ tipo: "finalizacao", item, opcoes }),
       abrirModeracao: (item, opcoes) => setAberto({ tipo: "moderacao", item, opcoes }),
     }),
     []
@@ -137,10 +134,6 @@ export function TratativaProvider({ children }: { children: ReactNode }) {
         <PedidoAvaliacaoModal key={chave} item={aberto.item} onClose={fechar} onSalvo={salvo} />
       )}
 
-      {aberto?.tipo === "finalizacao" && (
-        <FinalizacaoModal key={chave} item={aberto.item} onClose={fechar} onSalvo={salvo} />
-      )}
-
       {aberto?.tipo === "moderacao" && (
         <ModeracaoModal key={chave} item={aberto.item} onClose={fechar} onSalvo={salvo} />
       )}
@@ -154,7 +147,6 @@ const NADA: TratativaContextType = {
   abrirImersao: () => {},
   abrirArea: () => {},
   abrirPedidoAvaliacao: () => {},
-  abrirFinalizacao: () => {},
   abrirModeracao: () => {},
 };
 

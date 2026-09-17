@@ -181,10 +181,6 @@ export interface Case {
   imersaoEm?: string;
   imersaoPor?: string;
 
-  /** Finalização: o CW Engine atualizado. */
-  cwEngineEm?: string;
-  cwEnginePor?: string;
-
   /** Rotina diária, item 6: o pedido de moderação ao Reclame Aqui. */
   moderacaoPedidaEm?: string;
   moderacaoMotivo?: string;

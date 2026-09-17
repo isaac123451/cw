@@ -163,8 +163,9 @@ export default function EstablishmentForm({
   /**
    * Os dois ids do restaurante, que são números diferentes.
    *
-   * `externalId` é a conta no CW Engine; `portalId` é o do link do
-   * portal. A conta 27409 abre em /25681 — confundir os dois leva a
+   * `externalId` é o id que cruza com o NPS (o mesmo que o Wootric
+   * manda); `portalId` é o do link do portal. A conta 27409 abre em
+   * /25681 — confundir os dois leva a
    * operação para a ficha de outro restaurante, e quem clica não tem
    * como perceber.
    */
@@ -550,8 +551,8 @@ export default function EstablishmentForm({
             </Field>
 
             <Field
-              label="Id da conta no CW Engine"
-              hint="A coluna Company ID do export."
+              label="Id da conta (cruza com o NPS)"
+              hint="A coluna Company ID do export — o mesmo id que o Wootric manda nas respostas."
             >
               <input
                 value={externalId}
@@ -565,7 +566,7 @@ export default function EstablishmentForm({
 
             <Field
               label="Id do link do portal"
-              hint="Abre portal.cardapioweb.com/<id>. Não é o mesmo número do CW Engine."
+              hint="Abre portal.cardapioweb.com/<id>. Não é o mesmo número do id que cruza com o NPS."
             >
               <input
                 value={portalId}

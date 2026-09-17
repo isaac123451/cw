@@ -29,7 +29,6 @@ export const PORQUES = {
   "ra.validacao": { doc: "cintcw-reclame-aqui", ancora: "passo-6-validacao-de-satisfacao-e-construcao-do-compromisso", rotulo: "Passo 6 — Validação com o cliente" },
   "ra.resposta-publica": { doc: "cintcw-reclame-aqui", ancora: "passo-7-resposta-publica", rotulo: "Passo 7 — Resposta pública" },
   "ra.follow-up": { doc: "cintcw-reclame-aqui", ancora: "passo-8-follow-up-de-avaliacao-acompanhamento-ativo", rotulo: "Passo 8 — Follow-up de avaliação" },
-  "ra.finalizacao": { doc: "cintcw-reclame-aqui", ancora: "finalizacao", rotulo: "Finalização" },
   "ra.regra-de-ouro": { doc: "cintcw-reclame-aqui", ancora: "regra-de-ouro-sem-macros-prontas-ou-textos-robotizados", rotulo: "Regra de ouro: sem macros prontas" },
   "ra.indicadores": { doc: "cintcw-reclame-aqui", ancora: "indicadores", rotulo: "Indicadores do Reclame Aqui" },
 
@@ -111,7 +110,6 @@ export const PORQUE_DO_PASSO_RA: Record<string, ChaveDoPorQue> = {
   validacao: "ra.validacao",
   resposta: "ra.resposta-publica",
   "pedir-avaliacao": "ra.follow-up",
-  "cw-engine": "ra.finalizacao",
 };
 
 /** O passo do fluxo das redes sociais. */

@@ -242,7 +242,7 @@ export default function EstablishmentDetail({
     ],
     ["Cliente desde", br(establishment.startedAt)],
     ["Responsável na CW", establishment.owner ?? "—"],
-    ["Conta no CW Engine", establishment.externalId ?? "—"],
+    ["Id da conta (cruza com o NPS)", establishment.externalId ?? "—"],
   ];
 
   /**
@@ -393,7 +393,7 @@ export default function EstablishmentDetail({
       <NasQuatroFrentes
         alvo={{
           establishmentId: establishment.id,
-          contaCwEngine: establishment.externalId,
+          contaExterna: establishment.externalId,
           emails: establishment.email ? [establishment.email] : [],
         }}
       />

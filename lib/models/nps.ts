@@ -616,8 +616,8 @@ export interface NpsResponseView {
   externalId?: string;
 
   /**
-   * A conta no CW Engine, como o Wootric manda — o mesmo `externalId` do
-   * cadastro de estabelecimentos. É por ela que a resposta encontra o
+   * O id da conta, como o Wootric manda — o mesmo `externalId` do
+   * cadastro de estabelecimentos. É por ele que a resposta encontra o
    * restaurante quando ninguém fez o vínculo à mão.
    */
   externalCompanyId?: string;

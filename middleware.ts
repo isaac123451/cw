@@ -41,7 +41,7 @@ export async function middleware(request: NextRequest) {
   /**
    * A API tem autenticação própria, por token (`lib/api/auth.ts`).
    *
-   * Sem esta saída, quem consome a API — o CW Engine, por exemplo —
+   * Sem esta saída, quem consome a API — outro sistema, por exemplo —
    * recebia um redirecionamento HTML para /login em vez de JSON, porque
    * um sistema não carrega cookie de sessão de navegador.
    */

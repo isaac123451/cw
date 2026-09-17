@@ -19,8 +19,8 @@ import { descreverRegistro } from "@/lib/services/horasUteis";
 /** O que identifica o cliente em cada frente — quanto mais, mais o cruzamento acha. */
 export interface AlvoNasFrentes {
   establishmentId?: string;
-  /** O id da conta no CW Engine (`Establishment.externalId`), que o Wootric manda. */
-  contaCwEngine?: string;
+  /** O id da conta (`Establishment.externalId`), o mesmo que o Wootric manda no NPS. */
+  contaExterna?: string;
   emails?: string[];
   nomes?: string[];
 }
@@ -44,9 +44,9 @@ const limpar = (s?: string | null) =>
  * Google parecia um cliente tranquilo com uma reclamação antiga. Aqui
  * as quatro aparecem sempre — o zero numa frente também é informação.
  *
- * O cruzamento é o mesmo da imersão: o estabelecimento vinculado, a
- * conta do CW Engine (o que o NPS traz), o e-mail e, para o Google, o
- * vínculo feito à mão com um caso ou com o promotor do NPS.
+ * O cruzamento é o mesmo da imersão: o estabelecimento vinculado, o id
+ * da conta (o que o NPS traz), o e-mail e, para o Google, o vínculo
+ * feito à mão com um caso ou com o promotor do NPS.
  */
 export default function NasQuatroFrentes({
   alvo,
@@ -76,7 +76,7 @@ export default function NasQuatroFrentes({
     const nps = responses.filter(
       (r) =>
         (alvo.establishmentId && r.establishmentId === alvo.establishmentId) ||
-        (alvo.contaCwEngine && r.externalCompanyId === alvo.contaCwEngine) ||
+        (alvo.contaExterna && r.externalCompanyId === alvo.contaExterna) ||
         (r.email && emails.has(limpar(r.email))) ||
         (r.customerName && nomes.has(limpar(r.customerName)))
     );

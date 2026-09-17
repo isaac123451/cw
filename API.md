@@ -1,8 +1,9 @@
 # API de dados — CW Reputação
 
 Endpoints para **nós fornecermos nossos dados** a outros sistemas da
-Cardápio Web — o CW Engine ou um banco de destino. Somente leitura: quem
-consome lê os indicadores e as reclamações daqui, não escreve.
+Cardápio Web — outro sistema interno ou um banco de destino. Somente
+leitura: quem consome lê os indicadores e as reclamações daqui, não
+escreve.
 
 Nada a ver com a API do Reclame Aqui, que não existe publicamente.
 
@@ -107,7 +108,7 @@ só o que mudou depois da data, para quem puxa periodicamente não
 reprocessar a base inteira a cada rodada.
 
 ```bash
-# rotina diária do CW Engine
+# rotina diária de outro sistema
 curl -H "Authorization: Bearer $API_TOKEN" \
   "https://<host>/api/casos?atualizadoApos=2026-08-07&limite=200"
 ```

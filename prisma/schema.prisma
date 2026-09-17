@@ -467,7 +467,7 @@ model Case {
   imersaoEm  DateTime?
   imersaoPor String?
 
-  /// Finalização: "atualiza as informações no CW Engine".
+  /// Sem uso desde a remoção do passo de finalização (17/09/2026) — campo mantido, sem migração.
   cwEngineEm  DateTime?
   cwEnginePor String?
 
@@ -932,10 +932,9 @@ model Establishment {
   /// Chamar de `cnpj` deixaria metade dos cadastros com o campo errado.
   document String?
 
-  /// Id da conta no CW Engine — a coluna "Company ID" do export.
-  ///
-  /// É o que liga este cadastro ao sistema onde o restaurante realmente
-  /// vive. O documento nem sempre está preenchido lá; este número está.
+  /// Id da conta — a coluna "Company ID" do export. O mesmo id que o
+  /// Wootric manda em `externalCompanyId` no NPS, usado para cruzar a
+  /// resposta com o estabelecimento quando ninguém vinculou à mão.
   externalId String?
 
   /// Endereço da conta no portal, como o export entrega.
@@ -954,9 +953,9 @@ model Establishment {
   /// tem em mãos e digita. Quem sabe um dos dois consegue abrir a
   /// conta — e ninguém precisa saber os dois.
   ///
-  /// **Não é o `externalId`.** Aquele é o id da conta no CW Engine; este
-  /// é o do link do portal, e são números diferentes para o mesmo
-  /// restaurante. Montar o link com o id errado abre a ficha de outro.
+  /// **Não é o `externalId`.** Aquele é o id da conta que cruza com o
+  /// NPS; este é o do link do portal, e são números diferentes para o
+  /// mesmo restaurante. Montar o link com o id errado abre a ficha de outro.
   portalId String?
 
   /// Conversa deste restaurante no Crisp.
@@ -1606,7 +1605,7 @@ model NpsAttempt {
 /// INTEGRAÇÕES
 /// ============================================================
 
-/// Webhook para o CW Engine (ou outro destino) ser avisado por evento,
+/// Webhook para outro sistema ser avisado por evento,
 /// em vez de só puxar via GET /api. Um registro só: a aplicação atende
 /// um tenant (Cardápio Web), não é multiempresa.
 /// Qual IA responde, e quão rápido — escolhido na tela.

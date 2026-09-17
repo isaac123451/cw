@@ -85,7 +85,7 @@ const settings: SettingLink[] = [
   {
     title: "Integrações",
     description:
-      "Webhook por evento para o CW Engine, com assinatura e histórico de entregas.",
+      "Webhook por evento para outro sistema, com assinatura e histórico de entregas.",
     href: "/configuracoes/integracoes",
     icon: GitBranch,
   },

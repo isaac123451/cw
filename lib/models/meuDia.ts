@@ -8,7 +8,6 @@ import type { LinhaDeMetrica } from "@/lib/actions/metricas";
 import { FRENTES_DA_OPERACAO, frente, type FrenteId } from "@/lib/models/frentes";
 import { isEncerrado, tentativasMinimas, type NpsKindOption, type NpsResponseView } from "@/lib/models/nps";
 import { filaDeAvaliacao, semNoticia } from "@/lib/models/cadencia";
-import { INICIO_DA_TRILHA } from "@/lib/models/trilha";
 import { eFinalDasRedes } from "@/lib/models/redes";
 import type { AtividadeDaRotina, ChaveDaRotina } from "@/lib/models/rotina";
 
@@ -293,15 +292,6 @@ export function contarRotina(
 
   /* ---- concluídos a registrar ---- */
   const concluidos: ItemDaRotina[] = [
-    ...dados.casos
-      .filter((c) => isReclameAqui(c) && c.evaluated && !c.cwEngineEm && (c.evaluatedAt ?? "") >= INICIO_DA_TRILHA)
-      .map((c) => ({
-        id: c.id,
-        frente: "reclame-aqui" as const,
-        titulo: c.title,
-        detalhe: "avaliada — falta registrar no CW Engine",
-        href: caseHref(c),
-      })),
     ...dados.nps
       .filter((r) => !isEncerrado(r.status) && r.confirmedAt && podeEncerrar(r, dados.tiposNps))
       .map((r) => ({

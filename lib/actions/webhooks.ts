@@ -29,7 +29,7 @@ const MODULO: Modulo = "configuracoes";
  * **ADMIN**, inclusive para ler.
  *
  * A configuração devolve o segredo de assinatura em texto puro — quem
- * o tem consegue forjar chamadas que o CW Engine aceitaria como
+ * o tem consegue forjar chamadas que o sistema que recebe aceitaria como
  * nossas. Não é informação para toda a operação.
  */
 async function autorizado() {

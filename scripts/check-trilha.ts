@@ -82,10 +82,9 @@ confere("validado: resposta pública", atual(validado), "resposta");
 const respondido = { ...validado, respondida: true, publicResponseAt: br("2026-09-15 15:00") };
 confere("respondido: pedir a avaliação", atual(respondido), "pedir-avaliacao");
 const avaliado = { ...respondido, evaluated: true, score: 10, evaluatedAt: "2026-09-18" };
-confere("avaliado: CW Engine", atual(avaliado), "cw-engine");
+confere("avaliado: trilha completa", atual(avaliado), "completa");
 confere("consumidor replicou: a vez é nossa, não de pedir nota", atual({ ...respondido, status: "Aguardando nossa réplica" }), "resposta");
 confere("quem espera a nossa réplica não entra na fila de avaliação", pedidoDeAvaliacao({ ...respondido, status: "Aguardando nossa réplica" }).ativo, false);
-confere("CW Engine feito: trilha completa", atual({ ...avaliado, cwEngineEm: br("2026-09-18 10:00") }), "completa");
 confere(
   "a imersão é deduzida quando o 1º contato veio antes do registro dela",
   trilhaDoCaso({ ...triado, primeiroContatoEm: br("2026-09-14 09:30") }).find((p) => p.id === "imersao")?.deduzido,
