@@ -158,6 +158,14 @@
       }
 
       .numero b { display: block; font-size: 16px; line-height: 1.1; }
+
+      /* O que move a nota e as conquistas de hoje, debaixo dos números do dia. */
+      .move, .conquista { margin: 6px 0 0; font-size: 11.5px; line-height: 1.35; cursor: pointer; }
+      .move b, .conquista b { font-weight: 600; }
+      .move span, .conquista span { display: block; color: var(--fraco); }
+      .move em { font-style: normal; font-weight: 600; color: #047857; }
+      .conquista span { display: inline; }
+      .move:hover b, .conquista[data-url]:hover b { text-decoration: underline; }
       .numero span {
         font-size: 9.5px;
         color: var(--fraco);

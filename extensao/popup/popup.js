@@ -236,8 +236,36 @@ function blocoDoDia(meuDia, base) {
     `    <div class="numero"><b>${p.estourados}</b><span>estourados</span></div>`,
     `    <div class="numero"><b>${falta}</b><span>a marcar</span></div>`,
     `  </div>`,
+    blocoDaNota(meuDia, base),
     `</div>`,
   ].join("");
+}
+
+/**
+ * O que move a nota e o que já deu certo hoje — o mesmo topo do Meu dia.
+ *
+ * O popup só cobrava: prazos e rotina. Quem abre a extensão no meio do
+ * dia também precisa ver que o trabalho rende ("responder as 13 leva a
+ * nota a 8,9") e o que já foi conquistado — é o que faz voltar a abrir.
+ */
+function blocoDaNota(meuDia, base) {
+
+  const acoes = Array.isArray(meuDia.moveANota) ? meuDia.moveANota : [];
+  const conquistas = Array.isArray(meuDia.conquistas) ? meuDia.conquistas : [];
+
+  if (acoes.length === 0 && conquistas.length === 0) return "";
+
+  const nota = (n) => Number(n).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+  const linhasDeAcao = acoes.map((a) =>
+    `  <p class="move" data-url="${escapar(`${base}${a.href}`)}"><b>${escapar(a.titulo)}</b><span>nota ${nota(a.notaAntes)} → <em>${nota(a.notaDepois)}</em> · ${escapar(a.efeito)}</span></p>`
+  );
+
+  const linhasDeConquista = conquistas.map((c) =>
+    `  <p class="conquista"${c.href ? ` data-url="${escapar(`${base}${c.href}`)}"` : ""}>🎉 <b>${escapar(c.titulo)}</b> <span>${escapar(c.detalhe)}</span></p>`
+  );
+
+  return [...linhasDeAcao, ...linhasDeConquista].join("");
 }
 /* ============================================================
    RESUMO
@@ -363,7 +391,7 @@ async function carregar() {
     );
   }
 
-  for (const botao of conteudo.querySelectorAll(".atalho, .rotulo .todos")) {
+  for (const botao of conteudo.querySelectorAll(".atalho, .rotulo .todos, .move, .conquista[data-url]")) {
     botao.addEventListener("click", () => {
       const url = botao.dataset.url ?? "";
       /* Só http(s): o endereço vem do banco, e o popup não abre outra coisa. */

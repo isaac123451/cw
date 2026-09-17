@@ -27,6 +27,7 @@ import {
 import { isOpen } from "@/lib/services/case.service";
 
 import { getPrisma } from "@/lib/prisma";
+import { conquistasDoDia, oQueMoveANota } from "@/lib/models/motivacaoDoDia";
 import { NpsResponseView } from "@/lib/models/nps";
 import { summarize } from "@/lib/services/nps.service";
 import { provedorDeIA } from "@/lib/services/ia.service";
@@ -204,7 +205,35 @@ async function meuDiaDeBolso(
     }
   }
 
-  return { dia: hoje, rotina, prazos: { estourados, vencemHoje } };
+  /*
+    O que move a nota e o que já deu certo — as mesmas contas do topo do
+    Meu dia, para o popup devolver alguma coisa a quem o abre, e não só
+    cobrar. Os detratores revertidos vêm do banco: aqui não há a lista de
+    NPS da tela, só o que mudou hoje importa.
+  */
+  let revertidosHoje: NpsResponseView[] = [];
+  if (prisma) {
+    try {
+      const linhas = await prisma.npsResponse.findMany({
+        where: { score: { lte: 6 }, postContactAt: { gte: new Date(Date.now() - 36 * 3_600_000) } },
+        select: { id: true, score: true, postContactAt: true, resolvedAfter: true, moodAfter: true },
+      });
+      revertidosHoje = linhas.map((l) => ({
+        id: l.id,
+        score: l.score,
+        postContactAt: l.postContactAt?.toISOString(),
+        resolvedAfter: l.resolvedAfter ?? undefined,
+        moodAfter: l.moodAfter ?? undefined,
+      })) as NpsResponseView[];
+    } catch {
+      /* Sem NPS, as conquistas são só as do Reclame Aqui. */
+    }
+  }
+
+  const moveANota = oQueMoveANota(casos).map((a) => ({ titulo: a.titulo, efeito: a.efeito, notaAntes: a.notaAntes, notaDepois: a.notaDepois, href: a.href }));
+  const conquistas = conquistasDoDia({ casos, nps: revertidosHoje, prazosEstourados: estourados }).map((c) => ({ titulo: c.titulo, detalhe: c.detalhe, href: c.href }));
+
+  return { dia: hoje, rotina, prazos: { estourados, vencemHoje }, moveANota, conquistas };
 }
 
 export async function GET(request: Request) {

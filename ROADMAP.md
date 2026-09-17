@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 17/09/2026. Aplicação **0.81.0**, extensão **0.81.0**.
+Atualizado em 17/09/2026. Aplicação **0.82.0**, extensão **0.82.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1100,6 +1100,30 @@ caracteres** antes e depois da divisão (contato 6.026, fila 3.289, NPS
 nenhum erro no console. `check:painel`, `check:fiacao`, `check:escape`,
 `check:dossie`, `check:respostas` e `check:atalho` de pé — as quatro
 últimas leem o painel como texto e passaram a ler os sete como um só.
+
+### Extensão que devolve, e não só cobra (17/09/2026, 0.82.0)
+
+Pedido de 13/09: a extensão como ferramenta aberta o dia todo. A Fase 8
+trouxe os lugares novos, os passos no painel e o popup como Meu dia de
+bolso — mas o popup só cobrava: rotina a marcar, prazos vencendo,
+estourados.
+
+Agora, debaixo dos números do dia, o popup mostra o mesmo topo do Meu
+dia:
+
+- **O que move a nota**, clicável: "Responder as 13 sem resposta pública
+  · nota 8,7 → 8,9" e "Pedir avaliação às 43 da vez · 8,7 → 9,1".
+- **Conquistas de hoje**: avaliação positiva, detrator revertido (lido do
+  banco, porque a extensão não tem a lista do NPS da tela), selo RA1000
+  mantido, dia sem prazo estourado.
+
+As contas são as de `motivacaoDoDia`, as mesmas da tela — conferido na
+resposta real do `/api/extensao/resumo`: 43 da vez e 8,7 → 9,1, iguais
+ao Meu dia. De quebra, as conquistas passaram a comparar o dia direto
+pelo texto da data, sem passar por `new Date`.
+
+Recarregar a extensão para ver. Prova: `check:meu-dia` (com a fiação do
+popup).
 
 ### Fase 10.2 — desempenho medido: a abertura numa ida só (17/09/2026, 0.81.0)
 

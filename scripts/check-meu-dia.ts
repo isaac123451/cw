@@ -109,6 +109,11 @@ console.log("\n— A fiação —\n");
     true
   );
 
+  const resumo = ler("app/api/extensao/resumo/route.ts");
+  conferir("o popup da extensão usa as mesmas contas", /oQueMoveANota\(casos\)/.test(resumo) && /conquistasDoDia\(\{ casos,/.test(resumo), true);
+  const popup = ler("extensao/popup/popup.js");
+  conferir("e desenha o que move a nota e as conquistas", /function blocoDaNota\(/.test(popup) && /blocoDaNota\(meuDia, base\)/.test(popup), true);
+
   const bloco = ler("components/rotina/AgoraNoMeuDia.tsx");
   conferir("todo aviso tem saída (Resolver, ou o plano abaixo)", /Resolver/.test(bloco) && /no plano abaixo/.test(bloco), true);
   conferir("todo bloco diz algo quando está vazio", (bloco.match(/length === 0 \?/g) ?? []).length, 3);

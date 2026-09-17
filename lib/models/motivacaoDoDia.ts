@@ -142,7 +142,7 @@ export function conquistasDoDia(entrada: {
     (c) =>
       c.evaluated &&
       c.evaluatedAt &&
-      diaNaOperacao(new Date(c.evaluatedAt)) === hoje &&
+      diaNaOperacao(c.evaluatedAt) === hoje &&
       (c.resolved || (c.score ?? 0) >= 9)
   );
 
@@ -163,7 +163,7 @@ export function conquistasDoDia(entrada: {
     (r) =>
       r.score <= 6 &&
       r.postContactAt &&
-      diaNaOperacao(new Date(r.postContactAt)) === hoje &&
+      diaNaOperacao(r.postContactAt) === hoje &&
       (r.resolvedAfter === true || (r.moodAfter ?? 0) >= 4)
   );
 
