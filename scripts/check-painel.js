@@ -192,7 +192,7 @@ reportar(
 );
 
 reportar(
-  /chrome\.commands\.onCommand/.test(worker) && /alternar-painel/.test(worker),
+  /chrome\.commands\??\.onCommand/.test(worker) && /alternar-painel/.test(worker),
   "o service worker escuta o atalho"
 );
 

@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 17/09/2026. Aplicação **1.0.0**, extensão **1.0.0**.
+Atualizado em 17/09/2026. Aplicação **1.0.1**, extensão **1.0.1**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1100,6 +1100,40 @@ caracteres** antes e depois da divisão (contato 6.026, fila 3.289, NPS
 nenhum erro no console. `check:painel`, `check:fiacao`, `check:escape`,
 `check:dossie`, `check:respostas` e `check:atalho` de pé — as quatro
 últimas leem o painel como texto e passaram a ler os sete como um só.
+
+### Verificação geral depois da 1.0 (17/09/2026, 1.0.1)
+
+O Isaac: "verifique e finalize tudo caso falte algo. veja se tem bugs".
+
+**O que rodou.** 80 checks do projeto contra o servidor de conferência
+(ficaram de fora só os que mandam e-mail, chamam a IA paga, disparam o
+cron ou batem em produção: `check:cron`, `check:email`,
+`check:duas-etapas`, `check:ia`, `check:resumo-caso`, `check:cadeia`,
+`check:vercel`, `check:publicado`); `tsc` inteiro; `eslint` no código;
+e as 38 telas abertas uma a uma num navegador limpo, lendo o console e o
+log do servidor.
+
+**O que apareceu, e o que foi feito:**
+
+- **Service worker da extensão frágil** (defeito real): o atalho
+  `Alt+Shift+C` registrava o ouvinte em `chrome.commands` sem conferir se
+  a API existe. Sem ela, o service worker inteiro quebrava na carga — e
+  com ele o vigia, o badge e as notificações. Agora é
+  `chrome.commands?.onCommand?.addListener`. Foi o `check:vigia-volta`
+  que pegou.
+- **Recarga do cadastro servindo a cópia da abertura** (defeito real, da
+  0.81.0): nos primeiros 10 s depois de abrir a plataforma, salvar os
+  planos e pedir a recarga devolvia os planos antigos. `invalidarWorkspace`
+  agora descarta a parte da carga inicial.
+- **Três checks presos a um estado antigo**, não defeitos:
+  `check:vinculo` esperava que a reimportação mudasse o título — desde
+  10/09 ela só grava campos do portal, de propósito; `check:vigia-volta`
+  exigia reclamações reais pendentes, e a base hoje tem zero;
+  `check:painel` procurava a escrita exata do ouvinte do atalho.
+- **Lint:** o único erro no código era um `require` num check.
+
+Console: nenhum erro em nenhuma das 38 telas. Servidor: só requisições
+abortadas por troca de página no meio da carga, que é normal.
 
 ### Versão 1.0.0 — o roadmap 1.0 fechado (17/09/2026)
 

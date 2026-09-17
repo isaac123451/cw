@@ -160,6 +160,7 @@ const notificacoes: { id: string; title: string; message: string }[] = [];
   storage: { local, sync, session: area(), onChanged: { addListener() {} } },
   cookies: { get: async () => (sessao ? { value: sessao } : null) },
   permissions: { contains: async () => true, onAdded: { addListener() {} } },
+  commands: { onCommand: { addListener() {} } },
   notifications: {
     create: (id: string, opcoes: { title: string; message: string }) => {
       notificacoes.push({ id, ...opcoes });
@@ -322,7 +323,12 @@ async function main() {
     const tentadas = ((await local.get("vigiaTentadas")).vigiaTentadas ?? {}) as Record<string, number>;
     const pendentesReais = Object.keys(tentadas).length;
 
-    conferir("as pendentes de verdade foram tentadas (e o portal disse 404)", pendentesReais > 0, true);
+    /* Sem reclamação real pendente na base, não há o que tentar — e zero é o certo. */
+    conferir(
+      `as pendentes de verdade foram tentadas (${reaisAntes.length} na base)`,
+      reaisAntes.length === 0 ? pendentesReais === 0 : pendentesReais > 0,
+      true
+    );
 
     const reaisDepois = await prisma.case.findMany({
       where: { protocol: { in: reaisAntes.map((c) => c.protocol) } },

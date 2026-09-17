@@ -56,6 +56,11 @@ for (const [arquivo, marca] of usos) {
   conferir(`${arquivo.split("/").pop()} pega ${marca.split('"')[1]} da ida única`, ler(arquivo).includes(marca), true);
 }
 
+conferir(
+  "reler o cadastro depois de gravar não recebe a cópia da abertura",
+  /descartarDaCargaInicial\("workspace"\)/.test(ler("lib/context/useWorkspace.ts")) && /descartadas\.has\(chave\)/.test(cliente),
+  true
+);
 conferir("recarregar o Google depois de gravar vai direto", ler("lib/context/useAvaliacoesGoogle.ts").includes("forcar ? listarAvaliacoesGoogle()"), true);
 
 console.log(falhas === 0 ? "\n  A abertura faz uma ida só.\n" : `\n  ${falhas} ponto(s) a corrigir.\n`);

@@ -1672,7 +1672,7 @@ chrome.permissions.onAdded.addListener(() => registrarPonte());
  * Numa aba sem o painel (uma página qualquer), a mensagem não chega a
  * ninguém e o erro é engolido: não há o que abrir ali.
  */
-chrome.commands.onCommand.addListener(async (comando) => {
+chrome.commands?.onCommand?.addListener(async (comando) => {
 
   if (comando !== "alternar-painel") return;
 

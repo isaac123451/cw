@@ -15,6 +15,8 @@
  *   npm run check:rascunho
  */
 
+import { readFileSync } from "node:fs";
+
 import {
   conferirRascunho,
   REGRAS_DO_RASCUNHO,
@@ -238,10 +240,9 @@ console.log("\n— As regras também vão na instrução —");
     "app/api/extensao/conversa/route.ts",
   ];
 
-  const fs = require("node:fs") as typeof import("node:fs");
 
   for (const rota of rotas) {
-    const fonte = fs.readFileSync(rota, "utf8");
+    const fonte = readFileSync(rota, "utf8");
 
     conferir(
       `${rota.split("/").slice(-2)[0]} manda as regras ao modelo`,

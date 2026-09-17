@@ -372,10 +372,14 @@ async function main() {
      5. Reimportar a planilha não apaga o vínculo.
   ---------------------------------------------------------- */
 
-  // A planilha não traz CNPJ nem estabelecimento — e muda algo.
+  /*
+    A planilha não traz CNPJ nem estabelecimento — e muda algo que é do
+    portal. Mudava o título, mas desde 10/09/2026 a reimportação só grava
+    os campos do portal (atualizacaoDoPortal.ts): o título é da operação.
+  */
   const daPlanilha = casoDeTeste(protocoloA);
 
-  daPlanilha.title = `Vínculo ${marca} (reimportado)`;
+  daPlanilha.status = "Aguardando avaliação";
 
   await importCasesBulk(prisma, [daPlanilha]);
 
@@ -384,14 +388,14 @@ async function main() {
     select: {
       document: true,
       establishmentId: true,
-      title: true,
+      status: true,
     },
   });
 
   conferir(
     "5. reimportação gravou a mudança",
-    apos?.title,
-    `Vínculo ${marca} (reimportado)`
+    apos?.status,
+    "Aguardando avaliação"
   );
 
   conferir("5. CNPJ preservado", apos?.document, CNPJ_A);

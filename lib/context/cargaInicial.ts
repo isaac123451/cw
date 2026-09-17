@@ -33,13 +33,23 @@ function carga() {
   return pendente;
 }
 
+const descartadas = new Set<keyof CargaInicial>();
+
+/**
+ * A parte deixa de valer — quem gravou e quer reler não pode receber a
+ * cópia da abertura, mesmo dentro da validade.
+ */
+export function descartarDaCargaInicial(...chaves: (keyof CargaInicial)[]) {
+  for (const c of chaves) descartadas.add(c);
+}
+
 type Valor<K extends keyof CargaInicial> = Extract<CargaInicial[K], { ok: true }>["valor"];
 
 export async function daCargaInicial<K extends keyof CargaInicial>(
   chave: K,
   caminhoProprio: () => Promise<Valor<K>>
 ): Promise<Valor<K>> {
-  if (chegouEm && Date.now() - chegouEm > VALIDADE_MS) return caminhoProprio();
+  if (descartadas.has(chave) || (chegouEm && Date.now() - chegouEm > VALIDADE_MS)) return caminhoProprio();
 
   try {
     const c = await carga();

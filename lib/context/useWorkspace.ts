@@ -1,6 +1,6 @@
 "use client";
 
-import { daCargaInicial } from "@/lib/context/cargaInicial";
+import { daCargaInicial, descartarDaCargaInicial } from "@/lib/context/cargaInicial";
 import { useEffect, useState } from "react";
 
 import {
@@ -35,6 +35,8 @@ export function carregarWorkspace() {
 /** Descarta o cache — usado depois de importar ou de gravar em lote. */
 export function invalidarWorkspace() {
   pendente = null;
+  /* Senão, nos primeiros segundos, a recarga devolveria a cópia da abertura. */
+  descartarDaCargaInicial("workspace");
 }
 
 /**
