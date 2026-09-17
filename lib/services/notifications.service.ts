@@ -11,7 +11,14 @@ import { GoogleEvent } from "@/lib/models/google";
 import { hojeNaOperacao } from "@/lib/services/reputation.service";
 import { lateMovements } from "@/lib/services/movement.service";
 import type { Expediente } from "@/lib/services/horasUteis";
-import { isOpen } from "@/lib/services/case.service";
+import { isOpen, isSocial } from "@/lib/services/case.service";
+import type { FrenteDaJanela } from "@/lib/models/janelas";
+import type { NpsResponseView } from "@/lib/models/nps";
+import type { SlaRule } from "@/lib/models/sla";
+import { avisosDeAbertura } from "@/lib/models/aberturaDoAgente";
+import { summarize } from "@/lib/services/nps.service";
+import { slaStatus } from "@/lib/services/sla.service";
+import { diaNaOperacao } from "@/lib/services/reputation.service";
 
 export type NotificationTone =
   | "danger"
@@ -26,6 +33,35 @@ export interface Notification {
   href: string;
   /** Quantidade agrupada, quando o alerta resume vários itens. */
   count?: number;
+  /** A frente, para o sino agrupar. */
+  frente?: FrenteDoAviso;
+  /** Quando o aviso aponta para um caso só: abre direto na mini-janela. */
+  janela?: { frente: FrenteDaJanela; ref: string; titulo: string };
+}
+
+export type FrenteDoAviso = "reclame-aqui" | "redes" | "nps" | "google" | "agenda" | "operacao";
+
+export const ROTULO_DA_FRENTE_DO_AVISO: Record<FrenteDoAviso, string> = {
+  "reclame-aqui": "Reclame Aqui",
+  redes: "Redes Sociais",
+  nps: "NPS",
+  google: "Google",
+  agenda: "Agenda",
+  operacao: "Operação",
+};
+
+/**
+ * O que o sino passou a olhar além do Reclame Aqui e da agenda (Fase 11).
+ *
+ * Todos opcionais: a extensão chama sem eles e continua recebendo o que
+ * recebia. Cada um usa a conta da própria tela — o sino não pode dizer
+ * 160 atrasados no NPS enquanto a tela diz 158.
+ */
+export interface FontesDoSino {
+  nps?: NpsResponseView[];
+  avaliacoesGoogle?: { id: string; status: string; classificacao: string; respondidaEm?: string | null; autor?: string }[];
+  regras?: SlaRule[];
+  agora?: Date;
 }
 
 export interface NotificationPrefs {
@@ -76,6 +112,16 @@ export const prefLabels: Record<
   },
 };
 
+/**
+ * A assinatura de um aviso: muda quando o que ele diz muda.
+ *
+ * "Visto" vale para esta assinatura — ver "3 sem resposta" e marcar como
+ * visto não esconde o "4 sem resposta" de amanhã.
+ */
+export function assinaturaDoAviso(n: Pick<Notification, "id" | "count" | "title">) {
+  return `${n.id}:${n.count ?? ""}:${n.title}`;
+}
+
 /** Diferença em dias entre duas datas ISO. */
 function daysBetween(from: string, to: string) {
   return Math.round(
@@ -105,7 +151,8 @@ export function buildNotifications(
    * operação: um retorno que vence às 18h num expediente até 17h aparecia
    * em dia.
    */
-  expediente?: Expediente
+  expediente?: Expediente,
+  fontes: FontesDoSino = {}
 ): Notification[] {
 
   const list: Notification[] = [];
@@ -334,6 +381,101 @@ export function buildNotifications(
       });
     }
   }
+
+  /* ---------- as outras frentes ---------- */
+
+  const agora = fontes.agora ?? new Date();
+
+  if (fontes.nps) {
+    const resumo = summarize(fontes.nps, agora);
+    if (resumo.estourados > 0) {
+      list.push({
+        id: "nps-fora-do-prazo",
+        tone: "danger",
+        title: `${resumo.estourados} ciclo(s) do NPS com o 1º contato fora do prazo`,
+        detail: "Detratores e passivos esperando o primeiro contato além do prazo do segmento.",
+        href: "/nps",
+        count: resumo.estourados,
+        frente: "nps",
+      });
+    }
+    const hojeOp = diaNaOperacao(agora);
+    const detratoresDeHoje = fontes.nps.filter((r) => r.score <= 6 && !r.firstContactAt && !r.closedAt && diaNaOperacao(r.respondedAt) === hojeOp);
+    if (detratoresDeHoje.length > 0) {
+      const primeiro = detratoresDeHoje[0];
+      const nome = primeiro.customerName?.trim() || primeiro.customer;
+      list.push({
+        id: "nps-detratores-hoje",
+        tone: "warning",
+        title: `${detratoresDeHoje.length} detrator(es) novo(s) hoje`,
+        detail: detratoresDeHoje.length === 1 ? `${nome} deu nota ${primeiro.score} e ainda não teve contato.` : "Responderam hoje e ainda não tiveram contato.",
+        href: detratoresDeHoje.length === 1 ? `/nps/${primeiro.id}` : "/nps",
+        count: detratoresDeHoje.length,
+        frente: "nps",
+        janela: detratoresDeHoje.length === 1 ? { frente: "nps", ref: primeiro.id, titulo: `NPS ${primeiro.score} · ${nome}` } : undefined,
+      });
+    }
+  }
+
+  if (fontes.avaliacoesGoogle) {
+    const negativas = fontes.avaliacoesGoogle.filter((a) => a.status === "aberta" && a.classificacao === "negativa" && !a.respondidaEm);
+    if (negativas.length > 0) {
+      list.push({
+        id: "google-negativas",
+        tone: "warning",
+        title: `${negativas.length} avaliação(ões) negativa(s) no Google sem resposta`,
+        detail: "A resposta pública é para quem avaliou e para quem vai ler antes de decidir.",
+        href: "/google",
+        count: negativas.length,
+        frente: "google",
+        janela: negativas.length === 1 ? { frente: "google", ref: negativas[0].id, titulo: `Google · ${negativas[0].autor ?? "avaliação"}` } : undefined,
+      });
+    }
+  }
+
+  if (fontes.regras) {
+    const redesAtrasadas = cases.filter((c) => isSocial(c) && isOpen(c) && slaStatus(c, fontes.regras!, { agora, expediente }).situation === "estourado");
+    if (redesAtrasadas.length > 0) {
+      list.push({
+        id: "redes-fora-do-prazo",
+        tone: "danger",
+        title: `${redesAtrasadas.length} atendimento(s) das Redes fora do prazo`,
+        detail: "O 1º contato das Redes é em 4 horas úteis.",
+        href: "/redes-sociais",
+        count: redesAtrasadas.length,
+        frente: "redes",
+        janela: redesAtrasadas.length === 1 ? { frente: "redes", ref: redesAtrasadas[0].id, titulo: `${redesAtrasadas[0].protocol} · ${redesAtrasadas[0].customer}` } : undefined,
+      });
+    }
+
+    /* Crise e sem notícia: as mesmas leituras do Assistente e do Meu dia. */
+    for (const aviso of avisosDeAbertura({ casos: cases, regras: fontes.regras, nps: fontes.nps, expediente, agora })) {
+      if (aviso.chave !== "crise" && aviso.chave !== "sem-noticia") continue;
+      list.push({
+        id: aviso.chave === "crise" ? "crise" : "sem-noticia",
+        tone: aviso.tom === "perigo" ? "danger" : "warning",
+        title: aviso.titulo,
+        detail: aviso.detalhe,
+        href: aviso.href,
+        count: aviso.quantidade,
+        frente: aviso.janela?.frente === "redes" ? "redes" : "reclame-aqui",
+        janela: aviso.janela,
+      });
+    }
+  }
+
+  /* A frente dos avisos de antes, pelo id. */
+  const FRENTE_POR_ID: Record<string, FrenteDoAviso> = {
+    "sem-resposta": "reclame-aqui",
+    replica: "reclame-aqui",
+    "nao-resolvido": "reclame-aqui",
+    "cadastro-incompleto": "reclame-aqui",
+    "movimentacao-atrasada": "operacao",
+    "agenda-vencida": "agenda",
+    "agenda-hoje": "agenda",
+    "google-hoje": "agenda",
+  };
+  for (const item of list) item.frente ??= FRENTE_POR_ID[item.id] ?? "operacao";
 
   const ordem: Record<NotificationTone, number> = {
     danger: 0,

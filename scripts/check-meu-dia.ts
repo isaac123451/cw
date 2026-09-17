@@ -105,7 +105,7 @@ console.log("\n— A fiação —\n");
   conferir("o sino conta o atraso das áreas pelo expediente configurado", sino.includes("lateMovements(movements, { expediente })"), true);
   conferir(
     "e quem chama o sino passa o expediente",
-    /googleEvents,\s*expediente\s*\)/.test(ler("components/layout/NotificationsMenu.tsx")) && /workspace\.expediente\s*\)/.test(ler("app/api/extensao/resumo/route.ts")),
+    /googleEvents,\s*expediente\s*[,)]/.test(ler("components/layout/NotificationsMenu.tsx")) && /workspace\.expediente\s*\)/.test(ler("app/api/extensao/resumo/route.ts")),
     true
   );
 

@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 17/09/2026. Aplicação **1.2.0**, extensão **1.2.0**.
+Atualizado em 17/09/2026. Aplicação **1.3.0**, extensão **1.3.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,31 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### Notificações que resolvem (17/09/2026, 1.3.0)
+
+O sino só olhava Reclame Aqui, agenda e áreas, e o número nunca
+baixava.
+
+- **Todas as frentes:** além do que havia, NPS com o 1º contato fora do
+  prazo (a mesma conta da tela), detrator novo hoje, Google negativo sem
+  resposta, Redes fora do prazo, sinal de crise e cliente sem notícia
+  (as leituras do Assistente e do Meu dia).
+- **Agrupado por frente**, em ordem fixa, com a ação no próprio aviso:
+  abrir a tela, ou abrir o caso direto numa mini-janela quando o aviso é
+  de um caso só.
+- **Visto por pessoa:** o número do sino conta só o que é novo;
+  "Marcar como visto" em cada aviso e "Tudo visto". Visto vale para o
+  texto — ver "3 sem resposta" não esconde o "4 sem resposta".
+- **Pop-up discreto do que muda com a tela aberta:** aviso novo, grave
+  ou de atenção, vira um toast pequeno. **Na abertura nada pula**: os
+  dados chegam em partes, e o que aparece nos primeiros 20 s só é
+  registrado.
+
+A extensão continua recebendo o mesmo resumo (as fontes novas são
+opcionais). Provas: `check:sino` (novo), `check:meu-dia`,
+`check:extensao`; na tela, 7 avisos em 4 frentes, visto e "Tudo visto"
+zerando o número, e nenhum pop-up ao abrir.
 
 ### Menu lateral repaginado (17/09/2026, 1.2.0)
 
