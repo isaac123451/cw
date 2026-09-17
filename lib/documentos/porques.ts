@@ -117,6 +117,7 @@ export const PORQUE_DO_PASSO_RA: Record<string, ChaveDoPorQue> = {
 /** O passo do fluxo das redes sociais. */
 export const PORQUE_DO_PASSO_REDES: Record<string, ChaveDoPorQue> = {
   recebido: "redes.recebimento",
+  triagem: "redes.recebimento",
   analise: "redes.analise",
   contato: "redes.primeiro-contato",
   tratativa: "redes.tratativa",

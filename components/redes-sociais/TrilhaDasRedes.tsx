@@ -39,6 +39,7 @@ import { quandoVence } from "@/components/reclame-aqui/tratativa/RelogioDoCaso";
 import { useTratativa } from "@/components/reclame-aqui/tratativa/TratativaProvider";
 
 import EncerrarRedesModal from "./EncerrarRedesModal";
+import TriagemDasRedes from "./TriagemDasRedes";
 
 interface Props {
   data: Case;
@@ -82,6 +83,7 @@ export default function TrilhaDasRedes({ data, aoMudarNoServidor, irParaAreas, m
   const [encerrando, setEncerrando] = useState<string | null>(null);
   const [reabrindo, setReabrindo] = useState(false);
   const [relato, setRelato] = useState<{ protocolo: string; texto: string } | null>(null);
+  const [refazendo, setRefazendo] = useState(false);
 
   useEffect(() => {
     let ativo = true;
@@ -126,12 +128,15 @@ export default function TrilhaDasRedes({ data, aoMudarNoServidor, irParaAreas, m
 
   const passos: Passo[] = [
     {
-      id: "recebido",
-      titulo: "Recebimento",
-      feito: true,
-      detalhe: [data.source, data.socialHandle ? `@${data.socialHandle.replace(/^@/, "")}` : null, data.followers ? `${data.followers.toLocaleString("pt-BR")} seguidores` : null]
-        .filter(Boolean)
-        .join(" · "),
+      id: "triagem",
+      titulo: "Triagem",
+      feito: Boolean(data.triadaEm) || final,
+      detalhe: data.triadaEm
+        ? [data.priority, data.source, data.socialHandle ? `@${data.socialHandle.replace(/^@/, "")}` : null, data.followers ? `${data.followers.toLocaleString("pt-BR")} seguidores` : null]
+            .filter(Boolean)
+            .join(" · ")
+        : "Quem é, a rede, o que aconteceu, a gravidade e a saída.",
+      acao: { rotulo: "Triar", fazer: () => setRefazendo(true) },
     },
     {
       id: "analise",
@@ -182,6 +187,10 @@ export default function TrilhaDasRedes({ data, aoMudarNoServidor, irParaAreas, m
 
   const atual = passos.find((p) => !p.feito);
 
+  /* Sem triagem, a triagem ocupa o lugar dos passos — é a primeira coisa a fazer. */
+  const triando = !final && (!data.triadaEm || refazendo);
+  const relatoCarregado = relato?.protocolo === data.protocol || Boolean(data.description);
+
   /* A etapa que o registro diz, para o quadro acompanhar. */
   const etapaPeloRegistro = final
     ? data.status
@@ -224,6 +233,11 @@ export default function TrilhaDasRedes({ data, aoMudarNoServidor, irParaAreas, m
           <MessagesSquare size={17} className="text-pink-600" />
           Fluxo das Redes Sociais
         </h2>
+        {data.triadaEm && !final && !refazendo && (
+          <button type="button" onClick={() => setRefazendo(true)} className="ml-auto text-xs font-medium text-zinc-500 hover:text-zinc-900">
+            Refazer a triagem
+          </button>
+        )}
         {(data.reaberturas ?? 0) > 0 && (
           <span className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-[11px] font-semibold text-zinc-600">
             reaberto {data.reaberturas}×
@@ -259,6 +273,27 @@ export default function TrilhaDasRedes({ data, aoMudarNoServidor, irParaAreas, m
         </p>
       )}
 
+      {triando ? (
+        <div className="mt-4">
+          {relatoCarregado ? (
+            <TriagemDasRedes
+              key={data.protocol}
+              data={data}
+              relato={descricao}
+              aoSalvar={(patch) => {
+                aoMudarNoServidor?.(patch);
+                setRefazendo(false);
+              }}
+              onCancelar={data.triadaEm ? () => setRefazendo(false) : undefined}
+            />
+          ) : (
+            <p className="flex items-center gap-2 rounded-xl border border-zinc-200 px-4 py-6 text-xs text-zinc-500">
+              <Loader2 size={13} className="animate-spin" /> Lendo o relato para a triagem…
+            </p>
+          )}
+        </div>
+      ) : (
+      <>
       <ol className="mt-4 grid gap-2 sm:grid-cols-3 xl:grid-cols-6">
         {passos.map((p, i) => (
           <li
@@ -343,7 +378,10 @@ export default function TrilhaDasRedes({ data, aoMudarNoServidor, irParaAreas, m
         </div>
       </div>
 
-      {atrasada && (
+      </>
+      )}
+
+      {atrasada && !triando && (
         <p className="mt-2 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
           O quadro mostra “{etapaAtual}”, mas o registro já está em “{etapaPeloRegistro}”.
           <button type="button" onClick={() => mover(etapaPeloRegistro)} className="font-medium text-violet-700 hover:underline">

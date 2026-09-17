@@ -39,6 +39,7 @@ export const ETAPAS_DAS_REDES: EtapaDasRedes[] = [
   { nome: "Resolvido", cor: "#10B981", dica: "Encerrado com a solução confirmada pelo cliente.", final: true, resolvido: true },
   { nome: "Sem contato", cor: "#71717A", dica: "Três tentativas sem resposta. Não conta como resolvido; reabre se o cliente voltar.", final: true },
   { nome: "Sem identificação", cor: "#A1A1AA", dica: "O cliente não se identificou pelo canal privado. O registro fica para efeito de menção.", final: true },
+  { nome: "Encaminhado", cor: "#6366F1", dica: "Passou para a área que responde pelo assunto (suporte, financeiro, comercial…) e sai da fila da reputação. Não conta como resolvido.", final: true },
 ];
 
 export const FINAIS_DAS_REDES = ETAPAS_DAS_REDES.filter((e) => e.final).map((e) => e.nome);
@@ -187,3 +188,96 @@ export function sinaisDeCrise(
 
   return sinais;
 }
+
+/* ============================================================
+   TRIAGEM — "uma pergunta por vez"
+============================================================ */
+
+/**
+ * A triagem das Redes, pergunta a pergunta (roadmap 2.0, Fase 14).
+ *
+ * O Isaac: "a triagem de redes sociais é confusa e precisa colocar algo
+ * como resolvido". O caso chegava pela planilha ou pelo Slack e caía em
+ * "Recebido" com um formulário de treze campos; encerrar pedia outra
+ * janela, e metade dos atendimentos se resolve na primeira conversa.
+ *
+ * Agora são cinco perguntas — quem é, qual rede, o que aconteceu, a
+ * gravidade e a saída — e a saída pode ser um final: resolvido na
+ * primeira conversa, sem contato, sem identificação ou encaminhado para
+ * outra área. Cada final pede só o que o documento exige dele.
+ */
+
+export type SaidaDaTriagem = "segue" | "Resolvido" | "Sem contato" | "Sem identificação" | "Encaminhado";
+
+export const SAIDAS_DA_TRIAGEM: { id: SaidaDaTriagem; nome: string; texto: string }[] = [
+  { id: "segue", nome: "Segue em atendimento", texto: "Ainda falta falar com o cliente ou resolver. O caso vai para Em análise." },
+  { id: "Resolvido", nome: "Resolvido", texto: "Resolvido na conversa, com o cliente confirmando. Conta como resolvido." },
+  { id: "Sem contato", nome: "Sem contato", texto: "Três tentativas sem resposta. Reabre se o cliente voltar." },
+  { id: "Sem identificação", nome: "Sem identificação", texto: "O cliente não se identificou pelo canal privado. Fica o registro da menção." },
+  { id: "Encaminhado", nome: "Encaminhado", texto: "Outra área responde pelo assunto e o caso sai da fila da reputação." },
+];
+
+export interface TriagemDasRedes {
+  customer: string;
+  socialHandle: string;
+  followers: number | null;
+  /** O cliente ainda não disse quem é. */
+  naoIdentificado: boolean;
+  source: string;
+  category: string;
+  relato: string;
+  prioridade: "Urgente" | "Alta" | "Normal";
+  saida: SaidaDaTriagem;
+  /** Resolvido. */
+  solucao: string;
+  causaRaiz: string;
+  clienteConfirmou: boolean;
+  /** Encaminhado. */
+  area: string;
+  chamado: string;
+}
+
+/** A gravidade que os dados sugerem, com o motivo — a pessoa decide. */
+export function gravidadeSugerida(sinais: SinalDeCrise[], followers: number | null | undefined): { nivel: TriagemDasRedes["prioridade"]; motivo: string } {
+  const mencoes = sinais.filter((s) => !/seguidores/.test(s.motivo));
+  if (mencoes.length > 0) return { nivel: "Urgente", motivo: mencoes.map((s) => s.motivo).join("; ") };
+  if ((followers ?? 0) >= SEGUIDORES_DE_ALCANCE) return { nivel: "Alta", motivo: `perfil com ${(followers ?? 0).toLocaleString("pt-BR")} seguidores: 1º contato em até 1 hora` };
+  return { nivel: "Normal", motivo: "sem sinal de crise nem perfil de grande alcance" };
+}
+
+/**
+ * O que falta para salvar a triagem com a saída escolhida — vazio quando pode.
+ *
+ * A mesma conta roda na tela (o botão diz o que falta) e no servidor
+ * (que não confia na tela).
+ */
+export function faltaNaTriagem(
+  t: Pick<TriagemDasRedes, "customer" | "naoIdentificado" | "source" | "category" | "saida" | "solucao" | "causaRaiz" | "clienteConfirmou" | "area">,
+  caso: { validadoEm?: string | null; tentativasSemResposta?: number | null }
+): string[] {
+  const falta: string[] = [];
+  if (!t.naoIdentificado && t.customer.trim().length < 2) falta.push("dizer quem é o cliente (ou marcar que não se identificou)");
+  if (!SOCIAL_DAS_REDES.includes(t.source)) falta.push("escolher a rede");
+  if (!t.category.trim()) falta.push("escolher o assunto");
+
+  if (t.saida === "Resolvido") {
+    if (t.naoIdentificado) falta.push("identificar o cliente — resolvido pede saber com quem se falou");
+    if (!caso.validadoEm && !t.clienteConfirmou) falta.push("confirmar que o cliente validou a solução");
+    if (t.solucao.trim().length < 8) falta.push("descrever a solução aplicada");
+    if (!t.causaRaiz.trim()) falta.push("escolher a causa raiz");
+  }
+  if (t.saida === "Sem contato") {
+    const feitas = caso.tentativasSemResposta ?? 0;
+    if (feitas < TENTATIVAS_DAS_REDES) falta.push(`fazer mais ${TENTATIVAS_DAS_REDES - feitas} tentativa(s) de contato — hoje são ${feitas}`);
+  }
+  if (t.saida === "Encaminhado" && !t.area.trim()) falta.push("dizer para qual área foi");
+  return falta;
+}
+
+/** O texto que fica em "solução aplicada" no encaminhamento. */
+export function textoDoEncaminhamento(area: string, chamado: string, nota: string) {
+  return [`Encaminhado para ${area.trim()}${chamado.trim() ? ` (chamado ${chamado.trim()})` : ""}.`, nota.trim()].filter(Boolean).join(" ");
+}
+
+/** As redes que entram na triagem — as mesmas do módulo. */
+export const SOCIAL_DAS_REDES = ["Instagram", "Facebook", "WhatsApp", "ManyChat"];

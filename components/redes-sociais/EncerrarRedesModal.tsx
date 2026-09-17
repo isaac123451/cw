@@ -52,7 +52,9 @@ export default function EncerrarRedesModal({ item, resultadoInicial, onClose, on
           solucao.trim().length < 8 ? "descrever a solução aplicada" : null,
           !causa ? "escolher a causa raiz" : null,
         ].filter(Boolean)
-      : resultado === "Sem contato" && tentativas < TENTATIVAS_DAS_REDES
+      : resultado === "Encaminhado" && solucao.trim().length < 8
+        ? ["dizer para qual área foi e por quê"]
+        : resultado === "Sem contato" && tentativas < TENTATIVAS_DAS_REDES
         ? [`fazer mais ${TENTATIVAS_DAS_REDES - tentativas} tentativa(s) — hoje são ${tentativas}`]
         : [];
 
@@ -140,13 +142,13 @@ export default function EncerrarRedesModal({ item, resultadoInicial, onClose, on
 
         <label className="block">
           <span className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
-            Solução aplicada{resultado === "Resolvido" ? "" : " (opcional)"}
+            {resultado === "Encaminhado" ? "Para qual área e por quê" : `Solução aplicada${resultado === "Resolvido" ? "" : " (opcional)"}`}
           </span>
           <textarea
             value={solucao}
             onChange={(e) => setSolucao(e.target.value)}
             rows={3}
-            placeholder={resultado === "Resolvido" ? "O que resolveu — para quem abrir o caso de novo." : "O que foi feito até aqui."}
+            placeholder={resultado === "Resolvido" ? "O que resolveu — para quem abrir o caso de novo." : resultado === "Encaminhado" ? "Financeiro, chamado 1234: estorno em análise." : "O que foi feito até aqui."}
             className={`mt-1.5 ${textareaClass}`}
           />
         </label>

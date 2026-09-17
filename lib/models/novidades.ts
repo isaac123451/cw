@@ -104,6 +104,14 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.10.0",
+    data: "2026-09-17",
+    titulo: "Triagem das Redes em cinco perguntas",
+    texto: "Quem é, a rede, o que aconteceu, a gravidade (com a sugestão e o motivo) e a saída. Resolvido na primeira conversa se registra ali mesmo, com a confirmação do cliente; e há um final novo, Encaminhado, para o caso que passou para outra área. Na tela das Redes, Triar o mais antigo abre o próximo na janela.",
+    frentes: ["redes"],
+    href: "/redes-sociais",
+  },
+  {
     versao: "1.9.0",
     data: "2026-09-17",
     titulo: "Novidades de todas as versões",

@@ -39,6 +39,7 @@ export const CLOSED_STATUS = [
   /* Os finais das Redes Sociais que não são "Resolvido" — ver lib/models/redes.ts. */
   "Sem contato",
   "Sem identificação",
+  "Encaminhado",
 ];
 
 export const RECLAME_AQUI = "Reclame Aqui";

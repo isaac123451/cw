@@ -191,7 +191,7 @@ export function passosParaFechar(entrada: EntradaDoGuia): PassoParaFechar[] {
         id: "encerrar",
         titulo: "Encerrar com a saída",
         feito: final,
-        detalhe: final ? c.status : "Resolvido, Sem contato ou Sem identificação.",
+        detalhe: final ? c.status : "Resolvido, sem contato, sem identificação ou encaminhado.",
       },
     ]);
   }

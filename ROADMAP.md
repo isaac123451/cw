@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 17/09/2026. Aplicação **1.9.0**, extensão **1.9.0**.
+Atualizado em 17/09/2026. Aplicação **1.10.0**, extensão **1.10.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,44 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### Triagem das Redes em cinco perguntas, com as saídas claras (17/09/2026, 1.10.0)
+
+O Isaac: "a triagem de redes sociais é confusa e precisa colocar algo
+como resolvido".
+
+- **Uma pergunta por vez.** Atendimento sem triagem mostra a triagem no
+  lugar dos passos do fluxo: quem é (nome, perfil, seguidores, ou "ainda
+  não se identificou"), a rede, o que aconteceu (os assuntos mais usados
+  nas Redes primeiro e o relato), a gravidade e a saída. Enter segue, as
+  perguntas respondidas voltam com um clique, e o que falta aparece ao
+  lado do botão.
+- **Gravidade sugerida, com o motivo**: menção a órgão do consumidor,
+  ação judicial ou imprensa sugere Urgente; perfil acima de 10 mil
+  seguidores, Alta; o resto, Normal. A pessoa decide.
+- **As saídas**: Segue em atendimento (vai para Em análise), Resolvido,
+  Sem contato, Sem identificação e **Encaminhado** — final novo, para o
+  caso que passou para outra área (suporte, financeiro, comercial…) e sai
+  da fila da reputação. Não conta como resolvido.
+- **Resolvido na primeira conversa** num passo só: "o cliente confirmou"
+  registra a validação ali mesmo, com a solução e a causa raiz. Sem
+  contato continua exigindo as três tentativas; encaminhado pede a área
+  (e aceita o nº do chamado).
+- **Grava tudo de uma vez** (`triarAtendimento`): a regra da tela
+  (`faltaNaTriagem`) roda no servidor antes da primeira escrita, para uma
+  recusa não deixar o caso pela metade; carimba quem triou pela mesma
+  triagem do Reclame Aqui; e só diz "salvo" com a resposta do banco.
+- **Na tela das Redes**, a barra "N a triar" com **Triar o mais antigo**,
+  que abre o atendimento na mini-janela com a ficha inteira. O indicador
+  "Sem contato ou identificação" virou "Encerrados sem solução" e conta os
+  encaminhados. "Refazer a triagem" fica no cabeçalho do fluxo.
+
+Provas: `check:triagem-redes` (o que cada saída pede, a gravidade, o
+final novo, a ordem conferir-antes-de-gravar) e `check:redes` atualizado;
+na tela, com um atendimento descartável criado para isso: triado pela
+barra, encerrado como Resolvido com a validação registrada na hora,
+reaberto, triado de novo como Encaminhado para o Financeiro e excluído no
+fim — a base voltou a ter o único atendimento real.
 
 ### Novidades de todas as versões, com tour na própria tela (17/09/2026, 1.9.0)
 

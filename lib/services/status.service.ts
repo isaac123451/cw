@@ -27,6 +27,7 @@ export const STATUS_TONE: Record<string, string> = {
   "Validação": "bg-teal-50 text-teal-700 ring-teal-100",
   "Sem contato": "bg-zinc-100 text-zinc-600 ring-zinc-200",
   "Sem identificação": "bg-zinc-100 text-zinc-500 ring-zinc-200",
+  Encaminhado: "bg-indigo-50 text-indigo-700 ring-indigo-100",
 };
 
 export function toneOf(status: string) {

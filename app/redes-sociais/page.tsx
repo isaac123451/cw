@@ -36,6 +36,8 @@ import { groupBy, isOpen } from "@/lib/services/case.service";
 
 import { Case } from "@/lib/models/case";
 import BotaoAbrirEmJanela from "@/components/janelas/BotaoAbrirEmJanela";
+import { useJanelas } from "@/lib/context/JanelasContext";
+import { idDaJanela } from "@/lib/models/janelas";
 
 function RedesSociaisConteudo() {
 
@@ -121,8 +123,27 @@ function RedesSociaisConteudo() {
   ).length;
 
   const semSolucao = social.filter(
-    (item) => item.status === "Sem contato" || item.status === "Sem identificação"
+    (item) => item.status === "Sem contato" || item.status === "Sem identificação" || item.status === "Encaminhado"
   ).length;
+
+  /* Os que chegaram e ninguém triou — o mais antigo primeiro. */
+  const aTriar = useMemo(
+    () =>
+      todosOsSociais
+        .filter((c) => !c.triadaEm && !eFinalDasRedes(c.status))
+        .sort((a, b) => (a.recebidaEm ?? a.createdAt).localeCompare(b.recebidaEm ?? b.createdAt)),
+    [todosOsSociais]
+  );
+
+  const { abrir, janelas, alternarCompleta } = useJanelas();
+
+  function triarProximo() {
+    const c = aTriar[0];
+    if (!c) return;
+    const id = idDaJanela("redes", c.id);
+    abrir({ frente: "redes", ref: c.id, titulo: `${c.protocol} · ${c.customer}` });
+    if (!janelas.find((j) => j.id === id)?.completa) alternarCompleta(id);
+  }
 
   const [encerrando, setEncerrando] = useState<{ item: Case; status: string } | null>(null);
 
@@ -235,8 +256,8 @@ function RedesSociaisConteudo() {
           />
 
           <StatTile
-            label="Sem contato ou identificação"
-            description="Encerrados sem solução: três tentativas sem resposta, ou cliente que não se identificou. Não contam como resolvidos."
+            label="Encerrados sem solução"
+            description="Sem contato (três tentativas sem resposta), sem identificação ou encaminhados para outra área. Não contam como resolvidos."
             value={semSolucao}
             hint="não contam como resolvidos"
             icon={Camera}
@@ -327,6 +348,22 @@ function RedesSociaisConteudo() {
               </SurfaceCard>
 
             </div>
+
+            {aTriar.length > 0 && (
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-zinc-200/80 bg-white px-5 py-3">
+                <p className="text-sm text-zinc-700">
+                  <strong className="font-semibold tabular-nums text-zinc-900">{aTriar.length}</strong> a triar
+                  <span className="text-zinc-500"> · o mais antigo chegou {String(aTriar[0].createdAt).slice(0, 10).split("-").reverse().slice(0, 2).join("/")}</span>
+                </p>
+                <button
+                  type="button"
+                  onClick={triarProximo}
+                  className="ml-auto flex h-8 items-center gap-1.5 rounded-lg bg-zinc-900 px-3 text-xs font-semibold text-white hover:bg-zinc-800"
+                >
+                  Triar o mais antigo
+                </button>
+              </div>
+            )}
 
             <SurfaceCard
               title="Quadro de atendimento"

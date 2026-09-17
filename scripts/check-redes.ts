@@ -77,11 +77,11 @@ confere("a antiga e a de outra categoria não contam", sinaisDeCrise(base, outro
 
 console.log("\n— As etapas —");
 confere("Novo das etapas antigas é Recebido", etapaDasRedes("Novo")?.nome, "Recebido");
-confere("os três finais", ["Resolvido", "Sem contato", "Sem identificação", "Validação"].map(eFinalDasRedes), [true, true, true, false]);
+confere("os quatro finais", ["Resolvido", "Sem contato", "Sem identificação", "Encaminhado", "Validação"].map(eFinalDasRedes), [true, true, true, true, false]);
 confere(
-  "sem contato e sem identificação fecham o caso, validação não",
-  ["Sem contato", "Sem identificação", "Validação", "Em tratativa"].map((status) => isOpen({ ...base, status })),
-  [false, false, true, true]
+  "sem contato, sem identificação e encaminhado fecham o caso, validação não",
+  ["Sem contato", "Sem identificação", "Encaminhado", "Validação", "Em tratativa"].map((status) => isOpen({ ...base, status })),
+  [false, false, false, true, true]
 );
 
 console.log(falhas === 0 ? "\nTudo certo.\n" : `\n${falhas} falha(s).\n`);
