@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 
 import MainLayout from "@/components/layout/MainLayout";
 import PageHeading from "@/components/shared/PageHeading";
@@ -12,6 +12,7 @@ import ConfigurarRotina from "@/components/rotina/ConfigurarRotina";
 import { useMeuDia } from "@/components/rotina/useMeuDia";
 import CartaoDoPrimeiroAcesso from "@/components/primeiroAcesso/CartaoDoPrimeiroAcesso";
 import AgoraNoMeuDia from "@/components/rotina/AgoraNoMeuDia";
+import ModoProximo from "@/components/rotina/ModoProximo";
 
 /**
  * Meu dia — a primeira tela do dia.
@@ -24,11 +25,21 @@ import AgoraNoMeuDia from "@/components/rotina/AgoraNoMeuDia";
  * Tudo é contado, e nada é enviado: a tela aponta, você faz, marca e
  * salva.
  */
+const nadaParaOuvir = () => () => {};
+
 export default function MeuDiaPage() {
 
   const dia = useMeuDia();
   const [marcas, setMarcas] = useState<Set<string> | null>(null);
   const [configurando, setConfigurando] = useState(false);
+  /* A Agenda chega aqui com ?um-por-vez: o modo já abre (no servidor, fechado). */
+  const pedidoPeloEndereco = useSyncExternalStore(
+    nadaParaOuvir,
+    () => new URLSearchParams(window.location.search).has("um-por-vez"),
+    () => false
+  );
+  const [escolha, setUmPorVez] = useState<boolean | null>(null);
+  const umPorVez = escolha ?? pedidoPeloEndereco;
 
   /* O rascunho das marcas é o salvo até alguém mexer. */
   const efetivas = marcas ?? dia.feitasHoje;
@@ -51,6 +62,8 @@ export default function MeuDiaPage() {
           description={`${dataPorExtenso ? `${dataPorExtenso[0].toUpperCase()}${dataPorExtenso.slice(1)}. ` : ""}A rotina do documento com os números de hoje nas quatro frentes, o plano que cabe no expediente e o checkpoint com a gestão.`}
         />
 
+        {umPorVez && <ModoProximo dia={dia} marcadas={efetivas} onFechar={() => setUmPorVez(false)} />}
+
         <CartaoDoPrimeiroAcesso />
 
         {/* O que pede ação, o que move a nota e o que já deu certo — antes da lista de tarefas. */}
@@ -58,7 +71,7 @@ export default function MeuDiaPage() {
 
         <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
 
-          <RotinaDoDia dia={dia} rascunho={efetivas} setRascunho={setMarcas} onConfigurar={() => setConfigurando(true)} />
+          <RotinaDoDia dia={dia} rascunho={efetivas} setRascunho={setMarcas} onConfigurar={() => setConfigurando(true)} onUmPorVez={() => { setUmPorVez(true); window.scrollTo({ top: 0, behavior: "smooth" }); }} />
 
           <div className="space-y-6">
             <PlanoDoDia plano={plano} atividades={dia.doDia} />

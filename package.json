@@ -1,6 +1,6 @@
 {
   "name": "cw-reputacao",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -109,6 +109,7 @@
     "check:edicao": "tsx scripts/check-edicao.ts",
     "check:gravacoes": "tsx --conditions=react-server scripts/check-gravacoes.ts",
     "check:planos": "tsx scripts/check-planos.ts",
+    "check:guia-para-fechar": "tsx scripts/check-guia-para-fechar.ts",
     "check:janelas": "tsx scripts/check-janelas.ts",
     "check:meu-dia": "tsx scripts/check-meu-dia.ts",
     "check:conversas-retrato": "tsx scripts/check-conversas-retrato.ts",

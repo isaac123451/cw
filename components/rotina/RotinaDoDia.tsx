@@ -4,7 +4,7 @@ import Link from "next/link";
 
 import { useEffect, useMemo, useState } from "react";
 
-import { ArrowUpRight, Check, ChevronDown, ChevronRight, Flame, Loader2, Save, Settings2 } from "lucide-react";
+import { ArrowUpRight, Check, ChevronDown, ChevronRight, Flame, ListChecks, Loader2, Save, Settings2 } from "lucide-react";
 
 import SurfaceCard from "@/components/shared/SurfaceCard";
 import IconeDaFrente from "@/components/shared/IconeDaFrente";
@@ -21,6 +21,9 @@ import type { useMeuDia } from "@/components/rotina/useMeuDia";
 
 import PorQue from "@/components/shared/PorQue";
 import JanelaDoLink from "@/components/janelas/JanelaDoLink";
+import { usePassosParaFechar } from "@/components/rotina/usePassosParaFechar";
+import { resumoDosPassos } from "@/lib/models/guiaParaFechar";
+import { janelaDoEndereco } from "@/lib/models/janelas";
 type MeuDia = ReturnType<typeof useMeuDia>;
 
 interface Props {
@@ -28,6 +31,8 @@ interface Props {
   /** Na Agenda: a lista enxuta, sem as contínuas, com o atalho para o Meu dia. */
   compacto?: boolean;
   onConfigurar?: () => void;
+  /** Abre o modo um por vez — a fila do dia com os passos de cada item. */
+  onUmPorVez?: () => void;
   /**
    * As marcas como estão na tela — vivem fora porque o plano do dia
    * também as lê. `null` em setRascunho volta ao que está salvo.
@@ -48,11 +53,12 @@ interface Props {
  * As marcas ficam no banco, por pessoa e por dia, com Salvar: é o que
  * dá a barra de progresso e a sequência de dias com a rotina completa.
  */
-export default function RotinaDoDia({ dia, compacto = false, onConfigurar, rascunho, setRascunho }: Props) {
+export default function RotinaDoDia({ dia, compacto = false, onConfigurar, onUmPorVez, rascunho, setRascunho }: Props) {
 
   const { notify } = useToast();
   const [aberta, setAberta] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
+  const passosDe = usePassosParaFechar();
 
   const { doDia, contagens, feitasHoje, sequencia, hoje } = dia;
 
@@ -133,6 +139,21 @@ export default function RotinaDoDia({ dia, compacto = false, onConfigurar, rascu
             >
               <Flame size={13} /> {sequencia} dia(s)
             </span>
+          )}
+          {onUmPorVez && doDia.length > 0 && (
+            <button
+              type="button"
+              onClick={onUmPorVez}
+              title="Os itens das atividades abertas, um por vez, com o que falta em cada um"
+              className="flex items-center gap-1.5 rounded-xl bg-zinc-900 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-zinc-800"
+            >
+              <ListChecks size={14} /> Um por vez
+            </button>
+          )}
+          {compacto && doDia.length > 0 && (
+            <Link href="/meu-dia?um-por-vez" className="flex items-center gap-1.5 rounded-xl border border-zinc-200 px-3 py-2 text-xs font-medium text-zinc-700 hover:border-zinc-300">
+              <ListChecks size={14} /> Um por vez
+            </Link>
           )}
           {onConfigurar && (
             <button
@@ -244,16 +265,26 @@ export default function RotinaDoDia({ dia, compacto = false, onConfigurar, rascu
 
               {expandida && c && (
                 <ul className="max-h-72 space-y-1 overflow-y-auto border-t border-zinc-100 px-3 py-2">
-                  {c.itens.slice(0, 40).map((i) => (
+                  {c.itens.slice(0, 40).map((i) => {
+                    const pedido = janelaDoEndereco(i.href, i.titulo);
+                    const passos = pedido ? passosDe(pedido.frente, pedido.ref) : null;
+                    const proximo = passos ? resumoDosPassos(passos).atual : null;
+                    return (
                     <li key={`${i.frente ?? "g"}:${i.id}`} className="flex min-w-0 items-start gap-2 text-xs">
                       {i.frente ? <IconeDaFrente frente={i.frente} size={12} className="mt-0.5" /> : <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-zinc-300" />}
                       <Link href={i.href} className="min-w-0 flex-1">
                         <span className={`block truncate font-medium ${i.atrasado ? "text-rose-700" : "text-zinc-700"} hover:underline`}>{i.titulo}</span>
                         {i.detalhe && <span className="block truncate text-[11px] text-zinc-500">{i.frente ? `${frente(i.frente).curto} · ` : ""}{i.detalhe}</span>}
+                        {proximo && (
+                          <span className="block truncate text-[11px] text-zinc-400">
+                            Falta: <span className="text-zinc-600">{proximo.titulo.charAt(0).toLowerCase()}{proximo.titulo.slice(1)}</span>
+                          </span>
+                        )}
                       </Link>
                       <JanelaDoLink href={i.href} titulo={i.titulo} className="-mt-0.5 p-0.5" />
                     </li>
-                  ))}
+                    );
+                  })}
                   {c.itens.length > 40 && <li className="pt-1 text-[11px] text-zinc-400">e mais {c.itens.length - 40} — o atalho abre a lista inteira.</li>}
                 </ul>
               )}

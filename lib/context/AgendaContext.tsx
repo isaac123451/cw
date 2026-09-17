@@ -15,7 +15,7 @@ import {
 } from "@/lib/actions/registry";
 
 import { useWorkspaceSlice } from "@/lib/context/useWorkspace";
-import { sincronizar } from "@/lib/context/sync";
+import { sincronizar, type Gravacao } from "@/lib/context/sync";
 
 export type TaskDraft = Omit<AgendaTask, "id">;
 
@@ -28,9 +28,14 @@ interface AgendaContextType {
   createTask: (data: TaskDraft) => void;
   updateTask: (data: AgendaTask) => void;
   removeTask: (id: string) => void;
-  toggleTask: (id: string) => void;
+  /**
+   * Concluir e reagendar devolvem a gravação: quem precisa confirmar só
+   * depois do banco (o modo um por vez) espera; se o banco recusa, a
+   * tarefa volta ao que era.
+   */
+  toggleTask: (id: string) => Promise<Gravacao>;
   /** Reagenda ao arrastar entre os dias do quadro. */
-  moveTask: (id: string, dueDate: string) => void;
+  moveTask: (id: string, dueDate: string) => Promise<Gravacao>;
 }
 
 const AgendaContext =
@@ -95,7 +100,7 @@ export function AgendaProvider({
           (item) => item.id === id
         );
 
-        if (!atual) return;
+        if (!atual) return Promise.resolve({ ok: false, erro: "Esta atividade não existe mais." });
 
         const alterada = { ...atual, done: !atual.done };
 
@@ -105,7 +110,10 @@ export function AgendaProvider({
           )
         );
 
-        sincronizar(() => saveAgendaTask(alterada));
+        return sincronizar(
+          () => saveAgendaTask(alterada),
+          () => setTasks((prev) => prev.map((item) => (item.id === id ? atual : item)))
+        );
       },
 
       moveTask: (id, dueDate) => {
@@ -114,7 +122,7 @@ export function AgendaProvider({
           (item) => item.id === id
         );
 
-        if (!atual) return;
+        if (!atual) return Promise.resolve({ ok: false, erro: "Esta atividade não existe mais." });
 
         const movida = { ...atual, dueDate };
 
@@ -126,7 +134,10 @@ export function AgendaProvider({
           )
         );
 
-        sincronizar(() => saveAgendaTask(movida));
+        return sincronizar(
+          () => saveAgendaTask(movida),
+          () => setTasks((prev) => ordenar(prev.map((item) => (item.id === id ? atual : item))))
+        );
       },
     }),
     [tasks, loading, setTasks]

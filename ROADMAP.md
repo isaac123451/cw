@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 17/09/2026. Aplicação **1.7.0**, extensão **1.7.0**.
+Atualizado em 17/09/2026. Aplicação **1.8.0**, extensão **1.8.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,37 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### Meu dia um por vez: a fila com o que falta em cada item (17/09/2026, 1.8.0)
+
+O Isaac: "guia para finalizar as atividades" e "para atualizar casos do
+nps na agenda ou meu dia mini janelas seriam interessantes".
+
+- **Um por vez.** Botão na Rotina de hoje (e na Agenda, que leva ao Meu
+  dia já no modo). Os itens das atividades ainda não marcadas viram uma
+  fila: o mesmo caso em duas atividades é um item só, o fora do prazo
+  vem primeiro e o resto segue a ordem do documento. Um item na frente,
+  com a frente, as atividades em que aparece, e ← → (ou Pular) para
+  andar.
+- **O que falta, passo a passo.** Ao lado, os passos do item: a trilha
+  do Reclame Aqui e a do NPS (as mesmas das fichas), e as das Redes
+  (triagem, 1º contato, validação, saída) e do Google (resposta pública,
+  tratativa privada na negativa, encerramento). Cada passo se marca pelo
+  registro: salvou na janela, o passo aparece feito na hora.
+- **Abrir na janela** traz a ficha completa ao lado. Quando o item deixa
+  de pertencer ao dia (respondido, contatado, encerrado), o modo avisa
+  "saiu do dia" e segue para o que ocupou o lugar dele — não volta ao
+  começo da fila.
+- **Atividade da agenda** se resolve ali: Concluir ou Próximo dia útil,
+  com a confirmação só depois do banco (e a tarefa volta ao que era se o
+  banco recusar — vale também para a Agenda). Com protocolo vinculado, o
+  caso abre na janela e mostra os passos dele.
+- **Na lista de cada atividade**, cada item ganhou a linha "Falta: …".
+
+Provas: `check:guia-para-fechar` (fila, lugar na fila, passos de Redes e
+Google, confirmação da agenda); na tela, 93 itens na fila de hoje, ← →
+andando, um NPS aberto na janela completa (720 px) a partir do modo, e
+as listas mostrando "Falta: classificar tipo e causa".
 
 ### Várias janelas, organizadas e sem perder rascunho (17/09/2026, 1.7.0)
 
