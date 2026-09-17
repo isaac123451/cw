@@ -261,3 +261,41 @@ export function janelaDoEndereco(href: string | undefined | null, titulo: string
   }
   return null;
 }
+
+/**
+ * Arrumar as janelas abertas (as minimizadas ficam na bandeja).
+ *
+ * **Lado a lado:** em colunas da largura de cada uma, da esquerda para a
+ * direita a partir do conteúdo, quebrando para uma segunda fileira
+ * deslocada quando não cabem. **Cascata:** uma sobre a outra, deslocadas,
+ * a partir do canto — a mais recente na frente.
+ */
+export function organizarJanelas(
+  janelas: Janela[],
+  modo: "lado-a-lado" | "cascata",
+  tela: { largura: number; altura: number }
+): Janela[] {
+  const visiveis = janelas.filter((j) => !j.minimizada).sort((a, b) => a.z - b.z);
+  const largura = (j: Janela) => Math.min(j.completa ? LARGURA_DA_FICHA_COMPLETA : LARGURA_DA_JANELA, tela.largura - 16);
+  const novas = new Map<string, { x: number; y: number }>();
+
+  if (modo === "cascata") {
+    visiveis.forEach((j, i) => {
+      const x = Math.max(8, Math.min(tela.largura - largura(j) - 8, 80 + i * CASCATA));
+      novas.set(j.id, { x, y: Math.min(tela.altura - 200, 64 + i * CASCATA) });
+    });
+  } else {
+    let x = 8;
+    let fileira = 0;
+    for (const j of visiveis) {
+      if (x + largura(j) > tela.largura - 8 && x > 8) {
+        fileira += 1;
+        x = 8 + fileira * CASCATA;
+      }
+      novas.set(j.id, { x, y: 64 + fileira * 48 });
+      x += largura(j) + 8;
+    }
+  }
+
+  return janelas.map((j) => (novas.has(j.id) ? { ...j, ...novas.get(j.id)! } : j));
+}

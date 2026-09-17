@@ -1,10 +1,12 @@
 "use client";
 
-import { useRef, type PointerEvent as PointerEventReact } from "react";
+import { useRef, useState, type PointerEvent as PointerEventReact } from "react";
 
 import Link from "next/link";
 
-import { ExternalLink, GripHorizontal, Maximize2, Minimize2, Minus, X } from "lucide-react";
+import { Columns3, ExternalLink, GripHorizontal, Layers, Maximize2, Minimize2, Minus, PanelBottomClose, X } from "lucide-react";
+
+import { JanelaAtual, useJanelasComRascunho } from "@/lib/context/rascunhosDasJanelas";
 
 import IconeDaFrente from "@/components/shared/IconeDaFrente";
 
@@ -40,6 +42,20 @@ function linkDaFicha(j: Janela) {
 function Moldura({ janela }: { janela: Janela }) {
 
   const { fechar, focar, minimizar, mover, alternarCompleta } = useJanelas();
+  const comRascunho = useJanelasComRascunho();
+  const temRascunho = comRascunho.has(janela.id);
+
+  /*
+    Fechar com algo digitado e não salvo pede um segundo clique. Um
+    diálogo por cima da janela seria pesado para uma janela pequena; o
+    próprio botão vira "Descartar?" por alguns segundos.
+  */
+  const [confirmarFechar, setConfirmarFechar] = useState(false);
+  function pedirFechar() {
+    if (!temRascunho || confirmarFechar) return fechar(janela.id);
+    setConfirmarFechar(true);
+    setTimeout(() => setConfirmarFechar(false), 4000);
+  }
 
   /* Google já mostra tudo na própria janela; as outras frentes têm as duas formas. */
   const temCompleta = janela.frente !== "google";
@@ -102,6 +118,7 @@ function Moldura({ janela }: { janela: Janela }) {
         <GripHorizontal size={13} className="shrink-0 text-zinc-300" aria-hidden />
         <IconeDaFrente frente={janela.frente} size={14} />
         <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-zinc-800">{janela.titulo}</span>
+        {temRascunho && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" title="Há alterações não salvas" aria-label="Há alterações não salvas" />}
 
         {temCompleta && (
           <button
@@ -130,17 +147,30 @@ function Moldura({ janela }: { janela: Janela }) {
         >
           <Minus size={14} />
         </button>
-        <button
-          type="button"
-          onClick={() => fechar(janela.id)}
-          title="Fechar a janela"
-          className="rounded-md p-1 text-zinc-400 transition-colors hover:bg-rose-50 hover:text-rose-600"
-        >
-          <X size={14} />
-        </button>
+        {confirmarFechar ? (
+          <button
+            type="button"
+            onClick={pedirFechar}
+            title="Fechar e descartar o que não foi salvo"
+            className="rounded-md bg-rose-50 px-1.5 py-0.5 text-[11px] font-medium text-rose-700 hover:bg-rose-100"
+          >
+            Descartar?
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={pedirFechar}
+            title="Fechar a janela"
+            aria-label="Fechar a janela"
+            className="rounded-md p-1 text-zinc-400 transition-colors hover:bg-rose-50 hover:text-rose-600"
+          >
+            <X size={14} />
+          </button>
+        )}
       </header>
 
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className="rolagem-fina min-h-0 flex-1 overflow-y-auto">
+        <JanelaAtual.Provider value={janela.id}>
         {completa ? (
           <FichaCompletaNaJanela frente={janela.frente} id={janela.ref} />
         ) : janela.frente === "nps" ? (
@@ -150,6 +180,7 @@ function Moldura({ janela }: { janela: Janela }) {
         ) : (
           <JanelaDoCaso id={janela.ref} frente={janela.frente} />
         )}
+        </JanelaAtual.Provider>
       </div>
     </div>
   );
@@ -157,11 +188,13 @@ function Moldura({ janela }: { janela: Janela }) {
 
 export default function JanelasHost() {
 
-  const { janelas, minimizar, fechar } = useJanelas();
+  const { janelas, minimizar, fechar, organizar, minimizarTodas } = useJanelas();
+  const comRascunho = useJanelasComRascunho();
 
   if (janelas.length === 0) return null;
 
   const minimizadas = janelas.filter((j) => j.minimizada);
+  const visiveis = janelas.length - minimizadas.length;
 
   return (
     <>
@@ -174,11 +207,25 @@ export default function JanelasHost() {
         <Moldura key={j.id} janela={j} />
       ))}
 
-      {minimizadas.length > 0 && (
+      {(minimizadas.length > 0 || visiveis >= 2) && (
         <div
-          className="fixed bottom-3 right-3 z-[69] flex max-w-[calc(100vw-24px)] flex-wrap justify-end gap-1.5"
+          className="fixed bottom-3 right-3 z-[69] flex max-w-[calc(100vw-24px)] flex-wrap items-center justify-end gap-1.5"
           aria-label="Janelas minimizadas"
         >
+          {/* Com duas ou mais abertas, arrumar de uma vez. */}
+          {visiveis >= 2 && (
+            <span className="flex items-center gap-0.5 rounded-lg border border-zinc-200 bg-white p-0.5 shadow-lg shadow-zinc-900/10">
+              <button type="button" onClick={() => organizar("lado-a-lado")} title="Lado a lado" aria-label="Organizar lado a lado" className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-violet-700">
+                <Columns3 size={14} />
+              </button>
+              <button type="button" onClick={() => organizar("cascata")} title="Em cascata" aria-label="Organizar em cascata" className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-violet-700">
+                <Layers size={14} />
+              </button>
+              <button type="button" onClick={minimizarTodas} title="Minimizar todas" aria-label="Minimizar todas as janelas" className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800">
+                <PanelBottomClose size={14} />
+              </button>
+            </span>
+          )}
           {minimizadas.map((j) => (
             <span
               key={j.id}
@@ -192,11 +239,13 @@ export default function JanelasHost() {
               >
                 <IconeDaFrente frente={j.frente} size={12} />
                 <span className="truncate">{j.titulo}</span>
+                {comRascunho.has(j.id) && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" title="Rascunho não salvo" aria-label="Rascunho não salvo" />}
               </button>
               <button
                 type="button"
-                onClick={() => fechar(j.id)}
-                title="Fechar"
+                /* Com rascunho, fechar pela bandeja reabre a janela: descartar se confirma lá, à vista. */
+                onClick={() => (comRascunho.has(j.id) ? minimizar(j.id, false) : fechar(j.id))}
+                title={comRascunho.has(j.id) ? "Tem rascunho: abrir para decidir" : "Fechar"}
                 className="rounded-md p-0.5 text-zinc-400 hover:bg-rose-50 hover:text-rose-600"
               >
                 <X size={12} />

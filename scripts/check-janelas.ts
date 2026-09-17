@@ -23,6 +23,7 @@ import {
   abrirJanela,
   alternarCompleta,
   janelaDoEndereco,
+  organizarJanelas,
   focarJanela,
   idDaJanela,
   lerJanelasGuardadas,
@@ -129,6 +130,20 @@ console.log("\n— Ficha completa e links (Fase 12) —\n");
     ["components/janelas/JanelasHost.tsx", /<FichaCompletaNaJanela/],
   ];
   for (const [arquivo, marca] of fontes) conferir(`abre em janela: ${arquivo.split("/").slice(-2).join("/")}`, marca.test(ler(arquivo)), true);
+}
+
+{
+  let js: Janela[] = [];
+  for (const ref of ["a", "b", "c", "d"]) js = abrirJanela(js, { frente: "reclame-aqui", ref, titulo: ref }, TELA).janelas;
+  js = js.map((j) => (j.ref === "d" ? { ...j, minimizada: true } : j));
+  const lado = organizarJanelas(js, "lado-a-lado", TELA);
+  conferir("lado a lado: as abertas não se sobrepõem na fileira", lado.filter((j) => !j.minimizada).map((j) => j.x), [8, 396, 784]);
+  conferir("e a minimizada não muda de lugar", lado.find((j) => j.ref === "d")?.x, js.find((j) => j.ref === "d")?.x);
+  const cascata = organizarJanelas(js, "cascata", TELA).filter((j) => !j.minimizada);
+  conferir("em cascata, cada uma deslocada da anterior", cascata.map((j) => [j.x, j.y]), [[80, 64], [108, 92], [136, 120]]);
+  conferir("rascunho: retrato novo a cada mudança (o Compiler não memoriza o Set)", /retrato = new Set\(comRascunho\)/.test(ler("lib/context/rascunhosDasJanelas.ts")), true);
+  conferir("fechar com rascunho pede Descartar? antes", /if \(!temRascunho \|\| confirmarFechar\) return fechar/.test(ler("components/janelas/JanelasHost.tsx")), true);
+  conferir("os três formulários avisam o rascunho", ["JanelaDoCaso", "JanelaDoNps", "JanelaDoGoogle"].every((n) => /useRascunhoNaJanela\(/.test(ler(`components/janelas/${n}.tsx`))), true);
 }
 
 console.log("\n— O que volta do F5 —\n");

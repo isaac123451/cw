@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react";
 
+import { useRascunhoNaJanela } from "@/lib/context/rascunhosDasJanelas";
+
 import { Loader2, Save, ShieldAlert, StickyNote } from "lucide-react";
 
 import Combobox from "@/components/shared/Combobox";
@@ -66,6 +68,12 @@ export default function JanelaDoCaso({
 
   const [nota, setNota] = useState("");
   const [anotando, setAnotando] = useState(false);
+
+  /* Algo digitado e não salvo: a moldura pede confirmação para fechar. */
+  useRascunhoNaJanela(
+    nota.trim() !== "" ||
+      (Object.keys(rascunho) as (keyof Rascunho)[]).some((k) => (rascunho[k] ?? "") !== (caso?.[k] ?? ""))
+  );
 
   const etapas = useMemo(() => {
     if (frente === "redes") {

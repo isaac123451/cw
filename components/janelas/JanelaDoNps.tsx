@@ -2,6 +2,8 @@
 
 import { useState, type ReactNode } from "react";
 
+import { useRascunhoNaJanela } from "@/lib/context/rascunhosDasJanelas";
+
 import { Loader2, PhoneOutgoing, ShieldAlert, StickyNote, Tags } from "lucide-react";
 
 import Combobox from "@/components/shared/Combobox";
@@ -67,6 +69,9 @@ export default function JanelaDoNps({ id }: { id: string }) {
   const [tentativa, setTentativa] = useState("");
   const [nota, setNota] = useState("");
   const [ocupado, setOcupado] = useState<string | null>(null);
+
+  /* Algo digitado e não salvo: a moldura pede confirmação para fechar. */
+  useRascunhoNaJanela(etapa !== null || tipo !== null || causa !== null || tentativa.trim() !== "" || nota.trim() !== "");
 
   if (!item) {
     return (

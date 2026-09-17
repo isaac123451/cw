@@ -15,6 +15,7 @@ import { useToast } from "@/lib/context/ToastContext";
 import {
   abrirJanela,
   alternarCompleta,
+  organizarJanelas,
   focarJanela,
   lerJanelasGuardadas,
   limitarNaTela,
@@ -45,6 +46,10 @@ interface JanelasContextType {
   mover: (id: string, x: number, y: number) => void;
   /** Essencial ↔ ficha completa. */
   alternarCompleta: (id: string) => void;
+  /** Lado a lado ou em cascata. */
+  organizar: (modo: "lado-a-lado" | "cascata") => void;
+  /** Todas para a bandeja. */
+  minimizarTodas: () => void;
 }
 
 const JanelasContext = createContext<JanelasContextType | null>(null);
@@ -140,9 +145,17 @@ export function JanelasProvider({ children }: { children: ReactNode }) {
     setJanelas((atuais) => focarJanela(alternarCompleta(atuais, id, tela()), id));
   }, []);
 
+  const organizar = useCallback((modo: "lado-a-lado" | "cascata") => {
+    setJanelas((atuais) => organizarJanelas(atuais, modo, tela()));
+  }, []);
+
+  const minimizarTodas = useCallback(() => {
+    setJanelas((atuais) => atuais.map((j) => ({ ...j, minimizada: true })));
+  }, []);
+
   const valor = useMemo(
-    () => ({ janelas, abrir, fechar, focar, minimizar, mover, alternarCompleta: alternar }),
-    [janelas, abrir, fechar, focar, minimizar, mover, alternar]
+    () => ({ janelas, abrir, fechar, focar, minimizar, mover, alternarCompleta: alternar, organizar, minimizarTodas }),
+    [janelas, abrir, fechar, focar, minimizar, mover, alternar, organizar, minimizarTodas]
   );
 
   return <JanelasContext.Provider value={valor}>{children}</JanelasContext.Provider>;

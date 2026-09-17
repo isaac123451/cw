@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import { useRascunhoNaJanela } from "@/lib/context/rascunhosDasJanelas";
+
 import { Loader2, MessageSquareReply, Star, UserRoundCheck } from "lucide-react";
 
 import Combobox from "@/components/shared/Combobox";
@@ -57,6 +59,11 @@ export default function JanelaDoGoogle({ id }: { id: string }) {
   const [notaAtualizada, setNotaAtualizada] = useState<string | null>(null);
   const [causa, setCausa] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState<string | null>(null);
+
+  /* Algo digitado e não salvo: a moldura pede confirmação para fechar. */
+  useRascunhoNaJanela(
+    (resposta !== null && resposta !== (a?.resposta ?? "")) || canal !== null || resultado !== null || notaAtualizada !== null || causa !== null
+  );
 
   if (!a) {
     return (

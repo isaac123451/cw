@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 17/09/2026. Aplicação **1.6.0**, extensão **1.6.0**.
+Atualizado em 17/09/2026. Aplicação **1.7.0**, extensão **1.7.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,28 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### Várias janelas, organizadas e sem perder rascunho (17/09/2026, 1.7.0)
+
+Fecha a Fase 12.
+
+- **Organizar:** com duas ou mais janelas abertas, a bandeja ganha três
+  botões — lado a lado (em colunas, quebrando para uma segunda fileira
+  quando não cabem), em cascata e minimizar todas.
+- **Rascunho à vista:** cada formulário de janela (caso, NPS, Google)
+  avisa quando há algo digitado e não salvo. A janela mostra um ponto
+  âmbar no cabeçalho, e a minimizada, o mesmo ponto na bandeja.
+- **Fechar não perde nada por engano:** com rascunho, o × vira
+  "Descartar?" por 4 s e só o segundo clique fecha. Fechar pela bandeja
+  uma minimizada com rascunho reabre a janela, para decidir à vista.
+
+Achado ao conferir: a primeira versão nunca mostrava o rascunho. O
+registro devolvia sempre o mesmo `Set`, e o React Compiler memorizava o
+`has()` — agora cada mudança gera um retrato novo.
+
+Provas: `check:janelas` (arrumação, rascunho e confirmação); na tela,
+duas janelas lado a lado (8 px e 396 px), texto digitado acendendo o
+ponto, o × pedindo "Descartar?" e fechando no segundo clique.
 
 ### Mini-janelas com a ficha inteira, abertas de qualquer lugar (17/09/2026, 1.6.0)
 
