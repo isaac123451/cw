@@ -181,6 +181,8 @@ export function toCaseModel(row: {
   validadoEm?: Date | null;
   ultimoPedidoAvaliacaoEm?: Date | null;
   pedidosDeAvaliacao?: number | null;
+  avaliacaoDispensadaEm?: Date | null;
+  avaliacaoDispensadaPor?: string | null;
   imersaoEm?: Date | null;
   imersaoPor?: string | null;
   moderacaoPedidaEm?: Date | null;
@@ -255,6 +257,8 @@ export function toCaseModel(row: {
     validadoEm: row.validadoEm?.toISOString() ?? undefined,
     ultimoPedidoAvaliacaoEm: row.ultimoPedidoAvaliacaoEm?.toISOString() ?? undefined,
     pedidosDeAvaliacao: row.pedidosDeAvaliacao ?? undefined,
+    avaliacaoDispensadaEm: row.avaliacaoDispensadaEm?.toISOString() ?? undefined,
+    avaliacaoDispensadaPor: row.avaliacaoDispensadaPor ?? undefined,
     imersaoEm: row.imersaoEm?.toISOString() ?? undefined,
     imersaoPor: row.imersaoPor ?? undefined,
     moderacaoPedidaEm: row.moderacaoPedidaEm?.toISOString() ?? undefined,

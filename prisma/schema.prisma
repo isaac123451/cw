@@ -463,6 +463,12 @@ model Case {
   ultimoPedidoAvaliacaoEm DateTime?
   pedidosDeAvaliacao      Int       @default(0)
 
+  /// Alguém decidiu não pedir mais avaliação deste caso — sai da fila
+  /// mesmo dentro da janela de 6 meses. Reversível: "desfazer" volta a
+  /// contar normalmente.
+  avaliacaoDispensadaEm DateTime?
+  avaliacaoDispensadaPor String?
+
   /// Passo 2: a imersão no histórico, antes do 1º contato.
   imersaoEm  DateTime?
   imersaoPor String?

@@ -104,6 +104,14 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.16.0",
+    data: "2026-09-17",
+    titulo: "Dispensar o pedido de avaliação",
+    texto: "Nem todo caso merece seis meses de lembrete. Na fila de Pedir avaliação (e dentro do próprio pedido), Dispensar tira o caso da cadência sem apagar nada — e a seção Dispensados mostra quem tirou, quando, e devolve à fila com um clique.",
+    frentes: ["reclame-aqui"],
+    href: "/reclame-aqui/avaliacoes",
+  },
+  {
     versao: "1.14.0",
     data: "2026-09-17",
     titulo: "Resumo de conversa sem depender de IA externa",

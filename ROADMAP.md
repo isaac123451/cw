@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 17/09/2026. Aplicação **1.15.0**, extensão **1.15.0**.
+Atualizado em 17/09/2026. Aplicação **1.16.0**, extensão **1.16.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,40 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### Dispensar o pedido de avaliação (17/09/2026, 1.16.0)
+
+Pedido do Isaac: "possibilidade de excluir os pedidos de avaliação."
+
+A cadência da documentação insiste por até seis meses, e nem todo caso
+merece insistência: o consumidor pediu para não ser procurado, a
+reclamação era duplicada, o assunto se resolveu por fora. Sem uma saída,
+a fila de hoje acumulava linhas que ninguém ia tratar — e fila com lixo
+dentro deixa de ser lida.
+
+- **Dispensar, na fila e no modal.** Cada linha de "Pedir avaliação"
+  ganhou **Dispensar** (dois cliques: o primeiro pergunta, o segundo
+  grava, e a pergunta expira em 4 s). Dentro do modal de pedido, o mesmo
+  em **Não pedir mais** — é lá que se percebe que não vale insistir.
+- **Não apaga nada.** Os pedidos já registrados continuam no histórico
+  de contatos e na contagem do caso; o que muda é a cadência parar de
+  chamar aquele caso. O `pedidoDeAvaliacao` devolve `dispensado: true` e
+  diz o porquê, em vez de se confundir com "já avaliada" ou "fora da
+  janela de 6 meses".
+- **Reversível e à vista.** Uma seção **Dispensados (N)** no fim da fila
+  lista cada um com quem dispensou e quando, e **Devolver à fila** desfaz
+  — a cadência volta a contar do último pedido.
+- **Banco:** duas colunas novas e opcionais em `Case`
+  (`avaliacaoDispensadaEm`, `avaliacaoDispensadaPor`), aplicadas com
+  `prisma db push` **com a sua autorização explícita** — mudança aditiva,
+  nada removido nem renomeado; os 358 casos seguiram intactos.
+
+Provas: `check:trilha` com cinco asserções novas (sai da fila, o motivo
+certo, os pedidos já feitos continuam contados, desfazer devolve, e o
+dispensado não aparece na fila do dia); na tela, dois casos reais
+dispensados — um pela fila, outro pelo modal —, conferidos no banco
+(`avaliacaoDispensadaEm` com autor e hora) e **devolvidos à fila no fim
+do teste**, com o banco de volta a zero dispensados.
 
 ### Fora a parte do CW Engine (17/09/2026, 1.15.0)
 

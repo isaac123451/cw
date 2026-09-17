@@ -123,6 +123,29 @@ confere("data só de dia (planilha) não recua um dia no fuso", soDia.proximoDia
 confere("avaliada não pede mais", pedidoDeAvaliacao({ ...resp, evaluated: true }).ativo, false);
 confere("sem resposta pública não pede", pedidoDeAvaliacao(caso()).ativo, false);
 
+/*
+  Dispensar (17/09/2026): a cadência insiste por seis meses, e nem todo
+  caso merece insistência — o consumidor pediu para não ser procurado, a
+  reclamação era duplicada, resolveu-se por fora. Sai da fila sem apagar
+  os pedidos já registrados, e volta quando se desfaz.
+*/
+const dispensado = pedidoDeAvaliacao({ ...resp, avaliacaoDispensadaEm: br("2026-09-13 09:00") }, new Date(br("2026-09-15 10:00")));
+confere("dispensado sai da fila", [dispensado.ativo, dispensado.dispensado], [false, true]);
+confere("e diz por que saiu — não é 'já avaliada' nem 'fora da janela'", dispensado.resumo, "Dispensado — não entra mais na fila de pedir avaliação.");
+confere("os pedidos já feitos continuam contados", pedidoDeAvaliacao({ ...resp, pedidosDeAvaliacao: 2, avaliacaoDispensadaEm: br("2026-09-13 09:00") }).numero, 2);
+confere("desfazer devolve à fila", pedidoDeAvaliacao({ ...resp, avaliacaoDispensadaEm: undefined }, new Date(br("2026-09-15 10:00"))).ativo, true);
+confere(
+  "dispensado não aparece na fila do dia",
+  filaDeAvaliacao(
+    [
+      { ...resp, id: "x", protocol: "x" },
+      { ...resp, id: "y", protocol: "y", avaliacaoDispensadaEm: br("2026-09-13 09:00") },
+    ],
+    new Date(br("2026-09-15 10:00"))
+  ).hoje.map((f) => f.item.protocol),
+  ["x"]
+);
+
 const fila = filaDeAvaliacao(
   [
     { ...resp, id: "a", protocol: "a" },

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { Loader2, MessageCircle, Send, TriangleAlert } from "lucide-react";
+import { BellOff, Loader2, MessageCircle, Send, TriangleAlert } from "lucide-react";
 
 import Modal, { GhostButton, inputClass, textareaClass } from "@/components/shared/Modal";
 import BotaoCopiar from "@/components/shared/BotaoCopiar";
@@ -12,7 +12,7 @@ import { pedidoDeAvaliacao } from "@/lib/models/cadencia";
 import { mensagemDePedidoDeAvaliacao } from "@/lib/models/mensagens";
 import { patchDoResumo } from "@/lib/models/tratativa";
 
-import { registrarContato } from "@/lib/actions/tratativa";
+import { dispensarPedidoDeAvaliacao, registrarContato } from "@/lib/actions/tratativa";
 import { useConversasGuardadas } from "@/components/conversas/ConversasGuardadas";
 import { descreverRegistro } from "@/lib/services/horasUteis";
 import { useSession } from "@/lib/context/SessionContext";
@@ -43,6 +43,8 @@ export default function PedidoAvaliacaoModal({ item, onClose, onSalvo }: Props) 
   const [gancho, setGancho] = useState("");
   const [editada, setEditada] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
+  const [dispensando, setDispensando] = useState(false);
+  const [confirmandoDispensa, setConfirmandoDispensa] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
   const gerada = mensagemDePedidoDeAvaliacao({
@@ -115,6 +117,46 @@ export default function PedidoAvaliacaoModal({ item, onClose, onSalvo }: Props) 
     }
   }
 
+  /*
+    A saída para quem não deve ser procurado de novo: o consumidor pediu,
+    a reclamação era duplicada, o caso se resolveu por fora. Tira da
+    cadência sem apagar os pedidos já registrados, e dá para devolver na
+    própria fila.
+  */
+  async function dispensar() {
+
+    if (!confirmandoDispensa) {
+      setConfirmandoDispensa(true);
+      return;
+    }
+
+    setDispensando(true);
+    setErro(null);
+
+    try {
+      const r = await dispensarPedidoDeAvaliacao({ protocol: item.protocol });
+
+      if (!r.ok) {
+        setErro(r.erro);
+        return;
+      }
+
+      onSalvo({ avaliacaoDispensadaEm: r.em, avaliacaoDispensadaPor: r.por });
+
+      notify({
+        tone: "success",
+        title: `${item.protocol} saiu da fila de pedir avaliação.`,
+        detail: "Some da fila de hoje. Para devolver, o botão está na lista de dispensados, em Pedir avaliação.",
+      });
+
+      onClose();
+    } catch {
+      setErro("Não foi gravado. Tente de novo.");
+    } finally {
+      setDispensando(false);
+    }
+  }
+
   return (
     <Modal
       open
@@ -125,6 +167,20 @@ export default function PedidoAvaliacaoModal({ item, onClose, onSalvo }: Props) 
       footer={
         <>
           <GhostButton onClick={onClose}>Cancelar</GhostButton>
+          <button
+            type="button"
+            onClick={dispensar}
+            disabled={dispensando}
+            title="Tira este caso da cadência de lembretes. Nada é apagado, e dá para devolver na fila."
+            className={`flex items-center gap-1.5 whitespace-nowrap rounded-xl px-3 py-2.5 text-sm font-medium transition-colors disabled:opacity-60 ${
+              confirmandoDispensa
+                ? "bg-amber-50 text-amber-800 ring-1 ring-inset ring-amber-200"
+                : "text-zinc-600 ring-1 ring-inset ring-zinc-200 hover:bg-zinc-50"
+            }`}
+          >
+            {dispensando ? <Loader2 size={14} className="animate-spin" /> : <BellOff size={14} />}
+            {confirmandoDispensa ? "Não pedir mais?" : "Não pedir mais"}
+          </button>
           <BotaoCopiar texto={mensagem} />
           {whatsapp && (
             <a

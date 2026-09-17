@@ -354,6 +354,48 @@ export async function marcarPasso(entrada: {
   }
 }
 
+/**
+ * Tira (ou devolve) o caso da fila de pedir avaliação.
+ *
+ * **Por que existe.** A cadência da documentação insiste por até 6
+ * meses, e nem todo caso merece insistência: o consumidor pediu para
+ * não ser mais procurado, a reclamação era duplicada, o caso foi
+ * resolvido por fora. Sem uma saída, a fila de hoje acumulava linhas que
+ * ninguém ia tratar — e uma fila com lixo dentro deixa de ser lida.
+ *
+ * Não apaga nada: os pedidos já registrados continuam na lista de
+ * contatos e na contagem. O que muda é a cadência parar de chamar este
+ * caso. Desfazer devolve à fila no mesmo ponto em que estava.
+ */
+export async function dispensarPedidoDeAvaliacao(entrada: {
+  protocol: string;
+  desfazer?: boolean;
+}): Promise<{ ok: true; em?: string; por?: string } | Falha> {
+
+  const quem = await quemGrava("AGENTE", MODULO);
+  if ("erro" in quem) return { ok: false, erro: quem.erro! };
+
+  try {
+    const agora = new Date();
+
+    await quem.ctx.prisma.case.update({
+      where: { protocol: entrada.protocol },
+      data: entrada.desfazer
+        ? { avaliacaoDispensadaEm: null, avaliacaoDispensadaPor: null }
+        : { avaliacaoDispensadaEm: agora, avaliacaoDispensadaPor: quem.nome },
+      select: { id: true },
+    });
+
+    updateTag(CASES_TAG);
+
+    return entrada.desfazer
+      ? { ok: true }
+      : { ok: true, em: agora.toISOString(), por: quem.nome };
+  } catch (erro) {
+    return falha(erro, "dispensar pedido de avaliação");
+  }
+}
+
 /* ============================================================
    MODERAÇÃO
 ============================================================ */

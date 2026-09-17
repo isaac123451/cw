@@ -177,6 +177,10 @@ export interface Case {
   ultimoPedidoAvaliacaoEm?: string;
   pedidosDeAvaliacao?: number;
 
+  /** Alguém decidiu não pedir mais avaliação deste caso — sai da fila. */
+  avaliacaoDispensadaEm?: string;
+  avaliacaoDispensadaPor?: string;
+
   /** Passo 2: a imersão no histórico antes do 1º contato. */
   imersaoEm?: string;
   imersaoPor?: string;

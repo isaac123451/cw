@@ -160,6 +160,8 @@ export interface PedidoDeAvaliacao {
   /** "hoje", "desde 10/09", "em 15/09" — o dia em Brasília, para a tela. */
   quando?: string;
   resumo: string;
+  /** Alguém decidiu não pedir mais — não é "avaliada" nem "fora da janela". */
+  dispensado?: boolean;
 }
 
 function mais(dia: string, dias: number) {
@@ -174,7 +176,7 @@ function mais(dia: string, dias: number) {
  * uma vez a mais do que esquecer quem já respondemos.
  */
 export function pedidoDeAvaliacao(
-  item: Pick<Case, "evaluated" | "respondida" | "publicResponse" | "publicResponseAt" | "updatedAt" | "createdAt" | "pedidosDeAvaliacao" | "ultimoPedidoAvaliacaoEm"> &
+  item: Pick<Case, "evaluated" | "respondida" | "publicResponse" | "publicResponseAt" | "updatedAt" | "createdAt" | "pedidosDeAvaliacao" | "ultimoPedidoAvaliacaoEm" | "avaliacaoDispensadaEm"> &
     Partial<Pick<Case, "status">>,
   agora = new Date()
 ): PedidoDeAvaliacao {
@@ -183,6 +185,11 @@ export function pedidoDeAvaliacao(
 
   if (!respondida(item) || item.evaluated) {
     return { ativo: false, vencido: false, numero: 0, resumo: item.evaluated ? "Já avaliada." : "Ainda sem resposta pública." };
+  }
+
+  /* Decisão de não pedir mais — sai da fila mesmo dentro da janela de 6 meses. */
+  if (item.avaliacaoDispensadaEm) {
+    return { ativo: false, vencido: false, numero: item.pedidosDeAvaliacao ?? 0, resumo: "Dispensado — não entra mais na fila de pedir avaliação.", dispensado: true };
   }
 
   /* O consumidor respondeu à nossa resposta: primeiro a réplica, depois a nota. */

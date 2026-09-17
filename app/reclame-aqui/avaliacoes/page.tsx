@@ -2,11 +2,14 @@
 
 import Link from "next/link";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import {
+  BellOff,
   CalendarClock,
+  Loader2,
   PhoneOff,
+  RotateCcw,
   Send,
   Sparkles,
   Star,
@@ -33,7 +36,10 @@ import {
 } from "@/lib/services/reputation.service";
 
 import { useScopedCases } from "@/lib/context/useScopedCases";
+import { useCases } from "@/lib/context/CaseContext";
 import { useAgora } from "@/lib/hooks/useAgora";
+import { useToast } from "@/lib/context/ToastContext";
+import { dispensarPedidoDeAvaliacao } from "@/lib/actions/tratativa";
 
 function diaCurto(dia?: string) {
   return dia ? dia.split("-").reverse().slice(0, 2).join("/") : "—";
@@ -51,7 +57,50 @@ function diaCurto(dia?: string) {
 export default function AvaliacoesPage() {
 
   const { cases } = useScopedCases("reclame-aqui");
+  const { setCases } = useCases();
   const { abrirPedidoAvaliacao } = useTratativa();
+  const { notify } = useToast();
+
+  /*
+    Dispensar tira o caso da cadência sem apagar nada: os pedidos já
+    registrados continuam no histórico. É reversível, e os dispensados
+    aparecem numa lista própria para poder voltar.
+  */
+  const [gravando, setGravando] = useState<string | null>(null);
+
+  async function dispensar(item: Case, desfazer: boolean) {
+    setGravando(item.protocol);
+    try {
+      const r = await dispensarPedidoDeAvaliacao({ protocol: item.protocol, desfazer });
+      if (!r.ok) {
+        notify({ tone: "error", title: "Não foi gravado.", detail: r.erro });
+        return;
+      }
+      setCases((prev) =>
+        prev.map((c) =>
+          c.protocol === item.protocol
+            ? { ...c, avaliacaoDispensadaEm: r.em, avaliacaoDispensadaPor: r.por }
+            : c
+        )
+      );
+      notify({
+        tone: "success",
+        title: desfazer ? `${item.protocol} voltou para a fila.` : `${item.protocol} saiu da fila de pedir avaliação.`,
+        detail: desfazer
+          ? "A cadência conta de novo a partir do último pedido."
+          : "Os pedidos já registrados continuam no histórico do caso.",
+      });
+    } catch {
+      notify({ tone: "error", title: "Não foi gravado.", detail: "Tente de novo em instantes." });
+    } finally {
+      setGravando(null);
+    }
+  }
+
+  const dispensados = useMemo(
+    () => cases.filter((c) => c.avaliacaoDispensadaEm && !c.evaluated),
+    [cases]
+  );
 
   const agoraMs = useAgora()?.getTime();
 
@@ -165,7 +214,7 @@ export default function AvaliacoesPage() {
                   {fila.proximos[0] ? `em ${diaCurto(fila.proximos[0].pedido.proximoDia)}` : "quando houver resposta nova"}.
                 </p>
               ) : (
-                <Lista itens={fila.hoje} onPedir={(item) => abrirPedidoAvaliacao(item)} destaque />
+                <Lista itens={fila.hoje} onPedir={(item) => abrirPedidoAvaliacao(item)} onDispensar={(item) => dispensar(item, false)} gravando={gravando} destaque />
               )}
             </SurfaceCard>
 
@@ -174,7 +223,40 @@ export default function AvaliacoesPage() {
                 title="Próximos dias"
                 description="Já estão na cadência. Adiantar o pedido também conta — o próximo lembrete passa a contar dele."
               >
-                <Lista itens={fila.proximos} onPedir={(item) => abrirPedidoAvaliacao(item)} />
+                <Lista itens={fila.proximos} onPedir={(item) => abrirPedidoAvaliacao(item)} onDispensar={(item) => dispensar(item, false)} gravando={gravando} />
+              </SurfaceCard>
+            )}
+
+            {dispensados.length > 0 && (
+              <SurfaceCard
+                title={`Dispensados (${dispensados.length})`}
+                description="Fora da cadência por decisão de alguém. Nada foi apagado — devolver à fila volta a contar do último pedido."
+              >
+                <ul className="divide-y divide-zinc-100">
+                  {dispensados.map((item) => (
+                    <li key={item.id} className="flex flex-wrap items-center gap-3 py-3 first:pt-0 last:pb-0">
+                      <div className="min-w-0 flex-1">
+                        <Link href={caseHref(item)} className="group block">
+                          <span className="font-mono text-[10px] uppercase tracking-wide text-zinc-400">{item.protocol}</span>
+                          <span className="block truncate text-sm font-medium text-zinc-700 group-hover:text-violet-700">{item.title}</span>
+                        </Link>
+                        <p className="mt-0.5 text-xs text-zinc-500">
+                          {item.customer} · dispensado {descreverRegistro(item.avaliacaoDispensadaEm)}
+                          {item.avaliacaoDispensadaPor ? ` por ${item.avaliacaoDispensadaPor}` : ""}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => dispensar(item, true)}
+                        disabled={gravando === item.protocol}
+                        className="flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-medium text-zinc-600 ring-1 ring-inset ring-zinc-200 transition-colors hover:bg-zinc-50 disabled:opacity-60"
+                      >
+                        {gravando === item.protocol ? <Loader2 size={13} className="animate-spin" /> : <RotateCcw size={13} />}
+                        Devolver à fila
+                      </button>
+                    </li>
+                  ))}
+                </ul>
               </SurfaceCard>
             )}
           </>
@@ -189,12 +271,19 @@ export default function AvaliacoesPage() {
 function Lista({
   itens,
   onPedir,
+  onDispensar,
+  gravando,
   destaque = false,
 }: {
   itens: NaFila<Case>[];
   onPedir: (item: Case) => void;
+  onDispensar: (item: Case) => void;
+  gravando: string | null;
   destaque?: boolean;
 }) {
+  /* O primeiro clique pergunta; o segundo dispensa. Tirar da fila não é para acontecer por engano. */
+  const [confirmando, setConfirmando] = useState<string | null>(null);
+
   return (
     <ul className="divide-y divide-zinc-100">
       {itens.map(({ item, pedido }) => {
@@ -244,6 +333,29 @@ function Lista({
               }`}
             >
               <Send size={14} /> Pedir
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (confirmando === item.protocol) {
+                  onDispensar(item);
+                  setConfirmando(null);
+                } else {
+                  setConfirmando(item.protocol);
+                  window.setTimeout(() => setConfirmando((atual) => (atual === item.protocol ? null : atual)), 4000);
+                }
+              }}
+              disabled={gravando === item.protocol}
+              title="Tira este caso da fila de pedir avaliação. Nada é apagado, e dá para devolver depois."
+              className={`flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-medium transition-colors disabled:opacity-60 ${
+                confirmando === item.protocol
+                  ? "bg-amber-50 text-amber-800 ring-1 ring-inset ring-amber-200"
+                  : "text-zinc-500 ring-1 ring-inset ring-zinc-200 hover:bg-zinc-50 hover:text-zinc-700"
+              }`}
+            >
+              {gravando === item.protocol ? <Loader2 size={13} className="animate-spin" /> : <BellOff size={13} />}
+              {confirmando === item.protocol ? "Dispensar?" : "Dispensar"}
             </button>
 
           </li>
