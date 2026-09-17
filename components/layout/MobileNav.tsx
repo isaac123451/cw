@@ -109,7 +109,7 @@ export default function MobileNav() {
 
           <div className="absolute inset-y-0 left-0 flex">
 
-            <Sidebar />
+            <Sidebar forcarAberto />
 
             <button
               type="button"

@@ -752,3 +752,16 @@
 .dark .disabled\:bg-zinc-50:disabled {
   background-color: var(--color-zinc-50);
 }
+
+/*
+  Barra de rolagem fina, para listas laterais (menu, paleta).
+  A do navegador, grossa e cinza, era o que mais parecia "página web"
+  num lugar que precisa parecer ferramenta.
+*/
+.rolagem-fina {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.rolagem-fina:hover {
+  scrollbar-color: var(--color-zinc-300) transparent;
+}

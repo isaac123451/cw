@@ -18,7 +18,7 @@ import {
   Zap,
 } from "lucide-react";
 
-import { menuItems } from "@/core/navigation/menu";
+import { itemDeConfiguracoes, menuItems } from "@/core/navigation/menu";
 
 import { listarConversas } from "@/lib/actions/conversas";
 import { useCases } from "@/lib/context/CaseContext";
@@ -130,7 +130,7 @@ export default function BuscaGlobal() {
         className="flex h-10 items-center gap-2 rounded-xl border border-zinc-200 bg-zinc-50/80 px-3 text-sm text-zinc-400 transition-colors hover:border-zinc-300 hover:bg-white md:w-72"
       >
         <Search size={16} className="shrink-0" />
-        <span className="hidden flex-1 text-left md:inline">Buscar casos, clientes, telas…</span>
+        <span className="hidden flex-1 truncate whitespace-nowrap text-left md:inline">Buscar casos, clientes, telas…</span>
         <kbd className="hidden rounded-md border border-zinc-200 bg-white px-1.5 py-0.5 font-sans text-[11px] text-zinc-500 md:inline">Ctrl K</kbd>
       </button>
       {aberta && <Paleta onFechar={() => setAberta(false)} />}
@@ -162,7 +162,7 @@ function Paleta({ onFechar }: { onFechar: () => void }) {
 
   const telas = useMemo<TelaDaBusca[]>(
     () => [
-      ...menuItems.flatMap((m) => [
+      ...[...menuItems, itemDeConfiguracoes].flatMap((m) => [
         { titulo: m.title, href: m.href, grupo: m.group, sinonimos: SINONIMOS[m.href] },
         ...(m.children ?? [])
           .filter((f) => f.href !== m.href)
@@ -321,7 +321,7 @@ function Paleta({ onFechar }: { onFechar: () => void }) {
           <kbd className="rounded-md border border-zinc-200 px-1.5 py-0.5 text-[11px] text-zinc-400">Esc</kbd>
         </div>
 
-        <div ref={lista} id="resultados-da-busca" role="listbox" className="flex-1 overflow-y-auto p-2">
+        <div ref={lista} id="resultados-da-busca" role="listbox" className="rolagem-fina flex-1 overflow-y-auto p-2">
           {!termo.trim() ? (
             recentes.length > 0 ? (
               <>

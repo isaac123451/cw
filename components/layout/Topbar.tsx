@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 
-import { menuItems } from "@/core/navigation/menu";
+import { itemDeConfiguracoes, menuItems } from "@/core/navigation/menu";
 import UserMenu from "./UserMenu";
 import NotificationsMenu from "./NotificationsMenu";
 import { useSession } from "@/lib/context/SessionContext";
@@ -16,7 +16,7 @@ export default function Topbar() {
 
   const user = useSession();
 
-  const current = menuItems.find(
+  const current = [...menuItems, itemDeConfiguracoes].find(
     (item) =>
       pathname === item.href ||
       pathname.startsWith(`${item.href}/`)

@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 17/09/2026. Aplicação **1.1.0**, extensão **1.1.0**.
+Atualizado em 17/09/2026. Aplicação **1.2.0**, extensão **1.2.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,32 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### Menu lateral repaginado (17/09/2026, 1.2.0)
+
+O Isaac: "repaginada principalmente deste menu lateral", "pontos na
+plataforma que não consigo achar com facilidade", "nada pode parecer
+que uma IA fez".
+
+- **Grupos pelo dia de trabalho:** Hoje (Meu dia, Agenda, Dashboard),
+  Frentes (Reclame Aqui, Redes, NPS com Análise dentro, Google,
+  Conversas), Pessoas e contas, Inteligência, Conhecimento.
+  Configurações mora no rodapé.
+- **O número do que pede ação**, com a conta da própria tela: Meu dia —
+  prazos estourados; Reclame Aqui — abertas sem resposta pública; Redes —
+  em aberto; NPS — 1º contato fora do prazo (a mesma `summarize` da
+  tela: 160 nos dois); Google — abertas; Agenda — vencidas e de hoje.
+  Vermelho só quando há atraso.
+- **Fixados:** o alfinete (ao passar o mouse) leva qualquer tela para o
+  topo. **Recolher:** só ícones, com o ponto do contador. As duas
+  escolhas ficam no navegador de cada pessoa.
+- Visual de ferramenta: item ativo em branco com contorno, e não roxo
+  cheio; 13 px; cabeçalho alinhado ao topo (64 px); barra de rolagem
+  fina que só aparece ao passar o mouse. O texto do botão de busca
+  não quebra mais em duas linhas.
+
+Prova: `check:menu` (novo) e, na tela, fixar o Google, recolher e
+reabrir, e o contador do NPS igual ao "Fora do prazo" da tela.
 
 ### Busca global e o aviso de falha discreto (17/09/2026, 1.1.0)
 
