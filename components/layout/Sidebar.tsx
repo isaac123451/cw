@@ -250,9 +250,9 @@ export default function Sidebar() {
             CW Reputação
           </p>
 
-          <p className="mt-1 text-[11px] leading-relaxed text-zinc-500">
+          <Link href="/novidades" className="mt-1 block text-[11px] leading-relaxed text-zinc-500 hover:text-violet-700 hover:underline" title="O que mudou na 1.0">
             Versão {process.env.NEXT_PUBLIC_VERSAO} · Cardápio Web
-          </p>
+          </Link>
 
         </div>
 

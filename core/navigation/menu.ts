@@ -17,6 +17,7 @@ import {
   MessagesSquare,
   Route,
   Settings,
+  Sparkles,
   Star,
   TrendingUp,
   UserRound,
@@ -176,6 +177,12 @@ export const menuItems: MenuItem[] = [
     title: "Ferramentas e acessos",
     href: "/ferramentas",
     icon: KeyRound,
+    group: "Conhecimento",
+  },
+  {
+    title: "Novidades da 1.0",
+    href: "/novidades",
+    icon: Sparkles,
     group: "Conhecimento",
   },
   {

@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 17/09/2026. Aplicação **0.82.0**, extensão **0.82.0**.
+Atualizado em 17/09/2026. Aplicação **1.0.0**, extensão **1.0.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1100,6 +1100,35 @@ caracteres** antes e depois da divisão (contato 6.026, fila 3.289, NPS
 nenhum erro no console. `check:painel`, `check:fiacao`, `check:escape`,
 `check:dossie`, `check:respostas` e `check:atalho` de pé — as quatro
 últimas leem o painel como texto e passaram a ler os sete como um só.
+
+### Versão 1.0.0 — o roadmap 1.0 fechado (17/09/2026)
+
+Fase 10.5: aplicação e extensão em **1.0.0**, a página **Novidades da
+1.0** dentro da plataforma (`/novidades`, no menu em Conhecimento e no
+rodapé de versão do menu) e este ROADMAP atualizado.
+
+**O que o roadmap 1.0 entregou**, das Fases 1 a 10: o relógio único em
+horas úteis; o Reclame Aqui passo a passo; ofertas e renegociação;
+Redes, Google e NPS no mesmo desenho; a rotina do agente (Meu dia,
+relatório do ciclo); a documentação viva; as conversas do WhatsApp; a
+extensão nos lugares onde o trabalho acontece; o agente de IA que cita a
+documentação; e o acabamento — edição simultânea sem perda, toda
+gravação dizendo o que aconteceu, a abertura numa ida só, a passada em
+375 px e nenhuma tela sem saída. As ideias além do documento
+(reincidência como sinal de produto, promotor que vira avaliação no
+Google, urgência sugerida por dado, tempo até o 1º contato como
+indicador) e os pedidos da conversa também estão feitos.
+
+**O que continua dependendo do Isaac** (não é código):
+
+- `WOOTRIC_USUARIO` e `WOOTRIC_SENHA` no `.env` e na Vercel — sem eles,
+  encerrar conclui no Wootric, mas a nota com os detalhes não vai.
+- Atribuir os planos às 239 contas em Estabelecimentos — liga a
+  mensalidade no Impacto e o sinal de alto ticket da triagem.
+- Os endereços em Ferramentas e acessos; o "Usar os prazos da
+  documentação" em Processos e SLA, se ainda não salvou.
+- Push dos commits, reiniciar o `npm run dev` (o rodapé lê a versão ao
+  subir) e recarregar a extensão.
 
 ### Extensão que devolve, e não só cobra (17/09/2026, 0.82.0)
 
