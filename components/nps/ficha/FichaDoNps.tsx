@@ -56,7 +56,8 @@ type Dialogo =
  * quem é e como está, a trilha diz o que falta e oferece a ação, o
  * corpo conta o que aconteceu e a lateral guarda os dados.
  */
-export default function FichaDoNps({ id }: { id: string }) {
+/** `naJanela`: dentro da mini-janela não há "voltar" — a lista continua atrás. */
+export default function FichaDoNps({ id, naJanela = false }: { id: string; naJanela?: boolean }) {
 
   const router = useRouter();
   const { responses, stages, kinds, loading, aplicarLocal, recarregar } = useNps();
@@ -149,9 +150,11 @@ export default function FichaDoNps({ id }: { id: string }) {
       {/* Cabeçalho */}
       <div className="rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
 
-        <Link href="/nps" className="inline-flex items-center gap-1.5 text-sm font-medium text-zinc-500 transition-colors hover:text-violet-700">
-          <ChevronLeft size={16} /> Voltar para NPS
-        </Link>
+        {!naJanela && (
+          <Link href="/nps" className="inline-flex items-center gap-1.5 text-sm font-medium text-zinc-500 transition-colors hover:text-violet-700">
+            <ChevronLeft size={16} /> Voltar para NPS
+          </Link>
+        )}
 
         <div className="mt-4 flex flex-wrap items-start justify-between gap-5">
 

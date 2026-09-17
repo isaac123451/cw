@@ -44,8 +44,10 @@ import { useToast } from "@/lib/context/ToastContext";
 
 import { ptBR } from "@/lib/services/reputation.service";
 import { isOpen,
+  isSocial,
   caseHref,
 } from "@/lib/services/case.service";
+import BotaoAbrirEmJanela from "@/components/janelas/BotaoAbrirEmJanela";
 
 import { kindTone } from "@/lib/models/client";
 
@@ -691,10 +693,13 @@ export default function ClientDetail({
                           {item.title}
                         </p>
 
-                        <ArrowUpRight
-                          size={13}
-                          className="mt-0.5 shrink-0 text-zinc-300 transition-colors group-hover:text-violet-500"
-                        />
+                        <span className="flex shrink-0 items-center gap-0.5">
+                          <BotaoAbrirEmJanela frente={isSocial(item) ? "redes" : "reclame-aqui"} referencia={item.id} titulo={`${item.protocol} · ${item.customer}`} className="-mt-0.5 p-0.5" />
+                          <ArrowUpRight
+                            size={13}
+                            className="mt-0.5 shrink-0 text-zinc-300 transition-colors group-hover:text-violet-500"
+                          />
+                        </span>
 
                       </div>
 

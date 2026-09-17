@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 17/09/2026. Aplicação **1.5.0**, extensão **1.5.0**.
+Atualizado em 17/09/2026. Aplicação **1.6.0**, extensão **1.6.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,34 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### Mini-janelas com a ficha inteira, abertas de qualquer lugar (17/09/2026, 1.6.0)
+
+O Isaac: "em cada frente eu consiga abrir mini janelas com tudo que
+possui em cada caso para preenchimento, alteração, adição … abrir
+várias telas também" e "para atualizar casos do nps na agenda ou meu
+dia mini janelas seriam interessantes".
+
+- **Ficha completa na janela.** Novo botão no cabeçalho da janela: a
+  janela alarga (720 px) e mostra **a mesma ficha da tela cheia** — no
+  Reclame Aqui e nas Redes, dados do cliente, triagem, trilha, contatos,
+  áreas, anotações, etiquetas, impacto, resposta e encerramento; no NPS,
+  a ficha do ciclo inteira. É a mesma ficha, com as mesmas proteções de
+  gravação. Alternar de novo volta ao essencial. A janela completa pode
+  ser redimensionada pelo canto e volta do F5 no mesmo modo.
+- **Abre de qualquer lugar:** além do quadro, das listas, da busca e do
+  sino, agora dos itens do Meu dia (a lista de cada atividade da
+  rotina), das atividades da Agenda com protocolo vinculado, dos casos
+  na ficha do cliente e do estabelecimento. Um item que aponta para uma
+  ficha (caso, NPS, avaliação) ganha o botão; link de tela não.
+- **Achado ao conferir:** a ficha em formato empilhado (a mesma da
+  prévia lateral da lista) espremia o título numa coluna de uma palavra
+  ao lado dos botões. Título e ações agora empilham — vale para a prévia
+  da lista também. No NPS dentro da janela, some o "Voltar para NPS".
+
+Provas: `check:janelas` (ficha completa, links que abrem janela e os
+cinco pontos de abertura); na tela, um NPS aberto a partir do Meu dia e
+alternado para a ficha completa, e um caso do quadro na ficha completa.
 
 ### Visual de ferramenta, começando pelo Reclame Aqui (17/09/2026, 1.5.0)
 

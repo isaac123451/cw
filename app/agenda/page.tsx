@@ -33,6 +33,9 @@ import { pushTaskToGoogle } from "@/lib/actions/google";
 import { AgendaTask } from "@/lib/models/agenda";
 import { hojeNaOperacao } from "@/lib/services/reputation.service";
 import RotinaNaAgenda from "@/components/rotina/RotinaNaAgenda";
+import BotaoAbrirEmJanela from "@/components/janelas/BotaoAbrirEmJanela";
+import { useCases } from "@/lib/context/CaseContext";
+import { isSocial } from "@/lib/services/case.service";
 
 const typeTone: Record<string, string> = {
   "Follow-up": "bg-sky-50 text-sky-700 ring-sky-100",
@@ -76,6 +79,10 @@ function formatDay(date: string) {
 }
 
 export default function AgendaPage() {
+
+  /* O protocolo vinculado vira o caso, para abrir na mini-janela sem sair da agenda. */
+  const { cases } = useCases();
+  const casoDoProtocolo = useMemo(() => new Map(cases.map((c) => [c.protocol, c])), [cases]);
 
   const {
     tasks,
@@ -420,8 +427,16 @@ export default function AgendaPage() {
                           )}
 
                           {item.relatedCase && (
-                            <span className="font-mono text-[11px] text-violet-600">
+                            <span className="inline-flex items-center gap-0.5 font-mono text-[11px] text-violet-600">
                               {item.relatedCase}
+                              {casoDoProtocolo.get(item.relatedCase) && (
+                                <BotaoAbrirEmJanela
+                                  frente={isSocial(casoDoProtocolo.get(item.relatedCase)!) ? "redes" : "reclame-aqui"}
+                                  referencia={casoDoProtocolo.get(item.relatedCase)!.id}
+                                  titulo={`${item.relatedCase} · ${casoDoProtocolo.get(item.relatedCase)!.customer}`}
+                                  className="p-0.5"
+                                />
+                              )}
                             </span>
                           )}
 

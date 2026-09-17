@@ -21,6 +21,8 @@ import { resolve } from "node:path";
 
 import {
   abrirJanela,
+  alternarCompleta,
+  janelaDoEndereco,
   focarJanela,
   idDaJanela,
   lerJanelasGuardadas,
@@ -102,6 +104,31 @@ console.log("— A regra —\n");
 
   const notebook = limitarNaTela({ x: 1800, y: 1000 }, { largura: 1280, altura: 720 });
   conferir("posição de monitor grande cabe no notebook", [notebook.x <= 1160, notebook.y <= 672], [true, true]);
+}
+
+console.log("\n— Ficha completa e links (Fase 12) —\n");
+
+{
+  const [j] = abrirJanela([], { frente: "reclame-aqui", ref: "c1", titulo: "c1" }, TELA).janelas;
+  const larga = alternarCompleta([{ ...j, x: 1300 }], j.id, TELA)[0];
+  conferir("alternar para a ficha completa marca e traz a janela para dentro", [larga.completa, larga.x + 720 <= TELA.largura - 8], [true, true]);
+  conferir("e alternar de novo volta ao essencial", alternarCompleta([larga], j.id, TELA)[0].completa, false);
+  conferir("ficha completa volta do F5", lerJanelasGuardadas(JSON.stringify([{ ...larga }]), TELA)[0]?.completa, true);
+
+  conferir("link de caso abre janela", janelaDoEndereco("/reclame-aqui/abc", "t"), { frente: "reclame-aqui", ref: "abc", titulo: "t" });
+  conferir("link das Redes", janelaDoEndereco("/redes-sociais/x1", "t")?.frente, "redes");
+  conferir("link de NPS (e não a análise)", [janelaDoEndereco("/nps/n1", "t")?.frente, janelaDoEndereco("/nps/analise", "t")], ["nps", null]);
+  conferir("link do Google pela avaliação", janelaDoEndereco("/google?avaliacao=g9", "t")?.ref, "g9");
+  conferir("link de tela não abre janela", [janelaDoEndereco("/reclame-aqui/analytics", "t"), janelaDoEndereco("/meu-dia", "t"), janelaDoEndereco("/reclame-aqui", "t")], [null, null, null]);
+
+  const fontes: [string, RegExp][] = [
+    ["components/rotina/RotinaDoDia.tsx", /<JanelaDoLink href=\{i\.href\}/],
+    ["app/agenda/page.tsx", /casoDoProtocolo\.get\(item\.relatedCase\)/],
+    ["components/clientes/ClientDetail.tsx", /<BotaoAbrirEmJanela/],
+    ["components/estabelecimentos/EstablishmentDetail.tsx", /<BotaoAbrirEmJanela/],
+    ["components/janelas/JanelasHost.tsx", /<FichaCompletaNaJanela/],
+  ];
+  for (const [arquivo, marca] of fontes) conferir(`abre em janela: ${arquivo.split("/").slice(-2).join("/")}`, marca.test(ler(arquivo)), true);
 }
 
 console.log("\n— O que volta do F5 —\n");

@@ -66,7 +66,8 @@ import { usePlans } from "@/lib/hooks/usePlans";
 
 import { kindTone } from "@/lib/models/client";
 
-import { caseHref } from "@/lib/services/case.service";
+import { caseHref, isSocial } from "@/lib/services/case.service";
+import BotaoAbrirEmJanela from "@/components/janelas/BotaoAbrirEmJanela";
 
 const money = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -634,6 +635,12 @@ export default function EstablishmentDetail({
                         </p>
 
                       </Link>
+
+                      <BotaoAbrirEmJanela
+                        frente={isSocial(item) ? "redes" : "reclame-aqui"}
+                        referencia={item.id}
+                        titulo={`${item.protocol} · ${item.customer}`}
+                      />
 
                       <span
                         className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ring-inset ${

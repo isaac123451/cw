@@ -4,12 +4,13 @@ import { useRef, type PointerEvent as PointerEventReact } from "react";
 
 import Link from "next/link";
 
-import { ExternalLink, GripHorizontal, Minus, X } from "lucide-react";
+import { ExternalLink, GripHorizontal, Maximize2, Minimize2, Minus, X } from "lucide-react";
 
 import IconeDaFrente from "@/components/shared/IconeDaFrente";
 
 import { useJanelas } from "@/lib/context/JanelasContext";
 import {
+  LARGURA_DA_FICHA_COMPLETA,
   LARGURA_DA_JANELA,
   ROTULO_DA_FRENTE,
   type Janela,
@@ -18,6 +19,7 @@ import {
 import JanelaDoCaso from "@/components/janelas/JanelaDoCaso";
 import JanelaDoNps from "@/components/janelas/JanelaDoNps";
 import JanelaDoGoogle from "@/components/janelas/JanelaDoGoogle";
+import FichaCompletaNaJanela from "@/components/janelas/FichaCompletaNaJanela";
 
 /**
  * As janelas abertas e a bandeja das minimizadas.
@@ -37,7 +39,11 @@ function linkDaFicha(j: Janela) {
 
 function Moldura({ janela }: { janela: Janela }) {
 
-  const { fechar, focar, minimizar, mover } = useJanelas();
+  const { fechar, focar, minimizar, mover, alternarCompleta } = useJanelas();
+
+  /* Google já mostra tudo na própria janela; as outras frentes têm as duas formas. */
+  const temCompleta = janela.frente !== "google";
+  const completa = temCompleta && Boolean(janela.completa);
 
   const el = useRef<HTMLDivElement>(null);
   const arrasto = useRef<{ x0: number; y0: number; x: number; y: number } | null>(null);
@@ -76,8 +82,14 @@ function Moldura({ janela }: { janela: Janela }) {
       role="dialog"
       aria-label={`${ROTULO_DA_FRENTE[janela.frente]}: ${janela.titulo}`}
       onPointerDownCapture={() => focar(janela.id)}
-      style={{ left: janela.x, top: janela.y, zIndex: 70 + janela.z, width: `min(${LARGURA_DA_JANELA}px, calc(100vw - 16px))` }}
-      className={`fixed ${janela.minimizada ? "hidden" : "flex"} max-h-[min(640px,calc(100vh-24px))] flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-2xl shadow-zinc-900/15 dark:border-zinc-700`}
+      style={{
+        left: janela.x,
+        top: janela.y,
+        zIndex: 70 + janela.z,
+        width: `min(${completa ? LARGURA_DA_FICHA_COMPLETA : LARGURA_DA_JANELA}px, calc(100vw - 16px))`,
+        height: completa ? "min(820px, calc(100vh - 72px))" : undefined,
+      }}
+      className={`fixed ${janela.minimizada ? "hidden" : "flex"} ${completa ? "min-h-[320px] min-w-[360px] max-w-[calc(100vw-16px)] resize" : "max-h-[min(640px,calc(100vh-24px))]"} max-h-[calc(100vh-24px)] flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-[0_24px_60px_-20px_rgba(16,24,40,0.35)] dark:border-zinc-700`}
     >
       <header
         onPointerDown={comecar}
@@ -91,9 +103,21 @@ function Moldura({ janela }: { janela: Janela }) {
         <IconeDaFrente frente={janela.frente} size={14} />
         <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-zinc-800">{janela.titulo}</span>
 
+        {temCompleta && (
+          <button
+            type="button"
+            onClick={() => alternarCompleta(janela.id)}
+            title={completa ? "Voltar ao essencial" : "Ficha completa nesta janela"}
+            aria-label={completa ? "Voltar ao essencial" : "Abrir a ficha completa nesta janela"}
+            aria-pressed={completa}
+            className="rounded-md p-1 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-violet-700"
+          >
+            {completa ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+          </button>
+        )}
         <Link
           href={linkDaFicha(janela)}
-          title="Abrir a ficha completa"
+          title="Abrir a ficha em tela cheia"
           className="rounded-md p-1 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-violet-700"
         >
           <ExternalLink size={14} />
@@ -117,7 +141,9 @@ function Moldura({ janela }: { janela: Janela }) {
       </header>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
-        {janela.frente === "nps" ? (
+        {completa ? (
+          <FichaCompletaNaJanela frente={janela.frente} id={janela.ref} />
+        ) : janela.frente === "nps" ? (
           <JanelaDoNps id={janela.ref} />
         ) : janela.frente === "google" ? (
           <JanelaDoGoogle id={janela.ref} />

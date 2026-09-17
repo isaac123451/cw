@@ -20,6 +20,7 @@ import { descreverMinutos } from "@/components/rotina/formato";
 import type { useMeuDia } from "@/components/rotina/useMeuDia";
 
 import PorQue from "@/components/shared/PorQue";
+import JanelaDoLink from "@/components/janelas/JanelaDoLink";
 type MeuDia = ReturnType<typeof useMeuDia>;
 
 interface Props {
@@ -250,6 +251,7 @@ export default function RotinaDoDia({ dia, compacto = false, onConfigurar, rascu
                         <span className={`block truncate font-medium ${i.atrasado ? "text-rose-700" : "text-zinc-700"} hover:underline`}>{i.titulo}</span>
                         {i.detalhe && <span className="block truncate text-[11px] text-zinc-500">{i.frente ? `${frente(i.frente).curto} · ` : ""}{i.detalhe}</span>}
                       </Link>
+                      <JanelaDoLink href={i.href} titulo={i.titulo} className="-mt-0.5 p-0.5" />
                     </li>
                   ))}
                   {c.itens.length > 40 && <li className="pt-1 text-[11px] text-zinc-400">e mais {c.itens.length - 40} — o atalho abre a lista inteira.</li>}

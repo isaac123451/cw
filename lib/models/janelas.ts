@@ -31,6 +31,12 @@ export interface Janela {
   /** Ordem de empilhamento: a maior fica na frente. */
   z: number;
   minimizada: boolean;
+  /**
+   * A ficha inteira (Fase 12 do roadmap 2.0): mais larga, com tudo o que a
+   * tela cheia tem. Sem isto, a janela mostra só o essencial para mudar
+   * etapa, prioridade e responsável no meio do dia.
+   */
+  completa?: boolean;
 }
 
 export interface PedidoDeJanela {
@@ -49,6 +55,24 @@ export interface PedidoDeJanela {
 export const MAXIMO_DE_JANELAS = 8;
 
 export const LARGURA_DA_JANELA = 380;
+
+/** A largura da ficha completa — cabe a ficha empilhada, sem cobrir a tela inteira. */
+export const LARGURA_DA_FICHA_COMPLETA = 720;
+
+/**
+ * Trocar entre essencial e completa, trazendo a janela para dentro da tela:
+ * alargar uma janela que estava no canto direito a jogaria para fora.
+ */
+export function alternarCompleta(janelas: Janela[], id: string, tela: { largura: number; altura: number }): Janela[] {
+  return janelas.map((j) => {
+    if (j.id !== id) return j;
+    const completa = !j.completa;
+    const largura = Math.min(completa ? LARGURA_DA_FICHA_COMPLETA : LARGURA_DA_JANELA, tela.largura - 16);
+    const x = Math.max(8, Math.min(j.x, tela.largura - largura - 8));
+    const y = completa ? Math.max(8, Math.min(j.y, 56)) : j.y;
+    return { ...j, completa, x, y };
+  });
+}
 
 /** O deslocamento de uma janela nova em relação à anterior. */
 const CASCATA = 28;
@@ -201,6 +225,7 @@ export function lerJanelasGuardadas(
         y,
         z: Number(j.z) || i + 1,
         minimizada: Boolean(j.minimizada),
+        completa: Boolean(j.completa),
       };
     });
 }
@@ -211,3 +236,28 @@ export const ROTULO_DA_FRENTE: Record<FrenteDaJanela, string> = {
   nps: "NPS",
   google: "Google",
 };
+
+/**
+ * O que dá para abrir numa mini-janela, pelo endereço do link.
+ *
+ * O Meu dia, a Agenda, o cliente e o estabelecimento já apontam para a
+ * ficha pelo endereço. Em vez de cada lista saber a frente e o id de cada
+ * item, o endereço diz: `/reclame-aqui/<id>`, `/redes-sociais/<id>`,
+ * `/nps/<id>` e `/google?avaliacao=<id>`. Qualquer outro link — uma tela,
+ * uma lista — não abre janela, e a função devolve `null`.
+ */
+export function janelaDoEndereco(href: string | undefined | null, titulo: string): PedidoDeJanela | null {
+  if (!href) return null;
+  const [caminho, busca = ""] = href.split("?");
+  const partes = caminho.split("/").filter(Boolean);
+  if (partes.length === 2 && partes[0] === "reclame-aqui" && !["analytics", "graficos", "calculadora", "configuracoes", "avaliacoes", "novo"].includes(partes[1])) {
+    return { frente: "reclame-aqui", ref: decodeURIComponent(partes[1]), titulo };
+  }
+  if (partes.length === 2 && partes[0] === "redes-sociais") return { frente: "redes", ref: decodeURIComponent(partes[1]), titulo };
+  if (partes.length === 2 && partes[0] === "nps" && partes[1] !== "analise") return { frente: "nps", ref: decodeURIComponent(partes[1]), titulo };
+  if (partes.length === 1 && partes[0] === "google") {
+    const id = new URLSearchParams(busca).get("avaliacao");
+    if (id) return { frente: "google", ref: id, titulo };
+  }
+  return null;
+}
