@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 17/09/2026. Aplicação **1.8.0**, extensão **1.8.0**.
+Atualizado em 17/09/2026. Aplicação **1.9.0**, extensão **1.9.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,41 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### Novidades de todas as versões, com tour na própria tela (17/09/2026, 1.9.0)
+
+Fecha a Fase 13. O Isaac: "tela com todas as novidades".
+
+- **Linha do tempo** em `/novidades`: 53 versões, da 1.9 à 0.21, em três
+  eras (Rumo à 2.0, 1.0, Antes da 1.0), cada uma com o que mudou em
+  linguagem de quem usa, as frentes que toca e "Onde fica". As correções
+  que não mudam a tela continuam só aqui no ROADMAP.
+- **Filtro por frente** — Reclame Aqui, Redes, NPS, Google, Extensão e
+  Plataforma, com a contagem de cada uma.
+- **O que é novo para você.** A página guarda, no navegador, a última
+  versão vista; o que veio depois ganha a marca "novo" e o topo diz
+  quantas. Quem nunca abriu vê marcadas só as da era atual. No rodapé do
+  menu, ao lado da versão, um ponto avisa quando há novidade não vista.
+- **Mostrar na tela.** Sete novidades têm tour: um balão com contorno
+  no elemento (sem escurecer a tela), um a três passos, → avança, Esc
+  sai. O passo espera até 4 s o elemento aparecer; se não aparece (lista
+  vazia, menu escondido no celular), é pulado, e se nenhum aparece a
+  tela avisa em vez de ficar em branco. Alvo alto demais (o menu inteiro)
+  recebe o balão ao lado.
+- O armazenamento das preferências do menu saiu do `Sidebar` para
+  `lib/hooks/usePreferenciaLocal.ts`, que a página e o menu dividem.
+
+Achado ao conferir: em desenvolvimento o React monta a página duas vezes,
+e a limpeza apagava a versão guardada entre as duas — a página já abria
+achando que tudo tinha sido visto. A limpeza agora espera um instante e
+é cancelada pela remontagem.
+
+Provas: `check:novidades` (versão atual presente, ordem, endereços que
+existem, tours apontando `data-tour` que existem, a regra do "novo");
+na tela, 3 novidades marcadas para quem viu a 1.5.0, o filtro do Google
+com 6 versões, os tours do Meu dia (dois passos, o parâmetro sai ao
+terminar), do menu (balão ao lado) e do quadro do Reclame Aqui, e a
+página sem nada passando da borda em 375 px.
 
 ### Meu dia um por vez: a fila com o que falta em cada item (17/09/2026, 1.8.0)
 

@@ -2,121 +2,182 @@
 
 import Link from "next/link";
 
-import { ArrowUpRight } from "lucide-react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+
+import { ArrowUpRight, PlayCircle } from "lucide-react";
 
 import MainLayout from "@/components/layout/MainLayout";
 import PageHeading from "@/components/shared/PageHeading";
-import SurfaceCard from "@/components/shared/SurfaceCard";
+
+import { gravarLocal, lerLocal } from "@/lib/hooks/usePreferenciaLocal";
+import {
+  CHAVE_DA_VERSAO_VISTA,
+  ERAS,
+  FRENTES_DAS_NOVIDADES,
+  NOVIDADES,
+  eraDaVersao,
+  filtrarNovidades,
+  novasDesde,
+  type FrenteDaNovidade,
+} from "@/lib/models/novidades";
+import { cn } from "@/lib/utils";
 
 /**
- * Novidades da 1.0 (Fase 10.5).
+ * Novidades de todas as versões (roadmap 2.0, Fase 13).
  *
- * A versão 1.0 fecha o roadmap que transformou a documentação de
- * reputação no funcionamento da plataforma. Esta página diz, em uma
- * leitura, o que mudou — cada item com o lugar onde ele está, porque
- * novidade que não diz onde fica é só propaganda.
+ * Linha do tempo da mais nova para a mais antiga, com o filtro por frente,
+ * o "novo" do que mudou desde a última visita de cada pessoa, o lugar de
+ * cada coisa e, quando cabe, o tour que aponta a novidade na própria tela.
  *
- * O detalhe técnico de cada entrega, com o que foi medido e as provas,
- * mora no ROADMAP.md do repositório.
+ * O detalhe técnico — o que foi medido, os defeitos do caminho e as
+ * provas — continua no ROADMAP.md do repositório.
  */
 
-interface Novidade {
-  titulo: string;
-  texto: string;
-  href?: string;
-}
+const VERSAO = process.env.NEXT_PUBLIC_VERSAO ?? "";
 
-const FASES: { nome: string; itens: Novidade[] }[] = [
-  {
-    nome: "O relógio certo",
-    itens: [
-      { titulo: "Horas úteis em todo prazo", texto: "Segunda a sexta, no expediente configurado, com feriados. O mesmo relógio no Reclame Aqui, nas Redes, no NPS, nas áreas e no sino.", href: "/processos" },
-      { titulo: "Criticidade da documentação", texto: "Urgente, Alta e Normal, com a triagem pelos critérios da tabela — e agora com a sugestão pelos dados: reincidência pelo CPF/CNPJ, alto ticket e risco de cancelamento.", href: "/reclame-aqui" },
-    ],
-  },
-  {
-    nome: "Reclame Aqui, passo a passo",
-    itens: [
-      { titulo: "A trilha do caso", texto: "O passo da vez no alto da ficha, com a ação na frente: 1º contato, tentativas, áreas, confirmação do cliente, pedido de avaliação." },
-      { titulo: "Pedir avaliação na hora certa", texto: "A fila de hoje e dos próximos dias, com o efeito na nota.", href: "/reclame-aqui/avaliacoes" },
-      { titulo: "Resposta pública conferida", texto: "Nome, canal privado, promessa, tom e dado pessoal conferidos antes de copiar — também dentro do HugMe e do Reclame Aqui, pela extensão." },
-    ],
-  },
-  {
-    nome: "As quatro frentes juntas",
-    itens: [
-      { titulo: "Redes, Google e NPS no mesmo desenho", texto: "Ficha própria para cada ciclo do NPS, avaliações do Google com prazo e reincidência, redes no fluxo do documento.", href: "/nps" },
-      { titulo: "Mini-janelas", texto: "Abra a ficha de um caso, NPS ou avaliação por cima de qualquer tela — várias ao mesmo tempo — e continue navegando." },
-      { titulo: "Conversas do WhatsApp", texto: "Guardadas pela extensão ou pelo arquivo, com quem está esperando a gente, busca dentro da conversa e vínculo sugerido pelo telefone.", href: "/conversas" },
-    ],
-  },
-  {
-    nome: "A rotina do agente",
-    itens: [
-      { titulo: "Meu dia", texto: "O que pede ação agora, o que move a nota e as conquistas de hoje; a rotina e o plano do dia pela quantidade e pela urgência.", href: "/meu-dia" },
-      { titulo: "Relatório do ciclo pronto sozinho", texto: "Indicadores das abas do portal, o selo RA1000, o tempo até o 1º contato por frente e os pontos de atenção, em texto para o Slack e planilha.", href: "/relatorio" },
-    ],
-  },
-  {
-    nome: "Documentação viva e IA",
-    itens: [
-      { titulo: "O agente conhece a documentação", texto: "Responde citando a seção do documento, avisa antes de perguntar e escreve pelas regras — o texto da IA passa pela mesma conferência do digitado.", href: "/assistente" },
-      { titulo: "Documentos e acessos no lugar", texto: "A documentação, as ferramentas e o primeiro acesso guiado para quem chega.", href: "/documentacao" },
-    ],
-  },
-  {
-    nome: "Extensão",
-    itens: [
-      { titulo: "Onde o trabalho acontece", texto: "Portal Cardápio Web, Crisp, Google Perfil da Empresa, WhatsApp Web, HugMe e Reclame Aqui. Alt+Shift+C abre o painel." },
-      { titulo: "Meu dia de bolso", texto: "O popup mostra a rotina, os prazos, o que move a nota e as conquistas de hoje; o ícone conta o que está estourando." },
-    ],
-  },
-  {
-    nome: "Acabamento",
-    itens: [
-      { titulo: "Nada se perde", texto: "Duas pessoas no mesmo caso sem uma apagar a outra, e toda gravação diz o que aconteceu — inclusive quando não aconteceu." },
-      { titulo: "Mais rápida para abrir", texto: "A plataforma carrega tudo numa ida só: os dados da abertura chegam em cerca de 1 s, contra quase 3 s antes." },
-      { titulo: "No celular e sem beco sem saída", texto: "As telas principais cabem em 375 px, e toda lista vazia diz por quê e oferece o próximo passo." },
-    ],
-  },
-];
+/*
+  A versão vista **quando a página abriu**: gravar a atual logo em seguida
+  apagaria o "novo" da própria visita. Fica guardada até a página sair.
+*/
+let vistaAoAbrir: string | null | undefined;
+let esquecer: number | undefined;
+const lerVistaAoAbrir = () => {
+  if (vistaAoAbrir === undefined) vistaAoAbrir = lerLocal(CHAVE_DA_VERSAO_VISTA);
+  return vistaAoAbrir;
+};
+const semOuvinte = () => () => {};
+
+const dataCurta = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
 
 export default function NovidadesPage() {
+
+  const [frente, setFrente] = useState<FrenteDaNovidade | null>(null);
+
+  const vista = useSyncExternalStore(semOuvinte, lerVistaAoAbrir, () => undefined);
+
+  useEffect(() => {
+    /*
+      A saída esquece a versão guardada — mas só depois de um instante: em
+      desenvolvimento o React desmonta e remonta na hora, e esquecer ali
+      gravaria a versão atual como "vista" antes de a página mostrá-la.
+    */
+    window.clearTimeout(esquecer);
+    lerVistaAoAbrir();
+    if (VERSAO) gravarLocal(CHAVE_DA_VERSAO_VISTA, VERSAO);
+    return () => {
+      esquecer = window.setTimeout(() => {
+        vistaAoAbrir = undefined;
+      }, 0);
+    };
+  }, []);
+
+  /* No servidor (vista indefinida) nada é marcado: o "novo" chega com a leitura do navegador. */
+  const novas = useMemo(() => (vista === undefined ? new Set<string>() : novasDesde(NOVIDADES, vista)), [vista]);
+
+  const contagem = useMemo(() => {
+    const c = new Map<FrenteDaNovidade, number>();
+    for (const n of NOVIDADES) for (const f of n.frentes) c.set(f, (c.get(f) ?? 0) + 1);
+    return c;
+  }, []);
+
+  const lista = filtrarNovidades(NOVIDADES, frente);
+  const nome = (id: FrenteDaNovidade) => FRENTES_DAS_NOVIDADES.find((f) => f.id === id)?.nome ?? id;
+
   return (
     <MainLayout>
-      <div className="space-y-6">
+      <div className="mx-auto max-w-4xl space-y-6">
+
         <PageHeading
           eyebrow="Conhecimento"
-          title="Novidades da 1.0"
-          description="A documentação de reputação virou o funcionamento da plataforma. O que mudou, e onde está cada coisa."
+          title="Novidades"
+          description="O que mudou em cada versão, onde fica e, quando cabe, um tour na própria tela."
         />
 
-        <div className="grid gap-4 lg:grid-cols-2">
-          {FASES.map((fase) => (
-            <SurfaceCard key={fase.nome} title={fase.nome}>
-              <ul className="space-y-3">
-                {fase.itens.map((item) => (
-                  <li key={item.titulo}>
-                    {item.href ? (
-                      <Link href={item.href} className="group inline-flex items-center gap-1 text-sm font-semibold text-zinc-900 hover:text-violet-700">
-                        {item.titulo}
-                        <ArrowUpRight size={13} className="text-zinc-300 group-hover:text-violet-600" />
-                      </Link>
-                    ) : (
-                      <p className="text-sm font-semibold text-zinc-900">{item.titulo}</p>
-                    )}
-                    <p className="mt-0.5 text-sm leading-relaxed text-zinc-600">{item.texto}</p>
-                  </li>
-                ))}
-              </ul>
-            </SurfaceCard>
-          ))}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+          <div role="group" aria-label="Filtrar por frente" className="flex flex-wrap gap-1.5">
+            <Chip ativo={frente === null} onClick={() => setFrente(null)} rotulo="Todas" numero={NOVIDADES.length} />
+            {FRENTES_DAS_NOVIDADES.map((f) => (
+              <Chip key={f.id} ativo={frente === f.id} onClick={() => setFrente(frente === f.id ? null : f.id)} rotulo={f.nome} numero={contagem.get(f.id) ?? 0} />
+            ))}
+          </div>
+          {novas.size > 0 && (
+            <p className="text-xs text-zinc-500 sm:ml-auto">
+              <span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-violet-500 align-middle" />
+              {vista ? `${novas.size} desde a sua última visita (${vista})` : `${novas.size} desde a 1.0`}
+            </p>
+          )}
         </div>
 
+        {ERAS.map((era) => {
+          const itens = lista.filter((n) => eraDaVersao(n.versao) === era.id);
+          if (itens.length === 0) return null;
+          return (
+            <section key={era.id} aria-labelledby={`era-${era.id}`}>
+              <div className="mb-2 flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+                <h2 id={`era-${era.id}`} className="text-sm font-semibold text-zinc-900">{era.nome}</h2>
+                <p className="text-xs text-zinc-500">{era.texto}</p>
+              </div>
+
+              <ol className="divide-y divide-zinc-100 rounded-xl border border-zinc-200/80 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+                {itens.map((n) => {
+                  const nova = novas.has(n.versao);
+                  return (
+                    <li key={n.versao} className="grid gap-x-5 gap-y-1 px-5 py-4 sm:grid-cols-[84px_minmax(0,1fr)]">
+                      <div className="flex items-baseline gap-2 sm:block">
+                        <p className="font-mono text-xs font-medium text-zinc-700">{n.versao}</p>
+                        <p className="text-[11px] tabular-nums text-zinc-400 sm:mt-0.5">{dataCurta(n.data)}</p>
+                      </div>
+
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                          <h3 className="text-sm font-semibold text-zinc-900">{n.titulo}</h3>
+                          {nova && <span className="rounded bg-violet-50 px-1.5 py-px text-[10.5px] font-semibold text-violet-700 ring-1 ring-inset ring-violet-100">novo</span>}
+                        </div>
+                        <p className="mt-1 text-sm leading-relaxed text-zinc-600">{n.texto}</p>
+
+                        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs">
+                          <span className="text-zinc-400">{n.frentes.map(nome).join(" · ")}</span>
+                          {n.tour && (
+                            <Link href={`${n.tour.rota}?tour=${n.tour.id}`} className="flex items-center gap-1 font-medium text-zinc-700 hover:text-violet-700">
+                              <PlayCircle size={13} /> Mostrar na tela
+                            </Link>
+                          )}
+                          {n.href && (!n.tour || n.tour.rota !== n.href) && (
+                            <Link href={n.href} className="flex items-center gap-0.5 font-medium text-zinc-700 hover:text-violet-700">
+                              Onde fica <ArrowUpRight size={12} />
+                            </Link>
+                          )}
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ol>
+            </section>
+          );
+        })}
+
         <p className="text-xs text-zinc-500">
-          O detalhe de cada entrega — o que foi medido, os defeitos achados no caminho e as provas — está no ROADMAP.md do repositório.
+          As correções que não mudam a tela, e o detalhe de cada entrega — o que foi medido e as provas —, estão no ROADMAP.md do repositório.
         </p>
       </div>
     </MainLayout>
+  );
+}
+
+function Chip({ ativo, onClick, rotulo, numero }: { ativo: boolean; onClick: () => void; rotulo: string; numero: number }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={ativo}
+      className={cn(
+        "flex h-7 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors",
+        ativo ? "border-zinc-900 bg-zinc-900 text-white" : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300 hover:text-zinc-900"
+      )}
+    >
+      {rotulo}
+      <span className={cn("tabular-nums", ativo ? "text-white/60" : "text-zinc-400")}>{numero}</span>
+    </button>
   );
 }

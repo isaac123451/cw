@@ -144,6 +144,7 @@ export default function RotinaDoDia({ dia, compacto = false, onConfigurar, onUmP
             <button
               type="button"
               onClick={onUmPorVez}
+              data-tour="um-por-vez"
               title="Os itens das atividades abertas, um por vez, com o que falta em cada um"
               className="flex items-center gap-1.5 rounded-xl bg-zinc-900 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-zinc-800"
             >

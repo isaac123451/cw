@@ -180,6 +180,7 @@ export default function NotificationsMenu() {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
+        data-tour="sino"
         aria-label={novos.length ? `Notificações: ${novos.length} nova(s)` : "Notificações"}
         aria-expanded={open}
         title={novos.length === 0 ? "Nada novo" : `${novos.length} aviso(s) novo(s)`}

@@ -1,4 +1,7 @@
+import { Suspense } from "react";
+
 import Sidebar from "./Sidebar";
+import TourDaNovidade from "@/components/novidades/TourDaNovidade";
 import TopBar from "./Topbar";
 
 interface Props {
@@ -37,6 +40,12 @@ export default function MainLayout({
         </main>
 
       </div>
+
+      <Suspense fallback={null}>
+
+        <TourDaNovidade />
+
+      </Suspense>
 
     </div>
   );

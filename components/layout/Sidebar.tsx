@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { ChevronDown, PanelLeftClose, PanelLeftOpen, Pin, PinOff } from "lucide-react";
 
@@ -17,6 +17,8 @@ import { useNps } from "@/lib/context/NpsContext";
 import { useSla } from "@/lib/context/SlaContext";
 import { useAvaliacoesGoogle } from "@/lib/context/useAvaliacoesGoogle";
 import { useAgora } from "@/lib/hooks/useAgora";
+import { gravarLocal, usePreferenciaLocal } from "@/lib/hooks/usePreferenciaLocal";
+import { CHAVE_DA_VERSAO_VISTA, compararVersoes } from "@/lib/models/novidades";
 import { contadoresDoMenu, numeroCurto, type ContadorDoMenu } from "@/lib/models/contadoresDoMenu";
 
 /**
@@ -38,34 +40,6 @@ import { contadoresDoMenu, numeroCurto, type ContadorDoMenu } from "@/lib/models
 const SCROLL_KEY = "cw:sidebar-scroll";
 const FIXADOS_KEY = "cw:menu-fixados";
 const RECOLHIDO_KEY = "cw:menu-recolhido";
-
-/* Preferências do menu num armazenamento externo simples, lido sem efeito. */
-const ouvintes = new Set<() => void>();
-function lerLocal(chave: string) {
-  try {
-    return localStorage.getItem(chave);
-  } catch {
-    return null;
-  }
-}
-function gravarLocal(chave: string, valor: string) {
-  try {
-    localStorage.setItem(chave, valor);
-  } catch {
-    /* Sem armazenamento, a escolha vale até fechar a aba. */
-  }
-  ouvintes.forEach((o) => o());
-}
-function usePreferenciaLocal(chave: string) {
-  return useSyncExternalStore(
-    (ouvir) => {
-      ouvintes.add(ouvir);
-      return () => ouvintes.delete(ouvir);
-    },
-    () => lerLocal(chave),
-    () => null
-  );
-}
 
 function useContadores(): Record<string, ContadorDoMenu> {
   const { cases } = useCases();
@@ -96,6 +70,11 @@ export default function Sidebar({ forcarAberto = false }: { forcarAberto?: boole
   const fixadosBruto = usePreferenciaLocal(FIXADOS_KEY);
   const recolhidoBruto = usePreferenciaLocal(RECOLHIDO_KEY);
   const recolhido = !forcarAberto && recolhidoBruto === "1";
+
+  /* O ponto ao lado da versão: há novidade que a pessoa ainda não abriu. */
+  const versaoVista = usePreferenciaLocal(CHAVE_DA_VERSAO_VISTA);
+  const versao = process.env.NEXT_PUBLIC_VERSAO ?? "";
+  const temNovidade = Boolean(versao) && (versaoVista === null || compararVersoes(versao, versaoVista) > 0);
 
   const fixados = useMemo<string[]>(() => {
     try {
@@ -248,6 +227,7 @@ export default function Sidebar({ forcarAberto = false }: { forcarAberto?: boole
           <button
             type="button"
             onClick={() => gravarLocal(RECOLHIDO_KEY, "1")}
+            data-tour="menu-recolher"
             title="Recolher o menu"
             aria-label="Recolher o menu"
             className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-200/60 hover:text-zinc-700"
@@ -257,7 +237,7 @@ export default function Sidebar({ forcarAberto = false }: { forcarAberto?: boole
         )}
       </div>
 
-      <nav ref={navRef} aria-label="Menu principal" className={cn("rolagem-fina flex-1 overflow-y-auto py-3", recolhido ? "px-2" : "px-2.5")}>
+      <nav ref={navRef} data-tour="menu" aria-label="Menu principal" className={cn("rolagem-fina flex-1 overflow-y-auto py-3", recolhido ? "px-2" : "px-2.5")}>
         {itemFixados.length > 0 && (
           <div className="mb-3">
             {!recolhido && <p className="px-2.5 pb-1 text-[11px] font-medium text-zinc-400">Fixados</p>}
@@ -300,8 +280,13 @@ export default function Sidebar({ forcarAberto = false }: { forcarAberto?: boole
             <PanelLeftOpen size={16} />
           </button>
         ) : (
-          <Link href="/novidades" title="O que mudou" className="block px-2.5 pt-1 text-[11px] text-zinc-400 hover:text-violet-700">
-            Versão {process.env.NEXT_PUBLIC_VERSAO}
+          <Link href="/novidades" data-tour="versao" title={temNovidade ? "Há novidades que você ainda não viu" : "O que mudou"} className="flex items-center gap-1.5 px-2.5 pt-1 text-[11px] text-zinc-400 hover:text-violet-700">
+            Versão {versao}
+            {temNovidade && (
+              <span className="flex items-center gap-1 text-violet-700">
+                <span className="h-1.5 w-1.5 rounded-full bg-violet-500" /> novidades
+              </span>
+            )}
           </Link>
         )}
       </div>

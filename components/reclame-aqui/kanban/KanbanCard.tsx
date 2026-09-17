@@ -101,6 +101,7 @@ export default function KanbanCard({
           setDragging(false);
           onDragEnd();
         }}
+        data-tour="cartao-do-quadro"
         className={`group relative block cursor-grab rounded-lg border border-zinc-200 bg-white px-3 pb-2.5 pt-2 transition-[border-color,box-shadow] active:cursor-grabbing hover:border-zinc-300 hover:shadow-[0_2px_8px_-2px_rgba(16,24,40,0.12)] ${
           dragging ? "opacity-40" : ""
         }`}

@@ -126,6 +126,7 @@ export default function BuscaGlobal() {
       <button
         type="button"
         onClick={abrir}
+        data-tour="busca"
         aria-label="Buscar na plataforma (Ctrl+K)"
         className="flex h-10 items-center gap-2 rounded-xl border border-zinc-200 bg-zinc-50/80 px-3 text-sm text-zinc-400 transition-colors hover:border-zinc-300 hover:bg-white md:w-72"
       >
