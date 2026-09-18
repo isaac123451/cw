@@ -87,7 +87,7 @@ export default function StatTile({
 
       </div>
 
-      <p className="mt-1.5 text-[26px] font-semibold leading-none tracking-tight text-zinc-900 tabular-nums">
+      <p className="mt-1.5 text-[22px] font-semibold leading-none tracking-tight text-zinc-900 tabular-nums sm:text-[26px]">
         {value}
       </p>
 

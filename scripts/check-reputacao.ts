@@ -190,9 +190,14 @@ async function main() {
     0
   );
 
+  /*
+    A nota sai com uma casa (8,75 vira 8,8) e cada componente com duas:
+    a diferença honesta chega a meio décimo mais o arredondamento de
+    cada parcela. O "< 0,05" de antes falhava justo em x,x5.
+  */
   conferir(
     "3. os componentes somam a nota",
-    Math.abs(soma - rep.raScore) < 0.05,
+    Math.abs(soma - rep.raScore) <= 0.05 + 0.005 * rep.breakdown.length + 1e-9,
     true
   );
 

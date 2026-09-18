@@ -765,3 +765,15 @@
 .rolagem-fina:hover {
   scrollbar-color: var(--color-zinc-300) transparent;
 }
+
+/*
+  Ações que só aparecem ao passar o mouse (editar, apagar, abrir na
+  janela) sumiam de vez no celular: sem mouse não há hover, e o botão
+  ficava invisível ocupando espaço. Em tela de toque elas ficam à vista.
+  Os balões de explicação (pointer-events-none) continuam escondidos.
+*/
+@media (hover: none) {
+  .group-hover\:opacity-100:not(.pointer-events-none) {
+    opacity: 1;
+  }
+}

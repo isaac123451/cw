@@ -165,35 +165,35 @@ export default function AvaliacoesPage() {
           <p className="text-sm text-zinc-400">Montando a fila…</p>
         ) : (
           <>
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
 
-              <div className="rounded-2xl bg-violet-700 p-5 text-white shadow-sm">
+              <div className="rounded-2xl bg-violet-700 p-4 text-white sm:p-5 shadow-sm">
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-white/75">Para hoje</p>
-                <p className="mt-1 text-3xl font-semibold tabular-nums">{fila.hoje.length}</p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums sm:text-3xl">{fila.hoje.length}</p>
                 <p className="mt-1 text-xs text-white/80">lembretes no dia ou atrasados</p>
               </div>
 
-              <div className="rounded-2xl border border-zinc-200/80 bg-white p-5">
+              <div className="rounded-2xl border border-zinc-200/80 bg-white p-4 sm:p-5">
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">Próximos dias</p>
-                <p className="mt-1 text-3xl font-semibold tabular-nums text-zinc-900">{fila.proximos.length}</p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums sm:text-3xl text-zinc-900">{fila.proximos.length}</p>
                 <p className="mt-1 text-xs text-zinc-500">na cadência, ainda não é o dia</p>
               </div>
 
-              <div className="rounded-2xl border border-zinc-200/80 bg-white p-5">
+              <div className="rounded-2xl border border-zinc-200/80 bg-white p-4 sm:p-5">
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
                   {impacto.lote === 1 ? "Uma nota 10 vale" : `${impacto.lote} notas 10 valem`}
                 </p>
-                <p className="mt-1 text-3xl font-semibold tabular-nums text-emerald-700">
+                <p className="mt-1 text-2xl font-semibold tabular-nums sm:text-3xl text-emerald-700">
                   +{ptBR(Math.max(0, impacto.porLote), 2)}
                 </p>
                 <p className="mt-1 text-xs text-zinc-500">na nota dos últimos 6 meses (hoje {ptBR(impacto.atual)})</p>
               </div>
 
-              <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-5">
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4 sm:p-5">
                 <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-emerald-700">
                   <Sparkles size={12} /> Se a fila avaliar com 10
                 </p>
-                <p className="mt-1 text-3xl font-semibold tabular-nums text-emerald-800">
+                <p className="mt-1 text-2xl font-semibold tabular-nums sm:text-3xl text-emerald-800">
                   {ptBR(impacto.atual)} → {ptBR(impacto.comTodas)}
                 </p>
                 <p className="mt-1 text-xs text-emerald-800/80">
@@ -234,8 +234,8 @@ export default function AvaliacoesPage() {
               >
                 <ul className="divide-y divide-zinc-100">
                   {dispensados.map((item) => (
-                    <li key={item.id} className="flex flex-wrap items-center gap-3 py-3 first:pt-0 last:pb-0">
-                      <div className="min-w-0 flex-1">
+                    <li key={item.id} className="flex flex-wrap items-center gap-2 py-3 first:pt-0 last:pb-0 sm:gap-3">
+                      <div className="min-w-0 basis-full sm:basis-0 sm:flex-1">
                         <Link href={caseHref(item)} className="group block">
                           <span className="font-mono text-[10px] uppercase tracking-wide text-zinc-400">{item.protocol}</span>
                           <span className="block truncate text-sm font-medium text-zinc-700 group-hover:text-violet-700">{item.title}</span>
@@ -291,9 +291,9 @@ function Lista({
         const semTelefone = !item.phone || item.phone.includes("•") || item.phone.replace(/\D/g, "").length < 10;
 
         return (
-          <li key={item.id} className="flex flex-wrap items-center gap-3 py-3 first:pt-0 last:pb-0">
+          <li key={item.id} className="flex flex-wrap items-center gap-2 py-3 first:pt-0 last:pb-0 sm:gap-3">
 
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 basis-full sm:basis-0 sm:flex-1">
               <Link href={caseHref(item)} className="group block">
                 <span className="font-mono text-[10px] uppercase tracking-wide text-zinc-400">{item.protocol}</span>
                 <span className="block truncate text-sm font-medium text-zinc-900 group-hover:text-violet-700">
@@ -348,6 +348,7 @@ function Lista({
               }}
               disabled={gravando === item.protocol}
               title="Tira este caso da fila de pedir avaliação. Nada é apagado, e dá para devolver depois."
+              aria-label={confirmando === item.protocol ? "Confirmar: dispensar o pedido de avaliação" : "Dispensar o pedido de avaliação"}
               className={`flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-medium transition-colors disabled:opacity-60 ${
                 confirmando === item.protocol
                   ? "bg-amber-50 text-amber-800 ring-1 ring-inset ring-amber-200"
@@ -355,7 +356,7 @@ function Lista({
               }`}
             >
               {gravando === item.protocol ? <Loader2 size={13} className="animate-spin" /> : <BellOff size={13} />}
-              {confirmando === item.protocol ? "Dispensar?" : "Dispensar"}
+              {confirmando === item.protocol ? "Dispensar?" : <span className="hidden sm:inline">Dispensar</span>}
             </button>
 
           </li>

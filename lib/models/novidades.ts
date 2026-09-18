@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.17.0",
+    data: "2026-09-18",
+    titulo: "Busca mais legível e telas melhores no celular",
+    texto: "Na busca (Ctrl+K), cada resultado mostra o nome em cima e, embaixo, o protocolo, o status em etiqueta colorida e o título; casos das Redes aparecem num grupo separado do Reclame Aqui, e a nota do NPS vem na cor da faixa. No celular, os indicadores ficam em duas colunas, os botões que só apareciam com o mouse ficam à vista, e a fila de Pedir avaliação e a Agenda deixaram de espremer o texto.",
+    frentes: ["plataforma"],
+  },
+  {
     versao: "1.16.0",
     data: "2026-09-17",
     titulo: "Dispensar o pedido de avaliação",

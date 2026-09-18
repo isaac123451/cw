@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 17/09/2026. Aplicação **1.16.0**, extensão **1.16.0**.
+Atualizado em 18/09/2026. Aplicação **1.17.0**, extensão **1.17.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,70 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### Revisão: busca, celular e o que estava mal feito (18/09/2026, 1.17.0)
+
+Pedido do Isaac: "verifique todos os pontos feitos anteriormente para ver
+se não tem bug e finalize as pendências. vi que teve algumas coisas mal
+feitas, tipo na pesquisa o layout fica ruim. melhore esse layout um pouco
+e também a parte de responsividade de algumas coisas."
+
+- **Busca (Ctrl+K).** Cada resultado vinha numa faixa cinza só:
+  "RA-vqem… · Maria" em cima e "Reclame Aqui · Aguardando avaliação ·
+  Impossibilidade de…" cortado embaixo. Agora o nome fica sozinho na
+  primeira linha, e embaixo vêm o protocolo em fonte de código, o status
+  em etiqueta na cor do quadro e o título. Redes e Reclame Aqui viraram
+  grupos separados, cada um com seu ícone; no NPS, a nota vem na cor da
+  faixa (detrator, passivo, promotor). O modelo passou a entregar os
+  campos separados (`marca`, `etiqueta`, `detalhe`, `tom`), e o
+  subtítulo de uma linha continua lá, porque os recentes já guardados no
+  navegador só têm ele.
+- **Busca no celular.** Campo em 16 px (abaixo disso o iPhone dá zoom
+  ao focar), botão de fechar, sem a faixa de atalhos de teclado, e a
+  paleta usa mais da altura da tela. Na linha, sai o título da
+  reclamação e fica a etiqueta: no celular, o estado vale mais que o
+  começo do título.
+- **Indicadores em duas colunas no celular.** Os blocos de quatro
+  indicadores (Painel, Redes, Agenda, Impacto, NPS, Clientes,
+  Estabelecimentos e mais 8 telas) eram uma torre de quatro cartões, um
+  embaixo do outro. Agora são 2 × 2, com o número um pouco menor só no
+  celular.
+- **Botões que só apareciam com o mouse.** Editar, apagar, abrir na
+  janela: em cerca de 25 lugares eles surgiam no hover, e no celular,
+  sem mouse, ficavam invisíveis. Uma regra no CSS global, só para tela
+  de toque, deixa esses botões à vista. Os balões de explicação
+  continuam escondidos.
+- **Fila de Pedir avaliação no celular.** O texto do caso ficava
+  espremido numa coluna de 60 px, com o protocolo quebrando letra por
+  letra. Agora o texto ocupa a linha inteira e, embaixo, lembrete, Pedir
+  e Dispensar (só o ícone no celular) cabem numa linha só.
+- **Agenda no celular.** O título da atividade tinha 109 px porque as
+  ações invisíveis ocupavam o resto. Agora vão para uma linha própria,
+  à vista, e o título ficou com 254 px.
+
+Bugs achados na revisão:
+
+- **"Um por vez" dizia "A rotina de hoje está marcada" enquanto a
+  rotina ainda carregava.** Olhava só as contagens, não o `carregando`.
+  Agora mostra "Lendo a fila do dia…" até tudo chegar.
+- **Painel de captura da extensão** usava `innerWidth` e `innerHeight`
+  sem `window.`. Funcionava, mas o `check:painel` barrava.
+- **`check:reputacao` falhava sem erro de cálculo.** Os componentes somam
+  8,75 e a nota sai 8,8. A tolerância "< 0,05" quebrava justo em x,x5.
+  Agora conta o arredondamento de cada parcela.
+
+Provas: `check:busca-global` com dez asserções novas (nome sozinho,
+protocolo, status, título, subtítulo mantido, grupo das Redes, as três
+cores do NPS); os detectores de 375 px (borda e coluna espremida) sem
+nada no Painel, Meu dia, "Um por vez", NPS, Reclame Aqui, Redes, Impacto,
+Análise do NPS, Agenda e Pedir avaliação; em 1440 px, tudo igual a antes.
+Rodaram todos os checks. `telas`, `acesso`, `extensao` e `vigia-volta`
+rodaram contra o servidor de conferência, porque o de desenvolvimento não
+estava no ar. O `check:extensao` criou e apagou só a tarefa descartável
+dele.
+
+Fica aberto: `check:vinculo` acusa 2 reclamações com nome de empresa no
+campo. É dado que chegou pela captura, não código, e não mexi.
 
 ### Dispensar o pedido de avaliação (17/09/2026, 1.16.0)
 

@@ -229,7 +229,7 @@ export default function DashboardPage() {
           o defeito clássico dessas telas: o painel dizer 14 e a lista
           mostrar 11.
         */}
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
 
           <StatTile
             label="Sem resposta pública"

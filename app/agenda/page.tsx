@@ -234,7 +234,7 @@ export default function AgendaPage() {
 
         </PageHeading>
 
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
 
           <StatTile
             label="Atividades de hoje"
@@ -359,7 +359,7 @@ export default function AgendaPage() {
                         event.dataTransfer.effectAllowed =
                           "move";
                       }}
-                      className="group flex cursor-grab items-start gap-3.5 px-6 py-3.5 transition-colors active:cursor-grabbing hover:bg-zinc-50/70"
+                      className="group flex cursor-grab flex-wrap items-start gap-x-3.5 gap-y-1 px-4 py-3.5 sm:flex-nowrap sm:px-6 transition-colors active:cursor-grabbing hover:bg-zinc-50/70"
                     >
 
                       <button
@@ -444,13 +444,13 @@ export default function AgendaPage() {
 
                       </div>
 
-                      <div className="flex shrink-0 items-center gap-1">
+                      <div className="flex shrink-0 items-center gap-1 max-sm:basis-full max-sm:justify-end">
 
                         <span className="text-xs font-medium tabular-nums text-zinc-400">
                           {item.time}
                         </span>
 
-                        <div className="flex opacity-0 transition-opacity group-hover:opacity-100">
+                        <div className="flex transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
 
                           <button
                             onClick={() => enviarAoGoogle(item)}

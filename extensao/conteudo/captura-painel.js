@@ -91,8 +91,8 @@
         const dy = e.clientY - r.top;
         topo.setPointerCapture(e.pointerId);
         const mover = (m) => {
-          const x = Math.max(8, Math.min(m.clientX - dx, innerWidth - r.width - 8));
-          const y = Math.max(8, Math.min(m.clientY - dy, innerHeight - 48));
+          const x = Math.max(8, Math.min(m.clientX - dx, window.innerWidth - r.width - 8));
+          const y = Math.max(8, Math.min(m.clientY - dy, window.innerHeight - 48));
           Object.assign(caixa.style, { left: `${x}px`, top: `${y}px`, right: "auto", bottom: "auto" });
         };
         const soltar = () => {
