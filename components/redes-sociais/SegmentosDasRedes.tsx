@@ -34,13 +34,13 @@ export default function SegmentosDasRedes({ facetas, total, filtrados, ativos, o
         ) : undefined
       }
     >
-      <dl className="divide-y divide-zinc-100">
+      <dl className="grid gap-x-10 gap-y-1 lg:grid-cols-2">
         {DIMENSOES_DAS_REDES.map(({ id, nome }) => {
           const valores = facetas[id] ?? [];
           if (valores.length === 0) return null;
           return (
-            <div key={id} className="flex flex-col gap-1.5 py-2.5 first:pt-0 last:pb-0 sm:flex-row sm:items-start sm:gap-4">
-              <dt className="w-28 shrink-0 pt-1.5 text-xs text-zinc-500">{nome}</dt>
+            <div key={id} className="flex min-w-0 flex-col gap-1.5 py-1.5 sm:flex-row sm:items-start sm:gap-4">
+              <dt className="w-24 shrink-0 pt-1.5 text-xs text-zinc-500">{nome}</dt>
               <dd className="flex min-w-0 flex-wrap gap-1.5">
                 {valores.map((f) => (
                   <button
