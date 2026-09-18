@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 18/09/2026. Aplicação **1.17.0**, extensão **1.17.0**.
+Atualizado em 18/09/2026. Aplicação **1.18.0**, extensão **1.18.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,58 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### Visual de ferramenta no NPS e nas Redes, e a cadeia de IA gratuita (18/09/2026, 1.18.0)
+
+**Fase 11, visual de ferramenta, fechado.**
+
+- **NPS.** No topo havia sete botões do mesmo peso. Agora ficam os de
+  todo dia (Buscar novas, Período, Registrar resposta), e Etapas e tipos,
+  Causas raiz, Exportar o recorte e Importar planilha foram para um menu
+  **Mais**. Saíram os gráficos de Distribuição e de Causa raiz, que
+  repetiam os indicadores e já estão na Análise do NPS. O percentual de
+  cada faixa foi para o próprio indicador ("80,5% · 96 com comentário").
+  A lista de respostas subiu cerca de 300 px. O menu (`MenuMais`) fecha
+  no clique fora e no Esc, e abre para o outro lado quando está perto da
+  borda.
+- **Redes.** Os seis segmentos ficam em duas colunas na tela larga (de
+  cerca de 280 px para 128 px), e o quadro de atendimento aparece sem
+  rolar.
+- **Meu dia e Dashboard** foram revistos e ficaram como estavam: não
+  havia repetição nem ação escondida para tirar.
+
+**Fase 16, cadeia de provedores gratuitos.**
+
+- **Groq e OpenRouter entram na cadeia.** A ordem é Anthropic (se houver
+  chave), Gemini, Groq, OpenRouter. Só entra quem tem chave, e a
+  preferência da tela põe o escolhido na frente. Quando um cai (fila,
+  cota, chave recusada, modelo aposentado, resposta fora do formato), o
+  próximo responde. Recusa do modelo (422) para a cadeia. Se todos
+  falharem, volta o erro do primeiro, em português, dizendo qual
+  variável conferir. Sem chave nenhuma, o motor próprio continua sendo a
+  última saída de quem já o usa.
+- **Um adaptador para os dois** (`lib/services/iaCompativel.ts`): os
+  dois usam o mesmo formato de chat. Pede JSON, manda o esquema na
+  instrução e confere os campos obrigatórios. Tira o JSON de dentro de
+  cercas de markdown. O assistente também responde em fluxo por eles.
+- **Configurações → IA:** o seletor de provedor ganhou Groq e
+  OpenRouter, com "(sem chave)" enquanto não houver chave. `/api/saude`
+  diz quais das quatro chaves existem.
+- **Modelos padrão:** `llama-3.3-70b-versatile` (Groq, e
+  `llama-3.1-8b-instant` na via rápida) e
+  `meta-llama/llama-3.3-70b-instruct:free` (OpenRouter). Para trocar sem
+  deploy, use `GROQ_MODELO` e `OPENROUTER_MODELO` (com `_RAPIDO`).
+
+Provas: `check:ia-cadeia` (novo, 21 pontos). Um servidor local faz o
+papel dos dois provedores e prova a ordem, a passagem quando um cai, o
+campo que falta, as mensagens de chave e de modelo, o marcador do
+`.env.example` e o fluxo do assistente. O `check:ia` contra o Gemini de
+verdade continua respondendo (1,2 s), e o `check:motor-proprio` passa.
+
+**Ainda não provado:** a chamada real ao Groq e ao OpenRouter. Isso
+depende das chaves (console.groq.com e openrouter.ai). Com elas no
+`.env`, `npm run check:ia` com `IA_PROVEDOR=groq` mostra na hora se o
+modelo padrão ainda existe.
 
 ### Revisão: busca, celular e o que estava mal feito (18/09/2026, 1.17.0)
 

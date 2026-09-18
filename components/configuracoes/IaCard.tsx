@@ -71,7 +71,7 @@ export default function IaCard() {
   /** O rascunho: só vai ao banco quando clicar em Salvar. */
   const [draft, setDraft] = useState<{
     perfil: Perfil;
-    provedorPreferido: "auto" | "anthropic" | "gemini";
+    provedorPreferido: "auto" | "anthropic" | "gemini" | "groq" | "openrouter";
     modelo: string;
     modeloRapido: string;
     modeloReserva: string;
@@ -355,6 +355,14 @@ export default function IaCard() {
                 {retrato.chaves.gemini
                   ? ""
                   : " (sem chave)"}
+              </option>
+              <option value="groq">
+                Groq (gratuito)
+                {retrato.chaves.groq ? "" : " (sem chave)"}
+              </option>
+              <option value="openrouter">
+                OpenRouter (gratuito)
+                {retrato.chaves.openrouter ? "" : " (sem chave)"}
               </option>
             </select>
 

@@ -10,11 +10,13 @@ import {
   type Perfil,
   PERFIS,
   perfilPorId,
+  type ProvedorPreferido,
 } from "@/lib/services/iaConfig.service";
 
 import {
   pedirEstruturado,
   provedorDeIA,
+  type ProvedorExterno,
 } from "@/lib/services/ia.service";
 
 /** O módulo a que estas ações pertencem — ver lib/auth/modules.ts. */
@@ -30,9 +32,9 @@ const MODULO: Modulo = "configuracoes";
 export interface RetratoDaIA {
   /** Há alguma chave válida configurada neste ambiente? */
   disponivel: boolean;
-  provedor: "anthropic" | "gemini" | null;
+  provedor: ProvedorExterno | null;
   perfil: Perfil;
-  provedorPreferido: "auto" | "anthropic" | "gemini";
+  provedorPreferido: ProvedorPreferido;
   modelo: string;
   modeloRapido: string;
   modeloReserva: string;
@@ -40,7 +42,7 @@ export interface RetratoDaIA {
   timeoutSegundos: number;
   origem: "banco" | "ambiente";
   /** Quais chaves existem — sem revelar nenhuma. */
-  chaves: { anthropic: boolean; gemini: boolean };
+  chaves: Record<ProvedorExterno, boolean>;
   permitido: boolean;
 }
 
@@ -76,6 +78,8 @@ export async function getIaConfig(): Promise<RetratoDaIA> {
     chaves: {
       anthropic: provedorDeIA("anthropic") === "anthropic",
       gemini: provedorDeIA("gemini") === "gemini",
+      groq: provedorDeIA("groq") === "groq",
+      openrouter: provedorDeIA("openrouter") === "openrouter",
     },
     permitido: ctx?.role === "ADMIN",
   };
@@ -83,7 +87,7 @@ export async function getIaConfig(): Promise<RetratoDaIA> {
 
 export interface RascunhoDaIA {
   perfil: Perfil;
-  provedorPreferido: "auto" | "anthropic" | "gemini";
+  provedorPreferido: ProvedorPreferido;
   /** Vazio devolve o valor do perfil. */
   modelo?: string;
   modeloRapido?: string;

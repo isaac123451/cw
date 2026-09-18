@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { conversarCompativel, pelaApiCompativel, temChaveCompativel } from "@/lib/services/iaCompativel";
 
 import {
   type ConfigDeIA,
@@ -36,7 +37,7 @@ import {
  * `provedorDeIA` — é o chamador que decide recorrer a ele depois que
  * `pedirEstruturado` volta sem dados.
  */
-export type Provedor = "anthropic" | "gemini" | "motor-proprio";
+export type Provedor = "anthropic" | "gemini" | "groq" | "openrouter" | "motor-proprio";
 
 /**
  * Só os dois de fora — o que `provedorDeIA` escolhe e o que
@@ -68,6 +69,44 @@ function chave(nome: string) {
  * aqui, e trocar de modelo muda o texto que a operação lê. Para inverter
  * a ordem, defina `IA_PROVEDOR=gemini`.
  */
+/**
+ * A ordem em que os provedores são tentados — só os que têm chave.
+ *
+ * A Anthropic vem antes do Gemini quando as duas chaves existem: é a que
+ * já estava aqui, e trocar de modelo muda o texto que a operação lê.
+ * Groq e OpenRouter (Fase 16, gratuitos) entram depois, como reserva:
+ * quando o da frente cai ou esgota a cota, o próximo responde. A
+ * preferência da tela (ou `IA_PROVEDOR`) passa o escolhido para a frente.
+ */
+const ORDEM: ProvedorExterno[] = ["anthropic", "gemini", "groq", "openrouter"];
+
+export function cadeiaDeProvedores(preferencia?: string): ProvedorExterno[] {
+
+  const preferido = (
+    preferencia ??
+    process.env.IA_PROVEDOR ??
+    ""
+  ).trim().toLowerCase();
+
+  const disponivel: Record<ProvedorExterno, boolean> = {
+    anthropic: chave("ANTHROPIC_API_KEY").startsWith("sk-ant-"),
+    gemini: chave("GEMINI_API_KEY") !== "",
+    groq: temChaveCompativel("groq"),
+    openrouter: temChaveCompativel("openrouter"),
+  };
+
+  const cadeia = ORDEM.filter((p) => disponivel[p]);
+  const i = cadeia.indexOf(preferido as ProvedorExterno);
+  if (i > 0) cadeia.unshift(...cadeia.splice(i, 1));
+  return cadeia;
+}
+
+/**
+ * Qual provedor responde primeiro.
+ *
+ * Com uma preferência, responde também "esse está utilizável?":
+ * `provedorDeIA("groq") === "groq"` só é verdade com a chave do Groq.
+ */
 export function provedorDeIA(
   /**
    * A preferência já resolvida (banco > ambiente).
@@ -77,27 +116,7 @@ export function provedorDeIA(
    */
   preferencia?: string
 ): ProvedorExterno | null {
-
-  const preferido = (
-    preferencia ??
-    process.env.IA_PROVEDOR ??
-    ""
-  ).trim().toLowerCase();
-
-  const temAnthropic =
-    chave("ANTHROPIC_API_KEY").startsWith("sk-ant-");
-
-  const temGemini = chave("GEMINI_API_KEY") !== "";
-
-  if (preferido === "gemini" && temGemini) return "gemini";
-  if (preferido === "anthropic" && temAnthropic) {
-    return "anthropic";
-  }
-
-  if (temAnthropic) return "anthropic";
-  if (temGemini) return "gemini";
-
-  return null;
+  return cadeiaDeProvedores(preferencia)[0] ?? null;
 }
 
 export function temIA() {
@@ -124,21 +143,9 @@ export function provedorReserva(
   emUso: ProvedorExterno,
   preferencia?: string
 ): ProvedorExterno | null {
-
-  const outro: ProvedorExterno =
-    emUso === "gemini" ? "anthropic" : "gemini";
-
-  /*
-    A mesma checagem de chave do seletor, e não uma segunda.
-
-    `provedorDeIA` com a preferência invertida responde exatamente
-    "esse outro está utilizável?" sem duplicar a regra do marcador do
-    .env.example, que já enganou uma vez.
-  */
-  return provedorDeIA(outro) === outro &&
-    outro !== provedorDeIA(preferencia)
-    ? outro
-    : null;
+  const cadeia = cadeiaDeProvedores(preferencia);
+  const depois = cadeia.slice(cadeia.indexOf(emUso) + 1);
+  return depois.find((p) => p !== emUso) ?? null;
 }
 
 export interface PedidoDeIA {
@@ -188,60 +195,52 @@ export async function pedirEstruturado(
    */
   const config = await lerConfigDeIA();
 
-  const provedor = provedorDeIA(
+  const cadeia = cadeiaDeProvedores(
     config.provedorPreferido
   );
 
-  if (!provedor) {
+  if (cadeia.length === 0) {
     return {
-      provedor: "anthropic",
+      provedor: "gemini",
       status: 503,
-      erro: "Nenhuma IA configurada. Defina ANTHROPIC_API_KEY ou GEMINI_API_KEY.",
+      erro: SEM_IA,
     };
   }
 
-  const primeira =
-    provedor === "gemini"
-      ? await peloGemini(pedido, config)
-      : await pelaAnthropic(pedido, config);
-
   /*
-    Deu certo, ou a culpa é do pedido: entrega como está.
+    Um de cada vez, até um responder.
 
-    Só falha de infraestrutura justifica tentar de novo. 422 é recusa
-    ou limite do modelo — repetir no outro provedor daria a mesma
-    recusa, com o dobro do tempo de espera.
+    Só falha de infraestrutura (fila, cota, chave, modelo aposentado)
+    passa para o próximo. 422 é recusa ou limite do modelo — repetir em
+    outro daria a mesma recusa, com o dobro da espera.
+
+    Se todos falharem, volta o erro do **primeiro**: é o provedor que a
+    operação escolheu, e é o erro que faz sentido investigar.
   */
-  if (!primeira.erro || primeira.status === 422) {
-    return primeira;
+  let primeira: RespostaDeIA | null = null;
+
+  for (const provedor of cadeia) {
+    const resposta = await pedirA(provedor, pedido, config);
+    if (!resposta.erro) return resposta;
+    primeira ??= resposta;
+    if (resposta.status === 422) break;
   }
 
-  const reserva = provedorReserva(
-    provedor,
-    config.provedorPreferido
-  );
+  return primeira!;
+}
 
-  if (!reserva) return primeira;
+const SEM_IA =
+  "Nenhuma IA configurada. Defina GEMINI_API_KEY, GROQ_API_KEY ou OPENROUTER_API_KEY (as três têm camada gratuita).";
 
-  /**
-   * A segunda tentativa, no outro provedor.
-   *
-   * O 503 de congestionamento do Gemini é o caso real: sem isto o
-   * resumo da extensão simplesmente não sai, e quem está atendendo vê
-   * uma ferramenta quebrada. A chave do outro provedor já está
-   * configurada — não usá-la numa hora dessas é desperdiçar uma
-   * redundância paga.
-   *
-   * Se a segunda também falhar, quem volta é a **primeira** resposta:
-   * ela descreve o provedor que a operação escolheu, e é o erro que
-   * faz sentido investigar.
-   */
-  const segunda =
-    reserva === "gemini"
-      ? await peloGemini(pedido, config)
-      : await pelaAnthropic(pedido, config);
-
-  return segunda.erro ? primeira : segunda;
+function pedirA(
+  provedor: ProvedorExterno,
+  pedido: PedidoDeIA,
+  config: ConfigDeIA
+): Promise<RespostaDeIA> {
+  if (provedor === "gemini") return peloGemini(pedido, config);
+  if (provedor === "anthropic") return pelaAnthropic(pedido, config);
+  /* Groq responde em um ou dois segundos; o teto não deixa a cadeia estourar o relógio da ação. */
+  return pelaApiCompativel(provedor, pedido, Math.min(config.prazoMs, 25_000));
 }
 
 /* ============================================================
@@ -928,14 +927,18 @@ export async function* conversar(pedido: {
   if (!provedor) {
     yield {
       tipo: "erro",
-      mensagem:
-        "Nenhuma IA configurada. Defina ANTHROPIC_API_KEY ou GEMINI_API_KEY.",
+      mensagem: SEM_IA,
     };
     return;
   }
 
   if (provedor === "gemini") {
     yield* conversarNoGemini(pedido, config);
+    return;
+  }
+
+  if (provedor === "groq" || provedor === "openrouter") {
+    yield* conversarCompativel(provedor, pedido, config.prazoMs);
     return;
   }
 

@@ -122,9 +122,11 @@ export function perfilPorId(id?: string | null) {
   );
 }
 
+export type ProvedorPreferido = "auto" | "anthropic" | "gemini" | "groq" | "openrouter";
+
 export interface ConfigDeIA {
   /** "auto" deixa a chave decidir; os outros forçam. */
-  provedorPreferido: "auto" | "anthropic" | "gemini";
+  provedorPreferido: ProvedorPreferido;
   perfil: Perfil;
   modelo: string;
   modeloRapido: string;
@@ -209,9 +211,8 @@ async function montar(): Promise<ConfigDeIA> {
 
   return {
     provedorPreferido:
-      provedorPreferido === "anthropic" ||
-      provedorPreferido === "gemini"
-        ? provedorPreferido
+      ["anthropic", "gemini", "groq", "openrouter"].includes(provedorPreferido)
+        ? (provedorPreferido as ProvedorPreferido)
         : "auto",
 
     perfil: perfil.id,

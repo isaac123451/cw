@@ -104,6 +104,14 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.18.0",
+    data: "2026-09-18",
+    titulo: "NPS mais direto e IA gratuita de reserva",
+    texto: "No NPS, o topo ficou com o que se usa todo dia; etapas, causas, exportar e importar estão em Mais. Os gráficos repetidos saíram (continuam na Análise do NPS), o percentual de cada faixa foi para o indicador, e a lista sobe. Nas Redes, os segmentos ocupam metade da altura. A IA ganhou Groq e OpenRouter como reserva gratuita: quando uma cai, a próxima responde. Para ligar, basta pôr as chaves.",
+    frentes: ["nps", "redes", "plataforma"],
+    href: "/nps",
+  },
+  {
     versao: "1.17.0",
     data: "2026-09-18",
     titulo: "Busca mais legível e telas melhores no celular",

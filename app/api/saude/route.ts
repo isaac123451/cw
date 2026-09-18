@@ -120,6 +120,8 @@ export async function GET(request: Request) {
         anthropic:
           provedorDeIA("anthropic") === "anthropic",
         gemini: provedorDeIA("gemini") === "gemini",
+        groq: provedorDeIA("groq") === "groq",
+        openrouter: provedorDeIA("openrouter") === "openrouter",
       },
 
       google: Boolean(
