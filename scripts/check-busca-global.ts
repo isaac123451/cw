@@ -47,7 +47,22 @@ conferir("termo curto não acha pedaço do meio de palavra", ids("sla").includes
 conferir("termo longo acha o meio", ids("lagoas"), ["nps:n1"]);
 conferir("NPS pelo nome digitado", ids("jose"), ["nps:n2"]);
 conferir("rede social vai para a ficha das Redes", buscarNaPlataforma({ termo: "pedro", casos })[0]?.href, "/redes-sociais/c");
+conferir("rede social é um grupo à parte do Reclame Aqui", buscarNaPlataforma({ termo: "pedro", casos })[0]?.tipo, "rede");
 conferir("caso abre em mini-janela", buscarNaPlataforma({ termo: "maria", casos })[0]?.janela?.frente, "reclame-aqui");
+
+/* A tela desenha etiqueta e código: o modelo entrega separado, não concatenado. */
+const maria = buscarNaPlataforma({ termo: "maria", casos })[0];
+conferir("o nome fica sozinho no título", maria?.titulo, "Maria Souza");
+conferir("o protocolo vem como marca", maria?.marca, "RA-XY12");
+conferir("o status vem como etiqueta", maria?.etiqueta, "Novo");
+conferir("o título da reclamação vem como detalhe", maria?.detalhe, "Cobrança indevida");
+conferir("o subtítulo de uma linha continua, para os recentes já guardados", maria?.subtitulo, "Reclame Aqui · Novo · Cobrança indevida");
+
+const jose = buscarNaPlataforma({ termo: "jose", nps: npsLista })[0];
+conferir("NPS: o nome no título e a nota na marca", [jose?.titulo, jose?.marca], ["José Prado", "NPS 5"]);
+conferir("nota de detrator sai em tom ruim", jose?.tom, "ruim");
+conferir("nota de promotor sai em tom bom", buscarNaPlataforma({ termo: "prado", nps: [nps({ id: "n9", customerName: "Prado", score: 10 })] })[0]?.tom, "bom");
+conferir("nota de passivo sai em tom de atenção", buscarNaPlataforma({ termo: "prado", nps: [nps({ id: "n8", customerName: "Prado", score: 8 })] })[0]?.tom, "atencao");
 conferir("sem termo, sem resultado", ids("   "), []);
 conferir("normalizar tira acento pelo \\p{M}", normalizar("Ação Técnica"), "acao tecnica");
 

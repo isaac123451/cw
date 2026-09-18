@@ -1,7 +1,7 @@
 import type { Case } from "@/lib/models/case";
 import type { Establishment } from "@/lib/models/establishment";
 import type { FrenteDaJanela } from "@/lib/models/janelas";
-import type { NpsResponseView } from "@/lib/models/nps";
+import { segmentOf, type NpsResponseView } from "@/lib/models/nps";
 
 /**
  * A busca global (Ctrl+K) — Fase 11 do roadmap 2.0.
@@ -20,13 +20,31 @@ import type { NpsResponseView } from "@/lib/models/nps";
  * "João".
  */
 
-export type TipoDoResultado = "tela" | "acao" | "caso" | "nps" | "cliente" | "estabelecimento" | "conversa";
+export type TipoDoResultado = "tela" | "acao" | "caso" | "rede" | "nps" | "cliente" | "estabelecimento" | "conversa";
+
+/** A leitura do dado, sem cor nenhuma: a tela decide como pintar. */
+export type TomDoResultado = "neutro" | "bom" | "atencao" | "ruim";
 
 export interface ResultadoDaBusca {
   tipo: TipoDoResultado;
   id: string;
+  /** O nome de quem se procura — sozinho na primeira linha. */
   titulo: string;
+  /**
+   * A linha de apoio em texto corrido. Continua existindo por causa dos
+   * recentes já guardados no navegador (que só têm título e subtítulo) e
+   * de quem quiser uma linha só; a tela prefere os campos separados
+   * abaixo, que ela sabe desenhar como etiqueta e código.
+   */
   subtitulo?: string;
+  /** Protocolo, nota do NPS: o código curto, à parte do nome. */
+  marca?: string;
+  /** Status — vira etiqueta colorida. */
+  etiqueta?: string;
+  /** A frase que explica o item: título da reclamação, cidade, empresa. */
+  detalhe?: string;
+  /** Só para a `marca` que tem leitura própria (a nota do NPS). */
+  tom?: TomDoResultado;
   href: string;
   /** Quando dá para abrir numa mini-janela (Shift+Enter). */
   janela?: { frente: FrenteDaJanela; ref: string; titulo: string };
@@ -127,6 +145,7 @@ export function buscarNaPlataforma(entrada: EntradaDaBusca): ResultadoDaBusca[] 
       id: t.href,
       titulo: t.titulo,
       subtitulo: t.grupo,
+      detalhe: t.grupo,
       href: t.href,
       /* Tela ganha peso extra: quem digita "relatorio" quer ir para lá. */
       pontos: pontuarCampos([t.titulo, ...(t.sinonimos ?? [])], termo) * 1.2,
@@ -145,10 +164,15 @@ export function buscarNaPlataforma(entrada: EntradaDaBusca): ResultadoDaBusca[] 
         pontuarDigitos(c.phone, numeros)
       );
       return {
-        tipo: "caso" as const,
+        /* Redes e Reclame Aqui são o mesmo registro, mas quem procura quer
+           saber em qual das duas frentes o caso está: viram dois grupos. */
+        tipo: social ? ("rede" as const) : ("caso" as const),
         id: c.id,
-        titulo: `${c.protocol} · ${c.customer}`,
+        titulo: c.customer || c.protocol,
         subtitulo: [social ? "Redes" : "Reclame Aqui", c.status, c.title].filter(Boolean).join(" · "),
+        marca: c.protocol,
+        etiqueta: c.status,
+        detalhe: c.title,
         href: social ? `/redes-sociais/${c.id}` : `/reclame-aqui/${c.id}`,
         janela: { frente: social ? ("redes" as const) : ("reclame-aqui" as const), ref: c.id, titulo: `${c.protocol} · ${c.customer}` },
         pontos,
@@ -160,11 +184,16 @@ export function buscarNaPlataforma(entrada: EntradaDaBusca): ResultadoDaBusca[] 
   guardar(
     (entrada.nps ?? []).map((r) => {
       const nome = r.customerName?.trim() || r.customer;
+      const faixa = segmentOf(r.score).label;
       return {
         tipo: "nps" as const,
         id: r.id,
-        titulo: `NPS ${r.score} · ${nome}`,
+        titulo: nome,
         subtitulo: [r.company, r.status].filter(Boolean).join(" · "),
+        marca: `NPS ${r.score}`,
+        tom: faixa === "Detrator" ? ("ruim" as const) : faixa === "Passivo" ? ("atencao" as const) : ("bom" as const),
+        etiqueta: r.status,
+        detalhe: r.company,
         href: `/nps/${r.id}`,
         janela: { frente: "nps" as const, ref: r.id, titulo: `NPS ${r.score} · ${nome}` },
         pontos: Math.max(pontuarCampos([r.customerName, r.customer, r.email, r.company], termo), pontuarDigitos(r.phone, numeros)),
@@ -179,6 +208,8 @@ export function buscarNaPlataforma(entrada: EntradaDaBusca): ResultadoDaBusca[] 
       id: c.slug,
       titulo: c.name,
       subtitulo: [c.city, c.total ? `${c.total} reclamação(ões)` : null].filter(Boolean).join(" · "),
+      etiqueta: c.total ? `${c.total} reclamação(ões)` : undefined,
+      detalhe: c.city,
       href: `/clientes/${c.slug}`,
       pontos: Math.max(pontuarCampos([c.name, c.email], termo), pontuarDigitos(c.phone, numeros), pontuarDigitos(c.document, numeros, 1.1)),
     }))
@@ -191,6 +222,7 @@ export function buscarNaPlataforma(entrada: EntradaDaBusca): ResultadoDaBusca[] 
       id: e.id,
       titulo: e.name,
       subtitulo: e.city,
+      detalhe: e.city,
       href: `/estabelecimentos/${e.slug}`,
       pontos: Math.max(
         pontuarCampos([e.name, e.email], termo),
@@ -216,7 +248,8 @@ export function agruparResultados(resultados: ResultadoDaBusca[]) {
 export const ROTULO_DO_TIPO: Record<TipoDoResultado, string> = {
   tela: "Telas",
   acao: "Ações",
-  caso: "Casos",
+  caso: "Reclame Aqui",
+  rede: "Redes sociais",
   nps: "NPS",
   cliente: "Clientes",
   estabelecimento: "Estabelecimentos",

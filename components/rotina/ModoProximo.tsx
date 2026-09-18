@@ -178,7 +178,9 @@ export default function ModoProximo({ dia, marcadas, onFechar }: Props) {
         </p>
       )}
 
-      {!dia.contagens ? (
+      {/* `carregando` junto: sem ele, a rotina que ainda não chegou passava
+          por rotina vazia e o modo anunciava "está marcada" antes da hora. */}
+      {dia.carregando || !dia.contagens ? (
         <p className="px-5 py-8 text-center text-sm text-zinc-400">Lendo a fila do dia…</p>
       ) : !item ? (
         <div className="px-5 py-8 text-center">

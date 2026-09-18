@@ -13,8 +13,10 @@ import {
   Loader2,
   MessageCircle,
   Search,
+  Share2,
   Smile,
   UserRound,
+  X,
   Zap,
 } from "lucide-react";
 
@@ -35,7 +37,9 @@ import {
   type ResultadoDaBusca,
   type TelaDaBusca,
   type TipoDoResultado,
+  type TomDoResultado,
 } from "@/lib/models/buscaGlobal";
+import { toneOf } from "@/lib/services/status.service";
 
 /**
  * A busca da plataforma: Ctrl+K (ou Cmd+K, ou "/") de qualquer tela.
@@ -74,10 +78,19 @@ const ICONE: Record<TipoDoResultado, typeof Search> = {
   tela: LayoutGrid,
   acao: Zap,
   caso: FileText,
+  rede: Share2,
   nps: Smile,
   cliente: UserRound,
   estabelecimento: Building2,
   conversa: MessageCircle,
+};
+
+/* A nota do NPS é a única marca que tem leitura própria. */
+const COR_DO_TOM: Record<TomDoResultado, string> = {
+  neutro: "text-zinc-400",
+  bom: "text-emerald-600",
+  atencao: "text-amber-600",
+  ruim: "text-rose-600",
 };
 
 const CHAVE_RECENTES = "cw:busca-recentes";
@@ -203,6 +216,7 @@ function Paleta({ onFechar }: { onFechar: () => void }) {
               id: c.id,
               titulo: c.contatoNome,
               subtitulo: c.ultimoTexto,
+              detalhe: c.ultimoTexto,
               href: `/conversas?id=${encodeURIComponent(c.id)}`,
               pontos: 30,
             })),
@@ -255,10 +269,22 @@ function Paleta({ onFechar }: { onFechar: () => void }) {
   }, [indice]);
 
   const posicao = new Map(planos.map((r, i) => [`${r.tipo}:${r.id}`, i]));
+
+  /*
+    Duas linhas, nesta ordem de importância: o nome sozinho em cima —
+    é por ele que se procura — e, embaixo, o código (protocolo, nota),
+    o status como etiqueta e, por último, a frase que explica o item.
+    Tudo concatenado com "·" virava uma faixa cinza ilegível.
+
+    No celular a frase sai e a etiqueta fica: saber o estado do caso vale
+    mais que ler o começo do título da reclamação.
+  */
   const linha = (r: ResultadoDaBusca) => {
     const i = posicao.get(`${r.tipo}:${r.id}`) ?? 0;
     const Icone = ICONE[r.tipo];
     const eAtivo = i === indice;
+    const apoio = r.detalhe || (!r.marca && !r.etiqueta ? r.subtitulo : "");
+    const temApoio = Boolean(r.marca || r.etiqueta || apoio);
     return (
       <div
         key={`${r.tipo}:${r.id}`}
@@ -266,14 +292,29 @@ function Paleta({ onFechar }: { onFechar: () => void }) {
         aria-selected={eAtivo}
         data-indice={i}
         onMouseMove={() => ativo !== i && setAtivo(i)}
-        className={`group flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 ${eAtivo ? "bg-violet-50" : ""}`}
+        className={`group flex cursor-pointer items-start gap-2.5 rounded-lg px-2 py-2 sm:gap-3 sm:px-3 ${eAtivo ? "bg-violet-50" : ""}`}
         onClick={(e) => escolher(r, e.shiftKey)}
       >
-        <Icone size={16} className={`shrink-0 ${eAtivo ? "text-violet-600" : "text-zinc-400"}`} />
+        <Icone size={16} className={`mt-0.5 shrink-0 ${eAtivo ? "text-violet-600" : "text-zinc-400"}`} />
+
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium text-zinc-900">{r.titulo}</p>
-          {r.subtitulo && <p className="truncate text-xs text-zinc-500">{r.subtitulo}</p>}
+
+          {temApoio && (
+            <div className="mt-0.5 flex items-center gap-2 overflow-hidden text-xs text-zinc-500">
+              {r.marca && (
+                <span className={`shrink-0 font-mono text-[11px] ${COR_DO_TOM[r.tom ?? "neutro"]}`}>{r.marca}</span>
+              )}
+              {r.etiqueta && (
+                <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium ring-1 ring-inset ${toneOf(r.etiqueta)}`}>
+                  {r.etiqueta}
+                </span>
+              )}
+              {apoio && <span className={`min-w-0 truncate ${r.marca && r.etiqueta ? "hidden sm:inline" : ""}`}>{apoio}</span>}
+            </div>
+          )}
         </div>
+
         {r.janela && (
           <button
             type="button"
@@ -283,25 +324,25 @@ function Paleta({ onFechar }: { onFechar: () => void }) {
               e.stopPropagation();
               escolher(r, true);
             }}
-            className={`rounded-md p-1 text-zinc-400 hover:bg-white hover:text-violet-700 ${eAtivo ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
+            className={`hidden shrink-0 rounded-md p-1 text-zinc-400 hover:bg-white hover:text-violet-700 sm:block ${eAtivo ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
           >
             <AppWindow size={14} />
           </button>
         )}
-        {eAtivo && <CornerDownLeft size={13} className="shrink-0 text-zinc-400" />}
+        {eAtivo && <CornerDownLeft size={13} className="mt-1 hidden shrink-0 text-zinc-400 sm:block" />}
       </div>
     );
   };
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-start justify-center bg-zinc-900/20 px-3 pt-[10vh]" onMouseDown={onFechar}>
+    <div className="fixed inset-0 z-[80] flex items-start justify-center bg-zinc-900/20 px-2 pt-[6vh] sm:px-3 sm:pt-[10vh]" onMouseDown={onFechar}>
       <div
         role="dialog"
         aria-label="Buscar na plataforma"
         onMouseDown={(e) => e.stopPropagation()}
-        className="flex max-h-[70vh] w-full max-w-[640px] flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-[0_24px_60px_-20px_rgba(16,24,40,0.35)]"
+        className="flex max-h-[84vh] w-full max-w-[640px] flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-[0_24px_60px_-20px_rgba(16,24,40,0.35)] sm:max-h-[70vh]"
       >
-        <div className="flex items-center gap-3 border-b border-zinc-100 px-4">
+        <div className="flex items-center gap-2 border-b border-zinc-100 px-3 sm:gap-3 sm:px-4">
           <Search size={17} className="shrink-0 text-zinc-400" />
           <input
             ref={campo}
@@ -311,15 +352,24 @@ function Paleta({ onFechar }: { onFechar: () => void }) {
               setAtivo(0);
             }}
             onKeyDown={teclas}
-            placeholder="Protocolo, cliente, CPF/CNPJ, telefone, tela…"
+            placeholder="Protocolo, cliente, CPF/CNPJ, telefone…"
             aria-label="O que você procura"
             role="combobox"
             aria-expanded="true"
             aria-controls="resultados-da-busca"
-            className="h-14 flex-1 bg-transparent text-[15px] text-zinc-900 outline-none placeholder:text-zinc-400"
+            /* 16px no celular: abaixo disso o iPhone dá zoom sozinho ao focar. */
+            className="h-14 min-w-0 flex-1 bg-transparent text-base text-zinc-900 outline-none placeholder:text-zinc-400 sm:text-[15px]"
           />
-          {termo !== adiado && <Loader2 size={15} className="animate-spin text-zinc-300" />}
-          <kbd className="rounded-md border border-zinc-200 px-1.5 py-0.5 text-[11px] text-zinc-400">Esc</kbd>
+          {termo !== adiado && <Loader2 size={15} className="shrink-0 animate-spin text-zinc-300" />}
+          <kbd className="hidden shrink-0 rounded-md border border-zinc-200 px-1.5 py-0.5 text-[11px] text-zinc-400 sm:inline">Esc</kbd>
+          <button
+            type="button"
+            onClick={onFechar}
+            aria-label="Fechar a busca"
+            className="-mr-1 shrink-0 rounded-lg p-2 text-zinc-400 hover:bg-zinc-50 hover:text-zinc-600 sm:hidden"
+          >
+            <X size={18} />
+          </button>
         </div>
 
         <div ref={lista} id="resultados-da-busca" role="listbox" className="rolagem-fina flex-1 overflow-y-auto p-2">
@@ -350,7 +400,8 @@ function Paleta({ onFechar }: { onFechar: () => void }) {
           )}
         </div>
 
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-zinc-100 px-4 py-2 text-[11px] text-zinc-400">
+        {/* Dicas de teclado só onde há teclado. */}
+        <div className="hidden flex-wrap items-center gap-x-4 gap-y-1 border-t border-zinc-100 px-4 py-2 text-[11px] text-zinc-400 sm:flex">
           <span><kbd className="font-sans">↑↓</kbd> navegar</span>
           <span><kbd className="font-sans">Enter</kbd> abrir</span>
           <span><kbd className="font-sans">Shift+Enter</kbd> abrir em mini-janela</span>
