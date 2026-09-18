@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.19.0",
+    data: "2026-09-18",
+    titulo: "Atalhos no painel da extensão",
+    texto: "Com o painel aberto pelo Alt+Shift+C, o foco já vai para ele: / vai para a busca, 1 a 5 trocam de aba (Reclame Aqui, NPS, Redes, Painel, Atividades) e Esc fecha. As teclas só valem dentro do painel, para não disputar com os atalhos do WhatsApp nem com o que se digita na conversa. Atalhos, no rodapé (ou ?), mostra a lista.",
+    frentes: ["extensao"],
+  },
+  {
     versao: "1.18.0",
     data: "2026-09-18",
     titulo: "NPS mais direto e IA gratuita de reserva",

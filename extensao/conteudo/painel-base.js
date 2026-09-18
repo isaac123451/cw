@@ -236,7 +236,7 @@
         <span class="selo"></span>
       </button>
 
-      <aside class="gaveta">
+      <aside class="gaveta" tabindex="-1">
         <div class="punho" title="Arraste para redimensionar"></div>
         <header class="topo">
           <span style="color:#fff;display:grid;place-items:center">${MARCA}</span>
@@ -301,12 +301,20 @@
                   aria-pressed="false" title="O que está marcado: hoje, atrasado e o que vem">Atividades</button>
         </nav>
 
+        <p class="ajuda-atalhos" hidden>
+          <kbd>/</kbd> busca · <kbd>1</kbd>–<kbd>5</kbd> abas · <kbd>Esc</kbd> fecha ·
+          <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>C</kbd> abre de qualquer tela
+        </p>
+
         <footer class="rodape-painel">
           <label class="auto" title="Abrir o painel sozinho ao trocar de conversa (só no WhatsApp Web)">
             <input type="checkbox" data-acao="auto" />
             <span>abrir sozinho</span>
           </label>
-          <a data-acao="opcoes">Opções</a>
+          <span class="rodape-direita">
+            <a data-acao="atalhos" title="Atalhos do painel (?)">Atalhos</a>
+            <a data-acao="opcoes">Opções</a>
+          </span>
         </footer>
       </aside>`;
 
@@ -360,6 +368,7 @@
       if (acao === "fixar") alternarFixado();
       if (acao === "ancorar") ancorar();
       if (acao === "capturar") P.abrirCaptura();
+      if (acao === "atalhos") alternarAjudaDosAtalhos();
       if (acao === "cadastrar-canal") P.cadastrarNesteCanal();
       if (acao === "anotar-caso") P.anotarCaso(alvo);
       if (acao === "anotar-tarefa") P.anotarTarefa(alvo);
@@ -625,6 +634,7 @@
       e.stopPropagation()
     );
 
+    ligarAtalhos();
     ligarRedimensionamento();
     ligarArrasto();
 
@@ -1311,6 +1321,55 @@
     if (naMao) P.fechadoNaMao = true;
   };
 
+  /* ============================================================
+     OS ATALHOS DENTRO DO PAINEL
+  ============================================================ */
+
+  /**
+   * Teclas soltas só valem com o foco dentro do painel.
+   *
+   * O WhatsApp Web e o HugMe têm atalhos próprios, e uma tecla ouvida
+   * na página inteira ia disputar com eles (e com o que se digita na
+   * conversa). Dentro da gaveta não há disputa: abrir pelo Alt+Shift+C
+   * já põe o foco nela, e clicar em qualquer coisa do painel também.
+   */
+  const ABA_DA_TECLA = { 1: "reclame-aqui", 2: "nps", 3: "social", 4: "painel", 5: "atividades" };
+
+  function ligarAtalhos() {
+    P.raiz.addEventListener("keydown", (evento) => {
+
+      const alvo = evento.composedPath()[0];
+      const digitando =
+        alvo?.tagName === "INPUT" ||
+        alvo?.tagName === "TEXTAREA" ||
+        alvo?.tagName === "SELECT" ||
+        alvo?.isContentEditable;
+
+      if (digitando || evento.ctrlKey || evento.metaKey || evento.altKey) return;
+
+      let tratou = true;
+
+      if (evento.key === "/") P.campoBusca?.focus();
+      else if (evento.key === "Escape") P.fechar();
+      else if (evento.key === "?") alternarAjudaDosAtalhos();
+      else if (ABA_DA_TECLA[evento.key]) {
+        P.raiz
+          .querySelector(`[data-acao="canal"][data-canal="${ABA_DA_TECLA[evento.key]}"]`)
+          ?.click();
+      } else tratou = false;
+
+      if (tratou) {
+        evento.preventDefault();
+        evento.stopPropagation();
+      }
+    });
+  }
+
+  function alternarAjudaDosAtalhos() {
+    const ajuda = P.raiz?.querySelector(".ajuda-atalhos");
+    if (ajuda) ajuda.hidden = !ajuda.hidden;
+  }
+
   function alternar() {
     if (P.aberto) P.fechar();
     else {
@@ -1346,6 +1405,9 @@
       if (!P.montado()) P.montar();
 
       alternar();
+
+      /* Pelo atalho, o foco vai junto: 1–5, / e Esc já funcionam. */
+      if (P.aberto) gaveta?.focus({ preventScroll: true });
     });
   } catch {
     /*

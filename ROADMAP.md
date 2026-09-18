@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 18/09/2026. Aplicação **1.18.0**, extensão **1.18.0**.
+Atualizado em 18/09/2026. Aplicação **1.19.0**, extensão **1.19.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,23 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### Atalhos no painel da extensão (18/09/2026, 1.19.0)
+
+Fecha o último item da Fase 11: os atalhos também no painel.
+
+- **Dentro do painel:** `/` vai para a busca, `1` a `5` trocam de aba
+  (Reclame Aqui, NPS, Redes, Painel, Atividades), `Esc` fecha e `?`
+  mostra a lista. O rodapé ganhou **Atalhos** ao lado de Opções.
+- **Só com o foco no painel.** O WhatsApp Web e o HugMe têm atalhos
+  próprios; uma tecla ouvida na página inteira disputaria com eles e
+  com o texto da conversa. Abrir pelo `Alt+Shift+C` já põe o foco na
+  gaveta, então as teclas funcionam na hora. A abertura automática ao
+  trocar de conversa não pega o foco, para não interromper quem digita.
+
+Provas: `check:painel` (7 arquivos, 7066 linhas, todos se encontram) e
+`check:extensao` contra o servidor de conferência. **Não testado numa
+página real com a extensão carregada**: vale conferir ao recarregar.
 
 ### Visual de ferramenta no NPS e nas Redes, e a cadeia de IA gratuita (18/09/2026, 1.18.0)
 

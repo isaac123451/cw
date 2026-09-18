@@ -992,6 +992,28 @@ ${CORES}
 
 .rodape-painel a:hover { text-decoration: underline; }
 
+.rodape-direita { display: flex; gap: 12px; }
+
+.gaveta:focus { outline: none; }
+
+.ajuda-atalhos {
+  margin: 0;
+  padding: 8px 14px;
+  border-top: 1px solid var(--borda);
+  font-size: 11px;
+  line-height: 1.8;
+  color: var(--fraco);
+}
+
+.ajuda-atalhos kbd {
+  font: inherit;
+  font-size: 10.5px;
+  padding: 0 5px;
+  border: 1px solid var(--borda);
+  border-radius: 4px;
+  color: var(--texto, inherit);
+}
+
 /* Interruptor do "abrir sozinho" — some fora do WhatsApp Web. */
 .rodape-painel .auto {
   display: flex;
