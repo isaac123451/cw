@@ -26,6 +26,7 @@ import MainLayout from "@/components/layout/MainLayout";
 import PageHeading from "@/components/shared/PageHeading";
 import StatTile from "@/components/shared/StatTile";
 import SurfaceCard from "@/components/shared/SurfaceCard";
+import MenuMais from "@/components/shared/MenuMais";
 
 import { ConfirmDelete } from "@/components/shared/Modal";
 
@@ -66,7 +67,6 @@ import {
 
 import {
   bySegment,
-  byRootCause,
   slaState,
   summarize,
 } from "@/lib/services/nps.service";
@@ -234,10 +234,10 @@ export default function NpsPage() {
     [doPeriodo]
   );
 
-  const causas = useMemo(
-    () => byRootCause(doPeriodo),
-    [doPeriodo]
-  );
+  /* O percentual de cada faixa vai no próprio indicador; o gráfico de
+     distribuição e o de causa raiz ficam na Análise do NPS. */
+  const pctDe = (faixa: NpsSegment) =>
+    String(segmentos.find((s) => s.label === faixa)?.percent ?? 0).replace(".", ",");
 
   const visiveis = useMemo(() => {
 
@@ -561,44 +561,6 @@ export default function NpsPage() {
         >
           <div className="flex flex-wrap items-center gap-2">
 
-            <button
-              onClick={() => setEtapasOpen(true)}
-              title="As colunas por onde a tratativa caminha e os tipos que classificam cada resposta."
-              className="flex items-center gap-2 rounded-xl border border-zinc-200 px-3.5 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:border-violet-300 hover:text-violet-700"
-            >
-              <Columns3 size={15} />
-              Etapas e tipos
-            </button>
-
-            <button
-              onClick={() => setCausasOpen(true)}
-              className="flex items-center gap-2 rounded-xl border border-zinc-200 px-3.5 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:border-violet-300 hover:text-violet-700"
-            >
-              <SlidersHorizontal size={15} />
-              Causa raiz
-            </button>
-
-            <button
-              onClick={exportar}
-              disabled={exportando || visiveis.length === 0}
-              title="Gera um .xlsx com o recorte que está na tela."
-              className="flex items-center gap-2 rounded-xl border border-zinc-200 px-3.5 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:border-violet-300 hover:text-violet-700 disabled:opacity-50"
-            >
-              <Download size={15} />
-              {exportando
-                ? "Exportando..."
-                : `Exportar (${visiveis.length})`}
-            </button>
-
-            <button
-              onClick={() => setPlanilhaOpen(true)}
-              title="Um .xlsx ou .csv — o mesmo cabeçalho que a exportação gera."
-              className="flex items-center gap-2 rounded-xl border border-zinc-200 px-3.5 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:border-violet-300 hover:text-violet-700"
-            >
-              <Upload size={15} />
-              Importar planilha
-            </button>
-
             <WootricImport
               onDone={async (resumo, houveErro) => {
 
@@ -612,6 +574,21 @@ export default function NpsPage() {
                   detail: resumo,
                 });
               }}
+            />
+
+            <MenuMais
+              itens={[
+                { rotulo: "Etapas e tipos", icone: Columns3, onClick: () => setEtapasOpen(true), dica: "As colunas por onde a tratativa caminha e os tipos que classificam cada resposta." },
+                { rotulo: "Causas raiz", icone: SlidersHorizontal, onClick: () => setCausasOpen(true) },
+                {
+                  rotulo: exportando ? "Exportando…" : `Exportar o recorte (${visiveis.length})`,
+                  icone: Download,
+                  onClick: exportar,
+                  desativado: exportando || visiveis.length === 0,
+                  dica: "Gera um .xlsx com o recorte que está na tela.",
+                },
+                { rotulo: "Importar planilha", icone: Upload, onClick: () => setPlanilhaOpen(true), dica: "Um .xlsx ou .csv — o mesmo cabeçalho que a exportação gera." },
+              ]}
             />
 
             <button
@@ -641,7 +618,7 @@ export default function NpsPage() {
           }}
         />
 
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-5">
 
           <StatTile
             label="NPS"
@@ -656,7 +633,7 @@ export default function NpsPage() {
             label="Promotores"
             description="Notas 9 e 10 — base para review, depoimento e indicação. Clique para ver só estes."
             value={porSegmento.Promotor.total}
-            hint={`${porSegmento.Promotor.comentarios} com comentário`}
+            hint={`${pctDe("Promotor")}% · ${porSegmento.Promotor.comentarios} com comentário`}
             icon={Star}
             tone="success"
             ativo={segmento === "Promotor"}
@@ -671,7 +648,7 @@ export default function NpsPage() {
             label="Passivos"
             description="Notas 7 e 8 — satisfeitos sem entusiasmo. Costuma ser onde mora a sugestão útil. Clique para ver só estes."
             value={porSegmento.Passivo.total}
-            hint={`${porSegmento.Passivo.comentarios} com comentário`}
+            hint={`${pctDe("Passivo")}% · ${porSegmento.Passivo.comentarios} com comentário`}
             icon={Users}
             tone="warning"
             ativo={segmento === "Passivo"}
@@ -686,7 +663,7 @@ export default function NpsPage() {
             label="Detratores"
             description="Notas 0 a 6 — risco de cancelamento. Clique para ver só estes."
             value={porSegmento.Detrator.total}
-            hint={`${porSegmento.Detrator.comentarios} com comentário`}
+            hint={`${pctDe("Detrator")}% · ${porSegmento.Detrator.comentarios} com comentário`}
             icon={ThumbsDown}
             tone="danger"
             ativo={segmento === "Detrator"}
@@ -711,79 +688,6 @@ export default function NpsPage() {
               )
             }
           />
-
-        </div>
-
-        <div className="grid gap-4 lg:grid-cols-2">
-
-          <SurfaceCard
-            title="Distribuição"
-            description="Como as respostas se dividem entre os três segmentos."
-          >
-            <div className="space-y-2.5">
-              {segmentos.map((s) => (
-                <div key={s.label}>
-
-                  <div className="mb-1 flex items-center justify-between text-xs">
-                    <span className="font-medium text-zinc-700">
-                      {s.label}
-                    </span>
-                    <span className="tabular-nums text-zinc-500">
-                      {s.value} · {s.percent}%
-                    </span>
-                  </div>
-
-                  <div className="h-2 overflow-hidden rounded-full bg-zinc-100">
-                    <div
-                      className="h-full rounded-full transition-all"
-                      style={{
-                        width: `${s.percent}%`,
-                        background: s.color,
-                      }}
-                    />
-                  </div>
-
-                </div>
-              ))}
-            </div>
-          </SurfaceCard>
-
-          <SurfaceCard
-            title="Causa raiz"
-            description="Onde investir para parar de perder cliente."
-          >
-            {causas.length === 0 ? (
-              <p className="py-6 text-center text-sm text-zinc-400">
-                Nenhuma causa marcada ainda.
-              </p>
-            ) : (
-              <div className="space-y-2.5">
-                {causas.slice(0, 6).map((c) => (
-                  <div key={c.label}>
-
-                    <div className="mb-1 flex items-center justify-between text-xs">
-                      <span className="font-medium text-zinc-700">
-                        {c.label}
-                      </span>
-                      <span className="tabular-nums text-zinc-500">
-                        {c.value} · {c.percent}%
-                      </span>
-                    </div>
-
-                    <div className="h-2 overflow-hidden rounded-full bg-zinc-100">
-                      <div
-                        className="h-full rounded-full bg-violet-500 transition-all"
-                        style={{
-                          width: `${c.percent}%`,
-                        }}
-                      />
-                    </div>
-
-                  </div>
-                ))}
-              </div>
-            )}
-          </SurfaceCard>
 
         </div>
 
