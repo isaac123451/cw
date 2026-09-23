@@ -17,8 +17,10 @@ export const dynamic = "force-dynamic";
  * "Guardar a conversa", pela extensão.
  *
  * É a segunda rota da extensão que recebe texto de conversa (a outra é
- * o resumo), e pelo mesmo caminho: **só no clique**, depois de a pessoa
- * confirmar no painel quantas mensagens vão. O painel manda as mensagens
+ * o resumo). Chega por dois caminhos: o clique em "Guardar a conversa",
+ * depois de a pessoa confirmar quantas mensagens vão, e — desde a 1.26 —
+ * sozinho, quando a conversa é de um caso ou NPS aberto (pausável por
+ * conversa no painel). O painel manda as mensagens
  * visíveis da conversa aberta, cada uma com o id que o WhatsApp dá a ela
  * — é por esse id que guardar de novo acrescenta só as novas.
  *

@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.26.0",
+    data: "2026-09-22",
+    titulo: "A conversa se guarda sozinha",
+    texto: "Conversa de cliente com caso ou NPS aberto é guardada na plataforma sozinha enquanto está na tela, só com as mensagens novas. Dá para pausar por conversa, no próprio painel. Conversa de quem não tem nada aberto continua no botão, com confirmação.",
+    frentes: ["extensao"],
+  },
+  {
     versao: "1.25.0",
     data: "2026-09-22",
     titulo: "O painel da extensão em quatro abas",

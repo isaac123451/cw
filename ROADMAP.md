@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 22/09/2026. Aplicação **1.25.0**, extensão **1.25.0**.
+Atualizado em 22/09/2026. Aplicação **1.26.0**, extensão **1.26.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,48 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### A conversa se guarda sozinha (22/09/2026, 1.26.0)
+
+Fase 18, "Salvamento automático". O botão "Guardar a conversa" dependia
+de lembrar de clicar, e a conversa que mais importa guardar (a do cliente
+com reclamação aberta) é justamente a que corre enquanto a pessoa está
+ocupada respondendo.
+
+- **Quando guarda sozinha:** conversa com telefone de um contato com
+  caso ou NPS aberto. Na aba Agora, o botão vira uma linha de estado:
+  "Guardando sozinho · 4 mensagens novas guardadas · pausar". Conversa
+  de quem não tem nada aberto continua no botão, com confirmação.
+- **Só o que é novo.** Guarda ao abrir e depois a cada 20 s com o painel
+  aberto, mandando só as mensagens que ainda não mandou (pelo id que o
+  WhatsApp dá a cada uma). A rota já ignorava as repetidas, então nada
+  duplica. Nunca faz mais de uma gravação por vez, e com o painel
+  fechado não grava.
+- **Pausar por conversa.** A pausa fica guardada na configuração da
+  extensão, pelo telefone, e vale até retomar. Ficam as 100 pausas mais
+  recentes, porque o armazenamento sincronizado do Chrome aceita no
+  máximo 8 KB por item. Retomar guarda na hora o que ficou para trás.
+- Dados bancários continuam omitidos antes de gravar, e o vínculo com o
+  caso continua só quando o contato tem um caso só.
+
+Provas:
+- `check:avisos-extensao` subiu para 76 pontos, com o código real do
+  painel:
+  - caso aberto com telefone guarda sozinho, NPS aberto também, e sem
+    nada aberto fica no botão;
+  - a primeira gravação leva o que está na tela, e sem mensagem nova não
+    há chamada;
+  - depois, só a mensagem nova;
+  - pausado não guarda, e a pausa fica gravada por conversa; retomar
+    guarda o que ficou;
+  - painel fechado não guarda.
+- O mesmo roteiro no painel inteiro, numa página de teste com a conversa
+  crescendo: m1–m3, depois só m4; pausado, m5 não foi; ao retomar, m5
+  foi.
+- `check:painel` e `check:extensao` continuam passando.
+
+Fica para depois, na mesma fase: imagens e vídeos no Google Drive, que
+dependem de reconectar a conta Google com acesso ao Drive.
 
 ### As quatro abas do painel (22/09/2026, 1.25.0)
 

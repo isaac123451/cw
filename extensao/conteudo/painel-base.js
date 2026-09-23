@@ -371,6 +371,7 @@
       if (acao === "atalhos") alternarAjudaDosAtalhos();
       if (acao === "completar-conversa") P.completarPelaConversa(alvo);
       if (acao === "aba-contato") P.trocarAbaDoContato(alvo);
+      if (acao === "pausar-guardar") P.alternarPausaDeGuardar();
       if (acao === "cadastrar-canal") P.cadastrarNesteCanal();
       if (acao === "anotar-caso") P.anotarCaso(alvo);
       if (acao === "anotar-tarefa") P.anotarTarefa(alvo);

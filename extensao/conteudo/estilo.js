@@ -1016,6 +1016,10 @@ ${CORES}
 .avisos-contato li.atencao { border-left-color: var(--atencao); }
 .avisos-contato[hidden] { display: none; }
 
+/* "Guardando sozinho" — uma linha de estado, com pausar. */
+.guardar-sozinho { display: flex; align-items: baseline; gap: 8px; justify-content: space-between; }
+.guardar-sozinho a { color: var(--violeta); font-size: 12px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+
 /* As quatro abas do contato: Agora, Dossiê, Responder, Histórico. */
 .abas-contato {
   display: flex;

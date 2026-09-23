@@ -895,6 +895,140 @@
     marcarSelo(cliente.abertos);
 
     P.pedirSinaisDaConversa();
+    ligarRelogioDeGuardar();
+  };
+
+  /* ============================================================
+     GUARDAR SOZINHO (Fase 18)
+  ============================================================ */
+
+  /**
+   * Conversa de caso ou de NPS aberto se guarda sozinha enquanto está
+   * na tela — só o que é novo, e dá para pausar por conversa.
+   *
+   * Por quê: o botão "Guardar a conversa" dependia de lembrar de
+   * clicar, e a conversa que mais importa guardar (a do cliente com
+   * reclamação aberta) é justamente a que corre enquanto a pessoa está
+   * ocupada respondendo. A rota já acrescenta só as mensagens que ainda
+   * não tinha, pelo id de cada uma — então mandar de novo não duplica.
+   *
+   * Só com telefone (a conversa da plataforma é a do telefone) e só com
+   * algo aberto: conversa de quem não tem caso nem NPS continua no
+   * botão, com confirmação. Nunca mais de uma gravação ao mesmo tempo.
+   */
+  const INTERVALO_DE_GUARDAR_MS = 20_000;
+  const MAXIMO_DE_PAUSADAS = 100;
+  const guardadasPorConversa = new Map();
+  const totalPorConversa = new Map();
+  const falhaPorConversa = new Map();
+  let gravandoSozinho = false;
+  let relogioDeGuardar = null;
+
+  function telefoneDaConversa() {
+    const d = String(P.consulta?.telefone ?? "").replace(/\D/g, "");
+    return d.length >= 8 ? d.slice(-8) : "";
+  }
+
+  P.podeGuardarSozinho = function podeGuardarSozinho(dados = P.ultimoDado) {
+    if (!P.lerConversa || !telefoneDaConversa() || !dados?.cliente) return false;
+    const casoAberto = (dados.casos ?? []).some((c) => c.aberto);
+    const npsAberto = Boolean(dados.nps && !dados.nps.encerrado);
+    return casoAberto || npsAberto;
+  };
+
+  function pausada() {
+    return Boolean(P.config?.guardarPausado?.[telefoneDaConversa()]);
+  }
+
+  function textoDoEstadoDeGuardar() {
+    const tel = telefoneDaConversa();
+    if (pausada()) {
+      return `<span class="sub">Guardar sozinho está pausado nesta conversa.</span>
+        <a data-acao="pausar-guardar">retomar</a>`;
+    }
+    const falha = falhaPorConversa.get(tel);
+    const total = totalPorConversa.get(tel) ?? 0;
+    const texto = falha
+      ? `Não guardou agora: ${CW.escapar(falha)} Tenta de novo sozinho.`
+      : total > 0
+        ? `Guardando sozinho · ${total} ${total === 1 ? "mensagem nova guardada" : "mensagens novas guardadas"}`
+        : "Guardando sozinho o que for novo nesta conversa";
+    return `<span class="sub">${texto}</span> <a data-acao="pausar-guardar">pausar</a>`;
+  }
+
+  function desenharEstadoDeGuardar() {
+    const el = P.corpo?.querySelector("[data-guardar-estado]");
+    if (el) el.innerHTML = textoDoEstadoDeGuardar();
+  }
+
+  P.guardarSozinho = async function guardarSozinho() {
+
+    if (gravandoSozinho || !P.aberto || P.vista !== "contato") return;
+    if (!P.podeGuardarSozinho() || pausada()) return;
+
+    const tel = telefoneDaConversa();
+    const leitura = P.lerConversa();
+    const mensagens = (Array.isArray(leitura) ? leitura : leitura?.mensagens ?? []).filter(
+      (m) => m && m.id && typeof m.texto === "string" && m.texto.trim() !== ""
+    );
+
+    const ja = guardadasPorConversa.get(tel) ?? new Set();
+    const novas = mensagens.filter((m) => !ja.has(m.id));
+    if (novas.length === 0) return;
+
+    gravandoSozinho = true;
+    try {
+      const casos = P.ultimoDado?.casos ?? [];
+      const resposta = await CW.enviar({
+        tipo: "guardarConversa",
+        corpo: {
+          contato: { nome: P.consulta?.nome, telefone: P.consulta?.telefone },
+          mensagens: novas.map((m) => ({ id: m.id, de: m.de, texto: m.texto, carimbo: m.carimbo, autor: m.autor })),
+          protocolo: casos.length === 1 ? casos[0].protocolo : undefined,
+        },
+      });
+
+      if (resposta?.ok && resposta.dados?.id && !resposta.dados?.erro) {
+        for (const m of novas) ja.add(m.id);
+        guardadasPorConversa.set(tel, ja);
+        totalPorConversa.set(tel, (totalPorConversa.get(tel) ?? 0) + (resposta.dados.novas ?? 0));
+        falhaPorConversa.delete(tel);
+      } else {
+        falhaPorConversa.set(tel, resposta?.dados?.erro ?? resposta?.erro ?? "sem resposta da plataforma.");
+      }
+    } catch {
+      falhaPorConversa.set(tel, "sem resposta da plataforma.");
+    } finally {
+      gravandoSozinho = false;
+      desenharEstadoDeGuardar();
+    }
+  };
+
+  function ligarRelogioDeGuardar() {
+    if (!P.podeGuardarSozinho()) return;
+    // A primeira logo depois de desenhar; as outras no ritmo da conversa.
+    setTimeout(() => P.guardarSozinho(), 1500);
+    if (!relogioDeGuardar) {
+      relogioDeGuardar = setInterval(() => P.guardarSozinho(), INTERVALO_DE_GUARDAR_MS);
+    }
+  }
+
+  P.alternarPausaDeGuardar = function alternarPausaDeGuardar() {
+    const tel = telefoneDaConversa();
+    if (!tel) return;
+    const mapa = { ...(P.config?.guardarPausado ?? {}) };
+    if (mapa[tel]) delete mapa[tel];
+    else mapa[tel] = Date.now();
+
+    // chrome.storage.sync guarda até 8 KB por item: ficam as pausas mais recentes.
+    const recentes = Object.entries(mapa)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, MAXIMO_DE_PAUSADAS);
+    P.config = { ...(P.config ?? {}), guardarPausado: Object.fromEntries(recentes) };
+    CW.enviar({ tipo: "salvar", parcial: { guardarPausado: P.config.guardarPausado } });
+
+    desenharEstadoDeGuardar();
+    if (!pausada()) P.guardarSozinho();
   };
 
   /* ============================================================
@@ -1633,6 +1767,11 @@
   function blocoGuardarConversa() {
 
     if (!P.lerConversa) return "";
+
+    // Conversa de caso ou NPS aberto: guarda sozinha, e o bloco só mostra o estado.
+    if (P.podeGuardarSozinho()) {
+      return `<div class="bloco guardar-sozinho" data-guardar-estado>${textoDoEstadoDeGuardar()}</div>`;
+    }
 
     if (P.guardarConversa === "gravando") {
       return '<div class="bloco"><p class="sub">Guardando a conversa…</p></div>';

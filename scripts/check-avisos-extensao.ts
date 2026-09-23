@@ -239,5 +239,62 @@ definir({ telefone: "11900000000", nome: "Contato Novo" });
 conferir("contato novo volta para Agora", Pm.abaDoContato, "agora");
 conferir("o clique troca a aba no painel", base.includes('acao === "aba-contato"') && painel.includes("partes.push(P.blocoAbas(abas, dados));"), true);
 
-console.log(falhas === 0 ? "\n  O painel abre dizendo o que pede cuidado.\n" : `\n  ${falhas} ponto(s) a corrigir.\n`);
-process.exit(falhas === 0 ? 0 : 1);
+/* ---------- guardar sozinho (Fase 18) ---------- */
+
+async function guardarSozinho() {
+
+  console.log("\n  GUARDAR SOZINHO\n");
+
+  const gravacoes: string[][] = [];
+  const salvos: unknown[] = [];
+  (janela.CWReputacao as Record<string, unknown>).enviar = async (m: { tipo: string; corpo?: { mensagens: { id: string }[] }; parcial?: unknown }) => {
+    if (m.tipo === "guardarConversa") {
+      gravacoes.push(m.corpo!.mensagens.map((x) => x.id));
+      return { ok: true, dados: { id: "conv", novas: m.corpo!.mensagens.length } };
+    }
+    if (m.tipo === "salvar") salvos.push(m.parcial);
+    return { ok: true, dados: {} };
+  };
+
+  const conversaViva = [
+    { id: "m1", de: "cliente", texto: "oi" },
+    { id: "m2", de: "nos", texto: "olá" },
+  ];
+  Pm.lerConversa = () => ({ mensagens: conversaViva });
+  definir({ telefone: "5548999095712", nome: "Ana" });
+  Object.assign(Pm, { aberto: true, vista: "contato", config: {}, ultimoDado: { cliente: cliente(), casos: [{ aberto: true, protocolo: "RA-1" }] } });
+
+  const pode = P.podeGuardarSozinho as (d?: unknown) => boolean;
+  const guardar = P.guardarSozinho as () => Promise<void>;
+  const pausar = P.alternarPausaDeGuardar as () => void;
+
+  conferir("com caso aberto e telefone, guarda sozinho", pode(), true);
+  conferir("sem nada aberto, fica no botão com confirmação", pode({ cliente: cliente(), casos: [{ aberto: false }] }), false);
+  conferir("NPS aberto também conta", pode({ cliente: cliente(), casos: [], nps: { encerrado: false } }), true);
+
+  await guardar();
+  await guardar();
+  conferir("a primeira leva o que está na tela; sem novidade, nada", gravacoes, [["m1", "m2"]]);
+  conversaViva.push({ id: "m3", de: "cliente", texto: "e aí?" });
+  await guardar();
+  conferir("depois, só a mensagem nova", gravacoes.at(-1), ["m3"]);
+
+  pausar();
+  conversaViva.push({ id: "m4", de: "cliente", texto: "alô" });
+  await guardar();
+  conferir("pausado, não guarda", gravacoes.length, 2);
+  conferir("a pausa é por conversa e fica gravada", Object.keys((salvos[0] as { guardarPausado: object }).guardarPausado), ["99095712"]);
+  pausar();
+  await new Promise((r) => setTimeout(r, 10));
+  conferir("retomar guarda o que ficou", gravacoes.at(-1), ["m4"]);
+
+  Pm.aberto = false;
+  conversaViva.push({ id: "m5", de: "cliente", texto: "..." });
+  await guardar();
+  conferir("painel fechado não guarda", gravacoes.length, 3);
+}
+
+guardarSozinho().then(() => {
+  console.log(falhas === 0 ? "\n  O painel abre dizendo o que pede cuidado.\n" : `\n  ${falhas} ponto(s) a corrigir.\n`);
+  process.exit(falhas === 0 ? 0 : 1);
+});
