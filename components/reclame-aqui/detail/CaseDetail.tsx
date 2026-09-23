@@ -32,6 +32,7 @@ import { toneOfSla } from "@/lib/services/sla.service";
 import { isSocial } from "@/lib/services/case.service";
 
 import TagPicker, { TagChips } from "@/components/shared/TagPicker";
+import PerguntarAoAssistente from "@/components/assistente/PerguntarAoAssistente";
 import StatusPicker from "@/components/reclame-aqui/shared/StatusPicker";
 import BarraDeSalvar from "@/components/shared/BarraDeSalvar";
 import { ConfirmDelete } from "@/components/shared/Modal";
@@ -473,6 +474,11 @@ export default function CaseDetail({
                 {canal === "social" ? data.source : "Reclame Aqui"}
               </a>
             )}
+
+            <PerguntarAoAssistente
+              pergunta={`O que fazer agora no caso ${data.protocol}? O que falta para ele fechar?`}
+              rotulo="Perguntar"
+            />
 
             {whatsapp && (
               <a

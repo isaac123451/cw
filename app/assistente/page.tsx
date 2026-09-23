@@ -7,6 +7,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 
 import {
@@ -44,7 +45,9 @@ import { buildOperationSnapshot } from "@/lib/services/assistant.context";
 import {
   aberturaParaOPrompt,
   avisosDeAbertura,
+  prazosDeHoje,
 } from "@/lib/models/aberturaDoAgente";
+import { isOpen } from "@/lib/services/case.service";
 
 import AberturaDoAgente from "@/components/assistente/AberturaDoAgente";
 
@@ -80,6 +83,47 @@ const SUGESTOES = [
   "Quanto de impacto financeiro no mês?",
 ];
 
+/*
+  A pergunta que chega de outra tela: `/assistente?pergunta=...`.
+
+  A busca (Ctrl+K), a ficha de cada frente, as conversas, o relatório e
+  a extensão mandam a pergunta por aqui. Lida no navegador, depois da
+  hidratação, para o servidor e a tela não discordarem.
+*/
+const nadaParaOuvir = () => () => {};
+
+const NOME_DO_PROVEDOR: Record<string, string> = { anthropic: "Claude", gemini: "Gemini", groq: "Groq", openrouter: "OpenRouter" };
+const perguntaDoEndereco = () => new URLSearchParams(window.location.search).get("pergunta")?.trim().slice(0, 500) ?? "";
+
+/**
+ * Os casos que a pergunta cita, por inteiro.
+ *
+ * O retrato da operação é agregado — conta, prazos, frentes —, e
+ * "o que fazer no RA-123?" precisa do caso em si: relato, resposta,
+ * status. Só os citados, no máximo três, para não afogar o retrato.
+ */
+function casosCitados(pergunta: string, cases: ReturnType<typeof useCases>["cases"]) {
+  const citados = cases.filter((c) => c.protocol && pergunta.includes(c.protocol)).slice(0, 3);
+  if (citados.length === 0) return "";
+  return [
+    "",
+    "CASOS CITADOS NA PERGUNTA (os dados completos, do banco):",
+    ...citados.map((c) =>
+      [
+        `- ${c.protocol} (${c.source}), status "${c.status}", aberto em ${c.createdAt}. Consumidor: ${c.customer}.`,
+        c.category ? `  Categoria: ${c.category}.` : "",
+        `  Título: ${c.title}`,
+        c.description ? `  Relato: ${c.description.slice(0, 1500)}` : "  Relato: (não registrado)",
+        c.publicResponse ? `  Nossa resposta pública: ${c.publicResponse.slice(0, 800)}` : "  Ainda sem resposta pública nossa.",
+        c.evaluated ? `  Avaliado: nota ${c.score ?? "—"}, ${c.resolved ? "resolvido" : "não resolvido"}.` : "  Ainda sem avaliação.",
+        c.churnRisk ? "  Marcado como risco de cancelamento." : "",
+      ]
+        .filter(Boolean)
+        .join("\n")
+    ),
+  ].join("\n");
+}
+
 export default function AssistentePage() {
 
   const { cases } = useCases();
@@ -101,10 +145,26 @@ export default function AssistentePage() {
 
   const fimRef = useRef<HTMLDivElement>(null);
 
+  /* Quem responde, pelo nome: o texto dizia "Claude Opus 5" mesmo quando era o Gemini. */
+  const [provedor, setProvedor] = useState<string | null>(null);
+
+  const perguntaInicial = useSyncExternalStore(nadaParaOuvir, perguntaDoEndereco, () => "");
+  const jaPerguntou = useRef(false);
+  /* As regras de prazo chegam depois dos casos; sem elas, todo caso sairia "sem regra" e o retrato diria zero atrasados. Cinco segundos é o teto para esperar. */
+  const [esperouAsRegras, setEsperouAsRegras] = useState(false);
+  useEffect(() => {
+    if (!perguntaInicial) return;
+    const t = window.setTimeout(() => setEsperouAsRegras(true), 5000);
+    return () => window.clearTimeout(t);
+  }, [perguntaInicial]);
+
   useEffect(() => {
     fetch("/api/assistente")
       .then((response) => response.json())
-      .then((data) => setAiEnabled(Boolean(data.enabled)))
+      .then((data) => {
+        setAiEnabled(Boolean(data.enabled));
+        setProvedor(typeof data.provedor === "string" ? data.provedor : null);
+      })
       .catch(() => setAiEnabled(false));
   }, []);
 
@@ -162,6 +222,17 @@ export default function AssistentePage() {
     [cases, rules, responses, expediente]
   );
 
+  useEffect(() => {
+    if (!perguntaInicial || jaPerguntou.current || aiEnabled === null || cases.length === 0) return;
+    if (rules.length === 0 && !esperouAsRegras) return;
+    jaPerguntou.current = true;
+    /* Tira do endereço: recarregar a página não repete a pergunta. */
+    window.history.replaceState(null, "", window.location.pathname);
+    const t = window.setTimeout(() => perguntar(perguntaInicial), 0);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [perguntaInicial, aiEnabled, cases.length, rules.length, esperouAsRegras]);
+
   async function perguntar(texto: string) {
 
     const pergunta = texto.trim();
@@ -211,6 +282,20 @@ export default function AssistentePage() {
           },
         ]);
 
+      /*
+        Os prazos do relógio do documento, por frente — a mesma conta do Meu
+        dia. Sem a separação, o modelo lia "0 fora do prazo" no retrato das
+        reclamações e ignorava os 136 da abertura, que eram do NPS.
+      */
+      const agora = new Date();
+      const doCaso = prazosDeHoje(cases.filter(isOpen), rules, [], expediente, agora);
+      const doNps = prazosDeHoje([], rules, responses, expediente, agora);
+      const prazosPorFrente = [
+        "PRAZOS DO RELÓGIO DO DOCUMENTO AGORA (a mesma conta do Meu dia):",
+        `- Reclame Aqui e Redes (casos abertos): ${doCaso.estourados} estourado(s), ${doCaso.vencemHoje} vencem hoje.`,
+        `- NPS (ciclos sem 1º contato): ${doNps.estourados} estourado(s), ${doNps.vencemHoje} vencem hoje.`,
+      ].join("\n");
+
       const response = await fetch("/api/assistente", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -224,7 +309,9 @@ export default function AssistentePage() {
           })}
 
 O QUE ESTÁ PEDINDO AÇÃO AGORA (o mesmo que a tela mostra ao abrir):
-${aberturaParaOPrompt(abertura)}`,
+${aberturaParaOPrompt(abertura)}
+
+${prazosPorFrente}${casosCitados(pergunta, cases)}`,
           messages: [
             ...historico,
             { role: "user", content: pergunta },
@@ -394,7 +481,7 @@ ${aberturaParaOPrompt(abertura)}`,
             title="Conversa"
             description={
               aiEnabled
-                ? "Claude Opus 5 lendo o retrato atual da operação."
+                ? `${NOME_DO_PROVEDOR[provedor ?? ""] ?? "A IA"} lendo o retrato atual da operação.`
                 : "Consultas locais sobre os dados da base."
             }
             hint="O modelo recebe os indicadores já apurados pelos serviços — nota, fila, SLA, agenda e impacto — em vez das reclamações cruas, para não recontar por conta própria o que a plataforma já calcula."

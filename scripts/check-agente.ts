@@ -56,9 +56,11 @@ import {
 } from "../lib/services/reputation.service";
 
 import {
+  isReclameAqui,
   naSituacao,
   seteDiasAtras,
 } from "../lib/services/case.service";
+import { respondida } from "../lib/models/case";
 
 const url =
   process.env.DIRECT_URL || process.env.DATABASE_URL;
@@ -178,6 +180,22 @@ async function main() {
   const vencidasNaTela = dados.cases.filter((item) =>
     naSituacao(item, "vencidas", corte)
   ).length;
+
+  /*
+    A conta do cartão do painel, escrita à parte: reclamação do Reclame
+    Aqui sem `respondida`. Antes os dois lados deste check usavam
+    `naSituacao`, que olhava o texto da resposta — e a lista chega sem
+    ele. Os dois concordavam no erro (356 contra os 17 da tela).
+  */
+  const vencidasPeloPainel = dados.cases.filter(
+    (item) => isReclameAqui(item) && !respondida(item) && item.createdAt < corte
+  ).length;
+
+  if (vencidasPeloPainel === vencidasNaTela) {
+    ok("o filtro de vencidas conta como o cartão do painel", `${vencidasNaTela} nos dois`);
+  } else {
+    falhar("o filtro de vencidas conta como o cartão do painel", `filtro ${vencidasNaTela}, cartão ${vencidasPeloPainel}`);
+  }
 
   const filaDoAgente =
     CATALOGO.find(

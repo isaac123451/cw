@@ -74,6 +74,13 @@ export function buildOperationSnapshot(
         a.status.remainingHours - b.status.remainingHours
     );
 
+  /*
+    Sem regra cadastrada, o relógio por regra não mede nada — todo caso
+    sai "sem regra" e a conta dava zero. Dizer "0 fora do prazo" nesse
+    caso é afirmar o que não foi medido.
+  */
+  const semRegras = rules.filter((item) => item.active).length === 0;
+
   const porStatus = new Map<string, number>();
   const porCategoria = new Map<string, number>();
 
@@ -243,14 +250,14 @@ Janela de 12 meses (${doze.start} a ${doze.end}):
 - Total na base: ${cases.length} reclamações
 - Por status: ${linha(porStatus)}
 - Em aberto (dependem de ação nossa): ${abertos.length}
-- Fora do prazo de SLA: ${atrasados.length}
+- Fora do prazo de SLA: ${semRegras ? "não medido — não há regra de SLA cadastrada; use os prazos do relógio do documento, abaixo" : atrasados.length}
 - Categorias na janela de 6 meses: ${linha(porCategoria)}
 
 ## Casos em aberto (${abertos.length})
 
 ${abertos.map(resumo).join("\n") || "nenhum"}
 
-## Casos fora do prazo de SLA (${atrasados.length})
+## Casos fora do prazo de SLA (${semRegras ? "não medido" : atrasados.length})
 
 ${
   atrasados
@@ -276,7 +283,7 @@ ${rules
         item.priority ? ` (prioridade ${item.priority})` : ""
       }: ${item.responseHours}h para responder, ${item.solutionHours}h para resolver, time ${item.team ?? "não definido"}`
   )
-  .join("\n")}
+  .join("\n") || "- Nenhuma regra cadastrada (Processos e SLA)."}
 
 ## Agenda
 

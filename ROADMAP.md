@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 22/09/2026. Aplicação **1.27.0**, extensão **1.27.0**.
+Atualizado em 23/09/2026. Aplicação **1.28.0**, extensão **1.28.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,68 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### O assistente em mais lugares, e um filtro que contava errado (23/09/2026, 1.28.0)
+
+Fase 16, "O agente em mais lugares".
+
+- **Pergunte à plataforma (Ctrl+K).** O que é digitado com cara de
+  pergunta (com "?" ou começando por como, quantos, qual, o que...) vira
+  o primeiro resultado: **Perguntar ao assistente**. Enter abre o
+  assistente já perguntando. Três palavras ou mais sem cara de pergunta
+  também ganham o item, mas no fim da lista: quem busca "joão pizzaria
+  bella" quer o caso.
+- **Da ficha do caso** (Reclame Aqui e Redes), um botão **Perguntar**:
+  "O que fazer agora no caso RA-x? O que falta para ele fechar?".
+- **Do relatório do ciclo:** "O que mais pesou na reputação no ciclo, e o
+  que fazer primeiro?".
+- **Da extensão**, na aba Agora: "Perguntar ao assistente sobre RA-x",
+  que abre a plataforma já perguntando.
+- **O caso citado vai inteiro.** O assistente recebia um retrato
+  agregado, sem relato nem resposta de nenhum caso. Quando a pergunta
+  cita um protocolo, o caso vai junto (relato, resposta pública, status,
+  avaliação, risco), no máximo três. Ao vivo, ele respondeu sobre o caso
+  com a data, a categoria, o título e a falta de resposta pública.
+- **O assistente pergunta sozinho, uma vez.** A pergunta chega pelo
+  endereço, sai dele (recarregar não repete) e só vai depois de os
+  casos e as regras de prazo carregarem.
+- **O nome certo de quem responde.** A tela dizia "Claude Opus 5" mesmo
+  quando o Gemini respondia. Agora mostra o provedor ativo.
+
+Defeitos achados testando ao vivo:
+
+- **O filtro "Sem resposta pública" e "Vencidas" do painel mostrava a
+  base inteira.** A regra (`naSituacao`) olhava o texto da resposta
+  pública, e a lista chega sem ele (é pesado). Resultado: toda
+  reclamação contava como sem resposta. O cartão do painel dizia 21, e
+  o clique listava quase as 363. O assistente repetia o erro ("356
+  sem resposta"). Agora a regra usa `respondida`, como o cartão, e a
+  lista mostra "Exibindo 21 de 363". O `check:agente` comparava agente
+  e painel com a mesma regra errada, então os dois concordavam no erro.
+  Agora ele confere também contra a conta do cartão.
+- **"0 fora do prazo de SLA" era afirmar o que não foi medido.** Não há
+  nenhuma regra de SLA cadastrada, então o relógio por regra dá "sem
+  regra" para todo caso. O retrato agora diz "não medido: não há regra
+  cadastrada" e traz os prazos do relógio do documento por frente (a
+  mesma conta do Meu dia): os 136 estourados eram quase todos do NPS.
+
+Provas:
+- `check:busca-global` com 5 pontos novos (pergunta com "?", começo de
+  pergunta, três palavras no fim, nome curto não vira pergunta, o item
+  diz o que vai perguntar).
+- `check:agente` com a conta do cartão: 21 sem resposta e 14 vencidas,
+  nos três lugares.
+- Ao vivo, com o Gemini:
+  - Ctrl+K → pergunta → Enter → resposta;
+  - ficha → Perguntar → resposta com os dados do caso;
+  - o filtro do painel com 21.
+- A suíte inteira passa, fora duas falhas que não são de código e já
+  apareciam antes: `vinculo` (3 reclamações com nome de empresa no
+  campo, dado) e `publicado` (as rotas novas ainda não foram publicadas).
+- O `check:carga` passou a acusar 670 ms (teto de 500 ms). O banco
+  executa em 5 ms, e um `select` simples de 364 linhas leva 623 ms até
+  aqui: é a rede de hoje, não a consulta. Fica anotado para medir de
+  novo.
 
 ### O motor próprio em todo lugar que usa IA (22/09/2026, 1.27.0)
 

@@ -236,6 +236,34 @@ export function buscarNaPlataforma(entrada: EntradaDaBusca): ResultadoDaBusca[] 
   return saida;
 }
 
+/**
+ * "Pergunte à plataforma" (Fase 16): o que foi digitado parece pergunta?
+ *
+ * Com ponto de interrogação, ou começando como pergunta ("como",
+ * "quantos", "o que"...), vira o primeiro resultado: levar ao assistente.
+ * Qualquer outra coisa com três palavras ou mais também ganha o item, mas
+ * no fim da lista — quem busca "joão pizzaria bella" quer o caso, não
+ * uma conversa.
+ */
+const COMECO_DE_PERGUNTA = /^(como|quantos?|quantas?|qual|quais|quando|onde|por ?que|o que|quem|devo|posso|tem|existe|mostre|liste|me (diga|mostre))\b/;
+
+export function comoPergunta(termo: string): ResultadoDaBusca | null {
+  const limpo = termo.trim().replace(/\s+/g, " ");
+  if (limpo.length < 8) return null;
+  const n = normalizar(limpo);
+  const pareceMuito = limpo.endsWith("?") || COMECO_DE_PERGUNTA.test(n);
+  if (!pareceMuito && limpo.split(" ").length < 3) return null;
+  return {
+    tipo: "acao",
+    id: "perguntar",
+    titulo: "Perguntar ao assistente",
+    detalhe: `"${limpo.slice(0, 160)}"`,
+    subtitulo: limpo.slice(0, 160),
+    href: `/assistente?pergunta=${encodeURIComponent(limpo.slice(0, 500))}`,
+    pontos: pareceMuito ? 1000 : 1,
+  };
+}
+
 /** A ordem dos grupos na lista: o que tem o melhor resultado vem primeiro. */
 export function agruparResultados(resultados: ResultadoDaBusca[]) {
   const grupos = new Map<TipoDoResultado, ResultadoDaBusca[]>();

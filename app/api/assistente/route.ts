@@ -86,7 +86,7 @@ export async function GET() {
   if (barrado) return barrado;
 
   // A tela consulta isto para saber se mostra a IA ou o modo local.
-  return Response.json({ enabled: hasAssistant() });
+  return Response.json({ enabled: hasAssistant(), provedor: provedorDeIA() });
 }
 
 export async function POST(request: Request) {

@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.28.0",
+    data: "2026-09-23",
+    titulo: "Pergunte à plataforma",
+    texto: "Digite uma pergunta no Ctrl+K e o primeiro resultado leva ao assistente, já perguntando. A ficha do caso, o relatório e a extensão ganharam o mesmo atalho, e quando a pergunta cita um protocolo o assistente recebe o caso inteiro. De quebra, o filtro Sem resposta pública do painel voltou a listar só as que estão sem resposta.",
+    frentes: ["plataforma", "reclame-aqui", "extensao"],
+  },
+  {
     versao: "1.27.0",
     data: "2026-09-22",
     titulo: "Triagem, dossiê e resumo mesmo sem IA",

@@ -1,4 +1,4 @@
-import { Case } from "@/lib/models/case";
+import { Case, respondida } from "@/lib/models/case";
 import { hojeNaOperacao } from "@/lib/services/reputation.service";
 
 export interface Distribution {
@@ -524,9 +524,14 @@ export function naSituacao(
   corte: string
 ) {
 
-  const semResposta =
-    isReclameAqui(item) &&
-    (item.publicResponse ?? "").trim() === "";
+  /*
+    Por `respondida`, e não pelo texto: a lista chega sem `publicResponse`
+    (é pesado demais), e olhar o texto contava toda reclamação como sem
+    resposta — o filtro "sem resposta" do painel mostrava a base inteira,
+    e o assistente respondeu 356 onde o painel dizia 17. Achado em
+    22/09/2026.
+  */
+  const semResposta = isReclameAqui(item) && !respondida(item);
 
   switch (situacao) {
 

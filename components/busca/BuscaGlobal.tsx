@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 import {
   AppWindow,
+  Bot,
   Building2,
   CornerDownLeft,
   FileText,
@@ -32,6 +33,7 @@ import { useNps } from "@/lib/context/NpsContext";
 import {
   agruparResultados,
   buscarNaPlataforma,
+  comoPergunta,
   normalizar,
   ROTULO_DO_TIPO,
   type ResultadoDaBusca,
@@ -232,8 +234,9 @@ function Paleta({ onFechar }: { onFechar: () => void }) {
 
   const todos = useMemo(() => {
     const extras = conversas && conversas.para === termoDasConversas ? conversas.itens : [];
-    return agruparResultados([...resultados, ...extras]);
-  }, [resultados, conversas, termoDasConversas]);
+    const pergunta = comoPergunta(adiado);
+    return agruparResultados([...(pergunta ? [pergunta] : []), ...resultados, ...extras]);
+  }, [resultados, conversas, termoDasConversas, adiado]);
 
   const planos = termo.trim() ? todos.flatMap((g) => g.itens) : recentes;
   const indice = Math.min(ativo, Math.max(0, planos.length - 1));
@@ -281,7 +284,7 @@ function Paleta({ onFechar }: { onFechar: () => void }) {
   */
   const linha = (r: ResultadoDaBusca) => {
     const i = posicao.get(`${r.tipo}:${r.id}`) ?? 0;
-    const Icone = ICONE[r.tipo];
+    const Icone = r.id === "perguntar" ? Bot : ICONE[r.tipo];
     const eAtivo = i === indice;
     const apoio = r.detalhe || (!r.marca && !r.etiqueta ? r.subtitulo : "");
     const temApoio = Boolean(r.marca || r.etiqueta || apoio);

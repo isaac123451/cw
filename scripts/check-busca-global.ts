@@ -12,7 +12,7 @@ import { resolve } from "node:path";
 
 import type { Case } from "../lib/models/case";
 import type { NpsResponseView } from "../lib/models/nps";
-import { buscarNaPlataforma, normalizar } from "../lib/models/buscaGlobal";
+import { buscarNaPlataforma, comoPergunta, normalizar } from "../lib/models/buscaGlobal";
 
 let falhas = 0;
 function conferir(titulo: string, obtido: unknown, esperado: unknown) {
@@ -65,6 +65,14 @@ conferir("nota de promotor sai em tom bom", buscarNaPlataforma({ termo: "prado",
 conferir("nota de passivo sai em tom de atenção", buscarNaPlataforma({ termo: "prado", nps: [nps({ id: "n8", customerName: "Prado", score: 8 })] })[0]?.tom, "atencao");
 conferir("sem termo, sem resultado", ids("   "), []);
 conferir("normalizar tira acento pelo \\p{M}", normalizar("Ação Técnica"), "acao tecnica");
+
+/* "Pergunte à plataforma": o que parece pergunta leva ao assistente. */
+const perg = (t: string) => comoPergunta(t);
+conferir("com interrogação, vira o primeiro resultado", [perg("quantos casos estão fora do prazo?")?.pontos, perg("quantos casos estão fora do prazo?")?.href], [1000, "/assistente?pergunta=quantos%20casos%20est%C3%A3o%20fora%20do%20prazo%3F"]);
+conferir("começo de pergunta também conta", perg("como está o NPS este mês")?.pontos, 1000);
+conferir("três palavras sem cara de pergunta: vai para o fim", perg("joao pizzaria bella")?.pontos, 1);
+conferir("nome curto não vira pergunta", perg("maria"), null);
+conferir("o item diz o que vai ser perguntado", perg("qual o prazo do RA-1?")?.detalhe, '"qual o prazo do RA-1?"');
 
 /* O tempo: acima da base real, várias teclas seguidas. */
 const muitosCasos = Array.from({ length: 500 }, (_, i) => caso({ id: `m${i}`, protocol: `RA-${i}`, customer: `Cliente Número ${i}`, title: "Pedido atrasado e sem resposta", phone: `4899${String(i).padStart(7, "0")}` }));

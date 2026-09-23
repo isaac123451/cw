@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { ArrowUpRight, BadgeCheck, CircleAlert, Download, FileCheck2, Loader2, Save, ShieldAlert, Sparkles } from "lucide-react";
 
 import PageHeading from "@/components/shared/PageHeading";
+import PerguntarAoAssistente from "@/components/assistente/PerguntarAoAssistente";
 import SurfaceCard from "@/components/shared/SurfaceCard";
 import TextoEditavel from "@/components/shared/TextoEditavel";
 import IconeDaFrente from "@/components/shared/IconeDaFrente";
@@ -193,7 +194,9 @@ export default function RelatorioDoCiclo() {
         eyebrow="Inteligência"
         title="Relatório de Reputação"
         description={`Ciclo ${d.ciclo.rotulo}${d.corrente ? " — parcial, até hoje" : ""}. Os indicadores, o selo RA1000 nas abas do portal, o ciclo nas quatro frentes e os pontos de atenção, para enviar à gestão.`}
-      />
+      >
+        <PerguntarAoAssistente pergunta={`O que mais pesou na reputação no ciclo ${d.ciclo.rotulo}, e o que fazer primeiro para melhorar?`} />
+      </PageHeading>
 
       {/* Os ciclos: o atual e os anteriores, com o que já foi salvo. */}
       <div className="flex flex-wrap items-center gap-1.5">

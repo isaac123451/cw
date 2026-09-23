@@ -885,6 +885,7 @@
         </div>`);
     }
 
+    abas.agora.push(blocoPerguntar(dados));
     abas.agora.push(P.blocoAnotar(dados));
 
     partes.push(P.blocoAbas(abas, dados));
@@ -897,6 +898,30 @@
     P.pedirSinaisDaConversa();
     ligarRelogioDeGuardar();
   };
+
+  /* ============================================================
+     PERGUNTAR AO ASSISTENTE (Fase 16)
+  ============================================================ */
+
+  /**
+   * Leva a pergunta sobre o caso aberto ao assistente da plataforma, já
+   * feita. O endereço sai do próprio link do caso, que é da plataforma
+   * que a extensão está usando — nada de endereço fixo.
+   */
+  function blocoPerguntar(dados) {
+    const casos = dados?.casos ?? [];
+    const caso = casos.find((c) => c.aberto) ?? casos[0];
+    if (!caso?.url || !caso.protocolo) return "";
+    let origem = "";
+    try {
+      origem = new URL(caso.url).origin;
+    } catch {
+      return "";
+    }
+    const pergunta = `O que fazer agora no caso ${caso.protocolo}? O que falta para ele fechar?`;
+    const url = `${origem}/assistente?pergunta=${encodeURIComponent(pergunta)}`;
+    return `<div class="bloco"><a class="tag marca" data-acao="abrir" data-url="${CW.escapar(url)}" style="cursor:pointer">Perguntar ao assistente sobre ${CW.escapar(caso.protocolo)} &rarr;</a></div>`;
+  }
 
   /* ============================================================
      GUARDAR SOZINHO (Fase 18)
@@ -1066,7 +1091,7 @@
 
     const botoes = ABAS_DO_CONTATO.map(
       (a) => `<button type="button" role="tab" data-acao="aba-contato" data-aba="${a.id}"
-        aria-selected="${a.id === ativa}">${a.nome}${contagem[a.id] ? ` <span class="aba-contagem">${contagem[a.id]}</span>` : ""}</button>`
+        aria-selected="${a.id === ativa}">${CW.escapar(a.nome)}${contagem[a.id] ? ` <span class="aba-contagem">${contagem[a.id]}</span>` : ""}</button>`
     ).join("");
 
     const VAZIO = {
