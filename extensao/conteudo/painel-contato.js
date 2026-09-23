@@ -61,6 +61,12 @@
 
     P.chaveConsulta = chave;
     P.consulta = novo;
+
+    /* O número da conversa aberta sobrevive à busca manual: é ele que o "É este" lembra. */
+    if (novo?.telefone) {
+      P.telefoneDaConversa = novo.telefone;
+      P.nomeDaConversa = novo.nome ?? "";
+    }
     P.ultimoDado = null;
 
     // Contato novo de verdade: a recusa anterior não vale mais.
@@ -601,6 +607,19 @@
 
       const podeCapturar = doPortal || daConversa;
 
+      /*
+        Conhecido pelo NPS ou pela conta, mas sem reclamação: não é "nada
+        encontrado". Até a 1.35 esta tela dizia isso para o cliente do NPS
+        que estava ali, com ciclo aberto.
+      */
+      if (dados?.nps || dados?.estabelecimento) {
+        P.corpo.innerHTML = blocoReconhecido(dados);
+        P.corpo.insertAdjacentHTML("beforeend", P.blocoResumo());
+        marcarSelo(null);
+        P.pedirSinaisDaConversa();
+        return;
+      }
+
       P.vazio(
         "Nada encontrado",
         doPortal
@@ -618,6 +637,10 @@
             }</button>`
           : undefined
       );
+
+      // Quem é? Candidatos pelo nome do contato, e o "É este" que a extensão lembra.
+      P.corpo.insertAdjacentHTML("beforeend", blocoQuemE());
+      P.pedirQuemE();
 
       // Sem caso, mas com conversa aberta: resumir ainda ajuda.
       P.corpo.insertAdjacentHTML("beforeend", P.blocoResumo());
@@ -663,6 +686,7 @@
     // Antes de tudo, o que pede cuidado com esta pessoa, em uma linha cada.
     // (A lista existe mesmo vazia: os sinais da conversa chegam depois.)
     partes.push(blocoCabecalho(dados, tom, rotuloConfianca));
+    partes.push(blocoVinculo(dados));
     partes.push(blocoAvisos(P.avisosDoContato(dados), true));
 
     // O resumo vem primeiro: responde "o que está havendo aqui".
@@ -1359,6 +1383,147 @@
   }
 
   P.blocoCabecalho = blocoCabecalho;
+
+  /* ============================================================
+     QUEM É ESTE CONTATO (1.36)
+  ============================================================ */
+
+  /**
+   * O Isaac: "a identificação de contatos ainda está bem ruim". A base
+   * não tem telefone de nenhum dos 239 estabelecimentos, e só 108 das
+   * 1.724 respostas de NPS têm: pelo número, a extensão só achava
+   * reclamação. Quando o telefone não acha, o nome do contato sugere
+   * candidatos; "É este" liga o número à ficha, para sempre.
+   */
+  const candidatosPorContato = new Map();
+  const ROTULO_DO_CANDIDATO = { nps: "NPS", caso: "Reclamação", conta: "Conta" };
+
+  function telefoneParaLembrar() {
+    const t = String(P.telefoneDaConversa ?? P.consulta?.telefone ?? "").replace(/\D/g, "");
+    return t.length >= 10 ? t : "";
+  }
+
+  function blocoQuemE() {
+    if (!telefoneParaLembrar()) return "";
+    const nome = P.consulta?.nome ?? "";
+    const lista = candidatosPorContato.get(P.chaveConsulta);
+    let miolo;
+    if (!nome) {
+      miolo = '<p class="sub">Sem o nome do contato para procurar. Busque acima por nome, e-mail ou protocolo.</p>';
+    } else if (!Array.isArray(lista)) {
+      miolo = `<p class="sub">Procurando parecidos com "${CW.escapar(nome)}"…</p>`;
+    } else if (lista.length === 0) {
+      miolo = `<p class="sub">Ninguém parecido com "${CW.escapar(nome)}" na base. Busque acima por nome, e-mail ou protocolo.</p>`;
+    } else {
+      miolo = `<p class="sub">Não achei pelo telefone. Parecidos com "${CW.escapar(nome)}":</p>
+        <ul class="candidatos">${lista
+          .map(
+            (c) => `<li>
+              <span class="tag neutro">${ROTULO_DO_CANDIDATO[c.tipo] ?? ""}</span>
+              <span class="candidato"><b>${CW.escapar(c.titulo)}</b><span class="sub">${CW.escapar(c.detalhe)}</span></span>
+              <button type="button" class="copiar" data-acao="vincular" data-tipo="${CW.escapar(c.tipo)}" data-ref="${CW.escapar(c.ref)}">É este</button>
+            </li>`
+          )
+          .join("")}</ul>`;
+    }
+    return `<div class="bloco quem-e" data-quem-e>
+      <div class="rotulo">Quem é este contato?</div>
+      ${miolo}
+      <p class="sub falha" data-quem-e-erro></p>
+      <p class="sub">Confirmado uma vez, a extensão reconhece este número para sempre — em qualquer computador.</p>
+    </div>`;
+  }
+
+  P.pedirQuemE = async function pedirQuemE() {
+    const chave = P.chaveConsulta;
+    const nome = P.consulta?.nome;
+    if (!nome || !telefoneParaLembrar() || candidatosPorContato.has(chave)) return;
+    candidatosPorContato.set(chave, "procurando");
+    const r = await CW.enviar({ tipo: "quemE", nome });
+    candidatosPorContato.set(chave, r?.ok && Array.isArray(r.dados?.candidatos) ? r.dados.candidatos : []);
+    if (chave !== P.chaveConsulta) return;
+    const el = P.corpo?.querySelector("[data-quem-e]");
+    if (el) el.outerHTML = blocoQuemE();
+  };
+
+  /** Conhecido pelo NPS ou pela conta, sem reclamação. */
+  function blocoReconhecido(dados) {
+    const nps = dados.nps;
+    const conta = dados.estabelecimento;
+    const nome = nps?.cliente || conta?.nome || P.consulta?.nome || "Contato";
+    const linhas = [];
+    if (nps) {
+      linhas.push(`<div class="cab-frentes"><span class="frente-chip${!nps.encerrado && nps.nota <= 6 ? " perigo" : ""}">NPS ${CW.escapar(String(nps.nota))} · ${nps.encerrado ? "ciclo encerrado" : "ciclo aberto"}</span></div>`);
+    }
+    return `<div class="cabecalho-cliente">
+        <div class="cab-linha">
+          <span class="cab-nome" title="${CW.escapar(nome)}">${CW.escapar(nome)}</span>
+          <span class="tag ok">reconhecido</span>
+        </div>
+        ${conta ? `<div class="cab-conta">${CW.escapar(conta.nome)}</div>` : ""}
+        ${linhas.join("")}
+      </div>
+      ${blocoVinculo(dados)}
+      <div class="bloco">
+        <p class="sub">Sem reclamação registrada. ${nps ? "O ciclo do NPS está na aba NPS." : ""}</p>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
+          ${nps ? '<button type="button" class="copiar" data-acao="canal" data-canal="nps">Abrir no NPS</button>' : ""}
+          ${conta?.url ? `<a class="tag marca" data-acao="abrir" data-url="${CW.escapar(conta.url)}" style="cursor:pointer">abrir a conta &rarr;</a>` : ""}
+        </div>
+      </div>`;
+  }
+
+  /** Quem ligou este número à ficha — e o "não é este" para desfazer. Numa busca manual, o "É este" do número da conversa. */
+  function blocoVinculo(dados) {
+    if (dados?.vinculo) {
+      const em = String(dados.vinculo.em ?? "");
+      return `<div class="vinculo-contato sub">Vinculado a este número por ${CW.escapar(dados.vinculo.por ?? "")} em ${em.slice(8, 10)}/${em.slice(5, 7)} · <a data-acao="desvincular">não é este cliente</a></div>`;
+    }
+    const manual = String(P.chaveConsulta ?? "").startsWith("manual:");
+    const tel = telefoneParaLembrar();
+    if (!manual || !tel) return "";
+    const aberto = (dados?.casos ?? []).find((c) => c.aberto) ?? (dados?.casos ?? [])[0];
+    const alvo = aberto ? { tipo: "caso", ref: aberto.protocolo } : dados?.nps ? { tipo: "nps", ref: dados.nps.id } : dados?.estabelecimento?.id ? { tipo: "conta", ref: dados.estabelecimento.id } : null;
+    if (!alvo) return "";
+    return `<div class="vinculo-contato">
+      <button type="button" class="copiar" data-acao="vincular" data-tipo="${alvo.tipo}" data-ref="${CW.escapar(alvo.ref)}">É o contato da conversa aberta (${CW.escapar(tel.slice(0, 2))} …${CW.escapar(tel.slice(-4))}) — lembrar</button>
+      <p class="sub falha" data-quem-e-erro></p>
+    </div>`;
+  }
+
+  P.vincularContato = async function vincularContato(botao) {
+    const tel = telefoneParaLembrar();
+    if (!tel) return;
+    const rotulo = botao.textContent;
+    botao.disabled = true;
+    botao.textContent = "vinculando…";
+    const r = await CW.enviar({
+      tipo: "vincularContato",
+      corpo: { telefone: tel, nome: P.nomeDaConversa || P.consulta?.nome || "", tipo: botao.dataset.tipo, ref: botao.dataset.ref },
+    });
+    if (!r?.ok || r.dados?.erro || !r.dados?.ok) {
+      botao.disabled = false;
+      botao.textContent = rotulo;
+      const erro = P.corpo?.querySelector("[data-quem-e-erro]");
+      if (erro) erro.textContent = r?.dados?.erro ?? r?.erro ?? "Não deu para vincular agora.";
+      return;
+    }
+    candidatosPorContato.clear();
+    /* Volta para a conversa, já reconhecida, sem o cache de antes. */
+    if (String(P.chaveConsulta ?? "").startsWith("manual:") && P.telefoneDaConversa) {
+      P.consulta = { telefone: P.telefoneDaConversa, nome: P.nomeDaConversa };
+      P.chaveConsulta = null;
+    }
+    P.consultar(true);
+  };
+
+  P.desvincularContato = async function desvincularContato() {
+    const tel = telefoneParaLembrar();
+    if (!tel) return;
+    await CW.enviar({ tipo: "vincularContato", corpo: { telefone: tel, desfazer: true } });
+    candidatosPorContato.clear();
+    P.consultar(true);
+  };
 
   const ROTULO_DO_HUMOR = { 1: "muito irritado", 2: "insatisfeito", 3: "neutro", 4: "satisfeito", 5: "muito satisfeito" };
 

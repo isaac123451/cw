@@ -193,6 +193,13 @@ ${CORES}
 }
 
 .gatilho .selo.visivel { display: flex; }
+/* Quem é este contato: candidatos com "É este". */
+.quem-e .candidatos { list-style: none; margin: 6px 0; padding: 0; display: grid; gap: 6px; }
+.quem-e .candidatos li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px; }
+.quem-e .candidato { display: grid; min-width: 0; }
+.quem-e .candidato b, .quem-e .candidato .sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vinculo-contato { margin: 4px 0 8px; }
+.vinculo-contato a { cursor: pointer; text-decoration: underline; }
 /* Guardando esta conversa: um ponto verde discreto no canto do botão. */
 .gatilho.guardando::after {
   content: "";

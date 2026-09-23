@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.36.0",
+    data: "2026-09-23",
+    titulo: "A extensão reconhece o contato, e lembra",
+    texto: "Quando o telefone da conversa não acha ninguém, o painel pergunta quem é e mostra os parecidos pelo nome (reclamações, contas e clientes do NPS). É este liga o número à ficha para sempre, em qualquer computador, e Não é este cliente desfaz. O cliente do NPS sem reclamação aparece reconhecido, com a nota e o ciclo, e não mais como nada encontrado.",
+    frentes: ["extensao", "nps"],
+  },
+  {
     versao: "1.35.0",
     data: "2026-09-23",
     titulo: "A conversa se guarda com o painel fechado",

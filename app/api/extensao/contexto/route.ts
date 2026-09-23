@@ -5,6 +5,7 @@ import {
   semSessao,
 } from "@/lib/api/extensao";
 
+import { lerContatoConhecido } from "@/lib/services/contatoConhecido.service";
 import { getApiCases } from "@/lib/api/source";
 import { loadWorkspace } from "@/lib/actions/workspace";
 import { Prisma } from "@prisma/client";
@@ -138,7 +139,7 @@ export async function GET(request: Request) {
    */
   const termo = (params.get("termo") ?? "").trim();
 
-  const alvo = interpretar({
+  let alvo = interpretar({
     telefone: telefoneBruto,
     nome: nomeBruto,
     email: emailBruto,
@@ -195,6 +196,21 @@ export async function GET(request: Request) {
    */
   const prismaBusca = getPrisma();
 
+  /*
+    "É este cliente", confirmado antes por alguém do time: o telefone já
+    sabe a ficha. Entra como se o protocolo e o e-mail tivessem vindo na
+    página — e é o que faz o contato do NPS (quase nunca com telefone na
+    base) ser reconhecido.
+  */
+  const conhecido = prismaBusca ? await lerContatoConhecido(prismaBusca, alvo.telefone) : null;
+  if (conhecido) {
+    alvo = {
+      ...alvo,
+      protocolo: alvo.protocolo || conhecido.protocolo || "",
+      email: alvo.email || conhecido.email || "",
+    };
+  }
+
   const [todos, workspace] = await Promise.all([
     prismaBusca
       ? fetchCandidateCases(prismaBusca, {
@@ -222,6 +238,11 @@ export async function GET(request: Request) {
       : todos;
 
   const encontro = casar(casos, alvo);
+  if (conhecido && encontro.casos.length) {
+    encontro.confianca = "exata";
+    encontro.porQue = `Vinculado a este telefone por ${conhecido.vinculadoPor} em ${conhecido.vinculadoEm.toISOString().slice(8, 10)}/${conhecido.vinculadoEm.toISOString().slice(5, 7)}.`;
+    encontro.aviso = undefined;
+  }
 
   /**
    * O que este contato tem nas **outras** frentes.
@@ -273,7 +294,7 @@ export async function GET(request: Request) {
     workspace.establishments,
     alvo,
     encontro.casos,
-    nps?.establishmentId
+    conhecido?.establishmentId ?? nps?.establishmentId
   );
 
   const resumos = encontro.casos
@@ -302,6 +323,15 @@ export async function GET(request: Request) {
     confianca: encontro.confianca,
     porQue: encontro.porQue,
     aviso: encontro.aviso,
+
+    /* Quem ligou este telefone à ficha, e quando — o painel oferece desfazer. */
+    vinculo: conhecido
+      ? {
+          por: conhecido.vinculadoPor,
+          em: conhecido.vinculadoEm.toISOString(),
+          tipo: conhecido.protocolo ? "caso" : conhecido.npsResponseId ? "nps" : "conta",
+        }
+      : null,
 
     cliente: encontro.casos.length
       ? perfil(encontro.casos, origem)

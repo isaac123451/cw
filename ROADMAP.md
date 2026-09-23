@@ -1116,6 +1116,57 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Identificação de contatos que acerta (23/09/2026, 1.36.0)
+
+"A identificação de contatos ainda está bem ruim." Medido na base (só
+leitura): **os 239 estabelecimentos não têm telefone nem e-mail**; das
+**1.724 respostas de NPS, só 108 têm telefone** e nenhuma tem nome (o
+"cliente" é o começo do e-mail); as 364 reclamações têm telefone. Pelo
+número do WhatsApp, a extensão só conseguia achar reclamação. E o
+cliente conhecido só pelo NPS aparecia como "Nada encontrado".
+
+O que mudou:
+- **"É este cliente", lembrado para sempre.** Tabela nova
+  `ContatoConhecido`: o telefone da conversa ligado à ficha escolhida
+  (cliente do NPS, reclamação ou conta), por quem confirmou. A consulta
+  seguinte já acha — em qualquer computador. No NPS, guarda o e-mail
+  (acha todos os ciclos do cliente) e completa o telefone da resposta se
+  estava vazio. "Não é este cliente" desfaz, e tira o telefone que o
+  vínculo tinha completado.
+- **Candidatos pelo nome.** Quando o telefone não acha, o painel pergunta
+  "Quem é este contato?" e mostra os parecidos pelo nome do contato:
+  reclamações, contas e clientes do NPS — pelo começo do e-mail escrito
+  junto ("Tre Duarte Pizzaria" acha `treduartepizzaria`). A régua ignora
+  o que não distingue ninguém (o ramo, "pizzaria", "delivery", sufixos
+  de empresa): "Pizzaria Central" não casa com "Pizzaria Bella".
+- **Busca manual que lembra.** Buscou pelo nome e achou: o resultado
+  oferece "É o contato da conversa aberta — lembrar".
+- **Reconhecido não é "nada encontrado".** Cliente do NPS ou conta sem
+  reclamação aparece com o nome, a nota, o ciclo e "Abrir no NPS".
+
+Medido na base real (`scripts/medir-identificacao.ts`, só leitura): cada
+reclamação procurada pelo nome do próprio consumidor foi achada em
+**119 de 120 (99%)**, em primeiro em 96 (80%), com 4,3 candidatos por
+busca em média. No NPS não dá para medir assim — não há nome na base.
+
+Provas:
+- `check:quem-e` (novo, 16 pontos): a régua (ramo sozinho não casa,
+  acento não importa, e-mail colado casa, nome curto não casa por
+  dentro) e o `painel-contato.js` real simulado (NPS reconhecido,
+  candidatos, "É este" com o telefone e a ficha, consulta de novo sem
+  cache, "não é este cliente", lembrar numa busca manual).
+- De ponta a ponta, contra o servidor de teste, com um NPS descartável:
+  antes o telefone não achava; o nome achou; "É este" gravou; a consulta
+  pelo telefone passou a achar o NPS; desfazer tirou o vínculo **e o
+  telefone completado** (depois de desfazer, não acha mais). Nada sobrou
+  no banco.
+
+**Banco:** tabela nova `ContatoConhecido` (aditiva, RLS em 62 de 62).
+**Depende de você:** recarregar a extensão (1.36.0) e reiniciar o `npm
+run dev`. E, se der, o telefone e o e-mail das contas (a planilha de
+estabelecimentos ou o CW Engine): é o que faria a conta ser achada pelo
+número, sem precisar do "É este".
+
 ### Salvamento automático que guarda de verdade (23/09/2026, 1.35.0)
 
 "Salvamento automático tá aonde também?". Medido na base: **2 conversas

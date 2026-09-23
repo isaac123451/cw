@@ -2038,3 +2038,25 @@ model SaudeDaIA {
 
   atualizadoEm DateTime @updatedAt
 }
+
+/// "É este cliente": o telefone de um contato ligado à ficha certa, por
+/// quem confirmou.
+///
+/// A base tem 239 estabelecimentos sem telefone e 1.724 respostas de NPS
+/// das quais só 108 têm telefone (medido em 23/09/2026): pelo número do
+/// WhatsApp, a extensão só achava reclamação. Confirmado uma vez, o
+/// contato é reconhecido para sempre, em qualquer computador.
+model ContatoConhecido {
+  id              String   @id @default(cuid())
+  /// Só dígitos, sem o 55 — o `lerTelefone(...).digitos`.
+  telefone        String   @unique
+  nome            String   @default("")
+  /// O que foi confirmado: um caso, um cliente do NPS ou uma conta.
+  protocolo       String?
+  npsResponseId   String?
+  /// O e-mail do cliente do NPS — acha todos os ciclos dele, não só um.
+  email           String?
+  establishmentId String?
+  vinculadoPor    String
+  vinculadoEm     DateTime @default(now())
+}

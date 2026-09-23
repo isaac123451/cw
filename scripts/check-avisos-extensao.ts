@@ -116,7 +116,7 @@ const rota = readFileSync(resolve(__dirname, "../app/api/extensao/sinais/route.t
 const sw = readFileSync(resolve(__dirname, "../extensao/fundo/service-worker.js"), "utf8");
 conferir("a rota exige sessão", rota.includes("semSessao(request)"), true);
 conferir("o service worker conhece o caminho", sw.includes('sinais: "/api/extensao/sinais"') && sw.includes("sinaisDaConversa"), true);
-conferir("o painel pede os sinais com e sem cadastro", (painel.match(/P\.pedirSinaisDaConversa\(\);/g) ?? []).length, 2);
+conferir("o painel pede os sinais com cadastro, sem cadastro e só reconhecido", (painel.match(/P\.pedirSinaisDaConversa\(\);/g) ?? []).length, 3);
 
 /* ---------- completar o cadastro pela conversa ---------- */
 
@@ -269,7 +269,9 @@ async function guardarSozinho() {
   const pausar = P.alternarPausaDeGuardar as () => void;
 
   conferir("com caso aberto e telefone, guarda sozinho", pode(), true);
-  conferir("sem nada aberto, fica no botão com confirmação", pode({ cliente: cliente(), casos: [{ aberto: false }] }), false);
+  /* 1.35: contato conhecido guarda mesmo sem nada aberto; o desconhecido fica no botão. */
+  conferir("conhecido, mesmo sem nada aberto, guarda sozinho (1.35)", pode({ cliente: cliente(), casos: [{ aberto: false }] }), true);
+  conferir("desconhecido fica no botão com confirmação", pode({ cliente: null, nps: null, estabelecimento: null, casos: [] }), false);
   conferir("NPS aberto também conta", pode({ cliente: cliente(), casos: [], nps: { encerrado: false } }), true);
 
   await guardar();
@@ -291,7 +293,8 @@ async function guardarSozinho() {
   Pm.aberto = false;
   conversaViva.push({ id: "m5", de: "cliente", texto: "..." });
   await guardar();
-  conferir("painel fechado não guarda", gravacoes.length, 3);
+  /* 1.35: o painel fechado também guarda — era o que fazia o salvamento quase nunca acontecer. */
+  conferir("painel fechado também guarda (1.35)", gravacoes.length, 4);
 }
 
 guardarSozinho().then(() => {

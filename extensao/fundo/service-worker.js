@@ -57,6 +57,8 @@ const CAMINHOS = {
   capturaRedes: "/api/extensao/captura-redes",
   sinais: "/api/extensao/sinais",
   completarPelaConversa: "/api/extensao/completar-pela-conversa",
+  quemE: "/api/extensao/quem-e",
+  vincularContato: "/api/extensao/vincular-contato",
 };
 
 /**
@@ -871,6 +873,18 @@ async function tratar(mensagem) {
       }
     );
 
+    return { ok: true, dados };
+  }
+
+  /* Quem é este contato: candidatos pelo nome, quando o telefone não achou. Leitura. */
+  if (mensagem?.tipo === "quemE") {
+    const dados = await chamar(CAMINHOS.quemE, { nome: mensagem.nome ?? "" });
+    return { ok: true, dados };
+  }
+
+  /* "É este" (ou desfazer): liga o número da conversa à ficha. Escrita, sem cache. */
+  if (mensagem?.tipo === "vincularContato") {
+    const dados = await chamar(CAMINHOS.vincularContato, {}, mensagem.corpo ?? {});
     return { ok: true, dados };
   }
 
