@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.21.0",
+    data: "2026-09-22",
+    titulo: "A conversa também avisa",
+    texto: "Com uma conversa aberta, o painel da extensão lê as mensagens do cliente e acrescenta dois avisos: quando o humor piorou nas últimas mensagens, e quando a mensagem é a mesma de uma reclamação do Reclame Aqui (\"A mensagem é a mesma da reclamação RA-x\"), com ou sem cadastro do contato. Sem IA, uma consulta por contato.",
+    frentes: ["extensao"],
+  },
+  {
     versao: "1.20.0",
     data: "2026-09-22",
     titulo: "Avisos ao abrir a conversa",

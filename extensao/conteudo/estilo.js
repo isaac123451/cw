@@ -1014,6 +1014,7 @@ ${CORES}
 
 .avisos-contato li.perigo { border-left-color: var(--perigo); }
 .avisos-contato li.atencao { border-left-color: var(--atencao); }
+.avisos-contato[hidden] { display: none; }
 
 .gaveta:focus { outline: none; }
 

@@ -55,6 +55,7 @@ const CAMINHOS = {
   raVigia: "/api/extensao/ra-vigia",
   completar: "/api/extensao/completar",
   capturaRedes: "/api/extensao/captura-redes",
+  sinais: "/api/extensao/sinais",
 };
 
 /**
@@ -856,6 +857,18 @@ async function tratar(mensagem) {
    * sozinho. Sem cache: um resumo de dez minutos atrás descreve outra
    * conversa.
    */
+  /* Os avisos que só a conversa dá: humor e reclamação colada. Leitura, sem gravar. */
+  if (mensagem?.tipo === "sinaisDaConversa") {
+
+    const dados = await chamar(
+      CAMINHOS.sinais,
+      {},
+      { mensagens: mensagem.mensagens ?? [] }
+    );
+
+    return { ok: true, dados };
+  }
+
   if (mensagem?.tipo === "resumirConversa") {
 
     const dados = await chamar(

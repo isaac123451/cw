@@ -104,6 +104,26 @@ export function humorDaConversa(mensagens: MensagemDaConversa[]): 1 | 2 | 3 | 4 
   return 5;
 }
 
+/**
+ * O humor mudou ao longo da conversa?
+ *
+ * Compara as três últimas mensagens do cliente com as de antes. Só
+ * responde com quatro ou mais mensagens dele: com menos, "antes" e
+ * "agora" são a mesma frase, e qualquer tendência seria invenção.
+ */
+export function tendenciaDoHumor(mensagens: MensagemDaConversa[]): {
+  antes: number;
+  agora: number;
+  piorou: boolean;
+  melhorou: boolean;
+} | null {
+  const doCliente = mensagens.filter((m) => m.de === "cliente");
+  if (doCliente.length < 4) return null;
+  const antes = humorDaConversa(doCliente.slice(0, -3));
+  const agora = humorDaConversa(doCliente.slice(-3));
+  return { antes, agora, piorou: agora < antes && agora <= 2, melhorou: agora > antes && antes <= 2 };
+}
+
 /* ============================================================
    ASSUNTO — as mesmas regras da triagem do Reclame Aqui
 ============================================================ */

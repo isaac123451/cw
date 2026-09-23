@@ -620,6 +620,9 @@
       );
 
       marcarSelo(null);
+
+      // Sem cadastro é quando mais vale saber que a mensagem é a de um RA.
+      P.pedirSinaisDaConversa();
       return;
     }
 
@@ -637,7 +640,8 @@
     }
 
     // Antes de tudo, o que pede cuidado com esta pessoa, em uma linha cada.
-    partes.push(blocoAvisos(P.avisosDoContato(dados)));
+    // (A lista existe mesmo vazia: os sinais da conversa chegam depois.)
+    partes.push(blocoAvisos(P.avisosDoContato(dados), true));
 
     // O resumo vem primeiro: responde "o que está havendo aqui".
     partes.push(P.blocoResumo());
@@ -873,6 +877,8 @@
     P.corpo.scrollTop = 0;
 
     marcarSelo(cliente.abertos);
+
+    P.pedirSinaisDaConversa();
   };
 
   /* ============================================================
@@ -944,15 +950,62 @@
       .map(({ tom, texto }) => ({ tom, texto }));
   };
 
-  function blocoAvisos(avisos) {
-    if (avisos.length === 0) return "";
+  function blocoAvisos(avisos, mesmoVazio = false) {
+    if (avisos.length === 0 && !mesmoVazio) return "";
     return `
-      <ul class="avisos-contato" aria-label="Avisos sobre este contato">
+      <ul class="avisos-contato" aria-label="Avisos sobre este contato"${avisos.length === 0 ? " hidden" : ""}>
         ${avisos
           .map((a) => `<li class="${a.tom}">${CW.escapar(a.texto)}</li>`)
           .join("")}
       </ul>`;
   }
+
+  /**
+   * Os sinais que só a conversa dá (humor que piorou, reclamação colada)
+   * vêm do servidor, uma vez por contato, depois que o painel desenhou.
+   * Redesenhar o painel não chama de novo: a resposta fica guardada.
+   */
+  const sinaisPorContato = new Map();
+
+  P.pedirSinaisDaConversa = async function pedirSinaisDaConversa() {
+
+    const leitura = P.lerConversa?.();
+    const mensagens = (Array.isArray(leitura) ? leitura : leitura?.mensagens ?? [])
+      .filter((m) => m && typeof m.texto === "string")
+      .map((m) => ({ de: m.de === "nos" ? "nos" : "cliente", texto: m.texto }));
+
+    if (mensagens.filter((m) => m.de === "cliente").length < 2) return;
+
+    const chave = [P.consulta?.telefone, P.consulta?.nome, P.consulta?.rotulo].join("|");
+
+    if (!sinaisPorContato.has(chave)) {
+      sinaisPorContato.set(chave, null);
+      try {
+        const resposta = await CW.enviar({ tipo: "sinaisDaConversa", mensagens });
+        sinaisPorContato.set(chave, resposta?.dados?.avisos ?? []);
+      } catch {
+        sinaisPorContato.delete(chave);
+        return;
+      }
+    }
+
+    const avisos = sinaisPorContato.get(chave);
+    if (!avisos || avisos.length === 0) return;
+
+    let lista = P.corpo?.querySelector(".avisos-contato");
+    if (!lista) {
+      P.corpo?.insertAdjacentHTML("afterbegin", blocoAvisos([], true));
+      lista = P.corpo?.querySelector(".avisos-contato");
+    }
+    if (!lista || lista.dataset.sinais === chave) return;
+
+    lista.dataset.sinais = chave;
+    lista.insertAdjacentHTML(
+      "beforeend",
+      avisos.map((a) => `<li class="${CW.escapar(a.tom)}">${CW.escapar(a.texto)}</li>`).join("")
+    );
+    lista.hidden = false;
+  };
 
   P.desenharCaso = function desenharCaso(caso) {
 
