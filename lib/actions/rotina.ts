@@ -18,7 +18,8 @@ import type { LinhaDeMetrica } from "@/lib/actions/metricas";
 import { lerExpediente } from "@/lib/services/operacao.service";
 import { SOCIAL_SOURCES } from "@/lib/services/case.service";
 import { CANAL_PARA_ORIGEM } from "@/lib/services/case.mapper";
-import { paredeDe, ehDiaUtil } from "@/lib/services/horasUteis";
+import { descreverRegistro, paredeDe, ehDiaUtil } from "@/lib/services/horasUteis";
+import { ESPERA_DO_RETORNO_MIN } from "@/lib/models/tratativa";
 
 /**
  * A rotina do agente: o cadastro das atividades e as marcas de feito.
@@ -216,6 +217,8 @@ export interface CargaDoMeuDia {
   marcas: { atividadeId: string; dia: string }[];
   /** Os itens tirados das atividades que ainda valem hoje. */
   marcasDeItens: MarcaDeItem[];
+  /** Casos com tentativa aguardando retorno há mais de 2 horas. */
+  aguardandoRetorno: ItemDaRotina[];
   metricaHoje: LinhaDeMetrica | null;
   ligacoes: ItemDaRotina[];
   ontem: ResumoDeOntem | null;
@@ -245,7 +248,7 @@ function diaUtilAnterior(dia: string, expediente: Parameters<typeof ehDiaUtil>[1
 export async function lerMeuDia(): Promise<CargaDoMeuDia> {
 
   const ctx = await tryRole("LEITURA");
-  if (!ctx) return { marcas: [], marcasDeItens: [], metricaHoje: null, ligacoes: [], ontem: null, relatorio: null };
+  if (!ctx) return { marcas: [], marcasDeItens: [], aguardandoRetorno: [], metricaHoje: null, ligacoes: [], ontem: null, relatorio: null };
 
   const prisma = ctx.prisma;
   const agora = new Date();
@@ -260,12 +263,19 @@ export async function lerMeuDia(): Promise<CargaDoMeuDia> {
 
   const ciclo = cicloDe(hoje);
 
-  const [marcas, marcasDeItens, metrica, emCadencia, contatosOntem, publicadasOntem, npsOntem, googleOntem, relatorioSalvo] = await Promise.all([
+  const [marcas, marcasDeItens, pendentes, metrica, emCadencia, contatosOntem, publicadasOntem, npsOntem, googleOntem, relatorioSalvo] = await Promise.all([
     prisma.marcaDaRotina.findMany({ where: { userId: ctx.userId, dia: { gte: desde } }, select: { atividadeId: true, dia: true } }),
     prisma.marcaDeItemDaRotina.findMany({
       where: { userId: ctx.userId, dia: { lte: hoje }, OR: [{ ate: null }, { ate: { gte: hoje } }] },
       orderBy: { criadoEm: "desc" },
       take: 2000,
+    }),
+    /* A tentativa que passou de 2 horas sem resposta: marcar sem retorno ou registrar a resposta. */
+    prisma.caseContato.findMany({
+      where: { tipo: "tentativa", resultado: "aguardando", em: { lte: new Date(agora.getTime() - ESPERA_DO_RETORNO_MIN * 60_000) }, case: { resolved: false } },
+      select: { em: true, canal: true, case: { select: { id: true, protocol: true, externalId: true, title: true, customer: true, channel: true } } },
+      orderBy: { em: "asc" },
+      take: 200,
     }),
     prisma.metricaDiaria.findUnique({ where: { dia: hoje } }),
     prisma.case.findMany({
@@ -299,11 +309,27 @@ export async function lerMeuDia(): Promise<CargaDoMeuDia> {
     });
   }
 
+  const vistos = new Set<string>();
+  const aguardandoRetorno: ItemDaRotina[] = [];
+  for (const p of pendentes) {
+    if (vistos.has(p.case.id)) continue;
+    vistos.add(p.case.id);
+    const social = SOCIAL_SOURCES.includes(CANAL_PARA_ORIGEM[p.case.channel] ?? "");
+    aguardandoRetorno.push({
+      id: p.case.id,
+      frente: social ? "redes" : "reclame-aqui",
+      titulo: p.case.title,
+      detalhe: `tentativa por ${p.canal} de ${descreverRegistro(p.em.toISOString())} sem resposta há 2h — marcar sem retorno · ${p.case.customer}`,
+      href: social ? `/redes-sociais/${p.case.externalId ?? p.case.protocol}` : `/reclame-aqui/${p.case.externalId ?? p.case.protocol}`,
+    });
+  }
+
   const marcasOntem = marcas.filter((m) => m.dia === ontem).length;
 
   return {
     marcas,
     marcasDeItens: marcasDeItens.map(paraMarcaDeItem),
+    aguardandoRetorno,
     metricaHoje: metrica
       ? {
           dia: metrica.dia,

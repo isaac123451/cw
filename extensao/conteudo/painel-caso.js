@@ -155,7 +155,7 @@
         ? '  <p class="sub" style="margin:6px 0 0">1º contato registrado.' + (c.tentativasSemResposta ? ' ' + c.tentativasSemResposta + ' tentativa(s) sem resposta.' : "") + '</p>'
         : passo("contato", "Fiz o 1º contato", "Registra o contato agora, pelo mesmo caminho da ficha"),
 
-      passo("tentativa", "Tentei, sem sucesso", "Entra na cadência de 5 tentativas em 7 dias"),
+      passo("tentativa", "Tentei contato", "Fica aguardando retorno; sem retorno só 2 horas depois, pela ficha do caso"),
       passo("atualizacao", "Mandei uma atualização", "O documento pede não deixar o cliente no vácuo"),
       texto("Copiar a mensagem de atualização", textos.atualizacao),
 

@@ -13,7 +13,7 @@ import {
   slaRuleDoBanco,
   type SlaRule,
 } from "@/lib/models/sla";
-import type { ContatoView, ResumoDosContatos } from "@/lib/models/tratativa";
+import type { ContatoView, ResultadoDoContato, ResumoDosContatos } from "@/lib/models/tratativa";
 
 import { expedienteValido, type Expediente } from "@/lib/services/horasUteis";
 import type { Prisma } from "@prisma/client";
@@ -29,6 +29,7 @@ import {
   contatosDoCaso,
   gravarContato,
   problemaDoContato,
+  marcarSemRetorno,
   removerContato,
   triar,
   type NovoContato,
@@ -157,6 +158,29 @@ export async function registrarContato(
     return { ok: true, ...feito };
   } catch (erro) {
     return falha(erro, "contato");
+  }
+}
+
+/**
+ * A tentativa aguardando retorno vira "sem retorno" — só depois de 2
+ * horas. É o que faz a tentativa contar na cadência de persistência.
+ */
+export async function marcarTentativaSemRetorno(entrada: {
+  id: string;
+  resultado: ResultadoDoContato;
+}): Promise<{ ok: true; contato: ContatoView; resumo: ResumoDosContatos } | Falha> {
+
+  const quem = await quemGrava("AGENTE", MODULO);
+  if ("erro" in quem) return { ok: false, erro: quem.erro! };
+
+  try {
+    const feito = await marcarSemRetorno(quem.ctx.prisma, entrada.id, entrada.resultado);
+    if (!feito) return { ok: false, erro: "Este contato não existe mais." };
+    if ("erro" in feito) return { ok: false, erro: feito.erro };
+    updateTag(CASES_TAG);
+    return { ok: true, ...feito };
+  } catch (erro) {
+    return falha(erro, "sem retorno");
   }
 }
 

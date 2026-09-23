@@ -62,7 +62,7 @@ async function main() {
     churnRisk: r.churnRisk,
     wootricNotes: r.wootricNotes,
     notes: [],
-    attempts: r.attempts.map((a) => ({ id: a.id, channel: a.channel, note: a.note, actor: a.actor, createdAt: a.createdAt.toISOString() })),
+    attempts: r.attempts.map((a) => ({ id: a.id, channel: a.channel, note: a.note, actor: a.actor, createdAt: a.createdAt.toISOString(), resultado: a.resultado === "aguardando" ? ("aguardando" as const) : ("sem-resposta" as const) })),
   }));
 
   const contagens = contarRotina(

@@ -1,6 +1,8 @@
 "use client";
 
-import { CheckCircle2, Flag, MessageSquareHeart, Phone, PhoneOff } from "lucide-react";
+import { useState } from "react";
+
+import { CheckCircle2, Flag, Loader2, MessageSquareHeart, Phone, PhoneOff } from "lucide-react";
 
 import SurfaceCard from "@/components/shared/SurfaceCard";
 
@@ -15,7 +17,11 @@ import {
 } from "@/lib/models/nps";
 import { tentativasNaJanela } from "@/lib/services/nps.service";
 import { descreverRegistro } from "@/lib/services/horasUteis";
+import { podeMarcarSemRetorno, quandoLiberaSemRetorno } from "@/lib/models/tratativa";
 import { useAgora } from "@/lib/hooks/useAgora";
+import { marcarTentativaNpsSemRetorno } from "@/lib/actions/nps";
+import { useNps } from "@/lib/context/NpsContext";
+import { useToast } from "@/lib/context/ToastContext";
 
 import type { ModoDoContato } from "./ContatoNpsModal";
 
@@ -27,6 +33,8 @@ interface Evento {
   titulo: string;
   texto?: string;
   quem?: string;
+  /** A tentativa ainda aguardando retorno — o id, para marcar depois das 2 horas. */
+  aguardando?: string;
 }
 
 /**
@@ -41,6 +49,9 @@ interface Evento {
 export default function ContatosDoNps({ item, registrar }: { item: NpsResponseView; registrar: (modo: ModoDoContato) => void }) {
 
   const agora = useAgora();
+  const { recarregar } = useNps();
+  const { notify } = useToast();
+  const [marcando, setMarcando] = useState<string | null>(null);
   const encerrado = isEncerrado(item.status);
   const minimas = tentativasMinimas(item.kind);
   const naJanela = agora ? tentativasNaJanela(item, agora).length : 0;
@@ -51,10 +62,11 @@ export default function ContatosDoNps({ item, registrar }: { item: NpsResponseVi
       id: a.id,
       em: a.createdAt,
       icone: Phone,
-      cor: "text-zinc-400",
-      titulo: `Tentativa por ${a.channel}`,
+      cor: a.resultado === "aguardando" ? "text-amber-500" : "text-zinc-400",
+      titulo: `Tentativa por ${a.channel} · ${a.resultado === "aguardando" ? "aguardando retorno" : "sem retorno"}`,
       texto: a.note,
       quem: a.actor,
+      aguardando: a.resultado === "aguardando" && !encerrado ? a.id : undefined,
     })),
     ...(item.postContactAt
       ? [
@@ -92,6 +104,32 @@ export default function ContatosDoNps({ item, registrar }: { item: NpsResponseVi
       : []),
   ].sort((a, b) => Date.parse(a.em) - Date.parse(b.em));
 
+  /* Passadas as 2 horas sem resposta, a tentativa vira "sem retorno" e conta para o guia. */
+  async function semRetorno(id: string) {
+    setMarcando(id);
+    try {
+      const r = await marcarTentativaNpsSemRetorno(id);
+      if (!r.ok) {
+        notify({ tone: "error", title: "Não foi marcado.", detail: r.erro });
+        return;
+      }
+      await recarregar();
+      const n = naJanela + 1;
+      notify({
+        tone: "success",
+        title: "Tentativa sem retorno.",
+        detail:
+          n >= minimas
+            ? `${n} tentativas em ${JANELA_TENTATIVAS_DIAS} dias: o guia já permite encerrar sem retorno.`
+            : `${n} de ${minimas} tentativas em ${JANELA_TENTATIVAS_DIAS} dias — varie o canal e o horário.`,
+      });
+    } catch {
+      notify({ tone: "error", title: "Não foi marcado.", detail: "Tente de novo em instantes." });
+    } finally {
+      setMarcando(null);
+    }
+  }
+
   return (
     <SurfaceCard
       title="Contatos"
@@ -108,7 +146,7 @@ export default function ContatosDoNps({ item, registrar }: { item: NpsResponseVi
               onClick={() => registrar("tentativa")}
               className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-medium text-zinc-600 ring-1 ring-inset ring-zinc-200 transition-colors hover:bg-zinc-50"
             >
-              <PhoneOff size={13} /> Tentei, sem sucesso
+              <PhoneOff size={13} /> Tentei contato
             </button>
             <button
               type="button"
@@ -123,7 +161,7 @@ export default function ContatosDoNps({ item, registrar }: { item: NpsResponseVi
     >
       {eventos.length === 0 ? (
         <p className="rounded-xl border border-dashed border-zinc-200 px-4 py-6 text-center text-sm text-zinc-500">
-          Nenhum contato ainda. A primeira tentativa já conta como 1º contato — vale registrar mesmo quando a pessoa não atende.
+          Nenhum contato ainda. A primeira tentativa já conta como 1º contato — vale registrar mesmo quando a pessoa não atende. Ela fica aguardando retorno por 2 horas; depois, marque sem retorno.
         </p>
       ) : (
         <ol className="relative space-y-3 before:absolute before:bottom-2 before:left-[11px] before:top-2 before:w-px before:bg-zinc-200">
@@ -143,6 +181,26 @@ export default function ContatosDoNps({ item, registrar }: { item: NpsResponseVi
                     </span>
                   </p>
                   {e.texto && <p className="mt-0.5 text-[13px] leading-relaxed text-zinc-600">{e.texto}</p>}
+                  {e.aguardando && agora && (
+                    podeMarcarSemRetorno(e.em, agora) ? (
+                      <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs">
+                        <span className="text-amber-800">O cliente não respondeu?</span>
+                        <button
+                          type="button"
+                          onClick={() => semRetorno(e.aguardando!)}
+                          disabled={marcando !== null}
+                          className="flex items-center gap-1 rounded-md bg-white px-2 py-0.5 font-medium text-zinc-800 ring-1 ring-inset ring-zinc-200 hover:ring-zinc-300 disabled:opacity-50"
+                        >
+                          {marcando === e.aguardando && <Loader2 size={11} className="animate-spin" />}
+                          Marcar sem retorno
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="mt-1 text-xs text-zinc-500">
+                        Sem retorno a partir das {quandoLiberaSemRetorno(e.em, agora)} — até lá, o cliente ainda pode responder.
+                      </p>
+                    )
+                  )}
                 </div>
               </li>
             );

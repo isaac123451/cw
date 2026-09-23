@@ -9,6 +9,8 @@ import { Loader2, PhoneCall, ShieldCheck, Sparkles, Trash2 } from "lucide-react"
 import { Case, CRITERIOS } from "@/lib/models/case";
 import {
   patchDoResumo,
+  podeMarcarSemRetorno,
+  quandoLiberaSemRetorno,
   ROTULO_DO_RESULTADO,
   tipoDeContato,
   type ContatoView,
@@ -16,7 +18,7 @@ import {
 import { descreverPrazo, paredeDe } from "@/lib/services/horasUteis";
 import { slaStatus } from "@/lib/services/sla.service";
 
-import { apagarContato, listarContatos } from "@/lib/actions/tratativa";
+import { apagarContato, listarContatos, marcarTentativaSemRetorno } from "@/lib/actions/tratativa";
 import { useCases } from "@/lib/context/CaseContext";
 import { useSession } from "@/lib/context/SessionContext";
 import { useSla } from "@/lib/context/SlaContext";
@@ -68,6 +70,7 @@ export default function PrazoECriticidade({ data, aoMudarNoServidor }: Props) {
   const [contatos, setContatos] = useState<ContatoView[] | null>(null);
   const [todos, setTodos] = useState(false);
   const [apagando, setApagando] = useState<string | null>(null);
+  const [marcando, setMarcando] = useState<string | null>(null);
 
   const recarregar = useCallback(() => {
     listarContatos(data.protocol)
@@ -111,6 +114,31 @@ export default function PrazoECriticidade({ data, aoMudarNoServidor }: Props) {
       recarregar();
     } finally {
       setApagando(null);
+    }
+  }
+
+  /* A tentativa aguardando retorno vira "sem retorno" — passadas as 2 horas. */
+  async function semRetorno(c: ContatoView) {
+    setMarcando(c.id);
+    try {
+      const r = await marcarTentativaSemRetorno({ id: c.id, resultado: /telefone/i.test(c.canal) ? "nao-atendeu" : "sem-resposta" });
+      if (!r.ok) {
+        notify({ tone: "error", title: "Não foi marcado.", detail: r.erro });
+        return;
+      }
+      const patch: Partial<Case> = patchDoResumo(r.resumo);
+      setCases((prev) => prev.map((x) => (x.protocol === data.protocol ? { ...x, ...patch } : x)));
+      aoMudarNoServidor?.(patch);
+      notify({
+        tone: "success",
+        title: "Tentativa sem retorno.",
+        detail: `${r.resumo.tentativasSemResposta}ª seguida sem resposta — entra na cadência de 5 em 7 dias.`,
+      });
+      recarregar();
+    } catch {
+      notify({ tone: "error", title: "Não foi marcado.", detail: "Tente de novo em instantes." });
+    } finally {
+      setMarcando(null);
     }
   }
 
@@ -263,6 +291,24 @@ export default function PrazoECriticidade({ data, aoMudarNoServidor }: Props) {
                     {dataHora(c.em)} · {c.autor}
                   </p>
                   {c.nota && <p className="mt-1 whitespace-pre-wrap text-zinc-600">{c.nota}</p>}
+                  {c.tipo === "tentativa" && c.resultado === "aguardando" && agora && (
+                    podeMarcarSemRetorno(c.em, agora) ? (
+                      <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                        <span className="text-amber-800">O cliente não respondeu?</span>
+                        <button
+                          type="button"
+                          onClick={() => semRetorno(c)}
+                          disabled={marcando !== null}
+                          className="flex items-center gap-1 rounded-md bg-white px-2 py-0.5 font-medium text-zinc-800 ring-1 ring-inset ring-zinc-200 hover:ring-zinc-300 disabled:opacity-50"
+                        >
+                          {marcando === c.id && <Loader2 size={11} className="animate-spin" />}
+                          Marcar sem retorno
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="mt-1 text-zinc-500">Sem retorno a partir das {quandoLiberaSemRetorno(c.em, agora)} — até lá, o cliente ainda pode responder.</p>
+                    )
+                  )}
                 </li>
               ))}
             </ul>

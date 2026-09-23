@@ -1,3 +1,5 @@
+import { horaDoMinuto, paredeDe } from "@/lib/services/horasUteis";
+
 /**
  * O vocabulário da tratativa: os contatos com o cliente de um caso.
  *
@@ -15,10 +17,42 @@ export type TipoDeContato =
 
 export type ResultadoDoContato =
   | "respondeu"
+  | "aguardando"
   | "sem-resposta"
   | "nao-atendeu"
   | "caixa-postal"
   | "enviado";
+
+/**
+ * Quanto esperar antes de uma tentativa virar "sem retorno".
+ *
+ * O Isaac: "tentativas de contato só podem ser marcadas sem retorno
+ * depois de um tempo, algo em torno de 2 horas". A mensagem mandada às
+ * 10h pode ser respondida às 11h; marcar "sem retorno" na hora contava
+ * a tentativa na cadência (e no critério de encerrar sem retorno) antes
+ * de o cliente ter tido tempo de responder. Até lá, ela fica
+ * "aguardando retorno".
+ */
+export const ESPERA_DO_RETORNO_MIN = 120;
+
+/** Os resultados que dizem "o cliente não voltou" — só depois da espera. */
+export const RESULTADOS_SEM_RETORNO: ResultadoDoContato[] = ["sem-resposta", "nao-atendeu", "caixa-postal"];
+
+/** A partir de quando a tentativa feita em `em` pode virar "sem retorno". */
+export function semRetornoLiberadoEm(em: string | Date) {
+  return new Date(new Date(em).getTime() + ESPERA_DO_RETORNO_MIN * 60_000);
+}
+
+export function podeMarcarSemRetorno(em: string | Date, agora = new Date()) {
+  return agora.getTime() >= semRetornoLiberadoEm(em).getTime();
+}
+
+/** "12:10" (ou "24/09 08:10", se passa do dia) — quando a tentativa pode virar "sem retorno", em Brasília. */
+export function quandoLiberaSemRetorno(em: string | Date, agora = new Date()) {
+  const libera = paredeDe(semRetornoLiberadoEm(em));
+  const hora = horaDoMinuto(libera.min);
+  return libera.dia === paredeDe(agora).dia ? hora : `${libera.dia.split("-").reverse().slice(0, 2).join("/")} ${hora}`;
+}
 
 export interface TipoDeContatoInfo {
   id: TipoDeContato;
@@ -40,10 +74,10 @@ export const TIPOS_DE_CONTATO: TipoDeContatoInfo[] = [
   },
   {
     id: "tentativa",
-    rotulo: "Tentei, sem sucesso",
-    quando: "Liguei ou mandei mensagem e não houve resposta.",
-    resultadoPadrao: "nao-atendeu",
-    resultados: ["nao-atendeu", "caixa-postal", "sem-resposta"],
+    rotulo: "Tentei contato",
+    quando: "Liguei ou mandei mensagem e o cliente ainda não respondeu. Fica aguardando retorno; sem retorno, só 2 horas depois.",
+    resultadoPadrao: "aguardando",
+    resultados: ["aguardando", "nao-atendeu", "caixa-postal", "sem-resposta"],
   },
   {
     id: "atualizacao",
@@ -70,6 +104,7 @@ export const TIPOS_DE_CONTATO: TipoDeContatoInfo[] = [
 
 export const ROTULO_DO_RESULTADO: Record<ResultadoDoContato, string> = {
   respondeu: "Respondeu",
+  aguardando: "Aguardando retorno",
   "sem-resposta": "Sem resposta",
   "nao-atendeu": "Não atendeu",
   "caixa-postal": "Caixa postal",
@@ -146,10 +181,12 @@ export function resumirContatos(
   const respostas = ordenados.filter((c) => c.resultado === "respondeu");
   const ultimaResposta = respostas[respostas.length - 1];
 
+  /* A tentativa ainda aguardando retorno não conta: o cliente ainda pode responder. */
   const tentativasSemResposta = ordenados.filter(
     (c) =>
       c.tipo === "tentativa" &&
       c.resultado !== "respondeu" &&
+      c.resultado !== "aguardando" &&
       (!ultimaResposta || c.em > ultimaResposta.em)
   ).length;
 

@@ -674,6 +674,12 @@ export interface NpsAttemptView {
   note: string;
   actor: string;
   createdAt: string;
+  /**
+   * "aguardando" nas primeiras 2 horas (ver ESPERA_DO_RETORNO_MIN) e
+   * "sem-resposta" depois de marcada. Ausente é "sem-resposta": as de
+   * antes da regra já eram "tentei, sem sucesso".
+   */
+  resultado?: "aguardando" | "sem-resposta";
 }
 
 export const CHANNELS = [

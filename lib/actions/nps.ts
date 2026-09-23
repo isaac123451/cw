@@ -60,6 +60,7 @@ import {
 } from "@/lib/services/wootric.import";
 import { hojeNaOperacao } from "@/lib/services/reputation.service";
 import { semApagarVazios } from "@/lib/services/semApagar";
+import { podeMarcarSemRetorno, quandoLiberaSemRetorno } from "@/lib/models/tratativa";
 
 /** O módulo a que estas ações pertencem — ver lib/auth/modules.ts. */
 const MODULO: Modulo = "nps";
@@ -174,6 +175,7 @@ export async function listNpsResponses(): Promise<
       note: a.note,
       actor: a.actor,
       createdAt: a.createdAt.toISOString(),
+      resultado: a.resultado === "aguardando" ? ("aguardando" as const) : ("sem-resposta" as const),
     })),
   }));
 }
@@ -562,28 +564,74 @@ export async function registerNpsAttempt(input: {
   responseId: string;
   channel: string;
   note: string;
+  /** Quando foi (ISO). Ausente é agora. */
+  em?: string;
+  /** Já passou das 2 horas e o cliente não respondeu. */
+  semRetorno?: boolean;
 }): Promise<{ ok: true } | Falha> {
 
   const note = input.note.trim().slice(0, 1000);
   if (!CHANNELS.includes(input.channel)) return { ok: false, erro: "Escolha o canal: e-mail, telefone ou WhatsApp." };
   if (!note) return { ok: false, erro: "Diga o que aconteceu na tentativa." };
 
+  const agora = new Date();
+  const em = input.em ? new Date(input.em) : agora;
+  if (!Number.isFinite(em.getTime())) return { ok: false, erro: "A hora da tentativa não é válida." };
+  if (em.getTime() > agora.getTime() + 5 * 60_000) return { ok: false, erro: "A tentativa não pode estar no futuro." };
+  /* Sem retorno só depois da espera: o cliente ainda pode responder. */
+  if (input.semRetorno && !podeMarcarSemRetorno(em, agora)) {
+    return { ok: false, erro: `Sem retorno só 2 horas depois da tentativa (a partir das ${quandoLiberaSemRetorno(em, agora)}). Até lá, fica aguardando retorno.` };
+  }
+
   const quem = await agente();
   if ("erro" in quem) return { ok: false, erro: quem.erro! };
 
   try {
-    const existe = await quem.ctx.prisma.npsResponse.findUnique({ where: { id: input.responseId }, select: { status: true } });
+    const existe = await quem.ctx.prisma.npsResponse.findUnique({ where: { id: input.responseId }, select: { status: true, respondedAt: true } });
     if (!existe) return { ok: false, erro: "Esta resposta não existe mais." };
     if (isEncerrado(existe.status)) return { ok: false, erro: "O ciclo já está encerrado." };
+    if (em < existe.respondedAt) return { ok: false, erro: "A tentativa não pode ser de antes da resposta do cliente." };
 
     await registrarTentativa(quem.ctx.prisma, {
       responseId: input.responseId,
       channel: input.channel,
       note,
       actor: await nomeDe(quem.ctx.prisma, quem.ctx.userId),
+      em,
+      resultado: input.semRetorno ? "sem-resposta" : "aguardando",
     });
   } catch (erro) {
     console.error("[nps] tentativa", erro);
+    return { ok: false, erro: "O banco não aceitou a gravação agora. Tente de novo em instantes." };
+  }
+
+  updateTag(WORKSPACE_TAG);
+  return { ok: true };
+}
+
+/**
+ * A tentativa aguardando retorno vira "sem retorno" — só depois de 2
+ * horas. É aí que ela passa a contar para as tentativas mínimas do guia.
+ */
+export async function marcarTentativaNpsSemRetorno(attemptId: string): Promise<{ ok: true } | Falha> {
+
+  const quem = await agente();
+  if ("erro" in quem) return { ok: false, erro: quem.erro! };
+
+  try {
+    const t = await quem.ctx.prisma.npsAttempt.findUnique({
+      where: { id: attemptId },
+      select: { resultado: true, createdAt: true, response: { select: { status: true } } },
+    });
+    if (!t) return { ok: false, erro: "Esta tentativa não existe mais." };
+    if (isEncerrado(t.response.status)) return { ok: false, erro: "O ciclo já está encerrado." };
+    if (t.resultado !== "aguardando") return { ok: false, erro: "Esta tentativa já está marcada." };
+    if (!podeMarcarSemRetorno(t.createdAt)) {
+      return { ok: false, erro: `Ainda dá tempo de o cliente responder: sem retorno a partir das ${quandoLiberaSemRetorno(t.createdAt)}.` };
+    }
+    await quem.ctx.prisma.npsAttempt.update({ where: { id: attemptId }, data: { resultado: "sem-resposta" } });
+  } catch (erro) {
+    console.error("[nps] sem retorno", erro);
     return { ok: false, erro: "O banco não aceitou a gravação agora. Tente de novo em instantes." };
   }
 

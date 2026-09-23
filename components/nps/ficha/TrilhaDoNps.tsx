@@ -142,7 +142,7 @@ export default function TrilhaDoNps({ item, passos, executar }: Props) {
                 onClick={() => executar("tentativa")}
                 className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium text-zinc-600 ring-1 ring-inset ring-zinc-200 transition-colors hover:bg-white"
               >
-                <PhoneOff size={14} /> Tentei, sem sucesso
+                <PhoneOff size={14} /> Tentei contato
               </button>
             )}
             {atual.id === "confirmacao" && (

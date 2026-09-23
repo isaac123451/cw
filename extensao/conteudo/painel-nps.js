@@ -419,8 +419,8 @@
     if (!nps.encerrado) {
       partes.push(
         '  <div class="cartao" style="margin-top:7px">',
-        '    <div class="rotulo" style="margin-bottom:5px">Não atendeu?</div>',
-        '    <p class="sub" style="margin-bottom:9px">Cada tentativa registrada conta para a regra das três em 7 dias, que é o que autoriza encerrar por falta de retorno.</p>',
+        '    <div class="rotulo" style="margin-bottom:5px">Tentou contato?</div>',
+        '    <p class="sub" style="margin-bottom:9px">A tentativa fica aguardando retorno por 2 horas. Sem resposta, marque sem retorno na ficha do NPS: aí ela conta para a regra das três em 7 dias, que autoriza encerrar por falta de retorno.</p>',
         '    <select class="campo" id="nps-canal">',
         ...P.CANAIS.map(
           (c) => `      <option value="${c}">${c}</option>`

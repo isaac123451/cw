@@ -7,7 +7,10 @@ import {
 } from "@/lib/models/case";
 import {
   ContatoView,
+  podeMarcarSemRetorno,
+  quandoLiberaSemRetorno,
   ResultadoDoContato,
+  RESULTADOS_SEM_RETORNO,
   resumirContatos,
   ResumoDosContatos,
   TipoDeContato,
@@ -158,6 +161,15 @@ export function problemaDoContato(
     }
   }
 
+  /* Sem retorno só depois da espera: o cliente ainda pode responder. */
+  if (
+    tipo.id === "tentativa" &&
+    RESULTADOS_SEM_RETORNO.includes(entrada.resultado as ResultadoDoContato) &&
+    !podeMarcarSemRetorno(entrada.em ?? agora, agora)
+  ) {
+    return `Sem retorno só 2 horas depois da tentativa (a partir das ${quandoLiberaSemRetorno(entrada.em ?? agora, agora)}). Até lá, registre como "aguardando retorno".`;
+  }
+
   if ((entrada.nota ?? "").length > 2000) {
     return "A anotação passou de 2.000 caracteres — resuma o essencial.";
   }
@@ -199,6 +211,36 @@ export async function gravarContato(
   const resumo = await recalcularResumo(prisma, caseId);
 
   return { contato: paraView(criado), resumo };
+}
+
+/**
+ * A tentativa que aguardava retorno vira "sem retorno" — passadas as 2
+ * horas. Devolve `null` quando o contato não existe; o erro, em
+ * português, quando não pode.
+ */
+export async function marcarSemRetorno(
+  prisma: PrismaClient,
+  id: string,
+  resultado: ResultadoDoContato,
+  agora = new Date()
+): Promise<{ contato: ContatoView; resumo: ResumoDosContatos } | { erro: string } | null> {
+
+  if (!RESULTADOS_SEM_RETORNO.includes(resultado)) return { erro: "Escolha não atendeu, caixa postal ou sem resposta." };
+
+  const achado = await prisma.caseContato.findUnique({ where: { id }, select: { caseId: true, tipo: true, resultado: true, em: true } });
+  if (!achado) return null;
+  if (achado.tipo !== "tentativa" || achado.resultado !== "aguardando") return { erro: "Este contato não está aguardando retorno." };
+  if (!podeMarcarSemRetorno(achado.em, agora)) {
+    return { erro: `Ainda dá tempo de o cliente responder: sem retorno a partir das ${quandoLiberaSemRetorno(achado.em, agora)}.` };
+  }
+
+  const atualizado = await prisma.caseContato.update({
+    where: { id },
+    data: { resultado },
+    include: { autor: { select: { name: true } } },
+  });
+
+  return { contato: paraView(atualizado), resumo: await recalcularResumo(prisma, achado.caseId) };
 }
 
 export async function removerContato(

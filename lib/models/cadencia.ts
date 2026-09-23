@@ -90,8 +90,13 @@ export function persistencia(
   const respostas = ordenados.filter((c) => c.resultado === "respondeu");
   const ultimaResposta = respostas[respostas.length - 1]?.em;
 
+  /* A tentativa aguardando retorno ainda não é "sem resposta" — ver ESPERA_DO_RETORNO_MIN. */
   const seguidas = ordenados.filter(
-    (c) => c.tipo === "tentativa" && c.resultado !== "respondeu" && (!ultimaResposta || c.em > ultimaResposta)
+    (c) =>
+      c.tipo === "tentativa" &&
+      c.resultado !== "respondeu" &&
+      c.resultado !== "aguardando" &&
+      (!ultimaResposta || c.em > ultimaResposta)
   );
 
   if (seguidas.length === 0) {

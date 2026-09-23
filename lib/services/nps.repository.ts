@@ -314,6 +314,10 @@ export interface Tentativa {
   channel: string;
   note: string;
   actor: string;
+  /** Quando foi — ausente é agora. */
+  em?: Date;
+  /** "aguardando" (o padrão) ou, passadas 2 horas, "sem-resposta". */
+  resultado?: "aguardando" | "sem-resposta";
 }
 
 /**
@@ -329,12 +333,16 @@ export async function registrarTentativa(
   input: Tentativa
 ) {
 
+  const em = input.em ?? new Date();
+
   const criada = await prisma.npsAttempt.create({
     data: {
       responseId: input.responseId,
       channel: input.channel,
       note: input.note,
       actor: input.actor,
+      createdAt: em,
+      resultado: input.resultado ?? "aguardando",
     },
     select: { id: true, createdAt: true },
   });
@@ -345,7 +353,7 @@ export async function registrarTentativa(
       firstContactAt: null,
     },
     data: {
-      firstContactAt: new Date(),
+      firstContactAt: em,
       status: "Em tratativa",
     },
   });

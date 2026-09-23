@@ -1126,9 +1126,76 @@ Pedido do Isaac, depois da 1.30.0, em partes:
    que "volta para a fila" sem sentido depois de feito. **1.31.0.**
 2. Triagem do NPS: sem comentário, o contato vem antes da
    classificação. Tentativa só vira "sem retorno" depois de ~2 horas.
+   **1.32.0.**
 3. Google Agenda: o plano do dia vira eventos na agenda.
 4. O ícone da aba era o padrão do Next.js (o triângulo da Vercel).
    **1.31.0.**
+
+### NPS: o contato antes da classificação, e sem retorno só depois de 2 horas (23/09/2026, 1.32.0)
+
+O que o Isaac disse: "a parte de triagem tem situações, pelo menos nos
+casos de NPS, que você precisa classificar, e nem faz sentido, porque na
+maioria dos casos não tem comentário e preciso primeiro fazer o
+contato"; "tentativas de contato só podem ser marcadas sem retorno
+depois de um tempo, algo em torno de 2 horas".
+
+Medido antes: **126 das 188 respostas abertas do NPS não têm comentário
+nem tipo.** Em todas, a trilha pedia "Classificar tipo e causa" como
+passo da vez, antes do contato — e o Meu dia repetia "Falta: classificar"
+em cada uma.
+
+O que mudou:
+- **Sem comentário, o contato vem primeiro.** A trilha fica: segmento,
+  1º contato, retorno registrado e só então "Classificar depois da
+  conversa" (na fase do contato). O passo da vez passa a ser o contato;
+  depois de uma tentativa, registrar a conversa. Com comentário, nada
+  muda: dá para classificar pelo que o cliente escreveu.
+- **Tentativa nasce "aguardando retorno".** No Reclame Aqui, nas Redes e
+  no NPS, "Tentei contato" (era "Tentei, sem sucesso") grava a tentativa
+  como aguardando. Ela já conta como 1º contato (o prazo para), mas
+  **não conta como sem retorno** — nem na cadência de 5 em 7 dias, nem
+  nas 3 tentativas do guia do NPS, nem no robô que encerra sozinho.
+- **Sem retorno só 2 horas depois.** No formulário, "não atendeu",
+  "caixa postal" e "sem resposta" ficam bloqueados até 2 horas depois da
+  hora da tentativa, e a tela diz a partir de quando. Quem tentou às 9h e
+  registra às 14h marca direto. O servidor confere a mesma regra — a
+  extensão e qualquer chamada direta passam por ela.
+- **"Marcar sem retorno" depois.** Na lateral do caso e em Contatos, na
+  ficha do NPS, a tentativa aguardando mostra "sem retorno a partir das
+  HH:MM"; passadas as 2 horas, vira o botão. No Meu dia, a tentativa que
+  passou das 2 horas entra em FUPs ("sem resposta há 2h — marcar sem
+  retorno"), e só lá.
+- **O NPS guarda o resultado da tentativa.** Coluna nova
+  `NpsAttempt.resultado` (aguardando ou sem-resposta). As tentativas de
+  antes ficaram "sem-resposta", que é o que eram ("tentei, sem
+  sucesso"). A tentativa do NPS ganhou também a hora, como a do caso.
+
+Provas:
+- `check:espera-do-retorno` (novo, 29 pontos): a regra das 2 horas e a
+  hora que a tela mostra; o servidor recusa sem retorno antes e aceita
+  depois; a tentativa aguardando não conta no caso, na cadência, nas
+  tentativas do NPS nem no encerramento automático; a trilha sem
+  comentário (contato e conversa antes de classificar) e com comentário
+  (igual a antes); o Meu dia (espera nas 2 horas, FUP depois, e o caso só
+  em FUPs); e as travas no código (ação do NPS, robô, extensão).
+  Sabotado (a tentativa aguardando voltando a contar no caso), ficou
+  vermelho.
+- Os checks de antes continuam verdes: `check:tratativa`,
+  `check:trilha`, `check:trilha-nps`, `check:nps-guia`, `check:nps`,
+  `check:contato`, `check:rotina`, `check:guia-para-fechar`.
+- Na tela, com um NPS descartável (nota 2, sem comentário, sem Wootric):
+  a trilha pôs o contato como passo da vez; "Tentei contato" gravou
+  aguardando, com "sem retorno a partir das 19:00"; uma tentativa de 3
+  horas atrás ganhou o botão, e marcar levou a contagem de 0 para 1 de
+  3. No Reclame Aqui, só abrindo o formulário (sem salvar): as três
+  opções de sem retorno bloqueadas agora e liberadas com a hora 3 horas
+  antes. O NPS descartável foi apagado no fim.
+
+**Banco:** coluna nova `NpsAttempt.resultado` com padrão
+"sem-resposta" (aditiva, `db push`; RLS conferido). **Depende de você:**
+reiniciar o `npm run dev` — sem isso, registrar tentativa no NPS dá "o
+banco não aceitou" (o Prisma em memória não conhece a coluna; foi o que
+aconteceu no servidor de teste antes de reiniciar).
 
 ### Meu dia: itens que saem, ordem do documento e o fora do prazo (23/09/2026, 1.31.0)
 

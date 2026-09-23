@@ -111,10 +111,16 @@ export function tentativasNaJanela(
   agora = new Date()
 ) {
   const desde = item.postContactAt ? Date.parse(item.postContactAt) : 0;
+  /* A que ainda aguarda retorno não conta: o cliente pode responder nas 2 horas. */
   return item.attempts.filter((a) => {
     const t = Date.parse(a.createdAt);
-    return t > desde && (agora.getTime() - t) / 86400000 <= JANELA_TENTATIVAS_DIAS;
+    return a.resultado !== "aguardando" && t > desde && (agora.getTime() - t) / 86400000 <= JANELA_TENTATIVAS_DIAS;
   });
+}
+
+/** A tentativa mais antiga ainda aguardando retorno, se houver. */
+export function tentativaAguardando(item: Pick<NpsResponseView, "attempts">) {
+  return item.attempts.find((a) => a.resultado === "aguardando") ?? null;
 }
 
 /**

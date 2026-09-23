@@ -1602,6 +1602,11 @@ model NpsAttempt {
   note    String @default("")
   actor   String
 
+  /// aguardando · sem-resposta. A tentativa espera 2 horas antes de virar
+  /// "sem retorno" e só então conta para as tentativas mínimas do guia.
+  /// As de antes da regra (23/09/2026) já eram "tentei, sem sucesso".
+  resultado String @default("sem-resposta")
+
   createdAt DateTime @default(now())
 
   @@index([responseId, createdAt])

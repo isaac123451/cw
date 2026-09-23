@@ -363,7 +363,8 @@ async function encerrarNpsAbandonado(
     where: { closedAt: null },
     include: {
       attempts: {
-        select: { createdAt: true },
+        /* O resultado junto: a tentativa aguardando retorno não conta para encerrar. */
+        select: { createdAt: true, resultado: true },
         orderBy: { createdAt: "asc" },
       },
     },
@@ -383,6 +384,7 @@ async function encerrarNpsAbandonado(
           linha.confirmedAt?.toISOString(),
         attempts: linha.attempts.map((a) => ({
           createdAt: a.createdAt.toISOString(),
+          resultado: a.resultado,
         })),
       } as NpsResponseView,
     }))

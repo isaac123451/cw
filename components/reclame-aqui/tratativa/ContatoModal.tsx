@@ -10,6 +10,9 @@ import type { Case } from "@/lib/models/case";
 import {
   CANAIS_DE_CONTATO,
   patchDoResumo,
+  podeMarcarSemRetorno,
+  quandoLiberaSemRetorno,
+  RESULTADOS_SEM_RETORNO,
   ROTULO_DO_RESULTADO,
   TIPOS_DE_CONTATO,
   tipoDeContato,
@@ -83,6 +86,14 @@ export default function ContatoModal({ item, tipoInicial, onClose, onSalvo }: Pr
 
   const info = tipoDeContato(tipo)!;
 
+  /*
+    Sem retorno só 2 horas depois da tentativa. A hora do campo decide:
+    quem ligou às 9h e registra às 14h já pode marcar "não atendeu".
+  */
+  const emDoCampo = instanteDoCampo(quando);
+  const liberado = tipo !== "tentativa" || (emDoCampo ? podeMarcarSemRetorno(emDoCampo) : false);
+  const resultadoEfetivo: ResultadoDoContato = !liberado && RESULTADOS_SEM_RETORNO.includes(resultado) ? "aguardando" : resultado;
+
   function escolherTipo(novo: TipoDeContato) {
     setTipo(novo);
     setResultado(tipoDeContato(novo)!.resultadoPadrao);
@@ -108,7 +119,7 @@ export default function ContatoModal({ item, tipoInicial, onClose, onSalvo }: Pr
         protocol: item.protocol,
         tipo,
         canal,
-        resultado,
+        resultado: resultadoEfetivo,
         nota,
         em: em.toISOString(),
       });
@@ -126,7 +137,7 @@ export default function ContatoModal({ item, tipoInicial, onClose, onSalvo }: Pr
         "Salvo" sozinho confirma o clique; "1º contato dentro do prazo,
         com 2h10 de folga" confirma o trabalho.
       */
-      let detalhe = `${info.rotulo} por ${canal} — ${ROTULO_DO_RESULTADO[resultado].toLowerCase()}.`;
+      let detalhe = `${info.rotulo} por ${canal} — ${ROTULO_DO_RESULTADO[resultadoEfetivo].toLowerCase()}.`;
 
       if (primeiro && antes.fase === "contato" && antes.prazo && antes.situation !== "sem-registro") {
         const folga = minutosUteisEntre(em, new Date(antes.prazo), expediente);
@@ -134,6 +145,8 @@ export default function ContatoModal({ item, tipoInicial, onClose, onSalvo }: Pr
           folga >= 0
             ? `1º contato dentro do prazo, com ${descreverMinutosUteis(folga, expediente)} de folga.`
             : `1º contato registrado ${descreverMinutosUteis(folga, expediente)} depois do prazo.`;
+      } else if (tipo === "tentativa" && resultadoEfetivo === "aguardando") {
+        detalhe = `Aguardando retorno até ${quandoLiberaSemRetorno(em)}. Depois, marque sem retorno no bloco Criticidade e prazo — ou registre a resposta do cliente.`;
       } else if (tipo === "tentativa" && r.resumo.tentativasSemResposta > 0) {
         detalhe = `${r.resumo.tentativasSemResposta}ª tentativa seguida sem resposta. A documentação pede até 5, em horários variados, ao longo de 7 dias.`;
       }
@@ -233,16 +246,22 @@ export default function ContatoModal({ item, tipoInicial, onClose, onSalvo }: Pr
                 Resultado
               </span>
               <select
-                value={resultado}
+                value={resultadoEfetivo}
                 onChange={(e) => setResultado(e.target.value as ResultadoDoContato)}
                 className={`mt-1.5 ${inputClass}`}
               >
                 {info.resultados.map((r) => (
-                  <option key={r} value={r}>
+                  <option key={r} value={r} disabled={!liberado && RESULTADOS_SEM_RETORNO.includes(r)}>
                     {ROTULO_DO_RESULTADO[r]}
+                    {!liberado && RESULTADOS_SEM_RETORNO.includes(r) ? " — depois de 2h" : ""}
                   </option>
                 ))}
               </select>
+              {!liberado && emDoCampo && (
+                <span className="mt-1 block text-[11px] leading-snug text-zinc-500">
+                  Sem retorno a partir das {quandoLiberaSemRetorno(emDoCampo)}: o cliente ainda pode responder.
+                </span>
+              )}
             </label>
           )}
 

@@ -98,6 +98,7 @@ export function useMeuDia() {
               ligacoes: carga?.ligacoes ?? [],
               relatorio: carga?.relatorio ?? null,
               marcasDeItens: carga?.marcasDeItens ?? [],
+              aguardandoRetorno: carga?.aguardandoRetorno ?? [],
             },
             agora,
             expediente

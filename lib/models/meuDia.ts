@@ -13,7 +13,8 @@ import type { AtividadeDaRotina, ChaveDaRotina } from "@/lib/models/rotina";
 
 import { caseHref, isOpen, isReclameAqui, isSocial } from "@/lib/services/case.service";
 import { lateMovements, isPending } from "@/lib/services/movement.service";
-import { deveEncerrarSemRetorno, nivelDoNps, ordemDoNivel, podeEncerrar, tentativasNaJanela } from "@/lib/services/nps.service";
+import { deveEncerrarSemRetorno, nivelDoNps, ordemDoNivel, podeEncerrar, tentativaAguardando, tentativasNaJanela } from "@/lib/services/nps.service";
+import { podeMarcarSemRetorno } from "@/lib/models/tratativa";
 import { INICIO_DO_REGISTRO_DE_CONTATO, inicioDoRelogio, primeiroContatoFeito, slaStatus } from "@/lib/services/sla.service";
 import {
   EXPEDIENTE_PADRAO,
@@ -135,6 +136,12 @@ export interface DadosDoDia {
   relatorio?: { ciclo: string; rotulo: string; salvo: boolean } | null;
   /** Os itens que quem trabalha tirou das atividades (feito hoje, dispensado). */
   marcasDeItens?: MarcaDeItem[];
+  /**
+   * Os casos com tentativa aguardando retorno há mais de 2 horas — vêm do
+   * servidor, que tem o registro de contatos. É FUP: marcar sem retorno
+   * ou registrar a resposta.
+   */
+  aguardandoRetorno?: ItemDaRotina[];
 }
 
 /** A ordem do documento entre as frentes; sem frente (a agenda), logo depois do Reclame Aqui. */
@@ -271,6 +278,13 @@ export function etapaDoNps(r: NpsResponseView, tipos: NpsKindOption[] | undefine
   if (!r.firstContactAt) return { etapa: "novo", motivo: "sem 1º contato" };
 
   if (!r.postContactAt) {
+    /* A tentativa ainda aguardando: espera 2 horas; depois, é FUP — marcar sem retorno ou registrar a conversa. */
+    const pendente = tentativaAguardando(r);
+    if (pendente) {
+      return podeMarcarSemRetorno(pendente.createdAt, agora)
+        ? { etapa: "fup", motivo: `tentativa por ${pendente.channel} sem resposta há 2h — marcar sem retorno` }
+        : { etapa: "esperando", motivo: "tentativa aguardando retorno" };
+    }
     const semRetorno = deveEncerrarSemRetorno(r, agora);
     if (semRetorno.deve && r.attempts.length > 0) return { etapa: "sem-retorno", motivo: semRetorno.motivo ?? "critério do guia atingido" };
     if (r.attempts.length > 0) return { etapa: "ligacao", motivo: "cliente ainda não atendeu" };
@@ -306,6 +320,10 @@ export function contarRotina(
 
   /* Contato registrado hoje: o retorno de hoje já foi dado — volta amanhã, se ainda faltar. */
   const mexidoHoje = (c: Case) => Boolean(c.ultimoContatoEm && paredeDe(new Date(c.ultimoContatoEm)).dia === hoje);
+
+  /* Tentativa aguardando retorno há mais de 2 horas: é FUP, e só lá. */
+  const aguardandoRetorno = dados.aguardandoRetorno ?? [];
+  const aguardandoIds = new Set(aguardandoRetorno.map((i) => i.id));
 
   const npsAbertos = dados.nps.filter((r) => !isEncerrado(r.status));
   const etapaNps = new Map(npsAbertos.map((r) => [r.id, etapaDoNps(r, dados.tiposNps, agora)]));
@@ -391,7 +409,7 @@ export function contarRotina(
   const emAberto: ItemDaRotina[] = [
     ...abertos
       .filter((c) => (primeiroContatoFeito(c) || legado(c)) && (isSocial(c) ? !eFinalDasRedes(c.status) : !respondida(c)))
-      .filter((c) => !(c.tentativasSemResposta && c.tentativasSemResposta > 0) && !mexidoHoje(c))
+      .filter((c) => !(c.tentativasSemResposta && c.tentativasSemResposta > 0) && !mexidoHoje(c) && !aguardandoIds.has(c.id))
       .map((c) => {
         const atrasado = atrasadoCaso(c);
         return {
@@ -432,8 +450,9 @@ export function contarRotina(
     tempo duas vezes no plano.
   */
   const fups: ItemDaRotina[] = [
+    ...aguardandoRetorno,
     ...abertos
-      .filter((c) => !(c.tentativasSemResposta && c.tentativasSemResposta > 0))
+      .filter((c) => !(c.tentativasSemResposta && c.tentativasSemResposta > 0) && !aguardandoIds.has(c.id))
       .map((c) => ({ c, s: semNoticia(c, agora, expediente) }))
       .filter((x) => x.s?.atrasado)
       .map(({ c, s }) => ({
@@ -444,12 +463,12 @@ export function contarRotina(
         href: caseHref(c),
         atrasado: true,
       })),
-    /* No NPS: já conversamos, falta a confirmação — e faz 2 dias. */
+    /* No NPS: a tentativa passou de 2 horas sem resposta, ou a confirmação do cliente passou de 2 dias. */
     ...naEtapa("fup")
       .map((r) => ({
         id: r.id,
         frente: "nps" as const,
-        titulo: `Nota ${r.score} · falta a confirmação do cliente`,
+        titulo: `Nota ${r.score} · ${etapaNps.get(r.id)!.motivo}`,
         detalhe: r.customerName || r.customer,
         href: `/nps/${r.id}`,
         urgencia: urgenciaDoNps(r, false),
@@ -595,7 +614,7 @@ export function contarRotina(
     pendencias: montar("pendencias", pendencias, (n) => (n ? `${n} tarefa(s) da agenda para hoje ou atrasadas.` : "Nenhuma tarefa da agenda vencendo.")),
     "em-aberto": montar("em-aberto", emAberto, (n, l) => (n ? `${n} em andamento esperando o nosso retorno${foraDoPrazoTexto(l)}.` : "Nada em andamento esperando retorno.")),
     novos: montar("novos", novos, (n, l) => (n ? `${n} sem 1º contato${foraDoPrazoTexto(l)}.` : "Nenhum caso novo esperando.")),
-    fups: montar("fups", fups, (n) => (n ? `${n} sem notícia há 2 dias úteis ou mais.` : "Ninguém sem notícia.")),
+    fups: montar("fups", fups, (n) => (n ? `${n} sem notícia ou sem resposta a uma tentativa.` : "Ninguém sem notícia.")),
     moderacoes: montar("moderacoes", moderacoes, (n) => (n ? `${n} moderação(ões) aguardando o Reclame Aqui.` : "Nenhuma moderação em aberto.")),
     avaliacoes: montar("avaliacoes", avaliacoes, (n) => (n ? `${n} pedido(s) de avaliação para hoje.` : "Nenhum pedido de avaliação para hoje.")),
     ligacoes: montar("ligacoes", ligacoes, (n) => (n ? `${n} tentativa(s) da cadência para hoje.` : "Nenhuma tentativa marcada para hoje.")),

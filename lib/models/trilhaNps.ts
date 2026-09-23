@@ -15,8 +15,10 @@ import type { EstadoDoPasso } from "@/lib/models/trilha";
 import {
   deveEncerrarSemRetorno,
   slaState,
+  tentativaAguardando,
   tentativasNaJanela,
 } from "@/lib/services/nps.service";
+import { podeMarcarSemRetorno, quandoLiberaSemRetorno } from "@/lib/models/tratativa";
 import {
   descreverMinutosUteis,
   descreverPrazo,
@@ -41,6 +43,12 @@ import {
  * no prazo do segmento; retorno registrado; confirmação do cliente
  * (quando o tipo pede); status final aplicado. As ações do promotor
  * entram como passo opcional de quem deu 9 ou 10.
+ *
+ * **Sem comentário, o contato vem antes da classificação.** O Isaac: "na
+ * maioria dos casos não tem comentário e preciso primeiro fazer o
+ * contato". Classificar uma nota 3 sem texto é chutar; é na conversa que
+ * o motivo aparece. Nesses casos o passo de classificar vai para depois
+ * do retorno registrado (126 das 188 respostas abertas em 23/09).
  *
  * **Cada passo se marca pelo que o banco sabe** — nada aqui é clique de
  * "feito": a primeira tentativa é o 1º contato, o pós-contato é o
@@ -113,6 +121,10 @@ export function trilhaDoNps(item: NpsResponseView, contexto: ContextoDaTrilhaNps
 
   const passos: Rascunho[] = [];
 
+  /* Sem comentário e sem tipo: não há o que classificar antes de falar com o cliente. */
+  const classificarDepois = !item.comment.trim() && !item.kind;
+  const aguardando = tentativaAguardando(item);
+
   /* 1. Segmento — sai da nota; o guia pede que esteja identificado. */
   passos.push({
     id: "segmento",
@@ -134,7 +146,9 @@ export function trilhaDoNps(item: NpsResponseView, contexto: ContextoDaTrilhaNps
     opcional: calado,
     acao: "classificar",
     detalhe: !item.kind
-      ? "Reclamação, sugestão, elogio, engano, erro no sistema, erro processual ou falta de retorno."
+      ? classificarDepois
+        ? "Sem comentário na pesquisa: classifique depois de falar com o cliente — é na conversa que o motivo aparece."
+        : "Reclamação, sugestão, elogio, engano, erro no sistema, erro processual ou falta de retorno."
       : precisaCausa && !item.rootCause
         ? `${item.kind} pede a causa raiz — é ela que mostra a tendência.`
         : `${regra?.emoji ? `${regra.emoji} ` : ""}${item.kind}${item.rootCause ? ` · ${item.rootCause}` : ""}`,
@@ -188,8 +202,19 @@ export function trilhaDoNps(item: NpsResponseView, contexto: ContextoDaTrilhaNps
         ]
           .filter(Boolean)
           .join(" · ") || `Registrado em ${descreverRegistro(item.postContactAt)}.`
-      : (item.kind && RETORNO_DO_TIPO[item.kind]) || regra?.action || "Registre a solução ou o retorno dado ao cliente.",
+      : aguardando
+        ? podeMarcarSemRetorno(aguardando.createdAt, agora)
+          ? `A tentativa por ${aguardando.channel} passou de 2 horas sem resposta: marque sem retorno em Contatos, ou registre a conversa se o cliente respondeu.`
+          : `Tentativa por ${aguardando.channel} aguardando retorno — sem retorno só a partir das ${quandoLiberaSemRetorno(aguardando.createdAt, agora)}.`
+        : (item.kind && RETORNO_DO_TIPO[item.kind]) || regra?.action || "Registre a solução ou o retorno dado ao cliente.",
   });
+
+  /* Sem comentário: classificar vem logo depois da conversa, na fase do contato. */
+  if (classificarDepois) {
+    const i = passos.findIndex((p) => p.id === "classificar");
+    const [classificar] = passos.splice(i, 1);
+    passos.push({ ...classificar, fase: "Contato", titulo: "Classificar depois da conversa" });
+  }
 
   /* 5. Confirmação — só quando o tipo pede ("isso resolveu sua questão?"). */
   if (regra?.requiresConfirmation) {

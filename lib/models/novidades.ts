@@ -104,6 +104,14 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.32.0",
+    data: "2026-09-23",
+    titulo: "Contato antes de classificar, e sem retorno só depois de 2 horas",
+    texto: "No NPS sem comentário, a trilha pede primeiro o contato e a conversa, e só depois a classificação. Em todas as frentes, Tentei contato grava a tentativa como aguardando retorno: ela já conta como 1º contato, mas só vira sem retorno 2 horas depois, com o botão Marcar sem retorno na ficha. No Meu dia, a tentativa que passou das 2 horas aparece em FUPs.",
+    frentes: ["nps", "reclame-aqui", "redes", "extensao"],
+    href: "/nps",
+  },
+  {
     versao: "1.31.0",
     data: "2026-09-23",
     titulo: "Meu dia: cada item sai com um clique, na ordem do documento",

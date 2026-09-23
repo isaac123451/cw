@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import Modal, { textareaClass } from "@/components/shared/Modal";
+import Modal, { inputClass, textareaClass } from "@/components/shared/Modal";
 
 import { registerNpsAttempt, registerPostContact } from "@/lib/actions/nps";
 import { useNps } from "@/lib/context/NpsContext";
@@ -19,19 +19,33 @@ import {
   type NpsResponseView,
 } from "@/lib/models/nps";
 import { tentativasNaJanela } from "@/lib/services/nps.service";
-import { descreverMinutosUteis, minutosUteisEntre } from "@/lib/services/horasUteis";
+import { descreverMinutosUteis, instanteDe, minutosUteisEntre, paredeDe } from "@/lib/services/horasUteis";
+import { podeMarcarSemRetorno, quandoLiberaSemRetorno } from "@/lib/models/tratativa";
 
 import { ErroDoServidor, RodapeDeSalvar, Rotulo } from "@/components/shared/Rodape";
 
 export type ModoDoContato = "contato" | "tentativa";
+
+/** "2026-09-15T16:20" em Brasília, para o campo de data e hora. */
+function valorDoCampo(d: Date) {
+  const { dia, min } = paredeDe(d);
+  return `${dia}T${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
+}
+
+function instanteDoCampo(valor: string) {
+  const m = valor.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})/);
+  return m ? instanteDe(m[1], Number(m[2]) * 60 + Number(m[3])) : null;
+}
 
 /**
  * O contato com o cliente, feito ou tentado.
  *
  * "Falei com o cliente" é o retorno do guia: o que foi feito, se
  * resolveu e como a pessoa ficou (a régua de humor, que é o indicador
- * "humor do detrator após resolução"). "Tentei, sem sucesso" é a
- * cadência: cada tentativa conta para o encerramento sem retorno.
+ * "humor do detrator após resolução"). "Tentei contato" é a
+ * cadência: cada tentativa conta para o encerramento sem retorno —
+ * depois de 2 horas sem resposta. Antes disso ela fica "aguardando
+ * retorno", porque o cliente ainda pode responder à mensagem.
  *
  * As duas contam como 1º contato — o prazo do segmento para no
  * primeiro registro, como a operação sempre mediu.
@@ -59,6 +73,8 @@ export default function ContatoNpsModal({
 
   const [canal, setCanal] = useState(item.phone ? "WhatsApp" : CHANNELS[0]);
   const [aconteceu, setAconteceu] = useState("");
+  const [quando, setQuando] = useState(() => valorDoCampo(new Date()));
+  const [semRetorno, setSemRetorno] = useState(false);
 
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -67,6 +83,10 @@ export default function ContatoNpsModal({
   const segmento = segmentOf(item.score);
   const minimas = tentativasMinimas(item.kind);
   const naJanela = agora ? tentativasNaJanela(item, agora).length : item.attempts.length;
+
+  /* Quem tentou às 9h e registra às 14h já pode marcar sem retorno; quem tentou agora, espera 2 horas. */
+  const emDoCampo = instanteDoCampo(quando);
+  const liberado = Boolean(emDoCampo && agora && podeMarcarSemRetorno(emDoCampo, agora));
 
   /* O que o registro significa para o prazo, dito antes de salvar. */
   const prazo = new Date(item.firstContactDueAt);
@@ -99,7 +119,12 @@ export default function ContatoNpsModal({
             .join(" ") || nomeDoCliente(item),
         });
       } else {
-        const r = await registerNpsAttempt({ responseId: item.id, channel: canal, note: aconteceu });
+        if (!emDoCampo) {
+          setErro("Preencha a data e a hora da tentativa.");
+          return;
+        }
+        const comoSemRetorno = semRetorno && liberado;
+        const r = await registerNpsAttempt({ responseId: item.id, channel: canal, note: aconteceu, em: emDoCampo.toISOString(), semRetorno: comoSemRetorno });
         if (!r.ok) {
           setErro(r.erro);
           return;
@@ -109,8 +134,9 @@ export default function ContatoNpsModal({
         notify({
           tone: "success",
           title: `Tentativa por ${canal} registrada.`,
-          detail:
-            n >= minimas
+          detail: !comoSemRetorno
+            ? `Aguardando retorno até ${quandoLiberaSemRetorno(emDoCampo)}. Depois, marque sem retorno em Contatos — ou registre a conversa.`
+            : n >= minimas
               ? `${n} tentativas em ${JANELA_TENTATIVAS_DIAS} dias: o guia já permite encerrar sem retorno.`
               : `${n} de ${minimas} tentativas em ${JANELA_TENTATIVAS_DIAS} dias — varie o canal e o horário.`,
         });
@@ -127,7 +153,7 @@ export default function ContatoNpsModal({
     <Modal
       open
       porque="nps.segmentacao"
-      title={modo === "contato" ? (primeiro ? "Registrar o 1º contato" : "Registrar o retorno") : "Registrar tentativa sem sucesso"}
+      title={modo === "contato" ? (primeiro ? "Registrar o 1º contato" : "Registrar o retorno") : "Registrar tentativa de contato"}
       description={`${nomeDoCliente(item)} · ${segmento.label}, nota ${item.score}`}
       onClose={onClose}
       footer={
@@ -146,7 +172,7 @@ export default function ContatoNpsModal({
           {(
             [
               ["contato", "Falei com o cliente"],
-              ["tentativa", "Tentei, sem sucesso"],
+              ["tentativa", "Tentei contato"],
             ] as const
           ).map(([id, rotulo]) => (
             <button
@@ -268,9 +294,42 @@ export default function ContatoNpsModal({
               />
             </label>
 
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block">
+                <Rotulo>Quando (Brasília)</Rotulo>
+                <input
+                  type="datetime-local"
+                  value={quando}
+                  max={valorDoCampo(new Date())}
+                  onChange={(e) => setQuando(e.target.value)}
+                  className={`mt-1.5 ${inputClass}`}
+                />
+              </label>
+              <div>
+                <Rotulo>O cliente respondeu?</Rotulo>
+                <label className={`mt-2.5 flex items-start gap-2 text-sm ${liberado ? "text-zinc-700" : "text-zinc-400"}`}>
+                  <input
+                    type="checkbox"
+                    checked={semRetorno && liberado}
+                    disabled={!liberado}
+                    onChange={(e) => setSemRetorno(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-zinc-300 text-violet-700"
+                  />
+                  <span>
+                    Não — sem retorno
+                    {!liberado && emDoCampo && (
+                      <span className="block text-[11px] leading-snug text-zinc-500">
+                        Só a partir das {quandoLiberaSemRetorno(emDoCampo)}. Até lá, fica aguardando retorno.
+                      </span>
+                    )}
+                  </span>
+                </label>
+              </div>
+            </div>
+
             <p className="text-xs leading-relaxed text-zinc-500">
-              {naJanela} de {minimas} tentativas nos últimos {JANELA_TENTATIVAS_DIAS} dias. O guia pede {minimas} em {JANELA_TENTATIVAS_DIAS} dias
-              (e-mail, telefone, WhatsApp) antes de encerrar sem retorno.
+              {naJanela} de {minimas} tentativas sem retorno nos últimos {JANELA_TENTATIVAS_DIAS} dias. O guia pede {minimas} em {JANELA_TENTATIVAS_DIAS} dias
+              (e-mail, telefone, WhatsApp) antes de encerrar sem retorno; a tentativa conta depois de 2 horas sem resposta.
             </p>
           </>
         )}
