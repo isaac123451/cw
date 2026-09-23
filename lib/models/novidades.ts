@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.23.0",
+    data: "2026-09-22",
+    titulo: "Cabeçalho do cliente no painel",
+    texto: "O painel da extensão abre com quem é, de qual conta, o que está aberto em cada frente (Reclame Aqui, Redes, NPS) e um termômetro do humor da conversa, com seta quando piora ou melhora. Os avisos ficam em no máximo cinco, o mais grave primeiro.",
+    frentes: ["extensao"],
+  },
+  {
     versao: "1.22.0",
     data: "2026-09-22",
     titulo: "Completar o cadastro pela conversa",

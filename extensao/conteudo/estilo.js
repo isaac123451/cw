@@ -1016,6 +1016,46 @@ ${CORES}
 .avisos-contato li.atencao { border-left-color: var(--atencao); }
 .avisos-contato[hidden] { display: none; }
 
+/* Cabeçalho do cliente: quem é, a conta, as frentes abertas e o humor. */
+.cabecalho-cliente {
+  margin: 0 0 10px;
+  display: grid;
+  gap: 4px;
+}
+.cab-linha { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.cab-nome {
+  font-size: 14px;
+  font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cab-conta { font-size: 12px; color: var(--fraco); }
+.cab-frentes { display: flex; flex-wrap: wrap; gap: 5px; }
+.frente-chip {
+  font-size: 11px;
+  padding: 2px 7px;
+  border: 1px solid var(--borda);
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.frente-chip.perigo { border-color: var(--perigo); color: var(--perigo); }
+.frente-chip.calmo { color: var(--fraco); }
+.termometro {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--superficie);
+}
+.termometro[hidden] { display: none; }
+.termometro.h1, .termometro.h2 { color: var(--perigo); }
+.termometro.h3 { color: var(--fraco); }
+.termometro.h4, .termometro.h5 { color: var(--ok, #16a34a); }
+
 /* "Na conversa: e-mail x" — completar só com o clique. */
 .completar-conversa {
   margin: 0 0 10px;
@@ -1028,6 +1068,13 @@ ${CORES}
   gap: 7px;
 }
 .completar-conversa p { margin: 0; }
+.completar-conversa .acao {
+  justify-self: start;
+  width: auto;
+  margin: 0;
+  padding: 5px 11px;
+  font-size: 12px;
+}
 .completar-conversa.feito { border-style: solid; border-color: color-mix(in srgb, var(--ok, #16a34a) 45%, var(--borda)); }
 .completar-conversa .erro-completar { color: var(--perigo); }
 

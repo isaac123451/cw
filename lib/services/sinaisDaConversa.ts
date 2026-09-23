@@ -7,7 +7,7 @@ import { semValor } from "@/lib/models/case";
 import { digitosDoDocumento } from "@/lib/models/establishment";
 import { lerTelefone } from "@/lib/services/contato.service";
 import { cpfValido, dadosSensiveis } from "@/lib/services/lgpd";
-import { tendenciaDoHumor, type MensagemDaConversa } from "@/lib/services/motorProprio";
+import { humorDaConversa, tendenciaDoHumor, type MensagemDaConversa } from "@/lib/services/motorProprio";
 
 /**
  * Os avisos que só a conversa dá (Fase 17).
@@ -182,4 +182,29 @@ export function oQueCompletar(
   if (achados.telefone && semValor(caso.phone)) faltas.push({ campo: "telefone", valor: achados.telefone });
   if (achados.documento && !caso.document) faltas.push({ campo: "documento", valor: achados.documento });
   return faltas;
+}
+
+/* ============================================================
+   TERMÔMETRO DO CABEÇALHO (Fase 17)
+============================================================ */
+
+export interface HumorDoCabecalho {
+  /** 1 (muito irritado) a 5 (muito satisfeito), pelas últimas mensagens. */
+  agora: 1 | 2 | 3 | 4 | 5;
+  tendencia: "piorando" | "melhorando" | "estavel" | null;
+}
+
+/**
+ * O humor de agora e para onde vai. Com menos de duas mensagens do
+ * cliente não há o que medir; a tendência só com quatro ou mais.
+ */
+export function humorDoCabecalho(mensagens: MensagemDaConversa[]): HumorDoCabecalho | null {
+  const doCliente = mensagens.filter((m) => m.de === "cliente");
+  if (doCliente.length < 2) return null;
+  const agora = humorDaConversa(mensagens);
+  const t = tendenciaDoHumor(mensagens);
+  return {
+    agora,
+    tendencia: !t ? null : t.agora < t.antes ? "piorando" : t.agora > t.antes ? "melhorando" : "estavel",
+  };
 }

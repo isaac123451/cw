@@ -14,7 +14,7 @@ import { runInNewContext } from "node:vm";
 
 import { criarIndice } from "../lib/models/sugestaoPorTexto";
 import { tendenciaDoHumor } from "../lib/services/motorProprio";
-import { avisosDaConversa, dadosDaConversa, oQueCompletar } from "../lib/services/sinaisDaConversa";
+import { avisosDaConversa, dadosDaConversa, humorDoCabecalho, oQueCompletar } from "../lib/services/sinaisDaConversa";
 
 let falhas = 0;
 function conferir(titulo: string, obtido: unknown, esperado: unknown) {
@@ -141,6 +141,42 @@ const base = readFileSync(resolve(__dirname, "../extensao/conteudo/painel-base.j
 conferir("gravar exige quem pode escrever", rotaCompletar.includes('usuario.papel === "LEITURA"') && rotaCompletar.includes("completarContato("), true);
 conferir("o botão chega ao painel", base.includes('acao === "completar-conversa"') && sw.includes("completarPelaConversa"), true);
 conferir("só diz gravado quando o servidor gravou", /completou\.length > 0\) \{\s*sinais\.completar = null;/.test(painel), true);
+
+/* ---------- cabeçalho do cliente ---------- */
+
+console.log("\n  CABEÇALHO DO CLIENTE\n");
+
+const cabecalho = P.blocoCabecalho as (dados: unknown, tom: string, rotulo: string) => string;
+const html = cabecalho(
+  {
+    cliente: cliente(),
+    estabelecimento: { nome: "Pizzaria Bella" },
+    casos: [
+      { aberto: true, canal: "Reclame Aqui" },
+      { aberto: true, canal: "Reclame Aqui" },
+      { aberto: false, canal: "Reclame Aqui" },
+      { aberto: true, canal: "Instagram" },
+    ],
+    nps: { nota: 4, encerrado: false },
+  },
+  "ok",
+  "confirmado"
+);
+const chips = [...html.matchAll(/<span class="frente-chip[^"]*">([^<]+)<\/span>/g)].map((m) => m[1]);
+conferir("frentes abertas: RA, Redes e NPS", chips, ["Reclame Aqui · 2 abertos", "Redes · 1 aberto", "NPS 4 · ciclo aberto"]);
+conferir("a conta aparece", html.includes('<div class="cab-conta">Pizzaria Bella</div>'), true);
+conferir("detrator em destaque", html.includes('frente-chip perigo">NPS 4'), true);
+conferir("o termômetro nasce escondido", html.includes('<span class="termometro" hidden></span>'), true);
+conferir(
+  "nada aberto diz isso",
+  [...cabecalho({ cliente: cliente(), casos: [] }, "ok", "x").matchAll(/frente-chip[^"]*">([^<]+)</g)].map((m) => m[1]),
+  ["nada aberto"]
+);
+
+conferir("humor com uma mensagem só: nada", humorDoCabecalho([cli("oi")]), null);
+conferir("humor de agora, sem tendência com poucas", humorDoCabecalho([cli("absurdo"), cli("péssimo, vou cancelar")]), { agora: 1, tendencia: null });
+conferir("humor piorando", humorDoCabecalho(piorou)?.tendencia, "piorando");
+conferir("humor melhorando", humorDoCabecalho(melhorou)?.tendencia, "melhorando");
 
 console.log(falhas === 0 ? "\n  O painel abre dizendo o que pede cuidado.\n" : `\n  ${falhas} ponto(s) a corrigir.\n`);
 process.exit(falhas === 0 ? 0 : 1);

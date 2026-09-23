@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 22/09/2026. Aplicação **1.22.0**, extensão **1.22.0**.
+Atualizado em 22/09/2026. Aplicação **1.23.0**, extensão **1.23.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,40 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### Cabeçalho do cliente com o termômetro de humor (22/09/2026, 1.23.0)
+
+Fase 17, "Cabeçalho do cliente". O painel da extensão abre com quem é,
+de qual conta, o que está aberto em cada frente e como está o humor da
+conversa, antes de qualquer outra coisa.
+
+- **Quem é e de qual conta.** O nome e o grau de certeza da
+  identificação saíram do bloco "Cliente" e subiram para o topo, com o
+  estabelecimento embaixo.
+- **Frentes abertas em etiquetas.** "Reclame Aqui · 2 abertos",
+  "Redes · 1 aberto", "NPS 4 · ciclo aberto" (em vermelho quando é
+  detrator), ou "nada aberto".
+- **Termômetro de humor.** De "muito irritado" a "muito satisfeito",
+  com ↓ ou ↑ quando piora ou melhora, e o motivo no `title`. Vem na mesma
+  consulta dos sinais da conversa (a rota passou a devolver `humor`).
+  Até chegar, fica escondido, em vez de mostrar um humor inventado.
+- **Avisos: no máximo cinco, somando os da conversa.** Com os sinais da
+  conversa somados aos do contato, a lista chegava a seis. Agora são no
+  máximo cinco, o grave primeiro, e no mesmo tom o sinal da conversa vem
+  antes, porque é o que ninguém sabia até abrir. O botão "Completar o
+  cadastro" ficou menor, de ação secundária.
+
+Provas:
+- `check:avisos-extensao` subiu para 44 pontos: frentes abertas, conta,
+  detrator em destaque, termômetro que nasce escondido, "nada aberto",
+  e o humor com uma mensagem, sem tendência, piorando e melhorando.
+- **Página de conferência com o código real do painel**
+  (`painel-contato.js` e o CSS de verdade, com o servidor simulado):
+  - uma chamada só, com o protocolo e o telefone certos;
+  - termômetro "insatisfeito ↓";
+  - cinco avisos na ordem certa, com o da reclamação colada dentro;
+  - o clique em Completar mandou e-mail e documento e só disse
+    "Gravado" depois da resposta.
 
 ### Completar o cadastro pela conversa (22/09/2026, 1.22.0)
 

@@ -641,6 +641,7 @@
 
     // Antes de tudo, o que pede cuidado com esta pessoa, em uma linha cada.
     // (A lista existe mesmo vazia: os sinais da conversa chegam depois.)
+    partes.push(blocoCabecalho(dados, tom, rotuloConfianca));
     partes.push(blocoAvisos(P.avisosDoContato(dados), true));
 
     // O resumo vem primeiro: responde "o que está havendo aqui".
@@ -656,10 +657,6 @@
       <div class="bloco">
         <div class="rotulo">Cliente</div>
         <div class="cartao">
-          <div class="linha">
-            <span class="nome">${CW.escapar(cliente.nome)}</span>
-            <span class="tag ${tom}">${rotuloConfianca}</span>
-          </div>
           <div class="sub">
             ${[
               cliente.cidade &&
@@ -893,6 +890,7 @@
    * quatro: aviso demais vira papel de parede.
    */
   const PESO_DO_TOM = { perigo: 0, atencao: 1, neutro: 2 };
+  const TETO_DE_AVISOS = 5;
 
   P.avisosDoContato = function avisosDoContato(dados, agora = Date.now()) {
 
@@ -994,6 +992,7 @@
         sinaisPorContato.set(chave, {
           avisos: resposta?.dados?.avisos ?? [],
           completar: resposta?.dados?.completar ?? null,
+          humor: resposta?.dados?.humor ?? null,
         });
       } catch {
         sinaisPorContato.delete(chave);
@@ -1004,6 +1003,7 @@
     const sinais = sinaisPorContato.get(chave);
     if (!sinais) return;
 
+    desenharTermometro(sinais.humor);
     desenharCompletar(sinais.completar, chave);
 
     const avisos = sinais.avisos;
@@ -1019,10 +1019,84 @@
     lista.dataset.sinais = chave;
     lista.insertAdjacentHTML(
       "beforeend",
-      avisos.map((a) => `<li class="${CW.escapar(a.tom)}">${CW.escapar(a.texto)}</li>`).join("")
+      avisos.map((a) => `<li class="${CW.escapar(a.tom)}" data-conversa>${CW.escapar(a.texto)}</li>`).join("")
     );
+
+    /*
+      Junto com os do contato, o grave primeiro e no máximo cinco — aviso
+      demais vira papel de parede. No mesmo tom, o da conversa vem antes:
+      é o que ninguém sabia até abrir.
+    */
+    const itens = [...lista.children].map((li, i) => ({
+      li,
+      i,
+      peso: PESO_DO_TOM[li.className] ?? 2,
+      daConversa: li.hasAttribute("data-conversa") ? 0 : 1,
+    }));
+    itens.sort((a, b) => a.peso - b.peso || a.daConversa - b.daConversa || a.i - b.i);
+    itens.forEach(({ li }, n) => (n < TETO_DE_AVISOS ? lista.appendChild(li) : li.remove()));
     lista.hidden = false;
   };
+
+  /* ============================================================
+     CABEÇALHO DO CLIENTE (Fase 17)
+  ============================================================ */
+
+  /**
+   * Quem é, de qual conta, o que está aberto em cada frente e como está
+   * o humor da conversa — antes de qualquer outra coisa do painel.
+   *
+   * O termômetro chega depois, com os sinais da conversa: até lá fica
+   * escondido, em vez de mostrar um humor inventado.
+   */
+  function blocoCabecalho(dados, tom, rotuloConfianca) {
+
+    const cliente = dados.cliente;
+    const casos = dados.casos ?? [];
+    const doRA = (c) => (c.canal ?? "Reclame Aqui") === "Reclame Aqui";
+    const plural = (n, palavra) => `${n} ${palavra}${n === 1 ? "" : "s"}`;
+
+    const raAbertos = casos.filter((c) => c.aberto && doRA(c)).length;
+    const redesAbertos = casos.filter((c) => c.aberto && !doRA(c)).length;
+    const nps = dados.nps;
+
+    const frentes = [];
+    if (raAbertos) frentes.push(`<span class="frente-chip">Reclame Aqui · ${plural(raAbertos, "aberto")}</span>`);
+    if (redesAbertos) frentes.push(`<span class="frente-chip">Redes · ${plural(redesAbertos, "aberto")}</span>`);
+    if (nps && !nps.encerrado && typeof nps.nota === "number") {
+      frentes.push(
+        `<span class="frente-chip${nps.nota <= 6 ? " perigo" : ""}">NPS ${nps.nota} · ciclo aberto</span>`
+      );
+    }
+    if (frentes.length === 0) frentes.push(`<span class="frente-chip calmo">nada aberto</span>`);
+
+    const conta = dados.estabelecimento?.nome;
+
+    return `
+      <div class="cabecalho-cliente">
+        <div class="cab-linha">
+          <span class="cab-nome">${CW.escapar(cliente.nome)}</span>
+          <span class="tag ${tom}">${rotuloConfianca}</span>
+          <span class="termometro" hidden></span>
+        </div>
+        ${conta ? `<div class="cab-conta">${CW.escapar(conta)}</div>` : ""}
+        <div class="cab-frentes">${frentes.join("")}</div>
+      </div>`;
+  }
+
+  P.blocoCabecalho = blocoCabecalho;
+
+  const ROTULO_DO_HUMOR = { 1: "muito irritado", 2: "insatisfeito", 3: "neutro", 4: "satisfeito", 5: "muito satisfeito" };
+
+  function desenharTermometro(humor) {
+    const el = P.corpo?.querySelector(".cabecalho-cliente .termometro");
+    if (!el || !humor || !ROTULO_DO_HUMOR[humor.agora]) return;
+    const seta = humor.tendencia === "piorando" ? " ↓" : humor.tendencia === "melhorando" ? " ↑" : "";
+    el.className = `termometro h${humor.agora}`;
+    el.textContent = `${ROTULO_DO_HUMOR[humor.agora]}${seta}`;
+    el.title = `Humor da conversa: ${humor.agora} de 5${humor.tendencia ? `, ${humor.tendencia}` : ""} — pelas últimas mensagens do cliente`;
+    el.hidden = false;
+  }
 
   const NOME_DO_CAMPO = { email: "e-mail", telefone: "telefone", documento: "CPF/CNPJ" };
 

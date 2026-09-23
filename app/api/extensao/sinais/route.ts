@@ -9,6 +9,7 @@ import { getPrisma } from "@/lib/prisma";
 import {
   avisosDaConversa,
   dadosDaConversa,
+  humorDoCabecalho,
   indiceDosRelatos,
   oQueCompletar,
 } from "@/lib/services/sinaisDaConversa";
@@ -74,7 +75,11 @@ export async function POST(request: Request) {
     }
   }
 
-  return responder(request, { avisos: avisosDaConversa(mensagens, indice), completar });
+  return responder(request, {
+    avisos: avisosDaConversa(mensagens, indice),
+    completar,
+    humor: humorDoCabecalho(mensagens),
+  });
 }
 
 export function OPTIONS(request: Request) {
