@@ -104,6 +104,14 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.30.0",
+    data: "2026-09-23",
+    titulo: "A primeira semana guiada",
+    texto: "Quem está começando vê, na primeira visita a cada tela principal, um convite pequeno no rodapé para um tour de dois ou três passos: Meu dia, Reclame Aqui, NPS, Redes Sociais e Agenda. Aparece uma vez por tela, só na primeira semana, e some para quem já concluiu ou dispensou o roteiro do primeiro acesso.",
+    frentes: ["plataforma"],
+    href: "/primeiro-acesso",
+  },
+  {
     versao: "1.29.0",
     data: "2026-09-23",
     titulo: "Conquistas da semana",

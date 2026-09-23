@@ -24,6 +24,7 @@ interface Props {
 export default function SegmentosDasRedes({ facetas, total, filtrados, ativos, onAlternar, onLimpar }: Props) {
   return (
     <SurfaceCard
+      tour="segmentos"
       title="Segmentos"
       description={ativos ? `${filtrados} de ${total} atendimento(s) com os filtros escolhidos.` : `${total} atendimento(s). Clique num segmento para filtrar o quadro e a lista.`}
       action={

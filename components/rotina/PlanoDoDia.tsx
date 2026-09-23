@@ -39,7 +39,7 @@ export default function PlanoDoDia({ plano, atividades }: { plano: Plano | null;
 
   if (!plano) {
     return (
-      <SurfaceCard title="Plano do dia">
+      <SurfaceCard tour="plano-do-dia" title="Plano do dia">
         <p className="py-8 text-center text-sm text-zinc-400">Montando o plano…</p>
       </SurfaceCard>
     );
@@ -77,6 +77,7 @@ export default function PlanoDoDia({ plano, atividades }: { plano: Plano | null;
 
   return (
     <SurfaceCard
+      tour="plano-do-dia"
       title="Plano do dia"
       description="O que falta da rotina, no expediente que sobra — na ordem do documento, com o que está fora do prazo na frente."
       action={

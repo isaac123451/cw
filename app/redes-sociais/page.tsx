@@ -345,6 +345,7 @@ function RedesSociaisConteudo() {
             )}
 
             <SurfaceCard
+              tour="quadro-redes"
               title="Quadro de atendimento"
               description="Arraste um cartão para mover a conversa de etapa."
             >

@@ -618,7 +618,7 @@ export default function NpsPage() {
           }}
         />
 
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-5">
+        <div data-tour="indicadores-nps" className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-5">
 
           <StatTile
             label="NPS"
@@ -702,6 +702,7 @@ export default function NpsPage() {
         />
 
         <SurfaceCard
+          tour="respostas-nps"
           title="Respostas"
           description="Clique para abrir a tratativa e fechar o ciclo."
           bodyClassName="p-0"

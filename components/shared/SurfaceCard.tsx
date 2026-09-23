@@ -16,6 +16,8 @@ interface Props {
   children: ReactNode;
   className?: string;
   bodyClassName?: string;
+  /** Âncora para os tours da primeira semana e das novidades (`data-tour`). */
+  tour?: string;
 }
 
 /**
@@ -30,9 +32,11 @@ export default function SurfaceCard({
   children,
   className,
   bodyClassName,
+  tour,
 }: Props) {
   return (
     <section
+      data-tour={tour}
       className={cn(
         "min-w-0 rounded-xl border border-zinc-200/80 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]",
         className

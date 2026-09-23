@@ -67,6 +67,7 @@ export default function AgoraNoMeuDia() {
     <div className="grid gap-4 lg:grid-cols-3">
 
       <SurfaceCard
+        tour="pede-acao"
         title="Pede ação agora"
         description="O que vence, quem está sem notícia, de quem pedir avaliação e sinal de crise."
       >
@@ -106,6 +107,7 @@ export default function AgoraNoMeuDia() {
       </SurfaceCard>
 
       <SurfaceCard
+        tour="move-a-nota"
         title="O que move a nota"
         description="Na janela de 6 meses que o portal mostra, pela mesma conta da calculadora."
       >
@@ -134,6 +136,7 @@ export default function AgoraNoMeuDia() {
       </SurfaceCard>
 
       <SurfaceCard
+        tour="conquistas"
         title="Conquistas"
         description="Hoje e na semana — só o que o banco confirma."
       >

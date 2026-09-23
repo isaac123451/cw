@@ -82,6 +82,7 @@ export default function ModuleNav() {
             <Link
               key={item.href}
               href={item.href}
+              data-tour={`modulo-${item.href.split("/").pop()}`}
               title={item.hint}
               className={`flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-medium transition-colors ${
                 active

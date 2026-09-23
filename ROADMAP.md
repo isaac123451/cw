@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 23/09/2026. Aplicação **1.29.0**, extensão **1.29.0**.
+Atualizado em 23/09/2026. Aplicação **1.30.0**, extensão **1.30.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,48 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### A primeira semana guiada (23/09/2026, 1.30.0)
+
+Fase 19, "Primeira semana guiada". O roteiro do primeiro acesso ensina o
+que é reputação e leva a cada tela uma vez. Faltava o momento seguinte:
+voltar ao Reclame Aqui no terceiro dia e não lembrar para que serve a
+barra de cima.
+
+- **Um tour por tela.** Meu dia, Reclame Aqui, NPS, Redes Sociais e
+  Agenda ganharam dois ou três balões nos blocos que decidem o trabalho:
+  - o que pede ação, o "um por vez" e o plano do dia;
+  - o cartão do quadro, trazer do portal e pedir avaliação;
+  - as faixas do NPS, o que está parado e o ciclo;
+  - os recortes e o quadro das Redes;
+  - nova atividade e o dia da Agenda.
+
+  O balão é o mesmo dos tours das novidades.
+- **Na hora certa, e uma vez só.** Na primeira visita a cada tela,
+  durante a primeira semana, aparece no rodapé um aviso pequeno:
+  "Primeira vez no Reclame Aqui? Ver em 3 passos". Nada abre sozinho.
+  Mostrar ou fechar conta como visto, e o aviso não volta naquela tela.
+  Quem concluiu ou dispensou o roteiro do primeiro acesso não vê aviso
+  nenhum.
+- **Leve.** A primeira visita e as telas já vistas ficam no navegador. O
+  servidor só é consultado quando há de fato um convite a fazer, e uma
+  vez por sessão, para não pôr uma chamada na fila a cada troca de tela.
+- **Âncoras de tour.** O `SurfaceCard` ganhou a propriedade `tour`
+  (vira `data-tour`), e as abas do Reclame Aqui se marcam sozinhas
+  (`modulo-avaliacoes`...).
+
+Provas:
+- `check:primeira-semana` (novo, 10 pontos): oferece na primeira
+  semana; não oferece em tela sem tour, já vista, depois de 7 dias, com
+  roteiro concluído ou dispensado, ou sem primeira visita; e **as 13
+  âncoras dos tours existem no código**.
+- Na tela, as 13 âncoras apareceram visíveis nas cinco telas com os
+  dados reais. O tour do Reclame Aqui abriu com o balão no primeiro
+  cartão do quadro.
+- Na sua conta, o convite **não** aparece, e é o certo: o roteiro foi
+  dispensado em 17/09. O caso do roteiro em curso está provado pelo
+  check, e não na tela: mostrar exigiria mexer no seu cadastro ou criar
+  uma conta de teste, e nenhum dos dois foi feito.
 
 ### Conquistas da semana (23/09/2026, 1.29.0)
 

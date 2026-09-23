@@ -143,6 +143,7 @@ export default function TriagemNps({ itens, tipos, onOpen, onAplicado }: Props) 
 
   return (
     <SurfaceCard
+      tour="triagem-nps"
       title="Triagem do que está parado"
       description={`${fila.length} ciclo(s) abertos sem primeiro contato${estourados ? `, ${estourados} fora do prazo` : ""}. A ordem é a da rotina: detratores críticos primeiro.`}
       action={

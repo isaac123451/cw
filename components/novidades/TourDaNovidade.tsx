@@ -8,6 +8,7 @@ import { X } from "lucide-react";
 
 import { notifyGlobal } from "@/lib/context/ToastContext";
 import { tourPorId, type TourDaNovidade as Tour } from "@/lib/models/novidades";
+import { tourDaTela } from "@/lib/models/primeiraSemana";
 
 /**
  * O tour de uma novidade, na própria tela.
@@ -26,7 +27,8 @@ export default function TourDaNovidade() {
   const pathname = usePathname();
 
   const id = params.get("tour");
-  const tour = tourPorId(id);
+  /* Os tours das novidades e os da primeira semana (um por tela) usam o mesmo balão. */
+  const tour = tourPorId(id) ?? tourDaTela(id);
 
   const sair = useCallback(() => {
     const resto = new URLSearchParams(params.toString());

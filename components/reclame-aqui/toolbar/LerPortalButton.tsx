@@ -61,6 +61,7 @@ export default function LerPortalButton() {
   return (
     <button
       type="button"
+      data-tour="ler-portal"
       onClick={clicar}
       disabled={lendo || extensao === "procurando"}
       title={titulo}

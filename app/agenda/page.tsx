@@ -225,6 +225,7 @@ export default function AgendaPage() {
           </label>
 
           <button
+            data-tour="nova-atividade"
             onClick={() => novaAtividade()}
             className="flex items-center gap-2 rounded-xl bg-violet-700 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-violet-800"
           >
@@ -305,6 +306,7 @@ export default function AgendaPage() {
             return (
               <SurfaceCard
                 key={date}
+                tour="dia-da-agenda"
                 title={formatDay(date)}
                 description={`${items.length} atividade(s)${
                   atrasado ? " · há pendências atrasadas" : ""
