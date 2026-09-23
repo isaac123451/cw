@@ -1116,6 +1116,42 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Parte 2 do roadmap, e a IA que diz se está no ar (23/09/2026, 1.34.0)
+
+O Isaac mandou uma lista nova e pediu o roadmap refeito "como analista de
+reputação da Cardápio Web". A página publicada ganhou a **Parte 2
+(Fases 21 a 30, 53 itens)** e uma **revisão honesta** do que foi
+entregue e não pegou no uso real, medido na base: salvamento automático
+com 2 conversas guardadas ao todo, Agenda com 4 tarefas e nenhuma
+aberta, o dossiê de 8 partes no código sem nenhuma tela, as conquistas
+que ele nunca viu e a identificação que ainda erra.
+
+Primeiro item da Fase 21, **"verifique se o Gemini está funcionando"**:
+- Na máquina local, `check:ia` com a chave: `gemini-flash-lite-latest`
+  respondeu em 1,1 a 1,7 s com a saída estruturada certa;
+  `gemini-3.5-flash` passou dos 15 s e o preview estava congestionado
+  (fila do Google, não a chave).
+- A chave que ele pôs é a da produção, na Vercel, e a rota de saúde pede
+  o token da API. Então a resposta tinha de vir da tela: tabela nova
+  `SaudeDaIA` guarda **a última resposta boa** (provedor, modelo,
+  tempo, ambiente) e **o último erro**, gravados depois da resposta
+  (`after`), no máximo uma vez por minuto — nenhuma chamada fica mais
+  lenta. Configurações → Integrações → IA mostra os dois, e "Medir"
+  passou a dizer qual modelo respondeu.
+- Scripts não gravam (fora de requisição): o `check:ia` mede a chave da
+  máquina local, e a tela tem de falar do ambiente em que está.
+
+Provas: `check:ia` e `check:ia-cadeia` verdes; na tela, antes "Nenhuma
+chamada registrada", medir deu "1,3 s · gemini
+(gemini-flash-lite-latest)", e ao recarregar "Última resposta boa em
+23/09 18:14 · gemini (gemini-flash-lite-latest) · 1,3 s · máquina
+local".
+
+**Banco:** tabela nova `SaudeDaIA` (aditiva, RLS em 61 de 61).
+**Depende de você:** depois do push, abrir Integrações na produção: a
+primeira chamada de IA de lá aparece como "produção". Reiniciar o `npm
+run dev`.
+
 ### A lista de 23/09: Meu dia, NPS e Google Agenda
 
 Pedido do Isaac, depois da 1.30.0, em partes:

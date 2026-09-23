@@ -23,6 +23,8 @@ import {
   type MedicaoDaIA,
   type RetratoDaIA,
 } from "@/lib/actions/ia";
+import type { SaudeDaIAView } from "@/lib/services/saudeDaIa";
+import { descreverRegistro } from "@/lib/services/horasUteis";
 
 import type {
   Perfil,
@@ -520,6 +522,8 @@ export default function IaCard() {
             antes de medir.
           </p>
 
+          <SaudeDaIA saude={retrato.saude} />
+
           <div className="mt-2.5 flex flex-wrap items-center gap-2">
 
             {(
@@ -564,7 +568,8 @@ export default function IaCard() {
                       s
                     </strong>{" "}
                     na via de {medicao.via} ·{" "}
-                    {medicao.provedor} ·{" "}
+                    {medicao.provedor}
+                    {medicao.modelo ? ` (${medicao.modelo})` : ""} ·{" "}
                     {medicao.entrada ?? 0}/
                     {medicao.saida ?? 0} tokens
                     {medicao.amostra
@@ -619,5 +624,41 @@ export default function IaCard() {
       </div>
 
     </SurfaceCard>
+  );
+}
+
+const AMBIENTE: Record<string, string> = { production: "produção", preview: "prévia", local: "máquina local" };
+
+/**
+ * A última resposta boa e o último erro da IA, de qualquer tela.
+ *
+ * Responde "a chave nova está funcionando?" sem precisar medir: se a
+ * produção respondeu há 3 minutos pelo Gemini, está.
+ */
+function SaudeDaIA({ saude }: { saude: SaudeDaIAView }) {
+  if (!saude.ok && !saude.erro) {
+    return <p className="mt-2 text-xs text-zinc-500">Nenhuma chamada registrada ainda — a primeira resposta da IA aparece aqui.</p>;
+  }
+  const erroDepois = saude.erro && (!saude.ok || saude.erro.em > saude.ok.em);
+  return (
+    <ul className="mt-2.5 space-y-1 text-xs">
+      {saude.ok && (
+        <li className="text-zinc-700">
+          <span className="font-semibold text-emerald-700">Última resposta boa</span> em {descreverRegistro(saude.ok.em)}
+          {" · "}
+          {saude.ok.provedor}
+          {saude.ok.modelo ? ` (${saude.ok.modelo})` : ""}
+          {saude.ok.ms ? ` · ${(saude.ok.ms / 1000).toFixed(1).replace(".", ",")} s` : ""}
+          {saude.ok.ambiente ? ` · ${AMBIENTE[saude.ok.ambiente] ?? saude.ok.ambiente}` : ""}
+        </li>
+      )}
+      {saude.erro && (
+        <li className={erroDepois ? "text-rose-700" : "text-zinc-500"}>
+          <span className="font-semibold">{erroDepois ? "Último erro (depois da última resposta boa)" : "Último erro"}</span> em {descreverRegistro(saude.erro.em)}
+          {saude.erro.provedor ? ` · ${saude.erro.provedor}` : ""}
+          {saude.erro.ambiente ? ` · ${AMBIENTE[saude.erro.ambiente] ?? saude.erro.ambiente}` : ""} — {saude.erro.texto}
+        </li>
+      )}
+    </ul>
   );
 }

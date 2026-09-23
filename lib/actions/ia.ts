@@ -18,6 +18,7 @@ import {
   provedorDeIA,
   type ProvedorExterno,
 } from "@/lib/services/ia.service";
+import { lerSaudeDaIA, type SaudeDaIAView } from "@/lib/services/saudeDaIa";
 
 /** O módulo a que estas ações pertencem — ver lib/auth/modules.ts. */
 const MODULO: Modulo = "configuracoes";
@@ -43,6 +44,8 @@ export interface RetratoDaIA {
   origem: "banco" | "ambiente";
   /** Quais chaves existem — sem revelar nenhuma. */
   chaves: Record<ProvedorExterno, boolean>;
+  /** A última resposta boa e o último erro de verdade — em qualquer tela. */
+  saude: SaudeDaIAView;
   permitido: boolean;
 }
 
@@ -82,6 +85,7 @@ export async function getIaConfig(): Promise<RetratoDaIA> {
       openrouter: provedorDeIA("openrouter") === "openrouter",
     },
     permitido: ctx?.role === "ADMIN",
+    saude: ctx ? await lerSaudeDaIA() : {},
   };
 }
 
@@ -187,6 +191,8 @@ export interface MedicaoDaIA {
   erro?: string;
   ms?: number;
   provedor?: string;
+  /** Qual modelo respondeu — é o que diz se a chave nova está valendo. */
+  modelo?: string;
   amostra?: string;
   entrada?: number;
   saida?: number;
@@ -243,6 +249,7 @@ export async function medirIa(
   return {
     ms,
     provedor: resultado.provedor,
+    modelo: resultado.modelo,
     amostra: String(
       (resultado.dados as { assunto?: string })
         ?.assunto ?? ""

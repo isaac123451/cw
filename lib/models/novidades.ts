@@ -104,6 +104,14 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.34.0",
+    data: "2026-09-23",
+    titulo: "A IA diz se está no ar",
+    texto: "Em Configurações, Integrações, o cartão da IA mostra a última resposta boa (qual provedor, qual modelo, em quanto tempo e em qual ambiente) e o último erro, sem precisar medir. E o Medir agora diz qual modelo respondeu.",
+    frentes: ["plataforma"],
+    href: "/configuracoes/integracoes",
+  },
+  {
     versao: "1.33.0",
     data: "2026-09-23",
     titulo: "O plano do dia na Google Agenda",

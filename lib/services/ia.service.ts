@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { conversarCompativel, pelaApiCompativel, temChaveCompativel } from "@/lib/services/iaCompativel";
+import { registrarSaudeDaIA } from "@/lib/services/saudeDaIa";
 
 import {
   type ConfigDeIA,
@@ -218,14 +219,19 @@ export async function pedirEstruturado(
     operação escolheu, e é o erro que faz sentido investigar.
   */
   let primeira: RespostaDeIA | null = null;
+  const inicio = Date.now();
 
   for (const provedor of cadeia) {
     const resposta = await pedirA(provedor, pedido, config);
-    if (!resposta.erro) return resposta;
+    if (!resposta.erro) {
+      registrarSaudeDaIA({ ok: true, provedor: resposta.provedor, modelo: resposta.modelo, ms: Date.now() - inicio });
+      return resposta;
+    }
     primeira ??= resposta;
     if (resposta.status === 422) break;
   }
 
+  registrarSaudeDaIA({ ok: false, provedor: primeira!.provedor, modelo: primeira!.modelo, ms: Date.now() - inicio, erro: primeira!.erro });
   return primeira!;
 }
 

@@ -2014,3 +2014,27 @@ model MarcaDeItemDaRotina {
   @@unique([userId, chave, item, dia])
   @@index([userId, ate])
 }
+
+/// A última resposta boa da IA e o último erro, por ambiente.
+///
+/// "Verifique se o Gemini está funcionando" não pode depender de alguém
+/// rodar um script: a tela diz quando a IA respondeu pela última vez,
+/// qual modelo, em quanto tempo — e o último erro, se houve. Gravado
+/// depois da resposta (`after`), no máximo uma vez por minuto.
+model SaudeDaIA {
+  id String @id @default("unico")
+
+  ultimoOkEm       DateTime?
+  ultimoOkProvedor String?
+  ultimoOkModelo   String?
+  ultimoOkMs       Int?
+  /// production, preview ou local.
+  ultimoOkAmbiente String?
+
+  ultimoErroEm       DateTime?
+  ultimoErro         String?
+  ultimoErroProvedor String?
+  ultimoErroAmbiente String?
+
+  atualizadoEm DateTime @updatedAt
+}
