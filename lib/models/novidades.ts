@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.25.0",
+    data: "2026-09-22",
+    titulo: "O painel da extensão em quatro abas",
+    texto: "Quem é, os avisos e o completar ficam fixos em cima; o resto se divide em Agora (resumo, resposta, NPS, anotação), Dossiê, Responder (textos aprovados) e Histórico (reclamações, números do cliente, estabelecimento). Trocar de aba é instantâneo e não recarrega nada.",
+    frentes: ["extensao"],
+  },
+  {
     versao: "1.24.0",
     data: "2026-09-22",
     titulo: "O painel acha o cliente pelo que ele escreveu",

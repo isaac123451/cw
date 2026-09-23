@@ -72,7 +72,11 @@ conferir("detrator de hoje", tudo[2].texto, "Detrator do NPS (nota 2), respondeu
 const estilo = readFileSync(resolve(__dirname, "../extensao/conteudo/estilo.js"), "utf8");
 const painel = readFileSync(resolve(__dirname, "../extensao/conteudo/painel-contato.js"), "utf8");
 const posAvisos = painel.indexOf("partes.push(blocoAvisos(P.avisosDoContato(dados), true));");
-conferir("o painel desenha os avisos antes do resumo", posAvisos > 0 && posAvisos < painel.indexOf("partes.push(P.blocoResumo());"), true);
+conferir(
+  "os avisos ficam fixos, e o resumo na aba Agora",
+  posAvisos > 0 && posAvisos < painel.indexOf("abas.agora.push(P.blocoResumo());"),
+  true
+);
 conferir("e o estilo existe", estilo.includes(".avisos-contato li.perigo"), true);
 
 /* ---------- os sinais que só a conversa dá (servidor) ---------- */
@@ -213,6 +217,27 @@ conferir("não tenta de novo (sem ida e volta)", tentar(), false);
 Pm.lerConversa = () => ({ mensagens: [cli("oi"), cli("tudo bem?")] });
 definir({ telefone: "11999990000", nome: "Bia" });
 conferir("conversa sem identificador: não refaz a busca", tentar(), false);
+
+/* ---------- as quatro abas ---------- */
+
+console.log("\n  AS QUATRO ABAS\n");
+
+type Abas = Record<"agora" | "dossie" | "responder" | "historico", string[]>;
+const blocoAbas = P.blocoAbas as (abas: Abas, dados: unknown) => string;
+const abasHtml = blocoAbas(
+  { agora: ["<div>resumo</div>"], dossie: ["<div>dossie</div>"], responder: [""], historico: ["<div>casos</div>"] },
+  { totalCasos: 3, macros: [] }
+);
+const botoesDasAbas = [...abasHtml.matchAll(/data-aba="([a-z]+)"\s+aria-selected="(true|false)">([^<]+)/g)].map((m) => `${m[1]}:${m[2]}`);
+conferir("quatro abas, a primeira é Agora", botoesDasAbas, ["agora:true", "dossie:false", "responder:false", "historico:false"]);
+conferir("só a aba ativa aparece", [...abasHtml.matchAll(/data-aba="([a-z]+)"( hidden)?>/g)].map((m) => `${m[1]}${m[2] ? ":oculta" : ""}`), ["agora", "dossie:oculta", "responder:oculta", "historico:oculta"]);
+conferir("Histórico conta as reclamações", /Histórico <span class="aba-contagem">3<\/span>/.test(abasHtml), true);
+conferir("aba vazia explica o que falta", abasHtml.includes("Sem textos aprovados para este caso"), true);
+Pm.abaDoContato = "historico";
+conferir("a aba escolhida vale no redesenho", /data-aba="historico"\s+aria-selected="true"/.test(blocoAbas({ agora: [], dossie: [], responder: [], historico: [] }, {})), true);
+definir({ telefone: "11900000000", nome: "Contato Novo" });
+conferir("contato novo volta para Agora", Pm.abaDoContato, "agora");
+conferir("o clique troca a aba no painel", base.includes('acao === "aba-contato"') && painel.includes("partes.push(P.blocoAbas(abas, dados));"), true);
 
 console.log(falhas === 0 ? "\n  O painel abre dizendo o que pede cuidado.\n" : `\n  ${falhas} ponto(s) a corrigir.\n`);
 process.exit(falhas === 0 ? 0 : 1);

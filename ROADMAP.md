@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 22/09/2026. Aplicação **1.24.0**, extensão **1.24.0**.
+Atualizado em 22/09/2026. Aplicação **1.25.0**, extensão **1.25.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,42 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### As quatro abas do painel (22/09/2026, 1.25.0)
+
+Fase 17, "Quatro abas claras". O painel do contato era uma coluna só,
+com tudo empilhado: resumo, captura, cliente, estabelecimento, NPS,
+reclamações, dossiê, textos. Achar a resposta pronta pedia rolar a tela
+inteira.
+
+- **Fixo, em cima:** o cabeçalho (quem é, conta, frentes, humor), os
+  avisos e o "Completar o cadastro", que valem para qualquer aba.
+- **Agora:** resumir e escrever a resposta, guardar a conversa, capturar
+  a reclamação da tela, "O que fazer", o ciclo de NPS e a anotação.
+- **Dossiê:** o dossiê do atendimento.
+- **Responder:** os textos aprovados, com a contagem na aba. Sem textos,
+  a aba lembra que o resumo, na aba Agora, traz três rascunhos.
+- **Histórico:** as reclamações (com a contagem na aba), os números do
+  cliente e o estabelecimento.
+- **Trocar de aba não chama o servidor nem redesenha:** só mostra e
+  esconde. A aba escolhida continua ao redesenhar (por exemplo, depois
+  do resumo), e um contato novo começa em Agora.
+- Nenhum bloco foi reescrito, só separado: o que cada um fazia continua
+  igual. O nome longo no cabeçalho ganhou o nome inteiro no `title`.
+
+Provas:
+- `check:avisos-extensao` subiu para 67 pontos: quatro abas com Agora
+  primeiro, só a ativa à vista, contagem no Histórico, aba vazia que
+  explica, aba mantida no redesenho, Agora para contato novo, e o clique
+  ligado.
+- **Painel inteiro numa página de teste** (os nove arquivos do painel,
+  na ordem do manifesto, com o `chrome` e o servidor simulados):
+  - o painel montou e desenhou as quatro abas, com "Responder 2" e
+    "Histórico 3";
+  - Histórico mostrou Cliente, Estabelecimento e as três reclamações;
+    Responder, os dois textos; Dossiê, o dossiê;
+  - trocar de aba não fez nenhuma chamada.
+- `check:extensao` e `check:painel` continuam passando.
 
 ### Identifica pelo que o cliente escreveu (22/09/2026, 1.24.0)
 

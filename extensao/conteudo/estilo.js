@@ -1016,6 +1016,37 @@ ${CORES}
 .avisos-contato li.atencao { border-left-color: var(--atencao); }
 .avisos-contato[hidden] { display: none; }
 
+/* As quatro abas do contato: Agora, Dossiê, Responder, Histórico. */
+.abas-contato {
+  display: flex;
+  gap: 2px;
+  margin: 2px 0 10px;
+  border-bottom: 1px solid var(--borda);
+}
+.abas-contato button {
+  flex: 1;
+  padding: 7px 4px 8px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  background: none;
+  color: var(--fraco);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.abas-contato button:hover { color: var(--texto); }
+.abas-contato button[aria-selected="true"] { color: var(--texto); border-bottom-color: var(--violeta); }
+.aba-contagem {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--fraco);
+}
+.aba-painel[hidden] { display: none; }
+.aba-vazia { margin: 14px 2px; font-size: 12.5px; color: var(--fraco); line-height: 1.5; }
+
 /* Cabeçalho do cliente: quem é, a conta, as frentes abertas e o humor. */
 .cabecalho-cliente {
   margin: 0 0 10px;

@@ -69,6 +69,9 @@
     // E o resumo da conversa anterior não descreve esta.
     P.resumo = null;
 
+    // Nem a aba escolhida para o contato anterior.
+    P.abaDoContato = "agora";
+
     // Nem o "guardada" dela vale para esta.
     P.guardarConversa = null;
 
@@ -644,6 +647,9 @@
 
     const partes = [];
 
+    /* O que fica em cada aba; o que está em `partes` fica fixo, acima delas. */
+    const abas = { agora: [], dossie: [], responder: [], historico: [] };
+
     if (dados.aviso) {
       partes.push(
         `<div class="aviso">${CW.escapar(dados.aviso)}</div>`
@@ -656,15 +662,15 @@
     partes.push(blocoAvisos(P.avisosDoContato(dados), true));
 
     // O resumo vem primeiro: responde "o que está havendo aqui".
-    partes.push(P.blocoResumo());
+    abas.agora.push(P.blocoResumo());
 
     // Depois, o atalho de capturar a reclamação que está na tela.
-    partes.push(blocoOutroCanal(dados));
-    partes.push(P.blocoCaptura(dados));
+    abas.agora.push(blocoOutroCanal(dados));
+    abas.agora.push(P.blocoCaptura(dados));
 
     /* ---- cliente ---- */
 
-    partes.push(`
+    abas.historico.push(`
       <div class="bloco">
         <div class="rotulo">Cliente</div>
         <div class="cartao">
@@ -712,7 +718,7 @@
     if (dados.estabelecimento) {
       const est = dados.estabelecimento;
 
-      partes.push(`
+      abas.historico.push(`
         <div class="bloco">
           <div class="rotulo">Estabelecimento</div>
           <div class="cartao">
@@ -795,7 +801,7 @@
           : [];
 
     for (const ciclo of ciclos) {
-      partes.push(
+      abas.agora.push(
         P.blocoNps(
           ciclo,
           P.podeEscrever(dados),
@@ -808,7 +814,7 @@
     /* ---- sugestões ---- */
 
     if ((dados.sugestoes ?? []).length > 0) {
-      partes.push(`
+      abas.agora.push(`
         <div class="bloco">
           <div class="rotulo">O que fazer</div>
           ${dados.sugestoes
@@ -826,7 +832,7 @@
     /* ---- casos ---- */
 
     if ((dados.casos ?? []).length > 0) {
-      partes.push(`
+      abas.historico.push(`
         <div class="bloco">
           <div class="rotulo">
             Reclamações (${dados.totalCasos})
@@ -851,14 +857,14 @@
       Sem caso, vai com protocolo vazio: o servidor cruza pelo contato
       e monta a partir do NPS, dos outros canais e da transcrição.
     */
-    partes.push(
+    abas.dossie.push(
       P.blocoDossie(dados.casos?.[0]?.protocolo ?? "")
     );
 
     /* ---- macros ---- */
 
     if ((dados.macros ?? []).length > 0) {
-      partes.push(`
+      abas.responder.push(`
         <div class="bloco">
           <div class="rotulo">Textos aprovados</div>
           ${dados.macros
@@ -879,7 +885,9 @@
         </div>`);
     }
 
-    partes.push(P.blocoAnotar(dados));
+    abas.agora.push(P.blocoAnotar(dados));
+
+    partes.push(P.blocoAbas(abas, dados));
 
     P.corpo.innerHTML = partes.join("");
     P.corpo.scrollTop = 0;
@@ -887,6 +895,72 @@
     marcarSelo(cliente.abertos);
 
     P.pedirSinaisDaConversa();
+  };
+
+  /* ============================================================
+     AS QUATRO ABAS (Fase 17)
+  ============================================================ */
+
+  /**
+   * Agora, Dossiê, Responder e Histórico.
+   *
+   * O painel era uma coluna só, com tudo empilhado: o resumo, a captura,
+   * o cliente, o estabelecimento, o NPS, as reclamações, o dossiê, os
+   * textos. Achar a resposta pronta pedia rolar a tela inteira. Agora o
+   * que vale para qualquer aba (quem é, os avisos, o completar) fica em
+   * cima, fixo, e o resto se divide pelo que a pessoa veio fazer.
+   *
+   * Trocar de aba não refaz a busca nem redesenha: só mostra e esconde.
+   * A aba escolhida vale para o contato até ele mudar.
+   */
+  const ABAS_DO_CONTATO = [
+    { id: "agora", nome: "Agora" },
+    { id: "dossie", nome: "Dossiê" },
+    { id: "responder", nome: "Responder" },
+    { id: "historico", nome: "Histórico" },
+  ];
+
+  P.blocoAbas = function blocoAbas(abas, dados) {
+
+    const ativa = ABAS_DO_CONTATO.some((a) => a.id === P.abaDoContato) ? P.abaDoContato : "agora";
+    const vazio = (id) => abas[id].every((html) => !String(html ?? "").trim());
+
+    const contagem = {
+      historico: dados?.totalCasos ?? (dados?.casos ?? []).length,
+      responder: (dados?.macros ?? []).length,
+    };
+
+    const botoes = ABAS_DO_CONTATO.map(
+      (a) => `<button type="button" role="tab" data-acao="aba-contato" data-aba="${a.id}"
+        aria-selected="${a.id === ativa}">${a.nome}${contagem[a.id] ? ` <span class="aba-contagem">${contagem[a.id]}</span>` : ""}</button>`
+    ).join("");
+
+    const VAZIO = {
+      agora: "Nada pendente aqui agora.",
+      dossie: "O dossiê aparece quando houver caso ou conversa para montar.",
+      responder: "Sem textos aprovados para este caso. O resumo da conversa, na aba Agora, traz três rascunhos.",
+      historico: "Nenhuma reclamação registrada.",
+    };
+
+    const paineis = ABAS_DO_CONTATO.map(
+      (a) => `<section class="aba-painel" role="tabpanel" data-aba="${a.id}"${a.id === ativa ? "" : " hidden"}>${
+        vazio(a.id) ? `<p class="aba-vazia">${VAZIO[a.id]}</p>` : abas[a.id].join("")
+      }</section>`
+    ).join("");
+
+    return `<nav class="abas-contato" role="tablist" aria-label="O que fazer com este contato">${botoes}</nav>${paineis}`;
+  };
+
+  P.trocarAbaDoContato = function trocarAbaDoContato(alvo) {
+    const aba = alvo?.dataset?.aba;
+    if (!aba || !P.corpo) return;
+    P.abaDoContato = aba;
+    for (const b of P.corpo.querySelectorAll('[data-acao="aba-contato"]')) {
+      b.setAttribute("aria-selected", String(b.dataset.aba === aba));
+    }
+    for (const sec of P.corpo.querySelectorAll(".aba-painel")) {
+      sec.hidden = sec.dataset.aba !== aba;
+    }
   };
 
   /* ============================================================
@@ -1086,7 +1160,7 @@
     return `
       <div class="cabecalho-cliente">
         <div class="cab-linha">
-          <span class="cab-nome">${CW.escapar(cliente.nome)}</span>
+          <span class="cab-nome" title="${CW.escapar(cliente.nome)}">${CW.escapar(cliente.nome)}</span>
           <span class="tag ${tom}">${rotuloConfianca}</span>
           <span class="termometro" hidden></span>
         </div>
