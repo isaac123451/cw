@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 22/09/2026. Aplicação **1.20.0**, extensão **1.20.0**.
+Atualizado em 22/09/2026. Aplicação **1.21.0**, extensão **1.21.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,39 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### A conversa também avisa (22/09/2026, 1.21.0)
+
+Fecha "Avisos ao abrir a tela" (Fase 17) com as duas partes que
+precisavam ler a conversa.
+
+- **"O humor piorou nas últimas mensagens"** (ou melhorou). As três
+  últimas mensagens do cliente são comparadas com as de antes, pelo
+  léxico do motor próprio. O aviso só aparece com quatro ou mais
+  mensagens dele: com menos, qualquer tendência seria invenção.
+- **"A mensagem é a mesma da reclamação RA-x (96%)".** O texto do
+  cliente é comparado com os relatos do Reclame Aqui pelo índice TF-IDF
+  da sugestão de assunto. A partir de 85% é "a mesma"; entre 55% e 85%
+  é "parecida". Texto com menos de 80 caracteres não é comparado.
+  Vale também para contato sem cadastro, que é quando mais importa.
+- **Rota nova, só leitura:** `POST /api/extensao/sinais`. Exige sessão
+  e não usa IA. O índice dos relatos é guardado por 5 minutos e
+  invalidado quando um caso muda. O painel chama uma vez por contato,
+  depois de desenhar, e redesenhar não chama de novo.
+
+Provas:
+- `check:avisos-extensao` subiu para 24 pontos: humor que piorou e que
+  melhorou, relato colado, texto curto, assunto parecido que não é
+  colado, sessão exigida, caminho no service worker e chamada com e
+  sem cadastro.
+- `medir-sinais-conversa`, na base real (363 relatos, só leitura):
+  - o relato colado inteiro acha a própria reclamação em **60 de 60**;
+  - com só a metade colada, acha em **59 de 60**;
+  - comentários do NPS tomados por reclamação: **0 de 20** (amostra
+    pequena).
+- Chamada real à rota no servidor de conferência: devolveu o protocolo
+  certo com 96% e o aviso de humor. A segunda chamada levou 130 ms.
+  Sem sessão, 401.
 
 ### Avisos ao abrir a conversa (22/09/2026, 1.20.0)
 
