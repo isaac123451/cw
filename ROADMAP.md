@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 22/09/2026. Aplicação **1.23.0**, extensão **1.23.0**.
+Atualizado em 22/09/2026. Aplicação **1.24.0**, extensão **1.24.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,44 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### Identifica pelo que o cliente escreveu (22/09/2026, 1.24.0)
+
+Fase 17, "Identifica mais sozinha". Quando a página não basta para achar
+o cliente (o nome do WhatsApp é um apelido, o número mudou, o chat do
+Crisp não mostra o telefone), o painel lê as mensagens **do cliente** e
+refaz a busca com o que ele escreveu.
+
+- **O que conta, em ordem de força:** CPF/CNPJ (com dígito verificador
+  certo), protocolo do Reclame Aqui (`RA-…`), e-mail e, por último,
+  telefone com DDD. O que nós escrevemos (o e-mail do suporte, um
+  protocolo citado) não identifica ninguém.
+- **Uma vez por contexto, sem ida e volta.** O site reenvia o contexto
+  da página a cada mudança. Se a busca só trocasse a consulta, a
+  reforçada e a fraca se alternariam. Por isso o reforço fica guardado
+  por contexto: quando o mesmo contexto volta, a consulta continua
+  reforçada e não é refeita. Conversa sem identificador não refaz nada.
+- **Diz de onde veio.** O cabeçalho mostra "achado pelo CPF/CNPJ escrito
+  na conversa", e a confiança da identificação continua a da busca.
+
+Provas:
+- `check:avisos-extensao` subiu para 60 pontos:
+  - CPF com pontos e traço, CNPJ com e sem pontuação, CPF errado de
+    fora, celular que não vira CPF e CPF que não vira telefone;
+  - e-mail e protocolo, o que nós escrevemos ignorado;
+  - a busca refeita com o documento;
+  - o site reenviando o mesmo contexto sem desfazer o reforço;
+  - nenhuma nova tentativa depois da primeira.
+- Na aplicação, a busca por documento sozinho (com um nome que não
+  existe) achou o cliente certo com confiança "exata" ("CNPJ confere com
+  o cadastro da reclamação").
+
+Fica de fora, e por quê:
+- **Número do pedido:** a base não guarda número de pedido, então não há
+  com o que casar.
+- **Nome do estabelecimento escrito na conversa:** pede busca por
+  semelhança de nome, que erra fácil ("Pizzaria Bella" existe às
+  dezenas). Fica para quando houver um jeito de confirmar.
 
 ### Cabeçalho do cliente com o termômetro de humor (22/09/2026, 1.23.0)
 

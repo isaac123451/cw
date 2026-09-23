@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.24.0",
+    data: "2026-09-22",
+    titulo: "O painel acha o cliente pelo que ele escreveu",
+    texto: "Quando o nome ou o número da página não bastam, o painel da extensão procura o cliente pelo CPF/CNPJ, protocolo do Reclame Aqui, e-mail ou telefone que ele escreveu na conversa, e diz no cabeçalho de onde veio a identificação.",
+    frentes: ["extensao"],
+  },
+  {
     versao: "1.23.0",
     data: "2026-09-22",
     titulo: "Cabeçalho do cliente no painel",

@@ -178,5 +178,41 @@ conferir("humor de agora, sem tendência com poucas", humorDoCabecalho([cli("abs
 conferir("humor piorando", humorDoCabecalho(piorou)?.tendencia, "piorando");
 conferir("humor melhorando", humorDoCabecalho(melhorou)?.tendencia, "melhorando");
 
+/* ---------- identifica pela conversa ---------- */
+
+console.log("\n  IDENTIFICA PELA CONVERSA\n");
+
+type Ids = { email?: string; documento?: string; protocolo?: string; telefone?: string };
+const ids = P.identificadoresDaConversa as (m: unknown[]) => Ids;
+
+conferir("CPF com pontos e traço", ids([cli("meu cpf é 529.982.247-25")]).documento, "52998224725");
+conferir("CNPJ sem pontuação", ids([cli("cnpj 11222333000181")]).documento, "11222333000181");
+conferir("CNPJ formatado", ids([cli("CNPJ: 11.222.333/0001-81")]).documento, "11222333000181");
+conferir("CPF com dígito errado fica de fora", ids([cli("cpf 529.982.247-24")]).documento, undefined);
+conferir("celular não vira CPF", ids([cli("me liga no (48) 99909-5712")]).documento, undefined);
+conferir("e-mail e protocolo do RA", ids([cli("abri o RA-vqem0oQy3I1TOBBN, meu e-mail é Ana@Loja.com.br")]), { email: "ana@loja.com.br", protocolo: "RA-vqem0oQy3I1TOBBN" });
+conferir("o que nós escrevemos não identifica", ids([nos("escreva para suporte@cardapioweb.com, protocolo RA-abc123def")]), {});
+conferir("telefone digitado com DDD", ids([cli("pode me chamar no (48) 99909-5712")]).telefone, "48999095712");
+conferir("CPF não vira telefone", ids([cli("cpf 52998224725")]).telefone, undefined);
+conferir("número curto não é telefone", ids([cli("pedido 12345678")]).telefone, undefined);
+
+/* A busca refeita pela conversa, e o reforço que não some quando o site reenvia o contexto. */
+const Pm = P as Record<string, unknown> & { consulta?: Record<string, string>; chaveConsulta?: string };
+Pm.lerConversa = () => ({ mensagens: [cli("oi, preciso de ajuda"), cli("meu cpf 529.982.247-25")] });
+const definir = P.definirContexto as (c: unknown) => void;
+const tentar = P.tentarPelaConversa as () => boolean;
+definir({ telefone: "48999095712", nome: "Ana" });
+const chaveFraca = Pm.chaveConsulta;
+conferir("sem nada achado, tenta pelo CPF escrito", tentar(), true);
+conferir("a busca leva o documento", [Pm.consulta?.documento, Pm.consulta?.pelaConversa], ["52998224725", "CPF/CNPJ"]);
+const chaveForte = Pm.chaveConsulta;
+conferir("e é outra busca", chaveForte !== chaveFraca, true);
+definir({ telefone: "48999095712", nome: "Ana" });
+conferir("o site reenvia o mesmo contexto: o reforço continua", [Pm.chaveConsulta === chaveForte, Pm.consulta?.documento], [true, "52998224725"]);
+conferir("não tenta de novo (sem ida e volta)", tentar(), false);
+Pm.lerConversa = () => ({ mensagens: [cli("oi"), cli("tudo bem?")] });
+definir({ telefone: "11999990000", nome: "Bia" });
+conferir("conversa sem identificador: não refaz a busca", tentar(), false);
+
 console.log(falhas === 0 ? "\n  O painel abre dizendo o que pede cuidado.\n" : `\n  ${falhas} ponto(s) a corrigir.\n`);
 process.exit(falhas === 0 ? 0 : 1);

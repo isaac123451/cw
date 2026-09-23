@@ -30,6 +30,14 @@
    */
   P.definirContexto = function definirContexto(novo) {
 
+    /*
+      O que a conversa já revelou sobre este contexto continua valendo
+      quando o site manda o mesmo contexto de novo — sem isto, a consulta
+      reforçada e a fraca se alternariam a cada leitura da página.
+    */
+    const reforco = reforcoPorContexto.get(chaveDoContexto(novo));
+    if (reforco) novo = { ...novo, ...reforco };
+
     const chave = JSON.stringify({
       telefone: novo?.telefone ?? "",
       nome: novo?.nome ?? "",
@@ -621,6 +629,9 @@
 
       marcarSelo(null);
 
+      // Antes de desistir: o cliente pode ter escrito o e-mail, o CPF ou o protocolo.
+      if (P.tentarPelaConversa()) return;
+
       // Sem cadastro é quando mais vale saber que a mensagem é a de um RA.
       P.pedirSinaisDaConversa();
       return;
@@ -1080,6 +1091,7 @@
           <span class="termometro" hidden></span>
         </div>
         ${conta ? `<div class="cab-conta">${CW.escapar(conta)}</div>` : ""}
+        ${P.consulta?.pelaConversa ? `<div class="cab-conta">achado pelo ${CW.escapar(P.consulta.pelaConversa)} escrito na conversa</div>` : ""}
         <div class="cab-frentes">${frentes.join("")}</div>
       </div>`;
   }
@@ -1097,6 +1109,115 @@
     el.title = `Humor da conversa: ${humor.agora} de 5${humor.tendencia ? `, ${humor.tendencia}` : ""} — pelas últimas mensagens do cliente`;
     el.hidden = false;
   }
+
+  /* ============================================================
+     IDENTIFICA PELA CONVERSA (Fase 17)
+  ============================================================ */
+
+  function chaveDoContexto(c) {
+    return JSON.stringify([c?.telefone ?? "", c?.nome ?? "", c?.protocolo ?? "", c?.email ?? "", c?.documento ?? "", c?.canalDaPagina ?? ""]);
+  }
+
+  const reforcoPorContexto = new Map();
+
+  function digitosVerificam(d) {
+    if (/^(\d)\1+$/.test(d)) return false;
+    const n = d.split("").map(Number);
+    if (d.length === 11) {
+      const dv = (ate) => {
+        let soma = 0;
+        for (let i = 0; i < ate; i++) soma += n[i] * (ate + 1 - i);
+        const r = (soma * 10) % 11;
+        return r === 10 ? 0 : r;
+      };
+      return dv(9) === n[9] && dv(10) === n[10];
+    }
+    if (d.length === 14) {
+      const dv = (tamanho) => {
+        let soma = 0;
+        let peso = tamanho - 7;
+        for (let i = 0; i < tamanho; i++) {
+          soma += n[i] * peso--;
+          if (peso < 2) peso = 9;
+        }
+        const r = soma % 11;
+        return r < 2 ? 0 : 11 - r;
+      };
+      return dv(12) === n[12] && dv(13) === n[13];
+    }
+    return false;
+  }
+
+  /**
+   * E-mail, CPF/CNPJ e protocolo do Reclame Aqui escritos **pelo cliente**.
+   * O e-mail do suporte e o protocolo que nós citamos não identificam
+   * ninguém — por isso só as mensagens dele.
+   */
+  P.identificadoresDaConversa = function identificadoresDaConversa(mensagens) {
+    const texto = (mensagens ?? [])
+      .filter((m) => m && m.de !== "nos" && typeof m.texto === "string")
+      .map((m) => m.texto)
+      .join("\n");
+
+    const achados = {};
+
+    const email = texto.match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i);
+    if (email) achados.email = email[0].toLowerCase();
+
+    for (const m of texto.matchAll(/\d[\d.\/\s-]{9,20}\d/g)) {
+      const d = m[0].replace(/\D/g, "");
+      if ((d.length === 11 || d.length === 14) && digitosVerificam(d)) {
+        achados.documento = d;
+        break;
+      }
+    }
+
+    /* Telefone com DDD (10 ou 11 dígitos), que não seja o próprio documento. */
+    for (const m of texto.matchAll(/\(?\d{2}\)?[\s.-]?9?\d{4}[\s.-]?\d{4}/g)) {
+      const d = m[0].replace(/\D/g, "");
+      if ((d.length === 10 || d.length === 11) && d !== achados.documento && !digitosVerificam(d)) {
+        achados.telefone = d;
+        break;
+      }
+    }
+
+    const protocolo = texto.match(/\bRA-[A-Za-z0-9_-]{6,30}/);
+    if (protocolo) achados.protocolo = protocolo[0];
+
+    return achados;
+  };
+
+  const NOME_DO_ACHADO = { documento: "CPF/CNPJ", email: "e-mail", protocolo: "protocolo", telefone: "telefone" };
+
+  /**
+   * Nada achado pelo que a página mostra? Tenta pelo que o cliente
+   * escreveu, uma vez por contexto. Devolve `true` quando refez a busca.
+   */
+  P.tentarPelaConversa = function tentarPelaConversa() {
+    if (!P.lerConversa || !P.consulta) return false;
+
+    const original = chaveDoContexto(P.consulta);
+    if (reforcoPorContexto.has(original)) return false;
+
+    const leitura = P.lerConversa();
+    const mensagens = Array.isArray(leitura) ? leitura : leitura?.mensagens ?? [];
+    const achados = P.identificadoresDaConversa(mensagens);
+
+    const reforco = {};
+    for (const campo of ["documento", "protocolo", "email", "telefone"]) {
+      if (achados[campo] && !P.consulta[campo]) reforco[campo] = achados[campo];
+    }
+
+    /* Guardado mesmo vazio: a mesma conversa não é relida a cada redesenho. */
+    reforcoPorContexto.set(original, reforco);
+
+    const campos = Object.keys(reforco);
+    if (campos.length === 0) return false;
+
+    reforco.pelaConversa = NOME_DO_ACHADO[campos[0]];
+    P.definirContexto(P.consulta);
+    return true;
+  };
 
   const NOME_DO_CAMPO = { email: "e-mail", telefone: "telefone", documento: "CPF/CNPJ" };
 
