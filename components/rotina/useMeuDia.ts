@@ -10,10 +10,17 @@ import { useSla } from "@/lib/context/SlaContext";
 import { useAvaliacoesGoogle } from "@/lib/context/useAvaliacoesGoogle";
 import { useAgora } from "@/lib/hooks/useAgora";
 
-import { lerMeuDia, listarRotina, type CargaDoMeuDia } from "@/lib/actions/rotina";
+import {
+  desfazerMarcasDeItens,
+  lerMeuDia,
+  listarRotina,
+  marcarItensDaRotina,
+  type CargaDoMeuDia,
+  type DuracaoDaMarca,
+} from "@/lib/actions/rotina";
 
 import { atividadesDoDia, sequenciaDeDias, type AtividadeDaRotina } from "@/lib/models/rotina";
-import { contarRotina, planoDoDia } from "@/lib/models/meuDia";
+import { contarRotina, planoDoDia, type TipoDeMarcaDeItem } from "@/lib/models/meuDia";
 import { paredeDe } from "@/lib/services/horasUteis";
 
 /**
@@ -90,6 +97,7 @@ export function useMeuDia() {
               metricaHoje: carga?.metricaHoje ?? null,
               ligacoes: carga?.ligacoes ?? [],
               relatorio: carga?.relatorio ?? null,
+              marcasDeItens: carga?.marcasDeItens ?? [],
             },
             agora,
             expediente
@@ -126,6 +134,44 @@ export function useMeuDia() {
     [hoje]
   );
 
+  /**
+   * Tirar itens das atividades — feito hoje, ou não se aplica.
+   *
+   * A lista só muda depois que o servidor gravou: quem chama mostra o
+   * aviso com o que voltou, e o erro fica na tela se não gravou.
+   */
+  const marcarItens = useCallback(
+    async (itens: { chave: string; item: string; titulo: string }[], tipo: TipoDeMarcaDeItem, duracao: DuracaoDaMarca = "hoje") => {
+      const r = await marcarItensDaRotina({ itens, tipo, duracao });
+      if (r.ok) {
+        const novas = new Set(r.marcas.map((m) => m.id));
+        const mesmas = new Set(r.marcas.map((m) => `${m.chave}|${m.item}|${m.dia}`));
+        setCarga((atual) =>
+          atual
+            ? {
+                ...atual,
+                marcasDeItens: [
+                  ...r.marcas,
+                  ...atual.marcasDeItens.filter((m) => !novas.has(m.id) && !mesmas.has(`${m.chave}|${m.item}|${m.dia}`)),
+                ],
+              }
+            : atual
+        );
+      }
+      return r;
+    },
+    []
+  );
+
+  const desfazerMarcas = useCallback(async (ids: string[]) => {
+    const r = await desfazerMarcasDeItens(ids);
+    if (r.ok) {
+      const saem = new Set(ids);
+      setCarga((atual) => (atual ? { ...atual, marcasDeItens: atual.marcasDeItens.filter((m) => !saem.has(m.id)) } : atual));
+    }
+    return r;
+  }, []);
+
   return {
     carregando: atividades === null || carga === null || !agora,
     erro,
@@ -142,6 +188,8 @@ export function useMeuDia() {
     ontem: carga?.ontem ?? null,
     planejar,
     aplicarMarcas,
+    marcarItens,
+    desfazerMarcas,
     recarregar,
   };
 }

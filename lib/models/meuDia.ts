@@ -1,20 +1,20 @@
 import type { Case } from "@/lib/models/case";
 import type { CaseMovement } from "@/lib/models/movement";
 import type { AgendaTask } from "@/lib/models/agenda";
-import type { SlaRule } from "@/lib/models/sla";
+import { PRAZOS_DA_DOCUMENTACAO, type SlaRule } from "@/lib/models/sla";
 import type { AvaliacaoGoogleView } from "@/lib/actions/avaliacoesGoogle";
 import type { LinhaDeMetrica } from "@/lib/actions/metricas";
 
 import { FRENTES_DA_OPERACAO, frente, type FrenteId } from "@/lib/models/frentes";
-import { isEncerrado, tentativasMinimas, type NpsKindOption, type NpsResponseView } from "@/lib/models/nps";
+import { isEncerrado, tentativasMinimas, tipoPorNome, TIPOS_PADRAO, type NpsKindOption, type NpsResponseView } from "@/lib/models/nps";
 import { filaDeAvaliacao, semNoticia } from "@/lib/models/cadencia";
 import { eFinalDasRedes } from "@/lib/models/redes";
 import type { AtividadeDaRotina, ChaveDaRotina } from "@/lib/models/rotina";
 
 import { caseHref, isOpen, isReclameAqui, isSocial } from "@/lib/services/case.service";
 import { lateMovements, isPending } from "@/lib/services/movement.service";
-import { podeEncerrar } from "@/lib/services/nps.service";
-import { INICIO_DO_REGISTRO_DE_CONTATO, primeiroContatoFeito, slaStatus } from "@/lib/services/sla.service";
+import { deveEncerrarSemRetorno, nivelDoNps, ordemDoNivel, podeEncerrar, tentativasNaJanela } from "@/lib/services/nps.service";
+import { INICIO_DO_REGISTRO_DE_CONTATO, inicioDoRelogio, primeiroContatoFeito, slaStatus } from "@/lib/services/sla.service";
 import {
   EXPEDIENTE_PADRAO,
   ehDiaUtil,
@@ -22,8 +22,9 @@ import {
   horaDoMinuto,
   minutoDaHora,
   paredeDe,
+  prazoUtil,
 } from "@/lib/services/horasUteis";
-import { respondida } from "@/lib/models/case";
+import { prioridadeNormalizada, respondida } from "@/lib/models/case";
 
 /**
  * O "Meu dia": o número de cada atividade da rotina, e o plano.
@@ -48,6 +49,44 @@ export interface ItemDaRotina {
   detalhe?: string;
   href: string;
   atrasado?: boolean;
+  /**
+   * A ordem dentro da frente — menor vem antes. Quem não diz, vale o
+   * atraso (0 atrasado, 1 no prazo). No NPS é a régua da rotina:
+   * detrator crítico, detrator, neutro, promotor.
+   */
+  urgencia?: number;
+}
+
+/** Marcar um item: fiz hoje, ou não se aplica a esta atividade. */
+export type TipoDeMarcaDeItem = "feito" | "dispensado";
+
+/**
+ * Um item tirado de uma atividade por quem trabalha — gravado no banco.
+ *
+ * A contagem sai dos dados, e o dado às vezes não acompanha o que foi
+ * feito: o FUP foi por um canal que não se registra, o caso espera um
+ * terceiro. Sem isto o item ficava na lista o dia inteiro.
+ */
+export interface MarcaDeItem {
+  id: string;
+  chave: ChaveDaRotina;
+  /** `frente:id` — a mesma chave da fila do dia. */
+  item: string;
+  tipo: TipoDeMarcaDeItem;
+  /** O dia em que foi marcado (AAAA-MM-DD, Brasília). */
+  dia: string;
+  /** O último dia em que vale; vazio é "até desfazer". */
+  ate: string | null;
+  titulo: string;
+}
+
+/** A chave de um item numa atividade — a mesma da fila do dia. */
+export function chaveDoItem(i: Pick<ItemDaRotina, "frente" | "id">, chave: ChaveDaRotina) {
+  return `${i.frente ?? chave}:${i.id}`;
+}
+
+export function marcaValeHoje(m: Pick<MarcaDeItem, "dia" | "ate">, hoje: string) {
+  return m.dia <= hoje && (m.ate === null || m.ate >= hoje);
 }
 
 export interface Contagem {
@@ -57,12 +96,8 @@ export interface Contagem {
   /** Frase curta que diz o que o número é. */
   resumo: string;
   itens: ItemDaRotina[];
-  /**
-   * O acumulado que não é do dia — o backlog antigo, com o caminho para
-   * tratá-lo. Fica fora do total e do plano: senão um estoque de semanas
-   * vira "o dia pede 23 horas", e o plano deixa de servir para o dia.
-   */
-  acumulado?: { total: number; texto: string; href: string };
+  /** O que saiu hoje desta atividade por marca de quem trabalha — para ver e desfazer. */
+  tirados: MarcaDeItem[];
 }
 
 /**
@@ -98,32 +133,162 @@ export interface DadosDoDia {
   ligacoes?: ItemDaRotina[];
   /** O relatório do ciclo de hoje, e se já foi salvo. */
   relatorio?: { ciclo: string; rotulo: string; salvo: boolean } | null;
+  /** Os itens que quem trabalha tirou das atividades (feito hoje, dispensado). */
+  marcasDeItens?: MarcaDeItem[];
 }
 
-function contagem(itens: ItemDaRotina[], resumo: string): Contagem {
+/** A ordem do documento entre as frentes; sem frente (a agenda), logo depois do Reclame Aqui. */
+export const prioridadeDaFrente = (f?: FrenteId) => (f ? frente(f).prioridade : 1.5);
+
+export const urgenciaDe = (i: Pick<ItemDaRotina, "urgencia" | "atrasado">) => i.urgencia ?? (i.atrasado ? 0 : 1);
+
+/**
+ * A lista de uma atividade, na ordem da documentação.
+ *
+ * "Em cenários de alto volume: Reclame Aqui, Redes Sociais, NPS e
+ * Google" — a frente manda primeiro. Dentro dela, o fora do prazo e a
+ * criticidade (no NPS, o detrator crítico antes do promotor).
+ */
+function contagem(itens: ItemDaRotina[], resumo: string, tirados: MarcaDeItem[] = []): Contagem {
   const porFrente: Partial<Record<FrenteId, number>> = {};
   for (const i of itens) if (i.frente) porFrente[i.frente] = (porFrente[i.frente] ?? 0) + 1;
-  const ordem = FRENTES_DA_OPERACAO.map((f) => f.id);
   return {
     total: itens.length,
     porFrente,
     atrasados: itens.filter((i) => i.atrasado).length,
     resumo,
-    itens: [...itens].sort(
-      (a, b) =>
-        Number(Boolean(b.atrasado)) - Number(Boolean(a.atrasado)) ||
-        (a.frente ? ordem.indexOf(a.frente) : 9) - (b.frente ? ordem.indexOf(b.frente) : 9)
-    ),
+    itens: itens
+      .map((i, n) => ({ i, n }))
+      .sort(
+        (a, b) =>
+          prioridadeDaFrente(a.i.frente) - prioridadeDaFrente(b.i.frente) ||
+          urgenciaDe(a.i) - urgenciaDe(b.i) ||
+          a.n - b.n
+      )
+      .map((x) => x.i),
+    tirados,
   };
 }
 
 const frenteDoCaso = (c: Case): FrenteId => (isSocial(c) ? "redes" : "reclame-aqui");
 
-/** Quantos dias uma resposta de NPS sem contato conta como "nova". */
-export const DIAS_DE_NPS_NOVO = 5;
+/** Quanto esperar a resposta de uma avaliação do Google: 48h úteis, pelo documento. */
+export const HORAS_DE_RESPOSTA_DO_GOOGLE = 48;
 
 function diasCorridosDesde(iso: string, agora: Date) {
   return (agora.getTime() - Date.parse(iso)) / 86_400_000;
+}
+
+/**
+ * As regras de prazo que valem na conta.
+ *
+ * Sem nenhuma cadastrada em Processos, valem as da documentação (a
+ * tabela de criticidade do Reclame Aqui e o 1º contato das Redes) —
+ * senão nenhum caso fica "fora do prazo" e a rotina não sabe o que vem
+ * primeiro.
+ */
+export function regrasQueValem(regras: SlaRule[]): SlaRule[] {
+  if (regras.some((r) => r.active)) return regras;
+  return PRAZOS_DA_DOCUMENTACAO.map((p, i) => ({ ...p, id: `documentacao-${i}`, active: true }));
+}
+
+const CRITICIDADE: Record<string, number> = { urgente: 0, alta: 1, normal: 2 };
+
+/**
+ * A ordem de um caso dentro da frente: fora do prazo primeiro, depois a
+ * criticidade do documento (urgente, alta, normal).
+ */
+function urgenciaDoCaso(c: Case, atrasado: boolean) {
+  return (atrasado ? 0 : 3) + (CRITICIDADE[prioridadeNormalizada(c.priority).toLowerCase()] ?? 2);
+}
+
+/**
+ * Anterior ao registro de contatos (12/09): o caso aberto e sem resposta
+ * pública sem 1º contato registrado. Não é "novo" — já foi trabalhado
+ * fora da plataforma —, e sem isto não caía em atividade nenhuma: 13
+ * reclamações abertas, algumas de junho, somiam do Meu dia (medido em
+ * 23/09).
+ */
+const legado = (c: Case) => c.createdAt < INICIO_DO_REGISTRO_DE_CONTATO && !primeiroContatoFeito(c);
+
+/** O caso aberto passou do prazo — o do 1º contato ou o da solução. */
+function foraDoPrazo(c: Case, regras: SlaRule[], opcoes: { agora: Date; expediente: Expediente }) {
+  const s = slaStatus(c, regras, opcoes);
+  if (s.situation === "estourado") return true;
+  if (s.situation !== "sem-registro" || !s.rule || !(s.rule.solutionHours > 0)) return false;
+  /* Sem 1º contato registrado, anterior ao registro: vale o prazo da solução. */
+  const { inicio } = inicioDoRelogio(c, opcoes.expediente);
+  return opcoes.agora.getTime() > prazoUtil(inicio, s.rule.solutionHours, opcoes.expediente).getTime();
+}
+
+/** A ordem de uma resposta do NPS: detrator crítico primeiro, e o fora do prazo antes, dentro do nível. */
+function urgenciaDoNps(r: NpsResponseView, atrasado: boolean) {
+  return ordemDoNivel(nivelDoNps(r).nivel) * 2 + (atrasado ? 0 : 1);
+}
+
+function rotuloDoNivel(r: NpsResponseView) {
+  const { nivel, motivos } = nivelDoNps(r);
+  return nivel === "detrator-critico" ? `Detrator crítico (${motivos[0]})` : undefined;
+}
+
+/** O que houve de contato hoje com a resposta do NPS — tentativa, conversa ou confirmação. */
+function mexidoHojeNps(r: NpsResponseView, hoje: string) {
+  const datas = [r.postContactAt, r.confirmedAt, ...r.attempts.map((a) => a.createdAt)].filter((d): d is string => Boolean(d));
+  return datas.some((d) => paredeDe(new Date(d)).dia === hoje);
+}
+
+export interface EtapaDoNps {
+  etapa: "novo" | "ligacao" | "sem-retorno" | "em-aberto" | "fup" | "concluir" | "esperando";
+  /** Em português, para o detalhe do item. */
+  motivo: string;
+  /** Classificar depois da conversa é o passo seguinte, e não "voltar à fila": vale no mesmo dia. */
+  mesmoMexidoHoje?: boolean;
+}
+
+/**
+ * Onde está uma resposta aberta do NPS — uma atividade só.
+ *
+ * Antes, a resposta com uma tentativa sem sucesso contava em "em aberto"
+ * e nas ligações ao mesmo tempo (22 em 23/09): registrar a tentativa
+ * jogava o cliente de volta à fila de hoje, que era justamente o que não
+ * fazia sentido. A régua agora é o guia:
+ *
+ * - sem 1º contato: novo;
+ * - só tentativas: a próxima tentativa no dia seguinte (ligação), ou
+ *   encerrar sem retorno quando o critério do guia chegou;
+ * - conversamos: falta classificar ou o retorno com a solução (em aberto);
+ *   a confirmação do cliente é espera, e vira FUP depois de 2 dias;
+ * - checklist completo: concluir.
+ */
+export function etapaDoNps(r: NpsResponseView, tipos: NpsKindOption[] | undefined, agora: Date): EtapaDoNps {
+
+  const regra = tipoPorNome(tipos ?? TIPOS_PADRAO, r.kind);
+
+  if (podeEncerrar(r, tipos) && (r.postContactAt || r.kind === "Engano")) {
+    return { etapa: "concluir", motivo: "pronto para encerrar" };
+  }
+
+  if (!r.firstContactAt) return { etapa: "novo", motivo: "sem 1º contato" };
+
+  if (!r.postContactAt) {
+    const semRetorno = deveEncerrarSemRetorno(r, agora);
+    if (semRetorno.deve && r.attempts.length > 0) return { etapa: "sem-retorno", motivo: semRetorno.motivo ?? "critério do guia atingido" };
+    if (r.attempts.length > 0) return { etapa: "ligacao", motivo: "cliente ainda não atendeu" };
+    return { etapa: "em-aberto", motivo: "falta o retorno" };
+  }
+
+  if (!r.kind || (regra?.requiresRootCause && !r.rootCause)) {
+    return { etapa: "em-aberto", motivo: r.kind ? "falta a causa raiz" : "falta classificar", mesmoMexidoHoje: true };
+  }
+
+  if (regra?.requiresConfirmation && !r.confirmedAt) {
+    if (r.resolvedAfter === false) return { etapa: "em-aberto", motivo: "não resolveu ainda — falta a solução" };
+    return diasCorridosDesde(r.postContactAt, agora) >= 2
+      ? { etapa: "fup", motivo: "falta a confirmação do cliente" }
+      : { etapa: "esperando", motivo: "esperando a confirmação do cliente" };
+  }
+
+  return { etapa: "em-aberto", motivo: "falta o registro final" };
 }
 
 /** O número de cada atividade que a plataforma sabe contar. */
@@ -136,82 +301,121 @@ export function contarRotina(
   const hoje = paredeDe(agora).dia;
   const abertos = dados.casos.filter(isOpen);
   const opcoes = { agora, expediente };
+  const regras = regrasQueValem(dados.regrasSla);
+  const atrasadoCaso = (c: Case) => foraDoPrazo(c, regras, opcoes);
 
-  /*
-    O NPS que chegou nesta semana é "novo"; o parado há mais tempo é o
-    backlog que a triagem do NPS trata, na ordem dos críticos. Medido em
-    13/09: 169 parados, quase todos de semanas atrás — contados como
-    novos, o plano pedia 23 horas para um dia de 10.
-  */
-  const recenteNps = (r: NpsResponseView) => diasCorridosDesde(r.respondedAt, agora) <= DIAS_DE_NPS_NOVO;
-  const paradosNps = dados.nps.filter((r) => !isEncerrado(r.status) && !r.firstContactAt);
-  const backlogNps = paradosNps.filter((r) => !recenteNps(r)).length;
+  /* Contato registrado hoje: o retorno de hoje já foi dado — volta amanhã, se ainda faltar. */
+  const mexidoHoje = (c: Case) => Boolean(c.ultimoContatoEm && paredeDe(new Date(c.ultimoContatoEm)).dia === hoje);
+
+  const npsAbertos = dados.nps.filter((r) => !isEncerrado(r.status));
+  const etapaNps = new Map(npsAbertos.map((r) => [r.id, etapaDoNps(r, dados.tiposNps, agora)]));
+  const naEtapa = (e: EtapaDoNps["etapa"]) => npsAbertos.filter((r) => etapaNps.get(r.id)!.etapa === e);
 
   /* ---- novos: chegou e ninguém começou ---- */
   const novos: ItemDaRotina[] = [
     ...abertos
-      .filter((c) => isReclameAqui(c) && !primeiroContatoFeito(c) && c.createdAt >= INICIO_DO_REGISTRO_DE_CONTATO)
-      .map((c) => ({
-        id: c.id,
-        frente: "reclame-aqui" as const,
-        titulo: c.title,
-        detalhe: `${c.priority} · ${c.customer}`,
-        href: caseHref(c),
-        atrasado: slaStatus(c, dados.regrasSla, opcoes).situation === "estourado",
-      })),
+      .filter((c) => isReclameAqui(c) && !primeiroContatoFeito(c) && !legado(c))
+      .map((c) => {
+        const atrasado = atrasadoCaso(c);
+        return {
+          id: c.id,
+          frente: "reclame-aqui" as const,
+          titulo: c.title,
+          detalhe: `${c.priority} · ${c.customer}`,
+          href: caseHref(c),
+          atrasado,
+          urgencia: urgenciaDoCaso(c, atrasado),
+        };
+      }),
     ...abertos
       .filter((c) => isSocial(c) && !c.primeiroContatoEm && !eFinalDasRedes(c.status))
-      .map((c) => ({
-        id: c.id,
-        frente: "redes" as const,
-        titulo: c.title,
-        detalhe: `${c.source} · ${c.customer}`,
-        href: caseHref(c),
-        atrasado: slaStatus(c, dados.regrasSla, opcoes).situation === "estourado",
-      })),
-    ...paradosNps
-      .filter(recenteNps)
-      .map((r) => ({
-        id: r.id,
-        frente: "nps" as const,
-        titulo: `Nota ${r.score}${r.comment.trim() ? ` — ${r.comment.trim().slice(0, 60)}` : ""}`,
-        detalhe: r.customerName || r.customer,
-        href: `/nps/${r.id}`,
-        atrasado: agora.getTime() > Date.parse(r.firstContactDueAt),
-      })),
+      .map((c) => {
+        const atrasado = atrasadoCaso(c);
+        return {
+          id: c.id,
+          frente: "redes" as const,
+          titulo: c.title,
+          detalhe: `${c.source} · ${c.customer}`,
+          href: caseHref(c),
+          atrasado,
+          urgencia: urgenciaDoCaso(c, atrasado),
+        };
+      }),
+    /*
+      Todo NPS sem 1º contato — o de semanas atrás também. Até a 1.30 o
+      parado havia mais de 5 dias ficava fora (era "o acumulado", com um
+      link para a triagem), e 139 respostas vencidas não entravam em
+      atividade nenhuma. Agora entram, fora do prazo, na régua da rotina:
+      o detrator crítico primeiro.
+    */
+    ...naEtapa("novo")
+      .map((r) => {
+        const atrasado = agora.getTime() > Date.parse(r.firstContactDueAt);
+        const nivel = rotuloDoNivel(r);
+        return {
+          id: r.id,
+          frente: "nps" as const,
+          titulo: `Nota ${r.score}${r.comment.trim() ? ` — ${r.comment.trim().slice(0, 60)}` : " · sem comentário"}`,
+          detalhe: [nivel, r.customerName || r.customer].filter(Boolean).join(" · "),
+          href: `/nps/${r.id}`,
+          atrasado,
+          urgencia: urgenciaDoNps(r, atrasado),
+        };
+      }),
     ...dados.google
       .filter((a) => a.status === "aberta" && !a.respondidaEm)
-      .map((a) => ({
-        id: a.id,
-        frente: "google" as const,
-        titulo: `Avaliação ${a.classificacao} de ${a.autor}`,
-        href: `/google?avaliacao=${a.id}`,
-      })),
+      .map((a) => {
+        const atrasado = agora.getTime() > prazoUtil(new Date(a.publicadaEm), HORAS_DE_RESPOSTA_DO_GOOGLE, expediente).getTime();
+        return {
+          id: a.id,
+          frente: "google" as const,
+          titulo: `Avaliação ${a.classificacao} de ${a.autor}`,
+          href: `/google?avaliacao=${a.id}`,
+          atrasado,
+          urgencia: (atrasado ? 0 : 2) + (a.classificacao === "negativa" ? 0 : 1),
+        };
+      }),
   ];
 
-  /* ---- em aberto: já começou, falta o retorno ---- */
+  /*
+    ---- em aberto: já começou, falta o nosso retorno ----
+
+    Três coisas não entram, e entravam:
+    - o caso em que o cliente não atende (tentativa sem resposta): é das
+      ligações, pela cadência — em aberto, ele aparecia duas vezes;
+    - o que teve contato hoje: o retorno de hoje já foi dado. Era o "fiz
+      e voltou para a fila" — registrar o 1º contato jogava o caso de
+      "novos" direto em "em aberto", no mesmo dia;
+    - no NPS, a resposta só tentada (sem conversa): também é das ligações.
+  */
   const emAberto: ItemDaRotina[] = [
     ...abertos
-      .filter((c) => primeiroContatoFeito(c) && (isSocial(c) ? !eFinalDasRedes(c.status) : !respondida(c)))
-      .map((c) => ({
-        id: c.id,
-        frente: frenteDoCaso(c),
-        titulo: c.title,
-        detalhe: `${c.status} · ${c.customer}`,
-        href: caseHref(c),
-        atrasado: slaStatus(c, dados.regrasSla, opcoes).situation === "estourado",
-      })),
-    ...dados.nps
-      .filter((r) => !isEncerrado(r.status) && r.firstContactAt)
+      .filter((c) => (primeiroContatoFeito(c) || legado(c)) && (isSocial(c) ? !eFinalDasRedes(c.status) : !respondida(c)))
+      .filter((c) => !(c.tentativasSemResposta && c.tentativasSemResposta > 0) && !mexidoHoje(c))
+      .map((c) => {
+        const atrasado = atrasadoCaso(c);
+        return {
+          id: c.id,
+          frente: frenteDoCaso(c),
+          titulo: c.title,
+          detalhe: `${c.status} · ${c.customer}${legado(c) ? " · 1º contato não registrado" : ""}`,
+          href: caseHref(c),
+          atrasado,
+          urgencia: urgenciaDoCaso(c, atrasado),
+        };
+      }),
+    ...naEtapa("em-aberto")
+      .filter((r) => etapaNps.get(r.id)!.mesmoMexidoHoje || !mexidoHojeNps(r, hoje))
       .map((r) => ({
         id: r.id,
         frente: "nps" as const,
         titulo: `Nota ${r.score} · ${r.kind ?? "sem tipo"}`,
-        detalhe: r.customerName || r.customer,
+        detalhe: [etapaNps.get(r.id)!.motivo, r.customerName || r.customer].join(" · "),
         href: `/nps/${r.id}`,
+        urgencia: urgenciaDoNps(r, false),
       })),
     ...dados.google
-      .filter((a) => a.status === "aberta" && a.respondidaEm && a.classificacao === "negativa")
+      .filter((a) => a.status === "aberta" && a.respondidaEm && a.classificacao === "negativa" && !a.tratativaResultado)
       .map((a) => ({
         id: a.id,
         frente: "google" as const,
@@ -241,15 +445,14 @@ export function contarRotina(
         atrasado: true,
       })),
     /* No NPS: já conversamos, falta a confirmação — e faz 2 dias. */
-    ...dados.nps
-      .filter((r) => !isEncerrado(r.status) && r.postContactAt && !r.confirmedAt)
-      .filter((r) => diasCorridosDesde(r.postContactAt!, agora) >= 2)
+    ...naEtapa("fup")
       .map((r) => ({
         id: r.id,
         frente: "nps" as const,
         titulo: `Nota ${r.score} · falta a confirmação do cliente`,
         detalhe: r.customerName || r.customer,
         href: `/nps/${r.id}`,
+        urgencia: urgenciaDoNps(r, false),
       })),
   ];
 
@@ -275,32 +478,45 @@ export function contarRotina(
     atrasado: pedido.proximoDia !== undefined && pedido.proximoDia < hoje,
   }));
 
-  /* ---- ligações do dia: RA e redes vêm do servidor; NPS pela cadência do guia ---- */
-  const ligacoesNps: ItemDaRotina[] = dados.nps
-    /* Ainda não conseguimos falar: é a cadência de tentativas do guia. */
-    .filter((r) => !isEncerrado(r.status) && !r.postContactAt && !r.confirmedAt)
-    .filter((r) => r.attempts.length > 0 && r.attempts.length < tentativasMinimas(r.kind))
+  /*
+    ---- ligações do dia: RA e redes vêm do servidor; NPS pela cadência do guia ----
+
+    A resposta só tentada (nunca conversamos): a próxima tentativa é no
+    dia seguinte à última. Atingido o critério de sem retorno, ela sai
+    daqui e vai para os concluídos — o guia manda encerrar.
+  */
+  const ligacoesNps: ItemDaRotina[] = naEtapa("ligacao")
     .filter((r) => paredeDe(new Date(r.attempts[r.attempts.length - 1].createdAt)).dia < hoje)
-    .map((r) => ({
-      id: r.id,
-      frente: "nps" as const,
-      titulo: `Tentativa ${r.attempts.length + 1} de ${tentativasMinimas(r.kind)} · nota ${r.score}`,
-      detalhe: r.customerName || r.customer,
-      href: `/nps/${r.id}`,
-    }));
+    .map((r) => {
+      const feitas = tentativasNaJanela(r, agora).length;
+      return {
+        id: r.id,
+        frente: "nps" as const,
+        titulo: `Tentativa ${feitas + 1} de ${tentativasMinimas(r.kind)} · nota ${r.score}`,
+        detalhe: r.customerName || r.customer,
+        href: `/nps/${r.id}`,
+        urgencia: urgenciaDoNps(r, false),
+      };
+    });
   const ligacoes = [...(dados.ligacoes ?? []), ...ligacoesNps];
 
   /* ---- concluídos a registrar ---- */
   const concluidos: ItemDaRotina[] = [
-    ...dados.nps
-      .filter((r) => !isEncerrado(r.status) && r.confirmedAt && podeEncerrar(r, dados.tiposNps))
-      .map((r) => ({
-        id: r.id,
-        frente: "nps" as const,
-        titulo: `Nota ${r.score} · checklist completo`,
-        detalhe: `${r.customerName || r.customer} — pronto para encerrar`,
-        href: `/nps/${r.id}`,
-      })),
+    ...naEtapa("concluir").map((r) => ({
+      id: r.id,
+      frente: "nps" as const,
+      titulo: `Nota ${r.score} · checklist completo`,
+      detalhe: `${r.customerName || r.customer} — pronto para encerrar`,
+      href: `/nps/${r.id}`,
+    })),
+    ...naEtapa("sem-retorno").map((r) => ({
+      id: r.id,
+      frente: "nps" as const,
+      titulo: `Nota ${r.score} · encerrar sem retorno`,
+      detalhe: `${r.customerName || r.customer} — ${etapaNps.get(r.id)!.motivo}`,
+      href: `/nps/${r.id}`,
+      atrasado: true,
+    })),
     ...dados.google
       .filter((a) => a.status === "aberta" && (a.tratativaResultado === "resolvido" || a.tratativaResultado === "sem-retorno"))
       .map((a) => ({
@@ -348,29 +564,43 @@ export function contarRotina(
         m.desativadas === null ? "desativadas" : null,
       ].filter((x): x is string => Boolean(x));
 
+  /*
+    As marcas de quem trabalha: o item feito hoje ou dispensado sai da
+    atividade (e da fila e do plano), e fica listado para desfazer.
+  */
+  const marcas = (dados.marcasDeItens ?? []).filter((mm) => marcaValeHoje(mm, hoje));
+  const montar = (chave: ChaveDaRotina, itens: ItemDaRotina[], resumo: (n: number, lista: ItemDaRotina[]) => string): Contagem => {
+    const daqui = marcas.filter((mm) => mm.chave === chave);
+    if (!daqui.length) return contagem(itens, resumo(itens.length, itens));
+    const presentes = new Map(itens.map((i) => [chaveDoItem(i, chave), i]));
+    const tirados = daqui.filter((mm) => presentes.has(mm.item));
+    const fora = new Set(tirados.map((mm) => mm.item));
+    const ficam = itens.filter((i) => !fora.has(chaveDoItem(i, chave)));
+    return contagem(ficam, resumo(ficam.length, ficam), tirados);
+  };
+
   const metricas = contagem(
     faltando.map((f) => ({ id: f, titulo: f, href: "/analytics" })),
     !m ? "A métrica de hoje ainda não foi medida — ela entra de madrugada; confira mais tarde." : faltando.length ? `Falta preencher: ${faltando.join(", ")}.` : "Métrica de hoje completa."
   );
 
-  const semItens = (resumo: string): Contagem => ({ total: 0, porFrente: {}, atrasados: 0, resumo, itens: [] });
+  const semItens = (resumo: string): Contagem => ({ total: 0, porFrente: {}, atrasados: 0, resumo, itens: [], tirados: [] });
+  const foraDoPrazoTexto = (lista: ItemDaRotina[]) => {
+    const n = lista.filter((i) => i.atrasado).length;
+    return n ? `, ${n} fora do prazo` : "";
+  };
 
   return {
     metricas,
-    pendencias: contagem(pendencias, pendencias.length ? `${pendencias.length} tarefa(s) da agenda para hoje ou atrasadas.` : "Nenhuma tarefa da agenda vencendo."),
-    "em-aberto": contagem(emAberto, emAberto.length ? `${emAberto.length} em andamento, esperando o nosso retorno.` : "Nada em andamento esperando retorno."),
-    novos: {
-      ...contagem(novos, novos.length ? `${novos.length} sem 1º contato.` : "Nenhum caso novo esperando."),
-      acumulado: backlogNps
-        ? { total: backlogNps, texto: `+${backlogNps} parados há mais de ${DIAS_DE_NPS_NOVO} dias no NPS — pela triagem, críticos primeiro`, href: "/nps" }
-        : undefined,
-    },
-    fups: contagem(fups, fups.length ? `${fups.length} sem notícia há 2 dias úteis ou mais.` : "Ninguém sem notícia."),
-    moderacoes: contagem(moderacoes, moderacoes.length ? `${moderacoes.length} moderação(ões) aguardando o Reclame Aqui.` : "Nenhuma moderação em aberto."),
-    avaliacoes: contagem(avaliacoes, avaliacoes.length ? `${avaliacoes.length} pedido(s) de avaliação para hoje.` : "Nenhum pedido de avaliação para hoje."),
-    ligacoes: contagem(ligacoes, ligacoes.length ? `${ligacoes.length} tentativa(s) da cadência para hoje.` : "Nenhuma tentativa marcada para hoje."),
-    concluidos: contagem(concluidos, concluidos.length ? `${concluidos.length} concluído(s) sem o registro final.` : "Tudo o que terminou está registrado."),
-    areas: contagem(areas, areas.length ? `${areas.length} com as áreas, ${atrasadas.size} fora do prazo.` : "Nada com as áreas."),
+    pendencias: montar("pendencias", pendencias, (n) => (n ? `${n} tarefa(s) da agenda para hoje ou atrasadas.` : "Nenhuma tarefa da agenda vencendo.")),
+    "em-aberto": montar("em-aberto", emAberto, (n, l) => (n ? `${n} em andamento esperando o nosso retorno${foraDoPrazoTexto(l)}.` : "Nada em andamento esperando retorno.")),
+    novos: montar("novos", novos, (n, l) => (n ? `${n} sem 1º contato${foraDoPrazoTexto(l)}.` : "Nenhum caso novo esperando.")),
+    fups: montar("fups", fups, (n) => (n ? `${n} sem notícia há 2 dias úteis ou mais.` : "Ninguém sem notícia.")),
+    moderacoes: montar("moderacoes", moderacoes, (n) => (n ? `${n} moderação(ões) aguardando o Reclame Aqui.` : "Nenhuma moderação em aberto.")),
+    avaliacoes: montar("avaliacoes", avaliacoes, (n) => (n ? `${n} pedido(s) de avaliação para hoje.` : "Nenhum pedido de avaliação para hoje.")),
+    ligacoes: montar("ligacoes", ligacoes, (n) => (n ? `${n} tentativa(s) da cadência para hoje.` : "Nenhuma tentativa marcada para hoje.")),
+    concluidos: montar("concluidos", concluidos, (n) => (n ? `${n} concluído(s) sem o registro final.` : "Tudo o que terminou está registrado.")),
+    areas: montar("areas", areas, (n, l) => (n ? `${n} com as áreas, ${l.filter((i) => i.atrasado).length} fora do prazo.` : "Nada com as áreas.")),
     checkpoint: semItens("O texto de ontem, hoje e riscos sai pronto no fim desta tela."),
     indicadores: semItens("Analytics e as projeções da semana."),
     relatorio: !dados.relatorio
@@ -481,16 +711,20 @@ function pedacos(a: AtividadeDaRotina, c: Contagem | undefined): Pedaco[] {
 }
 
 /** Sem frente (a agenda, uma semanal sem contagem): logo depois do Reclame Aqui. */
-const prioridadeDo = (p: Pedaco) => (p.frente ? frente(p.frente).prioridade : 1.5);
+const prioridadeDo = (p: Pedaco) => prioridadeDaFrente(p.frente);
 
 /**
  * Encaixa a rotina que falta no expediente que sobra.
  *
  * As que têm horário (a planilha às 8h, o checkpoint no fim do dia)
  * ficam no horário delas — ou no primeiro espaço livre, se a hora já
- * passou. O resto vai em pedaços por frente, nesta ordem: primeiro o que
- * está fora do prazo; depois a prioridade do documento (Reclame Aqui,
- * Redes, NPS, Google); dentro disso, a ordem da rotina.
+ * passou. O resto vai em pedaços por frente, nesta ordem: primeiro a
+ * prioridade do documento (Reclame Aqui, Redes, NPS, Google); dentro da
+ * frente, o que está fora do prazo; depois, a ordem da rotina.
+ *
+ * Até a 1.30 o fora do prazo vinha antes da frente. Com o NPS vencido
+ * dentro das atividades (139 respostas em 23/09), isso poria o NPS na
+ * frente de todo o Reclame Aqui — o contrário do documento.
  */
 export function planoDoDia(
   atividades: AtividadeDaRotina[],
@@ -530,8 +764,8 @@ export function planoDoDia(
     .flatMap((a) => pedacos(a, a.chave ? contagens[a.chave] : undefined))
     .sort(
       (x, y) =>
-        Number(y.atrasados > 0) - Number(x.atrasados > 0) ||
         prioridadeDo(x) - prioridadeDo(y) ||
+        Number(y.atrasados > 0) - Number(x.atrasados > 0) ||
         x.a.ordem - y.a.ordem
     );
 

@@ -62,17 +62,30 @@ const contagens = {
 const fila = filaDoDia(atividades, contagens);
 conferir("o mesmo caso em duas atividades é um item só", fila.length, 4);
 conferir("e leva as duas atividades", fila.find((i) => i.chave === "reclame-aqui:c1")?.atividades, ["Novos", "FUPs"]);
-conferir("o fora do prazo vem primeiro", fila[0].chave, "reclame-aqui:c1");
-conferir("depois, na ordem do documento", fila.map((i) => i.chave).slice(1), ["nps:n1", "redes:c2", "pendencias:t1"]);
-conferir("a ficha abre em janela; a agenda, não", fila.map((i) => Boolean(i.janela)), [true, true, true, false]);
+conferir("e as duas chaves — marcar feito tira das duas", fila.find((i) => i.chave === "reclame-aqui:c1")?.chaves, ["novos", "fups"]);
+conferir("o Reclame Aqui vem primeiro", fila[0].chave, "reclame-aqui:c1");
+conferir("depois, a prioridade do documento: agenda, Redes, NPS", fila.map((i) => i.chave).slice(1), ["pendencias:t1", "redes:c2", "nps:n1"]);
+conferir("a ficha abre em janela; a agenda, não", fila.map((i) => Boolean(i.janela)), [true, false, true, true]);
+{
+  /* O NPS vencido não passa na frente do Reclame Aqui no prazo; dentro da frente, o vencido e o crítico primeiro. */
+  const f = filaDoDia([{ id: "b1", titulo: "Novos", chave: "novos" as const }], {
+    novos: { itens: [
+      { id: "n2", frente: "nps" as const, titulo: "Nota 8", href: "/nps/n2", atrasado: true, urgencia: 5 },
+      { id: "n3", frente: "nps" as const, titulo: "Nota 0", href: "/nps/n3", urgencia: 1 },
+      { id: "c3", frente: "reclame-aqui" as const, titulo: "Caso 3", href: "/reclame-aqui/c3" },
+      { id: "c4", frente: "reclame-aqui" as const, titulo: "Caso 4", href: "/reclame-aqui/c4", atrasado: true },
+    ] },
+  });
+  conferir("NPS vencido não fura o RA; no RA, o vencido antes; no NPS, o crítico antes do neutro vencido", f.map((i) => i.ref), ["c4", "c3", "n3", "n2"]);
+}
 conferir("atividade marcada sai da fila", filaDoDia(atividades, contagens, new Set(["a1", "a2"])).map((i) => i.chave), ["pendencias:t1"]);
 
 /* ---- 2. o lugar na fila ---- */
 
 conferir("o item atual continua onde está", posicaoNaFila(fila, "redes:c2", 0), 2);
-const semNps = fila.filter((i) => i.chave !== "nps:n1");
-conferir("resolvido o 2º, segue no 2º lugar (e não no 1º)", semNps[posicaoNaFila(semNps, "nps:n1", 1)].chave, "redes:c2");
-conferir("resolvido o último, fica no novo último", posicaoNaFila(fila.slice(0, 3), "pendencias:t1", 3), 2);
+const semAgenda = fila.filter((i) => i.chave !== "pendencias:t1");
+conferir("resolvido o 2º, segue no 2º lugar (e não no 1º)", semAgenda[posicaoNaFila(semAgenda, "pendencias:t1", 1)].chave, "redes:c2");
+conferir("resolvido o último, fica no novo último", posicaoNaFila(fila.slice(0, 3), "nps:n1", 3), 2);
 conferir("fila vazia não tem posição", posicaoNaFila([], "x", 2), -1);
 
 /* ---- 3. os passos ---- */
@@ -113,7 +126,10 @@ const modo = ler("components/rotina/ModoProximo.tsx");
 conferir("a agenda confirma só depois do banco", /await toggleTask\(tarefa\.id\)[\s\S]{0,120}if \(r\.ok\)/.test(modo), true);
 conferir("e desfaz quando o banco recusa", (ler("lib/context/AgendaContext.tsx").match(/return sincronizar\(\s*\(\) => saveAgendaTask\((alterada|movida)\),\s*\(\) => setTasks/g) ?? []).length, 2);
 conferir("os passos vêm da ficha, não do id do item", modo.includes("passosDe(ficha.frente, ficha.ref)"), true);
-conferir("a lista da atividade mostra o que falta", ler("components/rotina/RotinaDoDia.tsx").includes("resumoDosPassos(passos).atual"), true);
+conferir("a lista da atividade mostra o que falta", ler("components/rotina/ItensDaAtividade.tsx").includes("resumoDosPassos(passos).atual"), true);
+conferir("e a Rotina de hoje usa essa lista", ler("components/rotina/RotinaDoDia.tsx").includes("<ItensDaAtividade"), true);
+conferir("marcar item só muda a tela depois do banco", /await marcarItensDaRotina[\s\S]{0,80}if \(r\.ok\)/.test(ler("components/rotina/useMeuDia.ts")), true);
+conferir("o modo guarda o lugar de cada item (não segue o item que mudou de atividade)", modo.includes("lugar.get(x.chave)"), true);
 conferir("a Agenda chega ao modo", ler("components/rotina/RotinaDoDia.tsx").includes('href="/meu-dia?um-por-vez"') && ler("app/meu-dia/page.tsx").includes('has("um-por-vez")'), true);
 
 console.log(falhas === 0 ? "\n  O modo um por vez leva a fila até o fim.\n" : `\n  ${falhas} ponto(s) a corrigir.\n`);

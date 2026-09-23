@@ -12,7 +12,7 @@ import IconeDaFrente from "@/components/shared/IconeDaFrente";
 import { salvarMarcas } from "@/lib/actions/rotina";
 import { useToast } from "@/lib/context/ToastContext";
 
-import { FRENTES_DA_OPERACAO, frente } from "@/lib/models/frentes";
+import { FRENTES_DA_OPERACAO } from "@/lib/models/frentes";
 import { DIAS_DA_SEMANA, type AtividadeDaRotina } from "@/lib/models/rotina";
 import { minutosDaAtividade } from "@/lib/models/meuDia";
 import { descreverMinutos } from "@/components/rotina/formato";
@@ -20,10 +20,8 @@ import { descreverMinutos } from "@/components/rotina/formato";
 import type { useMeuDia } from "@/components/rotina/useMeuDia";
 
 import PorQue from "@/components/shared/PorQue";
-import JanelaDoLink from "@/components/janelas/JanelaDoLink";
-import { usePassosParaFechar } from "@/components/rotina/usePassosParaFechar";
-import { resumoDosPassos } from "@/lib/models/guiaParaFechar";
-import { janelaDoEndereco } from "@/lib/models/janelas";
+import ItensDaAtividade from "@/components/rotina/ItensDaAtividade";
+import { useSla } from "@/lib/context/SlaContext";
 type MeuDia = ReturnType<typeof useMeuDia>;
 
 interface Props {
@@ -58,7 +56,7 @@ export default function RotinaDoDia({ dia, compacto = false, onConfigurar, onUmP
   const { notify } = useToast();
   const [aberta, setAberta] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
-  const passosDe = usePassosParaFechar();
+  const { rules } = useSla();
 
   const { doDia, contagens, feitasHoje, sequencia, hoje } = dia;
 
@@ -194,7 +192,10 @@ export default function RotinaDoDia({ dia, compacto = false, onConfigurar, onUmP
           const marcada = rascunho.has(a.id);
           const expandida = aberta === a.id;
           const minutos = minutosDaAtividade(a, c);
-          const temItens = Boolean(c && c.itens.length);
+          const temLista = Boolean(c && (c.itens.length || c.tirados.length));
+          /* Todos os itens saíram por marca: a atividade está feita, falta só marcar. */
+          const esvaziada = Boolean(c && c.total === 0 && c.tirados.length > 0 && !marcada);
+          const alternarLista = () => setAberta(expandida ? null : a.id);
 
           return (
             <li key={a.id} className={`rounded-xl border transition-colors ${marcada ? "border-emerald-200 bg-emerald-50/40" : "border-zinc-200"}`}>
@@ -210,7 +211,10 @@ export default function RotinaDoDia({ dia, compacto = false, onConfigurar, onUmP
                   {marcada && <Check size={13} strokeWidth={3} />}
                 </button>
 
-                <div className="min-w-0 flex-1">
+                <div
+                  className={`min-w-0 flex-1 ${temLista ? "cursor-pointer" : ""}`}
+                  onClick={temLista ? alternarLista : undefined}
+                >
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                     <span className={`text-sm font-medium ${marcada ? "text-zinc-400 line-through" : "text-zinc-800"}`}>{a.titulo}</span>
                     {a.frequencia === "semanal" && (
@@ -233,12 +237,22 @@ export default function RotinaDoDia({ dia, compacto = false, onConfigurar, onUmP
                         </span>
                       )}
                       <span className="text-[11px] text-zinc-500">{c.resumo}</span>
-                      {c.acumulado && (
-                        <Link href={c.acumulado.href} className="text-[11px] font-medium text-violet-700 hover:underline">
-                          {c.acumulado.texto}
-                        </Link>
-                      )}
                     </div>
+                  )}
+                  {esvaziada && (
+                    <p className="mt-1 flex flex-wrap items-center gap-x-2 text-[11px] text-emerald-700">
+                      Todos os itens saíram da lista.
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          alternar(a.id);
+                        }}
+                        className="font-semibold underline-offset-2 hover:underline"
+                      >
+                        Marcar a atividade
+                      </button>
+                    </p>
                   )}
                   {!c && a.descricao && !compacto && <p className="mt-0.5 text-[11px] text-zinc-500">{a.descricao}</p>}
                 </div>
@@ -250,49 +264,46 @@ export default function RotinaDoDia({ dia, compacto = false, onConfigurar, onUmP
                       <ArrowUpRight size={15} />
                     </Link>
                   )}
-                  {temItens && (
+                  {temLista && (
                     <button
                       type="button"
-                      onClick={() => setAberta(expandida ? null : a.id)}
+                      onClick={alternarLista}
+                      data-tour="itens-da-atividade"
                       aria-expanded={expandida}
-                      title={expandida ? "Fechar a lista" : "Ver os itens"}
-                      className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700"
+                      title={expandida ? "Fechar a lista" : "Ver os itens, marcar como feito ou tirar da atividade"}
+                      className={`flex items-center gap-0.5 rounded-lg py-1 pl-2 pr-1 text-[11px] font-medium transition-colors ${expandida ? "bg-zinc-100 text-zinc-800" : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800"}`}
                     >
-                      {expandida ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+                      {c!.total ? `${c!.total} ${c!.total === 1 ? "item" : "itens"}` : "Tirados"}
+                      {expandida ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                     </button>
                   )}
                 </div>
               </div>
 
-              {expandida && c && (
-                <ul className="max-h-72 space-y-1 overflow-y-auto border-t border-zinc-100 px-3 py-2">
-                  {c.itens.slice(0, 40).map((i) => {
-                    const pedido = janelaDoEndereco(i.href, i.titulo);
-                    const passos = pedido ? passosDe(pedido.frente, pedido.ref) : null;
-                    const proximo = passos ? resumoDosPassos(passos).atual : null;
-                    return (
-                    <li key={`${i.frente ?? "g"}:${i.id}`} className="flex min-w-0 items-start gap-2 text-xs">
-                      {i.frente ? <IconeDaFrente frente={i.frente} size={12} className="mt-0.5" /> : <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-zinc-300" />}
-                      <Link href={i.href} className="min-w-0 flex-1">
-                        <span className={`block truncate font-medium ${i.atrasado ? "text-rose-700" : "text-zinc-700"} hover:underline`}>{i.titulo}</span>
-                        {i.detalhe && <span className="block truncate text-[11px] text-zinc-500">{i.frente ? `${frente(i.frente).curto} · ` : ""}{i.detalhe}</span>}
-                        {proximo && (
-                          <span className="block truncate text-[11px] text-zinc-400">
-                            Falta: <span className="text-zinc-600">{proximo.titulo.charAt(0).toLowerCase()}{proximo.titulo.slice(1)}</span>
-                          </span>
-                        )}
-                      </Link>
-                      <JanelaDoLink href={i.href} titulo={i.titulo} className="-mt-0.5 p-0.5" />
-                    </li>
-                    );
-                  })}
-                  {c.itens.length > 40 && <li className="pt-1 text-[11px] text-zinc-400">e mais {c.itens.length - 40} — o atalho abre a lista inteira.</li>}
-                </ul>
+              {expandida && c && a.chave && (
+                <ItensDaAtividade
+                  chave={a.chave}
+                  atividade={a.titulo}
+                  contagem={c}
+                  marcarItens={dia.marcarItens}
+                  desfazerMarcas={dia.desfazerMarcas}
+                />
               )}
             </li>
           );
         })}
       </ul>
+
+      {!compacto && doDia.length > 0 && !rules.some((r) => r.active) && (
+        <p className="mt-3 text-[11px] leading-relaxed text-zinc-400">
+          &ldquo;Fora do prazo&rdquo; pelos prazos da documentação (a criticidade do Reclame Aqui e o 1º contato das Redes): nenhum prazo foi
+          cadastrado em{" "}
+          <Link href="/processos" className="text-zinc-500 underline-offset-2 hover:underline">
+            Processos
+          </Link>
+          .
+        </p>
+      )}
 
       {!compacto && dia.continuas.length > 0 && (
         <div className="mt-5 border-t border-zinc-100 pt-4">

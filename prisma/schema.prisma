@@ -1981,3 +1981,31 @@ model MarcaDaRotina {
   @@unique([atividadeId, userId, dia])
   @@index([userId, dia])
 }
+
+/// Um item tirado de uma atividade do Meu dia por quem trabalha.
+///
+/// A contagem de cada atividade sai dos dados, e o dado às vezes não
+/// acompanha o que foi feito: o FUP foi por um canal que não se
+/// registra, o caso espera um terceiro. "Feito" vale para o dia;
+/// "dispensado" vale até `ate` (vazio: até desfazer). Por pessoa, como as
+/// marcas da rotina.
+model MarcaDeItemDaRotina {
+  id       String   @id @default(cuid())
+  userId   String
+  /// A chave da atividade (novos, em-aberto, fups…).
+  chave    String
+  /// `frente:id` — o item na fila do dia.
+  item     String
+  /// feito · dispensado
+  tipo     String
+  /// AAAA-MM-DD em Brasília: o dia em que foi marcado.
+  dia      String
+  /// O último dia em que vale; vazio é "até desfazer".
+  ate      String?
+  /// O título na hora da marca, para a lista de desfazer.
+  titulo   String
+  criadoEm DateTime @default(now())
+
+  @@unique([userId, chave, item, dia])
+  @@index([userId, ate])
+}

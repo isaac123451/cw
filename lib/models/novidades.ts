@@ -104,6 +104,14 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.31.0",
+    data: "2026-09-23",
+    titulo: "Meu dia: cada item sai com um clique, na ordem do documento",
+    texto: "Na lista de cada atividade, marque o item como feito hoje ou tire da atividade (só hoje, por 7 dias ou até devolver). O que saiu fica listado para devolver. A linha inteira abre a lista, e o Um por vez ganhou Ver a fila, Feito hoje e Tirar do dia, sem pular de lugar depois de uma ação. A ordem é a do documento (Reclame Aqui, Redes, NPS, Google; no NPS, o detrator crítico primeiro), e o que está fora do prazo agora entra nas atividades: o NPS vencido e as reclamações antigas sem resposta. De quebra, a aba do navegador ganhou o ícone da plataforma.",
+    frentes: ["plataforma", "reclame-aqui", "nps"],
+    href: "/meu-dia",
+  },
+  {
     versao: "1.30.0",
     data: "2026-09-23",
     titulo: "A primeira semana guiada",
@@ -277,7 +285,7 @@ export const NOVIDADES: Novidade[] = [
       rota: "/meu-dia",
       passos: [
         { alvo: '[data-tour="um-por-vez"]', titulo: "Um por vez", texto: "Abre a fila do dia com um item por vez. ← e → andam pela fila." },
-        { alvo: 'button[title="Ver os itens"]', titulo: "O que falta em cada item", texto: "Na lista de cada atividade, a linha “Falta:” diz o próximo passo do caso." },
+        { alvo: '[data-tour="itens-da-atividade"]', titulo: "O que falta em cada item", texto: "Na lista de cada atividade, a linha “Falta:” diz o próximo passo do caso." },
       ],
     },
   },

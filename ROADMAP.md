@@ -1116,6 +1116,115 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### A lista de 23/09: Meu dia, NPS e Google Agenda
+
+Pedido do Isaac, depois da 1.30.0, em partes:
+
+1. Meu dia: tirar um item da atividade ou marcar como feito; ver a
+   lista de itens na própria atividade; a ordem da prioridade do
+   documento; o que está fora do prazo dentro das atividades; e o item
+   que "volta para a fila" sem sentido depois de feito. **1.31.0.**
+2. Triagem do NPS: sem comentário, o contato vem antes da
+   classificação. Tentativa só vira "sem retorno" depois de ~2 horas.
+3. Google Agenda: o plano do dia vira eventos na agenda.
+4. O ícone da aba era o padrão do Next.js (o triângulo da Vercel).
+   **1.31.0.**
+
+### Meu dia: itens que saem, ordem do documento e o fora do prazo (23/09/2026, 1.31.0)
+
+O que o Isaac disse: "tem situações que o caso não some, preciso de uma
+forma para excluir a atividade ou marcar o checklist"; "preciso de uma
+janela para verificar a lista"; "vá pela prioridade descrita na
+documentação"; "algumas atividades, quando realizo, vão para a fila de
+novo, e ele me direciona para aquela etapa e preciso voltar tudo";
+"você precisa trabalhar com as coisas que estão fora de prazo também".
+
+Medido antes, na base real (só leitura, `scripts/medir-meu-dia.ts`):
+- **139 NPS vencidos fora de todas as atividades.** O NPS parado havia
+  mais de 5 dias ficava num link ("o acumulado") e não entrava na conta.
+- **13 reclamações do Reclame Aqui abertas, sem resposta pública, fora
+  de todas as atividades.** Eram de antes do registro de contatos
+  (12/09), sem 1º contato registrado: nem "novas", nem "em aberto".
+  Algumas de junho, quase todas urgentes.
+- **22 NPS em duas atividades ao mesmo tempo.** Uma tentativa sem
+  sucesso jogava o cliente em "em aberto" e nas ligações. Era o "fiz e
+  voltou para a fila".
+- Nenhum caso aparecia "fora do prazo": não há prazo cadastrado em
+  Processos, e a conta não tinha plano B.
+- A fila do "um por vez" começava por oito NPS, antes de qualquer
+  reclamação.
+
+O que mudou:
+- **Cada item sai à mão, e volta com um clique.** Na lista da
+  atividade: "feito hoje" (volta amanhã só se ainda for trabalho) ou
+  "não se aplica" (só hoje, por 7 dias ou até devolver). No "um por
+  vez": "Feito hoje" e "Tirar do dia". Nada muda no caso; é o Meu dia
+  que deixa de pedir o item. Gravado no banco (tabela nova
+  `MarcaDeItemDaRotina`, por pessoa), e cada atividade mostra os
+  tirados com "Devolver". Quando todos os itens saem, a atividade
+  oferece "Marcar a atividade".
+- **A lista aparece na atividade.** A linha inteira abre a lista, e o
+  botão diz quantos itens tem. Agrupada por frente, com o fora do prazo
+  marcado, 25 por vez. No "um por vez", "Ver a fila" lista a fila
+  inteira e leva direto ao item escolhido.
+- **A ordem do documento.** Reclame Aqui, Redes, NPS, Google. Dentro da
+  frente, o fora do prazo e a criticidade: no RA, urgente, alta,
+  normal; no NPS, a régua da triagem (detrator crítico, detrator,
+  neutro, promotor). Vale para a lista, para a fila e para o plano. O
+  fora do prazo não passa mais na frente da frente: com o NPS vencido
+  dentro das atividades, passaria na frente de todo o Reclame Aqui.
+- **O fora do prazo entra.** Todo NPS sem 1º contato está em "novos",
+  o crítico primeiro. As reclamações antigas sem 1º contato registrado
+  estão em "em aberto", com o prazo da solução. Sem prazo cadastrado,
+  valem os da documentação (a tabela de criticidade do RA e o 1º
+  contato das Redes), e a tela diz isso. O Google ganhou o prazo de
+  48h úteis.
+- **Uma atividade por item, e sem volta no mesmo dia.** O NPS só
+  tentado fica nas ligações (no dia seguinte à tentativa) ou em
+  "concluídos" quando o critério de sem retorno chega; o conversado
+  vai para "em aberto" só se falta a classificação ou a solução; a
+  confirmação do cliente é espera, e vira FUP em 2 dias. O caso com
+  contato registrado hoje não volta para "em aberto" hoje.
+- **O "um por vez" não pula.** Cada item guarda o lugar em que
+  apareceu desde que o modo abriu; o que muda de atividade continua no
+  mesmo lugar, e o que entra depois vai para o fim.
+- **Ícone próprio na aba.** Era o triângulo da Vercel, que vem com o
+  Next.js. Agora é o da extensão (moldura roxa, ponto laranja,
+  sorriso): `app/favicon.ico` com 16, 32 e 48 px e `app/icon.svg`.
+
+Depois, na mesma base:
+- NPS aberto fora de todas as atividades: **0 de 191** (era 139).
+- Reclamação aberta sem resposta fora de todas: **0** (eram 13).
+- "Em aberto" caiu de 27 para 16: entraram as 13 reclamações antigas,
+  saíram os 22 NPS só tentados, que seguem nas ligações.
+- A fila começa por oito reclamações do Reclame Aqui fora do prazo.
+
+Provas:
+- `check:rotina` (46 pontos): o NPS de agosto entra fora do prazo; o
+  Instagram passa das 4h úteis pelos prazos da documentação; a ordem
+  RA, Redes, NPS, Google; a reclamação antiga entra em "em aberto" e
+  fora do prazo; "em aberto" não repete cadência nem contato de hoje;
+  **cada NPS aberto em uma atividade só**; e quatro das marcas (feito
+  hoje sai e fica listado, o de ontem não vale, o dispensado até
+  devolver continua fora, a marca vale só na atividade dela).
+  Sabotado (tirando a regra do contato de hoje), ficou vermelho em
+  dois pontos.
+- `check:guia-para-fechar`: a fila na ordem do documento, o NPS
+  vencido sem furar o RA, as chaves das duas atividades, e o modo que
+  guarda o lugar.
+- Na tela, com os dados reais: marcar feito tirou o item (172 para
+  171), recarregar manteve, "Devolver" voltou para 172. No "um por
+  vez", "Tirar do dia" passou ao seguinte e "Devolver" pôs o item de
+  volta no lugar dele sem mudar o item da vez. As marcas do teste
+  foram apagadas: 0 no banco no fim.
+- O ícone: `/favicon.ico` e `/icon.svg` respondem 200 sem passar pelo
+  login; desenhados lado a lado, diferem 1,9 de 255 por canal.
+
+**Banco:** tabela nova `MarcaDeItemDaRotina`, aplicada com `db push`
+(aditiva, nada existente mudou) e RLS ligado (60 de 60 tabelas).
+**Depende de você:** reiniciar o `npm run dev` (tabela nova no
+Prisma).
+
 ### O roadmap 2.0 não fecha na 2.0.0 (23/09/2026)
 
 Decisão do Isaac: a lista continua. O item "Versão 2.0.0" saiu da Fase

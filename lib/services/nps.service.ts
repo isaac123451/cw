@@ -727,6 +727,39 @@ export interface ItemDeTriagem {
 }
 
 /**
+ * O nível da resposta na ordem da rotina, e por quê.
+ *
+ * Crítico é o detrator que falou em cancelar (marcado ou escrito), deu
+ * nota de 0 a 3 ou relatou erro no sistema. Serve à triagem do que está
+ * parado e à ordem do Meu dia — a mesma régua nos dois lugares.
+ */
+export function nivelDoNps(
+  item: Pick<NpsResponseView, "score" | "churnRisk" | "comment" | "kind">
+): { nivel: NivelDeTriagem; motivos: string[] } {
+
+  const segmento = segmentOf(item.score).label;
+  const motivos: string[] = [];
+
+  let nivel: NivelDeTriagem =
+    segmento === "Detrator" ? "detrator" : segmento === "Passivo" ? "neutro" : "promotor";
+
+  if (nivel === "detrator") {
+    if (item.churnRisk) motivos.push("marcado como risco de cancelamento");
+    else if (FALA_EM_SAIR.test(item.comment)) motivos.push("fala em cancelar ou trocar");
+    if (item.score <= 3) motivos.push(`nota ${item.score}`);
+    if (item.kind === "Erro no Sistema") motivos.push("erro no sistema");
+    if (motivos.length > 0) nivel = "detrator-critico";
+  }
+
+  return { nivel, motivos };
+}
+
+/** 0 para o detrator crítico, 3 para o promotor. */
+export function ordemDoNivel(nivel: NivelDeTriagem) {
+  return ORDEM_DA_TRIAGEM.indexOf(nivel);
+}
+
+/**
  * A fila do que está parado, na ordem da rotina.
  *
  * "Identificação de detratores críticos na base ativa; após isso seguir
@@ -759,19 +792,7 @@ export function filaDeTriagem(
 
     if (isEncerrado(item.status) || item.firstContactAt) continue;
 
-    const segmento = segmentOf(item.score).label;
-    const motivos: string[] = [];
-
-    let nivel: NivelDeTriagem =
-      segmento === "Detrator" ? "detrator" : segmento === "Passivo" ? "neutro" : "promotor";
-
-    if (nivel === "detrator") {
-      if (item.churnRisk) motivos.push("marcado como risco de cancelamento");
-      else if (FALA_EM_SAIR.test(item.comment)) motivos.push("fala em cancelar ou trocar");
-      if (item.score <= 3) motivos.push(`nota ${item.score}`);
-      if (item.kind === "Erro no Sistema") motivos.push("erro no sistema");
-      if (motivos.length > 0) nivel = "detrator-critico";
-    }
+    const { nivel, motivos } = nivelDoNps(item);
 
     const situacao = item.establishmentId ? opcoes.situacaoDaConta?.(item.establishmentId) : undefined;
     const contaInativa = Boolean(situacao && !/^ativ/i.test(situacao));

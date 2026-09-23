@@ -74,12 +74,14 @@ const contagens = contarRotina(
       caso("ra-sem-noticia", { status: "Em tratativa", primeiroContatoEm: br("2026-09-10 10:00"), ultimoContatoEm: br("2026-09-10 10:00") }),
       caso("ra-moderacao", { status: "Resolvido", resolved: true, moderacaoPedidaEm: "2026-09-01", moderacaoResultado: "pendente" }),
       caso("ra-na-cadencia", { status: "Em tratativa", primeiroContatoEm: br("2026-09-09 10:00"), ultimoContatoEm: br("2026-09-09 10:00"), tentativasSemResposta: 2 }),
+      caso("ra-contatado-hoje", { status: "Em tratativa", primeiroContatoEm: br("2026-09-15 09:30"), ultimoContatoEm: br("2026-09-15 09:30") }),
     ],
     nps: [
       resposta("nps-parado", {}),
       resposta("nps-antigo", { respondedAt: br("2026-08-20 10:00"), firstContactDueAt: br("2026-08-21 10:00") }),
       resposta("nps-tentado", { status: "Em tratativa", firstContactAt: br("2026-09-11 10:00"), attempts: [{ id: "a", channel: "WhatsApp", note: "", actor: "", createdAt: br("2026-09-11 10:00") }] }),
       resposta("nps-conversado", { status: "Em tratativa", firstContactAt: br("2026-09-10 10:00"), postContactAt: br("2026-09-11 11:00"), moodAfter: 3, attempts: [{ id: "b", channel: "Telefone", note: "", actor: "", createdAt: br("2026-09-10 10:00") }] }),
+      resposta("nps-esperando", { status: "[Aguardando Resposta]", kind: "Reclamação", rootCause: "Bug", firstContactAt: br("2026-09-10 10:00"), postContactAt: br("2026-09-11 11:00") }),
     ],
     google: [{ id: "g1", autor: "Bia", status: "aberta", classificacao: "negativa", publicadaEm: br("2026-09-14 12:00") }],
     movimentos: [{ id: "m1", caseId: "ra-sem-noticia", destination: "Financeiro", reason: "", actor: "", startedAt: br("2026-09-10 10:00"), dueHours: 24 }],
@@ -94,15 +96,39 @@ const contagens = contarRotina(
   agora
 );
 
-confere("novos: o RA de hoje, o Instagram, o NPS parado e o Google aberto (o RA de antes do registro não)", [contagens.novos.total, contagens.novos.porFrente], [4, { "reclame-aqui": 1, redes: 1, nps: 1, google: 1 }]);
-confere("o NPS parado desde agosto é backlog, fora do total e do plano", contagens.novos.acumulado?.total, 1);
+confere("novos: o RA de hoje, o Instagram, os dois NPS parados e o Google aberto (o RA de antes do registro não)", [contagens.novos.total, contagens.novos.porFrente], [5, { "reclame-aqui": 1, redes: 1, nps: 2, google: 1 }]);
+confere("o NPS parado desde agosto entra na atividade, fora do prazo (era o acumulado, fora de tudo)", contagens.novos.itens.find((i) => i.id === "nps-antigo")?.atrasado, true);
 confere("NPS parado com o prazo vencido conta como atrasado", contagens.novos.itens.find((i) => i.id === "nps-parado")?.atrasado, true);
-confere("FUP: o RA sem notícia e o NPS conversado sem confirmação (o RA na cadência de tentativas não)", [contagens.fups.itens.map((i) => i.id).sort(), contagens.fups.porFrente], [["nps-conversado", "ra-sem-noticia"], { "reclame-aqui": 1, nps: 1 }]);
+confere("sem prazo cadastrado, valem os da documentação: o Instagram passou das 4h úteis", contagens.novos.itens.find((i) => i.id === "ig-novo")?.atrasado, true);
+confere("novos na ordem do documento: RA, Redes, NPS, Google", contagens.novos.itens.map((i) => i.frente), ["reclame-aqui", "redes", "nps", "nps", "google"]);
+confere("em aberto: o RA antigo sem 1º contato registrado entra, e o conversado sem classificar", contagens["em-aberto"].itens.map((i) => i.id).sort(), ["nps-conversado", "ra-antigo", "ra-sem-noticia"]);
+confere("o RA de agosto sem resposta está fora do prazo (o da solução)", contagens["em-aberto"].itens.find((i) => i.id === "ra-antigo")?.atrasado, true);
+confere("em aberto não repete quem está na cadência (RA e NPS só tentado) nem quem teve contato hoje", ["ra-na-cadencia", "nps-tentado", "ra-contatado-hoje"].some((id) => contagens["em-aberto"].itens.some((i) => i.id === id)), false);
+confere("FUP: o RA sem notícia e o NPS esperando a confirmação há 2 dias (o RA na cadência não)", [contagens.fups.itens.map((i) => i.id).sort(), contagens.fups.porFrente], [["nps-esperando", "ra-sem-noticia"], { "reclame-aqui": 1, nps: 1 }]);
+{
+  /* Cada resposta aberta do NPS em uma atividade só. */
+  const ids = ["novos", "em-aberto", "fups", "ligacoes", "concluidos"].flatMap((k) => contagens[k as "novos"].itens.filter((i) => i.frente === "nps").map((i) => i.id));
+  confere("cada NPS aberto está em uma atividade só", ids.length, new Set(ids).size);
+}
 confere("moderação pendente há 14 dias: na fila e atrasada", [contagens.moderacoes.total, contagens.moderacoes.atrasados], [1, 1]);
 confere("área: o Financeiro de 1 dia útil, acionado 3 dias úteis atrás, atrasado", [contagens.areas.total, contagens.areas.atrasados], [1, 1]);
 confere("agenda: só o que vence hoje ou antes, e sem frente", [contagens.pendencias.total, contagens.pendencias.porFrente], [1, {}]);
 confere("ligações: a do servidor mais a 2ª tentativa do NPS que nunca atendeu (o conversado não)", [contagens.ligacoes.itens.map((i) => i.id).sort(), contagens.ligacoes.porFrente], [["nps-tentado", "ra-lig"], { "reclame-aqui": 1, nps: 1 }]);
 confere("métrica ainda não medida hoje: pede para conferir depois", contagens.metricas.total, 1);
+
+console.log("\n— Itens tirados à mão —");
+{
+  const base = { casos: [caso("ra-novo", {}), caso("ra-2", {})], nps: [], google: [], movimentos: [], tarefas: [], regrasSla: [] };
+  const m = (item: string, dia: string, ate: string | null, tipo: "feito" | "dispensado" = "feito") => ({ id: item + dia, chave: "novos" as const, item, tipo, dia, ate, titulo: item });
+  const c1 = contarRotina({ ...base, marcasDeItens: [m("reclame-aqui:ra-novo", "2026-09-15", "2026-09-15")] }, agora).novos;
+  confere("feito hoje sai da atividade e fica listado para devolver", [c1.total, c1.tirados.map((t) => t.item)], [1, ["reclame-aqui:ra-novo"]]);
+  const c2 = contarRotina({ ...base, marcasDeItens: [m("reclame-aqui:ra-novo", "2026-09-14", "2026-09-14")] }, agora).novos;
+  confere("o feito de ontem não vale hoje", c2.total, 2);
+  const c3 = contarRotina({ ...base, marcasDeItens: [m("reclame-aqui:ra-novo", "2026-09-10", null, "dispensado")] }, agora).novos;
+  confere("dispensado até devolver continua fora", c3.total, 1);
+  const c4 = contarRotina({ ...base, marcasDeItens: [{ ...m("reclame-aqui:ra-novo", "2026-09-15", "2026-09-15"), chave: "fups" as const }] }, agora).novos;
+  confere("a marca vale só na atividade dela", c4.total, 2);
+}
 
 console.log("\n— O plano do dia —");
 const doDia = atividadesDoDia(rotina, "2026-09-15");
@@ -114,11 +140,11 @@ confere("e as pendências das 8h15 logo depois dela, sem sobrepor", plano.blocos
 const livres = plano.blocos.filter((b) => !["Preencher a Planilha de Métricas Reputação", "Verificar atividades e pendências do dia", "Checkpoint diário com a gestão"].includes(b.titulo));
 confere("o 1º bloco livre é atrasado e do Reclame Aqui (o FUP do cliente sem notícia)", [livres[0]?.atrasados > 0, livres[0]?.frente], [true, "reclame-aqui"]);
 const pos0 = (titulo: string, f: string) => livres.findIndex((b) => b.titulo.startsWith(titulo) && b.frente === f);
-confere("o NPS vencido dos novos vem antes de qualquer bloco sem atraso", pos0("Verificar novos", "nps") < livres.findIndex((b) => b.atrasados === 0), true);
+confere("o NPS vencido não passa na frente do Reclame Aqui (a frente manda primeiro)", pos0("Verificar novos", "nps") > Math.max(...livres.map((b, n) => (b.frente === "reclame-aqui" ? n : -1))), true);
 const pos = (titulo: string, f: string) => livres.findIndex((b) => b.titulo.startsWith(titulo) && b.frente === f);
 confere("sem atraso, a ordem do documento: o RA de retornar vem antes do NPS de retornar", pos("Retornar", "reclame-aqui") < pos("Retornar", "nps"), true);
 confere("e o Instagram dos novos vem antes do NPS não vencido de qualquer atividade", pos("Verificar novos", "redes") < pos("Retornar", "nps"), true);
-confere("minutos dos novos: 15 do RA + 10 das redes + 8 do NPS + 8 do Google", minutosDaAtividade(doDia.find((a) => a.chave === "novos")!, contagens.novos), 41);
+confere("minutos dos novos: 15 do RA + 10 das redes + 2 × 8 do NPS + 8 do Google", minutosDaAtividade(doDia.find((a) => a.chave === "novos")!, contagens.novos), 49);
 const tarde = planoDoDia(doDia, contagens, new Set(), new Date(br("2026-09-15 17:20")));
 confere("às 17h20, quase nada cabe: o resto vai para 'não cabe'", tarde.naoCabe.length > 0 && tarde.minutosDisponiveis === 40, true);
 const feitas = new Set(doDia.map((a) => a.id));

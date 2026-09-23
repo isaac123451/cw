@@ -10,8 +10,9 @@
  *
  * 1. A fila (`filaDoDia`): os itens das atividades de hoje que ainda não
  *    foram marcadas, sem repetir o mesmo caso (um caso novo e atrasado
- *    aparece em "novos" e em "FUPs" — é um trabalho só), o fora do prazo
- *    primeiro e, depois, na ordem do documento.
+ *    aparece em "novos" e em "FUPs" — é um trabalho só), na prioridade do
+ *    documento: a frente (Reclame Aqui, Redes, NPS, Google), dentro dela
+ *    o fora do prazo e a criticidade, e depois a ordem da rotina.
  * 2. Os passos de cada item (`passosParaFechar`): as trilhas que as fichas
  *    já mostram — a do Reclame Aqui e a do NPS —, e as das Redes e do
  *    Google, pelo documento de cada uma. **Cada passo se marca pelo que o
@@ -24,8 +25,8 @@ import type { Case } from "@/lib/models/case";
 import type { AvaliacaoGoogleView } from "@/lib/actions/avaliacoesGoogle";
 import type { NpsResponseView } from "@/lib/models/nps";
 import type { FrenteId } from "@/lib/models/frentes";
-import type { AtividadeDaRotina } from "@/lib/models/rotina";
-import type { Contagem } from "@/lib/models/meuDia";
+import type { AtividadeDaRotina, ChaveDaRotina } from "@/lib/models/rotina";
+import { prioridadeDaFrente, urgenciaDe, type Contagem } from "@/lib/models/meuDia";
 
 import { trilhaDoCaso, type ContextoDaTrilha, type EstadoDoPasso } from "@/lib/models/trilha";
 import { trilhaDoNps, type ContextoDaTrilhaNps } from "@/lib/models/trilhaNps";
@@ -44,6 +45,8 @@ export interface ItemDaFila {
   atrasado: boolean;
   /** As atividades de hoje em que o item aparece, na ordem do documento. */
   atividades: string[];
+  /** As chaves dessas atividades — marcar o item como feito tira de todas. */
+  chaves: ChaveDaRotina[];
   /** A ficha que abre em mini-janela — `null` quando o item é uma tela. */
   janela: PedidoDeJanela | null;
 }
@@ -60,7 +63,7 @@ export function filaDoDia(
   marcadas: Set<string> = new Set()
 ): ItemDaFila[] {
 
-  const porChave = new Map<string, ItemDaFila & { ordem: number }>();
+  const porChave = new Map<string, ItemDaFila & { ordem: number; urgencia: number }>();
   let ordem = 0;
 
   for (const a of atividades) {
@@ -70,7 +73,9 @@ export function filaDoDia(
       const ja = porChave.get(chave);
       if (ja) {
         if (!ja.atividades.includes(a.titulo)) ja.atividades.push(a.titulo);
+        if (!ja.chaves.includes(a.chave)) ja.chaves.push(a.chave);
         ja.atrasado = ja.atrasado || Boolean(i.atrasado);
+        ja.urgencia = Math.min(ja.urgencia, urgenciaDe(i));
         continue;
       }
       porChave.set(chave, {
@@ -82,17 +87,25 @@ export function filaDoDia(
         href: i.href,
         atrasado: Boolean(i.atrasado),
         atividades: [a.titulo],
+        chaves: [a.chave],
         janela: janelaDoEndereco(i.href, i.titulo),
         ordem: ordem++,
+        urgencia: urgenciaDe(i),
       });
     }
   }
 
   return [...porChave.values()]
-    .sort((x, y) => Number(y.atrasado) - Number(x.atrasado) || x.ordem - y.ordem)
+    .sort(
+      (x, y) =>
+        prioridadeDaFrente(x.frente) - prioridadeDaFrente(y.frente) ||
+        x.urgencia - y.urgencia ||
+        x.ordem - y.ordem
+    )
     .map((i): ItemDaFila => {
-      const item: ItemDaFila & { ordem?: number } = { ...i };
+      const item: ItemDaFila & { ordem?: number; urgencia?: number } = { ...i };
       delete item.ordem;
+      delete item.urgencia;
       return item;
     });
 }

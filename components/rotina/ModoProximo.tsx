@@ -4,7 +4,7 @@ import Link from "next/link";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { AppWindow, ArrowUpRight, CalendarArrowUp, Check, Loader2, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { AppWindow, ArrowUpRight, CalendarArrowUp, Check, CircleSlash, List, Loader2, ChevronLeft, ChevronRight, X } from "lucide-react";
 
 import IconeDaFrente from "@/components/shared/IconeDaFrente";
 
@@ -40,6 +40,12 @@ interface Props {
  * quando o item deixa de pertencer ao dia (respondido, contatado,
  * encerrado) o modo passa sozinho para o seguinte — no mesmo lugar da
  * fila, e não de volta ao começo.
+ *
+ * **A ordem não muda com o modo aberto.** O Isaac: "quando realizo, vai
+ * para a fila de novo e ele me direciona para aquela etapa, e preciso
+ * voltar tudo". Registrar o 1º contato mudava o caso de atividade, a fila
+ * se reordenava e o modo seguia o caso até a nova posição. Agora cada
+ * item guarda o lugar em que apareceu; o que entra depois vai para o fim.
  */
 export default function ModoProximo({ dia, marcadas, onFechar }: Props) {
 
@@ -49,12 +55,23 @@ export default function ModoProximo({ dia, marcadas, onFechar }: Props) {
   const { cases } = useCases();
   const { expediente } = useSla();
   const { notify } = useToast();
-  const [gravando, setGravando] = useState<"concluir" | "adiar" | null>(null);
+  const [gravando, setGravando] = useState<"concluir" | "adiar" | "feito" | "tirar" | null>(null);
+  const [verFila, setVerFila] = useState(false);
 
-  const fila = useMemo(
+  const base = useMemo(
     () => (dia.contagens ? filaDoDia(dia.doDia, dia.contagens, marcadas) : []),
     [dia.doDia, dia.contagens, marcadas]
   );
+
+  /* O lugar de cada item, na ordem em que apareceu desde que o modo abriu. */
+  const [ordem, setOrdem] = useState<string[]>([]);
+  const novosNaFila = base.filter((i) => !ordem.includes(i.chave));
+  if (novosNaFila.length) setOrdem([...ordem, ...novosNaFila.map((i) => i.chave)]);
+
+  const fila = useMemo(() => {
+    const lugar = new Map(ordem.map((k, n) => [k, n]));
+    return [...base].sort((x, y) => (lugar.get(x.chave) ?? Infinity) - (lugar.get(y.chave) ?? Infinity));
+  }, [base, ordem]);
 
   const [chave, setChave] = useState<string | null>(null);
   const [indice, setIndice] = useState(0);
@@ -115,6 +132,35 @@ export default function ModoProximo({ dia, marcadas, onFechar }: Props) {
     item?.janela ??
     (casoDaTarefa ? { frente: isSocial(casoDaTarefa) ? "redes" : "reclame-aqui", ref: casoDaTarefa.id, titulo: casoDaTarefa.title } : null);
 
+  /*
+    Feito hoje / não se aplica: sai de todas as atividades em que está
+    hoje. Nada muda no caso — é o Meu dia que deixa de pedir o item.
+  */
+  async function tirarDoDia(tipo: "feito" | "tirar") {
+    if (!item || gravando) return;
+    setGravando(tipo);
+    try {
+      const r = await dia.marcarItens(
+        item.chaves.map((c) => ({ chave: c, item: item.chave, titulo: item.titulo })),
+        tipo === "feito" ? "feito" : "dispensado",
+        "hoje"
+      );
+      if (!r.ok) {
+        notify({ tone: "error", title: "O item não saiu da fila.", detail: r.erro });
+        return;
+      }
+      notify({
+        tone: "success",
+        title: tipo === "feito" ? "Marcado como feito hoje." : "Tirado do dia.",
+        detail: `${item.titulo} — dá para devolver na lista da atividade, em Rotina de hoje.`,
+      });
+    } catch {
+      notify({ tone: "error", title: "O item não saiu da fila.", detail: "Tente de novo em instantes." });
+    } finally {
+      setGravando(null);
+    }
+  }
+
   async function gravarTarefa(tipo: "concluir" | "adiar") {
     if (!tarefa || gravando) return;
     setGravando(tipo);
@@ -137,9 +183,10 @@ export default function ModoProximo({ dia, marcadas, onFechar }: Props) {
     if (!janelas.find((j) => j.id === id)?.completa) alternarCompleta(id);
   }
 
-  /* A barra mede o que saiu da fila desde que o modo abriu, contra o que ainda resta. */
-  const total = fila.length + saidos.length;
-  const pct = total ? Math.round((saidos.length / total) * 100) : 0;
+  /* A barra mede o que saiu da fila desde que o modo abriu, contra o que ainda resta — o devolvido volta a contar como aberto. */
+  const fechados = saidos.filter((k) => !fila.some((i) => i.chave === k));
+  const total = fila.length + fechados.length;
+  const pct = total ? Math.round((fechados.length / total) * 100) : 0;
 
   const passos = ficha ? passosDe(ficha.frente, ficha.ref) : null;
   const resumo = passos ? resumoDosPassos(passos) : null;
@@ -155,9 +202,19 @@ export default function ModoProximo({ dia, marcadas, onFechar }: Props) {
           </span>
         )}
         <div className="ml-auto flex items-center gap-3">
-          {saidos.length > 0 && (
+          {fila.length > 1 && (
+            <button
+              type="button"
+              onClick={() => setVerFila((v) => !v)}
+              aria-expanded={verFila}
+              className={`flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium ${verFila ? "bg-zinc-100 text-zinc-900" : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800"}`}
+            >
+              <List size={13} /> Ver a fila
+            </button>
+          )}
+          {fechados.length > 0 && (
             <span className="hidden items-center gap-2 text-xs text-zinc-500 sm:flex">
-              <span className="tabular-nums">{saidos.length} fechado(s) agora</span>
+              <span className="tabular-nums">{fechados.length} fechado(s) agora</span>
               <span className="h-1 w-20 overflow-hidden rounded-full bg-zinc-100">
                 <span className="block h-full rounded-full bg-emerald-500 transition-[width]" style={{ width: `${pct}%` }} />
               </span>
@@ -168,6 +225,29 @@ export default function ModoProximo({ dia, marcadas, onFechar }: Props) {
           </button>
         </div>
       </header>
+
+      {verFila && fila.length > 0 && (
+        <ol className="max-h-64 overflow-y-auto overscroll-contain border-b border-zinc-100 px-3 py-1.5">
+          {fila.map((i, n) => (
+            <li key={i.chave}>
+              <button
+                type="button"
+                onClick={() => {
+                  irPara(n);
+                  setVerFila(false);
+                }}
+                aria-current={n === posicao}
+                className={`flex w-full min-w-0 items-center gap-2 rounded-md px-2 py-1 text-left text-xs ${n === posicao ? "bg-violet-50 text-violet-900" : "text-zinc-700 hover:bg-zinc-50"}`}
+              >
+                <span className="w-6 shrink-0 text-right tabular-nums text-zinc-400">{n + 1}</span>
+                {i.frente ? <IconeDaFrente frente={i.frente} size={12} /> : <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-zinc-300" />}
+                <span className={`min-w-0 flex-1 truncate ${i.atrasado ? "text-rose-700" : ""}`}>{i.titulo}</span>
+                <span className="hidden max-w-[40%] shrink-0 truncate text-[11px] text-zinc-400 sm:block">{i.atividades.join(" · ")}</span>
+              </button>
+            </li>
+          ))}
+        </ol>
+      )}
 
       {recemSaido && (
         <p className="flex items-center gap-2 border-b border-emerald-100 bg-emerald-50/60 px-5 py-1.5 text-xs text-emerald-800">
@@ -246,6 +326,28 @@ export default function ModoProximo({ dia, marcadas, onFechar }: Props) {
               >
                 {tarefa ? "Agenda" : item.janela ? "Tela cheia" : "Abrir"} <ArrowUpRight size={13} />
               </Link>
+              {!tarefa && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => tirarDoDia("feito")}
+                    disabled={gravando !== null}
+                    title="Fiz por fora (ou o registro não acompanhou): sai da fila e das atividades de hoje"
+                    className="flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50 disabled:opacity-60"
+                  >
+                    {gravando === "feito" ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} strokeWidth={2.5} />} Feito hoje
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => tirarDoDia("tirar")}
+                    disabled={gravando !== null}
+                    title="Não se aplica hoje: sai da fila e volta amanhã, se ainda for trabalho"
+                    className="flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium text-zinc-600 hover:bg-zinc-100 disabled:opacity-60"
+                  >
+                    {gravando === "tirar" ? <Loader2 size={14} className="animate-spin" /> : <CircleSlash size={14} />} Tirar do dia
+                  </button>
+                </>
+              )}
               <div className="ml-auto flex items-center">
                 <button type="button" onClick={() => irPara(posicao - 1)} disabled={fila.length < 2} title="Anterior (←)" aria-label="Item anterior" className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 disabled:opacity-40">
                   <ChevronLeft size={16} />

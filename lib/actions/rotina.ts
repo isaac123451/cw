@@ -12,7 +12,7 @@ import {
   type Frequencia,
 } from "@/lib/models/rotina";
 import { persistencia, ROTULO_DO_PERIODO, faixaDoPeriodo } from "@/lib/models/cadencia";
-import type { ItemDaRotina } from "@/lib/models/meuDia";
+import type { ItemDaRotina, MarcaDeItem, TipoDeMarcaDeItem } from "@/lib/models/meuDia";
 import type { LinhaDeMetrica } from "@/lib/actions/metricas";
 
 import { lerExpediente } from "@/lib/services/operacao.service";
@@ -214,6 +214,8 @@ export interface ResumoDeOntem {
 
 export interface CargaDoMeuDia {
   marcas: { atividadeId: string; dia: string }[];
+  /** Os itens tirados das atividades que ainda valem hoje. */
+  marcasDeItens: MarcaDeItem[];
   metricaHoje: LinhaDeMetrica | null;
   ligacoes: ItemDaRotina[];
   ontem: ResumoDeOntem | null;
@@ -243,7 +245,7 @@ function diaUtilAnterior(dia: string, expediente: Parameters<typeof ehDiaUtil>[1
 export async function lerMeuDia(): Promise<CargaDoMeuDia> {
 
   const ctx = await tryRole("LEITURA");
-  if (!ctx) return { marcas: [], metricaHoje: null, ligacoes: [], ontem: null, relatorio: null };
+  if (!ctx) return { marcas: [], marcasDeItens: [], metricaHoje: null, ligacoes: [], ontem: null, relatorio: null };
 
   const prisma = ctx.prisma;
   const agora = new Date();
@@ -258,8 +260,13 @@ export async function lerMeuDia(): Promise<CargaDoMeuDia> {
 
   const ciclo = cicloDe(hoje);
 
-  const [marcas, metrica, emCadencia, contatosOntem, publicadasOntem, npsOntem, googleOntem, relatorioSalvo] = await Promise.all([
+  const [marcas, marcasDeItens, metrica, emCadencia, contatosOntem, publicadasOntem, npsOntem, googleOntem, relatorioSalvo] = await Promise.all([
     prisma.marcaDaRotina.findMany({ where: { userId: ctx.userId, dia: { gte: desde } }, select: { atividadeId: true, dia: true } }),
+    prisma.marcaDeItemDaRotina.findMany({
+      where: { userId: ctx.userId, dia: { lte: hoje }, OR: [{ ate: null }, { ate: { gte: hoje } }] },
+      orderBy: { criadoEm: "desc" },
+      take: 2000,
+    }),
     prisma.metricaDiaria.findUnique({ where: { dia: hoje } }),
     prisma.case.findMany({
       where: { tentativasSemResposta: { gt: 0 }, resolved: false },
@@ -296,6 +303,7 @@ export async function lerMeuDia(): Promise<CargaDoMeuDia> {
 
   return {
     marcas,
+    marcasDeItens: marcasDeItens.map(paraMarcaDeItem),
     metricaHoje: metrica
       ? {
           dia: metrica.dia,
@@ -381,5 +389,86 @@ export async function salvarMarcas(entrada: {
   } catch (erro) {
     console.error("[rotina] marcas", erro);
     return { ok: false, erro: "O banco não aceitou a gravação agora. Tente de novo em instantes." };
+  }
+}
+
+/* ============================================================
+   OS ITENS DE CADA ATIVIDADE — feito hoje, ou dispensado
+============================================================ */
+
+const CHAVES_DE_ITENS = new Set(["novos", "em-aberto", "fups", "moderacoes", "avaliacoes", "ligacoes", "concluidos", "areas", "pendencias", "metricas", "relatorio"]);
+
+function paraMarcaDeItem(m: { id: string; chave: string; item: string; tipo: string; dia: string; ate: string | null; titulo: string }): MarcaDeItem {
+  return { id: m.id, chave: m.chave as ChaveDaRotina, item: m.item, tipo: m.tipo as TipoDeMarcaDeItem, dia: m.dia, ate: m.ate, titulo: m.titulo };
+}
+
+/** Por quanto tempo vale a marca: só hoje, uma semana, ou até desfazer. */
+export type DuracaoDaMarca = "hoje" | "semana" | "sempre";
+
+function somarDias(dia: string, dias: number) {
+  return new Date(Date.parse(`${dia}T00:00:00Z`) + dias * 86_400_000).toISOString().slice(0, 10);
+}
+
+/**
+ * Tira itens das atividades de hoje — "feito" ou "não se aplica".
+ *
+ * Nada é apagado nem muda no caso: a marca só diz ao Meu dia que aquele
+ * item não é trabalho de hoje (ou desta semana, ou mais). Uma marca por
+ * atividade: o mesmo caso em "novos" e em "FUPs" sai dos dois quando a
+ * fila manda as duas chaves.
+ */
+export async function marcarItensDaRotina(entrada: {
+  itens: { chave: string; item: string; titulo: string }[];
+  tipo: TipoDeMarcaDeItem;
+  duracao: DuracaoDaMarca;
+}): Promise<{ ok: true; marcas: MarcaDeItem[] } | Falha> {
+
+  if (entrada.tipo !== "feito" && entrada.tipo !== "dispensado") return { ok: false, erro: "Marca inválida." };
+  if (!["hoje", "semana", "sempre"].includes(entrada.duracao)) return { ok: false, erro: "Duração inválida." };
+  if (entrada.tipo === "feito" && entrada.duracao !== "hoje") return { ok: false, erro: "\"Feito\" vale só para hoje: amanhã a conta decide de novo." };
+  if (!entrada.itens.length || entrada.itens.length > 200) return { ok: false, erro: "Escolha de 1 a 200 itens." };
+  for (const i of entrada.itens) {
+    if (!CHAVES_DE_ITENS.has(i.chave) || !i.item || i.item.length > 200) return { ok: false, erro: "Item inválido." };
+  }
+
+  const q = await quem();
+  if ("erro" in q) return { ok: false, erro: q.erro! };
+  const prisma = q.ctx.prisma;
+
+  const hoje = paredeDe(new Date()).dia;
+  const ate = entrada.duracao === "hoje" ? hoje : entrada.duracao === "semana" ? somarDias(hoje, 6) : null;
+
+  try {
+    const gravadas = await prisma.$transaction(
+      entrada.itens.map((i) =>
+        prisma.marcaDeItemDaRotina.upsert({
+          where: { userId_chave_item_dia: { userId: q.ctx.userId, chave: i.chave, item: i.item, dia: hoje } },
+          create: { userId: q.ctx.userId, chave: i.chave, item: i.item, tipo: entrada.tipo, dia: hoje, ate, titulo: i.titulo.slice(0, 200) },
+          update: { tipo: entrada.tipo, ate, titulo: i.titulo.slice(0, 200) },
+        })
+      )
+    );
+    return { ok: true, marcas: gravadas.map(paraMarcaDeItem) };
+  } catch (erro) {
+    console.error("[rotina] marcar item", erro);
+    return { ok: false, erro: "O banco não aceitou a gravação agora. Tente de novo em instantes." };
+  }
+}
+
+/** Devolve o item à atividade: apaga a marca (só a de quem está logado). */
+export async function desfazerMarcasDeItens(ids: string[]): Promise<{ ok: true; removidas: number } | Falha> {
+
+  if (!ids.length || ids.length > 200) return { ok: false, erro: "Escolha de 1 a 200 marcas." };
+
+  const q = await quem();
+  if ("erro" in q) return { ok: false, erro: q.erro! };
+
+  try {
+    const r = await q.ctx.prisma.marcaDeItemDaRotina.deleteMany({ where: { id: { in: ids }, userId: q.ctx.userId } });
+    if (r.count === 0) return { ok: false, erro: "Essa marca já não existe — a lista pode estar desatualizada. Recarregue a página." };
+    return { ok: true, removidas: r.count };
+  } catch (erro) {
+    console.error("[rotina] desfazer item", erro);
+    return { ok: false, erro: "O banco não aceitou agora. Tente de novo em instantes." };
   }
 }
