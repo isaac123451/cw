@@ -760,6 +760,7 @@ function Resumo({ conversa: c, onMudou }: { conversa: ConversaView; onMudou: (c:
   const [pedindo, setPedindo] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [peloMotor, setPeloMotor] = useState(false);
 
   async function pedir() {
     setPedindo(true);
@@ -768,6 +769,7 @@ function Resumo({ conversa: c, onMudou }: { conversa: ConversaView; onMudou: (c:
       const r = await resumirConversa(c.id);
       if (!r.ok) return setErro(r.erro);
       setRascunho(r.resumo);
+      setPeloMotor(r.provedor === "motor-proprio");
     } catch {
       setErro("A IA não respondeu agora. Tente de novo.");
     } finally {
@@ -797,6 +799,9 @@ function Resumo({ conversa: c, onMudou }: { conversa: ConversaView; onMudou: (c:
       {rascunho !== null ? (
         <div className="space-y-2">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-violet-700">Resumo — revise e salve se quiser guardar</p>
+          {peloMotor && (
+            <p className="text-xs text-zinc-500">Nenhuma IA respondeu agora; este rascunho saiu do motor próprio, pelas regras da documentação.</p>
+          )}
           <textarea value={rascunho} onChange={(e) => setRascunho(e.target.value)} rows={6} aria-label="Resumo da conversa" className="w-full resize-y rounded-xl border border-zinc-200 p-3 text-sm leading-6 outline-none focus:border-violet-400" />
           <ErroDoServidor erro={erro} />
           <div className="flex justify-end gap-2">

@@ -17,6 +17,7 @@ import {
   lerTelefone,
 } from "@/lib/services/contato.service";
 import { pedirEstruturado } from "@/lib/services/ia.service";
+import { dossieSemIA } from "@/lib/services/motorProprio";
 import { diaNaOperacao } from "@/lib/services/reputation.service";
 import { conversasParaODossie } from "@/lib/services/conversas.service";
 import { paredeDe } from "@/lib/services/horasUteis";
@@ -596,23 +597,27 @@ export async function POST(request: Request) {
 
   const rapido = entrada.rapido === true;
 
-  const resultado = await pedirEstruturado({
+  const resultadoDaIa = await pedirEstruturado({
     sistema: SISTEMA,
     prompt,
     esquema: ESQUEMA,
     rapido,
   });
 
-  if (resultado.erro || !resultado.dados) {
-    return responder(
-      request,
-      {
-        erro: resultado.erro,
-        provedor: resultado.provedor,
-      },
-      resultado.status ?? 502
-    );
-  }
+  /*
+    Nenhuma IA respondeu: o dossiê sai pelo motor próprio, só com os
+    fatos que a rota já juntou (relato, resposta, linha do tempo,
+    histórico do contato). As peças, que nunca dependeram do modelo,
+    continuam indo junto — antes elas sumiam com o erro.
+  */
+  const resultado =
+    resultadoDaIa.erro || !resultadoDaIa.dados
+      ? {
+          ...resultadoDaIa,
+          provedor: "motor-proprio" as const,
+          dados: dossieSemIA({ caso, linhaDoTempo, historico: historicoDoContato }) as unknown as Record<string, unknown>,
+        }
+      : resultadoDaIa;
 
   /**
    * As **peças** do dossiê — o conjunto organizado de registros.

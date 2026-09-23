@@ -15,6 +15,7 @@ import {
 import { loadWorkspace } from "@/lib/actions/workspace";
 import { fetchCaseByProtocol } from "@/lib/services/case.repository";
 import { pedirEstruturado } from "@/lib/services/ia.service";
+import { triarSemIA } from "@/lib/services/motorProprio";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -227,22 +228,30 @@ export async function POST(request: Request) {
 
   const rapido = entrada.rapido === true;
 
-  const resultado = await pedirEstruturado({
+  let resultado = await pedirEstruturado({
     sistema: SISTEMA,
     prompt,
     esquema: ESQUEMA,
     rapido,
   });
 
+  /*
+    Nenhuma IA respondeu: a triagem sai pelo motor próprio, com as
+    mesmas regras que a instrução acima pede ao modelo ("na dúvida,
+    analisar"; cobrança, erro e integração pedem apuração). O rascunho
+    passa pela mesma conferência logo abaixo, e a extensão fica sabendo
+    que foi pelas regras (`provedor: "motor-proprio"`).
+  */
   if (resultado.erro || !resultado.dados) {
-    return responder(
-      request,
-      {
-        erro: resultado.erro,
-        provedor: resultado.provedor,
-      },
-      resultado.status ?? 502
-    );
+    resultado = {
+      provedor: "motor-proprio",
+      dados: triarSemIA({
+        titulo: caso.title,
+        relato: caso.description ?? "",
+        nome: caso.customer,
+        macros: workspace.macros.map((m) => ({ titulo: m.title, corpo: m.body })),
+      }) as unknown as Record<string, unknown>,
+    };
   }
 
   /**
@@ -273,7 +282,7 @@ export async function POST(request: Request) {
     rascunho abriu com "Olá!" e passou limpo porque estava sendo
     comparado com o nome da loja.
   */
-  const conferencia = conferirRascunho(String(resultado.dados.rascunho ?? ""), {
+  const conferencia = conferirRascunho(String(resultado.dados?.rascunho ?? ""), {
     nome: caso.customer,
     publicadas,
     publico: false,

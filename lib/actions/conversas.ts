@@ -6,6 +6,7 @@ import { updateTag } from "next/cache";
 
 import { CASES_TAG } from "@/lib/actions/tags";
 import { pedirEstruturado } from "@/lib/services/ia.service";
+import { retratarConversaSemIA } from "@/lib/services/motorProprio";
 import {
   candidatas,
   conversasDoRegistro,
@@ -289,11 +290,26 @@ export async function resumirConversa(id: string): Promise<{ ok: true; resumo: s
     esquema: ESQUEMA_DO_RESUMO as unknown as Record<string, unknown>,
     rapido: true,
   });
-  if (r.erro || !r.dados) return { ok: false, erro: r.erro ?? "A IA não respondeu agora." };
+  /*
+    Nenhuma IA respondeu (sem chave, fila, cota): o motor próprio lê a
+    mesma conversa pelas regras da documentação, em vez de a tela parar
+    em "a IA não respondeu". É rascunho do mesmo jeito — a pessoa revisa
+    e decide se salva.
+  */
+  const d: { resumo?: string; pendencia?: string; proximoPasso?: string } =
+    r.erro || !r.dados
+      ? retratarConversaSemIA(
+          conversa.lista
+            .filter((m) => m.de !== "sistema")
+            .slice(-150)
+            .map((m) => ({ de: m.de === "nos" ? ("nos" as const) : ("cliente" as const), texto: m.texto })),
+          { nome: conversa.contatoNome }
+        )
+      : (r.dados as { resumo?: string; pendencia?: string; proximoPasso?: string });
 
-  const d = r.dados as { resumo?: string; pendencia?: string; proximoPasso?: string };
   const texto = [d.resumo?.trim(), d.pendencia?.trim() && `Pendência: ${d.pendencia.trim()}`, d.proximoPasso?.trim() && `Próximo passo: ${d.proximoPasso.trim()}`].filter(Boolean).join("\n\n");
-  return { ok: true, resumo: texto, provedor: r.provedor };
+  if (!texto) return { ok: false, erro: r.erro ?? "A conversa não tem texto para resumir." };
+  return { ok: true, resumo: texto, provedor: r.erro || !r.dados ? "motor-proprio" : r.provedor };
 }
 
 export async function salvarResumo(id: string, resumo: string): Promise<{ ok: true; conversa: ConversaView } | Falha> {

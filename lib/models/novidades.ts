@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.27.0",
+    data: "2026-09-22",
+    titulo: "Triagem, dossiê e resumo mesmo sem IA",
+    texto: "Quando nenhuma IA responde, a triagem da extensão, o dossiê do caso e o resumo das conversas da plataforma saem pelo motor próprio, pelas regras da documentação e só com os fatos registrados, em vez de parar no erro. As peças do dossiê vão sempre junto.",
+    frentes: ["extensao", "plataforma"],
+  },
+  {
     versao: "1.26.0",
     data: "2026-09-22",
     titulo: "A conversa se guarda sozinha",

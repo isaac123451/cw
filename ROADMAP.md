@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 22/09/2026. Aplicação **1.26.0**, extensão **1.26.0**.
+Atualizado em 22/09/2026. Aplicação **1.27.0**, extensão **1.27.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,59 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### O motor próprio em todo lugar que usa IA (22/09/2026, 1.27.0)
+
+Fase 16, "Motor próprio, sem IA externa". Até aqui ele só cobria o resumo
+de conversa da extensão. Quando nenhuma IA respondia (sem chave, fila,
+cota), a triagem, o dossiê e o resumo das conversas da plataforma
+paravam no erro.
+
+- **Triagem da extensão** ("responder agora ou analisar"): sai pelas
+  regras que a própria instrução da IA já trazia. Cobrança, erro de
+  sistema, integração e pedido sumido pedem apuração, cada um dizendo o
+  que falta descobrir e qual área apura. "Responder" só quando um texto
+  aprovado cobre o assunto (metade das palavras do título dele no
+  relato). Na dúvida, analisar. O rascunho de acolhimento começa pelo
+  nome e passa pela mesma conferência do rascunho da IA.
+- **Gravidade medida na base.** A primeira versão dava "alta" em 132 dos
+  363 relatos: "cancel" pegava "pedido cancelado" e "processo" pegava
+  "processo de cadastro". Agora "cancelar" só conta junto de plano,
+  assinatura, contrato ou sistema, e "processo" só como ação na
+  justiça. Ficaram 85 casos em alta, e nenhum "pedido cancelado" sozinho
+  virou alta. Os 28 casos que a equipe marcou com risco de cancelamento
+  não têm palavra em comum no texto (conferi 26 termos), porque a
+  marcação vem do contexto; por isso ela não serve de gabarito.
+- **Dossiê da extensão:** o mesmo formato, só com fatos:
+  - a situação do caso, o último movimento (da linha do tempo) e tudo
+    na ordem, com as outras frentes do contato;
+  - a próxima resposta conforme o status;
+  - as pendências: resposta pública, réplica, área que não devolveu,
+    avaliação;
+  - as três respostas prontas, com o nome do cliente. Onde a IA
+    escreveria a solução, fica um espaço para preencher: inventar seria
+    pior.
+
+  **As peças** (anotações, contatos, respostas), que nunca dependeram do
+  modelo, antes sumiam junto com o erro; agora vão sempre.
+- **Resumo das conversas da plataforma:** sai pelo motor da conversa, e
+  a tela avisa "Nenhuma IA respondeu agora; este rascunho saiu do motor
+  próprio". Continua sendo rascunho, e só vira resumo salvo com o Salvar.
+- Plano do dia, relatório e pendências já tinham resposta pelas regras.
+  Com isso, todo lugar que pede uma resposta estruturada à IA tem
+  resposta mesmo sem ela. O assistente em conversa livre é a exceção:
+  sem modelo, não há o que conversar.
+
+Provas:
+- `check:motor-proprio` com 26 pontos novos: triagem (cobrança,
+  Procon, texto aprovado que cobre, na dúvida analisar, pedido cancelado
+  não é alta, cancelar o plano é, rascunho aprovado na conferência),
+  dossiê (pendências por situação, o último, as três respostas com o
+  nome, o espaço da solução, sem caso) e as três rotas ligadas.
+- Na base real (363 relatos, só leitura), o rascunho da triagem passou
+  na conferência em todos.
+- Ao vivo, com o Gemini, triagem (4,9 s) e dossiê (11,4 s) continuam
+  respondendo como antes, com as peças.
 
 ### A conversa se guarda sozinha (22/09/2026, 1.26.0)
 

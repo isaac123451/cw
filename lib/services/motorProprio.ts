@@ -1,3 +1,4 @@
+import type { Case } from "@/lib/models/case";
 import { normalizarTexto, REGRAS_DE_ASSUNTO } from "@/lib/models/sugestaoPorTexto";
 
 /**
@@ -242,6 +243,110 @@ export function rascunhosDaConversa(entrada: {
    O RETRATO INTEIRO
 ============================================================ */
 
+/* ============================================================
+   TRIAGEM — responder agora ou analisar, sem IA (Fase 16)
+============================================================ */
+
+export interface TriagemSemIA {
+  decisao: "responder" | "analisar";
+  porque: string;
+  assunto: string;
+  gravidade: "baixa" | "media" | "alta";
+  oQueFalta: string[];
+  areaSugerida: string;
+  rascunho: string;
+}
+
+/**
+ * O que obriga a olhar o sistema antes de responder. Cada regra diz o
+ * que falta descobrir e quem apura — a mesma lógica da instrução da IA:
+ * cobrança, erro, integração e pedido sumido pedem apuração.
+ */
+const PEDE_APURACAO: { padrao: RegExp; falta: string; area: string }[] = [
+  { padrao: /\b(cobran[cç]a|cobrad[oa]|cobraram|estorno|reembols|fatura|boleto|mensalidade|valor|pix|cart[aã]o)\b/, falta: "Conferir a cobrança e o histórico de pagamentos da conta.", area: "Financeiro" },
+  { padrao: /\b(n[aã]o funciona|parou|travou|trava|erro|bug|fora do ar|caiu|lento|n[aã]o (abre|carrega|imprime))\b/, falta: "Reproduzir o problema e checar os registros do sistema no período relatado.", area: "Suporte técnico" },
+  { padrao: /\b(ifood|integra[cç][aã]o|anota a[ií]|rappi|aiqfome|99food|impressora)\b/, falta: "Checar a integração citada e se o problema é de lá ou daqui.", area: "Integrações" },
+  { padrao: /\b(pedido (sumiu|n[aã]o chegou|perdido)|n[aã]o recebi|n[aã]o chegou)\b/, falta: "Localizar o pedido citado e o que aconteceu com ele.", area: "Suporte técnico" },
+];
+
+/*
+  Alta, na definição da própria triagem: intenção de sair, ameaça de ação
+  ou prejuízo declarado. Medido na base (363 relatos): "cancel" sozinho
+  pegava "pedido cancelado" em 96 casos e "processo" pegava "processo de
+  cadastro" — por isso cancelar só vale junto de plano, assinatura,
+  contrato ou sistema, e processo só como ação na justiça.
+*/
+const GRAVE =
+  /\b(procon|processar|processo judicial|a[cç][aã]o judicial|advogad|justi[cç]a|preju[ií]zo|perdi (clientes|vendas|dinheiro)|golpe|rescis|(trocar de|outro|mudar de) sistema|cancel\w*\s+((o|a) )?((meu|minha|nosso|nossa) )?(plano|assinatura|contrato|servi[cç]o|sistema|conta))/;
+const MEDIA = /\b(cobran[cç]a|estorno|reembols|n[aã]o funciona|parou|erro|pedido|cliente(s)? reclam)/;
+
+function palavrasDe(texto: string) {
+  return new Set(normalizarTexto(texto).split(/[^a-z0-9]+/).filter((p) => p.length >= 4));
+}
+
+export function triarSemIA(entrada: {
+  titulo: string;
+  relato: string;
+  nome?: string;
+  macros: { titulo: string; corpo: string }[];
+}): TriagemSemIA {
+
+  const texto = normalizarTexto(`${entrada.titulo}\n${entrada.relato}`);
+  const assunto = assuntoDaConversa([{ de: "cliente", texto }]);
+  const gravidade: TriagemSemIA["gravidade"] = GRAVE.test(texto) ? "alta" : MEDIA.test(texto) ? "media" : "baixa";
+
+  const apuracoes = PEDE_APURACAO.filter((r) => r.padrao.test(texto));
+  const nome = primeiroNomeDo(entrada.nome);
+  const ola = nome ? `Olá, ${nome}!` : "Olá!";
+
+  /* Texto aprovado que cobre o assunto: metade das palavras do título dele aparecem no relato. */
+  const doRelato = palavrasDe(texto);
+  const coberta = entrada.macros
+    .map((m) => {
+      const doTitulo = [...palavrasDe(m.titulo)];
+      const comuns = doTitulo.filter((p) => doRelato.has(p)).length;
+      return { m, cobertura: doTitulo.length ? comuns / doTitulo.length : 0 };
+    })
+    .filter((x) => x.cobertura >= 0.5)
+    .sort((a, b) => b.cobertura - a.cobertura)[0]?.m;
+
+  if (apuracoes.length === 0 && coberta && gravidade !== "alta") {
+    return {
+      decisao: "responder",
+      porque: `O relato não pede apuração e o texto aprovado "${coberta.titulo}" cobre o assunto.`,
+      assunto,
+      gravidade,
+      oQueFalta: [],
+      areaSugerida: "",
+      rascunho: `${ola} Sentimos muito pelo transtorno.\n\n${coberta.corpo.trim()}`,
+    };
+  }
+
+  const oQueFalta = apuracoes.length
+    ? apuracoes.map((r) => r.falta)
+    : ["Confirmar com a operação o fato relatado antes de responder."];
+
+  return {
+    decisao: "analisar",
+    porque: apuracoes.length
+      ? `O relato pede apuração (${apuracoes.map((r) => r.area.toLowerCase()).join(", ")}) antes de qualquer resposta.`
+      : coberta
+        ? "Há texto aprovado sobre o assunto, mas a gravidade pede olhar o caso antes."
+        : "Nenhum texto aprovado cobre o assunto — na dúvida, analisar.",
+    assunto,
+    gravidade,
+    oQueFalta,
+    areaSugerida: apuracoes[0]?.area ?? "",
+    rascunho: `${ola} Sentimos muito pelo transtorno e entendemos a sua frustração. Já estamos verificando o que aconteceu com a sua conta e retornamos por aqui com a apuração.`,
+  };
+}
+
+function primeiroNomeDo(nome?: string) {
+  const limpo = String(nome ?? "").trim();
+  if (!limpo || /^n[ãa]o informado$/i.test(limpo)) return "";
+  return limpo.split(/\s+/)[0].replace(/^./, (c) => c.toUpperCase());
+}
+
 export function retratarConversaSemIA(mensagens: MensagemDaConversa[], contato?: { nome?: string }): RetratoDaConversa {
   const assunto = assuntoDaConversa(mensagens);
   const { pendencia, proximoPasso, resolvido } = estadoDaConversa(mensagens);
@@ -265,5 +370,107 @@ export function retratarConversaSemIA(mensagens: MensagemDaConversa[], contato?:
     resposta: principal.texto,
     respostas,
     resolvido,
+  };
+}
+
+/* ============================================================
+   DOSSIÊ — o mesmo formato da IA, só com fatos (Fase 16)
+============================================================ */
+
+/**
+ * O dossiê pelo motor próprio — o mesmo formato, só com fatos.
+ *
+ * Nenhuma frase aqui é deduzida: a situação vem do status, o último
+ * movimento da linha do tempo, as pendências do que falta registrado
+ * (resposta pública, réplica, área que não devolveu, avaliação). Onde a
+ * IA escreveria a solução, fica um marcador para quem atende preencher —
+ * inventar uma solução seria pior do que deixar o espaço.
+ */
+export function dossieSemIA(ctx: {
+  caso: Pick<
+    Case,
+    "protocol" | "customer" | "source" | "status" | "title" | "createdAt" | "description" | "publicResponse" | "evaluated" | "resolved" | "score" | "churnRisk" | "category"
+  > | null;
+  linhaDoTempo: string[];
+  historico: string[];
+}) {
+  const c = ctx.caso;
+  const nome = String(c?.customer ?? "").trim().split(/\s+/)[0] ?? "";
+  const ola = nome && !/^n[ãa]o$/i.test(nome) ? `Olá, ${nome.replace(/^./, (x) => x.toUpperCase())}!` : "Olá!";
+
+  const respostas = [
+    {
+      titulo: "Acolher e apurar",
+      quando: "Ainda não há solução e é preciso responder dentro do prazo.",
+      texto: `${ola} Sentimos muito pelo transtorno e entendemos a sua frustração. Já estamos apurando o que aconteceu e retornamos por aqui com a apuração.`,
+    },
+    {
+      titulo: "Responder com solução",
+      quando: "Quando a apuração terminou e há o que informar.",
+      texto: `${ola} Obrigado pela paciência enquanto apurávamos. [Explique aqui o que foi feito, ou o que precisa ser feito, em passos concretos.]`,
+    },
+    {
+      titulo: "Encerrar e pedir reavaliação",
+      quando: "Quando o assunto está resolvido.",
+      texto: `${ola} Que bom que conseguimos resolver. Se fizer sentido para você, atualize a sua avaliação contando como foi o atendimento.`,
+    },
+  ];
+
+  if (!c) {
+    return {
+      geral: "Este cliente não tem reclamação cadastrada; o dossiê saiu só do histórico do contato.",
+      ultimo: ctx.historico.at(-1) ?? "Nenhum registro anterior deste contato.",
+      dossie: ctx.historico.length ? ctx.historico.join("\n") : "Nenhum registro anterior deste contato nas outras frentes.",
+      proximaResposta: "Entender o que a pessoa precisa agora e, se for reclamação, registrar o caso.",
+      pendencias: [] as string[],
+      respostas,
+      pontos: [] as string[],
+    };
+  }
+
+  const semResposta = !(c.publicResponse ?? "").trim();
+  const areaPendente = ctx.linhaDoTempo.some((l) => l.includes("ainda não devolvido"));
+  const avaliacao = c.evaluated
+    ? `avaliada com nota ${c.score ?? "—"}, ${c.resolved ? "resolvida" : "não resolvida"}`
+    : "ainda sem avaliação";
+
+  const pendencias = [
+    semResposta && "Publicar a resposta pública.",
+    c.status === "Aguardando nossa réplica" && "Responder a réplica do consumidor.",
+    areaPendente && "Cobrar o retorno da área para onde o caso foi movido.",
+    !semResposta && !c.evaluated && "Pedir a avaliação ao consumidor.",
+  ].filter((p): p is string => Boolean(p));
+
+  const proximaResposta = semResposta
+    ? "Responder publicamente dentro do prazo: reconhecer o problema, dizer que está sendo apurado e não prometer prazo em número."
+    : c.status === "Aguardando nossa réplica"
+      ? "Responder a réplica: retomar o que o consumidor disse por último e dizer o que muda a partir daqui."
+      : !c.evaluated
+        ? "Confirmar se o problema foi resolvido e, se foi, convidar a avaliar, sem cobrar nota."
+        : "Caso já avaliado: só voltar a falar se o consumidor se manifestar de novo.";
+
+  return {
+    geral: `${c.customer} abriu ${c.protocol} em ${c.createdAt} pelo ${c.source}. Situação: ${c.status}, ${avaliacao}.${c.churnRisk ? " Marcado como risco de cancelamento." : ""}${ctx.historico.length ? ` Há mais ${ctx.historico.length} registro(s) deste contato em outras frentes.` : ""}`,
+    ultimo:
+      ctx.linhaDoTempo.at(-1) ??
+      (semResposta ? "Nada aconteceu depois do relato: ainda sem resposta pública." : "A última ação registrada foi a nossa resposta pública."),
+    dossie: [
+      `Relato do consumidor: ${(c.description ?? "").trim().slice(0, 1200) || "(sem relato registrado)"}`,
+      semResposta ? "Ainda sem resposta pública nossa." : `Resposta pública: ${(c.publicResponse ?? "").trim().slice(0, 800)}`,
+      ...(ctx.linhaDoTempo.length ? ["", "Linha do tempo interna:", ...ctx.linhaDoTempo] : ["Nenhuma anotação nem movimentação interna registrada."]),
+      ...(ctx.historico.length ? ["", "Outras frentes deste contato:", ...ctx.historico] : []),
+      "",
+      `Agora: ${c.status}, ${avaliacao}.`,
+    ].join("\n"),
+    proximaResposta,
+    pendencias,
+    respostas,
+    pontos: [
+      c.category ? `Categoria: ${c.category}` : null,
+      `Situação: ${c.status}`,
+      c.evaluated ? `Nota ${c.score ?? "—"}` : "Sem avaliação",
+      c.churnRisk ? "Risco de cancelamento" : null,
+      areaPendente ? "Movido para outra área e ainda não devolvido" : null,
+    ].filter((p): p is string => Boolean(p)),
   };
 }

@@ -32,8 +32,11 @@ import {
   rascunhosDaConversa,
   resumirTexto,
   retratarConversaSemIA,
+  triarSemIA,
+  dossieSemIA,
   type MensagemDaConversa,
 } from "../lib/services/motorProprio";
+import { conferirRascunho } from "../lib/models/rascunho";
 
 const RAIZ = resolve(__dirname, "..");
 
@@ -109,6 +112,79 @@ const rota = ler("app/api/extensao/conversa/route.ts");
 conferir("a rota não recusa mais de cara sem provedor configurado", /if \(!provedorDeIA\(\)\) \{\s*return responder/.test(rota), false);
 conferir("o motor próprio entra quando o pedido estruturado não traz dados", rota.includes("retratarConversaSemIA"), true);
 conferir("a rota do GET continua dizendo que dá para resumir mesmo sem provedor", /disponivel: true/.test(rota), true);
+
+/* ---------- triagem sem IA (Fase 16) ---------- */
+
+console.log("\n  TRIAGEM SEM IA\n");
+
+const macros = [
+  { titulo: "Como alterar o horário de funcionamento", corpo: "Para alterar o horário, acesse Configurações > Loja > Horários e salve." },
+  { titulo: "Cancelamento do plano", corpo: "O cancelamento é feito pelo painel, em Plano > Cancelar." },
+];
+
+const cobranca = triarSemIA({ titulo: "Cobrança duplicada", relato: "Fui cobrado duas vezes na mensalidade e ninguém faz o estorno.", nome: "Maria Souza", macros });
+conferir("cobrança pede apuração do financeiro", [cobranca.decisao, cobranca.areaSugerida, cobranca.gravidade], ["analisar", "Financeiro", "media"]);
+conferir("e diz o que falta descobrir", cobranca.oQueFalta, ["Conferir a cobrança e o histórico de pagamentos da conta."]);
+
+const procon = triarSemIA({ titulo: "Sistema parou", relato: "O sistema parou no sábado, perdi vendas e vou no Procon.", nome: "João", macros });
+conferir("Procon e prejuízo são gravidade alta", procon.gravidade, "alta");
+conferir("erro de sistema vai para o suporte técnico", procon.areaSugerida, "Suporte técnico");
+conferir(
+  "pedido cancelado não é intenção de sair",
+  triarSemIA({ titulo: "Pedido cancelado", relato: "O pedido do cliente foi cancelado sozinho pelo sistema ontem.", nome: "Rui", macros }).gravidade === "alta",
+  false
+);
+conferir(
+  "cancelar o plano é",
+  triarSemIA({ titulo: "Quero sair", relato: "Vou cancelar o meu plano se isso não for resolvido.", nome: "Rui", macros }).gravidade,
+  "alta"
+);
+
+const coberta = triarSemIA({ titulo: "Horário de funcionamento", relato: "Como faço para alterar o horário de funcionamento da loja no domingo?", nome: "Ana Lima", macros });
+conferir("dúvida coberta por texto aprovado: responder", coberta.decisao, "responder");
+conferir("com o texto aprovado no rascunho", coberta.rascunho.includes("Configurações > Loja > Horários"), true);
+
+const semTexto = triarSemIA({ titulo: "Sugestão", relato: "Gostaria que o cardápio tivesse modo escuro.", nome: "Bia", macros });
+conferir("sem texto aprovado que cubra: na dúvida, analisar", semTexto.decisao, "analisar");
+
+for (const [nome, t] of [["cobrança", cobranca], ["coberta", coberta], ["sem texto", semTexto]] as const) {
+  const achados = conferirRascunho(t.rascunho, { nome: nome === "cobrança" ? "Maria Souza" : nome === "coberta" ? "Ana Lima" : "Bia", publicadas: [], publico: false });
+  conferir(`o rascunho (${nome}) passa na conferência de nome e acolhimento`, achados.filter((a) => a.tipo === "sem-nome" || a.tipo === "sem-validacao").length, 0);
+}
+
+/* ---------- dossiê sem IA ---------- */
+
+console.log("\n  DOSSIÊ SEM IA\n");
+
+const casoBase = {
+  protocol: "RA-XY12", customer: "Maria Souza", source: "Reclame Aqui", status: "Novo", title: "Cobrança duplicada",
+  createdAt: "2026-09-10", description: "Fui cobrada duas vezes.", publicResponse: null, evaluated: false,
+  resolved: false, score: undefined, churnRisk: false, category: "Financeiro",
+} as unknown as Parameters<typeof dossieSemIA>[0]["caso"];
+
+const novo = dossieSemIA({ caso: casoBase, linhaDoTempo: [], historico: [] });
+conferir("sem resposta pública: a pendência é publicar", novo.pendencias, ["Publicar a resposta pública."]);
+conferir("e o último diz que nada aconteceu", novo.ultimo, "Nada aconteceu depois do relato: ainda sem resposta pública.");
+conferir("três respostas, nos títulos do dossiê", novo.respostas.map((r) => r.titulo), ["Acolher e apurar", "Responder com solução", "Encerrar e pedir reavaliação"]);
+conferir("o texto começa pelo nome", novo.respostas.every((r) => r.texto.startsWith("Olá, Maria!")), true);
+conferir("onde falta a solução, fica o espaço para preencher", novo.respostas[1].texto.includes("[Explique aqui"), true);
+
+const movido = dossieSemIA({
+  caso: { ...casoBase!, publicResponse: "Olá, Maria, estamos verificando.", status: "Aguardando nossa réplica" },
+  linhaDoTempo: ["12/09 — anotação de Ana: pedido ao financeiro", "13/09 — movido para Financeiro, **ainda não devolvido**"],
+  historico: ["01/08 — NPS nota 3"],
+});
+conferir("réplica e área sem retorno viram pendência", movido.pendencias, ["Responder a réplica do consumidor.", "Cobrar o retorno da área para onde o caso foi movido.", "Pedir a avaliação ao consumidor."]);
+conferir("o último é o último registro da linha do tempo", movido.ultimo, "13/09 — movido para Financeiro, **ainda não devolvido**");
+conferir("o dossiê traz a linha do tempo e as outras frentes", movido.dossie.includes("Linha do tempo interna:") && movido.dossie.includes("Outras frentes deste contato:"), true);
+conferir("sem caso, sai do histórico do contato", dossieSemIA({ caso: null, linhaDoTempo: [], historico: ["01/08 — NPS nota 3"] }).ultimo, "01/08 — NPS nota 3");
+
+const triagem = readFileSync(resolve(RAIZ, "app/api/extensao/triagem/route.ts"), "utf8");
+const dossieRota = readFileSync(resolve(RAIZ, "app/api/extensao/resumo-caso/route.ts"), "utf8");
+conferir("o dossiê da extensão cai no motor, e as peças vão junto", /provedor: "motor-proprio" as const,\s*dados: dossieSemIA\(/.test(dossieRota) && dossieRota.includes("    pecas,"), true);
+conferir("a triagem da extensão cai no motor quando a IA não responde", /provedor: "motor-proprio",\s*dados: triarSemIA\(/.test(triagem), true);
+const conversas = readFileSync(resolve(RAIZ, "lib/actions/conversas.ts"), "utf8");
+conferir("o resumo das conversas da plataforma também", conversas.includes("retratarConversaSemIA("), true);
 
 console.log(falhas === 0 ? "\n  O motor próprio lê a conversa direito, mesmo sem nenhuma IA.\n" : `\n  ${falhas} ponto(s) a corrigir.\n`);
 process.exit(falhas === 0 ? 0 : 1);
