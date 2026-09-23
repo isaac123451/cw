@@ -1116,6 +1116,23 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### O roadmap 2.0 não fecha na 2.0.0 (23/09/2026)
+
+Decisão do Isaac: a lista continua. O item "Versão 2.0.0" saiu da Fase
+19, e os próximos pontos entram numa nova lista.
+
+Da identificação automática da extensão saíram "número do pedido" e
+"nome do estabelecimento". Vinham do texto do item no roadmap, e não
+fazem sentido para a operação. O item fica fechado com o que foi
+entregue na 1.24.0: CPF/CNPJ, protocolo do Reclame Aqui, e-mail e
+telefone escritos pelo cliente.
+
+Ficam abertos só itens que dependem de ação fora do código:
+- a cadeia de IA gratuita, que espera as chaves do Groq e do
+  OpenRouter;
+- imagens e vídeos no Google Drive, que espera a permissão do Drive e a
+  reconexão da conta Google (hoje o OAuth só pede Agenda e e-mail).
+
 ### A primeira semana guiada (23/09/2026, 1.30.0)
 
 Fase 19, "Primeira semana guiada". O roteiro do primeiro acesso ensina o
