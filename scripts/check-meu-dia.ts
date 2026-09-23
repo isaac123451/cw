@@ -18,7 +18,7 @@ import { resolve } from "node:path";
 import type { Case } from "../lib/models/case";
 import type { NpsResponseView } from "../lib/models/nps";
 
-import { conquistasDaSemana, conquistasDoDia, inicioDaSemana, oQueMoveANota } from "../lib/models/motivacaoDoDia";
+import { conquistasDaSemana, conquistasDoDia, inicioDaSemana, oQueMoveANota, placarDaSemana, textoDoResumoDaSemana } from "../lib/models/motivacaoDoDia";
 
 const RAIZ = resolve(__dirname, "..");
 
@@ -116,7 +116,11 @@ console.log("\n— A fiação —\n");
 
   const bloco = ler("components/rotina/AgoraNoMeuDia.tsx");
   conferir("todo aviso tem saída (Resolver, ou o plano abaixo)", /Resolver/.test(bloco) && /no plano abaixo/.test(bloco), true);
-  conferir("todo bloco diz algo quando está vazio", (bloco.match(/length === 0 \?/g) ?? []).length, 4);
+  conferir("todo bloco diz algo quando está vazio", (bloco.match(/length === 0 \?/g) ?? []).length, 3);
+  /* 1.37: a semana saiu do cartão para o placar do topo, que mostra sempre os números (zero incluso) contra a semana passada. */
+  const placar = ler("components/rotina/PlacarDaSemana.tsx");
+  conferir("o placar da semana compara com a semana passada, até zero", /igual à semana passada/.test(placar) && /que a semana passada/.test(placar), true);
+  conferir("e está no Meu dia", ler("app/meu-dia/page.tsx").includes("<PlacarDaSemana dia={dia} />"), true);
 }
 
 console.log("\n— Conquistas da semana —\n");
@@ -149,6 +153,14 @@ console.log("\n— Conquistas da semana —\n");
   conferir("NPS no prazo pelo prazo do próprio ciclo", por["nps-no-prazo"], "1 primeiro contato do NPS no prazo · de 2 feito(s) na semana");
   conferir("detrator revertido na semana", por.revertidos, "1 detrator revertido · resolvidos ou satisfeitos depois do contato");
   conferir("ciclo encerrado na semana", por.encerrados, "1 ciclo de NPS encerrado · com a tratativa registrada");
+
+  /* O placar conta pela mesma régua, e a comparação é até o mesmo dia da semana passada. */
+  const placar = placarDaSemana({ casos, nps: ciclos, agora: AGORA });
+  conferir("o placar conta igual às conquistas", [placar.agora.avaliacoes, placar.agora.respondidas, placar.agora.npsNoPrazo, placar.agora.revertidos, placar.agora.encerrados], [1, 2, 1, 1, 1]);
+  const semanaPassada = placarDaSemana({ casos, nps: ciclos, agora: new Date(AGORA.getTime() + 7 * 86_400_000) });
+  conferir("uma semana depois, o que foi desta semana vira a comparação", [semanaPassada.agora.respondidas, semanaPassada.antes.respondidas], [0, 2]);
+  const resumo = textoDoResumoDaSemana(semanaPassada, { sequencia: 3 });
+  conferir("o resumo diz a queda com a conta", resumo.includes("0 reclamações respondidas (2 a menos que na semana passada)"), true);
 }
 
 console.log(

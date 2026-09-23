@@ -104,6 +104,21 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.37.0",
+    data: "2026-09-23",
+    titulo: "Placar da semana",
+    texto: "No topo do Meu dia, os números da semana contra a semana passada até o mesmo dia: avaliações positivas, respondidas, contatos do NPS no prazo, detratores revertidos, ciclos encerrados e a sequência de dias com a rotina inteira. Junto, o próximo passo que mais mexe na nota e o resumo da semana pronto para o Slack.",
+    frentes: ["plataforma", "reclame-aqui", "nps"],
+    href: "/meu-dia",
+    tour: {
+      id: "placar-da-semana",
+      rota: "/meu-dia",
+      passos: [
+        { alvo: '[data-tour="placar"]', titulo: "A semana em números", texto: "Cada número contra a semana passada até o mesmo dia. Clique para ver a lista. O resumo para a gestão fica no botão do canto." },
+      ],
+    },
+  },
+  {
     versao: "1.36.0",
     data: "2026-09-23",
     titulo: "A extensão reconhece o contato, e lembra",

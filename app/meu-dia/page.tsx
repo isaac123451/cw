@@ -13,6 +13,7 @@ import { useMeuDia } from "@/components/rotina/useMeuDia";
 import CartaoDoPrimeiroAcesso from "@/components/primeiroAcesso/CartaoDoPrimeiroAcesso";
 import AgoraNoMeuDia from "@/components/rotina/AgoraNoMeuDia";
 import ModoProximo from "@/components/rotina/ModoProximo";
+import PlacarDaSemana from "@/components/rotina/PlacarDaSemana";
 
 /**
  * Meu dia — a primeira tela do dia.
@@ -63,6 +64,9 @@ export default function MeuDiaPage() {
           title="Meu dia"
           description={`${dataPorExtenso ? `${dataPorExtenso[0].toUpperCase()}${dataPorExtenso.slice(1)}. ` : ""}A rotina do documento com os números de hoje nas quatro frentes, o plano que cabe no expediente e o checkpoint com a gestão.`}
         />
+
+        {/* O placar da semana vem antes de tudo: é o que diz se o trabalho está andando. */}
+        <PlacarDaSemana dia={dia} />
 
         {umPorVez && <ModoProximo dia={dia} marcadas={efetivas} onFechar={() => setUmPorVez(false)} />}
 

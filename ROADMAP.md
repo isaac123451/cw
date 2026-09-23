@@ -1116,6 +1116,41 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Placar da semana no topo do Meu dia (23/09/2026, 1.37.0)
+
+"Parte de conquistas nunca vi." O cartão existia (1.29.0), mas era texto
+corrido no canto direito de uma fileira de três, e a semana ficava
+embaixo, em letra miúda. A sequência de dias estava num selo pequeno na
+Rotina de hoje, e o resumo de sexta, prometido, não existia.
+
+O que mudou:
+- **Placar da semana, no topo.** Avaliações positivas (de quantas
+  avaliadas), respondidas no Reclame Aqui, 1º contato do NPS no prazo (de
+  quantos), detratores revertidos, ciclos encerrados e os dias seguidos
+  com a rotina inteira — números grandes, cada um contra **a semana
+  passada até o mesmo dia** ("−3 que a semana passada"), com o link para
+  a lista. Zero aparece como zero: é informação.
+- **Próximo passo para a nota**, na mesma faixa: a ação que mais mexe no
+  índice, com a conta ("responder as 9 sem resposta pública: 8,8 → 8,9").
+- **Resumo da semana** pronto para o Slack, editável antes de copiar.
+- **Conquista avisa.** Quando um número sobe desde a última vez que o
+  placar foi visto nesta semana, um aviso pequeno diz o que foi
+  conquistado — uma vez.
+- O cartão Conquistas continua com as de hoje; a semana foi para o
+  placar.
+
+Na base real, hoje: 1 avaliação positiva (igual à semana passada), 1
+respondida (−3), **0 de 8 primeiros contatos do NPS no prazo** (−1), 65
+ciclos encerrados (−4). O placar mostra o que o cartão escondia: a
+semana está mais lenta que a anterior, e o NPS está sendo contatado fora
+do prazo.
+
+Provas: `check:meu-dia` com cinco pontos novos (o placar conta igual às
+conquistas; uma semana depois, o que foi desta semana vira a
+comparação; o resumo diz a queda com a conta; o placar está no Meu dia
+e mostra zero). Na tela, com os dados reais, os números acima e o
+resumo gerado.
+
 ### Identificação de contatos que acerta (23/09/2026, 1.36.0)
 
 "A identificação de contatos ainda está bem ruim." Medido na base (só

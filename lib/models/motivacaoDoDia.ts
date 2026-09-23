@@ -314,3 +314,90 @@ export function conquistasDaSemana(entrada: {
 
   return { desde, conquistas };
 }
+
+/* ============================================================
+   O PLACAR DA SEMANA (1.37)
+============================================================ */
+
+export type ChaveDoPlacar = "avaliacoes" | "respondidas" | "nps-no-prazo" | "revertidos" | "encerrados";
+
+export interface NumerosDaJanela {
+  avaliacoes: number;
+  avaliadas: number;
+  respondidas: number;
+  npsNoPrazo: number;
+  npsContatados: number;
+  revertidos: number;
+  encerrados: number;
+}
+
+/** Os números de uma janela de dias (AAAA-MM-DD, dia de Brasília, os dois inclusive). */
+export function numerosDaJanela(entrada: { casos: Case[]; nps: NpsResponseView[]; de: string; ate: string }): NumerosDaJanela {
+  const dentro = (quando?: string | null) => {
+    if (!quando) return false;
+    const dia = diaNaOperacao(quando);
+    return dia >= entrada.de && dia <= entrada.ate;
+  };
+  const avaliadas = entrada.casos.filter((c) => c.evaluated && dentro(c.evaluatedAt));
+  const contatados = entrada.nps.filter((r) => dentro(r.firstContactAt));
+  return {
+    avaliacoes: avaliadas.filter((c) => c.resolved || (c.score ?? 0) >= 9).length,
+    avaliadas: avaliadas.length,
+    respondidas: entrada.casos.filter((c) => c.source === "Reclame Aqui" && dentro(c.publicResponseAt)).length,
+    npsNoPrazo: contatados.filter((r) => r.firstContactDueAt && new Date(r.firstContactAt!).getTime() <= new Date(r.firstContactDueAt).getTime()).length,
+    npsContatados: contatados.length,
+    revertidos: entrada.nps.filter((r) => r.score <= 6 && dentro(r.postContactAt) && (r.resolvedAfter === true || (r.moodAfter ?? 0) >= 4)).length,
+    encerrados: entrada.nps.filter((r) => dentro(r.closedAt)).length,
+  };
+}
+
+function menosDias(dia: string, dias: number) {
+  return new Date(Date.parse(`${dia}T12:00:00Z`) - dias * 86_400_000).toISOString().slice(0, 10);
+}
+
+export interface PlacarDaSemana {
+  desde: string;
+  hoje: string;
+  agora: NumerosDaJanela;
+  /** A semana passada até o mesmo dia da semana — a comparação justa numa quarta. */
+  antes: NumerosDaJanela;
+}
+
+/**
+ * A semana contra a semana passada, até o mesmo dia.
+ *
+ * O Isaac: "parte de conquistas nunca vi". O cartão existia, com texto
+ * corrido no canto de uma fileira de três. O placar põe os números no
+ * topo, com a comparação — "3 avaliações positivas, 1 a mais que na
+ * semana passada até quarta" diz se o trabalho está andando.
+ */
+export function placarDaSemana(entrada: { casos: Case[]; nps: NpsResponseView[]; agora?: Date }): PlacarDaSemana {
+  const hoje = diaNaOperacao(entrada.agora ?? new Date());
+  const desde = inicioDaSemana(hoje);
+  return {
+    desde,
+    hoje,
+    agora: numerosDaJanela({ casos: entrada.casos, nps: entrada.nps, de: desde, ate: hoje }),
+    antes: numerosDaJanela({ casos: entrada.casos, nps: entrada.nps, de: menosDias(desde, 7), ate: menosDias(hoje, 7) }),
+  };
+}
+
+const NOME_DO_DIA = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
+
+/** O resumo da semana para colar no Slack — só o que aconteceu, com a comparação. */
+export function textoDoResumoDaSemana(p: PlacarDaSemana, extra: { sequencia?: number; nota?: string } = {}) {
+  const dia = NOME_DO_DIA[new Date(`${p.hoje}T12:00:00Z`).getUTCDay()];
+  const comparar = (agora: number, antes: number) => (agora === antes ? "igual à semana passada" : agora > antes ? `${agora - antes} a mais que na semana passada` : `${antes - agora} a menos que na semana passada`);
+  const p2 = (n: number, um: string, varios: string) => `${n} ${n === 1 ? um : varios}`;
+  const linhas = [
+    `*Reputação — semana de ${p.desde.split("-").reverse().slice(0, 2).join("/")} até ${dia}*`,
+    p.agora.avaliacoes || p.antes.avaliacoes ? `• ${p2(p.agora.avaliacoes, "avaliação positiva", "avaliações positivas")} no Reclame Aqui, de ${p2(p.agora.avaliadas, "avaliada", "avaliadas")} (${comparar(p.agora.avaliacoes, p.antes.avaliacoes)})` : null,
+    p.agora.respondidas || p.antes.respondidas ? `• ${p2(p.agora.respondidas, "reclamação respondida", "reclamações respondidas")} (${comparar(p.agora.respondidas, p.antes.respondidas)})` : null,
+    p.agora.npsContatados ? `• NPS: ${p.agora.npsNoPrazo} de ${p2(p.agora.npsContatados, "primeiro contato", "primeiros contatos")} no prazo` : null,
+    p.agora.revertidos ? `• ${p2(p.agora.revertidos, "detrator revertido", "detratores revertidos")}` : null,
+    p.agora.encerrados || p.antes.encerrados ? `• ${p2(p.agora.encerrados, "ciclo de NPS encerrado", "ciclos de NPS encerrados")} (${comparar(p.agora.encerrados, p.antes.encerrados)})` : null,
+    extra.sequencia ? `• ${p2(extra.sequencia, "dia útil", "dias úteis")} seguidos com a rotina inteira` : null,
+    extra.nota ? `• Nota do Reclame Aqui: ${extra.nota}` : null,
+  ].filter((l): l is string => Boolean(l));
+  return linhas.length > 1 ? linhas.join("\n") : `${linhas[0]}\n• Nada fechado ainda nesta semana.`;
+}
