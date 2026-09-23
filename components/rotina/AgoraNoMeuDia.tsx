@@ -15,7 +15,7 @@ import { useSla } from "@/lib/context/SlaContext";
 import { useAgora } from "@/lib/hooks/useAgora";
 
 import { avisosDeAbertura, prazosDeHoje } from "@/lib/models/aberturaDoAgente";
-import { conquistasDoDia, oQueMoveANota } from "@/lib/models/motivacaoDoDia";
+import { conquistasDaSemana, conquistasDoDia, oQueMoveANota } from "@/lib/models/motivacaoDoDia";
 import { isOpen } from "@/lib/services/case.service";
 
 /**
@@ -55,12 +55,13 @@ export default function AgoraNoMeuDia() {
       avisos,
       acoes: oQueMoveANota(cases, agora),
       conquistas: conquistasDoDia({ casos: cases, nps: responses, prazosEstourados: prazos.estourados, agora }),
+      semana: conquistasDaSemana({ casos: cases, nps: responses, agora }),
     };
   }, [cases, responses, rules, expediente, agora]);
 
   if (!calculado) return null;
 
-  const { avisos, acoes, conquistas } = calculado;
+  const { avisos, acoes, conquistas, semana } = calculado;
 
   return (
     <div className="grid gap-4 lg:grid-cols-3">
@@ -133,8 +134,8 @@ export default function AgoraNoMeuDia() {
       </SurfaceCard>
 
       <SurfaceCard
-        title="Conquistas de hoje"
-        description="O que já deu certo — só o que o banco confirma."
+        title="Conquistas"
+        description="Hoje e na semana — só o que o banco confirma."
       >
         {conquistas.length === 0 ? (
           <p className="text-sm text-zinc-500">
@@ -166,6 +167,27 @@ export default function AgoraNoMeuDia() {
             })}
           </ul>
         )}
+
+        {/* A semana: de segunda até hoje. Só aparece o que aconteceu — nenhuma linha de zero. */}
+        <div className="mt-4 border-t border-zinc-100 pt-3">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+            Na semana · desde {semana.desde.split("-").reverse().slice(0, 2).join("/")}
+          </p>
+          {semana.conquistas.length === 0 ? (
+            <p className="mt-1.5 text-xs text-zinc-500">Ainda nada fechado nesta semana.</p>
+          ) : (
+            <ul className="mt-1.5 space-y-1.5">
+              {semana.conquistas.map((c) => (
+                <li key={c.chave}>
+                  <Link href={c.href ?? "#"} className="block text-xs hover:opacity-80">
+                    <span className="font-medium text-zinc-800">{c.titulo}</span>
+                    <span className="text-zinc-500"> · {c.detalhe}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </SurfaceCard>
 
     </div>

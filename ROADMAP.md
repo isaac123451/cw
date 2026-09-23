@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 23/09/2026. Aplicação **1.28.0**, extensão **1.28.0**.
+Atualizado em 23/09/2026. Aplicação **1.29.0**, extensão **1.29.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,39 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### Conquistas da semana (23/09/2026, 1.29.0)
+
+Fase 19, "Conquistas da semana". O cartão "Conquistas de hoje" do Meu
+dia virou **Conquistas**: hoje em cima e, embaixo, **Na semana**, de
+segunda até hoje, no dia de Brasília.
+
+- **Só fatos do banco, e só os que existem.** Nenhuma linha de zero e
+  nada de ponto por abrir tela, como o roadmap pede ("sem medalha por
+  clique"):
+  - avaliações positivas no Reclame Aqui, de quantas avaliadas;
+  - reclamações respondidas, com a espera real (mediana, ou "esperou N
+    dias" quando é uma só);
+  - primeiros contatos do NPS **no prazo do próprio ciclo**, de quantos
+    feitos;
+  - detratores revertidos (resolvidos ou satisfeitos depois do contato);
+  - ciclos de NPS encerrados.
+- **Onde não há prazo cadastrado, não se inventa um.** A resposta do
+  Reclame Aqui não tem regra de SLA na base, então aparece a espera em
+  dias, e não um "no prazo" sem régua.
+- Na base real, esta semana (desde 21/09): 1 avaliação positiva, 1
+  reclamação respondida (esperou 17 dias) e 56 ciclos de NPS encerrados.
+
+A sequência de dias com a rotina completa já aparecia no cabeçalho da
+Rotina de hoje (a chama com "N dia(s)") e ficou onde está.
+
+Provas: `check:meu-dia` com 8 pontos novos:
+- a semana começa na segunda, e o domingo ainda é da semana;
+- semana vazia não mostra nenhuma linha;
+- só as avaliações da semana, e quantas positivas;
+- a espera real das respondidas;
+- o NPS no prazo pelo prazo do próprio ciclo;
+- revertido e encerrado.
 
 ### O assistente em mais lugares, e um filtro que contava errado (23/09/2026, 1.28.0)
 

@@ -202,3 +202,115 @@ export function conquistasDoDia(entrada: {
 
   return conquistas;
 }
+
+/* ============================================================
+   CONQUISTAS DA SEMANA (Fase 19)
+============================================================ */
+
+export interface ConquistaDaSemana {
+  chave: "avaliacoes" | "respondidas" | "nps-no-prazo" | "revertidos" | "encerrados";
+  titulo: string;
+  detalhe: string;
+  href?: string;
+}
+
+/** Segunda-feira da semana de `hoje` (AAAA-MM-DD, dia de Brasília). */
+export function inicioDaSemana(hoje: string) {
+  const d = new Date(`${hoje}T12:00:00Z`);
+  const diaDaSemana = (d.getUTCDay() + 6) % 7; // segunda = 0
+  d.setUTCDate(d.getUTCDate() - diaDaSemana);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * O que deu certo de segunda até hoje — só fatos, e só os que existem.
+ *
+ * "Sem medalha por clique", do roadmap: nada de ponto por ter aberto a
+ * tela. Cada linha é um fato do banco com a conta à vista. Onde a base
+ * não tem prazo cadastrado (resposta do Reclame Aqui), não se inventa
+ * um: vai a espera de verdade, em dias. O "no prazo" só aparece onde o
+ * próprio registro guarda o prazo (o 1º contato do NPS).
+ */
+export function conquistasDaSemana(entrada: {
+  casos: Case[];
+  nps: NpsResponseView[];
+  agora?: Date;
+}): { desde: string; conquistas: ConquistaDaSemana[] } {
+
+  const agora = entrada.agora ?? new Date();
+  const hoje = diaNaOperacao(agora);
+  const desde = inicioDaSemana(hoje);
+  const naSemana = (quando?: string | null) => {
+    if (!quando) return false;
+    const dia = diaNaOperacao(quando);
+    return dia >= desde && dia <= hoje;
+  };
+
+  const conquistas: ConquistaDaSemana[] = [];
+
+  const avaliadas = entrada.casos.filter((c) => c.evaluated && naSemana(c.evaluatedAt));
+  const positivas = avaliadas.filter((c) => c.resolved || (c.score ?? 0) >= 9);
+  if (positivas.length > 0) {
+    conquistas.push({
+      chave: "avaliacoes",
+      titulo: `${positivas.length} ${positivas.length === 1 ? "avaliação positiva" : "avaliações positivas"}`,
+      detalhe: `de ${avaliadas.length} avaliada(s) no Reclame Aqui`,
+      href: "/reclame-aqui",
+    });
+  }
+
+  const respondidas = entrada.casos.filter((c) => c.source === "Reclame Aqui" && naSemana(c.publicResponseAt));
+  if (respondidas.length > 0) {
+    const esperas = respondidas
+      .map((c) => (new Date(c.publicResponseAt!).getTime() - new Date(c.createdAt).getTime()) / 86_400_000)
+      .filter((d) => d >= 0)
+      .sort((a, b) => a - b);
+    const mediana = esperas.length ? esperas[Math.floor(esperas.length / 2)] : null;
+    conquistas.push({
+      chave: "respondidas",
+      titulo: `${respondidas.length} ${respondidas.length === 1 ? "reclamação respondida" : "reclamações respondidas"}`,
+      detalhe:
+        mediana === null
+          ? "no Reclame Aqui"
+          : `${esperas.length === 1 ? "esperou" : "espera mediana de"} ${mediana < 1 ? "menos de 1 dia" : `${Math.round(mediana)} dia(s)`} desde a publicação`,
+      href: "/reclame-aqui",
+    });
+  }
+
+  const contatados = entrada.nps.filter((r) => naSemana(r.firstContactAt));
+  const noPrazo = contatados.filter(
+    (r) => r.firstContactDueAt && new Date(r.firstContactAt!).getTime() <= new Date(r.firstContactDueAt).getTime()
+  );
+  if (noPrazo.length > 0) {
+    conquistas.push({
+      chave: "nps-no-prazo",
+      titulo: `${noPrazo.length} ${noPrazo.length === 1 ? "primeiro contato do NPS no prazo" : "primeiros contatos do NPS no prazo"}`,
+      detalhe: `de ${contatados.length} feito(s) na semana`,
+      href: "/nps",
+    });
+  }
+
+  const revertidos = entrada.nps.filter(
+    (r) => r.score <= 6 && naSemana(r.postContactAt) && (r.resolvedAfter === true || (r.moodAfter ?? 0) >= 4)
+  );
+  if (revertidos.length > 0) {
+    conquistas.push({
+      chave: "revertidos",
+      titulo: `${revertidos.length} ${revertidos.length === 1 ? "detrator revertido" : "detratores revertidos"}`,
+      detalhe: "resolvidos ou satisfeitos depois do contato",
+      href: `/nps/${revertidos[0].id}`,
+    });
+  }
+
+  const encerrados = entrada.nps.filter((r) => naSemana(r.closedAt));
+  if (encerrados.length > 0) {
+    conquistas.push({
+      chave: "encerrados",
+      titulo: `${encerrados.length} ${encerrados.length === 1 ? "ciclo de NPS encerrado" : "ciclos de NPS encerrados"}`,
+      detalhe: "com a tratativa registrada",
+      href: "/nps",
+    });
+  }
+
+  return { desde, conquistas };
+}

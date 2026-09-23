@@ -104,6 +104,14 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.29.0",
+    data: "2026-09-23",
+    titulo: "Conquistas da semana",
+    texto: "No Meu dia, o cartão Conquistas mostra também a semana, de segunda até hoje: avaliações positivas, reclamações respondidas com a espera real, primeiros contatos do NPS no prazo, detratores revertidos e ciclos encerrados. Só o que o banco confirma, sem linha de zero.",
+    frentes: ["plataforma", "reclame-aqui", "nps"],
+    href: "/meu-dia",
+  },
+  {
     versao: "1.28.0",
     data: "2026-09-23",
     titulo: "Pergunte à plataforma",

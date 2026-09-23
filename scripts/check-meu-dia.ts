@@ -18,7 +18,7 @@ import { resolve } from "node:path";
 import type { Case } from "../lib/models/case";
 import type { NpsResponseView } from "../lib/models/nps";
 
-import { conquistasDoDia, oQueMoveANota } from "../lib/models/motivacaoDoDia";
+import { conquistasDaSemana, conquistasDoDia, inicioDaSemana, oQueMoveANota } from "../lib/models/motivacaoDoDia";
 
 const RAIZ = resolve(__dirname, "..");
 
@@ -116,7 +116,39 @@ console.log("\n— A fiação —\n");
 
   const bloco = ler("components/rotina/AgoraNoMeuDia.tsx");
   conferir("todo aviso tem saída (Resolver, ou o plano abaixo)", /Resolver/.test(bloco) && /no plano abaixo/.test(bloco), true);
-  conferir("todo bloco diz algo quando está vazio", (bloco.match(/length === 0 \?/g) ?? []).length, 3);
+  conferir("todo bloco diz algo quando está vazio", (bloco.match(/length === 0 \?/g) ?? []).length, 4);
+}
+
+console.log("\n— Conquistas da semana —\n");
+
+{
+  /* AGORA é quarta, 16/09: a semana começa na segunda, 14/09. */
+  conferir("a semana começa na segunda", inicioDaSemana("2026-09-16"), "2026-09-14");
+  conferir("domingo ainda é da semana que começou na segunda", inicioDaSemana("2026-09-20"), "2026-09-14");
+
+  const vazia = conquistasDaSemana({ casos: [], nps: [], agora: AGORA });
+  conferir("semana sem nada: nenhuma linha de zero", vazia.conquistas, []);
+
+  const casos = [
+    caso({ protocol: "RA-1", evaluated: true, evaluatedAt: "2026-09-15T13:00:00Z", score: 10, resolved: true }),
+    caso({ protocol: "RA-2", evaluated: true, evaluatedAt: "2026-09-15T14:00:00Z", score: 2, resolved: false }),
+    caso({ protocol: "RA-3", evaluated: true, evaluatedAt: "2026-09-10T14:00:00Z", score: 10, resolved: true }),
+    caso({ protocol: "RA-4", createdAt: "2026-09-12T12:00:00Z", publicResponseAt: "2026-09-14T12:00:00Z" }),
+    caso({ protocol: "RA-5", createdAt: "2026-09-10T12:00:00Z", publicResponseAt: "2026-09-16T12:00:00Z" }),
+  ];
+  const ciclos = [
+    ciclo({ id: "a", firstContactAt: "2026-09-15T12:00:00Z", firstContactDueAt: "2026-09-16T12:00:00Z" }),
+    ciclo({ id: "b", firstContactAt: "2026-09-15T12:00:00Z", firstContactDueAt: "2026-09-14T12:00:00Z" }),
+    ciclo({ id: "c", score: 4, postContactAt: "2026-09-16T12:00:00Z", resolvedAfter: true, closedAt: "2026-09-16T13:00:00Z" }),
+  ];
+  const semana = conquistasDaSemana({ casos, nps: ciclos, agora: AGORA });
+  const por = Object.fromEntries(semana.conquistas.map((c) => [c.chave, `${c.titulo} · ${c.detalhe}`]));
+
+  conferir("só as avaliações da semana, e quantas foram positivas", por.avaliacoes, "1 avaliação positiva · de 2 avaliada(s) no Reclame Aqui");
+  conferir("respondidas com a espera de verdade, sem prazo inventado", por.respondidas, "2 reclamações respondidas · espera mediana de 6 dia(s) desde a publicação");
+  conferir("NPS no prazo pelo prazo do próprio ciclo", por["nps-no-prazo"], "1 primeiro contato do NPS no prazo · de 2 feito(s) na semana");
+  conferir("detrator revertido na semana", por.revertidos, "1 detrator revertido · resolvidos ou satisfeitos depois do contato");
+  conferir("ciclo encerrado na semana", por.encerrados, "1 ciclo de NPS encerrado · com a tratativa registrada");
 }
 
 console.log(
