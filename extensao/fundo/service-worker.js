@@ -56,6 +56,7 @@ const CAMINHOS = {
   completar: "/api/extensao/completar",
   capturaRedes: "/api/extensao/captura-redes",
   sinais: "/api/extensao/sinais",
+  completarPelaConversa: "/api/extensao/completar-pela-conversa",
 };
 
 /**
@@ -863,7 +864,23 @@ async function tratar(mensagem) {
     const dados = await chamar(
       CAMINHOS.sinais,
       {},
-      { mensagens: mensagem.mensagens ?? [] }
+      {
+        mensagens: mensagem.mensagens ?? [],
+        protocolo: mensagem.protocolo,
+        telefone: mensagem.telefone,
+      }
+    );
+
+    return { ok: true, dados };
+  }
+
+  /* O clique em Completar: grava no caso o que a conversa trouxe. Escrita, sem cache. */
+  if (mensagem?.tipo === "completarPelaConversa") {
+
+    const dados = await chamar(
+      CAMINHOS.completarPelaConversa,
+      {},
+      mensagem.corpo ?? {}
     );
 
     return { ok: true, dados };

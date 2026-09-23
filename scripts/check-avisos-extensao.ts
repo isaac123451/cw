@@ -14,7 +14,7 @@ import { runInNewContext } from "node:vm";
 
 import { criarIndice } from "../lib/models/sugestaoPorTexto";
 import { tendenciaDoHumor } from "../lib/services/motorProprio";
-import { avisosDaConversa } from "../lib/services/sinaisDaConversa";
+import { avisosDaConversa, dadosDaConversa, oQueCompletar } from "../lib/services/sinaisDaConversa";
 
 let falhas = 0;
 function conferir(titulo: string, obtido: unknown, esperado: unknown) {
@@ -113,6 +113,34 @@ const sw = readFileSync(resolve(__dirname, "../extensao/fundo/service-worker.js"
 conferir("a rota exige sessão", rota.includes("semSessao(request)"), true);
 conferir("o service worker conhece o caminho", sw.includes('sinais: "/api/extensao/sinais"') && sw.includes("sinaisDaConversa"), true);
 conferir("o painel pede os sinais com e sem cadastro", (painel.match(/P\.pedirSinaisDaConversa\(\);/g) ?? []).length, 2);
+
+/* ---------- completar o cadastro pela conversa ---------- */
+
+console.log("\n  COMPLETAR PELA CONVERSA\n");
+
+const conversa = [
+  nos("Pode me mandar o e-mail da conta? O nosso é suporte@cardapioweb.com, (11) 4000-1234"),
+  cli("claro, é Maria.Souza@Exemplo.com.br"),
+  cli("meu cpf 529.982.247-25 e o celular (48) 99909-5712"),
+];
+conferir("e-mail, CPF e telefone do cliente", dadosDaConversa(conversa), { email: "maria.souza@exemplo.com.br", documento: "52998224725", telefone: "48999095712" });
+conferir("o que nós escrevemos não conta", dadosDaConversa([nos("suporte@cardapioweb.com, (11) 4000-1234")]), {});
+conferir("o número da página vale mais que o digitado", dadosDaConversa(conversa, "5511987654321").telefone, "11987654321");
+conferir("CPF com dígito errado não é documento", dadosDaConversa([cli("cpf 529.982.247-24")]).documento, undefined);
+conferir("CNPJ válido entra", dadosDaConversa([cli("o cnpj da loja é 11.222.333/0001-81")]).documento, "11222333000181");
+conferir("CNPJ com dígito errado não entra", dadosDaConversa([cli("o cnpj da loja é 11.222.333/0001-82")]).documento, undefined);
+conferir(
+  "só o que falta no caso",
+  oQueCompletar({ email: "ja@tem.com", phone: null, document: null }, dadosDaConversa(conversa)).map((c) => c.campo),
+  ["telefone", "documento"]
+);
+conferir("caso completo, nada a sugerir", oQueCompletar({ email: "a@b.com", phone: "48999095712", document: "52998224725" }, dadosDaConversa(conversa)), []);
+
+const rotaCompletar = readFileSync(resolve(__dirname, "../app/api/extensao/completar-pela-conversa/route.ts"), "utf8");
+const base = readFileSync(resolve(__dirname, "../extensao/conteudo/painel-base.js"), "utf8");
+conferir("gravar exige quem pode escrever", rotaCompletar.includes('usuario.papel === "LEITURA"') && rotaCompletar.includes("completarContato("), true);
+conferir("o botão chega ao painel", base.includes('acao === "completar-conversa"') && sw.includes("completarPelaConversa"), true);
+conferir("só diz gravado quando o servidor gravou", /completou\.length > 0\) \{\s*sinais\.completar = null;/.test(painel), true);
 
 console.log(falhas === 0 ? "\n  O painel abre dizendo o que pede cuidado.\n" : `\n  ${falhas} ponto(s) a corrigir.\n`);
 process.exit(falhas === 0 ? 0 : 1);

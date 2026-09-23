@@ -978,18 +978,35 @@
 
     const chave = [P.consulta?.telefone, P.consulta?.nome, P.consulta?.rotulo].join("|");
 
+    /* O caso a completar: o aberto mais recente do contato (ou o mais recente). */
+    const casos = P.ultimoDado?.cliente ? P.ultimoDado.casos ?? [] : [];
+    const protocolo = (casos.find((c) => c.aberto) ?? casos[0])?.protocolo;
+
     if (!sinaisPorContato.has(chave)) {
       sinaisPorContato.set(chave, null);
       try {
-        const resposta = await CW.enviar({ tipo: "sinaisDaConversa", mensagens });
-        sinaisPorContato.set(chave, resposta?.dados?.avisos ?? []);
+        const resposta = await CW.enviar({
+          tipo: "sinaisDaConversa",
+          mensagens,
+          protocolo,
+          telefone: P.consulta?.telefone,
+        });
+        sinaisPorContato.set(chave, {
+          avisos: resposta?.dados?.avisos ?? [],
+          completar: resposta?.dados?.completar ?? null,
+        });
       } catch {
         sinaisPorContato.delete(chave);
         return;
       }
     }
 
-    const avisos = sinaisPorContato.get(chave);
+    const sinais = sinaisPorContato.get(chave);
+    if (!sinais) return;
+
+    desenharCompletar(sinais.completar, chave);
+
+    const avisos = sinais.avisos;
     if (!avisos || avisos.length === 0) return;
 
     let lista = P.corpo?.querySelector(".avisos-contato");
@@ -1005,6 +1022,80 @@
       avisos.map((a) => `<li class="${CW.escapar(a.tom)}">${CW.escapar(a.texto)}</li>`).join("")
     );
     lista.hidden = false;
+  };
+
+  const NOME_DO_CAMPO = { email: "e-mail", telefone: "telefone", documento: "CPF/CNPJ" };
+
+  function valorParaMostrar(campo, valor) {
+    if (campo === "documento" && valor.length === 11) return valor.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+    if (campo === "documento" && valor.length === 14) return valor.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
+    if (campo === "telefone" && valor.length >= 10) return valor.replace(/(\d{2})(\d{4,5})(\d{4})/, "($1) $2-$3");
+    return valor;
+  }
+
+  /**
+   * "Encontrei na conversa" — e-mail, telefone ou CPF/CNPJ que o cliente
+   * escreveu e o caso não tem. Nada é gravado sem o clique, e o que já
+   * está no cadastro nunca é trocado.
+   */
+  function desenharCompletar(completar, chave) {
+    if (!completar || !completar.campos?.length) return;
+    if (P.corpo?.querySelector(".completar-conversa")) return;
+
+    const lista = completar.campos
+      .map((c) => `${NOME_DO_CAMPO[c.campo] ?? c.campo} <b>${CW.escapar(valorParaMostrar(c.campo, c.valor))}</b>`)
+      .join(", ");
+
+    const html = `
+      <div class="completar-conversa" data-chave="${CW.escapar(chave)}">
+        <p>Na conversa: ${lista}. O ${CW.escapar(completar.protocolo)} não tem.</p>
+        <button type="button" class="acao" data-acao="completar-conversa">Completar o cadastro</button>
+      </div>`;
+
+    const avisos = P.corpo?.querySelector(".avisos-contato");
+    if (avisos) avisos.insertAdjacentHTML("afterend", html);
+    else P.corpo?.insertAdjacentHTML("afterbegin", html);
+  }
+
+  P.completarPelaConversa = async function completarPelaConversa(botao) {
+
+    const caixa = botao.closest(".completar-conversa");
+    const sinais = sinaisPorContato.get(caixa?.dataset.chave);
+    const completar = sinais?.completar;
+    if (!caixa || !completar) return;
+
+    const corpo = { protocolo: completar.protocolo };
+    for (const c of completar.campos) corpo[c.campo] = c.valor;
+
+    botao.disabled = true;
+    botao.textContent = "gravando\u2026";
+
+    let resposta;
+    try {
+      resposta = await CW.enviar({ tipo: "completarPelaConversa", corpo });
+    } catch {
+      resposta = null;
+    }
+
+    const completou = resposta?.dados?.completou;
+
+    /* Só diz que gravou quando o servidor respondeu que gravou. */
+    if (Array.isArray(completou) && completou.length > 0) {
+      sinais.completar = null;
+      caixa.innerHTML = `<p>Gravado no ${CW.escapar(completar.protocolo)}: ${CW.escapar(completou.join(", "))}.</p>`;
+      caixa.classList.add("feito");
+    } else if (Array.isArray(completou)) {
+      sinais.completar = null;
+      caixa.innerHTML = `<p>O cadastro já estava completo — nada foi trocado.</p>`;
+    } else {
+      botao.disabled = false;
+      botao.textContent = "Completar o cadastro";
+      caixa.querySelector(".erro-completar")?.remove();
+      caixa.insertAdjacentHTML(
+        "beforeend",
+        `<p class="erro-completar">${CW.escapar(resposta?.dados?.erro ?? "Não foi gravado. Tente de novo.")}</p>`
+      );
+    }
   };
 
   P.desenharCaso = function desenharCaso(caso) {

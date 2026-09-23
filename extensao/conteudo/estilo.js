@@ -1016,6 +1016,21 @@ ${CORES}
 .avisos-contato li.atencao { border-left-color: var(--atencao); }
 .avisos-contato[hidden] { display: none; }
 
+/* "Na conversa: e-mail x" — completar só com o clique. */
+.completar-conversa {
+  margin: 0 0 10px;
+  padding: 9px 11px;
+  border: 1px dashed var(--borda);
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.45;
+  display: grid;
+  gap: 7px;
+}
+.completar-conversa p { margin: 0; }
+.completar-conversa.feito { border-style: solid; border-color: color-mix(in srgb, var(--ok, #16a34a) 45%, var(--borda)); }
+.completar-conversa .erro-completar { color: var(--perigo); }
+
 .gaveta:focus { outline: none; }
 
 .ajuda-atalhos {

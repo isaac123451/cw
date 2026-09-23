@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.22.0",
+    data: "2026-09-22",
+    titulo: "Completar o cadastro pela conversa",
+    texto: "Quando o cliente escreve na conversa um e-mail, telefone ou CPF/CNPJ que o caso não tem, o painel da extensão mostra o que encontrou e oferece Completar o cadastro. Só preenche o que está vazio, nunca troca o que já existe, e só grava com o clique.",
+    frentes: ["extensao"],
+  },
+  {
     versao: "1.21.0",
     data: "2026-09-22",
     titulo: "A conversa também avisa",

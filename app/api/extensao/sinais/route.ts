@@ -5,14 +5,22 @@ import {
   semSessao,
 } from "@/lib/api/extensao";
 
-import { avisosDaConversa, indiceDosRelatos } from "@/lib/services/sinaisDaConversa";
+import { getPrisma } from "@/lib/prisma";
+import {
+  avisosDaConversa,
+  dadosDaConversa,
+  indiceDosRelatos,
+  oQueCompletar,
+} from "@/lib/services/sinaisDaConversa";
 
 /**
  * POST /api/extensao/sinais
  *
- * Os avisos que só a conversa aberta dá: o humor que piorou e a mensagem
- * que é a mesma de uma reclamação do Reclame Aqui. Sem IA e sem gravar
- * nada — o painel chama uma vez por contato, depois de desenhar.
+ * O que só a conversa aberta dá: o humor que piorou, a mensagem que é a
+ * mesma de uma reclamação do Reclame Aqui e, com o caso do contato, o
+ * e-mail, telefone ou documento que o cliente escreveu e o cadastro não
+ * tem. Sem IA e sem gravar nada — o painel chama uma vez por contato,
+ * depois de desenhar, e só grava se a pessoa clicar em Completar.
  */
 
 const MAXIMO_MENSAGENS = 60;
@@ -20,6 +28,10 @@ const MAXIMO_CARACTERES = 2000;
 
 interface Corpo {
   mensagens?: { de?: string; texto?: string }[];
+  /** O caso aberto mais recente do contato, se houver. */
+  protocolo?: string;
+  /** O número do contato na página (WhatsApp). */
+  telefone?: string;
 }
 
 export async function POST(request: Request) {
@@ -46,7 +58,23 @@ export async function POST(request: Request) {
   /* Na demonstração não há base de relatos para comparar: só o humor. */
   const indice = demonstracao ? null : await indiceDosRelatos().catch(() => null);
 
-  return responder(request, { avisos: avisosDaConversa(mensagens, indice) });
+  /* O que dá para completar — só para quem pode gravar, e só o que falta. */
+  let completar: { protocolo: string; campos: ReturnType<typeof oQueCompletar> } | null = null;
+
+  const protocolo = typeof corpo.protocolo === "string" ? corpo.protocolo.trim().slice(0, 40) : "";
+  const prisma = getPrisma();
+
+  if (protocolo && prisma && usuario && usuario.papel !== "LEITURA") {
+    const caso = await prisma.case
+      .findUnique({ where: { protocol: protocolo }, select: { protocol: true, email: true, phone: true, document: true } })
+      .catch(() => null);
+    if (caso) {
+      const campos = oQueCompletar(caso, dadosDaConversa(mensagens, corpo.telefone));
+      if (campos.length > 0) completar = { protocolo: caso.protocol, campos };
+    }
+  }
+
+  return responder(request, { avisos: avisosDaConversa(mensagens, indice), completar });
 }
 
 export function OPTIONS(request: Request) {

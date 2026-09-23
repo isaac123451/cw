@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 22/09/2026. Aplicação **1.21.0**, extensão **1.21.0**.
+Atualizado em 22/09/2026. Aplicação **1.22.0**, extensão **1.22.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,43 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### Completar o cadastro pela conversa (22/09/2026, 1.22.0)
+
+Fase 17, "Salvamento inteligente". Quando o cliente escreve na conversa
+um e-mail, telefone ou CPF/CNPJ que o caso não tem, o painel mostra
+"Na conversa: e-mail x, CPF y. O RA-z não tem." e um botão **Completar o
+cadastro**.
+
+- **Só do cliente, e validado.** Vale só o que o cliente escreveu: o
+  e-mail do suporte e o telefone da central, que nós mandamos, não
+  contam. CPF e CNPJ só entram com os dígitos verificadores certos. O
+  detector do LGPD aceitava CPF formatado sem conferir, o que basta para
+  esconder dado, mas não para gravar; o check pegou isso. No WhatsApp,
+  o número do contato na página vale mais que um número digitado.
+- **Nunca troca o que existe.** A gravação usa a mesma regra do vigia do
+  Reclame Aqui (`completarContato`): só preenche campo vazio, e o
+  documento liga o estabelecimento sozinho quando o vínculo não foi
+  escolhido à mão. O servidor confere de novo o que chega.
+- **Só com o clique, e só "gravado" depois do servidor.** A sugestão
+  vem na mesma consulta dos avisos (nenhuma chamada a mais). Gravar
+  exige acesso de escrita. Sem nada a completar, o painel diz que o
+  cadastro já estava completo.
+- **Rota nova:** `POST /api/extensao/completar-pela-conversa`.
+
+Provas:
+- `check:avisos-extensao` subiu para 35 pontos. Os novos: extração de
+  e-mail, CPF e telefone, o que nós escrevemos ignorado, número da
+  página na frente, CPF e CNPJ com dígito errado recusados, só o campo
+  que falta, acesso de escrita exigido, e a ligação do botão.
+- Ao vivo, no servidor de conferência, com um caso **descartável**
+  criado e apagado pelo próprio teste:
+  - a sugestão trouxe os três campos, e o clique gravou os três
+    (conferidos no banco);
+  - a segunda tentativa, com outros valores, não trocou nada;
+  - protocolo inexistente dá 404, e sem sessão dá 401.
+- Não houve caso real do Reclame Aqui sem e-mail para testar a
+  sugestão em leitura: todos já têm.
 
 ### A conversa também avisa (22/09/2026, 1.21.0)
 
