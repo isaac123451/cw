@@ -75,6 +75,8 @@ export async function POST(request: Request) {
     contato?: { nome?: string; telefone?: string };
     mensagens?: MensagemDoPainel[];
     protocolo?: string;
+    npsId?: string;
+    estabelecimentoId?: string;
   };
 
   const telefone = somenteDigitosDoTelefone(entrada.contato?.telefone);
@@ -99,7 +101,14 @@ export async function POST(request: Request) {
   const destino = existentes[0]?.id ?? "nova";
 
   const protocolo = String(entrada.protocolo ?? "").trim();
-  const caso = protocolo ? await prisma.case.findUnique({ where: { protocol: protocolo }, select: { id: true } }) : null;
+  const npsId = String(entrada.npsId ?? "").trim().slice(0, 60);
+  const estabelecimentoId = String(entrada.estabelecimentoId ?? "").trim().slice(0, 60);
+  /* Cada vínculo conferido no banco: id que não existe não vira chave estrangeira quebrada. */
+  const [caso, nps, estabelecimento] = await Promise.all([
+    protocolo ? prisma.case.findUnique({ where: { protocol: protocolo }, select: { id: true } }) : null,
+    npsId ? prisma.npsResponse.findUnique({ where: { id: npsId }, select: { id: true } }) : null,
+    estabelecimentoId ? prisma.establishment.findUnique({ where: { id: estabelecimentoId }, select: { id: true } }) : null,
+  ]);
 
   try {
     const r = await gravarMensagens(prisma, {
@@ -108,7 +117,7 @@ export async function POST(request: Request) {
       contatoNome: nome,
       origem: "extensao",
       mensagens,
-      vinculo: { caseId: caso?.id ?? null },
+      vinculo: { caseId: caso?.id ?? null, npsResponseId: nps?.id ?? null, establishmentId: estabelecimento?.id ?? null },
       autor: usuario.nome,
     });
     const origem = new URL(request.url).origin;

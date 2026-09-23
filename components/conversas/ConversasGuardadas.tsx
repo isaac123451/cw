@@ -9,15 +9,15 @@ import { conversasGuardadasDe } from "@/lib/actions/conversas";
 import type { ConversaDoRegistro } from "@/lib/services/conversas.service";
 import { descreverRegistro } from "@/lib/services/horasUteis";
 
-/** As conversas guardadas de um caso ou de um ciclo de NPS — carregadas uma vez por registro. */
-export function useConversasGuardadas(alvo: { protocolo?: string; npsId?: string }) {
+/** As conversas guardadas de um caso, de um ciclo de NPS ou de uma conta — carregadas uma vez por registro. */
+export function useConversasGuardadas(alvo: { protocolo?: string; npsId?: string; estabelecimentoId?: string }) {
   const [conversas, setConversas] = useState<ConversaDoRegistro[]>([]);
-  const chave = `${alvo.protocolo ?? ""}|${alvo.npsId ?? ""}`;
+  const chave = `${alvo.protocolo ?? ""}|${alvo.npsId ?? ""}|${alvo.estabelecimentoId ?? ""}`;
   useEffect(() => {
-    const [protocolo, npsId] = chave.split("|");
-    if (!protocolo && !npsId) return;
+    const [protocolo, npsId, estabelecimentoId] = chave.split("|");
+    if (!protocolo && !npsId && !estabelecimentoId) return;
     let vivo = true;
-    conversasGuardadasDe({ protocolo: protocolo || undefined, npsId: npsId || undefined })
+    conversasGuardadasDe({ protocolo: protocolo || undefined, npsId: npsId || undefined, estabelecimentoId: estabelecimentoId || undefined })
       .then((r) => vivo && r.ok && setConversas(r.conversas))
       .catch(() => undefined);
     return () => {
@@ -35,8 +35,18 @@ export function useConversasGuardadas(alvo: { protocolo?: string; npsId?: string
  * quem é, quantas mensagens, a última fala do cliente e o link para
  * abrir a conversa inteira.
  */
-export default function ConversasGuardadas({ protocolo, npsId, className = "" }: { protocolo?: string; npsId?: string; className?: string }) {
-  const conversas = useConversasGuardadas({ protocolo, npsId });
+export default function ConversasGuardadas({
+  protocolo,
+  npsId,
+  estabelecimentoId,
+  className = "",
+}: {
+  protocolo?: string;
+  npsId?: string;
+  estabelecimentoId?: string;
+  className?: string;
+}) {
+  const conversas = useConversasGuardadas({ protocolo, npsId, estabelecimentoId });
   if (conversas.length === 0) return null;
 
   return (

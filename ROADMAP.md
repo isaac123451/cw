@@ -1116,6 +1116,42 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Salvamento automático que guarda de verdade (23/09/2026, 1.35.0)
+
+"Salvamento automático tá aonde também?". Medido na base: **2 conversas
+guardadas ao todo**. O motivo estava no código da extensão: só guardava
+com o **painel aberto**, na vista do contato, com telefone e com caso ou
+NPS **aberto**. Com o painel fechado — o jeito normal de trabalhar no
+WhatsApp —, nada. E o contato conhecido só pelo NPS ou pela conta
+(sem reclamação) nem contava como identificado.
+
+O que mudou:
+- **Guarda com o painel fechado.** A consulta silenciosa que já acendia
+  o contador no botão agora também liga o salvamento: conversa aberta no
+  WhatsApp, contato conhecido (caso, NPS ou estabelecimento), a cada 20
+  segundos só o que é novo. Aba escondida espera; pausar por conversa
+  continua valendo. Contato desconhecido segue no botão, com confirmação.
+- **Ligada à ficha certa.** A conversa se liga ao caso aberto (antes, só
+  quando havia exatamente um caso), ao ciclo de NPS e ao estabelecimento
+  — cada vínculo conferido no banco antes de gravar.
+- **Dá para ver que trabalhou.** O botão da extensão ganha um ponto verde
+  e o título "guardando esta conversa"; na plataforma, a conversa
+  aparece na ficha do caso, do NPS e agora também do estabelecimento.
+
+Provas:
+- `check:guardar-sozinho` (novo, 13 pontos) carrega o `painel-contato.js`
+  real num ambiente simulado: com o painel **fechado** e o contato
+  conhecido só pelo NPS e pela conta, manda a conversa com os dois ids;
+  não manda de novo o que já foi; manda só a mensagem nova; espera com a
+  aba escondida; respeita a pausa; com dois casos, liga ao único aberto;
+  o botão mostra que está guardando. Sabotado (voltando a exigir o painel
+  aberto), 6 falhas.
+- A rota, contra o servidor de teste, com um NPS descartável: gravou a
+  conversa ligada ao NPS e ignorou um id de conta que não existe. O NPS,
+  a conversa e as mensagens do teste foram apagados (0 no fim).
+
+**Depende de você:** recarregar a extensão (1.35.0).
+
 ### Parte 2 do roadmap, e a IA que diz se está no ar (23/09/2026, 1.34.0)
 
 O Isaac mandou uma lista nova e pediu o roadmap refeito "como analista de

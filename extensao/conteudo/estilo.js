@@ -193,6 +193,18 @@ ${CORES}
 }
 
 .gatilho .selo.visivel { display: flex; }
+/* Guardando esta conversa: um ponto verde discreto no canto do botão. */
+.gatilho.guardando::after {
+  content: "";
+  position: absolute;
+  left: 3px;
+  bottom: 3px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 0 2px #fff;
+}
 
 /* ---------- gaveta ---------- */
 

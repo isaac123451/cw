@@ -104,6 +104,14 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.35.0",
+    data: "2026-09-23",
+    titulo: "A conversa se guarda com o painel fechado",
+    texto: "No WhatsApp, a conversa de um contato conhecido (com reclamação, NPS ou conta cadastrada) se guarda sozinha mesmo com o painel da extensão fechado. O botão da extensão ganha um ponto verde quando está guardando, e a conversa aparece na ficha do caso, do NPS e do estabelecimento.",
+    frentes: ["extensao", "plataforma"],
+    href: "/conversas",
+  },
+  {
     versao: "1.34.0",
     data: "2026-09-23",
     titulo: "A IA diz se está no ar",

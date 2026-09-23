@@ -25,6 +25,7 @@ import PageHeading from "@/components/shared/PageHeading";
 import StatTile from "@/components/shared/StatTile";
 import { ExternalLink } from "lucide-react";
 
+import ConversasGuardadas from "@/components/conversas/ConversasGuardadas";
 import SurfaceCard from "@/components/shared/SurfaceCard";
 
 import {
@@ -689,6 +690,8 @@ export default function EstablishmentDetail({
             </div>
 
           </SurfaceCard>
+
+          <ConversasGuardadas estabelecimentoId={establishment.id} />
 
           <SurfaceCard
             title="Impacto no negócio"

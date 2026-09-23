@@ -162,10 +162,11 @@ export interface ConversaDoRegistro {
 }
 
 /** As conversas guardadas ligadas a um caso ou a um ciclo de NPS. */
-export async function conversasDoRegistro(prisma: Db, alvo: { caseId?: string | null; npsResponseId?: string | null }): Promise<ConversaDoRegistro[]> {
+export async function conversasDoRegistro(prisma: Db, alvo: { caseId?: string | null; npsResponseId?: string | null; establishmentId?: string | null }): Promise<ConversaDoRegistro[]> {
   const ou: object[] = [];
   if (alvo.caseId) ou.push({ caseId: alvo.caseId });
   if (alvo.npsResponseId) ou.push({ npsResponseId: alvo.npsResponseId });
+  if (alvo.establishmentId) ou.push({ establishmentId: alvo.establishmentId });
   if (ou.length === 0) return [];
   const linhas = await prisma.conversa.findMany({
     where: { OR: ou },

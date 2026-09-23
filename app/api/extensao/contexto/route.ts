@@ -309,6 +309,8 @@ export async function GET(request: Request) {
 
     estabelecimento: estabelecimento
       ? {
+          /* O id vai junto para a conversa guardada se ligar à conta. */
+          id: estabelecimento.id,
           nome: estabelecimento.name,
           plano: estabelecimento.plan,
           status: estabelecimento.status,

@@ -483,16 +483,20 @@
       return;
     }
 
+    const chave = P.chaveConsulta;
     const resposta = await CW.enviar({
       tipo: "contexto",
       consulta: P.parametros(),
     });
 
-    if (!resposta.ok) return;
+    if (!resposta.ok || chave !== P.chaveConsulta) return;
 
     P.ultimoDado = resposta.dados;
 
     marcarSelo(resposta.dados?.cliente?.abertos ?? 0);
+
+    /* Fechado também: contato conhecido, a conversa começa a se guardar. */
+    ligarRelogioDeGuardar();
   }
 
   function marcarSelo(quantidade) {
@@ -928,18 +932,22 @@
   ============================================================ */
 
   /**
-   * Conversa de caso ou de NPS aberto se guarda sozinha enquanto está
-   * na tela — só o que é novo, e dá para pausar por conversa.
+   * A conversa de um contato identificado se guarda sozinha enquanto
+   * está na tela — só o que é novo, e dá para pausar por conversa.
    *
    * Por quê: o botão "Guardar a conversa" dependia de lembrar de
-   * clicar, e a conversa que mais importa guardar (a do cliente com
-   * reclamação aberta) é justamente a que corre enquanto a pessoa está
-   * ocupada respondendo. A rota já acrescenta só as mensagens que ainda
-   * não tinha, pelo id de cada uma — então mandar de novo não duplica.
+   * clicar, e a conversa que mais importa guardar é justamente a que
+   * corre enquanto a pessoa está ocupada respondendo. A rota acrescenta
+   * só as mensagens que ainda não tinha, pelo id de cada uma — mandar de
+   * novo não duplica.
    *
-   * Só com telefone (a conversa da plataforma é a do telefone) e só com
-   * algo aberto: conversa de quem não tem caso nem NPS continua no
-   * botão, com confirmação. Nunca mais de uma gravação ao mesmo tempo.
+   * **Com o painel fechado também.** Até a 1.34 só guardava com o painel
+   * aberto, na vista do contato, e só com caso ou NPS aberto: em uma
+   * semana de uso, 2 conversas guardadas ao todo. Agora basta a conversa
+   * estar aberta no WhatsApp e o contato ser conhecido (caso, NPS ou
+   * estabelecimento), pela consulta silenciosa que já acende o selo do
+   * botão. Quem não é conhecido continua no botão, com confirmação.
+   * Nunca mais de uma gravação ao mesmo tempo.
    */
   const INTERVALO_DE_GUARDAR_MS = 20_000;
   const MAXIMO_DE_PAUSADAS = 100;
@@ -955,11 +963,19 @@
   }
 
   P.podeGuardarSozinho = function podeGuardarSozinho(dados = P.ultimoDado) {
-    if (!P.lerConversa || !telefoneDaConversa() || !dados?.cliente) return false;
-    const casoAberto = (dados.casos ?? []).some((c) => c.aberto);
-    const npsAberto = Boolean(dados.nps && !dados.nps.encerrado);
-    return casoAberto || npsAberto;
+    if (!P.lerConversa || !telefoneDaConversa() || !dados) return false;
+    return Boolean(dados.cliente || dados.nps || dados.estabelecimento);
   };
+
+  /* O botão da extensão diz, mesmo fechado, que esta conversa está sendo guardada. */
+  function marcarGatilho() {
+    const gatilho = P.raiz?.querySelector(".gatilho");
+    if (!gatilho) return;
+    const guardando = P.podeGuardarSozinho() && !pausada();
+    gatilho.classList.toggle("guardando", guardando);
+    gatilho.title = guardando ? "CW Reputação · guardando esta conversa" : "CW Reputação";
+  }
+  P.marcarGatilho = marcarGatilho;
 
   function pausada() {
     return Boolean(P.config?.guardarPausado?.[telefoneDaConversa()]);
@@ -984,12 +1000,15 @@
   function desenharEstadoDeGuardar() {
     const el = P.corpo?.querySelector("[data-guardar-estado]");
     if (el) el.innerHTML = textoDoEstadoDeGuardar();
+    marcarGatilho();
   }
 
   P.guardarSozinho = async function guardarSozinho() {
 
-    if (gravandoSozinho || !P.aberto || P.vista !== "contato") return;
+    /* Aberto ou fechado: o que manda é haver conversa na tela e contato conhecido. */
+    if (gravandoSozinho || document.hidden) return;
     if (!P.podeGuardarSozinho() || pausada()) return;
+    const deQuem = P.chaveConsulta;
 
     const tel = telefoneDaConversa();
     const leitura = P.lerConversa();
@@ -1003,15 +1022,24 @@
 
     gravandoSozinho = true;
     try {
-      const casos = P.ultimoDado?.casos ?? [];
+      const dados = P.ultimoDado ?? {};
+      const casos = dados.casos ?? [];
+      /* O caso aberto mais recente liga a conversa à ficha dele; o NPS e a conta, às deles. */
+      const abertos = casos.filter((c) => c.aberto);
+      const caso = abertos.length === 1 ? abertos[0] : casos.length === 1 ? casos[0] : null;
       const resposta = await CW.enviar({
         tipo: "guardarConversa",
         corpo: {
           contato: { nome: P.consulta?.nome, telefone: P.consulta?.telefone },
           mensagens: novas.map((m) => ({ id: m.id, de: m.de, texto: m.texto, carimbo: m.carimbo, autor: m.autor })),
-          protocolo: casos.length === 1 ? casos[0].protocolo : undefined,
+          protocolo: caso?.protocolo,
+          npsId: dados.nps?.id,
+          estabelecimentoId: dados.estabelecimento?.id,
         },
       });
+
+      /* Trocou de conversa no meio da gravação: o resultado é da anterior. */
+      if (deQuem !== P.chaveConsulta) return;
 
       if (resposta?.ok && resposta.dados?.id && !resposta.dados?.erro) {
         for (const m of novas) ja.add(m.id);
@@ -1030,6 +1058,7 @@
   };
 
   function ligarRelogioDeGuardar() {
+    marcarGatilho();
     if (!P.podeGuardarSozinho()) return;
     // A primeira logo depois de desenhar; as outras no ritmo da conversa.
     setTimeout(() => P.guardarSozinho(), 1500);

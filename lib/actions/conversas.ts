@@ -404,12 +404,15 @@ export async function evidenciaDoCaso(conversaId: string): Promise<
 }
 
 /** As conversas guardadas de um caso ou de um ciclo de NPS — para a ficha e o pedido de avaliação. */
-export async function conversasGuardadasDe(alvo: { protocolo?: string; npsId?: string }): Promise<{ ok: true; conversas: ConversaDoRegistro[] } | Falha> {
+export async function conversasGuardadasDe(alvo: { protocolo?: string; npsId?: string; estabelecimentoId?: string }): Promise<{ ok: true; conversas: ConversaDoRegistro[] } | Falha> {
   const ctx = await tryRole("LEITURA", "conversas");
   if (!ctx) return { ok: true, conversas: [] };
   try {
     const caso = alvo.protocolo ? await ctx.prisma.case.findUnique({ where: { protocol: alvo.protocolo }, select: { id: true } }) : null;
-    return { ok: true, conversas: await conversasDoRegistro(ctx.prisma, { caseId: caso?.id ?? null, npsResponseId: alvo.npsId ?? null }) };
+    return {
+      ok: true,
+      conversas: await conversasDoRegistro(ctx.prisma, { caseId: caso?.id ?? null, npsResponseId: alvo.npsId ?? null, establishmentId: alvo.estabelecimentoId ?? null }),
+    };
   } catch (erro) {
     console.error("[conversas] do registro", erro);
     return { ok: false, erro: "Não foi possível ler as conversas guardadas." };
