@@ -636,6 +636,9 @@
       );
     }
 
+    // Antes de tudo, o que pede cuidado com esta pessoa, em uma linha cada.
+    partes.push(blocoAvisos(P.avisosDoContato(dados)));
+
     // O resumo vem primeiro: responde "o que está havendo aqui".
     partes.push(P.blocoResumo());
 
@@ -871,6 +874,85 @@
 
     marcarSelo(cliente.abertos);
   };
+
+  /* ============================================================
+     AVISOS AO ABRIR (Fase 17)
+  ============================================================ */
+
+  /**
+   * O que quem vai responder precisa saber antes da primeira frase.
+   *
+   * Sai só do que a consulta já trouxe — nenhuma chamada a mais ao
+   * abrir a conversa. O mais grave vem primeiro, e são no máximo
+   * quatro: aviso demais vira papel de parede.
+   */
+  const PESO_DO_TOM = { perigo: 0, atencao: 1, neutro: 2 };
+
+  P.avisosDoContato = function avisosDoContato(dados, agora = Date.now()) {
+
+    const cliente = dados?.cliente;
+    if (!cliente) return [];
+
+    const avisos = [];
+    const abertos = (dados.casos ?? []).filter((c) => c.aberto);
+
+    for (const caso of abertos) {
+      if (caso.sla?.situacao === "estourado") {
+        avisos.push({ tom: "perigo", texto: `Prazo estourado em ${caso.protocolo}` });
+      } else if (caso.sla?.situacao === "atencao") {
+        avisos.push({ tom: "atencao", texto: `${caso.protocolo}: ${caso.sla.rotulo}` });
+      }
+    }
+
+    if (cliente.risco) {
+      avisos.push({ tom: "perigo", texto: "Risco de cancelamento" });
+    }
+
+    const nps = dados.nps;
+    if (nps && !nps.encerrado && typeof nps.nota === "number" && nps.nota <= 6) {
+      const dias = nps.respondidoEm
+        ? Math.floor((agora - new Date(nps.respondidoEm).getTime()) / 86_400_000)
+        : null;
+      avisos.push({
+        tom: "perigo",
+        texto: `Detrator do NPS (nota ${nps.nota})${
+          dias === null ? "" : dias <= 0 ? ", respondeu hoje" : dias === 1 ? " há 1 dia" : ` há ${dias} dias`
+        }`,
+      });
+    }
+
+    if (cliente.total >= 2) {
+      avisos.push({
+        tom: cliente.total >= 3 ? "atencao" : "neutro",
+        texto: `Já reclamou ${cliente.total} vezes`,
+      });
+    }
+
+    if (cliente.naoResolvidos > 0) {
+      avisos.push({
+        tom: "atencao",
+        texto: cliente.naoResolvidos === 1
+          ? "1 reclamação terminou sem solução"
+          : `${cliente.naoResolvidos} reclamações terminaram sem solução`,
+      });
+    }
+
+    return avisos
+      .map((a, i) => ({ ...a, i }))
+      .sort((a, b) => PESO_DO_TOM[a.tom] - PESO_DO_TOM[b.tom] || a.i - b.i)
+      .slice(0, 4)
+      .map(({ tom, texto }) => ({ tom, texto }));
+  };
+
+  function blocoAvisos(avisos) {
+    if (avisos.length === 0) return "";
+    return `
+      <ul class="avisos-contato" aria-label="Avisos sobre este contato">
+        ${avisos
+          .map((a) => `<li class="${a.tom}">${CW.escapar(a.texto)}</li>`)
+          .join("")}
+      </ul>`;
+  }
 
   P.desenharCaso = function desenharCaso(caso) {
 

@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 18/09/2026. Aplicação **1.19.0**, extensão **1.19.0**.
+Atualizado em 22/09/2026. Aplicação **1.20.0**, extensão **1.20.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,27 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### Avisos ao abrir a conversa (22/09/2026, 1.20.0)
+
+Fase 17, primeira parte de "Avisos ao abrir a tela".
+
+- **Até quatro linhas no topo do painel**, antes do resumo, com o que
+  pede cuidado: prazo estourado (ou perto de vencer, com o rótulo do
+  relógio), risco de cancelamento, detrator do NPS com ciclo aberto e há
+  quantos dias respondeu, reincidência ("Já reclamou 3 vezes") e
+  reclamações que terminaram sem solução. O grave vem primeiro, e a cor
+  fica só na borda.
+- **Nenhuma chamada a mais.** Sai do que a consulta do contato já traz,
+  e abrir a conversa continua com o mesmo peso de antes.
+
+Provas: `check:avisos-extensao` (novo, 15 pontos) roda a regra do
+próprio arquivo do painel numa página simulada. Também passa o
+`check:painel`.
+
+Falta, do mesmo item: "99% igual a RA-x" (semelhança do texto da
+conversa com reclamações) e "o humor piorou nas últimas mensagens".
+Os dois precisam ler a conversa, e ficam para a próxima.
 
 ### Atalhos no painel da extensão (18/09/2026, 1.19.0)
 

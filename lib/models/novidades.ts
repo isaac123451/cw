@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.20.0",
+    data: "2026-09-22",
+    titulo: "Avisos ao abrir a conversa",
+    texto: "O painel da extensão abre com até quatro linhas do que pede cuidado com aquele contato: prazo estourado ou perto de vencer, risco de cancelamento, detrator do NPS (e há quantos dias), quantas vezes já reclamou e quantas terminaram sem solução. O mais grave vem primeiro.",
+    frentes: ["extensao"],
+  },
+  {
     versao: "1.19.0",
     data: "2026-09-18",
     titulo: "Atalhos no painel da extensão",

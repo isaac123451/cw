@@ -994,6 +994,27 @@ ${CORES}
 
 .rodape-direita { display: flex; gap: 12px; }
 
+/* Avisos ao abrir: uma linha cada, com a cor só na borda. */
+.avisos-contato {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.avisos-contato li {
+  font-size: 12px;
+  line-height: 1.4;
+  padding: 5px 9px;
+  border-left: 3px solid var(--borda);
+  border-radius: 4px;
+  background: var(--superficie);
+}
+
+.avisos-contato li.perigo { border-left-color: var(--perigo); }
+.avisos-contato li.atencao { border-left-color: var(--atencao); }
+
 .gaveta:focus { outline: none; }
 
 .ajuda-atalhos {

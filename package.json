@@ -1,6 +1,6 @@
 {
   "name": "cw-reputacao",
-  "version": "1.19.0",
+  "version": "1.20.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -110,6 +110,7 @@
     "conferir:fila": "tsx scripts/conferir-fila-avaliacao.ts",
     "bancada:painel": "tsx scripts/bancada-painel.ts",
     "check:painel": "node scripts/check-painel.js",
+    "check:avisos-extensao": "tsx scripts/check-avisos-extensao.ts",
     "check:rascunho": "tsx scripts/check-rascunho.ts",
     "check:edicao": "tsx scripts/check-edicao.ts",
     "check:gravacoes": "tsx --conditions=react-server scripts/check-gravacoes.ts",
