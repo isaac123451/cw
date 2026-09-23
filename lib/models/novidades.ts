@@ -104,6 +104,14 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.33.0",
+    data: "2026-09-23",
+    titulo: "O plano do dia na Google Agenda",
+    texto: "No Meu dia, Levar para a agenda põe cada bloco do plano na sua Google Agenda, no horário do bloco, com os itens e os links. Mostra o que vai antes de mandar, e mandar de novo atualiza os mesmos blocos, sem duplicar e sem tocar nos seus eventos. O nome do cliente e o comentário do NPS ficam fora. E o checkpoint agora fica no horário dele, mesmo com a manhã atrasada.",
+    frentes: ["plataforma"],
+    href: "/meu-dia",
+  },
+  {
     versao: "1.32.0",
     data: "2026-09-23",
     titulo: "Contato antes de classificar, e sem retorno só depois de 2 horas",

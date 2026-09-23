@@ -145,6 +145,12 @@ const pos = (titulo: string, f: string) => livres.findIndex((b) => b.titulo.star
 confere("sem atraso, a ordem do documento: o RA de retornar vem antes do NPS de retornar", pos("Retornar", "reclame-aqui") < pos("Retornar", "nps"), true);
 confere("e o Instagram dos novos vem antes do NPS não vencido de qualquer atividade", pos("Verificar novos", "redes") < pos("Retornar", "nps"), true);
 confere("minutos dos novos: 15 do RA + 10 das redes + 2 × 8 do NPS + 8 do Google", minutosDaAtividade(doDia.find((a) => a.chave === "novos")!, contagens.novos), 49);
+{
+  /* Às 17h, a planilha das 8h está atrasada; o checkpoint das 17h30 continua no horário dele. */
+  const fim = planoDoDia(doDia, contagens, new Set(), new Date(br("2026-09-15 17:00")));
+  confere("às 17h, o checkpoint das 17h30 fica no horário (o atrasado não toma o lugar)", fim.blocos.find((b) => b.titulo.startsWith("Checkpoint"))?.inicio, "17:30");
+  confere("e a planilha atrasada vai para o espaço livre, dizendo por quê", fim.blocos.find((b) => b.titulo.startsWith("Preencher"))?.motivo, "Era para as 08:00: no primeiro espaço livre.");
+}
 const tarde = planoDoDia(doDia, contagens, new Set(), new Date(br("2026-09-15 17:20")));
 confere("às 17h20, quase nada cabe: o resto vai para 'não cabe'", tarde.naoCabe.length > 0 && tarde.minutosDisponiveis === 40, true);
 const feitas = new Set(doDia.map((a) => a.id));

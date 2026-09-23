@@ -7,7 +7,9 @@ import {
   authorizeUrl,
   createEvent,
   deleteEvent,
+  gravarEventoDoPlano,
   hasGoogle,
+  listarEventosDoPlano,
   listUpcomingEvents,
   updateEvent,
   validAccessToken,
@@ -17,6 +19,8 @@ import {
   GoogleEvent,
   GoogleEventDraft,
 } from "@/lib/models/google";
+import { linkDoDia, sincronizacao, type EventoDoPlano } from "@/lib/models/planoNaAgenda";
+import { paredeDe } from "@/lib/services/horasUteis";
 
 /** O módulo a que estas ações pertencem — ver lib/auth/modules.ts. */
 const MODULO: Modulo = "agenda";
@@ -227,4 +231,43 @@ export async function deleteGoogleEvent(
   return r.ok
     ? { ok: true as const }
     : { ok: false as const, error: r.error };
+}
+
+/**
+ * Leva o plano do dia para a Google Agenda da própria pessoa.
+ *
+ * Um evento por bloco, marcado com o dia e o bloco. Mandar de novo
+ * atualiza os mesmos eventos, cria os novos e tira os que saíram do
+ * plano — o que já terminou fica, e evento sem a marca não é tocado.
+ */
+export async function levarPlanoParaAgenda(entrada: {
+  dia: string;
+  eventos: EventoDoPlano[];
+}): Promise<{ ok: true; criados: number; atualizados: number; removidos: number; link: string } | { ok: false; error: string }> {
+
+  const hoje = paredeDe(new Date()).dia;
+  if (entrada.dia !== hoje) return { ok: false, error: "Só o plano de hoje vai para a agenda. Recarregue a página." };
+  if (!Array.isArray(entrada.eventos) || entrada.eventos.length > 40) return { ok: false, error: "O plano veio num formato inesperado. Recarregue a página." };
+
+  const hora = /^([01]\d|2[0-3]):[0-5]\d$/;
+  for (const e of entrada.eventos) {
+    if (!hora.test(e.inicio) || !hora.test(e.fim) || e.fim <= e.inicio) return { ok: false, error: `O bloco "${e.titulo}" tem um horário inválido.` };
+    if (!e.chave || e.chave.length > 160 || !e.titulo || e.titulo.length > 200 || e.descricao.length > 6000) {
+      return { ok: false, error: "O plano veio num formato inesperado. Recarregue a página." };
+    }
+  }
+
+  const r = await comToken(async (token) => {
+    const existentes = await listarEventosDoPlano(token, entrada.dia);
+    const s = sincronizacao(existentes, entrada.eventos, new Date());
+    /* Em paralelo: uma dúzia de blocos, um de cada vez, passava do tempo de uma ação do servidor. */
+    await Promise.all([
+      ...s.criar.map((e) => gravarEventoDoPlano(token, entrada.dia, e)),
+      ...s.atualizar.map(({ id, evento }) => gravarEventoDoPlano(token, entrada.dia, evento, id)),
+      ...s.apagar.map((id) => deleteEvent(token, id)),
+    ]);
+    return { criados: s.criar.length, atualizados: s.atualizar.length, removidos: s.apagar.length };
+  });
+
+  return r.ok ? { ok: true, ...r.dados, link: linkDoDia(entrada.dia) } : { ok: false, error: r.error };
 }

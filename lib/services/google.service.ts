@@ -10,6 +10,7 @@ import {
   RepeatKind,
   RepeatRule,
 } from "@/lib/models/google";
+import { MARCA_DO_BLOCO, MARCA_DO_PLANO, type EventoDoPlano, type EventoExistente } from "@/lib/models/planoNaAgenda";
 
 /**
  * OAuth do Google para conectar a agenda de **cada usuário**.
@@ -543,4 +544,75 @@ function somarHora(time: string) {
   return `${String(hora).padStart(2, "0")}:${String(
     m || 0
   ).padStart(2, "0")}`;
+}
+
+/* ============================================================
+   O PLANO DO DIA NA AGENDA
+============================================================ */
+
+/**
+ * Os eventos que o plano do dia já pôs na agenda — pela marca privada,
+ * e não pelo título: um evento seu com o mesmo nome nunca é tocado.
+ */
+export async function listarEventosDoPlano(accessToken: string, dia: string): Promise<EventoExistente[]> {
+
+  const params = new URLSearchParams({
+    privateExtendedProperty: `${MARCA_DO_PLANO}=${dia}`,
+    timeMin: `${dia}T00:00:00-03:00`,
+    timeMax: `${dia}T23:59:59-03:00`,
+    singleEvents: "true",
+    maxResults: "100",
+  });
+
+  const res = await fetch(`${EVENTS_URL}?${params.toString()}`, {
+    headers: { authorization: `Bearer ${accessToken}` },
+  });
+
+  if (!res.ok) throw new Error(`Não foi possível ler a agenda (Google respondeu ${res.status}).`);
+
+  const data = (await res.json()) as {
+    items?: {
+      id: string;
+      start?: { dateTime?: string };
+      end?: { dateTime?: string };
+      extendedProperties?: { private?: Record<string, string> };
+    }[];
+  };
+
+  return (data.items ?? [])
+    .filter((i) => i.start?.dateTime && i.end?.dateTime)
+    .map((i) => ({
+      id: i.id,
+      bloco: i.extendedProperties?.private?.[MARCA_DO_BLOCO],
+      inicio: i.start!.dateTime!,
+      fim: i.end!.dateTime!,
+    }));
+}
+
+/** Cria (sem `eventId`) ou reescreve um bloco do plano, com a marca privada. */
+export async function gravarEventoDoPlano(accessToken: string, dia: string, evento: EventoDoPlano, eventId?: string) {
+
+  const corpo = {
+    summary: evento.titulo,
+    description: evento.descricao,
+    start: { dateTime: `${dia}T${evento.inicio}:00`, timeZone: "America/Sao_Paulo" },
+    end: { dateTime: `${dia}T${evento.fim}:00`, timeZone: "America/Sao_Paulo" },
+    /* Uva: o roxo da plataforma, para o bloco se distinguir dos seus eventos. */
+    colorId: "3",
+    extendedProperties: { private: { [MARCA_DO_PLANO]: dia, [MARCA_DO_BLOCO]: evento.chave } },
+  };
+
+  const res = await fetch(eventId ? `${EVENTS_URL}/${encodeURIComponent(eventId)}` : EVENTS_URL, {
+    method: eventId ? "PUT" : "POST",
+    headers: { authorization: `Bearer ${accessToken}`, "content-type": "application/json" },
+    body: JSON.stringify(corpo),
+  });
+
+  if (!res.ok) {
+    throw new Error(
+      res.status === 403
+        ? "O Google não deu permissão para escrever na agenda — reconecte a conta na Agenda."
+        : `O Google recusou o bloco "${evento.titulo}" (${res.status}).`
+    );
+  }
 }

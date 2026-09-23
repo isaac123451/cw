@@ -33,8 +33,8 @@ import { paredeDe } from "@/lib/services/horasUteis";
  */
 export function useMeuDia() {
 
-  const { cases } = useCases();
-  const { responses, kinds } = useNps();
+  const { cases, loading: carregandoCasos } = useCases();
+  const { responses, kinds, loading: carregandoNps } = useNps();
   const { avaliacoes } = useAvaliacoesGoogle();
   const { movements } = useMovements();
   const { tasks } = useAgenda();
@@ -174,7 +174,11 @@ export function useMeuDia() {
   }, []);
 
   return {
-    carregando: atividades === null || carga === null || !agora,
+    /*
+      Os casos e o NPS também: sem eles a conta sai zerada, e o plano dizia
+      "Nada da rotina pendente. Bom trabalho." até os dados chegarem.
+    */
+    carregando: atividades === null || carga === null || !agora || carregandoCasos || carregandoNps,
     erro,
     hoje,
     agora,

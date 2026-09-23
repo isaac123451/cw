@@ -45,7 +45,9 @@ export default function MeuDiaPage() {
   const efetivas = marcas ?? dia.feitasHoje;
 
   const { planejar } = dia;
-  const plano = useMemo(() => planejar(efetivas), [planejar, efetivas]);
+  /* Enquanto os casos e o NPS chegam, o plano é "montando" — e não um dia vazio. */
+  const carregando = dia.carregando;
+  const plano = useMemo(() => (carregando ? null : planejar(efetivas)), [carregando, planejar, efetivas]);
 
   const dataPorExtenso = dia.agora
     ? dia.agora.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo", weekday: "long", day: "numeric", month: "long" })
@@ -74,7 +76,7 @@ export default function MeuDiaPage() {
           <RotinaDoDia dia={dia} rascunho={efetivas} setRascunho={setMarcas} onConfigurar={() => setConfigurando(true)} onUmPorVez={() => { setUmPorVez(true); window.scrollTo({ top: 0, behavior: "smooth" }); }} />
 
           <div className="space-y-6">
-            <PlanoDoDia plano={plano} atividades={dia.doDia} />
+            <PlanoDoDia plano={plano} atividades={dia.doDia} contagens={dia.contagens} hoje={dia.hoje} />
             {dia.hoje && (
               <CheckpointDoDia
                 hoje={dia.hoje}

@@ -776,7 +776,19 @@ export function planoDoDia(
       const c = a.chave ? contagens[a.chave] : undefined;
       return { a, itens: c?.total ?? 0, atrasados: c?.atrasados ?? 0, minutos: minutosDaAtividade(a, c) } as Pedaco;
     })
-    .sort((x, y) => minutoDaHora(x.a.horario!) - minutoDaHora(y.a.horario!) || x.a.ordem - y.a.ordem);
+    /*
+      O que ainda tem o horário pela frente fica nele; o que já passou da
+      hora encaixa depois, no espaço livre. Na ordem só de horário, a
+      planilha das 9h e a semanal das 15h, vistas às 17h, ocupavam antes o
+      horário do checkpoint das 17h30 — que ia para as 18h07 dizendo "tem
+      horário marcado: 17:30".
+    */
+    .sort(
+      (x, y) =>
+        Number(minutoDaHora(x.a.horario!) < inicio) - Number(minutoDaHora(y.a.horario!) < inicio) ||
+        minutoDaHora(x.a.horario!) - minutoDaHora(y.a.horario!) ||
+        x.a.ordem - y.a.ordem
+    );
 
   const livres = comTrabalho
     .filter((a) => !temHorario(a))
@@ -823,7 +835,17 @@ export function planoDoDia(
       continue;
     }
     ocupado.push({ de, ate: de + p.minutos });
-    blocos.push(bloco(p, de, hora >= inicio ? `Tem horário marcado: ${p.a.horario}.` : `Era para as ${p.a.horario}: no primeiro espaço livre.`));
+    blocos.push(
+      bloco(
+        p,
+        de,
+        hora < inicio
+          ? `Era para as ${p.a.horario}: no primeiro espaço livre.`
+          : de === hora
+            ? `Tem horário marcado: ${p.a.horario}.`
+            : `Marcado para as ${p.a.horario}: no primeiro espaço livre depois.`
+      )
+    );
   }
 
   for (const p of livres) {

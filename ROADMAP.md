@@ -1127,9 +1127,65 @@ Pedido do Isaac, depois da 1.30.0, em partes:
 2. Triagem do NPS: sem comentário, o contato vem antes da
    classificação. Tentativa só vira "sem retorno" depois de ~2 horas.
    **1.32.0.**
-3. Google Agenda: o plano do dia vira eventos na agenda.
+3. Google Agenda: o plano do dia vira eventos na agenda. **1.33.0.**
 4. O ícone da aba era o padrão do Next.js (o triângulo da Vercel).
    **1.31.0.**
+
+### O plano do dia na Google Agenda (23/09/2026, 1.33.0)
+
+O que o Isaac disse: "preciso que você crie algo para a minha agenda no
+Google quando montar uma lista de coisas do dia".
+
+O que mudou:
+- **"Levar para a agenda", no Plano do dia.** Cada bloco do plano vira
+  um evento na Google Agenda da própria pessoa, no horário do bloco, em
+  roxo (a cor da plataforma). O título diz a atividade, a frente e
+  quantos itens; a descrição, o motivo da posição, o fora do prazo e os
+  itens com o link de cada um na plataforma (até 10, e "e mais N" com o
+  link do Meu dia).
+- **Confirma antes de mandar.** O clique confere a conexão com o Google
+  e mostra, na própria linha, quantos blocos vão, de que hora a que
+  hora e para qual conta. Só o "Enviar" manda. Sem conta conectada, a
+  linha leva à Agenda para conectar. O aviso diz o que o Google gravou
+  (novos, atualizados, tirados) e abre o dia na agenda.
+- **Sem duplicar.** Os eventos levam uma marca privada (o dia e o
+  bloco), lida só pela plataforma. Mandar de novo depois de mexer no
+  dia atualiza os mesmos eventos, cria os blocos novos e tira os que
+  saíram do plano. O que já terminou fica, como registro do dia; o
+  bloco em andamento é atualizado; evento sem a marca (os seus) nunca é
+  tocado. O que não coube no expediente não vai.
+- **Sem dado pessoal a mais.** O nome do cliente e o comentário do NPS
+  não vão para a agenda: no NPS vai só a nota. A agenda se compartilha;
+  a plataforma, não.
+
+De quebra, no mesmo plano:
+- **O checkpoint fica no horário dele.** Às 17h, a planilha das 8h e a
+  semanal das 15h, atrasadas, ocupavam antes o horário do checkpoint
+  das 17h30, que ia para as 18h07 dizendo "tem horário marcado: 17:30".
+  Agora o que ainda tem o horário pela frente fica nele, e o atrasado
+  encaixa em volta, dizendo "era para as 8h".
+- **Sem "Bom trabalho" antes da hora.** Enquanto os casos e o NPS
+  chegavam, a conta saía zerada e o plano dizia "Nada da rotina
+  pendente para hoje. Bom trabalho.". Agora aparece "Montando o plano…"
+  até os dados chegarem.
+
+Provas:
+- `check:plano-na-agenda` (novo, 22 pontos), com o Google trocado por um
+  falso que guarda as chamadas: um evento por bloco, o título, só os
+  itens que couberam, o fora do prazo, o link; **nem o nome do cliente
+  nem o comentário do NPS**; "e mais N"; a primeira vez cria, a segunda
+  atualiza sem duplicar, o bloco que saiu é tirado, o passado fica, o
+  em andamento é atualizado, evento sem a marca nunca é tocado; e as
+  chamadas: leitura pela marca no dia de Brasília (o evento de dia
+  inteiro fica de fora), POST na agenda principal com o horário em
+  Brasília e a marca, PUT no mesmo evento para atualizar.
+- `check:rotina` (48 pontos): o checkpoint das 17h30 no horário às 17h,
+  e a planilha atrasada no espaço livre com o motivo certo.
+- Na tela: "Levar para a agenda" conferiu a conta conectada e mostrou
+  "Vão 4 bloco(s), das 17:12 às 18:57, para a agenda de …"; fechei no
+  Cancelar. **Nada foi mandado para a sua agenda** — criar evento na
+  agenda de alguém é coisa que só a própria pessoa decide. O primeiro
+  envio de verdade é o seu.
 
 ### NPS: o contato antes da classificação, e sem retorno só depois de 2 horas (23/09/2026, 1.32.0)
 

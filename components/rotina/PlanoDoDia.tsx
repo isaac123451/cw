@@ -4,14 +4,17 @@ import Link from "next/link";
 
 import { useState } from "react";
 
-import { CalendarClock, CircleAlert, Loader2, Sparkles } from "lucide-react";
+import { CalendarClock, CalendarPlus, CircleAlert, Loader2, Sparkles } from "lucide-react";
 
 import SurfaceCard from "@/components/shared/SurfaceCard";
 import IconeDaFrente from "@/components/shared/IconeDaFrente";
 
 import { frente } from "@/lib/models/frentes";
-import type { PlanoDoDia as Plano } from "@/lib/models/meuDia";
-import type { AtividadeDaRotina } from "@/lib/models/rotina";
+import type { Contagem, PlanoDoDia as Plano } from "@/lib/models/meuDia";
+import type { AtividadeDaRotina, ChaveDaRotina } from "@/lib/models/rotina";
+import { eventosDoPlano } from "@/lib/models/planoNaAgenda";
+import { getGoogleStatus, levarPlanoParaAgenda } from "@/lib/actions/google";
+import { useToast } from "@/lib/context/ToastContext";
 import { descreverMinutos } from "@/components/rotina/formato";
 
 interface Leitura {
@@ -31,11 +34,28 @@ interface Leitura {
  * a IA acrescenta, a pedido, é a leitura: por onde começar e o que dá
  * para adiar quando não cabe, com os números que o plano já tem.
  */
-export default function PlanoDoDia({ plano, atividades }: { plano: Plano | null; atividades: AtividadeDaRotina[] }) {
+export default function PlanoDoDia({
+  plano,
+  atividades,
+  contagens,
+  hoje,
+}: {
+  plano: Plano | null;
+  atividades: AtividadeDaRotina[];
+  contagens?: Record<ChaveDaRotina, Contagem> | null;
+  hoje?: string | null;
+}) {
 
+  const { notify } = useToast();
   const [lendo, setLendo] = useState(false);
   const [leitura, setLeitura] = useState<Leitura | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+
+  /*
+    A Google Agenda: confere a conexão no clique (não a cada abertura da
+    tela), mostra o que vai e só manda na confirmação.
+  */
+  const [agenda, setAgenda] = useState<null | "conferindo" | "enviando" | { email?: string } | { aviso: string; link?: boolean }>(null);
 
   if (!plano) {
     return (
@@ -52,6 +72,50 @@ export default function PlanoDoDia({ plano, atividades }: { plano: Plano | null;
       ? plano.minutosNecessarios > 0 ? 100 : 0
       : Math.min(100, Math.round((plano.minutosNecessarios / plano.minutosDisponiveis) * 100));
   const linkDe = (id: string) => atividades.find((a) => a.id === id)?.link;
+
+  async function abrirAgenda() {
+    setAgenda("conferindo");
+    try {
+      const s = await getGoogleStatus();
+      if (!s.configurado) setAgenda({ aviso: "A integração com o Google não está ligada neste servidor." });
+      else if (!s.conectado) setAgenda({ aviso: "Conecte a sua Google Agenda primeiro, na tela Agenda.", link: true });
+      else setAgenda({ email: s.email });
+    } catch {
+      setAgenda({ aviso: "Não deu para conferir a conexão com o Google agora." });
+    }
+  }
+
+  async function enviarParaAgenda() {
+    if (!plano || !contagens || !hoje) return;
+    setAgenda("enviando");
+    try {
+      const eventos = eventosDoPlano({ plano, atividades, contagens, origem: window.location.origin });
+      const r = await levarPlanoParaAgenda({ dia: hoje, eventos });
+      if (!r.ok) {
+        notify({ tone: "error", title: "O plano não foi para a agenda.", detail: r.error });
+        setAgenda(null);
+        return;
+      }
+      notify({
+        tone: "success",
+        title: "Plano na sua Google Agenda.",
+        detail:
+          [
+            r.criados ? `${r.criados} bloco(s) novo(s)` : null,
+            r.atualizados ? `${r.atualizados} atualizado(s)` : null,
+            r.removidos ? `${r.removidos} tirado(s) — saíram do plano` : null,
+          ]
+            .filter(Boolean)
+            .join(" · ") || "Nada mudou.",
+        href: r.link,
+        hrefLabel: "Abrir a agenda",
+      });
+      setAgenda(null);
+    } catch {
+      notify({ tone: "error", title: "O plano não foi para a agenda.", detail: "Tente de novo em instantes." });
+      setAgenda(null);
+    }
+  }
 
   async function pedirLeitura() {
     setLendo(true);
@@ -81,17 +145,67 @@ export default function PlanoDoDia({ plano, atividades }: { plano: Plano | null;
       title="Plano do dia"
       description="O que falta da rotina, no expediente que sobra — na ordem do documento, com o que está fora do prazo na frente."
       action={
-        <button
-          type="button"
-          onClick={pedirLeitura}
-          disabled={lendo || plano.blocos.length + plano.naoCabe.length === 0}
-          className="flex shrink-0 items-center gap-2 rounded-xl border border-violet-200 px-3 py-2 text-xs font-medium text-violet-700 transition-colors hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {lendo ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-          {lendo ? "Lendo…" : leitura ? "Ler de novo" : "Pedir a leitura da IA"}
-        </button>
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={abrirAgenda}
+            disabled={plano.blocos.length === 0 || !contagens || !hoje || agenda === "conferindo" || agenda === "enviando"}
+            title="Cada bloco do plano vira um evento na sua Google Agenda. Mandar de novo atualiza, sem duplicar."
+            className="flex items-center gap-2 rounded-xl border border-zinc-200 px-3 py-2 text-xs font-medium text-zinc-700 transition-colors hover:border-violet-300 hover:text-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {agenda === "conferindo" || agenda === "enviando" ? <Loader2 size={14} className="animate-spin" /> : <CalendarPlus size={14} />}
+            Levar para a agenda
+          </button>
+          <button
+            type="button"
+            onClick={pedirLeitura}
+            disabled={lendo || plano.blocos.length + plano.naoCabe.length === 0}
+            className="flex items-center gap-2 rounded-xl border border-violet-200 px-3 py-2 text-xs font-medium text-violet-700 transition-colors hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {lendo ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+            {lendo ? "Lendo…" : leitura ? "Ler de novo" : "Pedir a leitura da IA"}
+          </button>
+        </div>
       }
     >
+
+      {agenda && typeof agenda === "object" && (
+        <div className="mb-4 rounded-xl bg-zinc-50 px-3.5 py-2.5 text-xs text-zinc-700 ring-1 ring-inset ring-zinc-200">
+          {"aviso" in agenda ? (
+            <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              {agenda.aviso}
+              {agenda.link && (
+                <Link href="/agenda" className="font-semibold text-violet-700 hover:underline">
+                  Ir para a Agenda
+                </Link>
+              )}
+              <button type="button" onClick={() => setAgenda(null)} className="ml-auto text-zinc-500 hover:text-zinc-800">
+                Fechar
+              </button>
+            </p>
+          ) : (
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+              <p className="min-w-0 flex-1 basis-60 leading-relaxed">
+                Vão <strong className="text-zinc-900">{plano.blocos.length} bloco(s)</strong>, das {plano.blocos[0]?.inicio} às{" "}
+                {plano.blocos[plano.blocos.length - 1]?.fim}, para a agenda{agenda.email ? ` de ${agenda.email}` : ""}. Mandar de novo depois
+                atualiza os mesmos blocos, sem duplicar; o que não coube hoje não vai.
+              </p>
+              <div className="flex items-center gap-1.5">
+                <button type="button" onClick={() => setAgenda(null)} className="rounded-lg px-2.5 py-1.5 text-zinc-600 hover:bg-zinc-100">
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={enviarParaAgenda}
+                  className="flex items-center gap-1.5 rounded-lg bg-zinc-900 px-3 py-1.5 font-semibold text-white hover:bg-zinc-800"
+                >
+                  <CalendarPlus size={13} /> Enviar
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="mb-4">
         <div className="flex flex-wrap items-baseline justify-between gap-2 text-xs text-zinc-600">
