@@ -104,6 +104,14 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.57.0",
+    data: "2026-09-24",
+    titulo: "Depoimentos prontos",
+    texto: "Na tela do Prêmio, as melhores falas de quem gosta da Cardápio Web: comentários de promotores do NPS e avaliações 5 estrelas do Google, sem ressalva. Primeiro quem aceitou ser case e o que já é público; o comentário do NPS sem aceite vem marcado para pedir autorização. Cada um se copia pronto, com o nome de quem disse.",
+    frentes: ["reclame-aqui", "nps", "google"],
+    href: "/reclame-aqui/premio",
+  },
+  {
     versao: "1.56.0",
     data: "2026-09-24",
     titulo: "O prêmio no calendário",

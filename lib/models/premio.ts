@@ -250,3 +250,82 @@ export function premioNoCalendario(entrada: { casos: Case[]; dataDeCorte: string
     diasAteOCorte: dias,
   };
 }
+
+/* ------------------------------------------------------------------ */
+/* Depoimentos prontos                                                 */
+/* ------------------------------------------------------------------ */
+
+export interface Depoimento {
+  origem: "nps" | "google";
+  ref: string;
+  autor: string;
+  fala: string;
+  nota: number;
+  data: string;
+  /** Pode ir para a campanha e para o marketing sem pedir de novo. */
+  liberado: boolean;
+  /** Por que está liberado — ou o que falta para estar. */
+  uso: string;
+  link?: string;
+}
+
+/* Uma ressalva no meio do elogio ("ótimo, mas demorou") não serve de depoimento. */
+const RESSALVA = /\b(mas|porem|entretanto|contudo|so que|poderia|deveria|demor|problema|ruim|pessimo|falha|erro|bug|nao gostei|reclam)/;
+const semAcento = (t: string) => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+
+/**
+ * As melhores falas de quem gosta da Cardápio Web.
+ *
+ * Os promotores do NPS com comentário e as avaliações 5 estrelas do
+ * Google com texto; sem ressalva, de 25 caracteres para cima. Primeiro
+ * quem aceitou ser case, depois o que já é público (o Google), depois o
+ * resto — que precisa de autorização antes de ir para o marketing.
+ */
+export function depoimentosDoPremio(entrada: {
+  nps: NpsResponseView[];
+  google?: { id: string; estrelas: number; autor: string; texto?: string; identificado: boolean; publicadaEm: string; link?: string }[];
+}): Depoimento[] {
+
+  const lista: Depoimento[] = [];
+
+  for (const r of entrada.nps) {
+    const fala = r.comment?.trim() ?? "";
+    if (r.score < 9 || fala.length < 25 || RESSALVA.test(semAcento(fala))) continue;
+    lista.push({
+      origem: "nps",
+      ref: r.id,
+      autor: nomeDoCliente(r),
+      fala,
+      nota: r.score,
+      data: (r.respondedAt ?? "").slice(0, 10),
+      liberado: r.aceitaCase === true,
+      uso: r.aceitaCase === true ? "aceitou ser case" : "comentário privado do NPS: pedir autorização antes de publicar",
+    });
+  }
+
+  for (const g of entrada.google ?? []) {
+    const fala = g.texto?.trim() ?? "";
+    if (g.estrelas !== 5 || !g.identificado || fala.length < 25 || RESSALVA.test(semAcento(fala))) continue;
+    lista.push({
+      origem: "google",
+      ref: g.id,
+      autor: g.autor,
+      fala,
+      nota: 5,
+      data: g.publicadaEm.slice(0, 10),
+      liberado: true,
+      uso: "avaliação pública no Google",
+      link: g.link,
+    });
+  }
+
+  /* Liberado primeiro (case, depois Google), e dentro de cada grupo a fala de tamanho bom e mais recente. */
+  const peso = (d: Depoimento) => (d.origem === "nps" && d.liberado ? 0 : d.origem === "google" ? 1 : 2);
+  const tamanho = (d: Depoimento) => Math.abs(Math.min(d.fala.length, 400) - 160);
+  return lista.sort((a, b) => peso(a) - peso(b) || tamanho(a) - tamanho(b) || b.data.localeCompare(a.data));
+}
+
+/** O depoimento pronto para colar: a fala entre aspas e quem disse. */
+export function textoDoDepoimento(d: Pick<Depoimento, "fala" | "autor">) {
+  return `“${d.fala.replace(/\s+/g, " ")}” — ${d.autor}, cliente Cardápio Web`;
+}

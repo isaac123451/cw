@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 24/09/2026. Aplicação **1.56.0**, extensão **1.56.0**.
+Atualizado em 24/09/2026. Aplicação **1.57.0**, extensão **1.57.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,28 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### Depoimentos prontos (24/09/2026, 1.57.0)
+
+Último item da Fase 23 — fecha a fase ("Prêmio Reclame Aqui"):
+"promotores que aceitaram ser case e as melhores falas dos que avaliaram
+bem, para a campanha e para o time de marketing".
+
+- **De onde vêm** (`depoimentosDoPremio`): comentários de promotores do
+  NPS (9 e 10) e avaliações 5 estrelas do Google com autor identificado —
+  de 25 caracteres para cima e sem ressalva ("ótimo, mas demorou" não
+  serve). O caso do Reclame Aqui não guarda o texto da avaliação do
+  consumidor, então não entra.
+- **O que pode ser usado:** quem aceitou ser case (`aceitaCase`) e a
+  avaliação pública do Google, sim; o comentário do NPS sem aceite vem
+  marcado "pedir autorização antes de publicar". Nessa ordem, e dentro de
+  cada grupo a fala de tamanho bom e mais recente.
+- **O cartão** na tela do Prêmio: Liberados / Todos, copiar cada um
+  (“fala” — Nome, cliente Cardápio Web) ou os 20 primeiros de uma vez.
+
+Provas: `check:premio` com 4 pontos novos (a ordem case → Google → NPS
+sem aceite; ressalva, nota 8, fala curta, 4 estrelas e anônimo de fora;
+o texto pronto). A tela do Prêmio abre sem erro. `tsc` e `lint` limpos.
 
 ### O prêmio no calendário (24/09/2026, 1.56.0)
 

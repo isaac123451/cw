@@ -9,7 +9,7 @@
  */
 import type { Case } from "../lib/models/case";
 import type { NpsResponseView } from "../lib/models/nps";
-import { janelaNaDataDeCorte, premioNoCalendario } from "../lib/models/premio";
+import { depoimentosDoPremio, janelaNaDataDeCorte, premioNoCalendario, textoDoDepoimento } from "../lib/models/premio";
 import { contatosDoPremio, FILTROS_PADRAO, linkDoWhatsApp, mensagemDaVez, mensagemParaContato, resumoDaCampanha, telefoneInternacional } from "../lib/models/premio";
 
 let falhas = 0;
@@ -83,6 +83,28 @@ console.log("\n  O prêmio no calendário\n");
   conferir("meta alta demais: nem com todas avaliando 10", impossivel.faltam, null);
   const ja = premioNoCalendario({ casos, dataDeCorte: "2026-11-15", notaMeta: 1, hoje: "2026-09-24" });
   conferir("meta já batida: faltam 0", ja.faltam, 0);
+}
+
+console.log("\n  Depoimentos prontos\n");
+{
+  const d = depoimentosDoPremio({
+    nps: [
+      nps({ id: "d1", score: 10, customerName: "Loja A", comment: "O sistema mudou a nossa operação, os pedidos ficaram organizados.", aceitaCase: true }),
+      nps({ id: "d2", score: 9, customerName: "Loja B", comment: "Atendimento excelente e a equipe sempre muito atenciosa com a gente." }),
+      nps({ id: "d3", score: 10, customerName: "Loja C", comment: "Muito bom, mas demorou para configurar a impressora." }),
+      nps({ id: "d4", score: 8, customerName: "Loja D", comment: "Gostei bastante do cardápio digital e da facilidade no dia a dia." }),
+      nps({ id: "d5", score: 10, customerName: "Loja E", comment: "Top" }),
+    ],
+    google: [
+      { id: "g1", estrelas: 5, autor: "Maria", texto: "Plataforma completa, suporte rápido e o cardápio ficou lindo.", identificado: true, publicadaEm: "2026-09-01T10:00:00Z" },
+      { id: "g2", estrelas: 5, autor: "Anônimo", texto: "Plataforma completa, suporte rápido e o cardápio ficou lindo.", identificado: false, publicadaEm: "2026-09-01T10:00:00Z" },
+      { id: "g3", estrelas: 4, autor: "João", texto: "Bom sistema no geral, atende o que precisamos no restaurante.", identificado: true, publicadaEm: "2026-09-01T10:00:00Z" },
+    ],
+  });
+  conferir("case primeiro, Google depois, o NPS sem autorização por último", d.map((x) => x.ref), ["d1", "g1", "d2"]);
+  conferir("elogio com ressalva, nota 8, fala curta, 4 estrelas e anônimo ficam de fora", d.length, 3);
+  conferir("o NPS sem aceite diz que precisa de autorização", d.find((x) => x.ref === "d2")?.liberado, false);
+  conferir("pronto para colar", textoDoDepoimento({ fala: "Muito  bom", autor: "Ana" }), "“Muito bom” — Ana, cliente Cardápio Web");
 }
 
 console.log(falhas === 0 ? "\n  A lista do prêmio tira as pessoas certas.\n" : `\n  ${falhas} ponto(s) a corrigir.\n`);
