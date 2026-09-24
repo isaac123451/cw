@@ -47,6 +47,7 @@
     "check:carga": "tsx scripts/check-carga.ts",
     "check:sugestao-texto": "tsx scripts/check-sugestao-texto.ts",
     "check:links-do-ra": "tsx scripts/check-links-do-ra.ts",
+    "check:imersao": "tsx scripts/check-imersao.ts",
     "medir:sugestao": "tsx scripts/medir-sugestao.ts",
     "check:segmentos-redes": "tsx scripts/check-segmentos-redes.ts",
     "check:motor-proprio": "tsx scripts/check-motor-proprio.ts",

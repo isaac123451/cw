@@ -18,6 +18,7 @@ import { useMovements } from "@/lib/context/MovementsContext";
 
 import AcionarAreaModal from "./AcionarAreaModal";
 import ContatoModal from "./ContatoModal";
+import ValidacaoModal from "./ValidacaoModal";
 import ImersaoModal from "./ImersaoModal";
 import ModeracaoModal from "./ModeracaoModal";
 import PedidoAvaliacaoModal from "./PedidoAvaliacaoModal";
@@ -107,7 +108,12 @@ export function TratativaProvider({ children }: { children: ReactNode }) {
         <TriagemModal key={chave} item={aberto.item} onClose={fechar} onSalvo={salvo} />
       )}
 
-      {aberto?.tipo === "contato" && (
+      {/* A validação tem o próprio diálogo: pergunta, resposta e compromisso — não o formulário de contato. */}
+      {aberto?.tipo === "contato" && aberto.contato === "validacao" && (
+        <ValidacaoModal key={chave} item={aberto.item} onClose={fechar} onSalvo={salvo} />
+      )}
+
+      {aberto?.tipo === "contato" && aberto.contato !== "validacao" && (
         <ContatoModal
           key={chave}
           item={aberto.item}

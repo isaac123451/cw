@@ -33,6 +33,7 @@ import {
   type AcaoDoPasso,
   type PassoDaTrilha,
 } from "@/lib/models/trilha";
+import { estadoDaValidacao, type EstadoDaValidacao } from "@/lib/models/tratativa";
 import { descreverRegistro } from "@/lib/services/horasUteis";
 import {
   movementStatus,
@@ -66,7 +67,7 @@ const ROTULO_DA_ACAO: Record<AcaoDoPasso, string> = {
   contato: "Registrar o 1º contato",
   tentativa: "Registrar nova tentativa",
   "acionar-area": "Acionar área",
-  validacao: "Cliente confirmou a solução",
+  validacao: "Validar com o cliente",
   resposta: "Escrever a resposta",
   "pedir-avaliacao": "Pedir a avaliação",
 };
@@ -97,13 +98,30 @@ export default function TrilhaDoCaso({ data, aoMudarNoServidor, irParaResposta, 
   const statusDaArea = aberta && agora ? movementStatus(aberta, { agora, expediente }) : undefined;
   const concluidas = movementsOf(data.id, movements).filter((m) => m.returnedAt).length;
 
+  /* A pergunta de validação feita e a pendência apontada — lidas só quando a validação é o passo da vez. */
+  const [validacao, setValidacao] = useState<EstadoDaValidacao | undefined>(undefined);
+
   const passos = trilhaDoCaso(data, {
     areaAberta: aberta
       ? { destino: aberta.destination, vence: statusDaArea ? quandoVence(statusDaArea.prazo) : undefined }
       : undefined,
     areasConcluidas: concluidas,
     agora: agora ?? undefined,
+    validacao,
   });
+
+  const naValidacao = passos.find((p) => p.estado === "atual")?.id === "validacao";
+
+  useEffect(() => {
+    if (!naValidacao) return;
+    let ativo = true;
+    listarContatos(data.protocol)
+      .then((contatos) => ativo && setValidacao(estadoDaValidacao(contatos)))
+      .catch(() => undefined);
+    return () => {
+      ativo = false;
+    };
+  }, [naValidacao, data.protocol, data.ultimoContatoEm, data.ultimaRespostaEm]);
 
   const atual = passos.find((p) => p.estado === "atual");
   const feitos = passos.filter((p) => p.estado === "feito").length;

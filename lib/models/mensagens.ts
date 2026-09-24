@@ -131,6 +131,16 @@ export function mensagemDeAtualizacao(d: { nome?: string; area?: string; retorno
 }
 
 /**
+ * A pergunta do Passo 6: "confirmar se tudo voltou a funcionar
+ * perfeitamente e se não restaram dúvidas ou pendências".
+ */
+export function mensagemDeValidacao(d: { nome?: string; agente?: string }) {
+  const nome = primeiroNome(d.nome);
+  const quem = d.agente ? ` Aqui é ${primeiroNome(d.agente)}, da Cardápio Web.` : "";
+  return `Oi${nome ? `, ${nome}` : ""}! Tudo bem?${quem} Passando para confirmar se está tudo funcionando direitinho por aí depois do que resolvemos. Ficou alguma dúvida ou pendência? Se tiver qualquer coisa, me conta que eu cuido.`;
+}
+
+/**
  * A mensagem pública transparente do Passo 4.
  *
  * Sem dado pessoal nenhum — é pública. Diz que tentamos por telefone e

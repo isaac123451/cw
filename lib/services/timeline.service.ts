@@ -147,7 +147,14 @@ export function buildTimeline(
   for (const c of contatos) {
     entries.push({
       id: `contato-${c.id}`,
-      title: c.id === primeiro?.id ? "1º contato" : TITULO_DO_CONTATO[c.tipo] ?? "Contato",
+      title:
+        c.id === primeiro?.id
+          ? "1º contato"
+          : c.tipo === "validacao" && c.resultado === "aguardando"
+            ? "Validação pedida ao cliente"
+            : c.tipo === "validacao" && c.resultado === "pendencia"
+              ? "Cliente apontou pendência"
+              : TITULO_DO_CONTATO[c.tipo] ?? "Contato",
       detail: [
         c.id === primeiro?.id && c.tipo !== "contato" ? TITULO_DO_CONTATO[c.tipo].toLowerCase() : null,
         c.canal,

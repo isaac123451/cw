@@ -21,7 +21,9 @@ export type ResultadoDoContato =
   | "sem-resposta"
   | "nao-atendeu"
   | "caixa-postal"
-  | "enviado";
+  | "enviado"
+  /** Validação: o cliente respondeu, mas ainda há o que resolver. */
+  | "pendencia";
 
 /**
  * Quanto esperar antes de uma tentativa virar "sem retorno".
@@ -95,10 +97,11 @@ export const TIPOS_DE_CONTATO: TipoDeContatoInfo[] = [
   },
   {
     id: "validacao",
-    rotulo: "Cliente confirmou a solução",
-    quando: "O Passo 6: tudo voltou a funcionar e não restou pendência.",
+    rotulo: "Validação da solução",
+    quando: "O Passo 6: perguntar se tudo voltou a funcionar e registrar o que o cliente respondeu.",
     resultadoPadrao: "respondeu",
-    resultados: ["respondeu"],
+    /* Confirmou, apontou pendência, ou a pergunta foi feita e o cliente ainda não respondeu. */
+    resultados: ["respondeu", "pendencia", "aguardando"],
   },
 ];
 
@@ -109,6 +112,7 @@ export const ROTULO_DO_RESULTADO: Record<ResultadoDoContato, string> = {
   "nao-atendeu": "Não atendeu",
   "caixa-postal": "Caixa postal",
   enviado: "Enviado",
+  pendencia: "Apontou pendência",
 };
 
 export const CANAIS_DE_CONTATO = [
@@ -178,7 +182,8 @@ export function resumirContatos(
   const primeiro = ordenados.find((c) => c.tipo !== "pedido-avaliacao");
   const ultimo = ordenados[ordenados.length - 1];
 
-  const respostas = ordenados.filter((c) => c.resultado === "respondeu");
+  /* A pendência apontada na validação também é o cliente respondendo. */
+  const respostas = ordenados.filter((c) => c.resultado === "respondeu" || c.resultado === "pendencia");
   const ultimaResposta = respostas[respostas.length - 1];
 
   /* A tentativa ainda aguardando retorno não conta: o cliente ainda pode responder. */
@@ -190,7 +195,8 @@ export function resumirContatos(
       (!ultimaResposta || c.em > ultimaResposta.em)
   ).length;
 
-  const validacoes = ordenados.filter((c) => c.tipo === "validacao");
+  /* Só a confirmação valida: a pergunta feita e a pendência apontada, não. */
+  const validacoes = ordenados.filter((c) => c.tipo === "validacao" && (c.resultado ?? "respondeu") === "respondeu");
   const pedidos = ordenados.filter((c) => c.tipo === "pedido-avaliacao");
 
   return {
@@ -203,6 +209,37 @@ export function resumirContatos(
     validadoEm: validacoes[validacoes.length - 1]?.em,
     ultimoPedidoAvaliacaoEm: pedidos[pedidos.length - 1]?.em,
     pedidosDeAvaliacao: pedidos.length,
+  };
+}
+
+/**
+ * Onde está a validação (Passo 6), pela lista de contatos.
+ *
+ * A pergunta "tudo resolvido?" feita e sem resposta, e a pendência que
+ * o cliente apontou, não são validação — mas mudam o que a trilha diz:
+ * "aguardando o cliente desde 14:10" e "apontou pendência: a impressora
+ * ainda falha" pedem coisas diferentes de quem tria.
+ */
+export interface EstadoDaValidacao {
+  /** A pergunta mais recente ainda sem resposta. */
+  pedidaEm?: string;
+  pedidaPor?: string;
+  /** A pendência mais recente, se veio depois da última pergunta. */
+  pendencia?: { em: string; nota?: string };
+}
+
+export function estadoDaValidacao(
+  contatos: Pick<ContatoView, "tipo" | "resultado" | "em" | "nota" | "autor">[]
+): EstadoDaValidacao {
+  const doPasso = contatos.filter((c) => c.tipo === "validacao").sort((a, b) => a.em.localeCompare(b.em));
+  const ultima = doPasso[doPasso.length - 1];
+  if (!ultima || (ultima.resultado ?? "respondeu") === "respondeu") return {};
+  if (ultima.resultado === "pendencia") return { pendencia: { em: ultima.em, nota: ultima.nota } };
+  const pendencia = [...doPasso].reverse().find((c) => c.resultado === "pendencia");
+  return {
+    pedidaEm: ultima.em,
+    pedidaPor: ultima.autor,
+    ...(pendencia ? { pendencia: { em: pendencia.em, nota: pendencia.nota } } : {}),
   };
 }
 

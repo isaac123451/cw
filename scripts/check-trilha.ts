@@ -18,7 +18,7 @@ import {
   semNoticia,
 } from "../lib/models/cadencia";
 import { mensagemDeAcionamento } from "../lib/models/mensagens";
-import { resumirContatos, type ContatoView } from "../lib/models/tratativa";
+import { estadoDaValidacao, resumirContatos, type ContatoView } from "../lib/models/tratativa";
 import { descreverRegistro, instanteDe } from "../lib/services/horasUteis";
 import { movementStatus } from "../lib/services/movement.service";
 import { buildTimeline, quandoNaLinha } from "../lib/services/timeline.service";
@@ -256,6 +256,33 @@ confere(
   [msg.startsWith("@financeiro"), msg.includes("Link do RA: https://"), msg.includes("Conta do cliente: https://"), msg.includes("retorno até 1 dia útil"), msg.includes("Contato: (11) 98765-4321 - Maria")],
   [true, true, true, true, true]
 );
+
+console.log("\n— A validação com cara de validação (1.40) —");
+{
+  const ct = (tipo: ContatoView["tipo"], resultado: ContatoView["resultado"], em: string, nota?: string): ContatoView => ({
+    id: `${tipo}-${em}`, tipo, canal: "WhatsApp", resultado, em: br(em), autor: "Isaac", ...(nota ? { nota } : {}),
+  });
+  const base = [ct("contato", "respondeu", "2026-09-14 09:30")];
+  const perguntou = [...base, ct("validacao", "aguardando", "2026-09-15 14:10")];
+  confere("a pergunta feita não valida o caso", resumirContatos(perguntou).validadoEm, undefined);
+  confere("e não conta como resposta do cliente", resumirContatos(perguntou).ultimaRespostaEm, br("2026-09-14 09:30"));
+  confere("o estado diz que aguarda desde a pergunta", estadoDaValidacao(perguntou), { pedidaEm: br("2026-09-15 14:10"), pedidaPor: "Isaac" });
+
+  const pendente = [...perguntou, ct("validacao", "pendencia", "2026-09-15 15:00", 'O cliente: "a impressora ainda falha"')];
+  confere("a pendência não valida, mas é o cliente respondendo", [resumirContatos(pendente).validadoEm, resumirContatos(pendente).ultimaRespostaEm], [undefined, br("2026-09-15 15:00")]);
+  const comPendencia = { ...falou, ultimaRespostaEm: br("2026-09-15 15:00") };
+  const passoVal = trilhaDoCaso(comPendencia, { agora: new Date(br("2026-09-15 16:00")), validacao: estadoDaValidacao(pendente) }).find((p) => p.id === "validacao");
+  confere("a trilha mostra a pendência e pede para resolver", [passoVal?.estado, passoVal?.curto, passoVal?.detalhe?.includes("a impressora ainda falha")], ["atual", "resolver a pendência", true]);
+
+  const confirmou = [...pendente, ct("validacao", "aguardando", "2026-09-16 10:00"), ct("validacao", "respondeu", "2026-09-16 11:00")];
+  confere("só a confirmação valida — com a hora dela", resumirContatos(confirmou).validadoEm, br("2026-09-16 11:00"));
+  confere("depois da confirmação, nada pendente", estadoDaValidacao(confirmou), {});
+  confere("validação antiga sem resultado gravado continua valendo", resumirContatos([{ tipo: "validacao", canal: "WhatsApp", em: br("2026-09-16 11:00"), autor: "Isaac" }]).validadoEm, br("2026-09-16 11:00"));
+
+  const validado = { ...comPendencia, validadoEm: br("2026-09-16 11:00"), createdAt: "2026-09-10" };
+  const passoResp = trilhaDoCaso(validado, { agora: new Date(br("2026-09-16 12:00")) }).find((p) => p.id === "resposta");
+  confere("validado: a resposta é a vez, com os dias sem resposta no portal", [passoResp?.estado, passoResp?.detalhe?.includes('"não respondida" há 6 dias')], ["atual", true]);
+}
 
 console.log(falhas === 0 ? "\nTudo certo.\n" : `\n${falhas} falha(s).\n`);
 process.exit(falhas === 0 ? 0 : 1);

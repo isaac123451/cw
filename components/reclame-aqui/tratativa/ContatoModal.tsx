@@ -199,7 +199,7 @@ export default function ContatoModal({ item, tipoInicial, onClose, onSalvo }: Pr
             O que aconteceu
           </p>
           <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
-            {TIPOS_DE_CONTATO.map((t) => (
+            {TIPOS_DE_CONTATO.filter((t) => t.id !== "validacao").map((t) => (
               <button
                 key={t.id}
                 type="button"

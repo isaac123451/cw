@@ -37,6 +37,14 @@ interface EstablishmentsContextType {
 
   removeEstablishment: (id: string) => void;
 
+  /**
+   * O que o servidor já gravou, só na tela — sem gravar de novo.
+   *
+   * A imersão cria a conta e salva o link do Crisp por ações próprias,
+   * que respondem só depois de gravar; a lista acompanha com isto.
+   */
+  aplicarDoServidor: (item: Pick<Establishment, "id"> & Partial<Establishment>) => void;
+
   /** Busca por id ou por slug — a rota usa slug, os vínculos usam id. */
   findEstablishment: (
     key: string
@@ -120,6 +128,15 @@ export function EstablishmentsProvider({
         );
         sincronizar(() => removeEstablishment(id));
       },
+
+      aplicarDoServidor: (item) =>
+        setEstablishments((prev) => {
+          const existe = prev.some((e) => e.id === item.id);
+          const lista = existe
+            ? prev.map((e) => (e.id === item.id ? { ...e, ...item } : e))
+            : [...prev, item as Establishment];
+          return lista.sort((a, b) => a.name.localeCompare(b.name));
+        }),
 
       findEstablishment: (key) =>
         establishments.find(

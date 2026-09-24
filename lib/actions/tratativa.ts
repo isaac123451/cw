@@ -18,7 +18,9 @@ import type { ContatoView, ResultadoDoContato, ResumoDosContatos } from "@/lib/m
 import { expedienteValido, type Expediente } from "@/lib/services/horasUteis";
 import type { Prisma } from "@prisma/client";
 import type { Prioridade } from "@/lib/models/case";
-import { linkDoPortal } from "@/lib/models/establishment";
+import { digitosDoDocumento, linkDoPortal, type Establishment } from "@/lib/models/establishment";
+import { conversasDoRegistro } from "@/lib/services/conversas.service";
+import { slugify } from "@/lib/services/slug";
 import type { CaseMovement, PrazosDeArea } from "@/lib/models/movement";
 import { AREAS_INTERNAS } from "@/lib/models/mensagens";
 import { LIMITE_DE_REPETICAO, semelhanca } from "@/lib/services/lgpd";
@@ -722,6 +724,7 @@ export async function salvarPrazosDeArea(
 
 export interface RetratoDoCliente {
   estabelecimento?: {
+    id: string;
     nome: string;
     slug: string;
     plano?: string;
@@ -746,6 +749,8 @@ export interface RetratoDoCliente {
   google: { id: string; estrelas: number; status: string; dia: string; texto: string }[];
   /** A fase quando não há estabelecimento vinculado — só pelo que o caso diz. */
   faseSemCadastro?: string;
+  /** As conversas do WhatsApp guardadas do caso ou da conta, e a última fala do cliente. */
+  conversas: { total: number; ultimaFala?: { texto: string; em?: string } };
 }
 
 /**
@@ -816,12 +821,15 @@ export async function retratoDoCliente(protocol: string): Promise<RetratoDoClien
   if (est) vinculoGoogle.push({ establishmentId: est.id });
   if (nps.length) vinculoGoogle.push({ npsResponseId: { in: nps.map((r) => r.id) } });
 
-  const google = await ctx.prisma.avaliacaoGoogle.findMany({
-    where: { OR: vinculoGoogle },
-    select: { id: true, estrelas: true, notaAtualizada: true, status: true, publicadaEm: true, texto: true },
-    orderBy: { publicadaEm: "desc" },
-    take: 10,
-  });
+  const [google, conversas] = await Promise.all([
+    ctx.prisma.avaliacaoGoogle.findMany({
+      where: { OR: vinculoGoogle },
+      select: { id: true, estrelas: true, notaAtualizada: true, status: true, publicadaEm: true, texto: true },
+      orderBy: { publicadaEm: "desc" },
+      take: 10,
+    }),
+    conversasDoRegistro(ctx.prisma, { caseId: caso.id, establishmentId: est?.id ?? null }).catch(() => []),
+  ]);
 
   const dia = (d: Date) => d.toISOString().slice(0, 10);
 
@@ -844,6 +852,7 @@ export async function retratoDoCliente(protocol: string): Promise<RetratoDoClien
   return {
     estabelecimento: est
       ? {
+          id: est.id,
           nome: est.name,
           slug: est.slug,
           plano: est.plan,
@@ -884,7 +893,158 @@ export async function retratoDoCliente(protocol: string): Promise<RetratoDoClien
       dia: diaNaOperacao(a.publicadaEm),
       texto: (a.texto ?? "").slice(0, 160),
     })),
+    conversas: {
+      total: conversas.length,
+      ultimaFala: conversas.find((c) => c.ultimaDoCliente)?.ultimaDoCliente,
+    },
   };
+}
+
+/* ============================================================
+   IMERSÃO QUE PREPARA O CONTATO (1.40)
+============================================================ */
+
+/*
+  O Isaac: "que seja possível criar o estabelecimento na ferramenta na
+  parte da imersão, adição do Crisp por lá também para facilitar o
+  preenchimento". Sem conta vinculada, a imersão só avisava; agora ela
+  vincula, cria e completa os links — cada um gravado no servidor antes
+  de a tela dizer que foi.
+*/
+
+const LINKS_DA_CONTA = {
+  crispUrl: { padrao: /^https:\/\/(app\.)?crisp\.chat\/\S+$/, nome: "do Crisp", exemplo: "https://app.crisp.chat/…" },
+  portalUrl: { padrao: /^https:\/\/portal\.cardapioweb\.com\/\S+$/, nome: "do portal", exemplo: "https://portal.cardapioweb.com/…" },
+} as const;
+
+function linkDaConta(campo: keyof typeof LINKS_DA_CONTA, valor?: string): { ok: true; valor: string | null } | Falha {
+  const limpo = String(valor ?? "").trim();
+  if (!limpo) return { ok: true, valor: null };
+  const regra = LINKS_DA_CONTA[campo];
+  if (limpo.length > 500 || !regra.padrao.test(limpo)) return { ok: false, erro: `Cole o link ${regra.nome} inteiro, como ${regra.exemplo}` };
+  return { ok: true, valor: limpo };
+}
+
+/** Liga a reclamação a uma conta que já existe — escolha de quem trabalha, que nada automático desfaz. */
+export async function vincularEstabelecimentoDoCaso(entrada: { protocol: string; establishmentId: string }): Promise<{ ok: true } | Falha> {
+  const quem = await quemGrava("AGENTE", MODULO);
+  if ("erro" in quem) return { ok: false, erro: quem.erro! };
+  try {
+    const existe = await quem.ctx.prisma.establishment.findUnique({ where: { id: entrada.establishmentId }, select: { id: true } });
+    if (!existe) return { ok: false, erro: "Este estabelecimento não existe mais." };
+    const r = await quem.ctx.prisma.case.updateMany({
+      where: { protocol: entrada.protocol },
+      data: { establishmentId: existe.id, establishmentManual: true },
+    });
+    if (r.count === 0) return { ok: false, erro: "Esta reclamação não existe mais." };
+    updateTag(CASES_TAG);
+    return { ok: true };
+  } catch (erro) {
+    return falha(erro, "vínculo do estabelecimento");
+  }
+}
+
+/**
+ * Cria a conta a partir da reclamação e já liga as duas.
+ *
+ * O nome e o CPF/CNPJ vêm preenchidos da reclamação; telefone, e-mail,
+ * cidade e UF também, quando não estão mascarados. Documento que já é de
+ * outra conta não cria duplicata: devolve o nome dela, para vincular.
+ */
+export async function criarEstabelecimentoDoCaso(entrada: {
+  protocol: string;
+  nome: string;
+  documento?: string;
+  crispUrl?: string;
+  portalUrl?: string;
+}): Promise<{ ok: true; estabelecimento: Establishment } | Falha> {
+  const nome = String(entrada.nome ?? "").replace(/\s+/g, " ").trim().slice(0, 120);
+  if (nome.length < 2) return { ok: false, erro: "Escreva o nome do estabelecimento." };
+
+  const documento = digitosDoDocumento(entrada.documento);
+  if (String(entrada.documento ?? "").trim() && !documento) return { ok: false, erro: "O CPF/CNPJ precisa ter 11 ou 14 dígitos." };
+
+  const crisp = linkDaConta("crispUrl", entrada.crispUrl);
+  if (!crisp.ok) return crisp;
+  const portal = linkDaConta("portalUrl", entrada.portalUrl);
+  if (!portal.ok) return portal;
+
+  const quem = await quemGrava("AGENTE", "estabelecimentos");
+  if ("erro" in quem) return { ok: false, erro: quem.erro! };
+  const prisma = quem.ctx.prisma;
+
+  try {
+    const caso = await prisma.case.findUnique({ where: { protocol: entrada.protocol }, select: { id: true, phone: true, email: true, city: true, state: true } });
+    if (!caso) return { ok: false, erro: "Esta reclamação não existe mais." };
+
+    if (documento) {
+      const mesma = await prisma.establishment.findFirst({ where: { document: documento }, select: { name: true } });
+      if (mesma) return { ok: false, erro: `${mesma.name} já tem este CPF/CNPJ — procure pelo nome e vincule.` };
+    }
+
+    const base = slugify(nome) || "estabelecimento";
+    let slug = base;
+    for (let n = 2; await prisma.establishment.findUnique({ where: { slug }, select: { id: true } }); n += 1) slug = `${base}-${n}`;
+
+    const limpo = (v: string | null) => (v && !v.includes("•") ? v : null);
+    const criado = await prisma.establishment.create({
+      data: {
+        slug,
+        name: nome,
+        document: documento,
+        crispUrl: crisp.valor,
+        portalUrl: portal.valor,
+        plan: "",
+        status: "Ativo",
+        city: caso.city,
+        state: caso.state,
+        phone: limpo(caso.phone),
+        email: limpo(caso.email),
+      },
+    });
+    await prisma.case.update({ where: { id: caso.id }, data: { establishmentId: criado.id, establishmentManual: true } });
+
+    updateTag(WORKSPACE_TAG);
+    updateTag(CASES_TAG);
+
+    return {
+      ok: true,
+      estabelecimento: {
+        id: criado.id,
+        slug: criado.slug,
+        name: criado.name,
+        document: criado.document ?? undefined,
+        crispUrl: criado.crispUrl ?? undefined,
+        portalUrl: criado.portalUrl ?? undefined,
+        city: criado.city ?? undefined,
+        state: criado.state ?? undefined,
+        plan: criado.plan,
+        status: criado.status as Establishment["status"],
+        phone: criado.phone ?? undefined,
+        email: criado.email ?? undefined,
+      },
+    };
+  } catch (erro) {
+    return falha(erro, "criação do estabelecimento");
+  }
+}
+
+/** O link do Crisp ou do portal de uma conta — o campo que grava ao sair. Vazio apaga. */
+export async function salvarLinkDaConta(entrada: { id: string; campo: "crispUrl" | "portalUrl"; valor: string }): Promise<{ ok: true } | Falha> {
+  if (entrada.campo !== "crispUrl" && entrada.campo !== "portalUrl") return { ok: false, erro: "Campo desconhecido." };
+  const link = linkDaConta(entrada.campo, entrada.valor);
+  if (!link.ok) return link;
+
+  const quem = await quemGrava("AGENTE", "estabelecimentos");
+  if ("erro" in quem) return { ok: false, erro: quem.erro! };
+  try {
+    const r = await quem.ctx.prisma.establishment.updateMany({ where: { id: entrada.id }, data: { [entrada.campo]: link.valor } });
+    if (r.count === 0) return { ok: false, erro: "Este estabelecimento não existe mais." };
+    updateTag(WORKSPACE_TAG);
+    return { ok: true };
+  } catch (erro) {
+    return falha(erro, "link da conta");
+  }
 }
 
 /* ============================================================

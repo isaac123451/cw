@@ -1,5 +1,6 @@
 import { respondida, type Case } from "@/lib/models/case";
 import { pedidoDeAvaliacao } from "@/lib/models/cadencia";
+import type { EstadoDaValidacao } from "@/lib/models/tratativa";
 import { descreverRegistro } from "@/lib/services/horasUteis";
 
 /**
@@ -68,6 +69,8 @@ export interface ContextoDaTrilha {
   areasConcluidas?: number;
   /** O instante de referência — a janela de 6 meses do follow-up depende dele. */
   agora?: Date;
+  /** A pergunta de validação feita e a pendência apontada — ver `estadoDaValidacao`. */
+  validacao?: EstadoDaValidacao;
 }
 
 /** O dia a partir do qual a plataforma registra contatos e validação. */
@@ -201,18 +204,26 @@ export function trilhaDoCaso(
     acao: "acionar-area",
   });
 
+  /* A pergunta feita e a pendência apontada não validam, mas mudam o que a pessoa tem de fazer. */
+  const pendencia = contexto.validacao?.pendencia;
+  const pedida = contexto.validacao?.pedidaEm;
+
   empurrar({
     id: "validacao",
     numero: 6,
     fase: "Validação",
     titulo: "Validação com o cliente",
-    curto: "validar a solução com o cliente",
+    curto: item.validadoEm ? "validar a solução com o cliente" : pendencia && !pedida ? "resolver a pendência" : pedida ? "aguardar a confirmação" : "validar a solução com o cliente",
     feito: Boolean(item.validadoEm) || (legado && resposta) || encerrado,
     deduzido: !item.validadoEm && ((legado && resposta) || encerrado),
     quando: item.validadoEm,
     detalhe: item.validadoEm
       ? "O cliente confirmou que tudo voltou a funcionar."
-      : "Confirmar que tudo voltou a funcionar antes da resposta pública.",
+      : pendencia && !pedida
+        ? `O cliente apontou pendência ${descreverRegistro(pendencia.em)}${pendencia.nota ? ` — ${pendencia.nota.replace(/^O cliente: /, "")}` : ""}. Resolver e perguntar de novo.`
+        : pedida
+          ? `Pergunta feita ${descreverRegistro(pedida)}. Aguardando o cliente confirmar que tudo voltou a funcionar.`
+          : "Perguntar se tudo voltou a funcionar e se ficou pendência — antes da resposta pública.",
     acao: "validacao",
   });
 
@@ -225,6 +236,22 @@ export function trilhaDoCaso(
   */
   const devendoReplica = /aguardando nossa r[ée]plica/i.test(item.status);
 
+  /*
+    Quanto tempo o portal mostra a reclamação sem resposta.
+
+    A regra do documento fica: a resposta oficial só depois da validação —
+    responder antes abre a avaliação do consumidor antes da solução. Mas
+    a espera tem custo à vista: é "não respondida" no portal e entra no
+    tempo médio de resposta. Medido em 23/09/2026: mediana de 6 dias da
+    publicação à resposta, e 10% passam de 32. O número fica no passo
+    para a validação não ficar para depois.
+  */
+  const diasSemResposta =
+    !resposta && contexto.agora
+      ? Math.max(0, Math.floor((contexto.agora.getTime() - Date.parse(`${item.createdAt.slice(0, 10)}T12:00:00Z`)) / 86_400_000))
+      : 0;
+  const noPortal = diasSemResposta >= 2 ? ` O portal mostra "não respondida" há ${diasSemResposta} dias.` : "";
+
   empurrar({
     id: "resposta",
     numero: 7,
@@ -236,8 +263,10 @@ export function trilhaDoCaso(
     detalhe: devendoReplica
       ? "O consumidor respondeu no portal — a vez é nossa. Mesmas regras: texto do caso, sem dado pessoal."
       : resposta
-        ? "Publicada no Reclame Aqui."
-        : "Texto exclusivo do caso, sem dado pessoal, só depois da validação.",
+        ? "Publicada no Reclame Aqui. Avise o cliente, com o link, e peça a avaliação."
+        : item.validadoEm
+          ? `Validado: agora o texto exclusivo do caso, agradecendo o diálogo e confirmando a resolução, sem dado pessoal.${noPortal}`
+          : `Só depois da validação — responder antes abre a avaliação antes da solução.${noPortal}`,
     acao: "resposta",
   });
 

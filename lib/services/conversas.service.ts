@@ -156,7 +156,7 @@ export interface ConversaDoRegistro {
   contatoNome: string;
   mensagens: number;
   ultimaEm?: string;
-  /** A última mensagem do cliente — o gancho do pedido de avaliação. */
+  /** A última mensagem do cliente — o gancho do pedido de avaliação e a resposta da validação. */
   ultimaDoCliente?: { texto: string; em?: string };
   resumo?: string;
 }

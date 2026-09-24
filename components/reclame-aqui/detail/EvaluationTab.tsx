@@ -281,7 +281,7 @@ export default function EvaluationTab({
                 onClick={() => abrirContato(data, "validacao", { aoSalvar: aoMudarNoServidor })}
                 className="shrink-0 rounded-lg bg-white px-2.5 py-1.5 font-medium text-amber-800 ring-1 ring-inset ring-amber-200 transition-colors hover:bg-amber-100"
               >
-                Cliente confirmou a solução
+                Validar com o cliente
               </button>
             </div>
           )}

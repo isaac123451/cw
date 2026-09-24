@@ -7,14 +7,21 @@ import { useEffect, useState } from "react";
 import { Check, ExternalLink, Loader2, TriangleAlert, Undo2 } from "lucide-react";
 
 import Modal, { GhostButton } from "@/components/shared/Modal";
+import BotaoCopiar from "@/components/shared/BotaoCopiar";
+import CampoQueSalva from "@/components/shared/CampoQueSalva";
+import LinksDoRa from "@/components/shared/LinksDoRa";
+import ContaDaImersao from "./ContaDaImersao";
 
 import type { Case } from "@/lib/models/case";
+import { resumoDoCliente } from "@/lib/models/resumoDoCliente";
 
 import {
   marcarPasso,
   retratoDoCliente,
+  salvarLinkDaConta,
   type RetratoDoCliente,
 } from "@/lib/actions/tratativa";
+import { useEstablishments } from "@/lib/context/EstablishmentsContext";
 import { useToast } from "@/lib/context/ToastContext";
 
 interface Props {
@@ -48,10 +55,13 @@ function br(dia: string) {
 export default function ImersaoModal({ item, onClose, onSalvo }: Props) {
 
   const { notify } = useToast();
+  const { aplicarDoServidor } = useEstablishments();
 
   const [retrato, setRetrato] = useState<RetratoDoCliente | null | undefined>(undefined);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  /* Muda quando a conta é vinculada ou criada aqui: o retrato é montado de novo, já com ela. */
+  const [versao, setVersao] = useState(0);
 
   useEffect(() => {
     let ativo = true;
@@ -61,7 +71,23 @@ export default function ImersaoModal({ item, onClose, onSalvo }: Props) {
     return () => {
       ativo = false;
     };
-  }, [item.protocol]);
+  }, [item.protocol, versao]);
+
+  /* O link que faltava, gravado ao sair do campo — a tela acompanha o que o servidor gravou. */
+  async function salvarLink(campo: "crispUrl" | "portalUrl", valor: string) {
+    const id = retrato?.estabelecimento?.id;
+    if (!id) return { ok: false as const, erro: "Sem conta vinculada." };
+    const r = await salvarLinkDaConta({ id, campo, valor });
+    if (r.ok) {
+      aplicarDoServidor({ id, [campo]: valor || undefined });
+      setRetrato((atual) =>
+        atual?.estabelecimento
+          ? { ...atual, estabelecimento: { ...atual.estabelecimento, [campo === "crispUrl" ? "crisp" : "portal"]: valor || undefined } }
+          : atual
+      );
+    }
+    return r;
+  }
 
   const feita = Boolean(item.imersaoEm);
 
@@ -145,6 +171,19 @@ export default function ImersaoModal({ item, onClose, onSalvo }: Props) {
       {retrato && (
         <div className="space-y-5 text-sm">
 
+          {/* O resumo: o que ler antes da 1ª mensagem, montado do dado. */}
+          <section className="rounded-xl bg-violet-50/60 px-3.5 py-3 ring-1 ring-inset ring-violet-100">
+            <div className="flex items-center justify-between gap-2">
+              <h4 className="text-[11px] font-semibold uppercase tracking-wide text-violet-800">Resumo antes do contato</h4>
+              <BotaoCopiar texto={resumoDoCliente(retrato, item).join("\n")} rotulo="Copiar o resumo" />
+            </div>
+            <ul className="mt-1.5 space-y-1 text-xs leading-relaxed text-violet-950/90">
+              {resumoDoCliente(retrato, item).map((linha) => (
+                <li key={linha}>{linha}</li>
+              ))}
+            </ul>
+          </section>
+
           <section>
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="text-base font-semibold text-zinc-900">
@@ -155,6 +194,7 @@ export default function ImersaoModal({ item, onClose, onSalvo }: Props) {
                   {fase}
                 </span>
               )}
+              {item.source === "Reclame Aqui" && <LinksDoRa caso={item} className="ml-auto" />}
             </div>
 
             {est ? (
@@ -193,6 +233,32 @@ export default function ImersaoModal({ item, onClose, onSalvo }: Props) {
                   </Link>
                 </div>
 
+                {/* O link que falta se cola aqui e grava ao sair do campo — sem abrir o cadastro da conta. */}
+                {(!est.crisp || !est.portal) && (
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    {!est.crisp && (
+                      <CampoQueSalva
+                        id="imersao-crisp"
+                        rotulo="Link do Crisp"
+                        valor=""
+                        placeholder="https://app.crisp.chat/…"
+                        maximo={500}
+                        onSalvar={(v) => salvarLink("crispUrl", v)}
+                      />
+                    )}
+                    {!est.portal && (
+                      <CampoQueSalva
+                        id="imersao-portal"
+                        rotulo="Link do portal"
+                        valor=""
+                        placeholder="https://portal.cardapioweb.com/…"
+                        maximo={500}
+                        onSalvar={(v) => salvarLink("portalUrl", v)}
+                      />
+                    )}
+                  </div>
+                )}
+
                 {est.notas && (
                   <p className="mt-3 whitespace-pre-wrap rounded-xl bg-zinc-50 px-3.5 py-2.5 text-xs leading-relaxed text-zinc-600 ring-1 ring-inset ring-zinc-200">
                     {est.notas}
@@ -200,11 +266,15 @@ export default function ImersaoModal({ item, onClose, onSalvo }: Props) {
                 )}
               </>
             ) : (
-              <p className="mt-2 flex items-start gap-2 rounded-xl bg-amber-50 px-3.5 py-2.5 text-xs leading-relaxed text-amber-800 ring-1 ring-inset ring-amber-100">
-                <TriangleAlert size={14} className="mt-0.5 shrink-0" />
-                Nenhum estabelecimento vinculado. O vínculo se faz pelo CPF/CNPJ da reclamação — ou
-                escolha na lateral do caso. Sem ele, a conta no Portal precisa ser localizada à mão.
-              </p>
+              <ContaDaImersao
+                item={item}
+                onVinculado={(id) => {
+                  onSalvo({ establishmentId: id, establishmentManual: true });
+                  notify({ tone: "success", title: `Conta vinculada a ${item.protocol}.`, detail: "O retrato foi montado de novo, com a conta." });
+                  setRetrato(undefined);
+                  setVersao((v) => v + 1);
+                }}
+              />
             )}
           </section>
 

@@ -87,7 +87,7 @@ export function persistencia(
 
   const ordenados = [...contatos].sort((a, b) => a.em.localeCompare(b.em));
 
-  const respostas = ordenados.filter((c) => c.resultado === "respondeu");
+  const respostas = ordenados.filter((c) => c.resultado === "respondeu" || c.resultado === "pendencia");
   const ultimaResposta = respostas[respostas.length - 1]?.em;
 
   /* A tentativa aguardando retorno ainda não é "sem resposta" — ver ESPERA_DO_RETORNO_MIN. */
