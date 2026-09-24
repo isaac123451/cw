@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.63.0",
+    data: "2026-09-24",
+    titulo: "A causa que se repete vira item em Projetos sozinha",
+    texto: "Em Causas raiz, \"A semana\" mostra as causas mais registradas nos últimos 7 dias em cada frente e o que subiu em relação à semana anterior. A causa com 3 ou mais registros em 30 dias, somando as frentes, e com área dona no catálogo agora vira item em Projetos pela rotina diária, com a área como responsável e o prazo da causa na descrição — uma vez por mês. A causa sem dono continua com o botão \"Abrir agora\".",
+    frentes: ["plataforma", "reclame-aqui", "nps", "redes", "google"],
+  },
+  {
     versao: "1.62.0",
     data: "2026-09-24",
     titulo: "A mesma causa raiz nas quatro frentes",

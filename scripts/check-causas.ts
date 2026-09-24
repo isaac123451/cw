@@ -22,6 +22,8 @@ import {
   type TextoDaBase,
 } from "../lib/models/catalogoDeCausas";
 import { normalizarTexto, sugerir } from "../lib/models/sugestaoPorTexto";
+import { donoDoItem, semanaDasCausas, type RegistroDeCausa } from "../lib/models/causaRaiz";
+import { instanteDe } from "../lib/services/horasUteis";
 
 let falhas = 0;
 function conferir(titulo: string, obtido: unknown, esperado: unknown) {
@@ -134,6 +136,32 @@ conferir("NPS: 3 com texto, 3 com causa, 1 fora (\"cobranca\")", [rg.porFrente.n
 conferir("desativada não conta como fora; texto curto não conta", [rg.porFrente.google.total, rg.porFrente.google.comCausa], [1, 0]);
 conferir("fora do catálogo diz qual é a certa", rg.foraDoCatalogo, [{ causa: "cobranca", registros: 1, noCatalogo: "Cobrança" }]);
 conferir("acerto medido tirando o registro: RA 2 de 2", [rg.porFrente["reclame-aqui"].sugeridos, rg.porFrente["reclame-aqui"].acertos], [2, 2]);
+
+console.log("\n  A semana e o dono do item\n");
+const br = (dia: string, h = 12) => instanteDe(dia, h * 60).toISOString();
+const reg = (frente: RegistroDeCausa["frente"], causa: string, dia: string): RegistroDeCausa => ({ frente, causa, em: br(dia), rotulo: causa });
+const agoraS = new Date(br("2026-09-24", 13));
+const sem = semanaDasCausas(
+  [
+    reg("reclame-aqui", "Impressão de pedidos", "2026-09-23"),
+    reg("nps", "Impressão de pedidos", "2026-09-22"),
+    reg("google", "impressão de pedidos ", "2026-09-20"),
+    reg("reclame-aqui", "Cobrança", "2026-09-19"),
+    reg("reclame-aqui", "Cobrança", "2026-09-15"),
+    reg("nps", "Cobrança", "2026-09-14"),
+    reg("nps", "Cobrança", "2026-09-12"),
+    reg("redes", "Implantação e ativação", "2026-09-01"),
+  ],
+  agoraS
+);
+conferir("esta semana × anterior, com caixa e espaço juntos", sem.linhas.map((l) => [l.causa, l.estaSemana, l.anterior]), [["Impressão de pedidos", 3, 0], ["Cobrança", 1, 3]]);
+conferir("subiu: 2 ou mais a mais que a anterior", sem.linhas.map((l) => l.subiu), [true, false]);
+conferir("top da frente: só a semana", sem.topPorFrente["reclame-aqui"], [{ causa: "Cobrança", n: 1 }, { causa: "Impressão de pedidos", n: 1 }]);
+conferir("frente sem nada na semana", sem.topPorFrente.redes, []);
+conferir("7 dias atrás, 1 h depois da hora de agora: desta semana; 14 dias: fora", semanaDasCausas([{ ...reg("nps", "X", "2026-09-17"), em: br("2026-09-17", 14) }, reg("nps", "X", "2026-09-10")], agoraS).linhas.map((l) => [l.estaSemana, l.anterior]), [[1, 0]]);
+conferir("dono do item: a área da causa", donoDoItem({ area: "Financeiro" }, "Ana"), "Financeiro");
+conferir("sem área: quem abriu", donoDoItem({ area: null }, "Ana"), "Ana");
+conferir("sem área e sem quem abriu (rotina): sem dono", donoDoItem(undefined), "");
 
 console.log(falhas ? `\n  ${falhas} falha(s).\n` : "\n  Tudo certo.\n");
 process.exit(falhas ? 1 : 0);

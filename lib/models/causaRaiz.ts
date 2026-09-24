@@ -133,3 +133,76 @@ export function origemDaReincidencia(causa: string, agora: Date) {
     .replace(/^-|-$/g, "");
   return `reincidencia:${slug}:${mes}`;
 }
+
+/* ============================================================
+   A SEMANA (Fase 27 — tendência que vira ação)
+============================================================ */
+
+export interface LinhaDaSemana {
+  causa: string;
+  /** Últimos 7 dias. */
+  estaSemana: number;
+  /** Os 7 dias antes desses. */
+  anterior: number;
+  porFrente: Record<Frente, number>;
+  /** Subiu de verdade: pelo menos `SUBIU_MINIMO` registros a mais que na semana anterior. */
+  subiu: boolean;
+}
+
+/** Menos que isto de diferença entre as semanas é oscilação, não tendência. */
+export const SUBIU_MINIMO = 2;
+
+/**
+ * As causas da semana, somando as frentes, e o top de cada frente.
+ *
+ * "Semana" é a janela móvel dos últimos 7 dias contra os 7 anteriores —
+ * na segunda de manhã a comparação não zera, como zeraria a semana do
+ * calendário. O que subiu é o que a gestão olha primeiro.
+ */
+export function semanaDasCausas(registros: RegistroDeCausa[], agora: Date): { linhas: LinhaDaSemana[]; topPorFrente: Record<Frente, { causa: string; n: number }[]> } {
+  const fim = agora.getTime();
+  const meio = fim - 7 * DIA;
+  const inicio = fim - 14 * DIA;
+  const mapa = new Map<string, LinhaDaSemana>();
+  const porFrente = new Map<Frente, Map<string, { causa: string; n: number }>>(FRENTES.map((f) => [f, new Map()]));
+
+  for (const r of registros) {
+    const causa = r.causa.trim();
+    const quando = Date.parse(r.em);
+    if (!causa || !Number.isFinite(quando) || quando <= inicio || quando > fim) continue;
+    const chave = causa.toLowerCase();
+    const linha = mapa.get(chave) ?? { causa, estaSemana: 0, anterior: 0, porFrente: zerado(), subiu: false };
+    if (quando > meio) {
+      linha.estaSemana += 1;
+      linha.porFrente[r.frente] += 1;
+      const daFrente = porFrente.get(r.frente)!;
+      const atual = daFrente.get(chave) ?? { causa, n: 0 };
+      atual.n += 1;
+      daFrente.set(chave, atual);
+    } else {
+      linha.anterior += 1;
+    }
+    mapa.set(chave, linha);
+  }
+
+  const linhas = [...mapa.values()]
+    .map((l) => ({ ...l, subiu: l.estaSemana - l.anterior >= SUBIU_MINIMO }))
+    .sort((a, b) => b.estaSemana - a.estaSemana || b.estaSemana - b.anterior - (a.estaSemana - a.anterior) || a.causa.localeCompare(b.causa));
+
+  const topPorFrente = Object.fromEntries(
+    FRENTES.map((f) => [f, [...porFrente.get(f)!.values()].sort((a, b) => b.n - a.n || a.causa.localeCompare(b.causa)).slice(0, 3)])
+  ) as Record<Frente, { causa: string; n: number }[]>;
+
+  return { linhas, topPorFrente };
+}
+
+/**
+ * Quem responde pelo item em Projetos que a reincidência abre.
+ *
+ * A área dona da causa (Fase 27) — é ela que resolve o problema que se
+ * repete. Sem dono no catálogo, fica com quem abriu à mão; a rotina
+ * diária só abre sozinha o item da causa que tem dono.
+ */
+export function donoDoItem(causa: { area?: string | null } | undefined, quemAbriu?: string) {
+  return causa?.area?.trim() || quemAbriu?.trim() || "";
+}

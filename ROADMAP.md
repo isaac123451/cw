@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 24/09/2026. Aplicação **1.62.0**, extensão **1.62.0**.
+Atualizado em 24/09/2026. Aplicação **1.63.0**, extensão **1.63.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,37 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### Tendência que vira ação (24/09/2026, 1.63.0)
+
+Último item da Fase 27 — fecha a fase ("Causas raiz que direcionam"):
+top causas da semana por frente, o que subiu, e a causa que passa do
+limite vira item em Projetos com dono.
+
+- `semanaDasCausas` (`lib/models/causaRaiz.ts`): os últimos 7 dias contra
+  os 7 anteriores (janela móvel, para a segunda de manhã não zerar), o
+  top 3 de cada frente e "subiu" quando a causa tem 2 ou mais registros
+  a mais que na semana anterior.
+- `lib/services/reincidencia.service.ts`: a leitura dos registros e a
+  abertura do item saíram da ação do botão para um serviço usado pelo
+  botão e pela rotina. `donoDoItem`: o responsável é a área dona da
+  causa; sem área, quem abriu.
+- Rotina diária (`/api/cron`, etapa `reincidencias`): toda causa com área
+  dona no catálogo que tem 3 ou mais registros em 30 dias, somando as
+  frentes, vira item em Projetos com a área como responsável e o prazo
+  da causa na descrição. A marca `origem` (uma por causa e por mês)
+  segura o segundo item; a causa sem dono fica de fora e é listada no
+  relatório da rotina.
+- Causas raiz ganhou "A semana: o que subiu e o que vira ação": o top de
+  cada frente, o que subiu e o que passou do limite, com o dono, "Item
+  aberto em Projetos" quando já existe, "a rotina de amanhã cedo abre o
+  item" para a causa com dono e "Abrir agora" para qualquer uma.
+
+Provas: `npm run check:causas` (a semana e a anterior, caixa e espaço, o
+que subiu, o top por frente, as bordas da janela, o dono do item) e
+teste no navegador da vista da semana. Não provado sem banco: a rotina
+abrindo o item (`check:cron` pede o banco). **Depende de você:** dar
+dono às causas — só as com dono viram item sozinhas.
 
 ### A mesma régua em todas as frentes (24/09/2026, 1.62.0)
 
