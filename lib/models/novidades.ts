@@ -104,6 +104,14 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.42.0",
+    data: "2026-09-24",
+    titulo: "Um por vez: nada pula sob o mouse, e o teclado",
+    texto: "No Um por vez do Meu dia, Feito hoje e Tirar do dia confirmam numa linha logo abaixo dos botões, com desfazer — sem aviso no canto nem faixa entrando em cima, e os botões ficam na mesma altura de um item para o outro. E o teclado: F feito, T tirar do dia, A passa a atividade da agenda para o próximo dia útil, J e K (ou as setas) andam, Enter abre na janela.",
+    frentes: ["plataforma"],
+    href: "/meu-dia",
+  },
+  {
     versao: "1.41.0",
     data: "2026-09-24",
     titulo: "A ficha da reclamação salva sozinha",

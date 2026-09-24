@@ -16,6 +16,7 @@ import { useSla } from "@/lib/context/SlaContext";
 import { useToast } from "@/lib/context/ToastContext";
 import { filaDoDia, posicaoNaFila, resumoDosPassos, type PassoParaFechar } from "@/lib/models/guiaParaFechar";
 import { frente as frenteInfo } from "@/lib/models/frentes";
+import { JANELA_DO_G_MS } from "@/lib/models/atalhosDeTeclado";
 import { idDaJanela, type PedidoDeJanela } from "@/lib/models/janelas";
 import { isSocial } from "@/lib/services/case.service";
 import { proximoDiaUtil } from "@/lib/services/horasUteis";
@@ -77,7 +78,25 @@ export default function ModoProximo({ dia, marcadas, onFechar }: Props) {
   const [chave, setChave] = useState<string | null>(null);
   const [indice, setIndice] = useState(0);
   const [saidos, setSaidos] = useState<string[]>([]);
-  const [recemSaido, setRecemSaido] = useState<string | null>(null);
+
+  /*
+    O que acabou de sair, na linha fixa embaixo dos botões.
+
+    Era um aviso no canto e uma faixa que entrava em cima do item: os
+    botões desciam no mesmo instante em que o mouse estava sobre eles. O
+    Isaac: "pop-up de quando coloco tirar do dia, aí o botão desce". A
+    linha existe sempre, vazia ou não — nada muda de lugar.
+  */
+  const [saida, setSaida] = useState<{ texto: string; titulo: string; ids?: string[] } | null>(null);
+  const relogioDaSaida = useRef<number | null>(null);
+  function mostrarSaida(nova: { texto: string; titulo: string; ids?: string[] } | null) {
+    if (relogioDaSaida.current) window.clearTimeout(relogioDaSaida.current);
+    setSaida(nova);
+    if (nova) relogioDaSaida.current = window.setTimeout(() => setSaida(null), 8000);
+  }
+  useEffect(() => () => {
+    if (relogioDaSaida.current) window.clearTimeout(relogioDaSaida.current);
+  }, []);
 
 
   const posicao = posicaoNaFila(fila, chave, indice);
@@ -89,12 +108,12 @@ export default function ModoProximo({ dia, marcadas, onFechar }: Props) {
     const antes = anterior.current;
     if (antes && !fila.some((i) => i.chave === antes.chave)) {
       setSaidos((s) => (s.includes(antes.chave) ? s : [...s, antes.chave]));
-      setRecemSaido(antes.titulo);
-      const t = window.setTimeout(() => setRecemSaido(null), 5000);
+      /* Saído por Feito hoje ou Tirar do dia, a linha já diz — e com o desfazer. */
+      setSaida((atual) => (atual?.titulo === antes.titulo ? atual : { texto: "saiu do dia", titulo: antes.titulo }));
       anterior.current = item ? { chave: item.chave, titulo: item.titulo } : null;
       setChave(item?.chave ?? null);
       setIndice(Math.max(posicao, 0));
-      return () => window.clearTimeout(t);
+      return;
     }
     anterior.current = item ? { chave: item.chave, titulo: item.titulo } : null;
   }, [fila, item, posicao]);
@@ -104,17 +123,36 @@ export default function ModoProximo({ dia, marcadas, onFechar }: Props) {
     const n = (i + fila.length) % fila.length;
     setIndice(n);
     setChave(fila[n].chave);
-    setRecemSaido(null);
   }
 
-  /* ← e → andam pela fila, fora de campo de texto e sem janela em foco de digitação. */
+  /*
+    O teclado, para quem passa a manhã na fila.
+
+    ← → ou J K andam; F é feito (na atividade da agenda, concluir); T tira
+    do dia; A passa a atividade da agenda para o próximo dia útil; Enter
+    abre na janela. Fora de campo de texto, sem modificador — e com uma
+    janela aberta por cima, a tecla é dela: o foco está lá dentro.
+  */
+  /* A tecla anterior: depois de "g", a letra é do atalho de tela ("g t" é o Relatório), não da fila. */
+  const teclaAnterior = useRef<{ tecla: string; em: number } | null>(null);
   useEffect(() => {
     function tecla(e: KeyboardEvent) {
-      if (e.altKey || e.ctrlKey || e.metaKey) return;
+      const antes = teclaAnterior.current;
+      teclaAnterior.current = { tecla: e.key, em: Date.now() };
+      if (antes?.tecla === "g" && Date.now() - antes.em < JANELA_DO_G_MS) return;
+      if (e.altKey || e.ctrlKey || e.metaKey || e.repeat) return;
       const alvo = e.target as HTMLElement | null;
       if (alvo && (alvo.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(alvo.tagName))) return;
-      if (e.key === "ArrowRight") irPara(posicao + 1);
-      else if (e.key === "ArrowLeft") irPara(posicao - 1);
+      /* Enter num botão ou link é o clique dele, não "abrir na janela". */
+      if (e.key === "Enter" && alvo && alvo.closest("button, a, [role=dialog]")) return;
+      if (alvo && alvo.closest("[role=dialog]")) return;
+      const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+      if (k === "ArrowRight" || k === "j") irPara(posicao + 1);
+      else if (k === "ArrowLeft" || k === "k") irPara(posicao - 1);
+      else if (k === "f" && item) void (tarefa ? gravarTarefa("concluir") : tirarDoDia("feito"));
+      else if (k === "t" && item && !tarefa) void tirarDoDia("tirar");
+      else if (k === "a" && tarefa) void gravarTarefa("adiar");
+      else if (k === "Enter" && ficha) abrirNaJanela();
       else return;
       e.preventDefault();
     }
@@ -150,11 +188,7 @@ export default function ModoProximo({ dia, marcadas, onFechar }: Props) {
         notify({ tone: "error", title: "O item não saiu da fila.", detail: r.erro });
         return;
       }
-      notify({
-        tone: "success",
-        title: tipo === "feito" ? "Marcado como feito hoje." : "Tirado do dia.",
-        detail: `${item.titulo} — dá para devolver na lista da atividade, em Rotina de hoje.`,
-      });
+      mostrarSaida({ texto: tipo === "feito" ? "feito hoje" : "tirado do dia", titulo: item.titulo, ids: r.marcas.map((m) => m.id) });
     } catch {
       notify({ tone: "error", title: "O item não saiu da fila.", detail: "Tente de novo em instantes." });
     } finally {
@@ -169,11 +203,22 @@ export default function ModoProximo({ dia, marcadas, onFechar }: Props) {
     const r = tipo === "concluir" ? await toggleTask(tarefa.id) : await moveTask(tarefa.id, dia2!);
     setGravando(null);
     if (r.ok) {
-      notify({
-        tone: "success",
-        title: tipo === "concluir" ? "Atividade concluída." : `Atividade passada para ${dia2!.split("-").reverse().slice(0, 2).join("/")}.`,
-        detail: tarefa.title,
+      mostrarSaida({
+        texto: tipo === "concluir" ? "atividade concluída" : `passada para ${dia2!.split("-").reverse().slice(0, 2).join("/")}`,
+        titulo: tarefa.title,
       });
+    }
+  }
+
+  /* Devolve à fila o que Feito hoje ou Tirar do dia acabou de tirar. */
+  async function desfazerSaida() {
+    if (!saida?.ids?.length || gravando) return;
+    const { ids, titulo } = saida;
+    mostrarSaida(null);
+    const r = await dia.desfazerMarcas(ids);
+    if (!r.ok) {
+      notify({ tone: "error", title: "Não voltou para a fila.", detail: r.erro });
+      mostrarSaida({ texto: "tirado do dia", titulo, ids });
     }
   }
 
@@ -250,15 +295,6 @@ export default function ModoProximo({ dia, marcadas, onFechar }: Props) {
         </ol>
       )}
 
-      {recemSaido && (
-        <p className="flex items-center gap-2 border-b border-emerald-100 bg-emerald-50/60 px-5 py-1.5 text-xs text-emerald-800">
-          <Check size={13} strokeWidth={2.5} />
-          <span className="min-w-0 truncate">
-            <strong className="font-medium">{recemSaido}</strong> saiu do dia.
-          </span>
-        </p>
-      )}
-
       {/* `carregando` junto: sem ele, a rotina que ainda não chegou passava
           por rotina vazia e o modo anunciava "está marcada" antes da hora. */}
       {dia.carregando || !dia.contagens ? (
@@ -274,21 +310,22 @@ export default function ModoProximo({ dia, marcadas, onFechar }: Props) {
         <div className="grid gap-5 px-5 py-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
 
           <div className="min-w-0">
-            <div className="flex items-center gap-2 text-[11px] text-zinc-500">
+            <div className="flex h-5 items-center gap-2 text-[11px] text-zinc-500">
               {item.frente && (
                 <span className="flex items-center gap-1 font-medium text-zinc-600">
                   <IconeDaFrente frente={item.frente} size={12} />
                   {frenteInfo(item.frente).curto}
                 </span>
               )}
-              <span className="truncate">{item.atividades.join(" · ")}</span>
+              <span className="min-w-0 truncate">{item.atividades.join(" · ")}</span>
+              {item.atrasado && (
+                <span className="shrink-0 rounded-md bg-rose-50 px-1.5 text-[11px] font-semibold leading-4 text-rose-700 ring-1 ring-inset ring-rose-100">fora do prazo</span>
+              )}
             </div>
 
-            <h3 className="mt-1.5 text-[15px] font-semibold leading-snug text-zinc-900 [overflow-wrap:anywhere]">{item.titulo}</h3>
-            {item.detalhe && <p className="mt-0.5 text-xs text-zinc-500 [overflow-wrap:anywhere]">{item.detalhe}</p>}
-            {item.atrasado && (
-              <span className="mt-2 inline-block rounded-md bg-rose-50 px-1.5 py-0.5 text-[11px] font-semibold text-rose-700 ring-1 ring-inset ring-rose-100">fora do prazo</span>
-            )}
+            {/* Duas linhas de título e uma de detalhe, sempre: de um item para o outro, os botões ficam na mesma altura. */}
+            <h3 title={item.titulo} className="mt-1.5 line-clamp-2 min-h-[2lh] text-[15px] font-semibold leading-snug text-zinc-900 [overflow-wrap:anywhere]">{item.titulo}</h3>
+            <p title={item.detalhe ?? undefined} className="mt-0.5 line-clamp-1 min-h-[1lh] text-xs text-zinc-500 [overflow-wrap:anywhere]">{item.detalhe}</p>
 
             <div className="mt-4 flex flex-wrap items-center gap-2">
               {tarefa && (
@@ -299,16 +336,16 @@ export default function ModoProximo({ dia, marcadas, onFechar }: Props) {
                     disabled={gravando !== null}
                     className="flex h-8 items-center gap-1.5 rounded-lg bg-zinc-900 px-3 text-xs font-semibold text-white hover:bg-zinc-800 disabled:opacity-60"
                   >
-                    {gravando === "concluir" ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} strokeWidth={2.5} />} Concluir atividade
+                    {gravando === "concluir" ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} strokeWidth={2.5} />} Concluir atividade <Tecla>F</Tecla>
                   </button>
                   <button
                     type="button"
                     onClick={() => gravarTarefa("adiar")}
                     disabled={gravando !== null || !dia.hoje}
-                    title="Passa para o próximo dia útil, no mesmo horário"
+                    title="Passa para o próximo dia útil, no mesmo horário (A)"
                     className="flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium text-zinc-700 hover:bg-zinc-100"
                   >
-                    {gravando === "adiar" ? <Loader2 size={14} className="animate-spin" /> : <CalendarArrowUp size={14} />} Próximo dia útil
+                    {gravando === "adiar" ? <Loader2 size={14} className="animate-spin" /> : <CalendarArrowUp size={14} />} Próximo dia útil <Tecla>A</Tecla>
                   </button>
                 </>
               )}
@@ -318,7 +355,7 @@ export default function ModoProximo({ dia, marcadas, onFechar }: Props) {
                   onClick={abrirNaJanela}
                   className={`flex h-8 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold ${tarefa ? "text-zinc-700 hover:bg-zinc-100" : "bg-zinc-900 text-white hover:bg-zinc-800"}`}
                 >
-                  <AppWindow size={14} /> {tarefa ? "Caso na janela" : "Abrir na janela"}
+                  <AppWindow size={14} /> {tarefa ? "Caso na janela" : "Abrir na janela"} <Tecla>Enter</Tecla>
                 </button>
               ) : null}
               <Link
@@ -334,31 +371,47 @@ export default function ModoProximo({ dia, marcadas, onFechar }: Props) {
                     type="button"
                     onClick={() => tirarDoDia("feito")}
                     disabled={gravando !== null}
-                    title="Fiz por fora (ou o registro não acompanhou): sai da fila e das atividades de hoje"
+                    title="Fiz por fora (ou o registro não acompanhou): sai da fila e das atividades de hoje (F)"
                     className="flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50 disabled:opacity-60"
                   >
-                    {gravando === "feito" ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} strokeWidth={2.5} />} Feito hoje
+                    {gravando === "feito" ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} strokeWidth={2.5} />} Feito hoje <Tecla>F</Tecla>
                   </button>
                   <button
                     type="button"
                     onClick={() => tirarDoDia("tirar")}
                     disabled={gravando !== null}
-                    title="Não se aplica hoje: sai da fila e volta amanhã, se ainda for trabalho"
+                    title="Não se aplica hoje: sai da fila e volta amanhã, se ainda for trabalho (T)"
                     className="flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium text-zinc-600 hover:bg-zinc-100 disabled:opacity-60"
                   >
-                    {gravando === "tirar" ? <Loader2 size={14} className="animate-spin" /> : <CircleSlash size={14} />} Tirar do dia
+                    {gravando === "tirar" ? <Loader2 size={14} className="animate-spin" /> : <CircleSlash size={14} />} Tirar do dia <Tecla>T</Tecla>
                   </button>
                 </>
               )}
               <div className="ml-auto flex items-center">
-                <button type="button" onClick={() => irPara(posicao - 1)} disabled={fila.length < 2} title="Anterior (←)" aria-label="Item anterior" className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 disabled:opacity-40">
+                <button type="button" onClick={() => irPara(posicao - 1)} disabled={fila.length < 2} title="Anterior (← ou K)" aria-label="Item anterior" className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 disabled:opacity-40">
                   <ChevronLeft size={16} />
                 </button>
-                <button type="button" onClick={() => irPara(posicao + 1)} disabled={fila.length < 2} title="Pular para o próximo (→)" className="flex h-8 items-center gap-0.5 rounded-lg pl-2 pr-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-100 disabled:opacity-40">
+                <button type="button" onClick={() => irPara(posicao + 1)} disabled={fila.length < 2} title="Pular para o próximo (→ ou J)" className="flex h-8 items-center gap-0.5 rounded-lg pl-2 pr-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-100 disabled:opacity-40">
                   Pular <ChevronRight size={15} />
                 </button>
               </div>
             </div>
+
+            <p aria-live="polite" className="mt-2 flex h-6 min-w-0 items-center gap-1.5 text-xs text-emerald-800">
+              {saida && (
+                <>
+                  <Check size={13} strokeWidth={2.5} className="shrink-0" />
+                  <span className="min-w-0 truncate">
+                    <strong className="font-medium">{saida.titulo}</strong> · {saida.texto}
+                  </span>
+                  {saida.ids?.length ? (
+                    <button type="button" onClick={desfazerSaida} className="shrink-0 rounded px-1 font-semibold text-emerald-900 underline-offset-2 hover:underline">
+                      desfazer
+                    </button>
+                  ) : null}
+                </>
+              )}
+            </p>
           </div>
 
           <div className="min-w-0 md:border-l md:border-zinc-100 md:pl-5">
@@ -425,4 +478,9 @@ function Passo({ passo }: { passo: PassoParaFechar }) {
       </div>
     </li>
   );
+}
+
+/* A tecla do atalho, discreta ao lado do rótulo; some no celular, onde não há teclado. */
+function Tecla({ children }: { children: string }) {
+  return <kbd className="ml-0.5 hidden rounded border border-current/20 px-1 font-sans text-[10px] font-medium leading-4 opacity-60 sm:inline">{children}</kbd>;
 }

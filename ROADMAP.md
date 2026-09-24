@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 24/09/2026. Aplicação **1.41.0**, extensão **1.41.0**.
+Atualizado em 24/09/2026. Aplicação **1.42.0**, extensão **1.42.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,39 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### Um por vez: nada pula sob o mouse, e o teclado (24/09/2026, 1.42.0)
+
+Dois itens da Fase 24, "Meu dia sem atrito" — "pop-up de quando coloco
+tirar do dia, aí o botão desce".
+
+- **Nada muda de lugar sob o mouse.** Feito hoje e Tirar do dia
+  mostravam um aviso no canto, e o item que saía da fila punha uma faixa
+  verde em cima do item seguinte: os botões desciam no instante do
+  clique. Agora a confirmação vai numa linha de altura fixa logo abaixo
+  dos botões ("Fulano · tirado do dia · desfazer"), que existe mesmo
+  vazia; o desfazer apaga as marcas que o clique gravou
+  (`desfazerMarcas`). E o item tem sempre duas linhas de título, uma de
+  detalhe e o "fora do prazo" na linha de cima: de um item para o outro,
+  os botões ficam na mesma altura.
+- **Teclado no Um por vez.** F feito (na atividade da agenda, concluir),
+  T tirar do dia, A passa a atividade da agenda para o próximo dia útil,
+  J e K além das setas, Enter abre na janela. Não vale dentro de campo
+  de texto, com modificador, com uma mini-janela em foco, nem logo depois
+  de "g" — "g t" continua indo para o Relatório e "g a" para a Agenda.
+  As teclas aparecem ao lado dos rótulos (some no celular).
+
+O "Adiar para outro dia" com data (amanhã, próximo dia útil ou uma data
+escolhida, para qualquer item) é outro item da fase: hoje o A vale só
+para a atividade da agenda, como o botão que já existia.
+
+Provas, no navegador, com o componente real e uma fila falsa (página de
+teste fora do commit): 13 pontos — J e K andam; o botão Tirar do dia
+fica na mesma altura com título de uma e de duas linhas e depois de
+tirar; T tira e a linha diz "tirado do dia · desfazer", sem aviso no
+canto; desfazer devolve o item; F marca feito; "g t" não tira nada. Na
+primeira rodada, a altura variava 4 px por causa do selo "fora do
+prazo" — corrigido. `tsc` e `lint` limpos.
 
 ### A ficha salva sozinha (24/09/2026, 1.41.0)
 
