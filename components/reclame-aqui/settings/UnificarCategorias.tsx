@@ -147,7 +147,7 @@ export default function UnificarCategorias({ onClose }: Props) {
           Nenhuma categoria ativa com nome parecido com outra. A lista está em ordem.
         </p>
       ) : (
-        <div className="grid gap-5 md:grid-cols-[220px_1fr]">
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-[220px_minmax(0,1fr)]">
 
           <ul className="space-y-1">
             {grupos.map((g, i) => (

@@ -344,7 +344,7 @@ export default function ProcessosPage() {
                   ].map((head, index) => (
                     <th
                       key={head || index}
-                      className="whitespace-nowrap px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-zinc-500"
+                      className="whitespace-nowrap px-3 py-3 xl:px-5 text-left text-[11px] font-semibold uppercase tracking-wide text-zinc-500"
                     >
                       {head}
                     </th>
@@ -397,7 +397,7 @@ export default function ProcessosPage() {
                     }`}
                   >
 
-                    <td className="px-5 py-3.5">
+                    <td className="px-3 py-3.5 xl:px-5">
 
                       <p className="font-medium text-zinc-800">
                         {rule.category === ANY_CATEGORY
@@ -437,19 +437,19 @@ export default function ProcessosPage() {
 
                     </td>
 
-                    <td className="whitespace-nowrap px-5 py-3.5 font-medium tabular-nums text-zinc-700">
+                    <td className="whitespace-nowrap px-3 py-3.5 xl:px-5 font-medium tabular-nums text-zinc-700">
                       {descreverPrazo(rule.responseHours)}
                     </td>
 
-                    <td className="whitespace-nowrap px-5 py-3.5 font-medium tabular-nums text-zinc-700">
+                    <td className="whitespace-nowrap px-3 py-3.5 xl:px-5 font-medium tabular-nums text-zinc-700">
                       {rule.solutionHours > 0 ? descreverPrazo(rule.solutionHours) : "sem prazo"}
                     </td>
 
-                    <td className="whitespace-nowrap px-5 py-3.5 text-zinc-600">
+                    <td className="whitespace-nowrap px-3 py-3.5 xl:px-5 text-zinc-600">
                       {rule.team ?? "—"}
                     </td>
 
-                    <td className="whitespace-nowrap px-5 py-3.5">
+                    <td className="whitespace-nowrap px-3 py-3.5 xl:px-5">
 
                       <div className="flex items-center gap-2">
 
@@ -470,7 +470,7 @@ export default function ProcessosPage() {
 
                     </td>
 
-                    <td className="whitespace-nowrap px-5 py-3.5">
+                    <td className="whitespace-nowrap px-3 py-3.5 xl:px-5">
 
                       <div className="flex items-center justify-end gap-1">
 
@@ -563,7 +563,7 @@ export default function ProcessosPage() {
                   ].map((head, index) => (
                     <th
                       key={head || index}
-                      className="whitespace-nowrap px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-zinc-500"
+                      className="whitespace-nowrap px-3 py-3 xl:px-5 text-left text-[11px] font-semibold uppercase tracking-wide text-zinc-500"
                     >
                       {head}
                     </th>
@@ -606,7 +606,7 @@ export default function ProcessosPage() {
                       className={`group text-sm transition-colors hover:bg-zinc-50/70 ${rule.active ? "" : "opacity-55"}`}
                     >
 
-                      <td className="px-5 py-3.5">
+                      <td className="px-3 py-3.5 xl:px-5">
 
                         <p className="font-medium text-zinc-800">
                           {rule.destination}
@@ -626,13 +626,13 @@ export default function ProcessosPage() {
 
                       </td>
 
-                      <td className="whitespace-nowrap px-5 py-3.5 font-medium tabular-nums text-zinc-700">
+                      <td className="whitespace-nowrap px-3 py-3.5 xl:px-5 font-medium tabular-nums text-zinc-700">
                         {AREAS_INTERNAS.some((a) => a.nome === rule.destination)
                           ? "Pela criticidade"
                           : formatHours(rule.hours)}
                       </td>
 
-                      <td className="whitespace-nowrap px-5 py-3.5">
+                      <td className="whitespace-nowrap px-3 py-3.5 xl:px-5">
 
                         <div className="flex items-center gap-2">
 
@@ -653,13 +653,13 @@ export default function ProcessosPage() {
 
                       </td>
 
-                      <td className="whitespace-nowrap px-5 py-3.5 tabular-nums text-zinc-600">
+                      <td className="whitespace-nowrap px-3 py-3.5 xl:px-5 tabular-nums text-zinc-600">
                         {mediaRetorno === undefined
                           ? "—"
                           : formatHours(mediaRetorno)}
                       </td>
 
-                      <td className="whitespace-nowrap px-5 py-3.5">
+                      <td className="whitespace-nowrap px-3 py-3.5 xl:px-5">
 
                         {rule.id.startsWith(AREA_DO_DOCUMENTO) ? (
                           <p className="text-right text-xs text-zinc-400">Área do documento</p>

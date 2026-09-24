@@ -47,9 +47,9 @@ export default function SettingsTabs({
   onChange,
 }: Props) {
   return (
-    <div className="overflow-x-auto">
+    <div>
 
-      <div className="flex min-w-max items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
 
         {tabs.map((tab) => {
 

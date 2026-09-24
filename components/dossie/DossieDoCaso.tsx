@@ -134,7 +134,7 @@ export function EditorDoDossie({ protocolo, aberto }: { protocolo: string; abert
       )}
       {aberto.salvo && <p className="text-xs text-zinc-500">Versão {aberto.salvo.versao}, salva em {dataHora(aberto.salvo.em)}{aberto.salvo.por ? ` por ${aberto.salvo.por}` : ""}.</p>}
 
-      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="min-w-0 space-y-5">
           <SurfaceCard title="1. Identificação" description="Montada do banco.">
             <dl className="grid gap-2 text-sm sm:grid-cols-2">

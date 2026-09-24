@@ -1116,6 +1116,34 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Sem barra para ir de um lado ao outro (24/09/2026, 1.68.2)
+
+O Isaac: "a tela tem uma barra lá embaixo para ir de esquerda e direita,
+tem muitas telas assim". Medido abrindo as 45 telas em 1366, 1024 e 390
+px e apontando o elemento que passava da borda:
+
+- **Quadros:** o do Reclame Aqui tinha 7 colunas de 284 px (~2.000 px
+  para ~1.000 visíveis); o das Redes, 9 de 230 (2.166 px); Projetos, 4 de
+  300; a Jornada, o mesmo desenho. Agora as colunas quebram em fileiras
+  (mínimo de 210 a 260 px cada, altura própria e rolagem por dentro).
+- **Menus de abas:** o do Reclame Aqui, o do Analytics e o das
+  configurações eram `min-w-max` com rolagem — quebram linha. As abas
+  sublinhadas (ficha do caso, Conta) rolam sem a barra à vista (`.sem-barra`).
+- **Celular:** o balão dos indicadores (`StatTile`) era `opacity-0`,
+  invisível mas ocupando lugar — 16 telas escorregavam 21 px. Agora sai
+  do layout até o hover. Conversas e a ficha do estabelecimento (324 px a
+  mais): grade sem coluna definida abaixo do `lg` — `grid-cols-1`, também
+  em mais 13 grades do mesmo desenho.
+- **Tabelas:** Analytics, Processos e Configurar fluxo com folga menor
+  abaixo de 1280 px e cabeçalho que quebra; o gráfico de evolução do RA
+  ocupa a largura toda até 1536 px.
+
+Provas: a mesma varredura depois — nenhuma tela rola de lado em 1366,
+1024 ou 390 px (antes: 18 no celular, o quadro do RA e o das Redes em
+qualquer tela); só tabelas largas rolam dentro do cartão no celular.
+`check:celular`, `check:telas-sem-saida`, `check:janelas`,
+`check:primeira-semana`, `check:menu` de pé.
+
 ### Banco em dia e as provas de pé (24/09/2026, 1.68.1)
 
 A sessão local e a da web (esta branch, PR #2) trabalharam em paralelo;

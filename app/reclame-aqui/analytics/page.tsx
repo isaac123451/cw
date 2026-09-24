@@ -440,7 +440,9 @@ export default function ReclameAquiAnalyticsPage() {
 
         <GoalEditor />
 
-        <div className="grid gap-6 xl:grid-cols-2">
+        {/* Lado a lado só a partir de 1536 px: abaixo disso o gráfico de evolução
+            ficava com 470 px e ganhava barra de rolagem para não encolher o texto. */}
+        <div className="grid grid-cols-1 gap-6 2xl:grid-cols-2">
 
           <ReputationTrend data={trend} />
 

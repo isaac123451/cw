@@ -80,7 +80,7 @@ export default function MeuDiaPage() {
         {/* Só aparece com acumulado: 10 ou mais fora do prazo numa frente. */}
         <PlanoDeRecuperacao dia={dia} />
 
-        <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
+        <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
 
           <RotinaDoDia dia={dia} rascunho={efetivas} setRascunho={setMarcas} onConfigurar={() => setConfigurando(true)} onUmPorVez={() => { setUmPorVez(true); window.scrollTo({ top: 0, behavior: "smooth" }); }} />
 

@@ -283,7 +283,7 @@ export default function AnalyticsOverview({
                 ].map((head) => (
                   <th
                     key={head}
-                    className="whitespace-nowrap px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-zinc-500"
+                    className="px-3 py-3 xl:px-5 text-left text-[11px] font-semibold uppercase leading-tight tracking-wide text-zinc-500 xl:whitespace-nowrap"
                   >
                     {head}
                   </th>
@@ -307,27 +307,27 @@ export default function AnalyticsOverview({
                 return (
                   <tr key={item.channel} className="text-sm">
 
-                    <td className="whitespace-nowrap px-5 py-3 font-medium text-zinc-800">
+                    <td className="whitespace-nowrap px-3 py-3 xl:px-5 font-medium text-zinc-800">
                       {item.channel}
                     </td>
 
-                    <td className="px-5 py-3 tabular-nums text-zinc-700">
+                    <td className="px-3 py-3 xl:px-5 tabular-nums text-zinc-700">
                       {item.total}
                     </td>
 
-                    <td className="px-5 py-3 tabular-nums text-zinc-700">
+                    <td className="px-3 py-3 xl:px-5 tabular-nums text-zinc-700">
                       {item.open}
                     </td>
 
-                    <td className="px-5 py-3 tabular-nums text-zinc-700">
+                    <td className="px-3 py-3 xl:px-5 tabular-nums text-zinc-700">
                       {item.resolved}
                     </td>
 
-                    <td className="px-5 py-3">
+                    <td className="px-3 py-3 xl:px-5">
 
                       <div className="flex items-center gap-2">
 
-                        <div className="h-1.5 w-20 overflow-hidden rounded-full bg-zinc-100">
+                        <div className="h-1.5 w-12 overflow-hidden rounded-full bg-zinc-100 xl:w-20">
                           <div
                             className="h-full rounded-full bg-emerald-500"
                             style={{ width: `${taxa}%` }}
@@ -342,11 +342,11 @@ export default function AnalyticsOverview({
 
                     </td>
 
-                    <td className="px-5 py-3 tabular-nums text-zinc-700">
+                    <td className="px-3 py-3 xl:px-5 tabular-nums text-zinc-700">
                       {ptBR(item.averageScore)}
                     </td>
 
-                    <td className="whitespace-nowrap px-5 py-3 text-zinc-600">
+                    <td className="whitespace-nowrap px-3 py-3 xl:px-5 text-zinc-600">
                       {formatElapsed(item.responseMinutes)}
                     </td>
 

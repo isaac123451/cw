@@ -119,7 +119,7 @@ export default function ExpedienteCard() {
       hint="24h úteis equivalem a um dia útil e caem na mesma hora do dia útil seguinte. Prazo menor que um dia conta só dentro do expediente. Fins de semana e feriados nacionais não contam."
     >
 
-      <div className="grid gap-5 lg:grid-cols-[1fr_280px]">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
 
         <div className="space-y-4">
 

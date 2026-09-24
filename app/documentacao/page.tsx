@@ -261,7 +261,7 @@ function Documentacao() {
         </div>
       )}
 
-      <div className="grid items-start gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
         <aside className="lg:sticky lg:top-0">
           <div className="rounded-3xl border border-zinc-200/80 bg-white p-3">
             <div className="relative">

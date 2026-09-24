@@ -168,9 +168,10 @@ export default function ProjetosPage() {
 
         </div>
 
-        <div className="overflow-x-auto pb-2">
+        {/* As etapas cabem na tela: 4 lado a lado em tela grande, 2 no notebook, 1 no celular — sem rolar de lado. */}
+        <div className="pb-2">
 
-          <div className="flex gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
 
             {stages.map((stage) => {
 
@@ -199,7 +200,7 @@ export default function ProjetosPage() {
 
                     if (id) moveProject(id, stage.id);
                   }}
-                  className={`flex w-[300px] shrink-0 flex-col rounded-2xl border transition-colors ${
+                  className={`flex min-w-0 flex-col rounded-2xl border transition-colors ${
                     isOver
                       ? "border-violet-400 bg-violet-50/70"
                       : "border-zinc-200/80 bg-zinc-50/80"

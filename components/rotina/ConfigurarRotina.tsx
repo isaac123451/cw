@@ -193,7 +193,7 @@ export default function ConfigurarRotina({ atividades, onClose, onSalvo }: Props
       }
     >
 
-      <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
 
         {/* A lista: uma linha por atividade, agrupada como o documento. */}
         <div className="space-y-4">

@@ -754,6 +754,21 @@
 }
 
 /*
+  Abas que rolam de lado sem mostrar a barra.
+
+  O Isaac: "a tela tem uma barra lá embaixo para ir de esquerda e
+  direita". Nas abas sublinhadas (ficha do caso, Conta) a rolagem de
+  lado continua pelo toque, pelo trackpad e por Shift + roda, mas a barra
+  cinza embaixo das abas some. Menus em pílula quebram linha em vez de rolar.
+*/
+.sem-barra {
+  scrollbar-width: none;
+}
+.sem-barra::-webkit-scrollbar {
+  display: none;
+}
+
+/*
   Barra de rolagem fina, para listas laterais (menu, paleta).
   A do navegador, grossa e cinza, era o que mais parecia "página web"
   num lugar que precisa parecer ferramenta.

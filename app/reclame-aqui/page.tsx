@@ -61,9 +61,10 @@ export default function ReclameAquiPage() {
 
         <AvisoIncompletas />
 
-        {/* Altura definida: sem isso as colunas ou espremem ou esticam
-            a página inteira em vez de rolarem por dentro. */}
-        <div className="h-[calc(100vh-330px)] min-h-[460px]">
+        {/* A lista precisa da altura definida para rolar por dentro. O
+            quadro, não: as colunas quebram em fileiras e cada uma tem a
+            própria altura — ver KanbanView. */}
+        <div className={view === "kanban" && !loading ? "" : "h-[calc(100vh-330px)] min-h-[460px]"}>
 
           {loading ? (
             <LoadingPanel />

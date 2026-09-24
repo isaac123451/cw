@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "CW Reputação — painel de contexto",
-  "version": "1.68.1",
+  "version": "1.68.2",
   "description": "Mostra o cliente do CW Reputacao ao lado do WhatsApp Web, do Hugme/Reclame Aqui, do ManyChat, do Crisp e do Portal Cardapio Web, poe os textos aprovados ao lado da caixa de mensagem, captura reclamacoes para o Kanban e registra avaliacoes do Google Perfil da Empresa e leva para as Redes os casos da planilha do Google e do canal do Slack.",
   "icons": {
     "16": "icones/icone-16.png",

@@ -32,9 +32,18 @@ export default function KanbanView() {
   }
 
   return (
-    <div className="h-full overflow-x-auto overflow-y-hidden pb-1">
+    /*
+      As colunas quebram em fileiras em vez de rolar de lado.
 
-      <div className="flex h-full gap-3">
+      São 7 etapas de 284 px: ~2.000 px de quadro para ~1.000 visíveis num
+      notebook, com uma barra embaixo para ir de um lado ao outro — o que o
+      Isaac apontou. Agora cada coluna tem no mínimo 250 px e a própria
+      altura, com rolagem por dentro; o que não cabe na fileira desce para a
+      próxima. Em tela larga, continua uma fileira só.
+    */
+    <div className="pb-1">
+
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-3">
 
         {sortedWorkflow.map((status) => (
 

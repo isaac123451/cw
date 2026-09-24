@@ -84,9 +84,9 @@ export default function FrenteTabs({
 }) {
 
   return (
-    <nav className="overflow-x-auto">
+    <nav>
 
-      <div className="flex min-w-max items-center gap-1 rounded-2xl border border-zinc-200/80 bg-white p-1.5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+      <div className="flex flex-wrap items-center gap-1 rounded-2xl border border-zinc-200/80 bg-white p-1.5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
 
         {ABAS.map((aba) => {
 

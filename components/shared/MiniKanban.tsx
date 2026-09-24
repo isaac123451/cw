@@ -40,10 +40,17 @@ export default function MiniKanban({
 
   const [over, setOver] = useState<string | null>(null);
 
-  return (
-    <div className="overflow-x-auto pb-1">
+  /*
+    As colunas quebram em fileiras em vez de rolar de lado.
 
-      <div className="flex gap-3">
+    As Redes têm 9 etapas: com 230 px cada, o quadro pedia 2.166 px e
+    ganhava uma barra embaixo em qualquer tela. Em fileiras, cada coluna
+    tem no mínimo 210 px e todas ficam à vista.
+  */
+  return (
+    <div className="pb-1">
+
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(210px,1fr))] gap-3">
 
         {columns.map((column) => {
 
@@ -70,7 +77,7 @@ export default function MiniKanban({
 
                 if (id) onMove(id, column.name);
               }}
-              className={`flex max-h-[320px] w-[230px] shrink-0 flex-col rounded-xl border transition-colors ${
+              className={`flex max-h-[320px] min-w-0 flex-col rounded-xl border transition-colors ${
                 isOver
                   ? "border-violet-400 bg-violet-50/70"
                   : "border-zinc-200 bg-zinc-50/70"

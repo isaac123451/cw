@@ -604,7 +604,7 @@ export default function CaseDetail({
           {/* Abas */}
 
           <div
-            className={`overflow-x-auto bg-white ${
+            className={`sem-barra overflow-x-auto bg-white ${
               drawer
                 ? "-mx-6 border-b border-zinc-200/80 px-6"
                 : "rounded-2xl border border-zinc-200/80 shadow-[0_1px_2px_rgba(16,24,40,0.04)]"

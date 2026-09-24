@@ -276,7 +276,7 @@ export default function FichaDoNps({ id, naJanela = false }: { id: string; naJan
 
       <TrilhaDoNps item={ciclo} passos={passos} executar={executar} />
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
 
         <div className="min-w-0 space-y-5">
 

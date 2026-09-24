@@ -413,7 +413,7 @@ export default function ClientDetail({
         descricao="Pelo e-mail e pelo nome: o NPS só cruza pelo e-mail, e o Google pelo nome de quem avaliou ou pelo vínculo feito à mão."
       />
 
-      <div className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
 
         <div className="space-y-6">
 

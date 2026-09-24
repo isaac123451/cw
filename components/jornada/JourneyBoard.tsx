@@ -58,9 +58,10 @@ export default function JourneyBoard({
   const active = stages.filter((item) => item.active);
 
   return (
-    <div className="overflow-x-auto pb-1">
+    /* Etapas em fileiras, como o quadro do Reclame Aqui: nada de rolar de lado. */
+    <div className="pb-1">
 
-      <div className="flex h-[540px] gap-4">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4">
 
         {active.map((stage) => {
 
@@ -89,7 +90,7 @@ export default function JourneyBoard({
 
                 if (company) onMove(company, stage.id);
               }}
-              className={`flex w-[280px] shrink-0 flex-col rounded-2xl border transition-colors ${
+              className={`flex h-[540px] min-w-0 flex-col rounded-2xl border transition-colors ${
                 isOver
                   ? "border-violet-400 bg-violet-50/70"
                   : "border-zinc-200/80 bg-zinc-50/80"

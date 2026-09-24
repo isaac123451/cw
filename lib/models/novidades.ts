@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.68.2",
+    data: "2026-09-24",
+    titulo: "Sem barra para ir de um lado ao outro",
+    texto: "O quadro do Reclame Aqui, o das Redes, o de Projetos e o da Jornada passam a quebrar as colunas em fileiras em vez de pedir para rolar de lado. O menu de abas do Reclame Aqui, do Analytics e das configurações quebra linha quando não cabe. No celular, a tela deixou de escorregar para o lado em 18 telas (o balão de explicação dos indicadores ocupava lugar mesmo escondido). E as tabelas de Analytics, Processos e Configurar fluxo cabem num notebook.",
+    frentes: ["plataforma", "reclame-aqui", "redes"],
+  },
+  {
     versao: "1.68.1",
     data: "2026-09-24",
     titulo: "Prêmio, dossiê, causas e tons prontos no banco",

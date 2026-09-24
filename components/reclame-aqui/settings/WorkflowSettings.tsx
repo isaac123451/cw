@@ -285,13 +285,13 @@ export default function WorkflowSettings() {
                   ].map((head) => (
                     <th
                       key={head}
-                      className="whitespace-nowrap px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-zinc-500"
+                      className="whitespace-nowrap px-3 py-3 xl:px-5 text-left text-[11px] font-semibold uppercase tracking-wide text-zinc-500"
                     >
                       {head}
                     </th>
                   ))}
 
-                  <th className="px-5 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+                  <th className="px-3 py-3 xl:px-5 text-right text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
                     Ações
                   </th>
 
@@ -319,7 +319,7 @@ export default function WorkflowSettings() {
                       }`}
                     >
 
-                      <td className="px-5 py-3">
+                      <td className="px-3 py-3 xl:px-5">
 
                         <div className="flex items-center gap-1">
 
@@ -347,7 +347,7 @@ export default function WorkflowSettings() {
 
                       </td>
 
-                      <td className="px-5 py-3">
+                      <td className="px-3 py-3 xl:px-5">
 
                         <span
                           className="block h-6 w-6 rounded-full ring-2 ring-white"
@@ -360,7 +360,7 @@ export default function WorkflowSettings() {
 
                       </td>
 
-                      <td className="px-5 py-3">
+                      <td className="px-3 py-3 xl:px-5">
 
                         <p className="text-sm font-medium text-zinc-800">
                           {item.name}
@@ -372,7 +372,7 @@ export default function WorkflowSettings() {
 
                       </td>
 
-                      <td className="px-5 py-3">
+                      <td className="px-3 py-3 xl:px-5">
 
                         <span
                           className={`inline-block rounded-full px-2.5 py-1 text-xs font-semibold tabular-nums ${
@@ -391,7 +391,7 @@ export default function WorkflowSettings() {
 
                       </td>
 
-                      <td className="px-5 py-3">
+                      <td className="px-3 py-3 xl:px-5">
 
                         <input
                           type="number"
@@ -407,7 +407,7 @@ export default function WorkflowSettings() {
 
                       </td>
 
-                      <td className="px-5 py-3">
+                      <td className="px-3 py-3 xl:px-5">
 
                         <button
                           onClick={() =>
@@ -432,7 +432,7 @@ export default function WorkflowSettings() {
 
                       </td>
 
-                      <td className="px-5 py-3">
+                      <td className="px-3 py-3 xl:px-5">
 
                         <div className="flex items-center justify-end gap-1">
 

@@ -85,7 +85,7 @@ export default function EncerrarNpsModal({ item, onClose }: { item: NpsResponseV
       onClose={onClose}
       footer={<RodapeDeSalvar salvando={salvando} desabilitado={!final || Boolean(motivos[final])} rotulo="Encerrar" onSalvar={salvar} onCancelar={onClose} />}
     >
-      <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_240px]">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_240px]">
 
         <div className="space-y-4">
           <div>

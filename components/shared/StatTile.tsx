@@ -119,11 +119,20 @@ export default function StatTile({
 
       </div>
 
+      {/*
+        O balão sai do layout enquanto está escondido.
+
+        Era `opacity-0`: invisível, mas ocupando lugar — e um balão de
+        240 px centrado no indicador da ponta passava da borda da tela.
+        No celular isso dava rolagem lateral em 16 telas. Agora ele só
+        existe no hover (ou com o foco no indicador) e nunca é mais largo
+        que o próprio indicador.
+      */}
       {description && (
 
         <span
           role="tooltip"
-          className="pointer-events-none absolute bottom-[calc(100%+6px)] left-1/2 z-50 w-max max-w-[240px] -translate-x-1/2 rounded-lg bg-zinc-900 px-2.5 py-1.5 text-[11px] font-medium leading-snug text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100"
+          className="pointer-events-none absolute bottom-[calc(100%+6px)] left-1/2 z-50 hidden w-max max-w-[min(240px,calc(100%+1rem))] -translate-x-1/2 rounded-lg bg-zinc-900 px-2.5 py-1.5 text-[11px] font-medium leading-snug text-white shadow-lg group-hover:block group-focus-visible:block"
         >
           {description}
         </span>

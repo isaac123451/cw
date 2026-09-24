@@ -64,7 +64,7 @@ export default function KanbanColumn({
 
         if (id) onDropCase(id, workflow.name);
       }}
-      className={`flex h-full w-[284px] shrink-0 flex-col rounded-xl transition-colors ${
+      className={`flex h-[min(480px,calc(100vh-280px))] min-h-[320px] min-w-0 flex-col rounded-xl transition-colors ${
         isOver
           ? "bg-violet-50 ring-2 ring-inset ring-violet-300"
           : isDragging

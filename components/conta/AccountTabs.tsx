@@ -80,7 +80,7 @@ export default function AccountTabs({
   return (
     <div className="space-y-6">
 
-      <div className="overflow-x-auto rounded-2xl border border-zinc-200/80 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+      <div className="sem-barra overflow-x-auto rounded-2xl border border-zinc-200/80 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
 
         <div className="flex min-w-max">
 
