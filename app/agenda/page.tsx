@@ -38,6 +38,7 @@ import RotinaNaAgenda from "@/components/rotina/RotinaNaAgenda";
 import { useMeuDia } from "@/components/rotina/useMeuDia";
 import BotaoAbrirEmJanela from "@/components/janelas/BotaoAbrirEmJanela";
 import { useCases } from "@/lib/context/CaseContext";
+import { useSession } from "@/lib/context/SessionContext";
 import { isSocial } from "@/lib/services/case.service";
 
 const typeTone: Record<string, string> = {
@@ -102,7 +103,17 @@ export default function AgendaPage() {
     moveTask,
   } = useAgenda();
 
-  const [showDone, setShowDone] = useState(true);
+  /*
+    Achar o que foi criado (Fase 25): "pra verificar coisas que criei tá
+    muito ruim de ver". Busca no título, no estabelecimento e no
+    protocolo; tipo, situação, frente e "só as minhas".
+  */
+  const sessao = useSession();
+  const [busca, setBusca] = useState("");
+  const [tipo, setTipo] = useState<string>("");
+  const [situacao, setSituacao] = useState<"abertas" | "atrasadas" | "concluidas" | "todas">("abertas");
+  const [frenteDoFiltro, setFrenteDoFiltro] = useState<"" | "reclame-aqui" | "redes" | "sem-caso">("");
+  const [soMinhas, setSoMinhas] = useState(false);
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<AgendaTask>();
@@ -121,13 +132,24 @@ export default function AgendaPage() {
     texto: string;
   }>();
 
-  const visible = useMemo(
-    () =>
-      showDone
-        ? tasks
-        : tasks.filter((item) => !item.done),
-    [tasks, showDone]
-  );
+  const visible = useMemo(() => {
+    const hoje = hojeNaOperacao();
+    const termo = busca.trim().toLowerCase();
+    return tasks.filter((item) => {
+      if (situacao === "abertas" && item.done) return false;
+      if (situacao === "concluidas" && !item.done) return false;
+      if (situacao === "atrasadas" && (item.done || item.dueDate >= hoje)) return false;
+      if (tipo && item.type !== tipo) return false;
+      if (soMinhas && item.owner !== sessao?.name) return false;
+      if (frenteDoFiltro) {
+        const caso = item.relatedCase ? casoDoProtocolo.get(item.relatedCase) : undefined;
+        const f = caso ? (isSocial(caso) ? "redes" : "reclame-aqui") : "sem-caso";
+        if (f !== frenteDoFiltro) return false;
+      }
+      if (termo && ![item.title, item.relatedCompany, item.relatedCase, item.owner].some((v) => v?.toLowerCase().includes(termo))) return false;
+      return true;
+    });
+  }, [tasks, busca, tipo, situacao, frenteDoFiltro, soMinhas, sessao?.name, casoDoProtocolo]);
 
   const days = useMemo(() => {
 
@@ -218,21 +240,6 @@ export default function AgendaPage() {
           description="Atividades, follow-ups, cobranças internas e pendências do time."
         >
 
-          <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3.5 py-2.5 text-sm font-medium text-zinc-600">
-
-            <input
-              type="checkbox"
-              checked={showDone}
-              onChange={(e) =>
-                setShowDone(e.target.checked)
-              }
-              className="h-4 w-4 accent-violet-600"
-            />
-
-            Mostrar resolvidas
-
-          </label>
-
           <button
             data-tour="nova-atividade"
             onClick={() => novaAtividade()}
@@ -312,6 +319,44 @@ export default function AgendaPage() {
         <RotinaNaAgenda dia={meuDia} />
 
         <GoogleCalendarCard />
+
+        {/* As atividades criadas, para achar: busca e filtros, e a contagem do que sobrou. */}
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm">
+          <label htmlFor="agenda-busca" className="sr-only">Buscar atividade</label>
+          <input
+            id="agenda-busca"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="Buscar por título, estabelecimento ou protocolo"
+            className="h-8 min-w-48 flex-1 rounded-lg border border-zinc-200 px-2.5 text-sm outline-none focus:border-violet-400"
+          />
+          <label htmlFor="agenda-situacao" className="sr-only">Situação</label>
+          <select id="agenda-situacao" value={situacao} onChange={(e) => setSituacao(e.target.value as typeof situacao)} className="h-8 rounded-lg border border-zinc-200 px-2 text-sm">
+            <option value="abertas">Abertas</option>
+            <option value="atrasadas">Atrasadas</option>
+            <option value="concluidas">Concluídas</option>
+            <option value="todas">Todas</option>
+          </select>
+          <label htmlFor="agenda-tipo" className="sr-only">Tipo</label>
+          <select id="agenda-tipo" value={tipo} onChange={(e) => setTipo(e.target.value)} className="h-8 rounded-lg border border-zinc-200 px-2 text-sm">
+            <option value="">Todos os tipos</option>
+            {["Follow-up", "Cobrança interna", "Solicitação de avaliação", "Pendência", "Recorrente"].map((t) => (
+              <option key={t} value={t}>{t}</option>
+            ))}
+          </select>
+          <label htmlFor="agenda-frente" className="sr-only">Frente</label>
+          <select id="agenda-frente" value={frenteDoFiltro} onChange={(e) => setFrenteDoFiltro(e.target.value as typeof frenteDoFiltro)} className="h-8 rounded-lg border border-zinc-200 px-2 text-sm">
+            <option value="">Todas as frentes</option>
+            <option value="reclame-aqui">Reclame Aqui</option>
+            <option value="redes">Redes Sociais</option>
+            <option value="sem-caso">Sem caso ligado</option>
+          </select>
+          <label className="flex items-center gap-1.5 text-sm text-zinc-600">
+            <input id="agenda-minhas" type="checkbox" checked={soMinhas} onChange={(e) => setSoMinhas(e.target.checked)} className="h-4 w-4 accent-violet-600" />
+            Só as minhas
+          </label>
+          <span className="ml-auto text-xs tabular-nums text-zinc-500">{visible.length} de {tasks.length}</span>
+        </div>
 
         <div className="space-y-5">
 
@@ -524,17 +569,34 @@ export default function AgendaPage() {
                   className="text-zinc-300"
                 />
 
-                <p className="mt-3 text-sm font-medium text-zinc-700">
-                  Nenhuma atividade pendente.
-                </p>
-
-                <button
-                  onClick={() => novaAtividade()}
-                  className="mt-4 flex items-center gap-2 rounded-xl bg-violet-700 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-violet-800"
-                >
-                  <Plus size={15} />
-                  Criar a primeira
-                </button>
+                {tasks.length > 0 ? (
+                  <>
+                    <p className="mt-3 text-sm font-medium text-zinc-700">Nenhuma atividade com esses filtros.</p>
+                    <button
+                      onClick={() => {
+                        setBusca("");
+                        setTipo("");
+                        setSituacao("todas");
+                        setFrenteDoFiltro("");
+                        setSoMinhas(false);
+                      }}
+                      className="mt-3 text-sm font-medium text-violet-700 hover:underline"
+                    >
+                      Ver todas as {tasks.length}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p className="mt-3 text-sm font-medium text-zinc-700">Nenhuma atividade criada ainda.</p>
+                    <button
+                      onClick={() => novaAtividade()}
+                      className="mt-4 flex items-center gap-2 rounded-xl bg-violet-700 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-violet-800"
+                    >
+                      <Plus size={15} />
+                      Criar a primeira
+                    </button>
+                  </>
+                )}
 
               </div>
             </SurfaceCard>

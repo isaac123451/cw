@@ -104,6 +104,14 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.52.0",
+    data: "2026-09-24",
+    titulo: "Achar o que foi criado na Agenda",
+    texto: "A lista de atividades da Agenda ganhou busca (título, estabelecimento, protocolo ou responsável) e filtros de situação (abertas, atrasadas, concluídas ou todas), tipo, frente e \"só as minhas\", com a contagem do que sobrou. As concluídas continuam guardadas e se reabrem com um clique.",
+    frentes: ["plataforma"],
+    href: "/agenda",
+  },
+  {
     versao: "1.51.0",
     data: "2026-09-24",
     titulo: "Atividade em uma linha",

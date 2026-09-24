@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 24/09/2026. Aplicação **1.51.0**, extensão **1.51.0**.
+Atualizado em 24/09/2026. Aplicação **1.52.0**, extensão **1.52.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,28 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### O que eu criei, fácil de achar (24/09/2026, 1.52.0)
+
+Item da Fase 25 — "pra verificar coisas que criei tá muito ruim de ver".
+
+- A lista de atividades da Agenda (os dias, abaixo da linha do tempo)
+  ganhou uma barra: busca no título, estabelecimento, protocolo e
+  responsável; situação (Abertas, que é o padrão, Atrasadas, Concluídas,
+  Todas); tipo; frente (Reclame Aqui, Redes, sem caso ligado, pelo
+  protocolo da atividade); e "Só as minhas" (responsável é quem está
+  logado). Ao lado, "2 de 14".
+- Saiu o "Mostrar resolvidas" do cabeçalho: virou a situação. As
+  concluídas ficam guardadas e reabrem pelo mesmo quadradinho.
+- Filtro que esconde tudo diz "Nenhuma atividade com esses filtros" e
+  oferece ver todas.
+- A atividade não guarda quem a criou, só o responsável: "Só as minhas"
+  é pelo responsável.
+
+Provas, no navegador, na Agenda: três atividades criadas pela linha,
+busca "zé" acha uma, tipo Follow-up acha uma, concluir tira das abertas
+e ela aparece em Concluídas, e o filtro vazio diz isso. `tsc` e `lint`
+limpos.
 
 ### Criar em uma linha (24/09/2026, 1.51.0)
 
