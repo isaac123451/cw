@@ -419,6 +419,11 @@ export interface RootCauseOption {
   description?: string;
   order: number;
   active: boolean;
+  /** A área que resolve e o prazo interno dela (Fase 27). */
+  area?: string;
+  prazoHoras?: number;
+  /** As palavras que a sugestão pelo texto procura. */
+  palavras?: string[];
 }
 
 /**

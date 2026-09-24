@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 24/09/2026. Aplicação **1.59.0**, extensão **1.59.0**.
+Atualizado em 24/09/2026. Aplicação **1.60.0**, extensão **1.60.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,46 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### Catálogo de causas tirado da base (24/09/2026, 1.60.0)
+
+Primeiro item da Fase 27 ("Causas raiz que direcionam"): "crie causas
+raiz conforme os casos que já tiveram para direcionar corretamente".
+
+- `lib/models/catalogoDeCausas.ts`: 19 famílias de causa da Cardápio Web
+  (pedido do consumidor ao restaurante, repasse e pagamento online,
+  cobrança depois de cancelar, pedido de cancelamento, nota fiscal,
+  cobrança e mensalidade, impressão, integração com iFood, WhatsApp e
+  robô, sistema fora do ar, cardápio e preços, taxa de entrega, cupom,
+  implantação, promessa da venda, demora, postura, dúvida de uso, função
+  que falta), da mais específica para a mais genérica, cada uma com a
+  área que resolve (Atendimento, Suporte N2, Financeiro, Comercial,
+  Desenvolvimento, Implantação), o prazo e as causas genéricas que
+  detalha. `propostaDoCatalogo` conta os registros por família e por
+  frente, com dois exemplos de frentes diferentes, e lista as palavras
+  que mais se repetem no que não coube.
+- `lib/actions/catalogoDeCausas.ts`: `lerPropostaDoCatalogo` lê do banco
+  o relato e o post (que a lista não carrega), os comentários do NPS e
+  o texto do Google; `aprovarCausasDoCatalogo` grava as causas com área,
+  prazo e palavras — a que já existe com o mesmo nome ganha área e
+  prazo; nada é apagado nem renomeado.
+- Tela `/causas-raiz` (menu Inteligência → Causas raiz): a proposta com
+  a cobertura, a contagem por frente, os exemplos, a área e o prazo
+  editáveis e o botão Aprovar. Vem marcada a família com 3 ou mais
+  registros que ainda não está no catálogo.
+- `NpsRootCause` ganhou `area`, `prazoHoras` e `palavras`. A leitura do
+  cadastro cai para as colunas antigas enquanto o `db:push` não roda, e
+  editar ou excluir uma causa não pede mais as colunas novas.
+- `regrasDoCatalogo`: as regras de texto que a sugestão usa para as
+  causas novas (a expressão da família, ou as palavras guardadas).
+
+Provas: `npm run check:causas` (cada relato na família certa, a
+contagem, os exemplos, o que não coube, a aprovação e a sugestão pelo
+texto) e teste no navegador da proposta (marcadas, avisos, área e prazo
+escolhidos indo para a aprovação). Não provado sem banco: a leitura real
+dos registros e a gravação. **Depende de você:** `npm run db:push` (as
+três colunas novas), abrir Causas raiz, conferir a área e o prazo e
+aprovar.
 
 ### O dossiê sai da extensão (24/09/2026, 1.59.0)
 

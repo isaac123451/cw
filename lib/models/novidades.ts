@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.60.0",
+    data: "2026-09-24",
+    titulo: "Causas raiz tiradas dos casos reais",
+    texto: "Nova tela Causas raiz (menu Inteligência): a plataforma lê os relatos do Reclame Aqui, os comentários do NPS, as redes e o Google e propõe as causas que se repetem na Cardápio Web — impressão de pedidos, integração com iFood, repasse, cobrança depois de cancelar, implantação e outras —, cada uma com quantos registros tem por frente, dois exemplos reais, a área que resolve e o prazo. Você ajusta a área e o prazo e aprova; as causas de antes continuam.",
+    frentes: ["plataforma", "reclame-aqui", "nps", "redes", "google"],
+  },
+  {
     versao: "1.59.0",
     data: "2026-09-24",
     titulo: "O dossiê sai da extensão",

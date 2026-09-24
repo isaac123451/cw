@@ -23,7 +23,7 @@
    TEXTO
 ============================================================ */
 
-const PARADAS = new Set(
+export const PARADAS = new Set(
   "a o e é de da do das dos em no na nos nas um uma uns umas que se por para pra com sem como mais mas ou ao aos à às eu ele ela eles elas nós vocês você voce vc vcs me te lhe nos seu sua seus suas meu minha meus minhas isso isto esse essa este esta aquele aquela já ja foi ser ter tem tenho tinha estou está esta estão estava muito muita pouco quando onde porque pois então entao também tambem só so até ate sobre depois antes ainda aqui ali lá la dia dias hoje ontem nao não sim empresa cardapio cardápio web".split(" ")
 );
 

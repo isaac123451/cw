@@ -1477,6 +1477,16 @@ model NpsRootCause {
   order       Int     @default(0)
   active      Boolean @default(true)
 
+  /// A área que resolve (Fase 27): Atendimento, Suporte N2, Financeiro,
+  /// Comercial, Desenvolvimento, Implantação. Classificar com esta causa
+  /// já sugere acionar a área certa.
+  area       String?
+  /// O prazo interno da área, em horas úteis.
+  prazoHoras Int?
+  /// As palavras que a sugestão pelo texto procura — para a causa criada
+  /// à mão; a que nasceu do catálogo usa a expressão da família.
+  palavras   String[] @default([])
+
   createdAt DateTime @default(now())
 }
 
