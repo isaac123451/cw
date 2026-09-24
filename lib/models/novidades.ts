@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.40.0",
+    data: "2026-09-23",
+    titulo: "Triagem pelo relato, validação de verdade e imersão que prepara o contato",
+    texto: "A triagem ganhou os critérios de Normal e mais critérios de Urgente e Alta — 21 ao todo —, e o relato sugere os que se aplicam, com o trecho que acendeu cada um. Toda reclamação abre na página pública e na área da empresa do Reclame Aqui, no quadro, no Meu dia, na busca, no sino e na extensão. A validação virou um passo próprio: a pergunta pronta, a resposta do cliente (confirmou ou apontou pendência) e o compromisso da avaliação. O passo da resposta pública mostra há quantos dias o portal exibe a reclamação como não respondida. E a imersão traz um resumo do cliente, acha ou cria a conta ali mesmo e guarda os links do Crisp e do portal.",
+    frentes: ["reclame-aqui", "extensao"],
+  },
+  {
     versao: "1.39.0",
     data: "2026-09-23",
     titulo: "Pessoas clicáveis, nome que se preenche e anotação em uma linha",

@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 23/09/2026. Aplicação **1.30.0**, extensão **1.30.0**.
+Atualizado em 24/09/2026. Aplicação **1.40.0**, extensão **1.40.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,50 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### Ficha: triagem pelo relato, links do RA, validação, resposta pública e imersão (23/09/2026, 1.40.0)
+
+Cinco pontos da Fase 22, em dois commits (`82433bf` e `4a34b68`) que
+subiram sem versão; a 1.40.0 é o registro deles.
+
+- **Critérios de criticidade completos.** "Mais critérios de urgente,
+  alta e adicione o normal." A triagem mostra as três colunas (Urgente,
+  Alta e Normal), 21 critérios ao todo. O relato acende os critérios
+  pelas palavras (`criteriosPeloTexto`) e mostra o trecho que acendeu
+  cada um; os de Normal não sobem o nível, registram por que o caso é
+  Normal. Quem já cancelou e segue sendo cobrado é cobrança, não risco
+  de cancelamento (`anula`). Medido contra os 363 relatos com
+  `scripts/medir-criterios.ts`.
+- **Reclamação e portal lado a lado.** Duas páginas com papéis
+  diferentes: a pública (o que o consumidor lê, `raUrl`, 321 das 363) e
+  a área da empresa (onde se responde e modera; sai do protocolo, existe
+  para as 363). `LinksDoRa` no quadro, na lista, no Meu dia, no Um por
+  vez, na busca, no sino, na ficha e nos dois painéis da extensão.
+- **Validação com cara de validação.** Um passo próprio
+  (`ValidacaoModal`): a pergunta pronta para copiar ou abrir no
+  WhatsApp, registrada como "aguardando o cliente"; a resposta —
+  confirmou (valida) ou apontou pendência (não valida, e a pendência
+  fica na trilha); a última fala da conversa guardada entra com um
+  clique; e o compromisso da avaliação, registrado junto.
+- **Resposta pública no tempo certo — decidido diferente do roadmap.**
+  O roadmap pedia duas respostas públicas (uma logo depois do 1º
+  contato, a final depois da validação). Ficou a regra do documento:
+  responder só depois da validação, porque responder antes abre a
+  avaliação do consumidor antes da solução. O custo da espera fica à
+  vista no passo: "o portal mostra não respondida há N dias" (mediana
+  de 6 dias da publicação à resposta; 10% passam de 32).
+- **Imersão que prepara o contato.** Resumo do cliente montado do dado,
+  sem IA (`resumoDoCliente`): conta, primeira reclamação ou não, NPS,
+  Google e a última fala guardada. Sem conta vinculada, acha pelo nome
+  ou documento ou cria ali mesmo (`ContaDaImersao`); os links do Crisp e
+  do portal gravam ao sair do campo.
+
+Provas: `check:sugestao-texto` (49 pontos), `check:links-do-ra` (6),
+`check:imersao` (8), `check:trilha` (64, com a validação pedida, a
+pendência e os dias sem resposta) — todos passando em 24/09. `tsc` e
+`lint` limpos.
+
+**Depende de você:** recarregar a extensão (1.40.0).
 
 ### Ficha: pessoas clicáveis, o nome que se preenche e a anotação em uma linha (23/09/2026, 1.39.0)
 
