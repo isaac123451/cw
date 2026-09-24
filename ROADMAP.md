@@ -1116,6 +1116,29 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Pedidos de 24/09 — Fases 32 a 34 no roadmap (a fazer)
+
+Registrados na página do roadmap (Parte 2 passa a 47 de 92):
+
+- **Fase 32 · Reclame Aqui sem atrito:** campos de seleção que criam e
+  editam (cliente, estabelecimento, categoria, status; filtro de clientes
+  sem estabelecimentos misturados nem opção vazia), quadro com contraste,
+  lista enxuta, completar em sequência, pedir avaliação em lote (devolver
+  e dispensar todos, tirar de verdade), índice como no HugMe (atual,
+  prévia, 6/12 meses, evolução diária), o que fazer em cada reclamação,
+  ficha responsiva, Prêmio repensado (estratégias e casos indicados),
+  dossiê em texto único com campo livre e imagens, mais categorias e
+  causas raiz.
+- **Fase 33 · Extensão que trabalha junto:** disparos em lote seguros (10
+  em 10, ~40 s entre mensagens), a plataforma dentro da extensão, IA como
+  copiloto, selos de quem espera resposta, prazo estourando avisa,
+  identificação pela conversa/Slack/Redes, área da empresa com pedir
+  avaliação rápido e urgência, salvamento que avisa com áudio transcrito.
+- **Fase 34 · Plataforma leve e ágil:** plano de recuperação
+  configurável, atividades manuais direcionadas, rotina de hoje
+  repaginada, sem botão de recarregar, entrada mais rápida e segura,
+  cards e pop-ups de foco, desempenho medido.
+
 ### A extensão ao lado na área da empresa (24/09/2026, 1.69.0)
 
 O Isaac: "dentro da área da empresa, quero algumas iniciativas que a
