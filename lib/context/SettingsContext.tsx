@@ -73,6 +73,18 @@ interface SettingsContextType {
   ) => Promise<Gravacao>;
   removeSubcategory: (id: string) => Promise<Gravacao>;
 
+  /**
+   * Criar e renomear dos campos de escolha da reclamação.
+   *
+   * Ao contrário de `saveCategory`, a lista só muda depois de o servidor
+   * gravar: o campo não mostra como criada uma categoria que o banco
+   * recusou. `false` é recusa — o aviso já saiu.
+   */
+  criarCategoria: (nome: string) => Promise<boolean>;
+  renomearCategoria: (id: string, nome: string) => Promise<boolean>;
+  criarSubcategoria: (categoria: string, nome: string) => Promise<boolean>;
+  renomearSubcategoria: (id: string, nome: string) => Promise<boolean>;
+
   saveTeam: (data: TeamOption) => Promise<Gravacao>;
   removeTeam: (id: string) => Promise<Gravacao>;
 
@@ -170,6 +182,48 @@ export function SettingsProvider({
         return sincronizar(() => gravarSubcategoria(data));
       },
 
+      criarCategoria: async (nome) => {
+        const nova: CategoryOption = {
+          id: crypto.randomUUID(),
+          name: nome,
+          description: "",
+          order: Math.max(0, ...categories.map((c) => c.order)) + 1,
+          active: true,
+        };
+        const r = await sincronizar(() => gravarCategoria(nova));
+        if (r.ok) setCategories((prev) => upsert(prev, nova));
+        return r.ok;
+      },
+      renomearCategoria: async (id, nome) => {
+        const atual = categories.find((c) => c.id === id);
+        if (!atual) return false;
+        const r = await sincronizar(() => gravarCategoria({ ...atual, name: nome }));
+        if (!r.ok) return false;
+        setCategories((prev) => upsert(prev, { ...atual, name: nome }));
+        /* A subcategoria aponta para a categoria pelo nome. */
+        setSubcategories((prev) => prev.map((s) => (s.category === atual.name ? { ...s, category: nome } : s)));
+        return true;
+      },
+      criarSubcategoria: async (categoria, nome) => {
+        const nova: SubcategoryOption = {
+          id: crypto.randomUUID(),
+          category: categoria,
+          name: nome,
+          description: "",
+          order: Math.max(0, ...subcategories.filter((s) => s.category === categoria).map((s) => s.order)) + 1,
+          active: true,
+        };
+        const r = await sincronizar(() => gravarSubcategoria(nova));
+        if (r.ok) setSubcategories((prev) => upsert(prev, nova));
+        return r.ok;
+      },
+      renomearSubcategoria: async (id, nome) => {
+        const atual = subcategories.find((s) => s.id === id);
+        if (!atual) return false;
+        const r = await sincronizar(() => gravarSubcategoria({ ...atual, name: nome }));
+        if (r.ok) setSubcategories((prev) => upsert(prev, { ...atual, name: nome }));
+        return r.ok;
+      },
       removeSubcategory: (id) => {
         setSubcategories((prev) =>
           prev.filter((item) => item.id !== id)

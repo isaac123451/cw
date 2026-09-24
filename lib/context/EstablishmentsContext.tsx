@@ -38,6 +38,13 @@ interface EstablishmentsContextType {
   removeEstablishment: (id: string) => void;
 
   /**
+   * Criar e renomear dos campos de escolha: só aparecem na lista depois
+   * de o servidor gravar. `null`/`false` é recusa — o aviso já saiu.
+   */
+  criarEstabelecimento: (nome: string) => Promise<Establishment | null>;
+  renomearEstabelecimento: (id: string, nome: string) => Promise<boolean>;
+
+  /**
    * O que o servidor já gravou, só na tela — sem gravar de novo.
    *
    * A imersão cria a conta e salva o link do Crisp por ações próprias,
@@ -120,6 +127,32 @@ export function EstablishmentsProvider({
             )
         );
         sincronizar(() => saveEstablishment(data));
+      },
+
+      criarEstabelecimento: async (nome) => {
+        const base = slugify(nome) || "estabelecimento";
+        const taken = new Set(establishments.map((item) => item.slug));
+        let slug = base;
+        for (let n = 2; taken.has(slug); n += 1) slug = `${base}-${n}`;
+
+        const novo: Establishment = { id: crypto.randomUUID(), slug, name: nome, plan: "", status: "Ativo" };
+        const r = await sincronizar(() => saveEstablishment(novo));
+        if (!r.ok) return null;
+
+        setEstablishments((prev) => [...prev, novo].sort((a, b) => a.name.localeCompare(b.name)));
+        return novo;
+      },
+
+      renomearEstabelecimento: async (id, nome) => {
+        const atual = establishments.find((item) => item.id === id);
+        if (!atual) return false;
+        const r = await sincronizar(() => saveEstablishment({ ...atual, name: nome }));
+        if (!r.ok) return false;
+
+        setEstablishments((prev) =>
+          prev.map((item) => (item.id === id ? { ...item, name: nome } : item)).sort((a, b) => a.name.localeCompare(b.name))
+        );
+        return true;
       },
 
       removeEstablishment: (id) => {

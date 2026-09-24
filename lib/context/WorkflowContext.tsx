@@ -30,6 +30,14 @@ interface WorkflowContextProps {
   updateStatus: (item: WorkflowStatus) => Promise<Gravacao>;
   deleteStatus: (id: string) => void;
   toggleStatus: (id: string) => void;
+
+  /**
+   * Criar e renomear do seletor de situação da reclamação: a etapa só
+   * aparece (ou muda de nome) depois de o servidor gravar. Renomear leva
+   * as reclamações da etapa junto — ver `saveWorkflowStatus`.
+   */
+  criarEtapa: (nome: string) => Promise<boolean>;
+  renomearEtapa: (id: string, nome: string) => Promise<boolean>;
 }
 
 const WorkflowContext = createContext<
@@ -98,6 +106,27 @@ export function WorkflowProvider({
     sincronizar(() => saveWorkflowStatus(alterado));
   }
 
+  async function criarEtapa(nome: string) {
+    const nova: WorkflowStatus = {
+      id: crypto.randomUUID(),
+      name: nome,
+      color: "#7C3AED",
+      order: Math.max(0, ...workflow.map((s) => s.order)) + 1,
+      active: true,
+    };
+    const r = await sincronizar(() => saveWorkflowStatus(nova));
+    if (r.ok) setWorkflow((current) => [...current, nova]);
+    return r.ok;
+  }
+
+  async function renomearEtapa(id: string, nome: string) {
+    const atual = workflow.find((s) => s.id === id);
+    if (!atual) return false;
+    const r = await sincronizar(() => saveWorkflowStatus({ ...atual, name: nome }));
+    if (r.ok) setWorkflow((current) => current.map((s) => (s.id === id ? { ...s, name: nome } : s)));
+    return r.ok;
+  }
+
   return (
     <WorkflowContext.Provider
       value={{
@@ -107,6 +136,8 @@ export function WorkflowProvider({
         updateStatus,
         deleteStatus,
         toggleStatus,
+        criarEtapa,
+        renomearEtapa,
       }}
     >
       {children}

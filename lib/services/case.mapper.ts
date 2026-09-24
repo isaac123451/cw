@@ -225,7 +225,8 @@ export function toCaseModel(row: {
      */
     company:
       row.establishment?.name ??
-      (mesmoNome(row.companyName, row.customer)
+      /* "Não informado" (8 casos da carga) também é vazio: não é um restaurante. */
+      (mesmoNome(row.companyName, row.customer) || /^\s*n[ãa]o informad[oa]\s*$/i.test(row.companyName ?? "")
         ? ""
         : row.companyName),
     document: row.document ?? undefined,

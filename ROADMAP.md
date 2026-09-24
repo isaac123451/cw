@@ -1116,6 +1116,22 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Campos de seleção que criam e editam (24/09/2026, 1.73.0)
+
+`Combobox` com `onCriar` ("Criar “…”" quando a busca não acha nome igual)
+e `onRenomear` (lápis por item, Enter salva, Esc cancela) — os dois só
+mudam a lista depois de o servidor gravar. Ligado no estabelecimento da
+ficha (cria e já vincula, por `criarEstabelecimentoDoCaso`), categoria e
+subcategoria da investigação e no seletor de situação (etapas) — criar e
+renomear categoria/etapa é do administrador. A Nova reclamação trocou os
+`<select>` por campos com busca, e o estabelecimento deixou de ser texto
+livre que repetia o consumidor. Renomear etapa leva as reclamações junto
+(`Case.status` guarda o nome; `saveWorkflowStatus` faz o `updateMany` na
+mesma transação). "Não informado" (8 casos) não aparece mais como
+estabelecimento. Tema escuro: `focus:bg-white` e `hover:bg-white` viram a
+superfície do cartão. Conferido na tela com um estabelecimento descartável
+(criado, renomeado e apagado; nenhuma reclamação gravada).
+
 ### O que fazer em cada reclamação (24/09/2026, 1.72.0)
 
 `lib/models/oQueFazer.ts`: o passo da trilha vira uma frase do que fazer —

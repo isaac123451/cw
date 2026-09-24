@@ -4,7 +4,7 @@ import { comResultado } from "@/lib/services/gravacao";
 import type { ResultadoDaGravacao } from "@/lib/models/resultadoDaGravacao";
 
 import { updateTag } from "next/cache";
-import { WORKSPACE_TAG } from "@/lib/actions/tags";
+import { CASES_TAG, WORKSPACE_TAG } from "@/lib/actions/tags";
 
 import { requireRole, Role, tryRole } from "@/lib/auth/guard";
 import { diaNaOperacao } from "@/lib/services/reputation.service";
@@ -100,7 +100,7 @@ export async function saveWorkflowStatus(
     if (!prisma) return;
 
     const dados = {
-      name: item.name,
+      name: item.name.replace(/\s+/g, " ").trim(),
       color: item.color,
       order: item.order,
       active: item.active,
@@ -108,13 +108,27 @@ export async function saveWorkflowStatus(
       reminderMinutes: item.reminderMinutes ?? null,
     };
 
-    await prisma.workflowStatus.upsert({
-      where: { id: item.id },
-      update: dados,
-      create: { id: item.id, ...dados },
-    });
+    /*
+      Renomear a etapa leva as reclamações junto.
+
+      `Case.status` guarda o nome, não o id: trocar só o nome da etapa
+      deixava as reclamações dela sem coluna no quadro. Na mesma
+      transação, quem estava na etapa antiga passa para o nome novo.
+    */
+    const antes = await prisma.workflowStatus.findUnique({ where: { id: item.id }, select: { name: true } });
+    const renomeada = Boolean(antes && antes.name !== dados.name);
+
+    await prisma.$transaction([
+      prisma.workflowStatus.upsert({
+        where: { id: item.id },
+        update: dados,
+        create: { id: item.id, ...dados },
+      }),
+      ...(renomeada ? [prisma.case.updateMany({ where: { status: antes!.name }, data: { status: dados.name } })] : []),
+    ]);
 
     updateTag(WORKSPACE_TAG);
+    if (renomeada) updateTag(CASES_TAG);
   });
 }
 
@@ -151,6 +165,8 @@ export async function saveCategory(
     });
 
     updateTag(WORKSPACE_TAG);
+    /* O nome sai na lista das reclamações — um renome precisa aparecer lá. */
+    updateTag(CASES_TAG);
   });
 }
 
@@ -198,6 +214,8 @@ export async function saveSubcategory(
     });
 
     updateTag(WORKSPACE_TAG);
+    /* O nome sai na lista das reclamações — um renome precisa aparecer lá. */
+    updateTag(CASES_TAG);
   });
 }
 
@@ -460,6 +478,8 @@ export async function saveEstablishment(
     }
 
     updateTag(WORKSPACE_TAG);
+    /* O nome do estabelecimento é a "empresa" na lista das reclamações. */
+    updateTag(CASES_TAG);
   });
 }
 

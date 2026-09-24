@@ -8,6 +8,9 @@ import {
   Check,
   ChevronDown,
   Copy,
+  Loader2,
+  Pencil,
+  Plus,
   Send,
 } from "lucide-react";
 
@@ -15,6 +18,8 @@ import { Case } from "@/lib/models/case";
 import { INICIO_DA_TRILHA } from "@/lib/models/trilha";
 
 import { useWorkflow } from "@/lib/context/WorkflowContext";
+import { useSession } from "@/lib/context/SessionContext";
+import { useCases } from "@/lib/context/CaseContext";
 import { descreverRegistro } from "@/lib/services/horasUteis";
 import { dadosSensiveis, resumoDosAchados } from "@/lib/services/lgpd";
 import { hojeNaOperacao } from "@/lib/services/reputation.service";
@@ -114,9 +119,80 @@ function SituacaoPicker({
   onChange: (next: string) => void;
 }) {
 
-  const { workflow } = useWorkflow();
+  const { workflow, criarEtapa, renomearEtapa } = useWorkflow();
+  const { recarregar } = useCases();
 
   const [aberta, setAberta] = useState(false);
+
+  /*
+    Criar e renomear etapa ali mesmo — só o administrador, porque a etapa
+    é uma coluna do quadro de todo mundo. Nada muda antes do servidor.
+  */
+  const admin = useSession()?.role === "ADMIN";
+  const [editando, setEditando] = useState<string | null>(null);
+  const [nome, setNome] = useState("");
+  const [gravando, setGravando] = useState(false);
+
+  function fechar() {
+    setAberta(false);
+    setEditando(null);
+  }
+
+  async function gravarNome() {
+    const limpo = nome.replace(/\s+/g, " ").trim();
+    const atual = workflow.find((s) => s.id === editando);
+    if (gravando) return;
+    if (limpo.length < 2 || (atual && atual.name === limpo)) {
+      setEditando(null);
+      return;
+    }
+    setGravando(true);
+    const ok = editando === "nova" ? await criarEtapa(limpo) : await renomearEtapa(editando!, limpo);
+    setGravando(false);
+    if (!ok) return;
+    setEditando(null);
+    if (editando === "nova") {
+      onChange(limpo);
+      setAberta(false);
+    } else {
+      if (atual?.name === value) onChange(limpo);
+      void recarregar();
+    }
+  }
+
+  const campoDoNome = (
+    <span className="flex w-full items-center gap-1">
+      <input
+        autoFocus
+        value={nome}
+        onChange={(e) => setNome(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            void gravarNome();
+          }
+          if (e.key === "Escape") {
+            e.preventDefault();
+            setEditando(null);
+          }
+        }}
+        disabled={gravando}
+        placeholder="Nome da etapa"
+        aria-label="Nome da etapa"
+        className="h-8 min-w-0 flex-1 rounded-lg bg-white px-2.5 text-sm outline-none ring-1 ring-violet-300 focus:ring-2 focus:ring-violet-200"
+      />
+      <button
+        type="button"
+        onClick={() => void gravarNome()}
+        disabled={gravando}
+        title="Salvar (Enter)"
+        aria-label="Salvar"
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-700 text-white transition-colors hover:bg-violet-800 disabled:opacity-60"
+      >
+        {gravando ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+      </button>
+    </span>
+  );
 
   const etapas = workflow
     .filter((item) => item.active)
@@ -138,18 +214,34 @@ function SituacaoPicker({
         <>
           <div
             className="fixed inset-0 z-40"
-            onClick={() => setAberta(false)}
+            onClick={fechar}
           />
 
-          <div className="absolute right-0 top-[calc(100%+6px)] z-50 w-60 overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-[0_12px_32px_-12px_rgba(16,24,40,0.25)]">
+          <div className="absolute right-0 top-[calc(100%+6px)] z-50 w-64 overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-[0_12px_32px_-12px_rgba(16,24,40,0.25)]">
 
             <p className="border-b border-zinc-100 px-3.5 py-2 text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
               Situação no quadro
             </p>
 
             <ul className="max-h-64 overflow-y-auto p-1.5">
-              {etapas.map((etapa) => (
-                <li key={etapa.id}>
+              {etapas.map((etapa) => editando === etapa.id ? (
+                <li key={etapa.id} className="px-1 py-0.5">{campoDoNome}</li>
+              ) : (
+                <li key={etapa.id} className="group relative">
+                  {admin && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditando(etapa.id);
+                        setNome(etapa.name);
+                      }}
+                      title={`Renomear ${etapa.name} (as reclamações vão junto)`}
+                      aria-label={`Renomear ${etapa.name}`}
+                      className="absolute right-1.5 top-1/2 z-10 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-zinc-400 opacity-0 transition-opacity hover:bg-white hover:text-violet-700 focus-visible:opacity-100 group-hover:opacity-100"
+                    >
+                      <Pencil size={12} />
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => {
@@ -179,6 +271,25 @@ function SituacaoPicker({
                 </li>
               ))}
             </ul>
+
+            {admin && (
+              <div className="border-t border-zinc-100 p-1.5">
+                {editando === "nova" ? (
+                  <div className="px-1 py-0.5">{campoDoNome}</div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditando("nova");
+                      setNome("");
+                    }}
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-medium text-violet-800 transition-colors hover:bg-violet-50"
+                  >
+                    <Plus size={14} /> Nova etapa
+                  </button>
+                )}
+              </div>
+            )}
 
           </div>
         </>

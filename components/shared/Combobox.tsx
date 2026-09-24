@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { Check, ChevronDown, Search } from "lucide-react";
+import { Check, ChevronDown, Loader2, Pencil, Plus, Search, X } from "lucide-react";
 
 export interface Opcao {
   value: string;
@@ -31,6 +31,19 @@ interface Props {
 
   /** Largura do menu. A do botão é sempre a do campo. */
   menuWidth?: string;
+
+  /**
+   * Criar ali mesmo. Com isto, a busca que não acha um nome igual oferece
+   * "Criar “…”". Devolve o valor criado — que já fica escolhido — ou
+   * `null` quando o servidor recusou (quem chama avisa o porquê).
+   */
+  onCriar?: (texto: string) => Promise<string | null>;
+
+  /** Renomear ali mesmo: o lápis de cada item. Devolve se o servidor aceitou. */
+  onRenomear?: (value: string, nome: string) => Promise<boolean>;
+
+  /** "categoria", "estabelecimento" — no botão de criar. */
+  nomeDoItem?: string;
 }
 
 /**
@@ -57,6 +70,9 @@ interface Props {
  * preenche cinquenta reclamações por dia digita rápido.
  */
 
+/** O valor do "Criar" na navegação por teclado — nenhum id real começa assim. */
+const CRIAR = "__criar__";
+
 /** Teto de itens desenhados. Além disso, refine a busca. */
 const MOSTRAR = 80;
 
@@ -80,11 +96,20 @@ export default function Combobox({
   id,
   title,
   menuWidth = "w-full min-w-64",
+  onCriar,
+  onRenomear,
+  nomeDoItem,
 }: Props) {
 
   const [open, setOpen] = useState(false);
   const [term, setTerm] = useState("");
   const [ativo, setAtivo] = useState(0);
+
+  /* Criar e renomear esperam o servidor: nada aparece como feito antes da resposta. */
+  const [criando, setCriando] = useState(false);
+  const [editando, setEditando] = useState<string | null>(null);
+  const [nomeEditado, setNomeEditado] = useState("");
+  const [renomeando, setRenomeando] = useState(false);
 
   const campo = useRef<HTMLInputElement>(null);
   const lista = useRef<HTMLUListElement>(null);
@@ -117,10 +142,19 @@ export default function Combobox({
 
   const escolhida = itens.find((i) => i.value === value);
 
-  /* A opção vazia entra na navegação como se fosse item. */
-  const navegaveis = emptyLabel
-    ? [{ value: "", label: emptyLabel }, ...visiveis]
-    : visiveis;
+  /* "Criar" só quando o que foi digitado ainda não existe — nome igual, sem acento e caixa. */
+  const digitado = term.trim().replace(/\s+/g, " ");
+  const podeCriar =
+    Boolean(onCriar) &&
+    digitado.length >= 2 &&
+    !itens.some((i) => normalizar(i.label) === normalizar(digitado));
+
+  /* A opção vazia e o "Criar" entram na navegação como se fossem itens. */
+  const navegaveis = [
+    ...(emptyLabel ? [{ value: "", label: emptyLabel }] : []),
+    ...visiveis,
+    ...(podeCriar ? [{ value: CRIAR, label: digitado }] : []),
+  ];
 
   /**
    * Digitou, abriu ou fechou: o destaque volta para o primeiro.
@@ -169,9 +203,43 @@ export default function Combobox({
   }
 
   function escolher(v: string) {
+    if (v === CRIAR) {
+      void criar();
+      return;
+    }
     onChange(v);
     setOpen(false);
     setTerm("");
+  }
+
+  async function criar() {
+    if (!onCriar || criando) return;
+    setCriando(true);
+    const criado = await onCriar(digitado).catch(() => null);
+    setCriando(false);
+    if (criado === null) return;
+    onChange(criado);
+    setOpen(false);
+    setTerm("");
+  }
+
+  function editar(item: Opcao) {
+    setEditando(item.value);
+    setNomeEditado(item.label);
+  }
+
+  async function renomear() {
+    const nome = nomeEditado.trim().replace(/\s+/g, " ");
+    const atual = itens.find((i) => i.value === editando);
+    if (!onRenomear || !editando || renomeando) return;
+    if (!atual || nome.length < 2 || nome === atual.label) {
+      setEditando(null);
+      return;
+    }
+    setRenomeando(true);
+    const ok = await onRenomear(editando, nome).catch(() => false);
+    setRenomeando(false);
+    if (ok) setEditando(null);
   }
 
   function teclado(
@@ -204,6 +272,7 @@ export default function Combobox({
     if (e.key === "Escape") {
       e.preventDefault();
       setOpen(false);
+      setEditando(null);
     }
   }
 
@@ -245,7 +314,10 @@ export default function Combobox({
         <>
           <div
             className="fixed inset-0 z-40"
-            onClick={() => setOpen(false)}
+            onClick={() => {
+              setOpen(false);
+              setEditando(null);
+            }}
           />
 
           <div
@@ -298,8 +370,53 @@ export default function Combobox({
 
                 const indice = emptyLabel ? i + 1 : i;
 
+                if (editando === item.value) {
+                  return (
+                    <li key={item.value} className="flex items-center gap-1 px-1 py-0.5">
+                      <input
+                        autoFocus
+                        value={nomeEditado}
+                        onChange={(e) => setNomeEditado(e.target.value)}
+                        onKeyDown={(e) => {
+                          e.stopPropagation();
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            void renomear();
+                          }
+                          if (e.key === "Escape") {
+                            e.preventDefault();
+                            setEditando(null);
+                          }
+                        }}
+                        disabled={renomeando}
+                        aria-label={`Novo nome de ${item.label}`}
+                        className="h-8 min-w-0 flex-1 rounded-lg bg-white px-2.5 text-sm outline-none ring-1 ring-violet-300 focus:ring-2 focus:ring-violet-200"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => void renomear()}
+                        disabled={renomeando}
+                        title="Salvar o nome (Enter)"
+                        className="flex h-8 items-center gap-1 rounded-lg bg-violet-700 px-2.5 text-xs font-medium text-white transition-colors hover:bg-violet-800 disabled:opacity-60"
+                      >
+                        {renomeando ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+                        Salvar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditando(null)}
+                        title="Cancelar (Esc)"
+                        aria-label="Cancelar"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700"
+                      >
+                        <X size={13} />
+                      </button>
+                    </li>
+                  );
+                }
+
                 return (
-                  <li key={item.value}>
+                  <li key={item.value} className="group relative">
                     <button
                       type="button"
                       role="option"
@@ -308,7 +425,7 @@ export default function Combobox({
                       onClick={() => escolher(item.value)}
                       className={`flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-left text-sm transition-colors ${
                         ativo === indice ? "bg-zinc-100" : ""
-                      } ${item.value === value ? "font-medium text-violet-800" : "text-zinc-700"}`}
+                      } ${item.value === value ? "font-medium text-violet-800" : "text-zinc-700"} ${onRenomear ? "pr-10" : ""}`}
                     >
 
                       <span className="min-w-0">
@@ -333,11 +450,42 @@ export default function Combobox({
                       )}
 
                     </button>
+
+                    {onRenomear && (
+                      <button
+                        type="button"
+                        onClick={() => editar(item)}
+                        title={`Renomear ${item.label}`}
+                        aria-label={`Renomear ${item.label}`}
+                        className="absolute right-1.5 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-zinc-400 opacity-0 transition-opacity hover:bg-white hover:text-violet-700 focus-visible:opacity-100 group-hover:opacity-100"
+                      >
+                        <Pencil size={12} />
+                      </button>
+                    )}
                   </li>
                 );
               })}
 
-              {filtradas.length === 0 && (
+              {podeCriar && (
+                <li>
+                  <button
+                    type="button"
+                    onMouseEnter={() => setAtivo(navegaveis.length - 1)}
+                    onClick={() => void criar()}
+                    disabled={criando}
+                    className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-medium text-violet-800 transition-colors disabled:opacity-60 ${
+                      ativo === navegaveis.length - 1 ? "bg-violet-50" : ""
+                    }`}
+                  >
+                    {criando ? <Loader2 size={14} className="shrink-0 animate-spin" /> : <Plus size={14} className="shrink-0" />}
+                    <span className="min-w-0 truncate">
+                      {criando ? "Criando" : "Criar"}{nomeDoItem ? ` ${nomeDoItem}` : ""} “{digitado}”
+                    </span>
+                  </button>
+                </li>
+              )}
+
+              {filtradas.length === 0 && !podeCriar && (
                 <li className="px-3 py-6 text-center text-sm text-zinc-400">
                   Nada encontrado.
                 </li>

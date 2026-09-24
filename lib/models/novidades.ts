@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.73.0",
+    data: "2026-09-24",
+    titulo: "Criar e renomear direto no campo",
+    texto: "Estabelecimento, categoria, subcategoria e situação: digite para buscar e, se não existir, \"Criar\" aparece ali mesmo; o lápis de cada item renomeia. Na ficha, o estabelecimento criado já fica vinculado à reclamação. A Nova reclamação ganhou os mesmos campos com busca, e o estabelecimento vem do cadastro — não repete mais o nome do consumidor. Renomear uma situação leva as reclamações junto.",
+    frentes: ["reclame-aqui"],
+  },
+  {
     versao: "1.72.0",
     data: "2026-09-24",
     titulo: "O que fazer em cada reclamação",

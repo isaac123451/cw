@@ -15,6 +15,8 @@ import SurfaceCard from "@/components/shared/SurfaceCard";
 import SugestaoDoTexto from "@/components/shared/SugestaoDoTexto";
 
 import { useSettings } from "@/lib/context/SettingsContext";
+import { useSession } from "@/lib/context/SessionContext";
+import { useCases } from "@/lib/context/CaseContext";
 import { useNps } from "@/lib/context/NpsContext";
 import Combobox from "@/components/shared/Combobox";
 
@@ -33,8 +35,32 @@ export default function InvestigationTab({
   onChange,
 }: Props) {
 
-  const { categories, subcategories, teams, checklist } =
+  const { categories, subcategories, teams, checklist, criarCategoria, renomearCategoria, criarSubcategoria, renomearSubcategoria } =
     useSettings();
+
+  /*
+    Criar e renomear categoria ali mesmo — o cadastro é do administrador,
+    então só ele vê o "Criar" e o lápis. Renomear relê as reclamações:
+    as outras com a mesma categoria mudam de nome também.
+  */
+  const admin = useSession()?.role === "ADMIN";
+  const { recarregar } = useCases();
+
+  async function renomearACategoria(nomeAntigo: string, nome: string) {
+    const categoria = categories.find((c) => c.name === nomeAntigo);
+    if (!categoria || !(await renomearCategoria(categoria.id, nome))) return false;
+    if (data.category === nomeAntigo) onChange({ category: nome });
+    void recarregar();
+    return true;
+  }
+
+  async function renomearASubcategoria(nomeAntigo: string, nome: string) {
+    const sub = subcategories.find((s) => s.category === data.category && s.name === nomeAntigo);
+    if (!sub || !(await renomearSubcategoria(sub.id, nome))) return false;
+    if (data.subcategory === nomeAntigo) onChange({ subcategory: nome });
+    void recarregar();
+    return true;
+  }
 
   const { rootCauses } = useNps();
 
@@ -296,6 +322,9 @@ export default function InvestigationTab({
                 options={categories.map(
                   (item) => item.name
                 )}
+                nomeDoItem="categoria"
+                onCriar={admin ? async (nome) => ((await criarCategoria(nome)) ? nome : null) : undefined}
+                onRenomear={admin ? renomearACategoria : undefined}
               />
             </div>
 
@@ -318,6 +347,9 @@ export default function InvestigationTab({
                 options={relatedSubcategories.map(
                   (item) => item.name
                 )}
+                nomeDoItem="subcategoria"
+                onCriar={admin && data.category ? async (nome) => ((await criarSubcategoria(data.category, nome)) ? nome : null) : undefined}
+                onRenomear={admin ? renomearASubcategoria : undefined}
               />
             </div>
 

@@ -467,6 +467,15 @@
   background-color: var(--cw-card);
 }
 
+/*
+  O mesmo para o branco que só aparece no foco e no hover — o campo de
+  busca das listas ficava branco com o texto claro, ilegível.
+*/
+.dark .focus\:bg-white:focus,
+.dark .hover\:bg-white:hover {
+  background-color: var(--cw-card);
+}
+
 .dark .divide-white > * + * {
   border-color: var(--cw-card);
 }

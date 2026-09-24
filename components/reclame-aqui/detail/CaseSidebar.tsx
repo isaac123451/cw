@@ -20,6 +20,8 @@ import LinksDoRa from "@/components/shared/LinksDoRa";
 import PrazoECriticidade from "@/components/reclame-aqui/tratativa/PrazoECriticidade";
 import NegociacoesDoCaso from "@/components/reclame-aqui/negociacao/NegociacoesDoCaso";
 import { useTratativa } from "@/components/reclame-aqui/tratativa/TratativaProvider";
+import { criarEstabelecimentoDoCaso } from "@/lib/actions/tratativa";
+import { useToast } from "@/lib/context/ToastContext";
 import { idExterno, idLabel, isSocial } from "@/lib/services/case.service";
 import { descreverRegistro } from "@/lib/services/horasUteis";
 import { eFinalDasRedes, etapaDasRedes } from "@/lib/models/redes";
@@ -81,7 +83,23 @@ export default function CaseSidebar({
 }: Props) {
 
   const { people } = useTeams();
-  const { establishments } = useEstablishments();
+  const { establishments, aplicarDoServidor, renomearEstabelecimento } = useEstablishments();
+  const { notify } = useToast();
+
+  /*
+    Criar o restaurante ali mesmo, sem ir ao cadastro: o servidor cria,
+    vincula a esta reclamação e só então ele aparece escolhido.
+  */
+  async function criarEstabelecimento(nome: string) {
+    const r = await criarEstabelecimentoDoCaso({ protocol: data.protocol, nome });
+    if (!r.ok) {
+      notify({ tone: "error", title: "O estabelecimento não foi criado.", detail: r.erro });
+      return null;
+    }
+    aplicarDoServidor(r.estabelecimento);
+    notify({ tone: "success", title: `${r.estabelecimento.name} criado e vinculado.` });
+    return r.estabelecimento.id;
+  }
   const { abrirModeracao } = useTratativa();
 
   const sessao = useSession();
@@ -289,6 +307,9 @@ export default function CaseSidebar({
           }
           emptyLabel="Sem vínculo"
           placeholder="Buscar restaurante…"
+          nomeDoItem="estabelecimento"
+          onCriar={criarEstabelecimento}
+          onRenomear={renomearEstabelecimento}
           options={establishments.map((item) => ({
             value: item.id,
             label: item.name,

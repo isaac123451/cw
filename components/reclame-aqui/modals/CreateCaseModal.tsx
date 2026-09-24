@@ -19,6 +19,8 @@ import { useSettings } from "@/lib/context/SettingsContext";
 import { useWorkflow } from "@/lib/context/WorkflowContext";
 import { useTeams } from "@/lib/context/TeamsContext";
 import { useSession } from "@/lib/context/SessionContext";
+import { useEstablishments } from "@/lib/context/EstablishmentsContext";
+import Combobox from "@/components/shared/Combobox";
 
 import { hojeNaOperacao } from "@/lib/services/reputation.service";
 
@@ -59,10 +61,14 @@ export default function CreateCaseModal({
 }: Props) {
 
   const { cases, createCase } = useCases();
-  const { categories, subcategories } = useSettings();
-  const { workflow } = useWorkflow();
+  const { categories, subcategories, criarCategoria, criarSubcategoria } = useSettings();
+  const { workflow, criarEtapa } = useWorkflow();
   const { people } = useTeams();
+  const { establishments, criarEstabelecimento, renomearEstabelecimento } = useEstablishments();
   const session = useSession();
+
+  /* Criar categoria, subcategoria e etapa é do administrador; estabelecimento, de quem trata. */
+  const admin = session?.role === "ADMIN";
 
   const etapas = useMemo(
     () =>
@@ -116,7 +122,12 @@ export default function CreateCaseModal({
 
   const [title, setTitle] = useState("");
   const [customer, setCustomer] = useState("");
-  const [company, setCompany] = useState("");
+  /*
+    O estabelecimento vem do cadastro, com busca — e não mais de um campo
+    de texto que, em branco, repetia o consumidor. Era assim que nome de
+    cliente virava "estabelecimento" no filtro do quadro.
+  */
+  const [establishmentId, setEstablishmentId] = useState("");
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
   const [category, setCategory] = useState("");
@@ -163,7 +174,10 @@ export default function CreateCaseModal({
     const resultado = await createCase({
       id: crypto.randomUUID(),
       protocol,
-      company: company.trim() || customer.trim(),
+      /* Sem estabelecimento, o nome do consumidor fica na coluna antiga — a lista já o esconde. */
+      company: establishments.find((e) => e.id === establishmentId)?.name ?? customer.trim(),
+      establishmentId: establishmentId || undefined,
+      establishmentManual: Boolean(establishmentId),
       customer: customer.trim(),
       city: city.trim() || undefined,
       state: state.trim() || undefined,
@@ -243,12 +257,21 @@ export default function CreateCaseModal({
 
           <Field
             label="Estabelecimento"
-            hint="Em branco, repete o consumidor — como nos casos importados."
+            hint="Busque pelo nome, cidade ou CPF/CNPJ; se não existir, crie ali mesmo."
           >
-            <input
-              value={company}
-              onChange={(e) => setCompany(e.target.value)}
-              className={inputClass}
+            <Combobox
+              value={establishmentId}
+              onChange={setEstablishmentId}
+              emptyLabel="Sem estabelecimento"
+              placeholder="Buscar restaurante…"
+              options={establishments.map((item) => ({
+                value: item.id,
+                label: item.name,
+                hint: [item.city, item.document].filter(Boolean).join(" · "),
+              }))}
+              nomeDoItem="estabelecimento"
+              onCriar={async (nome) => (await criarEstabelecimento(nome))?.id ?? null}
+              onRenomear={renomearEstabelecimento}
             />
           </Field>
 
@@ -274,45 +297,31 @@ export default function CreateCaseModal({
             label="Categoria"
             hint="Do cadastro e das que já existem na base."
           >
-            <select
+            <Combobox
               value={category}
-              onChange={(e) => {
-                setCategory(e.target.value);
+              onChange={(valor) => {
+                setCategory(valor);
                 setSubcategory("");
               }}
-              className={inputClass}
-            >
-              <option value="">Não classificado</option>
-
-              {opcoesCategoria.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
+              emptyLabel="Não classificado"
+              placeholder="Não classificado"
+              options={opcoesCategoria}
+              nomeDoItem="categoria"
+              onCriar={admin ? async (nome) => ((await criarCategoria(nome)) ? nome : null) : undefined}
+            />
           </Field>
 
           <Field label="Subcategoria">
-            <select
+            <Combobox
               value={subcategory}
-              onChange={(e) =>
-                setSubcategory(e.target.value)
-              }
-              disabled={subsDaCategoria.length === 0}
-              className={`${inputClass} disabled:bg-zinc-50 disabled:text-zinc-400`}
-            >
-              <option value="">
-                {subsDaCategoria.length === 0
-                  ? "Escolha uma categoria primeiro"
-                  : "Sem subcategoria"}
-              </option>
-
-              {subsDaCategoria.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
+              onChange={setSubcategory}
+              disabled={!category}
+              emptyLabel="Sem subcategoria"
+              placeholder={category ? "Sem subcategoria" : "Escolha uma categoria primeiro"}
+              options={subsDaCategoria}
+              nomeDoItem="subcategoria"
+              onCriar={admin && category ? async (nome) => ((await criarSubcategoria(category, nome)) ? nome : null) : undefined}
+            />
           </Field>
 
           <Field label="Prioridade">
@@ -337,33 +346,23 @@ export default function CreateCaseModal({
             label="Status"
             hint="Etapas do fluxo configurado."
           >
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              className={inputClass}
-            >
-              {etapas.map((item) => (
-                <option key={item.id} value={item.name}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
+            <Combobox
+              value={status || etapas[0]?.name || ""}
+              onChange={setStatus}
+              options={etapas.map((item) => item.name)}
+              nomeDoItem="etapa"
+              onCriar={admin ? async (nome) => ((await criarEtapa(nome)) ? nome : null) : undefined}
+            />
           </Field>
 
           <Field label="Responsável">
-            <select
+            <Combobox
               value={owner}
-              onChange={(e) => setOwner(e.target.value)}
-              className={inputClass}
-            >
-              <option value="">Sem responsável</option>
-
-              {opcoesResponsavel.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
+              onChange={setOwner}
+              emptyLabel="Sem responsável"
+              placeholder="Sem responsável"
+              options={opcoesResponsavel}
+            />
           </Field>
 
           <Field label="Data da reclamação">
