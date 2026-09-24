@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.65.0",
+    data: "2026-09-24",
+    titulo: "O que fazer agora, em cada conversa",
+    texto: "Ao abrir uma conversa no WhatsApp, o painel da extensão diz logo abaixo do nome do cliente o que fazer agora: só escutar e acolher (quando ele mandou várias mensagens seguidas, irritado), assumir o erro (quando aponta uma falha nossa), esperar a área e dizer quando volta (quando o caso está com outra área e ele pergunta do andamento), propor 15 minutos no Meet (quando a explicação já foi e voltou), mandar um áudio curto (quando ele não entendeu ou os textos estão longos) ou escalar (Procon, advogado ou cliente no limite e reincidente). Com o porquê e um roteiro de três linhas.",
+    frentes: ["extensao"],
+  },
+  {
     versao: "1.64.0",
     data: "2026-09-24",
     titulo: "O botão da extensão vai para onde você quiser",

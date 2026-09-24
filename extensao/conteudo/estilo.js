@@ -1128,6 +1128,24 @@ ${CORES}
   background: var(--superficie);
 }
 .termometro[hidden] { display: none; }
+
+/* O que fazer agora (Fase 28): uma linha com a abordagem, o roteiro abre no clique. */
+.agora-conversa {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--superficie);
+  border-left: 3px solid var(--violeta);
+  font-size: 12.5px;
+}
+.agora-conversa.atencao { border-left-color: var(--atencao); }
+.agora-conversa.perigo { border-left-color: var(--perigo); }
+.agora-conversa summary { cursor: pointer; list-style: none; }
+.agora-conversa summary::-webkit-details-marker { display: none; }
+.agora-conversa .agora-rotulo { color: var(--fraco); }
+.agora-conversa .agora-porque { margin: 6px 0 0; color: var(--fraco); }
+.agora-conversa .agora-roteiro { margin: 6px 0 0; padding-left: 18px; }
+.agora-conversa .agora-roteiro li { margin: 2px 0; }
 .termometro.h1, .termometro.h2 { color: var(--perigo); }
 .termometro.h3 { color: var(--fraco); }
 .termometro.h4, .termometro.h5 { color: var(--ok, #16a34a); }

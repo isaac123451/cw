@@ -1267,7 +1267,7 @@
     const leitura = P.lerConversa?.();
     const mensagens = (Array.isArray(leitura) ? leitura : leitura?.mensagens ?? [])
       .filter((m) => m && typeof m.texto === "string")
-      .map((m) => ({ de: m.de === "nos" ? "nos" : "cliente", texto: m.texto }));
+      .map((m) => ({ de: m.de === "nos" ? "nos" : "cliente", texto: m.texto, carimbo: m.carimbo }));
 
     if (mensagens.filter((m) => m.de === "cliente").length < 2) return;
 
@@ -1286,11 +1286,17 @@
           protocolo,
           telefone: P.consulta?.telefone,
           nome: P.consulta?.nome,
+          /* O que o painel já sabe: pesa no "o que fazer agora" (Fase 28). */
+          historico: {
+            casosAbertos: casos.filter((c) => c.aberto).length,
+            reclamacoes: casos.filter((c) => (c.canal ?? "Reclame Aqui") === "Reclame Aqui").length,
+          },
         });
         sinaisPorContato.set(chave, {
           avisos: resposta?.dados?.avisos ?? [],
           completar: resposta?.dados?.completar ?? null,
           humor: resposta?.dados?.humor ?? null,
+          agora: resposta?.dados?.agora ?? null,
         });
       } catch {
         sinaisPorContato.delete(chave);
@@ -1302,6 +1308,7 @@
     if (!sinais) return;
 
     desenharTermometro(sinais.humor);
+    desenharAgora(sinais.agora);
     desenharCompletar(sinais.completar, chave);
 
     const avisos = sinais.avisos;
@@ -1537,6 +1544,30 @@
     el.title = `Humor da conversa: ${humor.agora} de 5${humor.tendencia ? `, ${humor.tendencia}` : ""} — pelas últimas mensagens do cliente`;
     el.hidden = false;
   }
+
+  /**
+   * O que fazer agora (Fase 28): escutar, assumir o erro, áudio, Meet,
+   * esperar a área, escalar — logo abaixo do cabeçalho, com o porquê e
+   * um roteiro curto. Fechado por padrão: o título já diz o essencial, e
+   * o roteiro abre com um clique.
+   */
+  function desenharAgora(agora) {
+    const cabecalho = P.corpo?.querySelector(".cabecalho-cliente");
+    if (!cabecalho || !agora?.titulo) return;
+    P.corpo.querySelector(".agora-conversa")?.remove();
+    const tom = agora.acao === "escalar" ? "perigo" : agora.acao === "escutar" || agora.acao === "assumir" ? "atencao" : "neutro";
+    cabecalho.insertAdjacentHTML(
+      "afterend",
+      `<details class="agora-conversa ${tom}" data-acao-momento="${CW.escapar(agora.acao)}">
+        <summary><span class="agora-rotulo">O que fazer:</span> <b>${CW.escapar(agora.titulo)}</b></summary>
+        ${agora.porque?.length ? `<p class="agora-porque">Porque ${CW.escapar(agora.porque.join(", "))}.</p>` : ""}
+        <ol class="agora-roteiro">${(agora.roteiro ?? []).map((r) => `<li>${CW.escapar(r)}</li>`).join("")}</ol>
+        ${agora.foraDoHorario ? `<p class="agora-porque">Fora do expediente: responda curto agora, diga quando volta e marque o retorno na agenda.</p>` : ""}
+      </details>`
+    );
+  }
+
+  P.desenharAgora = desenharAgora;
 
   /* ============================================================
      IDENTIFICA PELA CONVERSA (Fase 17)

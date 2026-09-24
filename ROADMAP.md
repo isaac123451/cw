@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 24/09/2026. Aplicação **1.64.0**, extensão **1.64.0**.
+Atualizado em 24/09/2026. Aplicação **1.65.0**, extensão **1.65.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,36 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### O que fazer agora (24/09/2026, 1.65.0)
+
+Segundo item da Fase 28: "o que é melhor fazer no momento: só escutar,
+enviar áudio, um momento no Meet".
+
+- `lib/models/oQueFazerAgora.ts`: regras sobre a conversa, na ordem —
+  escalar (Procon, advogado, ação, golpe, imprensa — os padrões dos
+  critérios de criticidade — ou humor 1 com 2+ reclamações ou casos
+  abertos), só escutar e acolher (3+ mensagens seguidas do cliente e
+  humor até 2), assumir o erro (o cliente aponta falha nossa), esperar a
+  área e dizer quando volta (caso com área acionada e o cliente
+  pergunta do andamento), 15 minutos no Meet (conversa longa com "não
+  entendi" ou assunto de tela), áudio curto ("não entendi" ou nossos
+  textos longos) e, sem sinal, responder com o próximo passo. Sempre com
+  o porquê e três linhas de roteiro; fora do expediente (antes das 8h,
+  depois das 18h, fim de semana) vem o aviso de responder curto e
+  marcar o retorno.
+- `/api/extensao/sinais` (que o painel já chamava sozinho) devolve
+  `agora`, com a área que está com o caso e a data do retorno lidas do
+  banco (`caseMovement` aberto + expediente). O painel manda o carimbo
+  de cada mensagem e o histórico que já tem (casos abertos, reclamações).
+- Painel: o bloco "O que fazer: …" logo abaixo do cabeçalho do cliente,
+  com o roteiro fechado até o clique; a cor segue a urgência.
+
+Provas: `npm run check:momento` (as sete abordagens, o porquê, o roteiro
+com a data da área, o carimbo em Brasília, o expediente) e teste na
+bancada com os scripts reais do painel (o bloco no lugar, o histórico e
+o carimbo indo ao servidor, o roteiro abrindo). **Depende de você:**
+recarregar a extensão (1.65.0).
 
 ### Botão que se move (24/09/2026, 1.64.0)
 
