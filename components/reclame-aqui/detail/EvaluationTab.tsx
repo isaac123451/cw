@@ -369,7 +369,7 @@ export default function EvaluationTab({
 
           <p className="mt-2.5 text-xs leading-relaxed text-zinc-400">
             Copie, cole no Reclame Aqui e volte aqui para
-            marcar — depois, Salvar. Esta tela não publica no
+            marcar — grava na hora. Esta tela não publica no
             portal: quem publica é você, e o registro só vale
             depois disso.
           </p>

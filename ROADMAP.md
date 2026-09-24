@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 24/09/2026. Aplicação **1.40.0**, extensão **1.40.0**.
+Atualizado em 24/09/2026. Aplicação **1.41.0**, extensão **1.41.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,53 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### A ficha salva sozinha (24/09/2026, 1.41.0)
+
+Fecha o último item da Fase 22, **"Salvar sem botão, com volta"** — "botão
+de salvar às vezes não é muito interessante, pense em uma forma melhor
+de salvar". A 1.39.0 trouxe o campo que grava ao sair (`CampoQueSalva`);
+faltava a ficha inteira, que passava dezenas de campos soltos (título,
+cliente, relato, contato, categoria, causa raiz, responsável, etapa,
+resposta pública, avaliação) por um rascunho com a barra Salvar.
+
+- **`useSalvarAoSair`**, por cima do `useRascunho` que já existia. O que
+  se escolhe (seletor, caixa, botão) grava na hora; o que se digita
+  grava ao sair do campo — tecla por tecla, não, que era o defeito que
+  o rascunho veio corrigir. "Salvo" só depois de o servidor confirmar.
+- **O aviso no lugar da barra** (`AvisoDoSalvar`): "grava ao sair do
+  campo" enquanto se digita, "salvando…", "salvo · desfazer" por 8 s; e
+  a recusa, que fica com "tentar de novo" e sem perder o texto. O
+  desfazer grava os valores de antes pelo mesmo caminho de sempre
+  (`updateCase` com o retrato anterior), então a proteção de edição
+  simultânea da Fase 10.1 vale para ele também.
+- **Os casos que o blur não pega.** O seletor de responsável tem busca:
+  escolher com Enter muda o valor com o cursor num campo que some da
+  tela, sem blur — passada a mudança, se o cursor não está num campo
+  de digitar que continua na tela, grava. E fechar a ficha (ou a
+  mini-janela) com o cursor num campo grava o que estava escrito, em
+  vez de perder.
+- **Defeito do rascunho que isso expôs.** Depois de gravar, o rascunho
+  limpava todas as edições. Com o botão dava no mesmo; gravando ao sair
+  do campo, quem pula para o próximo e digita enquanto a gravação está
+  no ar perdia o que digitou. Agora sai do rascunho só o que foi gravado.
+- **O que continua com botão:** formulários de vários campos de uma vez
+  — contato, acionar área, retorno da área, moderação, triagem — e os
+  cadastros. Mover etapa e etiquetar já gravavam direto.
+
+Provas, no navegador, com uma página de teste (fora do commit) montada
+com os mesmos `useRascunho`, `useSalvarAoSair`, `AvisoDoSalvar` e
+`Combobox` e uma gravação falsa de 600 ms: 19 pontos — digitar não grava,
+sair grava uma vez, desfazer volta banco e tela, seletor e caixa gravam
+na hora, o texto digitado durante uma gravação fica e é gravado depois,
+o responsável por Enter e por clique, a recusa mantém o texto e o
+tentar de novo grava, e fechar com o cursor no campo grava. Sem a
+correção do rascunho, o ponto da digitação durante a gravação falha
+(o texto some). `tsc` e `lint` limpos. Não abri a ficha real: este
+ambiente não tem o banco.
+
+**Depende de você:** abrir uma reclamação e editar um campo; recarregar
+a extensão (1.41.0).
 
 ### Ficha: triagem pelo relato, links do RA, validação, resposta pública e imersão (23/09/2026, 1.40.0)
 

@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.41.0",
+    data: "2026-09-24",
+    titulo: "A ficha da reclamação salva sozinha",
+    texto: "Sem o botão Salvar na ficha: o que se escolhe (etapa, responsável, categoria, uma caixa marcada) grava na hora, e o que se digita grava ao sair do campo. Na base da tela aparece salvando…, depois salvo com desfazer ao lado; se o servidor recusar, o que foi digitado fica e o aviso oferece tentar de novo. Fechar a ficha com o cursor num campo grava o que estava escrito.",
+    frentes: ["reclame-aqui", "redes"],
+  },
+  {
     versao: "1.40.0",
     data: "2026-09-23",
     titulo: "Triagem pelo relato, validação de verdade e imersão que prepara o contato",

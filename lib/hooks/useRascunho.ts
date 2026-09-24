@@ -376,8 +376,24 @@ export function useRascunho<T extends { id: string }>(
         return mudou ? proximo : prev;
       });
 
-      setEdicoes({});
-      setNovos([]);
+      /*
+        Sai do rascunho só o que foi gravado.
+
+        Limpava tudo. Com o botão Salvar dava no mesmo; com a ficha que
+        grava ao sair do campo, não: quem sai de um campo e já começa a
+        digitar no próximo escreve enquanto a gravação do primeiro está
+        no ar, e o `{}` apagava o que acabou de ser digitado. A edição
+        que mudou durante a gravação é outro objeto — fica, para a
+        próxima.
+      */
+      setEdicoes((prev) => {
+        const proximo = { ...prev };
+        for (const [id, salvo] of Object.entries(edicoes)) {
+          if (prev[id] === salvo) delete proximo[id];
+        }
+        return proximo;
+      });
+      setNovos((prev) => prev.filter((item) => !novos.some((salvo) => salvo.id === item.id)));
     }
 
     return {
