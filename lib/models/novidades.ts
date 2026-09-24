@@ -104,6 +104,14 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.55.0",
+    data: "2026-09-24",
+    titulo: "A campanha de votação, pessoa por pessoa",
+    texto: "Na tela do Prêmio, quem foi exportado entra na campanha: o painel conta quem falta pedir, pedido feito, lembrete feito e quem disse que votou, com a taxa de voto. Cada pessoa tem o WhatsApp aberto com a mensagem da vez — o pedido, e depois o lembrete — e o botão do próximo passo; marque várias para registrar de uma vez.",
+    frentes: ["reclame-aqui", "nps"],
+    href: "/reclame-aqui/premio",
+  },
+  {
     versao: "1.54.0",
     data: "2026-09-24",
     titulo: "Prêmio Reclame Aqui: a lista de quem pedir o voto",

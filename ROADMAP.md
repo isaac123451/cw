@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 24/09/2026. Aplicação **1.54.0**, extensão **1.54.0**.
+Atualizado em 24/09/2026. Aplicação **1.55.0**, extensão **1.55.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,30 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### Prêmio Reclame Aqui: a campanha de votação (24/09/2026, 1.55.0)
+
+Item da Fase 23 — "a lista dos que vão receber, a mensagem modelo com o
+link da votação, um pedido e um lembrete, e a marca de pedido feito e
+disse que votou — com o painel da campanha".
+
+- **O painel** (`CampanhaDeVotacao`, na tela do Prêmio): a pedir, pedido
+  feito, lembrete feito, disse que votou — cada número filtra a lista —
+  e a taxa de voto entre quem recebeu o pedido.
+- **Cada pessoa:** "Pedir no WhatsApp" (depois, "Lembrar no WhatsApp")
+  abre `wa.me` com a mensagem da vez já escrita — o pedido para quem
+  ainda não recebeu, o lembrete para quem recebeu (sem lembrete escrito,
+  repete o pedido) — e o botão do próximo passo. A plataforma não envia:
+  abre a conversa, e quem manda é você.
+- **Em lote:** marcar várias e registrar o passo de uma vez, ou voltar
+  para "a pedir".
+
+Provas: `check:premio` com 8 pontos novos (a mensagem da vez, o link do
+WhatsApp, o painel e a taxa). No navegador, com o componente real e uma
+campanha de teste: a lista começa em "a pedir", o link leva o texto
+certo, sem telefone não há link, pedido feito vira "Lembrar no
+WhatsApp", e a taxa (1 de 2) é 50%. `tsc` e `lint` limpos. Registrar de
+verdade precisa das tabelas no banco (1.54.0).
 
 ### Prêmio Reclame Aqui: exportar os contatos (24/09/2026, 1.54.0)
 

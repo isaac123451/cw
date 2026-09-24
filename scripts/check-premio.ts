@@ -9,7 +9,7 @@
  */
 import type { Case } from "../lib/models/case";
 import type { NpsResponseView } from "../lib/models/nps";
-import { contatosDoPremio, FILTROS_PADRAO, mensagemParaContato, telefoneInternacional } from "../lib/models/premio";
+import { contatosDoPremio, FILTROS_PADRAO, linkDoWhatsApp, mensagemDaVez, mensagemParaContato, resumoDaCampanha, telefoneInternacional } from "../lib/models/premio";
 
 let falhas = 0;
 function conferir(titulo: string, obtido: unknown, esperado: unknown) {
@@ -52,6 +52,20 @@ conferir("o motivo diz por que está na lista", lista.find((c) => c.ref === "n3"
 conferir("só 5 estrelas no Google", contatosDoPremio({ casos, nps: respostas, filtros: { ...FILTROS_PADRAO, frentes: ["nps"], googleCinco: true } }).map((c) => c.ref), ["n3"]);
 conferir("quem já está na campanha fica de fora", contatosDoPremio({ casos, nps: respostas, filtros: FILTROS_PADRAO, jaNaCampanha: new Set(["nps:n1"]) }).map((c) => c.ref).sort(), ["c1", "n3"]);
 conferir("o período pela data da avaliação", contatosDoPremio({ casos, nps: respostas, filtros: { ...FILTROS_PADRAO, frentes: ["reclame-aqui"], de: "2026-08-11" } }).length, 0);
+
+console.log("\n  A campanha de votação\n");
+{
+  const campanha = { mensagem: "Olá, {nome}! Vote: {link}", lembrete: "Oi, {nome}, fecha amanhã: {link}", linkVotacao: "https://ra/v" };
+  conferir("a pedir recebe o pedido", mensagemDaVez({ situacao: "exportado", nome: "Ana" }, campanha), "Olá, Ana! Vote: https://ra/v");
+  conferir("pedido feito recebe o lembrete", mensagemDaVez({ situacao: "pedido", nome: "Ana" }, campanha), "Oi, Ana, fecha amanhã: https://ra/v");
+  conferir("sem lembrete escrito, repete o pedido", mensagemDaVez({ situacao: "pedido", nome: "Ana" }, { ...campanha, lembrete: undefined }), "Olá, Ana! Vote: https://ra/v");
+  conferir("quem votou não recebe nada", mensagemDaVez({ situacao: "votou", nome: "Ana" }, campanha), "");
+  conferir("o link do WhatsApp com a mensagem", linkDoWhatsApp("+5511987654321", "Olá, Ana!"), "https://wa.me/5511987654321?text=Ol%C3%A1%2C%20Ana!");
+  conferir("sem telefone, sem link", linkDoWhatsApp(undefined, "x"), null);
+  const r = resumoDaCampanha([{ situacao: "exportado" }, { situacao: "pedido" }, { situacao: "lembrete" }, { situacao: "votou" }, { situacao: "votou" }]);
+  conferir("o painel conta cada passo", [r.exportado, r.pedido, r.lembrete, r.votou, r.total], [1, 1, 1, 2, 5]);
+  conferir("taxa de voto é sobre quem recebeu o pedido (2 de 4)", r.taxaDeVoto, 0.5);
+}
 
 console.log(falhas === 0 ? "\n  A lista do prêmio tira as pessoas certas.\n" : `\n  ${falhas} ponto(s) a corrigir.\n`);
 process.exit(falhas === 0 ? 0 : 1);

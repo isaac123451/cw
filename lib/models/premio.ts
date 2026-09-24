@@ -150,3 +150,48 @@ export function contatosDoPremio(entrada: {
   }
   return [...porPessoa.values()];
 }
+
+/* ------------------------------------------------------------------ */
+/* A campanha de votação                                               */
+/* ------------------------------------------------------------------ */
+
+export type SituacaoDoVoto = "exportado" | "pedido" | "lembrete" | "votou";
+
+export const ORDEM_DA_SITUACAO: SituacaoDoVoto[] = ["exportado", "pedido", "lembrete", "votou"];
+
+export const ROTULO_DA_SITUACAO: Record<SituacaoDoVoto, string> = {
+  exportado: "a pedir",
+  pedido: "pedido feito",
+  lembrete: "lembrete feito",
+  votou: "disse que votou",
+};
+
+/** Quantos em cada passo, e quantos dos pedidos já disseram que votaram. */
+export function resumoDaCampanha(pedidos: { situacao: SituacaoDoVoto }[]) {
+  const conta = Object.fromEntries(ORDEM_DA_SITUACAO.map((s) => [s, pedidos.filter((p) => p.situacao === s).length])) as Record<SituacaoDoVoto, number>;
+  const pedidosFeitos = conta.pedido + conta.lembrete + conta.votou;
+  return {
+    ...conta,
+    total: pedidos.length,
+    pedidosFeitos,
+    /* De quem recebeu o pedido, quantos disseram que votaram. */
+    taxaDeVoto: pedidosFeitos ? conta.votou / pedidosFeitos : 0,
+  };
+}
+
+/** A mensagem da vez: o pedido para quem ainda não recebeu; o lembrete para quem recebeu e não votou. */
+export function mensagemDaVez(
+  pedido: { situacao: SituacaoDoVoto; nome: string },
+  campanha: { mensagem?: string; lembrete?: string; linkVotacao?: string }
+) {
+  if (pedido.situacao === "votou") return "";
+  const modelo = pedido.situacao === "exportado" ? campanha.mensagem : campanha.lembrete || campanha.mensagem;
+  return modelo ? mensagemParaContato(modelo, pedido, campanha.linkVotacao ?? "") : "";
+}
+
+/** O link que abre a conversa no WhatsApp com a mensagem escrita; `null` sem telefone. */
+export function linkDoWhatsApp(telefone: string | undefined, texto: string) {
+  const d = telefone?.replace(/\D/g, "");
+  if (!d || d.length < 12) return null;
+  return `https://wa.me/${d}${texto ? `?text=${encodeURIComponent(texto)}` : ""}`;
+}

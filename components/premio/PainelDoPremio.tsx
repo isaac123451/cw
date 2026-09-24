@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Download, Loader2, TriangleAlert } from "lucide-react";
 
 import SurfaceCard from "@/components/shared/SurfaceCard";
+import CampanhaDeVotacao from "@/components/premio/CampanhaDeVotacao";
 
 import { lerPremio, registrarExportados, salvarCampanha, type CampanhaView, type PedidoView } from "@/lib/actions/premio";
 import { useCases } from "@/lib/context/CaseContext";
@@ -272,6 +273,8 @@ export default function PainelDoPremio({ aoMudar }: { aoMudar?: (campanha: Campa
           </div>
         )}
       </SurfaceCard>
+
+      {campanha && <CampanhaDeVotacao campanha={campanha} pedidos={pedidos} recarregar={() => carregar(campanha.id)} />}
     </div>
   );
 }
