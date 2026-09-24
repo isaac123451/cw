@@ -295,9 +295,32 @@ export function regrasDeCausa(causas: string[]): RegraDeTexto[] {
  * aos casos parecidos (peso 0,3), levam a sugestão de 62% para 64,6% e a
  * cobertura de 82% para 97,5% — contra 50% de chutar sempre Atendimento.
  */
+/** A mesma expressão, só na primeira linha — o título, em `título\nrelato`. */
+function noTitulo(p: RegExp) {
+  return new RegExp(`^[^\\n]*(?:${p.source})`);
+}
+
+const IMPRESSAO = /impressora|nao (esta |estao )?imprim|imprimir (os |o )?pedido|impressao (automatica|de pedido|dos pedido)|falhas? na impressao|problemas? de impressao|comandas? (nao|sem) (sai|imprim)/;
+const WHATSAPP = /whats ?app (bloquead|banid|desconect|caiu|nao (envia|conecta|funciona))|banindo|disparos? (de mensage|nao chega)|meus disparos|lista de transmiss|(chat ?bot|chatbox|\bbot\b|\brobo\b)( do whats ?app| com ia| da (loja|pizzaria|plataforma))? (nao (responde|funciona|reconhece)|com respostas|inefica|ineficien)|(bot|robo) (de atendimento )?do whats/;
+const WHATSAPP_NO_TITULO = /whats ?app (bloquead|banid)|banindo|disparos? de mensage|meus disparos|(?<!via )(chat ?bot|chatbox|\bbot\b|\brobo\b)/;
+
 export const REGRAS_DE_ASSUNTO: RegraDeTexto[] = [
+  /*
+    As duas categorias tiradas da base na 1.74 (38 e 45 registros).
+
+    Sem histórico classificado, só a regra as sugere. No **título** o
+    assunto manda — "Meu sistema não imprime pedidos" é impressão, por mais
+    que os casos parecidos estejam em "Sistema" —, e por isso a regra do
+    título pesa mais que todos os vizinhos juntos. No relato, a impressora
+    citada de passagem numa reclamação de suporte pesa pouco. O canal não
+    conta: "atendimento via chatbot" é o suporte, não o robô da loja.
+  */
+  { rotulo: "Impressão de pedidos", padrao: noTitulo(IMPRESSAO), motivo: "o título fala da impressão de pedidos", peso: 1.5 },
+  { rotulo: "Impressão de pedidos", padrao: IMPRESSAO, motivo: "o relato fala da impressão de pedidos", peso: 0.3 },
+  { rotulo: "WhatsApp e robô", padrao: noTitulo(WHATSAPP_NO_TITULO), motivo: "o título fala do WhatsApp da loja ou do robô", peso: 1.5 },
+  { rotulo: "WhatsApp e robô", padrao: WHATSAPP, motivo: "o relato fala do WhatsApp da loja ou do robô", peso: 0.3 },
   { rotulo: "Financeiro", padrao: /cobran[ca]|cobrad|boleto|mensalidade|fatura|estorno|reembols|debit|cartao de credito|valor(es)? (cobrad|errad|indevid)|pagamento|multa|juros|reajuste/, motivo: "fala de cobrança, pagamento ou estorno", peso: 0.3 },
-  { rotulo: "Sistema", padrao: /nao (funciona|imprime|abre|carrega|sincroniza|integra)|\bbug\b|\berro\b|travando|trava|lento|lentidao|impressora|instabilidade|fora do ar|aplicativo|atualizac|integrac/, motivo: "descreve falha ou limite do sistema", peso: 0.3 },
+  { rotulo: "Sistema", padrao: /nao (funciona|abre|carrega|sincroniza|integra)|\bbug\b|\berro\b|travando|trava|lento|lentidao|instabilidade|fora do ar|aplicativo|atualizac|integrac/, motivo: "descreve falha ou limite do sistema", peso: 0.3 },
   { rotulo: "Implantação", padrao: /implantac|treinamento|configurac(ao|oes) inicia|migrac|cadastrar (o )?cardapio|onboarding/, motivo: "fala de implantação ou treinamento", peso: 0.3 },
   { rotulo: "Cancelamento", padrao: /\bcancel(ar|amento)\b.*(contrato|plano|assinatura)|rescis|fidelidade/, motivo: "fala em cancelar o contrato", peso: 0.3 },
   { rotulo: "Comercial", padrao: /vendedor|consultor comercial|proposta|promet(eram|ido) na venda|contratei (achando|pensando)/, motivo: "fala da venda ou do vendedor", peso: 0.3 },

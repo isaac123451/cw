@@ -35,31 +35,41 @@ const ORDENAVEIS: Record<
   (item: Case) => number | string
 > = {
   Data: (item) => item.createdAt ?? "",
-  Estabelecimento: (item) =>
-    (item.company || "zzz").toLowerCase(),
   Cliente: (item) => item.customer.toLowerCase(),
-  Nota: (item) => (item.evaluated ? (item.score ?? 0) : -1),
-  Resolvido: (item) => (item.resolved ? 1 : 0),
-  Voltaria: (item) => (item.evaluated ? (item.wouldDoBusiness ? 1 : 0) : -1),
+  Avaliação: (item) => (item.evaluated ? (item.score ?? 0) : -1),
   Responsável: (item) =>
     (item.owner || "zzz").toLowerCase(),
 };
 
-/** As colunas, na ordem em que aparecem. */
+/**
+ * As colunas, na ordem em que aparecem.
+ *
+ * Eram doze — 1.883 px numa tela de 1.366, com rolagem de lado e linha
+ * de 93 px (Isaac: "a lista tem muito espaço"). Agora são sete: o
+ * estabelecimento vai embaixo do cliente, nota + resolvido + voltaria
+ * viram "Avaliação", status + prazo + o que fazer viram "Situação" e o
+ * contato vai junto do responsável.
+ */
 const COLUNAS = [
-  "ID",
+  "Reclamação",
   "Data",
-  "Estabelecimento",
   "Cliente",
   "Categoria",
-  "Nota",
-  "Resolvido",
-  "Voltaria",
-  "Status",
-  "Prazo",
+  "Avaliação",
+  "Situação",
   "Responsável",
-  "Contato",
 ];
+
+/* Larguras fixas: somam menos que a área útil de um notebook de 1.366 px. */
+const LARGURA: Record<string, string> = {
+  Reclamação: "",
+  Data: "w-[76px]",
+  Cliente: "w-[176px]",
+  Categoria: "w-[100px]",
+  Avaliação: "w-[72px]",
+  Situação: "w-[232px]",
+  Responsável: "w-[124px]",
+};
 
 /**
  * A lista em tabela.
@@ -123,7 +133,7 @@ export default function CasesTable({
   return (
     <div className="flex-1 overflow-auto">
 
-      <table className="min-w-full">
+      <table className="w-full min-w-[980px] table-fixed">
 
         <thead className="sticky top-0 z-10 bg-zinc-50/95 backdrop-blur">
 
@@ -133,7 +143,7 @@ export default function CasesTable({
 
               <th
                 key={h}
-                className="whitespace-nowrap px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-zinc-500"
+                className={`whitespace-nowrap px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-zinc-500 first:pl-5 last:pr-5 ${LARGURA[h] ?? ""}`}
               >
 
                 {ORDENAVEIS[h] ? (

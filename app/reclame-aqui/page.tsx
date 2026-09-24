@@ -64,7 +64,7 @@ export default function ReclameAquiPage() {
         {/* A lista precisa da altura definida para rolar por dentro. O
             quadro, não: as colunas quebram em fileiras e cada uma tem a
             própria altura — ver KanbanView. */}
-        <div className={view === "kanban" && !loading ? "" : "h-[calc(100vh-330px)] min-h-[460px]"}>
+        <div className={view === "kanban" && !loading ? "" : "h-[calc(100vh-96px)] min-h-[460px]"}>
 
           {loading ? (
             <LoadingPanel />

@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.74.0",
+    data: "2026-09-24",
+    titulo: "Mais causas e categorias, lista enxuta",
+    texto: "Dezesseis causas raiz novas, tiradas das reclamações e do NPS, cada uma com a área que resolve e o prazo; e duas categorias que a base pedia: Impressão de pedidos e WhatsApp e robô, com subcategorias. A lista do Reclame Aqui caiu de 12 para 7 colunas e cabe no notebook sem rolar para o lado: o estabelecimento vem embaixo do cliente, a avaliação numa célula só e a situação junto do prazo e do que fazer.",
+    frentes: ["reclame-aqui", "nps"],
+  },
+  {
     versao: "1.73.0",
     data: "2026-09-24",
     titulo: "Criar e renomear direto no campo",

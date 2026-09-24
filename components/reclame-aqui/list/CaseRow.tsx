@@ -3,15 +3,17 @@
 import {
   CheckCircle2,
   MessageCircle,
+  Puzzle,
   Star,
   XCircle,
 } from "lucide-react";
 
-import { Case, ROTULO_DO_VOLTARIA, voltariaDoCaso } from "@/lib/models/case";
+import { TAG_DA_EXTENSAO } from "@/lib/models/tag";
+
+import { Case, faltaNoCadastro, ROTULO_DO_VOLTARIA, voltariaDoCaso } from "@/lib/models/case";
 
 import { TagChips } from "@/components/shared/TagPicker";
 import LinksDoRa from "@/components/shared/LinksDoRa";
-import { linksDoRa } from "@/lib/models/linksDoRa";
 import StatusPicker from "@/components/reclame-aqui/shared/StatusPicker";
 import BotaoCompletar from "@/components/reclame-aqui/completar/BotaoCompletar";
 import ChipPrioridade from "@/components/reclame-aqui/tratativa/ChipPrioridade";
@@ -91,15 +93,22 @@ export default function CaseRow({
       ? digits
       : null;
 
+  const voltaria = voltariaDoCaso(data);
+
+  /* A marca de origem vira ícone: como etiqueta, empurrava a linha de quase toda reclamação recente. */
+  const daExtensao = (data.tags ?? []).includes(TAG_DA_EXTENSAO);
+  const etiquetas = (data.tags ?? []).filter((t) => t !== TAG_DA_EXTENSAO);
+
   return (
     <tr
       onClick={onClick}
-      className="cursor-pointer border-b border-zinc-100 text-sm transition-colors last:border-0 hover:bg-violet-50/50"
+      className="cursor-pointer border-b border-zinc-100 align-top text-sm transition-colors last:border-0 hover:bg-violet-50/50"
     >
 
-      <td className="px-5 py-3.5">
+      <td className="py-2.5 pl-5 pr-3">
 
-        <span className="flex items-center gap-1">
+        {/* O protocolo e as etiquetas na mesma linha: uma linha a menos por reclamação. */}
+        <span className="flex flex-wrap items-center gap-1">
           <span className="font-mono text-xs font-semibold text-violet-700">
             {idExterno(data)}
           </span>
@@ -109,29 +118,28 @@ export default function CaseRow({
             titulo={`${data.protocol} · ${data.customer}`}
             className="p-0.5"
           />
+          {daExtensao && (
+            <span title={TAG_DA_EXTENSAO} className="text-violet-400">
+              <Puzzle size={12} />
+            </span>
+          )}
+          {etiquetas.length > 0 && <TagChips tags={etiquetas} limit={2} />}
         </span>
 
-        <p className="mt-0.5 max-w-[220px] truncate text-xs text-zinc-500">
+        <p className="mt-0.5 line-clamp-2 max-w-[340px] text-xs leading-snug text-zinc-600" title={data.title}>
           {data.title}
         </p>
-
-        {data.tags && data.tags.length > 0 && (
-          <div className="mt-1.5">
-            <TagChips tags={data.tags} limit={2} />
-          </div>
-        )}
 
       </td>
 
       {/*
         A data da reclamação.
 
-        Dia e mês em cima, ano embaixo e a idade em dias ao lado: a
-        pergunta na lista quase nunca é "que dia foi", é "há quanto
-        tempo está aqui". A data completa fica no `title` para quem
-        precisa do dado exato.
+        Dia e mês em cima e a idade embaixo: a pergunta na lista quase
+        nunca é "que dia foi", é "há quanto tempo está aqui". A data
+        completa fica no `title` para quem precisa do dado exato.
       */}
-      <td className="whitespace-nowrap px-5 text-zinc-600">
+      <td className="whitespace-nowrap px-3 py-2.5 text-zinc-600">
 
         {data.createdAt ? (
 
@@ -153,94 +161,65 @@ export default function CaseRow({
 
       </td>
 
-      <td className="px-5 text-zinc-700">
-        {estabelecimento ? (
-          estabelecimento.name
+      {/* O cliente e, embaixo, o restaurante dele — a mesma pessoa, duas colunas a menos de largura. */}
+      <td className="px-3 py-2.5">
+        <span className="block max-w-[150px] truncate font-medium text-zinc-800" title={data.customer}>
+          {data.customer}
+        </span>
+        {/* Na segunda linha, o restaurante — ou o "Completar", quando falta o que o vincula. */}
+        {!estabelecimento && faltaNoCadastro(data).length > 0 ? (
+          <BotaoCompletar item={data} className="mt-0.5" />
         ) : (
           <span
-            className="text-zinc-300"
-            title="Reclamação ainda não vinculada a um estabelecimento."
+            className={`mt-0.5 block max-w-[150px] truncate text-xs ${estabelecimento ? "text-zinc-500" : "text-zinc-300"}`}
+            title={estabelecimento ? estabelecimento.name : "Reclamação ainda não vinculada a um estabelecimento."}
           >
-            —
+            {estabelecimento ? estabelecimento.name : "sem estabelecimento"}
           </span>
         )}
       </td>
 
-      <td className="px-5 text-zinc-700">
-        <span className="flex items-center gap-2">
-          <span className="truncate">{data.customer}</span>
-          <BotaoCompletar item={data} />
+      <td className="px-3 py-2.5 text-xs text-zinc-600">
+        <span className="line-clamp-2 max-w-[76px]" title={data.category}>{data.category}</span>
+      </td>
+
+      {/* Nota, resolvido e voltaria: a avaliação do portal numa linha só. */}
+      <td className="whitespace-nowrap px-3 py-2.5">
+        <span className="flex items-center gap-2 text-xs tabular-nums text-zinc-700">
+          <span className="flex items-center gap-0.5" title={data.evaluated ? `Nota ${data.score ?? 0}` : "Ainda não avaliada"}>
+            <Star size={13} className={data.evaluated ? "fill-amber-400 text-amber-400" : "text-zinc-300"} />
+            {data.evaluated ? data.score ?? 0 : "—"}
+          </span>
+          <span title={data.resolved ? "Resolvido" : "Não resolvido (ou sem avaliação)"}>
+            {data.resolved ? <CheckCircle2 size={15} className="text-emerald-600" /> : <XCircle size={15} className="text-zinc-300" />}
+          </span>
         </span>
-      </td>
-
-      <td className="px-5 text-zinc-600">
-        {data.category}
-      </td>
-
-      <td className="px-5">
-
-        <div className="flex items-center gap-1 tabular-nums text-zinc-700">
-
-          <Star
-            size={13}
-            className={
-              data.evaluated
-                ? "fill-amber-400 text-amber-400"
-                : "text-zinc-300"
-            }
-          />
-
-          {data.evaluated ? data.score ?? 0 : "—"}
-
-        </div>
-
-      </td>
-
-      <td className="px-5">
-
-        {data.resolved ? (
-          <CheckCircle2
-            size={17}
-            className="text-emerald-600"
-          />
-        ) : (
-          <XCircle size={17} className="text-zinc-300" />
+        {voltaria !== "indefinido" && (
+          <span className="mt-0.5 block text-[11px] text-zinc-500" title="Voltaria a fazer negócio">
+            {ROTULO_DO_VOLTARIA[voltaria]}
+          </span>
         )}
-
       </td>
 
-      <td className="px-5 text-zinc-600">
-        {voltariaDoCaso(data) === "indefinido" ? <span className="text-zinc-300">—</span> : ROTULO_DO_VOLTARIA[voltariaDoCaso(data)]}
-      </td>
-
-      <td className="px-5">
-
-        <StatusPicker
-          value={data.status}
-          size="compact"
-          onChange={(status) => moveCase(data.id, status)}
-        />
-
-      </td>
-
-      <td className="px-5">
-        {/* A criticidade e o relógio que está correndo, em tempo útil. */}
-        <span className="flex max-w-[220px] flex-wrap items-center gap-1">
+      {/* Onde está no quadro, o relógio que corre e o que fazer agora. */}
+      <td className="px-3 py-2.5">
+        <span className="flex max-w-[208px] flex-wrap items-center gap-1">
+          <StatusPicker
+            value={data.status}
+            size="compact"
+            onChange={(status) => moveCase(data.id, status)}
+          />
           <ChipPrioridade item={data} />
           <RelogioDoCaso item={data} esconderSemRegra />
-          <ProximoPasso item={data} />
         </span>
+        <ProximoPasso item={data} className="mt-1 max-w-[208px]" />
       </td>
 
-      <td className="px-5 text-zinc-600">
-        {data.owner ?? "—"}
-      </td>
-
-      <td className="px-5">
+      <td className="py-2.5 pl-3 pr-5">
+        <span className="block max-w-[92px] truncate text-xs text-zinc-600" title={data.owner}>{data.owner ?? "—"}</span>
 
         {/* Só aparece o que existe de verdade neste caso. */}
-        <div className="flex items-center gap-1">
-
+        <div className="mt-1 flex flex-wrap items-center gap-0.5">
           {whatsapp && (
             <a
               href={`https://wa.me/55${whatsapp}`}
@@ -248,20 +227,13 @@ export default function CaseRow({
               rel="noopener noreferrer"
               onClick={(event) => event.stopPropagation()}
               title={`Conversar com ${data.customer} no WhatsApp`}
-              className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-emerald-50 hover:text-emerald-600"
+              className="rounded-lg p-1 text-zinc-400 transition-colors hover:bg-emerald-50 hover:text-emerald-600"
             >
-              <MessageCircle size={15} />
+              <MessageCircle size={14} />
             </a>
           )}
-
           <LinksDoRa caso={data} />
-
-          {!whatsapp && linksDoRa(data).length === 0 && (
-            <span className="text-zinc-300">—</span>
-          )}
-
         </div>
-
       </td>
 
     </tr>

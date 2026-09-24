@@ -1,6 +1,7 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
 
 import { Case } from "@/lib/models/case";
+import { TAG_DA_EXTENSAO } from "@/lib/models/tag";
 import { instanteDeParede } from "@/lib/services/horasUteis";
 
 import {
@@ -70,8 +71,8 @@ export const CODIGO_DO_PORTAL = /^[A-Za-z0-9_-]{16}$/;
 /** Uma volta do vigia não traz mais que isto; mais seria abuso. */
 export const TETO_POR_VOLTA = 30;
 
-/** Tag das reclamações que entraram pela extensão, sem prévia ou com. */
-export const TAG_DA_EXTENSAO = "Capturada pela extensão";
+/** Tag das reclamações que entraram pela extensão — ver `lib/models/tag.ts`. */
+export { TAG_DA_EXTENSAO };
 
 export interface InteracaoDoPortal {
   /** `ANSWER`, `REPLY`, `COMPANY_REPLY`, `FINAL_ANSWER`. */

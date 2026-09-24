@@ -1116,6 +1116,25 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Mais causas e categorias, lista enxuta (24/09/2026, 1.74.0)
+
+Causas: as 16 famílias de `FAMILIAS_DE_CAUSA` com 3+ registros reais
+(RA + NPS) viraram causa raiz, com área, prazo e palavras — ninguém tinha
+aprovado nenhuma na tela Causas raiz. Categorias: "Impressão de pedidos"
+(38 registros) e "WhatsApp e robô" (45), com 4 subcategorias cada, tiradas
+dos títulos. `scripts/aplicar-catalogo-da-base.ts` (sem `--gravar` só
+mostra; idempotente; só acrescenta). A sugestão de assunto ganhou regras
+que pesam forte no título e fraco no relato: nos casos reais, 16 títulos de
+impressão e 14 de WhatsApp passam a ser sugeridos na categoria nova;
+"atendimento via chatbot" não conta.
+
+Lista do Reclame Aqui: de 12 colunas (1.883 px numa área de 1.015) para 7
+em tabela de layout fixo — cliente com o estabelecimento embaixo, avaliação
+numa célula, status + prazo + o que fazer em "Situação", contato junto do
+responsável. A marca "Capturada pela extensão" virou ícone. Linha mediana
+de 83 px (era 100–130), 6 reclamações à vista em 1.366 × 768 (eram 3) e
+nenhuma rolagem lateral.
+
 ### Campos de seleção que criam e editam (24/09/2026, 1.73.0)
 
 `Combobox` com `onCriar` ("Criar “…”" quando a busca não acha nome igual)
