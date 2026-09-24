@@ -5,9 +5,10 @@ import LinksDoRa from "@/components/shared/LinksDoRa";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { AppWindow, ArrowUpRight, CalendarArrowUp, Check, CircleSlash, List, Loader2, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { AppWindow, ArrowUpRight, CalendarArrowUp, CalendarClock, Check, CircleSlash, List, Loader2, ChevronLeft, ChevronRight, X } from "lucide-react";
 
 import IconeDaFrente from "@/components/shared/IconeDaFrente";
+import OpcoesDeAdiar from "@/components/rotina/OpcoesDeAdiar";
 
 import { useAgenda } from "@/lib/context/AgendaContext";
 import { useCases } from "@/lib/context/CaseContext";
@@ -17,6 +18,7 @@ import { useToast } from "@/lib/context/ToastContext";
 import { filaDoDia, posicaoNaFila, resumoDosPassos, type PassoParaFechar } from "@/lib/models/guiaParaFechar";
 import { frente as frenteInfo } from "@/lib/models/frentes";
 import { JANELA_DO_G_MS } from "@/lib/models/atalhosDeTeclado";
+import { diaCurtoDaMarca, opcoesDeAdiar } from "@/lib/models/meuDia";
 import { idDaJanela, type PedidoDeJanela } from "@/lib/models/janelas";
 import { isSocial } from "@/lib/services/case.service";
 import { proximoDiaUtil } from "@/lib/services/horasUteis";
@@ -57,7 +59,9 @@ export default function ModoProximo({ dia, marcadas, onFechar }: Props) {
   const { cases } = useCases();
   const { expediente } = useSla();
   const { notify } = useToast();
-  const [gravando, setGravando] = useState<"concluir" | "adiar" | "feito" | "tirar" | null>(null);
+  const [gravando, setGravando] = useState<"concluir" | "adiar" | "feito" | "tirar" | "adiado" | null>(null);
+  const [menuAdiar, setMenuAdiar] = useState(false);
+  const menuAdiarRef = useRef<HTMLDivElement>(null);
   const [verFila, setVerFila] = useState(false);
 
   const base = useMemo(
@@ -152,6 +156,7 @@ export default function ModoProximo({ dia, marcadas, onFechar }: Props) {
       else if (k === "f" && item) void (tarefa ? gravarTarefa("concluir") : tirarDoDia("feito"));
       else if (k === "t" && item && !tarefa) void tirarDoDia("tirar");
       else if (k === "a" && tarefa) void gravarTarefa("adiar");
+      else if (k === "a" && item) void tirarDoDia("adiado", opcoesDeAdiar(dia.hoje ?? "", expediente).at(-1)!.volta);
       else if (k === "Enter" && ficha) abrirNaJanela();
       else return;
       e.preventDefault();
@@ -175,20 +180,26 @@ export default function ModoProximo({ dia, marcadas, onFechar }: Props) {
     Feito hoje / não se aplica: sai de todas as atividades em que está
     hoje. Nada muda no caso — é o Meu dia que deixa de pedir o item.
   */
-  async function tirarDoDia(tipo: "feito" | "tirar") {
-    if (!item || gravando) return;
+  async function tirarDoDia(tipo: "feito" | "tirar" | "adiado", volta?: string) {
+    if (!item || gravando || (tipo === "adiado" && !dia.hoje)) return;
+    setMenuAdiar(false);
     setGravando(tipo);
     try {
       const r = await dia.marcarItens(
         item.chaves.map((c) => ({ chave: c, item: item.chave, titulo: item.titulo })),
-        tipo === "feito" ? "feito" : "dispensado",
-        "hoje"
+        tipo === "feito" ? "feito" : tipo === "adiado" ? "adiado" : "dispensado",
+        "hoje",
+        volta
       );
       if (!r.ok) {
         notify({ tone: "error", title: "O item não saiu da fila.", detail: r.erro });
         return;
       }
-      mostrarSaida({ texto: tipo === "feito" ? "feito hoje" : "tirado do dia", titulo: item.titulo, ids: r.marcas.map((m) => m.id) });
+      mostrarSaida({
+        texto: tipo === "feito" ? "feito hoje" : tipo === "adiado" ? `volta em ${diaCurtoDaMarca(volta!)}` : "tirado do dia",
+        titulo: item.titulo,
+        ids: r.marcas.map((m) => m.id),
+      });
     } catch {
       notify({ tone: "error", title: "O item não saiu da fila.", detail: "Tente de novo em instantes." });
     } finally {
@@ -209,6 +220,23 @@ export default function ModoProximo({ dia, marcadas, onFechar }: Props) {
       });
     }
   }
+
+  /* O menu de adiar fecha com Esc e com clique fora. */
+  useEffect(() => {
+    if (!menuAdiar) return;
+    function fora(e: MouseEvent) {
+      if (menuAdiarRef.current && !menuAdiarRef.current.contains(e.target as Node)) setMenuAdiar(false);
+    }
+    function esc(e: KeyboardEvent) {
+      if (e.key === "Escape") setMenuAdiar(false);
+    }
+    document.addEventListener("mousedown", fora);
+    document.addEventListener("keydown", esc);
+    return () => {
+      document.removeEventListener("mousedown", fora);
+      document.removeEventListener("keydown", esc);
+    };
+  }, [menuAdiar]);
 
   /* Devolve à fila o que Feito hoje ou Tirar do dia acabou de tirar. */
   async function desfazerSaida() {
@@ -385,6 +413,24 @@ export default function ModoProximo({ dia, marcadas, onFechar }: Props) {
                   >
                     {gravando === "tirar" ? <Loader2 size={14} className="animate-spin" /> : <CircleSlash size={14} />} Tirar do dia <Tecla>T</Tecla>
                   </button>
+                  <div ref={menuAdiarRef} className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setMenuAdiar((v) => !v)}
+                      disabled={gravando !== null || !dia.hoje}
+                      aria-haspopup="menu"
+                      aria-expanded={menuAdiar}
+                      title="Some até o dia escolhido e volta sozinho (A: próximo dia útil)"
+                      className={`flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium text-zinc-600 hover:bg-zinc-100 disabled:opacity-60 ${menuAdiar ? "bg-zinc-100" : ""}`}
+                    >
+                      {gravando === "adiado" ? <Loader2 size={14} className="animate-spin" /> : <CalendarClock size={14} />} Adiar <Tecla>A</Tecla>
+                    </button>
+                    {menuAdiar && (
+                      <div role="menu" className="absolute left-0 top-[calc(100%+4px)] z-30 w-56 overflow-hidden rounded-xl border border-zinc-200 bg-white p-1 shadow-[0_12px_32px_-12px_rgba(16,24,40,0.25)]">
+                        <OpcoesDeAdiar id="um-por-vez-adiar" onAdiar={(volta) => void tirarDoDia("adiado", volta)} />
+                      </div>
+                    )}
+                  </div>
                 </>
               )}
               <div className="ml-auto flex items-center">

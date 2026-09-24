@@ -142,8 +142,8 @@ export function useMeuDia() {
    * aviso com o que voltou, e o erro fica na tela se não gravou.
    */
   const marcarItens = useCallback(
-    async (itens: { chave: string; item: string; titulo: string }[], tipo: TipoDeMarcaDeItem, duracao: DuracaoDaMarca = "hoje") => {
-      const r = await marcarItensDaRotina({ itens, tipo, duracao });
+    async (itens: { chave: string; item: string; titulo: string }[], tipo: TipoDeMarcaDeItem, duracao: DuracaoDaMarca = "hoje", volta?: string) => {
+      const r = await marcarItensDaRotina({ itens, tipo, duracao, volta });
       if (r.ok) {
         const novas = new Set(r.marcas.map((m) => m.id));
         const mesmas = new Set(r.marcas.map((m) => `${m.chave}|${m.item}|${m.dia}`));

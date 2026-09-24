@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 24/09/2026. Aplicação **1.42.0**, extensão **1.42.0**.
+Atualizado em 24/09/2026. Aplicação **1.43.0**, extensão **1.43.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,35 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### Adiar para outro dia (24/09/2026, 1.43.0)
+
+Item da Fase 24 — "que seja possível remover a atividade, marcar um
+check, adiar para outro dia".
+
+- **Uma marca nova, sem mudar o banco.** `MarcaDeItemDaRotina.tipo` é
+  texto e já tinha `ate`: adiar grava `tipo: "adiado"` com `ate` na
+  véspera do dia da volta. `marcaValeHoje` já esconde o item até lá, e
+  no dia escolhido ele volta sozinho — se ainda for trabalho da
+  atividade. As regras moram em `lib/models/meuDia.ts`
+  (`ateDoAdiamento`, `opcoesDeAdiar`, `voltaDoAdiado`); o servidor recusa
+  hoje, datas passadas, mais de 90 dias e datas que não existem (o
+  `Date` aceita 31/11 e vira 01/12 calado — a data tem de voltar igual).
+- **Onde está.** No Um por vez, o botão Adiar (Amanhã, Próximo dia útil
+  quando é outro dia — na sexta, segunda —, ou uma data) e a tecla A,
+  que adia para o próximo dia útil; a linha fixa diz "volta em 28/09 ·
+  desfazer". Na lista de cada atividade, o menu do item ganhou a mesma
+  seção abaixo do "Não se aplica". Na lista dos tirados, o adiado aparece
+  como "volta em 28/09", com Devolver.
+- Fica para "Ações na lista da fila": adiar vários de uma vez.
+
+Provas: `check:meu-dia` com 9 pontos novos (quinta tem uma opção, sexta
+tem sábado e segunda; a marca vale até a véspera; hoje, passado, 91 dias
+e 31/11 recusados; adiado de sexta para segunda some três dias e volta
+na segunda) — com a validação antiga, o ponto de 31/11 falha. No
+navegador, com os componentes reais e uma fila de teste: 8 pontos
+(Amanhã, a tecla A, uma data escolhida, e o menu da lista gravam
+`adiado` com a volta certa). `tsc` e `lint` limpos.
 
 ### Um por vez: nada pula sob o mouse, e o teclado (24/09/2026, 1.42.0)
 

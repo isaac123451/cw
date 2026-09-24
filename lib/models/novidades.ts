@@ -104,6 +104,14 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.43.0",
+    data: "2026-09-24",
+    titulo: "Adiar para outro dia",
+    texto: "No Meu dia, qualquer item pode ser adiado: amanhã, o próximo dia útil ou uma data, em até 90 dias. Ele some até a véspera e volta sozinho no dia escolhido, se ainda for trabalho. Está no Um por vez (botão Adiar, e a tecla A adia para o próximo dia útil) e no menu de cada item na lista da atividade; a lista dos tirados mostra quando cada um volta, com Devolver.",
+    frentes: ["plataforma"],
+    href: "/meu-dia",
+  },
+  {
     versao: "1.42.0",
     data: "2026-09-24",
     titulo: "Um por vez: nada pula sob o mouse, e o teclado",

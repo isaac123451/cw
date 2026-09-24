@@ -13,6 +13,7 @@ import {
 } from "@/lib/models/rotina";
 import { persistencia, ROTULO_DO_PERIODO, faixaDoPeriodo } from "@/lib/models/cadencia";
 import type { ItemDaRotina, MarcaDeItem, TipoDeMarcaDeItem } from "@/lib/models/meuDia";
+import { ADIAR_NO_MAXIMO_DIAS, ateDoAdiamento } from "@/lib/models/meuDia";
 import type { LinhaDeMetrica } from "@/lib/actions/metricas";
 
 import { lerExpediente } from "@/lib/services/operacao.service";
@@ -447,10 +448,12 @@ export async function marcarItensDaRotina(entrada: {
   itens: { chave: string; item: string; titulo: string }[];
   tipo: TipoDeMarcaDeItem;
   duracao: DuracaoDaMarca;
+  /** Só no `adiado`: o dia em que o item volta (AAAA-MM-DD, Brasília). */
+  volta?: string;
 }): Promise<{ ok: true; marcas: MarcaDeItem[] } | Falha> {
 
-  if (entrada.tipo !== "feito" && entrada.tipo !== "dispensado") return { ok: false, erro: "Marca inválida." };
-  if (!["hoje", "semana", "sempre"].includes(entrada.duracao)) return { ok: false, erro: "Duração inválida." };
+  if (entrada.tipo !== "feito" && entrada.tipo !== "dispensado" && entrada.tipo !== "adiado") return { ok: false, erro: "Marca inválida." };
+  if (entrada.tipo !== "adiado" && !["hoje", "semana", "sempre"].includes(entrada.duracao)) return { ok: false, erro: "Duração inválida." };
   if (entrada.tipo === "feito" && entrada.duracao !== "hoje") return { ok: false, erro: "\"Feito\" vale só para hoje: amanhã a conta decide de novo." };
   if (!entrada.itens.length || entrada.itens.length > 200) return { ok: false, erro: "Escolha de 1 a 200 itens." };
   for (const i of entrada.itens) {
@@ -462,7 +465,11 @@ export async function marcarItensDaRotina(entrada: {
   const prisma = q.ctx.prisma;
 
   const hoje = paredeDe(new Date()).dia;
-  const ate = entrada.duracao === "hoje" ? hoje : entrada.duracao === "semana" ? somarDias(hoje, 6) : null;
+  let ate = entrada.duracao === "hoje" ? hoje : entrada.duracao === "semana" ? somarDias(hoje, 6) : null;
+  if (entrada.tipo === "adiado") {
+    ate = ateDoAdiamento(hoje, entrada.volta ?? "");
+    if (!ate) return { ok: false, erro: `Escolha um dia depois de hoje, em até ${ADIAR_NO_MAXIMO_DIAS} dias.` };
+  }
 
   try {
     const gravadas = await prisma.$transaction(

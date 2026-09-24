@@ -18,6 +18,7 @@ import { resolve } from "node:path";
 import type { Case } from "../lib/models/case";
 import type { NpsResponseView } from "../lib/models/nps";
 
+import { ateDoAdiamento, marcaValeHoje, opcoesDeAdiar, voltaDoAdiado } from "../lib/models/meuDia";
 import { conquistasDaSemana, conquistasDoDia, inicioDaSemana, oQueMoveANota, placarDaSemana, textoDoResumoDaSemana } from "../lib/models/motivacaoDoDia";
 
 const RAIZ = resolve(__dirname, "..");
@@ -161,6 +162,21 @@ console.log("\n— Conquistas da semana —\n");
   conferir("uma semana depois, o que foi desta semana vira a comparação", [semanaPassada.agora.respondidas, semanaPassada.antes.respondidas], [0, 2]);
   const resumo = textoDoResumoDaSemana(semanaPassada, { sequencia: 3 });
   conferir("o resumo diz a queda com a conta", resumo.includes("0 reclamações respondidas (2 a menos que na semana passada)"), true);
+}
+
+console.log("\n  Adiar para outro dia\n");
+{
+  /* Quinta, 24/09/2026: amanhã é sexta, dia útil. Sexta, 25/09: amanhã é sábado. */
+  conferir("quinta: amanhã já é o próximo dia útil, uma opção só", opcoesDeAdiar("2026-09-24").map((o) => o.volta), ["2026-09-25"]);
+  conferir("sexta: amanhã (sábado) e o próximo dia útil (segunda)", opcoesDeAdiar("2026-09-25").map((o) => o.volta), ["2026-09-26", "2026-09-28"]);
+  conferir("a marca vale até a véspera da volta", ateDoAdiamento("2026-09-25", "2026-09-28"), "2026-09-27");
+  conferir("hoje ou antes não é adiar", [ateDoAdiamento("2026-09-25", "2026-09-25"), ateDoAdiamento("2026-09-25", "2026-09-20")], [null, null]);
+  conferir("até 90 dias; 91 não", [ateDoAdiamento("2026-09-25", "2026-12-24"), ateDoAdiamento("2026-09-25", "2026-12-25")], ["2026-12-23", null]);
+  conferir("data inválida não passa (30/11 existe, 31/11 não)", [ateDoAdiamento("2026-09-25", "2026-11-31"), ateDoAdiamento("2026-09-25", "2026-11-30"), ateDoAdiamento("2026-09-25", "")], [null, "2026-11-29", null]);
+  const marca = { dia: "2026-09-25", ate: ateDoAdiamento("2026-09-25", "2026-09-28") };
+  conferir("adiado de sexta para segunda: some sexta, sábado e domingo", ["2026-09-25", "2026-09-26", "2026-09-27"].map((d) => marcaValeHoje(marca, d)), [true, true, true]);
+  conferir("e volta sozinho na segunda", marcaValeHoje(marca, "2026-09-28"), false);
+  conferir("a lista diz o dia da volta", voltaDoAdiado(marca), "2026-09-28");
 }
 
 console.log(
