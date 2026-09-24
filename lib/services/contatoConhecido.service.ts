@@ -1,6 +1,7 @@
 import type { PrismaClient } from "@prisma/client";
 
 import { lerTelefone, normalizarNome, type TelefoneLido } from "@/lib/services/contato.service";
+import { nomeDeContato, semNome } from "@/lib/models/case";
 
 /**
  * Quem é este contato — quando o telefone não basta.
@@ -189,10 +190,15 @@ export async function vincularContato(
     dados.establishmentId = r.establishmentId ?? null;
     if (!r.phone) await prisma.npsResponse.update({ where: { id: r.id }, data: { phone: chave } });
   } else if (entrada.tipo === "caso") {
-    const c = await prisma.case.findUnique({ where: { protocol: entrada.ref }, select: { protocol: true, establishmentId: true } });
+    const c = await prisma.case.findUnique({ where: { protocol: entrada.ref }, select: { protocol: true, establishmentId: true, customer: true } });
     if (!c) return { ok: false, erro: "Esse caso não existe mais." };
     dados.protocolo = c.protocol;
     dados.establishmentId = c.establishmentId ?? null;
+    /* Vinculou a pessoa: a reclamação que chegou sem nome ganha o do contato. Só no vazio, nunca troca. */
+    const nomeDoContato = nomeDeContato(entrada.nome);
+    if (nomeDoContato && semNome(c.customer)) {
+      await prisma.case.update({ where: { protocol: c.protocol }, data: { customer: nomeDoContato } });
+    }
   } else {
     const e = await prisma.establishment.findUnique({ where: { id: entrada.ref }, select: { id: true } });
     if (!e) return { ok: false, erro: "Essa conta não existe mais." };

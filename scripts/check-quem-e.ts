@@ -14,6 +14,8 @@ import { resolve } from "node:path";
 import vm from "node:vm";
 
 import { palavrasQueDistinguem, semelhancaDeNome } from "../lib/services/contatoConhecido.service";
+import { nomeDeContato } from "../lib/models/case";
+import { oQueCompletar } from "../lib/services/sinaisDaConversa";
 
 let falhas = 0;
 function conferir(titulo: string, obtido: unknown, esperado: unknown) {
@@ -33,6 +35,22 @@ conferir("o e-mail colado do NPS ('Tre Duarte Pizzaria' × treduartepizzaria)", 
 conferir("nome curto não casa por dentro ('Ana' × mariana)", semelhancaDeNome("Ana", "mariana"), 0);
 conferir("metade das palavras: 'Mario Rossi Burger' × 'Rossi Lanches'", semelhancaDeNome("Mario Rossi Burger", "Rossi Lanches"), 1);
 conferir("sem palavra que distinga, não procura", palavrasQueDistinguem("Pizzaria Delivery"), []);
+
+/* ---- o nome do contato preenche a reclamação sem nome (1.39) ---- */
+conferir("nome de contato vale como nome", nomeDeContato("  Pizzaria  Bella "), "Pizzaria Bella");
+conferir("número salvo sem nome não vira nome", nomeDeContato("+55 11 98888-7777"), null);
+conferir("emoji ou uma letra também não", [nomeDeContato("😀"), nomeDeContato("A")], [null, null]);
+conferir("'Não informado' não é nome", nomeDeContato("Não informado"), null);
+conferir(
+  "reclamação 'Não informado': o Completar oferece o nome",
+  oQueCompletar({ email: null, phone: null, document: null, customer: "Não informado" }, { nome: "Pizzaria Bella" }).map((c) => c.campo),
+  ["nome"]
+);
+conferir(
+  "com nome já no cadastro, não troca",
+  oQueCompletar({ email: null, phone: null, document: null, customer: "Maria Silva" }, { nome: "Pizzaria Bella" }).length,
+  0
+);
 
 /* ---- o painel ---- */
 const codigo = readFileSync(resolve(__dirname, "../extensao/conteudo/painel-contato.js"), "utf8");

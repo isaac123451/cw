@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.39.0",
+    data: "2026-09-23",
+    titulo: "Pessoas clicáveis, nome que se preenche e anotação em uma linha",
+    texto: "Na ficha da reclamação, o consumidor leva à ficha do cliente, o telefone abre o WhatsApp e a conta aparece junto. A reclamação que chega sem nome ganha o do contato pelo Completar ou pelo É este da extensão, ou num campo que grava ao sair, com desfazer. E a anotação virou uma linha com um botão pequeno de adicionar.",
+    frentes: ["reclame-aqui", "extensao"],
+  },
+  {
     versao: "1.38.0",
     data: "2026-09-23",
     titulo: "A ficha não afirma o que não aconteceu",

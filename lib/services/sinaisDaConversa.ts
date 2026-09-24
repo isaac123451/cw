@@ -3,7 +3,7 @@ import { unstable_cache } from "next/cache";
 import { CASES_TAG } from "@/lib/actions/tags";
 import { getPrisma } from "@/lib/prisma";
 import { criarIndice, parecidos, type Exemplo, type Indice } from "@/lib/models/sugestaoPorTexto";
-import { semValor } from "@/lib/models/case";
+import { semNome, semValor } from "@/lib/models/case";
 import { digitosDoDocumento } from "@/lib/models/establishment";
 import { lerTelefone } from "@/lib/services/contato.service";
 import { cpfValido, dadosSensiveis } from "@/lib/services/lgpd";
@@ -102,7 +102,7 @@ export async function indiceDosRelatos(): Promise<Indice | null> {
    COMPLETAR O CADASTRO PELA CONVERSA (Fase 17)
 ============================================================ */
 
-export type CampoDoCadastro = "email" | "telefone" | "documento";
+export type CampoDoCadastro = "email" | "telefone" | "documento" | "nome";
 
 export interface DadoParaCompletar {
   campo: CampoDoCadastro;
@@ -174,10 +174,12 @@ function cnpjValido(d: string) {
 
 /** O que a conversa tem e o caso não — nunca troca o que já está lá. */
 export function oQueCompletar(
-  caso: { email: string | null; phone: string | null; document: string | null },
+  caso: { email: string | null; phone: string | null; document: string | null; customer?: string | null },
   achados: Partial<Record<CampoDoCadastro, string>>
 ): DadoParaCompletar[] {
   const faltas: DadoParaCompletar[] = [];
+  /* O nome do contato no WhatsApp, quando a reclamação chegou "Não informado" (a leitura do portal). */
+  if (achados.nome && semNome(caso.customer)) faltas.push({ campo: "nome", valor: achados.nome });
   if (achados.email && semValor(caso.email)) faltas.push({ campo: "email", valor: achados.email });
   if (achados.telefone && semValor(caso.phone)) faltas.push({ campo: "telefone", valor: achados.telefone });
   if (achados.documento && !caso.document) faltas.push({ campo: "documento", valor: achados.documento });

@@ -13,6 +13,7 @@ import {
   indiceDosRelatos,
   oQueCompletar,
 } from "@/lib/services/sinaisDaConversa";
+import { nomeDeContato } from "@/lib/models/case";
 
 /**
  * POST /api/extensao/sinais
@@ -33,6 +34,8 @@ interface Corpo {
   protocolo?: string;
   /** O número do contato na página (WhatsApp). */
   telefone?: string;
+  /** O nome do contato como o WhatsApp mostra — completa a reclamação que chegou sem nome. */
+  nome?: string;
 }
 
 export async function POST(request: Request) {
@@ -67,10 +70,11 @@ export async function POST(request: Request) {
 
   if (protocolo && prisma && usuario && usuario.papel !== "LEITURA") {
     const caso = await prisma.case
-      .findUnique({ where: { protocol: protocolo }, select: { protocol: true, email: true, phone: true, document: true } })
+      .findUnique({ where: { protocol: protocolo }, select: { protocol: true, email: true, phone: true, document: true, customer: true } })
       .catch(() => null);
     if (caso) {
-      const campos = oQueCompletar(caso, dadosDaConversa(mensagens, corpo.telefone));
+      const nome = nomeDeContato(corpo.nome);
+      const campos = oQueCompletar(caso, { ...dadosDaConversa(mensagens, corpo.telefone), ...(nome ? { nome } : {}) });
       if (campos.length > 0) completar = { protocolo: caso.protocol, campos };
     }
   }

@@ -1285,6 +1285,7 @@
           mensagens,
           protocolo,
           telefone: P.consulta?.telefone,
+          nome: P.consulta?.nome,
         });
         sinaisPorContato.set(chave, {
           avisos: resposta?.dados?.avisos ?? [],
@@ -1646,7 +1647,7 @@
     return true;
   };
 
-  const NOME_DO_CAMPO = { email: "e-mail", telefone: "telefone", documento: "CPF/CNPJ" };
+  const NOME_DO_CAMPO = { email: "e-mail", telefone: "telefone", documento: "CPF/CNPJ", nome: "o nome" };
 
   function valorParaMostrar(campo, valor) {
     if (campo === "documento" && valor.length === 11) return valor.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");

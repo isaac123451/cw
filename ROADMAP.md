@@ -1116,6 +1116,45 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Ficha: pessoas clicáveis, o nome que se preenche e a anotação em uma linha (23/09/2026, 1.39.0)
+
+Três pontos da Fase 22.
+
+- **Pessoas clicáveis.** O bloco "Pessoas relacionadas" era texto: agora o
+  consumidor leva à ficha do cliente (todas as reclamações, NPS e
+  conversas), o telefone abre a conversa no WhatsApp Web, o e-mail abre o
+  e-mail, e a conta vinculada aparece como segunda linha, com plano e
+  situação, levando à ficha do estabelecimento.
+- **O nome do cliente se preenche.** "Não faz sentido a extensão puxar e
+  vincular como pessoa mas não adicionar o nome." A reclamação lida do
+  portal pode chegar "Não informado" (há uma hoje). Agora o nome entra
+  por três caminhos, sempre só no vazio e nunca trocando um nome real:
+  o "Completar o cadastro" da extensão oferece o nome do contato do
+  WhatsApp; o "É este" numa reclamação preenche; e na ficha, o próprio
+  bloco vira um campo "Nome do consumidor". Número salvo sem nome, emoji
+  ou uma letra não viram nome.
+- **Salvar sem botão, primeira peça.** Esse campo é o primeiro com o jeito
+  novo de salvar: grava ao sair do campo (ou Enter), mostra "salvando…",
+  depois "nome salvo · desfazer" ao lado; erro fica no campo, com tentar
+  de novo, e o que foi digitado não se perde. O componente
+  (`CampoQueSalva`) é o que os outros campos soltos vão usar.
+- **Anotação em uma linha.** O bloco grande com o botão roxo virou uma
+  linha que cresce com o texto e um botão pequeno "Adicionar"; Enter
+  adiciona, Shift+Enter quebra a linha.
+
+Provas:
+- `check:quem-e` com seis pontos novos (nome de contato vale; número sem
+  nome, emoji, uma letra e "Não informado" não; o Completar oferece o
+  nome só quando a reclamação está sem nome).
+- Na tela, com uma reclamação descartável criada para o teste (nome "Não
+  informado"): digitar o nome e apertar Enter gravou no banco e a pessoa
+  virou link com o nome; "desfazer" voltou o banco a "Não informado". A
+  reclamação foi apagada no fim. Numa reclamação real, só abrindo: os
+  links do cliente, do WhatsApp e do e-mail, a anotação em uma linha e
+  "Voltaria: não definido".
+
+**Depende de você:** recarregar a extensão (1.39.0).
+
 ### A lista da ficha, e os dois bugs que ela afirmava (23/09/2026, 1.38.0)
 
 Nova fase no roadmap (Fase 22, "A ficha da reclamação que acompanha a

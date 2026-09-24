@@ -12,6 +12,7 @@ import { digitosDoDocumento } from "@/lib/models/establishment";
 import { getPrisma } from "@/lib/prisma";
 import { lerTelefone } from "@/lib/services/contato.service";
 import { completarContato } from "@/lib/services/raPortal.service";
+import { nomeDeContato } from "@/lib/models/case";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -41,7 +42,7 @@ export async function POST(request: Request) {
   const prisma = getPrisma();
   if (!prisma) return responder(request, { erro: "Sem banco configurado." }, 503);
 
-  let corpo: { protocolo?: string; email?: string; telefone?: string; documento?: string };
+  let corpo: { protocolo?: string; email?: string; telefone?: string; documento?: string; nome?: string };
   try {
     corpo = await request.json();
   } catch {
@@ -75,7 +76,8 @@ export async function POST(request: Request) {
   const telefone = lerTelefone(String(corpo.telefone ?? "").slice(0, 40));
 
   const completou = await completarContato(prisma, caso, {
-    cliente: "",
+    /* O nome do contato só entra onde a reclamação está "Não informado" — a regra do completarContato. */
+    cliente: nomeDeContato(corpo.nome) ?? "",
     email: EMAIL.test(email) ? email : "",
     telefone: telefone?.completo ? telefone.digitos : "",
     documento: digitosDoDocumento(String(corpo.documento ?? "").slice(0, 30)),

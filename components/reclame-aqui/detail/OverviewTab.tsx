@@ -2,9 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { Mail, Phone, Send, User } from "lucide-react";
+import Link from "next/link";
 
-import { Case } from "@/lib/models/case";
+import { ArrowUpRight, Building2, Loader2, Mail, Phone, Plus } from "lucide-react";
+
+import { Case, semNome } from "@/lib/models/case";
 
 import { loadCaseTexts } from "@/lib/actions/cases";
 import {
@@ -14,6 +16,21 @@ import {
 } from "@/lib/actions/notes";
 
 import SurfaceCard from "@/components/shared/SurfaceCard";
+import { useEstablishments } from "@/lib/context/EstablishmentsContext";
+import { slugify } from "@/lib/services/slug";
+import CampoQueSalva from "@/components/shared/CampoQueSalva";
+import { nomearConsumidor } from "@/lib/actions/tratativa";
+
+function iniciais(nome: string) {
+  return nome.split(" ").map((p) => p[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
+}
+
+/** O link do WhatsApp Web para o telefone do caso, se ele estiver completo. */
+function whatsappDe(telefone?: string | null) {
+  let d = String(telefone ?? "").replace(/\D/g, "");
+  if (d.length === 10 || d.length === 11) d = `55${d}`;
+  return d.length >= 12 ? `https://wa.me/${d}` : null;
+}
 
 interface Props {
   data: Case;
@@ -43,6 +60,11 @@ export default function OverviewTab({
   onChange,
   onLoad,
 }: Props) {
+
+  const { findEstablishment } = useEstablishments();
+  /** O nome de antes, enquanto o "desfazer" do nome recém-salvo está à vista. */
+  const [nomeSalvo, setNomeSalvo] = useState<string | null>(null);
+  const estabelecimento = data.establishmentId ? findEstablishment(data.establishmentId) : undefined;
 
   const [comments, setComments] = useState<CaseNote[]>(
     []
@@ -326,57 +348,129 @@ export default function OverviewTab({
 
       <SurfaceCard
         title="Pessoas relacionadas"
-        description="Contatos vinculados a esta reclamação."
+        description="Quem está nesta reclamação — clique para abrir a ficha de cada um."
         action={
           <span className="shrink-0 rounded-xl bg-zinc-50 px-3 py-1.5 text-xs font-medium text-zinc-600">
-            1 pessoa vinculada
+            {estabelecimento ? "cliente e conta" : "1 pessoa vinculada"}
           </span>
         }
       >
 
-        <div className="rounded-xl bg-violet-50/50 p-4 ring-1 ring-inset ring-violet-100">
+        <ul className="space-y-2">
 
-          <div className="flex items-center gap-3">
-
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-xs font-semibold text-violet-700 ring-1 ring-inset ring-violet-100">
-              {data.customer
-                .split(" ")
-                .map((p) => p[0])
-                .slice(0, 2)
-                .join("")
-                .toUpperCase()}
-            </span>
-
-            <div className="min-w-0">
-
-              <p className="truncate text-sm font-semibold text-zinc-900">
-                {data.customer}
+          <li className="rounded-xl bg-violet-50/50 p-3 ring-1 ring-inset ring-violet-100">
+            {semNome(data.customer) ? (
+              /* Chegou sem nome (a leitura do portal nem sempre traz): o nome se escreve aqui e grava ao sair. */
+              <CampoQueSalva
+                id="nome-do-consumidor"
+                rotulo="Nome do consumidor"
+                valor=""
+                placeholder="Ainda sem nome — digite e saia do campo"
+                maximo={120}
+                onSalvar={async (nome) => {
+                  const r = await nomearConsumidor({ protocol: data.protocol, nome });
+                  if (r.ok) {
+                    /* O campo vira o nome: o "salvo · desfazer" continua ao lado dele por alguns segundos. */
+                    setNomeSalvo(data.customer);
+                    window.setTimeout(() => setNomeSalvo(null), 10000);
+                    onLoad({ customer: nome });
+                  }
+                  return r;
+                }}
+              />
+            ) : (
+            <Link
+              href={`/clientes/${slugify(data.customer)}`}
+              title={`Abrir a ficha de ${data.customer}: todas as reclamações, NPS e conversas`}
+              className="group flex min-w-0 items-center gap-3"
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-xs font-semibold text-violet-700 ring-1 ring-inset ring-violet-100">
+                {iniciais(data.customer)}
+              </span>
+              <span className="min-w-0">
+                <span className="flex items-center gap-1 truncate text-sm font-semibold text-zinc-900 group-hover:text-violet-700">
+                  {data.customer}
+                  <ArrowUpRight size={13} className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100" />
+                </span>
+                <span className="block text-[11px] text-zinc-500">Consumidor{data.city ? ` · ${data.city}/${data.state}` : ""}</span>
+              </span>
+            </Link>
+            )}
+            {nomeSalvo !== null && !semNome(data.customer) && (
+              <p aria-live="polite" className="mt-1 flex items-center gap-1.5 pl-[52px] text-[11px]">
+                <span className="text-emerald-700">nome salvo</span>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const anterior = nomeSalvo || "Não informado";
+                    const r = await nomearConsumidor({ protocol: data.protocol, nome: anterior });
+                    if (r.ok) {
+                      setNomeSalvo(null);
+                      onLoad({ customer: anterior });
+                    }
+                  }}
+                  className="rounded px-1 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800"
+                >
+                  desfazer
+                </button>
               </p>
-
-              <div className="mt-1.5 flex flex-wrap gap-1.5">
-
-                <span className="flex items-center gap-1.5 rounded-lg bg-white px-2 py-1 text-[11px] text-zinc-600 ring-1 ring-inset ring-violet-100">
+            )}
+            <div className="mt-2 flex flex-wrap gap-1.5 pl-[52px]">
+              {whatsappDe(data.phone) ? (
+                <a
+                  href={whatsappDe(data.phone)!}
+                  target="_blank"
+                  rel="noreferrer"
+                  title="Abrir a conversa no WhatsApp Web"
+                  className="flex items-center gap-1.5 rounded-lg bg-white px-2 py-1 text-[11px] text-zinc-700 ring-1 ring-inset ring-violet-100 hover:text-emerald-700 hover:ring-emerald-200"
+                >
                   <Phone size={10} />
-                  {data.phone ?? "—"}
+                  {data.phone}
+                </a>
+              ) : (
+                <span className="flex items-center gap-1.5 rounded-lg bg-white px-2 py-1 text-[11px] text-zinc-400 ring-1 ring-inset ring-violet-100">
+                  <Phone size={10} />—
                 </span>
-
-                <span className="flex items-center gap-1.5 rounded-lg bg-white px-2 py-1 text-[11px] text-zinc-600 ring-1 ring-inset ring-violet-100">
+              )}
+              {data.email ? (
+                <a
+                  href={`mailto:${data.email}`}
+                  className="flex items-center gap-1.5 rounded-lg bg-white px-2 py-1 text-[11px] text-zinc-700 ring-1 ring-inset ring-violet-100 hover:text-violet-700"
+                >
                   <Mail size={10} />
-                  {data.email ?? "—"}
+                  {data.email}
+                </a>
+              ) : (
+                <span className="flex items-center gap-1.5 rounded-lg bg-white px-2 py-1 text-[11px] text-zinc-400 ring-1 ring-inset ring-violet-100">
+                  <Mail size={10} />—
                 </span>
-
-                <span className="flex items-center gap-1.5 rounded-lg bg-white px-2 py-1 text-[11px] text-zinc-600 ring-1 ring-inset ring-violet-100">
-                  <User size={10} />
-                  {data.city}/{data.state}
-                </span>
-
-              </div>
-
+              )}
             </div>
+          </li>
 
-          </div>
+          {estabelecimento && (
+            <li>
+              <Link
+                href={`/estabelecimentos/${estabelecimento.slug}`}
+                className="group flex items-center gap-3 rounded-xl p-3 ring-1 ring-inset ring-zinc-100 transition-colors hover:bg-zinc-50"
+              >
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-zinc-50 text-zinc-500 ring-1 ring-inset ring-zinc-200">
+                  <Building2 size={16} />
+                </span>
+                <span className="min-w-0">
+                  <span className="flex items-center gap-1 truncate text-sm font-semibold text-zinc-900 group-hover:text-violet-700">
+                    {estabelecimento.name}
+                    <ArrowUpRight size={13} className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100" />
+                  </span>
+                  <span className="block text-[11px] text-zinc-500">
+                    {["Conta", estabelecimento.plan, estabelecimento.status].filter(Boolean).join(" · ")}
+                  </span>
+                </span>
+              </Link>
+            </li>
+          )}
 
-        </div>
+        </ul>
 
       </SurfaceCard>
 
@@ -439,34 +533,45 @@ export default function OverviewTab({
 
         )}
 
-        <div className="mt-4">
-
-          <label className={label}>
+        {/* Uma linha e um botão pequeno: Enter adiciona, Shift+Enter quebra a linha. */}
+        <form
+          className="mt-3 flex items-end gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            publish();
+          }}
+        >
+          <label htmlFor="nova-anotacao" className="sr-only">
             Nova anotação
           </label>
-
           <textarea
+            id="nova-anotacao"
             value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            rows={3}
-            placeholder="Registre contexto, próximos passos ou decisões internas."
-            className="mt-1.5 w-full resize-none rounded-xl border border-zinc-200 p-3 text-sm outline-none transition-colors placeholder:text-zinc-400 focus:border-violet-400"
+            onChange={(e) => {
+              setDraft(e.target.value);
+              e.currentTarget.style.height = "auto";
+              e.currentTarget.style.height = `${Math.min(e.currentTarget.scrollHeight, 160)}px`;
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                publish();
+              }
+            }}
+            rows={1}
+            placeholder="Anotar contexto, próximo passo ou decisão… (Enter adiciona)"
+            className="min-h-[38px] flex-1 resize-none rounded-xl border border-zinc-200 px-3 py-2 text-sm outline-none transition-colors placeholder:text-zinc-400 focus:border-violet-400"
           />
-
-          <div className="mt-2 flex justify-end">
-
-            <button
-              onClick={publish}
-              disabled={draft.trim() === "" || anotando}
-              className="flex items-center gap-2 rounded-xl bg-violet-700 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-violet-800 disabled:cursor-not-allowed disabled:bg-zinc-200 disabled:text-zinc-400"
-            >
-              <Send size={15} />
-              {anotando ? "Anotando..." : "Anotar"}
-            </button>
-
-          </div>
-
-        </div>
+          <button
+            type="submit"
+            disabled={draft.trim() === "" || anotando}
+            title="Adicionar a anotação"
+            className="flex h-[38px] shrink-0 items-center gap-1.5 rounded-xl bg-zinc-900 px-3 text-xs font-semibold text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-200 disabled:text-zinc-400"
+          >
+            {anotando ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
+            Adicionar
+          </button>
+        </form>
 
       </SurfaceCard>
 

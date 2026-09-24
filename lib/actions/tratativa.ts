@@ -931,3 +931,25 @@ export async function respostaParecida(entrada: {
 
   return melhor && melhor.percentual >= LIMITE_DE_REPETICAO ? melhor : null;
 }
+
+/**
+ * O nome do consumidor, direto na ficha — para a reclamação que chegou
+ * "Não informado" (a leitura do portal nem sempre traz o nome). Grava
+ * ao sair do campo; desfazer é gravar o anterior.
+ */
+export async function nomearConsumidor(entrada: { protocol: string; nome: string }): Promise<{ ok: true } | Falha> {
+  const nome = String(entrada.nome ?? "").replace(/\s+/g, " ").trim().slice(0, 120);
+  if (nome.length < 2) return { ok: false, erro: "Escreva o nome do consumidor." };
+
+  const quem = await quemGrava("AGENTE", MODULO);
+  if ("erro" in quem) return { ok: false, erro: quem.erro! };
+
+  try {
+    const r = await quem.ctx.prisma.case.updateMany({ where: { protocol: entrada.protocol }, data: { customer: nome } });
+    if (r.count === 0) return { ok: false, erro: "Esta reclamação não existe mais." };
+    updateTag(CASES_TAG);
+    return { ok: true };
+  } catch (erro) {
+    return falha(erro, "nome do consumidor");
+  }
+}

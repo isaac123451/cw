@@ -384,6 +384,19 @@ export const ROTULO_DA_FALTA: Record<FaltaNoCadastro, string> = {
 };
 
 /** O que a planilha e o vigia gravam quando não sabem o nome. */
+/**
+ * O nome do contato como o WhatsApp mostra, se ele serve de nome.
+ *
+ * Número salvo sem nome ("+55 11 9…"), emoji sozinho ou uma letra não
+ * são nome de gente: devolve `null` e nada é preenchido.
+ */
+export function nomeDeContato(valor?: string | null) {
+  const nome = String(valor ?? "").replace(/\s+/g, " ").trim().slice(0, 120);
+  if (nome.length < 2 || !/[A-Za-zÀ-ÿ]{2,}/.test(nome)) return null;
+  if ((nome.match(/\d/g) ?? []).length >= 6) return null;
+  return semNome(nome) ? null : nome;
+}
+
 export function semNome(valor?: string | null) {
   return ["", "não informado", "nao informado"].includes(
     String(valor ?? "").trim().toLowerCase()

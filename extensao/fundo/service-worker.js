@@ -870,6 +870,7 @@ async function tratar(mensagem) {
         mensagens: mensagem.mensagens ?? [],
         protocolo: mensagem.protocolo,
         telefone: mensagem.telefone,
+        nome: mensagem.nome,
       }
     );
 
