@@ -25,7 +25,8 @@ interface AgendaContextType {
   /** Carga inicial ainda em andamento. */
   loading: boolean;
 
-  createTask: (data: TaskDraft) => void;
+  /** Devolve o id da atividade nova — para o "desfazer" logo depois de criar. */
+  createTask: (data: TaskDraft) => string;
   updateTask: (data: AgendaTask) => void;
   removeTask: (id: string) => void;
   /**
@@ -74,6 +75,7 @@ export function AgendaProvider({
 
         setTasks((prev) => ordenar([nova, ...prev]));
         sincronizar(() => saveAgendaTask(nova));
+        return nova.id;
       },
 
       updateTask: (data) => {

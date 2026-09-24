@@ -15,6 +15,7 @@ import type { NpsResponseView } from "../lib/models/nps";
 import { PRAZOS_DA_DOCUMENTACAO, type SlaRule } from "../lib/models/sla";
 import { atrasadosDaAgenda, compromissosEntre } from "../lib/models/compromissos";
 import { instanteDe } from "../lib/services/horasUteis";
+import { entenderLinha } from "../lib/models/linhaDaAgenda";
 import { adiarLembrete, chaveDoAviso, lembretesNaHora } from "../lib/models/lembretes";
 
 let falhas = 0;
@@ -111,6 +112,25 @@ console.log("\n  O lembrete que avisa\n");
   conferir("adiada, avisa de novo no horário novo", lembretesNaHora([adiada], br("2026-09-16", "09:15"), new Set([chaveDoAviso(tarefas[0])])).map((t) => t.id), ["l1"]);
   conferir("1 h às 23h30 passa para amanhã 00:30", adiarLembrete(tarefas[0], "1h", br("2026-09-16", "23:30")), { dueDate: "2026-09-17", time: "00:30" });
   conferir("amanhã na sexta é segunda, mesmo horário", adiarLembrete(tarefas[0], "amanha", br("2026-09-18", "09:00")), { dueDate: "2026-09-21", time: "08:30" });
+}
+
+console.log("\n  Criar em uma linha\n");
+{
+  /* Quarta, 16/09/2026. */
+  const prot = new Set(["RA-123", "RA-ABC_def"]);
+  const ver = (t: string) => {
+    const l = entenderLinha(t, "2026-09-16", prot);
+    return l && [l.dueDate, l.time ?? null, l.title, l.type, l.relatedCase ?? null];
+  };
+  conferir("amanhã 10h ligar RA-123", ver("amanhã 10h ligar RA-123"), ["2026-09-17", "10:00", "Ligar", "Follow-up", "RA-123"]);
+  conferir("sexta às 14h30 cobrar financeiro", ver("sexta às 14h30 cobrar financeiro"), ["2026-09-18", "14:30", "Cobrar financeiro", "Cobrança interna", null]);
+  conferir("quarta (hoje é quarta): a próxima, não hoje", ver("quarta revisar macros")?.[0], "2026-09-23");
+  conferir("25/09 9:15 pedir avaliação da Ana", ver("25/09 9:15 pedir avaliação da Ana"), ["2026-09-25", "09:15", "Pedir avaliação da Ana", "Solicitação de avaliação", null]);
+  conferir("10/09 já passou: é o do ano que vem", ver("10/09 renovar contrato")?.[0], "2027-09-10");
+  conferir("sem dia nem hora: hoje, sem hora, Pendência", ver("conferir planilha"), ["2026-09-16", null, "Conferir planilha", "Pendência", null]);
+  conferir("protocolo que não existe não liga", ver("ligar RA-999")?.[4], null);
+  conferir("só data e hora, sem o que fazer: nada", entenderLinha("amanhã 10h", "2026-09-16", prot), null);
+  conferir("31/11 não existe: fica no título", ver("31/11 ver isso")?.[0], "2026-09-16");
 }
 
 console.log(falhas === 0 ? "\n  A Agenda junta o dia inteiro.\n" : `\n  ${falhas} ponto(s) a corrigir.\n`);

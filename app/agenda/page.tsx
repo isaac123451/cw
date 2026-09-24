@@ -23,6 +23,7 @@ import { ConfirmDelete } from "@/components/shared/Modal";
 import TaskForm from "@/components/agenda/TaskForm";
 import GoogleCalendarCard from "@/components/agenda/GoogleCalendarCard";
 import LinhaDoTempo from "@/components/agenda/LinhaDoTempo";
+import CriarEmUmaLinha from "@/components/agenda/CriarEmUmaLinha";
 
 import {
   TaskDraft,
@@ -304,6 +305,8 @@ export default function AgendaPage() {
           atividades, os eventos do Google e os prazos dos casos, do NPS e
           das áreas, no horário — e o que ficou para trás, em cima.
         */}
+        <CriarEmUmaLinha />
+
         <LinhaDoTempo ligacoes={ligacoes} />
 
         <RotinaNaAgenda dia={meuDia} />

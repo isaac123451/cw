@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 24/09/2026. Aplicação **1.50.0**, extensão **1.50.0**.
+Atualizado em 24/09/2026. Aplicação **1.51.0**, extensão **1.51.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,32 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### Criar em uma linha (24/09/2026, 1.51.0)
+
+Item da Fase 25 — "\"amanhã 10h ligar RA-123\" vira lembrete com hora e
+caso vinculado".
+
+- **O leitor** (`lib/models/linhaDaAgenda.ts`): dia (hoje, amanhã,
+  depois de amanhã, dia da semana — sempre o próximo, nunca hoje —, ou
+  dd/mm, que vira o ano que vem se já passou e é recusado se não
+  existe), hora (10h, 10h30, 10:30, às 14), protocolo (só liga se o caso
+  existe) e o tipo pelas palavras (ligar/retornar → Follow-up,
+  cobrar/escalonar → Cobrança interna, avaliação → Solicitação de
+  avaliação; o resto, Pendência). O que sobra é o título. Sem o que
+  fazer (só "amanhã 10h"), não cria.
+- **O campo** no topo da Agenda: a prévia do que foi entendido enquanto
+  se escreve, Enter cria, e "Criada para 17/09 · desfazer" ao lado.
+  `createTask` passou a devolver o id da atividade nova, para o desfazer.
+- **Não feito: "também pela extensão".** O painel da extensão já cria
+  lembrete pelo formulário dele; levar a linha para lá fica para a
+  Fase 28.
+
+Provas: `check:agenda` com 9 pontos novos (os exemplos acima, a quarta
+que é hoje vira a próxima, 10/09 vira 2027, 31/11 fica no título,
+protocolo inexistente não liga). No navegador, na Agenda: a prévia
+"hoje · 23:00 · Follow-up", Enter cria, a atividade aparece na linha do
+tempo às 23:00, e desfazer tira. `tsc` e `lint` limpos.
 
 ### O lembrete que avisa (24/09/2026, 1.50.0)
 

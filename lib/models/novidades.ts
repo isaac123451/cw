@@ -104,6 +104,14 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.51.0",
+    data: "2026-09-24",
+    titulo: "Atividade em uma linha",
+    texto: "No topo da Agenda, escreva \"amanhã 10h ligar RA-123\" e Enter: vira atividade com o dia, a hora, o tipo (ligar é follow-up, cobrar é cobrança interna, avaliação é pedido de avaliação) e o caso ligado. A prévia mostra o que foi entendido antes de criar, e o aviso oferece desfazer.",
+    frentes: ["plataforma"],
+    href: "/agenda",
+  },
+  {
     versao: "1.50.0",
     data: "2026-09-24",
     titulo: "O lembrete avisa na hora",
