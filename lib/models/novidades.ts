@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.71.0",
+    data: "2026-09-24",
+    titulo: "Completar em sequência",
+    texto: "No quadro do Reclame Aqui, o aviso das reclamações sem os dados do consumidor abre todas numa fila: o painel mostra 2 de 7, gravou e já vai para a próxima, e Pular deixa uma para depois.",
+    frentes: ["reclame-aqui"],
+  },
+  {
     versao: "1.70.0",
     data: "2026-09-24",
     titulo: "Menos atrito no Reclame Aqui e sem botão de recarregar",
