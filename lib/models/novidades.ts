@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.66.0",
+    data: "2026-09-24",
+    titulo: "O resumo da conversa situa quem chega no meio",
+    texto: "O \"Resumir\" do painel da extensão agora diz, em cinco linhas: o que o cliente quer, o que já foi feito, o que prometemos e para quando (em vermelho se o prazo já venceu), o que falta e o risco — cada ponto com o trecho da mensagem de onde saiu. Citação que não está na conversa é descartada, a data da promessa vem da própria mensagem, e o tamanho acompanha a conversa. Funciona também sem IA, pelas regras.",
+    frentes: ["extensao"],
+  },
+  {
     versao: "1.65.0",
     data: "2026-09-24",
     titulo: "O que fazer agora, em cada conversa",

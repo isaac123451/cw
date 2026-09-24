@@ -2135,6 +2135,36 @@
     else desenharResumo();
   };
 
+  const ROTULO_DO_RISCO = { baixo: "risco baixo", medio: "risco médio", alto: "risco alto" };
+
+  /**
+   * A situação da conversa (Fase 28): o que o cliente quer, o que já foi
+   * feito, o que prometemos e quando, o que falta e o risco. A citação é
+   * o trecho da mensagem — o servidor já tirou a que não está na
+   * conversa —, em letra menor, para conferir de onde o ponto saiu.
+   */
+  function blocoSituacao(s) {
+    /* A citação igual ao próprio ponto (o que as regras escrevem) não se repete. */
+    const igual = (a, b) => String(a ?? "").replace(/\u2026$/, "").trim() === String(b ?? "").replace(/\u2026$/, "").trim();
+    const cita = (p) => (p?.citacao && !igual(p.citacao, p.texto) ? `<span class="citacao">\u201c${CW.escapar(p.citacao)}\u201d</span>` : "");
+    const item = (p, extra = "") => `<li>${CW.escapar(p.texto)}${extra}${cita(p)}</li>`;
+    const risco = s.risco ?? { nivel: "baixo", porque: "" };
+    const tomDoRisco = risco.nivel === "alto" ? "perigo" : risco.nivel === "medio" ? "atencao" : "ok";
+    return [
+      '<dl class="situacao">',
+      `  <dt>Quer</dt><dd>${CW.escapar(s.quer?.texto ?? "\u2014")}${cita(s.quer)}</dd>`,
+      s.feito?.length ? `  <dt>Já feito</dt><dd><ul>${s.feito.map((p) => item(p)).join("")}</ul></dd>` : "",
+      s.prometido?.length
+        ? `  <dt>Prometido</dt><dd><ul>${s.prometido
+            .map((p) => item(p, p.quando ? ` <span class="quando${p.vencida ? " vencida" : ""}">${p.vencida ? "venceu " : "até "}${CW.escapar(p.quando)}</span>` : ""))
+            .join("")}</ul></dd>`
+        : "",
+      `  <dt>Falta</dt><dd>${CW.escapar(s.falta ?? "\u2014")}</dd>`,
+      `  <dt>Risco</dt><dd><span class="tag ${tomDoRisco}">${ROTULO_DO_RISCO[risco.nivel] ?? risco.nivel}</span> ${CW.escapar(risco.porque ?? "")}</dd>`,
+      "</dl>",
+    ].join("");
+  }
+
   function blocoSoDoResumo() {
 
     if (!P.lerConversa) return "";
@@ -2182,7 +2212,10 @@
       `      <span class="tag ${tom}">${HUMOR[P.resumo.humor] ?? "\u2014"}</span>`,
       '    </div>',
       `    <p class="sub" style="margin-top:6px;color:var(--suave)">${CW.escapar(P.resumo.resumo ?? "")}</p>`,
-      `    <p class="sub" style="margin-top:8px"><strong>Pendência:</strong> ${CW.escapar(P.resumo.pendencia ?? "\u2014")}</p>`,
+      /* A situação (Fase 28): quer, feito, prometido, falta e risco, cada um com a mensagem de onde saiu. */
+      P.resumo.situacao
+        ? blocoSituacao(P.resumo.situacao)
+        : `    <p class="sub" style="margin-top:8px"><strong>Pendência:</strong> ${CW.escapar(P.resumo.pendencia ?? "\u2014")}</p>`,
       `    <p class="sub" style="margin-top:4px"><strong>Próximo passo:</strong> ${CW.escapar(P.resumo.proximoPasso ?? "\u2014")}</p>`,
       '    <p class="sub" style="margin-top:8px">',
       P.resumo.resolvido

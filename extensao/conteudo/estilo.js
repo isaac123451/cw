@@ -1146,6 +1146,16 @@ ${CORES}
 .agora-conversa .agora-porque { margin: 6px 0 0; color: var(--fraco); }
 .agora-conversa .agora-roteiro { margin: 6px 0 0; padding-left: 18px; }
 .agora-conversa .agora-roteiro li { margin: 2px 0; }
+
+/* O resumo que situa (Fase 28): quer, feito, prometido, falta, risco — com a citação. */
+.situacao { margin: 8px 0 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; font-size: 12.5px; }
+.situacao dt { color: var(--fraco); font-weight: 600; }
+.situacao dd { margin: 0; min-width: 0; }
+.situacao ul { margin: 0; padding-left: 16px; }
+.situacao li { margin: 0 0 3px; }
+.situacao .citacao { display: block; color: var(--fraco); font-size: 11.5px; font-style: italic; overflow-wrap: anywhere; }
+.situacao .quando { font-size: 11px; color: var(--fraco); white-space: nowrap; }
+.situacao .quando.vencida { color: var(--perigo); font-weight: 600; }
 .termometro.h1, .termometro.h2 { color: var(--perigo); }
 .termometro.h3 { color: var(--fraco); }
 .termometro.h4, .termometro.h5 { color: var(--ok, #16a34a); }

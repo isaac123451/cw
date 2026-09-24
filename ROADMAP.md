@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 24/09/2026. Aplicação **1.65.0**, extensão **1.65.0**.
+Atualizado em 24/09/2026. Aplicação **1.66.0**, extensão **1.66.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,37 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### Resumo que situa (24/09/2026, 1.66.0)
+
+Terceiro item da Fase 28: "melhore os resumos" — o que o cliente quer, o
+que já foi feito, o que prometemos e quando, o que falta e o risco,
+citando as mensagens, no tamanho que a conversa pede.
+
+- `lib/models/resumoQueSitua.ts`: `situarSemIA` pelas regras — o último
+  pedido do cliente, as frases nossas de "já fiz/ajustei/encaminhei", as
+  promessas com dia ou hora (`combinadoNaMensagem`, com "amanhã" contado
+  do dia do carimbo da mensagem, e se venceu) e as sem data ("vou
+  verificar"), a pendência do motor próprio e o risco (Procon, imprensa,
+  cancelamento, operação parada, prejuízo, humor, promessa vencida,
+  rajada). Listas de até 2 itens em conversa curta, 3 até 20 mensagens,
+  5 acima.
+- `conferirSituacao`: a situação da IA conferida — citação que não está
+  na conversa sai (sem caixa, acento e espaço de diferença), a data das
+  promessas vem das mensagens, e o risco nunca fica abaixo do das
+  regras. Sem IA, as regras preenchem.
+- `/api/extensao/conversa`: o esquema da IA ganhou `situacao` (cada
+  ponto com a citação literal), as mensagens levam o carimbo, e a
+  resposta sai sempre com a situação conferida.
+- Painel: "Quer · Já feito · Prometido · Falta · Risco" no resumo, com a
+  citação em itálico (sem repetir quando é igual ao ponto), a promessa
+  vencida em vermelho e o risco numa etiqueta de cor.
+
+Provas: `npm run check:situacao` (cada parte, a data de "amanhã" pelo
+carimbo, o vencido, o risco, o tamanho, a citação inventada que sai, o
+risco que não desce) e o endpoint no servidor de desenvolvimento (motor
+próprio) desenhado na bancada do painel. **Depende de você:** recarregar
+a extensão (1.66.0).
 
 ### O que fazer agora (24/09/2026, 1.65.0)
 

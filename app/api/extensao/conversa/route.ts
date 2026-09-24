@@ -46,8 +46,11 @@ interface Mensagem {
   de: "cliente" | "nos";
   texto: string;
   hora?: string;
+  /** "10:32, 14/09/2026" — dá o dia das promessas ("amanhã" conta dele). */
+  carimbo?: string;
 }
 
+import { conferirSituacao } from "@/lib/models/resumoQueSitua";
 import {
   conferirRascunho,
   REGRAS_DO_RASCUNHO,
@@ -70,6 +73,13 @@ Regras:
 - O resumo é do problema e do estado atual, não da conversa mensagem a mensagem.
 - "pendencia" é o que está travado agora. Se nada está travado, diga isso.
 - "proximoPasso" é uma ação concreta de quem atende, não um conselho genérico.
+- "situacao" situa quem pega a conversa no meio, cada ponto com "citacao" — o trecho LITERAL, copiado sem mudar uma letra, da mensagem de onde saiu (citação que não estiver na conversa é descartada):
+  - "quer": o que o cliente pede agora (o pedido que está valendo, não o primeiro da conversa);
+  - "feito": o que a operação já fez;
+  - "prometido": o que a operação prometeu, com "quando" se houver dia ou hora;
+  - "falta": o que falta para resolver;
+  - "risco": nível baixo, medio ou alto, e o porquê (Procon, cancelamento, prejuízo, promessa vencida, humor).
+  No tamanho que a conversa pede: conversa curta, até dois itens por lista; longa, até cinco.
 - "resposta" é o rascunho mais óbvio para esta conversa: cordial, específico, sem prometer prazo que a conversa não sustenta, sem inventar dado que não está ali. Se o certo for perguntar algo antes de resolver, o rascunho pergunta.
 - "respostas" são exatamente três textos prontos, cada um para um caminho diferente que esta mesma conversa pode tomar. Sempre estes três, nesta ordem:
   1. titulo "Responder agora" — o que dizer com o que já se sabe. Reconhece o problema e diz o que está sendo feito.
@@ -141,6 +151,18 @@ const ESQUEMA = {
         additionalProperties: false,
       },
     },
+    situacao: {
+      type: "object",
+      properties: {
+        quer: { type: "object", properties: { texto: { type: "string" }, citacao: { type: "string" } }, required: ["texto", "citacao"], additionalProperties: false },
+        feito: { type: "array", items: { type: "object", properties: { texto: { type: "string" }, citacao: { type: "string" } }, required: ["texto", "citacao"], additionalProperties: false } },
+        prometido: { type: "array", items: { type: "object", properties: { texto: { type: "string" }, quando: { type: "string" }, citacao: { type: "string" } }, required: ["texto", "quando", "citacao"], additionalProperties: false } },
+        falta: { type: "string" },
+        risco: { type: "object", properties: { nivel: { type: "string", enum: ["baixo", "medio", "alto"] }, porque: { type: "string" } }, required: ["nivel", "porque"], additionalProperties: false },
+      },
+      required: ["quer", "feito", "prometido", "falta", "risco"],
+      additionalProperties: false,
+    },
     resolvido: {
       type: "boolean",
       description:
@@ -155,6 +177,7 @@ const ESQUEMA = {
     "proximoPasso",
     "resposta",
     "respostas",
+    "situacao",
     "resolvido",
   ],
   additionalProperties: false,
@@ -220,6 +243,7 @@ export async function POST(request: Request) {
       de: m.de === "nos" ? ("nos" as const) : ("cliente" as const),
       texto: m.texto.trim().slice(0, MAXIMO_CARACTERES),
       hora: m.hora,
+      carimbo: typeof m.carimbo === "string" ? m.carimbo.slice(0, 40) : undefined,
     }));
 
   if (mensagens.length < 2) {
@@ -305,7 +329,15 @@ ${transcricao}`,
   const dados = resultado.dados as {
     resposta?: string;
     respostas?: { titulo?: string; quando?: string; texto?: string }[];
+    situacao?: Parameters<typeof conferirSituacao>[0];
   };
+
+  /*
+    A situação (Fase 28): a da IA conferida — citação que não está na
+    conversa sai, a data das promessas vem das mensagens, o risco nunca
+    fica abaixo do que as regras veem. Sem IA, as regras preenchem.
+  */
+  const situacao = conferirSituacao(dados.situacao, mensagens, new Date());
 
   const conferir = (texto: string) =>
     conferirRascunho(texto, { nome: corpo.contato?.nome, publico: false });
@@ -325,6 +357,7 @@ ${transcricao}`,
 
   return responder(request, {
     ...resultado.dados,
+    situacao,
     respostas,
     conferencia,
     resumoDaConferencia: resumoDoRascunho(conferencia),
