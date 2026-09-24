@@ -18,6 +18,7 @@ import { resolve } from "node:path";
 import type { Case } from "../lib/models/case";
 import type { NpsResponseView } from "../lib/models/nps";
 
+import { getRange } from "../lib/services/reputation.service";
 import { cotaSugerida, cotasOferecidas, planoDeRecuperacao, ritmoDeHoje } from "../lib/models/recuperacao";
 import { ateDoAdiamento, marcaValeHoje, opcoesDeAdiar, voltaDoAdiado } from "../lib/models/meuDia";
 import { conquistasDaSemana, conquistasDoDia, inicioDaSemana, oQueMoveANota, placarDaSemana, textoDoResumoDaSemana } from "../lib/models/motivacaoDoDia";
@@ -80,6 +81,28 @@ console.log("— Conquistas —\n");
 console.log("\n— O que move a nota —\n");
 
 conferir("sem reclamação, nada a projetar", oQueMoveANota([], AGORA), []);
+
+{
+  /* Dez respondidas e avaliadas, duas sem resposta, e uma nota 0 com moderação pedida. */
+  /* Dentro da janela que o portal publica (meses fechados), qualquer que seja o dia em que o check rode. */
+  const hojeIso = getRange("6m", "vigente").end;
+  const base = (i: number, extra: Partial<Case>) =>
+    caso({ id: `c${i}`, protocol: `RA-${i}`, createdAt: hojeIso, status: "Resolvido", respondida: true, evaluated: true, score: 8, resolved: true, wouldDoBusiness: true, ...extra });
+  const casos = [
+    ...Array.from({ length: 10 }, (_, i) => base(i, {})),
+    base(10, { respondida: false, evaluated: false, status: "Não respondida" }),
+    base(11, { respondida: false, evaluated: false, status: "Não respondida" }),
+    base(12, { score: 0, resolved: false, wouldDoBusiness: false, moderacaoPedidaEm: hojeIso, moderacaoResultado: "pendente" }),
+  ];
+  const acoes = oQueMoveANota(casos);
+  const mod = acoes.find((a) => a.chave === "moderacao");
+  conferir("a moderação pendente entra, e sobe a nota se o portal aceitar", Boolean(mod && mod.notaDepois > mod.notaAntes && mod.efeito === "se o portal aceitar"), true);
+  conferir("no máximo três ações", acoes.length <= 3, true);
+  const ganhos = acoes.map((a) => a.notaDepois - a.notaAntes);
+  conferir("a que mais mexe na nota vem primeiro", ganhos.every((g, i) => i === 0 || g <= ganhos[i - 1]), true);
+  const semPeso = oQueMoveANota(casos.map((c) => (c.id === "c12" ? { ...c, score: 8, resolved: true, wouldDoBusiness: true } : c)));
+  conferir("moderação que não mexe na nota fica de fora", semPeso.some((a) => a.chave === "moderacao" && a.notaDepois === a.notaAntes), false);
+}
 
 console.log("\n— A fiação —\n");
 

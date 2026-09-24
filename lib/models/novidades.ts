@@ -104,6 +104,14 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.47.0",
+    data: "2026-09-24",
+    titulo: "O que move a nota, na ordem do efeito",
+    texto: "O bloco \"O que move a nota\" do Meu dia mostra as três ações de maior efeito no índice do Reclame Aqui, a maior primeiro, cada uma com a nota antes e depois. Entrou a terceira: as moderações pedidas e ainda sem decisão, com o quanto a nota sobe se o portal aceitar. O placar da semana passa a sugerir a que mais mexe.",
+    frentes: ["reclame-aqui", "plataforma"],
+    href: "/meu-dia",
+  },
+  {
     versao: "1.46.0",
     data: "2026-09-24",
     titulo: "Plano de recuperação do acumulado",

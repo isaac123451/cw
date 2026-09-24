@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 24/09/2026. Aplicação **1.46.0**, extensão **1.46.0**.
+Atualizado em 24/09/2026. Aplicação **1.47.0**, extensão **1.47.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,28 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### O que move a nota hoje (24/09/2026, 1.47.0)
+
+Item da Fase 24 — "as três ações de maior efeito no índice do Reclame
+Aqui, com a conta". O `oQueMoveANota` já existia com duas ações
+(responder as sem resposta, pedir avaliação às da vez), na ordem em que
+eram montadas.
+
+- **A terceira ação:** as moderações pedidas e sem decisão, na janela
+  do índice. A conta tira cada uma da base com tudo o que ela carregava
+  (`simulate` com `removed`, o mesmo caminho da calculadora): uma nota 0
+  moderada sobe a nota. Moderação de reclamação que não pesa não aparece.
+- **A ordem é o efeito:** as três que mais mexem na nota, a maior
+  primeiro. O placar da semana, que mostra a primeira como "o próximo
+  passo para a nota", passa a sugerir de fato a que mais mexe; o popup
+  da extensão usa a mesma lista.
+
+Provas: `check:meu-dia` com 4 pontos novos, sobre a janela que o portal
+publica (e não a data de hoje — a janela é de meses fechados): a
+moderação pendente de uma nota 0 entra e sobe a nota (8,4 → 9,1, contra
+8,4 → 8,7 de responder as 2 sem resposta, e vem primeiro); no máximo
+três; moderação sem peso fica de fora. `tsc` e `lint` limpos.
 
 ### Plano de recuperação do acumulado (24/09/2026, 1.46.0)
 
