@@ -14,6 +14,7 @@ import CartaoDoPrimeiroAcesso from "@/components/primeiroAcesso/CartaoDoPrimeiro
 import AgoraNoMeuDia from "@/components/rotina/AgoraNoMeuDia";
 import ModoProximo from "@/components/rotina/ModoProximo";
 import PlacarDaSemana from "@/components/rotina/PlacarDaSemana";
+import PlanoDeRecuperacao from "@/components/rotina/PlanoDeRecuperacao";
 
 /**
  * Meu dia — a primeira tela do dia.
@@ -74,6 +75,9 @@ export default function MeuDiaPage() {
 
         {/* O que pede ação, o que move a nota e o que já deu certo — antes da lista de tarefas. */}
         <AgoraNoMeuDia />
+
+        {/* Só aparece com acumulado: 10 ou mais fora do prazo numa frente. */}
+        <PlanoDeRecuperacao dia={dia} />
 
         <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
 

@@ -18,6 +18,7 @@ import { resolve } from "node:path";
 import type { Case } from "../lib/models/case";
 import type { NpsResponseView } from "../lib/models/nps";
 
+import { cotaSugerida, cotasOferecidas, planoDeRecuperacao, ritmoDeHoje } from "../lib/models/recuperacao";
 import { ateDoAdiamento, marcaValeHoje, opcoesDeAdiar, voltaDoAdiado } from "../lib/models/meuDia";
 import { conquistasDaSemana, conquistasDoDia, inicioDaSemana, oQueMoveANota, placarDaSemana, textoDoResumoDaSemana } from "../lib/models/motivacaoDoDia";
 
@@ -177,6 +178,19 @@ console.log("\n  Adiar para outro dia\n");
   conferir("adiado de sexta para segunda: some sexta, sábado e domingo", ["2026-09-25", "2026-09-26", "2026-09-27"].map((d) => marcaValeHoje(marca, d)), [true, true, true]);
   conferir("e volta sozinho na segunda", marcaValeHoje(marca, "2026-09-28"), false);
   conferir("a lista diz o dia da volta", voltaDoAdiado(marca), "2026-09-28");
+}
+
+console.log("\n  Plano de recuperação do acumulado\n");
+{
+  conferir("149 vencidos: a cota que zera em 5 dias úteis é 30", cotaSugerida(149), 30);
+  conferir("12 vencidos: cota mínima de 5", cotaSugerida(12), 5);
+  conferir("as cotas oferecidas, sem repetir", cotasOferecidas(149), [10, 20, 30, 50]);
+  conferir("quinta 24/09, 149 a 30 por dia: zera na quarta 30/09", planoDeRecuperacao(149, 30, "2026-09-24"), { dias: 5, zeraEm: "2026-09-30" });
+  conferir("começando no sábado, o 1º dia é a segunda", planoDeRecuperacao(30, 30, "2026-09-26"), { dias: 1, zeraEm: "2026-09-28" });
+  conferir("sem cota, sem plano", planoDeRecuperacao(149, 0, "2026-09-24"), null);
+  conferir("abriu com 149, está com 130: saíram 19, faltam 11", ritmoDeHoje(149, 130, 30), { saiu: 19, falta: 11, dandoConta: false });
+  conferir("entrou mais do que saiu: saiu 0, nunca negativo", ritmoDeHoje(149, 152, 30), { saiu: 0, falta: 30, dandoConta: false });
+  conferir("bateu a cota: dando conta", ritmoDeHoje(149, 118, 30).dandoConta, true);
 }
 
 console.log(

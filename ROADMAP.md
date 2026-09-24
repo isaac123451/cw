@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 24/09/2026. Aplicação **1.45.0**, extensão **1.45.0**.
+Atualizado em 24/09/2026. Aplicação **1.46.0**, extensão **1.46.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,32 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### Plano de recuperação do acumulado (24/09/2026, 1.46.0)
+
+Item da Fase 24 — "149 NPS vencidos não cabem num dia".
+
+- **A conta** em `lib/models/recuperacao.ts`: a cota que zera em 5 dias
+  úteis, arredondada de 5 em 5 (149 → 30); o dia útil em que zera com a
+  cota escolhida (hoje conta quando é útil; no fim de semana, começa na
+  segunda); e o ritmo de hoje — quanto saiu desde a primeira abertura do
+  dia, contra a cota. O que venceu durante o dia desconta do que saiu,
+  e "saiu" nunca fica negativo.
+- **O cartão** no Meu dia, logo depois do "Agora": só aparece para
+  frente com 10 ou mais fora do prazo (os mesmos itens da fila, sem
+  repetir o que está em duas atividades). Cotas para escolher, o dia em
+  que zera e a barra do dia. A cota escolhida e o número da primeira
+  abertura ficam no navegador de quem trabalha — lidos pelo
+  `useSyncExternalStore`, sem divergir do servidor na hidratação.
+- **Não mede ainda** quanto entra de acumulado por dia (NPS que vence):
+  o plano diz o dia em que zera se nada novo vencer.
+
+Provas: `check:meu-dia` com 9 pontos novos (149 → 30; quinta a 30 zera
+na quarta 30/09; começar no sábado conta da segunda; ritmo nunca
+negativo; bater a cota). No navegador, com o componente real: 7 pontos
+(3 vencidos do RA não aparecem, trocar a cota muda o dia, a cota e o
+início do dia voltam depois de recarregar, e sem erro de hidratação —
+que a primeira versão tinha). `tsc` e `lint` limpos.
 
 ### Foco por frente e bloco de foco (24/09/2026, 1.45.0)
 

@@ -104,6 +104,14 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.46.0",
+    data: "2026-09-24",
+    titulo: "Plano de recuperação do acumulado",
+    texto: "Quando uma frente tem 10 ou mais itens fora do prazo, o Meu dia mostra o plano: a cota por dia útil que zera em uma semana (\"30 por dia, zera na quarta\"), outras cotas para escolher, e quanto saiu hoje contra a cota.",
+    frentes: ["plataforma", "nps"],
+    href: "/meu-dia",
+  },
+  {
     versao: "1.45.0",
     data: "2026-09-24",
     titulo: "Foco no Um por vez",
