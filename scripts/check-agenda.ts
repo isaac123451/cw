@@ -16,6 +16,7 @@ import { PRAZOS_DA_DOCUMENTACAO, type SlaRule } from "../lib/models/sla";
 import { atrasadosDaAgenda, compromissosEntre } from "../lib/models/compromissos";
 import { instanteDe } from "../lib/services/horasUteis";
 import { entenderLinha } from "../lib/models/linhaDaAgenda";
+import { combinadoNaMensagem } from "../lib/models/lembretesAutomaticos";
 import { adiarLembrete, chaveDoAviso, lembretesNaHora } from "../lib/models/lembretes";
 
 let falhas = 0;
@@ -131,6 +132,20 @@ console.log("\n  Criar em uma linha\n");
   conferir("protocolo que não existe não liga", ver("ligar RA-999")?.[4], null);
   conferir("só data e hora, sem o que fazer: nada", entenderLinha("amanhã 10h", "2026-09-16", prot), null);
   conferir("31/11 não existe: fica no título", ver("31/11 ver isso")?.[0], "2026-09-16");
+}
+
+console.log("\n  O lembrete que nasce da conversa\n");
+{
+  const ver = (t: string) => {
+    const c = combinadoNaMensagem(t, "2026-09-16");
+    return c && [c.dueDate, c.time ?? null];
+  };
+  conferir("\"te ligo amanhã às 10h\"", ver("Oi Ana! Resolvido do nosso lado. Te ligo amanhã às 10h para confirmar."), ["2026-09-17", "10:00"]);
+  conferir("\"vou te retornar na sexta\"", ver("Vou te retornar na sexta com a posição do financeiro"), ["2026-09-18", null]);
+  conferir("\"retorno hoje às 16h\"", ver("Retorno hoje às 16h, combinado?"), ["2026-09-16", "16:00"]);
+  conferir("sem dia nem hora não é agendamento", ver("Vou verificar e te retorno"), null);
+  conferir("dia sem promessa nossa não é", ver("Amanhã às 10h eu estou na loja"), null);
+  conferir("o trecho é a frase da promessa", combinadoNaMensagem("Obrigado! Te ligo amanhã às 10h.", "2026-09-16")?.trecho, "Te ligo amanhã às 10h.");
 }
 
 console.log(falhas === 0 ? "\n  A Agenda junta o dia inteiro.\n" : `\n  ${falhas} ponto(s) a corrigir.\n`);

@@ -104,6 +104,14 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.53.0",
+    data: "2026-09-24",
+    titulo: "Lembretes que nascem sozinhos",
+    texto: "Ao abrir a Agenda, dois tipos de lembrete nascem sozinhos: \"cobrar retorno\" de cada área acionada sem retorno, na hora do prazo dela; e o retorno que você combinou numa conversa guardada (\"te ligo amanhã às 10h\"), no dia e na hora combinados. O que nasceu aparece no topo, com desfazer — que conclui o lembrete para ele não voltar.",
+    frentes: ["plataforma", "reclame-aqui"],
+    href: "/agenda",
+  },
+  {
     versao: "1.52.0",
     data: "2026-09-24",
     titulo: "Achar o que foi criado na Agenda",

@@ -29,6 +29,8 @@ interface AgendaContextType {
   createTask: (data: TaskDraft) => string;
   updateTask: (data: AgendaTask) => void;
   removeTask: (id: string) => void;
+  /** O que o servidor criou sozinho (os lembretes automáticos): entra na lista sem gravar de novo. */
+  receberDoServidor: (novas: AgendaTask[]) => void;
   /**
    * Concluir e reagendar devolvem a gravação: quem precisa confirmar só
    * depois do banco (o modo um por vez) espera; se o banco recusa, a
@@ -87,6 +89,11 @@ export function AgendaProvider({
           )
         );
         sincronizar(() => saveAgendaTask(data));
+      },
+
+      receberDoServidor: (novas) => {
+        if (novas.length === 0) return;
+        setTasks((prev) => ordenar([...novas.filter((n) => !prev.some((p) => p.id === n.id)), ...prev]));
       },
 
       removeTask: (id) => {

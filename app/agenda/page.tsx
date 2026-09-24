@@ -24,6 +24,7 @@ import TaskForm from "@/components/agenda/TaskForm";
 import GoogleCalendarCard from "@/components/agenda/GoogleCalendarCard";
 import LinhaDoTempo from "@/components/agenda/LinhaDoTempo";
 import CriarEmUmaLinha from "@/components/agenda/CriarEmUmaLinha";
+import LembretesQueNasceram from "@/components/agenda/LembretesQueNasceram";
 
 import {
   TaskDraft,
@@ -313,6 +314,9 @@ export default function AgendaPage() {
           das áreas, no horário — e o que ficou para trás, em cima.
         */}
         <CriarEmUmaLinha />
+
+        {/* Os lembretes que o servidor criou agora, das áreas e das conversas, com desfazer. */}
+        <LembretesQueNasceram />
 
         <LinhaDoTempo ligacoes={ligacoes} />
 

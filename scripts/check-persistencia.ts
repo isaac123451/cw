@@ -131,6 +131,18 @@ const EXCECOES: {
       "Põe na lista os documentos que importarDocumentosDoTime e salvarDocumento acabaram de gravar e devolver (Documentação).",
   },
   {
+    contexto: "EstablishmentsContext",
+    funcao: "aplicarDoServidor",
+    motivo:
+      "Põe na lista a conta que criarEstabelecimentoDoCaso, vincularEstabelecimentoDoCaso e salvarLinkDaConta acabaram de gravar (a imersão do caso).",
+  },
+  {
+    contexto: "AgendaContext",
+    funcao: "receberDoServidor",
+    motivo:
+      "Põe na lista os lembretes que gerarLembretesAutomaticos acabou de criar no banco.",
+  },
+  {
     contexto: "DocsContext",
     funcao: "retirarDaLista",
     motivo:

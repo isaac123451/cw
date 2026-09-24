@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 24/09/2026. Aplicação **1.52.0**, extensão **1.52.0**.
+Atualizado em 24/09/2026. Aplicação **1.53.0**, extensão **1.53.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,41 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### Lembrete que nasce sozinho (24/09/2026, 1.53.0)
+
+Último item da Fase 25 — fecha a fase ("Agenda que dá vontade de
+abrir"). "Lembretes você pode criar automaticamente identificando alguma
+pendência e agendamento com o cliente."
+
+- **Duas origens** (`gerarLembretesAutomaticos`, server action):
+  - **área acionada sem retorno** → "Cobrar retorno de Financeiro —
+    RA-123", Cobrança interna, na hora do prazo da área
+    (`movementStatus`); prazo que já passou vira lembrete para agora;
+  - **retorno combinado numa conversa guardada** (mensagens nossas dos
+    últimos 3 dias) → "Retorno combinado com Ana: “Te ligo amanhã às
+    10h.”", Follow-up, no dia e hora combinados, contados do dia da
+    mensagem (`combinadoNaMensagem`, com o leitor da "linha"). Promessa
+    sem dia nem hora ("vou verificar e te retorno") não vira lembrete.
+- **Nunca duplica, nunca volta:** o id é fixo por origem
+  (`auto-area-<id>`, `auto-conversa-<id>`) e a geração só cria o que não
+  existe. "Desfazer" conclui o lembrete em vez de apagar.
+- **Quando roda:** ao abrir a Agenda. O que nasceu aparece no topo, um
+  por linha, com desfazer e "desfazer todos".
+- **Pedido de avaliação** não virou lembrete: a fila "pedir avaliação
+  hoje" já é atividade do Meu dia, com o dia de cada um.
+- No caminho: o leitor da "linha" passou a aceitar pontuação depois do
+  dia e da hora ("às 16h, combinado?"), e o `check:persistencia` voltava
+  vermelho desde o `4a34b68` (o `aplicarDoServidor` das contas, da
+  imersão) — declarado, como os outros que só aplicam o que o servidor
+  gravou.
+
+Provas: `check:agenda` com 6 pontos novos (as três promessas, sem dia
+nem hora não é, dia sem promessa nossa não é, o trecho certo);
+`check:persistencia` e `check:seguranca` passando. A Agenda abre sem
+erro no modo de demonstração; ver os lembretes nascerem precisa de área
+acionada e conversa guardada no banco — conferir depois do push. `tsc`
+e `lint` limpos.
 
 ### O que eu criei, fácil de achar (24/09/2026, 1.52.0)
 

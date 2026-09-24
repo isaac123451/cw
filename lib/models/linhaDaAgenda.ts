@@ -67,25 +67,25 @@ export function entenderLinha(texto: string, hoje: string, protocolos: ReadonlyS
 
   /* Dia: hoje, amanhã, depois de amanhã, dia da semana, dd/mm. */
   let m: RegExpMatchArray | null;
-  if ((m = n.match(/\sdepois de amanha(?=\s)/))) {
+  if ((m = n.match(/\sdepois de amanha(?=[\s,.;!?])/))) {
     dueDate = somarDias(hoje, 2);
     entendido.push("depois de amanhã");
     resto = resto.slice(0, m.index!) + " " + resto.slice(m.index! + m[0].length);
-  } else if ((m = n.match(/\samanha(?=\s)/))) {
+  } else if ((m = n.match(/\samanha(?=[\s,.;!?])/))) {
     dueDate = somarDias(hoje, 1);
     entendido.push("amanhã");
     resto = resto.slice(0, m.index!) + " " + resto.slice(m.index! + m[0].length);
-  } else if ((m = n.match(/\shoje(?=\s)/))) {
+  } else if ((m = n.match(/\shoje(?=[\s,.;!?])/))) {
     entendido.push("hoje");
     resto = resto.slice(0, m.index!) + " " + resto.slice(m.index! + m[0].length);
-  } else if ((m = n.match(/\s(?:(?:na|no|nesta|neste|proxima|proximo)\s)?(domingo|segunda|terca|quarta|quinta|sexta|sabado|dom|seg|ter|qua|qui|sex|sab)(?:-feira)?(?=\s)/))) {
+  } else if ((m = n.match(/\s(?:(?:na|no|nesta|neste|proxima|proximo)\s)?(domingo|segunda|terca|quarta|quinta|sexta|sabado|dom|seg|ter|qua|qui|sex|sab)(?:-feira)?(?=[\s,.;!?])/))) {
     const alvo = DIAS[m[1]];
     const atual = new Date(`${hoje}T12:00:00Z`).getUTCDay();
     const faltam = ((alvo - atual + 7) % 7) || 7;
     dueDate = somarDias(hoje, faltam);
     entendido.push(`${m[1]} ${dueDate.slice(8, 10)}/${dueDate.slice(5, 7)}`);
     resto = resto.slice(0, m.index!) + " " + resto.slice(m.index! + m[0].length);
-  } else if ((m = n.match(/\s(?:dia\s)?(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?(?=\s)/))) {
+  } else if ((m = n.match(/\s(?:dia\s)?(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?(?=[\s,.;!?])/))) {
     const [, d, mes, a] = m;
     let ano = a ? Number(a.length === 2 ? `20${a}` : a) : Number(hoje.slice(0, 4));
     let candidato = `${ano}-${mes.padStart(2, "0")}-${d.padStart(2, "0")}`;
@@ -100,7 +100,7 @@ export function entenderLinha(texto: string, hoje: string, protocolos: ReadonlyS
 
   /* Hora: 10h, 10h30, 10:30, às 14, as 9. */
   const n2 = sem(resto);
-  const h = n2.match(/\s(?:as\s)?(\d{1,2})(?:h(\d{2})?|:(\d{2}))(?=\s)/) ?? n2.match(/\sas\s(\d{1,2})(?=\s)/);
+  const h = n2.match(/\s(?:as\s)?(\d{1,2})(?:h(\d{2})?|:(\d{2}))(?=[\s,.;!?])/) ?? n2.match(/\sas\s(\d{1,2})(?=[\s,.;!?])/);
   if (h) {
     const hora = Number(h[1]);
     const min = Number(h[2] ?? h[3] ?? 0);
