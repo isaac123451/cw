@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 24/09/2026. Aplicação **1.48.0**, extensão **1.48.0**.
+Atualizado em 24/09/2026. Aplicação **1.49.0**, extensão **1.49.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,37 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### Agenda: linha do tempo com tudo o que tem prazo (24/09/2026, 1.49.0)
+
+Dois itens da Fase 25, "Agenda que dá vontade de abrir" — "tudo está
+muito desorganizado", "os lembretes precisam aparecer por lá".
+
+- **Tudo com prazo no mesmo lugar** (`lib/models/compromissos.ts`): as
+  atividades da agenda (os lembretes dos casos já são atividades com o
+  protocolo), os eventos do Google, e os prazos que ainda dá para
+  cumprir — 1º contato e solução dos casos abertos (`slaStatus`), 1º
+  contato do NPS, retorno das áreas acionadas (`movementStatus`) — e as
+  ligações da cadência de hoje, como o Meu dia conta. O que já estourou
+  vira um número com link para o Meu dia: são dezenas, e numa linha do
+  tempo esconderiam o resto.
+- **Dia e semana numa linha do tempo** (`LinhaDoTempo`, no topo da
+  Agenda): Dia mostra o horário com a marca de "agora", "no dia, sem
+  hora" embaixo, e em cima "Ficou para trás" com as atividades vencidas
+  (Concluir e Para hoje em um clique). Semana mostra os sete dias lado a
+  lado; clicar num dia abre o dia. Atividade se conclui e passa para o
+  próximo dia útil na própria linha; caso ligado abre na mini-janela.
+- A página chama o Meu dia uma vez só, para a rotina e para as ligações
+  (`RotinaNaAgenda` recebe o `dia`).
+- **Não entra ainda** o "retorno combinado com o cliente" que não virou
+  atividade — é o item "Lembrete que nasce sozinho".
+
+Provas: `check:agenda` (novo, 9 pontos: a ordem do dia pela hora, o
+caso urgente de ontem 16h vencendo hoje 10h, NPS pelo nome, ligação sem
+hora só no dia dela, e o estourado virando número). No navegador: a
+Agenda abre sem erro no modo de demonstração, e a vista do dia desenha
+os compromissos de teste com a marca de agora no lugar. `tsc` e `lint`
+limpos.
 
 ### Fim do dia que se escreve sozinho (24/09/2026, 1.48.0)
 

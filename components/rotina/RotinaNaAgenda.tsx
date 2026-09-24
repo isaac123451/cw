@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import RotinaDoDia from "@/components/rotina/RotinaDoDia";
 import ConfigurarRotina from "@/components/rotina/ConfigurarRotina";
-import { useMeuDia } from "@/components/rotina/useMeuDia";
+import type { useMeuDia } from "@/components/rotina/useMeuDia";
 
 /**
  * A rotina de hoje dentro da Agenda.
@@ -15,9 +15,9 @@ import { useMeuDia } from "@/components/rotina/useMeuDia";
  * — as mesmas marcas, as mesmas contagens —, na versão enxuta, com o
  * atalho para o plano e o checkpoint.
  */
-export default function RotinaNaAgenda() {
+/* O `dia` vem da página: a linha do tempo usa as mesmas contagens, sem uma segunda ida ao servidor. */
+export default function RotinaNaAgenda({ dia }: { dia: ReturnType<typeof useMeuDia> }) {
 
-  const dia = useMeuDia();
   const [marcas, setMarcas] = useState<Set<string> | null>(null);
   const [configurando, setConfigurando] = useState(false);
 

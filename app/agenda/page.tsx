@@ -22,6 +22,7 @@ import { ConfirmDelete } from "@/components/shared/Modal";
 
 import TaskForm from "@/components/agenda/TaskForm";
 import GoogleCalendarCard from "@/components/agenda/GoogleCalendarCard";
+import LinhaDoTempo from "@/components/agenda/LinhaDoTempo";
 
 import {
   TaskDraft,
@@ -33,6 +34,7 @@ import { pushTaskToGoogle } from "@/lib/actions/google";
 import { AgendaTask } from "@/lib/models/agenda";
 import { hojeNaOperacao } from "@/lib/services/reputation.service";
 import RotinaNaAgenda from "@/components/rotina/RotinaNaAgenda";
+import { useMeuDia } from "@/components/rotina/useMeuDia";
 import BotaoAbrirEmJanela from "@/components/janelas/BotaoAbrirEmJanela";
 import { useCases } from "@/lib/context/CaseContext";
 import { isSocial } from "@/lib/services/case.service";
@@ -82,6 +84,12 @@ export default function AgendaPage() {
 
   /* O protocolo vinculado vira o caso, para abrir na mini-janela sem sair da agenda. */
   const { cases } = useCases();
+  /* Uma carga do Meu dia para a rotina e para as ligações da linha do tempo. */
+  const meuDia = useMeuDia();
+  const ligacoes = useMemo(
+    () => (meuDia.hoje && meuDia.contagens ? { dia: meuDia.hoje, itens: meuDia.contagens.ligacoes?.itens ?? [] } : undefined),
+    [meuDia.hoje, meuDia.contagens]
+  );
   const casoDoProtocolo = useMemo(() => new Map(cases.map((c) => [c.protocol, c])), [cases]);
 
   const {
@@ -291,7 +299,14 @@ export default function AgendaPage() {
           Vem antes porque é a metade do dia que some — a marcada já
           está garantida por ter sido marcada.
         */}
-        <RotinaNaAgenda />
+        {/*
+          Tudo o que tem dia e hora, antes de qualquer lista (Fase 25): as
+          atividades, os eventos do Google e os prazos dos casos, do NPS e
+          das áreas, no horário — e o que ficou para trás, em cima.
+        */}
+        <LinhaDoTempo ligacoes={ligacoes} />
+
+        <RotinaNaAgenda dia={meuDia} />
 
         <GoogleCalendarCard />
 

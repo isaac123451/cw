@@ -104,6 +104,14 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.49.0",
+    data: "2026-09-24",
+    titulo: "A Agenda numa linha do tempo, com tudo o que tem prazo",
+    texto: "No topo da Agenda, o dia e a semana numa linha do tempo: as atividades, os eventos do Google, os prazos que vencem (1º contato e solução dos casos, 1º contato do NPS, retorno das áreas) e as ligações da cadência, cada um com a sua marca. O que tem hora fica no horário, com a marca de agora; o resto em \"no dia, sem hora\". Em cima, o que ficou para trás, com concluir e trazer para hoje em um clique.",
+    frentes: ["plataforma", "reclame-aqui", "nps"],
+    href: "/agenda",
+  },
+  {
     versao: "1.48.0",
     data: "2026-09-24",
     titulo: "Fim do dia que se escreve sozinho",
