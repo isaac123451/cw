@@ -36,6 +36,8 @@ interface Props {
   item: Case;
   /** Abre já no tipo certo — "Fiz o 1º contato" chega como `contato`. */
   tipoInicial?: TipoDeContato;
+  /** O canal sugerido pelo "o que fazer" — "tente por e-mail". */
+  canalInicial?: string;
   onClose: () => void;
   onSalvo: (patch: Partial<Case>) => void;
 }
@@ -59,7 +61,7 @@ function instanteDoCampo(valor: string) {
  * área interna trabalha. A hora é a de Brasília, e pode ser a de antes:
  * quem ligou às 10h e só registrou às 15h registra 10h.
  */
-export default function ContatoModal({ item, tipoInicial, onClose, onSalvo }: Props) {
+export default function ContatoModal({ item, tipoInicial, canalInicial, onClose, onSalvo }: Props) {
 
   const { notify } = useToast();
   const { rules, expediente } = useSla();
@@ -73,7 +75,7 @@ export default function ContatoModal({ item, tipoInicial, onClose, onSalvo }: Pr
     continua "atualmente pelo Crisp".
   */
   const [canal, setCanal] = useState<string>(
-    item.source === "Reclame Aqui" ? "WhatsApp" : "Crisp"
+    canalInicial ?? (item.source === "Reclame Aqui" ? "WhatsApp" : "Crisp")
   );
   const [resultado, setResultado] = useState<ResultadoDoContato>(
     tipoDeContato(tipoInicial ?? "contato")!.resultadoPadrao

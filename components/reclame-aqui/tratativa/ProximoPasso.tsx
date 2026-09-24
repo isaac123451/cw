@@ -6,9 +6,10 @@ import { ArrowRight, MessageSquareWarning, Star } from "lucide-react";
 
 import type { Case } from "@/lib/models/case";
 import { pedidoDeAvaliacao, semNoticia } from "@/lib/models/cadencia";
+import { oQueFazer } from "@/lib/models/oQueFazer";
 import { proximoPasso, type AcaoDoPasso } from "@/lib/models/trilha";
 import { isSocial } from "@/lib/services/case.service";
-import { openMovementOf } from "@/lib/services/movement.service";
+import { movementStatus, openMovementOf } from "@/lib/services/movement.service";
 
 import { useMovements } from "@/lib/context/MovementsContext";
 import { useSla } from "@/lib/context/SlaContext";
@@ -22,7 +23,10 @@ interface Props {
 }
 
 /**
- * O próximo passo do caso, no cartão do quadro.
+ * O próximo passo do caso, no cartão do quadro — dito como se faz.
+ *
+ * Desde a 1.72 o chip diz o que fazer ("várias tentativas sem sucesso:
+ * tente por e-mail"), e não só o nome do passo — ver `oQueFazer`.
  *
  * O quadro dizia em que coluna o caso estava; não dizia o que fazer com
  * ele. Aqui aparece o passo da trilha que falta — "fazer a imersão",
@@ -53,15 +57,22 @@ export default function ProximoPasso({ item, className = "" }: Props) {
   const avaliacao = passo?.id === "pedir-avaliacao" ? pedidoDeAvaliacao(item, agora) : null;
 
   const mostrarPasso = passo && passo.id !== "triar" && passo.id !== "contato";
+  const conselho = mostrarPasso
+    ? oQueFazer(item, passo, {
+        agora,
+        canaisSemResposta: item.canaisSemResposta,
+        area: aberta ? { destino: aberta.destination, vencida: movementStatus(aberta, { agora, expediente }).situation === "estourado" } : undefined,
+      })
+    : null;
 
   if (!mostrarPasso && !vacuo?.atrasado) return null;
 
-  function abrir(e: MouseEvent, acao?: AcaoDoPasso) {
+  function abrir(e: MouseEvent, acao?: AcaoDoPasso, canal?: string) {
 
     /* Sem ação própria (a resposta, a área), o clique segue o link e abre o caso. */
     const dialogos: Partial<Record<AcaoDoPasso, () => void>> = {
       imersao: () => t.abrirImersao(item),
-      tentativa: () => t.abrirContato(item, "tentativa"),
+      tentativa: () => t.abrirContato(item, "tentativa", canal ? { canal } : undefined),
       validacao: () => t.abrirContato(item, "validacao"),
       "pedir-avaliacao": () => t.abrirPedidoAvaliacao(item),
     };
@@ -105,14 +116,16 @@ export default function ProximoPasso({ item, className = "" }: Props) {
         ) : (
           <button
             type="button"
-            onClick={(e) => abrir(e, passo.acao)}
+            onClick={(e) => abrir(e, conselho?.acao ?? passo.acao, conselho?.canal)}
             draggable={false}
             onDragStart={(e) => e.preventDefault()}
-            title={`Passo ${passo.numero} da documentação: ${passo.titulo}. ${passo.detalhe ?? ""}`}
-            className={`${chip} bg-violet-50 text-violet-800 ring-violet-200`}
+            title={`Passo ${passo.numero} da documentação: ${passo.titulo}. ${conselho?.porque ?? passo.detalhe ?? ""}`}
+            className={`${chip.replace("items-center", "items-start")} text-left ${
+              conselho?.urgente ? "bg-amber-50 text-amber-900 ring-amber-300" : "bg-violet-50 text-violet-800 ring-violet-200"
+            }`}
           >
-            <ArrowRight size={10} />
-            <span className="truncate">{passo.curto.replace(/^./, (c) => c.toUpperCase())}</span>
+            <ArrowRight size={10} className="mt-[3px] shrink-0" />
+            <span className="line-clamp-2">{conselho?.frase ?? passo.curto.replace(/^./, (c) => c.toUpperCase())}</span>
           </button>
         )
       )}

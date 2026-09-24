@@ -191,6 +191,10 @@ export interface Case {
   ultimaRespostaEm?: string;
   /** Tentativas seguidas sem resposta desde a última resposta. */
   tentativasSemResposta?: number;
+  /** Por onde foram essas tentativas — "tente por e-mail" depende disso. Só na lista. */
+  canaisSemResposta?: string[];
+  /** A primeira delas: a janela de 7 dias da cadência conta daqui. Só na lista. */
+  primeiraTentativaEm?: string;
 
   /** Passo 6: a validação do cliente, quando registrada. */
   validadoEm?: string;

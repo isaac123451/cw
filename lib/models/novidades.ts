@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.72.0",
+    data: "2026-09-24",
+    titulo: "O que fazer em cada reclamação",
+    texto: "O quadro, a lista e a trilha da reclamação dizem o que fazer agora, em uma frase: \"várias tentativas sem sucesso: tente por e-mail\", \"o objetivo foi cumprido: responda a reclamação\", \"o prazo da área passou: cobre\". Em âmbar quando passou do ponto; o clique já abre o contato no canal sugerido.",
+    frentes: ["reclame-aqui"],
+  },
+  {
     versao: "1.71.0",
     data: "2026-09-24",
     titulo: "Completar em sequência",

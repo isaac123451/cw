@@ -1116,6 +1116,18 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### O que fazer em cada reclamação (24/09/2026, 1.72.0)
+
+`lib/models/oQueFazer.ts`: o passo da trilha vira uma frase do que fazer —
+"Várias tentativas sem sucesso: tente por e-mail", "O objetivo foi
+cumprido: responda a reclamação", "O prazo de Financeiro passou: cobre a
+área". Âmbar quando passou do ponto. No chip do quadro e da lista e no
+bloco "Agora" da trilha; o clique abre o contato já no canal sugerido.
+A lista traz os canais e a 1ª tentativa sem resposta (LEFT JOIN LATERAL
+só nos casos com tentativa), para quadro e ficha dizerem o mesmo sobre a
+janela de 7 dias. `npm run check:o-que-fazer` (15 pontos); na base real,
+26 reclamações com passo, todas com frase.
+
 ### Completar em sequência (24/09/2026, 1.71.0)
 
 `CompletarProvider.abrirFila`: o aviso do quadro abre todas as reclamações

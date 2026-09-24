@@ -111,6 +111,8 @@ interface CaseRowCru {
   ultimoContatoEm: Date | null;
   ultimaRespostaEm: Date | null;
   tentativasSemResposta: number | null;
+  canaisSemResposta: string[] | null;
+  primeiraTentativaEm: Date | null;
   validadoEm: Date | null;
   ultimoPedidoAvaliacaoEm: Date | null;
   pedidosDeAvaliacao: number | null;
@@ -229,7 +231,15 @@ export async function fetchCases(
                 JOIN "Tag" t ON t."id" = ct."tagId"
                WHERE ct."caseId" = c."id"),
              '{}'
-           ) AS "tagNames"
+           ) AS "tagNames",
+
+           /*
+             As tentativas seguidas sem resposta: por onde ("tente por
+             e-mail") e desde quando (a janela de 7 dias da cadência). Só
+             nos casos que têm alguma — os outros não pagam a subconsulta.
+           */
+           tent."canais" AS "canaisSemResposta",
+           tent."desde" AS "primeiraTentativaEm"
 
       FROM "Case" c
       LEFT JOIN "Category" cat ON cat."id" = c."categoryId"
@@ -237,6 +247,15 @@ export async function fetchCases(
       LEFT JOIN "User" own ON own."id" = c."ownerId"
       LEFT JOIN "Team" tea ON tea."id" = c."teamId"
       LEFT JOIN "Establishment" est ON est."id" = c."establishmentId"
+      LEFT JOIN LATERAL (
+        SELECT array_agg(DISTINCT cc."canal") AS "canais", min(cc."em") AS "desde"
+          FROM "CaseContato" cc
+         WHERE c."tentativasSemResposta" > 0
+           AND cc."caseId" = c."id"
+           AND cc."tipo" = 'tentativa'
+           AND COALESCE(cc."resultado", '') NOT IN ('respondeu', 'aguardando')
+           AND (c."ultimaRespostaEm" IS NULL OR cc."em" > c."ultimaRespostaEm")
+      ) tent ON true
      ORDER BY c."publishedAt" DESC
   `);
 

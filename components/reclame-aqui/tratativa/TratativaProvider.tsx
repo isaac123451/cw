@@ -40,6 +40,8 @@ import TriagemModal from "./TriagemModal";
 
 export interface Opcoes {
   aoSalvar?: (patch: Partial<Case>) => void;
+  /** O contato já abre neste canal — "tente por e-mail". */
+  canal?: string;
 }
 
 interface TratativaContextType {
@@ -120,6 +122,7 @@ export function TratativaProvider({ children }: { children: ReactNode }) {
           key={chave}
           item={aberto.item}
           tipoInicial={aberto.contato}
+          canalInicial={aberto.opcoes?.canal}
           onClose={fechar}
           onSalvo={salvo}
         />

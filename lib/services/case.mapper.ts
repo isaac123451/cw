@@ -178,6 +178,8 @@ export function toCaseModel(row: {
   ultimoContatoEm?: Date | null;
   ultimaRespostaEm?: Date | null;
   tentativasSemResposta?: number | null;
+  canaisSemResposta?: string[] | null;
+  primeiraTentativaEm?: Date | null;
   validadoEm?: Date | null;
   ultimoPedidoAvaliacaoEm?: Date | null;
   pedidosDeAvaliacao?: number | null;
@@ -254,6 +256,8 @@ export function toCaseModel(row: {
     ultimoContatoEm: row.ultimoContatoEm?.toISOString() ?? undefined,
     ultimaRespostaEm: row.ultimaRespostaEm?.toISOString() ?? undefined,
     tentativasSemResposta: row.tentativasSemResposta ?? undefined,
+    canaisSemResposta: row.canaisSemResposta?.length ? row.canaisSemResposta : undefined,
+    primeiraTentativaEm: row.primeiraTentativaEm?.toISOString() ?? undefined,
     validadoEm: row.validadoEm?.toISOString() ?? undefined,
     ultimoPedidoAvaliacaoEm: row.ultimoPedidoAvaliacaoEm?.toISOString() ?? undefined,
     pedidosDeAvaliacao: row.pedidosDeAvaliacao ?? undefined,

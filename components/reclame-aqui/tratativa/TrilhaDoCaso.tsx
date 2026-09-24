@@ -33,6 +33,7 @@ import {
   type AcaoDoPasso,
   type PassoDaTrilha,
 } from "@/lib/models/trilha";
+import { canaisSemResposta, oQueFazer } from "@/lib/models/oQueFazer";
 import { estadoDaValidacao, type EstadoDaValidacao } from "@/lib/models/tratativa";
 import { descreverRegistro } from "@/lib/services/horasUteis";
 import {
@@ -134,6 +135,7 @@ export default function TrilhaDoCaso({ data, aoMudarNoServidor, irParaResposta, 
   */
   const tentativas = data.tentativasSemResposta ?? 0;
   const [cadencia, setCadencia] = useState<Persistencia | null>(null);
+  const [canais, setCanais] = useState<string[] | undefined>(undefined);
 
   useEffect(() => {
     if (tentativas === 0) return;
@@ -142,7 +144,9 @@ export default function TrilhaDoCaso({ data, aoMudarNoServidor, irParaResposta, 
 
     listarContatos(data.protocol)
       .then((contatos) => {
-        if (ativo) setCadencia(persistencia(contatos, new Date(), expediente));
+        if (!ativo) return;
+        setCadencia(persistencia(contatos, new Date(), expediente));
+        setCanais(canaisSemResposta(contatos));
       })
       .catch(() => ativo && setCadencia(null));
 
@@ -154,7 +158,16 @@ export default function TrilhaDoCaso({ data, aoMudarNoServidor, irParaResposta, 
   const vacuo = agora ? semNoticia(data, agora, expediente) : null;
   const avaliacao = agora ? pedidoDeAvaliacao(data, agora) : null;
 
-  function executar(acao?: AcaoDoPasso) {
+  /* O que fazer agora, em uma frase — a mesma do quadro, com o que a ficha lê a mais. */
+  const conselho = oQueFazer(data, atual, {
+    agora: agora ?? undefined,
+    canaisSemResposta: canais ?? data.canaisSemResposta,
+    cadenciaEsgotada: cadencia?.esgotada,
+    area: aberta ? { destino: aberta.destination, vencida: statusDaArea?.situation === "estourado" } : undefined,
+    validacao,
+  });
+
+  function executar(acao?: AcaoDoPasso, canal?: string) {
     switch (acao) {
       case "triar":
         return t.abrirTriagem(data, opcoes);
@@ -163,7 +176,7 @@ export default function TrilhaDoCaso({ data, aoMudarNoServidor, irParaResposta, 
       case "contato":
         return t.abrirContato(data, "contato", opcoes);
       case "tentativa":
-        return t.abrirContato(data, "tentativa", opcoes);
+        return t.abrirContato(data, "tentativa", { ...opcoes, canal });
       case "acionar-area":
         return aberta ? irParaAreas() : t.abrirArea(data);
       case "validacao":
@@ -256,14 +269,18 @@ export default function TrilhaDoCaso({ data, aoMudarNoServidor, irParaResposta, 
       {atual ? (
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-violet-50/60 px-4 py-3 ring-1 ring-inset ring-violet-100">
           <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-violet-700">
-              Agora · passo {atual.numero}
-            </p>
-            <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-sm font-semibold text-zinc-900">
-              {atual.titulo}
+            <p className="flex flex-wrap items-center gap-x-1.5 text-[11px] font-semibold uppercase tracking-wide text-violet-700">
+              Agora · passo {atual.numero} · {atual.titulo}
               {PORQUE_DO_PASSO_RA[atual.id] && <PorQue chave={PORQUE_DO_PASSO_RA[atual.id]} />}
             </p>
-            {atual.detalhe && <p className="mt-0.5 text-xs leading-relaxed text-zinc-600">{atual.detalhe}</p>}
+            <p className={`mt-0.5 text-sm font-semibold ${conselho?.urgente ? "text-amber-800" : "text-zinc-900"}`}>
+              {conselho?.frase ?? atual.titulo}
+            </p>
+            {(conselho?.porque ?? atual.detalhe) && (
+              <p className="mt-0.5 text-xs leading-relaxed text-zinc-600" title={atual.detalhe}>
+                {conselho?.porque ?? atual.detalhe}
+              </p>
+            )}
             {atual.id === "pedir-avaliacao" && avaliacao?.ativo && (
               <p className={`mt-1 text-xs font-medium ${avaliacao.vencido ? "text-violet-800" : "text-zinc-500"}`}>
                 {avaliacao.resumo}
@@ -291,10 +308,16 @@ export default function TrilhaDoCaso({ data, aoMudarNoServidor, irParaResposta, 
             )}
             <button
               type="button"
-              onClick={() => executar(atual.acao)}
+              onClick={() => executar(conselho?.acao ?? atual.acao, conselho?.canal)}
               className="flex items-center gap-2 rounded-xl bg-violet-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-violet-800"
             >
-              {atual.id === "area" && aberta ? `Ver ${aberta.destination}` : atual.acao ? ROTULO_DA_ACAO[atual.acao] : "Abrir"}
+              {atual.id === "area" && aberta
+                ? `Ver ${aberta.destination}`
+                : conselho?.canal
+                  ? `Tentar por ${conselho.canal}`
+                  : (conselho?.acao ?? atual.acao)
+                    ? ROTULO_DA_ACAO[(conselho?.acao ?? atual.acao)!]
+                    : "Abrir"}
               <ArrowRight size={14} />
             </button>
           </div>
