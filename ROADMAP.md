@@ -1116,6 +1116,13 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Completar em sequência (24/09/2026, 1.71.0)
+
+`CompletarProvider.abrirFila`: o aviso do quadro abre todas as reclamações
+sem dados do consumidor numa fila ("Completar em sequência (7)"); o painel
+mostra "2 de 7", avança sozinho depois de gravar e tem "Pular". Conferido
+na tela: 1 de 7 → Pular → 2 de 7, sem gravar nada.
+
 ### Menos atrito no Reclame Aqui e sem recarregar (24/09/2026, 1.70.0)
 
 - **Sem botão de recarregar** (Fase 34): `useAtualizarSozinho` relê

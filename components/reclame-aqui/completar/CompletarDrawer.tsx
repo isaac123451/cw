@@ -34,6 +34,10 @@ import { enderecoNaAreaDaEmpresa } from "@/lib/extensao/ponte";
 interface Props {
   caseId: string;
   onClose: () => void;
+  /** Em sequência: "2 de 7". */
+  posicao?: { atual: number; total: number };
+  /** Em sequência: vai para a próxima (ou fecha na última). */
+  onProximo?: () => void;
 }
 
 /**
@@ -53,7 +57,7 @@ interface Props {
  *    não mostra o dado. Grava por Salvar, com confirmação — e mostra o
  *    que muda antes.
  */
-export default function CompletarDrawer({ caseId, onClose }: Props) {
+export default function CompletarDrawer({ caseId, onClose, posicao, onProximo }: Props) {
 
   const { cases } = useCases();
 
@@ -82,7 +86,7 @@ export default function CompletarDrawer({ caseId, onClose }: Props) {
         aria-label={`Completar ${data.protocol}`}
         className="fixed right-0 top-0 z-50 flex h-screen w-[460px] max-w-full flex-col bg-white shadow-2xl"
       >
-        <Conteudo data={data} onClose={onClose} />
+        <Conteudo data={data} onClose={onClose} posicao={posicao} onProximo={onProximo} />
       </aside>
     </>
   );
@@ -145,7 +149,17 @@ function problemas(r: Rascunho) {
   return lista;
 }
 
-function Conteudo({ data, onClose }: { data: Case; onClose: () => void }) {
+function Conteudo({
+  data,
+  onClose,
+  posicao,
+  onProximo,
+}: {
+  data: Case;
+  onClose: () => void;
+  posicao?: { atual: number; total: number };
+  onProximo?: () => void;
+}) {
 
   const { updateCase, recarregar } = useCases();
   const { notify } = useToast();
@@ -250,7 +264,10 @@ function Conteudo({ data, onClose }: { data: Case; onClose: () => void }) {
       notify({
         tone: "success",
         title: `Dados do consumidor gravados em ${data.protocol}.`,
+        detail: onProximo && posicao && posicao.atual < posicao.total ? "Indo para a próxima." : undefined,
       });
+      /* Em sequência, gravou: segue para a próxima sem clique a mais. */
+      onProximo?.();
     } else {
       notify({
         tone: "error",
@@ -269,6 +286,7 @@ function Conteudo({ data, onClose }: { data: Case; onClose: () => void }) {
           <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
             <UserRoundPen size={13} />
             Completar dados do consumidor
+            {posicao && <span className="ml-1 rounded bg-violet-50 px-1.5 py-0.5 normal-case tracking-normal text-violet-700">{posicao.atual} de {posicao.total}</span>}
           </p>
 
           <p className="mt-1 font-mono text-xs text-violet-700">
@@ -280,6 +298,17 @@ function Conteudo({ data, onClose }: { data: Case; onClose: () => void }) {
           </p>
 
         </div>
+
+        {onProximo && (
+          <button
+            type="button"
+            onClick={onProximo}
+            title="Deixar esta para depois e ir para a próxima"
+            className="shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-medium text-zinc-600 ring-1 ring-inset ring-zinc-200 transition-colors hover:bg-zinc-50"
+          >
+            {posicao && posicao.atual < posicao.total ? "Pular" : "Terminar"}
+          </button>
+        )}
 
         <button
           onClick={onClose}

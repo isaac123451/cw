@@ -28,7 +28,7 @@ import { useCompletar } from "./CompletarProvider";
 export default function AvisoIncompletas() {
 
   const { cases } = useScopedCases("reclame-aqui");
-  const { abrir } = useCompletar();
+  const { abrir, abrirFila } = useCompletar();
 
   const [todas, setTodas] = useState(false);
 
@@ -59,8 +59,12 @@ export default function AvisoIncompletas() {
           <span className="text-amber-800/80"> · falta {descreverFaltas(faltas)}</span>
         </span>
         <span className="ml-auto flex items-center gap-3">
-          <button type="button" onClick={() => abrir(incompletas[0].id)} className="font-medium text-amber-900 underline-offset-2 hover:underline">
-            Completar a mais recente
+          <button
+            type="button"
+            onClick={() => (incompletas.length > 1 ? abrirFila(incompletas.map((item) => item.id)) : abrir(incompletas[0].id))}
+            className="font-medium text-amber-900 underline-offset-2 hover:underline"
+          >
+            {incompletas.length > 1 ? `Completar em sequência (${incompletas.length})` : "Completar"}
           </button>
           <button type="button" onClick={() => setTodas(!todas)} aria-expanded={todas} className="text-amber-800/80 underline-offset-2 hover:underline">
             {todas ? "esconder" : "ver todas"}
