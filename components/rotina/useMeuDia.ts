@@ -20,7 +20,7 @@ import {
 } from "@/lib/actions/rotina";
 
 import { atividadesDoDia, sequenciaDeDias, type AtividadeDaRotina } from "@/lib/models/rotina";
-import { contarRotina, planoDoDia, type TipoDeMarcaDeItem } from "@/lib/models/meuDia";
+import { contarRotina, planoDoDia, type MarcaDeItem, type TipoDeMarcaDeItem } from "@/lib/models/meuDia";
 import { paredeDe } from "@/lib/services/horasUteis";
 
 /**
@@ -31,6 +31,8 @@ import { paredeDe } from "@/lib/services/horasUteis";
  * (casos, NPS, Google, áreas, agenda); do servidor vêm só as marcas, a
  * métrica do dia, as ligações pela cadência e o resumo de ontem.
  */
+const SEM_MARCAS: MarcaDeItem[] = [];
+
 export function useMeuDia() {
 
   const { cases, loading: carregandoCasos } = useCases();
@@ -191,6 +193,9 @@ export function useMeuDia() {
     feitasHoje,
     sequencia,
     ontem: carga?.ontem ?? null,
+    hojeAteAgora: carga?.hojeAteAgora ?? null,
+    /* As marcas de itens que valem hoje — o fim do dia conta as feitas hoje. */
+    marcasDeItens: carga?.marcasDeItens ?? SEM_MARCAS,
     planejar,
     aplicarMarcas,
     marcarItens,

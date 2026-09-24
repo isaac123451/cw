@@ -19,6 +19,7 @@ import type { Case } from "../lib/models/case";
 import type { NpsResponseView } from "../lib/models/nps";
 
 import { getRange } from "../lib/services/reputation.service";
+import { textoDoFimDoDia } from "../lib/models/fimDoDia";
 import { cotaSugerida, cotasOferecidas, planoDeRecuperacao, ritmoDeHoje } from "../lib/models/recuperacao";
 import { ateDoAdiamento, marcaValeHoje, opcoesDeAdiar, voltaDoAdiado } from "../lib/models/meuDia";
 import { conquistasDaSemana, conquistasDoDia, inicioDaSemana, oQueMoveANota, placarDaSemana, textoDoResumoDaSemana } from "../lib/models/motivacaoDoDia";
@@ -214,6 +215,38 @@ console.log("\n  Plano de recuperação do acumulado\n");
   conferir("abriu com 149, está com 130: saíram 19, faltam 11", ritmoDeHoje(149, 130, 30), { saiu: 19, falta: 11, dandoConta: false });
   conferir("entrou mais do que saiu: saiu 0, nunca negativo", ritmoDeHoje(149, 152, 30), { saiu: 0, falta: 30, dandoConta: false });
   conferir("bateu a cota: dando conta", ritmoDeHoje(149, 118, 30).dandoConta, true);
+}
+
+console.log("\n  Fim do dia que se escreve sozinho\n");
+{
+  const marca = (id: string, item: string, tipo: "feito" | "dispensado" | "adiado", titulo: string, dia = "2026-09-24", ate: string | null = dia) =>
+    ({ id, chave: "novos", item, tipo, dia, ate, titulo }) as never;
+  const contagem = (total: number, atrasados: number) => ({ total, atrasados, porFrente: {}, resumo: "", itens: [], tirados: [] });
+  const texto = textoDoFimDoDia({
+    hoje: "2026-09-24",
+    feito: { dia: "2026-09-24", contatos: 7, primeirosContatos: 3, respostasPublicas: 2, pedidosDeAvaliacao: 1, tentativasNps: 4, googleRespondidas: 0, atividadesFeitas: 5 },
+    marcas: [
+      marca("1", "nps:a", "feito", "Cliente A"),
+      marca("2", "nps:a", "feito", "Cliente A"),
+      marca("3", "ra:b", "dispensado", "Cliente B"),
+      marca("4", "ra:c", "adiado", "Cliente C", "2026-09-24", "2026-09-27"),
+      marca("5", "ra:d", "dispensado", "De ontem", "2026-09-23", null),
+    ],
+    atividades: [
+      { id: "a1", titulo: "Novos casos", chave: "novos" },
+      { id: "a2", titulo: "FUPs", chave: "fups" },
+      { id: "a3", titulo: "Moderações", chave: "moderacoes" },
+    ],
+    contagens: { novos: contagem(4, 2), fups: contagem(3, 0), moderacoes: contagem(0, 0) } as never,
+    plano: { blocos: [], naoCabe: [{ atividadeId: "a2" }] as never, minutosNecessarios: 0, minutosDisponiveis: 0, semTrabalho: [] },
+    feitas: 5,
+    total: 8,
+  });
+  conferir("feito conta os registros de hoje, sem repetir o 1º contato", texto.includes("*Feito:* 3 primeiros contatos, 3 outros contatos registrados, 2 respostas públicas no Reclame Aqui, 1 pedido de avaliação, 4 tentativas no NPS. Rotina: 5 de 8 atividades."), true);
+  conferir("o mesmo item marcado duas vezes conta uma", texto.includes("1 feito por fora (Cliente A)"), true);
+  conferir("tirado e adiado com o dia da volta", texto.includes("1 tirado como não se aplica (Cliente B); 1 adiado (Cliente C, volta em 28/09)"), true);
+  conferir("marca de ontem não entra no fim de hoje", texto.includes("De ontem"), false);
+  conferir("o que ficou, com o porquê", texto.includes("*Ficou para amanhã:* novos casos (4 — 2 fora do prazo); fups (3 — não coube no expediente)."), true);
 }
 
 console.log(

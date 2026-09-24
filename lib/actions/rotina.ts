@@ -223,6 +223,8 @@ export interface CargaDoMeuDia {
   metricaHoje: LinhaDeMetrica | null;
   ligacoes: ItemDaRotina[];
   ontem: ResumoDeOntem | null;
+  /** O mesmo resumo, de hoje até agora — o fim do dia (Fase 24). */
+  hojeAteAgora: ResumoDeOntem | null;
   /** O relatório do ciclo de hoje: se já foi salvo. */
   relatorio: { ciclo: string; rotulo: string; salvo: boolean } | null;
 }
@@ -249,7 +251,7 @@ function diaUtilAnterior(dia: string, expediente: Parameters<typeof ehDiaUtil>[1
 export async function lerMeuDia(): Promise<CargaDoMeuDia> {
 
   const ctx = await tryRole("LEITURA");
-  if (!ctx) return { marcas: [], marcasDeItens: [], aguardandoRetorno: [], metricaHoje: null, ligacoes: [], ontem: null, relatorio: null };
+  if (!ctx) return { marcas: [], marcasDeItens: [], aguardandoRetorno: [], metricaHoje: null, ligacoes: [], ontem: null, hojeAteAgora: null, relatorio: null };
 
   const prisma = ctx.prisma;
   const agora = new Date();
@@ -261,10 +263,11 @@ export async function lerMeuDia(): Promise<CargaDoMeuDia> {
   /* Os limites de "ontem" em Brasília, como instantes. */
   const ontemIni = new Date(Date.parse(`${ontem}T03:00:00Z`));
   const ontemFim = new Date(ontemIni.getTime() + 86_400_000);
+  const hojeIni = new Date(Date.parse(`${hoje}T03:00:00Z`));
 
   const ciclo = cicloDe(hoje);
 
-  const [marcas, marcasDeItens, pendentes, metrica, emCadencia, contatosOntem, publicadasOntem, npsOntem, googleOntem, relatorioSalvo] = await Promise.all([
+  const [marcas, marcasDeItens, pendentes, metrica, emCadencia, contatosOntem, publicadasOntem, npsOntem, googleOntem, relatorioSalvo, contatosHoje, publicadasHoje, npsHoje, googleHoje] = await Promise.all([
     prisma.marcaDaRotina.findMany({ where: { userId: ctx.userId, dia: { gte: desde } }, select: { atividadeId: true, dia: true } }),
     prisma.marcaDeItemDaRotina.findMany({
       where: { userId: ctx.userId, dia: { lte: hoje }, OR: [{ ate: null }, { ate: { gte: hoje } }] },
@@ -289,6 +292,10 @@ export async function lerMeuDia(): Promise<CargaDoMeuDia> {
     prisma.npsAttempt.count({ where: { createdAt: { gte: ontemIni, lt: ontemFim } } }),
     prisma.avaliacaoGoogle.count({ where: { respondidaEm: { gte: ontemIni, lt: ontemFim } } }),
     prisma.relatorioDoCiclo.count({ where: { ciclo: ciclo.id } }),
+    prisma.caseContato.findMany({ where: { em: { gte: hojeIni } }, select: { tipo: true } }),
+    prisma.case.count({ where: { publicResponseAt: { gte: hojeIni } } }),
+    prisma.npsAttempt.count({ where: { createdAt: { gte: hojeIni } } }),
+    prisma.avaliacaoGoogle.count({ where: { respondidaEm: { gte: hojeIni } } }),
   ]);
 
   const ligacoes: ItemDaRotina[] = [];
@@ -362,6 +369,16 @@ export async function lerMeuDia(): Promise<CargaDoMeuDia> {
       tentativasNps: npsOntem,
       googleRespondidas: googleOntem,
       atividadesFeitas: marcasOntem,
+    },
+    hojeAteAgora: {
+      dia: hoje,
+      contatos: contatosHoje.length,
+      primeirosContatos: contatosHoje.filter((k) => k.tipo === "contato").length,
+      respostasPublicas: publicadasHoje,
+      pedidosDeAvaliacao: contatosHoje.filter((k) => k.tipo === "pedido-avaliacao").length,
+      tentativasNps: npsHoje,
+      googleRespondidas: googleHoje,
+      atividadesFeitas: marcas.filter((m) => m.dia === hoje).length,
     },
   };
 }

@@ -104,6 +104,14 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.48.0",
+    data: "2026-09-24",
+    titulo: "Fim do dia que se escreve sozinho",
+    texto: "No Meu dia, abaixo do checkpoint, o fim do dia pronto para copiar: o que andou hoje (contatos, respostas públicas, pedidos de avaliação, NPS, Google e a rotina), o que saiu da fila sem registro — feito por fora, tirado ou adiado, com o dia da volta — e o que ficou para amanhã, com o porquê: fora do prazo ou não coube no expediente.",
+    frentes: ["plataforma"],
+    href: "/meu-dia",
+  },
+  {
     versao: "1.47.0",
     data: "2026-09-24",
     titulo: "O que move a nota, na ordem do efeito",

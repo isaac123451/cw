@@ -8,6 +8,7 @@ import PageHeading from "@/components/shared/PageHeading";
 import RotinaDoDia from "@/components/rotina/RotinaDoDia";
 import PlanoDoDia from "@/components/rotina/PlanoDoDia";
 import CheckpointDoDia from "@/components/rotina/CheckpointDoDia";
+import FimDoDia from "@/components/rotina/FimDoDia";
 import ConfigurarRotina from "@/components/rotina/ConfigurarRotina";
 import { useMeuDia } from "@/components/rotina/useMeuDia";
 import CartaoDoPrimeiroAcesso from "@/components/primeiroAcesso/CartaoDoPrimeiroAcesso";
@@ -91,6 +92,18 @@ export default function MeuDiaPage() {
                 ontem={dia.ontem}
                 plano={plano}
                 contagens={dia.contagens}
+                feitas={dia.doDia.filter((a) => efetivas.has(a.id)).length}
+                total={dia.doDia.length}
+              />
+            )}
+            {dia.hoje && !dia.carregando && (
+              <FimDoDia
+                hoje={dia.hoje}
+                feito={dia.hojeAteAgora}
+                marcas={dia.marcasDeItens}
+                atividades={dia.doDia}
+                contagens={dia.contagens}
+                plano={plano}
                 feitas={dia.doDia.filter((a) => efetivas.has(a.id)).length}
                 total={dia.doDia.length}
               />

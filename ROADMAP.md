@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 24/09/2026. Aplicação **1.47.0**, extensão **1.47.0**.
+Atualizado em 24/09/2026. Aplicação **1.48.0**, extensão **1.48.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,30 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### Fim do dia que se escreve sozinho (24/09/2026, 1.48.0)
+
+Último item da Fase 24 — fecha a fase ("Meu dia sem atrito"). O
+checkpoint da manhã fala de ontem; faltava o fim de hoje.
+
+- **O servidor conta hoje também.** `lerMeuDia` já contava ontem
+  (contatos, 1º contatos, respostas públicas, pedidos de avaliação,
+  tentativas do NPS, Google respondido); ganhou `hojeAteAgora`, a mesma
+  conta desde a meia-noite de Brasília, com quatro consultas a mais na
+  mesma ida.
+- **O texto** (`lib/models/fimDoDia.ts`): *Feito* (os registros de hoje e
+  a rotina marcada), *Saiu da fila sem registro* (feito por fora, tirado
+  e adiado, com até três títulos e o dia da volta; o mesmo item marcado
+  em duas atividades conta uma vez; marca de outro dia não entra) e
+  *Ficou para amanhã* (cada atividade com itens, e o porquê: fora do
+  prazo e/ou não coube no expediente, pelo plano do dia).
+- **O cartão** "Fim do dia" no Meu dia, abaixo do checkpoint, com o
+  mesmo campo editável e o botão de copiar.
+
+Provas: `check:meu-dia` com 5 pontos novos; o cartão renderizado no
+navegador com os dados de teste, sem erro. A contagem de hoje no
+servidor é a mesma consulta da de ontem com outro intervalo — conferir
+contra a base depois do push. `tsc` e `lint` limpos.
 
 ### O que move a nota hoje (24/09/2026, 1.47.0)
 
