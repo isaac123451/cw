@@ -13,6 +13,7 @@ import {
 } from "@/lib/models/rotina";
 import { persistencia, ROTULO_DO_PERIODO, faixaDoPeriodo } from "@/lib/models/cadencia";
 import type { ItemDaRotina, MarcaDeItem, TipoDeMarcaDeItem } from "@/lib/models/meuDia";
+import { ADIAR_NO_MAXIMO_DIAS, ateDoAdiamento } from "@/lib/models/meuDia";
 import type { LinhaDeMetrica } from "@/lib/actions/metricas";
 
 import { lerExpediente } from "@/lib/services/operacao.service";
@@ -222,6 +223,8 @@ export interface CargaDoMeuDia {
   metricaHoje: LinhaDeMetrica | null;
   ligacoes: ItemDaRotina[];
   ontem: ResumoDeOntem | null;
+  /** O mesmo resumo, de hoje até agora — o fim do dia (Fase 24). */
+  hojeAteAgora: ResumoDeOntem | null;
   /** O relatório do ciclo de hoje: se já foi salvo. */
   relatorio: { ciclo: string; rotulo: string; salvo: boolean } | null;
 }
@@ -248,7 +251,7 @@ function diaUtilAnterior(dia: string, expediente: Parameters<typeof ehDiaUtil>[1
 export async function lerMeuDia(): Promise<CargaDoMeuDia> {
 
   const ctx = await tryRole("LEITURA");
-  if (!ctx) return { marcas: [], marcasDeItens: [], aguardandoRetorno: [], metricaHoje: null, ligacoes: [], ontem: null, relatorio: null };
+  if (!ctx) return { marcas: [], marcasDeItens: [], aguardandoRetorno: [], metricaHoje: null, ligacoes: [], ontem: null, hojeAteAgora: null, relatorio: null };
 
   const prisma = ctx.prisma;
   const agora = new Date();
@@ -260,10 +263,11 @@ export async function lerMeuDia(): Promise<CargaDoMeuDia> {
   /* Os limites de "ontem" em Brasília, como instantes. */
   const ontemIni = new Date(Date.parse(`${ontem}T03:00:00Z`));
   const ontemFim = new Date(ontemIni.getTime() + 86_400_000);
+  const hojeIni = new Date(Date.parse(`${hoje}T03:00:00Z`));
 
   const ciclo = cicloDe(hoje);
 
-  const [marcas, marcasDeItens, pendentes, metrica, emCadencia, contatosOntem, publicadasOntem, npsOntem, googleOntem, relatorioSalvo] = await Promise.all([
+  const [marcas, marcasDeItens, pendentes, metrica, emCadencia, contatosOntem, publicadasOntem, npsOntem, googleOntem, relatorioSalvo, contatosHoje, publicadasHoje, npsHoje, googleHoje] = await Promise.all([
     prisma.marcaDaRotina.findMany({ where: { userId: ctx.userId, dia: { gte: desde } }, select: { atividadeId: true, dia: true } }),
     prisma.marcaDeItemDaRotina.findMany({
       where: { userId: ctx.userId, dia: { lte: hoje }, OR: [{ ate: null }, { ate: { gte: hoje } }] },
@@ -288,6 +292,10 @@ export async function lerMeuDia(): Promise<CargaDoMeuDia> {
     prisma.npsAttempt.count({ where: { createdAt: { gte: ontemIni, lt: ontemFim } } }),
     prisma.avaliacaoGoogle.count({ where: { respondidaEm: { gte: ontemIni, lt: ontemFim } } }),
     prisma.relatorioDoCiclo.count({ where: { ciclo: ciclo.id } }),
+    prisma.caseContato.findMany({ where: { em: { gte: hojeIni } }, select: { tipo: true } }),
+    prisma.case.count({ where: { publicResponseAt: { gte: hojeIni } } }),
+    prisma.npsAttempt.count({ where: { createdAt: { gte: hojeIni } } }),
+    prisma.avaliacaoGoogle.count({ where: { respondidaEm: { gte: hojeIni } } }),
   ]);
 
   const ligacoes: ItemDaRotina[] = [];
@@ -361,6 +369,16 @@ export async function lerMeuDia(): Promise<CargaDoMeuDia> {
       tentativasNps: npsOntem,
       googleRespondidas: googleOntem,
       atividadesFeitas: marcasOntem,
+    },
+    hojeAteAgora: {
+      dia: hoje,
+      contatos: contatosHoje.length,
+      primeirosContatos: contatosHoje.filter((k) => k.tipo === "contato").length,
+      respostasPublicas: publicadasHoje,
+      pedidosDeAvaliacao: contatosHoje.filter((k) => k.tipo === "pedido-avaliacao").length,
+      tentativasNps: npsHoje,
+      googleRespondidas: googleHoje,
+      atividadesFeitas: marcas.filter((m) => m.dia === hoje).length,
     },
   };
 }
@@ -447,10 +465,12 @@ export async function marcarItensDaRotina(entrada: {
   itens: { chave: string; item: string; titulo: string }[];
   tipo: TipoDeMarcaDeItem;
   duracao: DuracaoDaMarca;
+  /** Só no `adiado`: o dia em que o item volta (AAAA-MM-DD, Brasília). */
+  volta?: string;
 }): Promise<{ ok: true; marcas: MarcaDeItem[] } | Falha> {
 
-  if (entrada.tipo !== "feito" && entrada.tipo !== "dispensado") return { ok: false, erro: "Marca inválida." };
-  if (!["hoje", "semana", "sempre"].includes(entrada.duracao)) return { ok: false, erro: "Duração inválida." };
+  if (entrada.tipo !== "feito" && entrada.tipo !== "dispensado" && entrada.tipo !== "adiado") return { ok: false, erro: "Marca inválida." };
+  if (entrada.tipo !== "adiado" && !["hoje", "semana", "sempre"].includes(entrada.duracao)) return { ok: false, erro: "Duração inválida." };
   if (entrada.tipo === "feito" && entrada.duracao !== "hoje") return { ok: false, erro: "\"Feito\" vale só para hoje: amanhã a conta decide de novo." };
   if (!entrada.itens.length || entrada.itens.length > 200) return { ok: false, erro: "Escolha de 1 a 200 itens." };
   for (const i of entrada.itens) {
@@ -462,7 +482,11 @@ export async function marcarItensDaRotina(entrada: {
   const prisma = q.ctx.prisma;
 
   const hoje = paredeDe(new Date()).dia;
-  const ate = entrada.duracao === "hoje" ? hoje : entrada.duracao === "semana" ? somarDias(hoje, 6) : null;
+  let ate = entrada.duracao === "hoje" ? hoje : entrada.duracao === "semana" ? somarDias(hoje, 6) : null;
+  if (entrada.tipo === "adiado") {
+    ate = ateDoAdiamento(hoje, entrada.volta ?? "");
+    if (!ate) return { ok: false, erro: `Escolha um dia depois de hoje, em até ${ADIAR_NO_MAXIMO_DIAS} dias.` };
+  }
 
   try {
     const gravadas = await prisma.$transaction(

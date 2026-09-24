@@ -8,6 +8,7 @@ import { useCallback, useMemo, useState } from "react";
 import {
   ChevronLeft,
   ExternalLink,
+  FileText,
   Maximize2,
   MessageCircle,
   ShieldAlert,
@@ -22,6 +23,7 @@ import { useCases } from "@/lib/context/CaseContext";
 import { useMovements } from "@/lib/context/MovementsContext";
 import { useSla } from "@/lib/context/SlaContext";
 import { useRascunho } from "@/lib/hooks/useRascunho";
+import { useSalvarAoSair } from "@/lib/hooks/useSalvarAoSair";
 
 import {
   movementStatus,
@@ -35,7 +37,7 @@ import TagPicker, { TagChips } from "@/components/shared/TagPicker";
 import LinksDoRa from "@/components/shared/LinksDoRa";
 import PerguntarAoAssistente from "@/components/assistente/PerguntarAoAssistente";
 import StatusPicker from "@/components/reclame-aqui/shared/StatusPicker";
-import BarraDeSalvar from "@/components/shared/BarraDeSalvar";
+import AvisoDoSalvar from "@/components/shared/AvisoDoSalvar";
 import { ConfirmDelete } from "@/components/shared/Modal";
 import CaseActions from "./CaseActions";
 import BotaoCompletar from "@/components/reclame-aqui/completar/BotaoCompletar";
@@ -141,7 +143,7 @@ export default function CaseDetail({
   const [encerrandoRedes, setEncerrandoRedes] = useState<string | null>(null);
 
   /**
-   * A edição vive num rascunho; o botão Salvar grava.
+   * A edição vive num rascunho, que grava sozinho (1.41.0).
    *
    * Era a tela que mais gravava sem pedir — **uma ida ao banco por
    * tecla**. Escrever a resposta pública, que tem centenas de
@@ -157,8 +159,14 @@ export default function CaseDetail({
    * consequência própria — voltar de "Resolvido" apaga a avaliação —,
    * e segurá-los num rascunho faria a coluna do quadro discordar da
    * tela enquanto ninguém clicasse em Salvar.
+   *
+   * **Sem o botão Salvar.** O Isaac: "botão de salvar às vezes não é
+   * muito interessante". O rascunho ficou, e quem grava é o
+   * `useSalvarAoSair`: o que se escolhe grava na hora, o que se digita
+   * grava ao sair do campo, e o aviso na base diz "salvo · desfazer".
    */
   const rascunho = useRascunho([data], updateCase);
+  const salvar = useSalvarAoSair(rascunho, data, updateCase);
 
   /** O caso como está sendo editado, e não como está no banco. */
   const emEdicao = rascunho.itens[0] ?? data;
@@ -194,7 +202,7 @@ export default function CaseDetail({
   );
 
   function patch(changes: Partial<Case>) {
-    rascunho.alterar(data.id, changes);
+    salvar.alterar(changes);
   }
 
   /**
@@ -488,6 +496,18 @@ export default function CaseDetail({
               rotulo="Perguntar"
             />
 
+            {/* O dossiê de 8 partes, em tela grande (Fase 26) — o do Reclame Aqui, que sustenta moderação. */}
+            {canal === "reclame-aqui" && (
+              <Link
+                href={`/reclame-aqui/${encodeURIComponent(data.id)}/dossie`}
+                title="Montar o dossiê do caso: linha do tempo, evidências, apuração e o pedido"
+                className="flex items-center gap-2 rounded-xl border border-zinc-200 px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
+              >
+                <FileText size={15} />
+                Dossiê
+              </Link>
+            )}
+
             {whatsapp && (
               <a
                 href={`https://wa.me/55${whatsapp}`}
@@ -571,6 +591,7 @@ export default function CaseDetail({
       )}
 
       <div
+        onBlur={salvar.aoSairDoCampo}
         className={
           drawer
             ? "px-6 pb-6"
@@ -700,7 +721,7 @@ export default function CaseDetail({
 
       </div>
 
-      <BarraDeSalvar rascunho={rascunho} nome="caso" />
+      <AvisoDoSalvar salvar={salvar} />
 
       {/*
         O diálogo nomeia o caso, e não "esta reclamação".

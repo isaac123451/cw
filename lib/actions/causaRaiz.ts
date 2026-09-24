@@ -6,18 +6,13 @@ import { WORKSPACE_TAG } from "@/lib/actions/tags";
 import { requireRole, SemPermissao } from "@/lib/auth/guard";
 
 import {
-  origemDaReincidencia,
+  donoDoItem,
   REINCIDENCIA_DIAS,
   REINCIDENCIA_MINIMA,
   reincidenciasCruzadas,
-  type Frente,
-  type RegistroDeCausa,
 } from "@/lib/models/causaRaiz";
-import { frente as frenteDaOperacao } from "@/lib/models/frentes";
-import { ProjectStage } from "@/lib/models/project";
-import { descreverRegistro } from "@/lib/services/horasUteis";
-import { SOCIAL_SOURCES } from "@/lib/services/case.service";
-import { CANAL_PARA_ORIGEM } from "@/lib/services/case.mapper";
+import { acharCausa } from "@/lib/models/catalogoDeCausas";
+import { abrirItemDaReincidencia, catalogoComDono, registrosComCausa } from "@/lib/services/reincidencia.service";
 
 type Falha = { ok: false; erro: string };
 
@@ -47,37 +42,13 @@ export async function abrirProjetoDeReincidencia(entrada: {
 
   const agora = new Date();
   const desde = new Date(agora.getTime() - REINCIDENCIA_DIAS * 86_400_000);
-  const mesmaCausa = { equals: causa, mode: "insensitive" as const };
 
   try {
-    const [casos, nps, google, pessoa] = await Promise.all([
-      ctx.prisma.case.findMany({
-        where: {
-          causaRaiz: mesmaCausa,
-          OR: [{ recebidaEm: { gte: desde } }, { recebidaEm: null, publishedAt: { gte: desde } }],
-        },
-        select: { protocol: true, externalId: true, title: true, channel: true, recebidaEm: true, publishedAt: true },
-      }),
-      ctx.prisma.npsResponse.findMany({
-        where: { rootCause: mesmaCausa, respondedAt: { gte: desde } },
-        select: { customer: true, customerName: true, score: true, respondedAt: true },
-      }),
-      ctx.prisma.avaliacaoGoogle.findMany({
-        where: { causaRaiz: mesmaCausa, publicadaEm: { gte: desde }, status: { not: "denunciada" } },
-        select: { autor: true, estrelas: true, publicadaEm: true },
-      }),
+    const [registros, catalogo, pessoa] = await Promise.all([
+      registrosComCausa(ctx.prisma, desde, causa),
+      catalogoComDono(ctx.prisma),
       ctx.prisma.user.findUnique({ where: { id: ctx.userId }, select: { name: true } }),
     ]);
-
-    const registros: RegistroDeCausa[] = [
-      ...casos.map((c) => {
-        const frente: Frente = SOCIAL_SOURCES.includes(CANAL_PARA_ORIGEM[c.channel] ?? "") ? "redes" : "reclame-aqui";
-        const em = (c.recebidaEm ?? c.publishedAt).toISOString();
-        return { frente, causa, em, rotulo: `${frente === "reclame-aqui" ? "RA" : CANAL_PARA_ORIGEM[c.channel]} ${c.externalId ?? c.protocol} — ${c.title}` };
-      }),
-      ...nps.map((n) => ({ frente: "nps" as const, causa, em: n.respondedAt.toISOString(), rotulo: `NPS — ${n.customerName ?? n.customer}, nota ${n.score}` })),
-      ...google.map((g) => ({ frente: "google" as const, causa, em: g.publicadaEm.toISOString(), rotulo: `Google — ${g.autor}, ${g.estrelas} estrela(s)` })),
-    ];
 
     const [achada] = reincidenciasCruzadas(registros, agora);
 
@@ -88,42 +59,18 @@ export async function abrirProjetoDeReincidencia(entrada: {
       };
     }
 
-    const origem = origemDaReincidencia(causa, agora);
-
-    const existente = await ctx.prisma.project.findFirst({ where: { origem }, select: { id: true, title: true } });
-    if (existente) return { ok: true, projeto: existente, jaExistia: true, registros: achada.registros.length };
-
-    const lista = achada.registros
-      .slice(0, 40)
-      .map((r) => `• ${descreverRegistro(r.em)} · ${r.rotulo}`)
-      .join("\n");
-
-    const criado = await ctx.prisma.project.create({
-      data: {
-        origem,
-        title: `Reincidência: ${causa} (${achada.registros.length} em ${REINCIDENCIA_DIAS} dias)`,
-        description: [
-          `Aberto a partir do Analytics: ${achada.registros.length} registros de "${causa}" nos últimos ${REINCIDENCIA_DIAS} dias, somando ${achada.frentes.map((f) => frenteDaOperacao(f).nome).join(", ")}.`,
-          "O problema que se repete em vários clientes é do produto ou do processo — o documento de reputação pede transformar esse feedback em melhoria.",
-          "",
-          "Registros:",
-          lista,
-          achada.registros.length > 40 ? `… e mais ${achada.registros.length - 40}.` : "",
-        ]
-          .filter((l, i, todas) => l !== "" || todas[i - 1] !== "")
-          .join("\n")
-          .trim(),
-        stage: "Ideia" satisfies ProjectStage,
-        owner: pessoa?.name ?? "",
-        impact: "Alto",
-        tags: ["Reincidência", causa, ...achada.frentes.map((f) => frenteDaOperacao(f).nome)],
-      },
-      select: { id: true, title: true },
+    /* O dono é a área da causa (Fase 27); sem área no catálogo, quem abriu. */
+    const doCatalogo = acharCausa(causa, catalogo);
+    const { projeto, jaExistia } = await abrirItemDaReincidencia(ctx.prisma, achada, agora, {
+      dono: donoDoItem(doCatalogo, pessoa?.name ?? ""),
+      prazoHoras: doCatalogo?.prazoHoras,
+      quem: `Aberto por ${pessoa?.name ?? "alguém da operação"}`,
     });
+    if (jaExistia) return { ok: true, projeto, jaExistia: true, registros: achada.registros.length };
 
     updateTag(WORKSPACE_TAG);
 
-    return { ok: true, projeto: criado, jaExistia: false, registros: achada.registros.length };
+    return { ok: true, projeto, jaExistia: false, registros: achada.registros.length };
   } catch (erro) {
     console.error("[causa raiz] reincidência", erro);
     return { ok: false, erro: "O banco não aceitou a gravação agora. Tente de novo em instantes." };

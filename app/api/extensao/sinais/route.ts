@@ -14,6 +14,11 @@ import {
   oQueCompletar,
 } from "@/lib/services/sinaisDaConversa";
 import { nomeDeContato } from "@/lib/models/case";
+import { oQueFazerAgora } from "@/lib/models/oQueFazerAgora";
+import { condicoesNaConversa } from "@/lib/models/impactoNaConversa";
+import { humorDaConversa } from "@/lib/services/motorProprio";
+import { descreverRegistro, prazoUtil } from "@/lib/services/horasUteis";
+import { lerExpediente } from "@/lib/services/operacao.service";
 
 /**
  * POST /api/extensao/sinais
@@ -29,7 +34,9 @@ const MAXIMO_MENSAGENS = 60;
 const MAXIMO_CARACTERES = 2000;
 
 interface Corpo {
-  mensagens?: { de?: string; texto?: string }[];
+  mensagens?: { de?: string; texto?: string; carimbo?: string }[];
+  /** O que o painel já sabe do contato: reclamações e casos abertos (Fase 28). */
+  historico?: { casosAbertos?: number; reclamacoes?: number };
   /** O caso aberto mais recente do contato, se houver. */
   protocolo?: string;
   /** O número do contato na página (WhatsApp). */
@@ -57,6 +64,7 @@ export async function POST(request: Request) {
     .map((m) => ({
       de: m.de === "nos" ? ("nos" as const) : ("cliente" as const),
       texto: String(m.texto).trim().slice(0, MAXIMO_CARACTERES),
+      carimbo: typeof m.carimbo === "string" ? m.carimbo.slice(0, 40) : undefined,
     }));
 
   /* Na demonstração não há base de relatos para comparar: só o humor. */
@@ -79,10 +87,66 @@ export async function POST(request: Request) {
     }
   }
 
+  /*
+    O que fazer agora (Fase 28): as regras sobre a conversa, mais o que a
+    base sabe — a área que está com o caso e até quando.
+  */
+  let area: { nome: string; venceEm?: string } | undefined;
+  if (protocolo && prisma && !demonstracao) {
+    const aberta = await prisma.caseMovement
+      .findFirst({ where: { case: { protocol: protocolo }, returnedAt: null }, select: { destination: true, startedAt: true, dueHours: true } })
+      .catch(() => null);
+    if (aberta) {
+      const expediente = await lerExpediente(prisma).catch(() => undefined);
+      area = { nome: aberta.destination, venceEm: expediente ? descreverRegistro(prazoUtil(aberta.startedAt, aberta.dueHours, expediente).toISOString()) : undefined };
+    }
+  }
+  /*
+    O impacto que a conversa mostra (Fase 28): desconto, meses sem
+    mensalidade, estorno — das nossas mensagens —, com o valor pela
+    mensalidade da conta e o aviso de "já registrado" quando o Impacto
+    já tem a mesma frase para este caso.
+  */
+  let impacto: (ReturnType<typeof condicoesNaConversa>[number] & { jaRegistrado: boolean; protocolo?: string; mensalidadeCents?: number })[] = [];
+  if (!demonstracao && prisma) {
+    const caso = protocolo
+      ? await prisma.case.findUnique({ where: { protocol: protocolo }, select: { id: true, establishment: { select: { mrrCents: true } } } }).catch(() => null)
+      : null;
+    const mensalidade = caso?.establishment?.mrrCents ?? undefined;
+    const condicoes = condicoesNaConversa(mensagens, mensalidade);
+    if (condicoes.length) {
+      const registrados = caso
+        ? await prisma.impactRecord.findMany({ where: { caseId: caso.id }, select: { description: true } }).catch(() => [])
+        : [];
+      impacto = condicoes.map((c) => ({
+        ...c,
+        protocolo: caso ? protocolo : undefined,
+        mensalidadeCents: mensalidade,
+        jaRegistrado: registrados.some((r) => (r.description ?? "").includes(c.trecho.slice(0, 60))),
+      }));
+    }
+  } else if (demonstracao) {
+    impacto = condicoesNaConversa(mensagens).map((c) => ({ ...c, jaRegistrado: false }));
+  }
+
+  const numero = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? Math.max(0, Math.round(v)) : undefined);
+
   return responder(request, {
     avisos: avisosDaConversa(mensagens, indice),
     completar,
+    impacto,
     humor: humorDoCabecalho(mensagens),
+    agora: oQueFazerAgora({
+      mensagens,
+      humor: humorDaConversa(mensagens),
+      agora: new Date(),
+      historico: {
+        casosAbertos: numero(corpo.historico?.casosAbertos),
+        reclamacoes: numero(corpo.historico?.reclamacoes),
+        areaAcionada: area?.nome,
+        areaVenceEm: area?.venceEm,
+      },
+    }),
   });
 }
 

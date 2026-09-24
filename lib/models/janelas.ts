@@ -250,7 +250,7 @@ export function janelaDoEndereco(href: string | undefined | null, titulo: string
   if (!href) return null;
   const [caminho, busca = ""] = href.split("?");
   const partes = caminho.split("/").filter(Boolean);
-  if (partes.length === 2 && partes[0] === "reclame-aqui" && !["analytics", "graficos", "calculadora", "configuracoes", "avaliacoes", "novo"].includes(partes[1])) {
+  if (partes.length === 2 && partes[0] === "reclame-aqui" && !["analytics", "graficos", "calculadora", "configuracoes", "avaliacoes", "novo", "premio"].includes(partes[1])) {
     return { frente: "reclame-aqui", ref: decodeURIComponent(partes[1]), titulo };
   }
   if (partes.length === 2 && partes[0] === "redes-sociais") return { frente: "redes", ref: decodeURIComponent(partes[1]), titulo };

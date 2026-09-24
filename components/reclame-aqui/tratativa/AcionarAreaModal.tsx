@@ -18,6 +18,8 @@ import {
 import { descreverPrazo, prazoUtil } from "@/lib/services/horasUteis";
 
 import { acionarArea } from "@/lib/actions/tratativa";
+import { acharCausa, prazoComCausa, rotuloDoPrazo } from "@/lib/models/catalogoDeCausas";
+import { useNps } from "@/lib/context/NpsContext";
 import { useEstablishments } from "@/lib/context/EstablishmentsContext";
 import { useMovements } from "@/lib/context/MovementsContext";
 import { useSla } from "@/lib/context/SlaContext";
@@ -27,6 +29,10 @@ import { quandoVence } from "./RelogioDoCaso";
 
 interface Props {
   item: Case;
+  /** A área dona da causa raiz, quando o acionamento nasce dela. */
+  areaInicial?: string;
+  /** A causa raiz de onde veio: o prazo dela aperta o relógio da área dona. */
+  causa?: string;
   onClose: () => void;
   onSalvo: (movimento: CaseMovement) => void;
 }
@@ -42,12 +48,13 @@ const PAPEIS = ["Dono", "Gerente", "Funcionário"];
  * A plataforma monta o modelo com o caso, abre o relógio da área com o
  * prazo da criticidade e copia a mensagem. Quem cola no Slack é você.
  */
-export default function AcionarAreaModal({ item, onClose, onSalvo }: Props) {
+export default function AcionarAreaModal({ item, areaInicial, causa, onClose, onSalvo }: Props) {
 
   const { notify } = useToast();
   const { expediente } = useSla();
   const { rules, prazosDeArea } = useMovements();
   const { establishments } = useEstablishments();
+  const { rootCauses } = useNps();
 
   const estabelecimento = establishments.find((e) => e.id === item.establishmentId);
 
@@ -61,7 +68,7 @@ export default function AcionarAreaModal({ item, onClose, onSalvo }: Props) {
     [rules]
   );
 
-  const [area, setArea] = useState<string>(destinos[0] ?? "Suporte N2");
+  const [area, setArea] = useState<string>(areaInicial && destinos.includes(areaInicial) ? areaInicial : (destinos[0] ?? "Suporte N2"));
   const [tratativa, setTratativa] = useState("");
   const [adicionais, setAdicionais] = useState("");
   const [papel, setPapel] = useState("");
@@ -73,7 +80,8 @@ export default function AcionarAreaModal({ item, onClose, onSalvo }: Props) {
 
   const ehArea = AREAS_INTERNAS.some((a) => a.nome === area);
   const regra = rules.find((r) => r.active && r.destination === area);
-  const horas = ehArea || !regra ? prazosDeArea[item.priority] : regra.hours;
+  const daCausa = acharCausa(causa, rootCauses);
+  const { horas, pelaCausa } = prazoComCausa(ehArea || !regra ? prazosDeArea[item.priority] : regra.hours, area, daCausa);
 
   const [agora] = useState(() => new Date());
   const vence = prazoUtil(agora, horas, expediente);
@@ -106,7 +114,7 @@ export default function AcionarAreaModal({ item, onClose, onSalvo }: Props) {
     setErro(null);
 
     try {
-      const r = await acionarArea({ protocol: item.protocol, area, tratativa, chamado });
+      const r = await acionarArea({ protocol: item.protocol, area, tratativa, chamado, causa: daCausa?.name });
 
       if (!r.ok) {
         setErro(r.erro);
@@ -171,7 +179,15 @@ export default function AcionarAreaModal({ item, onClose, onSalvo }: Props) {
           </label>
 
           <p className="rounded-xl bg-violet-50/60 px-3.5 py-2.5 text-xs leading-relaxed text-violet-900 ring-1 ring-inset ring-violet-100">
-            Caso <strong>{item.priority}</strong>: retorno da área <strong>{prazoTexto}</strong>.
+            {pelaCausa ? (
+              <>
+                Causa <strong>{daCausa?.name}</strong>, de {area}: retorno <strong>{prazoTexto}</strong> — o prazo da causa ({rotuloDoPrazo(daCausa?.prazoHoras)}) é mais curto que o da prioridade {item.priority}.
+              </>
+            ) : (
+              <>
+                Caso <strong>{item.priority}</strong>: retorno da área <strong>{prazoTexto}</strong>.
+              </>
+            )}{" "}
             Se vencer, a plataforma avisa e monta a mensagem de escalonamento ao gestor da área.
           </p>
 

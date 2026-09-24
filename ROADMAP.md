@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 23/09/2026. Aplicação **1.30.0**, extensão **1.30.0**.
+Atualizado em 24/09/2026. Aplicação **1.68.0**, extensão **1.68.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,882 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### Banco em dia e as provas de pé (24/09/2026, 1.68.1)
+
+A sessão local e a da web (esta branch, PR #2) trabalharam em paralelo;
+a local passou a trabalhar em cima desta branch. O que a da web deixou
+para você e foi feito aqui:
+
+- **Banco:** `db push` das mudanças das 1.54–1.67 — `CampanhaDoPremio`,
+  `PedidoDeVoto`, `DossieDoCaso`, `EdicaoDeResposta` e área, prazo e
+  palavras da causa raiz. Tudo aditivo; RLS em 66 de 66.
+- **Dia em UTC:** o nome do dossiê baixado e o da planilha do Prêmio
+  cortavam "hoje" em UTC — depois das 21h, a data de amanhã. Agora é o
+  dia de Brasília (`hojeNaOperacao`), achado pelo `check:dia`.
+- **Provas que tinham ficado para trás:** `check:campos` (as sete tabelas
+  de carga própria das 1.31–1.67, com o motivo) e `check:janelas` (a
+  lista da atividade mora em `ItensDaAtividade` desde a 1.31).
+
+Provas: `tsc` limpo e as 90 provas sem banco ou só de leitura, todas de
+pé (a `check:carga` caiu uma vez por conexão fechada e passou na
+repetição). **Depende de você:** reiniciar o `npm run dev` (cliente do
+banco novo), push desta branch e o merge do PR #2.
+
+### Impacto percebido na conversa (24/09/2026, 1.68.0)
+
+Quinto item da Fase 28: "identificar descontos, condições dadas para um
+cliente e abrir um aviso pra adicionar o impacto".
+
+- `lib/models/impactoNaConversa.ts`: nas mensagens nossas (é a operação
+  que concede), frase a frase — percentual na fatura ou na mensalidade
+  (com quantas mensalidades: "por 3 meses", "nas próximas 3 faturas"),
+  meses sem cobrança e isenção, valor em reais (desconto, estorno,
+  crédito, abatimento) e cortesia sem valor. O custo sai da mensalidade
+  da conta (`mrrCents`) quando ela é conhecida. O pedido do cliente não
+  é condição dada; "20% mais rápido" e "chega em 2 meses" ficam de fora;
+  a mesma condição dita duas vezes é uma, a mais recente.
+- `/api/extensao/sinais` devolve `impacto`, com o protocolo, a
+  mensalidade e o "já registrado" (o Impacto já tem a frase para o caso).
+- Rota nova `/api/extensao/impacto`: lança o custo em Impacto no Negócio
+  como "Oferta concedida" (o tipo que a oferta aceita já usa), negativo,
+  ligado ao caso e à conta, com a frase e o dia na descrição; a mesma
+  frase no mesmo caso não é lançada duas vezes.
+- Painel: o aviso "Condição dada na conversa — registre o impacto" com
+  a descrição, a mensalidade, a citação, o valor já preenchido (editável)
+  e o botão; sem valor, não registra. As teclas digitadas nos campos do
+  painel não vazam para o WhatsApp.
+
+Provas: `npm run check:impacto-conversa` (cada condição e o valor, o que
+não é condição, só as nossas, sem repetir, a descrição), o endpoint de
+sinais no servidor de desenvolvimento e a bancada do painel (valor
+preenchido, campo vazio sem mensalidade, já registrado sem botão, sem
+valor não registra, um clique manda caso, valor e frase). Não provado
+sem banco: o lançamento gravado. **Depende de você:** recarregar a
+extensão (1.68.0).
+
+### Respostas em três tons (24/09/2026, 1.67.0)
+
+Quarto item da Fase 28: "melhore as sugestões de resposta" —
+acolhedora, objetiva e técnica, com o nome e a pendência real, sem
+prometer o que não está registrado, aprendendo com o que você editou.
+
+- `lib/models/tonsDaResposta.ts`: `tonsSemIA` (as regras) com o nome, o
+  pedido real, o que foi feito e o tema pelo catálogo de causas
+  ("impressão de pedidos", não "Sistema"); prazo só o que a conversa
+  registra — e a promessa vencida vira desculpa pelo atraso, não data
+  nova. `prometeSemRegistro` acusa prazo que a conversa não tem.
+  `estiloAprendido`: a saudação trocada e a despedida acrescentada em 2
+  das últimas 5 edições viram estilo (aplicado às regras); as últimas 3
+  edições vão para a IA como exemplo.
+- Tabela nova `EdicaoDeResposta` (quem, tom, sugerido, enviado) e
+  `/api/extensao/aprender-resposta`, que só grava quando o texto mudou.
+- `/api/extensao/conversa`: o esquema da IA ganhou `tons`; sem IA, os
+  das regras. Cada tom passa pela conferência do documento e pela de
+  promessa sem registro.
+- Painel: "Responder em três tons" com abas, texto editável (as teclas
+  não vazam para o WhatsApp) e "copiar", que manda a edição quando o
+  texto mudou — uma vez por texto.
+- Conserto da 1.65.0: o service worker não repassava o `historico`
+  (casos abertos e reclamações) ao "o que fazer agora"; agora repassa.
+
+Provas: `npm run check:tons` (os três tons, o prazo registrado, a
+promessa vencida, a promessa sem registro, o estilo aprendido e
+aplicado, os exemplos para a IA), o endpoint no servidor de
+desenvolvimento e a bancada do painel (abas, cópia sem editar não
+aprende, editada aprende uma vez, tecla não vaza). **Depende de você:**
+`npm run db:push` e `npm run db:rls` (a tabela das edições) e recarregar
+a extensão (1.67.0).
+
+### Resumo que situa (24/09/2026, 1.66.0)
+
+Terceiro item da Fase 28: "melhore os resumos" — o que o cliente quer, o
+que já foi feito, o que prometemos e quando, o que falta e o risco,
+citando as mensagens, no tamanho que a conversa pede.
+
+- `lib/models/resumoQueSitua.ts`: `situarSemIA` pelas regras — o último
+  pedido do cliente, as frases nossas de "já fiz/ajustei/encaminhei", as
+  promessas com dia ou hora (`combinadoNaMensagem`, com "amanhã" contado
+  do dia do carimbo da mensagem, e se venceu) e as sem data ("vou
+  verificar"), a pendência do motor próprio e o risco (Procon, imprensa,
+  cancelamento, operação parada, prejuízo, humor, promessa vencida,
+  rajada). Listas de até 2 itens em conversa curta, 3 até 20 mensagens,
+  5 acima.
+- `conferirSituacao`: a situação da IA conferida — citação que não está
+  na conversa sai (sem caixa, acento e espaço de diferença), a data das
+  promessas vem das mensagens, e o risco nunca fica abaixo do das
+  regras. Sem IA, as regras preenchem.
+- `/api/extensao/conversa`: o esquema da IA ganhou `situacao` (cada
+  ponto com a citação literal), as mensagens levam o carimbo, e a
+  resposta sai sempre com a situação conferida.
+- Painel: "Quer · Já feito · Prometido · Falta · Risco" no resumo, com a
+  citação em itálico (sem repetir quando é igual ao ponto), a promessa
+  vencida em vermelho e o risco numa etiqueta de cor.
+
+Provas: `npm run check:situacao` (cada parte, a data de "amanhã" pelo
+carimbo, o vencido, o risco, o tamanho, a citação inventada que sai, o
+risco que não desce) e o endpoint no servidor de desenvolvimento (motor
+próprio) desenhado na bancada do painel. **Depende de você:** recarregar
+a extensão (1.66.0).
+
+### O que fazer agora (24/09/2026, 1.65.0)
+
+Segundo item da Fase 28: "o que é melhor fazer no momento: só escutar,
+enviar áudio, um momento no Meet".
+
+- `lib/models/oQueFazerAgora.ts`: regras sobre a conversa, na ordem —
+  escalar (Procon, advogado, ação, golpe, imprensa — os padrões dos
+  critérios de criticidade — ou humor 1 com 2+ reclamações ou casos
+  abertos), só escutar e acolher (3+ mensagens seguidas do cliente e
+  humor até 2), assumir o erro (o cliente aponta falha nossa), esperar a
+  área e dizer quando volta (caso com área acionada e o cliente
+  pergunta do andamento), 15 minutos no Meet (conversa longa com "não
+  entendi" ou assunto de tela), áudio curto ("não entendi" ou nossos
+  textos longos) e, sem sinal, responder com o próximo passo. Sempre com
+  o porquê e três linhas de roteiro; fora do expediente (antes das 8h,
+  depois das 18h, fim de semana) vem o aviso de responder curto e
+  marcar o retorno.
+- `/api/extensao/sinais` (que o painel já chamava sozinho) devolve
+  `agora`, com a área que está com o caso e a data do retorno lidas do
+  banco (`caseMovement` aberto + expediente). O painel manda o carimbo
+  de cada mensagem e o histórico que já tem (casos abertos, reclamações).
+- Painel: o bloco "O que fazer: …" logo abaixo do cabeçalho do cliente,
+  com o roteiro fechado até o clique; a cor segue a urgência.
+
+Provas: `npm run check:momento` (as sete abordagens, o porquê, o roteiro
+com a data da área, o carimbo em Brasília, o expediente) e teste na
+bancada com os scripts reais do painel (o bloco no lugar, o histórico e
+o carimbo indo ao servidor, o roteiro abrindo). **Depende de você:**
+recarregar a extensão (1.65.0).
+
+### Botão que se move (24/09/2026, 1.64.0)
+
+Primeiro item da Fase 28 ("Extensão que lê o momento"): "mover o botão
+da extensão".
+
+- O botão redondo (`.gatilho`) é arrastável: só vira arrasto depois de
+  6 px de movimento (o clique trêmulo continua abrindo o painel), o
+  clique que fecha o arrasto não abre nem fecha a gaveta, e a posição é
+  presa à janela — inclusive quando a janela muda de tamanho.
+- A posição fica em `botaoPorSite` na configuração (`storage.sync`), uma
+  por site (`location.hostname`); o site sem posição usa o canto de
+  baixo à direita. "Botão no canto", no rodapé do painel, aparece quando
+  o botão foi movido e devolve ao canto.
+
+Provas: `check:fiacao`, `check:painel` e `check:escape`; teste no
+navegador com os scripts reais do painel e um `chrome` simulado (abre no
+clique, arrasta sem abrir, grava por site, não sai da janela, volta ao
+canto, e a posição guardada volta ao abrir o site). **Depende de você:**
+recarregar a extensão (1.64.0).
+
+### Tendência que vira ação (24/09/2026, 1.63.0)
+
+Último item da Fase 27 — fecha a fase ("Causas raiz que direcionam"):
+top causas da semana por frente, o que subiu, e a causa que passa do
+limite vira item em Projetos com dono.
+
+- `semanaDasCausas` (`lib/models/causaRaiz.ts`): os últimos 7 dias contra
+  os 7 anteriores (janela móvel, para a segunda de manhã não zerar), o
+  top 3 de cada frente e "subiu" quando a causa tem 2 ou mais registros
+  a mais que na semana anterior.
+- `lib/services/reincidencia.service.ts`: a leitura dos registros e a
+  abertura do item saíram da ação do botão para um serviço usado pelo
+  botão e pela rotina. `donoDoItem`: o responsável é a área dona da
+  causa; sem área, quem abriu.
+- Rotina diária (`/api/cron`, etapa `reincidencias`): toda causa com área
+  dona no catálogo que tem 3 ou mais registros em 30 dias, somando as
+  frentes, vira item em Projetos com a área como responsável e o prazo
+  da causa na descrição. A marca `origem` (uma por causa e por mês)
+  segura o segundo item; a causa sem dono fica de fora e é listada no
+  relatório da rotina.
+- Causas raiz ganhou "A semana: o que subiu e o que vira ação": o top de
+  cada frente, o que subiu e o que passou do limite, com o dono, "Item
+  aberto em Projetos" quando já existe, "a rotina de amanhã cedo abre o
+  item" para a causa com dono e "Abrir agora" para qualquer uma.
+
+Provas: `npm run check:causas` (a semana e a anterior, caixa e espaço, o
+que subiu, o top por frente, as bordas da janela, o dono do item) e
+teste no navegador da vista da semana. Não provado sem banco: a rotina
+abrindo o item (`check:cron` pede o banco). **Depende de você:** dar
+dono às causas — só as com dono viram item sozinhas.
+
+### A mesma régua em todas as frentes (24/09/2026, 1.62.0)
+
+Terceiro item da Fase 27: Reclame Aqui, NPS, Redes e Google
+classificados pelo mesmo catálogo, com a sugestão pelo texto.
+
+- `motorDaCausa` (`lib/models/catalogoDeCausas.ts`): um índice só com os
+  registros já classificados das quatro frentes (só causas ativas do
+  catálogo, sem diferença de grafia) e as regras de texto de cada causa
+  (`regrasDoCatalogo`). O relato do Reclame Aqui ensina a sugestão do
+  Google; o comentário do NPS, a das redes.
+- `sugerirCausaRaiz` (`lib/actions/sugestoes.ts`): a conta no servidor —
+  o relato e o post não vêm na carga da lista —, com os registros e o
+  catálogo em cache (5 min, invalidados por caso e por cadastro) e o
+  índice em memória por 1 minuto. Devolve a taxa de acerto medida quando
+  há base.
+- `CausaSugerida`: "Causa sugerida pelo texto: X — Usar" embaixo do campo
+  de causa nas nove telas que classificam. Some quando já é a escolhida;
+  nunca marca sozinha. A classificação do NPS deixou a sugestão própria
+  (só com exemplos do NPS) e usa a mesma; `useSugestaoNps` ficou só com
+  o tipo.
+- `medirRegua` e a seção "A mesma régua nas quatro frentes" em Causas
+  raiz: por frente, registros com texto, com causa, com nome fora do
+  catálogo e o acerto da sugestão (tirando cada registro da base, até
+  200 por frente). Causa desativada não é "fora": é história.
+- `unificarCausa`: leva os registros de um nome fora do catálogo
+  ("cobranca") para a causa certa, nas três tabelas (casos, NPS, Google),
+  numa transação; recusa quando o nome de origem é uma causa do catálogo
+  (aí é renomear ou desativar no cadastro).
+
+Provas: `npm run check:causas` (exemplos só do catálogo ativo, o Reclame
+Aqui ensinando o Google, desativada não sugerida, a contagem por frente,
+o fora do catálogo com a causa certa, o acerto tirando o registro) e
+teste no navegador da régua, do Unificar e da sugestão (aparece, Usar
+marca, some quando é a escolhida). Não provado sem banco: a leitura real
+e a unificação gravando.
+
+### Cada causa com dono (24/09/2026, 1.61.0)
+
+Segundo item da Fase 27: a área que resolve e o prazo interno, e
+classificar já sugere acionar a área certa.
+
+- Cadastro de causas (NPS → Gerenciar, e o novo "Editar" em Causas
+  raiz): cada linha ganhou a área dona (Atendimento, Suporte N2,
+  Financeiro, Comercial, Desenvolvimento, Implantação) e o prazo (4 h
+  úteis a 7 dias úteis). `saveNpsRootCause` grava os dois e as palavras;
+  antes do `db:push`, renomear continua funcionando e só a área responde
+  "rode npm run db:push".
+- `DonoDaCausa`: a linha "Dono: Financeiro · 2 dias úteis" embaixo do
+  campo de causa raiz nas nove telas que classificam (investigação do
+  caso, janela do caso, triagem e encerramento das redes, tratativa e
+  janela do Google, ficha, classificação e janela do NPS). No caso do
+  Reclame Aqui e na janela do caso, o botão "Acionar <área>" abre o
+  acionamento já com a área dona escolhida; causa do próprio Atendimento
+  não tem botão.
+- O prazo da causa aperta o relógio: `prazoComCausa` — quando a área
+  acionada é a dona e o prazo da causa é menor que o da prioridade, vale
+  o da causa (o modal diz por quê). `acionarArea` lê o prazo do banco
+  (`donoNoBanco`), nunca da tela; sem as colunas, segue a prioridade.
+- Causas raiz mostra "O catálogo e os donos": as ativas, as sem dono
+  primeiro.
+
+Provas: `npm run check:causas` (acha a causa, prazo da causa × da
+prioridade, outra área, causa sem dono) e testes no navegador (a linha
+do dono e o botão, o cadastro gravando área e prazo, a tela Causas raiz
+em modo demonstração). Não provado sem banco: o acionamento real com o
+prazo da causa. **Depende de você:** `npm run db:push` e dar dono às
+causas.
+
+### Catálogo de causas tirado da base (24/09/2026, 1.60.0)
+
+Primeiro item da Fase 27 ("Causas raiz que direcionam"): "crie causas
+raiz conforme os casos que já tiveram para direcionar corretamente".
+
+- `lib/models/catalogoDeCausas.ts`: 19 famílias de causa da Cardápio Web
+  (pedido do consumidor ao restaurante, repasse e pagamento online,
+  cobrança depois de cancelar, pedido de cancelamento, nota fiscal,
+  cobrança e mensalidade, impressão, integração com iFood, WhatsApp e
+  robô, sistema fora do ar, cardápio e preços, taxa de entrega, cupom,
+  implantação, promessa da venda, demora, postura, dúvida de uso, função
+  que falta), da mais específica para a mais genérica, cada uma com a
+  área que resolve (Atendimento, Suporte N2, Financeiro, Comercial,
+  Desenvolvimento, Implantação), o prazo e as causas genéricas que
+  detalha. `propostaDoCatalogo` conta os registros por família e por
+  frente, com dois exemplos de frentes diferentes, e lista as palavras
+  que mais se repetem no que não coube.
+- `lib/actions/catalogoDeCausas.ts`: `lerPropostaDoCatalogo` lê do banco
+  o relato e o post (que a lista não carrega), os comentários do NPS e
+  o texto do Google; `aprovarCausasDoCatalogo` grava as causas com área,
+  prazo e palavras — a que já existe com o mesmo nome ganha área e
+  prazo; nada é apagado nem renomeado.
+- Tela `/causas-raiz` (menu Inteligência → Causas raiz): a proposta com
+  a cobertura, a contagem por frente, os exemplos, a área e o prazo
+  editáveis e o botão Aprovar. Vem marcada a família com 3 ou mais
+  registros que ainda não está no catálogo.
+- `NpsRootCause` ganhou `area`, `prazoHoras` e `palavras`. A leitura do
+  cadastro cai para as colunas antigas enquanto o `db:push` não roda, e
+  editar ou excluir uma causa não pede mais as colunas novas.
+- `regrasDoCatalogo`: as regras de texto que a sugestão usa para as
+  causas novas (a expressão da família, ou as palavras guardadas).
+
+Provas: `npm run check:causas` (cada relato na família certa, a
+contagem, os exemplos, o que não coube, a aprovação e a sugestão pelo
+texto) e teste no navegador da proposta (marcadas, avisos, área e prazo
+escolhidos indo para a aprovação). Não provado sem banco: a leitura real
+dos registros e a gravação. **Depende de você:** `npm run db:push` (as
+três colunas novas), abrir Causas raiz, conferir a área e o prazo e
+aprovar.
+
+### O dossiê sai da extensão (24/09/2026, 1.59.0)
+
+Último item da Fase 26 — fecha a fase ("Dossiê pela plataforma"): "quero
+que você retire [da] extensão".
+
+- A aba Dossiê do painel (`P.blocoDossie`) virou o botão "Abrir o dossiê
+  na plataforma", que abre `/reclame-aqui/<protocolo>/dossie` no endereço
+  configurado (ação nova `abrir-na-plataforma`, pela mensagem
+  `abrirNaPlataforma` que o service worker já tinha). Contato sem
+  reclamação: a aba diz que o dossiê nasce da reclamação.
+- Saíram do painel o "Montar dossiê (~15 s)", a importação da
+  transcrição do Crisp, o "Dossiê completo" e o "Salvar dossiê". Ficou o
+  "Resumo rápido do caso", que é leitura.
+
+Provas: `check:fiacao` (nenhum botão sem tratador, versões iguais),
+`check:escape` e `check:painel` passando; sintaxe conferida com
+`node --check`. **Depende de você:** recarregar a extensão (1.59.0).
+
+### O dossiê pela plataforma (24/09/2026, 1.58.0)
+
+Quatro itens da Fase 26 — "dossiê deve ser feito pela plataforma e
+precisa levar a estrutura que já te enviei". A estrutura
+(`lib/services/dossie.service.ts`: `montarDossie`, `conferirDossie`,
+`renderizarDossie`) existia desde 03/09 e nenhuma tela usava.
+
+- **As 8 partes, em tela grande:** `/reclame-aqui/<caso>/dossie`, pelo
+  botão Dossiê na ficha. Identificação, partes, linha do tempo numerada
+  e evidências vêm do banco e não se editam ali (corrige-se o registro);
+  destinatário, pedido, sumário, apuração (verificado · sustentado pela
+  evidência · só alegado), enquadramento e conclusão se escrevem.
+- **Montado dos registros:** a montagem passou a trazer os contatos
+  registrados (1º contato, tentativas com o resultado, atualização,
+  pedido de avaliação, validação — a nota vira anexo) e as conversas
+  guardadas (a transcrição vira anexo). E os anexos saem numerados na
+  ordem da cronologia — eram numerados na ordem em que cada fonte era
+  lida, e a linha do tempo citava o Anexo 05 antes do 02.
+- **A IA só escreve o sumário e a apuração** (`escreverDossieComIA`),
+  a partir da cronologia fechada; sem IA no ar, o rascunho das regras
+  (`rascunhoSemIA`: quem, quando, quantos eventos; verificado = fato com
+  peça). Nada é gravado sem a pessoa salvar.
+- **Conferência antes de usar** (`conferenciaAntesDeUsar`): a do
+  documento (cronologia, anexo citado que existe) mais sumário e pedido
+  escritos, pedido que cita a regra (regulamento, termos, política),
+  alegação sem prova, evidência sem data no nome e peça de fora do
+  sistema por anexar.
+- **Copiar e baixar:** o texto do pedido de moderação (o pedido, o
+  sumário, os fatos e a regra) e o dossiê inteiro em .md.
+- **Uma tabela nova, `DossieDoCaso`**, com as partes escritas (a versão
+  sobe a cada gravação). Vai no mesmo `npm run db:push` + `db:rls` do
+  Prêmio; sem ela, o dossiê monta e baixa, mas não salva — e diz.
+
+Provas: `check:dossie-escrito` (novo, 19 pontos: o rascunho sem IA, a
+conferência, o documento e o pedido de moderação, e a montagem com um
+Prisma de teste — contatos e conversa na linha do tempo, anexos 01 a 04
+em ordem, o nome do arquivo acompanhando o número). No navegador, o
+editor com o dossiê de teste: a conferência acusa e deixa de acusar ao
+escrever, o pedido de moderação se escreve sozinho. `check:seguranca`
+com as 4 ações novas. `tsc` e `lint` limpos.
+
+### Depoimentos prontos (24/09/2026, 1.57.0)
+
+Último item da Fase 23 — fecha a fase ("Prêmio Reclame Aqui"):
+"promotores que aceitaram ser case e as melhores falas dos que avaliaram
+bem, para a campanha e para o time de marketing".
+
+- **De onde vêm** (`depoimentosDoPremio`): comentários de promotores do
+  NPS (9 e 10) e avaliações 5 estrelas do Google com autor identificado —
+  de 25 caracteres para cima e sem ressalva ("ótimo, mas demorou" não
+  serve). O caso do Reclame Aqui não guarda o texto da avaliação do
+  consumidor, então não entra.
+- **O que pode ser usado:** quem aceitou ser case (`aceitaCase`) e a
+  avaliação pública do Google, sim; o comentário do NPS sem aceite vem
+  marcado "pedir autorização antes de publicar". Nessa ordem, e dentro de
+  cada grupo a fala de tamanho bom e mais recente.
+- **O cartão** na tela do Prêmio: Liberados / Todos, copiar cada um
+  (“fala” — Nome, cliente Cardápio Web) ou os 20 primeiros de uma vez.
+
+Provas: `check:premio` com 4 pontos novos (a ordem case → Google → NPS
+sem aceite; ressalva, nota 8, fala curta, 4 estrelas e anônimo de fora;
+o texto pronto). A tela do Prêmio abre sem erro. `tsc` e `lint` limpos.
+
+### O prêmio no calendário (24/09/2026, 1.56.0)
+
+Item da Fase 23 — "datas e categoria que você cadastra, e a pergunta que
+importa: a reputação chega onde precisa até a data de corte? Quantas
+avaliações faltam, contadas pela janela do índice".
+
+- **A janela do corte** (`janelaNaDataDeCorte`): os seis meses fechados
+  antes do mês do corte — a regra da janela vigente, olhada daquele dia
+  (corte em 15/11/2026 → 01/05 a 31/10).
+- **A conta** (`premioNoCalendario`): a nota dessa janela hoje, e o menor
+  número de avaliações nota 10, entre as reclamações da janela ainda sem
+  avaliação, que leva a nota à meta — pela `simulate` da calculadora. É
+  o teto do que o pedido pode render; "nem com todas" quando não dá.
+- **O cartão** na tela do Prêmio: votação (abre em / fecha em), data de
+  corte (em quantos dias, e a janela), a nota contra a meta e a frase
+  com o que falta, com o atalho para Pedir avaliação.
+
+Provas: `check:premio` com 7 pontos novos (as janelas de novembro e de
+janeiro, os dias até o corte, 3,8 → 6,0 pede 6 avaliações 10, meta alta
+demais é impossível, meta batida é 0). O cartão renderizado no
+navegador, inclusive sem reclamação na janela. `tsc` e `lint` limpos.
+
+### Prêmio Reclame Aqui: a campanha de votação (24/09/2026, 1.55.0)
+
+Item da Fase 23 — "a lista dos que vão receber, a mensagem modelo com o
+link da votação, um pedido e um lembrete, e a marca de pedido feito e
+disse que votou — com o painel da campanha".
+
+- **O painel** (`CampanhaDeVotacao`, na tela do Prêmio): a pedir, pedido
+  feito, lembrete feito, disse que votou — cada número filtra a lista —
+  e a taxa de voto entre quem recebeu o pedido.
+- **Cada pessoa:** "Pedir no WhatsApp" (depois, "Lembrar no WhatsApp")
+  abre `wa.me` com a mensagem da vez já escrita — o pedido para quem
+  ainda não recebeu, o lembrete para quem recebeu (sem lembrete escrito,
+  repete o pedido) — e o botão do próximo passo. A plataforma não envia:
+  abre a conversa, e quem manda é você.
+- **Em lote:** marcar várias e registrar o passo de uma vez, ou voltar
+  para "a pedir".
+
+Provas: `check:premio` com 8 pontos novos (a mensagem da vez, o link do
+WhatsApp, o painel e a taxa). No navegador, com o componente real e uma
+campanha de teste: a lista começa em "a pedir", o link leva o texto
+certo, sem telefone não há link, pedido feito vira "Lembrar no
+WhatsApp", e a taxa (1 de 2) é 50%. `tsc` e `lint` limpos. Registrar de
+verdade precisa das tabelas no banco (1.54.0).
+
+### Prêmio Reclame Aqui: exportar os contatos (24/09/2026, 1.54.0)
+
+Primeiro item da Fase 23 — "exportar todos os contatos que me avaliaram
+positivamente … para pedir para votarem nos prêmios Reclame Aqui".
+
+- **Duas tabelas novas** (`CampanhaDoPremio`, `PedidoDeVoto`). **Depende
+  de você: `npm run db:push` e `npm run db:rls` no banco, uma vez**, antes
+  de usar a tela — até lá ela diz exatamente isso, em vez de erro.
+- **A lista** (`lib/models/premio.ts`): Reclame Aqui avaliado (sem as
+  avaliações desconsideradas), com os filtros resolvido, voltaria e nota
+  mínima (padrão: resolvido e nota ≥ 7); NPS promotor (9 e 10), e só
+  quem publicou 5 estrelas no Google, se quiser; período pela data da
+  avaliação. Uma pessoa por telefone (e sem telefone, pelo e-mail): quem
+  reclamou e respondeu ao NPS recebe um pedido só. Quem já está na
+  campanha fica de fora.
+- **A planilha** (`registrarExportados`): nome, telefone no formato
+  internacional (+55DDD…; mascarado ou curto fica vazio), e-mail, a
+  mensagem com o primeiro nome e o link, o motivo e a origem. Quem foi
+  exportado entra na campanha com quem exportou e quando.
+- **A tela** `/reclame-aqui/premio`, no menu do Reclame Aqui: a campanha
+  (nome, categoria, link, datas, data de corte, nota meta, mensagem e
+  lembrete) e "Quem pedir o voto", com a prévia das primeiras linhas.
+- `janelas.ts` passou a saber que `/reclame-aqui/premio` é tela, e não
+  um caso.
+
+Provas: `check:premio` (novo, 12 pontos: telefone internacional,
+mascarado e curto recusados, a mensagem com o nome e sem "Olá, !", os
+filtros, a Ana do RA e do NPS vira uma pessoa só, 5 estrelas no Google,
+quem já está na campanha fica de fora, o período). `check:seguranca`
+com as 4 ações novas conferindo quem chama. A tela abre sem erro no
+modo de demonstração; exportar de verdade precisa das tabelas no banco.
+`tsc` e `lint` limpos.
+
+### Lembrete que nasce sozinho (24/09/2026, 1.53.0)
+
+Último item da Fase 25 — fecha a fase ("Agenda que dá vontade de
+abrir"). "Lembretes você pode criar automaticamente identificando alguma
+pendência e agendamento com o cliente."
+
+- **Duas origens** (`gerarLembretesAutomaticos`, server action):
+  - **área acionada sem retorno** → "Cobrar retorno de Financeiro —
+    RA-123", Cobrança interna, na hora do prazo da área
+    (`movementStatus`); prazo que já passou vira lembrete para agora;
+  - **retorno combinado numa conversa guardada** (mensagens nossas dos
+    últimos 3 dias) → "Retorno combinado com Ana: “Te ligo amanhã às
+    10h.”", Follow-up, no dia e hora combinados, contados do dia da
+    mensagem (`combinadoNaMensagem`, com o leitor da "linha"). Promessa
+    sem dia nem hora ("vou verificar e te retorno") não vira lembrete.
+- **Nunca duplica, nunca volta:** o id é fixo por origem
+  (`auto-area-<id>`, `auto-conversa-<id>`) e a geração só cria o que não
+  existe. "Desfazer" conclui o lembrete em vez de apagar.
+- **Quando roda:** ao abrir a Agenda. O que nasceu aparece no topo, um
+  por linha, com desfazer e "desfazer todos".
+- **Pedido de avaliação** não virou lembrete: a fila "pedir avaliação
+  hoje" já é atividade do Meu dia, com o dia de cada um.
+- No caminho: o leitor da "linha" passou a aceitar pontuação depois do
+  dia e da hora ("às 16h, combinado?"), e o `check:persistencia` voltava
+  vermelho desde o `4a34b68` (o `aplicarDoServidor` das contas, da
+  imersão) — declarado, como os outros que só aplicam o que o servidor
+  gravou.
+
+Provas: `check:agenda` com 6 pontos novos (as três promessas, sem dia
+nem hora não é, dia sem promessa nossa não é, o trecho certo);
+`check:persistencia` e `check:seguranca` passando. A Agenda abre sem
+erro no modo de demonstração; ver os lembretes nascerem precisa de área
+acionada e conversa guardada no banco — conferir depois do push. `tsc`
+e `lint` limpos.
+
+### O que eu criei, fácil de achar (24/09/2026, 1.52.0)
+
+Item da Fase 25 — "pra verificar coisas que criei tá muito ruim de ver".
+
+- A lista de atividades da Agenda (os dias, abaixo da linha do tempo)
+  ganhou uma barra: busca no título, estabelecimento, protocolo e
+  responsável; situação (Abertas, que é o padrão, Atrasadas, Concluídas,
+  Todas); tipo; frente (Reclame Aqui, Redes, sem caso ligado, pelo
+  protocolo da atividade); e "Só as minhas" (responsável é quem está
+  logado). Ao lado, "2 de 14".
+- Saiu o "Mostrar resolvidas" do cabeçalho: virou a situação. As
+  concluídas ficam guardadas e reabrem pelo mesmo quadradinho.
+- Filtro que esconde tudo diz "Nenhuma atividade com esses filtros" e
+  oferece ver todas.
+- A atividade não guarda quem a criou, só o responsável: "Só as minhas"
+  é pelo responsável.
+
+Provas, no navegador, na Agenda: três atividades criadas pela linha,
+busca "zé" acha uma, tipo Follow-up acha uma, concluir tira das abertas
+e ela aparece em Concluídas, e o filtro vazio diz isso. `tsc` e `lint`
+limpos.
+
+### Criar em uma linha (24/09/2026, 1.51.0)
+
+Item da Fase 25 — "\"amanhã 10h ligar RA-123\" vira lembrete com hora e
+caso vinculado".
+
+- **O leitor** (`lib/models/linhaDaAgenda.ts`): dia (hoje, amanhã,
+  depois de amanhã, dia da semana — sempre o próximo, nunca hoje —, ou
+  dd/mm, que vira o ano que vem se já passou e é recusado se não
+  existe), hora (10h, 10h30, 10:30, às 14), protocolo (só liga se o caso
+  existe) e o tipo pelas palavras (ligar/retornar → Follow-up,
+  cobrar/escalonar → Cobrança interna, avaliação → Solicitação de
+  avaliação; o resto, Pendência). O que sobra é o título. Sem o que
+  fazer (só "amanhã 10h"), não cria.
+- **O campo** no topo da Agenda: a prévia do que foi entendido enquanto
+  se escreve, Enter cria, e "Criada para 17/09 · desfazer" ao lado.
+  `createTask` passou a devolver o id da atividade nova, para o desfazer.
+- **Não feito: "também pela extensão".** O painel da extensão já cria
+  lembrete pelo formulário dele; levar a linha para lá fica para a
+  Fase 28.
+
+Provas: `check:agenda` com 9 pontos novos (os exemplos acima, a quarta
+que é hoje vira a próxima, 10/09 vira 2027, 31/11 fica no título,
+protocolo inexistente não liga). No navegador, na Agenda: a prévia
+"hoje · 23:00 · Follow-up", Enter cria, a atividade aparece na linha do
+tempo às 23:00, e desfazer tira. `tsc` e `lint` limpos.
+
+### O lembrete que avisa (24/09/2026, 1.50.0)
+
+Item da Fase 25 — "na hora marcada, aviso na plataforma e no navegador,
+com abrir o caso e adiar 15 min, 1 h ou amanhã".
+
+- **A regra** (`lib/models/lembretes.ts`): avisa a atividade de hoje,
+  aberta, com hora, quando a hora chega. "Já avisei" é da atividade
+  naquele horário (`chaveDoAviso`): adiada, ela avisa de novo no horário
+  novo. Adiar 15 min e 1 h contam de agora (passou da meia-noite, vai
+  para o dia seguinte); "Amanhã" é o próximo dia útil no mesmo horário.
+- **O aviso** (`AvisosDeLembrete`, montado no layout junto das
+  mini-janelas): no alto, à direita, abaixo da barra — embaixo ficam os
+  toasts e a bandeja das janelas. Até três à vista, cada um com Abrir o
+  caso (mini-janela), Adiar 15 min / 1 h / Amanhã, Concluir e
+  dispensar. O dispensado fica no navegador de quem trabalha.
+- **No navegador:** "Avisar também fora da aba" pede a permissão; com
+  ela, cada lembrete sai uma vez como notificação do sistema.
+- O relógio da tela anda de minuto em minuto (`useAgora`): o aviso chega
+  até um minuto depois da hora.
+
+Provas: `check:agenda` com 6 pontos novos (só o de hoje, aberto e com
+hora; dispensado não volta; adiado avisa de novo; 15 min de agora; 1 h
+às 23h30 vai para 00h30 de amanhã; amanhã na sexta é segunda). O aviso
+monta em todas as telas sem erro no modo de demonstração; vê-lo
+disparar precisa de atividade com hora no banco — conferir depois do
+push. `tsc` e `lint` limpos.
+
+### Agenda: linha do tempo com tudo o que tem prazo (24/09/2026, 1.49.0)
+
+Dois itens da Fase 25, "Agenda que dá vontade de abrir" — "tudo está
+muito desorganizado", "os lembretes precisam aparecer por lá".
+
+- **Tudo com prazo no mesmo lugar** (`lib/models/compromissos.ts`): as
+  atividades da agenda (os lembretes dos casos já são atividades com o
+  protocolo), os eventos do Google, e os prazos que ainda dá para
+  cumprir — 1º contato e solução dos casos abertos (`slaStatus`), 1º
+  contato do NPS, retorno das áreas acionadas (`movementStatus`) — e as
+  ligações da cadência de hoje, como o Meu dia conta. O que já estourou
+  vira um número com link para o Meu dia: são dezenas, e numa linha do
+  tempo esconderiam o resto.
+- **Dia e semana numa linha do tempo** (`LinhaDoTempo`, no topo da
+  Agenda): Dia mostra o horário com a marca de "agora", "no dia, sem
+  hora" embaixo, e em cima "Ficou para trás" com as atividades vencidas
+  (Concluir e Para hoje em um clique). Semana mostra os sete dias lado a
+  lado; clicar num dia abre o dia. Atividade se conclui e passa para o
+  próximo dia útil na própria linha; caso ligado abre na mini-janela.
+- A página chama o Meu dia uma vez só, para a rotina e para as ligações
+  (`RotinaNaAgenda` recebe o `dia`).
+- **Não entra ainda** o "retorno combinado com o cliente" que não virou
+  atividade — é o item "Lembrete que nasce sozinho".
+
+Provas: `check:agenda` (novo, 9 pontos: a ordem do dia pela hora, o
+caso urgente de ontem 16h vencendo hoje 10h, NPS pelo nome, ligação sem
+hora só no dia dela, e o estourado virando número). No navegador: a
+Agenda abre sem erro no modo de demonstração, e a vista do dia desenha
+os compromissos de teste com a marca de agora no lugar. `tsc` e `lint`
+limpos.
+
+### Fim do dia que se escreve sozinho (24/09/2026, 1.48.0)
+
+Último item da Fase 24 — fecha a fase ("Meu dia sem atrito"). O
+checkpoint da manhã fala de ontem; faltava o fim de hoje.
+
+- **O servidor conta hoje também.** `lerMeuDia` já contava ontem
+  (contatos, 1º contatos, respostas públicas, pedidos de avaliação,
+  tentativas do NPS, Google respondido); ganhou `hojeAteAgora`, a mesma
+  conta desde a meia-noite de Brasília, com quatro consultas a mais na
+  mesma ida.
+- **O texto** (`lib/models/fimDoDia.ts`): *Feito* (os registros de hoje e
+  a rotina marcada), *Saiu da fila sem registro* (feito por fora, tirado
+  e adiado, com até três títulos e o dia da volta; o mesmo item marcado
+  em duas atividades conta uma vez; marca de outro dia não entra) e
+  *Ficou para amanhã* (cada atividade com itens, e o porquê: fora do
+  prazo e/ou não coube no expediente, pelo plano do dia).
+- **O cartão** "Fim do dia" no Meu dia, abaixo do checkpoint, com o
+  mesmo campo editável e o botão de copiar.
+
+Provas: `check:meu-dia` com 5 pontos novos; o cartão renderizado no
+navegador com os dados de teste, sem erro. A contagem de hoje no
+servidor é a mesma consulta da de ontem com outro intervalo — conferir
+contra a base depois do push. `tsc` e `lint` limpos.
+
+### O que move a nota hoje (24/09/2026, 1.47.0)
+
+Item da Fase 24 — "as três ações de maior efeito no índice do Reclame
+Aqui, com a conta". O `oQueMoveANota` já existia com duas ações
+(responder as sem resposta, pedir avaliação às da vez), na ordem em que
+eram montadas.
+
+- **A terceira ação:** as moderações pedidas e sem decisão, na janela
+  do índice. A conta tira cada uma da base com tudo o que ela carregava
+  (`simulate` com `removed`, o mesmo caminho da calculadora): uma nota 0
+  moderada sobe a nota. Moderação de reclamação que não pesa não aparece.
+- **A ordem é o efeito:** as três que mais mexem na nota, a maior
+  primeiro. O placar da semana, que mostra a primeira como "o próximo
+  passo para a nota", passa a sugerir de fato a que mais mexe; o popup
+  da extensão usa a mesma lista.
+
+Provas: `check:meu-dia` com 4 pontos novos, sobre a janela que o portal
+publica (e não a data de hoje — a janela é de meses fechados): a
+moderação pendente de uma nota 0 entra e sobe a nota (8,4 → 9,1, contra
+8,4 → 8,7 de responder as 2 sem resposta, e vem primeiro); no máximo
+três; moderação sem peso fica de fora. `tsc` e `lint` limpos.
+
+### Plano de recuperação do acumulado (24/09/2026, 1.46.0)
+
+Item da Fase 24 — "149 NPS vencidos não cabem num dia".
+
+- **A conta** em `lib/models/recuperacao.ts`: a cota que zera em 5 dias
+  úteis, arredondada de 5 em 5 (149 → 30); o dia útil em que zera com a
+  cota escolhida (hoje conta quando é útil; no fim de semana, começa na
+  segunda); e o ritmo de hoje — quanto saiu desde a primeira abertura do
+  dia, contra a cota. O que venceu durante o dia desconta do que saiu,
+  e "saiu" nunca fica negativo.
+- **O cartão** no Meu dia, logo depois do "Agora": só aparece para
+  frente com 10 ou mais fora do prazo (os mesmos itens da fila, sem
+  repetir o que está em duas atividades). Cotas para escolher, o dia em
+  que zera e a barra do dia. A cota escolhida e o número da primeira
+  abertura ficam no navegador de quem trabalha — lidos pelo
+  `useSyncExternalStore`, sem divergir do servidor na hidratação.
+- **Não mede ainda** quanto entra de acumulado por dia (NPS que vence):
+  o plano diz o dia em que zera se nada novo vencer.
+
+Provas: `check:meu-dia` com 9 pontos novos (149 → 30; quinta a 30 zera
+na quarta 30/09; começar no sábado conta da segunda; ritmo nunca
+negativo; bater a cota). No navegador, com o componente real: 7 pontos
+(3 vencidos do RA não aparecem, trocar a cota muda o dia, a cota e o
+início do dia voltam depois de recarregar, e sem erro de hidratação —
+que a primeira versão tinha). `tsc` e `lint` limpos.
+
+### Foco por frente e bloco de foco (24/09/2026, 1.45.0)
+
+Item da Fase 24 — "filtrar a fila: só Reclame Aqui, só detratores
+críticos, só o que vence hoje. E blocos de foco de 25 a 45 minutos".
+
+- **Filtro de foco** no Um por vez: Tudo, cada frente com itens, Críticos
+  e Fora do prazo, com a contagem ao lado. "Crítico" é campo novo do item
+  do Meu dia (`critico`), marcado onde o item nasce: reclamação ou
+  atendimento das Redes com prioridade Urgente, e resposta do NPS no nível
+  detrator crítico (`nivelDoNps`). Trocar de foco não conta como "saiu do
+  dia"; foco vazio diz "Nada neste foco agora", com o caminho para a fila
+  inteira.
+- **Bloco de foco** de 25 ou 45 minutos: o relógio no cabeçalho e
+  quantos itens saíram durante o bloco; no fim, "Bloco de 25 min: 4
+  fechados". Só na tela, não grava.
+- **Não feito: "só o que vence hoje".** O item da fila não traz o prazo,
+  só o "fora do prazo"; o filtro do que vence hoje precisa levar o prazo
+  de cada item à fila — fica anotado aqui.
+
+Provas, no navegador, com o componente real, uma fila de teste de 5
+itens em três frentes e o relógio do navegador controlado: 10 pontos
+(contagens de cada foco, trocar de foco não marca saída, foco vazio, o
+relógio anda, conta o que saiu no bloco e fecha com o total). `tsc` e
+`lint` limpos.
+
+### Ações na lista da fila (24/09/2026, 1.44.0)
+
+Item da Fase 24. O "Ver a fila" do Um por vez só levava ao item; agora:
+
+- **cada linha** tem feito hoje, tirar do dia e adiar para o próximo dia
+  útil (aparecem com o mouse em cima ou com o foco), sem abrir o item;
+- **uma caixa de marcar** por linha e uma para todos; com algo marcado,
+  a barra acima da lista oferece Feito hoje, Tirar do dia e Adiar para
+  o próximo dia útil, numa gravação só (`marcarItens` com a lista). A
+  barra tem altura fixa: marcar não empurra a lista.
+- A linha fixa diz "3 itens · tirado do dia · desfazer", e o desfazer
+  devolve todos. Atividade da agenda não se marca (a caixa fica
+  desligada): ela se conclui ou passa de dia pelos botões dela.
+
+Provas, no navegador, com o componente real e uma fila de teste de 5
+itens: 9 pontos (feito e adiar na linha sem abrir o item, adiar de sexta
+cai na segunda, dois marcados saem numa chamada só, desfazer devolve os
+dois). `tsc` e `lint` limpos.
+
+### Adiar para outro dia (24/09/2026, 1.43.0)
+
+Item da Fase 24 — "que seja possível remover a atividade, marcar um
+check, adiar para outro dia".
+
+- **Uma marca nova, sem mudar o banco.** `MarcaDeItemDaRotina.tipo` é
+  texto e já tinha `ate`: adiar grava `tipo: "adiado"` com `ate` na
+  véspera do dia da volta. `marcaValeHoje` já esconde o item até lá, e
+  no dia escolhido ele volta sozinho — se ainda for trabalho da
+  atividade. As regras moram em `lib/models/meuDia.ts`
+  (`ateDoAdiamento`, `opcoesDeAdiar`, `voltaDoAdiado`); o servidor recusa
+  hoje, datas passadas, mais de 90 dias e datas que não existem (o
+  `Date` aceita 31/11 e vira 01/12 calado — a data tem de voltar igual).
+- **Onde está.** No Um por vez, o botão Adiar (Amanhã, Próximo dia útil
+  quando é outro dia — na sexta, segunda —, ou uma data) e a tecla A,
+  que adia para o próximo dia útil; a linha fixa diz "volta em 28/09 ·
+  desfazer". Na lista de cada atividade, o menu do item ganhou a mesma
+  seção abaixo do "Não se aplica". Na lista dos tirados, o adiado aparece
+  como "volta em 28/09", com Devolver.
+- Fica para "Ações na lista da fila": adiar vários de uma vez.
+
+Provas: `check:meu-dia` com 9 pontos novos (quinta tem uma opção, sexta
+tem sábado e segunda; a marca vale até a véspera; hoje, passado, 91 dias
+e 31/11 recusados; adiado de sexta para segunda some três dias e volta
+na segunda) — com a validação antiga, o ponto de 31/11 falha. No
+navegador, com os componentes reais e uma fila de teste: 8 pontos
+(Amanhã, a tecla A, uma data escolhida, e o menu da lista gravam
+`adiado` com a volta certa). `tsc` e `lint` limpos.
+
+### Um por vez: nada pula sob o mouse, e o teclado (24/09/2026, 1.42.0)
+
+Dois itens da Fase 24, "Meu dia sem atrito" — "pop-up de quando coloco
+tirar do dia, aí o botão desce".
+
+- **Nada muda de lugar sob o mouse.** Feito hoje e Tirar do dia
+  mostravam um aviso no canto, e o item que saía da fila punha uma faixa
+  verde em cima do item seguinte: os botões desciam no instante do
+  clique. Agora a confirmação vai numa linha de altura fixa logo abaixo
+  dos botões ("Fulano · tirado do dia · desfazer"), que existe mesmo
+  vazia; o desfazer apaga as marcas que o clique gravou
+  (`desfazerMarcas`). E o item tem sempre duas linhas de título, uma de
+  detalhe e o "fora do prazo" na linha de cima: de um item para o outro,
+  os botões ficam na mesma altura.
+- **Teclado no Um por vez.** F feito (na atividade da agenda, concluir),
+  T tirar do dia, A passa a atividade da agenda para o próximo dia útil,
+  J e K além das setas, Enter abre na janela. Não vale dentro de campo
+  de texto, com modificador, com uma mini-janela em foco, nem logo depois
+  de "g" — "g t" continua indo para o Relatório e "g a" para a Agenda.
+  As teclas aparecem ao lado dos rótulos (some no celular).
+
+O "Adiar para outro dia" com data (amanhã, próximo dia útil ou uma data
+escolhida, para qualquer item) é outro item da fase: hoje o A vale só
+para a atividade da agenda, como o botão que já existia.
+
+Provas, no navegador, com o componente real e uma fila falsa (página de
+teste fora do commit): 13 pontos — J e K andam; o botão Tirar do dia
+fica na mesma altura com título de uma e de duas linhas e depois de
+tirar; T tira e a linha diz "tirado do dia · desfazer", sem aviso no
+canto; desfazer devolve o item; F marca feito; "g t" não tira nada. Na
+primeira rodada, a altura variava 4 px por causa do selo "fora do
+prazo" — corrigido. `tsc` e `lint` limpos.
+
+### A ficha salva sozinha (24/09/2026, 1.41.0)
+
+Fecha o último item da Fase 22, **"Salvar sem botão, com volta"** — "botão
+de salvar às vezes não é muito interessante, pense em uma forma melhor
+de salvar". A 1.39.0 trouxe o campo que grava ao sair (`CampoQueSalva`);
+faltava a ficha inteira, que passava dezenas de campos soltos (título,
+cliente, relato, contato, categoria, causa raiz, responsável, etapa,
+resposta pública, avaliação) por um rascunho com a barra Salvar.
+
+- **`useSalvarAoSair`**, por cima do `useRascunho` que já existia. O que
+  se escolhe (seletor, caixa, botão) grava na hora; o que se digita
+  grava ao sair do campo — tecla por tecla, não, que era o defeito que
+  o rascunho veio corrigir. "Salvo" só depois de o servidor confirmar.
+- **O aviso no lugar da barra** (`AvisoDoSalvar`): "grava ao sair do
+  campo" enquanto se digita, "salvando…", "salvo · desfazer" por 8 s; e
+  a recusa, que fica com "tentar de novo" e sem perder o texto. O
+  desfazer grava os valores de antes pelo mesmo caminho de sempre
+  (`updateCase` com o retrato anterior), então a proteção de edição
+  simultânea da Fase 10.1 vale para ele também.
+- **Os casos que o blur não pega.** O seletor de responsável tem busca:
+  escolher com Enter muda o valor com o cursor num campo que some da
+  tela, sem blur — passada a mudança, se o cursor não está num campo
+  de digitar que continua na tela, grava. E fechar a ficha (ou a
+  mini-janela) com o cursor num campo grava o que estava escrito, em
+  vez de perder.
+- **Defeito do rascunho que isso expôs.** Depois de gravar, o rascunho
+  limpava todas as edições. Com o botão dava no mesmo; gravando ao sair
+  do campo, quem pula para o próximo e digita enquanto a gravação está
+  no ar perdia o que digitou. Agora sai do rascunho só o que foi gravado.
+- **O que continua com botão:** formulários de vários campos de uma vez
+  — contato, acionar área, retorno da área, moderação, triagem — e os
+  cadastros. Mover etapa e etiquetar já gravavam direto.
+
+Provas, no navegador, com uma página de teste (fora do commit) montada
+com os mesmos `useRascunho`, `useSalvarAoSair`, `AvisoDoSalvar` e
+`Combobox` e uma gravação falsa de 600 ms: 19 pontos — digitar não grava,
+sair grava uma vez, desfazer volta banco e tela, seletor e caixa gravam
+na hora, o texto digitado durante uma gravação fica e é gravado depois,
+o responsável por Enter e por clique, a recusa mantém o texto e o
+tentar de novo grava, e fechar com o cursor no campo grava. Sem a
+correção do rascunho, o ponto da digitação durante a gravação falha
+(o texto some). `tsc` e `lint` limpos. Não abri a ficha real: este
+ambiente não tem o banco.
+
+**Depende de você:** abrir uma reclamação e editar um campo; recarregar
+a extensão (1.41.0).
+
+### Ficha: triagem pelo relato, links do RA, validação, resposta pública e imersão (23/09/2026, 1.40.0)
+
+Cinco pontos da Fase 22, em dois commits (`82433bf` e `4a34b68`) que
+subiram sem versão; a 1.40.0 é o registro deles.
+
+- **Critérios de criticidade completos.** "Mais critérios de urgente,
+  alta e adicione o normal." A triagem mostra as três colunas (Urgente,
+  Alta e Normal), 21 critérios ao todo. O relato acende os critérios
+  pelas palavras (`criteriosPeloTexto`) e mostra o trecho que acendeu
+  cada um; os de Normal não sobem o nível, registram por que o caso é
+  Normal. Quem já cancelou e segue sendo cobrado é cobrança, não risco
+  de cancelamento (`anula`). Medido contra os 363 relatos com
+  `scripts/medir-criterios.ts`.
+- **Reclamação e portal lado a lado.** Duas páginas com papéis
+  diferentes: a pública (o que o consumidor lê, `raUrl`, 321 das 363) e
+  a área da empresa (onde se responde e modera; sai do protocolo, existe
+  para as 363). `LinksDoRa` no quadro, na lista, no Meu dia, no Um por
+  vez, na busca, no sino, na ficha e nos dois painéis da extensão.
+- **Validação com cara de validação.** Um passo próprio
+  (`ValidacaoModal`): a pergunta pronta para copiar ou abrir no
+  WhatsApp, registrada como "aguardando o cliente"; a resposta —
+  confirmou (valida) ou apontou pendência (não valida, e a pendência
+  fica na trilha); a última fala da conversa guardada entra com um
+  clique; e o compromisso da avaliação, registrado junto.
+- **Resposta pública no tempo certo — decidido diferente do roadmap.**
+  O roadmap pedia duas respostas públicas (uma logo depois do 1º
+  contato, a final depois da validação). Ficou a regra do documento:
+  responder só depois da validação, porque responder antes abre a
+  avaliação do consumidor antes da solução. O custo da espera fica à
+  vista no passo: "o portal mostra não respondida há N dias" (mediana
+  de 6 dias da publicação à resposta; 10% passam de 32).
+- **Imersão que prepara o contato.** Resumo do cliente montado do dado,
+  sem IA (`resumoDoCliente`): conta, primeira reclamação ou não, NPS,
+  Google e a última fala guardada. Sem conta vinculada, acha pelo nome
+  ou documento ou cria ali mesmo (`ContaDaImersao`); os links do Crisp e
+  do portal gravam ao sair do campo.
+
+Provas: `check:sugestao-texto` (49 pontos), `check:links-do-ra` (6),
+`check:imersao` (8), `check:trilha` (64, com a validação pedida, a
+pendência e os dias sem resposta) — todos passando em 24/09. `tsc` e
+`lint` limpos.
+
+**Depende de você:** recarregar a extensão (1.40.0).
 
 ### Ficha: pessoas clicáveis, o nome que se preenche e a anotação em uma linha (23/09/2026, 1.39.0)
 

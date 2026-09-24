@@ -123,7 +123,8 @@ console.log("\n— Ficha completa e links (Fase 12) —\n");
   conferir("link de tela não abre janela", [janelaDoEndereco("/reclame-aqui/analytics", "t"), janelaDoEndereco("/meu-dia", "t"), janelaDoEndereco("/reclame-aqui", "t")], [null, null, null]);
 
   const fontes: [string, RegExp][] = [
-    ["components/rotina/RotinaDoDia.tsx", /<JanelaDoLink href=\{i\.href\}/],
+    /* A lista de cada atividade saiu da RotinaDoDia para ItensDaAtividade na 1.31. */
+    ["components/rotina/ItensDaAtividade.tsx", /<JanelaDoLink href=\{item\.href\}/],
     ["app/agenda/page.tsx", /casoDoProtocolo\.get\(item\.relatedCase\)/],
     ["components/clientes/ClientDetail.tsx", /<BotaoAbrirEmJanela/],
     ["components/estabelecimentos/EstablishmentDetail.tsx", /<BotaoAbrirEmJanela/],

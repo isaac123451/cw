@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   BookOpenCheck,
   CalendarCheck2,
+  Crosshair,
   FileBarChart,
   KeyRound,
   LibraryBig,
@@ -66,6 +67,7 @@ export const menuItems: MenuItem[] = [
     children: [
       { title: "Quadro", href: "/reclame-aqui" },
       { title: "Pedir avaliação", href: "/reclame-aqui/avaliacoes" },
+      { title: "Prêmio", href: "/reclame-aqui/premio" },
       { title: "Analytics", href: "/reclame-aqui/analytics" },
       { title: "Gráficos", href: "/reclame-aqui/graficos" },
       { title: "Calculadora", href: "/reclame-aqui/calculadora" },
@@ -90,6 +92,7 @@ export const menuItems: MenuItem[] = [
   { title: "Jornada do Cliente", href: "/jornada", icon: Route, group: "Pessoas e contas" },
   { title: "Relatório do ciclo", href: "/relatorio", icon: FileBarChart, group: "Inteligência" },
   { title: "Analytics", href: "/analytics", icon: BarChart3, group: "Inteligência" },
+  { title: "Causas raiz", href: "/causas-raiz", icon: Crosshair, group: "Inteligência" },
   { title: "Impacto no Negócio", href: "/impacto", icon: Wallet, group: "Inteligência" },
   { title: "Assistente", href: "/assistente", icon: Bot, group: "Inteligência" },
   { title: "Documentação", href: "/documentacao", icon: BookOpenCheck, group: "Conhecimento" },

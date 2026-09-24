@@ -4,6 +4,8 @@ import { useState } from "react";
 
 import Modal, { inputClass } from "@/components/shared/Modal";
 import SugestaoDoTexto from "@/components/shared/SugestaoDoTexto";
+import DonoDaCausa from "@/components/causas/DonoDaCausa";
+import CausaSugerida from "@/components/causas/CausaSugerida";
 
 import { classificarNps } from "@/lib/actions/nps";
 import { useNps } from "@/lib/context/NpsContext";
@@ -42,7 +44,6 @@ export default function ClassificarNpsModal({ item, onClose }: { item: NpsRespon
   /* Sugestão pelo comentário: só enquanto o campo ainda não foi escolhido. */
   const sugestao = useSugestaoNps(item.comment, item.score);
   const tipoSugerido = !tipo && sugestao.tipo && ativos.some((k) => k.name === sugestao.tipo!.valor) ? sugestao.tipo : null;
-  const causaSugerida = !causa && sugestao.causa && causas.some((c) => c.name === sugestao.causa!.valor) ? sugestao.causa : null;
 
   async function salvar() {
     setSalvando(true);
@@ -138,17 +139,9 @@ export default function ClassificarNpsModal({ item, onClose }: { item: NpsRespon
                 </option>
               ))}
             </select>
+            <DonoDaCausa causa={causa} />
             <span className="mt-1 block text-xs text-zinc-400">A mesma lista nas quatro frentes — é ela que mostra a tendência no Analytics.</span>
-            {causaSugerida && (
-              <div className="mt-2">
-                <SugestaoDoTexto
-                  rotulo="Causa sugerida pelo comentário"
-                  valor={causaSugerida.valor}
-                  motivo={causaSugerida.motivo || undefined}
-                  onUsar={() => setCausa(causaSugerida.valor)}
-                />
-              </div>
-            )}
+            <CausaSugerida texto={item.comment} atual={causa} excluirId={item.id} onUsar={setCausa} />
           </label>
 
           <div>

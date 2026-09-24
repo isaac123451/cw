@@ -206,9 +206,7 @@ export async function listNpsRootCauses(): Promise<
     }));
   }
 
-  const linhas = await ctx.prisma.npsRootCause.findMany({
-    orderBy: [{ order: "asc" }, { name: "asc" }],
-  });
+  const linhas = await lerCausas(ctx.prisma);
 
   if (linhas.length === 0) {
     return ROOT_CAUSES.map((name, i) => ({
@@ -225,7 +223,33 @@ export async function listNpsRootCauses(): Promise<
     description: r.description ?? undefined,
     order: r.order,
     active: r.active,
+    area: r.area ?? undefined,
+    prazoHoras: r.prazoHoras ?? undefined,
+    palavras: r.palavras?.length ? r.palavras : undefined,
   }));
+}
+
+/**
+ * As causas, com a área e o prazo quando as colunas existem.
+ *
+ * `area`, `prazoHoras` e `palavras` chegaram na Fase 27. Antes do
+ * `npm run db:push` elas não existem no banco, e ler a linha inteira
+ * derrubaria a carga do NPS por três campos novos — então a leitura cai
+ * para as colunas antigas.
+ */
+async function lerCausas(prisma: PrismaClient): Promise<
+  { id: string; name: string; description: string | null; order: number; active: boolean; area?: string | null; prazoHoras?: number | null; palavras?: string[] }[]
+> {
+  const ordem = [{ order: "asc" as const }, { name: "asc" as const }];
+  try {
+    return await prisma.npsRootCause.findMany({ orderBy: ordem });
+  } catch (erro) {
+    if ((erro as { code?: string })?.code !== "P2022") throw erro;
+    return prisma.npsRootCause.findMany({
+      orderBy: ordem,
+      select: { id: true, name: true, description: true, order: true, active: true },
+    });
+  }
 }
 
 export async function saveNpsRootCause(
@@ -245,7 +269,32 @@ export async function saveNpsRootCause(
     description: input.description?.trim() || null,
     order: input.order,
     active: input.active,
+    /*
+      Área, prazo e palavras (Fase 27) só vão quando a tela os manda:
+      antes do `db:push` as colunas não existem, e renomear uma causa
+      não pode depender delas.
+    */
+    ...(input.area !== undefined ? { area: input.area.trim() || null } : {}),
+    ...(input.prazoHoras !== undefined ? { prazoHoras: input.prazoHoras > 0 ? Math.min(720, Math.round(input.prazoHoras)) : null } : {}),
+    ...(input.palavras !== undefined ? { palavras: input.palavras.map((p) => p.trim()).filter(Boolean).slice(0, 20) } : {}),
   };
+
+  try {
+    return await gravarCausa(ctx.prisma, input, dados, nome);
+  } catch (erro) {
+    if ((erro as { code?: string })?.code === "P2022") {
+      return { ok: false as const, erro: "A área e o prazo da causa ainda não existem no banco. Rode npm run db:push — uma vez só." };
+    }
+    throw erro;
+  }
+}
+
+async function gravarCausa(
+  prisma: PrismaClient,
+  input: RootCauseOption,
+  dados: Parameters<PrismaClient["npsRootCause"]["create"]>[0]["data"],
+  nome: string
+) {
 
   /**
    * Id que começa com "padrao-" é um valor de partida que nunca foi
@@ -264,12 +313,12 @@ export async function saveNpsRootCause(
     input.id.startsWith("novo-");
 
   if (novo) {
-    const criado = await ctx.prisma.npsRootCause.create({
+    const criado = await prisma.npsRootCause.create({
       data: dados,
       select: { id: true },
     });
 
-    await semearRestantes(ctx.prisma, nome);
+    await semearRestantes(prisma, nome);
 
     updateTag(WORKSPACE_TAG);
 
@@ -277,14 +326,15 @@ export async function saveNpsRootCause(
   }
 
   const anterior =
-    await ctx.prisma.npsRootCause.findUnique({
+    await prisma.npsRootCause.findUnique({
       where: { id: input.id },
       select: { name: true },
     });
 
-  await ctx.prisma.npsRootCause.update({
+  await prisma.npsRootCause.update({
     where: { id: input.id },
     data: dados,
+    select: { id: true },
   });
 
   /**
@@ -293,7 +343,7 @@ export async function saveNpsRootCause(
    * mostrar a causa antiga e a nova como coisas diferentes.
    */
   if (anterior && anterior.name !== nome) {
-    await ctx.prisma.npsResponse.updateMany({
+    await prisma.npsResponse.updateMany({
       where: { rootCause: anterior.name },
       data: { rootCause: nome },
     });
@@ -303,12 +353,12 @@ export async function saveNpsRootCause(
       (Reclame Aqui e redes) e as avaliações do Google guardam o mesmo
       nome, e renomear arrasta os três.
     */
-    await ctx.prisma.case.updateMany({
+    await prisma.case.updateMany({
       where: { causaRaiz: anterior.name },
       data: { causaRaiz: nome },
     });
 
-    await ctx.prisma.avaliacaoGoogle.updateMany({
+    await prisma.avaliacaoGoogle.updateMany({
       where: { causaRaiz: anterior.name },
       data: { causaRaiz: nome },
     });
@@ -376,10 +426,12 @@ export async function removeNpsRootCause(id: string) {
     await ctx.prisma.npsRootCause.update({
       where: { id },
       data: { active: false },
+      select: { id: true },
     });
   } else {
     await ctx.prisma.npsRootCause.delete({
       where: { id },
+      select: { id: true },
     });
   }
 

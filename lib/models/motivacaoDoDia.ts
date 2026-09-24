@@ -11,7 +11,9 @@ import {
   pendingAnswers,
   scoreFrom,
   simulate,
+  type RemovedComplaint,
 } from "@/lib/services/reputation.service";
+import { respondida } from "@/lib/models/case";
 
 import { filaDeAvaliacao } from "@/lib/models/cadencia";
 
@@ -35,7 +37,7 @@ import { filaDeAvaliacao } from "@/lib/models/cadencia";
  */
 
 export interface AcaoQueMoveANota {
-  chave: "responder" | "pedir-avaliacao";
+  chave: "responder" | "pedir-avaliacao" | "moderacao";
   quantidade: number;
   titulo: string;
   /** "índice de resposta 91,6% → 94%". */
@@ -110,7 +112,43 @@ export function oQueMoveANota(casos: Case[], agora = new Date()): AcaoQueMoveANo
     });
   }
 
-  return acoes;
+  /* ---------- as moderações pedidas e ainda sem decisão ---------- */
+
+  /*
+    Moderação aceita tira a reclamação da conta com tudo o que ela
+    carregava — a resposta, a nota, o "resolvido" e o "voltaria" (Fase 24,
+    "o que move a nota hoje"). Pedida é trabalho feito; acompanhar até o
+    portal decidir é o que falta. O efeito é o teto: "se o portal aceitar".
+  */
+  const pendentes = doPeriodo.filter((c) => c.moderacaoPedidaEm && (!c.moderacaoResultado || c.moderacaoResultado === "pendente"));
+
+  if (pendentes.length > 0) {
+    const removidas: RemovedComplaint[] = pendentes.map((c) => ({
+      id: c.id,
+      answered: respondida(c),
+      evaluated: Boolean(c.evaluated) && !c.scoreDisregarded,
+      score: c.score ?? 0,
+      resolved: c.resolved,
+      wouldReturn: c.wouldDoBusiness,
+    }));
+    const depois = scoreFrom(simulate(base, { ...emptySimulation, removed: removidas }));
+
+    /* Moderação de reclamação que não pesava na nota não é ação para a nota. */
+    if (depois.raScore !== atual.raScore) {
+      acoes.push({
+        chave: "moderacao",
+        quantidade: pendentes.length,
+        titulo: pendentes.length === 1 ? "Acompanhar a moderação pedida" : `Acompanhar as ${pendentes.length} moderações pedidas`,
+        efeito: "se o portal aceitar",
+        notaAntes: atual.raScore,
+        notaDepois: depois.raScore,
+        href: "/meu-dia",
+      });
+    }
+  }
+
+  /* As três que mais mexem na nota, a maior primeiro: o placar da semana usa a primeira como "o próximo passo". */
+  return acoes.sort((a, b) => b.notaDepois - b.notaAntes - (a.notaDepois - a.notaAntes)).slice(0, 3);
 }
 
 export interface ConquistaDoDia {

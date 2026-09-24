@@ -112,7 +112,7 @@ export default function AgoraNoMeuDia() {
       >
         {acoes.length === 0 ? (
           <p className="text-sm text-zinc-500">
-            Nada pendente que mova a nota hoje: nenhuma reclamação sem resposta e ninguém na vez de pedir avaliação.
+            Nada pendente que mova a nota hoje: nenhuma reclamação sem resposta, ninguém na vez de pedir avaliação e nenhuma moderação que pese na nota.
           </p>
         ) : (
           <ul className="space-y-3">

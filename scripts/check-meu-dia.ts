@@ -18,6 +18,10 @@ import { resolve } from "node:path";
 import type { Case } from "../lib/models/case";
 import type { NpsResponseView } from "../lib/models/nps";
 
+import { getRange } from "../lib/services/reputation.service";
+import { textoDoFimDoDia } from "../lib/models/fimDoDia";
+import { cotaSugerida, cotasOferecidas, planoDeRecuperacao, ritmoDeHoje } from "../lib/models/recuperacao";
+import { ateDoAdiamento, marcaValeHoje, opcoesDeAdiar, voltaDoAdiado } from "../lib/models/meuDia";
 import { conquistasDaSemana, conquistasDoDia, inicioDaSemana, oQueMoveANota, placarDaSemana, textoDoResumoDaSemana } from "../lib/models/motivacaoDoDia";
 
 const RAIZ = resolve(__dirname, "..");
@@ -78,6 +82,28 @@ console.log("— Conquistas —\n");
 console.log("\n— O que move a nota —\n");
 
 conferir("sem reclamação, nada a projetar", oQueMoveANota([], AGORA), []);
+
+{
+  /* Dez respondidas e avaliadas, duas sem resposta, e uma nota 0 com moderação pedida. */
+  /* Dentro da janela que o portal publica (meses fechados), qualquer que seja o dia em que o check rode. */
+  const hojeIso = getRange("6m", "vigente").end;
+  const base = (i: number, extra: Partial<Case>) =>
+    caso({ id: `c${i}`, protocol: `RA-${i}`, createdAt: hojeIso, status: "Resolvido", respondida: true, evaluated: true, score: 8, resolved: true, wouldDoBusiness: true, ...extra });
+  const casos = [
+    ...Array.from({ length: 10 }, (_, i) => base(i, {})),
+    base(10, { respondida: false, evaluated: false, status: "Não respondida" }),
+    base(11, { respondida: false, evaluated: false, status: "Não respondida" }),
+    base(12, { score: 0, resolved: false, wouldDoBusiness: false, moderacaoPedidaEm: hojeIso, moderacaoResultado: "pendente" }),
+  ];
+  const acoes = oQueMoveANota(casos);
+  const mod = acoes.find((a) => a.chave === "moderacao");
+  conferir("a moderação pendente entra, e sobe a nota se o portal aceitar", Boolean(mod && mod.notaDepois > mod.notaAntes && mod.efeito === "se o portal aceitar"), true);
+  conferir("no máximo três ações", acoes.length <= 3, true);
+  const ganhos = acoes.map((a) => a.notaDepois - a.notaAntes);
+  conferir("a que mais mexe na nota vem primeiro", ganhos.every((g, i) => i === 0 || g <= ganhos[i - 1]), true);
+  const semPeso = oQueMoveANota(casos.map((c) => (c.id === "c12" ? { ...c, score: 8, resolved: true, wouldDoBusiness: true } : c)));
+  conferir("moderação que não mexe na nota fica de fora", semPeso.some((a) => a.chave === "moderacao" && a.notaDepois === a.notaAntes), false);
+}
 
 console.log("\n— A fiação —\n");
 
@@ -161,6 +187,66 @@ console.log("\n— Conquistas da semana —\n");
   conferir("uma semana depois, o que foi desta semana vira a comparação", [semanaPassada.agora.respondidas, semanaPassada.antes.respondidas], [0, 2]);
   const resumo = textoDoResumoDaSemana(semanaPassada, { sequencia: 3 });
   conferir("o resumo diz a queda com a conta", resumo.includes("0 reclamações respondidas (2 a menos que na semana passada)"), true);
+}
+
+console.log("\n  Adiar para outro dia\n");
+{
+  /* Quinta, 24/09/2026: amanhã é sexta, dia útil. Sexta, 25/09: amanhã é sábado. */
+  conferir("quinta: amanhã já é o próximo dia útil, uma opção só", opcoesDeAdiar("2026-09-24").map((o) => o.volta), ["2026-09-25"]);
+  conferir("sexta: amanhã (sábado) e o próximo dia útil (segunda)", opcoesDeAdiar("2026-09-25").map((o) => o.volta), ["2026-09-26", "2026-09-28"]);
+  conferir("a marca vale até a véspera da volta", ateDoAdiamento("2026-09-25", "2026-09-28"), "2026-09-27");
+  conferir("hoje ou antes não é adiar", [ateDoAdiamento("2026-09-25", "2026-09-25"), ateDoAdiamento("2026-09-25", "2026-09-20")], [null, null]);
+  conferir("até 90 dias; 91 não", [ateDoAdiamento("2026-09-25", "2026-12-24"), ateDoAdiamento("2026-09-25", "2026-12-25")], ["2026-12-23", null]);
+  conferir("data inválida não passa (30/11 existe, 31/11 não)", [ateDoAdiamento("2026-09-25", "2026-11-31"), ateDoAdiamento("2026-09-25", "2026-11-30"), ateDoAdiamento("2026-09-25", "")], [null, "2026-11-29", null]);
+  const marca = { dia: "2026-09-25", ate: ateDoAdiamento("2026-09-25", "2026-09-28") };
+  conferir("adiado de sexta para segunda: some sexta, sábado e domingo", ["2026-09-25", "2026-09-26", "2026-09-27"].map((d) => marcaValeHoje(marca, d)), [true, true, true]);
+  conferir("e volta sozinho na segunda", marcaValeHoje(marca, "2026-09-28"), false);
+  conferir("a lista diz o dia da volta", voltaDoAdiado(marca), "2026-09-28");
+}
+
+console.log("\n  Plano de recuperação do acumulado\n");
+{
+  conferir("149 vencidos: a cota que zera em 5 dias úteis é 30", cotaSugerida(149), 30);
+  conferir("12 vencidos: cota mínima de 5", cotaSugerida(12), 5);
+  conferir("as cotas oferecidas, sem repetir", cotasOferecidas(149), [10, 20, 30, 50]);
+  conferir("quinta 24/09, 149 a 30 por dia: zera na quarta 30/09", planoDeRecuperacao(149, 30, "2026-09-24"), { dias: 5, zeraEm: "2026-09-30" });
+  conferir("começando no sábado, o 1º dia é a segunda", planoDeRecuperacao(30, 30, "2026-09-26"), { dias: 1, zeraEm: "2026-09-28" });
+  conferir("sem cota, sem plano", planoDeRecuperacao(149, 0, "2026-09-24"), null);
+  conferir("abriu com 149, está com 130: saíram 19, faltam 11", ritmoDeHoje(149, 130, 30), { saiu: 19, falta: 11, dandoConta: false });
+  conferir("entrou mais do que saiu: saiu 0, nunca negativo", ritmoDeHoje(149, 152, 30), { saiu: 0, falta: 30, dandoConta: false });
+  conferir("bateu a cota: dando conta", ritmoDeHoje(149, 118, 30).dandoConta, true);
+}
+
+console.log("\n  Fim do dia que se escreve sozinho\n");
+{
+  const marca = (id: string, item: string, tipo: "feito" | "dispensado" | "adiado", titulo: string, dia = "2026-09-24", ate: string | null = dia) =>
+    ({ id, chave: "novos", item, tipo, dia, ate, titulo }) as never;
+  const contagem = (total: number, atrasados: number) => ({ total, atrasados, porFrente: {}, resumo: "", itens: [], tirados: [] });
+  const texto = textoDoFimDoDia({
+    hoje: "2026-09-24",
+    feito: { dia: "2026-09-24", contatos: 7, primeirosContatos: 3, respostasPublicas: 2, pedidosDeAvaliacao: 1, tentativasNps: 4, googleRespondidas: 0, atividadesFeitas: 5 },
+    marcas: [
+      marca("1", "nps:a", "feito", "Cliente A"),
+      marca("2", "nps:a", "feito", "Cliente A"),
+      marca("3", "ra:b", "dispensado", "Cliente B"),
+      marca("4", "ra:c", "adiado", "Cliente C", "2026-09-24", "2026-09-27"),
+      marca("5", "ra:d", "dispensado", "De ontem", "2026-09-23", null),
+    ],
+    atividades: [
+      { id: "a1", titulo: "Novos casos", chave: "novos" },
+      { id: "a2", titulo: "FUPs", chave: "fups" },
+      { id: "a3", titulo: "Moderações", chave: "moderacoes" },
+    ],
+    contagens: { novos: contagem(4, 2), fups: contagem(3, 0), moderacoes: contagem(0, 0) } as never,
+    plano: { blocos: [], naoCabe: [{ atividadeId: "a2" }] as never, minutosNecessarios: 0, minutosDisponiveis: 0, semTrabalho: [] },
+    feitas: 5,
+    total: 8,
+  });
+  conferir("feito conta os registros de hoje, sem repetir o 1º contato", texto.includes("*Feito:* 3 primeiros contatos, 3 outros contatos registrados, 2 respostas públicas no Reclame Aqui, 1 pedido de avaliação, 4 tentativas no NPS. Rotina: 5 de 8 atividades."), true);
+  conferir("o mesmo item marcado duas vezes conta uma", texto.includes("1 feito por fora (Cliente A)"), true);
+  conferir("tirado e adiado com o dia da volta", texto.includes("1 tirado como não se aplica (Cliente B); 1 adiado (Cliente C, volta em 28/09)"), true);
+  conferir("marca de ontem não entra no fim de hoje", texto.includes("De ontem"), false);
+  conferir("o que ficou, com o porquê", texto.includes("*Ficou para amanhã:* novos casos (4 — 2 fora do prazo); fups (3 — não coube no expediente)."), true);
 }
 
 console.log(

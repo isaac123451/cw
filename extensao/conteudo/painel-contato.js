@@ -1267,7 +1267,7 @@
     const leitura = P.lerConversa?.();
     const mensagens = (Array.isArray(leitura) ? leitura : leitura?.mensagens ?? [])
       .filter((m) => m && typeof m.texto === "string")
-      .map((m) => ({ de: m.de === "nos" ? "nos" : "cliente", texto: m.texto }));
+      .map((m) => ({ de: m.de === "nos" ? "nos" : "cliente", texto: m.texto, carimbo: m.carimbo }));
 
     if (mensagens.filter((m) => m.de === "cliente").length < 2) return;
 
@@ -1286,11 +1286,18 @@
           protocolo,
           telefone: P.consulta?.telefone,
           nome: P.consulta?.nome,
+          /* O que o painel já sabe: pesa no "o que fazer agora" (Fase 28). */
+          historico: {
+            casosAbertos: casos.filter((c) => c.aberto).length,
+            reclamacoes: casos.filter((c) => (c.canal ?? "Reclame Aqui") === "Reclame Aqui").length,
+          },
         });
         sinaisPorContato.set(chave, {
           avisos: resposta?.dados?.avisos ?? [],
           completar: resposta?.dados?.completar ?? null,
           humor: resposta?.dados?.humor ?? null,
+          agora: resposta?.dados?.agora ?? null,
+          impacto: resposta?.dados?.impacto ?? [],
         });
       } catch {
         sinaisPorContato.delete(chave);
@@ -1302,6 +1309,8 @@
     if (!sinais) return;
 
     desenharTermometro(sinais.humor);
+    desenharAgora(sinais.agora);
+    desenharImpacto(sinais.impacto);
     desenharCompletar(sinais.completar, chave);
 
     const avisos = sinais.avisos;
@@ -1537,6 +1546,107 @@
     el.title = `Humor da conversa: ${humor.agora} de 5${humor.tendencia ? `, ${humor.tendencia}` : ""} — pelas últimas mensagens do cliente`;
     el.hidden = false;
   }
+
+  /**
+   * O que fazer agora (Fase 28): escutar, assumir o erro, áudio, Meet,
+   * esperar a área, escalar — logo abaixo do cabeçalho, com o porquê e
+   * um roteiro curto. Fechado por padrão: o título já diz o essencial, e
+   * o roteiro abre com um clique.
+   */
+  function desenharAgora(agora) {
+    const cabecalho = P.corpo?.querySelector(".cabecalho-cliente");
+    if (!cabecalho || !agora?.titulo) return;
+    P.corpo.querySelector(".agora-conversa")?.remove();
+    const tom = agora.acao === "escalar" ? "perigo" : agora.acao === "escutar" || agora.acao === "assumir" ? "atencao" : "neutro";
+    cabecalho.insertAdjacentHTML(
+      "afterend",
+      `<details class="agora-conversa ${tom}" data-acao-momento="${CW.escapar(agora.acao)}">
+        <summary><span class="agora-rotulo">O que fazer:</span> <b>${CW.escapar(agora.titulo)}</b></summary>
+        ${agora.porque?.length ? `<p class="agora-porque">Porque ${CW.escapar(agora.porque.join(", "))}.</p>` : ""}
+        <ol class="agora-roteiro">${(agora.roteiro ?? []).map((r) => `<li>${CW.escapar(r)}</li>`).join("")}</ol>
+        ${agora.foraDoHorario ? `<p class="agora-porque">Fora do expediente: responda curto agora, diga quando volta e marque o retorno na agenda.</p>` : ""}
+      </details>`
+    );
+  }
+
+  P.desenharAgora = desenharAgora;
+
+  /**
+   * O impacto que a conversa mostra (Fase 28): desconto, meses sem
+   * mensalidade, estorno combinados por nós. O aviso já vem com o valor
+   * (pela mensalidade da conta, quando se sabe) e o caso; um clique
+   * lança o custo em Impacto no Negócio. Sem mensalidade, o valor fica
+   * para a pessoa digitar.
+   */
+  const emReais = (cents) => (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }).replace(/\u00a0/g, " ");
+
+  function desenharImpacto(lista) {
+    P.corpo?.querySelector(".impacto-conversa")?.remove();
+    const pendentes = (lista ?? []).filter((c) => c && c.descricao);
+    if (!pendentes.length) return;
+    const ancora = P.corpo?.querySelector(".agora-conversa") ?? P.corpo?.querySelector(".cabecalho-cliente");
+    if (!ancora) return;
+    ancora.insertAdjacentHTML(
+      "afterend",
+      `<div class="impacto-conversa">
+        <p class="impacto-titulo">Condição dada na conversa — registre o impacto</p>
+        ${pendentes
+          .map(
+            (c, i) => `
+        <div class="impacto-item" data-indice="${i}">
+          <p><b>${CW.escapar(c.descricao)}</b>${c.mensalidadeCents ? ` <span class="sub">(mensalidade ${emReais(c.mensalidadeCents)})</span>` : ""}</p>
+          <p class="citacao">\u201c${CW.escapar(c.trecho)}\u201d</p>
+          ${
+            c.jaRegistrado
+              ? '<p class="sub impacto-feito">já registrado em Impacto</p>'
+              : `<div class="linha">
+            <label class="sub">R$ <input class="valor-impacto" inputmode="decimal" value="${c.valorCents ? (c.valorCents / 100).toFixed(2).replace(".", ",") : ""}" placeholder="valor" /></label>
+            <button class="copiar" data-acao="registrar-impacto">Registrar impacto</button>
+          </div>`
+          }
+        </div>`
+          )
+          .join("")}
+      </div>`
+    );
+    P.impactoDaConversa = pendentes;
+  }
+
+  P.registrarImpacto = async function registrarImpacto(botao) {
+    const item = botao.closest(".impacto-item");
+    const c = P.impactoDaConversa?.[Number(item?.dataset.indice)];
+    if (!item || !c) return;
+    const campo = item.querySelector(".valor-impacto");
+    const valorCents = Math.round(Number(String(campo?.value ?? "").replace(/\./g, "").replace(",", ".")) * 100);
+    if (!Number.isFinite(valorCents) || valorCents <= 0) {
+      campo?.focus();
+      P.avisar("Diga o valor concedido, em reais.", "atencao");
+      return;
+    }
+    const casos = P.ultimoDado?.casos ?? [];
+    const protocolo = c.protocolo ?? (casos.find((x) => x.aberto) ?? casos[0])?.protocolo;
+    botao.disabled = true;
+    botao.textContent = "registrando\u2026";
+    const resposta = await CW.enviar({
+      tipo: "registrarImpacto",
+      protocolo,
+      cliente: P.ultimoDado?.cliente?.nome ?? P.consulta?.nome,
+      descricao: c.descricao,
+      trecho: c.trecho,
+      valorCents,
+    });
+    if (!resposta?.ok || resposta.dados?.erro) {
+      botao.disabled = false;
+      botao.textContent = "Registrar impacto";
+      P.avisar(resposta?.dados?.erro ?? resposta?.erro ?? "Não foi registrado. Tente de novo.", "perigo");
+      return;
+    }
+    c.jaRegistrado = true;
+    item.querySelector(".linha")?.replaceWith(Object.assign(document.createElement("p"), {
+      className: "sub impacto-feito",
+      textContent: resposta.dados?.jaExistia ? "já estava registrado em Impacto" : `registrado em Impacto: ${emReais(valorCents)} de custo`,
+    }));
+  };
 
   /* ============================================================
      IDENTIFICA PELA CONVERSA (Fase 17)
@@ -2104,6 +2214,91 @@
     else desenharResumo();
   };
 
+  const ROTULO_DO_RISCO = { baixo: "risco baixo", medio: "risco médio", alto: "risco alto" };
+
+  /**
+   * As respostas em três tons (Fase 28): acolhedora, objetiva e técnica —
+   * o mesmo recado, para o cliente que está diante de você. O texto é
+   * editável ali mesmo; copiar leva o que está na caixa, e se você mudou
+   * alguma coisa a edição vai para o servidor, para o próximo rascunho
+   * sair do seu jeito.
+   */
+  function blocoTons(tons) {
+    if (!Array.isArray(tons) || tons.length === 0) return "";
+    return [
+      '<div class="tons">',
+      '  <div class="linha"><span class="rotulo">Responder em três tons</span>',
+      P.resumo?.estiloAprendido ? '  <span class="sub" title="O rascunho segue as edições que você fez antes">no seu jeito</span>' : "",
+      "  </div>",
+      '  <div class="tons-abas" role="tablist">',
+      tons.map((t, i) => `<button type="button" role="tab" data-acao="tom" data-tom="${CW.escapar(t.tom)}" aria-selected="${i === 0}" title="${CW.escapar(t.quando ?? "")}">${CW.escapar(t.rotulo ?? t.tom)}</button>`).join(""),
+      "  </div>",
+      tons
+        .map(
+          (t, i) => `
+      <div class="tom" data-tom="${CW.escapar(t.tom)}" ${i === 0 ? "" : "hidden"}>
+        <textarea class="texto-tom" rows="5" spellcheck="true" data-original="${CW.escapar(t.texto ?? "")}">${CW.escapar(t.texto ?? "")}</textarea>
+        ${(t.conferencia ?? []).map((a) => `<p class="sub" style="margin:4px 0 0;color:${a.tom === "perigo" ? "var(--perigo)" : "var(--suave)"}">• ${CW.escapar(a.texto)}</p>`).join("")}
+        <div class="linha" style="margin-top:6px">
+          <span class="sub">${CW.escapar(t.quando ?? "")}</span>
+          <button class="copiar" data-acao="copiar-tom">copiar</button>
+        </div>
+      </div>`
+        )
+        .join(""),
+      "</div>",
+    ].join("");
+  }
+
+  P.trocarTom = function trocarTom(botao) {
+    const caixa = botao.closest(".tons");
+    if (!caixa) return;
+    for (const b of caixa.querySelectorAll('[data-acao="tom"]')) b.setAttribute("aria-selected", String(b === botao));
+    for (const d of caixa.querySelectorAll(".tom")) d.hidden = d.dataset.tom !== botao.dataset.tom;
+  };
+
+  P.copiarTom = function copiarTom(botao) {
+    const bloco = botao.closest(".tom");
+    const area = bloco?.querySelector(".texto-tom");
+    if (!area) return;
+    const editada = area.value.trim();
+    const original = (area.dataset.original ?? "").trim();
+    P.copiar(botao, editada);
+    /* Mudou alguma coisa: é o jeito de quem envia — o próximo rascunho aprende. Uma vez por texto. */
+    if (editada && editada !== original && area.dataset.aprendido !== editada) {
+      area.dataset.aprendido = editada;
+      CW.enviar({ tipo: "aprenderResposta", tom: bloco.dataset.tom, original, editada });
+    }
+  };
+
+  /**
+   * A situação da conversa (Fase 28): o que o cliente quer, o que já foi
+   * feito, o que prometemos e quando, o que falta e o risco. A citação é
+   * o trecho da mensagem — o servidor já tirou a que não está na
+   * conversa —, em letra menor, para conferir de onde o ponto saiu.
+   */
+  function blocoSituacao(s) {
+    /* A citação igual ao próprio ponto (o que as regras escrevem) não se repete. */
+    const igual = (a, b) => String(a ?? "").replace(/\u2026$/, "").trim() === String(b ?? "").replace(/\u2026$/, "").trim();
+    const cita = (p) => (p?.citacao && !igual(p.citacao, p.texto) ? `<span class="citacao">\u201c${CW.escapar(p.citacao)}\u201d</span>` : "");
+    const item = (p, extra = "") => `<li>${CW.escapar(p.texto)}${extra}${cita(p)}</li>`;
+    const risco = s.risco ?? { nivel: "baixo", porque: "" };
+    const tomDoRisco = risco.nivel === "alto" ? "perigo" : risco.nivel === "medio" ? "atencao" : "ok";
+    return [
+      '<dl class="situacao">',
+      `  <dt>Quer</dt><dd>${CW.escapar(s.quer?.texto ?? "\u2014")}${cita(s.quer)}</dd>`,
+      s.feito?.length ? `  <dt>Já feito</dt><dd><ul>${s.feito.map((p) => item(p)).join("")}</ul></dd>` : "",
+      s.prometido?.length
+        ? `  <dt>Prometido</dt><dd><ul>${s.prometido
+            .map((p) => item(p, p.quando ? ` <span class="quando${p.vencida ? " vencida" : ""}">${p.vencida ? "venceu " : "até "}${CW.escapar(p.quando)}</span>` : ""))
+            .join("")}</ul></dd>`
+        : "",
+      `  <dt>Falta</dt><dd>${CW.escapar(s.falta ?? "\u2014")}</dd>`,
+      `  <dt>Risco</dt><dd><span class="tag ${tomDoRisco}">${ROTULO_DO_RISCO[risco.nivel] ?? risco.nivel}</span> ${CW.escapar(risco.porque ?? "")}</dd>`,
+      "</dl>",
+    ].join("");
+  }
+
   function blocoSoDoResumo() {
 
     if (!P.lerConversa) return "";
@@ -2151,7 +2346,10 @@
       `      <span class="tag ${tom}">${HUMOR[P.resumo.humor] ?? "\u2014"}</span>`,
       '    </div>',
       `    <p class="sub" style="margin-top:6px;color:var(--suave)">${CW.escapar(P.resumo.resumo ?? "")}</p>`,
-      `    <p class="sub" style="margin-top:8px"><strong>Pendência:</strong> ${CW.escapar(P.resumo.pendencia ?? "\u2014")}</p>`,
+      /* A situação (Fase 28): quer, feito, prometido, falta e risco, cada um com a mensagem de onde saiu. */
+      P.resumo.situacao
+        ? blocoSituacao(P.resumo.situacao)
+        : `    <p class="sub" style="margin-top:8px"><strong>Pendência:</strong> ${CW.escapar(P.resumo.pendencia ?? "\u2014")}</p>`,
       `    <p class="sub" style="margin-top:4px"><strong>Próximo passo:</strong> ${CW.escapar(P.resumo.proximoPasso ?? "\u2014")}</p>`,
       '    <p class="sub" style="margin-top:8px">',
       P.resumo.resolvido
@@ -2160,6 +2358,7 @@
       `      <span style="margin-left:6px">${P.resumo.mensagensLidas ?? 0} mensagens lidas</span>`,
       '    </p>',
       '  </div>',
+      blocoTons(P.resumo.tons),
       /*
         As três respostas, para escolher e enviar.
 

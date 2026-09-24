@@ -497,6 +497,16 @@
     ].join("");
   };
 
+  /*
+    A aba Dossiê abre o dossiê na plataforma (Fase 26).
+
+    O Isaac: "dossiê deve ser feito pela plataforma e precisa levar a
+    estrutura que já te enviei" e "quero que você retire [da] extensão".
+    O documento de 8 partes — linha do tempo numerada, evidências,
+    apuração, pedido — é trabalho de tela grande, com revisão. Aqui fica o
+    botão que abre na plataforma, já no caso certo, e o resumo rápido,
+    que é leitura.
+  */
   P.blocoDossie = function blocoDossie(protocolo) {
 
     const pronto =
@@ -505,44 +515,25 @@
 
     return [
       '<div class="bloco">',
-      '  <div class="rotulo">Dossiê do atendimento</div>',
+      '  <div class="rotulo">Dossiê</div>',
+
+      protocolo
+        ? `  <button class="acao" data-acao="abrir-na-plataforma" data-caminho="/reclame-aqui/${CW.escapar(encodeURIComponent(protocolo))}/dossie" style="width:100%;margin-top:0">Abrir o dossiê na plataforma</button>
+  <p class="sub" style="margin-top:6px">As 8 partes, montadas dos registros deste caso, com a conferência antes de pedir moderação. Abre na plataforma, já neste caso.</p>`
+        : '  <p class="sub" style="margin-top:0">O dossiê é feito na plataforma, a partir da reclamação — este contato não tem reclamação cadastrada.</p>',
 
       pronto
         ? blocoResumoDoCaso(resumoDoCaso)
-        : [
-            '  <div class="etapas" style="margin-top:0">',
-            '    <button class="passo" data-acao="resumir-caso" data-protocolo="' +
-              CW.escapar(protocolo ?? "") +
-              '" style="flex:1">Montar dossiê (~15 s)</button>',
-            '    <button class="passo" data-acao="resumir-caso" data-rapido="1" data-protocolo="' +
-              CW.escapar(protocolo ?? "") +
-              '" style="flex:1">Resumo rápido (~2 s)</button>',
-            '  </div>',
-
-            protocolo
-              ? '  <p class="sub" style="margin-top:6px">Lê o relato, a resposta pública e a linha do tempo interna. Devolve o dossiê completo, o que mudou, o que falta resolver e três respostas prontas para revisar. Só lê — não grava nem envia nada.</p>'
-              : '  <p class="sub" style="margin-top:6px">Este contato não tem reclamação cadastrada. Importe o arquivo de atendimento do Crisp abaixo e o dossiê sai dele — é o que mais ajuda antes de o assunto virar reclamação.</p>',
-
-            /*
-              O importador fica recolhido.
-
-              Não é usado toda vez; aberto por padrão, empurraria o
-              resto do painel para baixo em todo caso que não precisa
-              dele. Fechado, quem precisa clica.
-            */
-            `
-  <details style="margin-top:8px" ${protocolo ? "" : "open"}>
-    <summary style="cursor:pointer;font-size:12px;font-weight:600;padding:5px 0">Importar transcrição do Crisp (opcional)</summary>
-    <input type="file" id="dossie-arquivo"
-           accept=".txt,.log,.md,.json,.csv,text/plain"
-           style="margin-top:6px;font-size:11px;width:100%" />
-    <p class="sub" id="dossie-arquivo-info" style="margin-top:5px;color:var(--suave)">Escolha o arquivo de transcrição que o Crisp exporta. Ele entra no dossiê como parte da história — o que foi prometido, quem atendeu, onde travou. Fica só nesta consulta: não é gravado em lugar nenhum.</p>
-  </details>`,
-          ].join(""),
+        : protocolo
+          ? '  <div class="etapas" style="margin-top:8px"><button class="passo" data-acao="resumir-caso" data-rapido="1" data-protocolo="' +
+            CW.escapar(protocolo) +
+            '" style="flex:1">Resumo rápido do caso (~2 s)</button></div>'
+          : "",
 
       '</div>',
     ].join("");
   };
+
 
   /**
    * A capa do dossiê e as peças, agrupadas por tipo.
@@ -860,33 +851,11 @@
         ? capaEPecas(r.pecas)
         : "",
 
-      /* ---- a história inteira, recolhida ---- */
-
-      r.dossie
-        ? `
-  <details style="margin-top:9px">
-    <summary style="cursor:pointer;font-size:12.5px;font-weight:600;padding:7px 0">Dossiê completo — tudo que aconteceu</summary>
-    <div class="cartao" style="margin-top:5px">
-      <p class="sub" style="color:var(--texto);white-space:pre-wrap">${CW.escapar(r.dossie)}</p>
-    </div>
-  </details>`
-        : "",
-
       /*
-        Guardar na ficha, para quem abrir o caso pela aplicação.
-
-        Por clique e não automático: montar dossiê é barato e se faz por
-        curiosidade; guardar é decidir que aquele texto vale para a
-        próxima pessoa. E só com caso — dossiê de contato sem reclamação
-        cadastrada não tem ficha onde morar.
+        O dossiê completo e o "Salvar dossiê" saíram daqui (Fase 26): o
+        dossiê é feito na plataforma, com as 8 partes, a conferência e o
+        pedido de moderação. O painel fica com o resumo, que é leitura.
       */
-      r.protocolo && r.dossie
-        ? `
-  <button class="copiar" data-acao="salvar-dossie"
-          data-protocolo="${CW.escapar(r.protocolo)}"
-          style="width:100%;margin-top:8px;padding:7px">Salvar dossiê</button>
-  <p class="sub" style="margin-top:5px;color:var(--suave)">Fica visível para quem abrir o caso na aplicação. A transcrição do Crisp não é guardada — só esta leitura.</p>`
-        : "",
 
       r.rapido
         ? '  <p class="sub" style="margin-top:6px;color:var(--suave)">Resumo rápido: modelo menor, responde na hora e resume com menos cuidado.</p>'

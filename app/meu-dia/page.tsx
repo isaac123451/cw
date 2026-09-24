@@ -8,12 +8,14 @@ import PageHeading from "@/components/shared/PageHeading";
 import RotinaDoDia from "@/components/rotina/RotinaDoDia";
 import PlanoDoDia from "@/components/rotina/PlanoDoDia";
 import CheckpointDoDia from "@/components/rotina/CheckpointDoDia";
+import FimDoDia from "@/components/rotina/FimDoDia";
 import ConfigurarRotina from "@/components/rotina/ConfigurarRotina";
 import { useMeuDia } from "@/components/rotina/useMeuDia";
 import CartaoDoPrimeiroAcesso from "@/components/primeiroAcesso/CartaoDoPrimeiroAcesso";
 import AgoraNoMeuDia from "@/components/rotina/AgoraNoMeuDia";
 import ModoProximo from "@/components/rotina/ModoProximo";
 import PlacarDaSemana from "@/components/rotina/PlacarDaSemana";
+import PlanoDeRecuperacao from "@/components/rotina/PlanoDeRecuperacao";
 
 /**
  * Meu dia — a primeira tela do dia.
@@ -75,6 +77,9 @@ export default function MeuDiaPage() {
         {/* O que pede ação, o que move a nota e o que já deu certo — antes da lista de tarefas. */}
         <AgoraNoMeuDia />
 
+        {/* Só aparece com acumulado: 10 ou mais fora do prazo numa frente. */}
+        <PlanoDeRecuperacao dia={dia} />
+
         <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
 
           <RotinaDoDia dia={dia} rascunho={efetivas} setRascunho={setMarcas} onConfigurar={() => setConfigurando(true)} onUmPorVez={() => { setUmPorVez(true); window.scrollTo({ top: 0, behavior: "smooth" }); }} />
@@ -87,6 +92,18 @@ export default function MeuDiaPage() {
                 ontem={dia.ontem}
                 plano={plano}
                 contagens={dia.contagens}
+                feitas={dia.doDia.filter((a) => efetivas.has(a.id)).length}
+                total={dia.doDia.length}
+              />
+            )}
+            {dia.hoje && !dia.carregando && (
+              <FimDoDia
+                hoje={dia.hoje}
+                feito={dia.hojeAteAgora}
+                marcas={dia.marcasDeItens}
+                atividades={dia.doDia}
+                contagens={dia.contagens}
+                plano={plano}
                 feitas={dia.doDia.filter((a) => efetivas.has(a.id)).length}
                 total={dia.doDia.length}
               />

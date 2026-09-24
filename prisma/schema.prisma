@@ -1477,6 +1477,16 @@ model NpsRootCause {
   order       Int     @default(0)
   active      Boolean @default(true)
 
+  /// A área que resolve (Fase 27): Atendimento, Suporte N2, Financeiro,
+  /// Comercial, Desenvolvimento, Implantação. Classificar com esta causa
+  /// já sugere acionar a área certa.
+  area       String?
+  /// O prazo interno da área, em horas úteis.
+  prazoHoras Int?
+  /// As palavras que a sugestão pelo texto procura — para a causa criada
+  /// à mão; a que nasceu do catálogo usa a expressão da família.
+  palavras   String[] @default([])
+
   createdAt DateTime @default(now())
 }
 
@@ -2059,4 +2069,91 @@ model ContatoConhecido {
   establishmentId String?
   vinculadoPor    String
   vinculadoEm     DateTime @default(now())
+}
+
+/// A campanha de votação do Prêmio Reclame Aqui (Fase 23): o prêmio no
+/// calendário e a mensagem do pedido de voto.
+model CampanhaDoPremio {
+  id          String   @id @default(cuid())
+  nome        String
+  categoria   String?
+  /// O link da votação, que a mensagem leva em {link}.
+  linkVotacao String?
+  /// A mensagem do pedido, com {nome} e {link}.
+  mensagem    String?
+  /// A do lembrete, para quem recebeu o pedido e ainda não votou.
+  lembrete    String?
+  /// AAAA-MM-DD em Brasília.
+  votacaoInicio String?
+  votacaoFim    String?
+  /// A data em que o prêmio "fotografa" a reputação.
+  dataDeCorte   String?
+  /// A nota que a reputação precisa ter na data de corte.
+  notaMeta      Float?
+  criadoPor   String?
+  criadoEm    DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  pedidos PedidoDeVoto[]
+}
+
+/// Cada pessoa da campanha: exportada, pedida, lembrada, disse que votou.
+model PedidoDeVoto {
+  id         String           @id @default(cuid())
+  campanhaId String
+  campanha   CampanhaDoPremio @relation(fields: [campanhaId], references: [id], onDelete: Cascade)
+  /// reclame-aqui · nps
+  origem     String
+  /// O id do caso (portal) ou da resposta do NPS.
+  ref        String
+  nome       String
+  telefone   String?
+  email      String?
+  motivo     String?
+  /// exportado · pedido · lembrete · votou
+  situacao   String           @default("exportado")
+  exportadoPor String?
+  exportadoEm  DateTime       @default(now())
+  pedidoEm     DateTime?
+  lembreteEm   DateTime?
+  votouEm      DateTime?
+
+  @@unique([campanhaId, origem, ref])
+  @@index([campanhaId, situacao])
+}
+
+/// As partes escritas do dossiê de um caso (Fase 26). O resto do
+/// documento — identificação, partes, linha do tempo, anexos — é montado
+/// do banco a cada abertura (`montarDossie`) e não é guardado aqui.
+model DossieDoCaso {
+  id            String   @id @default(cuid())
+  caseId        String   @unique
+  destinatario  String?
+  pedido        String?
+  sumario       String?
+  verificado    String[] @default([])
+  sustentado    String[] @default([])
+  alegado       String[] @default([])
+  enquadramento String?
+  conclusao     String?
+  versao        Int      @default(1)
+  atualizadoPor String?
+  atualizadoEm  DateTime @updatedAt
+}
+
+/// O que a pessoa mudou numa resposta sugerida antes de enviar (Fase 28).
+///
+/// É daqui que o rascunho aprende o jeito de quem envia: a saudação que
+/// ela sempre troca, a despedida que ela sempre acrescenta — e a IA vê
+/// as últimas edições como exemplo. Só guarda quando o texto mudou.
+model EdicaoDeResposta {
+  id       String   @id @default(cuid())
+  userId   String
+  /// acolhedora · objetiva · tecnica — ou o caminho ("Responder agora").
+  tom      String
+  original String
+  editada  String
+  criadaEm DateTime @default(now())
+
+  @@index([userId, criadaEm])
 }

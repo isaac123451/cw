@@ -11,6 +11,7 @@ import {
   LucideIcon,
   Settings2,
   Star,
+  Trophy,
 } from "lucide-react";
 
 interface Item {
@@ -32,6 +33,12 @@ const items: Item[] = [
     href: "/reclame-aqui/avaliacoes",
     icon: Star,
     hint: "Quem pedir a avaliação hoje, na cadência da documentação",
+  },
+  {
+    label: "Prêmio",
+    href: "/reclame-aqui/premio",
+    icon: Trophy,
+    hint: "A campanha de votação do Prêmio Reclame Aqui",
   },
   {
     label: "Analytics",

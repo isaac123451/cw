@@ -24,6 +24,7 @@ import {
   minutoDaHora,
   paredeDe,
   prazoUtil,
+  proximoDiaUtil,
 } from "@/lib/services/horasUteis";
 import { prioridadeNormalizada, respondida } from "@/lib/models/case";
 
@@ -56,12 +57,15 @@ export interface ItemDaRotina {
    * detrator crítico, detrator, neutro, promotor.
    */
   urgencia?: number;
+  /** Urgente pela triagem (Reclame Aqui e Redes) ou detrator crítico do NPS — o filtro "Críticos" do Um por vez. */
+  critico?: boolean;
   /** Reclamação do Reclame Aqui: a página pública e a área da empresa — ver `linksDoRa`. */
   ra?: { protocol: string; raUrl?: string };
 }
 
 /** Marcar um item: fiz hoje, ou não se aplica a esta atividade. */
-export type TipoDeMarcaDeItem = "feito" | "dispensado";
+/** `adiado`: sai até a véspera do dia escolhido e volta sozinho nesse dia (Fase 24). */
+export type TipoDeMarcaDeItem = "feito" | "dispensado" | "adiado";
 
 /**
  * Um item tirado de uma atividade por quem trabalha — gravado no banco.
@@ -90,6 +94,54 @@ export function chaveDoItem(i: Pick<ItemDaRotina, "frente" | "id">, chave: Chave
 
 export function marcaValeHoje(m: Pick<MarcaDeItem, "dia" | "ate">, hoje: string) {
   return m.dia <= hoje && (m.ate === null || m.ate >= hoje);
+}
+
+/*
+  Adiar para outro dia (Fase 24).
+
+  O Isaac: "que seja possível remover a atividade, marcar um check,
+  adiar para outro dia". Tirar "só hoje" devolvia o item amanhã, e "por
+  7 dias" era uma semana cravada. Adiar é escolher o dia da volta:
+  amanhã, o próximo dia útil ou uma data. A marca vale até a véspera, e
+  no dia escolhido o item volta sozinho — se ainda for trabalho.
+*/
+
+/** Até quantos dias à frente dá para adiar. Mais que isso é "até devolver". */
+export const ADIAR_NO_MAXIMO_DIAS = 90;
+
+function somarDiasCorridos(dia: string, n: number) {
+  return new Date(Date.parse(`${dia}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
+}
+
+/** O último dia da marca de quem volta em `volta`; `null` quando a data não serve. */
+export function ateDoAdiamento(hoje: string, volta: string): string | null {
+  /* O `Date` aceita 30/02 e vira 02/03 calado: a data tem de voltar igual. */
+  const t = /^\d{4}-\d{2}-\d{2}$/.test(volta) ? Date.parse(`${volta}T00:00:00Z`) : NaN;
+  if (Number.isNaN(t) || new Date(t).toISOString().slice(0, 10) !== volta) return null;
+  if (volta <= hoje || volta > somarDiasCorridos(hoje, ADIAR_NO_MAXIMO_DIAS)) return null;
+  return somarDiasCorridos(volta, -1);
+}
+
+/** O dia em que um item adiado volta. */
+export function voltaDoAdiado(m: Pick<MarcaDeItem, "ate">) {
+  return m.ate ? somarDiasCorridos(m.ate, 1) : null;
+}
+
+/** As escolhas prontas: amanhã e o próximo dia útil — uma só quando são o mesmo dia. */
+export function opcoesDeAdiar(hoje: string, expediente: Expediente = EXPEDIENTE_PADRAO) {
+  const amanha = somarDiasCorridos(hoje, 1);
+  const util = proximoDiaUtil(hoje, expediente);
+  return util === amanha
+    ? [{ id: "amanha", rotulo: "Amanhã", volta: amanha }]
+    : [
+        { id: "amanha", rotulo: "Amanhã", volta: amanha },
+        { id: "util", rotulo: "Próximo dia útil", volta: util },
+      ];
+}
+
+/** "25/09" — o dia curto das marcas. */
+export function diaCurtoDaMarca(dia: string) {
+  return dia.split("-").reverse().slice(0, 2).join("/");
 }
 
 export interface Contagem {
@@ -346,6 +398,7 @@ export function contarRotina(
           ra: { protocol: c.protocol, raUrl: c.raUrl },
           atrasado,
           urgencia: urgenciaDoCaso(c, atrasado),
+          critico: prioridadeNormalizada(c.priority) === "Urgente",
         };
       }),
     ...abertos
@@ -360,6 +413,7 @@ export function contarRotina(
           href: caseHref(c),
           atrasado,
           urgencia: urgenciaDoCaso(c, atrasado),
+          critico: prioridadeNormalizada(c.priority) === "Urgente",
         };
       }),
     /*
@@ -381,6 +435,7 @@ export function contarRotina(
           href: `/nps/${r.id}`,
           atrasado,
           urgencia: urgenciaDoNps(r, atrasado),
+          critico: nivelDoNps(r).nivel === "detrator-critico",
         };
       }),
     ...dados.google
@@ -424,6 +479,7 @@ export function contarRotina(
           ...(frenteDoCaso(c) === "reclame-aqui" ? { ra: { protocol: c.protocol, raUrl: c.raUrl } } : {}),
           atrasado,
           urgencia: urgenciaDoCaso(c, atrasado),
+          critico: prioridadeNormalizada(c.priority) === "Urgente",
         };
       }),
     ...naEtapa("em-aberto")
@@ -435,6 +491,7 @@ export function contarRotina(
         detalhe: [etapaNps.get(r.id)!.motivo, r.customerName || r.customer].join(" · "),
         href: `/nps/${r.id}`,
         urgencia: urgenciaDoNps(r, false),
+        critico: nivelDoNps(r).nivel === "detrator-critico",
       })),
     ...dados.google
       .filter((a) => a.status === "aberta" && a.respondidaEm && a.classificacao === "negativa" && !a.tratativaResultado)
@@ -477,6 +534,7 @@ export function contarRotina(
         detalhe: r.customerName || r.customer,
         href: `/nps/${r.id}`,
         urgencia: urgenciaDoNps(r, false),
+        critico: nivelDoNps(r).nivel === "detrator-critico",
       })),
   ];
 
@@ -521,6 +579,7 @@ export function contarRotina(
         detalhe: r.customerName || r.customer,
         href: `/nps/${r.id}`,
         urgencia: urgenciaDoNps(r, false),
+        critico: nivelDoNps(r).nivel === "detrator-critico",
       };
     });
   const ligacoes = [...(dados.ligacoes ?? []), ...ligacoesNps];

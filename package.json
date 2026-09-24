@@ -1,6 +1,6 @@
 {
   "name": "cw-reputacao",
-  "version": "1.39.0",
+  "version": "1.68.1",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -123,6 +123,9 @@
     "check:primeira-semana": "tsx scripts/check-primeira-semana.ts",
     "check:triagem-redes": "tsx scripts/check-triagem-redes.ts",
     "check:meu-dia": "tsx scripts/check-meu-dia.ts",
+    "check:agenda": "tsx scripts/check-agenda.ts",
+    "check:premio": "tsx scripts/check-premio.ts",
+    "check:dossie-escrito": "tsx scripts/check-dossie-escrito.ts",
     "check:espera-do-retorno": "tsx scripts/check-espera-do-retorno.ts",
     "check:plano-na-agenda": "tsx --conditions=react-server scripts/check-plano-na-agenda.ts",
     "check:guardar-sozinho": "node scripts/check-guardar-sozinho.js",
@@ -138,7 +141,12 @@
     "check:nova-tentativa": "tsx scripts/check-nova-tentativa.ts",
     "check:menu": "tsx scripts/check-menu.ts",
     "check:sino": "tsx scripts/check-sino.ts",
-    "check:atalhos": "tsx scripts/check-atalhos.ts"
+    "check:atalhos": "tsx scripts/check-atalhos.ts",
+    "check:causas": "tsx scripts/check-causas.ts",
+    "check:momento": "tsx scripts/check-momento.ts",
+    "check:situacao": "tsx scripts/check-situacao.ts",
+    "check:tons": "tsx scripts/check-tons.ts",
+    "check:impacto-conversa": "tsx scripts/check-impacto-conversa.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",

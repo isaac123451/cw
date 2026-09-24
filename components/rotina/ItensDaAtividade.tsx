@@ -15,7 +15,8 @@ import { usePassosParaFechar } from "@/components/rotina/usePassosParaFechar";
 
 import type { DuracaoDaMarca } from "@/lib/actions/rotina";
 import { frente, type FrenteId } from "@/lib/models/frentes";
-import { chaveDoItem, type Contagem, type ItemDaRotina, type MarcaDeItem, type TipoDeMarcaDeItem } from "@/lib/models/meuDia";
+import { chaveDoItem, diaCurtoDaMarca, voltaDoAdiado, type Contagem, type ItemDaRotina, type MarcaDeItem, type TipoDeMarcaDeItem } from "@/lib/models/meuDia";
+import OpcoesDeAdiar from "@/components/rotina/OpcoesDeAdiar";
 import type { ChaveDaRotina } from "@/lib/models/rotina";
 import { resumoDosPassos } from "@/lib/models/guiaParaFechar";
 import { janelaDoEndereco } from "@/lib/models/janelas";
@@ -27,7 +28,7 @@ interface Props {
   /** O nome da atividade, para o aviso dizer de onde o item saiu. */
   atividade: string;
   contagem: Contagem;
-  marcarItens: (itens: { chave: string; item: string; titulo: string }[], tipo: TipoDeMarcaDeItem, duracao?: DuracaoDaMarca) => Promise<Resultado>;
+  marcarItens: (itens: { chave: string; item: string; titulo: string }[], tipo: TipoDeMarcaDeItem, duracao?: DuracaoDaMarca, volta?: string) => Promise<Resultado>;
   desfazerMarcas: (ids: string[]) => Promise<Resultado>;
 }
 
@@ -40,12 +41,11 @@ const DURACOES: { id: DuracaoDaMarca; rotulo: string; dica: string }[] = [
   { id: "sempre", rotulo: "Até eu devolver", dica: "Some desta atividade até você devolver, aqui embaixo." },
 ];
 
-function diaCurto(dia: string) {
-  return dia.split("-").reverse().slice(0, 2).join("/");
-}
+const diaCurto = diaCurtoDaMarca;
 
 function rotuloDaMarca(m: MarcaDeItem) {
   if (m.tipo === "feito") return "feito hoje";
+  if (m.tipo === "adiado") return `volta em ${diaCurto(voltaDoAdiado(m) ?? m.dia)}`;
   if (m.ate === null) return "tirado até devolver";
   return m.ate === m.dia ? "tirado hoje" : `tirado até ${diaCurto(m.ate)}`;
 }
@@ -77,22 +77,24 @@ export default function ItensDaAtividade({ chave, atividade, contagem, marcarIte
     else grupos.push({ frente: i.frente, itens: [i] });
   }
 
-  async function marcar(i: ItemDaRotina, tipo: TipoDeMarcaDeItem, duracao: DuracaoDaMarca = "hoje") {
+  async function marcar(i: ItemDaRotina, tipo: TipoDeMarcaDeItem, duracao: DuracaoDaMarca = "hoje", volta?: string) {
     const k = chaveDoItem(i, chave);
     setMenuDe(null);
     setGravando(k);
     try {
-      const r = await marcarItens([{ chave, item: k, titulo: i.titulo }], tipo, duracao);
+      const r = await marcarItens([{ chave, item: k, titulo: i.titulo }], tipo, duracao, volta);
       if (!r.ok) {
         notify({ tone: "error", title: "O item não saiu da lista.", detail: r.erro });
         return;
       }
       notify({
         tone: "success",
-        title: tipo === "feito" ? "Marcado como feito hoje." : `Tirado de "${atividade}".`,
+        title: tipo === "feito" ? "Marcado como feito hoje." : tipo === "adiado" ? `Adiado para ${diaCurto(volta!)}.` : `Tirado de "${atividade}".`,
         detail: `${i.titulo} — ${
           tipo === "feito"
             ? "volta amanhã só se ainda for trabalho desta atividade."
+            : tipo === "adiado"
+              ? "volta sozinho nesse dia, se ainda for trabalho; dá para devolver antes, no fim desta lista."
             : duracao === "hoje"
               ? "só por hoje."
               : duracao === "semana"
@@ -166,6 +168,7 @@ export default function ItensDaAtividade({ chave, atividade, contagem, marcarIte
                       onMenu={(aberto) => setMenuDe(aberto ? chaveDoItem(i, chave) : null)}
                       onFeito={() => marcar(i, "feito")}
                       onTirar={(d) => marcar(i, "dispensado", d)}
+                      onAdiar={(volta) => marcar(i, "adiado", "hoje", volta)}
                     />
                   ))}
                 </ul>
@@ -239,6 +242,7 @@ function Linha({
   onMenu,
   onFeito,
   onTirar,
+  onAdiar,
 }: {
   item: ItemDaRotina;
   falta: string | null;
@@ -248,6 +252,7 @@ function Linha({
   onMenu: (aberto: boolean) => void;
   onFeito: () => void;
   onTirar: (d: DuracaoDaMarca) => void;
+  onAdiar: (volta: string) => void;
 }) {
 
   const raiz = useRef<HTMLLIElement>(null);
@@ -300,8 +305,8 @@ function Linha({
           disabled={bloqueado}
           aria-haspopup="menu"
           aria-expanded={menuAberto}
-          title="Não se aplica — tirar desta atividade"
-          aria-label={`Tirar ${item.titulo} desta atividade`}
+          title="Não se aplica ou adiar — tirar desta atividade"
+          aria-label={`Tirar ou adiar ${item.titulo}`}
           className={`rounded-md p-1 text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700 focus-visible:opacity-100 group-hover:opacity-100 disabled:opacity-40 ${menuAberto ? "bg-zinc-100 text-zinc-700 opacity-100" : "opacity-0"}`}
         >
           <CircleSlash size={13} />
@@ -313,7 +318,7 @@ function Linha({
       </div>
 
       {menuAberto && (
-        <div role="menu" className="absolute right-1 top-[calc(100%-2px)] z-30 w-48 overflow-hidden rounded-xl border border-zinc-200 bg-white p-1 shadow-[0_12px_32px_-12px_rgba(16,24,40,0.25)]">
+        <div role="menu" className="absolute right-1 top-[calc(100%-2px)] z-30 w-56 overflow-hidden rounded-xl border border-zinc-200 bg-white p-1 shadow-[0_12px_32px_-12px_rgba(16,24,40,0.25)]">
           <p className="px-2.5 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-400">Não se aplica</p>
           {DURACOES.map((d) => (
             <button
@@ -327,6 +332,9 @@ function Linha({
               {d.rotulo}
             </button>
           ))}
+          <div className="mt-1 border-t border-zinc-100 pt-0.5">
+            <OpcoesDeAdiar id={`adiar-${item.id}`} onAdiar={onAdiar} />
+          </div>
         </div>
       )}
     </li>

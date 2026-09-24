@@ -33,6 +33,7 @@ import { limparTentativasVelhas } from "@/lib/auth/throttle";
 
 import { importarDoWootric } from "@/lib/services/wootric.import";
 import { temWootric } from "@/lib/services/wootric.service";
+import { abrirReincidenciasComDono } from "@/lib/services/reincidencia.service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -148,6 +149,7 @@ export async function GET(request: Request) {
     tentativas,
     wootric,
     metricasDeHoje,
+    reincidencias,
   ] = await Promise.all([
     /*
       Depois de encerrar, o Wootric: o que fechou agora e o que a ficha
@@ -209,6 +211,16 @@ export async function GET(request: Request) {
      * numero do dia, no dia. Esta linha e´ essa planilha.
      */
     protegida("metricasDeHoje", () => medirHoje(prisma)),
+
+    /**
+     * A causa que passa do limite vira item em Projetos (Fase 27).
+     *
+     * Três registros da mesma causa em 30 dias, somando as frentes, e a
+     * causa com área dona no catálogo: o item nasce com a área como
+     * responsável. Uma vez por causa e por mês — a marca `origem` segura
+     * o segundo, então rodar de novo não duplica.
+     */
+    protegida("reincidencias", () => abrirReincidenciasComDono(prisma, new Date())),
   ]);
 
   /**
@@ -231,7 +243,8 @@ export async function GET(request: Request) {
     contou(movimentacoes, "avisadas") > 0 ||
     contou(vinculos, "vinculados") > 0 ||
     contou(wootric, "novas") > 0 ||
-    contou(wootric, "atualizadas") > 0
+    contou(wootric, "atualizadas") > 0 ||
+    ((reincidencias as { criados?: string[] }).criados?.length ?? 0) > 0
   ) {
     revalidateTag(WORKSPACE_TAG, "max");
   }
@@ -256,6 +269,7 @@ export async function GET(request: Request) {
       tentativasApagadas: tentativas,
       wootric,
       metricasDeHoje,
+      reincidencias,
     },
     { status: falhas.length === 0 ? 200 : 500 }
   );

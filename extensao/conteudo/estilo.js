@@ -165,6 +165,10 @@ ${CORES}
 }
 
 .gatilho:hover { transform: translateY(-2px); }
+
+/* Arrastado para outro canto (Fase 28): a posição é a que a pessoa escolheu neste site. */
+.gatilho.movido { left: var(--bx); top: var(--by); right: auto; bottom: auto; }
+.gatilho.arrastando { cursor: grabbing; transition: none; transform: scale(1.06); }
 .gatilho:active { transform: translateY(0); }
 .gatilho:focus-visible {
   outline: 2px solid var(--violeta);
@@ -1124,6 +1128,86 @@ ${CORES}
   background: var(--superficie);
 }
 .termometro[hidden] { display: none; }
+
+/* O que fazer agora (Fase 28): uma linha com a abordagem, o roteiro abre no clique. */
+.agora-conversa {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--superficie);
+  border-left: 3px solid var(--violeta);
+  font-size: 12.5px;
+}
+.agora-conversa.atencao { border-left-color: var(--atencao); }
+.agora-conversa.perigo { border-left-color: var(--perigo); }
+.agora-conversa summary { cursor: pointer; list-style: none; }
+.agora-conversa summary::-webkit-details-marker { display: none; }
+.agora-conversa .agora-rotulo { color: var(--fraco); }
+.agora-conversa .agora-porque { margin: 6px 0 0; color: var(--fraco); }
+.agora-conversa .agora-roteiro { margin: 6px 0 0; padding-left: 18px; }
+.agora-conversa .agora-roteiro li { margin: 2px 0; }
+
+/* O resumo que situa (Fase 28): quer, feito, prometido, falta, risco — com a citação. */
+.situacao { margin: 8px 0 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; font-size: 12.5px; }
+.situacao dt { color: var(--fraco); font-weight: 600; }
+.situacao dd { margin: 0; min-width: 0; }
+.situacao ul { margin: 0; padding-left: 16px; }
+.situacao li { margin: 0 0 3px; }
+.situacao .citacao { display: block; color: var(--fraco); font-size: 11.5px; font-style: italic; overflow-wrap: anywhere; }
+.situacao .quando { font-size: 11px; color: var(--fraco); white-space: nowrap; }
+.situacao .quando.vencida { color: var(--perigo); font-weight: 600; }
+
+/* O impacto que a conversa mostra (Fase 28): a condição dada, com o valor e um clique. */
+.impacto-conversa {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px dashed var(--atencao);
+  font-size: 12.5px;
+}
+.impacto-conversa .impacto-titulo { margin: 0 0 4px; font-weight: 600; }
+.impacto-conversa .impacto-item + .impacto-item { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--borda); }
+.impacto-conversa p { margin: 0; }
+.impacto-conversa .citacao { color: var(--fraco); font-size: 11.5px; font-style: italic; overflow-wrap: anywhere; margin: 2px 0 6px; }
+.impacto-conversa .valor-impacto {
+  width: 90px;
+  font: inherit;
+  padding: 3px 6px;
+  border: 1px solid var(--borda);
+  border-radius: 6px;
+  background: var(--fundo);
+  color: var(--texto);
+}
+.impacto-conversa .impacto-feito { color: var(--ok, #16a34a); }
+
+/* Os três tons (Fase 28): abas, e o texto editável antes de copiar. */
+.tons { margin-top: 10px; }
+.tons-abas { display: flex; gap: 4px; margin: 6px 0; }
+.tons-abas button {
+  flex: 1;
+  padding: 4px 6px;
+  font: inherit;
+  font-size: 12px;
+  border: 1px solid var(--borda);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--texto);
+  cursor: pointer;
+}
+.tons-abas button[aria-selected="true"] { background: var(--violeta); border-color: var(--violeta); color: #fff; }
+.texto-tom {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  font: inherit;
+  font-size: 12.5px;
+  line-height: 1.45;
+  padding: 7px 9px;
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  background: var(--fundo, transparent);
+  color: var(--texto);
+}
 .termometro.h1, .termometro.h2 { color: var(--perigo); }
 .termometro.h3 { color: var(--fraco); }
 .termometro.h4, .termometro.h5 { color: var(--ok, #16a34a); }
