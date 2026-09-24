@@ -5,6 +5,7 @@ import { useMemo, useState, type KeyboardEvent, type ReactNode } from "react";
 import { Check, ChevronLeft, Loader2, TriangleAlert } from "lucide-react";
 
 import Combobox from "@/components/shared/Combobox";
+import DonoDaCausa from "@/components/causas/DonoDaCausa";
 
 import type { Case } from "@/lib/models/case";
 import { AREAS_INTERNAS } from "@/lib/models/mensagens";
@@ -326,6 +327,7 @@ export default function TriagemDasRedes({ data, relato, aoSalvar, onCancelar }: 
                       placeholder="Não definida"
                       options={[...new Set([...rootCauses.filter((c) => c.active).map((c) => c.name), ...(t.causaRaiz ? [t.causaRaiz] : [])])]}
                     />
+                    <DonoDaCausa causa={t.causaRaiz} />
                   </div>
                 </div>
               </div>

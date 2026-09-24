@@ -46,7 +46,8 @@ interface TratativaContextType {
   abrirTriagem: (item: Case, opcoes?: Opcoes) => void;
   abrirContato: (item: Case, tipo?: TipoDeContato, opcoes?: Opcoes) => void;
   abrirImersao: (item: Case, opcoes?: Opcoes) => void;
-  abrirArea: (item: Case) => void;
+  /** `area` e `causa`: o acionamento que nasce da causa raiz já vem com a área dona escolhida. */
+  abrirArea: (item: Case, daCausa?: { area?: string; causa?: string }) => void;
   abrirPedidoAvaliacao: (item: Case, opcoes?: Opcoes) => void;
   abrirModeracao: (item: Case, opcoes?: Opcoes) => void;
 }
@@ -60,6 +61,7 @@ interface Aberto {
   item: Case;
   contato?: TipoDeContato;
   opcoes?: Opcoes;
+  daCausa?: { area?: string; causa?: string };
 }
 
 export function TratativaProvider({ children }: { children: ReactNode }) {
@@ -87,7 +89,7 @@ export function TratativaProvider({ children }: { children: ReactNode }) {
       abrirContato: (item, contato, opcoes) =>
         setAberto({ tipo: "contato", item, contato, opcoes }),
       abrirImersao: (item, opcoes) => setAberto({ tipo: "imersao", item, opcoes }),
-      abrirArea: (item) => setAberto({ tipo: "area", item }),
+      abrirArea: (item, daCausa) => setAberto({ tipo: "area", item, daCausa }),
       abrirPedidoAvaliacao: (item, opcoes) => setAberto({ tipo: "pedido-avaliacao", item, opcoes }),
       abrirModeracao: (item, opcoes) => setAberto({ tipo: "moderacao", item, opcoes }),
     }),
@@ -131,6 +133,8 @@ export function TratativaProvider({ children }: { children: ReactNode }) {
         <AcionarAreaModal
           key={chave}
           item={aberto.item}
+          areaInicial={aberto.daCausa?.area}
+          causa={aberto.daCausa?.causa}
           onClose={fechar}
           onSalvo={(movimento: CaseMovement) => aplicarMovimento(movimento)}
         />

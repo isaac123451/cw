@@ -6,6 +6,7 @@ import { CheckCircle2, Loader2, TriangleAlert } from "lucide-react";
 
 import Modal, { GhostButton, textareaClass } from "@/components/shared/Modal";
 import Combobox from "@/components/shared/Combobox";
+import DonoDaCausa from "@/components/causas/DonoDaCausa";
 
 import type { Case } from "@/lib/models/case";
 import { ETAPAS_DAS_REDES, TENTATIVAS_DAS_REDES } from "@/lib/models/redes";
@@ -165,6 +166,7 @@ export default function EncerrarRedesModal({ item, resultadoInicial, onClose, on
               placeholder="Não definida"
               options={[...new Set([...rootCauses.filter((c) => c.active).map((c) => c.name), ...(causa ? [causa] : [])])]}
             />
+              <DonoDaCausa causa={causa} />
           </div>
         </div>
 

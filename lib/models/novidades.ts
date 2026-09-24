@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.61.0",
+    data: "2026-09-24",
+    titulo: "Cada causa raiz com dono",
+    texto: "Cada causa raiz agora tem a área que resolve e o prazo (em Causas raiz → Editar, ou no Gerenciar do NPS). Ao classificar um caso, uma resposta do NPS ou uma avaliação do Google, aparece embaixo do campo \"Dono: Financeiro · 2 dias úteis\"; no Reclame Aqui e na janela do caso, o botão \"Acionar Financeiro\" abre o acionamento com a área já escolhida — e, se o prazo da causa for mais curto que o da prioridade, o relógio da área usa o da causa.",
+    frentes: ["plataforma", "reclame-aqui", "nps", "redes", "google"],
+  },
+  {
     versao: "1.60.0",
     data: "2026-09-24",
     titulo: "Causas raiz tiradas dos casos reais",

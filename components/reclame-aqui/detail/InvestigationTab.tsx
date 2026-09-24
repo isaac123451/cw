@@ -19,6 +19,8 @@ import { useNps } from "@/lib/context/NpsContext";
 import Combobox from "@/components/shared/Combobox";
 
 import { sugerirAssuntoDoRelato, type SugestaoComAcerto } from "@/lib/actions/sugestoes";
+import DonoDaCausa from "@/components/causas/DonoDaCausa";
+import { useTratativa } from "@/components/reclame-aqui/tratativa/TratativaProvider";
 
 interface Props {
   data: Case;
@@ -34,6 +36,8 @@ export default function InvestigationTab({
     useSettings();
 
   const { rootCauses } = useNps();
+
+  const { abrirArea } = useTratativa();
 
   const active = useMemo(
     () => checklist.filter((item) => item.active),
@@ -372,6 +376,10 @@ export default function InvestigationTab({
                     ...(data.causaRaiz ? [data.causaRaiz] : []),
                   ]),
                 ]}
+              />
+              <DonoDaCausa
+                causa={data.causaRaiz}
+                onAcionar={(area) => abrirArea(data, { area, causa: data.causaRaiz })}
               />
             </div>
 

@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import Modal, { inputClass } from "@/components/shared/Modal";
 import SugestaoDoTexto from "@/components/shared/SugestaoDoTexto";
+import DonoDaCausa from "@/components/causas/DonoDaCausa";
 
 import { classificarNps } from "@/lib/actions/nps";
 import { useNps } from "@/lib/context/NpsContext";
@@ -138,6 +139,7 @@ export default function ClassificarNpsModal({ item, onClose }: { item: NpsRespon
                 </option>
               ))}
             </select>
+            <DonoDaCausa causa={causa} />
             <span className="mt-1 block text-xs text-zinc-400">A mesma lista nas quatro frentes — é ela que mostra a tendência no Analytics.</span>
             {causaSugerida && (
               <div className="mt-2">

@@ -15,6 +15,7 @@ import { useRascunho } from "@/lib/hooks/useRascunho";
 import type { Gravacao } from "@/lib/context/sync";
 
 import { RootCauseOption } from "@/lib/models/nps";
+import { AREAS_DAS_CAUSAS, PRAZOS_DAS_CAUSAS, rotuloDoPrazo } from "@/lib/models/catalogoDeCausas";
 
 interface Props {
   causas: RootCauseOption[];
@@ -87,8 +88,9 @@ export default function RootCauseManager({
   return (
     <Modal
       open
+      size="wide"
       title="Causa raiz"
-      description="A lista que aparece no registro de uma resposta. Fechada de propósito — é o que faz a tendência ser comparável."
+      description="A lista única das quatro frentes, cada causa com a área que resolve e o prazo. Fechada de propósito — é o que faz a tendência ser comparável."
       onClose={onClose}
       footer={
         <GhostButton onClick={onClose}>
@@ -110,7 +112,7 @@ export default function RootCauseManager({
           {ordenadas.map((causa) => (
             <li
               key={causa.id}
-              className="flex items-center gap-2 px-3.5 py-2.5"
+              className="flex flex-wrap items-center gap-2 px-3.5 py-2.5"
             >
 
               <input
@@ -121,8 +123,47 @@ export default function RootCauseManager({
                   })
                 }
                 placeholder="Nome da causa"
-                className={`${inputClass} h-8 py-1 ${causa.active ? "" : "text-zinc-400 line-through"}`}
+                className={`${inputClass} h-8 min-w-0 flex-1 basis-48 py-1 ${causa.active ? "" : "text-zinc-400 line-through"}`}
               />
+
+              {/*
+                O dono da causa (Fase 27): quem resolve e em quanto
+                tempo. Classificar com ela já mostra a área e o botão de
+                acionar — e o prazo aperta o relógio da área dona.
+              */}
+              <select
+                aria-label={`Área dona de ${causa.name || "causa nova"}`}
+                value={causa.area ?? ""}
+                onChange={(e) =>
+                  rascunho.alterar(causa.id, {
+                    area: e.target.value,
+                    ...(e.target.value && !causa.prazoHoras ? { prazoHoras: 24 } : {}),
+                  })
+                }
+                className="h-8 shrink-0 rounded-lg border border-zinc-200 bg-white px-2 text-xs text-zinc-700"
+              >
+                <option value="">sem dono</option>
+                {AREAS_DAS_CAUSAS.map((a) => (
+                  <option key={a}>{a}</option>
+                ))}
+              </select>
+
+              <select
+                aria-label={`Prazo de ${causa.name || "causa nova"}`}
+                value={causa.prazoHoras ?? 0}
+                disabled={!causa.area}
+                onChange={(e) =>
+                  rascunho.alterar(causa.id, {
+                    prazoHoras: Number(e.target.value),
+                  })
+                }
+                className="h-8 shrink-0 rounded-lg border border-zinc-200 bg-white px-2 text-xs text-zinc-700 disabled:opacity-40"
+              >
+                <option value={0}>sem prazo</option>
+                {PRAZOS_DAS_CAUSAS.map((h) => (
+                  <option key={h} value={h}>{rotuloDoPrazo(h)}</option>
+                ))}
+              </select>
 
               <label
                 title="Causa desativada some do formulário, mas continua no registro que já a usava."
@@ -170,7 +211,10 @@ export default function RootCauseManager({
         </button>
 
         <p className="text-xs leading-relaxed text-zinc-500">
-          Renomear arrasta as respostas junto — elas
+          A área dona aparece embaixo do campo de causa raiz
+          nas quatro frentes, com o botão de acionar nos casos;
+          o prazo da causa vale quando é mais curto que o da
+          prioridade. Renomear arrasta as respostas junto — elas
           guardam o nome, e sem isso a causa antiga e a
           nova apareceriam como coisas diferentes no
           gráfico. Excluir uma causa que já foi usada

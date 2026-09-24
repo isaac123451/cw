@@ -7,6 +7,8 @@ import { useRascunhoNaJanela } from "@/lib/context/rascunhosDasJanelas";
 import { Loader2, Save, ShieldAlert, StickyNote } from "lucide-react";
 
 import Combobox from "@/components/shared/Combobox";
+import DonoDaCausa from "@/components/causas/DonoDaCausa";
+import { useTratativa } from "@/components/reclame-aqui/tratativa/TratativaProvider";
 
 import { useCases } from "@/lib/context/CaseContext";
 import { useWorkflow } from "@/lib/context/WorkflowContext";
@@ -58,6 +60,7 @@ export default function JanelaDoCaso({
   const { categories } = useSettings();
   const { people } = useTeams();
   const { rootCauses } = useNps();
+  const { abrirArea } = useTratativa();
   const { notify } = useToast();
 
   const caso = cases.find((item) => item.id === id);
@@ -256,6 +259,7 @@ export default function JanelaDoCaso({
               placeholder="Não definida"
               options={causas}
             />
+            <DonoDaCausa causa={valor("causaRaiz")} onAcionar={(area) => abrirArea(caso, { area, causa: valor("causaRaiz") })} />
           </div>
         </div>
       </div>

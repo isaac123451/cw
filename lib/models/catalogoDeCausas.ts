@@ -448,3 +448,34 @@ export function regrasDoCatalogo(causas: { name: string; palavras?: string[] }[]
   }
   return [...regras, ...regrasDeCausa(semRegra)];
 }
+
+/* ============================================================
+   O DONO
+============================================================ */
+
+export interface DonoDaCausa {
+  nome: string;
+  area?: string | null;
+  prazoHoras?: number | null;
+}
+
+/** A causa do catálogo com este nome, sem diferença de caixa e de espaço. */
+export function acharCausa<T extends { name: string }>(nome: string | undefined, causas: T[]): T | undefined {
+  if (!nome?.trim()) return undefined;
+  const k = chave(nome);
+  return causas.find((c) => chave(c.name) === k);
+}
+
+/**
+ * O prazo da área quando o acionamento vem da causa raiz.
+ *
+ * O relógio da área segue a prioridade do caso (a regra da
+ * documentação); a causa só aperta. Se a causa é da mesma área e tem
+ * prazo menor — "sistema fora do ar" em 4 h num caso Normal de 24 h —,
+ * vale o da causa. Acionar outra área que não a dona não muda nada.
+ */
+export function prazoComCausa(horasDaPrioridade: number, area: string, causa?: Pick<DonoDaCausa, "area" | "prazoHoras"> | null): { horas: number; pelaCausa: boolean } {
+  const daCausa = causa?.area && causa.area === area && causa.prazoHoras ? causa.prazoHoras : undefined;
+  if (daCausa && daCausa < horasDaPrioridade) return { horas: daCausa, pelaCausa: true };
+  return { horas: horasDaPrioridade, pelaCausa: false };
+}

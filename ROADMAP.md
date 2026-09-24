@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 24/09/2026. Aplicação **1.60.0**, extensão **1.60.0**.
+Atualizado em 24/09/2026. Aplicação **1.61.0**, extensão **1.61.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,38 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### Cada causa com dono (24/09/2026, 1.61.0)
+
+Segundo item da Fase 27: a área que resolve e o prazo interno, e
+classificar já sugere acionar a área certa.
+
+- Cadastro de causas (NPS → Gerenciar, e o novo "Editar" em Causas
+  raiz): cada linha ganhou a área dona (Atendimento, Suporte N2,
+  Financeiro, Comercial, Desenvolvimento, Implantação) e o prazo (4 h
+  úteis a 7 dias úteis). `saveNpsRootCause` grava os dois e as palavras;
+  antes do `db:push`, renomear continua funcionando e só a área responde
+  "rode npm run db:push".
+- `DonoDaCausa`: a linha "Dono: Financeiro · 2 dias úteis" embaixo do
+  campo de causa raiz nas nove telas que classificam (investigação do
+  caso, janela do caso, triagem e encerramento das redes, tratativa e
+  janela do Google, ficha, classificação e janela do NPS). No caso do
+  Reclame Aqui e na janela do caso, o botão "Acionar <área>" abre o
+  acionamento já com a área dona escolhida; causa do próprio Atendimento
+  não tem botão.
+- O prazo da causa aperta o relógio: `prazoComCausa` — quando a área
+  acionada é a dona e o prazo da causa é menor que o da prioridade, vale
+  o da causa (o modal diz por quê). `acionarArea` lê o prazo do banco
+  (`donoNoBanco`), nunca da tela; sem as colunas, segue a prioridade.
+- Causas raiz mostra "O catálogo e os donos": as ativas, as sem dono
+  primeiro.
+
+Provas: `npm run check:causas` (acha a causa, prazo da causa × da
+prioridade, outra área, causa sem dono) e testes no navegador (a linha
+do dono e o botão, o cadastro gravando área e prazo, a tela Causas raiz
+em modo demonstração). Não provado sem banco: o acionamento real com o
+prazo da causa. **Depende de você:** `npm run db:push` e dar dono às
+causas.
 
 ### Catálogo de causas tirado da base (24/09/2026, 1.60.0)
 

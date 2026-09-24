@@ -1,5 +1,7 @@
 "use server";
 
+import type { PrismaClient } from "@prisma/client";
+
 import { updateTag } from "next/cache";
 
 import { CASES_TAG, WORKSPACE_TAG } from "@/lib/actions/tags";
@@ -23,6 +25,7 @@ import { conversasDoRegistro } from "@/lib/services/conversas.service";
 import { slugify } from "@/lib/services/slug";
 import type { CaseMovement, PrazosDeArea } from "@/lib/models/movement";
 import { AREAS_INTERNAS } from "@/lib/models/mensagens";
+import { prazoComCausa, type DonoDaCausa } from "@/lib/models/catalogoDeCausas";
 import { LIMITE_DE_REPETICAO, semelhanca } from "@/lib/services/lgpd";
 import { RESPOSTA_SINTETICA } from "@/lib/services/raMarcadores";
 import { diaNaOperacao } from "@/lib/services/reputation.service";
@@ -546,12 +549,35 @@ const PRIORIDADE_DO_ENUM: Record<string, Prioridade> = {
  * Normal 2 dias úteis — e fica congelado no acionamento. Destino que não
  * é área (o próprio cliente, por exemplo) usa a regra cadastrada dele.
  */
+/**
+ * A área e o prazo da causa raiz, lidos do banco — o prazo não vem da tela.
+ *
+ * Antes do `db:push` da Fase 27 as colunas não existem: aí a causa não
+ * tem dono, e o relógio segue só a prioridade, como sempre foi.
+ */
+async function donoNoBanco(prisma: PrismaClient, causa?: string): Promise<DonoDaCausa | null> {
+  const nome = causa?.trim();
+  if (!nome) return null;
+  try {
+    const achada = await prisma.npsRootCause.findFirst({
+      where: { name: { equals: nome, mode: "insensitive" } },
+      select: { name: true, area: true, prazoHoras: true },
+    });
+    return achada ? { nome: achada.name, area: achada.area, prazoHoras: achada.prazoHoras } : null;
+  } catch (erro) {
+    if ((erro as { code?: string })?.code === "P2022") return null;
+    throw erro;
+  }
+}
+
 export async function acionarArea(entrada: {
   protocol: string;
   area: string;
   tratativa: string;
   /** O número do chamado, quando a área abre um — o documento das Redes pede. */
   chamado?: string;
+  /** A causa raiz de onde o acionamento nasceu: o prazo dela aperta o da área dona. */
+  causa?: string;
 }): Promise<{ ok: true; movimento: CaseMovement } | Falha> {
 
   const area = entrada.area.trim();
@@ -594,7 +620,7 @@ export async function acionarArea(entrada: {
     ]);
 
     const ehArea = AREAS_INTERNAS.some((a) => a.nome === area);
-    const horas = ehArea || !regra ? prazosDeAreaDoBanco(operacao)[prioridade] : regra.hours;
+    const { horas } = prazoComCausa(ehArea || !regra ? prazosDeAreaDoBanco(operacao)[prioridade] : regra.hours, area, await donoNoBanco(quem.ctx.prisma, entrada.causa));
 
     const criado = await quem.ctx.prisma.caseMovement.create({
       data: {

@@ -9,7 +9,9 @@
  * cadastrada é reconhecida e as regras de texto servem às causas novas.
  */
 import {
+  acharCausa,
   causaDaLinha,
+  prazoComCausa,
   familiaDaCausa,
   familiaDoTexto,
   propostaDoCatalogo,
@@ -96,6 +98,15 @@ conferir("uma regra por causa que tem como ser lida", regras.map((x) => x.rotulo
 conferir("a causa feita à mão casa pelas palavras guardadas", regras[1].padrao.test(normalizarTexto("A maquininha da Stone não passa")), true);
 const s = sugerir("a impressora parou de imprimir", { regras, valoresValidos: ["Impressão de pedidos", "Maquininha", "Bug"] });
 conferir("sugestão pelo texto com o catálogo novo", s?.valor, "Impressão de pedidos");
+
+console.log("\n  O dono da causa\n");
+const catalogo = [{ name: "Sistema fora do ar ou lento", area: "Desenvolvimento", prazoHoras: 4 }, { name: "Implantação e ativação", area: "Implantação", prazoHoras: 72 }];
+conferir("acha a causa sem diferença de caixa e espaço", acharCausa(" sistema FORA do ar ou lento ", catalogo)?.area, "Desenvolvimento");
+conferir("sem causa, sem dono", acharCausa(undefined, catalogo), undefined);
+conferir("causa da área acionada e mais curta: vale o prazo da causa", prazoComCausa(24, "Desenvolvimento", catalogo[0]), { horas: 4, pelaCausa: true });
+conferir("prazo da causa mais longo: vale o da prioridade", prazoComCausa(24, "Implantação", catalogo[1]), { horas: 24, pelaCausa: false });
+conferir("acionar outra área que não a dona: a causa não muda nada", prazoComCausa(24, "Financeiro", catalogo[0]), { horas: 24, pelaCausa: false });
+conferir("causa sem dono (antes do db:push): só a prioridade", prazoComCausa(8, "Financeiro", { area: null, prazoHoras: null }), { horas: 8, pelaCausa: false });
 
 console.log(falhas ? `\n  ${falhas} falha(s).\n` : "\n  Tudo certo.\n");
 process.exit(falhas ? 1 : 0);

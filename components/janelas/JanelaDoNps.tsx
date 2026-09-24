@@ -7,6 +7,7 @@ import { useRascunhoNaJanela } from "@/lib/context/rascunhosDasJanelas";
 import { Loader2, PhoneOutgoing, ShieldAlert, StickyNote, Tags } from "lucide-react";
 
 import Combobox from "@/components/shared/Combobox";
+import DonoDaCausa from "@/components/causas/DonoDaCausa";
 
 import { useNps } from "@/lib/context/NpsContext";
 import { useToast } from "@/lib/context/ToastContext";
@@ -198,6 +199,7 @@ export default function JanelaDoNps({ id }: { id: string }) {
               placeholder={regra?.requiresRootCause ? "Causa raiz (obrigatória)" : "Causa raiz"}
               options={[...new Set([...rootCauses.filter((c) => c.active).map((c) => c.name), ...(item.rootCause ? [item.rootCause] : [])])]}
             />
+            <DonoDaCausa causa={causa ?? item.rootCause} />
             <div className="flex items-center justify-between gap-2">
               {!item.owner && (
                 <label className="flex items-center gap-1.5 text-xs text-zinc-600">

@@ -18,6 +18,7 @@ import {
 } from "@/lib/models/nps";
 
 import { NpsDraft } from "@/lib/actions/nps";
+import DonoDaCausa from "@/components/causas/DonoDaCausa";
 
 import { prazoPrimeiroContato } from "@/lib/services/nps.service";
 import {
@@ -378,6 +379,7 @@ export default function NpsForm({
             )}
 
           </div>
+          <DonoDaCausa causa={rootCause} />
         </Field>
 
         <Field label="Comentário do cliente">

@@ -6,6 +6,7 @@ import MainLayout from "@/components/layout/MainLayout";
 import PageHeading from "@/components/shared/PageHeading";
 import SurfaceCard from "@/components/shared/SurfaceCard";
 import PropostaDoCatalogo from "@/components/causas/PropostaDoCatalogo";
+import CatalogoComDonos from "@/components/causas/CatalogoComDonos";
 
 import { aprovarCausasDoCatalogo, lerPropostaDoCatalogo } from "@/lib/actions/catalogoDeCausas";
 import { useNps } from "@/lib/context/NpsContext";
@@ -52,6 +53,7 @@ export default function CausasRaizPage() {
           title="Causas raiz"
           description="O catálogo que diz para quem ligar: tirado dos casos reais, cada causa com a área dona e o prazo."
         />
+        <CatalogoComDonos />
         {carga?.proposta ? (
           <PropostaDoCatalogo proposta={carga.proposta} aoAprovar={aprovar} />
         ) : (
