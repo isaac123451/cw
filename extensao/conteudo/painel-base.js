@@ -312,6 +312,7 @@
             <span>abrir sozinho</span>
           </label>
           <span class="rodape-direita">
+            <a data-acao="botao-no-canto" title="O botão redondo volta para o canto de baixo, à direita, neste site" hidden>Botão no canto</a>
             <a data-acao="atalhos" title="Atalhos do painel (?)">Atalhos</a>
             <a data-acao="opcoes">Opções</a>
           </span>
@@ -349,7 +350,14 @@
      */
     P.raiz
       .querySelector(".gatilho")
-      ?.addEventListener("click", alternar);
+      ?.addEventListener("click", () => {
+        /* O clique que fecha um arrasto não abre nem fecha o painel. */
+        if (botaoAcabouDeArrastar) {
+          botaoAcabouDeArrastar = false;
+          return;
+        }
+        alternar();
+      });
 
     P.raiz.addEventListener("click", (evento) => {
 
@@ -367,6 +375,7 @@
       if (acao === "auto") alternarAuto(alvo.checked);
       if (acao === "fixar") alternarFixado();
       if (acao === "ancorar") ancorar();
+      if (acao === "botao-no-canto") botaoNoCanto();
       if (acao === "capturar") P.abrirCaptura();
       if (acao === "atalhos") alternarAjudaDosAtalhos();
       if (acao === "completar-conversa") P.completarPelaConversa(alvo);
@@ -647,6 +656,7 @@
     ligarAtalhos();
     ligarRedimensionamento();
     ligarArrasto();
+    ligarArrastoDoBotao();
 
     P.refletirCanal();
 
@@ -775,6 +785,122 @@
     if (botaoAncorar) botaoAncorar.style.display = "";
 
     return { x, y };
+  }
+
+  /* ---------- o botão redondo, arrastável (Fase 28) ---------- */
+
+  /** Tamanho do botão, para prendê-lo dentro da janela. */
+  const TAMANHO_DO_BOTAO = 48;
+
+  let botaoAcabouDeArrastar = false;
+
+  const siteAtual = () => location.hostname || "local";
+
+  /** Prende a posição à janela: um botão fora da tela não teria como voltar. */
+  function presoNaJanela(pos) {
+    return {
+      x: Math.round(Math.min(Math.max(Number(pos.x) || 0, 4), Math.max(window.innerWidth - TAMANHO_DO_BOTAO - 4, 4))),
+      y: Math.round(Math.min(Math.max(Number(pos.y) || 0, 4), Math.max(window.innerHeight - TAMANHO_DO_BOTAO - 4, 4))),
+    };
+  }
+
+  function desenharBotao(pos) {
+    const botao = P.raiz?.querySelector(".gatilho");
+    const voltar = P.raiz?.querySelector('[data-acao="botao-no-canto"]');
+    if (!botao) return;
+    if (!pos) {
+      botao.classList.remove("movido");
+      if (voltar) voltar.hidden = true;
+      return;
+    }
+    botao.style.setProperty("--bx", `${pos.x}px`);
+    botao.style.setProperty("--by", `${pos.y}px`);
+    botao.classList.add("movido");
+    if (voltar) voltar.hidden = false;
+  }
+
+  /** A posição deste site, presa à janela de agora. */
+  function aplicarPosicaoDoBotao() {
+    const guardada = P.config?.botaoPorSite?.[siteAtual()];
+    desenharBotao(guardada ? presoNaJanela(guardada) : null);
+  }
+
+  function gravarPosicaoDoBotao(pos) {
+    const mapa = { ...(P.config?.botaoPorSite ?? {}) };
+    if (pos) mapa[siteAtual()] = pos;
+    else delete mapa[siteAtual()];
+    P.config = { ...(P.config ?? {}), botaoPorSite: mapa };
+    CW.enviar({ tipo: "salvar", parcial: { botaoPorSite: mapa } });
+  }
+
+  function botaoNoCanto() {
+    desenharBotao(null);
+    gravarPosicaoDoBotao(null);
+  }
+
+  /**
+   * Arrastar o botão para qualquer canto.
+   *
+   * O mesmo cuidado da gaveta: só vira arrasto depois de a mão andar
+   * alguns pixels — um clique trêmulo continua abrindo o painel. Soltou,
+   * a posição fica gravada para este site.
+   */
+  function ligarArrastoDoBotao() {
+    const botao = P.raiz?.querySelector(".gatilho");
+    if (!botao) return;
+
+    const LIMIAR = 6;
+    let apertado = false;
+    let moveu = false;
+    let inicioX = 0;
+    let inicioY = 0;
+    let deltaX = 0;
+    let deltaY = 0;
+
+    botao.addEventListener("pointerdown", (evento) => {
+      if (evento.button !== 0) return;
+      const caixa = botao.getBoundingClientRect();
+      deltaX = evento.clientX - caixa.left;
+      deltaY = evento.clientY - caixa.top;
+      inicioX = evento.clientX;
+      inicioY = evento.clientY;
+      apertado = true;
+      moveu = false;
+      botao.setPointerCapture(evento.pointerId);
+    });
+
+    botao.addEventListener("pointermove", (evento) => {
+      if (!apertado) return;
+      if (!moveu) {
+        if (Math.abs(evento.clientX - inicioX) + Math.abs(evento.clientY - inicioY) < LIMIAR) return;
+        moveu = true;
+        botao.classList.add("arrastando");
+      }
+      desenharBotao(presoNaJanela({ x: evento.clientX - deltaX, y: evento.clientY - deltaY }));
+    });
+
+    const soltar = (evento) => {
+      if (!apertado) return;
+      apertado = false;
+      botao.classList.remove("arrastando");
+      try {
+        botao.releasePointerCapture(evento.pointerId);
+      } catch {
+        // Já liberado.
+      }
+      if (!moveu) return;
+      botaoAcabouDeArrastar = true;
+      /* Alguns navegadores não mandam o clique depois do arrasto: a trava não pode ficar para o próximo clique de verdade. */
+      setTimeout(() => (botaoAcabouDeArrastar = false), 300);
+      const pos = presoNaJanela({ x: evento.clientX - deltaX, y: evento.clientY - deltaY });
+      desenharBotao(pos);
+      gravarPosicaoDoBotao(pos);
+    };
+
+    botao.addEventListener("pointerup", soltar);
+    botao.addEventListener("pointercancel", soltar);
+
+    window.addEventListener("resize", CW.debounce(aplicarPosicaoDoBotao, 200));
   }
 
   /** Volta a gaveta para a lateral direita. */
@@ -1073,6 +1199,7 @@
       aplicarTema(P.config.tema);
       aplicarLargura(P.config.largura);
       aplicarPosicao(P.config.posicao);
+      aplicarPosicaoDoBotao();
       P.refletirAuto();
       refletirFixado();
 

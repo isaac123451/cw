@@ -165,6 +165,10 @@ ${CORES}
 }
 
 .gatilho:hover { transform: translateY(-2px); }
+
+/* Arrastado para outro canto (Fase 28): a posição é a que a pessoa escolheu neste site. */
+.gatilho.movido { left: var(--bx); top: var(--by); right: auto; bottom: auto; }
+.gatilho.arrastando { cursor: grabbing; transition: none; transform: scale(1.06); }
 .gatilho:active { transform: translateY(0); }
 .gatilho:focus-visible {
   outline: 2px solid var(--violeta);

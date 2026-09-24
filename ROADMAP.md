@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 24/09/2026. Aplicação **1.63.0**, extensão **1.63.0**.
+Atualizado em 24/09/2026. Aplicação **1.64.0**, extensão **1.64.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,26 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### Botão que se move (24/09/2026, 1.64.0)
+
+Primeiro item da Fase 28 ("Extensão que lê o momento"): "mover o botão
+da extensão".
+
+- O botão redondo (`.gatilho`) é arrastável: só vira arrasto depois de
+  6 px de movimento (o clique trêmulo continua abrindo o painel), o
+  clique que fecha o arrasto não abre nem fecha a gaveta, e a posição é
+  presa à janela — inclusive quando a janela muda de tamanho.
+- A posição fica em `botaoPorSite` na configuração (`storage.sync`), uma
+  por site (`location.hostname`); o site sem posição usa o canto de
+  baixo à direita. "Botão no canto", no rodapé do painel, aparece quando
+  o botão foi movido e devolve ao canto.
+
+Provas: `check:fiacao`, `check:painel` e `check:escape`; teste no
+navegador com os scripts reais do painel e um `chrome` simulado (abre no
+clique, arrasta sem abrir, grava por site, não sai da janela, volta ao
+canto, e a posição guardada volta ao abrir o site). **Depende de você:**
+recarregar a extensão (1.64.0).
 
 ### Tendência que vira ação (24/09/2026, 1.63.0)
 

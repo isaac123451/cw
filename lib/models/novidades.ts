@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.64.0",
+    data: "2026-09-24",
+    titulo: "O botão da extensão vai para onde você quiser",
+    texto: "Arraste o botão redondo da extensão para qualquer canto da tela. Ele lembra a posição em cada site — um lugar no WhatsApp, outro no Crisp, outro no Reclame Aqui. Clicar continua abrindo o painel; para voltar ao canto de baixo à direita, use \"Botão no canto\" no rodapé do painel.",
+    frentes: ["extensao"],
+  },
+  {
     versao: "1.63.0",
     data: "2026-09-24",
     titulo: "A causa que se repete vira item em Projetos sozinha",

@@ -62,6 +62,16 @@ export const PADROES = {
    */
   posicao: null,
 
+  /**
+   * Onde o botão redondo fica, em cada site (Fase 28).
+   *
+   * `{ "web.whatsapp.com": { x, y } }` — o canto de cima à esquerda do
+   * botão, em pixels da janela. O site que não está aqui usa o canto de
+   * baixo à direita. Por site porque o botão atrapalha coisas diferentes
+   * em cada um: o campo de mensagem no WhatsApp, o chat no Crisp.
+   */
+  botaoPorSite: {},
+
   /** Contador de pendências no ícone da extensão. */
   contador: true,
 
