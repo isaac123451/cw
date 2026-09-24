@@ -206,6 +206,16 @@ export async function montarDossie(
       },
       tasks: { orderBy: { createdAt: "asc" } },
       category: { select: { name: true } },
+      /* Os contatos registrados e as conversas guardadas (Fase 26): o registro do 1º contato à validação. */
+      contatos: { orderBy: { em: "asc" } },
+      conversas: {
+        select: {
+          id: true,
+          canal: true,
+          contatoNome: true,
+          mensagens: { orderBy: { em: "asc" }, select: { de: true, autor: true, texto: true, em: true } },
+        },
+      },
     },
   });
 
@@ -366,6 +376,69 @@ export async function montarDossie(
     });
   }
 
+  /* ---------- contatos registrados ---------- */
+
+  /*
+    Cada contato — o 1º, as tentativas, as atualizações, o pedido de
+    avaliação, a validação — é um fato com data, canal e resultado. A nota
+    de quem registrou vira anexo: é o que foi dito, na hora.
+  */
+  const ROTULO_DO_CONTATO: Record<string, string> = {
+    contato: "Contato com o cliente",
+    tentativa: "Tentativa de contato",
+    atualizacao: "Atualização ao cliente",
+    "pedido-avaliacao": "Pedido de avaliação",
+    validacao: "Validação da solução",
+  };
+  const ROTULO_DO_RESULTADO: Record<string, string> = {
+    respondeu: "respondeu",
+    "sem-resposta": "sem resposta",
+    "nao-atendeu": "não atendeu",
+    "caixa-postal": "caixa postal",
+    enviado: "enviado",
+    aguardando: "aguardando retorno",
+    pendencia: "apontou pendência",
+  };
+
+  for (const k of caso.contatos) {
+
+    const quando = iso(k.em);
+    if (!quando) continue;
+
+    eventos.push({
+      quando,
+      evento: `${ROTULO_DO_CONTATO[k.tipo] ?? "Contato"} por ${k.canal}${k.resultado ? ` — ${ROTULO_DO_RESULTADO[k.resultado] ?? k.resultado}` : ""}`,
+      canal: k.canal,
+      evidencia: k.nota?.trim()
+        ? anexar({ data: quando, descricao: `registro de ${k.tipo}`, conteudo: k.nota, canal: k.canal })
+        : "",
+      origem: `CaseContato.${k.id}`,
+    });
+  }
+
+  /* ---------- conversas guardadas ---------- */
+
+  for (const c of caso.conversas) {
+
+    const comData = c.mensagens.filter((m) => m.em);
+    if (!comData.length) continue;
+    const quando = iso(comData[0].em);
+    const ate = iso(comData[comData.length - 1].em);
+    if (!quando) continue;
+
+    const transcricao = comData
+      .map((m) => `[${iso(m.em)?.slice(0, 16).replace("T", " ")}] ${m.de === "nos" ? m.autor ?? "Nós" : m.de === "cliente" ? c.contatoNome || "Cliente" : "Sistema"}: ${m.texto}`)
+      .join("\n");
+
+    eventos.push({
+      quando,
+      evento: `Conversa ${c.canal === "whatsapp" ? "no WhatsApp" : `(${c.canal})`} guardada: ${comData.length} mensagem(ns)${ate && ate !== quando ? `, até ${ate.slice(8, 10)}/${ate.slice(5, 7)}` : ""}`,
+      canal: c.canal === "whatsapp" ? "WhatsApp" : c.canal,
+      evidencia: anexar({ data: quando, descricao: "conversa guardada", conteudo: transcricao, canal: c.canal }),
+      origem: `Conversa.${c.id}`,
+    });
+  }
+
   /* ---------- lembretes e tentativas ---------- */
 
   for (const t of caso.tasks) {
@@ -410,6 +483,29 @@ export async function montarDossie(
   /* ---------- ordena e numera ---------- */
 
   eventos.sort((a, b) => a.quando.localeCompare(b.quando));
+
+  /*
+    Os anexos na ordem da cronologia: o Anexo 01 é a primeira peça citada.
+
+    Eram numerados na ordem em que cada fonte era lida (anotações, depois
+    contatos, depois conversas), e a linha do tempo, já ordenada, citava
+    "Anexo 05" antes de "Anexo 02". Quem revisa lê a cronologia de cima
+    para baixo e espera os anexos na mesma ordem.
+  */
+  const doisDigitos = (n: number) => String(n).padStart(2, "0");
+  const novaOrdem = new Map<string, number>();
+  for (const e of eventos) if (e.evidencia && !novaOrdem.has(e.evidencia)) novaOrdem.set(e.evidencia, novaOrdem.size + 1);
+  for (const x of anexos) {
+    const rotulo = `Anexo ${doisDigitos(x.numero)}`;
+    if (!novaOrdem.has(rotulo)) novaOrdem.set(rotulo, novaOrdem.size + 1);
+  }
+  for (const e of eventos) if (e.evidencia) e.evidencia = `Anexo ${doisDigitos(novaOrdem.get(e.evidencia)!)}`;
+  for (const x of anexos) {
+    const n = novaOrdem.get(`Anexo ${doisDigitos(x.numero)}`)!;
+    x.numero = n;
+    x.nome = x.nome.replace(/_anexo-\d{2}_/, `_anexo-${doisDigitos(n)}_`);
+  }
+  anexos.sort((a, b) => a.numero - b.numero);
 
   const linhaDoTempo: EventoDaLinhaDoTempo[] = eventos.map(
     (e, i) => ({ ...e, numero: i + 1 })

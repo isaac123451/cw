@@ -8,6 +8,7 @@ import { useCallback, useMemo, useState } from "react";
 import {
   ChevronLeft,
   ExternalLink,
+  FileText,
   Maximize2,
   MessageCircle,
   ShieldAlert,
@@ -494,6 +495,18 @@ export default function CaseDetail({
               pergunta={`O que fazer agora no caso ${data.protocol}? O que falta para ele fechar?`}
               rotulo="Perguntar"
             />
+
+            {/* O dossiê de 8 partes, em tela grande (Fase 26) — o do Reclame Aqui, que sustenta moderação. */}
+            {canal === "reclame-aqui" && (
+              <Link
+                href={`/reclame-aqui/${encodeURIComponent(data.id)}/dossie`}
+                title="Montar o dossiê do caso: linha do tempo, evidências, apuração e o pedido"
+                className="flex items-center gap-2 rounded-xl border border-zinc-200 px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
+              >
+                <FileText size={15} />
+                Dossiê
+              </Link>
+            )}
 
             {whatsapp && (
               <a

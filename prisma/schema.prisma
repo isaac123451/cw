@@ -2111,3 +2111,22 @@ model PedidoDeVoto {
   @@unique([campanhaId, origem, ref])
   @@index([campanhaId, situacao])
 }
+
+/// As partes escritas do dossiê de um caso (Fase 26). O resto do
+/// documento — identificação, partes, linha do tempo, anexos — é montado
+/// do banco a cada abertura (`montarDossie`) e não é guardado aqui.
+model DossieDoCaso {
+  id            String   @id @default(cuid())
+  caseId        String   @unique
+  destinatario  String?
+  pedido        String?
+  sumario       String?
+  verificado    String[] @default([])
+  sustentado    String[] @default([])
+  alegado       String[] @default([])
+  enquadramento String?
+  conclusao     String?
+  versao        Int      @default(1)
+  atualizadoPor String?
+  atualizadoEm  DateTime @updatedAt
+}

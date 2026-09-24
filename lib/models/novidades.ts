@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.58.0",
+    data: "2026-09-24",
+    titulo: "O dossiê pela plataforma",
+    texto: "Na ficha da reclamação, o botão Dossiê abre o documento de 8 partes em tela grande: identificação, sumário, partes, linha do tempo numerada, evidências (Anexo 01, 02…), apuração, enquadramento e conclusão com o pedido. A linha do tempo e os anexos são montados dos registros — contatos, tentativas, áreas, anotações, conversas guardadas, respostas. A IA escreve o primeiro rascunho do sumário e da apuração; tudo é editável. Ao lado, a conferência do que falta para se sustentar, o texto do pedido de moderação para copiar e o dossiê para baixar.",
+    frentes: ["reclame-aqui"],
+  },
+  {
     versao: "1.57.0",
     data: "2026-09-24",
     titulo: "Depoimentos prontos",

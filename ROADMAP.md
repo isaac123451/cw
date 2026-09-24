@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 24/09/2026. Aplicação **1.57.0**, extensão **1.57.0**.
+Atualizado em 24/09/2026. Aplicação **1.58.0**, extensão **1.58.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,47 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### O dossiê pela plataforma (24/09/2026, 1.58.0)
+
+Quatro itens da Fase 26 — "dossiê deve ser feito pela plataforma e
+precisa levar a estrutura que já te enviei". A estrutura
+(`lib/services/dossie.service.ts`: `montarDossie`, `conferirDossie`,
+`renderizarDossie`) existia desde 03/09 e nenhuma tela usava.
+
+- **As 8 partes, em tela grande:** `/reclame-aqui/<caso>/dossie`, pelo
+  botão Dossiê na ficha. Identificação, partes, linha do tempo numerada
+  e evidências vêm do banco e não se editam ali (corrige-se o registro);
+  destinatário, pedido, sumário, apuração (verificado · sustentado pela
+  evidência · só alegado), enquadramento e conclusão se escrevem.
+- **Montado dos registros:** a montagem passou a trazer os contatos
+  registrados (1º contato, tentativas com o resultado, atualização,
+  pedido de avaliação, validação — a nota vira anexo) e as conversas
+  guardadas (a transcrição vira anexo). E os anexos saem numerados na
+  ordem da cronologia — eram numerados na ordem em que cada fonte era
+  lida, e a linha do tempo citava o Anexo 05 antes do 02.
+- **A IA só escreve o sumário e a apuração** (`escreverDossieComIA`),
+  a partir da cronologia fechada; sem IA no ar, o rascunho das regras
+  (`rascunhoSemIA`: quem, quando, quantos eventos; verificado = fato com
+  peça). Nada é gravado sem a pessoa salvar.
+- **Conferência antes de usar** (`conferenciaAntesDeUsar`): a do
+  documento (cronologia, anexo citado que existe) mais sumário e pedido
+  escritos, pedido que cita a regra (regulamento, termos, política),
+  alegação sem prova, evidência sem data no nome e peça de fora do
+  sistema por anexar.
+- **Copiar e baixar:** o texto do pedido de moderação (o pedido, o
+  sumário, os fatos e a regra) e o dossiê inteiro em .md.
+- **Uma tabela nova, `DossieDoCaso`**, com as partes escritas (a versão
+  sobe a cada gravação). Vai no mesmo `npm run db:push` + `db:rls` do
+  Prêmio; sem ela, o dossiê monta e baixa, mas não salva — e diz.
+
+Provas: `check:dossie-escrito` (novo, 19 pontos: o rascunho sem IA, a
+conferência, o documento e o pedido de moderação, e a montagem com um
+Prisma de teste — contatos e conversa na linha do tempo, anexos 01 a 04
+em ordem, o nome do arquivo acompanhando o número). No navegador, o
+editor com o dossiê de teste: a conferência acusa e deixa de acusar ao
+escrever, o pedido de moderação se escreve sozinho. `check:seguranca`
+com as 4 ações novas. `tsc` e `lint` limpos.
 
 ### Depoimentos prontos (24/09/2026, 1.57.0)
 
