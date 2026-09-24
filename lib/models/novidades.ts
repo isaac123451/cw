@@ -104,6 +104,14 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.56.0",
+    data: "2026-09-24",
+    titulo: "O prêmio no calendário",
+    texto: "Na tela do Prêmio, as datas da votação (quando abre e fecha) e a data de corte, com a pergunta que importa: a nota na janela que o prêmio vai olhar chega à meta? Diz quantas avaliações nota 10, entre as reclamações da janela ainda sem avaliação, faltam — ou que nem todas bastam.",
+    frentes: ["reclame-aqui"],
+    href: "/reclame-aqui/premio",
+  },
+  {
     versao: "1.55.0",
     data: "2026-09-24",
     titulo: "A campanha de votação, pessoa por pessoa",

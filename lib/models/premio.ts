@@ -1,5 +1,6 @@
 import type { Case } from "@/lib/models/case";
 import { nomeDoCliente, type NpsResponseView } from "@/lib/models/nps";
+import { emptySimulation, getRawCounts, pendingEvaluations, scoreFrom, simulate } from "@/lib/services/reputation.service";
 
 /**
  * O Prêmio Reclame Aqui (Fase 23).
@@ -194,4 +195,58 @@ export function linkDoWhatsApp(telefone: string | undefined, texto: string) {
   const d = telefone?.replace(/\D/g, "");
   if (!d || d.length < 12) return null;
   return `https://wa.me/${d}${texto ? `?text=${encodeURIComponent(texto)}` : ""}`;
+}
+
+/* ------------------------------------------------------------------ */
+/* O prêmio no calendário                                              */
+/* ------------------------------------------------------------------ */
+
+/**
+ * A janela do índice na data de corte: os seis meses fechados antes do
+ * mês do corte — a mesma regra da janela "vigente" do portal, olhada
+ * daquele dia.
+ */
+export function janelaNaDataDeCorte(dataDeCorte: string) {
+  const [ano, mes] = dataDeCorte.split("-").map(Number);
+  const fim = new Date(Date.UTC(ano, mes - 1, 0)).toISOString().slice(0, 10);
+  const inicio = new Date(Date.UTC(ano, mes - 7, 1)).toISOString().slice(0, 10);
+  return { inicio, fim };
+}
+
+/**
+ * A reputação chega onde precisa até a data de corte?
+ *
+ * A nota da janela do corte hoje, e quantas avaliações nota 10 — entre
+ * as reclamações da janela ainda sem avaliação — levam a nota até a
+ * meta, pela mesma conta da calculadora (`simulate`). `faltam: null` é
+ * "nem com todas avaliando 10".
+ */
+export function premioNoCalendario(entrada: { casos: Case[]; dataDeCorte: string; notaMeta: number; hoje: string }) {
+  const janela = janelaNaDataDeCorte(entrada.dataDeCorte);
+  const doPeriodo = entrada.casos.filter((c) => c.source === "Reclame Aqui" && c.createdAt >= janela.inicio && c.createdAt <= janela.fim);
+  const base = getRawCounts(doPeriodo);
+  const atual = scoreFrom(base);
+  const avaliaveis = pendingEvaluations(base);
+  const dias = Math.round((Date.parse(`${entrada.dataDeCorte}T00:00:00Z`) - Date.parse(`${entrada.hoje}T00:00:00Z`)) / 86_400_000);
+
+  let faltam: number | null = null;
+  if (!atual.scoreUnavailable && atual.raScore >= entrada.notaMeta) faltam = 0;
+  else {
+    for (let n = 1; n <= avaliaveis; n++) {
+      const s = scoreFrom(simulate(base, { ...emptySimulation, ratings: { 10: n } }));
+      if (!s.scoreUnavailable && s.raScore >= entrada.notaMeta) {
+        faltam = n;
+        break;
+      }
+    }
+  }
+
+  return {
+    janela,
+    reclamacoes: doPeriodo.length,
+    nota: atual.scoreUnavailable ? null : atual.raScore,
+    avaliaveis,
+    faltam,
+    diasAteOCorte: dias,
+  };
 }

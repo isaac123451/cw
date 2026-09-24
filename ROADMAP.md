@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 24/09/2026. Aplicação **1.55.0**, extensão **1.55.0**.
+Atualizado em 24/09/2026. Aplicação **1.56.0**, extensão **1.56.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,28 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### O prêmio no calendário (24/09/2026, 1.56.0)
+
+Item da Fase 23 — "datas e categoria que você cadastra, e a pergunta que
+importa: a reputação chega onde precisa até a data de corte? Quantas
+avaliações faltam, contadas pela janela do índice".
+
+- **A janela do corte** (`janelaNaDataDeCorte`): os seis meses fechados
+  antes do mês do corte — a regra da janela vigente, olhada daquele dia
+  (corte em 15/11/2026 → 01/05 a 31/10).
+- **A conta** (`premioNoCalendario`): a nota dessa janela hoje, e o menor
+  número de avaliações nota 10, entre as reclamações da janela ainda sem
+  avaliação, que leva a nota à meta — pela `simulate` da calculadora. É
+  o teto do que o pedido pode render; "nem com todas" quando não dá.
+- **O cartão** na tela do Prêmio: votação (abre em / fecha em), data de
+  corte (em quantos dias, e a janela), a nota contra a meta e a frase
+  com o que falta, com o atalho para Pedir avaliação.
+
+Provas: `check:premio` com 7 pontos novos (as janelas de novembro e de
+janeiro, os dias até o corte, 3,8 → 6,0 pede 6 avaliações 10, meta alta
+demais é impossível, meta batida é 0). O cartão renderizado no
+navegador, inclusive sem reclamação na janela. `tsc` e `lint` limpos.
 
 ### Prêmio Reclame Aqui: a campanha de votação (24/09/2026, 1.55.0)
 

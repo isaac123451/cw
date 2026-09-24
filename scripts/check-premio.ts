@@ -9,6 +9,7 @@
  */
 import type { Case } from "../lib/models/case";
 import type { NpsResponseView } from "../lib/models/nps";
+import { janelaNaDataDeCorte, premioNoCalendario } from "../lib/models/premio";
 import { contatosDoPremio, FILTROS_PADRAO, linkDoWhatsApp, mensagemDaVez, mensagemParaContato, resumoDaCampanha, telefoneInternacional } from "../lib/models/premio";
 
 let falhas = 0;
@@ -65,6 +66,23 @@ console.log("\n  A campanha de votação\n");
   const r = resumoDaCampanha([{ situacao: "exportado" }, { situacao: "pedido" }, { situacao: "lembrete" }, { situacao: "votou" }, { situacao: "votou" }]);
   conferir("o painel conta cada passo", [r.exportado, r.pedido, r.lembrete, r.votou, r.total], [1, 1, 1, 2, 5]);
   conferir("taxa de voto é sobre quem recebeu o pedido (2 de 4)", r.taxaDeVoto, 0.5);
+}
+
+console.log("\n  O prêmio no calendário\n");
+{
+  conferir("corte em 15/11/2026: janela de 01/05 a 31/10", janelaNaDataDeCorte("2026-11-15"), { inicio: "2026-05-01", fim: "2026-10-31" });
+  conferir("corte em janeiro: janela do ano anterior", janelaNaDataDeCorte("2027-01-10"), { inicio: "2026-07-01", fim: "2026-12-31" });
+  const base = (i: number, extra: Partial<Case>) =>
+    caso({ id: `p${i}`, createdAt: "2026-07-10", respondida: true, evaluated: true, score: 6, resolved: false, wouldDoBusiness: false, ...extra } as Partial<Case>);
+  const casos = [...Array.from({ length: 10 }, (_, i) => base(i, {})), ...Array.from({ length: 10 }, (_, i) => base(20 + i, { evaluated: false, score: undefined }))];
+  const r = premioNoCalendario({ casos, dataDeCorte: "2026-11-15", notaMeta: 6, hoje: "2026-09-24" });
+  conferir("dias até o corte", r.diasAteOCorte, 52);
+  conferir("10 avaliáveis na janela", r.avaliaveis, 10);
+  conferir("nota 3,8 → 6,0: faltam 6 avaliações 10 (5 dão 5,9)", r.faltam, 6);
+  const impossivel = premioNoCalendario({ casos, dataDeCorte: "2026-11-15", notaMeta: 9.9, hoje: "2026-09-24" });
+  conferir("meta alta demais: nem com todas avaliando 10", impossivel.faltam, null);
+  const ja = premioNoCalendario({ casos, dataDeCorte: "2026-11-15", notaMeta: 1, hoje: "2026-09-24" });
+  conferir("meta já batida: faltam 0", ja.faltam, 0);
 }
 
 console.log(falhas === 0 ? "\n  A lista do prêmio tira as pessoas certas.\n" : `\n  ${falhas} ponto(s) a corrigir.\n`);

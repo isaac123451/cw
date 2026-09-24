@@ -6,6 +6,7 @@ import { Download, Loader2, TriangleAlert } from "lucide-react";
 
 import SurfaceCard from "@/components/shared/SurfaceCard";
 import CampanhaDeVotacao from "@/components/premio/CampanhaDeVotacao";
+import PremioNoCalendario from "@/components/premio/PremioNoCalendario";
 
 import { lerPremio, registrarExportados, salvarCampanha, type CampanhaView, type PedidoView } from "@/lib/actions/premio";
 import { useCases } from "@/lib/context/CaseContext";
@@ -201,6 +202,8 @@ export default function PainelDoPremio({ aoMudar }: { aoMudar?: (campanha: Campa
           </button>
         </div>
       </SurfaceCard>
+
+      {campanha && <PremioNoCalendario campanha={campanha} />}
 
       <SurfaceCard
         title="Quem pedir o voto"
