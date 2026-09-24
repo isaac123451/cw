@@ -252,6 +252,10 @@
 
     const lida = lerReclamacao(conteudo);
 
+    /* O cartão da área da empresa (ra-area.js) usa esta mesma leitura. */
+    CW.raUltimaLida = lida.id || lida.cod ? lida : null;
+    window.dispatchEvent(new CustomEvent("cw:reclamacao-lida", { detail: CW.raUltimaLida }));
+
     if (!lida.id && !lida.cliente) {
       CW.painel.definirCaptura(null);
       CW.painel.definirContexto({

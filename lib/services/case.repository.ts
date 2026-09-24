@@ -674,6 +674,51 @@ export async function fetchCaseByProtocol(
 }
 
 /**
+ * O caso de uma reclamação aberta no portal, numa leitura só.
+ *
+ * Aceita o código de 16 caracteres (`RA-<código>`, o id externo ou o
+ * endereço) e o número "ID:" da área da empresa — as mesmas chaves de
+ * `acharParaCompletar`, mas já trazendo o caso inteiro, para o cartão da
+ * extensão não pagar duas idas ao banco.
+ */
+export async function fetchCaseByPortalCode(
+  prisma: PrismaClient,
+  cod: string,
+  numero?: string
+): Promise<Case | null> {
+
+  const ou: { protocol?: string; externalId?: string; externalUrl?: { contains: string } }[] = [];
+
+  if (/^[A-Za-z0-9_-]{16}$/.test(cod)) ou.push({ protocol: `RA-${cod}` }, { externalId: cod }, { externalUrl: { contains: cod } });
+  if (numero && /^\d{6,12}$/.test(numero)) ou.push({ protocol: `RA-${numero}` }, { externalId: numero });
+  if (ou.length === 0) return null;
+
+  const row = await prisma.case.findFirst({ where: { OR: ou }, include: INCLUDE });
+
+  return row ? toCaseModel(row) : null;
+}
+
+/**
+ * Vários casos pelo protocolo, sem os textos pesados — para a extensão
+ * marcar, na lista da área da empresa, quais reclamações já estão no CW.
+ */
+export async function fetchCasesByProtocols(
+  prisma: PrismaClient,
+  protocols: string[]
+): Promise<Case[]> {
+
+  if (protocols.length === 0) return [];
+
+  const rows = await prisma.case.findMany({
+    where: { protocol: { in: protocols } },
+    include: INCLUDE,
+    omit: { description: true, dossier: true },
+  });
+
+  return rows.map((row) => toCaseModel({ ...row, description: null }));
+}
+
+/**
  * Os casos que **podem** ser de um contato — não os que são.
  *
  * O painel da extensão carregava as 334 reclamações inteiras e decidia

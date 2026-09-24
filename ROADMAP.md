@@ -1116,6 +1116,42 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### A extensão ao lado na área da empresa (24/09/2026, 1.69.0)
+
+O Isaac: "dentro da área da empresa, quero algumas iniciativas que a
+extensão possa fazer — um popup resumindo a reclamação, fácil acesso
+para a reclamação em nova guia. Pense em mais coisas também."
+
+- **Cartão da reclamação aberta** (`extensao/conteudo/ra-area.js`):
+  flutuante no canto de cima, arrastável pelo topo (lembra a posição),
+  recolhível e sem desfoque. Resumo sem IA (`resumoDaReclamacao`: o que
+  aconteceu, o pedido — "Quero…", "Solicito…", sem confundir com "Quero
+  deixar claro" —, os sinais de criticidade com o trecho e o tom). Do
+  CW: prioridade (e "a triar"), prazo (pelos da documentação quando não
+  há regra cadastrada, e o cartão diz), passo da vez, responsável, conta,
+  reincidência do CPF/CNPJ em 90 dias, réplica pendente e o aviso do
+  Passo 6 antes de responder. Atalhos: abrir no CW, página pública e
+  dossiê em nova guia, copiar o protocolo e o rascunho da resposta. Fora
+  do CW: "Criar no quadro" abre a captura do painel.
+- **Selos da lista:** ao lado de cada reclamação, "CW · Urgente ·
+  atrasada" (leva à ficha) ou "CW · nova", e um ↗ que abre a reclamação
+  em nova guia.
+- **Rotas:** `/api/extensao/ra-cartao` e `/api/extensao/ra-lista`, só
+  leitura. A leitura da página é a do `hugme.js` (evento
+  `cw:reclamacao-lida`), sem ler o texto duas vezes. Regras de prazo e
+  expediente com um minuto de memória (`lerRegrasDePrazo`) e o caso numa
+  leitura só (`fetchCaseByPortalCode`): de 2,2 s para 0,6 s no servidor
+  local (o resto é a distância até o banco).
+
+Medido nos 364 relatos: o pedido aparece em 182, sinal de criticidade em
+288; tom calmo 237, irritado 96, muito irritado 31
+(`scripts/medir-resumo-reclamacao.ts`). Provas: `check:ra-area` (22
+pontos: resumo, cartão, selos, escape do texto do consumidor) e uma
+bancada local com o `ra-area.js` real contra o servidor — cartão com o
+caso RA-230hyWrE_Jfrj3w9, "Criar no quadro" numa reclamação fora do CW,
+recolher, fechar, arrastar e os três selos. **Depende de você:**
+recarregar a extensão (1.69.0) e abrir uma reclamação na área da empresa.
+
 ### Sem barra para ir de um lado ao outro (24/09/2026, 1.68.2)
 
 O Isaac: "a tela tem uma barra lá embaixo para ir de esquerda e direita,

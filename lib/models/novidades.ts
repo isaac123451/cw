@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.69.0",
+    data: "2026-09-24",
+    titulo: "A extensão ao lado na área da empresa do Reclame Aqui",
+    texto: "Ao abrir uma reclamação na área da empresa, um cartão pequeno (arrastável e recolhível) resume o relato: o que aconteceu, o que o cliente pede, os sinais de criticidade com o trecho e o tom. Mostra também o caso no CW (prioridade, prazo, passo da vez, responsável, reincidência do CPF/CNPJ, réplica pendente e se o cliente já validou antes de responder) e os atalhos para abrir no CW, na página pública e no dossiê em nova guia, copiar o protocolo e o rascunho da resposta. Se ainda não está no CW, o cartão oferece criar no quadro. Na lista de reclamações, cada uma ganha um selo (no CW com a prioridade e o atraso, ou nova) e um ↗ para abrir em nova guia.",
+    frentes: ["extensao", "reclame-aqui"],
+  },
+  {
     versao: "1.68.2",
     data: "2026-09-24",
     titulo: "Sem barra para ir de um lado ao outro",

@@ -10,6 +10,7 @@ import {
   Expediente,
   expedienteValido,
 } from "@/lib/services/horasUteis";
+import { slaRuleDoBanco, type SlaRule } from "@/lib/models/sla";
 
 /**
  * O expediente da operação, como o banco o guarda.
@@ -61,6 +62,23 @@ let guardado: { valor: Expediente; ate: number } | null = null;
  * Um minuto de memória: o expediente muda uma vez por ano, e cada painel
  * aberto na extensão pediria a mesma linha de novo.
  */
+let regrasGuardadas: { valor: SlaRule[]; ate: number } | null = null;
+
+/**
+ * As regras de prazo, com um minuto de memória — sem a carga inteira.
+ *
+ * As rotas da extensão na área da empresa (cartão e selos) só precisam
+ * das regras e do expediente para dizer "1º contato vence em…". Carregar
+ * o workspace inteiro para isso custava 1 a 2 s por chamada.
+ */
+export async function lerRegrasDePrazo(prisma: PrismaClient): Promise<SlaRule[]> {
+  if (regrasGuardadas && regrasGuardadas.ate > Date.now()) return regrasGuardadas.valor;
+  const linhas = await prisma.slaRule.findMany().catch(() => []);
+  const valor = linhas.map(slaRuleDoBanco);
+  regrasGuardadas = { valor, ate: Date.now() + 60_000 };
+  return valor;
+}
+
 export async function lerExpediente(
   prisma: PrismaClient
 ): Promise<Expediente> {

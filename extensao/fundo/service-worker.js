@@ -61,6 +61,8 @@ const CAMINHOS = {
   vincularContato: "/api/extensao/vincular-contato",
   aprenderResposta: "/api/extensao/aprender-resposta",
   impacto: "/api/extensao/impacto",
+  raCartao: "/api/extensao/ra-cartao",
+  raLista: "/api/extensao/ra-lista",
 };
 
 /**
@@ -518,6 +520,18 @@ async function tratar(mensagem) {
    * capturar de novo. A varredura só pergunta quando o conjunto de
    * links da página muda, então o custo é baixo.
    */
+  /* O cartão da reclamação aberta na área da empresa: resumo e o caso no CW. Só leitura. */
+  if (mensagem?.tipo === "raCartao") {
+    const dados = await chamar(CAMINHOS.raCartao, {}, mensagem.corpo ?? {});
+    return { ok: true, dados };
+  }
+
+  /* Os selos da lista da área da empresa: quais reclamações já estão no CW. */
+  if (mensagem?.tipo === "raLista") {
+    const dados = await chamar(CAMINHOS.raLista, {}, { codigos: mensagem.codigos ?? [] });
+    return { ok: true, dados };
+  }
+
   if (mensagem?.tipo === "raNovas") {
 
     const dados = await chamar(
