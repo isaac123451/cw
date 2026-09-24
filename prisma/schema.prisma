@@ -2060,3 +2060,54 @@ model ContatoConhecido {
   vinculadoPor    String
   vinculadoEm     DateTime @default(now())
 }
+
+/// A campanha de votação do Prêmio Reclame Aqui (Fase 23): o prêmio no
+/// calendário e a mensagem do pedido de voto.
+model CampanhaDoPremio {
+  id          String   @id @default(cuid())
+  nome        String
+  categoria   String?
+  /// O link da votação, que a mensagem leva em {link}.
+  linkVotacao String?
+  /// A mensagem do pedido, com {nome} e {link}.
+  mensagem    String?
+  /// A do lembrete, para quem recebeu o pedido e ainda não votou.
+  lembrete    String?
+  /// AAAA-MM-DD em Brasília.
+  votacaoInicio String?
+  votacaoFim    String?
+  /// A data em que o prêmio "fotografa" a reputação.
+  dataDeCorte   String?
+  /// A nota que a reputação precisa ter na data de corte.
+  notaMeta      Float?
+  criadoPor   String?
+  criadoEm    DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  pedidos PedidoDeVoto[]
+}
+
+/// Cada pessoa da campanha: exportada, pedida, lembrada, disse que votou.
+model PedidoDeVoto {
+  id         String           @id @default(cuid())
+  campanhaId String
+  campanha   CampanhaDoPremio @relation(fields: [campanhaId], references: [id], onDelete: Cascade)
+  /// reclame-aqui · nps
+  origem     String
+  /// O id do caso (portal) ou da resposta do NPS.
+  ref        String
+  nome       String
+  telefone   String?
+  email      String?
+  motivo     String?
+  /// exportado · pedido · lembrete · votou
+  situacao   String           @default("exportado")
+  exportadoPor String?
+  exportadoEm  DateTime       @default(now())
+  pedidoEm     DateTime?
+  lembreteEm   DateTime?
+  votouEm      DateTime?
+
+  @@unique([campanhaId, origem, ref])
+  @@index([campanhaId, situacao])
+}

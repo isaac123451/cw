@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 24/09/2026. Aplicação **1.53.0**, extensão **1.53.0**.
+Atualizado em 24/09/2026. Aplicação **1.54.0**, extensão **1.54.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,39 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### Prêmio Reclame Aqui: exportar os contatos (24/09/2026, 1.54.0)
+
+Primeiro item da Fase 23 — "exportar todos os contatos que me avaliaram
+positivamente … para pedir para votarem nos prêmios Reclame Aqui".
+
+- **Duas tabelas novas** (`CampanhaDoPremio`, `PedidoDeVoto`). **Depende
+  de você: `npm run db:push` e `npm run db:rls` no banco, uma vez**, antes
+  de usar a tela — até lá ela diz exatamente isso, em vez de erro.
+- **A lista** (`lib/models/premio.ts`): Reclame Aqui avaliado (sem as
+  avaliações desconsideradas), com os filtros resolvido, voltaria e nota
+  mínima (padrão: resolvido e nota ≥ 7); NPS promotor (9 e 10), e só
+  quem publicou 5 estrelas no Google, se quiser; período pela data da
+  avaliação. Uma pessoa por telefone (e sem telefone, pelo e-mail): quem
+  reclamou e respondeu ao NPS recebe um pedido só. Quem já está na
+  campanha fica de fora.
+- **A planilha** (`registrarExportados`): nome, telefone no formato
+  internacional (+55DDD…; mascarado ou curto fica vazio), e-mail, a
+  mensagem com o primeiro nome e o link, o motivo e a origem. Quem foi
+  exportado entra na campanha com quem exportou e quando.
+- **A tela** `/reclame-aqui/premio`, no menu do Reclame Aqui: a campanha
+  (nome, categoria, link, datas, data de corte, nota meta, mensagem e
+  lembrete) e "Quem pedir o voto", com a prévia das primeiras linhas.
+- `janelas.ts` passou a saber que `/reclame-aqui/premio` é tela, e não
+  um caso.
+
+Provas: `check:premio` (novo, 12 pontos: telefone internacional,
+mascarado e curto recusados, a mensagem com o nome e sem "Olá, !", os
+filtros, a Ana do RA e do NPS vira uma pessoa só, 5 estrelas no Google,
+quem já está na campanha fica de fora, o período). `check:seguranca`
+com as 4 ações novas conferindo quem chama. A tela abre sem erro no
+modo de demonstração; exportar de verdade precisa das tabelas no banco.
+`tsc` e `lint` limpos.
 
 ### Lembrete que nasce sozinho (24/09/2026, 1.53.0)
 
