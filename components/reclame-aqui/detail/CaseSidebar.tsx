@@ -16,6 +16,7 @@ import { useEstablishments } from "@/lib/context/EstablishmentsContext";
 import { useSession } from "@/lib/context/SessionContext";
 
 import Combobox from "@/components/shared/Combobox";
+import LinksDoRa from "@/components/shared/LinksDoRa";
 import PrazoECriticidade from "@/components/reclame-aqui/tratativa/PrazoECriticidade";
 import NegociacoesDoCaso from "@/components/reclame-aqui/negociacao/NegociacoesDoCaso";
 import { useTratativa } from "@/components/reclame-aqui/tratativa/TratativaProvider";
@@ -399,16 +400,20 @@ export default function CaseSidebar({
         {/* O export do HugMe não traz a URL — o botão só aparece
             depois que alguém colar o link do caso. Nas redes, o
             documento pede o link ou o print da interação no registro. */}
-        {data.raUrl && (
-          <a
-            href={data.raUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-2 flex items-center justify-center gap-2 rounded-xl border border-violet-200 px-4 py-2.5 text-sm font-medium text-violet-700 transition-colors hover:bg-violet-50"
-          >
-            <ExternalLink size={15} />
-            {isSocial(data) ? "Abrir a interação" : "Abrir no Reclame Aqui"}
-          </a>
+        {isSocial(data) ? (
+          data.raUrl && (
+            <a
+              href={data.raUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 flex items-center justify-center gap-2 rounded-xl border border-violet-200 px-4 py-2.5 text-sm font-medium text-violet-700 transition-colors hover:bg-violet-50"
+            >
+              <ExternalLink size={15} />
+              Abrir a interação
+            </a>
+          )
+        ) : (
+          <LinksDoRa caso={data} variante="botoes" className="mt-2 w-full flex-wrap gap-2 [&>*]:flex-1 [&>*]:justify-center" />
         )}
 
         {isSocial(data) && data.solucaoAplicada && (

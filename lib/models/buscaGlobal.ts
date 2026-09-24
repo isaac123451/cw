@@ -48,6 +48,8 @@ export interface ResultadoDaBusca {
   href: string;
   /** Quando dá para abrir numa mini-janela (Shift+Enter). */
   janela?: { frente: FrenteDaJanela; ref: string; titulo: string };
+  /** Reclamação do Reclame Aqui: a página pública e a área da empresa ao lado — ver `linksDoRa`. */
+  ra?: { protocol: string; raUrl?: string };
   pontos: number;
 }
 
@@ -175,6 +177,7 @@ export function buscarNaPlataforma(entrada: EntradaDaBusca): ResultadoDaBusca[] 
         detalhe: c.title,
         href: social ? `/redes-sociais/${c.id}` : `/reclame-aqui/${c.id}`,
         janela: { frente: social ? ("redes" as const) : ("reclame-aqui" as const), ref: c.id, titulo: `${c.protocol} · ${c.customer}` },
+        ...(social ? {} : { ra: { protocol: c.protocol, raUrl: c.raUrl } }),
         pontos,
       };
     })

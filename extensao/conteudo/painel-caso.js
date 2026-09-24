@@ -355,8 +355,18 @@
     partes.push(
       '<div class="bloco">',
       `  <button class="acao" data-acao="abrir" data-url="${CW.escapar(d.url)}" style="width:100%;margin-top:0">Abrir na aplicação</button>`,
-      d.urlPortal
-        ? `  <button class="copiar" data-acao="abrir" data-url="${CW.escapar(d.urlPortal)}" style="width:100%;margin-top:7px;padding:8px">Ver no portal</button>`
+      /* A página pública e a área da empresa, lado a lado: uma é o que o mercado lê, a outra é onde se responde. */
+      d.urlPortal || d.urlEmpresa
+        ? [
+            '  <div style="display:flex;gap:6px;margin-top:7px">',
+            d.urlPortal
+              ? `    <button class="copiar" data-acao="abrir" data-url="${CW.escapar(d.urlPortal)}" style="flex:1;padding:8px">Página pública</button>`
+              : "",
+            d.urlEmpresa
+              ? `    <button class="copiar" data-acao="abrir" data-url="${CW.escapar(d.urlEmpresa)}" style="flex:1;padding:8px">Área da empresa</button>`
+              : "",
+            "  </div>",
+          ].join("")
         : "",
       '</div>'
     );

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import LinksDoRa from "@/components/shared/LinksDoRa";
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
@@ -283,6 +284,7 @@ export default function NotificationsMenu() {
                               <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-zinc-500">{n.detail}</p>
                             </div>
                             <div className="flex shrink-0 items-start gap-0.5 pt-0.5">
+                              {n.ra && <LinksDoRa caso={n.ra} className="[&>a]:p-1" />}
                               {n.janela && (
                                 <button
                                   type="button"

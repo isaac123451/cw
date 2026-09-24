@@ -1792,8 +1792,26 @@
         </div>
         <div class="titulo-caso">${CW.escapar(caso.titulo)}</div>
         <div class="rodape">${etiquetas.join("")}</div>
+        ${P.linksDoCaso(caso)}
         ${P.botoesDeEtapa(caso)}
       </div>`;
+  };
+
+  /**
+   * Plataforma, página pública e área da empresa — os três lugares de uma
+   * reclamação. Cada link fica mais perto do clique que o cartão, e por
+   * isso abre a página em vez de abrir o caso no painel.
+   */
+  P.linksDoCaso = function linksDoCaso(caso) {
+    const links = [
+      caso.url ? ["plataforma", caso.url] : null,
+      caso.urlPortal ? ["página pública", caso.urlPortal] : null,
+      caso.urlEmpresa ? ["área da empresa", caso.urlEmpresa] : null,
+    ].filter(Boolean);
+    if (links.length < 2) return "";
+    return `<div class="links-caso">${links
+      .map(([rotulo, url]) => `<a data-acao="abrir" data-url="${CW.escapar(url)}">${rotulo} &#8599;</a>`)
+      .join("")}</div>`;
   };
 
   /* ============================================================

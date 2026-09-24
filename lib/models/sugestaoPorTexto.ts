@@ -213,19 +213,44 @@ export function medirAcerto(
  *
  * O texto normalizado não tem acento: as expressões também não.
  */
-export const CRITERIOS_NO_TEXTO: { criterio: string; padrao: RegExp; motivo: string }[] = [
-  { criterio: "juridico", padrao: /\bprocon\b|consumidor\.gov|defesa do consumidor|\badvogad|\bjudicial|\bna justica\b|pequenas causas|juizado|\bprocess(ar|arei|o contra)\b|entrar com (uma )?acao/, motivo: "fala em Procon, advogado ou ação" },
-  { criterio: "exposicao", padrao: /\bimprensa\b|\bjornal\b|\breportagem\b|viraliz|\bvou (postar|expor|divulgar)|redes sociais (todas|inteiras)|todo mundo (vai )?saber/, motivo: "ameaça expor ou fala em imprensa" },
-  { criterio: "operacao-parada", padrao: /(sistema|loja|restaurante|delivery|cardapio|operacao|tudo) (esta |ficou |totalmente )?(parad|fora do ar|travad)|nao (consigo|conseguimos) (vender|receber pedido|trabalhar|abrir a loja)|perdendo (vendas|pedidos)|nenhum pedido (entra|chega)/, motivo: "descreve a operação parada" },
-  { criterio: "cancelamento", padrao: /\bcancel(ar|amento|ei)\b|quero (sair|rescindir)|rescis|trocar de (sistema|plataforma|empresa)|\bconcorrente\b|nao renov/, motivo: "fala em cancelar ou trocar de sistema" },
-  { criterio: "financeiro", padrao: /cobran[ca]a (indevida|duplicada|em duplicidade|errada)|cobrad[oa]s? (duas vezes|a mais|indevidamente|sem autoriza)|\bestorno\b|\breembols|valor (errado|incorreto|a mais)|debitad/, motivo: "fala em cobrança indevida, estorno ou valor errado" },
-  { criterio: "funcionalidade", padrao: /nao (imprime|imprimi|funciona|abre|carrega|sincroniza|integra)|parou de (funcionar|imprimir|integrar)|integracao (caiu|parou|com o ifood)|\bbug\b|\berro\b ao/, motivo: "uma função deixou de funcionar" },
-  { criterio: "prazo-descumprido", padrao: /prometeram|prometido|combinad[oa] e nao|prazo (venceu|nao cumprido|passou)|ate hoje nada|ninguem (retornou|resolveu)|sem retorno ha|faz (\d+|uma|duas|tres) semanas?/, motivo: "cobra um prazo ou retorno prometido" },
+/**
+ * Os critérios que o relato acende, pelas palavras.
+ *
+ * Todo critério tem regra aqui, menos os que só o dado sabe
+ * (`estrategico` e `reincidencia` — ver `urgenciaPorDado`). Medido nos
+ * 363 relatos com `scripts/medir-criterios.ts`. `anula`: quando este
+ * casa, aquele sai — quem já cancelou e segue sendo cobrado não é mais
+ * risco de cancelamento, é cobrança.
+ */
+export const CRITERIOS_NO_TEXTO: { criterio: string; padrao: RegExp; motivo: string; anula?: string[] }[] = [
+  { criterio: "juridico", padrao: /\bprocon\b|consumidor\.gov|defesa do consumidor|\bcdc\b|\badvogad|\bjudicia|\bna justica\b|pequenas causas|juizado|\bprocess(ar|arei|o contra)\b|entrar com (uma )?acao|\bgolpe|\bgolpista|\bfraude/, motivo: "fala em Procon, advogado, ação ou golpe" },
+  { criterio: "exposicao", padrao: /\bimprensa\b|\bjornal\b|\breportagem\b|viraliz|\bvou (postar|expor|divulgar)|redes sociais (todas|inteiras)|todo mundo (vai )?saber|influenciador|meus seguidores/, motivo: "ameaça expor ou fala em imprensa" },
+  { criterio: "operacao-parada", padrao: /(sistema|loja|restaurante|delivery|cardapio|operacao|tudo) (esta |ficou |totalmente )?(parad|fora do ar|travad)|nao (consigo|conseguimos) (vender|receber pedido|trabalhar|abrir a loja)|sem conseguir (vender|trabalhar|operar|receber pedido)|impossibilitad[oa]s? de (vender|trabalhar|operar)|perdendo (vendas|pedidos)|nenhum pedido (entra|chega)|(loja|conta|sistema) (foi |esta )?(desativad|bloquead|suspens)/, motivo: "descreve a operação parada" },
+  { criterio: "prejuizo", padrao: /\brepasses?\b|dinheiro (retido|preso|bloqueado)|(valor|saldo|dinheiro)(es)? (esta |ficou )?(retid|bloquead)|nao (recebi|caiu|cairam|estao pagando) (o |os |meu |meus )?(pagamento|valor|dinheiro)s?\b|perdi (dinheiro|vendas|clientes)|prejuizo (financeiro|nas vendas|enorme|grande|de r)|perda de (faturamento|vendas|pedidos)/, motivo: "o dinheiro das vendas não chegou ou houve prejuízo" },
+  { criterio: "dados-pessoais", padrao: /\blgpd\b|(uso|vazamento|exposicao|compartilhamento) (indevid[oa] )?de (meus )?dados pessoais|dados pessoais (sem autoriz|expost|vazad|usad)|uso indevido de (meus )?dados|vazament|vazaram|expuseram (meus )?dados|cadastro nao autorizado|sem (minha )?autorizac(ao)? .{0,30}(dados|cadastr)/, motivo: "fala de dados pessoais ou LGPD" },
+  { criterio: "cancelamento", padrao: /(quero|vou|preciso|decidi|desejo|gostaria de) (o )?cancel(ar|amento)|solicit(o|ei|ando|acao de) (o )?cancelamento|pedido de cancelamento|cancelar (o |meu |a )?(contrato|plano|assinatura|sistema)|quero (sair|rescindir)|rescis|trocar de (sistema|plataforma|empresa)|\bconcorrente\b|nao (vou )?renovar/, motivo: "quer cancelar ou trocar de sistema" },
+  { criterio: "financeiro", padrao: /cobran[ca]as? (indevida|duplicada|em duplicidade|errada|abusiva)|cobrad[oa]s? (duas vezes|a mais|indevidamente|sem autoriza)|\bestorno\b|\breembols|valor(es)? (errad|incorret|a mais|divergente)|divergencia de valor|debitad|taxa de entrega (errad|incorret)/, motivo: "fala em cobrança indevida, estorno ou valor errado" },
+  { criterio: "cobranca-pos-cancelamento", padrao: /(cancelei|cancelad[oa]|cancelamento (feito|solicitado|realizado|confirmado)|apos (o )?cancelamento|depois (do|de) cancelar).{0,80}(cobra|debit|boleto|fatura|mensalidade)|(cobra|debit|boleto|fatura|mensalidade).{0,80}(apos|depois d[oe]) (o )?cancel|renovac(ao|oes) automatica|renovou (sozinh|automatic)|multa (de|por) (cancelamento|rescisao|fidelidade)|clausula de fidelidade/, motivo: "cobrança depois de cancelar ou renovação contestada", anula: ["cancelamento"] },
+  { criterio: "funcionalidade", padrao: /nao (imprime|imprimi|funciona|abre|carrega|sincroniza|integra|recebe pedido)|parou de (funcionar|imprimir|integrar|receber)|integracao (caiu|parou|com o ifood|nao)|falhas? n[ao]s? (impress|integrac|pagamento)|problemas? (com|na|de) (a )?(impress|integrac|pagamento online)|whatsapp (banid|bloquead)|banindo|\berro\b ao/, motivo: "uma função deixou de funcionar" },
+  { criterio: "falha-parcial", padrao: /instabilidade|instavel|\blent(o|idao)\b|travando|\btrava\b|horarios? de pico|\bbug|\bfalha(s|ndo)? (no|na|do|da) (sistema|cardapio|aplicativo|app)|de vez em quando|as vezes (nao|funciona)|fora do ar por/, motivo: "descreve falha ou instabilidade sem parar tudo" },
+  { criterio: "configuracao-critica", padrao: /nao (foi |foram )?(implantad|ativad|liberad)|nao cadastraram|implantac.{0,40}(atras|demor|nao (foi )?(feita|conclu)|parad)|aguardando (a )?(implantac|ativac|liberac)|pague?i e (ate hoje |ainda )?nao|apos (o )?pagamento.{0,40}nao/, motivo: "implantação ou ativação paga e travada" },
+  { criterio: "demora-excessiva", padrao: /suporte (simplesmente )?(nao (responde|retorna|atende|existe)|inexistente|sumiu|indisponivel)|sem (nenhum )?(suporte|resposta|retorno)|ninguem (me )?(responde|atende|retorna)|nao (tenho|tive|recebo|recebi) (nenhum )?(suporte|retorno|resposta)|falta de (suporte|retorno|resposta)|demora excessiva|horas (esperando|aguardando|na fila)|dias (esperando|aguardando|sem resposta)/, motivo: "reclama de demora ou falta de retorno" },
+  { criterio: "prazo-descumprido", padrao: /\bprometeram|\bprometid[oa]|combinad[oa] e nao|prazo (venceu|nao cumprido|passou|prometido)|ate hoje nada|ninguem (retornou|resolveu)|sem retorno ha|faz (\d+|uma|duas|tres) semanas?|nao compareceu|nao comparece|reuniao (agendada|marcada).{0,40}(nao|ninguem)/, motivo: "cobra um prazo ou retorno prometido" },
+  { criterio: "duvida", padrao: /como (faco|fazer|configur|cadastr|altero|mudo|coloco)|gostaria de saber|\bduvida|nao sei como|preciso de orientac/, motivo: "pergunta como usar" },
+  { criterio: "informacao", padrao: /nota fiscal|segunda via|copia do contrato|solicit(o|ando|ei) (a |o )?(copia|documento|informac)|informac(ao|oes) sobre/, motivo: "pede informação ou documento" },
+  { criterio: "ajuste", padrao: /\bajustes?\b|corrigir (o|a|um|uma)|erro pontual|foto(s)? (nao aparec|fora do ar|sumiram)|horarios? (de funcionamento |de disponibilidade )?(errad|incorret)|alterac(ao|oes) (de|nos?) (dados|cadastr)/, motivo: "pede um ajuste ou aponta um erro pontual" },
+  { criterio: "melhoria", padrao: /\bsugir|\bsugest|poderia(m)? (ter|melhorar|colocar|adicionar)|seria (bom|legal|otimo)|nao tem (a )?(opcao|funcao|como)|falta (a |uma )?(opcao|funcao|funcionalidade)|limitac|funcionalidades? (limitad|ausente)|solicitac(ao)? de (melhoria|funcionalidade)|gostaria que (tivesse|houvesse)/, motivo: "propõe melhoria ou aponta o que falta" },
+  { criterio: "atendimento", padrao: /atendimento (ruim|pessimo|horr|pessimo|ineficiente|despreparad|demorad)|suporte (ruim|pessimo|horr|ineficiente|despreparad|grosseir|insuficiente)|mau atendimento|atendente (grosseir|mal educad|despreparad)|postura/, motivo: "reclama da qualidade do atendimento" },
+  { criterio: "expectativa", padrao: /propaganda enganosa|esperava|nao era o que|vendedor (disse|falou|prometeu)|venda casada|diferente do anunciado|expectativa/, motivo: "a venda prometeu outra coisa" },
 ];
 
 export function criteriosPeloTexto(texto: string) {
   const normal = normalizarTexto(texto);
-  return CRITERIOS_NO_TEXTO.filter((c) => c.padrao.test(normal)).map(({ criterio, motivo }) => ({ criterio, motivo }));
+  const acesos = CRITERIOS_NO_TEXTO.filter((c) => c.padrao.test(normal));
+  const anulados = new Set(acesos.flatMap((c) => c.anula ?? []));
+  return acesos
+    .filter((c) => !anulados.has(c.criterio))
+    .map(({ criterio, motivo, padrao }) => ({ criterio, motivo, trecho: trechoDoPadrao(texto, padrao, 40) }));
 }
 
 /** Os tipos do guia do NPS, pelo comentário e pela nota. */

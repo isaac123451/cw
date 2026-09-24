@@ -32,6 +32,7 @@ import { toneOfSla } from "@/lib/services/sla.service";
 import { isSocial } from "@/lib/services/case.service";
 
 import TagPicker, { TagChips } from "@/components/shared/TagPicker";
+import LinksDoRa from "@/components/shared/LinksDoRa";
 import PerguntarAoAssistente from "@/components/assistente/PerguntarAoAssistente";
 import StatusPicker from "@/components/reclame-aqui/shared/StatusPicker";
 import BarraDeSalvar from "@/components/shared/BarraDeSalvar";
@@ -465,17 +466,21 @@ export default function CaseDetail({
               onToggle={(tag) => toggleTag(data.id, tag)}
             />
 
-            {data.raUrl && (
-              <a
-                href={data.raUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                title={canal === "social" ? "Abrir a interação original" : "Abrir esta reclamação no portal"}
-                className="flex items-center gap-2 rounded-xl border border-violet-200 px-4 py-2.5 text-sm font-medium text-violet-700 transition-colors hover:bg-violet-50"
-              >
-                <ExternalLink size={15} />
-                {canal === "social" ? data.source : "Reclame Aqui"}
-              </a>
+            {canal === "social" ? (
+              data.raUrl && (
+                <a
+                  href={data.raUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Abrir a interação original"
+                  className="flex items-center gap-2 rounded-xl border border-violet-200 px-4 py-2.5 text-sm font-medium text-violet-700 transition-colors hover:bg-violet-50"
+                >
+                  <ExternalLink size={15} />
+                  {data.source}
+                </a>
+              )
+            ) : (
+              <LinksDoRa caso={data} variante="botoes" className="gap-2" />
             )}
 
             <PerguntarAoAssistente

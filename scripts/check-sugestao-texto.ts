@@ -24,6 +24,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { familiaDoAssunto } from "../lib/models/assuntos";
+import { CRITERIOS, prioridadePelosCriterios } from "../lib/models/case";
 import {
   CRITERIOS_NO_TEXTO,
   REGRAS_DE_ASSUNTO,
@@ -112,8 +113,21 @@ conferir("família agrupa as categorias antigas do portal", [familiaDoAssunto("Q
 
 conferir("critério jurídico no relato", criteriosPeloTexto("vou entrar com uma ação no Procon").map((c) => c.criterio), ["juridico"]);
 conferir("critério de operação parada", criteriosPeloTexto("o sistema está totalmente parado, não consigo vender nada hoje").some((c) => c.criterio === "operacao-parada"), true);
-conferir("relato neutro não acende nenhum critério grave", criteriosPeloTexto("gostaria de saber como configurar o horário de entrega"), []);
-conferir("todo critério da tabela tem regra de texto (juridico/exposicao/operacao-parada/cancelamento/financeiro/funcionalidade/prazo-descumprido)", CRITERIOS_NO_TEXTO.length, 7);
+const ids = (t: string) => criteriosPeloTexto(t).map((c) => c.criterio);
+const nivelDoTexto = (t: string) => prioridadePelosCriterios(ids(t));
+conferir("dúvida acende só critério de Normal", [ids("gostaria de saber como configurar o horário de entrega"), nivelDoTexto("gostaria de saber como configurar o horário de entrega")], [["duvida"], "Normal"]);
+conferir("todo critério tem regra de texto, menos os que só o dado sabe", CRITERIOS.filter((c) => !CRITERIOS_NO_TEXTO.some((r) => r.criterio === c.id)).map((c) => c.id), ["estrategico", "reincidencia"]);
+conferir("regra de texto só com critério que existe", CRITERIOS_NO_TEXTO.every((r) => CRITERIOS.some((c) => c.id === r.criterio)), true);
+conferir("repasse retido é Urgente (prejuízo do estabelecimento)", [ids("Não estão pagando meu repasse"), nivelDoTexto("Não estão pagando meu repasse")], [["prejuizo"], "Urgente"]);
+conferir("quer cancelar: risco de cancelamento", ids("Quero cancelar meu plano").includes("cancelamento"), true);
+conferir("já cancelou e segue cobrado: é cobrança (Alta), não risco", [ids("Cancelei em agosto e continuam cobrando a mensalidade"), nivelDoTexto("Cancelei em agosto e continuam cobrando a mensalidade")], [["cobranca-pos-cancelamento"], "Alta"]);
+conferir("'comprometido' não é 'prometido'", ids("o propósito da automação fica comprometido").includes("prazo-descumprido"), false);
+conferir("'programa de fidelidade' não é multa de fidelidade", ids("meu programa de fidelidade mente sobre pontos").includes("cobranca-pos-cancelamento"), false);
+conferir("'reajuste' não é pedido de ajuste", ids("não reconhecemos nenhum reajuste de preço").includes("ajuste"), false);
+conferir("dados do proprietário não é LGPD", ids("alterar os dados do proprietário (nome, dados pessoais e o CNPJ)").includes("dados-pessoais"), false);
+conferir("demora do suporte é Alta, pela tabela de acionamento", nivelDoTexto("Suporte simplesmente não responde"), "Alta");
+conferir("instabilidade no pico, sem parar tudo, é Alta", ids("Meu cardápio falha em horários de pico").includes("falha-parcial"), true);
+conferir("o trecho vem do relato original, com acento", criteriosPeloTexto("Estou há dias sem resposta do suporte.")[0]?.trecho.includes("sem resposta"), true);
 
 conferir("NPS: Erro no Sistema pelo comentário", regrasDeTipoNps(5).find((r) => r.padrao.test(normalizarTexto("o app trava toda hora")))?.rotulo, "Erro no Sistema");
 conferir("NPS: elogio só entra com nota alta", regrasDeTipoNps(9).some((r) => r.rotulo === "Elogio") && !regrasDeTipoNps(4).some((r) => r.rotulo === "Elogio"), true);

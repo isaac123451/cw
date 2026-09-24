@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Check, Loader2, Sparkles, TriangleAlert } from "lucide-react";
 
@@ -14,9 +14,11 @@ import {
   PRIORIDADES,
   prioridadePelosCriterios,
 } from "@/lib/models/case";
+import { criteriosPeloTexto } from "@/lib/models/sugestaoPorTexto";
 import { descreverPrazo } from "@/lib/services/horasUteis";
 import { resolveRule } from "@/lib/services/sla.service";
 
+import { loadCaseTexts } from "@/lib/actions/cases";
 import { triarCaso } from "@/lib/actions/tratativa";
 import { useUrgenciaPorDado } from "./useUrgenciaPorDado";
 import { useSla } from "@/lib/context/SlaContext";
@@ -59,7 +61,30 @@ export default function TriagemModal({ item, onClose, onSalvo }: Props) {
   const [erro, setErro] = useState<string | null>(null);
 
   const porDado = useUrgenciaPorDado(item);
-  const faltamMarcar = porDado.sinais.filter((s) => !criterios.includes(s.criterio));
+  /*
+    O relato diz o resto: Procon, repasse retido, cobrança depois de
+    cancelar, dúvida... — cada um com o trecho. A lista do quadro não traz
+    o texto (peso); aberta de lá, a triagem busca o relato uma vez.
+  */
+  const [relato, setRelato] = useState(item.description ?? "");
+  useEffect(() => {
+    if (item.description) return;
+    let vivo = true;
+    loadCaseTexts(item.protocol)
+      .then((t) => vivo && setRelato(t.description))
+      .catch(() => undefined);
+    return () => {
+      vivo = false;
+    };
+  }, [item.protocol, item.description]);
+  const peloRelato = criteriosPeloTexto(`${item.title} ${relato}`).filter(
+    (s) => !porDado.sinais.some((d) => d.criterio === s.criterio)
+  );
+  const sinais = [...porDado.sinais.map((s) => ({ ...s, trecho: "" })), ...peloRelato];
+  const nivelDosSinais = prioridadePelosCriterios(sinais.map((s) => s.criterio));
+  const faltamMarcar = sinais.filter((s) => !criterios.includes(s.criterio));
+  const deOnde =
+    porDado.sinais.length > 0 && peloRelato.length > 0 ? "O relato e os dados sugerem" : porDado.sinais.length > 0 ? "Os dados sugerem" : "O relato sugere";
 
   const sugerido = prioridadePelosCriterios(criterios);
   const nivel = escolhido ?? sugerido;
@@ -112,14 +137,13 @@ export default function TriagemModal({ item, onClose, onSalvo }: Props) {
     }
   }
 
-  const grupo = (p: Exclude<Prioridade, "Normal">) =>
-    CRITERIOS.filter((c) => c.prioridade === p);
+  const grupo = (p: Prioridade) => CRITERIOS.filter((c) => c.prioridade === p);
 
   return (
     <Modal
       open
       porque="ra.criticidade"
-      size="wide"
+      size="xl"
       title={`Triar ${item.protocol}`}
       description="Passo 1 da documentação: classificar a criticidade antes do 1º contato. Os critérios sugerem o nível; você decide."
       onClose={onClose}
@@ -141,15 +165,16 @@ export default function TriagemModal({ item, onClose, onSalvo }: Props) {
 
       <p className="line-clamp-2 text-sm font-medium text-zinc-800">{item.title}</p>
 
-      {porDado.sinais.length > 0 && (
+      {sinais.length > 0 && (
         <div className="mt-4 rounded-2xl border border-violet-200 bg-violet-50/60 p-3.5">
           <p className="flex items-center gap-1.5 text-xs font-semibold text-violet-900">
-            <Sparkles size={13} /> Os dados sugerem {porDado.nivel}
+            <Sparkles size={13} /> {deOnde} {nivelDosSinais}
           </p>
           <ul className="mt-1.5 space-y-1 text-xs leading-relaxed text-violet-900/90">
-            {porDado.sinais.map((s) => (
+            {sinais.map((s) => (
               <li key={s.criterio}>
-                <strong className="font-semibold">{CRITERIOS.find((c) => c.id === s.criterio)?.texto}:</strong> {s.motivo}.
+                <strong className="font-semibold">{CRITERIOS.find((c) => c.id === s.criterio)?.texto}:</strong> {s.motivo}
+                {s.trecho ? <span className="text-violet-900/70"> — &ldquo;{s.trecho}&rdquo;</span> : "."}
               </li>
             ))}
           </ul>
@@ -167,9 +192,9 @@ export default function TriagemModal({ item, onClose, onSalvo }: Props) {
         </div>
       )}
 
-      <div className="mt-4 grid gap-4 md:grid-cols-2">
+      <div className="mt-4 grid gap-4 md:grid-cols-3">
 
-        {(["Urgente", "Alta"] as const).map((p) => (
+        {(["Urgente", "Alta", "Normal"] as const).map((p) => (
           <fieldset key={p} className="rounded-2xl border border-zinc-200 p-3.5">
             <legend className="px-1 text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
               Critérios de {p}
@@ -187,7 +212,12 @@ export default function TriagemModal({ item, onClose, onSalvo }: Props) {
                     onChange={() => alternar(c.id)}
                     className="mt-0.5 h-4 w-4 accent-violet-700"
                   />
-                  {c.texto}
+                  <span>
+                    {c.texto}
+                    {sinais.some((s) => s.criterio === c.id) && (
+                      <span className="ml-1.5 whitespace-nowrap rounded bg-violet-100 px-1 py-px text-[10px] font-semibold text-violet-700">sugerido</span>
+                    )}
+                  </span>
                 </label>
               ))}
             </div>
@@ -197,7 +227,7 @@ export default function TriagemModal({ item, onClose, onSalvo }: Props) {
       </div>
 
       <p className="mt-3 text-xs leading-relaxed text-zinc-500">
-        <strong className="font-semibold text-zinc-600">Normal:</strong> {CRITERIO_NORMAL}
+        Os de <strong className="font-semibold text-zinc-600">Normal</strong> não sobem o nível: registram por que o caso é Normal — {CRITERIO_NORMAL.charAt(0).toLowerCase() + CRITERIO_NORMAL.slice(1)}
       </p>
 
       <div className="mt-5">

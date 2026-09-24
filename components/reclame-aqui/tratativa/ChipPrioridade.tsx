@@ -38,7 +38,7 @@ export default function ChipPrioridade({ item, className = "", ocultarNormal = f
     ? "Ainda sem triagem — a prioridade é a de entrada. Clique para triar pelos critérios da documentação."
     : [
         `Triado${item.triadaPor ? ` por ${item.triadaPor}` : ""}.`,
-        marcados.length > 0 ? `Critérios: ${marcados.map((c) => c.texto).join("; ")}.` : "Sem critério de Urgente ou Alta marcado.",
+        marcados.length > 0 ? `Critérios: ${marcados.map((c) => c.texto).join("; ")}.` : "Sem critério marcado.",
         "Clique para refazer a triagem.",
       ].join(" ");
 

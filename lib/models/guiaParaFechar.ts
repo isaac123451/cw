@@ -49,6 +49,8 @@ export interface ItemDaFila {
   chaves: ChaveDaRotina[];
   /** A ficha que abre em mini-janela — `null` quando o item é uma tela. */
   janela: PedidoDeJanela | null;
+  /** Reclamação do Reclame Aqui: a página pública e a área da empresa. */
+  ra?: { protocol: string; raUrl?: string };
 }
 
 /**
@@ -89,6 +91,7 @@ export function filaDoDia(
         atividades: [a.titulo],
         chaves: [a.chave],
         janela: janelaDoEndereco(i.href, i.titulo),
+        ...(i.ra ? { ra: i.ra } : {}),
         ordem: ordem++,
         urgencia: urgenciaDe(i),
       });

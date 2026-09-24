@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import LinksDoRa from "@/components/shared/LinksDoRa";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -326,6 +327,7 @@ export default function ModoProximo({ dia, marcadas, onFechar }: Props) {
               >
                 {tarefa ? "Agenda" : item.janela ? "Tela cheia" : "Abrir"} <ArrowUpRight size={13} />
               </Link>
+              {item.ra && <LinksDoRa caso={item.ra} className="[&>a]:p-2" />}
               {!tarefa && (
                 <>
                   <button

@@ -9,6 +9,7 @@ import { Star, Trash2, TriangleAlert } from "lucide-react";
 import { Case } from "@/lib/models/case";
 import { TagChips } from "@/components/shared/TagPicker";
 import { ConfirmDelete } from "@/components/shared/Modal";
+import LinksDoRa from "@/components/shared/LinksDoRa";
 import BotaoCompletar from "@/components/reclame-aqui/completar/BotaoCompletar";
 import ChipPrioridade from "@/components/reclame-aqui/tratativa/ChipPrioridade";
 import RelogioDoCaso from "@/components/reclame-aqui/tratativa/RelogioDoCaso";
@@ -128,6 +129,7 @@ export default function KanbanCard({
             titulo={`${item.protocol} · ${item.customer}`}
             className="p-1"
           />
+          {!isSocial(item) && <LinksDoRa caso={item} dentroDeLink className="[&>button]:rounded [&>button]:p-1" />}
           <button
             type="button"
             onClick={(e) => {

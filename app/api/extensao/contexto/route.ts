@@ -31,6 +31,7 @@ import {
   openMovementOf,
 } from "@/lib/services/movement.service";
 import { slugify } from "@/lib/services/slug";
+import { enderecoNaAreaDaEmpresa } from "@/lib/models/linksDoRa";
 import { hojeNaOperacao } from "@/lib/services/reputation.service";
 import {
   condicoesPorNome,
@@ -97,6 +98,8 @@ interface CasoResumo {
   };
   url: string;
   urlPortal?: string;
+  /** A área da empresa do Reclame Aqui — onde se responde e modera. */
+  urlEmpresa?: string;
 }
 
 interface Sugestao {
@@ -1001,6 +1004,7 @@ function resumir(
 
     url: `${origem}/reclame-aqui/${item.id}`,
     urlPortal: item.raUrl,
+    urlEmpresa: enderecoNaAreaDaEmpresa(item.protocol) ?? undefined,
   };
 }
 

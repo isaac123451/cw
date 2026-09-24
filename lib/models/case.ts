@@ -30,27 +30,46 @@ export function prioridadeNormalizada(valor?: string | null): Prioridade {
 export interface Criterio {
   id: string;
   texto: string;
-  prioridade: Exclude<Prioridade, "Normal">;
+  prioridade: Prioridade;
 }
 
 /**
- * Os critérios de criticidade, na letra da documentação.
+ * Os critérios de criticidade — as duas tabelas da documentação do
+ * Reclame Aqui, abertas nos temas que os 363 relatos mais trazem.
+ *
+ * A tabela de SLA dá os de cada nível; a de acionamento das áreas
+ * acrescenta "clientes relatando prejuízos financeiros" (Urgente),
+ * "falhas sem interromper totalmente a operação", "dificuldades
+ * críticas na configuração" e "demora excessiva no atendimento" (Alta),
+ * e as dúvidas, ajustes, erros pontuais e melhorias (Normal). Os de
+ * Normal não sobem o nível: dizem por que o caso é Normal, e a triagem
+ * deixa isso registrado.
  *
  * Marcar qualquer um de Urgente sugere Urgente; sem nenhum desses e com
- * algum de Alta, Alta; sem nenhum, Normal — "dúvidas operacionais,
- * solicitações de informação, reclamações sem impacto operacional
- * imediato". É sugestão: quem tria decide.
+ * algum de Alta, Alta; o resto, Normal. É sugestão: quem tria decide.
  */
 export const CRITERIOS: Criterio[] = [
-  { id: "juridico", texto: "Risco jurídico ou regulatório", prioridade: "Urgente" },
-  { id: "exposicao", texto: "Grande exposição pública ou viralização", prioridade: "Urgente" },
+  { id: "juridico", texto: "Risco jurídico ou regulatório (Procon, advogado, ação, acusação de golpe)", prioridade: "Urgente" },
+  { id: "exposicao", texto: "Grande exposição pública, imprensa ou influenciador", prioridade: "Urgente" },
   { id: "operacao-parada", texto: "Operação do cliente totalmente paralisada", prioridade: "Urgente" },
+  { id: "prejuizo", texto: "Prejuízo financeiro do estabelecimento (repasse retido, dinheiro de vendas)", prioridade: "Urgente" },
+  { id: "dados-pessoais", texto: "Dados pessoais expostos ou usados sem autorização (LGPD)", prioridade: "Urgente" },
   { id: "estrategico", texto: "Cliente estratégico ou de alto ticket", prioridade: "Urgente" },
   { id: "reincidencia", texto: "Reincidência de erro", prioridade: "Urgente" },
   { id: "cancelamento", texto: "Risco concreto de cancelamento", prioridade: "Urgente" },
   { id: "financeiro", texto: "Impacto financeiro direto (cobrança indevida, erro de valores)", prioridade: "Alta" },
-  { id: "funcionalidade", texto: "Funcionalidade crítica indisponível", prioridade: "Alta" },
+  { id: "cobranca-pos-cancelamento", texto: "Cobrança depois do cancelamento ou renovação automática contestada", prioridade: "Alta" },
+  { id: "funcionalidade", texto: "Funcionalidade crítica indisponível (pedidos, impressão, integração, pagamento)", prioridade: "Alta" },
+  { id: "falha-parcial", texto: "Falha no sistema sem parar toda a operação (instabilidade, pico, lentidão)", prioridade: "Alta" },
+  { id: "configuracao-critica", texto: "Implantação ou configuração crítica travada, já paga", prioridade: "Alta" },
+  { id: "demora-excessiva", texto: "Demora excessiva ou falta de retorno do atendimento", prioridade: "Alta" },
   { id: "prazo-descumprido", texto: "Prazo combinado anteriormente não cumprido", prioridade: "Alta" },
+  { id: "duvida", texto: "Dúvida sobre o uso de uma funcionalidade", prioridade: "Normal" },
+  { id: "informacao", texto: "Pedido de informação ou documento (nota fiscal, contrato, segunda via)", prioridade: "Normal" },
+  { id: "ajuste", texto: "Ajuste no sistema ou erro pontual, sem recorrência", prioridade: "Normal" },
+  { id: "melhoria", texto: "Sugestão ou funcionalidade que o sistema não tem", prioridade: "Normal" },
+  { id: "atendimento", texto: "Insatisfação com o atendimento, sem problema ativo", prioridade: "Normal" },
+  { id: "expectativa", texto: "Expectativa da venda não atendida, sem impacto na operação", prioridade: "Normal" },
 ];
 
 export function prioridadePelosCriterios(ids: string[]): Prioridade {

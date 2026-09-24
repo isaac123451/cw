@@ -10,6 +10,7 @@ import { loadWorkspace } from "@/lib/actions/workspace";
 
 import { fetchCaseByProtocol } from "@/lib/services/case.repository";
 import { isOpen } from "@/lib/services/case.service";
+import { enderecoNaAreaDaEmpresa } from "@/lib/models/linksDoRa";
 import { slaStatus } from "@/lib/services/sla.service";
 import { contatosDoCaso } from "@/lib/services/tratativa.service";
 import { trilhaDoCaso } from "@/lib/models/trilha";
@@ -184,6 +185,7 @@ export async function GET(request: Request) {
     })),
 
     urlPortal: caso.raUrl,
+    urlEmpresa: enderecoNaAreaDaEmpresa(caso.protocol) ?? undefined,
     url: `${origem}/reclame-aqui/${caso.id}`,
 
     /** O passo da vez, para o painel oferecer a ação dele. */

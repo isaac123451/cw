@@ -104,17 +104,5 @@ export async function versaoDaExtensao(prazoMs = 1500) {
   return resposta?.ok ? (resposta.dados?.versao ?? null) : null;
 }
 
-/**
- * A reclamação na área da empresa do Reclame Aqui.
- *
- * É lá — e só lá — que nome, telefone, e-mail e o CPF/CNPJ do RA Forms
- * aparecem. O endereço é o que a extensão grava ao capturar; conferido
- * nas reclamações da base.
- */
-export function enderecoNaAreaDaEmpresa(protocolo: string) {
-  const codigo = protocolo.replace(/^RA-/, "");
-
-  return /^[A-Za-z0-9_-]{16}$/.test(codigo)
-    ? `https://www.reclameaqui.com.br/area-da-empresa/reclamacoes/${codigo}/`
-    : null;
-}
+/* A reclamação na área da empresa mora com os outros endereços do RA — ver `linksDoRa`. */
+export { enderecoNaAreaDaEmpresa } from "@/lib/models/linksDoRa";

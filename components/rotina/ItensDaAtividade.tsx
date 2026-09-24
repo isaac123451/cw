@@ -8,6 +8,7 @@ import { Check, CircleSlash, Loader2, Undo2 } from "lucide-react";
 
 import IconeDaFrente from "@/components/shared/IconeDaFrente";
 import JanelaDoLink from "@/components/janelas/JanelaDoLink";
+import LinksDoRa from "@/components/shared/LinksDoRa";
 
 import { useToast } from "@/lib/context/ToastContext";
 import { usePassosParaFechar } from "@/components/rotina/usePassosParaFechar";
@@ -305,6 +306,9 @@ function Linha({
         >
           <CircleSlash size={13} />
         </button>
+        {item.ra && (
+          <LinksDoRa caso={item.ra} className="opacity-0 transition focus-within:opacity-100 group-hover:opacity-100 [&>a]:p-1" />
+        )}
         <JanelaDoLink href={item.href} titulo={item.titulo} className="p-0.5" />
       </div>
 

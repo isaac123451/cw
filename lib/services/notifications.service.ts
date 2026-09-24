@@ -37,6 +37,8 @@ export interface Notification {
   frente?: FrenteDoAviso;
   /** Quando o aviso aponta para um caso só: abre direto na mini-janela. */
   janela?: { frente: FrenteDaJanela; ref: string; titulo: string };
+  /** E esse caso é do Reclame Aqui: a página pública e a área da empresa ao lado. */
+  ra?: { protocol: string; raUrl?: string };
 }
 
 export type FrenteDoAviso = "reclame-aqui" | "redes" | "nps" | "google" | "agenda" | "operacao";
@@ -475,7 +477,13 @@ export function buildNotifications(
     "agenda-hoje": "agenda",
     "google-hoje": "agenda",
   };
-  for (const item of list) item.frente ??= FRENTE_POR_ID[item.id] ?? "operacao";
+  for (const item of list) {
+    item.frente ??= FRENTE_POR_ID[item.id] ?? "operacao";
+    if (item.janela?.frente === "reclame-aqui") {
+      const caso = cases.find((c) => c.id === item.janela!.ref);
+      if (caso) item.ra = { protocol: caso.protocol, raUrl: caso.raUrl };
+    }
+  }
 
   const ordem: Record<NotificationTone, number> = {
     danger: 0,

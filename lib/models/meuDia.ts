@@ -56,6 +56,8 @@ export interface ItemDaRotina {
    * detrator crítico, detrator, neutro, promotor.
    */
   urgencia?: number;
+  /** Reclamação do Reclame Aqui: a página pública e a área da empresa — ver `linksDoRa`. */
+  ra?: { protocol: string; raUrl?: string };
 }
 
 /** Marcar um item: fiz hoje, ou não se aplica a esta atividade. */
@@ -341,6 +343,7 @@ export function contarRotina(
           titulo: c.title,
           detalhe: `${c.priority} · ${c.customer}`,
           href: caseHref(c),
+          ra: { protocol: c.protocol, raUrl: c.raUrl },
           atrasado,
           urgencia: urgenciaDoCaso(c, atrasado),
         };
@@ -418,6 +421,7 @@ export function contarRotina(
           titulo: c.title,
           detalhe: `${c.status} · ${c.customer}${legado(c) ? " · 1º contato não registrado" : ""}`,
           href: caseHref(c),
+          ...(frenteDoCaso(c) === "reclame-aqui" ? { ra: { protocol: c.protocol, raUrl: c.raUrl } } : {}),
           atrasado,
           urgencia: urgenciaDoCaso(c, atrasado),
         };
@@ -461,6 +465,7 @@ export function contarRotina(
         titulo: c.title,
         detalhe: `${s!.dias} dia(s) útil(eis) sem notícia · ${c.customer}`,
         href: caseHref(c),
+        ...(frenteDoCaso(c) === "reclame-aqui" ? { ra: { protocol: c.protocol, raUrl: c.raUrl } } : {}),
         atrasado: true,
       })),
     /* No NPS: a tentativa passou de 2 horas sem resposta, ou a confirmação do cliente passou de 2 dias. */
@@ -484,6 +489,7 @@ export function contarRotina(
       titulo: c.title,
       detalhe: `pedida em ${c.moderacaoPedidaEm!.slice(8, 10)}/${c.moderacaoPedidaEm!.slice(5, 7)}${c.moderacaoMotivo ? ` · ${c.moderacaoMotivo}` : ""}`,
       href: caseHref(c),
+      ra: { protocol: c.protocol, raUrl: c.raUrl },
       atrasado: diasCorridosDesde(c.moderacaoPedidaEm!, agora) > 10,
     }));
 

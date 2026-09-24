@@ -42,6 +42,7 @@ import {
   type TomDoResultado,
 } from "@/lib/models/buscaGlobal";
 import { toneOf } from "@/lib/services/status.service";
+import LinksDoRa from "@/components/shared/LinksDoRa";
 
 /**
  * A busca da plataforma: Ctrl+K (ou Cmd+K, ou "/") de qualquer tela.
@@ -318,6 +319,12 @@ function Paleta({ onFechar }: { onFechar: () => void }) {
           )}
         </div>
 
+        {r.ra && (
+          <LinksDoRa
+            caso={r.ra}
+            className={`hidden shrink-0 sm:inline-flex [&>a]:p-1 ${eAtivo ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
+          />
+        )}
         {r.janela && (
           <button
             type="button"

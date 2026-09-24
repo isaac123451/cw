@@ -2,7 +2,6 @@
 
 import {
   CheckCircle2,
-  ExternalLink,
   MessageCircle,
   Star,
   XCircle,
@@ -11,6 +10,8 @@ import {
 import { Case, ROTULO_DO_VOLTARIA, voltariaDoCaso } from "@/lib/models/case";
 
 import { TagChips } from "@/components/shared/TagPicker";
+import LinksDoRa from "@/components/shared/LinksDoRa";
+import { linksDoRa } from "@/lib/models/linksDoRa";
 import StatusPicker from "@/components/reclame-aqui/shared/StatusPicker";
 import BotaoCompletar from "@/components/reclame-aqui/completar/BotaoCompletar";
 import ChipPrioridade from "@/components/reclame-aqui/tratativa/ChipPrioridade";
@@ -253,20 +254,9 @@ export default function CaseRow({
             </a>
           )}
 
-          {data.raUrl && (
-            <a
-              href={data.raUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(event) => event.stopPropagation()}
-              title="Abrir esta reclamação no Reclame Aqui"
-              className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-violet-50 hover:text-violet-700"
-            >
-              <ExternalLink size={15} />
-            </a>
-          )}
+          <LinksDoRa caso={data} />
 
-          {!whatsapp && !data.raUrl && (
+          {!whatsapp && linksDoRa(data).length === 0 && (
             <span className="text-zinc-300">—</span>
           )}
 

@@ -576,6 +576,24 @@ ${CORES}
   align-items: center;
 }
 
+.caso .links-caso {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.caso .links-caso a {
+  font-size: 11px;
+  color: #6d28d9;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.caso .links-caso a:hover {
+  text-decoration: underline;
+}
+
 /* ---------- sugestões ---------- */
 
 .sugestao {
