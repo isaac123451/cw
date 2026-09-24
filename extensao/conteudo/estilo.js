@@ -1157,6 +1157,29 @@ ${CORES}
 .situacao .quando { font-size: 11px; color: var(--fraco); white-space: nowrap; }
 .situacao .quando.vencida { color: var(--perigo); font-weight: 600; }
 
+/* O impacto que a conversa mostra (Fase 28): a condição dada, com o valor e um clique. */
+.impacto-conversa {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px dashed var(--atencao);
+  font-size: 12.5px;
+}
+.impacto-conversa .impacto-titulo { margin: 0 0 4px; font-weight: 600; }
+.impacto-conversa .impacto-item + .impacto-item { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--borda); }
+.impacto-conversa p { margin: 0; }
+.impacto-conversa .citacao { color: var(--fraco); font-size: 11.5px; font-style: italic; overflow-wrap: anywhere; margin: 2px 0 6px; }
+.impacto-conversa .valor-impacto {
+  width: 90px;
+  font: inherit;
+  padding: 3px 6px;
+  border: 1px solid var(--borda);
+  border-radius: 6px;
+  background: var(--fundo);
+  color: var(--texto);
+}
+.impacto-conversa .impacto-feito { color: var(--ok, #16a34a); }
+
 /* Os três tons (Fase 28): abas, e o texto editável antes de copiar. */
 .tons { margin-top: 10px; }
 .tons-abas { display: flex; gap: 4px; margin: 6px 0; }

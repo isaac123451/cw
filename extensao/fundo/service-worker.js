@@ -60,6 +60,7 @@ const CAMINHOS = {
   quemE: "/api/extensao/quem-e",
   vincularContato: "/api/extensao/vincular-contato",
   aprenderResposta: "/api/extensao/aprender-resposta",
+  impacto: "/api/extensao/impacto",
 };
 
 /**
@@ -913,6 +914,18 @@ async function tratar(mensagem) {
       tom: mensagem.tom,
       original: mensagem.original,
       editada: mensagem.editada,
+    });
+    return { ok: true, dados };
+  }
+
+  /** A condição dada na conversa vira custo em Impacto — só no clique (Fase 28). */
+  if (mensagem?.tipo === "registrarImpacto") {
+    const dados = await chamar(CAMINHOS.impacto, {}, {
+      protocolo: mensagem.protocolo,
+      cliente: mensagem.cliente,
+      descricao: mensagem.descricao,
+      trecho: mensagem.trecho,
+      valorCents: mensagem.valorCents,
     });
     return { ok: true, dados };
   }

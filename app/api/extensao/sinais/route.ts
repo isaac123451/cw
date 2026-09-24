@@ -15,6 +15,7 @@ import {
 } from "@/lib/services/sinaisDaConversa";
 import { nomeDeContato } from "@/lib/models/case";
 import { oQueFazerAgora } from "@/lib/models/oQueFazerAgora";
+import { condicoesNaConversa } from "@/lib/models/impactoNaConversa";
 import { humorDaConversa } from "@/lib/services/motorProprio";
 import { descreverRegistro, prazoUtil } from "@/lib/services/horasUteis";
 import { lerExpediente } from "@/lib/services/operacao.service";
@@ -100,11 +101,40 @@ export async function POST(request: Request) {
       area = { nome: aberta.destination, venceEm: expediente ? descreverRegistro(prazoUtil(aberta.startedAt, aberta.dueHours, expediente).toISOString()) : undefined };
     }
   }
+  /*
+    O impacto que a conversa mostra (Fase 28): desconto, meses sem
+    mensalidade, estorno — das nossas mensagens —, com o valor pela
+    mensalidade da conta e o aviso de "já registrado" quando o Impacto
+    já tem a mesma frase para este caso.
+  */
+  let impacto: (ReturnType<typeof condicoesNaConversa>[number] & { jaRegistrado: boolean; protocolo?: string; mensalidadeCents?: number })[] = [];
+  if (!demonstracao && prisma) {
+    const caso = protocolo
+      ? await prisma.case.findUnique({ where: { protocol: protocolo }, select: { id: true, establishment: { select: { mrrCents: true } } } }).catch(() => null)
+      : null;
+    const mensalidade = caso?.establishment?.mrrCents ?? undefined;
+    const condicoes = condicoesNaConversa(mensagens, mensalidade);
+    if (condicoes.length) {
+      const registrados = caso
+        ? await prisma.impactRecord.findMany({ where: { caseId: caso.id }, select: { description: true } }).catch(() => [])
+        : [];
+      impacto = condicoes.map((c) => ({
+        ...c,
+        protocolo: caso ? protocolo : undefined,
+        mensalidadeCents: mensalidade,
+        jaRegistrado: registrados.some((r) => (r.description ?? "").includes(c.trecho.slice(0, 60))),
+      }));
+    }
+  } else if (demonstracao) {
+    impacto = condicoesNaConversa(mensagens).map((c) => ({ ...c, jaRegistrado: false }));
+  }
+
   const numero = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? Math.max(0, Math.round(v)) : undefined);
 
   return responder(request, {
     avisos: avisosDaConversa(mensagens, indice),
     completar,
+    impacto,
     humor: humorDoCabecalho(mensagens),
     agora: oQueFazerAgora({
       mensagens,

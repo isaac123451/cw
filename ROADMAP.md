@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 24/09/2026. Aplicação **1.67.0**, extensão **1.67.0**.
+Atualizado em 24/09/2026. Aplicação **1.68.0**, extensão **1.68.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,38 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### Impacto percebido na conversa (24/09/2026, 1.68.0)
+
+Quinto item da Fase 28: "identificar descontos, condições dadas para um
+cliente e abrir um aviso pra adicionar o impacto".
+
+- `lib/models/impactoNaConversa.ts`: nas mensagens nossas (é a operação
+  que concede), frase a frase — percentual na fatura ou na mensalidade
+  (com quantas mensalidades: "por 3 meses", "nas próximas 3 faturas"),
+  meses sem cobrança e isenção, valor em reais (desconto, estorno,
+  crédito, abatimento) e cortesia sem valor. O custo sai da mensalidade
+  da conta (`mrrCents`) quando ela é conhecida. O pedido do cliente não
+  é condição dada; "20% mais rápido" e "chega em 2 meses" ficam de fora;
+  a mesma condição dita duas vezes é uma, a mais recente.
+- `/api/extensao/sinais` devolve `impacto`, com o protocolo, a
+  mensalidade e o "já registrado" (o Impacto já tem a frase para o caso).
+- Rota nova `/api/extensao/impacto`: lança o custo em Impacto no Negócio
+  como "Oferta concedida" (o tipo que a oferta aceita já usa), negativo,
+  ligado ao caso e à conta, com a frase e o dia na descrição; a mesma
+  frase no mesmo caso não é lançada duas vezes.
+- Painel: o aviso "Condição dada na conversa — registre o impacto" com
+  a descrição, a mensalidade, a citação, o valor já preenchido (editável)
+  e o botão; sem valor, não registra. As teclas digitadas nos campos do
+  painel não vazam para o WhatsApp.
+
+Provas: `npm run check:impacto-conversa` (cada condição e o valor, o que
+não é condição, só as nossas, sem repetir, a descrição), o endpoint de
+sinais no servidor de desenvolvimento e a bancada do painel (valor
+preenchido, campo vazio sem mensalidade, já registrado sem botão, sem
+valor não registra, um clique manda caso, valor e frase). Não provado
+sem banco: o lançamento gravado. **Depende de você:** recarregar a
+extensão (1.68.0).
 
 ### Respostas em três tons (24/09/2026, 1.67.0)
 

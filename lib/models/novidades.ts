@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.68.0",
+    data: "2026-09-24",
+    titulo: "Desconto dado na conversa vira impacto com um clique",
+    texto: "Quando a conversa do WhatsApp mostra uma condição que nós demos — \"20% na próxima fatura\", \"1 mês grátis\", \"isentar a próxima mensalidade\", um estorno em reais ou uma cortesia —, o painel da extensão abre um aviso com o valor já calculado pela mensalidade da conta e o caso do cliente. Um clique em \"Registrar impacto\" lança o custo em Impacto no Negócio; sem mensalidade conhecida, você digita o valor. A mesma frase não é lançada duas vezes.",
+    frentes: ["extensao"],
+  },
+  {
     versao: "1.67.0",
     data: "2026-09-24",
     titulo: "Respostas em três tons, que aprendem com você",

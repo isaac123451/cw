@@ -1297,6 +1297,7 @@
           completar: resposta?.dados?.completar ?? null,
           humor: resposta?.dados?.humor ?? null,
           agora: resposta?.dados?.agora ?? null,
+          impacto: resposta?.dados?.impacto ?? [],
         });
       } catch {
         sinaisPorContato.delete(chave);
@@ -1309,6 +1310,7 @@
 
     desenharTermometro(sinais.humor);
     desenharAgora(sinais.agora);
+    desenharImpacto(sinais.impacto);
     desenharCompletar(sinais.completar, chave);
 
     const avisos = sinais.avisos;
@@ -1568,6 +1570,83 @@
   }
 
   P.desenharAgora = desenharAgora;
+
+  /**
+   * O impacto que a conversa mostra (Fase 28): desconto, meses sem
+   * mensalidade, estorno combinados por nós. O aviso já vem com o valor
+   * (pela mensalidade da conta, quando se sabe) e o caso; um clique
+   * lança o custo em Impacto no Negócio. Sem mensalidade, o valor fica
+   * para a pessoa digitar.
+   */
+  const emReais = (cents) => (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }).replace(/\u00a0/g, " ");
+
+  function desenharImpacto(lista) {
+    P.corpo?.querySelector(".impacto-conversa")?.remove();
+    const pendentes = (lista ?? []).filter((c) => c && c.descricao);
+    if (!pendentes.length) return;
+    const ancora = P.corpo?.querySelector(".agora-conversa") ?? P.corpo?.querySelector(".cabecalho-cliente");
+    if (!ancora) return;
+    ancora.insertAdjacentHTML(
+      "afterend",
+      `<div class="impacto-conversa">
+        <p class="impacto-titulo">Condição dada na conversa — registre o impacto</p>
+        ${pendentes
+          .map(
+            (c, i) => `
+        <div class="impacto-item" data-indice="${i}">
+          <p><b>${CW.escapar(c.descricao)}</b>${c.mensalidadeCents ? ` <span class="sub">(mensalidade ${emReais(c.mensalidadeCents)})</span>` : ""}</p>
+          <p class="citacao">\u201c${CW.escapar(c.trecho)}\u201d</p>
+          ${
+            c.jaRegistrado
+              ? '<p class="sub impacto-feito">já registrado em Impacto</p>'
+              : `<div class="linha">
+            <label class="sub">R$ <input class="valor-impacto" inputmode="decimal" value="${c.valorCents ? (c.valorCents / 100).toFixed(2).replace(".", ",") : ""}" placeholder="valor" /></label>
+            <button class="copiar" data-acao="registrar-impacto">Registrar impacto</button>
+          </div>`
+          }
+        </div>`
+          )
+          .join("")}
+      </div>`
+    );
+    P.impactoDaConversa = pendentes;
+  }
+
+  P.registrarImpacto = async function registrarImpacto(botao) {
+    const item = botao.closest(".impacto-item");
+    const c = P.impactoDaConversa?.[Number(item?.dataset.indice)];
+    if (!item || !c) return;
+    const campo = item.querySelector(".valor-impacto");
+    const valorCents = Math.round(Number(String(campo?.value ?? "").replace(/\./g, "").replace(",", ".")) * 100);
+    if (!Number.isFinite(valorCents) || valorCents <= 0) {
+      campo?.focus();
+      P.avisar("Diga o valor concedido, em reais.", "atencao");
+      return;
+    }
+    const casos = P.ultimoDado?.casos ?? [];
+    const protocolo = c.protocolo ?? (casos.find((x) => x.aberto) ?? casos[0])?.protocolo;
+    botao.disabled = true;
+    botao.textContent = "registrando\u2026";
+    const resposta = await CW.enviar({
+      tipo: "registrarImpacto",
+      protocolo,
+      cliente: P.ultimoDado?.cliente?.nome ?? P.consulta?.nome,
+      descricao: c.descricao,
+      trecho: c.trecho,
+      valorCents,
+    });
+    if (!resposta?.ok || resposta.dados?.erro) {
+      botao.disabled = false;
+      botao.textContent = "Registrar impacto";
+      P.avisar(resposta?.dados?.erro ?? resposta?.erro ?? "Não foi registrado. Tente de novo.", "perigo");
+      return;
+    }
+    c.jaRegistrado = true;
+    item.querySelector(".linha")?.replaceWith(Object.assign(document.createElement("p"), {
+      className: "sub impacto-feito",
+      textContent: resposta.dados?.jaExistia ? "já estava registrado em Impacto" : `registrado em Impacto: ${emReais(valorCents)} de custo`,
+    }));
+  };
 
   /* ============================================================
      IDENTIFICA PELA CONVERSA (Fase 17)
