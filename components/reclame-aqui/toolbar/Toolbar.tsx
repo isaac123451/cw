@@ -19,6 +19,7 @@ import { useSettings } from "@/lib/context/SettingsContext";
 import { useOwners } from "@/lib/hooks/useOwners";
 
 import { countCriteria } from "@/lib/models/savedFilter";
+import { SEM_ESTABELECIMENTO } from "@/lib/models/case";
 
 import CreateCaseModal from "@/components/reclame-aqui/modals/CreateCaseModal";
 import TransferModal from "@/components/reclame-aqui/toolbar/TransferModal";
@@ -120,7 +121,11 @@ export default function Toolbar({
 
   const companies = useMemo(
     () =>
-      [...new Set(cases.map((c) => c.company))].sort(),
+      /* É o estabelecimento vinculado, e não o consumidor; sem vínculo vira "Sem estabelecimento", e não uma opção vazia. */
+      [
+        ...[...new Set(cases.map((c) => c.company).filter(Boolean))].sort(),
+        ...(cases.some((c) => !c.company) ? [SEM_ESTABELECIMENTO] : []),
+      ],
     [cases]
   );
 
@@ -177,8 +182,8 @@ export default function Toolbar({
               setFilter("company", value)
             }
             options={companies}
-            allLabel="Todos os clientes"
-            title="Filtrar por cliente que registrou a reclamação"
+            allLabel="Todos os estabelecimentos"
+            title="Filtrar pelo estabelecimento vinculado à reclamação"
           />
 
           <select

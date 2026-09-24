@@ -13,7 +13,7 @@ import {
 
 import { usePathname } from "next/navigation";
 
-import { Case } from "@/lib/models/case";
+import { Case, SEM_ESTABELECIMENTO } from "@/lib/models/case";
 
 
 import {
@@ -37,6 +37,7 @@ import {
 import { carregarWorkspace, recarregarWorkspace } from "@/lib/context/useWorkspace";
 import { comNovaTentativa } from "@/lib/context/novaTentativa";
 import { RECADO } from "@/lib/models/leitura";
+import { useAtualizarSozinho } from "@/lib/hooks/useAtualizarSozinho";
 
 import {
   fraseDoConflito,
@@ -360,7 +361,7 @@ export function CaseProvider({
     };
   }, []);
 
-  /** Relê do banco. Chamado depois de importar uma planilha. */
+  /** Relê do banco. Chamado depois de importar uma planilha — e sozinho, ver `useAtualizarSozinho`. */
   async function recarregar() {
 
     if (!hasDatabase) return;
@@ -392,6 +393,9 @@ export function CaseProvider({
       );
     }
   }
+
+  /* As reclamações se atualizam sozinhas: ao voltar para a aba e a cada 3 min com ela à vista. */
+  useAtualizarSozinho(recarregar, hasDatabase);
 
   /**
    * Dispara a gravação sem travar a interface, e registra a falha.
@@ -695,7 +699,7 @@ export function CaseProvider({
 
       if (
         filters.company &&
-        item.company !== filters.company
+        (filters.company === SEM_ESTABELECIMENTO ? Boolean(item.company) : item.company !== filters.company)
       ) {
         return false;
       }

@@ -6,6 +6,9 @@ export type Prioridade = "Urgente" | "Alta" | "Normal";
 
 export const PRIORIDADES: Prioridade[] = ["Urgente", "Alta", "Normal"];
 
+/** A opção do filtro para as reclamações sem estabelecimento vinculado. */
+export const SEM_ESTABELECIMENTO = "Sem estabelecimento";
+
 /**
  * O nome de hoje para qualquer grafia que já circulou.
  *

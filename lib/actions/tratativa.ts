@@ -425,6 +425,38 @@ export async function dispensarPedidoDeAvaliacao(entrada: {
   }
 }
 
+/**
+ * Dispensar ou devolver vários de uma vez — numa gravação só.
+ *
+ * O Isaac: "não consigo devolver todos de uma vez para a fila e muito
+ * menos dispensar todos". Mesma regra do de um só: nada é apagado.
+ */
+export async function dispensarPedidosDeAvaliacao(entrada: {
+  protocols: string[];
+  desfazer?: boolean;
+}): Promise<{ ok: true; n: number; em?: string; por?: string } | Falha> {
+
+  const protocols = [...new Set((entrada.protocols ?? []).map((p) => String(p).trim()).filter(Boolean))].slice(0, 500);
+  if (protocols.length === 0) return { ok: false, erro: "Nenhum caso escolhido." };
+
+  const quem = await quemGrava("AGENTE", MODULO);
+  if ("erro" in quem) return { ok: false, erro: quem.erro! };
+
+  try {
+    const agora = new Date();
+    const r = await quem.ctx.prisma.case.updateMany({
+      where: { protocol: { in: protocols } },
+      data: entrada.desfazer
+        ? { avaliacaoDispensadaEm: null, avaliacaoDispensadaPor: null }
+        : { avaliacaoDispensadaEm: agora, avaliacaoDispensadaPor: quem.nome },
+    });
+    updateTag(CASES_TAG);
+    return entrada.desfazer ? { ok: true, n: r.count } : { ok: true, n: r.count, em: agora.toISOString(), por: quem.nome };
+  } catch (erro) {
+    return falha(erro, "dispensar em lote");
+  }
+}
+
 /* ============================================================
    MODERAÇÃO
 ============================================================ */

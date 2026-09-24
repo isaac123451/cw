@@ -39,7 +39,7 @@ import { useScopedCases } from "@/lib/context/useScopedCases";
 import { useCases } from "@/lib/context/CaseContext";
 import { useAgora } from "@/lib/hooks/useAgora";
 import { useToast } from "@/lib/context/ToastContext";
-import { dispensarPedidoDeAvaliacao } from "@/lib/actions/tratativa";
+import { dispensarPedidoDeAvaliacao, dispensarPedidosDeAvaliacao } from "@/lib/actions/tratativa";
 
 function diaCurto(dia?: string) {
   return dia ? dia.split("-").reverse().slice(0, 2).join("/") : "—";
@@ -89,6 +89,32 @@ export default function AvaliacoesPage() {
         detail: desfazer
           ? "A cadência conta de novo a partir do último pedido."
           : "Os pedidos já registrados continuam no histórico do caso.",
+      });
+    } catch {
+      notify({ tone: "error", title: "Não foi gravado.", detail: "Tente de novo em instantes." });
+    } finally {
+      setGravando(null);
+    }
+  }
+
+  /* Vários de uma vez: uma gravação só, com o mesmo aviso do de um. */
+  async function emLote(itens: Case[], desfazer: boolean) {
+    if (itens.length === 0) return;
+    setGravando("lote");
+    try {
+      const r = await dispensarPedidosDeAvaliacao({ protocols: itens.map((i) => i.protocol), desfazer });
+      if (!r.ok) {
+        notify({ tone: "error", title: "Não foi gravado.", detail: r.erro });
+        return;
+      }
+      const alvo = new Set(itens.map((i) => i.protocol));
+      setCases((prev) =>
+        prev.map((c) => (alvo.has(c.protocol) ? { ...c, avaliacaoDispensadaEm: r.em, avaliacaoDispensadaPor: r.por } : c))
+      );
+      notify({
+        tone: "success",
+        title: desfazer ? `${r.n} voltaram para a fila.` : `${r.n} saíram da fila de pedir avaliação.`,
+        detail: desfazer ? "A cadência conta de novo a partir do último pedido." : "Nada foi apagado; dá para devolver depois.",
       });
     } catch {
       notify({ tone: "error", title: "Não foi gravado.", detail: "Tente de novo em instantes." });
@@ -207,6 +233,7 @@ export default function AvaliacoesPage() {
             <SurfaceCard
               title="Para hoje"
               description="Primeiro o lembrete mais atrasado. A mensagem muda de tom a cada lembrete; quem envia é você."
+              action={fila.hoje.length > 1 ? <BotaoEmLote rotulo="Dispensar todos" n={fila.hoje.length} ocupado={gravando === "lote"} onConfirmar={() => emLote(fila.hoje.map((x) => x.item), false)} /> : undefined}
             >
               {fila.hoje.length === 0 ? (
                 <p className="rounded-xl bg-emerald-50 px-4 py-4 text-sm font-medium text-emerald-800 ring-1 ring-inset ring-emerald-100">
@@ -222,6 +249,7 @@ export default function AvaliacoesPage() {
               <SurfaceCard
                 title="Próximos dias"
                 description="Já estão na cadência. Adiantar o pedido também conta — o próximo lembrete passa a contar dele."
+                action={fila.proximos.length > 1 ? <BotaoEmLote rotulo="Dispensar todos" n={fila.proximos.length} ocupado={gravando === "lote"} onConfirmar={() => emLote(fila.proximos.map((x) => x.item), false)} /> : undefined}
               >
                 <Lista itens={fila.proximos} onPedir={(item) => abrirPedidoAvaliacao(item)} onDispensar={(item) => dispensar(item, false)} gravando={gravando} />
               </SurfaceCard>
@@ -231,14 +259,15 @@ export default function AvaliacoesPage() {
               <SurfaceCard
                 title={`Dispensados (${dispensados.length})`}
                 description="Fora da cadência por decisão de alguém. Nada foi apagado — devolver à fila volta a contar do último pedido."
+                action={dispensados.length > 1 ? <BotaoEmLote rotulo="Devolver todos" n={dispensados.length} ocupado={gravando === "lote"} devolver onConfirmar={() => emLote(dispensados, true)} /> : undefined}
               >
                 <ul className="divide-y divide-zinc-100">
                   {dispensados.map((item) => (
-                    <li key={item.id} className="flex flex-wrap items-center gap-2 py-3 first:pt-0 last:pb-0 sm:gap-3">
+                    <li key={item.id} className="flex flex-wrap items-center gap-2 py-2 first:pt-0 last:pb-0 sm:gap-3">
                       <div className="min-w-0 basis-full sm:basis-0 sm:flex-1">
-                        <Link href={caseHref(item)} className="group block">
-                          <span className="font-mono text-[10px] uppercase tracking-wide text-zinc-400">{item.protocol}</span>
-                          <span className="block truncate text-sm font-medium text-zinc-700 group-hover:text-violet-700">{item.title}</span>
+                        <Link href={caseHref(item)} className="group flex min-w-0 items-baseline gap-2">
+                          <span className="shrink-0 font-mono text-[10px] uppercase tracking-wide text-zinc-400">{item.protocol}</span>
+                          <span className="truncate text-sm font-medium text-zinc-700 group-hover:text-violet-700">{item.title}</span>
                         </Link>
                         <p className="mt-0.5 text-xs text-zinc-500">
                           {item.customer} · dispensado {descreverRegistro(item.avaliacaoDispensadaEm)}
@@ -249,7 +278,7 @@ export default function AvaliacoesPage() {
                         type="button"
                         onClick={() => dispensar(item, true)}
                         disabled={gravando === item.protocol}
-                        className="flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-medium text-zinc-600 ring-1 ring-inset ring-zinc-200 transition-colors hover:bg-zinc-50 disabled:opacity-60"
+                        className="flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-zinc-600 ring-1 ring-inset ring-zinc-200 transition-colors hover:bg-zinc-50 disabled:opacity-60"
                       >
                         {gravando === item.protocol ? <Loader2 size={13} className="animate-spin" /> : <RotateCcw size={13} />}
                         Devolver à fila
@@ -265,6 +294,32 @@ export default function AvaliacoesPage() {
       </div>
 
     </MainLayout>
+  );
+}
+
+/** Dispensar ou devolver todos: o primeiro clique pergunta no próprio botão, o segundo grava. */
+function BotaoEmLote({ rotulo, n, ocupado, devolver = false, onConfirmar }: { rotulo: string; n: number; ocupado: boolean; devolver?: boolean; onConfirmar: () => void }) {
+  const [confirmando, setConfirmando] = useState(false);
+  return (
+    <button
+      type="button"
+      disabled={ocupado}
+      onClick={() => {
+        if (confirmando) {
+          setConfirmando(false);
+          onConfirmar();
+        } else {
+          setConfirmando(true);
+          window.setTimeout(() => setConfirmando(false), 4000);
+        }
+      }}
+      className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium ring-1 ring-inset transition-colors disabled:opacity-60 ${
+        confirmando ? "bg-amber-50 text-amber-800 ring-amber-200" : "text-zinc-600 ring-zinc-200 hover:bg-zinc-50"
+      }`}
+    >
+      {ocupado ? <Loader2 size={13} className="animate-spin" /> : devolver ? <RotateCcw size={13} /> : <BellOff size={13} />}
+      {confirmando ? `${devolver ? "Devolver" : "Dispensar"} os ${n}?` : `${rotulo} (${n})`}
+    </button>
   );
 }
 
@@ -291,12 +346,12 @@ function Lista({
         const semTelefone = !item.phone || item.phone.includes("•") || item.phone.replace(/\D/g, "").length < 10;
 
         return (
-          <li key={item.id} className="flex flex-wrap items-center gap-2 py-3 first:pt-0 last:pb-0 sm:gap-3">
+          <li key={item.id} className="flex flex-wrap items-center gap-2 py-2 first:pt-0 last:pb-0 sm:gap-3">
 
             <div className="min-w-0 basis-full sm:basis-0 sm:flex-1">
-              <Link href={caseHref(item)} className="group block">
-                <span className="font-mono text-[10px] uppercase tracking-wide text-zinc-400">{item.protocol}</span>
-                <span className="block truncate text-sm font-medium text-zinc-900 group-hover:text-violet-700">
+              <Link href={caseHref(item)} className="group flex min-w-0 items-baseline gap-2">
+                <span className="shrink-0 font-mono text-[10px] uppercase tracking-wide text-zinc-400">{item.protocol}</span>
+                <span className="truncate text-sm font-medium text-zinc-900 group-hover:text-violet-700">
                   {item.title}
                 </span>
               </Link>
@@ -326,7 +381,7 @@ function Lista({
             <button
               type="button"
               onClick={() => onPedir(item)}
-              className={`flex shrink-0 items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-medium transition-colors ${
+              className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
                 destaque
                   ? "bg-violet-700 text-white hover:bg-violet-800"
                   : "text-violet-700 ring-1 ring-inset ring-violet-200 hover:bg-violet-50"
@@ -349,7 +404,7 @@ function Lista({
               disabled={gravando === item.protocol}
               title="Tira este caso da fila de pedir avaliação. Nada é apagado, e dá para devolver depois."
               aria-label={confirmando === item.protocol ? "Confirmar: dispensar o pedido de avaliação" : "Dispensar o pedido de avaliação"}
-              className={`flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-medium transition-colors disabled:opacity-60 ${
+              className={`flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors disabled:opacity-60 ${
                 confirmando === item.protocol
                   ? "bg-amber-50 text-amber-800 ring-1 ring-inset ring-amber-200"
                   : "text-zinc-500 ring-1 ring-inset ring-zinc-200 hover:bg-zinc-50 hover:text-zinc-700"

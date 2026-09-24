@@ -313,12 +313,12 @@ export default function CaseDetail({
         )}
 
         {/*
-          Na prévia e na mini-janela, título e ações empilham: lado a lado, as
-          ações não quebram linha e o título virava uma coluna de uma palavra.
+          Título em cima e ações embaixo, sempre: lado a lado, com sete botões,
+          o título virava uma coluna de uma palavra (visto na tela cheia em 24/09).
         */}
-        <div className={drawer ? "mt-3 flex flex-col gap-3" : "mt-4 flex flex-wrap items-start justify-between gap-5"}>
+        <div className={drawer ? "mt-3 flex flex-col gap-3" : "mt-4 flex flex-col gap-4"}>
 
-          <div className={drawer ? "min-w-0" : "min-w-0 flex-1"}>
+          <div className="min-w-0">
 
             <h1
               className={`font-semibold leading-snug tracking-tight text-zinc-900 [overflow-wrap:anywhere] ${

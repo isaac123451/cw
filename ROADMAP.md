@@ -1116,6 +1116,24 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Menos atrito no Reclame Aqui e sem recarregar (24/09/2026, 1.70.0)
+
+- **Sem botão de recarregar** (Fase 34): `useAtualizarSozinho` relê
+  reclamações e NPS ao voltar para a aba (passado 1 min) e a cada 3 min
+  com a aba visível; escondida, não lê. O rascunho aberto da ficha já não
+  é sobrescrito (`useRascunho` só troca a base sem edição).
+- **Pedir avaliação em lote** (Fase 32): `dispensarPedidosDeAvaliacao`
+  (uma gravação), "Dispensar todos" em Hoje e Próximos, "Devolver todos"
+  nos Dispensados, confirmação no próprio botão; linhas mais compactas.
+- **Quadro com contraste:** colunas `bg-zinc-200/60` com contorno.
+- **Filtro do quadro:** era o estabelecimento vinculado com o rótulo
+  "clientes" — agora "Todos os estabelecimentos"; a opção vazia (as sem
+  vínculo) virou "Sem estabelecimento".
+- **Ficha responsiva:** título em cima e ações embaixo, sempre.
+
+Provas: `tsc`, lint, `check:persistencia`, `check:rascunho`,
+`check:janelas`, `check:celular`, `check:telas-sem-saida` e a tela.
+
 ### Pedidos de 24/09 — Fases 32 a 34 no roadmap (a fazer)
 
 Registrados na página do roadmap (Parte 2 passa a 47 de 92):

@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.70.0",
+    data: "2026-09-24",
+    titulo: "Menos atrito no Reclame Aqui e sem botão de recarregar",
+    texto: "As reclamações e o NPS se atualizam sozinhos: ao voltar para a aba e a cada 3 minutos com ela à vista. No pedir avaliação, dispensar todos e devolver todos de uma vez, com as linhas mais compactas. As colunas do quadro ganharam contraste com os cartões. O filtro do quadro chama-se Estabelecimento (era o que ele filtrava) e a opção vazia virou Sem estabelecimento. E o cabeçalho da reclamação não espreme mais o título: título em cima, ações embaixo.",
+    frentes: ["reclame-aqui", "nps", "plataforma"],
+  },
+  {
     versao: "1.69.0",
     data: "2026-09-24",
     titulo: "A extensão ao lado na área da empresa do Reclame Aqui",

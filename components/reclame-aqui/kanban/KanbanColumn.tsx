@@ -69,7 +69,7 @@ export default function KanbanColumn({
           ? "bg-violet-50 ring-2 ring-inset ring-violet-300"
           : isDragging
           ? "bg-zinc-100 ring-1 ring-inset ring-zinc-300"
-          : "bg-zinc-100/70"
+          : "bg-zinc-200/60 ring-1 ring-inset ring-zinc-200/70"
       }`}
     >
 

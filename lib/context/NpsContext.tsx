@@ -11,6 +11,8 @@ import {
   ReactNode,
 } from "react";
 
+import { useAtualizarSozinho } from "@/lib/hooks/useAtualizarSozinho";
+
 import {
   listNpsResponses,
   listNpsRootCauses,
@@ -120,6 +122,9 @@ export function NpsProvider({
       setLoading(false);
     }
   }, [enabled]);
+
+  /* As respostas do NPS se atualizam sozinhas, como as reclamações. */
+  useAtualizarSozinho(recarregar, enabled);
 
   const recarregarCausas = useCallback(async () => {
 
