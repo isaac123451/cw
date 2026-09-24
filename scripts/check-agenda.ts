@@ -15,6 +15,7 @@ import type { NpsResponseView } from "../lib/models/nps";
 import { PRAZOS_DA_DOCUMENTACAO, type SlaRule } from "../lib/models/sla";
 import { atrasadosDaAgenda, compromissosEntre } from "../lib/models/compromissos";
 import { instanteDe } from "../lib/services/horasUteis";
+import { adiarLembrete, chaveDoAviso, lembretesNaHora } from "../lib/models/lembretes";
 
 let falhas = 0;
 function conferir(titulo: string, obtido: unknown, esperado: unknown) {
@@ -93,6 +94,24 @@ const atras = atrasadosDaAgenda({
 });
 conferir("atividade vencida e aberta, uma a uma", atras.atividades.map((t) => t.id), ["v"]);
 conferir("prazos estourados viram número (caso + NPS)", atras.prazosEstourados, 2);
+
+console.log("\n  O lembrete que avisa\n");
+{
+  const tarefas = [
+    tarefa({ id: "l1", title: "Ligar 08h30", time: "08:30" }),
+    tarefa({ id: "l2", title: "Ligar 10h", time: "10:00" }),
+    tarefa({ id: "l3", title: "Feita", time: "08:00", done: true }),
+    tarefa({ id: "l4", title: "Sem hora" }),
+    tarefa({ id: "l5", title: "Ontem", time: "08:00", dueDate: "2026-09-15" }),
+  ];
+  conferir("às 09h: só a das 08h30, aberta, de hoje e com hora", lembretesNaHora(tarefas, AGORA, new Set()).map((t) => t.id), ["l1"]);
+  conferir("dispensada, não volta", lembretesNaHora(tarefas, AGORA, new Set([chaveDoAviso(tarefas[0])])).length, 0);
+  const adiada = { ...tarefas[0], ...adiarLembrete(tarefas[0], "15min", AGORA) };
+  conferir("adiar 15 min conta de agora: 09:15", [adiada.dueDate, adiada.time], ["2026-09-16", "09:15"]);
+  conferir("adiada, avisa de novo no horário novo", lembretesNaHora([adiada], br("2026-09-16", "09:15"), new Set([chaveDoAviso(tarefas[0])])).map((t) => t.id), ["l1"]);
+  conferir("1 h às 23h30 passa para amanhã 00:30", adiarLembrete(tarefas[0], "1h", br("2026-09-16", "23:30")), { dueDate: "2026-09-17", time: "00:30" });
+  conferir("amanhã na sexta é segunda, mesmo horário", adiarLembrete(tarefas[0], "amanha", br("2026-09-18", "09:00")), { dueDate: "2026-09-21", time: "08:30" });
+}
 
 console.log(falhas === 0 ? "\n  A Agenda junta o dia inteiro.\n" : `\n  ${falhas} ponto(s) a corrigir.\n`);
 process.exit(falhas === 0 ? 0 : 1);

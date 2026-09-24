@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 24/09/2026. Aplicação **1.49.0**, extensão **1.49.0**.
+Atualizado em 24/09/2026. Aplicação **1.50.0**, extensão **1.50.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,33 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### O lembrete que avisa (24/09/2026, 1.50.0)
+
+Item da Fase 25 — "na hora marcada, aviso na plataforma e no navegador,
+com abrir o caso e adiar 15 min, 1 h ou amanhã".
+
+- **A regra** (`lib/models/lembretes.ts`): avisa a atividade de hoje,
+  aberta, com hora, quando a hora chega. "Já avisei" é da atividade
+  naquele horário (`chaveDoAviso`): adiada, ela avisa de novo no horário
+  novo. Adiar 15 min e 1 h contam de agora (passou da meia-noite, vai
+  para o dia seguinte); "Amanhã" é o próximo dia útil no mesmo horário.
+- **O aviso** (`AvisosDeLembrete`, montado no layout junto das
+  mini-janelas): no alto, à direita, abaixo da barra — embaixo ficam os
+  toasts e a bandeja das janelas. Até três à vista, cada um com Abrir o
+  caso (mini-janela), Adiar 15 min / 1 h / Amanhã, Concluir e
+  dispensar. O dispensado fica no navegador de quem trabalha.
+- **No navegador:** "Avisar também fora da aba" pede a permissão; com
+  ela, cada lembrete sai uma vez como notificação do sistema.
+- O relógio da tela anda de minuto em minuto (`useAgora`): o aviso chega
+  até um minuto depois da hora.
+
+Provas: `check:agenda` com 6 pontos novos (só o de hoje, aberto e com
+hora; dispensado não volta; adiado avisa de novo; 15 min de agora; 1 h
+às 23h30 vai para 00h30 de amanhã; amanhã na sexta é segunda). O aviso
+monta em todas as telas sem erro no modo de demonstração; vê-lo
+disparar precisa de atividade com hora no banco — conferir depois do
+push. `tsc` e `lint` limpos.
 
 ### Agenda: linha do tempo com tudo o que tem prazo (24/09/2026, 1.49.0)
 

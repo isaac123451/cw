@@ -31,6 +31,7 @@ import { PortalProvider } from "@/lib/context/PortalContext";
 import { CompletarProvider } from "@/components/reclame-aqui/completar/CompletarProvider";
 import { TratativaProvider } from "@/components/reclame-aqui/tratativa/TratativaProvider";
 import { JanelasProvider } from "@/lib/context/JanelasContext";
+import AvisosDeLembrete from "@/components/agenda/AvisosDeLembrete";
 import JanelasHost from "@/components/janelas/JanelasHost";
 import ToastHost from "@/components/shared/ToastHost";
 
@@ -169,6 +170,8 @@ export default async function RootLayout({
                                     {children}
 
                                     <JanelasHost />
+                                    {/* O lembrete com hora marcada avisa em qualquer tela (Fase 25). */}
+                                    <AvisosDeLembrete />
                                   </JanelasProvider>
 
                                   </TratativaProvider>

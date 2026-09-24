@@ -104,6 +104,14 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.50.0",
+    data: "2026-09-24",
+    titulo: "O lembrete avisa na hora",
+    texto: "Atividade da agenda com hora marcada aparece na tela na hora, em qualquer página: com abrir o caso (quando tem protocolo), adiar 15 minutos, 1 hora ou para o próximo dia útil, concluir e dispensar. Com a sua permissão, o navegador avisa também quando a aba não está na frente.",
+    frentes: ["plataforma"],
+    href: "/agenda",
+  },
+  {
     versao: "1.49.0",
     data: "2026-09-24",
     titulo: "A Agenda numa linha do tempo, com tudo o que tem prazo",
