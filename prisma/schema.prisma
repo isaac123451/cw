@@ -2140,3 +2140,20 @@ model DossieDoCaso {
   atualizadoPor String?
   atualizadoEm  DateTime @updatedAt
 }
+
+/// O que a pessoa mudou numa resposta sugerida antes de enviar (Fase 28).
+///
+/// É daqui que o rascunho aprende o jeito de quem envia: a saudação que
+/// ela sempre troca, a despedida que ela sempre acrescenta — e a IA vê
+/// as últimas edições como exemplo. Só guarda quando o texto mudou.
+model EdicaoDeResposta {
+  id       String   @id @default(cuid())
+  userId   String
+  /// acolhedora · objetiva · tecnica — ou o caminho ("Responder agora").
+  tom      String
+  original String
+  editada  String
+  criadaEm DateTime @default(now())
+
+  @@index([userId, criadaEm])
+}

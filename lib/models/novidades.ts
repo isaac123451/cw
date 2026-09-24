@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.67.0",
+    data: "2026-09-24",
+    titulo: "Respostas em três tons, que aprendem com você",
+    texto: "Depois de \"Resumir\", o painel da extensão traz a resposta em três tons — acolhedora, objetiva e técnica —, com o nome do cliente, o que já foi feito e o prazo só se ele já foi combinado na conversa (prazo novo aparece como aviso). O texto é editável ali mesmo: se você mudar algo antes de copiar, a plataforma guarda a edição e o próximo rascunho sai do seu jeito — a saudação que você usa, a despedida que você acrescenta.",
+    frentes: ["extensao"],
+  },
+  {
     versao: "1.66.0",
     data: "2026-09-24",
     titulo: "O resumo da conversa situa quem chega no meio",

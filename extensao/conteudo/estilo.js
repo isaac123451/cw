@@ -1156,6 +1156,35 @@ ${CORES}
 .situacao .citacao { display: block; color: var(--fraco); font-size: 11.5px; font-style: italic; overflow-wrap: anywhere; }
 .situacao .quando { font-size: 11px; color: var(--fraco); white-space: nowrap; }
 .situacao .quando.vencida { color: var(--perigo); font-weight: 600; }
+
+/* Os três tons (Fase 28): abas, e o texto editável antes de copiar. */
+.tons { margin-top: 10px; }
+.tons-abas { display: flex; gap: 4px; margin: 6px 0; }
+.tons-abas button {
+  flex: 1;
+  padding: 4px 6px;
+  font: inherit;
+  font-size: 12px;
+  border: 1px solid var(--borda);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--texto);
+  cursor: pointer;
+}
+.tons-abas button[aria-selected="true"] { background: var(--violeta); border-color: var(--violeta); color: #fff; }
+.texto-tom {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  font: inherit;
+  font-size: 12.5px;
+  line-height: 1.45;
+  padding: 7px 9px;
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  background: var(--fundo, transparent);
+  color: var(--texto);
+}
 .termometro.h1, .termometro.h2 { color: var(--perigo); }
 .termometro.h3 { color: var(--fraco); }
 .termometro.h4, .termometro.h5 { color: var(--ok, #16a34a); }

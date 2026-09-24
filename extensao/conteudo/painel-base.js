@@ -376,6 +376,8 @@
       if (acao === "fixar") alternarFixado();
       if (acao === "ancorar") ancorar();
       if (acao === "botao-no-canto") botaoNoCanto();
+      if (acao === "tom") P.trocarTom(alvo);
+      if (acao === "copiar-tom") P.copiarTom(alvo);
       if (acao === "capturar") P.abrirCaptura();
       if (acao === "atalhos") alternarAjudaDosAtalhos();
       if (acao === "completar-conversa") P.completarPelaConversa(alvo);
@@ -652,6 +654,17 @@
     P.campoBusca.addEventListener("keyup", (e) =>
       e.stopPropagation()
     );
+
+    /*
+      O mesmo para as caixas de texto do painel (a resposta em três tons,
+      a nota do caso): o que se digita ali não pode virar atalho do
+      WhatsApp nem do HugMe.
+    */
+    for (const tipo of ["keydown", "keyup", "keypress"]) {
+      P.raiz.addEventListener(tipo, (evento) => {
+        if (evento.composedPath()[0]?.tagName === "TEXTAREA") evento.stopPropagation();
+      });
+    }
 
     ligarAtalhos();
     ligarRedimensionamento();

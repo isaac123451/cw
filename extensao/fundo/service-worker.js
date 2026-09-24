@@ -59,6 +59,7 @@ const CAMINHOS = {
   completarPelaConversa: "/api/extensao/completar-pela-conversa",
   quemE: "/api/extensao/quem-e",
   vincularContato: "/api/extensao/vincular-contato",
+  aprenderResposta: "/api/extensao/aprender-resposta",
 };
 
 /**
@@ -871,6 +872,8 @@ async function tratar(mensagem) {
         protocolo: mensagem.protocolo,
         telefone: mensagem.telefone,
         nome: mensagem.nome,
+        /* Casos abertos e reclamações do contato: pesam no "o que fazer agora" (Fase 28). */
+        historico: mensagem.historico,
       }
     );
 
@@ -898,6 +901,19 @@ async function tratar(mensagem) {
       mensagem.corpo ?? {}
     );
 
+    return { ok: true, dados };
+  }
+
+  /**
+   * A resposta sugerida que a pessoa editou antes de copiar (Fase 28):
+   * é o jeito dela escrever, que o próximo rascunho segue.
+   */
+  if (mensagem?.tipo === "aprenderResposta") {
+    const dados = await chamar(CAMINHOS.aprenderResposta, {}, {
+      tom: mensagem.tom,
+      original: mensagem.original,
+      editada: mensagem.editada,
+    });
     return { ok: true, dados };
   }
 

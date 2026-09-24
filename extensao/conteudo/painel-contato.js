@@ -2138,6 +2138,61 @@
   const ROTULO_DO_RISCO = { baixo: "risco baixo", medio: "risco médio", alto: "risco alto" };
 
   /**
+   * As respostas em três tons (Fase 28): acolhedora, objetiva e técnica —
+   * o mesmo recado, para o cliente que está diante de você. O texto é
+   * editável ali mesmo; copiar leva o que está na caixa, e se você mudou
+   * alguma coisa a edição vai para o servidor, para o próximo rascunho
+   * sair do seu jeito.
+   */
+  function blocoTons(tons) {
+    if (!Array.isArray(tons) || tons.length === 0) return "";
+    return [
+      '<div class="tons">',
+      '  <div class="linha"><span class="rotulo">Responder em três tons</span>',
+      P.resumo?.estiloAprendido ? '  <span class="sub" title="O rascunho segue as edições que você fez antes">no seu jeito</span>' : "",
+      "  </div>",
+      '  <div class="tons-abas" role="tablist">',
+      tons.map((t, i) => `<button type="button" role="tab" data-acao="tom" data-tom="${CW.escapar(t.tom)}" aria-selected="${i === 0}" title="${CW.escapar(t.quando ?? "")}">${CW.escapar(t.rotulo ?? t.tom)}</button>`).join(""),
+      "  </div>",
+      tons
+        .map(
+          (t, i) => `
+      <div class="tom" data-tom="${CW.escapar(t.tom)}" ${i === 0 ? "" : "hidden"}>
+        <textarea class="texto-tom" rows="5" spellcheck="true" data-original="${CW.escapar(t.texto ?? "")}">${CW.escapar(t.texto ?? "")}</textarea>
+        ${(t.conferencia ?? []).map((a) => `<p class="sub" style="margin:4px 0 0;color:${a.tom === "perigo" ? "var(--perigo)" : "var(--suave)"}">• ${CW.escapar(a.texto)}</p>`).join("")}
+        <div class="linha" style="margin-top:6px">
+          <span class="sub">${CW.escapar(t.quando ?? "")}</span>
+          <button class="copiar" data-acao="copiar-tom">copiar</button>
+        </div>
+      </div>`
+        )
+        .join(""),
+      "</div>",
+    ].join("");
+  }
+
+  P.trocarTom = function trocarTom(botao) {
+    const caixa = botao.closest(".tons");
+    if (!caixa) return;
+    for (const b of caixa.querySelectorAll('[data-acao="tom"]')) b.setAttribute("aria-selected", String(b === botao));
+    for (const d of caixa.querySelectorAll(".tom")) d.hidden = d.dataset.tom !== botao.dataset.tom;
+  };
+
+  P.copiarTom = function copiarTom(botao) {
+    const bloco = botao.closest(".tom");
+    const area = bloco?.querySelector(".texto-tom");
+    if (!area) return;
+    const editada = area.value.trim();
+    const original = (area.dataset.original ?? "").trim();
+    P.copiar(botao, editada);
+    /* Mudou alguma coisa: é o jeito de quem envia — o próximo rascunho aprende. Uma vez por texto. */
+    if (editada && editada !== original && area.dataset.aprendido !== editada) {
+      area.dataset.aprendido = editada;
+      CW.enviar({ tipo: "aprenderResposta", tom: bloco.dataset.tom, original, editada });
+    }
+  };
+
+  /**
    * A situação da conversa (Fase 28): o que o cliente quer, o que já foi
    * feito, o que prometemos e quando, o que falta e o risco. A citação é
    * o trecho da mensagem — o servidor já tirou a que não está na
@@ -2224,6 +2279,7 @@
       `      <span style="margin-left:6px">${P.resumo.mensagensLidas ?? 0} mensagens lidas</span>`,
       '    </p>',
       '  </div>',
+      blocoTons(P.resumo.tons),
       /*
         As três respostas, para escolher e enviar.
 

@@ -51,6 +51,9 @@ interface Mensagem {
 }
 
 import { conferirSituacao } from "@/lib/models/resumoQueSitua";
+import { estiloAprendido, exemplosParaIA, prometeSemRegistro, TONS, tonsSemIA, type EdicaoFeita, type Tom } from "@/lib/models/tonsDaResposta";
+import { getPrisma } from "@/lib/prisma";
+import { familiaDoTexto } from "@/lib/models/catalogoDeCausas";
 import {
   conferirRascunho,
   REGRAS_DO_RASCUNHO,
@@ -73,6 +76,11 @@ Regras:
 - O resumo é do problema e do estado atual, não da conversa mensagem a mensagem.
 - "pendencia" é o que está travado agora. Se nada está travado, diga isso.
 - "proximoPasso" é uma ação concreta de quem atende, não um conselho genérico.
+- "tons" são três versões da mensagem de "Responder agora", o mesmo recado com o nome e a pendência real:
+  - "acolhedora": reconhece o transtorno antes de qualquer coisa;
+  - "objetiva": o que está sendo feito e quando, em duas frases;
+  - "tecnica": o que foi verificado e o que falta, com os termos do sistema.
+  Nenhum dos três promete prazo que não esteja prometido na conversa.
 - "situacao" situa quem pega a conversa no meio, cada ponto com "citacao" — o trecho LITERAL, copiado sem mudar uma letra, da mensagem de onde saiu (citação que não estiver na conversa é descartada):
   - "quer": o que o cliente pede agora (o pedido que está valendo, não o primeiro da conversa);
   - "feito": o que a operação já fez;
@@ -151,6 +159,16 @@ const ESQUEMA = {
         additionalProperties: false,
       },
     },
+    tons: {
+      type: "object",
+      properties: {
+        acolhedora: { type: "string" },
+        objetiva: { type: "string" },
+        tecnica: { type: "string" },
+      },
+      required: ["acolhedora", "objetiva", "tecnica"],
+      additionalProperties: false,
+    },
     situacao: {
       type: "object",
       properties: {
@@ -177,6 +195,7 @@ const ESQUEMA = {
     "proximoPasso",
     "resposta",
     "respostas",
+    "tons",
     "situacao",
     "resolvido",
   ],
@@ -263,8 +282,22 @@ export async function POST(request: Request) {
     )
     .join("\n");
 
+  /*
+    O jeito de quem vai enviar (Fase 28): as últimas edições desta pessoa
+    nos rascunhos. Sem a tabela (antes do db:push), segue sem estilo.
+  */
+  let edicoes: EdicaoFeita[] = [];
+  const prisma = getPrisma();
+  if (usuario && prisma) {
+    edicoes = await prisma.edicaoDeResposta
+      .findMany({ where: { userId: usuario.id }, orderBy: { criadaEm: "desc" }, take: 5, select: { tom: true, original: true, editada: true } })
+      .catch(() => []);
+  }
+  const estilo = estiloAprendido(edicoes);
+
   const cabecalho = [
     corpo.contato?.nome && `Contato: ${corpo.contato.nome}`,
+    exemplosParaIA(estilo),
     corpo.contexto &&
       `O que já sabemos deste cliente no CW Reputação:\n${corpo.contexto}`,
   ]
@@ -330,6 +363,8 @@ ${transcricao}`,
     resposta?: string;
     respostas?: { titulo?: string; quando?: string; texto?: string }[];
     situacao?: Parameters<typeof conferirSituacao>[0];
+    tons?: Partial<Record<Tom, string>>;
+    assunto?: string;
   };
 
   /*
@@ -338,6 +373,25 @@ ${transcricao}`,
     fica abaixo do que as regras veem. Sem IA, as regras preenchem.
   */
   const situacao = conferirSituacao(dados.situacao, mensagens, new Date());
+
+  /*
+    Os três tons (Fase 28): os da IA, ou os das regras com o estilo
+    aprendido. Cada um passa pela conferência — e por uma a mais: prazo
+    que a conversa não registra é promessa nova, feita sem querer.
+  */
+  const daIA = dados.tons && TONS.every((t) => typeof dados.tons?.[t.id] === "string" && dados.tons[t.id]!.trim()) ? dados.tons : null;
+  /* O tema pelo catálogo de causas ("impressão de pedidos") diz mais que o assunto genérico do motor ("Sistema"). */
+  const tema = familiaDoTexto(mensagens.filter((m) => m.de === "cliente").map((m) => m.texto).join("\n"))?.nome ?? String(dados.assunto ?? "o seu pedido");
+  const semIA = tonsSemIA({ nome: corpo.contato?.nome, assunto: tema, situacao, estilo });
+  const prazoConhecido = situacao.prometido.some((p) => p.quando);
+  const tons = TONS.map((t, i) => {
+    const texto = daIA ? String(daIA[t.id]) : semIA[i].texto;
+    const conferencia = conferirRascunho(texto, { nome: corpo.contato?.nome, publico: false, prazoConhecido });
+    if (prometeSemRegistro(texto, situacao) && !conferencia.some((a) => a.tipo === "promete-prazo")) {
+      conferencia.push({ tipo: "promete-prazo", tom: "atencao", texto: "Fala em prazo que a conversa não registra — é uma promessa nova. Confirme antes de enviar." });
+    }
+    return { tom: t.id, rotulo: t.rotulo, quando: t.quando, texto, conferencia };
+  });
 
   const conferir = (texto: string) =>
     conferirRascunho(texto, { nome: corpo.contato?.nome, publico: false });
@@ -358,6 +412,8 @@ ${transcricao}`,
   return responder(request, {
     ...resultado.dados,
     situacao,
+    tons,
+    estiloAprendido: Boolean(estilo.saudacao || estilo.despedida || estilo.exemplos.length),
     respostas,
     conferencia,
     resumoDaConferencia: resumoDoRascunho(conferencia),

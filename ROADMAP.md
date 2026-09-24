@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 24/09/2026. Aplicação **1.66.0**, extensão **1.66.0**.
+Atualizado em 24/09/2026. Aplicação **1.67.0**, extensão **1.67.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,39 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### Respostas em três tons (24/09/2026, 1.67.0)
+
+Quarto item da Fase 28: "melhore as sugestões de resposta" —
+acolhedora, objetiva e técnica, com o nome e a pendência real, sem
+prometer o que não está registrado, aprendendo com o que você editou.
+
+- `lib/models/tonsDaResposta.ts`: `tonsSemIA` (as regras) com o nome, o
+  pedido real, o que foi feito e o tema pelo catálogo de causas
+  ("impressão de pedidos", não "Sistema"); prazo só o que a conversa
+  registra — e a promessa vencida vira desculpa pelo atraso, não data
+  nova. `prometeSemRegistro` acusa prazo que a conversa não tem.
+  `estiloAprendido`: a saudação trocada e a despedida acrescentada em 2
+  das últimas 5 edições viram estilo (aplicado às regras); as últimas 3
+  edições vão para a IA como exemplo.
+- Tabela nova `EdicaoDeResposta` (quem, tom, sugerido, enviado) e
+  `/api/extensao/aprender-resposta`, que só grava quando o texto mudou.
+- `/api/extensao/conversa`: o esquema da IA ganhou `tons`; sem IA, os
+  das regras. Cada tom passa pela conferência do documento e pela de
+  promessa sem registro.
+- Painel: "Responder em três tons" com abas, texto editável (as teclas
+  não vazam para o WhatsApp) e "copiar", que manda a edição quando o
+  texto mudou — uma vez por texto.
+- Conserto da 1.65.0: o service worker não repassava o `historico`
+  (casos abertos e reclamações) ao "o que fazer agora"; agora repassa.
+
+Provas: `npm run check:tons` (os três tons, o prazo registrado, a
+promessa vencida, a promessa sem registro, o estilo aprendido e
+aplicado, os exemplos para a IA), o endpoint no servidor de
+desenvolvimento e a bancada do painel (abas, cópia sem editar não
+aprende, editada aprende uma vez, tecla não vaza). **Depende de você:**
+`npm run db:push` e `npm run db:rls` (a tabela das edições) e recarregar
+a extensão (1.67.0).
 
 ### Resumo que situa (24/09/2026, 1.66.0)
 
