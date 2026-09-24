@@ -422,8 +422,9 @@ export const CATALOGO: Medicao[] = [
         (item) => item.resolved
       ).length;
 
+      /* Voltaria só existe depois da avaliação: a base é a das avaliadas. */
       const voltaria = cases.filter(
-        (item) => item.wouldDoBusiness
+        (item) => item.evaluated && item.wouldDoBusiness
       ).length;
 
       const pct = (n: number, de: number) =>
@@ -432,7 +433,7 @@ export const CATALOGO: Medicao[] = [
       return [
         `${cases.length} reclamação(ões)`,
         `${resolvidas} resolvidas (${pct(resolvidas, cases.length)})`,
-        `${voltaria} voltariam a fazer negócio (${pct(voltaria, cases.length)})`,
+        `${voltaria} voltariam a fazer negócio (${pct(voltaria, avaliadas.length)} das avaliadas)`,
         `${avaliadas.length} avaliadas (${pct(avaliadas.length, cases.length)})`,
       ].join(" · ");
     },

@@ -16,7 +16,7 @@ import {
   Trash2,
 } from "lucide-react";
 
-import { Case } from "@/lib/models/case";
+import { Case, ROTULO_DO_VOLTARIA, voltariaDoCaso } from "@/lib/models/case";
 
 import { useCases } from "@/lib/context/CaseContext";
 import { useMovements } from "@/lib/context/MovementsContext";
@@ -367,14 +367,17 @@ export default function CaseDetail({
                   </span>
 
                   <span
+                    title={voltariaDoCaso(data) === "indefinido" ? "O consumidor ainda não avaliou: a resposta vem com a avaliação." : undefined}
                     className={`rounded-full px-3 py-1 text-xs font-medium ring-1 ring-inset ${
-                      data.wouldDoBusiness
+                      voltariaDoCaso(data) === "sim"
                         ? "bg-emerald-50 text-emerald-700 ring-emerald-100"
-                        : "bg-rose-50 text-rose-700 ring-rose-100"
+                        : voltariaDoCaso(data) === "nao"
+                          ? "bg-rose-50 text-rose-700 ring-rose-100"
+                          : "bg-zinc-50 text-zinc-500 ring-zinc-200"
                     }`}
                   >
                     Voltaria:{" "}
-                    {data.wouldDoBusiness ? "Sim" : "Não"}
+                    {ROTULO_DO_VOLTARIA[voltariaDoCaso(data)]}
                   </span>
                 </>
               )}

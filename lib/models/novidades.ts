@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.38.0",
+    data: "2026-09-23",
+    titulo: "A ficha não afirma o que não aconteceu",
+    texto: "Reclamação ainda sem avaliação mostra Voltaria como não definido, e não mais como Não (eram 140). E a persistência no contato só aparece feita quando o cliente respondeu: com contato feito e sem resposta, ela é o passo da vez, aguardando o retorno.",
+    frentes: ["reclame-aqui"],
+  },
+  {
     versao: "1.37.0",
     data: "2026-09-23",
     titulo: "Placar da semana",

@@ -70,8 +70,14 @@ const imerso = { ...triado, imersaoEm: br("2026-09-14 09:10") };
 confere("imersão feita: 1º contato", atual(imerso), "contato");
 const tentou = { ...imerso, primeiroContatoEm: br("2026-09-14 09:30"), ultimoContatoEm: br("2026-09-14 09:30"), tentativasSemResposta: 1 };
 confere("tentativa sem resposta: persistência", atual(tentou), "persistencia");
+/* 1.38: contato feito e nenhuma resposta ainda (a tentativa aguardando não conta como sem resposta) — a persistência não pode aparecer feita. */
+const semResposta = { ...imerso, primeiroContatoEm: br("2026-09-14 09:30"), ultimoContatoEm: br("2026-09-14 09:30"), tentativasSemResposta: 0 };
+const passoDe = (c: Case, id: string) => trilhaDoCaso(c, { agora: new Date(br("2026-09-15 10:00")) }).find((p) => p.id === id)?.estado;
+confere("contato feito sem resposta: persistência é o passo da vez, e não 'feita'", [atual(semResposta), passoDe(semResposta, "persistencia")], ["persistencia", "atual"]);
+confere("antes do 1º contato, a persistência ainda não se aplica", passoDe(imerso, "persistencia"), "opcional");
 const falou = { ...tentou, tentativasSemResposta: 0, ultimaRespostaEm: br("2026-09-14 14:00") };
 confere("cliente respondeu: validação (a área é opcional)", atual(falou), "validacao");
+confere("e a persistência aparece feita só por causa da resposta", passoDe(falou, "persistencia"), "feito");
 confere(
   "com área aberta: aguardar a área",
   proximoPasso(falou, { areaAberta: { destino: "Financeiro" }, agora: new Date(br("2026-09-15 10:00")) })?.id,

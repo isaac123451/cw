@@ -40,7 +40,7 @@ const ORDENAVEIS: Record<
   Cliente: (item) => item.customer.toLowerCase(),
   Nota: (item) => (item.evaluated ? (item.score ?? 0) : -1),
   Resolvido: (item) => (item.resolved ? 1 : 0),
-  Voltaria: (item) => (item.wouldDoBusiness ? 1 : 0),
+  Voltaria: (item) => (item.evaluated ? (item.wouldDoBusiness ? 1 : 0) : -1),
   Responsável: (item) =>
     (item.owner || "zzz").toLowerCase(),
 };

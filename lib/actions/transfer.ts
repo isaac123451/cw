@@ -20,6 +20,7 @@ import {
   parseReclameAqui,
 } from "@/lib/services/raImport.service";
 import { hojeNaOperacao } from "@/lib/services/reputation.service";
+import { ROTULO_DO_VOLTARIA, voltariaDoCaso } from "@/lib/models/case";
 
 /** O módulo destas ações — ver lib/auth/modules.ts. */
 const MODULO: Modulo = "reclame-aqui";
@@ -211,9 +212,7 @@ export async function exportCases(): Promise<{
       ? "Sim"
       : "Não",
     Resolvido: item.resolved ? "Sim" : "Não",
-    "Voltaria a fazer negócio": item.wouldDoBusiness
-      ? "Sim"
-      : "Não",
+    "Voltaria a fazer negócio": ROTULO_DO_VOLTARIA[voltariaDoCaso(item)],
     "Data avaliação": item.evaluatedAt ?? "",
     SLA: item.sla,
     Etiquetas: (item.tags ?? []).join("; "),

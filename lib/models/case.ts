@@ -322,6 +322,23 @@ export interface Case {
  * funcionando exatamente como antes, sem duas verdades sobre a mesma
  * coisa.
  */
+/**
+ * "Voltaria a fazer negócio" só existe depois que o consumidor avalia.
+ *
+ * O banco guarda `false` por padrão, e a ficha mostrava "Voltaria: Não"
+ * em reclamação que nem tinha sido avaliada — o Isaac viu e estranhou.
+ * Antes da avaliação, é "não definido". A conta da nota já usava só as
+ * avaliadas; o erro era de quem mostrava.
+ */
+export type Voltaria = "sim" | "nao" | "indefinido";
+
+export function voltariaDoCaso(item: { evaluated?: boolean; wouldDoBusiness?: boolean }): Voltaria {
+  if (!item.evaluated) return "indefinido";
+  return item.wouldDoBusiness ? "sim" : "nao";
+}
+
+export const ROTULO_DO_VOLTARIA: Record<Voltaria, string> = { sim: "Sim", nao: "Não", indefinido: "não definido" };
+
 export function respondida(item: {
   respondida?: boolean;
   publicResponse?: string;

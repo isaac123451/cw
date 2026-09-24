@@ -8,7 +8,7 @@ import {
   XCircle,
 } from "lucide-react";
 
-import { Case } from "@/lib/models/case";
+import { Case, ROTULO_DO_VOLTARIA, voltariaDoCaso } from "@/lib/models/case";
 
 import { TagChips } from "@/components/shared/TagPicker";
 import StatusPicker from "@/components/reclame-aqui/shared/StatusPicker";
@@ -209,7 +209,7 @@ export default function CaseRow({
       </td>
 
       <td className="px-5 text-zinc-600">
-        {data.wouldDoBusiness ? "Sim" : "Não"}
+        {voltariaDoCaso(data) === "indefinido" ? <span className="text-zinc-300">—</span> : ROTULO_DO_VOLTARIA[voltariaDoCaso(data)]}
       </td>
 
       <td className="px-5">

@@ -10,7 +10,7 @@ import {
   UserCheck,
 } from "lucide-react";
 
-import { Case } from "@/lib/models/case";
+import { Case, ROTULO_DO_VOLTARIA, voltariaDoCaso } from "@/lib/models/case";
 import { useTeams } from "@/lib/context/TeamsContext";
 import { useEstablishments } from "@/lib/context/EstablishmentsContext";
 import { useSession } from "@/lib/context/SessionContext";
@@ -519,12 +519,14 @@ export default function CaseSidebar({
             <dd className="mt-1">
               <span
                 className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${
-                  data.wouldDoBusiness
+                  voltariaDoCaso(data) === "sim"
                     ? "bg-emerald-50 text-emerald-700 ring-emerald-100"
-                    : "bg-rose-50 text-rose-700 ring-rose-100"
+                    : voltariaDoCaso(data) === "nao"
+                      ? "bg-rose-50 text-rose-700 ring-rose-100"
+                      : "bg-zinc-50 text-zinc-500 ring-zinc-200"
                 }`}
               >
-                {data.wouldDoBusiness ? "Sim" : "Não"}
+                {ROTULO_DO_VOLTARIA[voltariaDoCaso(data)]}
               </span>
             </dd>
 

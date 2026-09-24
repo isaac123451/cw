@@ -216,6 +216,11 @@ export default function ContatoModal({ item, tipoInicial, onClose, onSalvo }: Pr
             ))}
           </div>
           <p className="mt-1.5 text-xs text-zinc-500">{info.quando}</p>
+          {tipo === "contato" && primeiro && (
+            <p className="mt-1 text-xs text-amber-800">
+              Só se o cliente respondeu. Mandou mensagem e ainda não teve resposta? Use &ldquo;Tentei contato&rdquo; — a trilha espera o retorno.
+            </p>
+          )}
         </div>
 
         <div>

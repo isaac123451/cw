@@ -154,9 +154,10 @@ export function getMetrics(cases: Case[]): CaseMetrics {
 
     solutionRate: rate(resolved, total),
 
+    /* Só entre as avaliadas: antes da avaliação, "voltaria" não existe. */
     wouldDoBusinessRate: rate(
-      cases.filter((item) => item.wouldDoBusiness).length,
-      total
+      cases.filter((item) => item.evaluated && item.wouldDoBusiness).length,
+      cases.filter((item) => item.evaluated).length
     ),
 
     openWithoutOwner: cases.filter(

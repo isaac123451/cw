@@ -1116,6 +1116,44 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### A lista da ficha, e os dois bugs que ela afirmava (23/09/2026, 1.38.0)
+
+Nova fase no roadmap (Fase 22, "A ficha da reclamação que acompanha a
+tratativa"), com os pontos do Isaac sobre a ficha — e, entre eles, dois
+bugs em que a tela afirmava o que não aconteceu. Os dois vieram primeiro.
+
+**"Voltaria: Não" em reclamação sem avaliação.** O banco guarda
+`wouldDoBusiness = false` por padrão, e a ficha, a lateral, a lista e a
+planilha exportada mostravam "Não" antes de o consumidor avaliar.
+Medido: **140 das 363 reclamações** estavam assim. A conta da nota já
+usava só as avaliadas; o erro era de exibição e de dois totais
+secundários (a taxa do resumo e o assistente, que dividiam pelo total).
+Agora há uma regra só (`voltariaDoCaso`): sem avaliação é "não
+definido", em cinza, com a explicação no título; a lista mostra "—" e
+ordena essas por último; a planilha diz "não definido"; e as duas taxas
+contam só entre as avaliadas.
+
+**Persistência "aprovada" sem retorno do cliente.** A trilha marcava a
+persistência como feita sempre que havia 1º contato registrado. Desde a
+1.32, a tentativa aguardando retorno não conta como sem resposta — então
+contato sem resposta caía direto em "feito". Medido: **2 reclamações**
+(as que tinham contato recente sem resposta). Regra nova: feita só com
+resposta do cliente; contato feito e sem resposta é o passo da vez
+("aguardando o retorno do cliente desde…"); antes do contato, não se
+aplica. Varridos os oito passos: triagem, imersão, 1º contato e
+validação só deduzem em caso antigo e já dizem "deduzido"; resposta
+pública e avaliação só marcam com registro.
+
+E a outra porta do mesmo erro: no registro do 1º contato, "Falei com o
+cliente" agora avisa que é só quando ele respondeu — mandou e não teve
+resposta, é "Tentei contato", e a trilha espera o retorno.
+
+Provas: `check:trilha` com três pontos novos (contato sem resposta: a
+persistência é o passo da vez; antes do contato não se aplica; feita só
+pela resposta) — sabotado com a regra antiga, 2 falhas. `check:trilha`,
+`check:tratativa`, `check:guia-para-fechar` e `check:espera-do-retorno`
+verdes.
+
 ### Placar da semana no topo do Meu dia (23/09/2026, 1.37.0)
 
 "Parte de conquistas nunca vi." O cartão existia (1.29.0), mas era texto

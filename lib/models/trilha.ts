@@ -1,5 +1,6 @@
 import { respondida, type Case } from "@/lib/models/case";
 import { pedidoDeAvaliacao } from "@/lib/models/cadencia";
+import { descreverRegistro } from "@/lib/services/horasUteis";
 
 /**
  * A trilha do Reclame Aqui, na ordem da documentação.
@@ -148,27 +149,36 @@ export function trilhaDoCaso(
   });
 
   /*
-    Persistência só existe quando o cliente não respondeu.
+    Persistência: feita só com o cliente tendo respondido.
 
-    Quem atendeu na primeira ligação não passa por este passo — ele fica
-    como "não precisou", e não como pendência.
+    Até a 1.37 bastava haver 1º contato registrado para o passo aparecer
+    feito — e, desde a 1.32, a tentativa que ainda aguarda retorno não
+    conta como sem resposta. Resultado: "persistência aprovada" sem
+    retorno nenhum do cliente, que o Isaac viu. Agora: respondeu, feito;
+    contato feito e sem resposta, é o passo da vez; antes do contato,
+    ainda não se aplica.
   */
   const tentativas = item.tentativasSemResposta ?? 0;
   const clienteRespondeu = Boolean(item.ultimaRespostaEm) || houveConversa;
+  const contatoFeito = Boolean(item.primeiroContatoEm);
 
   empurrar({
     id: "persistencia",
     numero: 4,
     fase: "Conexão",
     titulo: "Persistência no contato",
-    curto: `nova tentativa (${Math.min(tentativas + 1, 5)} de 5)`,
-    feito: tentativas === 0 && (clienteRespondeu || Boolean(item.primeiroContatoEm)),
-    opcional: tentativas === 0,
-    detalhe:
-      tentativas > 0
+    curto: tentativas > 0 ? `nova tentativa (${Math.min(tentativas + 1, 5)} de 5)` : "aguardar o retorno do cliente",
+    feito: clienteRespondeu,
+    opcional: !contatoFeito && !clienteRespondeu,
+    quando: clienteRespondeu ? item.ultimaRespostaEm : undefined,
+    detalhe: clienteRespondeu
+      ? tentativas > 0 || item.ultimaRespostaEm
+        ? "O cliente respondeu."
+        : "Não precisou: o caso seguiu com o cliente."
+      : tentativas > 0
         ? `${tentativas} tentativa(s) seguida(s) sem resposta · até 5 ligações em 7 dias, horários variados`
-        : clienteRespondeu
-          ? "Não precisou: o cliente respondeu."
+        : contatoFeito
+          ? `Aguardando o retorno do cliente desde ${item.ultimoContatoEm ? descreverRegistro(item.ultimoContatoEm) : "o 1º contato"}. Sem resposta, siga a cadência: até 5 tentativas em 7 dias.`
           : "Só se o cliente não responder.",
     acao: "tentativa",
   });
@@ -259,7 +269,7 @@ export function trilhaDoCaso(
       let estado: EstadoDoPasso;
 
       if (feito) estado = "feito";
-      else if (opcional && !(p.id === "area" && area) && !(p.id === "persistencia" && tentativas > 0)) {
+      else if (opcional && !(p.id === "area" && area)) {
         estado = "opcional";
       } else if (!atualMarcado) {
         estado = "atual";
