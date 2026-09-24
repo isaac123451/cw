@@ -15,7 +15,7 @@ import { useCases } from "@/lib/context/CaseContext";
 import { useJanelas } from "@/lib/context/JanelasContext";
 import { useSla } from "@/lib/context/SlaContext";
 import { useToast } from "@/lib/context/ToastContext";
-import { filaDoDia, posicaoNaFila, resumoDosPassos, type PassoParaFechar } from "@/lib/models/guiaParaFechar";
+import { filaDoDia, posicaoNaFila, resumoDosPassos, type ItemDaFila, type PassoParaFechar } from "@/lib/models/guiaParaFechar";
 import { frente as frenteInfo } from "@/lib/models/frentes";
 import { JANELA_DO_G_MS } from "@/lib/models/atalhosDeTeclado";
 import { diaCurtoDaMarca, opcoesDeAdiar } from "@/lib/models/meuDia";
@@ -63,6 +63,8 @@ export default function ModoProximo({ dia, marcadas, onFechar }: Props) {
   const [menuAdiar, setMenuAdiar] = useState(false);
   const menuAdiarRef = useRef<HTMLDivElement>(null);
   const [verFila, setVerFila] = useState(false);
+  /* Os marcados na lista da fila, para fazer de uma vez. */
+  const [selecionados, setSelecionados] = useState<string[]>([]);
 
   const base = useMemo(
     () => (dia.contagens ? filaDoDia(dia.doDia, dia.contagens, marcadas) : []),
@@ -156,7 +158,7 @@ export default function ModoProximo({ dia, marcadas, onFechar }: Props) {
       else if (k === "f" && item) void (tarefa ? gravarTarefa("concluir") : tirarDoDia("feito"));
       else if (k === "t" && item && !tarefa) void tirarDoDia("tirar");
       else if (k === "a" && tarefa) void gravarTarefa("adiar");
-      else if (k === "a" && item) void tirarDoDia("adiado", opcoesDeAdiar(dia.hoje ?? "", expediente).at(-1)!.volta);
+      else if (k === "a" && item && dia.hoje) void tirarDoDia("adiado", opcoesDeAdiar(dia.hoje, expediente).at(-1)!.volta);
       else if (k === "Enter" && ficha) abrirNaJanela();
       else return;
       e.preventDefault();
@@ -180,24 +182,38 @@ export default function ModoProximo({ dia, marcadas, onFechar }: Props) {
     Feito hoje / não se aplica: sai de todas as atividades em que está
     hoje. Nada muda no caso — é o Meu dia que deixa de pedir o item.
   */
-  async function tirarDoDia(tipo: "feito" | "tirar" | "adiado", volta?: string) {
-    if (!item || gravando || (tipo === "adiado" && !dia.hoje)) return;
+  function tirarDoDia(tipo: "feito" | "tirar" | "adiado", volta?: string) {
+    if (!item) return;
+    return marcarDaFila([item], tipo, volta);
+  }
+
+  /* Atividade da agenda não tem marca: conclui-se ou passa de dia, pelos botões dela. */
+  const ehTarefa = (i: ItemDaFila) => !i.frente && i.chave.startsWith("pendencias:");
+
+  /*
+    Feito, tirar ou adiar — um item ou vários da lista da fila, numa
+    gravação só. O desfazer da linha fixa devolve todos.
+  */
+  async function marcarDaFila(alvos: ItemDaFila[], tipo: "feito" | "tirar" | "adiado", volta?: string) {
+    const validos = alvos.filter((i) => !ehTarefa(i));
+    if (!validos.length || gravando || (tipo === "adiado" && !volta)) return;
     setMenuAdiar(false);
     setGravando(tipo);
     try {
       const r = await dia.marcarItens(
-        item.chaves.map((c) => ({ chave: c, item: item.chave, titulo: item.titulo })),
+        validos.flatMap((i) => i.chaves.map((c) => ({ chave: c, item: i.chave, titulo: i.titulo }))),
         tipo === "feito" ? "feito" : tipo === "adiado" ? "adiado" : "dispensado",
         "hoje",
         volta
       );
       if (!r.ok) {
-        notify({ tone: "error", title: "O item não saiu da fila.", detail: r.erro });
+        notify({ tone: "error", title: validos.length > 1 ? "Os itens não saíram da fila." : "O item não saiu da fila.", detail: r.erro });
         return;
       }
+      setSelecionados((sel) => sel.filter((k) => !validos.some((i) => i.chave === k)));
       mostrarSaida({
         texto: tipo === "feito" ? "feito hoje" : tipo === "adiado" ? `volta em ${diaCurtoDaMarca(volta!)}` : "tirado do dia",
-        titulo: item.titulo,
+        titulo: validos.length > 1 ? `${validos.length} itens` : validos[0].titulo,
         ids: r.marcas.map((m) => m.id),
       });
     } catch {
@@ -300,28 +316,98 @@ export default function ModoProximo({ dia, marcadas, onFechar }: Props) {
         </div>
       </header>
 
-      {verFila && fila.length > 0 && (
-        <ol className="max-h-64 overflow-y-auto overscroll-contain border-b border-zinc-100 px-3 py-1.5">
-          {fila.map((i, n) => (
-            <li key={i.chave}>
-              <button
-                type="button"
-                onClick={() => {
-                  irPara(n);
-                  setVerFila(false);
-                }}
-                aria-current={n === posicao}
-                className={`flex w-full min-w-0 items-center gap-2 rounded-md px-2 py-1 text-left text-xs ${n === posicao ? "bg-violet-50 text-violet-900" : "text-zinc-700 hover:bg-zinc-50"}`}
-              >
-                <span className="w-6 shrink-0 text-right tabular-nums text-zinc-400">{n + 1}</span>
-                {i.frente ? <IconeDaFrente frente={i.frente} size={12} /> : <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-zinc-300" />}
-                <span className={`min-w-0 flex-1 truncate ${i.atrasado ? "text-rose-700" : ""}`}>{i.titulo}</span>
-                <span className="hidden max-w-[40%] shrink-0 truncate text-[11px] text-zinc-400 sm:block">{i.atividades.join(" · ")}</span>
-              </button>
-            </li>
-          ))}
-        </ol>
-      )}
+      {verFila && fila.length > 0 && (() => {
+        const marcaveis = fila.filter((i) => !ehTarefa(i));
+        const escolhidos = fila.filter((i) => selecionados.includes(i.chave));
+        const voltaUtil = dia.hoje ? opcoesDeAdiar(dia.hoje, expediente).at(-1)!.volta : null;
+        return (
+          <div className="border-b border-zinc-100">
+            {/*
+              A barra do que está marcado fica sempre no mesmo lugar, em cima
+              da lista: marcar um item não empurra nada para baixo.
+            */}
+            <div className="flex h-9 items-center gap-2 border-b border-zinc-50 px-5 text-xs">
+              <input
+                id="fila-todos"
+                type="checkbox"
+                checked={marcaveis.length > 0 && escolhidos.length === marcaveis.length}
+                onChange={(e) => setSelecionados(e.target.checked ? marcaveis.map((i) => i.chave) : [])}
+                aria-label="Marcar todos da fila"
+                className="h-3.5 w-3.5 accent-violet-700"
+              />
+              {escolhidos.length === 0 ? (
+                <span className="text-zinc-400">Marque itens para fazer de uma vez — ou use os botões de cada linha.</span>
+              ) : (
+                <>
+                  <span className="font-medium tabular-nums text-zinc-700">{escolhidos.length} marcado(s)</span>
+                  <button type="button" disabled={gravando !== null} onClick={() => void marcarDaFila(escolhidos, "feito")} className="rounded-md px-2 py-1 font-medium text-emerald-700 hover:bg-emerald-50 disabled:opacity-50">
+                    Feito hoje
+                  </button>
+                  <button type="button" disabled={gravando !== null} onClick={() => void marcarDaFila(escolhidos, "tirar")} className="rounded-md px-2 py-1 font-medium text-zinc-600 hover:bg-zinc-100 disabled:opacity-50">
+                    Tirar do dia
+                  </button>
+                  {voltaUtil && (
+                    <button type="button" disabled={gravando !== null} onClick={() => void marcarDaFila(escolhidos, "adiado", voltaUtil)} className="rounded-md px-2 py-1 font-medium text-zinc-600 hover:bg-zinc-100 disabled:opacity-50">
+                      Adiar para {diaCurtoDaMarca(voltaUtil)}
+                    </button>
+                  )}
+                  <button type="button" onClick={() => setSelecionados([])} className="ml-auto rounded-md px-2 py-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700">
+                    Limpar
+                  </button>
+                </>
+              )}
+            </div>
+            <ol className="max-h-64 overflow-y-auto overscroll-contain px-3 py-1.5">
+              {fila.map((i, n) => {
+                const tarefaDaLinha = ehTarefa(i);
+                return (
+                  <li key={i.chave} className={`group flex min-w-0 items-center gap-1 rounded-md pl-2 ${n === posicao ? "bg-violet-50" : "hover:bg-zinc-50"}`}>
+                    <input
+                      id={`fila-${n}`}
+                      type="checkbox"
+                      disabled={tarefaDaLinha}
+                      checked={selecionados.includes(i.chave)}
+                      onChange={(e) => setSelecionados((sel) => (e.target.checked ? [...sel, i.chave] : sel.filter((k) => k !== i.chave)))}
+                      aria-label={`Marcar ${i.titulo}`}
+                      title={tarefaDaLinha ? "Atividade da agenda: conclua ou passe de dia no próprio item" : undefined}
+                      className="h-3.5 w-3.5 shrink-0 accent-violet-700 disabled:opacity-30"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        irPara(n);
+                        setVerFila(false);
+                      }}
+                      aria-current={n === posicao}
+                      className={`flex min-w-0 flex-1 items-center gap-2 px-1 py-1 text-left text-xs ${n === posicao ? "text-violet-900" : "text-zinc-700"}`}
+                    >
+                      <span className="w-6 shrink-0 text-right tabular-nums text-zinc-400">{n + 1}</span>
+                      {i.frente ? <IconeDaFrente frente={i.frente} size={12} /> : <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-zinc-300" />}
+                      <span className={`min-w-0 flex-1 truncate ${i.atrasado ? "text-rose-700" : ""}`}>{i.titulo}</span>
+                      <span className="hidden max-w-[40%] shrink-0 truncate text-[11px] text-zinc-400 sm:block">{i.atividades.join(" · ")}</span>
+                    </button>
+                    {!tarefaDaLinha && (
+                      <span className="flex shrink-0 items-center opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
+                        <button type="button" disabled={gravando !== null} onClick={() => void marcarDaFila([i], "feito")} title="Feito hoje" aria-label={`Feito hoje: ${i.titulo}`} className="rounded-md p-1 text-zinc-400 hover:bg-emerald-50 hover:text-emerald-700">
+                          <Check size={13} strokeWidth={2.5} />
+                        </button>
+                        <button type="button" disabled={gravando !== null} onClick={() => void marcarDaFila([i], "tirar")} title="Tirar do dia" aria-label={`Tirar do dia: ${i.titulo}`} className="rounded-md p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700">
+                          <CircleSlash size={13} />
+                        </button>
+                        {voltaUtil && (
+                          <button type="button" disabled={gravando !== null} onClick={() => void marcarDaFila([i], "adiado", voltaUtil)} title={`Adiar para ${diaCurtoDaMarca(voltaUtil)}`} aria-label={`Adiar para ${diaCurtoDaMarca(voltaUtil)}: ${i.titulo}`} className="rounded-md p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700">
+                            <CalendarClock size={13} />
+                          </button>
+                        )}
+                      </span>
+                    )}
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
+        );
+      })()}
 
       {/* `carregando` junto: sem ele, a rotina que ainda não chegou passava
           por rotina vazia e o modo anunciava "está marcada" antes da hora. */}

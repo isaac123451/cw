@@ -104,6 +104,14 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.44.0",
+    data: "2026-09-24",
+    titulo: "A fila inteira, sem abrir item por item",
+    texto: "No Um por vez, Ver a fila ganhou os botões de cada linha — feito hoje, tirar do dia e adiar para o próximo dia útil — e a caixa de marcar: marque vários (ou todos) e faça de uma vez. A linha fixa diz quantos saíram, com desfazer para todos.",
+    frentes: ["plataforma"],
+    href: "/meu-dia",
+  },
+  {
     versao: "1.43.0",
     data: "2026-09-24",
     titulo: "Adiar para outro dia",

@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 24/09/2026. Aplicação **1.43.0**, extensão **1.43.0**.
+Atualizado em 24/09/2026. Aplicação **1.44.0**, extensão **1.44.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,25 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### Ações na lista da fila (24/09/2026, 1.44.0)
+
+Item da Fase 24. O "Ver a fila" do Um por vez só levava ao item; agora:
+
+- **cada linha** tem feito hoje, tirar do dia e adiar para o próximo dia
+  útil (aparecem com o mouse em cima ou com o foco), sem abrir o item;
+- **uma caixa de marcar** por linha e uma para todos; com algo marcado,
+  a barra acima da lista oferece Feito hoje, Tirar do dia e Adiar para
+  o próximo dia útil, numa gravação só (`marcarItens` com a lista). A
+  barra tem altura fixa: marcar não empurra a lista.
+- A linha fixa diz "3 itens · tirado do dia · desfazer", e o desfazer
+  devolve todos. Atividade da agenda não se marca (a caixa fica
+  desligada): ela se conclui ou passa de dia pelos botões dela.
+
+Provas, no navegador, com o componente real e uma fila de teste de 5
+itens: 9 pontos (feito e adiar na linha sem abrir o item, adiar de sexta
+cai na segunda, dois marcados saem numa chamada só, desfazer devolve os
+dois). `tsc` e `lint` limpos.
 
 ### Adiar para outro dia (24/09/2026, 1.43.0)
 
