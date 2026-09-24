@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 24/09/2026. Aplicação **1.44.0**, extensão **1.44.0**.
+Atualizado em 24/09/2026. Aplicação **1.45.0**, extensão **1.45.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,31 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### Foco por frente e bloco de foco (24/09/2026, 1.45.0)
+
+Item da Fase 24 — "filtrar a fila: só Reclame Aqui, só detratores
+críticos, só o que vence hoje. E blocos de foco de 25 a 45 minutos".
+
+- **Filtro de foco** no Um por vez: Tudo, cada frente com itens, Críticos
+  e Fora do prazo, com a contagem ao lado. "Crítico" é campo novo do item
+  do Meu dia (`critico`), marcado onde o item nasce: reclamação ou
+  atendimento das Redes com prioridade Urgente, e resposta do NPS no nível
+  detrator crítico (`nivelDoNps`). Trocar de foco não conta como "saiu do
+  dia"; foco vazio diz "Nada neste foco agora", com o caminho para a fila
+  inteira.
+- **Bloco de foco** de 25 ou 45 minutos: o relógio no cabeçalho e
+  quantos itens saíram durante o bloco; no fim, "Bloco de 25 min: 4
+  fechados". Só na tela, não grava.
+- **Não feito: "só o que vence hoje".** O item da fila não traz o prazo,
+  só o "fora do prazo"; o filtro do que vence hoje precisa levar o prazo
+  de cada item à fila — fica anotado aqui.
+
+Provas, no navegador, com o componente real, uma fila de teste de 5
+itens em três frentes e o relógio do navegador controlado: 10 pontos
+(contagens de cada foco, trocar de foco não marca saída, foco vazio, o
+relógio anda, conta o que saiu no bloco e fecha com o total). `tsc` e
+`lint` limpos.
 
 ### Ações na lista da fila (24/09/2026, 1.44.0)
 

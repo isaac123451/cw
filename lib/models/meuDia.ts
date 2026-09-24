@@ -57,6 +57,8 @@ export interface ItemDaRotina {
    * detrator crítico, detrator, neutro, promotor.
    */
   urgencia?: number;
+  /** Urgente pela triagem (Reclame Aqui e Redes) ou detrator crítico do NPS — o filtro "Críticos" do Um por vez. */
+  critico?: boolean;
   /** Reclamação do Reclame Aqui: a página pública e a área da empresa — ver `linksDoRa`. */
   ra?: { protocol: string; raUrl?: string };
 }
@@ -396,6 +398,7 @@ export function contarRotina(
           ra: { protocol: c.protocol, raUrl: c.raUrl },
           atrasado,
           urgencia: urgenciaDoCaso(c, atrasado),
+          critico: prioridadeNormalizada(c.priority) === "Urgente",
         };
       }),
     ...abertos
@@ -410,6 +413,7 @@ export function contarRotina(
           href: caseHref(c),
           atrasado,
           urgencia: urgenciaDoCaso(c, atrasado),
+          critico: prioridadeNormalizada(c.priority) === "Urgente",
         };
       }),
     /*
@@ -431,6 +435,7 @@ export function contarRotina(
           href: `/nps/${r.id}`,
           atrasado,
           urgencia: urgenciaDoNps(r, atrasado),
+          critico: nivelDoNps(r).nivel === "detrator-critico",
         };
       }),
     ...dados.google
@@ -474,6 +479,7 @@ export function contarRotina(
           ...(frenteDoCaso(c) === "reclame-aqui" ? { ra: { protocol: c.protocol, raUrl: c.raUrl } } : {}),
           atrasado,
           urgencia: urgenciaDoCaso(c, atrasado),
+          critico: prioridadeNormalizada(c.priority) === "Urgente",
         };
       }),
     ...naEtapa("em-aberto")
@@ -485,6 +491,7 @@ export function contarRotina(
         detalhe: [etapaNps.get(r.id)!.motivo, r.customerName || r.customer].join(" · "),
         href: `/nps/${r.id}`,
         urgencia: urgenciaDoNps(r, false),
+        critico: nivelDoNps(r).nivel === "detrator-critico",
       })),
     ...dados.google
       .filter((a) => a.status === "aberta" && a.respondidaEm && a.classificacao === "negativa" && !a.tratativaResultado)
@@ -527,6 +534,7 @@ export function contarRotina(
         detalhe: r.customerName || r.customer,
         href: `/nps/${r.id}`,
         urgencia: urgenciaDoNps(r, false),
+        critico: nivelDoNps(r).nivel === "detrator-critico",
       })),
   ];
 
@@ -571,6 +579,7 @@ export function contarRotina(
         detalhe: r.customerName || r.customer,
         href: `/nps/${r.id}`,
         urgencia: urgenciaDoNps(r, false),
+        critico: nivelDoNps(r).nivel === "detrator-critico",
       };
     });
   const ligacoes = [...(dados.ligacoes ?? []), ...ligacoesNps];

@@ -51,6 +51,8 @@ export interface ItemDaFila {
   janela: PedidoDeJanela | null;
   /** Reclamação do Reclame Aqui: a página pública e a área da empresa. */
   ra?: { protocol: string; raUrl?: string };
+  /** Urgente ou detrator crítico — ver `ItemDaRotina.critico`. */
+  critico: boolean;
 }
 
 /**
@@ -77,6 +79,7 @@ export function filaDoDia(
         if (!ja.atividades.includes(a.titulo)) ja.atividades.push(a.titulo);
         if (!ja.chaves.includes(a.chave)) ja.chaves.push(a.chave);
         ja.atrasado = ja.atrasado || Boolean(i.atrasado);
+        ja.critico = ja.critico || Boolean(i.critico);
         ja.urgencia = Math.min(ja.urgencia, urgenciaDe(i));
         continue;
       }
@@ -88,6 +91,7 @@ export function filaDoDia(
         detalhe: i.detalhe,
         href: i.href,
         atrasado: Boolean(i.atrasado),
+        critico: Boolean(i.critico),
         atividades: [a.titulo],
         chaves: [a.chave],
         janela: janelaDoEndereco(i.href, i.titulo),

@@ -104,6 +104,14 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.45.0",
+    data: "2026-09-24",
+    titulo: "Foco no Um por vez",
+    texto: "O Um por vez filtra a fila: só uma frente (Reclame Aqui, Redes, NPS, Google), só os críticos — urgentes e detratores críticos — ou só o fora do prazo, cada opção com quantos itens tem. E o bloco de foco: 25 ou 45 minutos com o relógio no cabeçalho e quantos itens você fechou durante ele.",
+    frentes: ["plataforma"],
+    href: "/meu-dia",
+  },
+  {
     versao: "1.44.0",
     data: "2026-09-24",
     titulo: "A fila inteira, sem abrir item por item",

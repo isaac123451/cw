@@ -5,7 +5,7 @@ import LinksDoRa from "@/components/shared/LinksDoRa";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { AppWindow, ArrowUpRight, CalendarArrowUp, CalendarClock, Check, CircleSlash, List, Loader2, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { AppWindow, ArrowUpRight, CalendarArrowUp, CalendarClock, Check, CircleSlash, List, Loader2, ChevronLeft, ChevronRight, Timer, X } from "lucide-react";
 
 import IconeDaFrente from "@/components/shared/IconeDaFrente";
 import OpcoesDeAdiar from "@/components/rotina/OpcoesDeAdiar";
@@ -16,7 +16,7 @@ import { useJanelas } from "@/lib/context/JanelasContext";
 import { useSla } from "@/lib/context/SlaContext";
 import { useToast } from "@/lib/context/ToastContext";
 import { filaDoDia, posicaoNaFila, resumoDosPassos, type ItemDaFila, type PassoParaFechar } from "@/lib/models/guiaParaFechar";
-import { frente as frenteInfo } from "@/lib/models/frentes";
+import { FRENTES_DA_OPERACAO, frente as frenteInfo, type FrenteId } from "@/lib/models/frentes";
 import { JANELA_DO_G_MS } from "@/lib/models/atalhosDeTeclado";
 import { diaCurtoDaMarca, opcoesDeAdiar } from "@/lib/models/meuDia";
 import { idDaJanela, type PedidoDeJanela } from "@/lib/models/janelas";
@@ -66,10 +66,42 @@ export default function ModoProximo({ dia, marcadas, onFechar }: Props) {
   /* Os marcados na lista da fila, para fazer de uma vez. */
   const [selecionados, setSelecionados] = useState<string[]>([]);
 
-  const base = useMemo(
+  const todos = useMemo(
     () => (dia.contagens ? filaDoDia(dia.doDia, dia.contagens, marcadas) : []),
     [dia.doDia, dia.contagens, marcadas]
   );
+
+  /*
+    Foco por frente (Fase 24): "só Reclame Aqui", "só os críticos", "só
+    o fora do prazo". O filtro não tira nada do dia — só da vista do Um
+    por vez, enquanto ele estiver ligado.
+  */
+  const [foco, setFoco] = useState<"tudo" | "criticos" | "atrasados" | FrenteId>("tudo");
+  const base = useMemo(
+    () =>
+      foco === "tudo"
+        ? todos
+        : todos.filter((i) => (foco === "criticos" ? i.critico : foco === "atrasados" ? i.atrasado : i.frente === foco)),
+    [todos, foco]
+  );
+  const opcoesDeFoco = [
+    { id: "tudo" as const, rotulo: "Tudo", n: todos.length },
+    ...FRENTES_DA_OPERACAO.map((f) => ({ id: f.id, rotulo: f.curto, n: todos.filter((i) => i.frente === f.id).length })).filter((o) => o.n > 0),
+    { id: "criticos" as const, rotulo: "Críticos", n: todos.filter((i) => i.critico).length },
+    { id: "atrasados" as const, rotulo: "Fora do prazo", n: todos.filter((i) => i.atrasado).length },
+  ].filter((o) => o.id === "tudo" || o.n > 0);
+
+  /*
+    O bloco de foco: 25 ou 45 minutos na fila, com o relógio no cabeçalho
+    e quantos itens saíram durante ele. Só na tela — não grava nada.
+  */
+  const [bloco, setBloco] = useState<{ fim: number; minutos: number; inicio: number } | null>(null);
+  const [agoraDoBloco, setAgoraDoBloco] = useState(() => Date.now());
+  useEffect(() => {
+    if (!bloco) return;
+    const t = window.setInterval(() => setAgoraDoBloco(Date.now()), 1000);
+    return () => window.clearInterval(t);
+  }, [bloco]);
 
   /* O lugar de cada item, na ordem em que apareceu desde que o modo abriu. */
   const [ordem, setOrdem] = useState<string[]>([]);
@@ -112,6 +144,11 @@ export default function ModoProximo({ dia, marcadas, onFechar }: Props) {
   const anterior = useRef<{ chave: string; titulo: string } | null>(null);
   useEffect(() => {
     const antes = anterior.current;
+    /* Sumiu só da vista, pelo filtro de foco: não saiu do dia. */
+    if (antes && !fila.some((i) => i.chave === antes.chave) && todos.some((i) => i.chave === antes.chave)) {
+      anterior.current = item ? { chave: item.chave, titulo: item.titulo } : null;
+      return;
+    }
     if (antes && !fila.some((i) => i.chave === antes.chave)) {
       setSaidos((s) => (s.includes(antes.chave) ? s : [...s, antes.chave]));
       /* Saído por Feito hoje ou Tirar do dia, a linha já diz — e com o desfazer. */
@@ -122,7 +159,7 @@ export default function ModoProximo({ dia, marcadas, onFechar }: Props) {
       return;
     }
     anterior.current = item ? { chave: item.chave, titulo: item.titulo } : null;
-  }, [fila, item, posicao]);
+  }, [fila, item, posicao, todos]);
 
   function irPara(i: number) {
     if (fila.length === 0) return;
@@ -292,6 +329,42 @@ export default function ModoProximo({ dia, marcadas, onFechar }: Props) {
           </span>
         )}
         <div className="ml-auto flex items-center gap-3">
+          {bloco ? (
+            (() => {
+              const resta = Math.max(0, bloco.fim - agoraDoBloco);
+              const mm = String(Math.floor(resta / 60000)).padStart(2, "0");
+              const ss = String(Math.floor((resta % 60000) / 1000)).padStart(2, "0");
+              const noBloco = fechados.length - bloco.inicio;
+              return (
+                <span className={`flex items-center gap-1.5 rounded-md px-2 py-1 text-xs tabular-nums ${resta === 0 ? "bg-emerald-50 text-emerald-800" : "bg-violet-50 text-violet-900"}`}>
+                  <Timer size={13} />
+                  {resta === 0 ? `Bloco de ${bloco.minutos} min: ${noBloco} fechado(s)` : `${mm}:${ss} · ${noBloco} fechado(s)`}
+                  <button type="button" onClick={() => setBloco(null)} aria-label="Encerrar o bloco de foco" className="rounded p-0.5 text-current/60 hover:bg-white/60">
+                    <X size={12} />
+                  </button>
+                </span>
+              );
+            })()
+          ) : (
+            fila.length > 0 && (
+              <span className="hidden items-center gap-0.5 text-xs text-zinc-500 sm:flex" title="Um bloco de foco: o relógio no cabeçalho e quantos itens saíram durante ele">
+                <Timer size={13} className="mr-0.5" /> Foco
+                {[25, 45].map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => {
+                      setAgoraDoBloco(Date.now());
+                      setBloco({ fim: Date.now() + m * 60_000, minutos: m, inicio: fechados.length });
+                    }}
+                    className="rounded-md px-1.5 py-1 font-medium tabular-nums text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
+                  >
+                    {m} min
+                  </button>
+                ))}
+              </span>
+            )
+          )}
           {fila.length > 1 && (
             <button
               type="button"
@@ -315,6 +388,22 @@ export default function ModoProximo({ dia, marcadas, onFechar }: Props) {
           </button>
         </div>
       </header>
+
+      {opcoesDeFoco.length > 2 && (
+        <div role="group" aria-label="Foco da fila" className="flex flex-wrap items-center gap-1 border-b border-zinc-100 px-5 py-1.5">
+          {opcoesDeFoco.map((o) => (
+            <button
+              key={o.id}
+              type="button"
+              aria-pressed={foco === o.id}
+              onClick={() => setFoco(o.id)}
+              className={`rounded-md px-2 py-0.5 text-xs font-medium tabular-nums ${foco === o.id ? "bg-zinc-900 text-white" : "text-zinc-600 hover:bg-zinc-100"}`}
+            >
+              {o.rotulo} <span className={foco === o.id ? "text-white/60" : "text-zinc-400"}>{o.n}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {verFila && fila.length > 0 && (() => {
         const marcaveis = fila.filter((i) => !ehTarefa(i));
@@ -413,6 +502,13 @@ export default function ModoProximo({ dia, marcadas, onFechar }: Props) {
           por rotina vazia e o modo anunciava "está marcada" antes da hora. */}
       {dia.carregando || !dia.contagens ? (
         <p className="px-5 py-8 text-center text-sm text-zinc-400">Lendo a fila do dia…</p>
+      ) : !item && foco !== "tudo" && todos.length > 0 ? (
+        <div className="px-5 py-8 text-center">
+          <p className="text-sm font-medium text-zinc-800">Nada neste foco agora.</p>
+          <button type="button" onClick={() => setFoco("tudo")} className="mt-1 text-xs font-medium text-violet-700 hover:underline">
+            Ver a fila inteira ({todos.length})
+          </button>
+        </div>
       ) : !item ? (
         <div className="px-5 py-8 text-center">
           <p className="text-sm font-medium text-zinc-800">Nada na fila das atividades abertas.</p>
