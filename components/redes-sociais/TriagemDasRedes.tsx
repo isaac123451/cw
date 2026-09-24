@@ -6,6 +6,7 @@ import { Check, ChevronLeft, Loader2, TriangleAlert } from "lucide-react";
 
 import Combobox from "@/components/shared/Combobox";
 import DonoDaCausa from "@/components/causas/DonoDaCausa";
+import CausaSugerida from "@/components/causas/CausaSugerida";
 
 import type { Case } from "@/lib/models/case";
 import { AREAS_INTERNAS } from "@/lib/models/mensagens";
@@ -328,6 +329,7 @@ export default function TriagemDasRedes({ data, relato, aoSalvar, onCancelar }: 
                       options={[...new Set([...rootCauses.filter((c) => c.active).map((c) => c.name), ...(t.causaRaiz ? [t.causaRaiz] : [])])]}
                     />
                     <DonoDaCausa causa={t.causaRaiz} />
+                    <CausaSugerida texto={`${data.title}\n${relato || data.description || ""}`} atual={t.causaRaiz} onUsar={(c) => mudar("causaRaiz", c)} />
                   </div>
                 </div>
               </div>

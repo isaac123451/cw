@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 24/09/2026. Aplicação **1.61.0**, extensão **1.61.0**.
+Atualizado em 24/09/2026. Aplicação **1.62.0**, extensão **1.62.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,42 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### A mesma régua em todas as frentes (24/09/2026, 1.62.0)
+
+Terceiro item da Fase 27: Reclame Aqui, NPS, Redes e Google
+classificados pelo mesmo catálogo, com a sugestão pelo texto.
+
+- `motorDaCausa` (`lib/models/catalogoDeCausas.ts`): um índice só com os
+  registros já classificados das quatro frentes (só causas ativas do
+  catálogo, sem diferença de grafia) e as regras de texto de cada causa
+  (`regrasDoCatalogo`). O relato do Reclame Aqui ensina a sugestão do
+  Google; o comentário do NPS, a das redes.
+- `sugerirCausaRaiz` (`lib/actions/sugestoes.ts`): a conta no servidor —
+  o relato e o post não vêm na carga da lista —, com os registros e o
+  catálogo em cache (5 min, invalidados por caso e por cadastro) e o
+  índice em memória por 1 minuto. Devolve a taxa de acerto medida quando
+  há base.
+- `CausaSugerida`: "Causa sugerida pelo texto: X — Usar" embaixo do campo
+  de causa nas nove telas que classificam. Some quando já é a escolhida;
+  nunca marca sozinha. A classificação do NPS deixou a sugestão própria
+  (só com exemplos do NPS) e usa a mesma; `useSugestaoNps` ficou só com
+  o tipo.
+- `medirRegua` e a seção "A mesma régua nas quatro frentes" em Causas
+  raiz: por frente, registros com texto, com causa, com nome fora do
+  catálogo e o acerto da sugestão (tirando cada registro da base, até
+  200 por frente). Causa desativada não é "fora": é história.
+- `unificarCausa`: leva os registros de um nome fora do catálogo
+  ("cobranca") para a causa certa, nas três tabelas (casos, NPS, Google),
+  numa transação; recusa quando o nome de origem é uma causa do catálogo
+  (aí é renomear ou desativar no cadastro).
+
+Provas: `npm run check:causas` (exemplos só do catálogo ativo, o Reclame
+Aqui ensinando o Google, desativada não sugerida, a contagem por frente,
+o fora do catálogo com a causa certa, o acerto tirando o registro) e
+teste no navegador da régua, do Unificar e da sugestão (aparece, Usar
+marca, some quando é a escolhida). Não provado sem banco: a leitura real
+e a unificação gravando.
 
 ### Cada causa com dono (24/09/2026, 1.61.0)
 

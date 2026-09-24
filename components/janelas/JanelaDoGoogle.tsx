@@ -8,6 +8,7 @@ import { Loader2, MessageSquareReply, Star, UserRoundCheck } from "lucide-react"
 
 import Combobox from "@/components/shared/Combobox";
 import DonoDaCausa from "@/components/causas/DonoDaCausa";
+import CausaSugerida from "@/components/causas/CausaSugerida";
 
 import { useAvaliacoesGoogle } from "@/lib/context/useAvaliacoesGoogle";
 import { useNps } from "@/lib/context/NpsContext";
@@ -205,6 +206,7 @@ export default function JanelaDoGoogle({ id }: { id: string }) {
             options={[...new Set([...rootCauses.filter((c) => c.active).map((c) => c.name), ...(a.causaRaiz ? [a.causaRaiz] : [])])]}
           />
           <DonoDaCausa causa={causa ?? a.causaRaiz} />
+          <CausaSugerida texto={a.texto ?? ""} atual={causa ?? a.causaRaiz} excluirId={a.id} onUsar={(c) => setCausa(c)} />
         </div>
 
         <button

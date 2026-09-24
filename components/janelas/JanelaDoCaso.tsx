@@ -8,6 +8,7 @@ import { Loader2, Save, ShieldAlert, StickyNote } from "lucide-react";
 
 import Combobox from "@/components/shared/Combobox";
 import DonoDaCausa from "@/components/causas/DonoDaCausa";
+import CausaSugerida from "@/components/causas/CausaSugerida";
 import { useTratativa } from "@/components/reclame-aqui/tratativa/TratativaProvider";
 
 import { useCases } from "@/lib/context/CaseContext";
@@ -260,6 +261,7 @@ export default function JanelaDoCaso({
               options={causas}
             />
             <DonoDaCausa causa={valor("causaRaiz")} onAcionar={(area) => abrirArea(caso, { area, causa: valor("causaRaiz") })} />
+            <CausaSugerida texto={`${caso.title}\n${caso.description ?? ""}`} atual={valor("causaRaiz")} onUsar={(causaRaiz) => alterar({ causaRaiz })} />
           </div>
         </div>
       </div>

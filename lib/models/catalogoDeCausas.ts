@@ -1,6 +1,6 @@
 import { AREAS_INTERNAS } from "@/lib/models/mensagens";
 import type { FrenteId } from "@/lib/models/frentes";
-import { normalizarTexto, PARADAS, regrasDeCausa, trechoDoPadrao, type RegraDeTexto } from "@/lib/models/sugestaoPorTexto";
+import { criarIndice, normalizarTexto, PARADAS, regrasDeCausa, sugerir, trechoDoPadrao, type Exemplo, type RegraDeTexto } from "@/lib/models/sugestaoPorTexto";
 
 /**
  * O catálogo de causas raiz tirado da base (Fase 27).
@@ -478,4 +478,98 @@ export function prazoComCausa(horasDaPrioridade: number, area: string, causa?: P
   const daCausa = causa?.area && causa.area === area && causa.prazoHoras ? causa.prazoHoras : undefined;
   if (daCausa && daCausa < horasDaPrioridade) return { horas: daCausa, pelaCausa: true };
   return { horas: horasDaPrioridade, pelaCausa: false };
+}
+
+/* ============================================================
+   A MESMA RÉGUA
+============================================================ */
+
+export interface RegistroClassificavel {
+  id: string;
+  frente: FrenteId;
+  texto: string;
+  /** A causa gravada, se houver. */
+  causa?: string | null;
+}
+
+export interface ReguaDaFrente {
+  /** Registros com texto para ler. */
+  total: number;
+  comCausa: number;
+  /** Com causa que não está no catálogo ativo — nome antigo, grafia diferente. */
+  foraDoCatalogo: number;
+  /** Dos classificados medidos, em quantos a sugestão pelo texto disse alguma coisa, e quantas bateram. */
+  medidos: number;
+  sugeridos: number;
+  acertos: number;
+}
+
+export interface Regua {
+  porFrente: Record<FrenteId, ReguaDaFrente>;
+  /** Os nomes gravados que não estão no catálogo, com quantos registros cada. */
+  foraDoCatalogo: { causa: string; registros: number; noCatalogo?: string }[];
+}
+
+/** Quantos classificados de cada frente entram na medida de acerto — os primeiros da lista. */
+export const MEDIDOS_POR_FRENTE = 200;
+
+const vazio = (): ReguaDaFrente => ({ total: 0, comCausa: 0, foraDoCatalogo: 0, medidos: 0, sugeridos: 0, acertos: 0 });
+
+/**
+ * O índice e as regras da sugestão de causa — os mesmos nas quatro frentes.
+ *
+ * Os exemplos são os registros já classificados de todas as frentes: o
+ * relato do Reclame Aqui ensina a sugestão do Google, o comentário do
+ * NPS ensina a das redes. Só entram causas do catálogo ativo.
+ */
+export function motorDaCausa(registros: RegistroClassificavel[], catalogo: { name: string; active: boolean; palavras?: string[] }[]) {
+  const ativas = catalogo.filter((c) => c.active);
+  const validos = ativas.map((c) => c.name);
+  const exemplos: Exemplo[] = registros.flatMap((r) => {
+    const achada = acharCausa(r.causa ?? undefined, ativas);
+    return achada && r.texto.trim().length > 5 ? [{ id: r.id, texto: r.texto, rotulo: achada.name }] : [];
+  });
+  return { indice: criarIndice(exemplos), regras: regrasDoCatalogo(ativas), validos, exemplos };
+}
+
+/**
+ * A régua em cada frente: quanto está classificado, quanto está fora do
+ * catálogo e quanto a sugestão pelo texto acerta, medida tirando cada
+ * registro da base e sugerindo pelos outros.
+ */
+export function medirRegua(registros: RegistroClassificavel[], catalogo: { name: string; active: boolean; palavras?: string[] }[]): Regua {
+  const porFrente: Record<FrenteId, ReguaDaFrente> = { "reclame-aqui": vazio(), redes: vazio(), nps: vazio(), google: vazio() };
+  const ativas = catalogo.filter((c) => c.active);
+  const fora = new Map<string, { causa: string; registros: number; noCatalogo?: string }>();
+  const motor = motorDaCausa(registros, catalogo);
+
+  for (const r of registros) {
+    if (r.texto.trim().length <= 5) continue;
+    const f = porFrente[r.frente];
+    f.total += 1;
+    const causa = r.causa?.trim();
+    if (!causa) continue;
+    f.comCausa += 1;
+    const achada = acharCausa(causa, ativas);
+    /*
+      Fora é o nome que o catálogo não tem, ativo ou não: "cobranca"
+      gravado quando o catálogo diz "Cobrança" é a mesma causa com outra
+      grafia — conta como fora, e diz qual é a certa. A causa desativada
+      não é fora: é história, e os registros dela continuam valendo.
+    */
+    if (!catalogo.some((c) => c.name === causa)) {
+      f.foraDoCatalogo += 1;
+      const atual = fora.get(causa) ?? { causa, registros: 0, noCatalogo: acharCausa(causa, catalogo)?.name };
+      atual.registros += 1;
+      fora.set(causa, atual);
+    }
+    if (!achada || f.medidos >= MEDIDOS_POR_FRENTE) continue;
+    f.medidos += 1;
+    const s = sugerir(r.texto, { indice: motor.indice, regras: motor.regras, valoresValidos: motor.validos, excluirId: r.id, k: 5 });
+    if (!s) continue;
+    f.sugeridos += 1;
+    if (s.valor === achada.name) f.acertos += 1;
+  }
+
+  return { porFrente, foraDoCatalogo: [...fora.values()].sort((a, b) => b.registros - a.registros) };
 }

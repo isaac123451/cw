@@ -20,6 +20,7 @@ import Combobox from "@/components/shared/Combobox";
 
 import { sugerirAssuntoDoRelato, type SugestaoComAcerto } from "@/lib/actions/sugestoes";
 import DonoDaCausa from "@/components/causas/DonoDaCausa";
+import CausaSugerida from "@/components/causas/CausaSugerida";
 import { useTratativa } from "@/components/reclame-aqui/tratativa/TratativaProvider";
 
 interface Props {
@@ -380,6 +381,11 @@ export default function InvestigationTab({
               <DonoDaCausa
                 causa={data.causaRaiz}
                 onAcionar={(area) => abrirArea(data, { area, causa: data.causaRaiz })}
+              />
+              <CausaSugerida
+                texto={`${data.title}\n${data.description ?? ""}`}
+                atual={data.causaRaiz}
+                onUsar={(causaRaiz) => onChange({ causaRaiz })}
               />
             </div>
 

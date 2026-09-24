@@ -7,10 +7,12 @@ import PageHeading from "@/components/shared/PageHeading";
 import SurfaceCard from "@/components/shared/SurfaceCard";
 import PropostaDoCatalogo from "@/components/causas/PropostaDoCatalogo";
 import CatalogoComDonos from "@/components/causas/CatalogoComDonos";
+import ReguaDasFrentes from "@/components/causas/ReguaDasFrentes";
 
-import { aprovarCausasDoCatalogo, lerPropostaDoCatalogo } from "@/lib/actions/catalogoDeCausas";
+import { aprovarCausasDoCatalogo, lerPropostaDoCatalogo, unificarCausa } from "@/lib/actions/catalogoDeCausas";
+import { medirReguaDasCausas } from "@/lib/actions/sugestoes";
 import { useNps } from "@/lib/context/NpsContext";
-import type { CausaAprovada, PropostaDoCatalogo as Proposta } from "@/lib/models/catalogoDeCausas";
+import type { CausaAprovada, PropostaDoCatalogo as Proposta, Regua } from "@/lib/models/catalogoDeCausas";
 
 /**
  * Causas raiz que direcionam (Fase 27).
@@ -22,8 +24,23 @@ import type { CausaAprovada, PropostaDoCatalogo as Proposta } from "@/lib/models
  */
 export default function CausasRaizPage() {
 
-  const { recarregarCausas } = useNps();
+  const { rootCauses, recarregarCausas } = useNps();
   const [carga, setCarga] = useState<{ proposta?: Proposta; erro?: string } | null>(null);
+  const [regua, setRegua] = useState<{ regua?: Regua; erro?: string } | null>(null);
+
+  useEffect(() => {
+    let ativo = true;
+    medirReguaDasCausas()
+      .then((r) => {
+        if (ativo) setRegua(r.ok ? { regua: r.regua } : { erro: r.erro });
+      })
+      .catch(() => {
+        if (ativo) setRegua({ erro: "A régua não carregou. Recarregue a página." });
+      });
+    return () => {
+      ativo = false;
+    };
+  }, []);
 
   useEffect(() => {
     let ativo = true;
@@ -38,6 +55,17 @@ export default function CausasRaizPage() {
       ativo = false;
     };
   }, []);
+
+  async function unificar(de: string, para: string) {
+    const r = await unificarCausa({ de, para });
+    if (r.ok) {
+      await recarregarCausas();
+      medirReguaDasCausas()
+        .then((m) => m.ok && setRegua({ regua: m.regua }))
+        .catch(() => undefined);
+    }
+    return r;
+  }
 
   async function aprovar(itens: CausaAprovada[]) {
     const r = await aprovarCausasDoCatalogo(itens);
@@ -54,6 +82,13 @@ export default function CausasRaizPage() {
           description="O catálogo que diz para quem ligar: tirado dos casos reais, cada causa com a área dona e o prazo."
         />
         <CatalogoComDonos />
+        {regua?.regua ? (
+          <ReguaDasFrentes regua={regua.regua} causas={rootCauses.map((c) => c.name)} aoUnificar={unificar} />
+        ) : (
+          <SurfaceCard title="A mesma régua nas quatro frentes" description="O mesmo catálogo e a mesma sugestão pelo texto no Reclame Aqui, nas redes, no NPS e no Google.">
+            <p className={`text-sm ${regua?.erro ? "text-rose-700" : "text-zinc-500"}`}>{regua?.erro ?? "Medindo…"}</p>
+          </SurfaceCard>
+        )}
         {carga?.proposta ? (
           <PropostaDoCatalogo proposta={carga.proposta} aoAprovar={aprovar} />
         ) : (

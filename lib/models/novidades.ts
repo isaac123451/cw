@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.62.0",
+    data: "2026-09-24",
+    titulo: "A mesma causa raiz nas quatro frentes",
+    texto: "A causa raiz agora é sugerida pelo texto no Reclame Aqui, nas redes, no NPS e no Google, pela mesma conta: o relato de um caso ensina a sugestão de uma avaliação, o comentário do NPS ensina a das redes. Em Causas raiz, a nova seção \"A mesma régua\" mostra por frente quanto já está classificado, quanto usa um nome fora do catálogo e quanto a sugestão acerta — e o botão Unificar leva os registros de um nome antigo (\"cobranca\") para a causa certa.",
+    frentes: ["plataforma", "reclame-aqui", "nps", "redes", "google"],
+  },
+  {
     versao: "1.61.0",
     data: "2026-09-24",
     titulo: "Cada causa raiz com dono",

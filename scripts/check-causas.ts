@@ -11,6 +11,8 @@
 import {
   acharCausa,
   causaDaLinha,
+  medirRegua,
+  motorDaCausa,
   prazoComCausa,
   familiaDaCausa,
   familiaDoTexto,
@@ -107,6 +109,31 @@ conferir("causa da área acionada e mais curta: vale o prazo da causa", prazoCom
 conferir("prazo da causa mais longo: vale o da prioridade", prazoComCausa(24, "Implantação", catalogo[1]), { horas: 24, pelaCausa: false });
 conferir("acionar outra área que não a dona: a causa não muda nada", prazoComCausa(24, "Financeiro", catalogo[0]), { horas: 24, pelaCausa: false });
 conferir("causa sem dono (antes do db:push): só a prioridade", prazoComCausa(8, "Financeiro", { area: null, prazoHoras: null }), { horas: 8, pelaCausa: false });
+
+console.log("\n  A mesma régua\n");
+const cat = [
+  { name: "Impressão de pedidos", active: true },
+  { name: "Cobrança", active: true },
+  { name: "Bug", active: false },
+];
+const regs = [
+  { id: "r1", frente: "reclame-aqui" as const, texto: "A impressora não imprime os pedidos da cozinha", causa: "Impressão de pedidos" },
+  { id: "r2", frente: "reclame-aqui" as const, texto: "Comanda não sai na impressora térmica", causa: "Impressão de pedidos" },
+  { id: "n1", frente: "nps" as const, texto: "A impressora da cozinha falha toda noite", causa: "Impressão de pedidos" },
+  { id: "n2", frente: "nps" as const, texto: "Cobraram a mensalidade duas vezes", causa: "cobranca" },
+  { id: "n3", frente: "nps" as const, texto: "Sistema travou no sábado", causa: "Bug" },
+  { id: "g1", frente: "google" as const, texto: "Boleto veio com valor errado", causa: null },
+  { id: "g2", frente: "google" as const, texto: "ok", causa: "Cobrança" },
+];
+const m = motorDaCausa(regs, cat);
+conferir("exemplos: só os com causa ativa do catálogo (grafia diferente conta)", m.exemplos.map((e) => [e.id, e.rotulo]), [["r1", "Impressão de pedidos"], ["r2", "Impressão de pedidos"], ["n1", "Impressão de pedidos"], ["n2", "Cobrança"]]);
+conferir("o Reclame Aqui ensina o Google: impressora no Google vira impressão", sugerir("minha impressora parou", { indice: m.indice, regras: m.regras, valoresValidos: m.validos })?.valor, "Impressão de pedidos");
+conferir("causa desativada não é sugerida", m.validos.includes("Bug"), false);
+const rg = medirRegua(regs, cat);
+conferir("NPS: 3 com texto, 3 com causa, 1 fora (\"cobranca\")", [rg.porFrente.nps.total, rg.porFrente.nps.comCausa, rg.porFrente.nps.foraDoCatalogo], [3, 3, 1]);
+conferir("desativada não conta como fora; texto curto não conta", [rg.porFrente.google.total, rg.porFrente.google.comCausa], [1, 0]);
+conferir("fora do catálogo diz qual é a certa", rg.foraDoCatalogo, [{ causa: "cobranca", registros: 1, noCatalogo: "Cobrança" }]);
+conferir("acerto medido tirando o registro: RA 2 de 2", [rg.porFrente["reclame-aqui"].sugeridos, rg.porFrente["reclame-aqui"].acertos], [2, 2]);
 
 console.log(falhas ? `\n  ${falhas} falha(s).\n` : "\n  Tudo certo.\n");
 process.exit(falhas ? 1 : 0);

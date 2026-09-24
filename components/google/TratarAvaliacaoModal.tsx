@@ -16,6 +16,7 @@ import Modal, { ConfirmDelete, GhostButton, inputClass, textareaClass } from "@/
 import BotaoCopiar from "@/components/shared/BotaoCopiar";
 import Combobox from "@/components/shared/Combobox";
 import DonoDaCausa from "@/components/causas/DonoDaCausa";
+import CausaSugerida from "@/components/causas/CausaSugerida";
 
 import {
   conferirResposta,
@@ -302,6 +303,7 @@ export default function TratarAvaliacaoModal({ avaliacao: a, onClose, onSalvo, o
                   options={[...new Set([...rootCauses.filter((c) => c.active).map((c) => c.name), ...(causa ? [causa] : [])])]}
                 />
                 <DonoDaCausa causa={causa} />
+                <CausaSugerida texto={a.texto ?? ""} atual={causa} excluirId={a.id} onUsar={setCausa} />
               </div>
             </div>
 

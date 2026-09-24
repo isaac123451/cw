@@ -5,7 +5,6 @@ import { useMemo } from "react";
 import { useNps } from "@/lib/context/NpsContext";
 import {
   criarIndice,
-  regrasDeCausa,
   regrasDeTipoNps,
   sugerir,
   type Exemplo,
@@ -13,8 +12,11 @@ import {
 } from "@/lib/models/sugestaoPorTexto";
 
 /**
- * Sugestão de tipo e causa raiz do NPS pelo comentário (roadmap 2.0,
- * Fase 15).
+ * Sugestão de tipo do NPS pelo comentário (roadmap 2.0, Fase 15).
+ *
+ * A causa raiz saiu daqui na Fase 27: é sugerida pela mesma conta nas
+ * quatro frentes, no servidor (`sugerirCausaRaiz`, em
+ * `components/causas/CausaSugerida`).
  *
  * **Por que é client, e não ação de servidor.** O comentário de cada
  * ciclo já vem no `NpsContext` — é o mesmo texto que a ficha mostra em
@@ -30,24 +32,21 @@ import {
  * e cresce sozinha a cada classificação nova.
  */
 export function useSugestaoNps(comentario: string, nota: number) {
-  const { responses, kinds, rootCauses } = useNps();
+  const { responses, kinds } = useNps();
 
   const indices = useMemo(() => {
     const comTipo: Exemplo[] = responses.filter((r) => r.kind && r.comment.trim().length > 5).map((r) => ({ id: r.id, texto: r.comment, rotulo: r.kind! }));
-    const comCausa: Exemplo[] = responses.filter((r) => r.rootCause && r.comment.trim().length > 5).map((r) => ({ id: r.id, texto: r.comment, rotulo: r.rootCause! }));
-    return { tipo: criarIndice(comTipo), causa: criarIndice(comCausa), baseTipo: comTipo.length, baseCausa: comCausa.length };
+    return { tipo: criarIndice(comTipo), baseTipo: comTipo.length };
   }, [responses]);
 
-  return useMemo((): { tipo: Sugestao | null; causa: Sugestao | null } => {
+  return useMemo((): { tipo: Sugestao | null } => {
     const texto = comentario.trim();
-    if (texto.length < 6) return { tipo: null, causa: null };
+    if (texto.length < 6) return { tipo: null };
 
     const nomesAtivos = kinds.filter((k) => k.active).map((k) => k.name);
-    const causasAtivas = rootCauses.filter((c) => c.active).map((c) => c.name);
 
     return {
       tipo: sugerir(texto, { indice: indices.tipo, regras: regrasDeTipoNps(nota), valoresValidos: nomesAtivos, k: 5 }),
-      causa: sugerir(texto, { indice: indices.causa, regras: regrasDeCausa(causasAtivas), valoresValidos: causasAtivas, k: 5 }),
     };
-  }, [comentario, nota, indices, kinds, rootCauses]);
+  }, [comentario, nota, indices, kinds]);
 }

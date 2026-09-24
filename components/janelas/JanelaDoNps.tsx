@@ -8,6 +8,7 @@ import { Loader2, PhoneOutgoing, ShieldAlert, StickyNote, Tags } from "lucide-re
 
 import Combobox from "@/components/shared/Combobox";
 import DonoDaCausa from "@/components/causas/DonoDaCausa";
+import CausaSugerida from "@/components/causas/CausaSugerida";
 
 import { useNps } from "@/lib/context/NpsContext";
 import { useToast } from "@/lib/context/ToastContext";
@@ -200,6 +201,7 @@ export default function JanelaDoNps({ id }: { id: string }) {
               options={[...new Set([...rootCauses.filter((c) => c.active).map((c) => c.name), ...(item.rootCause ? [item.rootCause] : [])])]}
             />
             <DonoDaCausa causa={causa ?? item.rootCause} />
+            <CausaSugerida texto={item.comment} atual={causa ?? item.rootCause} excluirId={item.id} onUsar={(c) => setCausa(c)} />
             <div className="flex items-center justify-between gap-2">
               {!item.owner && (
                 <label className="flex items-center gap-1.5 text-xs text-zinc-600">

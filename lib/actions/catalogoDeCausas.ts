@@ -2,7 +2,7 @@
 
 import { updateTag } from "next/cache";
 
-import { WORKSPACE_TAG } from "@/lib/actions/tags";
+import { CASES_TAG, WORKSPACE_TAG } from "@/lib/actions/tags";
 import { requireRole, SemPermissao, tryRole } from "@/lib/auth/guard";
 import { AREAS_DAS_CAUSAS, propostaDoCatalogo, type CausaAprovada, type PropostaDoCatalogo, type TextoDaBase } from "@/lib/models/catalogoDeCausas";
 import { ROOT_CAUSES } from "@/lib/models/nps";
@@ -138,6 +138,48 @@ export async function aprovarCausasDoCatalogo(itens: CausaAprovada[]): Promise<{
       return { ok: false, erro: "As colunas de área e prazo da causa ainda não existem no banco. Rode npm run db:push — uma vez só." };
     }
     console.error("[catálogo de causas] aprovar", erro);
+    return { ok: false, erro: "O banco não aceitou a gravação agora. Tente de novo em instantes." };
+  }
+}
+
+/**
+ * Leva os registros de um nome fora do catálogo para a causa certa.
+ *
+ * É o "cobranca" gravado antes da lista fechada, ou a causa que ficou
+ * com outra grafia: a mesma causa contada como duas. Troca o nome nas
+ * três tabelas que guardam causa — casos, NPS e Google — e só para uma
+ * causa que existe no catálogo.
+ */
+export async function unificarCausa(entrada: { de: string; para: string }): Promise<{ ok: true; registros: number } | Falha> {
+  const de = entrada.de.trim();
+  const para = entrada.para.trim();
+  if (!de || !para || de === para) return { ok: false, erro: "Diga de qual nome para qual causa." };
+
+  let ctx;
+  try {
+    ctx = await requireRole("AGENTE", "nps");
+  } catch (erro) {
+    return { ok: false, erro: erro instanceof SemPermissao ? erro.message : "Não foi possível confirmar sua sessão. Entre de novo." };
+  }
+  if (!ctx) return { ok: false, erro: "Sem banco configurado — nada é gravado no modo demonstração." };
+
+  try {
+    const destino = await ctx.prisma.npsRootCause.findFirst({ where: { name: para }, select: { id: true } });
+    if (!destino) return { ok: false, erro: `"${para}" não está no catálogo.` };
+    const noCatalogo = await ctx.prisma.npsRootCause.findFirst({ where: { name: de }, select: { id: true } });
+    if (noCatalogo) return { ok: false, erro: `"${de}" é uma causa do catálogo — para juntar duas causas, renomeie ou desative no cadastro.` };
+
+    const [casos, nps, google] = await ctx.prisma.$transaction([
+      ctx.prisma.case.updateMany({ where: { causaRaiz: de }, data: { causaRaiz: para } }),
+      ctx.prisma.npsResponse.updateMany({ where: { rootCause: de }, data: { rootCause: para } }),
+      ctx.prisma.avaliacaoGoogle.updateMany({ where: { causaRaiz: de }, data: { causaRaiz: para } }),
+    ]);
+
+    updateTag(CASES_TAG);
+    updateTag(WORKSPACE_TAG);
+    return { ok: true, registros: casos.count + nps.count + google.count };
+  } catch (erro) {
+    console.error("[catálogo de causas] unificar", erro);
     return { ok: false, erro: "O banco não aceitou a gravação agora. Tente de novo em instantes." };
   }
 }
