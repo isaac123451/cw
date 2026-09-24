@@ -521,6 +521,11 @@
         CW.enviar({ tipo: "abrir", url: alvo.dataset.url });
       }
 
+      /* Uma tela da plataforma pelo caminho, no endereço configurado (o dossiê do caso, por exemplo). */
+      if (acao === "abrir-na-plataforma") {
+        CW.enviar({ tipo: "abrirNaPlataforma", caminho: alvo.dataset.caminho ?? "/" });
+      }
+
       if (acao === "copiar") {
         P.copiar(alvo, alvo.dataset.texto ?? "");
       }

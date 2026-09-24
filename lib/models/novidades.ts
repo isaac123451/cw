@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.59.0",
+    data: "2026-09-24",
+    titulo: "O dossiê sai da extensão",
+    texto: "No painel da extensão, a aba Dossiê agora tem o botão \"Abrir o dossiê na plataforma\", que abre o documento de 8 partes já no caso certo. O resumo rápido do caso continua ali, para leitura; montar e salvar o dossiê é na plataforma.",
+    frentes: ["extensao", "reclame-aqui"],
+  },
+  {
     versao: "1.58.0",
     data: "2026-09-24",
     titulo: "O dossiê pela plataforma",

@@ -4,7 +4,7 @@ Fila do que está combinado, com contexto suficiente para retomar cada
 item sem reconstruir a conversa. Complementa o `DEPLOY.md` (como colocar
 no ar), o `API.md` (integração) e o `README.md` (como rodar).
 
-Atualizado em 24/09/2026. Aplicação **1.58.0**, extensão **1.58.0**.
+Atualizado em 24/09/2026. Aplicação **1.59.0**, extensão **1.59.0**.
 
 > **Versão sobe junto com a mudança.** `package.json` e
 > `extensao/manifest.json` andam no mesmo número: sem isso não dá para
@@ -1115,6 +1115,24 @@ https://claude.ai/artifact/LepbGWWR9An1ZHieMFc5D6 (Fases 11 a 19).
 Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
+
+### O dossiê sai da extensão (24/09/2026, 1.59.0)
+
+Último item da Fase 26 — fecha a fase ("Dossiê pela plataforma"): "quero
+que você retire [da] extensão".
+
+- A aba Dossiê do painel (`P.blocoDossie`) virou o botão "Abrir o dossiê
+  na plataforma", que abre `/reclame-aqui/<protocolo>/dossie` no endereço
+  configurado (ação nova `abrir-na-plataforma`, pela mensagem
+  `abrirNaPlataforma` que o service worker já tinha). Contato sem
+  reclamação: a aba diz que o dossiê nasce da reclamação.
+- Saíram do painel o "Montar dossiê (~15 s)", a importação da
+  transcrição do Crisp, o "Dossiê completo" e o "Salvar dossiê". Ficou o
+  "Resumo rápido do caso", que é leitura.
+
+Provas: `check:fiacao` (nenhum botão sem tratador, versões iguais),
+`check:escape` e `check:painel` passando; sintaxe conferida com
+`node --check`. **Depende de você:** recarregar a extensão (1.59.0).
 
 ### O dossiê pela plataforma (24/09/2026, 1.58.0)
 
