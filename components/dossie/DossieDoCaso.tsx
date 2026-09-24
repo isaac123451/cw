@@ -13,6 +13,7 @@ import { abrirDossie, escreverDossieComIA, salvarPartesDoDossie, type DossieAber
 import { useToast } from "@/lib/context/ToastContext";
 import { aplicarPartes, conferenciaAntesDeUsar, textoParaModeracao, type PartesEscritas } from "@/lib/models/dossieEscrito";
 import { renderizarDossie } from "@/lib/services/dossie.service";
+import { hojeNaOperacao } from "@/lib/services/reputation.service";
 
 const campo = "w-full rounded-lg border border-zinc-200 px-2.5 py-2 text-sm outline-none focus:border-violet-400";
 const dataHora = (iso: string) => new Date(iso).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
@@ -95,7 +96,7 @@ export function EditorDoDossie({ protocolo, aberto }: { protocolo: string; abert
     const url = URL.createObjectURL(new Blob([documento], { type: "text/markdown;charset=utf-8" }));
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${new Date().toISOString().slice(0, 10)}_dossie_${d.identificacao.protocolo}.md`;
+    a.download = `${hojeNaOperacao()}_dossie_${d.identificacao.protocolo}.md`;
     a.click();
     URL.revokeObjectURL(url);
   }

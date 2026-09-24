@@ -1116,6 +1116,27 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Banco em dia e as provas de pé (24/09/2026, 1.68.1)
+
+A sessão local e a da web (esta branch, PR #2) trabalharam em paralelo;
+a local passou a trabalhar em cima desta branch. O que a da web deixou
+para você e foi feito aqui:
+
+- **Banco:** `db push` das mudanças das 1.54–1.67 — `CampanhaDoPremio`,
+  `PedidoDeVoto`, `DossieDoCaso`, `EdicaoDeResposta` e área, prazo e
+  palavras da causa raiz. Tudo aditivo; RLS em 66 de 66.
+- **Dia em UTC:** o nome do dossiê baixado e o da planilha do Prêmio
+  cortavam "hoje" em UTC — depois das 21h, a data de amanhã. Agora é o
+  dia de Brasília (`hojeNaOperacao`), achado pelo `check:dia`.
+- **Provas que tinham ficado para trás:** `check:campos` (as sete tabelas
+  de carga própria das 1.31–1.67, com o motivo) e `check:janelas` (a
+  lista da atividade mora em `ItensDaAtividade` desde a 1.31).
+
+Provas: `tsc` limpo e as 90 provas sem banco ou só de leitura, todas de
+pé (a `check:carga` caiu uma vez por conexão fechada e passou na
+repetição). **Depende de você:** reiniciar o `npm run dev` (cliente do
+banco novo), push desta branch e o merge do PR #2.
+
 ### Impacto percebido na conversa (24/09/2026, 1.68.0)
 
 Quinto item da Fase 28: "identificar descontos, condições dadas para um

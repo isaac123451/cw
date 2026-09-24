@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.68.1",
+    data: "2026-09-24",
+    titulo: "Prêmio, dossiê, causas e tons prontos no banco",
+    texto: "As tabelas e colunas novas das versões 1.54 a 1.67 (a campanha do Prêmio e os pedidos de voto, o dossiê escrito, a área e o prazo de cada causa raiz e o aprendizado das respostas em três tons) foram criadas no banco, com a proteção de acesso ligada em todas. E a planilha do Prêmio e o dossiê baixados depois das 21h deixaram de sair com a data do dia seguinte.",
+    frentes: ["plataforma", "reclame-aqui"],
+  },
+  {
     versao: "1.68.0",
     data: "2026-09-24",
     titulo: "Desconto dado na conversa vira impacto com um clique",

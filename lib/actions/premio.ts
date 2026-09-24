@@ -4,6 +4,7 @@ import * as XLSX from "xlsx";
 
 import { requireRole, SemPermissao, tryRole } from "@/lib/auth/guard";
 import { mensagemParaContato, type ContatoDoPremio } from "@/lib/models/premio";
+import { hojeNaOperacao } from "@/lib/services/reputation.service";
 
 /*
   O Prêmio Reclame Aqui (Fase 23): a campanha e quem já recebeu o pedido.
@@ -195,7 +196,7 @@ export async function registrarExportados(
     const book = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(book, sheet, "Pedido de voto");
     const buffer = XLSX.write(book, { type: "buffer", bookType: "xlsx" }) as Buffer;
-    const dia = new Date().toISOString().slice(0, 10);
+    const dia = hojeNaOperacao();
 
     return { ok: true, novos: r.count, arquivo: buffer.toString("base64"), nome: `pedido-de-voto-${dia}.xlsx` };
   } catch (erro) {

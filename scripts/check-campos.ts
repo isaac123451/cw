@@ -214,6 +214,44 @@ const INTERNAS: Record<string, string[]> = {
 
   /** Quem mudou o expediente por último — registro, não conteúdo. */
   OperacaoConfig: ["updatedBy"],
+
+  /**
+   * Os itens tirados de uma atividade no Meu dia (1.31): carga própria
+   * (`lerMeuDia`, em `lib/actions/rotina.ts`), que devolve só as marcas
+   * que valem hoje — `userId` e `criadoEm` são registro.
+   */
+  MarcaDeItemDaRotina: ["*"],
+
+  /**
+   * O último sucesso e o último erro da IA (1.34): carga própria
+   * (`lerSaudeDaIA`, no cartão de Integrações), fora da carga de toda tela.
+   */
+  SaudeDaIA: ["*"],
+
+  /**
+   * O telefone confirmado como de um cliente (1.36): só a extensão lê,
+   * pela rota `quem-e` e pelo `contexto`.
+   */
+  ContatoConhecido: ["*"],
+
+  /**
+   * O Prêmio Reclame Aqui (1.54–1.56): carga própria (`lerPremio`, em
+   * `lib/actions/premio.ts`), aberta só na tela do Prêmio.
+   */
+  CampanhaDoPremio: ["*"],
+  PedidoDeVoto: ["*"],
+
+  /**
+   * As partes escritas do dossiê (1.58): carga própria (`abrirDossie`,
+   * em `lib/actions/dossie.ts`), na tela do dossiê do caso.
+   */
+  DossieDoCaso: ["*"],
+
+  /**
+   * O texto editado antes de enviar, que ensina o próximo rascunho dos
+   * três tons (1.67): só a rota `aprender-resposta` da extensão lê.
+   */
+  EdicaoDeResposta: ["*"],
 };
 
 
