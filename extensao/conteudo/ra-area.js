@@ -105,6 +105,36 @@
         </section>`);
     }
 
+    /*
+      ---- o estado, em destaque (1.79) ----
+      Prioridade, prazo e situação numa faixa só, e embaixo a frase do que
+      fazer — a mesma do quadro. É a primeira coisa que o olho pega.
+    */
+    if (caso) {
+      const cor = COR_DO_NIVEL[caso.prioridade] || "normal";
+      partes.unshift(`
+        <div class="estado ${e(cor)}${caso.conselho?.urgente ? " urgente-agora" : ""}">
+          <p class="linha-estado"><b>${e(caso.prioridade || "Sem triagem")}</b>${caso.sla?.rotulo ? ` · <span class="prazo ${e(COR_DO_PRAZO[caso.sla.situacao] || "neutro")}">${e(caso.sla.rotulo)}</span>` : ""} · ${e(caso.status)}</p>
+          ${caso.conselho ? `<p class="frase">${e(caso.conselho.frase)}</p>` : ""}
+        </div>`);
+    }
+
+    /* ---- pedir avaliação daqui (1.79) ---- */
+    if (caso?.pedirAvaliacao) {
+      const p = caso.pedirAvaliacao;
+      const zap = p.telefone ? `https://wa.me/${e(p.telefone)}?text=${encodeURIComponent(p.mensagem)}` : "";
+      partes.push(`
+        <section>
+          <h4>Pedir avaliação${p.numero > 1 ? ` · ${Number(p.numero)}º lembrete` : ""}</h4>
+          <p class="sub">${e(p.resumo)}</p>
+          <div class="acoes">
+            ${zap ? `<a href="${zap}" target="_blank" rel="noopener" class="principal" data-acao="pedir-avaliacao">Pedir no WhatsApp</a>` : ""}
+            <button type="button" data-acao="copiar" data-texto="${e(p.mensagem)}">Copiar a mensagem</button>
+            ${zap ? "" : '<button type="button" data-acao="pedir-avaliacao">Registrar pedido feito</button>'}
+          </div>
+        </section>`);
+    }
+
     /* ---- o caso no CW ---- */
     if (caso) {
       const linhas = [];
@@ -112,9 +142,6 @@
       if (!caso.respondida && !caso.validado) {
         linhas.push('<p class="aviso">Antes de responder: o cliente ainda não confirmou a solução (Passo 6).</p>');
       }
-      linhas.push(
-        `<p>${caso.sla?.rotulo ? `<span class="prazo ${e(COR_DO_PRAZO[caso.sla.situacao] || "neutro")}">${e(caso.sla.rotulo)}</span> · ` : ""}${e(caso.status)}</p>`
-      );
       if (caso.passo) linhas.push(`<p><em>Agora</em> passo ${Number(caso.passo.numero) || ""} — ${e(caso.passo.titulo)}</p>`);
       const extras = [
         caso.responsavel ? `Responsável: ${e(caso.responsavel)}` : "Sem responsável",
@@ -232,6 +259,12 @@
     .nivel.normal { background: #dcfce7; color: #166534; }
     .prazo { font-weight: 600; }
     .prazo.perigo { color: #be123c; } .prazo.atencao { color: #b45309; } .prazo.ok { color: #15803d; } .prazo.neutro { color: #6b6b76; }
+    .estado { border-radius: 10px; padding: 7px 9px; margin: 2px 0 6px; border-left: 4px solid #16a34a; background: #f0fdf4; }
+    .estado.alta { border-color: #ea580c; background: #fff7ed; }
+    .estado.urgente { border-color: #e11d48; background: #fff1f2; }
+    .estado .linha-estado { margin: 0; }
+    .estado .frase { margin: 3px 0 0; font-weight: 600; font-size: 13px; }
+    .estado.urgente-agora .frase { color: #9f1239; }
     .alerta { background: #fff1f2; color: #9f1239; border-radius: 8px; padding: 6px 8px; font-weight: 600; }
     .aviso { background: #fffbeb; color: #92400e; border-radius: 8px; padding: 6px 8px; }
     .acoes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
@@ -249,6 +282,8 @@
       .sub, .trecho, h4 { color: #9a9ba5; }
       .acoes a, .acoes button, section > button { background: #26272e; color: #e4e4e7; border-color: #3a3b44; }
       .aviso { background: #3a2a0c; color: #fbbf24; } .alerta { background: #3b1119; color: #fda4af; }
+      .estado { background: #13261a; } .estado.alta { background: #2e1c0d; } .estado.urgente { background: #3b1119; }
+      .estado.urgente-agora .frase { color: #fda4af; }
       .prazo.perigo { color: #fda4af; } .prazo.atencao { color: #fbbf24; } .prazo.ok { color: #4ade80; } .prazo.neutro { color: #9a9ba5; }
     }
   `;
@@ -331,6 +366,14 @@
       const P = window.__cwPainel;
       P?.abrir?.();
       P?.abrirCaptura?.();
+    } else if (acao === "pedir-avaliacao") {
+      const protocolo = dadosAtuais?.caso?.protocolo;
+      if (!protocolo || alvo.dataset.feito) return;
+      alvo.dataset.feito = "1";
+      const r = await CW.enviar({ tipo: "tratativa", corpo: { protocolo, tipo: "pedido-avaliacao", canal: "WhatsApp" } });
+      const ok = r?.ok && !r?.dados?.erro;
+      if (!ok) delete alvo.dataset.feito;
+      alvo.textContent = ok ? "Pedido registrado" : r?.dados?.erro || "Não registrou";
     } else if (acao === "copiar") {
       const original = alvo.textContent;
       try {

@@ -83,6 +83,15 @@ conferir("com réplica pendente, o alerta aparece", area.htmlDoCartao(lida, { re
 conferir("respondida, o aviso do Passo 6 some", area.htmlDoCartao(lida, { resumo, caso: { ...caso, respondida: true } }, false).includes("Passo 6"), false);
 const novo = area.htmlDoCartao(lida, { resumo, caso: null }, false);
 conferir("fora do CW: 'Criar no quadro' e o protocolo lido da página", [novo.includes('data-acao="criar"'), novo.includes("RA-uPDvBFKmssmEmxVa")], [true, true]);
+/* 1.79: o estado em destaque e o pedido de avaliação daqui. */
+const comConselho = area.htmlDoCartao(lida, { resumo, caso: { ...caso, conselho: { frase: "O objetivo foi cumprido: responda a reclamação", urgente: true } } }, false);
+conferir("estado no topo: prioridade, prazo e a frase do que fazer", [comConselho.indexOf('class="estado') < comConselho.indexOf("Resumo"), comConselho.includes("responda a reclamação"), comConselho.includes("urgente-agora")], [true, true, true]);
+const pedir = { numero: 2, vencido: true, resumo: "Lembrete vencido.", mensagem: "Oi, Ana! <script>", telefone: "5548996640777" };
+const comPedido = area.htmlDoCartao(lida, { resumo, caso: { ...caso, pedirAvaliacao: pedir } }, false);
+conferir("pedir avaliação: WhatsApp com a mensagem e o lembrete da vez", [comPedido.includes("https://wa.me/5548996640777?text=Oi%2C%20Ana"), comPedido.includes("2º lembrete")], [true, true]);
+conferir("a mensagem no botão de copiar vem escapada", comPedido.includes("<script>"), false);
+const semTelefone = area.htmlDoCartao(lida, { resumo, caso: { ...caso, pedirAvaliacao: { ...pedir, telefone: null } } }, false);
+conferir("sem telefone: copiar e registrar, sem link", [semTelefone.includes("wa.me"), semTelefone.includes("Registrar pedido feito")], [false, true]);
 conferir("recolhido: só o topo", area.htmlDoCartao(lida, { resumo, caso }, true).includes("Resumo"), false);
 conferir("carregando: diz que está lendo", area.htmlDoCartao(lida, null, false).includes("Lendo a reclamação"), true);
 

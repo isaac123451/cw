@@ -186,3 +186,15 @@ export function canaisSemResposta(
     .map((c) => c.canal);
   return [...new Set(canais)];
 }
+
+/** A primeira das tentativas seguidas sem resposta (ISO) — a janela de 7 dias conta daqui. */
+export function primeiraTentativaSemResposta(
+  contatos: Pick<ContatoView, "tipo" | "resultado" | "em">[]
+): string | undefined {
+  const respostas = contatos.filter((c) => c.resultado === "respondeu" || c.resultado === "pendencia").map((c) => c.em).sort();
+  const ultima = respostas[respostas.length - 1];
+  return contatos
+    .filter((c) => c.tipo === "tentativa" && c.resultado !== "respondeu" && c.resultado !== "aguardando" && (!ultima || c.em > ultima))
+    .map((c) => c.em)
+    .sort()[0];
+}

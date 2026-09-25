@@ -1116,6 +1116,18 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Área da empresa que ajuda mais (25/09/2026, 1.79.0)
+
+O cartão da reclamação na área da empresa do Reclame Aqui abre com uma
+faixa de estado — prioridade, prazo e situação, na cor da urgência — e a
+frase do que fazer (a mesma do quadro, `oQueFazer`; a rota agora lê os
+canais e a 1ª tentativa sem resposta, e diz "tentativas esgotadas" como o
+quadro). Quando é hora de pedir avaliação (respondida, sem nota, na
+cadência e sem réplica pendente), o cartão traz o pedido do lembrete da
+vez: "Pedir no WhatsApp" abre a conversa com a mensagem e registra o
+contato "Pedi a avaliação" no caso; sem telefone, copiar a mensagem e
+registrar. `check:ra-area` com 5 pontos novos.
+
 ### Disparos em lote seguros (25/09/2026, 1.78.0)
 
 A lista nasce na plataforma — os indicados do Prêmio e a fila de hoje do

@@ -8,6 +8,11 @@ import { fetchCaseByPortalCode } from "@/lib/services/case.repository";
 import { slaStatus } from "@/lib/services/sla.service";
 import { lerExpediente, lerRegrasDePrazo } from "@/lib/services/operacao.service";
 import { regrasQueValem } from "@/lib/models/meuDia";
+import type { ResultadoDoContato, TipoDeContato } from "@/lib/models/tratativa";
+import { canaisSemResposta, oQueFazer, primeiraTentativaSemResposta } from "@/lib/models/oQueFazer";
+import { pedidoDeAvaliacao } from "@/lib/models/cadencia";
+import { mensagemDePedidoDeAvaliacao } from "@/lib/models/mensagens";
+import { telefoneDoDisparo } from "@/lib/models/disparos";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -85,7 +90,36 @@ export async function POST(request: Request) {
 
     /* Sem regra cadastrada, valem os prazos da documentação — como no Meu dia. */
     const sla = slaStatus(caso, regrasQueValem(regras), { expediente });
-    const passo = trilhaDoCaso(caso, { agora: new Date() }).find((p) => p.estado === "atual") ?? null;
+    const agora = new Date();
+    const passo = trilhaDoCaso(caso, { agora }).find((p) => p.estado === "atual") ?? null;
+
+    /* A mesma frase do quadro e da ficha (1.72): o que fazer agora, em âmbar quando passou do ponto. */
+    /* Os canais e a 1ª tentativa sem resposta, como a lista lê — para o cartão dizer o mesmo que o quadro. */
+    const tentativas = (caso.tentativasSemResposta ?? 0) > 0
+      ? (await prisma.caseContato.findMany({ where: { case: { protocol: caso.protocol } }, select: { tipo: true, canal: true, resultado: true, em: true } })).map((c) => ({ ...c, tipo: c.tipo as TipoDeContato, resultado: (c.resultado ?? undefined) as ResultadoDoContato | undefined, em: c.em.toISOString() }))
+      : [];
+    const conselho = oQueFazer(
+      { ...caso, canaisSemResposta: canaisSemResposta(tentativas), primeiraTentativaEm: primeiraTentativaSemResposta(tentativas) },
+      passo,
+      { agora }
+    );
+
+    /*
+      Pedir avaliação daqui (1.79): respondida, sem nota e dentro da
+      cadência. A mensagem é a do diálogo da ficha, no tom do lembrete da
+      vez; o telefone, quando dá para confiar nele.
+    */
+    const cadencia = pedidoDeAvaliacao(caso, agora);
+    const pedir =
+      respondida(caso) && !caso.evaluated && cadencia.ativo
+        ? {
+            numero: Math.max(1, cadencia.numero),
+            vencido: cadencia.vencido,
+            resumo: cadencia.resumo,
+            mensagem: mensagemDePedidoDeAvaliacao({ nome: caso.customer, numero: Math.max(1, cadencia.numero), raUrl: caso.raUrl, agente: usuario?.nome }),
+            telefone: telefoneDoDisparo(caso.phone ?? ""),
+          }
+        : null;
 
     const base = `${origem}/reclame-aqui/${caso.id}`;
 
@@ -105,6 +139,8 @@ export async function POST(request: Request) {
           rotulo: regras.some((r) => r.active) ? sla.label : `${sla.label} (prazo da documentação)`,
         },
         passo: passo ? { numero: passo.numero, titulo: passo.titulo, detalhe: passo.detalhe ?? "" } : null,
+        conselho: conselho ? { frase: conselho.frase, urgente: Boolean(conselho.urgente) } : null,
+        pedirAvaliacao: pedir,
         responsavel: caso.owner ?? null,
         respondida: respondida(caso),
         validado: Boolean(caso.validadoEm),

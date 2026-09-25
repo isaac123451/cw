@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.79.0",
+    data: "2026-09-25",
+    titulo: "Área da empresa com o estado em destaque e pedir avaliação",
+    texto: "No cartão da reclamação, na área da empresa do Reclame Aqui: prioridade, prazo e situação no topo, na cor da urgência, com o que fazer agora. Quando é hora, o pedido de avaliação no tom do lembrete da vez — um clique abre o WhatsApp com a mensagem e registra no caso. Recarregue a extensão.",
+    frentes: ["reclame-aqui", "extensao"],
+  },
+  {
     versao: "1.78.0",
     data: "2026-09-25",
     titulo: "Disparos em lote seguros pelo WhatsApp",
