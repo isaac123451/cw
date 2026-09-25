@@ -1027,6 +1027,36 @@
     marcarGatilho();
   }
 
+  /** O áudio em base64, para a transcrição — só o que a pessoa já ouviu (1.82). */
+  function emBase64(blob) {
+    return new Promise((ok, falha) => {
+      const leitor = new FileReader();
+      leitor.onload = () => ok(String(leitor.result).split(",")[1] || "");
+      leitor.onerror = falha;
+      leitor.readAsDataURL(blob);
+    });
+  }
+
+  async function transcreverAudios(audios) {
+    const saida = [];
+    for (const a of audios) {
+      try {
+        const blob = await fetch(a.endereco).then((r) => r.blob());
+        if (!blob.size || blob.size > 3_000_000) continue;
+        const r = await CW.enviar({ tipo: "transcrever", corpo: { base64: await emBase64(blob), mime: blob.type || "audio/ogg" } });
+        const texto = String(r?.dados?.texto ?? "").trim();
+        if (texto) {
+          saida.push({ id: `${a.id}:t`, de: a.de, texto: `Transcrição do áudio${a.duracao ? ` (${a.duracao})` : ""}: ${texto}`, transcricao: true });
+        }
+      } catch {
+        /* o áudio fica para a próxima volta */
+      }
+    }
+    return saida;
+  }
+
+  const ultimoAvisoDeFalha = new Map();
+
   P.guardarSozinho = async function guardarSozinho() {
 
     /* Aberto ou fechado: o que manda é haver conversa na tela e contato conhecido. */
@@ -1042,10 +1072,14 @@
 
     const ja = guardadasPorConversa.get(tel) ?? new Set();
     const novas = mensagens.filter((m) => !ja.has(m.id));
-    if (novas.length === 0) return;
+    /* Áudio que a pessoa ouviu e ainda não foi transcrito — dois por volta, para não segurar a gravação. */
+    const audiosNovos = (CW.lerAudios?.() ?? []).filter((a) => a.endereco && !ja.has(`${a.id}:t`)).slice(0, 2);
+    if (novas.length === 0 && audiosNovos.length === 0) return;
 
     gravandoSozinho = true;
     try {
+      const transcritas = await transcreverAudios(audiosNovos);
+      if (novas.length === 0 && transcritas.length === 0) return;
       const dados = P.ultimoDado ?? {};
       const casos = dados.casos ?? [];
       /* O caso aberto mais recente liga a conversa à ficha dele; o NPS e a conta, às deles. */
@@ -1055,7 +1089,10 @@
         tipo: "guardarConversa",
         corpo: {
           contato: { nome: P.consulta?.nome, telefone: P.consulta?.telefone },
-          mensagens: novas.map((m) => ({ id: m.id, de: m.de, texto: m.texto, carimbo: m.carimbo, autor: m.autor })),
+          mensagens: [
+            ...novas.map((m) => ({ id: m.id, de: m.de, texto: m.texto, carimbo: m.carimbo, autor: m.autor })),
+            ...transcritas,
+          ],
           protocolo: caso?.protocolo,
           npsId: dados.nps?.id,
           estabelecimentoId: dados.estabelecimento?.id,
@@ -1067,11 +1104,26 @@
 
       if (resposta?.ok && resposta.dados?.id && !resposta.dados?.erro) {
         for (const m of novas) ja.add(m.id);
+        for (const t of transcritas) ja.add(t.id);
+        /* O aviso sem abrir nada (1.82): quantas entraram e onde. */
+        const entraram = Number(resposta.dados.novas) || 0;
+        if (entraram > 0) {
+          CW.notificar?.(
+            `Conversa guardada · ${entraram} nova(s)${transcritas.length ? ` · ${transcritas.length} áudio(s) transcrito(s)` : ""}${caso?.protocolo ? ` · ${caso.protocolo}` : ""}`
+          );
+        }
+        ultimoAvisoDeFalha.delete(tel);
         guardadasPorConversa.set(tel, ja);
         totalPorConversa.set(tel, (totalPorConversa.get(tel) ?? 0) + (resposta.dados.novas ?? 0));
         falhaPorConversa.delete(tel);
       } else {
-        falhaPorConversa.set(tel, resposta?.dados?.erro ?? resposta?.erro ?? "sem resposta da plataforma.");
+        const erro = resposta?.dados?.erro ?? resposta?.erro ?? "sem resposta da plataforma.";
+        falhaPorConversa.set(tel, erro);
+        /* A falha avisa uma vez por motivo — a volta seguinte não repete o mesmo aviso. */
+        if (ultimoAvisoDeFalha.get(tel) !== erro) {
+          ultimoAvisoDeFalha.set(tel, erro);
+          CW.notificar?.(`A conversa não foi guardada: ${erro}`, "erro");
+        }
       }
     } catch {
       falhaPorConversa.set(tel, "sem resposta da plataforma.");

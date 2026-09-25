@@ -2,6 +2,8 @@
 
 import { Fragment } from "react";
 
+import { Mic } from "lucide-react";
+
 import type { Lado } from "@/lib/models/conversa";
 import { paredeDe } from "@/lib/services/horasUteis";
 
@@ -11,6 +13,8 @@ export interface BalaoDaConversa {
   autor?: string | null;
   texto: string;
   em?: string | null;
+  /** "transcricao" marca o áudio transcrito (1.82). */
+  origem?: string;
 }
 
 function diaDe(iso?: string | null) {
@@ -73,6 +77,11 @@ export default function Baloes({
                   } ${m.id === foco ? "ring-2 ring-amber-500" : achou ? "ring-2 ring-amber-200" : ""}`}
                 >
                   {m.autor && m.de === "cliente" && <p className="text-[11px] font-semibold text-violet-700">{m.autor}</p>}
+                  {m.origem === "transcricao" && (
+                    <p className="flex items-center gap-1 text-[10.5px] font-semibold uppercase tracking-wide text-violet-700/80" title="Transcrito do áudio pela IA — confira no WhatsApp se algo parecer estranho">
+                      <Mic size={11} /> transcrição de áudio
+                    </p>
+                  )}
                   <p className="whitespace-pre-wrap break-words">{m.texto}</p>
                   <p className={`mt-0.5 text-right text-[10px] ${m.de === "nos" ? "text-violet-700/70" : "text-zinc-400"}`}>{horaDe(m.em)}</p>
                 </div>

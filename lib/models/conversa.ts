@@ -21,6 +21,8 @@ export interface MensagemRecebida {
   texto: string;
   /** ISO. O arquivo sempre traz; a extensão, quando o carimbo existe. */
   em?: string | null;
+  /** Transcrição de um áudio (1.82) — guardada com origem "transcricao". */
+  transcricao?: boolean;
 }
 
 export interface MensagemView {
@@ -29,7 +31,7 @@ export interface MensagemView {
   autor?: string;
   texto: string;
   em?: string;
-  origem: "extensao" | "arquivo";
+  origem: "extensao" | "arquivo" | "transcricao";
 }
 
 export interface ConversaResumo {

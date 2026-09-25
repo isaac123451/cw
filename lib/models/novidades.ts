@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.82.0",
+    data: "2026-09-25",
+    titulo: "Salvamento que avisa, com áudio transcrito",
+    texto: "Quando a conversa se guarda sozinha, um aviso discreto no canto diz quantas mensagens entraram e em qual caso — sem abrir o painel. E o áudio que você ouviu no WhatsApp é transcrito e guardado junto, marcado como transcrição de áudio. Recarregue a extensão.",
+    frentes: ["extensao", "plataforma"],
+  },
+  {
     versao: "1.81.0",
     data: "2026-09-25",
     titulo: "Selos de quem espera resposta",

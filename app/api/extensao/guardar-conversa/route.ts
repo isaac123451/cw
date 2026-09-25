@@ -38,6 +38,8 @@ interface MensagemDoPainel {
   /** "10:32, 14/09/2026" — o carimbo do WhatsApp. */
   carimbo?: string;
   autor?: string;
+  /** Transcrição de um áudio que a pessoa ouviu (1.82). */
+  transcricao?: boolean;
 }
 
 /**
@@ -93,6 +95,7 @@ export async function POST(request: Request) {
       autor: m.autor ? String(m.autor).slice(0, 120) : null,
       texto: String(m.texto),
       em: instanteDoCarimbo(m.carimbo),
+      transcricao: m.transcricao === true,
     }));
   if (mensagens.length === 0) return responder(request, { erro: "Nenhuma mensagem para guardar." }, 400);
 

@@ -67,6 +67,7 @@ const CAMINHOS = {
   raLista: "/api/extensao/ra-lista",
   disparos: "/api/extensao/disparos",
   prazos: "/api/extensao/prazos",
+  transcrever: "/api/extensao/transcrever",
 };
 
 /**
@@ -527,6 +528,12 @@ async function tratar(mensagem) {
   /* O cartão da reclamação aberta na área da empresa: resumo e o caso no CW. Só leitura. */
   if (mensagem?.tipo === "raCartao") {
     const dados = await chamar(CAMINHOS.raCartao, {}, mensagem.corpo ?? {});
+    return { ok: true, dados };
+  }
+
+  /* A transcrição do áudio que a pessoa ouviu, na hora de guardar a conversa (1.82). */
+  if (mensagem?.tipo === "transcrever") {
+    const dados = await chamar(CAMINHOS.transcrever, {}, mensagem.corpo ?? {});
     return { ok: true, dados };
   }
 

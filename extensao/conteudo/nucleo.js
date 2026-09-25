@@ -228,5 +228,36 @@
       .trim()
       .slice(0, limite);
 
+  /**
+   * Um aviso curto no canto, fora do painel (1.82).
+   *
+   * "Salvar conversas com aviso sem abrir nada": a gravação sozinha
+   * acontecia calada, e só quem abria o painel sabia. Uma pílula pequena,
+   * sem desfoque, que some em 3,5 s — e não empilha: o aviso novo troca o
+   * anterior.
+   */
+  let avisoAtual = null;
+  CW.notificar = (texto, tipo = "ok") => {
+    try {
+      avisoAtual?.remove();
+      const host = document.createElement("div");
+      host.id = "cw-reputacao-aviso";
+      const sombra = host.attachShadow({ mode: "open" });
+      const cor = tipo === "erro" ? "#9f1239" : "#5B2A86";
+      sombra.innerHTML = `<style>
+        .p { position: fixed; left: 16px; bottom: 16px; z-index: 2147483646; max-width: 360px; padding: 7px 12px; border-radius: 999px;
+          font: 600 12px/1.4 system-ui, sans-serif; color: #fff; background: #5B2A86; box-shadow: 0 8px 24px -12px rgba(40,10,70,.5); }
+      </style><div class="p" role="status"></div>`;
+      const pilula = sombra.querySelector(".p");
+      pilula.textContent = String(texto ?? "");
+      pilula.style.background = cor;
+      document.documentElement.appendChild(host);
+      avisoAtual = host;
+      setTimeout(() => host.remove(), 3500);
+    } catch {
+      /* página sem corpo ainda: o aviso só não aparece */
+    }
+  };
+
   window.CWReputacao = CW;
 })();

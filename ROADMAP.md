@@ -1116,6 +1116,25 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Salvamento que avisa (25/09/2026, 1.82.0)
+
+A gravação sozinha da conversa (que já rodava com o painel fechado)
+agora **avisa**: uma pílula discreta no canto (`CW.notificar`, sem
+desfoque, 3,5 s) — "Conversa guardada · 3 nova(s) · 1 áudio(s) transcrito(s)
+· RA-…"; a falha avisa uma vez por motivo. **Áudio:** a ponte
+`audio-ponte.js` (mundo da página, no início) anota o endereço do áudio
+quando a pessoa aperta play — a extensão nunca toca áudio sozinha, o que
+marcaria como ouvido para o cliente; na volta seguinte, até dois áudios
+ouvidos vão para `/api/extensao/transcrever` (Gemini, camada gratuita,
+modelo rápido → principal → reserva) e entram na conversa com origem
+"transcricao", que a tela mostra com o microfone. Provado: um áudio
+sintetizado em português voltou palavra por palavra ("Oi, aqui é da
+pizzaria. A impressora voltou a funcionar, obrigado pela ajuda.", 24,8 s);
+a ponte captou o endereço numa bancada e o áudio foi lido (16 KB).
+**A conferir no WhatsApp de verdade** (eu não entro no WhatsApp de
+ninguém): a leitura dos ícones de áudio da conversa. `check:salvamento`
+(9 pontos).
+
 ### Selos de quem espera resposta (25/09/2026, 1.81.0)
 
 `conteudo/selos-espera.js`, na lista de conversas do WhatsApp Web: a

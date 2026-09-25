@@ -78,7 +78,7 @@ export async function gravarMensagens(
     .map((m) => {
       const r = omitirDadosBancarios(m.texto.slice(0, MAXIMO_POR_MENSAGEM));
       const em = m.em && !Number.isNaN(Date.parse(m.em)) ? new Date(m.em).toISOString() : null;
-      const base = { de: m.de, autor: m.autor?.slice(0, 120) ?? null, texto: r.texto, em, omitidos: r.omitidos };
+      const base = { de: m.de, autor: m.autor?.slice(0, 120) ?? null, texto: r.texto, em, omitidos: r.omitidos, transcricao: m.transcricao === true };
       /*
         A chave e a assinatura saem do texto original (antes da omissão):
         guardar de novo precisa reconhecer a mesma mensagem, com ou sem o
@@ -136,7 +136,7 @@ export async function gravarMensagens(
 
     if (novas.length > 0) {
       await tx.mensagemDaConversa.createMany({
-        data: novas.map((m) => ({ conversaId: id, chave: m.chave, de: m.de, autor: m.autor, texto: m.texto, em: m.em ? new Date(m.em) : null, origem: entrada.origem })),
+        data: novas.map((m) => ({ conversaId: id, chave: m.chave, de: m.de, autor: m.autor, texto: m.texto, em: m.em ? new Date(m.em) : null, origem: m.transcricao ? "transcricao" : entrada.origem })),
         skipDuplicates: true,
       });
       await tx.conversa.update({ where: { id }, data: { atualizadoEm: new Date() } });
@@ -311,7 +311,7 @@ export async function ler(prisma: Db, id: string): Promise<ConversaView | null> 
     autor: m.autor ?? undefined,
     texto: m.texto,
     em: m.em?.toISOString(),
-    origem: (m.origem === "arquivo" ? "arquivo" : "extensao") as "arquivo" | "extensao",
+    origem: (m.origem === "arquivo" ? "arquivo" : m.origem === "transcricao" ? "transcricao" : "extensao") as "arquivo" | "extensao" | "transcricao",
   }));
   const ultima = c.mensagens[c.mensagens.length - 1];
   return {

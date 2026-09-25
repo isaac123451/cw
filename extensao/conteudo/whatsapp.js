@@ -539,6 +539,43 @@
 
   CW.painel.definirLeitorDeConversa?.(lerMensagens);
 
+  /*
+    Os áudios da conversa (1.82).
+
+    O WhatsApp toca o áudio fora da árvore da página; a ponte
+    (`audio-ponte.js`, no mundo da página) avisa o endereço do áudio no
+    instante em que a pessoa aperta play. Aqui ele fica guardado pela
+    mensagem que está tocando (a que mostra o ícone de pausa). A extensão
+    nunca toca áudio sozinha: isso marcaria o áudio como ouvido para o
+    cliente.
+  */
+  const ICONES_DE_AUDIO = '[data-icon^="audio-"], [data-icon^="ptt-"]';
+  const PAUSA = '[data-icon="audio-pause"], [data-icon="ptt-pause"]';
+  const ouvidos = new Map();
+
+  window.addEventListener("message", (ev) => {
+    if (ev.source !== window || typeof ev.data?.__cwAudio !== "string") return;
+    const tocando = document.querySelector(`#main ${PAUSA.split(", ").join(", #main ")}`);
+    const linha = tocando?.closest("[data-id]");
+    if (linha) ouvidos.set(linha.getAttribute("data-id"), ev.data.__cwAudio);
+  });
+
+  CW.lerAudios = function lerAudios() {
+    const principal = document.querySelector("#main");
+    if (!principal) return [];
+    const vistos = new Set();
+    const audios = [];
+    for (const icone of principal.querySelectorAll(ICONES_DE_AUDIO)) {
+      const linha = icone.closest("[data-id]");
+      const id = linha?.getAttribute("data-id");
+      if (!id || vistos.has(id)) continue;
+      vistos.add(id);
+      const duracao = [...linha.querySelectorAll("span, div")].map((el) => (el.children.length ? "" : (el.textContent || "").trim())).find((t) => /^\d{1,2}:\d{2}$/.test(t)) || "";
+      audios.push({ id, de: deQuemE(linha).de, duracao, endereco: ouvidos.get(id) || null });
+    }
+    return audios;
+  };
+
   let ultimaChave = "";
 
   function verificar() {

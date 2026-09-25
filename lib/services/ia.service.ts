@@ -1366,3 +1366,55 @@ export async function* lerEventos(
   yield { tipo: "fim", uso: { entrada, saida } };
 }
 
+
+/* ============================================================
+   TRANSCRIÇÃO DE ÁUDIO (1.82)
+============================================================ */
+
+/**
+ * Transcreve uma mensagem de voz — Gemini, na camada gratuita.
+ *
+ * O áudio vai inteiro, em base64, e volta só o que foi falado. Tenta o
+ * modelo rápido, o principal e o de reserva, nessa ordem: 503 e 429 são
+ * fila da camada gratuita, e o próximo modelo costuma responder. Sem
+ * chave do Gemini, diz isso — não inventa transcrição.
+ */
+export async function transcreverAudio(entrada: { base64: string; mime: string }): Promise<{ ok: true; texto: string } | { ok: false; erro: string }> {
+  const key = chave("GEMINI_API_KEY");
+  if (!key) return { ok: false, erro: "Sem chave do Gemini: a transcrição de áudio usa o Gemini." };
+
+  const config = await lerConfigDeIA();
+  const modelos = [...new Set([config.modeloRapido, config.modelo, config.modeloReserva].filter(Boolean))];
+  let ultimoErro = "O Gemini não respondeu.";
+
+  for (const modelo of modelos) {
+    try {
+      const resposta = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+        body: JSON.stringify({
+          contents: [
+            {
+              role: "user",
+              parts: [
+                { text: "Transcreva a mensagem de voz, em português do Brasil. Devolva só o que foi falado, sem comentário, sem aspas e sem rótulo. Se não houver fala, devolva vazio." },
+                { inline_data: { mime_type: entrada.mime.split(";")[0] || "audio/ogg", data: entrada.base64 } },
+              ],
+            },
+          ],
+        }),
+        signal: AbortSignal.timeout(45_000),
+      });
+      if (!resposta.ok) {
+        ultimoErro = resposta.status === 503 || resposta.status === 429 ? "A IA está com fila agora." : `O Gemini recusou (${resposta.status}).`;
+        continue;
+      }
+      const dados = (await resposta.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
+      const texto = (dados.candidates?.[0]?.content?.parts ?? []).map((p) => p.text ?? "").join("").trim();
+      return { ok: true, texto };
+    } catch (erro) {
+      ultimoErro = erro instanceof Error && erro.name === "TimeoutError" ? "A transcrição demorou demais." : "O Gemini não respondeu.";
+    }
+  }
+  return { ok: false, erro: ultimoErro };
+}
