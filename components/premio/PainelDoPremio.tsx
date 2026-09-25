@@ -8,20 +8,36 @@ import SurfaceCard from "@/components/shared/SurfaceCard";
 import CampanhaDeVotacao from "@/components/premio/CampanhaDeVotacao";
 import PremioNoCalendario from "@/components/premio/PremioNoCalendario";
 import DepoimentosProntos from "@/components/premio/DepoimentosProntos";
+import PedirOVoto from "@/components/premio/PedirOVoto";
+import IdeiasDoPremio from "@/components/premio/IdeiasDoPremio";
 
 import { lerPremio, registrarExportados, salvarCampanha, type CampanhaView, type PedidoView } from "@/lib/actions/premio";
 import { useCases } from "@/lib/context/CaseContext";
 import { useNps } from "@/lib/context/NpsContext";
 import { useToast } from "@/lib/context/ToastContext";
-import { contatosDoPremio, FILTROS_PADRAO, mensagemParaContato, type FiltrosDoPremio } from "@/lib/models/premio";
+import { contatosDoPremio, FILTROS_PADRAO, ideiasDoPremio, indicadosParaPedir, type FiltrosDoPremio } from "@/lib/models/premio";
+import { hojeNaOperacao } from "@/lib/services/reputation.service";
 
-const MENSAGEM_PADRAO =
-  "Olá, {nome}! Aqui é da Cardápio Web. Obrigado pela avaliação no Reclame Aqui — ela faz diferença. Estamos concorrendo ao Prêmio Reclame Aqui e o seu voto conta muito: {link}";
+/* Curta: o Isaac pediu "menos texto de mensagem". Quem lê no WhatsApp lê a primeira linha. */
+const MENSAGEM_PADRAO = "Oi, {nome}! Aqui é da Cardápio Web. Estamos no Prêmio Reclame Aqui e o seu voto ajuda muito: {link}";
+
+type Aba = "pedir" | "ideias" | "planilha" | "campanha";
+const ABAS: { id: Aba; rotulo: string }[] = [
+  { id: "pedir", rotulo: "Pedir o voto" },
+  { id: "ideias", rotulo: "Ideias e estratégias" },
+  { id: "planilha", rotulo: "Planilha" },
+  { id: "campanha", rotulo: "Campanha" },
+];
 
 const campo = "h-9 w-full rounded-lg border border-zinc-200 px-2.5 text-sm outline-none focus:border-violet-400";
 
 /**
  * O Prêmio Reclame Aqui (Fase 23): a campanha e a lista de quem pedir.
+ *
+ * **Repensado na 1.76**, em abas: pedir o voto como se pede avaliação (a
+ * lista do dia e os lembretes), ideias com os números da base, a planilha
+ * e, por último, o cadastro da campanha — que era a primeira coisa da tela
+ * e o que menos se usa depois de feito.
  *
  * Em cima, a campanha — o nome, o link da votação e a mensagem com
  * {nome} e {link}. Embaixo, os filtros de quem avaliou bem, a prévia de
@@ -42,6 +58,8 @@ export default function PainelDoPremio({ aoMudar }: { aoMudar?: (campanha: Campa
   const [salvando, setSalvando] = useState(false);
   const [exportando, setExportando] = useState(false);
   const [filtros, setFiltros] = useState<FiltrosDoPremio>(FILTROS_PADRAO);
+  const [aba, setAba] = useState<Aba>("pedir");
+  const hoje = hojeNaOperacao();
 
   function aplicar(r: Awaited<ReturnType<typeof lerPremio>>, id?: string) {
     if (!r.ok) {
@@ -74,6 +92,12 @@ export default function PainelDoPremio({ aoMudar }: { aoMudar?: (campanha: Campa
   const jaNaCampanha = useMemo(() => new Set(pedidos.map((p) => `${p.origem}:${p.ref}`)), [pedidos]);
   const lista = useMemo(() => contatosDoPremio({ casos: cases, nps: responses, filtros, jaNaCampanha }), [cases, responses, filtros, jaNaCampanha]);
   const comTelefone = lista.filter((c) => c.telefoneInternacional).length;
+
+  /* Os indicados não dependem dos filtros da planilha: é a lista padrão, ranqueada. */
+  const indicados = useMemo(
+    () => indicadosParaPedir(contatosDoPremio({ casos: cases, nps: responses, filtros: FILTROS_PADRAO, jaNaCampanha }), hoje),
+    [cases, responses, jaNaCampanha, hoje]
+  );
   const campanha = campanhas.find((c) => c.id === escolhida) ?? null;
 
   async function salvar() {
@@ -110,14 +134,53 @@ export default function PainelDoPremio({ aoMudar }: { aoMudar?: (campanha: Campa
 
   const troca = <K extends keyof FiltrosDoPremio>(k: K, v: FiltrosDoPremio[K]) => setFiltros((f) => ({ ...f, [k]: v }));
 
+  /* Sem campanha, só a aba de cadastro faz sentido. */
+  const abaVisivel: Aba = campanha ? aba : "campanha";
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {erroDoBanco && (
         <p className="flex items-start gap-2 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900 ring-1 ring-inset ring-amber-100">
           <TriangleAlert size={16} className="mt-0.5 shrink-0" /> {erroDoBanco}
         </p>
       )}
 
+      <div className="flex flex-wrap items-center gap-2" role="tablist" aria-label="Prêmio">
+        {ABAS.map((a) => (
+          <button
+            key={a.id}
+            type="button"
+            role="tab"
+            aria-selected={abaVisivel === a.id}
+            disabled={!campanha && a.id !== "campanha"}
+            onClick={() => setAba(a.id)}
+            className={`rounded-xl px-4 py-2 text-sm font-medium transition-colors disabled:opacity-40 ${
+              abaVisivel === a.id ? "bg-violet-700 text-white" : "text-zinc-600 ring-1 ring-inset ring-zinc-200 hover:bg-zinc-50"
+            }`}
+          >
+            {a.rotulo}
+            {a.id === "pedir" && campanha && indicados.length > 0 && <span className="ml-1.5 tabular-nums opacity-80">{indicados.length}</span>}
+          </button>
+        ))}
+        {campanha && <span className="text-xs text-zinc-500">{campanha.nome}</span>}
+      </div>
+
+      {abaVisivel === "pedir" && campanha && (
+        <>
+          <PedirOVoto campanha={campanha} indicados={indicados} pedidos={pedidos} hoje={hoje} aoRegistrar={() => carregar(campanha.id)} />
+          <CampanhaDeVotacao campanha={campanha} pedidos={pedidos} recarregar={() => carregar(campanha.id)} />
+        </>
+      )}
+
+      {abaVisivel === "ideias" && campanha && (
+        <>
+          <IdeiasDoPremio ideias={ideiasDoPremio({ indicados, pedidos, hoje, votacaoFim: campanha.votacaoFim })} />
+          <PremioNoCalendario campanha={campanha} />
+          <DepoimentosProntos />
+        </>
+      )}
+
+      {abaVisivel === "campanha" && (
       <SurfaceCard
         title="A campanha"
         description="O prêmio deste ano: o link da votação e a mensagem do pedido. Use {nome} e {link} na mensagem — a planilha sai com cada uma preenchida."
@@ -192,7 +255,7 @@ export default function PainelDoPremio({ aoMudar }: { aoMudar?: (campanha: Campa
               rows={2}
               value={rascunho.lembrete ?? ""}
               onChange={(e) => setRascunho((r) => ({ ...r, lembrete: e.target.value }))}
-              placeholder="Oi, {nome}! Passando para lembrar: a votação fecha em breve — {link}"
+              placeholder="Oi, {nome}! A votação fecha em breve: {link}"
               className={`${campo} h-auto py-2`}
             />
           </label>
@@ -203,12 +266,12 @@ export default function PainelDoPremio({ aoMudar }: { aoMudar?: (campanha: Campa
           </button>
         </div>
       </SurfaceCard>
+      )}
 
-      {campanha && <PremioNoCalendario campanha={campanha} />}
-
+      {abaVisivel === "planilha" && (
       <SurfaceCard
-        title="Quem pedir o voto"
-        description="Quem já foi bem atendido. Uma pessoa por telefone, e quem já está na campanha fica de fora."
+        title="Planilha"
+        description="A lista inteira com os filtros que você escolher, para mandar por outro canal. Uma pessoa por telefone; quem já está na campanha fica de fora."
       >
         <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-zinc-700">
           <fieldset className="flex flex-wrap items-center gap-x-4 gap-y-1">
@@ -258,8 +321,7 @@ export default function PainelDoPremio({ aoMudar }: { aoMudar?: (campanha: Campa
                 <tr>
                   <th className="py-1.5 pr-3 font-semibold">Nome</th>
                   <th className="py-1.5 pr-3 font-semibold">Telefone</th>
-                  <th className="py-1.5 pr-3 font-semibold">Por quê</th>
-                  <th className="py-1.5 font-semibold">Mensagem</th>
+                  <th className="py-1.5 font-semibold">Por quê</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-100">
@@ -267,8 +329,7 @@ export default function PainelDoPremio({ aoMudar }: { aoMudar?: (campanha: Campa
                   <tr key={`${c.origem}:${c.ref}`}>
                     <td className="py-1.5 pr-3 text-zinc-800">{c.nome}</td>
                     <td className="py-1.5 pr-3 tabular-nums text-zinc-600">{c.telefoneInternacional ?? <span className="text-zinc-400">sem telefone</span>}</td>
-                    <td className="py-1.5 pr-3 text-zinc-600">{c.motivo}</td>
-                    <td className="max-w-md truncate py-1.5 text-zinc-500">{mensagemParaContato(campanha?.mensagem ?? rascunho.mensagem ?? "", c, campanha?.linkVotacao ?? "")}</td>
+                    <td className="py-1.5 text-zinc-600">{c.motivo}</td>
                   </tr>
                 ))}
               </tbody>
@@ -277,10 +338,7 @@ export default function PainelDoPremio({ aoMudar }: { aoMudar?: (campanha: Campa
           </div>
         )}
       </SurfaceCard>
-
-      {campanha && <CampanhaDeVotacao campanha={campanha} pedidos={pedidos} recarregar={() => carregar(campanha.id)} />}
-
-      <DepoimentosProntos />
+      )}
     </div>
   );
 }

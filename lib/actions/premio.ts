@@ -228,3 +228,59 @@ export async function marcarPedidos(ids: string[], situacao: SituacaoDoPedido): 
     return { ok: false, erro: traduzir(erro) };
   }
 }
+
+/**
+ * Pedir o voto a uma pessoa, direto da lista de indicados (1.76).
+ *
+ * Como o pedir avaliação: sem planilha no meio. O clique abre o WhatsApp
+ * com a mensagem e registra a pessoa na campanha já como "pedido feito" —
+ * ou anda o passo de quem já estava lá. A chave (campanha, origem, ref) é
+ * a mesma da exportação: ninguém entra duas vezes.
+ */
+export async function pedirVoto(campanhaId: string, contato: ContatoDoPremio): Promise<{ ok: true; pedido: PedidoView } | Falha> {
+  const q = await quem("AGENTE");
+  if ("erro" in q) return { ok: false, erro: q.erro! };
+  if (!campanhaId) return { ok: false, erro: "Crie a campanha antes de pedir o voto." };
+  if (!contato?.ref || !contato.nome) return { ok: false, erro: "Contato incompleto." };
+
+  try {
+    const eu = await q.ctx.prisma.user.findUnique({ where: { id: q.ctx.userId }, select: { name: true } });
+    const agora = new Date();
+    const p = await q.ctx.prisma.pedidoDeVoto.upsert({
+      where: { campanhaId_origem_ref: { campanhaId, origem: contato.origem, ref: contato.ref } },
+      create: {
+        campanhaId,
+        origem: contato.origem,
+        ref: contato.ref,
+        nome: contato.nome.slice(0, 200),
+        telefone: contato.telefoneInternacional ?? contato.telefone ?? null,
+        email: contato.email ?? null,
+        motivo: contato.motivo.slice(0, 200),
+        exportadoPor: eu?.name ?? null,
+        situacao: "pedido",
+        pedidoEm: agora,
+      },
+      update: { situacao: "pedido", pedidoEm: agora },
+    });
+    return {
+      ok: true,
+      pedido: {
+        id: p.id,
+        origem: p.origem as PedidoView["origem"],
+        ref: p.ref,
+        nome: p.nome,
+        telefone: opcional(p.telefone),
+        email: opcional(p.email),
+        motivo: opcional(p.motivo),
+        situacao: p.situacao as SituacaoDoPedido,
+        exportadoPor: opcional(p.exportadoPor),
+        exportadoEm: p.exportadoEm.toISOString(),
+        pedidoEm: p.pedidoEm?.toISOString(),
+        lembreteEm: p.lembreteEm?.toISOString(),
+        votouEm: p.votouEm?.toISOString(),
+      },
+    };
+  } catch (erro) {
+    return { ok: false, erro: traduzir(erro) };
+  }
+}

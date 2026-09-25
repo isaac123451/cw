@@ -1116,6 +1116,19 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Prêmio repensado (24/09/2026, 1.76.0)
+
+O Prêmio em abas: **Pedir o voto** (como o pedir avaliação — os
+indicados com telefone, ranqueados por `forca` + recência, e a fila de
+lembrete de pedidos com 3+ dias; o clique abre o WhatsApp e registra o
+passo por `pedirVoto`, que põe a pessoa na campanha já como "pedido"),
+**Ideias e estratégias** (`ideiasDoPremio`, com os números da base, o
+calendário e os depoimentos), **Planilha** (filtros e exportação, sem a
+mensagem repetida em cada linha da prévia) e **Campanha** (o cadastro,
+que era o topo da tela). Mensagem padrão mais curta. Na lista da
+campanha, abrir o WhatsApp também registra o passo. Conferido na tela sem
+registrar nenhum pedido: 17 indicados, aviso de campanha sem link.
+
 ### Índice como no HugMe (24/09/2026, 1.75.0)
 
 Tela `/reclame-aqui/indice` (segunda aba do módulo). Atual (meses

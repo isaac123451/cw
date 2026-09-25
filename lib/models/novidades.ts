@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.76.0",
+    data: "2026-09-24",
+    titulo: "Prêmio repensado",
+    texto: "O Prêmio agora funciona como o pedir avaliação: a aba Pedir o voto traz os indicados de hoje (quem avaliou bem, com telefone, a melhor lembrança primeiro) e quem precisa de lembrete; o clique abre o WhatsApp e já registra. Ideias e estratégias com os números da base, a planilha à parte e o cadastro da campanha no fim. Mensagem padrão mais curta.",
+    frentes: ["reclame-aqui"],
+  },
+  {
     versao: "1.75.0",
     data: "2026-09-24",
     titulo: "Índice como no HugMe",

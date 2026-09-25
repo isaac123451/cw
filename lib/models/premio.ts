@@ -54,6 +54,11 @@ export interface ContatoDoPremio {
   motivo: string;
   /** AAAA-MM-DD da avaliação ou da resposta. */
   data: string;
+  /**
+   * Quão boa é a lembrança dessa pessoa — ordena os indicados.
+   * Nota 10, resolvido e "voltaria" pesam mais; promotor 10 mais que 9.
+   */
+  forca: number;
 }
 
 /**
@@ -119,6 +124,7 @@ export function contatosDoPremio(entrada: {
         email: c.email,
         motivo: [`avaliou ${c.score ?? "—"}`, c.resolved ? "resolvido" : null, c.wouldDoBusiness ? "voltaria" : null].filter(Boolean).join(", "),
         data: dia,
+        forca: Math.max(0, (c.score ?? 0) - 7) + (c.resolved ? 2 : 0) + (c.wouldDoBusiness ? 1 : 0),
       });
     }
   }
@@ -139,6 +145,7 @@ export function contatosDoPremio(entrada: {
         email: r.email,
         motivo: [`NPS ${r.score}`, r.avaliacaoGoogle?.estrelas === 5 ? "5 estrelas no Google" : null, r.aceitaCase ? "aceitou ser case" : null].filter(Boolean).join(", "),
         data: dia.slice(0, 10),
+        forca: Math.max(0, r.score - 8) + (r.avaliacaoGoogle?.estrelas === 5 ? 1 : 0) + (r.aceitaCase ? 1 : 0),
       });
     }
   }
@@ -328,4 +335,106 @@ export function depoimentosDoPremio(entrada: {
 /** O depoimento pronto para colar: a fala entre aspas e quem disse. */
 export function textoDoDepoimento(d: Pick<Depoimento, "fala" | "autor">) {
   return `“${d.fala.replace(/\s+/g, " ")}” — ${d.autor}, cliente Cardápio Web`;
+}
+
+/* ------------------------------------------------------------------ */
+/* Pedir o voto como o pedir avaliação (1.76)                          */
+/* ------------------------------------------------------------------ */
+
+function diasEntre(de: string, ate: string) {
+  return Math.round((Date.parse(`${ate.slice(0, 10)}T00:00:00Z`) - Date.parse(`${de.slice(0, 10)}T00:00:00Z`)) / 86_400_000);
+}
+
+/**
+ * Os indicados para pedir o voto agora: com telefone, fora da campanha,
+ * a melhor lembrança primeiro e a mais recente como desempate.
+ *
+ * Quem avaliou há pouco lembra do atendimento — os últimos 90 dias ganham
+ * dois pontos, até 180 dias um. É a mesma ideia do pedir avaliação: a
+ * lista do dia, e não a base inteira numa planilha.
+ */
+export function indicadosParaPedir(contatos: ContatoDoPremio[], hoje: string): ContatoDoPremio[] {
+  const recencia = (c: ContatoDoPremio) => {
+    if (!c.data) return 0;
+    const d = diasEntre(c.data, hoje);
+    return d <= 90 ? 2 : d <= 180 ? 1 : 0;
+  };
+  return contatos
+    .filter((c) => c.telefoneInternacional)
+    .map((c) => ({ c, pontos: c.forca + recencia(c) }))
+    .sort((a, b) => b.pontos - a.pontos || b.c.data.localeCompare(a.c.data))
+    .map((x) => x.c);
+}
+
+/** Um lembrete só, 3 dias depois do pedido: quem já passou disso e não votou. */
+export const DIAS_PARA_LEMBRAR = 3;
+
+export function lembretesDaVez<T extends { situacao: SituacaoDoVoto; pedidoEm?: string; telefone?: string }>(pedidos: T[], hoje: string): T[] {
+  return pedidos.filter((p) => p.situacao === "pedido" && p.pedidoEm && p.telefone && diasEntre(p.pedidoEm, hoje) >= DIAS_PARA_LEMBRAR);
+}
+
+export interface IdeiaDoPremio {
+  titulo: string;
+  texto: string;
+  /** O número da base que sustenta a ideia, quando há. */
+  numero?: string;
+}
+
+/**
+ * Ideias e estratégias da campanha, com os números desta base.
+ *
+ * Nada de promessa sobre o regulamento do prêmio: são as alavancas que a
+ * operação controla — quem pedir primeiro, quando pedir, quantas vezes e
+ * onde deixar o link.
+ */
+export function ideiasDoPremio(entrada: {
+  indicados: ContatoDoPremio[];
+  pedidos: { situacao: SituacaoDoVoto; pedidoEm?: string; telefone?: string }[];
+  hoje: string;
+  votacaoFim?: string;
+}): IdeiaDoPremio[] {
+  const { indicados, pedidos, hoje } = entrada;
+  const recentes = indicados.filter((c) => c.origem === "reclame-aqui" && c.data && diasEntre(c.data, hoje) <= 90 && c.forca >= 5).length;
+  const promotores = indicados.filter((c) => c.origem === "nps").length;
+  const lembrar = lembretesDaVez(pedidos, hoje).length;
+  const restam = entrada.votacaoFim ? diasEntre(hoje, entrada.votacaoFim) : null;
+
+  const ideias: IdeiaDoPremio[] = [
+    {
+      titulo: "Comece por quem lembra do atendimento",
+      texto: "Quem avaliou 10, resolvido e voltaria nos últimos 90 dias tem o atendimento fresco na memória — é o pedido com mais chance. Eles vêm primeiro em Pedir o voto.",
+      numero: `${recentes} pessoa(s) assim, com telefone`,
+    },
+    {
+      titulo: "Promotores do NPS",
+      texto: "Quem deu 9 ou 10 no NPS já disse que recomenda a Cardápio Web. O pedido de voto é o mesmo gesto, em outro lugar.",
+      numero: `${promotores} promotor(es) com telefone, fora da campanha`,
+    },
+    {
+      titulo: "Peça no fim de um atendimento que deu certo",
+      texto: "Quando o cliente agradece pela solução, o link da votação no fechamento da conversa pega o melhor momento — o mesmo do pedido de avaliação.",
+    },
+    {
+      titulo: "Um lembrete só",
+      texto: `Depois do pedido, um lembrete ${DIAS_PARA_LEMBRAR} dias depois, e só. Insistir mais vira incômodo e pode virar reclamação.`,
+      numero: lembrar > 0 ? `${lembrar} pedido(s) já passaram de ${DIAS_PARA_LEMBRAR} dias sem lembrete` : undefined,
+    },
+    {
+      titulo: "O link onde o cliente já está",
+      texto: "Assinatura do e-mail do suporte, mensagem de encerramento do atendimento e stories da marca durante a votação — sem abordagem nova, só o link no caminho.",
+    },
+    {
+      titulo: "Depoimentos para as redes",
+      texto: "As falas de quem avaliou bem viram posts com o link da votação: prova social de gente real, com autorização. Estão prontos logo abaixo.",
+    },
+  ];
+
+  if (restam !== null) {
+    ideias.unshift({
+      titulo: restam >= 0 ? "O relógio da votação" : "A votação fechou",
+      texto: restam >= 0 ? "Distribua os pedidos até a última semana e deixe os lembretes para os dias finais." : "Registre quem disse que votou e guarde a lista para o próximo ano.",
+      numero: restam >= 0 ? `${restam} dia(s) até fechar` : undefined,
+    });
+  }
+  return ideias;
 }

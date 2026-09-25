@@ -119,7 +119,14 @@ export default function CampanhaDeVotacao({ campanha, pedidos, recarregar }: { c
                 </p>
               </div>
               {zap ? (
-                <a href={zap} target="_blank" rel="noreferrer" className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50">
+                <a
+                  href={zap}
+                  target="_blank"
+                  rel="noreferrer"
+                  /* Abrir o WhatsApp já registra o passo (1.76): antes eram dois cliques, e o segundo se esquecia. */
+                  onClick={() => proximo && proximo !== "votou" && void marcar([p.id], proximo)}
+                  className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50"
+                >
                   <MessageCircle size={13} /> {p.situacao === "exportado" ? "Pedir no WhatsApp" : "Lembrar no WhatsApp"}
                 </a>
               ) : (
