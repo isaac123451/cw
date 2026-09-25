@@ -88,6 +88,12 @@ export const PADROES = {
   lembretes: true,
 
   /**
+   * Prazo estourando avisa (1.80): uma notificação quando o prazo de um
+   * caso seu (ou sem responsável) entra em atenção e quando estoura.
+   */
+  prazos: true,
+
+  /**
    * O vigia do Reclame Aqui: ler o portal ao abrir a plataforma.
    *
    * Ligado por padrão, porque é o que faz a reclamação nova chegar ao

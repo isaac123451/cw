@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.80.0",
+    data: "2026-09-25",
+    titulo: "Prazo estourando avisa",
+    texto: "A extensão avisa quando o prazo de um caso seu (ou sem responsável) entra em atenção e quando estoura — uma vez por mudança, das 8h às 20h; muitos de uma vez chegam num aviso só, e o clique abre o caso. Dá para desligar nas opções da extensão. Recarregue a extensão.",
+    frentes: ["reclame-aqui", "redes", "extensao"],
+  },
+  {
     versao: "1.79.0",
     data: "2026-09-25",
     titulo: "Área da empresa com o estado em destaque e pedir avaliação",

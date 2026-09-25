@@ -5,6 +5,8 @@ import {
   padraoDeOrigem,
 } from "../comum/config.js";
 
+import { decidirAvisosDePrazo, dentroDoHorario, horaDeBrasilia } from "../comum/prazos.js";
+
 import {
   ehDesafio,
   enderecoDaLista,
@@ -64,6 +66,7 @@ const CAMINHOS = {
   raCartao: "/api/extensao/ra-cartao",
   raLista: "/api/extensao/ra-lista",
   disparos: "/api/extensao/disparos",
+  prazos: "/api/extensao/prazos",
 };
 
 /**
@@ -1296,6 +1299,68 @@ async function cobrarEtapas() {
 }
 
 /* ============================================================
+   PRAZO ESTOURANDO AVISA (1.80)
+============================================================ */
+
+/**
+ * Um aviso por caso a cada mudança: quando o prazo entra em atenção
+ * (vence hoje ou falta um quarto) e quando estoura. Os casos da pessoa e
+ * os sem responsável — o dos colegas não é barulho dela. Três ou mais de
+ * uma vez viram uma notificação só. Das 8h às 20h de Brasília: fora do
+ * expediente, o aviso só acordaria alguém.
+ */
+async function avisarPrazos() {
+  const config = await lerConfig();
+  if (config.prazos === false) return;
+
+  if (!dentroDoHorario(horaDeBrasilia())) return;
+
+  let dados;
+  try {
+    dados = await chamar(CAMINHOS.prazos);
+  } catch {
+    return;
+  }
+
+  const { prazosAvisados = {}, avisosDePrazo = {} } = await chrome.storage.local.get(["prazosAvisados", "avisosDePrazo"]);
+  const decisao = decidirAvisosDePrazo({ casos: dados?.casos ?? [], avisados: prazosAvisados });
+  const agora = decisao.estado;
+  const links = { ...avisosDePrazo };
+
+  const icone = chrome.runtime.getURL("icones/icone-128.png");
+  if (decisao.individuais.length) {
+    for (const c of decisao.individuais) {
+      const id = `cw-prazo-${c.protocolo}-${c.situacao}`;
+      links[id] = c.url;
+      chrome.notifications.create(id, {
+        type: "basic",
+        iconUrl: icone,
+        title: c.situacao === "estourado" ? `Prazo estourado · ${c.protocolo}` : `Prazo vence logo · ${c.protocolo}`,
+        message: `${c.cliente} — ${c.rotulo}`.slice(0, 180),
+        contextMessage: c.prioridade ? `${c.prioridade}${c.meu ? " · seu caso" : " · sem responsável"}` : undefined,
+        priority: c.situacao === "estourado" ? 2 : 1,
+      });
+    }
+  } else if (decisao.grupo) {
+    const novos = decisao.grupo;
+    const id = `cw-prazo-grupo-${Date.now()}`;
+    links[id] = dados?.quadro;
+    const estourados = novos.filter((c) => c.situacao === "estourado").length;
+    chrome.notifications.create(id, {
+      type: "basic",
+      iconUrl: icone,
+      title: `${novos.length} prazos pedindo atenção`,
+      message: `${estourados ? `${estourados} estourado(s). ` : ""}${novos.slice(0, 3).map((c) => c.protocolo).join(", ")}${novos.length > 3 ? "…" : ""}`,
+      priority: estourados ? 2 : 1,
+    });
+  }
+
+  /* Os links das notificações: guardados para o clique abrir o caso certo; os antigos saem. */
+  const ids = Object.keys(links).slice(-50);
+  await chrome.storage.local.set({ prazosAvisados: agora, avisosDePrazo: Object.fromEntries(ids.map((k) => [k, links[k]])) });
+}
+
+/* ============================================================
    VIGIA DO RECLAME AQUI
 ============================================================ */
 
@@ -1809,7 +1874,10 @@ chrome.commands?.onCommand?.addListener(async (comando) => {
 
 chrome.alarms.onAlarm.addListener((alarme) => {
   if (alarme.name === ALARME) atualizarEmSilencio();
-  if (alarme.name === ALARME_LEMBRETE) cobrarEtapas();
+  if (alarme.name === ALARME_LEMBRETE) {
+    cobrarEtapas();
+    avisarPrazos();
+  }
 });
 
 chrome.notifications.onClicked.addListener(async (id) => {
@@ -1818,6 +1886,13 @@ chrome.notifications.onClicked.addListener(async (id) => {
   const base = normalizarBase(config.base);
 
   if (!base) return;
+
+  /* Aviso de prazo: abre o caso (ou o quadro, no aviso agrupado). */
+  if (id.startsWith("cw-prazo-")) {
+    const { avisosDePrazo = {} } = await chrome.storage.local.get("avisosDePrazo");
+    chrome.tabs.create({ url: avisosDePrazo[id] || `${base}/reclame-aqui` });
+    return;
+  }
 
   // Cobrança de etapa e reclamação nova levam ao quadro; o resto, ao painel do dia.
   chrome.tabs.create({

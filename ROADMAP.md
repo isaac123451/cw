@@ -1116,6 +1116,20 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Prazo estourando avisa (25/09/2026, 1.80.0)
+
+No ciclo de 5 minutos do service worker (o mesmo da cobrança de etapas),
+`avisarPrazos` pergunta `/api/extensao/prazos` — a conta do quadro
+(`slaStatus`, regras cadastradas ou os prazos da documentação), só o que
+está em atenção ou estourado, com a lista num cache de 60 s invalidado por
+gravação (de 3–6 s para ~0,9 s por pergunta em desenvolvimento). A
+decisão (`extensao/comum/prazos.js`): só os casos da pessoa e os sem
+responsável; um aviso por caso a cada mudança (atenção → estourado); três
+ou mais viram um aviso só; das 8h às 20h de Brasília. O clique abre o
+caso. Interruptor nas opções da extensão ("Prazo estourando avisa",
+ligado). Base real em 25/09: 13 pedindo atenção (12 estourados), 8 do
+Carlos. `check:prazos-extensao` (10 pontos).
+
 ### Área da empresa que ajuda mais (25/09/2026, 1.79.0)
 
 O cartão da reclamação na área da empresa do Reclame Aqui abre com uma
