@@ -1116,6 +1116,29 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Cancelamento e retenção (25/09/2026, 1.85.0)
+
+Pedido do Isaac: "identifique automaticamente nos casos, juntando pontos
+até da conversa de WhatsApp, os casos de cancelamento e retenção para
+termos um número". Tela `/retencao` (Inteligência). `lib/models/cancelamento.ts`
+lê cada texto — relato do RA e das Redes, solução aplicada, comentário do
+NPS, mensagens das conversas guardadas — atrás de três sinais: **pedido**
+(cancelar o plano/contrato/sistema, rescisão, trocar de sistema; "cancelar
+o pedido" do consumidor não conta), **retido** ("vou continuar com
+vocês", "desisti de cancelar", "aceito o desconto"; ou a avaliação do caso
+de cancelamento dizendo "voltaria") e **cancelado** ("já cancelei",
+"cancelamento efetuado", cobrança depois do cancelamento; ou "não voltaria").
+Os pontos se juntam por cliente (conta, documento, e-mail, telefone; a
+conversa entra pelo caso ligado a ela) e o desfecho é o sinal mais recente.
+Base real em 25/09: **68 clientes pediram, 34 retidos, 13 cancelados, 21 em
+aberto — retenção de 72%**; por mês na tela. Conferidos os 68 pedidos um a
+um; dois erros de leitura corrigidos ("vou ficar no prejuízo" não é
+retido; "se eu tivesse cancelado" não é cancelado). Correção à mão (retido,
+cancelado, não é cancelamento; volta ao automático) em
+`DesfechoDeCancelamento`, RLS 70 de 70 — testada e desfeita na tela.
+As contas estão todas "Ativo": a situação do cadastro ainda não diz quem
+saiu. `check:cancelamento` (17 pontos), `scripts/medir-cancelamento.ts`.
+
 ### Espera só de quem não respondi, e etiquetas na lista (25/09/2026, 1.84.0)
 
 Pedido do Isaac em cima da 1.81: "identifique a espera somente de quem eu

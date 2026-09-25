@@ -2224,3 +2224,19 @@ model ItemDeDisparo {
 
   @@index([loteId, ordem])
 }
+
+/// A correção à mão do desfecho de um cliente em cancelamento (1.85).
+///
+/// A conta de cancelamento e retenção é automática — lê os casos, o NPS e
+/// as conversas. Quando ela erra, alguém corrige: retido, cancelado ou
+/// "não é cancelamento". A chave é a do cliente na conta
+/// ("conta:<id>", "doc:<cpf/cnpj>", "email:<e-mail>", "caso:<protocolo>").
+model DesfechoDeCancelamento {
+  id       String   @id @default(cuid())
+  chave    String   @unique
+  /// retido · cancelado · nao-e-cancelamento
+  desfecho String
+  nota     String?
+  por      String?
+  em       DateTime @default(now())
+}

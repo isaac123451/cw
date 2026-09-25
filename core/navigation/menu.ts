@@ -1,4 +1,5 @@
 import {
+  ShieldCheck,
   BarChart3,
   Bot,
   Building2,
@@ -94,6 +95,7 @@ export const menuItems: MenuItem[] = [
   { title: "Analytics", href: "/analytics", icon: BarChart3, group: "Inteligência" },
   { title: "Causas raiz", href: "/causas-raiz", icon: Crosshair, group: "Inteligência" },
   { title: "Impacto no Negócio", href: "/impacto", icon: Wallet, group: "Inteligência" },
+  { title: "Cancelamento e retenção", href: "/retencao", icon: ShieldCheck, group: "Inteligência" },
   { title: "Assistente", href: "/assistente", icon: Bot, group: "Inteligência" },
   { title: "Documentação", href: "/documentacao", icon: BookOpenCheck, group: "Conhecimento" },
   { title: "Respostas prontas", href: "/base-conhecimento", icon: LibraryBig, group: "Conhecimento" },

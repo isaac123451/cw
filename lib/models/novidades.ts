@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.85.0",
+    data: "2026-09-25",
+    titulo: "Cancelamento e retenção, com o número",
+    texto: "Nova tela em Inteligência: quem pediu para cancelar, quem ficou e quem saiu, juntando o Reclame Aqui, as Redes, o NPS e as conversas guardadas do WhatsApp — com a taxa de retenção e o mês a mês. Cada cliente mostra os trechos que o colocaram ali; se a leitura errar, um clique corrige.",
+    frentes: ["reclame-aqui", "redes", "nps", "plataforma"],
+  },
+  {
     versao: "1.84.0",
     data: "2026-09-25",
     titulo: "Espera só de quem você não respondeu, e etiquetas na lista",
