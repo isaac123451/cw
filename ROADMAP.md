@@ -1116,6 +1116,18 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Selos de quem espera resposta (25/09/2026, 1.81.0)
+
+`conteudo/selos-espera.js`, na lista de conversas do WhatsApp Web: a
+linha cuja última mensagem não tem o ícone de envio (tiques ou relógio,
+que só existem no que nós mandamos) ganha um selo com a espera, pela hora
+que a lista mostra — "espera 28 min" (lilás), de 30 min a 2 h âmbar,
+depois vermelho; "espera desde ontem", "há 3 dias". Grupos e esperas de
+menos de 5 min ficam de fora; o selo some quando a gente responde. Lê só
+o ícone e a hora — nenhum texto de mensagem, e nada sai da página.
+`check:selos-espera` (13 pontos) e conferido numa bancada que imita a
+lista (5 linhas, incluindo o selo sumir depois do tique).
+
 ### Prazo estourando avisa (25/09/2026, 1.80.0)
 
 No ciclo de 5 minutos do service worker (o mesmo da cobrança de etapas),

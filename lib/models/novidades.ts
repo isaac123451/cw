@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.81.0",
+    data: "2026-09-25",
+    titulo: "Selos de quem espera resposta",
+    texto: "Na lista de conversas do WhatsApp Web, quem falou por último e ainda espera a nossa resposta ganha um selo com o tempo — lilás até meia hora, âmbar até 2 horas, vermelho depois. Some quando a gente responde. Recarregue a extensão.",
+    frentes: ["extensao"],
+  },
+  {
     versao: "1.80.0",
     data: "2026-09-25",
     titulo: "Prazo estourando avisa",
