@@ -496,11 +496,11 @@ export default function CaseDetail({
               rotulo="Perguntar"
             />
 
-            {/* O dossiê de 8 partes, em tela grande (Fase 26) — o do Reclame Aqui, que sustenta moderação. */}
-            {canal === "reclame-aqui" && (
+            {/* O dossiê: o texto do caso com fatos e imagens (1.77) — no Reclame Aqui e nas Redes. */}
+            {(canal === "reclame-aqui" || canal === "social") && (
               <Link
-                href={`/reclame-aqui/${encodeURIComponent(data.id)}/dossie`}
-                title="Montar o dossiê do caso: linha do tempo, evidências, apuração e o pedido"
+                href={`/${canal === "reclame-aqui" ? "reclame-aqui" : "redes-sociais"}/${encodeURIComponent(data.id)}/dossie`}
+                title="O dossiê do caso: o texto corrido com os fatos e as imagens, e o formato de moderação"
                 className="flex items-center gap-2 rounded-xl border border-zinc-200 px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
               >
                 <FileText size={15} />

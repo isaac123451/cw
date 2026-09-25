@@ -1116,6 +1116,24 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Dossiê em texto único (25/09/2026, 1.77.0)
+
+O dossiê abre num texto corrido (`textoCorridoDoDossie`): quem reclamou,
+de quê, o que aconteceu dia a dia (a linha do tempo do registro com os
+fatos acrescentados no lugar certo), onde está agora (`situacaoDoCaso`) e
+as imagens numeradas — sem as oito etapas, que ficaram recolhidas como
+"Formato de moderação". Enquanto ninguém edita, o texto acompanha o
+registro; editado, fica como a pessoa deixou até pedir o do registro de
+volta. **Fatos acrescentados** com data opcional; **imagens** comprimidas
+no navegador (JPEG até 1.600 px; um print de 83 KB virou 20 KB), coladas
+com Ctrl+V ou escolhidas, até 10 por caso, guardadas no banco
+(`ImagemDoDossie`, rota `/api/dossie/imagem` com sessão — não há
+armazenamento de arquivos configurado) e baixadas num .html com tudo
+dentro. Vale para o Reclame Aqui e as Redes (`/redes-sociais/[id]/dossie`).
+Banco: `DossieDoCaso.texto` e `.fatos`, tabela nova; RLS 67 de 67.
+`check:dossie-texto` (11 pontos). Conferido na tela com fato e imagem
+descartáveis, tirados depois; a linha de dossiê do teste foi apagada.
+
 ### Prêmio repensado (24/09/2026, 1.76.0)
 
 O Prêmio em abas: **Pedir o voto** (como o pedir avaliação — os

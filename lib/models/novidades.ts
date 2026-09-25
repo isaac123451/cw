@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.77.0",
+    data: "2026-09-25",
+    titulo: "Dossiê em texto único, com fatos e imagens",
+    texto: "O dossiê agora abre como um texto corrido, escrito do registro: quem reclamou, o que aconteceu dia a dia, onde o caso está. Dá para acrescentar fatos que o sistema não tem (com data, entram na ordem certa) e imagens — cole um print com Ctrl+V. Edite à vontade e baixe com as imagens. Vale também para as Redes Sociais; o formato de oito partes continua lá, recolhido, para o pedido de moderação.",
+    frentes: ["reclame-aqui", "redes"],
+  },
+  {
     versao: "1.76.0",
     data: "2026-09-24",
     titulo: "Prêmio repensado",

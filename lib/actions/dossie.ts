@@ -1,10 +1,12 @@
 "use server";
 
+import type { Prisma } from "@prisma/client";
 import { requireRole, SemPermissao, tryRole } from "@/lib/auth/guard";
 import { conferenciaAntesDeUsar, PARTES_VAZIAS, rascunhoSemIA, type PartesEscritas } from "@/lib/models/dossieEscrito";
 import { montarDossie, renderizarDossie, type DossieMontado } from "@/lib/services/dossie.service";
 import { aplicarPartes } from "@/lib/models/dossieEscrito";
 import { pedirEstruturado } from "@/lib/services/ia.service";
+import { fatoValido, situacaoDoCaso, type FatoDoDossie, type ImagemDoDossieView } from "@/lib/models/dossieTexto";
 
 /*
   O dossiê pela plataforma (Fase 26).
@@ -41,6 +43,12 @@ export interface DossieAberto {
   salvo?: { em: string; por?: string; versao: number };
   /** A tabela ainda não existe: as partes começam em branco. */
   semTabela?: boolean;
+  /** O texto único editado — ausente, a tela escreve do registro. */
+  texto?: string;
+  fatos: FatoDoDossie[];
+  imagens: ImagemDoDossieView[];
+  /** Onde o caso está agora, numa frase (status, resposta, avaliação). */
+  situacao: string;
 }
 
 export async function abrirDossie(protocolo: string): Promise<({ ok: true } & DossieAberto) | Falha> {
@@ -50,11 +58,24 @@ export async function abrirDossie(protocolo: string): Promise<({ ok: true } & Do
     const eu = await q.ctx.prisma.user.findUnique({ where: { id: q.ctx.userId }, select: { name: true } });
     const montado = await montarDossie(q.ctx.prisma, protocolo, { montadoPor: eu?.name ?? "Operação" });
     if (!montado) return { ok: false, erro: "Caso não encontrado." };
-    const caso = await q.ctx.prisma.case.findFirst({ where: { OR: [{ protocol: protocolo }, { externalId: protocolo }] }, select: { id: true } });
+    const caso = await q.ctx.prisma.case.findFirst({
+      where: { OR: [{ protocol: protocolo }, { externalId: protocolo }] },
+      select: { id: true, status: true, publicResponse: true, publicResponseAt: true, evaluated: true, score: true, resolved: true, wouldDoBusiness: true },
+    });
     let salvo = null;
+    let imagens: ImagemDoDossieView[] = [];
     let semTabela = false;
     try {
       salvo = caso ? await q.ctx.prisma.dossieDoCaso.findUnique({ where: { caseId: caso.id } }) : null;
+      imagens = caso
+        ? (
+            await q.ctx.prisma.imagemDoDossie.findMany({
+              where: { caseId: caso.id },
+              select: { id: true, nome: true, legenda: true, bytes: true, criadoEm: true },
+              orderBy: { criadoEm: "asc" },
+            })
+          ).map((i) => ({ id: i.id, nome: i.nome, legenda: i.legenda ?? undefined, bytes: i.bytes, criadoEm: i.criadoEm.toISOString() }))
+        : [];
     } catch (erro) {
       const codigo = (erro as { code?: string })?.code;
       if (codigo !== "P2021" && codigo !== "P2022") throw erro;
@@ -78,6 +99,12 @@ export async function abrirDossie(protocolo: string): Promise<({ ok: true } & Do
       partes,
       salvo: salvo ? { em: salvo.atualizadoEm.toISOString(), por: salvo.atualizadoPor ?? undefined, versao: salvo.versao } : undefined,
       semTabela,
+      texto: salvo?.texto ?? undefined,
+      fatos: lerFatos(salvo?.fatos),
+      imagens,
+      situacao: caso
+        ? situacaoDoCaso({ ...caso, respondida: Boolean(caso.publicResponse?.trim()) })
+        : "",
     };
   } catch (erro) {
     return { ok: false, erro: traduzir(erro) };
@@ -182,6 +209,90 @@ export async function documentoDoDossie(protocolo: string, partes: PartesEscrita
     if (!montado) return { ok: false, erro: "Caso não encontrado." };
     return { ok: true, texto: renderizarDossie(aplicarPartes(montado, partes)), problemas: conferenciaAntesDeUsar(montado, partes) };
   } catch (erro) {
+    return { ok: false, erro: traduzir(erro) };
+  }
+}
+
+/* ============================================================
+   O DOSSIÊ EM TEXTO ÚNICO (1.77)
+============================================================ */
+
+function lerFatos(json: unknown): FatoDoDossie[] {
+  if (!Array.isArray(json)) return [];
+  return json
+    .filter((f): f is FatoDoDossie => Boolean(f && typeof f === "object" && typeof (f as FatoDoDossie).texto === "string" && typeof (f as FatoDoDossie).id === "string"))
+    .slice(0, 100);
+}
+
+async function casoEAutor(prisma: NonNullable<Awaited<ReturnType<typeof tryRole>>>["prisma"], userId: string, protocolo: string) {
+  const [caso, eu] = await Promise.all([
+    prisma.case.findFirst({ where: { OR: [{ protocol: protocolo }, { externalId: protocolo }] }, select: { id: true } }),
+    prisma.user.findUnique({ where: { id: userId }, select: { name: true } }),
+  ]);
+  return { caso, autor: eu?.name ?? undefined };
+}
+
+/** Grava o texto único editado; `null` volta ao texto escrito do registro. */
+export async function salvarTextoDoDossie(protocolo: string, texto: string | null): Promise<{ ok: true; versao: number } | Falha> {
+  const q = await quem("AGENTE");
+  if ("erro" in q) return { ok: false, erro: q.erro! };
+  try {
+    const { caso, autor } = await casoEAutor(q.ctx.prisma, q.ctx.userId, protocolo);
+    if (!caso) return { ok: false, erro: "Caso não encontrado." };
+    const limpo = texto === null ? null : texto.replace(/\r\n/g, "\n").trim().slice(0, 20_000) || null;
+    const r = await q.ctx.prisma.dossieDoCaso.upsert({
+      where: { caseId: caso.id },
+      create: { caseId: caso.id, texto: limpo, atualizadoPor: autor ?? null },
+      update: { texto: limpo, atualizadoPor: autor ?? null, versao: { increment: 1 } },
+      select: { versao: true },
+    });
+    return { ok: true, versao: r.versao };
+  } catch (erro) {
+    return { ok: false, erro: traduzir(erro) };
+  }
+}
+
+/** Acrescenta um fato ao dossiê — ou tira, com `remover`. Devolve a lista gravada. */
+export async function mudarFatosDoDossie(
+  protocolo: string,
+  mudanca: { acrescentar?: { quando?: string; texto: string }; remover?: string }
+): Promise<{ ok: true; fatos: FatoDoDossie[] } | Falha> {
+  const q = await quem("AGENTE");
+  if ("erro" in q) return { ok: false, erro: q.erro! };
+  const novo = mudanca.acrescentar ? fatoValido(mudanca.acrescentar) : null;
+  if (mudanca.acrescentar && !novo) return { ok: false, erro: "Escreva o fato (pelo menos algumas palavras)." };
+  try {
+    const { caso, autor } = await casoEAutor(q.ctx.prisma, q.ctx.userId, protocolo);
+    if (!caso) return { ok: false, erro: "Caso não encontrado." };
+    const atual = await q.ctx.prisma.dossieDoCaso.findUnique({ where: { caseId: caso.id }, select: { fatos: true } });
+    let fatos = lerFatos(atual?.fatos);
+    if (mudanca.remover) fatos = fatos.filter((f) => f.id !== mudanca.remover);
+    if (novo) {
+      if (fatos.length >= 100) return { ok: false, erro: "O dossiê já tem 100 fatos acrescentados." };
+      fatos = [...fatos, { id: crypto.randomUUID(), ...novo, autor, em: new Date().toISOString() }];
+    }
+    await q.ctx.prisma.dossieDoCaso.upsert({
+      where: { caseId: caso.id },
+      create: { caseId: caso.id, fatos: fatos as unknown as Prisma.InputJsonValue, atualizadoPor: autor ?? null },
+      update: { fatos: fatos as unknown as Prisma.InputJsonValue, atualizadoPor: autor ?? null, versao: { increment: 1 } },
+      select: { id: true },
+    });
+    return { ok: true, fatos };
+  } catch (erro) {
+    return { ok: false, erro: traduzir(erro) };
+  }
+}
+
+/** Troca a legenda de uma imagem do dossiê, ou a tira (`remover`). */
+export async function mudarImagemDoDossie(id: string, mudanca: { legenda?: string; remover?: boolean }): Promise<{ ok: true } | Falha> {
+  const q = await quem("AGENTE");
+  if ("erro" in q) return { ok: false, erro: q.erro! };
+  try {
+    if (mudanca.remover) await q.ctx.prisma.imagemDoDossie.delete({ where: { id }, select: { id: true } });
+    else await q.ctx.prisma.imagemDoDossie.update({ where: { id }, data: { legenda: mudanca.legenda?.trim().slice(0, 300) || null }, select: { id: true } });
+    return { ok: true };
+  } catch (erro) {
+    if ((erro as { code?: string })?.code === "P2025") return { ok: false, erro: "Esta imagem já não existe." };
     return { ok: false, erro: traduzir(erro) };
   }
 }

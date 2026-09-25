@@ -510,6 +510,7 @@ model Case {
   negociacoes Negociacao[]
   avaliacoesGoogle AvaliacaoGoogle[]
   conversas Conversa[]
+  imagensDoDossie ImagemDoDossie[]
 
   @@index([channel, publishedAt])
   @@index([status])
@@ -2136,9 +2137,34 @@ model DossieDoCaso {
   alegado       String[] @default([])
   enquadramento String?
   conclusao     String?
+  /// O dossiê em texto único (1.77): o texto corrido, escrito do registro
+  /// e editado por quem conhece o caso — sem as oito partes.
+  texto         String?
+  /// Os fatos acrescentados à mão: [{ id, quando?, texto, autor, em }].
+  fatos         Json     @default("[]")
   versao        Int      @default(1)
   atualizadoPor String?
   atualizadoEm  DateTime @updatedAt
+}
+
+/// As imagens do dossiê (1.77): prints e fotos que o registro não tem.
+///
+/// No banco, comprimidas no navegador (JPEG de até 1600 px, algumas
+/// centenas de KB): não há armazenamento de arquivos configurado e o
+/// Drive saiu do plano. Dez por caso, no máximo.
+model ImagemDoDossie {
+  id        String   @id @default(cuid())
+  caseId    String
+  case      Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  nome      String
+  tipo      String
+  bytes     Int
+  dados     Bytes
+  legenda   String?
+  criadoPor String?
+  criadoEm  DateTime @default(now())
+
+  @@index([caseId, criadoEm])
 }
 
 /// O que a pessoa mudou numa resposta sugerida antes de enviar (Fase 28).

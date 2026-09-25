@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, CircleCheck, Download, Loader2, Sparkles, TriangleAlert } from "lucide-react";
 
 import SurfaceCard from "@/components/shared/SurfaceCard";
+import DossieEmTexto from "@/components/dossie/DossieEmTexto";
 import BotaoCopiar from "@/components/shared/BotaoCopiar";
 
 import { abrirDossie, escreverDossieComIA, salvarPartesDoDossie, type DossieAberto } from "@/lib/actions/dossie";
@@ -46,11 +47,37 @@ export default function DossieDoCaso({ protocolo }: { protocolo: string }) {
 
   if (erro) return <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900 ring-1 ring-inset ring-amber-100">{erro}</p>;
   if (!aberto) return <p className="flex items-center gap-2 py-10 text-sm text-zinc-500"><Loader2 size={15} className="animate-spin" /> Montando o dossiê do banco…</p>;
-  return <EditorDoDossie protocolo={protocolo} aberto={aberto} />;
+  /* O dossiê serve às duas frentes de casos: o caminho de volta segue o canal. */
+  const frente = aberto.montado.identificacao.canal === "Reclame Aqui" ? "/reclame-aqui" : "/redes-sociais";
+
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center gap-3">
+        <Link href={`${frente}/${encodeURIComponent(protocolo)}`} className="flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-800">
+          <ArrowLeft size={15} /> Voltar ao caso
+        </Link>
+        <h1 className="min-w-0 flex-1 truncate text-lg font-semibold text-zinc-900">Dossiê — {aberto.montado.identificacao.titulo}</h1>
+      </div>
+
+      {/* O texto único (1.77): o que se lê e se manda para outra área. */}
+      <DossieEmTexto protocolo={protocolo} aberto={aberto} />
+
+      {/* As oito partes ficam para o pedido de moderação — recolhidas, porque é o uso raro. */}
+      <details className="rounded-2xl border border-zinc-200/80 bg-white">
+        <summary className="cursor-pointer select-none px-5 py-4 text-sm font-semibold text-zinc-800">
+          Formato de moderação (oito partes)
+          <span className="ml-2 text-xs font-normal text-zinc-500">para o pedido de moderação no Reclame Aqui</span>
+        </summary>
+        <div className="border-t border-zinc-100 p-5">
+          <EditorDoDossie protocolo={protocolo} aberto={aberto} embutido />
+        </div>
+      </details>
+    </div>
+  );
 }
 
 /** O documento aberto, com as partes escritas editáveis. */
-export function EditorDoDossie({ protocolo, aberto }: { protocolo: string; aberto: DossieAberto }) {
+export function EditorDoDossie({ protocolo, aberto, embutido = false }: { protocolo: string; aberto: DossieAberto; embutido?: boolean }) {
 
   const { notify } = useToast();
   const [partes, setPartes] = useState<PartesEscritas>(aberto.partes);
@@ -118,10 +145,16 @@ export function EditorDoDossie({ protocolo, aberto }: { protocolo: string; abert
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center gap-3">
-        <Link href={`/reclame-aqui/${encodeURIComponent(protocolo)}`} className="flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-800">
-          <ArrowLeft size={15} /> Voltar ao caso
-        </Link>
-        <h1 className="min-w-0 flex-1 truncate text-lg font-semibold text-zinc-900">Dossiê — {d.identificacao.titulo}</h1>
+        {embutido ? (
+          <span className="min-w-0 flex-1" />
+        ) : (
+          <>
+            <Link href={`/reclame-aqui/${encodeURIComponent(protocolo)}`} className="flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-800">
+              <ArrowLeft size={15} /> Voltar ao caso
+            </Link>
+            <h1 className="min-w-0 flex-1 truncate text-lg font-semibold text-zinc-900">Dossiê — {d.identificacao.titulo}</h1>
+          </>
+        )}
         <button type="button" onClick={escrever} disabled={escrevendo} className="flex h-9 items-center gap-1.5 rounded-lg border border-violet-200 px-3 text-sm font-medium text-violet-700 hover:bg-violet-50 disabled:opacity-50">
           {escrevendo ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />} Escrever sumário e apuração
         </button>
