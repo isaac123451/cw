@@ -68,6 +68,7 @@ const CAMINHOS = {
   disparos: "/api/extensao/disparos",
   prazos: "/api/extensao/prazos",
   transcrever: "/api/extensao/transcrever",
+  etiquetasLista: "/api/extensao/etiquetas-lista",
 };
 
 /**
@@ -528,6 +529,14 @@ async function tratar(mensagem) {
   /* O cartão da reclamação aberta na área da empresa: resumo e o caso no CW. Só leitura. */
   if (mensagem?.tipo === "raCartao") {
     const dados = await chamar(CAMINHOS.raCartao, {}, mensagem.corpo ?? {});
+    return { ok: true, dados };
+  }
+
+  /* As etiquetas da lista de conversas (1.84): "Reclame Aqui", "Redes sociais", "Detrator · NPS". */
+  if (mensagem?.tipo === "etiquetasLista") {
+    const config = await lerConfig();
+    if (config.etiquetasLista === false) return { ok: true, dados: { etiquetas: {} } };
+    const dados = await chamar(CAMINHOS.etiquetasLista, {}, { contatos: mensagem.contatos ?? [] });
     return { ok: true, dados };
   }
 

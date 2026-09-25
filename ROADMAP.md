@@ -1116,6 +1116,25 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Espera só de quem não respondi, e etiquetas na lista (25/09/2026, 1.84.0)
+
+Pedido do Isaac em cima da 1.81: "identifique a espera somente de quem eu
+não respondi" e "deixe algo parecido informando que é 'redes sociais',
+'detrator - NPS'". **Espera:** a prévia começando por "Você" (reação,
+mensagem apagada, "Você: foto") é nossa, e a conversa que o cliente
+fechou com "ok", "obrigado", "👍" não é espera; os selos e etiquetas da
+própria extensão não contam como prévia. Conferido numa bancada: das 5
+linhas, só a pergunta do cliente e o "ok, mas e o repasse?" ganham selo.
+**Etiquetas:** ao lado do nome, "Reclame Aqui" (vermelho se Urgente),
+"Redes sociais", "Detrator · NPS 3" / "Promotor · NPS 10" / "Neutro";
+`/api/extensao/etiquetas-lista` casa pelo telefone (8 últimos dígitos) ou
+pelo nome completo exato de duas palavras ou mais, e pelos números
+confirmados no "É este"; índice com 60 s de cache. A extensão manda só o
+nome da lista (ou o número do contato não salvo), guarda 5 min e desenha
+como texto. Interruptor nas opções. O NPS quase não tem nome nem
+telefone (cruza por e-mail): o "Detrator · NPS" aparece sobretudo nos
+contatos já confirmados. `check:selos-espera` (26 pontos).
+
 ### Identificação que acerta mais (25/09/2026, 1.83.0)
 
 Um motor de pistas (`candidatosPelasPistas`): CPF/CNPJ e e-mail são

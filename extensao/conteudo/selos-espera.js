@@ -1,19 +1,20 @@
 /**
- * Selos de quem espera resposta, na lista de conversas do WhatsApp Web
- * (Fase 33, 1.81).
+ * Selos na lista de conversas do WhatsApp Web.
  *
- * "Nas conversas, o cliente que está esperando a nossa resposta ganha
- * selo, com o tempo de espera."
+ * **Espera (1.81, ajustada na 1.84).** "Identifique a espera somente de
+ * quem eu não respondi." A linha ganha o selo quando o cliente falou por
+ * último e ninguém respondeu: sem o ícone de envio (tiques ou relógio,
+ * que só existem no que nós mandamos) e sem prévia começando por "Você"
+ * (a reação, a mensagem apagada, o "Você: foto"). E a conversa que o
+ * cliente fechou com "ok", "obrigado", "👍" não é espera — é fim.
  *
- * **O que lê:** de cada linha da lista, só duas coisas — se a última
- * mensagem tem o ícone de envio (os tiques ou o relógio, que só existem
- * no que nós mandamos) e a hora dela. Sem tique, quem falou por último
- * foi o cliente: ele espera. **O que não lê:** o texto das mensagens.
- * Nada sai desta página; o selo é desenhado aqui e some quando a gente
- * responde.
+ * **Etiquetas (1.84).** "Redes sociais", "Detrator · NPS" e afins: ao
+ * lado do nome, o que o CW sabe daquele contato. A extensão manda à
+ * aplicação só o nome que a lista mostra e, do contato não salvo, o
+ * número — nunca mensagem — e guarda a resposta por 5 minutos.
  *
- * Grupos ficam de fora (a última fala é de qualquer um), e espera de
- * menos de 5 minutos também — é conversa acontecendo, não fila.
+ * **O que lê:** o ícone de envio, a hora, a prévia (só para o "Você" e o
+ * "obrigado", aqui mesmo) e o nome da linha. A prévia não sai da página.
  */
 (() => {
   const CW = (window.CWReputacao = window.CWReputacao || {});
@@ -59,7 +60,19 @@
     return { rotulo, nivel };
   }
 
-  CW.selosEspera = { minutosDesde, seloDaEspera };
+  /** A prévia é nossa? "Você: foto", "Você reagiu…", "Você apagou…". */
+  function previaNossa(previa) {
+    /* Sem \b: para o JavaScript, "ê" não é letra, e "Vocês" passaria. */
+    return /^voc[eê](?![a-zà-ÿ])/i.test(String(previa ?? "").trim());
+  }
+
+  /** O cliente encerrou: "ok", "obrigado", "valeu", um 👍 — não é espera. */
+  const ENCERRA = /^(ok+|okay|blz|beleza|obrigad[oa]s?|muito obrigad[oa]|obg|valeu|vlw|tmj|show|perfeito|certo|combinado|de nada|disponha|👍+|🙏+|❤️+|😊+)[\s!.,:)👍🙏❤️😊]*$/i;
+  function encerrou(previa) {
+    return ENCERRA.test(String(previa ?? "").trim());
+  }
+
+  CW.selosEspera = { minutosDesde, seloDaEspera, previaNossa, encerrou };
 
   /* ------------------------------------------------------------------ */
   /* A parte da página                                                    */
@@ -71,37 +84,58 @@
   const NOSSO = '[data-icon*="check"], [data-icon="status-time"], [data-icon="msg-time"]';
   const GRUPO = '[data-icon="default-group"], [data-icon="default-community"]';
   const HORA = /^(\d{1,2}:\d{2}|ontem|yesterday|domingo|segunda-feira|terça-feira|quarta-feira|quinta-feira|sexta-feira|sábado|\d{1,2}\/\d{1,2}\/\d{2,4})$/i;
+  const TELEFONE = /^\+?\d[\d\s().-]{8,}$/;
 
   const estilo = document.createElement("style");
   estilo.textContent = `
-    .cw-espera { display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 999px; font: 600 10.5px/1.5 system-ui, sans-serif; white-space: nowrap; vertical-align: middle; }
+    .cw-espera, .cw-etiqueta { display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 999px; font: 600 10.5px/1.5 system-ui, sans-serif; white-space: nowrap; vertical-align: middle; }
     .cw-espera.leve { background: #ede9fe; color: #5b21b6; }
     .cw-espera.atencao { background: #fef3c7; color: #92400e; }
     .cw-espera.atrasado { background: #ffe4e6; color: #9f1239; }
+    .cw-etiquetas { display: inline-flex; gap: 4px; margin-left: 4px; vertical-align: middle; }
+    .cw-etiqueta { margin-left: 0; font-weight: 600; }
+    .cw-etiqueta.perigo { background: #ffe4e6; color: #9f1239; }
+    .cw-etiqueta.atencao { background: #ffedd5; color: #9a3412; }
+    .cw-etiqueta.ok { background: #dcfce7; color: #166534; }
+    .cw-etiqueta.neutro { background: #f4f4f5; color: #52525b; }
   `;
   document.head?.appendChild(estilo);
 
   function linhas() {
     const lista = document.querySelector("#pane-side") || document.querySelector("[data-testid='chat-list']");
-    if (!lista) return [];
-    const achadas = lista.querySelectorAll('[role="listitem"], [role="row"]');
-    return [...achadas];
+    return lista ? [...lista.querySelectorAll('[role="listitem"], [role="row"]')] : [];
   }
 
   function horaDaLinha(linha) {
-    /* A hora é um texto curto sozinho num elemento — o primeiro que casa. */
     for (const el of linha.querySelectorAll("span, div")) {
       if (el.children.length === 0 && HORA.test((el.textContent || "").trim())) return el;
     }
     return null;
   }
 
-  function marcar() {
+  /** O nome é o primeiro texto com `title` da linha; a prévia, a primeira linha depois do nome e da hora. */
+  function nomeDaLinha(linha) {
+    return linha.querySelector("span[title]") || null;
+  }
+
+  function previaDaLinha(linha, nome) {
+    /* Os selos e etiquetas da própria extensão não são prévia. */
+    const nossos = new Set([...linha.querySelectorAll(".cw-espera, .cw-etiqueta")].map((e) => (e.textContent || "").trim()));
+    const partes = (linha.innerText || "").split("\n").map((l) => l.trim()).filter(Boolean);
+    return partes.find((l) => l !== nome && !nossos.has(l) && !HORA.test(l) && !/^\d+$/.test(l)) || "";
+  }
+
+  function marcarEspera() {
     const agora = new Date();
     for (const linha of linhas()) {
       const antigo = linha.querySelector(".cw-espera");
       const hora = horaDaLinha(linha);
-      const espera = !linha.querySelector(GRUPO) && hora && !linha.querySelector(NOSSO) ? seloDaEspera(minutosDesde(hora.textContent, agora)) : null;
+      const nome = nomeDaLinha(linha)?.getAttribute("title") || "";
+      const previa = previaDaLinha(linha, nome);
+      const espera =
+        !linha.querySelector(GRUPO) && hora && !linha.querySelector(NOSSO) && !previaNossa(previa) && !encerrou(previa)
+          ? seloDaEspera(minutosDesde(hora.textContent, agora))
+          : null;
       if (!espera) {
         antigo?.remove();
         continue;
@@ -114,5 +148,70 @@
     }
   }
 
-  setInterval(marcar, 3000);
+  /* ---- as etiquetas ---- */
+  const cache = new Map();
+  const VIDA_MS = 5 * 60 * 1000;
+  let perguntando = false;
+
+  function chaveDaLinha(nome) {
+    return TELEFONE.test(nome) ? `tel:${nome.replace(/\D/g, "")}` : `nome:${nome.trim().toLowerCase()}`;
+  }
+
+  async function perguntarEtiquetas() {
+    if (perguntando || !chrome?.runtime?.id || !CW.enviar) return;
+    const agora = Date.now();
+    const faltam = [];
+    for (const linha of linhas()) {
+      const nome = nomeDaLinha(linha)?.getAttribute("title") || "";
+      if (!nome || linha.querySelector(GRUPO)) continue;
+      const chave = chaveDaLinha(nome);
+      const guardado = cache.get(chave);
+      if (guardado && agora - guardado.em < VIDA_MS) continue;
+      if (!faltam.some((f) => f.chave === chave)) faltam.push({ chave, nome: TELEFONE.test(nome) ? "" : nome, telefone: TELEFONE.test(nome) ? nome : "" });
+    }
+    if (!faltam.length) return;
+    perguntando = true;
+    try {
+      const r = await CW.enviar({ tipo: "etiquetasLista", contatos: faltam.slice(0, 60) });
+      const etiquetas = r?.dados?.etiquetas ?? {};
+      for (const f of faltam.slice(0, 60)) cache.set(f.chave, { em: agora, lista: etiquetas[f.chave] ?? [] });
+    } finally {
+      perguntando = false;
+    }
+  }
+
+  function marcarEtiquetas() {
+    for (const linha of linhas()) {
+      const alvo = nomeDaLinha(linha);
+      const nome = alvo?.getAttribute("title") || "";
+      const antigo = linha.querySelector(".cw-etiquetas");
+      const lista = nome ? cache.get(chaveDaLinha(nome))?.lista ?? [] : [];
+      if (!lista.length) {
+        antigo?.remove();
+        continue;
+      }
+      const assinatura = lista.map((e) => `${e.tom}:${e.rotulo}`).join("|");
+      if (antigo?.dataset.assinatura === assinatura) continue;
+      const caixa = antigo || document.createElement("span");
+      caixa.className = "cw-etiquetas";
+      caixa.dataset.assinatura = assinatura;
+      caixa.replaceChildren(
+        ...lista.map((e) => {
+          const pilula = document.createElement("span");
+          pilula.className = `cw-etiqueta ${["perigo", "atencao", "ok", "neutro"].includes(e.tom) ? e.tom : "neutro"}`;
+          pilula.textContent = String(e.rotulo ?? "");
+          pilula.title = "O que o CW Reputação sabe deste contato";
+          return pilula;
+        })
+      );
+      if (!antigo) alvo.after(caixa);
+    }
+  }
+
+  setInterval(() => {
+    marcarEspera();
+    marcarEtiquetas();
+  }, 3000);
+  setInterval(() => void perguntarEtiquetas().then(marcarEtiquetas), 10000);
+  setTimeout(() => void perguntarEtiquetas().then(marcarEtiquetas), 2500);
 })();

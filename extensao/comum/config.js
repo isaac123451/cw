@@ -94,6 +94,12 @@ export const PADROES = {
   prazos: true,
 
   /**
+   * Etiquetas na lista de conversas do WhatsApp (1.84): "Reclame Aqui",
+   * "Redes sociais", "Detrator · NPS" ao lado do nome.
+   */
+  etiquetasLista: true,
+
+  /**
    * O vigia do Reclame Aqui: ler o portal ao abrir a plataforma.
    *
    * Ligado por padrão, porque é o que faz a reclamação nova chegar ao
