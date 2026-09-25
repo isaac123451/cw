@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.78.0",
+    data: "2026-09-25",
+    titulo: "Disparos em lote seguros pelo WhatsApp",
+    texto: "No Prêmio e no pedir avaliação, monte uma lista (você escolhe quem entra) e abra o WhatsApp Web: o painel CW abre uma conversa por vez com a mensagem escrita, você aperta Enter, e ele registra e espera uns 40 segundos antes da próxima. A cada 10, uma pausa. Dá para pausar, pular e parar. Recarregue a extensão.",
+    frentes: ["reclame-aqui", "extensao"],
+  },
+  {
     versao: "1.77.0",
     data: "2026-09-25",
     titulo: "Dossiê em texto único, com fatos e imagens",

@@ -63,6 +63,7 @@ const CAMINHOS = {
   impacto: "/api/extensao/impacto",
   raCartao: "/api/extensao/ra-cartao",
   raLista: "/api/extensao/ra-lista",
+  disparos: "/api/extensao/disparos",
 };
 
 /**
@@ -523,6 +524,12 @@ async function tratar(mensagem) {
   /* O cartão da reclamação aberta na área da empresa: resumo e o caso no CW. Só leitura. */
   if (mensagem?.tipo === "raCartao") {
     const dados = await chamar(CAMINHOS.raCartao, {}, mensagem.corpo ?? {});
+    return { ok: true, dados };
+  }
+
+  /* A fila de disparos no WhatsApp Web: ler a lista, registrar cada envio, pausar e parar. */
+  if (mensagem?.tipo === "disparos") {
+    const dados = await chamar(CAMINHOS.disparos, {}, { acao: mensagem.acao, itemId: mensagem.itemId, loteId: mensagem.loteId, motivo: mensagem.motivo });
     return { ok: true, dados };
   }
 

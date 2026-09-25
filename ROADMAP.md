@@ -1116,6 +1116,23 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Disparos em lote seguros (25/09/2026, 1.78.0)
+
+A lista nasce na plataforma — os indicados do Prêmio e a fila de hoje do
+pedir avaliação —, escolhida pela pessoa (caixas, os 10 primeiros
+marcados), com a mensagem de cada um pronta (`DispararEmLote`). No
+WhatsApp Web, `conteudo/disparos.js` abre uma conversa por vez pelo
+endereço `send?phone=&text=` (o WhatsApp escreve o texto), **a pessoa
+aperta Enter**, a extensão vê a mensagem sair (ícones de envio ou a última
+mensagem com o começo do texto), registra e espera 35–50 s; a cada 10,
+para e espera um clique. Pausar, pular e parar; número inválido é pulado
+com o motivo. Nenhum clique em enviar nem tecla simulada — a regra da
+extensão e o que protege o número. Cada envio tem efeito no domínio:
+Prêmio → "pedido feito" na campanha; avaliação → contato "Pedi a
+avaliação" por WhatsApp no caso. Banco: `LoteDeDisparo` e
+`ItemDeDisparo`; RLS 69 de 69. `check:disparos` (21 pontos, com um
+ciclo real numa lista descartável, apagada no fim).
+
 ### Dossiê em texto único (25/09/2026, 1.77.0)
 
 O dossiê abre num texto corrido (`textoCorridoDoDossie`): quem reclamou,

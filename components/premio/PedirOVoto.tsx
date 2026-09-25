@@ -5,6 +5,7 @@ import { useState } from "react";
 import { BellRing, Loader2, MessageCircle } from "lucide-react";
 
 import SurfaceCard from "@/components/shared/SurfaceCard";
+import DispararEmLote from "@/components/disparos/DispararEmLote";
 
 import { marcarPedidos, pedirVoto, type CampanhaView, type PedidoView } from "@/lib/actions/premio";
 import { useToast } from "@/lib/context/ToastContext";
@@ -76,6 +77,24 @@ export default function PedirOVoto({
         <p className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900 ring-1 ring-inset ring-amber-100">
           {semMensagem ? "A campanha está sem mensagem" : "A campanha está sem o link da votação"} — complete na aba Campanha para o WhatsApp abrir com o texto certo.
         </p>
+      )}
+
+      {!semMensagem && !semLink && indicados.length > 0 && (
+        <div className="mb-4">
+          <DispararEmLote
+            nome={`Prêmio · ${campanha.nome}`}
+            origem="premio"
+            campanhaId={campanha.id}
+            candidatos={indicados.map((c) => ({
+              chave: `${c.origem}:${c.ref}`,
+              nome: c.nome,
+              telefone: c.telefoneInternacional!,
+              mensagem: mensagemParaContato(campanha.mensagem ?? "", c, campanha.linkVotacao ?? ""),
+              ref: `${c.origem}:${c.ref}`,
+              motivo: c.motivo,
+            }))}
+          />
+        </div>
       )}
 
       {lembrar.length > 0 && (

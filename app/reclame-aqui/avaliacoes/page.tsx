@@ -20,6 +20,11 @@ import PageHeading from "@/components/shared/PageHeading";
 import SurfaceCard from "@/components/shared/SurfaceCard";
 import ModuleNav from "@/components/reclame-aqui/ModuleNav";
 import { useTratativa } from "@/components/reclame-aqui/tratativa/TratativaProvider";
+import DispararEmLote from "@/components/disparos/DispararEmLote";
+import { mensagemDePedidoDeAvaliacao } from "@/lib/models/mensagens";
+import { telefoneDoDisparo } from "@/lib/models/disparos";
+import { hojeNaOperacao } from "@/lib/services/reputation.service";
+import { useSession } from "@/lib/context/SessionContext";
 
 import type { Case } from "@/lib/models/case";
 import { filaDeAvaliacao, type NaFila } from "@/lib/models/cadencia";
@@ -59,6 +64,7 @@ export default function AvaliacoesPage() {
   const { cases } = useScopedCases("reclame-aqui");
   const { setCases } = useCases();
   const { abrirPedidoAvaliacao } = useTratativa();
+  const sessao = useSession();
   const { notify } = useToast();
 
   /*
@@ -241,7 +247,26 @@ export default function AvaliacoesPage() {
                   {fila.proximos[0] ? `em ${diaCurto(fila.proximos[0].pedido.proximoDia)}` : "quando houver resposta nova"}.
                 </p>
               ) : (
-                <Lista itens={fila.hoje} onPedir={(item) => abrirPedidoAvaliacao(item)} onDispensar={(item) => dispensar(item, false)} gravando={gravando} destaque />
+                <>
+                  {/* Os de hoje com telefone, para mandar em lote pelo WhatsApp Web (1.78). */}
+                  <div className="mb-3">
+                    <DispararEmLote
+                      nome={`Pedir avaliação · ${hojeNaOperacao().split("-").reverse().join("/")}`}
+                      origem="avaliacao"
+                      candidatos={fila.hoje
+                        .filter((x) => telefoneDoDisparo(x.item.phone ?? ""))
+                        .map((x) => ({
+                          chave: x.item.protocol,
+                          nome: x.item.customer,
+                          telefone: telefoneDoDisparo(x.item.phone ?? "")!,
+                          mensagem: mensagemDePedidoDeAvaliacao({ nome: x.item.customer, numero: Math.max(1, x.pedido.numero), raUrl: x.item.raUrl, agente: sessao?.name }),
+                          ref: `caso:${x.item.protocol}`,
+                          motivo: x.pedido.numero > 1 ? `${x.pedido.numero}º lembrete` : "1º pedido",
+                        }))}
+                    />
+                  </div>
+                  <Lista itens={fila.hoje} onPedir={(item) => abrirPedidoAvaliacao(item)} onDispensar={(item) => dispensar(item, false)} gravando={gravando} destaque />
+                </>
               )}
             </SurfaceCard>
 

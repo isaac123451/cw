@@ -2183,3 +2183,44 @@ model EdicaoDeResposta {
 
   @@index([userId, criadaEm])
 }
+
+/// Disparos em lote (1.78): uma lista escolhida na plataforma, mandada
+/// pelo WhatsApp Web aos poucos — lotes de 10, uma mensagem a cada ~40 s,
+/// com pausa e parada. A extensão abre a conversa com a mensagem escrita;
+/// quem aperta Enter é a pessoa, e cada envio fica registrado aqui.
+model LoteDeDisparo {
+  id          String   @id @default(cuid())
+  nome        String
+  /// premio · avaliacao
+  origem      String
+  /// O prêmio: a campanha em que cada envio vira "pedido feito".
+  campanhaId  String?
+  /// ativo · pausado · concluido · parado
+  situacao    String   @default("ativo")
+  criadoPor   String?
+  criadoPorId String?
+  criadoEm    DateTime @default(now())
+  itens       ItemDeDisparo[]
+
+  @@index([situacao, criadoEm])
+}
+
+model ItemDeDisparo {
+  id         String        @id @default(cuid())
+  loteId     String
+  lote       LoteDeDisparo @relation(fields: [loteId], references: [id], onDelete: Cascade)
+  ordem      Int
+  nome       String
+  /// Só dígitos, com DDI: 5548999990000.
+  telefone   String
+  mensagem   String
+  /// De onde veio: "reclame-aqui:<id do caso>", "nps:<id>", "caso:<id>".
+  ref        String?
+  /// pendente · enviado · pulado
+  situacao   String        @default("pendente")
+  motivo     String?
+  enviadoEm  DateTime?
+  enviadoPor String?
+
+  @@index([loteId, ordem])
+}
