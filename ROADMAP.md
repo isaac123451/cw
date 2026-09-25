@@ -1116,6 +1116,21 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Índice como no HugMe (24/09/2026, 1.75.0)
+
+Tela `/reclame-aqui/indice` (segunda aba do módulo). Atual (meses
+fechados) e prévia (entra o mês corrente) de 6 e 12 meses, com a nota
+exata — `raScoreExato`, das contagens, sem arredondar os índices no meio;
+`raScore` agora sai dela. Régua de 0 a 10 com as faixas, o mínimo do selo
+e as duas notas; "o que falta" para o selo na prévia (respostas pelo mesmo
+critério do selo, índice com uma casa; avaliações ideais contadas já com
+as respostas feitas). Evolução do mês: a nota exata de cada dia com o que
+se sabia naquele dia (`comoEstavaNoDia`: resposta e avaliação contam do
+dia em que aconteceram) e a lista dos dias que mexeram na nota, com o
+porquê. Base real em 24/09: atual 6 m 8,78111 (RA1000), prévia 8,81211
+sem o selo — faltam 10 respostas (82,7% → 90%). `check:indice` (10
+pontos), `scripts/medir-indice.ts`.
+
 ### Mais causas e categorias, lista enxuta (24/09/2026, 1.74.0)
 
 Causas: as 16 famílias de `FAMILIAS_DE_CAUSA` com 3+ registros reais

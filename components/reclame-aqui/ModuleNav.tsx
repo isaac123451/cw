@@ -12,6 +12,7 @@ import {
   Settings2,
   Star,
   Trophy,
+  Gauge,
 } from "lucide-react";
 
 interface Item {
@@ -27,6 +28,12 @@ const items: Item[] = [
     href: "/reclame-aqui",
     icon: LayoutGrid,
     hint: "Kanban e lista das reclamações",
+  },
+  {
+    label: "Índice",
+    href: "/reclame-aqui/indice",
+    icon: Gauge,
+    hint: "Nota atual e prévia, a exata, a régua até o RA1000 e o dia a dia do mês",
   },
   {
     label: "Pedir avaliação",

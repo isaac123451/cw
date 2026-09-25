@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.75.0",
+    data: "2026-09-24",
+    titulo: "Índice como no HugMe",
+    texto: "Nova aba Índice no Reclame Aqui: a nota de hoje e a prévia da virada do mês, em 6 e 12 meses, com a nota exata (8,78111), a régua até o RA1000 com o que falta indicador por indicador e a evolução dia a dia do mês — com os dias que mexeram na nota e o porquê.",
+    frentes: ["reclame-aqui"],
+  },
+  {
     versao: "1.74.0",
     data: "2026-09-24",
     titulo: "Mais causas e categorias, lista enxuta",

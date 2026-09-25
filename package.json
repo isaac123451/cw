@@ -1,6 +1,6 @@
 {
   "name": "cw-reputacao",
-  "version": "1.74.0",
+  "version": "1.75.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -50,6 +50,7 @@
     "check:imersao": "tsx scripts/check-imersao.ts",
     "check:ra-area": "tsx scripts/check-ra-area.ts",
     "check:o-que-fazer": "tsx scripts/check-o-que-fazer.ts",
+    "check:indice": "tsx scripts/check-indice.ts",
     "medir:sugestao": "tsx scripts/medir-sugestao.ts",
     "check:segmentos-redes": "tsx scripts/check-segmentos-redes.ts",
     "check:motor-proprio": "tsx scripts/check-motor-proprio.ts",

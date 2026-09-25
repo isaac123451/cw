@@ -424,6 +424,11 @@ export interface ReputationSummary {
   responseMinutes: number;
 
   raScore: number;
+  /**
+   * A nota sem arredondar nada no caminho — "8,52897", como o HugMe
+   * mostra. `raScore` é esta, com uma casa.
+   */
+  raScoreExato: number;
 
   /** Memória de cálculo da nota, para auditoria na tela. */
   breakdown: ScoreComponent[];
@@ -764,7 +769,19 @@ export function scoreFrom(
     };
   });
 
-  const raScore = Math.round(exactTotal * 10) / 10;
+  /*
+    A nota exata sai das contagens, e não dos índices já arredondados
+    para a tela (93,1% e 8,67): arredondar no meio desloca a quinta casa
+    — e, na fronteira, a primeira. É a conta do HugMe.
+  */
+  const semArredondar: Record<ScoreComponent["key"], number> = {
+    resposta: received === 0 ? 0 : (answered / received) * 10,
+    consumidor: evaluated === 0 ? 0 : Math.min(scoreSum / evaluated, 10),
+    solucao: evaluated === 0 ? 0 : (resolved / evaluated) * 10,
+    "novos-negocios": evaluated === 0 ? 0 : (wouldReturn / evaluated) * 10,
+  };
+  const raScoreExato = breakdown.reduce((soma, item) => soma + semArredondar[item.key] * item.effectiveWeight, 0);
+  const raScore = withBase.length === 0 ? Math.round(exactTotal * 10) / 10 : Math.round(raScoreExato * 10) / 10;
 
   return {
     received,
@@ -788,6 +805,7 @@ export function scoreFrom(
           ),
 
     raScore,
+    raScoreExato,
     breakdown,
     scoreUnavailable: withBase.length === 0,
   };
