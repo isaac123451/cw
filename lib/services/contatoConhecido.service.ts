@@ -213,3 +213,144 @@ export async function vincularContato(
   });
   return { ok: true };
 }
+
+/* ============================================================
+   PISTAS (1.83): o que a conversa, o Slack e o perfil dizem
+============================================================ */
+
+export interface PistasDeContato {
+  /** CPF/CNPJ que o cliente escreveu — só os dígitos. */
+  documentos?: string[];
+  emails?: string[];
+  /** O endereço do cardápio: "cardapioweb.com/pizzaria-do-ze" → "pizzaria-do-ze". */
+  slugs?: string[];
+  /** O @ do perfil nas redes — "pizzariadoze" casa com "Pizzaria do Zé" pelo nome colado. */
+  perfil?: string;
+  nome?: string;
+}
+
+/** As pistas que um texto tem, sem guardar o texto: documento, e-mail e endereço do cardápio. */
+export function pistasDoTexto(texto: string): Required<Pick<PistasDeContato, "documentos" | "emails" | "slugs">> {
+  const t = String(texto ?? "");
+  const documentos = [...t.matchAll(/\b\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}\b|\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b/g)]
+    .map((m) => m[0].replace(/\D/g, ""))
+    .filter((d) => d.length === 11 || d.length === 14);
+  const emails = [...t.matchAll(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g)].map((m) => m[0].toLowerCase());
+  /* As duas formas do endereço: cardapioweb.com/loja e loja.cardapioweb.com. */
+  const slugs = [
+    ...[...t.matchAll(/cardapioweb\.com(?:\.br)?\/([a-z0-9][a-z0-9-]{2,60})/gi)].map((m) => m[1]),
+    ...[...t.matchAll(/\b([a-z0-9][a-z0-9-]{2,60})\.cardapioweb\.com/gi)].map((m) => m[1]),
+  ]
+    .map((s) => s.toLowerCase())
+    .filter((s) => !["www", "app", "api", "admin", "painel", "login", "loja"].includes(s));
+  return { documentos: [...new Set(documentos)], emails: [...new Set(emails)], slugs: [...new Set(slugs)] };
+}
+
+/**
+ * Candidatos pelas pistas, do mais certo para o mais provável.
+ *
+ * Documento e e-mail são identidade (semelhança 1): o CNPJ que o cliente
+ * escreveu na conversa acha a conta e as reclamações dele mesmo com o
+ * telefone e o nome sem casar. O endereço do cardápio acha a conta pelo
+ * slug (0,95). O @ do perfil e o nome passam pela semelhança de nome.
+ * Cada candidato diz **por que** está ali — a pessoa confirma no "É este".
+ */
+export async function candidatosPelasPistas(prisma: PrismaClient, pistas: PistasDeContato, limite = 6): Promise<(CandidatoDeContato & { motivo: string })[]> {
+  const documentos = [...new Set((pistas.documentos ?? []).map((d) => d.replace(/\D/g, "")).filter((d) => d.length === 11 || d.length === 14))].slice(0, 5);
+  const emails = [...new Set((pistas.emails ?? []).map((e) => e.trim().toLowerCase()).filter((e) => e.includes("@")))].slice(0, 5);
+  const slugs = [...new Set((pistas.slugs ?? []).map((s) => s.trim().toLowerCase()).filter((s) => s.length >= 3))].slice(0, 5);
+
+  const lista = new Map<string, CandidatoDeContato & { motivo: string }>();
+  const pôr = (c: CandidatoDeContato, motivo: string) => {
+    const chave = `${c.tipo}:${c.ref}`;
+    const ja = lista.get(chave);
+    if (!ja || ja.semelhanca < c.semelhanca) lista.set(chave, { ...c, motivo });
+  };
+
+  const [contasPorDoc, casosPorDoc, npsPorEmail, casosPorEmail, contasPorSlug] = await Promise.all([
+    documentos.length ? prisma.establishment.findMany({ where: { document: { in: documentos } }, select: { id: true, name: true, plan: true, status: true, city: true, document: true } }) : [],
+    documentos.length
+      ? prisma.case.findMany({ where: { document: { in: documentos } }, select: { protocol: true, customer: true, title: true, status: true }, orderBy: { createdAt: "desc" }, take: 5 })
+      : [],
+    emails.length
+      ? prisma.npsResponse.findMany({ where: { email: { in: emails, mode: "insensitive" } }, select: { id: true, customer: true, customerName: true, email: true, score: true, respondedAt: true }, orderBy: { respondedAt: "desc" }, take: 5 })
+      : [],
+    emails.length
+      ? prisma.case.findMany({ where: { email: { in: emails, mode: "insensitive" } }, select: { protocol: true, customer: true, title: true, status: true }, orderBy: { createdAt: "desc" }, take: 5 })
+      : [],
+    slugs.length
+      ? prisma.establishment.findMany({
+          where: { OR: slugs.flatMap((s) => [{ slug: s }, { portalUrl: { contains: s, mode: "insensitive" as const } }]) },
+          select: { id: true, name: true, plan: true, status: true, city: true },
+          take: 5,
+        })
+      : [],
+  ]);
+
+  const conta = (e: { id: string; name: string; plan: string; status: string; city: string | null }): CandidatoDeContato => ({
+    tipo: "conta",
+    ref: e.id,
+    titulo: e.name,
+    detalhe: ["conta", e.plan, e.status, e.city].filter(Boolean).join(" · "),
+    semelhanca: 1,
+  });
+  for (const e of contasPorDoc) pôr(conta(e), "CPF/CNPJ citado");
+  for (const c of casosPorDoc) pôr({ tipo: "caso", ref: c.protocol, titulo: c.customer, detalhe: `${c.protocol} · ${c.status} · ${c.title.slice(0, 60)}`, semelhanca: 1 }, "CPF/CNPJ citado");
+  for (const r of npsPorEmail) {
+    pôr(
+      { tipo: "nps", ref: r.id, titulo: r.customerName || r.customer, detalhe: `NPS nota ${r.score} · ${r.email ?? r.customer}`, semelhanca: 1 },
+      "e-mail citado"
+    );
+  }
+  for (const c of casosPorEmail) pôr({ tipo: "caso", ref: c.protocol, titulo: c.customer, detalhe: `${c.protocol} · ${c.status} · ${c.title.slice(0, 60)}`, semelhanca: 1 }, "e-mail citado");
+  for (const e of contasPorSlug) pôr({ ...conta(e), semelhanca: 0.95 }, "endereço do cardápio citado");
+
+  /*
+    O @ colado ("pizzariavirtual") contra o nome e o endereço de cada
+    conta, também colados. A busca por palavra não acha: procura
+    "pizzariavirtual" dentro de "Pizzaria Virtual". São poucas centenas de
+    contas — comparar todas custa menos que errar.
+  */
+  const colar = (s: string) => normalizarNome(s).replace(/[^a-z0-9]/g, "");
+  const perfilColado = colar((pistas.perfil ?? "").replace(/^@/, ""));
+  if (perfilColado.length >= 6) {
+    const contas = await prisma.establishment.findMany({ select: { id: true, name: true, plan: true, status: true, city: true, slug: true } });
+    for (const e of contas) {
+      const nome = colar(e.name);
+      const slug = colar(e.slug);
+      const s = perfilColado === nome || perfilColado === slug ? 0.9 : (nome.length >= 6 && perfilColado.includes(nome)) || (perfilColado.length >= 8 && nome.includes(perfilColado)) ? 0.75 : 0;
+      if (s > 0) pôr({ ...conta(e), semelhanca: s }, "parecido com o perfil");
+    }
+  }
+
+  /* O @ do perfil vira nome com espaço onde houver ponto, traço ou sublinhado. */
+  const perfil = (pistas.perfil ?? "").replace(/^@/, "").replace(/[._-]+/g, " ").trim();
+  for (const [texto, motivo] of [
+    [perfil, "parecido com o perfil"],
+    [pistas.nome ?? "", "parecido com o nome"],
+  ] as const) {
+    if (!texto) continue;
+    for (const c of await candidatosPorNome(prisma, texto, limite)) pôr(c, motivo);
+  }
+
+  return [...lista.values()].sort((a, b) => b.semelhanca - a.semelhanca).slice(0, limite);
+}
+
+/** Quantas palavras que distinguem os dois nomes têm em comum — "Gomes" sozinho não liga pessoa a loja. */
+export function palavrasEmComum(a?: string | null, b?: string | null) {
+  const pb = new Set(palavrasQueDistinguem(b));
+  return new Set(palavrasQueDistinguem(a).filter((p) => pb.has(p))).size;
+}
+
+/**
+ * A sugestão pelo nome vale? Só quando as palavras em comum cobrem o
+ * nome do contato — até duas. "Bella Napoli" casa com "Pizzaria Bella
+ * Napoli"; o sobrenome de uma pessoa no nome de uma loja ("Marcia Gomes"
+ * → "Lanche do Gomes", "Dilson Neto" → "Açaí do Neto") não é pista.
+ * Medido em 25/09/2026: das 10 sugestões só pelo nome nos casos sem
+ * vínculo, todas eram coincidência de uma palavra.
+ */
+export function nomeSustentaSugestao(nomeDoContato: string, nomeDaConta: string) {
+  const exigidas = Math.min(2, palavrasQueDistinguem(nomeDoContato).length);
+  return exigidas > 0 && palavrasEmComum(nomeDoContato, nomeDaConta) >= exigidas;
+}

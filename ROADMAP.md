@@ -1116,6 +1116,25 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Identificação que acerta mais (25/09/2026, 1.83.0)
+
+Um motor de pistas (`candidatosPelasPistas`): CPF/CNPJ e e-mail são
+identidade (acham a conta, a reclamação e o NPS mesmo sem o nome casar),
+o endereço do cardápio (cardapioweb.com/loja ou loja.cardapioweb.com) acha
+a conta pelo slug, e o @ do perfil casa colado com o nome ou o endereço da
+conta ("@pizzariavirtual" → Pizzaria Virtual). **Conversa:** o "Quem é
+este contato?" do painel manda, além do nome, as pistas que o cliente
+escreveu — só os identificadores, nunca o texto —, e cada candidato diz
+por que está ali. **Redes e Slack:** o caso sem vínculo mostra "Pode ser"
+no bloco Estabelecimento (as pistas do próprio caso, do relato e das
+conversas guardadas), com um clique para vincular. Pelo nome, só quando
+as palavras em comum cobrem o nome do contato: medido em 25/09/2026, as
+10 sugestões só por nome nos 72 casos sem vínculo eram todas coincidência
+de sobrenome ("Marcia Gomes" → "Lanche do Gomes") — com a regra, nenhuma
+sugestão falsa; os clientes desses 72 não estão no cadastro, e o ganho
+vem nos casos novos e na conversa. `check:identificacao` (10 pontos),
+`scripts/medir-identificacao.ts`.
+
 ### Salvamento que avisa (25/09/2026, 1.82.0)
 
 A gravação sozinha da conversa (que já rodava com o painel fechado)

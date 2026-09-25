@@ -914,7 +914,13 @@ async function tratar(mensagem) {
 
   /* Quem é este contato: candidatos pelo nome, quando o telefone não achou. Leitura. */
   if (mensagem?.tipo === "quemE") {
-    const dados = await chamar(CAMINHOS.quemE, { nome: mensagem.nome ?? "" });
+    const p = mensagem.pistas ?? {};
+    const dados = await chamar(CAMINHOS.quemE, {
+      nome: mensagem.nome ?? "",
+      documentos: (p.documentos ?? []).join(","),
+      emails: (p.emails ?? []).join(","),
+      slugs: (p.slugs ?? []).join(","),
+    });
     return { ok: true, dados };
   }
 

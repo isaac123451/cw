@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.83.0",
+    data: "2026-09-25",
+    titulo: "Identificação que acerta mais",
+    texto: "O \"Quem é este contato?\" do painel agora usa o CPF/CNPJ, o e-mail e o endereço do cardápio que o cliente escreveu na conversa, e diz o porquê de cada sugestão. Nas Redes e nos casos sem vínculo, o bloco Estabelecimento sugere a conta provável pelo @ do perfil, pelo documento e pelas conversas guardadas — um clique vincula. Sugestão só pelo sobrenome não aparece mais. Recarregue a extensão.",
+    frentes: ["reclame-aqui", "redes", "extensao"],
+  },
+  {
     versao: "1.82.0",
     data: "2026-09-25",
     titulo: "Salvamento que avisa, com áudio transcrito",

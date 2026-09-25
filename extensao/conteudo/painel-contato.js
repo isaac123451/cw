@@ -1482,7 +1482,7 @@
           .map(
             (c) => `<li>
               <span class="tag neutro">${ROTULO_DO_CANDIDATO[c.tipo] ?? ""}</span>
-              <span class="candidato"><b>${CW.escapar(c.titulo)}</b><span class="sub">${CW.escapar(c.detalhe)}</span></span>
+              <span class="candidato"><b>${CW.escapar(c.titulo)}</b><span class="sub">${CW.escapar(c.detalhe)}${c.motivo ? ` · ${CW.escapar(c.motivo)}` : ""}</span></span>
               <button type="button" class="copiar" data-acao="vincular" data-tipo="${CW.escapar(c.tipo)}" data-ref="${CW.escapar(c.ref)}">É este</button>
             </li>`
           )
@@ -1496,12 +1496,40 @@
     </div>`;
   }
 
+  /**
+   * As pistas que o cliente escreveu na conversa (1.83): CPF/CNPJ, e-mail
+   * e o endereço do cardápio. Lidas aqui e mandadas sozinhas — o texto
+   * da conversa não sai da página por causa disso.
+   */
+  function pistasDaConversa() {
+    const leitura = P.lerConversa?.();
+    const mensagens = Array.isArray(leitura) ? leitura : leitura?.mensagens ?? [];
+    const texto = mensagens.filter((m) => m?.de === "cliente").map((m) => m.texto || "").join("\n");
+    const documentos = [...texto.matchAll(/\b\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}\b|\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b/g)]
+      .map((m) => m[0].replace(/\D/g, ""))
+      .filter((d) => d.length === 11 || d.length === 14);
+    const emails = [...texto.matchAll(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g)].map((m) => m[0].toLowerCase());
+    const slugs = [
+      ...[...texto.matchAll(/cardapioweb\.com(?:\.br)?\/([a-z0-9][a-z0-9-]{2,60})/gi)].map((m) => m[1]),
+      ...[...texto.matchAll(/\b([a-z0-9][a-z0-9-]{2,60})\.cardapioweb\.com/gi)].map((m) => m[1]),
+    ].map((s) => s.toLowerCase());
+    const unicos = (l) => [...new Set(l)].slice(0, 5);
+    return { documentos: unicos(documentos), emails: unicos(emails), slugs: unicos(slugs) };
+  }
+
   P.pedirQuemE = async function pedirQuemE() {
     const chave = P.chaveConsulta;
     const nome = P.consulta?.nome;
-    if (!nome || !telefoneParaLembrar() || candidatosPorContato.has(chave)) return;
+    let pistas = { documentos: [], emails: [], slugs: [] };
+    try {
+      pistas = pistasDaConversa();
+    } catch {
+      /* sem conversa legível, fica o nome */
+    }
+    const temPista = pistas.documentos.length || pistas.emails.length || pistas.slugs.length;
+    if ((!nome && !temPista) || !telefoneParaLembrar() || candidatosPorContato.has(chave)) return;
     candidatosPorContato.set(chave, "procurando");
-    const r = await CW.enviar({ tipo: "quemE", nome });
+    const r = await CW.enviar({ tipo: "quemE", nome, pistas });
     candidatosPorContato.set(chave, r?.ok && Array.isArray(r.dados?.candidatos) ? r.dados.candidatos : []);
     if (chave !== P.chaveConsulta) return;
     const el = P.corpo?.querySelector("[data-quem-e]");

@@ -16,6 +16,7 @@ import { useEstablishments } from "@/lib/context/EstablishmentsContext";
 import { useSession } from "@/lib/context/SessionContext";
 
 import Combobox from "@/components/shared/Combobox";
+import SugestoesDeEstabelecimento from "@/components/reclame-aqui/detail/SugestoesDeEstabelecimento";
 import LinksDoRa from "@/components/shared/LinksDoRa";
 import PrazoECriticidade from "@/components/reclame-aqui/tratativa/PrazoECriticidade";
 import NegociacoesDoCaso from "@/components/reclame-aqui/negociacao/NegociacoesDoCaso";
@@ -318,6 +319,14 @@ export default function CaseSidebar({
               .join(" · "),
           }))}
         />
+
+        {/* Sem vínculo: as pistas do próprio caso sugerem a conta (1.83). */}
+        {!data.establishmentId && (
+          <SugestoesDeEstabelecimento
+            protocolo={data.protocol}
+            onEscolher={(id) => onChange({ establishmentId: id, establishmentManual: true })}
+          />
+        )}
 
         <p className="mt-2 text-xs leading-relaxed text-zinc-500">
           {social
