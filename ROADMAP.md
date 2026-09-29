@@ -1369,6 +1369,27 @@ na tela: 1 de 7 → Pular → 2 de 7, sem gravar nada.
 Provas: `tsc`, lint, `check:persistencia`, `check:rascunho`,
 `check:janelas`, `check:celular`, `check:telas-sem-saida` e a tela.
 
+### Pedidos de 29/09 — Fases 35 a 37 no roadmap (a fazer)
+
+Registrados na página do roadmap (Parte 2 passa a 65 de 114):
+
+- **Fase 35 · Reclame Aqui preciso e automático:** motor próprio que puxa
+  respondida/avaliada/réplica e carimba a data da avaliação (Analytics por
+  ciclo), completar só abrindo a área da empresa (e ela reconhecer
+  reclamação), respondida com um clique e selo, resposta com data clara,
+  analista de respostas públicas, arrastar que se vê, investigação dentro
+  da triagem com visão de todos os abertos, mini telas por cima e caixas
+  de seleção sem corte.
+- **Fase 36 · Meu dia que impulsiona:** sem NPS antigo, atividades que se
+  fecham sozinhas (caso, extensão, IA), IA que cria atividades e
+  compromissos (reunião vira evento na Agenda — perguntar antes de enviar
+  evento real), "pede ação agora" clicável, placar por ciclos, mini
+  conquistas, cards para quem procrastina.
+- **Fase 37 · NPS, relatório e IA em dia:** NPS anterior a 17/07 vai para
+  finalizado (só no NPS), tentativa não muda a etapa, NPS em ciclos, nota
+  de encerramento clara, relatório do ciclo corrigido, planilha que
+  preenche só o vazio, Gemini do assistente sem falhas.
+
 ### Pedidos de 24/09 — Fases 32 a 34 no roadmap (a fazer)
 
 Registrados na página do roadmap (Parte 2 passa a 47 de 92):
