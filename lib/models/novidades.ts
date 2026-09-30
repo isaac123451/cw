@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.99.0",
+    data: "2026-09-30",
+    titulo: "Backup da base",
+    texto: "Em Configurações → Segurança, quem administra baixa a cópia da base inteira na hora, sem senhas nem chaves. A cópia diária automática fora do banco liga assim que as variáveis do Supabase Storage forem configuradas.",
+    frentes: ["plataforma"],
+  },
+  {
     versao: "1.98.0",
     data: "2026-09-30",
     titulo: "Atividade com frente, e a conversa marca o compromisso",

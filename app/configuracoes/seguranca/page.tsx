@@ -2,6 +2,7 @@ import MainLayout from "@/components/layout/MainLayout";
 
 import PageHeading from "@/components/shared/PageHeading";
 import SegurancaCard from "@/components/configuracoes/SegurancaCard";
+import BackupCard from "@/components/configuracoes/BackupCard";
 
 export const metadata = {
   title: "Segurança do acesso · CW Reputação",
@@ -20,6 +21,8 @@ export default function SegurancaPage() {
         />
 
         <SegurancaCard />
+
+        <BackupCard />
 
       </div>
 

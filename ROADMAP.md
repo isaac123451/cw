@@ -1116,6 +1116,21 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Backup da base (30/09/2026, 1.99.0)
+
+Fase 31 ("Backup diário").
+
+- **Baixar backup agora** em Configurações → Segurança (só administrador):
+  todas as 71 tabelas num JSON compactado — 700 KB, 7.543 linhas, 6,6 s
+  em 30/09. Senhas, tokens do Google, segredo de webhook e códigos de
+  verificação ficam fora (`lib/services/backup.service.ts`, `GET
+  /api/backup`).
+- **Cópia diária fora do banco:** a rotina da madrugada guarda a cópia no
+  Supabase Storage (bucket privado `backups`, as 14 mais novas) —
+  **liga quando `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` forem
+  postas na Vercel**; sem elas, o cartão e a rotina dizem que está
+  desligada.
+
 ### Atividade com frente, e a conversa vira atividade e compromisso (30/09/2026, 1.98.0)
 
 Fase 34 ("Atividades manuais direcionadas") e Fase 36 ("IA que cria
