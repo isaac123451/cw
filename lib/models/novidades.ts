@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.97.0",
+    data: "2026-09-30",
+    titulo: "A planilha de métricas se completa sozinha",
+    texto: "Um script para a planilha Métricas do Reclame Aqui preenche todo dia, e só nas células vazias, as entrantes, as respondidas, os ciclos com o selo e os números do painel oficial do portal. Nada do que já está na planilha é trocado. A instalação é uma vez, em Extensões → Apps Script.",
+    frentes: ["reclame-aqui", "plataforma"],
+  },
+  {
     versao: "1.96.0",
     data: "2026-09-30",
     titulo: "Metas do dia, e réplica e avaliação avisam",

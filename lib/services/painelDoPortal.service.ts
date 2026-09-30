@@ -1,5 +1,7 @@
 import type { PrismaClient } from "@prisma/client";
 
+import { hojeNaOperacao } from "@/lib/services/reputation.service";
+
 /**
  * O painel oficial do Reclame Aqui (1.86).
  *
@@ -63,11 +65,16 @@ export function validarPainel(bruto: unknown): PainelDoPortal | null {
   };
 }
 
-/** Grava por período e janela; ler de novo a mesma janela só atualiza. */
+/**
+ * Grava por período, janela **e dia** (1.97): a planilha do ciclo pede o
+ * número oficial de cada dia — o "aguardando resposta" muda no meio do mês
+ * sem a janela mudar. Ler de novo no mesmo dia só atualiza.
+ */
 export async function gravarPaineis(prisma: PrismaClient, paineis: PainelDoPortal[]) {
   const agora = new Date();
+  const dia = hojeNaOperacao();
   for (const p of paineis) {
-    const id = `${p.tipo}:${p.fim}`;
+    const id = `${p.tipo}:${p.fim}:${dia}`;
     const dados = { ...p };
     delete dados.lidoEm;
     await prisma.painelDoPortal.upsert({
@@ -95,4 +102,18 @@ export async function lerPaineis(prisma: PrismaClient): Promise<{
     if (l.tipo === "SIX_MONTHS") historico.push(p);
   }
   return { atuais, historico: historico.slice(0, 12) };
+}
+
+/** O último painel lido em cada dia, de um período — para a planilha do ciclo (1.97). */
+export async function paineisPorDia(prisma: PrismaClient, tipo: string, de: string, ate: string): Promise<Record<string, PainelDoPortal>> {
+  const linhas = await prisma.painelDoPortal.findMany({
+    where: { tipo, lidoEm: { gte: new Date(`${de}T03:00:00Z`), lt: new Date(Date.parse(`${ate}T03:00:00Z`) + 86_400_000) } },
+    orderBy: { lidoEm: "asc" },
+  });
+  const porDia: Record<string, PainelDoPortal> = {};
+  for (const l of linhas) {
+    const dia = new Date(l.lidoEm.getTime() - 3 * 3_600_000).toISOString().slice(0, 10);
+    porDia[dia] = { ...(l.dados as unknown as PainelDoPortal), lidoEm: l.lidoEm.toISOString() };
+  }
+  return porDia;
 }

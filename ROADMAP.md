@@ -1116,6 +1116,31 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### A planilha de métricas se completa sozinha — só o vazio (30/09/2026, 1.97.0)
+
+Fase 37 item 6. "Automações na planilha — SOMENTE o que está vazio, não pode
+mexer no que já está preenchido."
+
+- **Lida a planilha real** ("Métricas do Reclame Aqui", aba "Métricas RA -
+  Setembro": métricas nas linhas, dias nas colunas, "Set/2026" em A1) e
+  **calibrada contra o que a equipe preencheu** nos dias 1 a 24:
+  respondidas no mês e ciclos com o selo batem nos 24 dias; entrantes do
+  mês, todos a no máximo 1. A equipe copia do **painel oficial** a nota, a
+  nota dos consumidores, voltariam, resolvidas (%), tempo médio ("18,8" =
+  18 dias e 8 horas) e não respondidas — esses vêm do painel lido naquele
+  dia; dia sem leitura fica vazio. Linhas que não bateram (resolvidas por
+  ciclo, detratores, redes) e as que só existem no portal (visualizações,
+  desativadas) ficam à mão.
+- **O painel oficial guarda um registro por dia** (id com o dia), para a
+  planilha ter o número de cada dia.
+- **`GET /api/planilha/metricas?mes=AAAA-MM`** (com o `API_TOKEN`) e o
+  **Apps Script `docs/planilha/MetricasDoCW.gs`**, que roda na planilha
+  todo dia às 8h (e pelo menu "CW → Preencher o vazio agora") e escreve só
+  em célula vazia. **Falta instalar**: Extensões → Apps Script, colar o
+  arquivo, pôr `CW_BASE` e `CW_TOKEN` nas propriedades do script e
+  executar `instalar` uma vez (o passo a passo está no topo do arquivo).
+  `check:planilha-ciclo` (9 pontos).
+
 ### Réplica e avaliação avisam, e as mini conquistas (30/09/2026, 1.96.0)
 
 Fase 30 ("Réplica e avaliação acompanhadas") e Fase 36 ("Mini conquistas").
