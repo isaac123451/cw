@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.87.0",
+    data: "2026-09-30",
+    titulo: "Respondida num clique, e a área da empresa completa sozinha",
+    texto: "No quadro e na lista, cada reclamação mostra se já foi respondida no Reclame Aqui e quando; sem resposta, um clique marca. Na ficha, a data da resposta pública fica à vista para ajustar. Na área da empresa, abrir a reclamação já completa no quadro o que faltava — e a lista não é mais confundida com uma reclamação aberta. O topo do quadro mostra a nota do painel do portal.",
+    frentes: ["reclame-aqui", "extensao"],
+  },
+  {
     versao: "1.86.0",
     data: "2026-09-29",
     titulo: "Reclame Aqui sozinho, e a nota que o portal mostra",

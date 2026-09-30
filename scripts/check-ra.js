@@ -590,6 +590,28 @@ conferir(
   ""
 );
 
+/* Que página é esta (1.86): lista não é reclamação aberta. */
+conferir(
+  "página: reclamação na área pelo endereço",
+  JSON.stringify(ra.tipoDaPagina("https://www.reclameaqui.com.br/area-da-empresa/reclamacoes/uPDvBFKmssmEmxVa/", "")),
+  JSON.stringify({ tipo: "reclamacao", codigo: "uPDvBFKmssmEmxVa" })
+);
+conferir(
+  "página: reclamação aberta pelo texto (SPA sem trocar endereço)",
+  ra.tipoDaPagina("https://www.reclameaqui.com.br/area-da-empresa/reclamacoes/", PAGINA).tipo,
+  "reclamacao"
+);
+conferir(
+  "página: lista com várias reclamações",
+  ra.tipoDaPagina("https://www.reclameaqui.com.br/area-da-empresa/reclamacoes/", "Reclamações\nCOD: uPDvBFKmssmEmxVa\nID: 256949163\nNão respondida\nCOD: NsdEChv5c5jf349B\nID: 256811234\nRespondida").tipo,
+  "lista"
+);
+conferir(
+  "página: painel sem reclamação",
+  ra.tipoDaPagina("https://www.reclameaqui.com.br/area-da-empresa/painel/", "Painel inicial\nReputação RA1000").tipo,
+  "outra"
+);
+
 console.log(
   falhas === 0
     ? "\nTodos os campos conferem.\n"

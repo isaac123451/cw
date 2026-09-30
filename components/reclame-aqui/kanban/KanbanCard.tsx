@@ -14,6 +14,7 @@ import BotaoCompletar from "@/components/reclame-aqui/completar/BotaoCompletar";
 import ChipPrioridade from "@/components/reclame-aqui/tratativa/ChipPrioridade";
 import RelogioDoCaso from "@/components/reclame-aqui/tratativa/RelogioDoCaso";
 import ProximoPasso from "@/components/reclame-aqui/tratativa/ProximoPasso";
+import SeloRespondida from "@/components/reclame-aqui/tratativa/SeloRespondida";
 
 import { useCases } from "@/lib/context/CaseContext";
 import { useOwners } from "@/lib/hooks/useOwners";
@@ -159,6 +160,7 @@ export default function KanbanCard({
           <RelogioDoCaso item={item} esconderSemRegra />
           <ProximoPasso item={item} />
           <BotaoCompletar item={item} />
+          <SeloRespondida item={item} />
         </div>
 
         {etiquetas.length > 0 && (

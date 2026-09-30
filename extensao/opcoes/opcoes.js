@@ -26,6 +26,7 @@ const caixas = {
   lembretes: document.getElementById("lembretes"),
   prazos: document.getElementById("prazos"),
   etiquetasLista: document.getElementById("etiquetasLista"),
+  completarSozinho: document.getElementById("completarSozinho"),
   vigia: document.getElementById("vigia"),
 };
 
@@ -84,6 +85,7 @@ async function carregar() {
   caixas.lembretes.checked = Boolean(config.lembretes);
   caixas.prazos.checked = config.prazos !== false;
   caixas.etiquetasLista.checked = config.etiquetasLista !== false;
+  caixas.completarSozinho.checked = config.completarSozinho !== false;
   caixas.vigia.checked = config.vigia !== false;
 
   aplicarTema(config.tema);

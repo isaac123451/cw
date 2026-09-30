@@ -19,6 +19,7 @@ import BotaoCompletar from "@/components/reclame-aqui/completar/BotaoCompletar";
 import ChipPrioridade from "@/components/reclame-aqui/tratativa/ChipPrioridade";
 import RelogioDoCaso from "@/components/reclame-aqui/tratativa/RelogioDoCaso";
 import ProximoPasso from "@/components/reclame-aqui/tratativa/ProximoPasso";
+import SeloRespondida from "@/components/reclame-aqui/tratativa/SeloRespondida";
 
 import { useCases } from "@/lib/context/CaseContext";
 import { useEstablishments } from "@/lib/context/EstablishmentsContext";
@@ -211,6 +212,7 @@ export default function CaseRow({
           />
           <ChipPrioridade item={data} />
           <RelogioDoCaso item={data} esconderSemRegra />
+          <SeloRespondida item={data} />
         </span>
         <ProximoPasso item={data} className="mt-1 max-w-[208px]" />
       </td>

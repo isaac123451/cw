@@ -1116,6 +1116,28 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Área da empresa que completa sozinha, respondida num clique e a data da resposta (30/09/2026, 1.87.0)
+
+Fase 35, itens 2 a 4.
+
+- **Área da empresa:** abrir uma reclamação já completa no quadro o nome, o
+  contato e o CPF/CNPJ que faltam (o servidor só preenche o vazio) e avisa
+  o que entrou; a caixa com botão fica para quem desligar a opção
+  "Completar o quadro ao abrir a reclamação". E a área **reconhece
+  reclamação**: `CW.ra.tipoDaPagina` separa a reclamação aberta (pelo
+  endereço, ou por um só ID com COD) da lista (dois ou mais) e do resto —
+  a lista não vira mais "a reclamação aberta" com captura e "Completar".
+  `check:ra` (+4 pontos).
+- **Respondida num clique:** selo "Respondida 29/09" no quadro e na lista;
+  sem resposta, o mesmo lugar é o botão "Marcar respondida" — grava o
+  marcador com a data de agora, e o vigia troca pelo texto do portal. Um
+  quadro com retrato velho nunca troca resposta de verdade pelo marcador
+  (vira conflito, sem gravar) — provado num caso descartável, apagado.
+- **Data da resposta:** na ficha, "Publicada no portal em" (data e hora de
+  Brasília) sempre à vista, e "Já respondi no portal" sem colar o texto.
+- **Nota do topo do quadro** passa a ser a do painel oficial (8,8), com a
+  conta embaixo ("com o feito, 8,9") — era a mesma divergência do índice.
+
 ### Reclame Aqui automático, índice oficial e avaliações por ciclo (29/09/2026, 1.86.0)
 
 Pedidos: "toda atualização de casos no Reclame Aqui é para ser feita

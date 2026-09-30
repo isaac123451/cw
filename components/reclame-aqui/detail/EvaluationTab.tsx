@@ -20,7 +20,8 @@ import { INICIO_DA_TRILHA } from "@/lib/models/trilha";
 import { useWorkflow } from "@/lib/context/WorkflowContext";
 import { useSession } from "@/lib/context/SessionContext";
 import { useCases } from "@/lib/context/CaseContext";
-import { descreverRegistro } from "@/lib/services/horasUteis";
+import { descreverRegistro, instanteDe, paredeDe } from "@/lib/services/horasUteis";
+import { RESPOSTA_SINTETICA } from "@/lib/services/raMarcadores";
 import { dadosSensiveis, resumoDosAchados } from "@/lib/services/lgpd";
 import { hojeNaOperacao } from "@/lib/services/reputation.service";
 
@@ -299,6 +300,20 @@ function SituacaoPicker({
   );
 }
 
+/** "2026-09-15T16:20" em Brasília, para o campo de data e hora. */
+function valorDoCampo(iso?: string) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const { dia, min } = paredeDe(d);
+  return `${dia}T${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
+}
+
+function instanteDoCampo(valor: string) {
+  const m = valor.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})/);
+  return m ? instanteDe(m[1], Number(m[2]) * 60 + Number(m[3])) : null;
+}
+
 export default function EvaluationTab({
   data,
   onChange,
@@ -323,6 +338,9 @@ export default function EvaluationTab({
   const rascunho = (data.draftResponse ?? "").trim();
 
   const publicada = (data.publicResponse ?? "").trim();
+
+  /* Marcada como respondida sem o texto (1.87): o vigia traz o texto do portal. */
+  const soMarcada = publicada === RESPOSTA_SINTETICA;
 
   const achados = useMemo(() => dadosSensiveis(rascunho), [rascunho]);
 
@@ -495,17 +513,58 @@ export default function EvaluationTab({
         >
 
           <textarea
-            value={data.publicResponse ?? ""}
-            onChange={(e) =>
+            value={soMarcada ? "" : data.publicResponse ?? ""}
+            onChange={(e) => {
+              const texto = e.target.value;
+              /* Apagar o texto de uma resposta só marcada não desmarca: volta ao marcador. */
+              const vazio = texto.trim() === "";
               onChange({
-                publicResponse: e.target.value,
-                respondida: e.target.value.trim() !== "",
-              })
-            }
+                publicResponse: vazio && soMarcada ? RESPOSTA_SINTETICA : texto,
+                respondida: !vazio || soMarcada,
+              });
+            }}
             rows={6}
-            placeholder="Ainda sem resposta publicada."
+            placeholder={soMarcada ? "Marcada como respondida. O texto chega sozinho na próxima leitura do portal — ou cole aqui." : "Ainda sem resposta publicada. Cole o texto que está no portal, ou só marque abaixo."}
             className="w-full resize-y rounded-xl border border-zinc-200 p-3 text-sm leading-relaxed outline-none transition-colors placeholder:text-zinc-400 focus:border-violet-400"
           />
+
+          {/*
+            A data da resposta (1.87): "não tem como adicionar a data e não
+            fica claro como". Campo sempre à vista, em Brasília; é ela que
+            põe a resposta no ciclo e no índice do dia certo.
+          */}
+          <div className="mt-3 flex flex-wrap items-end gap-3">
+            <label className="block">
+              <span className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">Publicada no portal em</span>
+              <input
+                type="datetime-local"
+                value={valorDoCampo(data.publicResponseAt)}
+                max={valorDoCampo(new Date().toISOString())}
+                disabled={publicada === ""}
+                onChange={(e) => {
+                  const instante = instanteDoCampo(e.target.value);
+                  if (instante) onChange({ publicResponseAt: instante.toISOString() });
+                }}
+                className="mt-1 block h-9 rounded-xl border border-zinc-200 px-3 text-sm tabular-nums outline-none focus:border-violet-400 disabled:cursor-not-allowed disabled:opacity-50"
+              />
+            </label>
+            {publicada === "" && (
+              <button
+                type="button"
+                onClick={() =>
+                  onChange({
+                    publicResponse: RESPOSTA_SINTETICA,
+                    respondida: true,
+                    publicResponseAt: new Date().toISOString(),
+                  })
+                }
+                className="flex h-9 items-center gap-1.5 rounded-xl px-3 text-xs font-medium text-emerald-800 ring-1 ring-inset ring-emerald-200 transition-colors hover:bg-emerald-50"
+              >
+                <Check size={13} />
+                Já respondi no portal
+              </button>
+            )}
+          </div>
 
           {/*
             A data é a da primeira publicação, e não a da última edição.
@@ -517,10 +576,10 @@ export default function EvaluationTab({
           */}
           <p className="mt-3 text-xs leading-relaxed text-zinc-400">
             {publicada === ""
-              ? "Sem resposta pública — este é o fator de maior peso no índice de resposta."
+              ? "Sem resposta pública — o fator de maior peso no índice. Respondeu no portal? Marque acima; a data se ajusta no campo e vale depois de Salvar."
               : data.publicResponseAt
-                ? `Respondida em ${descreverRegistro(data.publicResponseAt)}.`
-                : "Respondida — a data da publicação não foi registrada."}
+                ? `Respondida em ${descreverRegistro(data.publicResponseAt)}. Se foi em outro dia, ajuste a data acima e salve.`
+                : "Respondida, sem a data da publicação — informe no campo acima e salve."}
           </p>
 
         </SurfaceCard>

@@ -776,6 +776,32 @@
     return [...codigos];
   };
 
+  /**
+   * Que página é esta: uma reclamação aberta, uma lista, ou outra coisa (1.86).
+   *
+   * "Na área da empresa, a extensão tenta completar como se fosse
+   * reclamação em vez de identificar as reclamações." A leitura olhava só
+   * o primeiro "ID:" do texto — numa lista, ou num painel que cita várias,
+   * a primeira linha virava "a reclamação aberta" e ganhava captura e
+   * "Completar". A regra:
+   *
+   * - endereço de uma reclamação (área da empresa ou página pública) é
+   *   reclamação, com o código do endereço;
+   * - dois ou mais "ID:" diferentes no texto é lista;
+   * - um só "ID:" com o "COD:" ao lado é reclamação (a área é SPA e às
+   *   vezes não troca o endereço);
+   * - o resto é outra página.
+   */
+  ra.tipoDaPagina = (href, texto) => {
+    const [codigo] = ra.codigosDosLinks([href]);
+    const ids = new Set([...String(texto ?? "").matchAll(/\bID\s*:\s*(\d{6,12})\b/g)].map((m) => m[1]));
+    const cods = new Set([...String(texto ?? "").matchAll(/\bCOD\s*:\s*([A-Za-z0-9._-]{6,40})\b/g)].map((m) => m[1]));
+    if (codigo) return { tipo: "reclamacao", codigo };
+    if (ids.size >= 2 || cods.size >= 2) return { tipo: "lista", codigo: "" };
+    if (ids.size === 1 && cods.size === 1) return { tipo: "reclamacao", codigo: [...cods][0] };
+    return { tipo: "outra", codigo: "" };
+  };
+
   ra.linhas = linhas;
 
   CW.ra = ra;

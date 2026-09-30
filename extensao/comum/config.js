@@ -100,6 +100,13 @@ export const PADROES = {
   etiquetasLista: true,
 
   /**
+   * Completar o quadro só de abrir a reclamação na área da empresa (1.86).
+   * O servidor só preenche o que está vazio. Desligado, volta a caixa com
+   * o botão "Completar no quadro".
+   */
+  completarSozinho: true,
+
+  /**
    * O vigia do Reclame Aqui: ler o portal ao abrir a plataforma e,
    * desde a 1.86, sozinho a cada meia hora com o Chrome aberto.
    *

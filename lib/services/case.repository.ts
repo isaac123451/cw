@@ -3,6 +3,7 @@ import {
   SELECAO_DO_PORTAL,
 } from "@/lib/services/atualizacaoDoPortal";
 import { semApagarVazios } from "@/lib/services/semApagar";
+import { RESPOSTA_SINTETICA } from "@/lib/services/raMarcadores";
 import { hojeNaOperacao } from "@/lib/services/reputation.service";
 
 import {
@@ -1139,6 +1140,13 @@ export async function persistCaseParcial(
   for (const chave of comparacao.meus) {
     /* `tags` e os nomes das relações não são colunas da tabela. */
     if (chave === "tags") continue;
+    /*
+      "Marcar respondida" grava o marcador; ele não substitui texto de
+      verdade que o banco já tenha (a lista do quadro não carrega o texto,
+      e o retrato dela pode estar velho).
+    */
+    if (chave === "publicResponse" && colunas[chave] === RESPOSTA_SINTETICA && String(linha.publicResponse ?? "").trim()) continue;
+    if (chave === "publicResponseAt" && colunas.publicResponse === RESPOSTA_SINTETICA && linha.publicResponseAt) continue;
     if ((RELACOES as readonly string[]).includes(chave)) continue;
     dados[chave] = colunas[chave];
   }

@@ -18,10 +18,12 @@ import { useScopedCases } from "@/lib/context/useScopedCases";
 import { isOpen } from "@/lib/services/case.service";
 import { useGoals } from "@/lib/context/GoalsContext";
 import { parseElapsedText } from "@/lib/services/case.mapper";
+import { usePainelDoPortal } from "@/lib/hooks/usePainelDoPortal";
 
 import StatTile from "@/components/shared/StatTile";
 
 import {
+  bandOf,
   displayBand,
   formatElapsed,
   formatRange,
@@ -29,6 +31,7 @@ import {
   getReputation,
   inRange,
   ptBR,
+  RA1000_BAND,
   RA1000_TARGETS,
   textoSobre,
 } from "@/lib/services/reputation.service";
@@ -55,7 +58,18 @@ export default function MetricsBar() {
     [noPeriodo]
   );
 
-  const band = displayBand(reputacao);
+  /*
+    A nota que o portal mostra (1.86). O painel do Reclame Aqui não é
+    recalculado todo dia: em 29/09 ele dizia 8,8 e a conta daqui, com as
+    respostas já publicadas, 8,9. O destaque é o oficial; a conta vai
+    embaixo, como "com o que já foi feito".
+  */
+  const painel = usePainelDoPortal().SIX_MONTHS;
+  const oficial = painel && painel.fim === range.end && painel.nota != null ? painel : undefined;
+
+  const band = oficial
+    ? oficial.selo === "RA1000" ? RA1000_BAND : bandOf(oficial.nota as number)
+    : displayBand(reputacao);
 
   const abertos = cases.filter(isOpen).length;
 
@@ -95,11 +109,12 @@ export default function MetricsBar() {
       {/* Nota de reputação em destaque */}
 
       <Link
-        href="/reclame-aqui/analytics"
-        title={`Nota calculada sobre ${formatRange(
-          range.start,
-          range.end
-        )} — clique para ver o detalhamento.`}
+        href="/reclame-aqui/indice"
+        title={
+          oficial
+            ? `Nota do painel do Reclame Aqui (${formatRange(range.start, range.end)}). Com as respostas e avaliações que já existem, a conta dá ${ptBR(reputacao.raScore)} — o portal atualiza com atraso. Clique para ver o índice.`
+            : `Nota calculada sobre ${formatRange(range.start, range.end)} — clique para ver o detalhamento.`
+        }
         className="group relative overflow-hidden rounded-xl border border-zinc-200/80 bg-white px-4 py-3.5 shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-colors hover:border-zinc-300"
       >
 
@@ -128,14 +143,18 @@ export default function MetricsBar() {
         </div>
 
         <p className="mt-1.5 text-[26px] font-semibold leading-none tracking-tight tabular-nums text-zinc-900">
-          {ptBR(reputacao.raScore)}
+          {ptBR(oficial ? (oficial.nota as number) : reputacao.raScore)}
           <span className="ml-1 text-base font-normal text-zinc-400">
             /10
           </span>
         </p>
 
         <p className="mt-2 text-xs text-zinc-400">
-          últimos 6 meses fechados
+          {oficial
+            ? Math.abs(reputacao.raScore - (oficial.nota as number)) >= 0.05
+              ? `no portal · com o feito, ${ptBR(reputacao.raScore)}`
+              : "no portal · 6 meses fechados"
+            : "últimos 6 meses fechados"}
         </p>
 
       </Link>

@@ -613,12 +613,14 @@ async function tratar(mensagem) {
    */
   if (mensagem?.tipo === "completarPergunta") {
 
+    const config = await lerConfig();
+
     const dados = await chamar(CAMINHOS.completar, {
       cod: mensagem.cod,
       id: mensagem.id,
     });
 
-    return { ok: true, dados };
+    return { ok: true, dados: dados ? { ...dados, sozinho: config.completarSozinho !== false } : dados };
   }
 
   /** Completa, depois do clique — só o que estava vazio. */

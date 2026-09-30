@@ -250,7 +250,28 @@
 
     fecharCompletar();
 
+    /*
+      Lista não é reclamação aberta (1.86). Com várias reclamações na
+      tela, a primeira virava "a aberta" e ganhava captura e "Completar".
+      Na lista, quem trabalha são os selos (ra-area.js) e o aviso de novas.
+    */
+    const pagina = CW.ra.tipoDaPagina ? CW.ra.tipoDaPagina(location.href, conteudo) : { tipo: "reclamacao" };
+
+    if (pagina.tipo === "lista") {
+      CW.raUltimaLida = null;
+      window.dispatchEvent(new CustomEvent("cw:reclamacao-lida", { detail: null }));
+      CW.painel.definirCaptura(null);
+      CW.painel.definirContexto({
+        canalDaPagina: "Reclame Aqui",
+        rotulo: "lista de reclamações — os selos mostram quais já estão no CW",
+      });
+      return;
+    }
+
     const lida = lerReclamacao(conteudo);
+
+    /* O código do endereço vale mais que o do texto: é o da reclamação aberta. */
+    if (pagina.codigo && !lida.cod) lida.cod = pagina.codigo;
 
     /* O cartão da área da empresa (ra-area.js) usa esta mesma leitura. */
     CW.raUltimaLida = lida.id || lida.cod ? lida : null;
@@ -360,7 +381,45 @@
       return;
     }
 
+    /*
+      Completar só de abrir (1.86): "completar as informações só abrindo
+      a área da empresa". O servidor só preenche o que está vazio no
+      quadro — nada preenchido é trocado —, então não há o que conferir
+      antes; o aviso diz o que entrou. Desligável nas opções, e aí volta
+      a caixa com o botão.
+    */
+    if (dados.sozinho) {
+      const resultado = await completarAgora(lida);
+      if (resultado?.ok && resultado.completou.length > 0) {
+        CW.notificar(`${dados.protocolo}: completei ${juntar(resultado.completou)} no quadro.`, "ok");
+      } else if (!resultado?.ok) {
+        desenharCompletar(lida, dados);
+      }
+      return;
+    }
+
     desenharCompletar(lida, dados);
+  }
+
+  /** Grava no quadro o que a página mostra; o servidor só preenche o vazio. */
+  async function completarAgora(lida) {
+    const resposta = await CW.enviar({
+      tipo: "completarNoQuadro",
+      dados: {
+        cod: lida.cod,
+        id: lida.id,
+        cliente: lida.cliente,
+        email: lida.email,
+        telefone: lida.telefone,
+        documento: lida.documento,
+        cidade: lida.cidade,
+        estado: lida.estado,
+      },
+    });
+    if (resposta?.ok && Array.isArray(resposta.dados?.completou)) {
+      return { ok: true, completou: resposta.dados.completou };
+    }
+    return { ok: false, erro: resposta?.erro ?? "Não deu para gravar agora." };
   }
 
   /** Montado com DOM, e o texto com `textContent`: é dado de consumidor. */
@@ -458,24 +517,12 @@
       sim.disabled = true;
       sim.textContent = "Gravando…";
 
-      const resposta = await CW.enviar({
-        tipo: "completarNoQuadro",
-        dados: {
-          cod: lida.cod,
-          id: lida.id,
-          cliente: lida.cliente,
-          email: lida.email,
-          telefone: lida.telefone,
-          documento: lida.documento,
-          cidade: lida.cidade,
-          estado: lida.estado,
-        },
-      });
+      const gravado = await completarAgora(lida);
 
       const resultado = document.createElement("p");
 
-      if (resposta?.ok && Array.isArray(resposta.dados?.completou)) {
-        const completou = resposta.dados.completou;
+      if (gravado.ok) {
+        const completou = gravado.completou;
         resultado.className = "ok";
         resultado.textContent = completou.length > 0
           ? `Completei ${juntar(completou)}. Pode fechar esta aba.`
@@ -483,7 +530,7 @@
         setTimeout(fecharCompletar, 6000);
       } else {
         resultado.className = "erro";
-        resultado.textContent = resposta?.erro ?? "Não deu para gravar agora.";
+        resultado.textContent = gravado.erro;
         sim.disabled = false;
         sim.textContent = "Tentar de novo";
       }
