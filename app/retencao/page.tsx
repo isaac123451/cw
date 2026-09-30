@@ -13,6 +13,7 @@ import SurfaceCard from "@/components/shared/SurfaceCard";
 import { lerRetencao, marcarDesfecho } from "@/lib/actions/retencao";
 import { useToast } from "@/lib/context/ToastContext";
 import type { ClienteEmCancelamento, Desfecho, DesfechoManual, ResumoDeRetencao } from "@/lib/models/cancelamento";
+import { ROTULO_DO_RISCO, type ClienteEmRisco } from "@/lib/models/clienteEmRisco";
 
 const ROTULO: Record<Desfecho, string> = { retido: "Retido", cancelado: "Cancelado", "em-aberto": "Em aberto" };
 const COR: Record<Desfecho, string> = {
@@ -37,7 +38,7 @@ const pct = (v: number | null) => (v === null ? "—" : `${Math.round(v * 100)}%
  */
 export default function RetencaoPage() {
   const { notify } = useToast();
-  const [dados, setDados] = useState<{ clientes: ClienteEmCancelamento[]; resumo: ResumoDeRetencao } | null>(null);
+  const [dados, setDados] = useState<{ clientes: ClienteEmCancelamento[]; resumo: ResumoDeRetencao; emRisco: ClienteEmRisco[] } | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [ver, setVer] = useState<Desfecho | "todos">("em-aberto");
   const [gravando, setGravando] = useState<string | null>(null);
@@ -47,7 +48,7 @@ export default function RetencaoPage() {
     if (!r.ok) setErro(r.erro);
     else {
       setErro(null);
-      setDados({ clientes: r.clientes, resumo: r.resumo });
+      setDados({ clientes: r.clientes, resumo: r.resumo, emRisco: r.emRisco });
     }
   }
 
@@ -56,7 +57,7 @@ export default function RetencaoPage() {
     lerRetencao().then((r) => {
       if (!vivo) return;
       if (!r.ok) setErro(r.erro);
-      else setDados({ clientes: r.clientes, resumo: r.resumo });
+      else setDados({ clientes: r.clientes, resumo: r.resumo, emRisco: r.emRisco });
     });
     return () => {
       vivo = false;
@@ -113,6 +114,38 @@ export default function RetencaoPage() {
                 tone="success"
               />
             </div>
+
+            {/* Cliente em risco (1.101): dois ou mais sinais, antes do pedido de cancelamento. */}
+            {dados.emRisco.length > 0 && (
+              <SurfaceCard
+                title={`Em risco agora · ${dados.emRisco.length}`}
+                description="Dois ou mais sinais juntos no mesmo cliente — reclamação aberta, detrator no NPS, pedido de cancelamento, marca de churn, reincidência. É a hora de agir, antes do pedido."
+              >
+                <ul className="divide-y divide-zinc-100">
+                  {dados.emRisco.slice(0, 20).map((c) => (
+                    <li key={c.chave} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
+                      <span className="w-6 shrink-0 text-center text-sm font-semibold tabular-nums text-rose-700" title="Quantos sinais">{c.sinais.length}</span>
+                      <span className="min-w-0 flex-1 basis-48">
+                        <span className="block truncate text-sm font-medium text-zinc-800">{c.nome}</span>
+                        <span className="block text-xs text-zinc-500">{c.sinais.map((s) => ROTULO_DO_RISCO[s]).join(" · ")}</span>
+                      </span>
+                      <span className="flex flex-wrap gap-1">
+                        {c.protocolos.slice(0, 3).map((p) => (
+                          <Link key={p} href={`/reclame-aqui/${encodeURIComponent(p)}`} className="rounded-md bg-zinc-100 px-1.5 py-0.5 font-mono text-[11px] text-zinc-700 hover:bg-violet-100">
+                            {p}
+                          </Link>
+                        ))}
+                        {c.nps.slice(0, 2).map((id) => (
+                          <Link key={id} href={`/nps/${id}`} className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[11px] text-amber-800 hover:bg-amber-100">
+                            NPS
+                          </Link>
+                        ))}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </SurfaceCard>
+            )}
 
             <SurfaceCard title="Por mês do pedido" description="O mês do primeiro sinal de cancelamento de cada cliente.">
               <div className="overflow-x-auto">

@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.101.0",
+    data: "2026-09-30",
+    titulo: "Cliente em risco",
+    texto: "A tela de Retenção mostra quem está em risco agora: o cliente com dois ou mais sinais juntos — reclamação aberta, detrator no NPS, pedido de cancelamento, marca de churn, reincidência —, com os casos para abrir. É a hora de agir antes do pedido de cancelamento.",
+    frentes: ["reclame-aqui", "nps", "plataforma"],
+  },
+  {
     versao: "1.100.0",
     data: "2026-09-30",
     titulo: "O leitor do Reclame Aqui não para se o portal mudar",

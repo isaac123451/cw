@@ -2,17 +2,19 @@
 
 import { requireRole, SemPermissao, tryRole } from "@/lib/auth/guard";
 import { resumoDeRetencao, type ClienteEmCancelamento, type DesfechoManual, type ResumoDeRetencao } from "@/lib/models/cancelamento";
-import { lerClientesEmCancelamento } from "@/lib/services/cancelamento.service";
+import { lerClientesEmCancelamento, lerClientesEmRisco } from "@/lib/services/cancelamento.service";
+import type { ClienteEmRisco } from "@/lib/models/clienteEmRisco";
 
 type Falha = { ok: false; erro: string };
 
 /** A conta de cancelamento e retenção, montada agora a partir da base (1.85). */
-export async function lerRetencao(): Promise<{ ok: true; clientes: ClienteEmCancelamento[]; resumo: ResumoDeRetencao } | Falha> {
+export async function lerRetencao(): Promise<{ ok: true; clientes: ClienteEmCancelamento[]; resumo: ResumoDeRetencao; emRisco: ClienteEmRisco[] } | Falha> {
   const ctx = await tryRole("LEITURA").catch(() => null);
   if (!ctx) return { ok: false, erro: "Entre na aplicação para ver a retenção." };
   try {
     const clientes = await lerClientesEmCancelamento(ctx.prisma);
-    return { ok: true, clientes, resumo: resumoDeRetencao(clientes) };
+    const emRisco = await lerClientesEmRisco(ctx.prisma, clientes).catch(() => []);
+    return { ok: true, clientes, resumo: resumoDeRetencao(clientes), emRisco };
   } catch (erro) {
     console.error("[retencao]", erro);
     return { ok: false, erro: "O banco não respondeu agora. Tente de novo em instantes." };

@@ -6,7 +6,10 @@ import {
   type DesfechoManual,
   type MensagemParaCancelamento,
   type NpsParaCancelamento,
+  type ClienteEmCancelamento,
 } from "@/lib/models/cancelamento";
+import { clientesEmRisco } from "@/lib/models/clienteEmRisco";
+import { CLOSED_STATUS } from "@/lib/services/case.service";
 
 /**
  * Os dados para a conta de cancelamento e retenção (1.85): os casos com o
@@ -111,4 +114,44 @@ async function lerManuais(prisma: PrismaClient) {
     if (codigo === "P2021" || codigo === "P2022") return new Map();
     throw erro;
   }
+}
+
+/**
+ * Os clientes em risco (1.101): reclamação aberta, detrator recente, pedido
+ * de cancelamento em aberto, marca de churn, reincidência — dois ou mais.
+ * Ver `lib/models/clienteEmRisco.ts`.
+ */
+export async function lerClientesEmRisco(prisma: PrismaClient, emCancelamento: ClienteEmCancelamento[]) {
+  const [casos, nps] = await Promise.all([
+    prisma.case.findMany({
+      select: { protocol: true, customer: true, status: true, churnRisk: true, createdAt: true, establishmentId: true, document: true, email: true, establishment: { select: { name: true } } },
+    }),
+    prisma.npsResponse.findMany({
+      where: { score: { lte: 6 }, respondedAt: { gte: new Date(Date.now() - 60 * 86_400_000) } },
+      select: { id: true, customer: true, customerName: true, score: true, respondedAt: true, status: true, establishmentId: true, email: true },
+    }),
+  ]);
+  return clientesEmRisco({
+    casos: casos.map((c) => ({
+      protocolo: c.protocol,
+      cliente: c.customer,
+      aberto: !CLOSED_STATUS.includes(c.status),
+      churn: c.churnRisk,
+      criadoEm: c.createdAt.toISOString(),
+      contaId: c.establishmentId ?? undefined,
+      contaNome: c.establishment?.name,
+      documento: c.document ?? undefined,
+      email: c.email ?? undefined,
+    })),
+    nps: nps.map((r) => ({
+      id: r.id,
+      cliente: r.customerName || r.customer,
+      nota: r.score,
+      respondidoEm: r.respondedAt.toISOString(),
+      encerrado: r.status.startsWith("[Encerrado]"),
+      contaId: r.establishmentId ?? undefined,
+      email: r.email ?? undefined,
+    })),
+    pedidosEmAberto: new Set(emCancelamento.filter((c) => c.desfecho === "em-aberto").map((c) => c.chave)),
+  });
 }

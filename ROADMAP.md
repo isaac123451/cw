@@ -1116,6 +1116,17 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Cliente em risco (30/09/2026, 1.101.0)
+
+Fase 31. Na tela de Retenção, **Em risco agora**: o cliente com dois ou
+mais sinais juntos — reclamação aberta, detrator no NPS (60 dias), pedido
+de cancelamento em aberto, marca de churn, reincidência (2+ reclamações
+em 90 dias) —, pela mesma chave da retenção (conta, CPF/CNPJ, e-mail), com
+os protocolos e o NPS para abrir (`lib/models/clienteEmRisco.ts`). Medido
+em 30/09: 13 clientes. "Conta que parou de usar" não entra: a plataforma
+não tem o uso da conta — quando tiver, é mais um sinal. O NPS só cruza por
+conta ou e-mail, então o detrator aparece pouco (1 dos 13).
+
 ### Leitor do Reclame Aqui à prova de mudança (30/09/2026, 1.100.0)
 
 Fase 31. A lista do portal já trocou de formato duas vezes (Next.js →
