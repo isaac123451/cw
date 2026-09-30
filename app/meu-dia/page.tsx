@@ -16,6 +16,7 @@ import AgoraNoMeuDia from "@/components/rotina/AgoraNoMeuDia";
 import ModoProximo from "@/components/rotina/ModoProximo";
 import PlacarDaSemana from "@/components/rotina/PlacarDaSemana";
 import MetasDoDia from "@/components/rotina/MetasDoDia";
+import RadarDeIncidente from "@/components/rotina/RadarDeIncidente";
 import PlanoDeRecuperacao from "@/components/rotina/PlanoDeRecuperacao";
 
 /**
@@ -72,6 +73,9 @@ export default function MeuDiaPage() {
           title="Meu dia"
           description={`${dataPorExtenso ? `${dataPorExtenso[0].toUpperCase()}${dataPorExtenso.slice(1)}. ` : ""}A rotina do documento com os números de hoje nas quatro frentes, o plano que cabe no expediente e o checkpoint com a gestão.`}
         />
+
+        {/* O radar de incidente (1.102): só aparece quando há um, e vem antes de tudo. */}
+        <RadarDeIncidente />
 
         {/* O placar da semana vem antes de tudo: é o que diz se o trabalho está andando. */}
         <PlacarDaSemana dia={dia} />

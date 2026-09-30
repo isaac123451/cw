@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.102.0",
+    data: "2026-09-30",
+    titulo: "Radar de incidente",
+    texto: "Se três ou mais clientes reclamam da mesma falha — impressão, iFood, WhatsApp, sistema fora do ar — em poucas horas, somando Reclame Aqui, Redes, NPS e conversas, o Meu dia mostra o alerta no topo com a lista dos afetados.",
+    frentes: ["reclame-aqui", "redes", "nps", "plataforma"],
+  },
+  {
     versao: "1.101.0",
     data: "2026-09-30",
     titulo: "Cliente em risco",

@@ -1116,6 +1116,19 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Radar de incidente (30/09/2026, 1.102.0)
+
+Fase 31. No topo do Meu dia, **só quando há um**: três ou mais clientes
+diferentes no mesmo tema de **falha da plataforma** (impressão, iFood,
+WhatsApp, fora do ar, repasse, fiscal, cobrança, cardápio, entrega, cupom)
+em 6 horas, somando reclamações (pela hora em que chegaram), NPS com
+comentário e mensagens de clientes nas conversas — com a lista dos
+afetados, relida a cada 5 minutos. O tema é a família de causa do
+catálogo. Temas de atendimento (demora, cancelamento, postura, dúvida)
+ficam fora: medidos nos últimos 60 dias, acendiam todo dia. Com as horas
+reais, os 60 dias não tiveram incidente — nenhum alarme falso.
+`check:radar` (6 pontos).
+
 ### Cliente em risco (30/09/2026, 1.101.0)
 
 Fase 31. Na tela de Retenção, **Em risco agora**: o cliente com dois ou
