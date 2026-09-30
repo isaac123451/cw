@@ -1116,6 +1116,22 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Réplica e avaliação avisam, e as mini conquistas (30/09/2026, 1.96.0)
+
+Fase 30 ("Réplica e avaliação acompanhadas") e Fase 36 ("Mini conquistas").
+
+- **Réplica e avaliação avisam na hora:** o vigia já gravava a réplica (a
+  coluna volta para "Aguardando nossa réplica") e a avaliação (o caso
+  fecha); agora cada uma vira notificação da extensão — "RA-x: avaliou com
+  nota 9 · resolvido", "RA-x: o consumidor respondeu — responda a réplica"
+  —, e clicar abre o caso. Três ou mais chegam num aviso só. O servidor
+  devolve o `evento` junto do que gravou; `check:vigia` +1 ponto.
+- **Mini conquistas:** "Metas de hoje" no Meu dia — primeiros contatos,
+  respostas públicas, pedidos de avaliação, detratores contatados e a
+  rotina —, cada uma do tamanho do dia (no máximo 5, nunca maior que o
+  que existe para fazer) e contada do banco. Meta batida vira aviso
+  discreto, uma vez por dia (`metasDoDia`, `MetasDoDia`).
+
 ### Triagem com a investigação dentro, e todos os casos em aberto (30/09/2026, 1.95.0)
 
 Fase 35 item 7. "Investigação e triagem: juntar e simplificar; uma visão

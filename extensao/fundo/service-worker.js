@@ -1756,6 +1756,7 @@ async function umaVolta(motivo) {
   });
 
   if (estado.criadas.length > 0) avisarNovas(estado.criadas);
+  avisarEventos(resultado.completadas ?? []);
 
   return estado;
 }
@@ -1778,6 +1779,55 @@ function avisarNovas(criadas) {
     contextMessage: "Já estão no quadro, na coluna Novo",
     priority: 2,
   });
+}
+
+/**
+ * Réplica e avaliação acompanhadas (Fase 30, 1.96).
+ *
+ * O vigia já gravava a réplica (a coluna volta para "Aguardando nossa
+ * réplica") e a avaliação (o caso fecha como Resolvido ou Não resolvido);
+ * ninguém ficava sabendo até abrir o quadro. Agora cada uma vira um aviso,
+ * e clicar abre o caso. Três ou mais chegam juntos, num aviso só.
+ */
+async function avisarEventos(completadas) {
+  const eventos = completadas.filter((c) => c.evento && c.id);
+  if (eventos.length === 0) return;
+
+  const config = await lerConfig();
+  const base = normalizarBase(config.base);
+  const { avisosDePrazo = {} } = await chrome.storage.local.get("avisosDePrazo");
+
+  const frase = (c) =>
+    c.evento.tipo === "replica"
+      ? `${c.protocolo}: o consumidor respondeu à resposta — responda a réplica`
+      : `${c.protocolo}: avaliou${c.evento.nota != null ? ` com nota ${c.evento.nota}` : ""}${c.evento.resolvida ? " · resolvido" : " · não resolvido"}`;
+
+  if (eventos.length >= 3) {
+    const id = `cw-prazo-eventos-${Date.now()}`;
+    avisosDePrazo[id] = base ? `${base}/reclame-aqui` : "";
+    await chrome.storage.local.set({ avisosDePrazo });
+    chrome.notifications.create(id, {
+      type: "basic",
+      iconUrl: chrome.runtime.getURL("icones/icone-128.png"),
+      title: `${eventos.length} novidades no Reclame Aqui`,
+      message: eventos.slice(0, 3).map(frase).join("\n").slice(0, 240),
+      priority: 2,
+    });
+    return;
+  }
+
+  for (const c of eventos) {
+    const id = `cw-prazo-evento-${c.protocolo}-${Date.now()}`;
+    avisosDePrazo[id] = base ? `${base}/reclame-aqui/${c.id}` : "";
+    chrome.notifications.create(id, {
+      type: "basic",
+      iconUrl: chrome.runtime.getURL("icones/icone-128.png"),
+      title: c.evento.tipo === "replica" ? "Réplica no Reclame Aqui" : "Avaliação no Reclame Aqui",
+      message: frase(c).slice(0, 240),
+      priority: 2,
+    });
+  }
+  await chrome.storage.local.set({ avisosDePrazo });
 }
 
 /* ============================================================

@@ -457,3 +457,82 @@ export function textoDoResumoDaSemana(p: PlacarDaSemana, extra: { sequencia?: nu
   ].filter((l): l is string => Boolean(l));
   return linhas.length > 1 ? linhas.join("\n") : `${linhas[0]}\n• Nada fechado ainda neste ciclo.`;
 }
+
+/* ============================================================
+   MINI CONQUISTAS — as metas pequenas do dia (Fase 36, 1.96)
+============================================================ */
+
+export interface MetaDoDia {
+  chave: "primeiros-contatos" | "respostas" | "pedidos" | "detratores" | "rotina";
+  titulo: string;
+  feito: number;
+  alvo: number;
+  href: string;
+}
+
+/**
+ * "Pequenas metas e conquistas que dão ritmo e engajamento." Metas do
+ * tamanho do dia — no máximo 5 de cada, e nunca maiores que o que existe
+ * para fazer —, contadas do banco: o que foi feito hoje contra o que ainda
+ * espera. Sem pendência e sem nada feito, a meta não aparece: meta de zero
+ * não é meta. Batida, vira aviso uma vez (a tela guarda quais já avisou).
+ */
+export function metasDoDia(entrada: {
+  casos: Case[];
+  nps: NpsResponseView[];
+  rotina?: { feitas: number; total: number };
+  agora?: Date;
+}): MetaDoDia[] {
+  const agora = entrada.agora ?? new Date();
+  const hoje = diaNaOperacao(agora);
+  const deHoje = (iso?: string | null) => Boolean(iso) && diaNaOperacao(iso!) === hoje;
+  const meta = (m: Omit<MetaDoDia, "alvo"> & { pendentes: number; teto: number }): MetaDoDia | null => {
+    const alvo = Math.min(m.teto, m.feito + m.pendentes);
+    return alvo > 0 ? { chave: m.chave, titulo: m.titulo, feito: Math.min(m.feito, alvo), alvo, href: m.href } : null;
+  };
+
+  const abertos = entrada.casos.filter((c) => !["Resolvido", "Não resolvido", "Aguardando avaliação", "Sem contato", "Sem identificação", "Encaminhado"].includes(c.status));
+  const npsAbertos = entrada.nps.filter((r) => !r.closedAt);
+  const ra = entrada.casos.filter((c) => c.source === "Reclame Aqui");
+  const fila = filaDeAvaliacao(ra, agora);
+
+  const metas = [
+    meta({
+      chave: "primeiros-contatos",
+      titulo: "Primeiros contatos",
+      feito: entrada.casos.filter((c) => deHoje(c.primeiroContatoEm)).length + entrada.nps.filter((r) => deHoje(r.firstContactAt)).length,
+      pendentes: abertos.filter((c) => !c.primeiroContatoEm).length + npsAbertos.filter((r) => !r.firstContactAt && Date.parse(r.respondedAt) > agora.getTime() - 30 * 86_400_000).length,
+      teto: 5,
+      href: "/meu-dia",
+    }),
+    meta({
+      chave: "respostas",
+      titulo: "Respostas públicas",
+      feito: ra.filter((c) => respondida(c) && deHoje(c.publicResponseAt)).length,
+      pendentes: ra.filter((c) => !respondida(c)).length,
+      teto: 3,
+      href: "/reclame-aqui",
+    }),
+    meta({
+      chave: "pedidos",
+      titulo: "Pedidos de avaliação",
+      feito: ra.filter((c) => deHoje(c.ultimoPedidoAvaliacaoEm)).length,
+      pendentes: fila.hoje.length,
+      teto: 5,
+      href: "/reclame-aqui/avaliacoes",
+    }),
+    meta({
+      chave: "detratores",
+      titulo: "Detratores contatados",
+      feito: entrada.nps.filter((r) => r.score <= 6 && deHoje(r.firstContactAt)).length,
+      pendentes: npsAbertos.filter((r) => r.score <= 6 && !r.firstContactAt && Date.parse(r.respondedAt) > agora.getTime() - 30 * 86_400_000).length,
+      teto: 5,
+      href: "/nps",
+    }),
+    entrada.rotina && entrada.rotina.total > 0
+      ? { chave: "rotina" as const, titulo: "Rotina do dia", feito: entrada.rotina.feitas, alvo: entrada.rotina.total, href: "/meu-dia" }
+      : null,
+  ];
+
+  return metas.filter((m): m is MetaDoDia => m !== null);
+}

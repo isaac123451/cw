@@ -15,6 +15,7 @@ import CartaoDoPrimeiroAcesso from "@/components/primeiroAcesso/CartaoDoPrimeiro
 import AgoraNoMeuDia from "@/components/rotina/AgoraNoMeuDia";
 import ModoProximo from "@/components/rotina/ModoProximo";
 import PlacarDaSemana from "@/components/rotina/PlacarDaSemana";
+import MetasDoDia from "@/components/rotina/MetasDoDia";
 import PlanoDeRecuperacao from "@/components/rotina/PlanoDeRecuperacao";
 
 /**
@@ -52,6 +53,11 @@ export default function MeuDiaPage() {
   const carregando = dia.carregando;
   const plano = useMemo(() => (carregando ? null : planejar(efetivas)), [carregando, planejar, efetivas]);
 
+  const rotinaDoDia = useMemo(
+    () => (dia.carregando ? undefined : { feitas: dia.doDia.filter((a) => efetivas.has(a.id)).length, total: dia.doDia.length }),
+    [dia.carregando, dia.doDia, efetivas]
+  );
+
   const dataPorExtenso = dia.agora
     ? dia.agora.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo", weekday: "long", day: "numeric", month: "long" })
     : "";
@@ -69,6 +75,9 @@ export default function MeuDiaPage() {
 
         {/* O placar da semana vem antes de tudo: é o que diz se o trabalho está andando. */}
         <PlacarDaSemana dia={dia} />
+
+        {/* As mini conquistas (1.96): metas do tamanho do dia, com aviso quando fecham. */}
+        <MetasDoDia rotina={rotinaDoDia} />
 
         {umPorVez && <ModoProximo dia={dia} marcadas={efetivas} onFechar={() => setUmPorVez(false)} />}
 

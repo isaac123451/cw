@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.96.0",
+    data: "2026-09-30",
+    titulo: "Metas do dia, e réplica e avaliação avisam",
+    texto: "O Meu dia ganhou as Metas de hoje: pequenas metas do tamanho do dia, com a barra de cada uma e um aviso quando fecha. E a extensão avisa na hora quando o consumidor avalia ou responde à resposta pública no Reclame Aqui — clique e o caso abre.",
+    frentes: ["reclame-aqui", "extensao", "plataforma"],
+  },
+  {
     versao: "1.95.0",
     data: "2026-09-30",
     titulo: "Triagem num passo só",

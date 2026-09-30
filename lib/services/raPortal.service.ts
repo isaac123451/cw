@@ -480,7 +480,16 @@ function vazioOuMarcador(valor: string | null, marcador: string) {
 
 export interface ResultadoDoVigia {
   criadas: { protocolo: string; titulo: string }[];
-  completadas: { protocolo: string; campos: string[] }[];
+  completadas: {
+    protocolo: string;
+    campos: string[];
+    /**
+     * O que o consumidor fez, para o aviso na hora (Fase 30, 1.96): avaliou
+     * (com a nota) ou respondeu à resposta pública (réplica).
+     */
+    evento?: { tipo: "avaliou"; nota: number | null; resolvida: boolean } | { tipo: "replica" };
+    id?: string;
+  }[];
   inalteradas: number;
 }
 
@@ -585,9 +594,17 @@ export async function gravarDoPortal(
         .catch((erro) => console.error("[vigia] fechar tarefas do caso", erro));
     }
 
+    const evento =
+      mudancas.evaluated === true
+        ? { tipo: "avaliou" as const, nota: typeof mudancas.score === "number" ? mudancas.score : null, resolvida: mudancas.resolved === true }
+        : mudancas.status === "Aguardando nossa réplica"
+          ? { tipo: "replica" as const }
+          : undefined;
+
     resultado.completadas.push({
       protocolo: atual.protocol,
       campos: Object.keys(mudancas),
+      ...(evento ? { evento, id: atual.id } : {}),
     });
   }
 

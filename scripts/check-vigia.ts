@@ -509,7 +509,14 @@ async function travas(prisma: PrismaClient) {
     "Em análise jurídica"
   );
 
-  await gravarDoPortal(prisma, [respondida(JURIDICO)]);
+  const avaliou = await gravarDoPortal(prisma, [respondida(JURIDICO)]);
+
+  /* 1.96: a avaliação vira aviso na extensão — o evento vai junto do que foi gravado. */
+  conferir(
+    "a avaliação volta como evento, com a nota",
+    avaliou.completadas.find((c) => c.protocolo === `RA-${JURIDICO}`)?.evento,
+    { tipo: "avaliou", nota: 9, resolvida: true }
+  );
 
   conferir(
     "avaliada no portal: a coluna da operação fecha como o portal diz",
