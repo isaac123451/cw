@@ -277,7 +277,7 @@ function Linha({
     <li ref={raiz} className="group relative flex min-w-0 items-start gap-2 rounded-lg px-1 py-1 text-xs hover:bg-zinc-50">
       {item.frente ? <IconeDaFrente frente={item.frente} size={12} className="mt-0.5" /> : <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-zinc-300" />}
 
-      <Link href={item.href} className="min-w-0 flex-1">
+      <Link href={item.href} target={item.href.startsWith("http") ? "_blank" : undefined} className="min-w-0 flex-1">
         <span className={`block truncate font-medium hover:underline ${item.atrasado ? "text-rose-700" : "text-zinc-700"}`}>{item.titulo}</span>
         {item.detalhe && <span className="block truncate text-[11px] text-zinc-500">{item.detalhe}</span>}
         {falta && (

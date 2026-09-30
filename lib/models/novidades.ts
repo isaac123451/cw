@@ -104,6 +104,14 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.108.0",
+    data: "2026-09-30",
+    titulo: "Quem espera no WhatsApp aparece no Meu dia",
+    texto: "Com o WhatsApp Web aberto, quem está esperando a nossa resposta vira aviso e item no Meu dia — detrator e reclamação aberta primeiro. Vai ao CW só o nome ou número e há quantos minutos, nunca a mensagem.",
+    frentes: ["extensao", "plataforma"],
+    href: "/meu-dia",
+  },
+  {
     versao: "1.107.0",
     data: "2026-09-30",
     titulo: "Comparação com o segmento",

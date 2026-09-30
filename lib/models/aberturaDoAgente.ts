@@ -3,6 +3,7 @@ import type { NpsResponseView } from "@/lib/models/nps";
 import type { SlaRule } from "@/lib/models/sla";
 
 import { filaDeAvaliacao, semNoticia } from "@/lib/models/cadencia";
+import { resumoDaEspera, type RetratoDaEspera } from "@/lib/models/esperaNoWhatsapp";
 import { sinaisDeCrise } from "@/lib/models/redes";
 
 import { caseHref, isOpen, isSocial } from "@/lib/services/case.service";
@@ -37,7 +38,7 @@ import {
 export type TomDoAviso = "perigo" | "atencao" | "neutro";
 
 export interface AvisoDeAbertura {
-  chave: "prazo" | "sem-noticia" | "avaliacao" | "crise";
+  chave: "prazo" | "sem-noticia" | "avaliacao" | "crise" | "whatsapp";
   tom: TomDoAviso;
   titulo: string;
   detalhe: string;
@@ -109,6 +110,8 @@ export interface EntradaDaAbertura {
   nps?: NpsResponseView[];
   expediente?: Expediente;
   agora?: Date;
+  /** O retrato da lista do WhatsApp mandado pela extensão (1.108). */
+  espera?: RetratoDaEspera | null;
 }
 
 /**
@@ -159,6 +162,7 @@ export function avisosDeAbertura(entrada: EntradaDaAbertura): AvisoDeAbertura[] 
     nps = [],
     expediente = EXPEDIENTE_PADRAO,
     agora = new Date(),
+    espera = null,
   } = entrada;
 
   const abertos = casos.filter(isOpen);
@@ -270,6 +274,23 @@ export function avisosDeAbertura(entrada: EntradaDaAbertura): AvisoDeAbertura[] 
         titulo: `${emCrise[0].caso.protocol} · ${emCrise[0].caso.customer}`,
       },
       itens: emCrise.slice(0, MAXIMO_DE_ITENS).map((x) => itemDoCaso(x.caso, x.sinais.map((s) => s.motivo).join(" · "))),
+    });
+  }
+
+  /* ---------- 5. quem espera resposta no WhatsApp (1.108) ---------- */
+
+  const whatsapp = resumoDaEspera(espera, agora);
+
+  if (whatsapp) {
+    avisos.push({
+      chave: "whatsapp",
+      tom: whatsapp.tom,
+      titulo: whatsapp.titulo,
+      detalhe: whatsapp.detalhe,
+      quantidade: whatsapp.quantidade,
+      href: "https://web.whatsapp.com/",
+      pergunta: "Quem está esperando resposta no WhatsApp?",
+      itens: whatsapp.itens,
     });
   }
 

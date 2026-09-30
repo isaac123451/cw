@@ -9,6 +9,8 @@ import { useNps } from "@/lib/context/NpsContext";
 import { useSla } from "@/lib/context/SlaContext";
 import { useAvaliacoesGoogle } from "@/lib/context/useAvaliacoesGoogle";
 import { useAgora } from "@/lib/hooks/useAgora";
+import { useEsperaNoWhatsapp } from "@/lib/hooks/useEsperaNoWhatsapp";
+import { itensDaEspera } from "@/lib/models/esperaNoWhatsapp";
 
 import {
   desfazerMarcasDeItens,
@@ -56,6 +58,7 @@ export function useMeuDia() {
   const { tasks, loading: carregandoAgenda } = useAgenda();
   const { rules, expediente } = useSla();
   const agora = useAgora();
+  const espera = useEsperaNoWhatsapp();
 
   const [atividades, setAtividades] = useState<AtividadeDaRotina[] | null>(null);
   const [carga, setCarga] = useState<CargaDoMeuDia | null>(null);
@@ -115,12 +118,13 @@ export function useMeuDia() {
               relatorio: carga?.relatorio ?? null,
               marcasDeItens: carga?.marcasDeItens ?? [],
               aguardandoRetorno: carga?.aguardandoRetorno ?? [],
+              esperaNoWhatsapp: itensDaEspera(espera, agora),
             },
             agora,
             expediente
           )
         : null,
-    [agora, cases, responses, kinds, avaliacoes, movements, tasks, rules, carga, expediente]
+    [agora, cases, responses, kinds, avaliacoes, movements, tasks, rules, carga, expediente, espera]
   );
 
   const feitasHoje = useMemo(

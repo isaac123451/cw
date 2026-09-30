@@ -100,6 +100,13 @@ export const PADROES = {
   etiquetasLista: true,
 
   /**
+   * Conversas sem resposta no Meu dia (1.108): a lista do WhatsApp manda
+   * ao CW quem espera resposta e há quantos minutos — só nome ou número,
+   * nunca mensagem.
+   */
+  esperaNoMeuDia: true,
+
+  /**
    * Completar o quadro só de abrir a reclamação na área da empresa (1.86).
    * O servidor só preenche o que está vazio. Desligado, volta a caixa com
    * o botão "Completar no quadro".

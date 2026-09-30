@@ -570,6 +570,7 @@ export default function ModoProximo({ dia, marcadas, onFechar }: Props) {
               ) : null}
               <Link
                 href={item.href}
+                target={item.href.startsWith("http") ? "_blank" : undefined}
                 className={`flex h-8 items-center gap-1 rounded-lg px-2.5 text-xs font-medium ${ficha || tarefa ? "text-zinc-600 hover:bg-zinc-100" : "bg-zinc-900 text-white hover:bg-zinc-800"}`}
               >
                 {tarefa ? "Agenda" : item.janela ? "Tela cheia" : "Abrir"} <ArrowUpRight size={13} />

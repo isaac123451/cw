@@ -125,17 +125,26 @@
     return partes.find((l) => l !== nome && !nossos.has(l) && !HORA.test(l) && !/^\d+$/.test(l)) || "";
   }
 
+  /* Quem espera agora, para o Meu dia (1.108): chave, nome ou número, minutos e etiquetas. */
+  let esperando = [];
+
   function marcarEspera() {
     const agora = new Date();
+    const vistos = [];
     for (const linha of linhas()) {
       const antigo = linha.querySelector(".cw-espera");
       const hora = horaDaLinha(linha);
       const nome = nomeDaLinha(linha)?.getAttribute("title") || "";
       const previa = previaDaLinha(linha, nome);
-      const espera =
+      const minutos =
         !linha.querySelector(GRUPO) && hora && !linha.querySelector(NOSSO) && !previaNossa(previa) && !encerrou(previa)
-          ? seloDaEspera(minutosDesde(hora.textContent, agora))
+          ? minutosDesde(hora.textContent, agora)
           : null;
+      const espera = seloDaEspera(minutos);
+      if (espera && nome) {
+        const chave = chaveDaLinha(nome);
+        vistos.push({ chave, nome: TELEFONE.test(nome) ? "" : nome, telefone: TELEFONE.test(nome) ? nome : "", minutos, etiquetas: cache.get(chave)?.lista ?? [] });
+      }
       if (!espera) {
         antigo?.remove();
         continue;
@@ -145,6 +154,29 @@
       selo.textContent = espera.rotulo;
       selo.title = "O cliente falou por último e ainda espera a nossa resposta (CW Reputação)";
       if (!antigo) hora.after(selo);
+    }
+    esperando = vistos;
+  }
+
+  /*
+    O retrato vai quando muda (quem entrou, quem saiu, a espera mudando de
+    faixa) ou a cada 4 minutos — o CW descarta retrato com mais de 15, e é
+    assim que o Meu dia sabe que o WhatsApp foi fechado. Só a lista que
+    aparece na tela: conversa rolada para baixo não conta.
+  */
+  let ultimoEnvio = { em: 0, assinatura: "" };
+  const faixa = (m) => (m < 60 ? Math.floor(m / 15) : 4 + Math.floor(m / 60));
+
+  async function enviarEspera() {
+    if (!chrome?.runtime?.id || !CW.enviar) return;
+    const assinatura = esperando.map((e) => `${e.chave}:${faixa(e.minutos)}:${e.etiquetas.length}`).sort().join("|");
+    const agora = Date.now();
+    if (assinatura === ultimoEnvio.assinatura && agora - ultimoEnvio.em < 4 * 60_000) return;
+    ultimoEnvio = { em: agora, assinatura };
+    try {
+      await CW.enviar({ tipo: "esperaWhatsapp", conversas: esperando.slice(0, 100) });
+    } catch {
+      ultimoEnvio.em = 0;
     }
   }
 
@@ -213,5 +245,7 @@
     marcarEtiquetas();
   }, 3000);
   setInterval(() => void perguntarEtiquetas().then(marcarEtiquetas), 10000);
+  setInterval(() => void enviarEspera(), 60000);
+  setTimeout(() => void enviarEspera(), 8000);
   setTimeout(() => void perguntarEtiquetas().then(marcarEtiquetas), 2500);
 })();

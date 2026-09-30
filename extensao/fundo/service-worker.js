@@ -75,6 +75,7 @@ const CAMINHOS = {
   etiquetasLista: "/api/extensao/etiquetas-lista",
   raPainel: "/api/extensao/ra-painel",
   raSegmento: "/api/extensao/ra-segmento",
+  esperaWhatsapp: "/api/extensao/espera-whatsapp",
 };
 
 /**
@@ -543,6 +544,14 @@ async function tratar(mensagem) {
     const config = await lerConfig();
     if (config.etiquetasLista === false) return { ok: true, dados: { etiquetas: {} } };
     const dados = await chamar(CAMINHOS.etiquetasLista, {}, { contatos: mensagem.contatos ?? [] });
+    return { ok: true, dados };
+  }
+
+  /* Conversas sem resposta (1.108): quem espera na lista do WhatsApp, para o Meu dia. */
+  if (mensagem?.tipo === "esperaWhatsapp") {
+    const config = await lerConfig();
+    if (config.esperaNoMeuDia === false) return { ok: true, dados: { gravados: 0 } };
+    const dados = await chamar(CAMINHOS.esperaWhatsapp, {}, { conversas: Array.isArray(mensagem.conversas) ? mensagem.conversas.slice(0, 100) : [] });
     return { ok: true, dados };
   }
 

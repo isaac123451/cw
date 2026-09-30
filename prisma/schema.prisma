@@ -1753,6 +1753,18 @@ model OperacaoConfig {
   updatedBy String?
 }
 
+/// Conversas sem resposta no WhatsApp (1.108): o retrato da lista de
+/// conversas de cada pessoa, mandado pela extensão a cada minuto com o
+/// WhatsApp Web aberto — quem falou por último e há quantos minutos. Só
+/// o nome que a lista mostra (ou o número do contato não salvo) e as
+/// etiquetas do CW; mensagem nenhuma. Uma linha por pessoa, trocada a
+/// cada envio; velha demais, o Meu dia a ignora.
+model EsperaNoWhatsapp {
+  userId    String   @id
+  conversas Json
+  lidoEm    DateTime
+}
+
 /// A reputação pública de uma empresa no Reclame Aqui, uma linha por
 /// empresa por dia (1.107) — a da Cardápio Web e a das parecidas, lidas
 /// pela extensão da mesma barra lateral de onde sai o painel oficial.

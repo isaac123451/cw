@@ -6,6 +6,7 @@ import {
   AppWindow,
   ArrowRight,
   CalendarClock,
+  MessageCircle,
   MessageSquareOff,
   Siren,
   Star,
@@ -36,6 +37,7 @@ const ICONE = {
   "sem-noticia": MessageSquareOff,
   avaliacao: Star,
   crise: Siren,
+  whatsapp: MessageCircle,
 } as const;
 
 const CORES = {
@@ -121,6 +123,7 @@ export default function AberturaDoAgente({
 
             <Link
               href={aviso.href}
+              target={aviso.href.startsWith("http") ? "_blank" : undefined}
               className="flex items-center gap-1 rounded-xl bg-white/70 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-white"
             >
               Resolver

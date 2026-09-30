@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 
 import Link from "next/link";
 
@@ -13,6 +13,7 @@ import { useJanelas } from "@/lib/context/JanelasContext";
 import { useNps } from "@/lib/context/NpsContext";
 import { useSla } from "@/lib/context/SlaContext";
 import { useAgora } from "@/lib/hooks/useAgora";
+import { useEsperaNoWhatsapp } from "@/lib/hooks/useEsperaNoWhatsapp";
 
 import { avisosDeAbertura, prazosDeHoje } from "@/lib/models/aberturaDoAgente";
 import { conquistasDoDia, oQueMoveANota } from "@/lib/models/motivacaoDoDia";
@@ -37,6 +38,19 @@ const TOM = {
   neutro: "text-violet-700",
 } as const;
 
+/** Link da plataforma, ou de fora (o WhatsApp Web) numa aba nova. */
+function Destino({ href, className, children }: { href: string; className: string; children: ReactNode }) {
+  return href.startsWith("http") ? (
+    <a href={href} target="_blank" rel="noreferrer" className={className}>
+      {children}
+    </a>
+  ) : (
+    <Link href={href} className={className}>
+      {children}
+    </Link>
+  );
+}
+
 const um = (n: number) => n.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
 export default function AgoraNoMeuDia() {
@@ -46,20 +60,21 @@ export default function AgoraNoMeuDia() {
   const { rules, expediente } = useSla();
   const { abrir } = useJanelas();
   const agora = useAgora();
+  const espera = useEsperaNoWhatsapp();
 
   /* O aviso aberto: clicar mostra quem está por trás do número (1.90). */
   const [aberto, setAberto] = useState<string | null>(null);
 
   const calculado = useMemo(() => {
     if (!agora) return null;
-    const avisos = avisosDeAbertura({ casos: cases, regras: rules, nps: responses, expediente, agora });
+    const avisos = avisosDeAbertura({ casos: cases, regras: rules, nps: responses, expediente, agora, espera });
     const prazos = prazosDeHoje(cases.filter(isOpen), rules, responses, expediente, agora);
     return {
       avisos,
       acoes: oQueMoveANota(cases, agora),
       conquistas: conquistasDoDia({ casos: cases, nps: responses, prazosEstourados: prazos.estourados, agora }),
     };
-  }, [cases, responses, rules, expediente, agora]);
+  }, [cases, responses, rules, expediente, agora, espera]);
 
   if (!calculado) return null;
 
@@ -71,7 +86,7 @@ export default function AgoraNoMeuDia() {
       <SurfaceCard
         tour="pede-acao"
         title="Pede ação agora"
-        description="O que vence, quem está sem notícia, de quem pedir avaliação e sinal de crise."
+        description="O que vence, quem está sem notícia, quem espera no WhatsApp, de quem pedir avaliação e sinal de crise."
       >
         {avisos.length === 0 ? (
           <p className="text-sm text-emerald-700">Nada vencendo, ninguém parado e nenhum sinal de crise.</p>
@@ -99,10 +114,10 @@ export default function AgoraNoMeuDia() {
                     <ul className="mt-1.5 max-h-72 divide-y divide-zinc-100 overflow-y-auto rounded-lg ring-1 ring-inset ring-zinc-200">
                       {a.itens.map((it) => (
                         <li key={it.href + it.titulo} className="flex items-center gap-2 px-2.5 py-1.5">
-                          <Link href={it.href} className="min-w-0 flex-1 hover:text-violet-700">
+                          <Destino href={it.href} className="min-w-0 flex-1 hover:text-violet-700">
                             <span className="block truncate text-xs font-medium text-zinc-800">{it.titulo}</span>
                             {it.detalhe && <span className="block truncate text-[11px] text-zinc-500">{it.detalhe}</span>}
-                          </Link>
+                          </Destino>
                           {it.janela && (
                             <button
                               type="button"
@@ -125,9 +140,9 @@ export default function AgoraNoMeuDia() {
                     {a.href === "/meu-dia" ? (
                       <span className="text-xs text-zinc-500">estão na frente no plano abaixo</span>
                     ) : (
-                      <Link href={a.href} className="flex items-center gap-1 text-xs font-medium text-violet-700 hover:underline">
-                        Resolver <ArrowRight size={12} />
-                      </Link>
+                      <Destino href={a.href} className="flex items-center gap-1 text-xs font-medium text-violet-700 hover:underline">
+                        {a.chave === "whatsapp" ? "Abrir o WhatsApp" : "Resolver"} <ArrowRight size={12} />
+                      </Destino>
                     )}
                     {a.janela && (
                       <button

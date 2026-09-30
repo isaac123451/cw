@@ -1116,6 +1116,20 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Conversas sem resposta no Meu dia (30/09/2026, 1.108.0)
+
+Fase 28. Com o WhatsApp Web aberto, a lista de conversas (que já tinha o
+selo de espera desde a 1.81) manda ao CW, quando muda ou a cada 4 minutos,
+quem falou por último e há quantos minutos — só o nome que a lista mostra
+(ou o número do contato não salvo) e as etiquetas que o CW deu; mensagem
+nenhuma (`EsperaNoWhatsapp`, uma linha por pessoa). No Meu dia, "Pede
+ação agora" ganha "N clientes esperando há mais de 1 h no WhatsApp", com a
+lista na ordem da prioridade (reclamação aberta ou detrator primeiro,
+depois a espera), e cada conversa entra em "casos em aberto" — espera de
+mais de 1 h conta como fora do prazo. Retrato com mais de 15 minutos é de
+um WhatsApp fechado e sai da tela. Pode ser desligado nas opções da
+extensão. `npm run check:conversas-sem-resposta`.
+
 ### Comparação com o segmento (30/09/2026, 1.107.0)
 
 Fase 30. Na tela Índice do Reclame Aqui, **Comparação com o segmento**: a
