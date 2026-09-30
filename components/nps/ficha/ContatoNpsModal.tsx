@@ -135,7 +135,7 @@ export default function ContatoNpsModal({
           tone: "success",
           title: `Tentativa por ${canal} registrada.`,
           detail: !comoSemRetorno
-            ? `Aguardando retorno até ${quandoLiberaSemRetorno(emDoCampo)}. Depois, marque sem retorno em Contatos — ou registre a conversa.`
+            ? `${n} de ${minimas} tentativas em ${JANELA_TENTATIVAS_DIAS} dias. Sem resposta até ${quandoLiberaSemRetorno(emDoCampo)}, vira sem retorno sozinha — se o cliente responder, registre a conversa.`
             : n >= minimas
               ? `${n} tentativas em ${JANELA_TENTATIVAS_DIAS} dias: o guia já permite encerrar sem retorno.`
               : `${n} de ${minimas} tentativas em ${JANELA_TENTATIVAS_DIAS} dias — varie o canal e o horário.`,

@@ -1,5 +1,6 @@
 import type { PrismaClient } from "@prisma/client";
 
+import { podeMarcarSemRetorno } from "@/lib/models/tratativa";
 import type { NpsResponseView } from "@/lib/models/nps";
 
 function dia(value?: Date | null) {
@@ -86,7 +87,8 @@ export async function lerRespostasDoNps(prisma: PrismaClient): Promise<NpsRespon
       note: a.note,
       actor: a.actor,
       createdAt: a.createdAt.toISOString(),
-      resultado: a.resultado === "aguardando" ? ("aguardando" as const) : ("sem-resposta" as const),
+      /* Passadas as 2 horas sem conversa, a tentativa já é sem retorno (1.110). */
+      resultado: a.resultado === "aguardando" && !podeMarcarSemRetorno(a.createdAt) ? ("aguardando" as const) : ("sem-resposta" as const),
     })),
   }));
 }

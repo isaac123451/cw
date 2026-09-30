@@ -420,7 +420,7 @@
       partes.push(
         '  <div class="cartao" style="margin-top:7px">',
         '    <div class="rotulo" style="margin-bottom:5px">Tentou contato?</div>',
-        '    <p class="sub" style="margin-bottom:9px">A tentativa fica aguardando retorno por 2 horas. Sem resposta, marque sem retorno na ficha do NPS: aí ela conta para a regra das três em 7 dias, que autoriza encerrar por falta de retorno.</p>',
+        '    <p class="sub" style="margin-bottom:9px">A tentativa conta na hora para a regra das três em 7 dias (que autoriza encerrar por falta de retorno). Sem resposta em 2 horas, vira sem retorno sozinha.</p>',
         '    <select class="campo" id="nps-canal">',
         ...P.CANAIS.map(
           (c) => `      <option value="${c}">${c}</option>`

@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.111.0",
+    data: "2026-09-30",
+    titulo: "Tentativa do NPS conta na hora",
+    texto: "A tentativa de contato registrada no NPS (pela ficha ou pela extensão) conta na hora para a regra das 3 tentativas em 7 dias. Sem resposta em 2 horas, vira sem retorno sozinha — ninguém precisa voltar para marcar.",
+    frentes: ["nps", "extensao"],
+  },
+  {
     versao: "1.110.0",
     data: "2026-09-30",
     titulo: "Consertos e a nota do mês",

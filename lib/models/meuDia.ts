@@ -14,7 +14,6 @@ import type { AtividadeDaRotina, ChaveDaRotina } from "@/lib/models/rotina";
 import { caseHref, isOpen, isReclameAqui, isSocial } from "@/lib/services/case.service";
 import { lateMovements, isPending } from "@/lib/services/movement.service";
 import { deveEncerrarSemRetorno, nivelDoNps, ordemDoNivel, podeEncerrar, tentativaAguardando, tentativasNaJanela } from "@/lib/services/nps.service";
-import { podeMarcarSemRetorno } from "@/lib/models/tratativa";
 import { INICIO_DO_REGISTRO_DE_CONTATO, inicioDoRelogio, primeiroContatoFeito, slaStatus } from "@/lib/services/sla.service";
 import {
   EXPEDIENTE_PADRAO,
@@ -354,12 +353,9 @@ export function etapaDoNps(r: NpsResponseView, tipos: NpsKindOption[] | undefine
 
   if (!r.postContactAt) {
     /* A tentativa ainda aguardando: espera 2 horas; depois, é FUP — marcar sem retorno ou registrar a conversa. */
-    const pendente = tentativaAguardando(r);
-    if (pendente) {
-      return podeMarcarSemRetorno(pendente.createdAt, agora)
-        ? { etapa: "fup", motivo: `tentativa por ${pendente.channel} sem resposta há 2h — marcar sem retorno` }
-        : { etapa: "esperando", motivo: "tentativa aguardando retorno" };
-    }
+    /* Nas 2 horas, espera; depois, a tentativa já conta como sem retorno (1.110) — sem FUP de marcar à mão. */
+    const pendente = tentativaAguardando(r, agora);
+    if (pendente) return { etapa: "esperando", motivo: "tentativa aguardando retorno" };
     const semRetorno = deveEncerrarSemRetorno(r, agora);
     if (semRetorno.deve && r.attempts.length > 0) return { etapa: "sem-retorno", motivo: semRetorno.motivo ?? "critério do guia atingido" };
     if (r.attempts.length > 0) return { etapa: "ligacao", motivo: "cliente ainda não atendeu" };

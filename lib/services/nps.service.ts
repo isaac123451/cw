@@ -14,6 +14,7 @@ import {
   TIPOS_PADRAO,
 } from "@/lib/models/nps";
 import { diaNaOperacao } from "@/lib/services/reputation.service";
+import { podeMarcarSemRetorno } from "@/lib/models/tratativa";
 import {
   EXPEDIENTE_PADRAO,
   type Expediente,
@@ -111,16 +112,26 @@ export function tentativasNaJanela(
   agora = new Date()
 ) {
   const desde = item.postContactAt ? Date.parse(item.postContactAt) : 0;
-  /* A que ainda aguarda retorno não conta: o cliente pode responder nas 2 horas. */
+  /*
+    Toda tentativa conta (1.110): "conta como tentativa feita, para aquele
+    negócio de 3 contatos". Antes, a que ficava "aguardando retorno" só
+    contava depois de alguém voltar, 2 horas depois, e marcar sem retorno à
+    mão — pela extensão, nunca contava. Uma conversa registrada depois zera
+    a conta (`desde`).
+  */
   return item.attempts.filter((a) => {
     const t = Date.parse(a.createdAt);
-    return a.resultado !== "aguardando" && t > desde && (agora.getTime() - t) / 86400000 <= JANELA_TENTATIVAS_DIAS;
+    return t > desde && (agora.getTime() - t) / 86400000 <= JANELA_TENTATIVAS_DIAS;
   });
 }
 
-/** A tentativa mais antiga ainda aguardando retorno, se houver. */
-export function tentativaAguardando(item: Pick<NpsResponseView, "attempts">) {
-  return item.attempts.find((a) => a.resultado === "aguardando") ?? null;
+/**
+ * A tentativa que ainda está nas 2 horas de espera, se houver. Passadas as
+ * 2 horas sem conversa registrada, ela já é "sem retorno" — ninguém
+ * precisa voltar para marcar (1.110).
+ */
+export function tentativaAguardando(item: Pick<NpsResponseView, "attempts">, agora = new Date()) {
+  return item.attempts.find((a) => a.resultado === "aguardando" && !podeMarcarSemRetorno(a.createdAt, agora)) ?? null;
 }
 
 /**
@@ -145,7 +156,8 @@ export function deveEncerrarSemRetorno(
 
   const naJanela = tentativasNaJanela(item, agora);
 
-  if (naJanela.length >= tentativasMinimas(item.kind)) {
+  /* A última tentativa ainda nas 2 horas: conta, mas o cliente ainda pode responder — não encerra agora. */
+  if (naJanela.length >= tentativasMinimas(item.kind) && !tentativaAguardando(item, agora)) {
     return {
       deve: true,
       motivo: `${naJanela.length} tentativas em ${JANELA_TENTATIVAS_DIAS} dias, sem resposta.`,

@@ -18,7 +18,7 @@ import {
   tentativaAguardando,
   tentativasNaJanela,
 } from "@/lib/services/nps.service";
-import { podeMarcarSemRetorno, quandoLiberaSemRetorno } from "@/lib/models/tratativa";
+import { quandoLiberaSemRetorno } from "@/lib/models/tratativa";
 import {
   descreverMinutosUteis,
   descreverPrazo,
@@ -123,7 +123,7 @@ export function trilhaDoNps(item: NpsResponseView, contexto: ContextoDaTrilhaNps
 
   /* Sem comentário e sem tipo: não há o que classificar antes de falar com o cliente. */
   const classificarDepois = !item.comment.trim() && !item.kind;
-  const aguardando = tentativaAguardando(item);
+  const aguardando = tentativaAguardando(item, agora);
 
   /* 1. Segmento — sai da nota; o guia pede que esteja identificado. */
   passos.push({
@@ -203,9 +203,7 @@ export function trilhaDoNps(item: NpsResponseView, contexto: ContextoDaTrilhaNps
           .filter(Boolean)
           .join(" · ") || `Registrado em ${descreverRegistro(item.postContactAt)}.`
       : aguardando
-        ? podeMarcarSemRetorno(aguardando.createdAt, agora)
-          ? `A tentativa por ${aguardando.channel} passou de 2 horas sem resposta: marque sem retorno em Contatos, ou registre a conversa se o cliente respondeu.`
-          : `Tentativa por ${aguardando.channel} aguardando retorno — sem retorno só a partir das ${quandoLiberaSemRetorno(aguardando.createdAt, agora)}.`
+        ? `Tentativa por ${aguardando.channel} aguardando retorno até ${quandoLiberaSemRetorno(aguardando.createdAt, agora)} — já conta nas tentativas; sem resposta até lá, vira sem retorno sozinha.`
         : (item.kind && RETORNO_DO_TIPO[item.kind]) || regra?.action || "Registre a solução ou o retorno dado ao cliente.",
   });
 

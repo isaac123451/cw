@@ -1116,6 +1116,17 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Tentativa conta nas três (30/09/2026, 1.111.0)
+
+Pedido de 30/09: "conta como tentativa feita, para aquele negócio de 3
+contatos". No NPS, a tentativa registrada ficava "aguardando retorno" e só
+entrava na regra das 3 tentativas em 7 dias depois de alguém voltar, 2 horas
+depois, e marcar "sem retorno" à mão — pela extensão, nunca entrava. Agora
+toda tentativa conta na hora; passadas 2 horas sem conversa registrada, ela
+já é "sem retorno" sozinha (na leitura, sem FUP de marcar). O robô de
+encerrar ainda espera as 2 horas da última tentativa antes de encerrar por
+falta de retorno. Na base de 30/09: nenhum NPS aberto muda de situação agora.
+
 ### Consertos e a nota do mês (30/09/2026, 1.110.0)
 
 Pedidos de 30/09.

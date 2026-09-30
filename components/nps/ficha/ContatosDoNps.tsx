@@ -161,7 +161,7 @@ export default function ContatosDoNps({ item, registrar }: { item: NpsResponseVi
     >
       {eventos.length === 0 ? (
         <p className="rounded-xl border border-dashed border-zinc-200 px-4 py-6 text-center text-sm text-zinc-500">
-          Nenhum contato ainda. A primeira tentativa já conta como 1º contato — vale registrar mesmo quando a pessoa não atende. Ela fica aguardando retorno por 2 horas; depois, marque sem retorno.
+          Nenhum contato ainda. A primeira tentativa já conta como 1º contato — vale registrar mesmo quando a pessoa não atende. Ela conta na hora para a regra das tentativas e, sem resposta em 2 horas, vira sem retorno sozinha.
         </p>
       ) : (
         <ol className="relative space-y-3 before:absolute before:bottom-2 before:left-[11px] before:top-2 before:w-px before:bg-zinc-200">

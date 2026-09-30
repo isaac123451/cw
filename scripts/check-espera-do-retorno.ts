@@ -68,8 +68,10 @@ const resposta = (campos: Partial<NpsResponseView>): NpsResponseView => ({
 const tentativa = (hora: string, resultado?: "aguardando" | "sem-resposta", dia = "2026-09-23") => ({ id: `${dia}${hora}`, channel: "WhatsApp", note: "mandei", actor: "x", createdAt: iso(dia, hora), resultado });
 
 const tresUmaAguardando = resposta({ firstContactAt: iso("2026-09-21", "10:00"), attempts: [tentativa("10:00", "sem-resposta", "2026-09-21"), tentativa("10:00", undefined, "2026-09-22"), tentativa("13:30", "aguardando")] });
-conferir("NPS: a aguardando fica fora das tentativas do guia (as antigas contam)", tentativasNaJanela(tresUmaAguardando, agora).length, 2);
-conferir("e o robô não encerra sem retorno por causa dela", deveEncerrarSemRetorno(tresUmaAguardando, agora).deve, false);
+/* 1.110: "conta como tentativa feita, para aquele negócio de 3 contatos". */
+conferir("NPS: a tentativa conta na hora, mesmo aguardando retorno", tentativasNaJanela(tresUmaAguardando, agora).length, 3);
+conferir("mas o robô não encerra enquanto a última está nas 2 horas", deveEncerrarSemRetorno(tresUmaAguardando, agora).deve, false);
+conferir("passadas as 2 horas, as três encerram sem retorno", deveEncerrarSemRetorno(tresUmaAguardando, br("2026-09-23", "16:00")).deve, true);
 
 /* ---- 3. a trilha sem comentário ---- */
 const semComentario = resposta({ firstContactAt: undefined, status: "Novo" });
@@ -85,7 +87,7 @@ conferir("já classificado, a ordem não muda", ids(resposta({ kind: "Reclamaç�
 
 /* ---- 4. o Meu dia ---- */
 conferir("NPS com tentativa de 30 min: espera (não volta à fila)", etapaDoNps(tentado, undefined, agora).etapa, "esperando");
-conferir("passadas 2 horas: é FUP, marcar sem retorno", etapaDoNps(tentado, undefined, br("2026-09-23", "16:00")).etapa, "fup");
+conferir("passadas 2 horas: vira sem retorno sozinha — a próxima tentativa é ligação, sem FUP de marcar", etapaDoNps(tentado, undefined, br("2026-09-23", "16:00")).etapa, "ligacao");
 
 const caso = (id: string, campos: Partial<Case>): Case => ({
   id, protocol: `P-${id}`, company: "Cliente", customer: "Ana", source: "Reclame Aqui", category: "Pagamento", priority: "Alta",
