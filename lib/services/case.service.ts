@@ -42,6 +42,13 @@ export const CLOSED_STATUS = [
   "Encaminhado",
 ];
 
+/**
+ * Os estados em que o trabalho do caso acabou (1.91) — os fechados, menos
+ * "Aguardando avaliação": ali ainda falta pedir a avaliação, e a tarefa de
+ * pedir não pode fechar sozinha.
+ */
+export const STATUS_TERMINADO = CLOSED_STATUS.filter((s) => s !== "Aguardando avaliação");
+
 export const RECLAME_AQUI = "Reclame Aqui";
 
 /**

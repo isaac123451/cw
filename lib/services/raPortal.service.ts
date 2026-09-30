@@ -3,6 +3,7 @@ import type { Prisma, PrismaClient } from "@prisma/client";
 import { Case } from "@/lib/models/case";
 import { TAG_DA_EXTENSAO } from "@/lib/models/tag";
 import { instanteDeParede } from "@/lib/services/horasUteis";
+import { STATUS_TERMINADO } from "@/lib/services/case.service";
 
 import {
   COLUNAS_DO_PORTAL,
@@ -576,6 +577,13 @@ export async function gravarDoPortal(
       data: mudancas,
       select: { id: true },
     });
+
+    /* O portal fechou o caso: as tarefas da agenda dele fecham junto (1.91). */
+    if (typeof mudancas.status === "string" && STATUS_TERMINADO.includes(mudancas.status)) {
+      await prisma.agendaTask
+        .updateMany({ where: { caseId: atual.id, done: false }, data: { done: true } })
+        .catch((erro) => console.error("[vigia] fechar tarefas do caso", erro));
+    }
 
     resultado.completadas.push({
       protocolo: atual.protocol,

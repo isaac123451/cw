@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useAgenda } from "@/lib/context/AgendaContext";
 import { useCases } from "@/lib/context/CaseContext";
@@ -15,6 +15,7 @@ import {
   lerMeuDia,
   listarRotina,
   marcarItensDaRotina,
+  salvarMarcas,
   type CargaDoMeuDia,
   type DuracaoDaMarca,
 } from "@/lib/actions/rotina";
@@ -22,6 +23,19 @@ import {
 import { atividadesDoDia, sequenciaDeDias, type AtividadeDaRotina } from "@/lib/models/rotina";
 import { contarRotina, planoDoDia, type MarcaDeItem, type TipoDeMarcaDeItem } from "@/lib/models/meuDia";
 import { paredeDe } from "@/lib/services/horasUteis";
+import { useToast } from "@/lib/context/ToastContext";
+
+/**
+ * As atividades de lista que fecham sozinhas quando não resta nada (1.91).
+ *
+ * "As atividades têm de ser finalizadas automaticamente quando houver
+ * atualização." O número de cada uma sai dos dados: o caso respondido, o
+ * NPS contatado, a avaliação pedida pela extensão saem da lista sozinhos.
+ * Quando a lista zera, a atividade é marcada como feita — com um aviso só.
+ * Checkpoint, indicadores, processos, sprint, métrica e relatório não
+ * entram: o zero delas não quer dizer que o trabalho foi feito.
+ */
+const FECHAM_SOZINHAS = new Set(["novos", "em-aberto", "fups", "moderacoes", "avaliacoes", "ligacoes", "concluidos", "areas", "pendencias"]);
 
 /**
  * O Meu dia inteiro, para quem desenha: a rotina, as marcas, as
@@ -37,9 +51,9 @@ export function useMeuDia() {
 
   const { cases, loading: carregandoCasos } = useCases();
   const { responses, kinds, loading: carregandoNps } = useNps();
-  const { avaliacoes } = useAvaliacoesGoogle();
-  const { movements } = useMovements();
-  const { tasks } = useAgenda();
+  const { avaliacoes, carregando: carregandoGoogle } = useAvaliacoesGoogle();
+  const { movements, loading: carregandoMovimentos } = useMovements();
+  const { tasks, loading: carregandoAgenda } = useAgenda();
   const { rules, expediente } = useSla();
   const agora = useAgora();
 
@@ -123,6 +137,36 @@ export function useMeuDia() {
     (feitas: Set<string>) => (contagens && agora ? planoDoDia(doDia, contagens, feitas, agora, expediente) : null),
     [contagens, agora, doDia, expediente]
   );
+
+  const { notify } = useToast();
+  const tentadas = useRef<string>("");
+
+  useEffect(() => {
+    /* Só com tudo carregado: uma lista vazia porque ainda não chegou não é uma lista zerada. */
+    if (!contagens || !hoje || !carga || !atividades || carregandoCasos || carregandoNps || carregandoMovimentos || carregandoAgenda || carregandoGoogle) return;
+    const zeradas = doDia.filter(
+      (a) => a.chave && FECHAM_SOZINHAS.has(a.chave) && contagens[a.chave]?.total === 0 && !feitasHoje.has(a.id)
+    );
+    if (zeradas.length === 0) return;
+    /* Uma tentativa por conjunto e por dia: se o servidor recusar, não insiste em laço. */
+    const chave = `${hoje}|${zeradas.map((a) => a.id).sort().join(",")}`;
+    if (tentadas.current === chave) return;
+    tentadas.current = chave;
+    salvarMarcas({ dia: hoje, feitas: [...feitasHoje, ...zeradas.map((a) => a.id)] })
+      .then((r) => {
+        if (!r.ok) return;
+        if (r.atividades) setAtividades(r.atividades);
+        setCarga((atual) =>
+          atual ? { ...atual, marcas: [...atual.marcas.filter((m) => m.dia !== hoje), ...r.feitas.map((atividadeId) => ({ atividadeId, dia: hoje }))] } : atual
+        );
+        notify({
+          tone: "success",
+          title: zeradas.length === 1 ? `"${zeradas[0].titulo}" fechou sozinha` : `${zeradas.length} atividades fecharam sozinhas`,
+          detail: "Não sobrou nada nelas hoje.",
+        });
+      })
+      .catch(() => {});
+  }, [contagens, hoje, carga, atividades, doDia, feitasHoje, carregandoCasos, carregandoNps, carregandoMovimentos, carregandoAgenda, carregandoGoogle, notify]);
 
   /** Depois do Salvar: as marcas de hoje como o servidor gravou. */
   const aplicarMarcas = useCallback(

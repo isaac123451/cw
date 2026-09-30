@@ -4,6 +4,22 @@ import {
 } from "@/lib/services/atualizacaoDoPortal";
 import { semApagarVazios } from "@/lib/services/semApagar";
 import { RESPOSTA_SINTETICA } from "@/lib/services/raMarcadores";
+import { STATUS_TERMINADO } from "@/lib/services/case.service";
+
+/**
+ * As tarefas da agenda de um caso que terminou fecham sozinhas (1.91).
+ *
+ * "As atividades têm de ser finalizadas automaticamente quando houver
+ * atualização — no caso, pela extensão, pela IA." Uma tarefa "ligar para o
+ * cliente" de um caso que já foi resolvido (à mão, pelo vigia, pela
+ * extensão) ficava na lista do dia até alguém lembrar de tirar. Caso
+ * reaberto não reabre a tarefa: ela era do trabalho que terminou.
+ */
+async function fecharTarefasDoCaso(prisma: PrismaClient, protocolo: string) {
+  await prisma.agendaTask
+    .updateMany({ where: { done: false, case: { protocol: protocolo } }, data: { done: true } })
+    .catch((erro) => console.error("[agenda] fechar tarefas do caso", erro));
+}
 import { hojeNaOperacao } from "@/lib/services/reputation.service";
 
 import {
@@ -1027,6 +1043,8 @@ export async function persistCase(
     );
   }
 
+  if (STATUS_TERMINADO.includes(item.status)) await fecharTarefasDoCaso(prisma, item.protocol);
+
   return salvo.id;
 }
 
@@ -1184,6 +1202,8 @@ export async function persistCaseParcial(
   if (syncTags && comparacao.meus.includes("tags")) {
     await sincronizarTags(prisma, linha.id, item.tags ?? []);
   }
+
+  if (comparacao.meus.includes("status") && STATUS_TERMINADO.includes(item.status)) await fecharTarefasDoCaso(prisma, item.protocol);
 
   return { ok: true, alterados: comparacao.meus };
 }

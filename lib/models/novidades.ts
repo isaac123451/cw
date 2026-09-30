@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.91.0",
+    data: "2026-09-30",
+    titulo: "O que pede ação abre, e o que acabou fecha sozinho",
+    texto: "No Meu dia, clicar num aviso de Pede ação agora mostra quem está por trás do número, cada um com link e janela. Atividades da rotina que zeram fecham sozinhas, e a tarefa da agenda ligada a um caso fecha quando o caso termina — pela tela, pela extensão ou pela leitura do portal.",
+    frentes: ["plataforma"],
+  },
+  {
     versao: "1.90.0",
     data: "2026-09-30",
     titulo: "Tudo por ciclo",

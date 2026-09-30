@@ -1116,6 +1116,26 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### O que pede ação abre, e o que acabou fecha sozinho (30/09/2026, 1.91.0)
+
+Fase 36 itens 2 e 4.
+
+- **"Pede ação agora" clicável:** cada aviso (prazos, sem notícia, pedir
+  avaliação, crise) abre a lista de quem está por trás do número — até 15,
+  na ordem da urgência, cada um com link e "abrir em janela"
+  (`ItemDoAviso` em `aberturaDoAgente.ts`). Medido: "109 prazos
+  estourados" abre os 15 mais antigos; "12 sem notícia" abre os 12.
+- **Atividades que se fecham sozinhas:** na rotina, a atividade de lista
+  (novos, em aberto, FUPs, moderações, avaliações, ligações, concluídos,
+  áreas, pendências) que zera é marcada como feita sozinha, com um aviso —
+  só depois de tudo carregado, para lista vazia por carregar não contar.
+  Checkpoint, indicadores, processos, sprint, métrica e relatório não
+  fecham sozinhos. Na agenda, a tarefa ligada a um caso fecha quando o
+  caso termina (Resolvido, Não resolvido, finais das Redes) — pela tela,
+  pela extensão ou pelo vigia do portal; "Aguardando avaliação" não fecha
+  (ainda falta pedir a avaliação).
+- `check:meu-dia`: +1 ponto (os quatro avisos trazem os itens).
+
 ### Tudo por ciclo: NPS, placar, e a nota do Wootric legível (30/09/2026, 1.90.0)
 
 Fase 37 itens 3 e 4, Fase 36 item 5.

@@ -122,7 +122,9 @@ console.log("\n— A fiação —\n");
     /filaDeAvaliacao\(casos\.filter\(\(c\) => c\.source === "Reclame Aqui"\), agora\)/.test(abertura),
     true
   );
-  conferir("sem notícia e crise levam o caso para a mini-janela", (abertura.match(/janela: \{/g) ?? []).length, 2);
+  conferir("sem notícia e crise levam o caso para a mini-janela", (abertura.match(/janela: \{\n\s+frente/g) ?? []).length, 2);
+  /* 1.91: cada aviso de lista traz quem está por trás do número. */
+  conferir("prazo, sem notícia, avaliação e crise trazem os itens", (abertura.match(/^ {6}itens: /gm) ?? []).length, 4);
 
   const pagina = ler("app/meu-dia/page.tsx");
   conferir("o Meu dia mostra o bloco no topo", /<AgoraNoMeuDia \/>/.test(pagina), true);
