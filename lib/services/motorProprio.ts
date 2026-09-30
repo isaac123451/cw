@@ -81,6 +81,11 @@ function pontuarTom(texto: string): number {
   return n;
 }
 
+/** O tom de uma mensagem solta: positivo acima de zero, negativo abaixo (1.109). */
+export function tomDoTexto(texto: string): number {
+  return pontuarTom(texto);
+}
+
 /**
  * O humor de agora — as últimas mensagens do cliente pesam mais que as
  * de trás, porque "como o cliente está agora" é o que a trilha usa para

@@ -28,6 +28,7 @@ import { hojeNaOperacao } from "@/lib/services/reputation.service";
 
 import SurfaceCard from "@/components/shared/SurfaceCard";
 import MacroPicker from "@/components/reclame-aqui/detail/MacroPicker";
+import ModelosQueFuncionaram from "@/components/reclame-aqui/detail/ModelosQueFuncionaram";
 import ConferenciaDaResposta from "@/components/reclame-aqui/tratativa/ConferenciaDaResposta";
 import { useTratativa } from "@/components/reclame-aqui/tratativa/TratativaProvider";
 
@@ -423,6 +424,14 @@ export default function EvaluationTab({
             placeholder="Comece pelo que só este caso tem: o nome, o problema que a pessoa viveu, o que foi feito. Sem dado pessoal e sem condição negociada."
             className="w-full resize-y rounded-xl border border-zinc-200 p-3 text-sm leading-relaxed outline-none transition-colors placeholder:text-zinc-400 focus:border-violet-400"
           />
+
+          {publicada === "" && (
+            <ModelosQueFuncionaram
+              caseId={data.id}
+              cliente={data.customer}
+              aoUsar={(text) => onChange({ draftResponse: rascunho === "" ? text : `${data.draftResponse}\n\n${text}` })}
+            />
+          )}
 
           <ConferenciaDaResposta texto={rascunho} protocol={data.protocol} achados={achados} />
 

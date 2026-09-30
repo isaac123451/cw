@@ -104,6 +104,14 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.109.0",
+    data: "2026-09-30",
+    titulo: "Cada resposta com o resultado — e o que funciona, em número",
+    texto: "Em Reclame Aqui → Respostas: o que cada resposta trouxe (avaliou, resolveu, nota), o que funciona por tipo de problema, as melhores virando resposta pronta com um clique e, no WhatsApp, o que o cliente fez depois de cada mensagem.",
+    frentes: ["reclame-aqui"],
+    href: "/reclame-aqui/respostas",
+  },
+  {
     versao: "1.108.0",
     data: "2026-09-30",
     titulo: "Quem espera no WhatsApp aparece no Meu dia",

@@ -1116,6 +1116,34 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Resposta e resultado (30/09/2026, 1.109.0)
+
+Fase 29, os três itens. Na tela Respostas, abas novas:
+
+- **Resultado**: cada resposta pública com o que veio depois — avaliou,
+  em quantos dias, resolveu, nota, voltaria (funcionou / em parte / não
+  funcionou / sem avaliação).
+- **O que funciona**: os traços de cada resposta (prazo concreto, "vamos
+  verificar" sem prazo, contar o contato feito, descrever a solução, pedir
+  desculpas, convidar a avaliar, tamanho, tempo até responder) com o
+  resolvido e a nota de quem tem contra quem não tem, por tipo de problema.
+  A tela diz que diferença não é causa e marca "pouca base" (menos de 10
+  avaliadas num lado). Na base de 30/09: descrever a solução 94,9% × 70,1%
+  resolvido; resposta longa (mais de 900 letras) 65,2% × ~90%; responder em
+  até 1 dia 98% × 81% com 4 dias ou mais. Horário não entra no RA: o portal
+  guarda só o dia.
+- **Modelos**: as resolvidas com nota 8+ viram resposta pronta com um
+  clique (sem o nome do cliente, categoria "Modelos que funcionaram"); as
+  que não funcionaram ficam listadas com os traços. Na ficha, ao escrever a
+  resposta pública, "Respostas que funcionaram neste tipo de reclamação"
+  com "Usar como base".
+- **WhatsApp**: cada vez que falamos nas conversas guardadas, se o cliente
+  respondeu, em quanto tempo e se o humor melhorou ou piorou — áudio ×
+  texto, horário e tamanho; as vezes depois das quais o humor piorou ficam
+  marcadas.
+
+`npm run check:resposta-e-resultado`.
+
 ### Conversas sem resposta no Meu dia (30/09/2026, 1.108.0)
 
 Fase 28. Com o WhatsApp Web aberto, a lista de conversas (que já tinha o

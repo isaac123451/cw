@@ -10,6 +10,7 @@ import MainLayout from "@/components/layout/MainLayout";
 import PageHeading from "@/components/shared/PageHeading";
 import SurfaceCard from "@/components/shared/SurfaceCard";
 import ModuleNav from "@/components/reclame-aqui/ModuleNav";
+import ResultadoDasRespostas, { type AbaDoResultado } from "@/components/reclame-aqui/respostas/ResultadoDasRespostas";
 
 import { lerRespostasAnalisadas, type RespostaAnalisada } from "@/lib/actions/analistaDeRespostas";
 import type { ProblemaDaResposta } from "@/lib/models/analistaDeRespostas";
@@ -32,8 +33,18 @@ const ROTULO: Record<ProblemaDaResposta, string> = {
 
 const PERIODOS = [30, 90, 180] as const;
 
+const ABAS: { id: "analise" | AbaDoResultado; rotulo: string }[] = [
+  { id: "analise", rotulo: "Análise do texto" },
+  { id: "resultado", rotulo: "Resultado" },
+  { id: "funciona", rotulo: "O que funciona" },
+  { id: "modelos", rotulo: "Modelos" },
+  { id: "whatsapp", rotulo: "WhatsApp" },
+];
+
 /**
- * O analista de respostas públicas, depois de publicar (Fase 35, 1.94).
+ * O analista de respostas públicas, depois de publicar (Fase 35, 1.94) —
+ * e, desde a 1.109, o resultado de cada resposta, o que funciona em
+ * número, os modelos e o WhatsApp (Fase 29), nas abas ao lado.
  *
  * Cada resposta do período com uma nota de 0 a 100 e o que o documento
  * pediria diferente — a pior primeiro. Em cima, o que mais se repete:
@@ -46,6 +57,7 @@ export default function RespostasPage() {
   const [erro, setErro] = useState<string | null>(null);
   const [aberta, setAberta] = useState<string | null>(null);
   const [filtro, setFiltro] = useState<ProblemaDaResposta | null>(null);
+  const [aba, setAba] = useState<"analise" | AbaDoResultado>("analise");
 
   useEffect(() => {
     let vivo = true;
@@ -88,11 +100,30 @@ export default function RespostasPage() {
         <PageHeading
           eyebrow="Reclame Aqui"
           title="Respostas públicas"
-          description="O analista lê cada resposta publicada e aponta os erros e o que melhorar, pelas regras do documento. As mesmas regras avisam antes de publicar, na ficha e na extensão."
+          description="O analista lê cada resposta publicada e aponta os erros e o que melhorar; ao lado, o que cada resposta trouxe de resultado e o que funciona, em número."
         />
 
         <ModuleNav />
 
+        <div className="flex flex-wrap gap-1 border-b border-zinc-200" role="tablist" aria-label="Visão">
+          {ABAS.map((a) => (
+            <button
+              key={a.id}
+              type="button"
+              role="tab"
+              aria-selected={aba === a.id}
+              onClick={() => setAba(a.id)}
+              className={`-mb-px border-b-2 px-3 py-2 text-sm font-medium transition-colors ${aba === a.id ? "border-violet-700 text-violet-800" : "border-transparent text-zinc-500 hover:text-zinc-800"}`}
+            >
+              {a.rotulo}
+            </button>
+          ))}
+        </div>
+
+        {aba !== "analise" && <ResultadoDasRespostas aba={aba} />}
+
+        {aba === "analise" && (
+        <>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="inline-flex rounded-xl bg-zinc-100 p-1" role="tablist" aria-label="Período">
             {PERIODOS.map((p) => (
@@ -202,6 +233,8 @@ export default function RespostasPage() {
               </ul>
             </SurfaceCard>
           </>
+        )}
+        </>
         )}
       </div>
     </MainLayout>
