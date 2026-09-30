@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.90.0",
+    data: "2026-09-30",
+    titulo: "Tudo por ciclo",
+    texto: "A análise do NPS tem a tabela Por ciclo — clique num ciclo e a tela inteira passa a mostrar só ele. O placar do Meu dia e o resumo para o Slack contam pelo ciclo, contra o ciclo anterior até o mesmo ponto. E a nota que o encerramento manda ao Wootric ficou legível: um título com o desfecho e uma informação por linha.",
+    frentes: ["nps", "plataforma"],
+  },
+  {
     versao: "1.89.0",
     data: "2026-09-30",
     titulo: "NPS antigo encerrado, e o Meu dia com o que vale hoje",

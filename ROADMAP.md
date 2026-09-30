@@ -1116,6 +1116,26 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Tudo por ciclo: NPS, placar, e a nota do Wootric legível (30/09/2026, 1.90.0)
+
+Fase 37 itens 3 e 4, Fase 36 item 5.
+
+- **NPS em ciclos:** tabela "Por ciclo" na análise do NPS — respostas, NPS,
+  promotores/passivos/detratores, 1º contato no prazo e encerrados em cada
+  ciclo de 7 dias (`lib/models/npsPorCiclo.ts`); clicar num ciclo recorta a
+  tela inteira nele. O lote "sem tratativa" não conta como encerrado.
+  Medido: 1º contato no prazo está baixo de verdade (2 de 58 no ciclo
+  22–28/09) — é a mesma régua das conquistas.
+- **Placar por ciclos:** o placar do Meu dia e o resumo para o Slack contam
+  pelo ciclo (15 a 21/09…) contra o ciclo anterior até o mesmo ponto; as
+  conquistas também. `check:meu-dia` com 3 pontos novos (inclusive o ciclo
+  29–31).
+- **Nota do encerramento:** a nota que vai ao Wootric virou um título com o
+  desfecho e um rótulo por linha (Classificação, Causa raiz, Responsável,
+  Primeiro contato, Tentativas, Retorno do cliente, Confirmação…), com
+  "horários de Brasília" dito uma vez. A prévia no encerramento mostra o
+  mesmo texto.
+
 ### NPS antigo encerrado e fora do Meu dia (30/09/2026, 1.89.0)
 
 Fase 37 item 1 e parte do item 1 da Fase 36.

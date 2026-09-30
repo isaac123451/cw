@@ -80,7 +80,7 @@ export default function PlacarDaSemana({ dia }: { dia: MeuDia }) {
       if (subiu.length) {
         notify({
           tone: "success",
-          title: "Conquista da semana",
+          title: "Conquista do ciclo",
           detail: subiu.map((c) => `+${placar.agora[c.chave] - (visto!.numeros[c.chave] ?? 0)} ${c.rotulo}`).join(" · "),
         });
       }
@@ -107,19 +107,19 @@ export default function PlacarDaSemana({ dia }: { dia: MeuDia }) {
   async function copiar() {
     try {
       await navigator.clipboard.writeText(texto);
-      notify({ tone: "success", title: "Resumo da semana copiado.", detail: "Cole no Slack da gestão." });
+      notify({ tone: "success", title: "Resumo do ciclo copiado.", detail: "Cole no Slack da gestão." });
     } catch {
       notify({ tone: "error", title: "Não deu para copiar.", detail: "Selecione o texto e copie com Ctrl+C." });
     }
   }
 
   return (
-    <section aria-label="Placar da semana" data-tour="placar" className="rounded-xl border border-zinc-200/80 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+    <section aria-label="Placar do ciclo" data-tour="placar" className="rounded-xl border border-zinc-200/80 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
 
       <header className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-zinc-100 px-4 py-2">
-        <p className="text-[13px] font-semibold text-zinc-900">Placar da semana</p>
+        <p className="text-[13px] font-semibold text-zinc-900">Placar do ciclo</p>
         <p className="text-xs text-zinc-500">
-          desde {placar.desde.split("-").reverse().slice(0, 2).join("/")} · comparado com a semana passada até {diaDaSemana}
+          {placar.ciclo} · comparado com o ciclo anterior até {placar.anteriorAte.split("-").reverse().slice(0, 2).join("/")}
         </p>
         <button
           type="button"
@@ -127,7 +127,7 @@ export default function PlacarDaSemana({ dia }: { dia: MeuDia }) {
           aria-expanded={resumoAberto}
           className="ml-auto flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
         >
-          <ClipboardCopy size={13} /> Resumo da semana
+          <ClipboardCopy size={13} /> Resumo do ciclo
         </button>
       </header>
 

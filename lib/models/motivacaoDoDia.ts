@@ -14,6 +14,7 @@ import {
   type RemovedComplaint,
 } from "@/lib/services/reputation.service";
 import { respondida } from "@/lib/models/case";
+import { cicloAnterior, cicloDe } from "@/lib/models/ciclo";
 
 import { filaDeAvaliacao } from "@/lib/models/cadencia";
 
@@ -277,7 +278,8 @@ export function conquistasDaSemana(entrada: {
 
   const agora = entrada.agora ?? new Date();
   const hoje = diaNaOperacao(agora);
-  const desde = inicioDaSemana(hoje);
+  /* Pelo ciclo (1.90), como o placar: "o placar da semana tem de ser por ciclos". */
+  const desde = cicloDe(hoje).inicio;
   const naSemana = (quando?: string | null) => {
     if (!quando) return false;
     const dia = diaNaOperacao(quando);
@@ -323,7 +325,7 @@ export function conquistasDaSemana(entrada: {
     conquistas.push({
       chave: "nps-no-prazo",
       titulo: `${noPrazo.length} ${noPrazo.length === 1 ? "primeiro contato do NPS no prazo" : "primeiros contatos do NPS no prazo"}`,
-      detalhe: `de ${contatados.length} feito(s) na semana`,
+      detalhe: `de ${contatados.length} feito(s) no ciclo`,
       href: "/nps",
     });
   }
@@ -396,6 +398,10 @@ function menosDias(dia: string, dias: number) {
 export interface PlacarDaSemana {
   desde: string;
   hoje: string;
+  /** "15 a 21/09" — o ciclo do placar (1.90). */
+  ciclo: string;
+  /** Até que dia o ciclo anterior foi contado, para a comparação. */
+  anteriorAte: string;
   agora: NumerosDaJanela;
   /** A semana passada até o mesmo dia da semana — a comparação justa numa quarta. */
   antes: NumerosDaJanela;
@@ -410,25 +416,37 @@ export interface PlacarDaSemana {
  * semana passada até quarta" diz se o trabalho está andando.
  */
 export function placarDaSemana(entrada: { casos: Case[]; nps: NpsResponseView[]; agora?: Date }): PlacarDaSemana {
+  /*
+    Pelo ciclo, e não pela semana (1.90): "o placar da semana tem de ser por
+    ciclos" — a mesma janela da planilha e do relatório (1–7, 8–14, 15–21,
+    22–28, 29–fim). A comparação é o ciclo anterior até o mesmo ponto: no
+    2º dia deste ciclo, os 2 primeiros dias do anterior.
+  */
   const hoje = diaNaOperacao(entrada.agora ?? new Date());
-  const desde = inicioDaSemana(hoje);
+  const atual = cicloDe(hoje);
+  const anterior = cicloAnterior(atual);
+  const decorridos = Math.round((Date.parse(`${hoje}T12:00:00Z`) - Date.parse(`${atual.inicio}T12:00:00Z`)) / 86_400_000);
+  const pontoDoAnterior = menosDias(anterior.inicio, -decorridos);
+  const anteriorAte = pontoDoAnterior > anterior.fim ? anterior.fim : pontoDoAnterior;
   return {
-    desde,
+    desde: atual.inicio,
     hoje,
-    agora: numerosDaJanela({ casos: entrada.casos, nps: entrada.nps, de: desde, ate: hoje }),
-    antes: numerosDaJanela({ casos: entrada.casos, nps: entrada.nps, de: menosDias(desde, 7), ate: menosDias(hoje, 7) }),
+    ciclo: atual.rotulo,
+    anteriorAte,
+    agora: numerosDaJanela({ casos: entrada.casos, nps: entrada.nps, de: atual.inicio, ate: hoje }),
+    antes: numerosDaJanela({ casos: entrada.casos, nps: entrada.nps, de: anterior.inicio, ate: anteriorAte }),
   };
 }
 
 const NOME_DO_DIA = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
 
-/** O resumo da semana para colar no Slack — só o que aconteceu, com a comparação. */
+/** O resumo do ciclo para colar no Slack — só o que aconteceu, com a comparação. */
 export function textoDoResumoDaSemana(p: PlacarDaSemana, extra: { sequencia?: number; nota?: string } = {}) {
   const dia = NOME_DO_DIA[new Date(`${p.hoje}T12:00:00Z`).getUTCDay()];
-  const comparar = (agora: number, antes: number) => (agora === antes ? "igual à semana passada" : agora > antes ? `${agora - antes} a mais que na semana passada` : `${antes - agora} a menos que na semana passada`);
+  const comparar = (agora: number, antes: number) => (agora === antes ? "igual ao ciclo anterior" : agora > antes ? `${agora - antes} a mais que no ciclo anterior` : `${antes - agora} a menos que no ciclo anterior`);
   const p2 = (n: number, um: string, varios: string) => `${n} ${n === 1 ? um : varios}`;
   const linhas = [
-    `*Reputação — semana de ${p.desde.split("-").reverse().slice(0, 2).join("/")} até ${dia}*`,
+    `*Reputação — ciclo de ${p.ciclo}, até ${dia}*`,
     p.agora.avaliacoes || p.antes.avaliacoes ? `• ${p2(p.agora.avaliacoes, "avaliação positiva", "avaliações positivas")} no Reclame Aqui, de ${p2(p.agora.avaliadas, "avaliada", "avaliadas")} (${comparar(p.agora.avaliacoes, p.antes.avaliacoes)})` : null,
     p.agora.respondidas || p.antes.respondidas ? `• ${p2(p.agora.respondidas, "reclamação respondida", "reclamações respondidas")} (${comparar(p.agora.respondidas, p.antes.respondidas)})` : null,
     p.agora.npsContatados ? `• NPS: ${p.agora.npsNoPrazo} de ${p2(p.agora.npsContatados, "primeiro contato", "primeiros contatos")} no prazo` : null,
@@ -437,5 +455,5 @@ export function textoDoResumoDaSemana(p: PlacarDaSemana, extra: { sequencia?: nu
     extra.sequencia ? `• ${p2(extra.sequencia, "dia útil", "dias úteis")} seguidos com a rotina inteira` : null,
     extra.nota ? `• Nota do Reclame Aqui: ${extra.nota}` : null,
   ].filter((l): l is string => Boolean(l));
-  return linhas.length > 1 ? linhas.join("\n") : `${linhas[0]}\n• Nada fechado ainda nesta semana.`;
+  return linhas.length > 1 ? linhas.join("\n") : `${linhas[0]}\n• Nada fechado ainda neste ciclo.`;
 }

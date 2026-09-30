@@ -26,6 +26,7 @@ import VazioComSaida from "@/components/shared/VazioComSaida";
 import BarList from "@/components/shared/BarList";
 
 import NpsTrendChart from "@/components/nps/NpsTrendChart";
+import NpsPorCiclo from "@/components/nps/NpsPorCiclo";
 
 import { useNps } from "@/lib/context/NpsContext";
 
@@ -386,6 +387,12 @@ export default function NpsAnalisePage() {
               </div>
 
             </section>
+
+            <NpsPorCiclo
+              respostas={responses}
+              ativo={porData.de}
+              aoEscolher={(de, ate) => setPorData(porData.de === de && porData.ate === ate ? { de: null, ate: null } : { de, ate })}
+            />
 
             <SurfaceCard
               title="Tendência"

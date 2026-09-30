@@ -175,18 +175,24 @@ console.log("\n— Conquistas da semana —\n");
   const por = Object.fromEntries(semana.conquistas.map((c) => [c.chave, `${c.titulo} · ${c.detalhe}`]));
 
   conferir("só as avaliações da semana, e quantas foram positivas", por.avaliacoes, "1 avaliação positiva · de 2 avaliada(s) no Reclame Aqui");
-  conferir("respondidas com a espera de verdade, sem prazo inventado", por.respondidas, "2 reclamações respondidas · espera mediana de 6 dia(s) desde a publicação");
-  conferir("NPS no prazo pelo prazo do próprio ciclo", por["nps-no-prazo"], "1 primeiro contato do NPS no prazo · de 2 feito(s) na semana");
+  /* Pelo ciclo (15 a 21/09): a resposta de 14/09 é do ciclo anterior. */
+  conferir("respondidas no ciclo, com a espera de verdade", por.respondidas, "1 reclamação respondida · esperou 6 dia(s) desde a publicação");
+  conferir("NPS no prazo pelo prazo do próprio ciclo", por["nps-no-prazo"], "1 primeiro contato do NPS no prazo · de 2 feito(s) no ciclo");
   conferir("detrator revertido na semana", por.revertidos, "1 detrator revertido · resolvidos ou satisfeitos depois do contato");
   conferir("ciclo encerrado na semana", por.encerrados, "1 ciclo de NPS encerrado · com a tratativa registrada");
 
   /* O placar conta pela mesma régua, e a comparação é até o mesmo dia da semana passada. */
   const placar = placarDaSemana({ casos, nps: ciclos, agora: AGORA });
-  conferir("o placar conta igual às conquistas", [placar.agora.avaliacoes, placar.agora.respondidas, placar.agora.npsNoPrazo, placar.agora.revertidos, placar.agora.encerrados], [1, 2, 1, 1, 1]);
-  const semanaPassada = placarDaSemana({ casos, nps: ciclos, agora: new Date(AGORA.getTime() + 7 * 86_400_000) });
-  conferir("uma semana depois, o que foi desta semana vira a comparação", [semanaPassada.agora.respondidas, semanaPassada.antes.respondidas], [0, 2]);
-  const resumo = textoDoResumoDaSemana(semanaPassada, { sequencia: 3 });
-  conferir("o resumo diz a queda com a conta", resumo.includes("0 reclamações respondidas (2 a menos que na semana passada)"), true);
+  conferir("o placar conta igual às conquistas", [placar.agora.avaliacoes, placar.agora.respondidas, placar.agora.npsNoPrazo, placar.agora.revertidos, placar.agora.encerrados], [1, 1, 1, 1, 1]);
+  conferir("o placar é do ciclo de 15 a 21/09", placar.ciclo, "15 a 21/09");
+  /* 23/09 é o 2º dia do ciclo 22–28: compara com 15 e 16/09. */
+  const cicloSeguinte = placarDaSemana({ casos, nps: ciclos, agora: new Date(AGORA.getTime() + 7 * 86_400_000) });
+  conferir("no ciclo seguinte, o anterior até o mesmo ponto vira a comparação", [cicloSeguinte.agora.respondidas, cicloSeguinte.antes.respondidas, cicloSeguinte.anteriorAte], [0, 1, "2026-09-16"]);
+  const resumo = textoDoResumoDaSemana(cicloSeguinte, { sequencia: 3 });
+  conferir("o resumo diz a queda com a conta", resumo.includes("0 reclamações respondidas (1 a menos que no ciclo anterior)"), true);
+  /* 31/10 é o 3º dia do ciclo 29–31: compara com 22 a 24/10. */
+  const fimDoMes = placarDaSemana({ casos: [], nps: [], agora: new Date("2026-10-31T18:00:00Z") });
+  conferir("ciclo 29–31 compara com o 22–28 até o mesmo ponto", [fimDoMes.ciclo, fimDoMes.anteriorAte], ["29 a 31/10", "2026-10-24"]);
 }
 
 console.log("\n  Adiar para outro dia\n");
