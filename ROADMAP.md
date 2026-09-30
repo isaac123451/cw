@@ -1116,6 +1116,23 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### NPS antigo encerrado e fora do Meu dia (30/09/2026, 1.89.0)
+
+Fase 37 item 1 e parte do item 1 da Fase 36.
+
+- **NPS antes de 17/07 encerrado — só no NPS:** 627 respostas paradas em
+  "Novo" (08/04 a 16/07, nenhuma com contato) foram para "[Encerrado] Sem
+  tratativa", cada uma com uma anotação do porquê
+  (`scripts/encerrar-nps-antigos.ts`, com lista de volta guardada antes de
+  gravar). "Sem tratativa" é o encerramento que o reenvio ao Wootric
+  ignora: nada saiu para o Wootric. Ficaram abertas as 218 de 17/07 em
+  diante, intactas.
+- **Meu dia sem NPS antigo:** NPS sem 1º contato há mais de 30 dias
+  (`DIAS_DO_NPS_NO_DIA`) sai da lista do dia e vira um item só no fim da
+  frente — "25 respostas do NPS com mais de 30 dias sem contato". Medido:
+  novos do NPS de 150 para 125 + 1. `check:meu-dia` e `check:rotina`
+  passam.
+
 ### Arrastar que se vê, janelas e seleções inteiras, tentativa que não muda a etapa (30/09/2026, 1.88.0)
 
 Fase 35 itens 6 e 8, Fase 37 item 2.

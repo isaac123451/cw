@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.89.0",
+    data: "2026-09-30",
+    titulo: "NPS antigo encerrado, e o Meu dia com o que vale hoje",
+    texto: "As 627 respostas do NPS anteriores a 17/07 que nunca foram tratadas foram encerradas como Sem tratativa, com uma anotação — nada foi enviado ao Wootric. No Meu dia, NPS sem contato há mais de 30 dias deixa de ocupar a lista e aparece como um item só, que leva ao NPS.",
+    frentes: ["nps", "plataforma"],
+  },
+  {
     versao: "1.88.0",
     data: "2026-09-30",
     titulo: "O cartão aparece ao arrastar, e nada fica escondido",

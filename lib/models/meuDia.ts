@@ -272,6 +272,21 @@ function urgenciaDoCaso(c: Case, atrasado: boolean) {
  */
 const legado = (c: Case) => c.createdAt < INICIO_DO_REGISTRO_DE_CONTATO && !primeiroContatoFeito(c);
 
+/**
+ * NPS sem 1º contato há mais que isto sai do dia (1.89).
+ *
+ * "No Meu dia está entrando coisa muito antiga de NPS." Desde a 1.31 todo
+ * NPS sem contato entrava, o de meses atrás também — e, fora do prazo,
+ * vinha **antes** do de ontem. O dia fica com o que ainda dá para salvar;
+ * o resto vira um item só, que diz quantos são e leva ao NPS para
+ * encerrar ou tratar em lote. Nada some: só deixa de ocupar o dia.
+ */
+export const DIAS_DO_NPS_NO_DIA = 30;
+
+function npsDoDia(r: NpsResponseView, agora: Date) {
+  return agora.getTime() - Date.parse(r.respondedAt) <= DIAS_DO_NPS_NO_DIA * 86_400_000;
+}
+
 /** O caso aberto passou do prazo — o do 1º contato ou o da solução. */
 function foraDoPrazo(c: Case, regras: SlaRule[], opcoes: { agora: Date; expediente: Expediente }) {
   const s = slaStatus(c, regras, opcoes);
@@ -424,6 +439,7 @@ export function contarRotina(
       o detrator crítico primeiro.
     */
     ...naEtapa("novo")
+      .filter((r) => npsDoDia(r, agora))
       .map((r) => {
         const atrasado = agora.getTime() > Date.parse(r.firstContactDueAt);
         const nivel = rotuloDoNivel(r);
@@ -438,6 +454,23 @@ export function contarRotina(
           critico: nivelDoNps(r).nivel === "detrator-critico",
         };
       }),
+    ...(() => {
+      const antigos = naEtapa("novo").filter((r) => !npsDoDia(r, agora));
+      if (antigos.length === 0) return [];
+      return [
+        {
+          id: "nps-acumulado",
+          frente: "nps" as const,
+          titulo: `${antigos.length} ${antigos.length === 1 ? "resposta" : "respostas"} do NPS com mais de ${DIAS_DO_NPS_NO_DIA} dias sem contato`,
+          detalhe: "fora do dia — encerre como sem tratativa ou trate em lote",
+          href: "/nps",
+          atrasado: false,
+          /* Por último na frente: é o acumulado, não a fila de hoje. */
+          urgencia: 99,
+          critico: false,
+        },
+      ];
+    })(),
     ...dados.google
       .filter((a) => a.status === "aberta" && !a.respondidaEm)
       .map((a) => {
