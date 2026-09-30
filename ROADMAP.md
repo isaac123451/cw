@@ -1116,6 +1116,17 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Voz do cliente para o Produto (30/09/2026, 1.104.0)
+
+Fase 31. No topo de **Causas raiz**, por mês: as cinco causas que mais
+pesaram somando Reclame Aqui, Redes e NPS (detratores com comentário),
+quantas em cada frente, três frases de quem reclamou (o título da
+reclamação, o começo do comentário do NPS) e o efeito — a nota das
+avaliações do RA daquela causa e quantos detratores ela trouxe. Sem causa
+marcada, vale o tema reconhecido pelo texto (em setembro só 11 registros
+tinham causa marcada; com o texto, 24); "Outro" não entra. "Copiar para a
+reunião" leva o texto pronto (`lib/models/vozDoCliente.ts`).
+
 ### A hora certa de pedir avaliação (30/09/2026, 1.103.0)
 
 Fase 31. No painel da extensão na conversa, o "O que fazer" ganhou a regra

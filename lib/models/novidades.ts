@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.104.0",
+    data: "2026-09-30",
+    titulo: "Voz do cliente para o Produto",
+    texto: "Em Causas raiz, as causas que mais pesaram no mês, somando Reclame Aqui, Redes e NPS, com as frases de quem reclamou e o efeito na nota — e o texto pronto para copiar na pauta da reunião com Produto.",
+    frentes: ["reclame-aqui", "redes", "nps", "plataforma"],
+  },
+  {
     versao: "1.103.0",
     data: "2026-09-30",
     titulo: "A hora certa de pedir a avaliação",

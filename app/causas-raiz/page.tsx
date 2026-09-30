@@ -9,6 +9,7 @@ import PropostaDoCatalogo from "@/components/causas/PropostaDoCatalogo";
 import CatalogoComDonos from "@/components/causas/CatalogoComDonos";
 import ReguaDasFrentes from "@/components/causas/ReguaDasFrentes";
 import SemanaDasCausas from "@/components/causas/SemanaDasCausas";
+import VozDoCliente from "@/components/causas/VozDoCliente";
 
 import { aprovarCausasDoCatalogo, lerPropostaDoCatalogo, unificarCausa } from "@/lib/actions/catalogoDeCausas";
 import { medirReguaDasCausas } from "@/lib/actions/sugestoes";
@@ -82,6 +83,7 @@ export default function CausasRaizPage() {
           title="Causas raiz"
           description="O catálogo que diz para quem ligar: tirado dos casos reais, cada causa com a área dona e o prazo."
         />
+        <VozDoCliente />
         <SemanaDasCausas />
         <CatalogoComDonos />
         {regua?.regua ? (
