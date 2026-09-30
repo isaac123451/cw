@@ -11,6 +11,7 @@ import { listNpsResponses } from "@/lib/actions/nps";
 import { lerMetricas } from "@/lib/actions/metricas";
 import { cicloDe, cicloPorId, ciclosAte, type Ciclo } from "@/lib/models/ciclo";
 import { fetchCases } from "@/lib/services/case.repository";
+import { lerPaineis } from "@/lib/services/painelDoPortal.service";
 import { slaRuleDoBanco } from "@/lib/models/sla";
 import { lerExpediente } from "@/lib/services/operacao.service";
 import { formatElapsed, hojeNaOperacao, ptBR, RA1000_TARGETS } from "@/lib/services/reputation.service";
@@ -46,7 +47,7 @@ export interface RelatorioLido {
 }
 
 async function montar(prisma: PrismaClient, ciclo: Ciclo) {
-  const [cases, nps, google, regras, expediente] = await Promise.all([
+  const [cases, nps, google, regras, expediente, paineis] = await Promise.all([
     fetchCases(prisma),
     listNpsResponses(),
     prisma.avaliacaoGoogle.findMany({
@@ -55,6 +56,7 @@ async function montar(prisma: PrismaClient, ciclo: Ciclo) {
     /* As regras e o expediente: é com eles que o 1º contato vira "no prazo". */
     prisma.slaRule.findMany().then((linhas) => linhas.map(slaRuleDoBanco)),
     lerExpediente(prisma),
+    lerPaineis(prisma).then((p) => p.atuais).catch(() => ({})),
   ]);
 
   const doGoogle: GoogleDoRelatorio[] = google.map((g) => ({
@@ -67,7 +69,7 @@ async function montar(prisma: PrismaClient, ciclo: Ciclo) {
     status: g.status as GoogleDoRelatorio["status"],
   }));
 
-  return montarRelatorio({ cases, nps, google: doGoogle, ciclo, hoje: hojeNaOperacao(), regras, expediente });
+  return montarRelatorio({ cases, nps, google: doGoogle, ciclo, hoje: hojeNaOperacao(), regras, expediente, paineis });
 }
 
 /** O relatório de um ciclo — o corrente, quando nenhum é pedido. */

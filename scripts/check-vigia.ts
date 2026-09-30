@@ -495,13 +495,26 @@ async function travas(prisma: PrismaClient) {
 
   /* --- coluna própria da operação --- */
 
+  /*
+    1.93: só respondida, a coluna da operação fica; avaliada, o caso
+    fecha — a avaliação é o fim do ciclo no portal, e "Em tratativa" com
+    nota 4 no quadro era dado velho, não escolha de ninguém.
+  */
   await nascer(prisma, JURIDICO, { status: "Em análise jurídica" });
+  await gravarDoPortal(prisma, [respondida(JURIDICO, { status: "ANSWERED", avaliada: false, resolvida: false, nota: undefined, voltaria: false, interacoes: [{ tipo: "ANSWER", em: "2026-08-21T10:00:00", texto: "Resposta do portal." }] })]);
+
+  conferir(
+    "respondida no portal: coluna própria da operação não é tocada",
+    (await prisma.case.findUnique({ where: { protocol: `RA-${JURIDICO}` }, select: { status: true } }))?.status,
+    "Em análise jurídica"
+  );
+
   await gravarDoPortal(prisma, [respondida(JURIDICO)]);
 
   conferir(
-    "coluna própria da operação não é tocada",
+    "avaliada no portal: a coluna da operação fecha como o portal diz",
     (await prisma.case.findUnique({ where: { protocol: `RA-${JURIDICO}` }, select: { status: true } }))?.status,
-    "Em análise jurídica"
+    "Resolvido"
   );
 
   /* --- ninguém volta para Novo --- */

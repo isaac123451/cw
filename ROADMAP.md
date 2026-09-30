@@ -1116,6 +1116,36 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Relatório do ciclo corrigido, e a avaliação fecha o caso (30/09/2026, 1.93.0)
+
+Fase 37 item 5. "O relatório do ciclo tem muita coisa incorreta."
+
+- **A mesma conta do Índice:** o relatório (e a planilha de métricas)
+  descartava resposta e avaliação sem data — 3 avaliações da carga antiga
+  e 1 resposta — e dava 79 avaliações e consumidor 8,16 onde o Índice e o
+  portal davam 81/82 e 8,12. Agora sem data conta como já existente, a
+  regra do Índice. `check:relatorio` prova as duas abas (6 e 12 meses)
+  iguais ao Índice, até a nota exata.
+- **O número do portal no relatório:** a aba vigente mostra o painel
+  oficial ("No portal: 8,8 · 93,1% respondidas · 82 avaliações") e, quando
+  o portal está atrasado, isso vira ponto de atenção; o texto do Slack
+  traz as duas linhas (portal e "com o que já foi feito").
+- **NPS encerrado pela regra dos 30 dias separado:** a rotina da madrugada
+  encerra como "Sem Retorno" a resposta sem retorno há 30 dias, mesmo sem
+  contato nenhum — em 29 e 30/09 foram 76 (73 sem contato), e o relatório
+  dizia "76 ciclos fechados" num ciclo de dois dias. Agora: "3 encerradas
+  com tratativa · 73 pela regra dos 30 dias, sem contato", e o segundo
+  número é ponto de atenção. "Ciclo(s) do NPS" virou "resposta(s)".
+- **1º contato por aba saiu da tabela:** as abas vão a março, antes do
+  registro de contato, e a mediana dava "30 dias úteis". O do ciclo segue.
+- **A avaliação fecha o caso (motor):** a leitura do portal não tocava a
+  coluna que a operação criou, nem com o consumidor tendo avaliado — a
+  RA-LFXcv7e9 estava avaliada (nota 4) e "Em tratativa". Agora a avaliação
+  leva a Resolvido ou Não resolvido de qualquer coluna; só respondida, a
+  coluna da operação fica. `check:vigia` atualizado (2 pontos). Os dois
+  casos incoerentes da base foram corrigidos (LFXcv7e9 → Não resolvido;
+  fVYvCSxD, "Finalizado" com nota 10 → Resolvido).
+
 ### Assistente que sempre responde (30/09/2026, 1.92.0)
 
 Fase 37 item 7. "O Gemini às vezes não funciona no assistente."

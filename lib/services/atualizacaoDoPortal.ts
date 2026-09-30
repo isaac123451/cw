@@ -199,7 +199,16 @@ export function mudancasDoPortal(
     if (campo === "status") {
       const atualStatus = String(velho ?? "");
 
-      if (!COLUNAS_DO_PORTAL.has(atualStatus)) continue;
+      /*
+        A avaliação fecha o caso, de qualquer coluna (1.93). A coluna que a
+        operação inventou ("Em tratativa", "Aguardando retorno") ficava
+        intocada mesmo com o consumidor já tendo avaliado — em 30/09 a
+        RA-LFXcv7e9 estava avaliada, nota 4, e "Em tratativa" no quadro. A
+        avaliação é o fim do ciclo no portal: Resolvido ou Não resolvido.
+      */
+      const fechouNoPortal = doArquivo.evaluated === true && COLUNAS_FINAIS.has(String(novo));
+
+      if (!COLUNAS_DO_PORTAL.has(atualStatus) && !fechouNoPortal) continue;
 
       if (
         COLUNAS_FINAIS.has(atualStatus) &&

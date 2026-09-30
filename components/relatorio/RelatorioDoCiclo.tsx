@@ -241,6 +241,11 @@ export default function RelatorioDoCiclo() {
                 {aba.selo ? "RA1000" : "sem o selo"}
               </span>
             </p>
+            {aba.modo === "vigente" && aba.meses === 6 && d.ra.portal?.nota != null && (
+              <p className="mt-1 text-xs text-zinc-600" title="O painel oficial do Reclame Aqui, lido pela extensão. Atualiza com atraso; o número grande é a conta com o que já foi feito.">
+                No portal: <b className="tabular-nums">{ptBR(d.ra.portal.nota)}</b> · {ptBR(d.ra.portal.resposta ?? 0)}% respondidas · {d.ra.portal.avaliadas} avaliações
+              </p>
+            )}
             <p className="mt-1 text-xs leading-relaxed text-zinc-600">
               {aba.selo
                 ? aba.modo === "vigente" && aba.meses === 6
@@ -321,27 +326,7 @@ export default function RelatorioDoCiclo() {
                 ))}
                 <td className="py-2 text-zinc-500">—</td>
               </tr>
-              <tr>
-                <td className="py-2 pr-3 text-zinc-600">1º contato (horas úteis)</td>
-                {abaisTabela.map(({ aba, nome }) => {
-                  const ind = aba.primeiroContato;
-                  return (
-                    <td key={nome} className={`py-2 pr-3 ${ind.percentualNoPrazo !== null && ind.percentualNoPrazo < 90 ? "font-semibold text-rose-700" : "text-zinc-800"}`}>
-                      {ind.medianaMin !== null ? `mediana ${descreverMinutosUteis(ind.medianaMin)}` : "sem registro"}
-                      <span className="block text-[11px] font-normal text-zinc-500">
-                        {ind.total > 0 && (
-                          <>
-                            {ind.percentualNoPrazo !== null ? `${ind.percentualNoPrazo}% no prazo · ` : ""}
-                            {ind.contatados}/{ind.total} contatados
-                          </>
-                        )}
-                        {ind.semRegistro ? `${ind.total > 0 ? " · " : ""}${ind.semRegistro} de antes do registro de contato` : ""}
-                      </span>
-                    </td>
-                  );
-                })}
-                <td className="py-2 text-zinc-500">no prazo da criticidade</td>
-              </tr>
+              {/* 1.93: o 1º contato por aba saiu — as abas vão a março, antes do registro de contato, e a mediana dava "30 dias úteis". O do ciclo fica no bloco abaixo. */}
             </tbody>
           </table>
         </div>
@@ -372,7 +357,8 @@ export default function RelatorioDoCiclo() {
             linhas: [
               `${d.nps.respostas} resposta(s)${d.nps.nps !== null ? ` · NPS ${d.nps.nps}` : ""}`,
               `${d.nps.detratores} detrator(es)${d.nps.percentualContatados !== null ? ` · ${d.nps.percentualContatados}% contatados` : ""}`,
-              `${d.nps.fechadosNoCiclo} ciclo(s) fechado(s)`,
+              `${d.nps.fechadosNoCiclo} encerrada(s) com tratativa`,
+              d.nps.fechadosPelaRegra ? `${d.nps.fechadosPelaRegra} pela regra dos 30 dias, sem contato` : null,
               d.nps.humorMedioDoDetrator !== null ? `humor depois do contato ${ptBR(d.nps.humorMedioDoDetrator)}/5` : null,
             ],
             href: "/nps",

@@ -94,15 +94,20 @@ function comoEstavaEm(caso: Case, ate: string): Case {
     que ficava intacto no objeto, contava no índice de resposta de um dia
     passado a reclamação respondida só depois dele.
   */
+  /*
+    Sem data, conta como já existente (1.93) — a mesma regra do Índice
+    (`comoEstavaNoDia`). Eram 3 avaliações da carga antiga e 1 resposta
+    sem data que o relatório e a planilha tiravam da conta, e o portal
+    conta: o relatório dava 79 avaliações e consumidor 8,16 onde o portal
+    e o Índice davam 82/81 e 8,12.
+  */
   const respondeu =
     respondida(caso) &&
-    Boolean(caso.publicResponseAt) &&
-    dia(caso.publicResponseAt!) <= ate;
+    (!caso.publicResponseAt || dia(caso.publicResponseAt) <= ate);
 
   const avaliou =
     Boolean(caso.evaluated) &&
-    Boolean(caso.evaluatedAt) &&
-    dia(caso.evaluatedAt!) <= ate;
+    (!caso.evaluatedAt || dia(caso.evaluatedAt) <= ate);
 
   return {
     ...caso,

@@ -15,6 +15,7 @@ import {
 import { descreverMinutosUteis, EXPEDIENTE_PADRAO, type Expediente } from "@/lib/services/horasUteis";
 import { abaEm, medirDia } from "@/lib/services/metricas.service";
 import { indicadoresDoGuia, summarize } from "@/lib/services/nps.service";
+import type { PainelDoPortal } from "@/lib/services/painelDoPortal.service";
 import {
   diaNaOperacao,
   evaluationsToReach,
@@ -73,6 +74,12 @@ export interface DadosDoRelatorio {
     noCiclo: { entrantes: number; respondidas: number; avaliadas: number; resolvidas: number };
     abertas: { semResposta: number; maisDe7Dias: number };
     ciclosComSelo: number;
+    /**
+     * O painel oficial do portal para a aba vigente de 6 meses (1.93), quando
+     * o vigia já o leu. É o número que o consumidor vê; a conta das abas é
+     * "com o que já foi feito" — o portal atualiza com atraso.
+     */
+    portal?: PainelDoPortal;
   };
   nps: {
     respostas: number;
@@ -81,7 +88,10 @@ export interface DadosDoRelatorio {
     detratores: number;
     percentualContatados: number | null;
     humorMedioDoDetrator: number | null;
+    /** Encerrados com tratativa no ciclo — sem o lote "sem tratativa" e sem a regra dos 30 dias. */
     fechadosNoCiclo: number;
+    /** Encerrados pela regra dos 30 dias sem resposta, sem contato nenhum (a rotina da madrugada). */
+    fechadosPelaRegra: number;
     abertosForaDoPrazo: number;
   };
   redes: { entrantes: number; resolvidos: number; abertos: number };
@@ -96,6 +106,9 @@ export interface GoogleDoRelatorio extends AvaliacaoParaIndicador {
 }
 
 const noIntervalo = (d: string | undefined, de: string, ate: string) => Boolean(d) && diaNaOperacao(d!) >= de && diaNaOperacao(d!) <= ate;
+
+/** Encerrada pela regra dos 30 dias, sem contato nenhum — não é tratativa de ninguém. */
+const pelaRegra = (r: NpsResponseView) => r.status === "[Encerrado] Sem Retorno" && !r.firstContactAt && (r.attempts ?? []).length === 0;
 
 function mediana(xs: number[]) {
   if (xs.length === 0) return null;
@@ -157,6 +170,8 @@ export function montarRelatorio(entrada: {
   regras?: SlaRule[];
   expediente?: Expediente;
   agora?: Date;
+  /** Os painéis oficiais lidos do portal, pelo período — ver `painelDoPortal.service`. */
+  paineis?: Record<string, PainelDoPortal>;
 }): DadosDoRelatorio {
 
   const { cases, nps, google, ciclo, hoje } = entrada;
@@ -229,6 +244,7 @@ export function montarRelatorio(entrada: {
       noCiclo,
       abertas: { semResposta: semResposta.length, maisDe7Dias },
       ciclosComSelo: metricaDoDia.ciclosComSelo,
+      portal: entrada.paineis?.SIX_MONTHS && entrada.paineis.SIX_MONTHS.fim === abas[0].janela.fim ? entrada.paineis.SIX_MONTHS : undefined,
     },
     nps: {
       respostas: resumoNps.total,
@@ -237,7 +253,14 @@ export function montarRelatorio(entrada: {
       detratores: resumoNps.detratores,
       percentualContatados: guia.percentualContatados,
       humorMedioDoDetrator: guia.humorMedioDoDetrator,
-      fechadosNoCiclo: nps.filter((r) => isEncerrado(r.status) && r.status !== "[Encerrado] Sem tratativa" && noIntervalo(r.closedAt, inicio, ateDia)).length,
+      /*
+        Separados (1.93): a rotina da madrugada encerra como "Sem Retorno" a
+        resposta sem retorno há 30 dias, mesmo sem contato nenhum — em 29 e
+        30/09 foram 76, 73 sem contato. Contá-los como trabalho feito dizia
+        "76 ciclos fechados" num ciclo de dois dias.
+      */
+      fechadosNoCiclo: nps.filter((r) => isEncerrado(r.status) && r.status !== "[Encerrado] Sem tratativa" && !pelaRegra(r) && noIntervalo(r.closedAt, inicio, ateDia)).length,
+      fechadosPelaRegra: nps.filter((r) => pelaRegra(r) && noIntervalo(r.closedAt, inicio, ateDia)).length,
       abertosForaDoPrazo,
     },
     redes,
@@ -265,6 +288,9 @@ function pontosDeAtencao(d: DadosDoRelatorio, seis: AbaDoRelatorio, proxima: Aba
   const r = seis.resumo;
   const p: DadosDoRelatorio["pontos"] = [];
 
+  if (d.ra.portal?.aguardando != null && d.ra.portal.aguardando > seis.semResposta) {
+    p.push({ texto: `O portal ainda mostra ${d.ra.portal.aguardando} sem resposta e nota ${ptBR(d.ra.portal.nota ?? 0)} na aba vigente; com o que já foi feito são ${seis.semResposta} e ${ptBR(r.raScore)} — o painel do Reclame Aqui atualiza com atraso.`, href: "/reclame-aqui/indice" });
+  }
   if (d.ra.anterior.selo && !seis.selo) p.push({ texto: "O selo RA1000 caiu na aba vigente de 6 meses neste ciclo.", href: "/reclame-aqui/analytics" });
   if (seis.selo && !proxima.selo) p.push({ texto: `O selo está em risco: a próxima aba de 6 meses (${br(proxima.janela.inicio)} a ${br(proxima.janela.fim)}) ainda não fecha as metas.`, href: "/reclame-aqui/analytics" });
 
@@ -303,7 +329,8 @@ function pontosDeAtencao(d: DadosDoRelatorio, seis: AbaDoRelatorio, proxima: Aba
     else if (ind.percentualNoPrazo !== null && ind.percentualNoPrazo < 90) p.push({ texto: `1º contato no prazo em ${ind.percentualNoPrazo}% dos casos do ciclo em ${nome}.`, href });
   }
 
-  if (d.nps.abertosForaDoPrazo > 0) p.push({ texto: `${d.nps.abertosForaDoPrazo} ciclo(s) do NPS com o 1º contato fora do prazo.`, href: "/nps" });
+  if (d.nps.abertosForaDoPrazo > 0) p.push({ texto: `${d.nps.abertosForaDoPrazo} resposta(s) do NPS em aberto com o 1º contato fora do prazo.`, href: "/nps" });
+  if (d.nps.fechadosPelaRegra > 0) p.push({ texto: `${d.nps.fechadosPelaRegra} resposta(s) do NPS encerradas pela regra dos 30 dias sem nenhum contato.`, href: "/nps" });
   if (d.nps.percentualContatados !== null && d.nps.percentualContatados < 100) p.push({ texto: `${d.nps.percentualContatados}% dos detratores do ciclo contatados.`, href: "/nps" });
   if (d.google.negativasSemResposta > 0) p.push({ texto: `${d.google.negativasSemResposta} avaliação(ões) negativa(s) no Google sem resposta.`, href: "/google" });
   if (d.redes.abertos > 0) p.push({ texto: `${d.redes.abertos} atendimento(s) das redes do ciclo ainda em aberto.`, href: "/redes-sociais" });
@@ -348,12 +375,13 @@ export function textoDoRelatorio(d: DadosDoRelatorio, analise?: string) {
   const linhas = [
     `*Relatório de Reputação — ciclo ${d.ciclo.rotulo}*${d.corrente ? " (parcial, até hoje)" : ""}`,
     "",
-    `*Reclame Aqui (6 meses vigente):* nota ${ptBR(r.raScore)} ${seta(r.raScore, a.nota)} · resposta ${pct(r.responseIndex)} ${seta(r.responseIndex, a.resposta)} · solução ${pct(r.solutionIndex)} · consumidor ${ptBR(r.consumerScore, 2)} · voltaria ${pct(r.wouldReturnIndex)} · ${r.evaluated} avaliações`,
+    ...(d.ra.portal ? [`*No portal (painel oficial, 6 meses):* nota ${ptBR(d.ra.portal.nota ?? 0)} · resposta ${pct(d.ra.portal.resposta ?? 0)} · solução ${pct(d.ra.portal.solucao ?? 0)} · consumidor ${ptBR(d.ra.portal.notaConsumidor ?? 0, 2)} · voltaria ${pct(d.ra.portal.voltaria ?? 0)} · ${d.ra.portal.avaliadas ?? 0} avaliações`] : []),
+    `*Reclame Aqui (6 meses vigente, com o que já foi feito):* nota ${ptBR(r.raScore)} ${seta(r.raScore, a.nota)} · resposta ${pct(r.responseIndex)} ${seta(r.responseIndex, a.resposta)} · solução ${pct(r.solutionIndex)} · consumidor ${ptBR(r.consumerScore, 2)} · voltaria ${pct(r.wouldReturnIndex)} · ${r.evaluated} avaliações`,
     `*Próxima aba de 6 meses:* nota ${ptBR(proxima.resumo.raScore)} · resposta ${pct(proxima.resumo.responseIndex)} · ${proxima.resumo.evaluated} avaliações`,
     `*Reclame Aqui (12 meses):* nota ${ptBR(doze.resumo.raScore)} · selo ${doze.selo ? "sim" : "não"}`,
     `*Selo RA1000:* ${projecao}.`,
     `*No ciclo:* ${d.ra.noCiclo.entrantes} reclamação(ões) nova(s) · ${d.ra.noCiclo.respondidas} respondida(s) · ${d.ra.noCiclo.avaliadas} avaliada(s), ${d.ra.noCiclo.resolvidas} resolvida(s). Em aberto sem resposta: ${d.ra.abertas.semResposta}.`,
-    `*NPS do ciclo:* ${d.nps.respostas} resposta(s)${d.nps.nps !== null ? ` · NPS ${d.nps.nps}` : ""} · ${d.nps.detratores} detrator(es)${d.nps.percentualContatados !== null ? `, ${d.nps.percentualContatados}% contatados` : ""}${d.nps.humorMedioDoDetrator !== null ? ` · humor do detrator depois do contato ${ptBR(d.nps.humorMedioDoDetrator)}/5` : ""} · ${d.nps.fechadosNoCiclo} ciclo(s) fechado(s).`,
+    `*NPS do ciclo:* ${d.nps.respostas} resposta(s)${d.nps.nps !== null ? ` · NPS ${d.nps.nps}` : ""} · ${d.nps.detratores} detrator(es)${d.nps.percentualContatados !== null ? `, ${d.nps.percentualContatados}% contatados` : ""}${d.nps.humorMedioDoDetrator !== null ? ` · humor do detrator depois do contato ${ptBR(d.nps.humorMedioDoDetrator)}/5` : ""} · ${d.nps.fechadosNoCiclo} encerrada(s) com tratativa${d.nps.fechadosPelaRegra ? `, ${d.nps.fechadosPelaRegra} pela regra dos 30 dias` : ""}.`,
     `*1º contato no ciclo:* Reclame Aqui ${descreverIndicadorDoPrimeiroContato(d.primeiroContato.ra, (m) => descreverMinutosUteis(m))} · redes ${descreverIndicadorDoPrimeiroContato(d.primeiroContato.redes, (m) => descreverMinutosUteis(m))} · NPS ${descreverIndicadorDoPrimeiroContato(d.primeiroContato.nps, (m) => descreverMinutosUteis(m))}.`,
     `*Redes sociais:* ${d.redes.entrantes} atendimento(s) · ${d.redes.resolvidos} resolvido(s) · ${d.redes.abertos} em aberto.`,
     `*Google:* ${d.google.total} avaliação(ões)${d.google.notaMedia !== null ? ` · nota média ${ptBR(d.google.notaMedia)}` : ""}${d.google.percentualRespondidas !== null ? ` · ${d.google.percentualRespondidas}% respondidas` : ""}.`,

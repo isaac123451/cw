@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.93.0",
+    data: "2026-09-30",
+    titulo: "Relatório do ciclo com os números certos",
+    texto: "O relatório agora conta igual ao Índice e mostra o número oficial do portal ao lado. Os NPS encerrados pela regra dos 30 dias sem contato aparecem separados, e não como trabalho feito. E a reclamação avaliada no portal vai sozinha para Resolvido ou Não resolvido, de qualquer etapa.",
+    frentes: ["reclame-aqui", "nps", "plataforma"],
+  },
+  {
     versao: "1.92.0",
     data: "2026-09-30",
     titulo: "O assistente não fica mais só no erro",
