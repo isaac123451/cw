@@ -1116,6 +1116,23 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Assistente que sempre responde (30/09/2026, 1.92.0)
+
+Fase 37 item 7. "O Gemini às vezes não funciona no assistente."
+
+- **Reserva entre provedores:** a conversa em fluxo ia só ao provedor da
+  frente; esgotada a cadeia de modelos do Gemini, a tela mostrava o erro.
+  Agora, falhou antes de escrever qualquer coisa, o próximo provedor com
+  chave responde no lugar (troca invisível). Com só o Gemini ligado, a
+  cadeia dele tem uma segunda volta 1,5 s depois — só se a primeira falhou
+  depressa, para não dobrar a espera. Caiu no meio do texto: para ali.
+- **Aviso claro e resposta pelas regras:** quando nada responde, a tela
+  diz por quê (cada tentativa, e que é fila da camada gratuita), oferece
+  "Tentar de novo" e mostra embaixo a resposta pelas regras — a mesma de
+  quando não há IA. Conferido simulando a falha no navegador.
+- `check:ia`: Gemini respondendo em 1,1 s; conversa real pelo caminho
+  novo em 1,5 s.
+
 ### O que pede ação abre, e o que acabou fecha sozinho (30/09/2026, 1.91.0)
 
 Fase 36 itens 2 e 4.

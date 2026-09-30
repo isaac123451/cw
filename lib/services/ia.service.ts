@@ -926,11 +926,9 @@ export async function* conversar(pedido: {
 
   const config = await lerConfigDeIA();
 
-  const provedor = provedorDeIA(
-    config.provedorPreferido
-  );
+  const cadeia = cadeiaDeProvedores(config.provedorPreferido);
 
-  if (!provedor) {
+  if (cadeia.length === 0) {
     yield {
       tipo: "erro",
       mensagem: SEM_IA,
@@ -938,18 +936,67 @@ export async function* conversar(pedido: {
     return;
   }
 
-  if (provedor === "gemini") {
-    yield* conversarNoGemini(pedido, config);
-    return;
+  /*
+    O assistente que sempre responde (1.92).
+
+    "O Gemini às vezes não funciona no assistente." A conversa ia só para
+    o provedor da frente: a cadeia do Gemini esgotava os modelos e a tela
+    mostrava o erro. Agora, falhou **antes de escrever qualquer coisa**,
+    o próximo provedor com chave responde no lugar — a troca é invisível,
+    porque nada tinha aparecido na tela. E, sendo o Gemini o único, a
+    cadeia dele tem uma segunda volta curta: a fila da camada gratuita
+    troca de modelo a cada minuto, e uma volta alguns segundos depois
+    costuma achar um livre. Se escreveu e caiu no meio, para ali: emendar
+    outra resposta na metade seria pior que o erro.
+  */
+  const erros: string[] = [];
+  const inicio = Date.now();
+  const voltas: ProvedorExterno[] = cadeia.length === 1 && cadeia[0] === "gemini" ? ["gemini", "gemini"] : cadeia;
+
+  for (const [i, provedor] of voltas.entries()) {
+
+    if (i > 0 && provedor === voltas[i - 1]) {
+      /* A segunda volta só se a primeira falhou depressa: não pode dobrar o tempo de espera. */
+      if (Date.now() - inicio > config.prazoMs / 2) break;
+      await new Promise((r) => setTimeout(r, 1500));
+    }
+
+    const fluxo =
+      provedor === "gemini"
+        ? conversarNoGemini(pedido, config)
+        : provedor === "groq" || provedor === "openrouter"
+          ? conversarCompativel(provedor, pedido, config.prazoMs)
+          : conversarNaAnthropic(pedido, config);
+
+    let escreveu = false;
+    let falhou: string | null = null;
+
+    for await (const pedaco of fluxo) {
+      if (pedaco.tipo === "erro" && !escreveu) {
+        falhou = pedaco.mensagem;
+        break;
+      }
+      if (pedaco.tipo === "delta") escreveu = true;
+      yield pedaco;
+      if (pedaco.tipo === "erro") return;
+    }
+
+    if (!falhou) return;
+    erros.push(`${NOME_DO_PROVEDOR[provedor]}: ${falhou}`);
   }
 
-  if (provedor === "groq" || provedor === "openrouter") {
-    yield* conversarCompativel(provedor, pedido, config.prazoMs);
-    return;
-  }
-
-  yield* conversarNaAnthropic(pedido, config);
+  yield {
+    tipo: "erro",
+    mensagem: `A IA não respondeu agora — tentei ${erros.length === 1 ? "o provedor ligado" : `${erros.length} vezes`} (${erros.join(" · ")}). É fila da camada gratuita, não defeito: tente de novo em um minuto.`,
+  };
 }
+
+const NOME_DO_PROVEDOR: Record<ProvedorExterno, string> = {
+  anthropic: "Anthropic",
+  gemini: "Gemini",
+  groq: "Groq",
+  openrouter: "OpenRouter",
+};
 
 async function* conversarNaAnthropic(
   pedido: {

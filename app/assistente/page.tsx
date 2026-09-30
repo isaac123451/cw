@@ -386,6 +386,8 @@ ${prazosPorFrente}${casosCitados(pergunta, cases)}`,
                   ? {
                       ...item,
                       error: evento.message,
+                      /* Nada escrito: a resposta pelas regras fica no lugar (1.92). */
+                      local: item.answer ? undefined : ask(pergunta, localInput),
                       streaming: false,
                     }
                   : item
@@ -405,7 +407,7 @@ ${prazosPorFrente}${casosCitados(pergunta, cases)}`,
       setTurns((prev) =>
         prev.map((item) =>
           item.id === id
-            ? { ...item, error: detalhe, streaming: false }
+            ? { ...item, error: detalhe, local: item.answer ? undefined : ask(pergunta, localInput), streaming: false }
             : item
         )
       );
@@ -575,17 +577,39 @@ ${prazosPorFrente}${casosCitados(pergunta, cases)}`,
 
                       <div className="min-w-0 flex-1 rounded-2xl rounded-tl-md border border-zinc-200/80 bg-white p-4">
 
-                        {turn.error ? (
+                        {/*
+                          A IA não respondeu (1.92): o aviso diz por quê, o botão
+                          refaz a pergunta, e embaixo vai a resposta pelas regras
+                          — a mesma de quando não há IA ligada. Nunca uma tela
+                          só com o erro.
+                        */}
+                        {turn.error && (
+                          <div className={turn.local || turn.answer ? "mb-3 border-b border-zinc-100 pb-3" : ""}>
+                            <p className="flex items-start gap-2 text-sm text-rose-700">
+                              <TriangleAlert
+                                size={15}
+                                className="mt-0.5 shrink-0"
+                              />
+                              {turn.error}
+                            </p>
+                            <div className="mt-2 flex flex-wrap items-center gap-2">
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() => {
+                                  setTurns((prev) => prev.filter((t) => t.id !== turn.id));
+                                  void perguntar(turn.question);
+                                }}
+                                className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-violet-700 ring-1 ring-inset ring-violet-200 transition-colors hover:bg-violet-50 disabled:opacity-50"
+                              >
+                                Tentar de novo
+                              </button>
+                              {turn.local && <span className="text-xs text-zinc-500">Enquanto isso, a resposta pelas regras, sem IA:</span>}
+                            </div>
+                          </div>
+                        )}
 
-                          <p className="flex items-start gap-2 text-sm text-rose-700">
-                            <TriangleAlert
-                              size={15}
-                              className="mt-0.5 shrink-0"
-                            />
-                            {turn.error}
-                          </p>
-
-                        ) : turn.local ? (
+                        {turn.error && !turn.local && !turn.answer ? null : turn.local ? (
 
                           <>
                             {turn.local.paragraphs.map(

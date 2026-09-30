@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.92.0",
+    data: "2026-09-30",
+    titulo: "O assistente não fica mais só no erro",
+    texto: "Se o Gemini não responder, o assistente tenta de novo e passa para outro provedor sem você ver. Se mesmo assim nada responder, ele diz por quê, oferece Tentar de novo e já mostra a resposta pelas regras, com os números da base.",
+    frentes: ["plataforma"],
+  },
+  {
     versao: "1.91.0",
     data: "2026-09-30",
     titulo: "O que pede ação abre, e o que acabou fecha sozinho",
