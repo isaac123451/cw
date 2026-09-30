@@ -355,3 +355,37 @@ export function lerPainel(html) {
     }))
     .slice(0, 12);
 }
+
+/**
+ * A leitura de reserva da lista (Fase 31, 1.100).
+ *
+ * "Se o portal mudar a página e a leitura quebrar: aviso na hora e uma
+ * leitura de reserva, para a operação não parar." A lista já trocou de
+ * formato duas vezes (Next.js → Astro em 16/09). O que não mudou em
+ * nenhuma delas é o **endereço** de cada reclamação:
+ * "/<empresa>/<título>_<código de 16>/". A reserva pega os códigos dos
+ * links — sem status nem avaliação (a página de cada uma é que diz), mas
+ * a reclamação nova continua chegando ao quadro.
+ *
+ * \`null\` quando nem os links estão lá (a página mudou de endereço, ou o
+ * portal pediu verificação).
+ */
+export function lerListaPelosLinks(html) {
+  const texto = String(html ?? "");
+  const codigos = new Set();
+  /* O link da reclamação ("/<empresa>/<título>_<código>/")… */
+  const padrao = new RegExp("/" + EMPRESA + "/[^\"'\\s<>]*?_([A-Za-z0-9_-]{16})/?[\"'?#&]", "g");
+  /* …e o "id" dela nos dados da página, com aspas cruas ou escapadas. */
+  const porId = /(?:&quot;|")id(?:&quot;|")\s*:\s*(?:\[\s*0\s*,\s*)?(?:&quot;|")([A-Za-z0-9_-]{16})(?:&quot;|")/g;
+  for (const re of [padrao, porId]) {
+    for (const m of texto.matchAll(re)) {
+      if (CODIGO.test(m[1])) codigos.add(m[1]);
+    }
+  }
+  if (codigos.size === 0) return null;
+  return {
+    total: null,
+    reserva: true,
+    itens: [...codigos].map((codigo) => ({ codigo, status: "", avaliada: false, criadaEm: "", titulo: "" })),
+  };
+}

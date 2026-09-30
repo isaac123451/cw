@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.100.0",
+    data: "2026-09-30",
+    titulo: "O leitor do Reclame Aqui não para se o portal mudar",
+    texto: "Se o Reclame Aqui mudar a página da lista, a extensão segue trazendo as reclamações novas por uma leitura de reserva e avisa na hora que o leitor precisa de ajuste.",
+    frentes: ["reclame-aqui", "extensao"],
+  },
+  {
     versao: "1.99.0",
     data: "2026-09-30",
     titulo: "Backup da base",

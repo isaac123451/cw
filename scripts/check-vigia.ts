@@ -36,6 +36,7 @@ import {
   desescapar,
   ehDesafio,
   lerLista,
+  lerListaPelosLinks,
   lerReclamacao,
 } from "../extensao/comum/portal-ra.js";
 
@@ -147,6 +148,13 @@ function leitor() {
   conferir("a tela antirrobô é reconhecida", ehDesafio(200, desafio), true);
   conferir("e a página normal, não", ehDesafio(200, amostra("ra-portal-lista.html")), false);
   conferir("a tela antirrobô não vira lista", lerLista(desafio), null);
+
+  /* 1.100: a leitura de reserva acha os mesmos códigos nos dois formatos da lista. */
+  const codigos = (l: { itens: { codigo: string }[] } | null) => (l?.itens ?? []).map((i) => i.codigo).sort();
+  for (const arq of ["ra-portal-lista.html", "ra-portal-lista-astro.html"]) {
+    conferir(`[reserva] ${arq}: os mesmos códigos da leitura principal`, codigos(lerListaPelosLinks(amostra(arq)) as never), codigos(lerLista(amostra(arq)) as never));
+  }
+  conferir("[reserva] a tela antirrobô também não vira lista", lerListaPelosLinks(desafio), null);
 
   const lida = lerReclamacao(amostra("ra-portal-reclamacao.html")) as Lida | null;
 

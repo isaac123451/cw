@@ -1116,6 +1116,24 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Leitor do Reclame Aqui à prova de mudança (30/09/2026, 1.100.0)
+
+Fase 31. A lista do portal já trocou de formato duas vezes (Next.js →
+Astro em 16/09); até aqui, isso parava o vigia com "a lista mudou de
+formato".
+
+- **Leitura de reserva** (`lerListaPelosLinks`): quando a leitura principal
+  não reconhece a página, a reserva pega os códigos das reclamações pelo
+  que não mudou em nenhum formato — o link "/<empresa>/<título>_<código>/"
+  e o `"id"` de 16 caracteres nos dados da página. Sem status nem
+  avaliação (a página de cada uma diz), mas a reclamação nova continua
+  chegando ao quadro. Provada nas duas amostras: os mesmos códigos da
+  leitura principal; a tela antirrobô não vira lista.
+- **Aviso na hora:** a extensão notifica, uma vez por dia, que o portal
+  mudou a página e a leitura está na reserva — para ajustar o leitor antes
+  que a reserva também quebre. (Leitura por regra, e não por IA: é
+  determinística e não depende da cota do Gemini.) `check:vigia` +3.
+
 ### Backup da base (30/09/2026, 1.99.0)
 
 Fase 31 ("Backup diário").

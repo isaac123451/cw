@@ -12,6 +12,7 @@ import {
   enderecoDaLista,
   enderecoDaReclamacao,
   lerLista,
+  lerListaPelosLinks,
   lerPainel,
   lerReclamacao,
 } from "../comum/portal-ra.js";
@@ -1557,6 +1558,20 @@ function vigiar(motivo) {
   return vigiaEmCurso;
 }
 
+/** Uma notificação por dia quando o vigia teve de ler pela reserva. */
+async function avisarLeituraDeReserva(hoje) {
+  const { vigiaReservaAvisada } = await chrome.storage.local.get("vigiaReservaAvisada");
+  if (vigiaReservaAvisada === hoje) return;
+  await chrome.storage.local.set({ vigiaReservaAvisada: hoje });
+  chrome.notifications.create(`cw-vigia-reserva-${Date.now()}`, {
+    type: "basic",
+    iconUrl: chrome.runtime.getURL("icones/icone-128.png"),
+    title: "O Reclame Aqui mudou a página da lista",
+    message: "A extensão segue trazendo as reclamações novas pela leitura de reserva, mas sem o status da lista. Vale ajustar o leitor (extensao/comum/portal-ra.js).",
+    priority: 2,
+  });
+}
+
 function falhaDoVigia(erro, agora, fila) {
   return {
     em: agora,
@@ -1621,7 +1636,17 @@ async function umaVolta(motivo) {
     for (let pagina = 1; pagina <= paginas; pagina += 1) {
 
       const html = await doPortal(enderecoDaLista(pagina));
-      const lista = lerLista(html);
+      let lista = lerLista(html);
+
+      /*
+        A lista mudou de formato (1.100): a leitura de reserva pelos links
+        segue trazendo a reclamação nova, e a pessoa é avisada uma vez por
+        dia — para ajustar o leitor antes que a reserva também quebre.
+      */
+      if (!lista) {
+        lista = lerListaPelosLinks(html);
+        if (lista) await avisarLeituraDeReserva(hoje);
+      }
 
       /* A primeira página traz o painel oficial: vai junto, sem outra ida ao portal. */
       if (pagina === 1) {
