@@ -70,6 +70,7 @@ const SINONIMOS: Record<string, string[]> = {
   "/relatorio": ["relatorio de reputacao", "ciclo", "gestao"],
   "/base-conhecimento": ["macros", "modelos de resposta", "respostas prontas"],
   "/meu-dia": ["rotina", "plano do dia", "hoje"],
+  "/distribuicao": ["carga", "ausencia", "ferias", "redistribuir", "atribuir", "fila"],
   "/impacto": ["reembolso", "credito", "financeiro"],
   "/conversas": ["whatsapp", "mensagens"],
   "/documentacao": ["documentos", "guias", "manual"],

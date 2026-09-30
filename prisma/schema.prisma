@@ -53,6 +53,12 @@ model User {
   /// administrador querer para si.
   twoFactorEnabled Boolean @default(false)
 
+  /// Ausente até este dia, inclusive (1.106) — férias, folga, atestado.
+  /// Vazio ou no passado, a pessoa está presente. Quem está ausente não
+  /// entra como destino na distribuição do time, e a fila dela aparece
+  /// para ser redistribuída.
+  ausenteAte DateTime? @db.Date
+
   @@index([email])
 }
 

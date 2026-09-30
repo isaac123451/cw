@@ -19,6 +19,7 @@ import {
   MessagesSquare,
   Route,
   Settings,
+  Shuffle,
   Sparkles,
   Star,
   UserRound,
@@ -60,6 +61,7 @@ export const menuItems: MenuItem[] = [
   { title: "Meu dia", href: "/meu-dia", icon: CalendarCheck2, group: "Hoje" },
   { title: "Agenda", href: "/agenda", icon: CalendarClock, group: "Hoje" },
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard, group: "Hoje" },
+  { title: "Distribuição do time", href: "/distribuicao", icon: Shuffle, group: "Hoje" },
   {
     title: "Reclame Aqui",
     href: "/reclame-aqui",

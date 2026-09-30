@@ -1116,6 +1116,20 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Distribuição do time (30/09/2026, 1.106.0)
+
+Fase 30. Tela nova em Hoje → **Distribuição do time**: a carga de cada
+pessoa por frente (Reclame Aqui com os sem resposta pública, Redes, NPS),
+quem está fora (`User.ausenteAte`, marcado na própria linha) e a fila que
+precisa de dono — a de quem está ausente, ou a dos sem responsável. Cada
+item vai para quem tem menos **na mesma frente** (o total só desempata) e,
+se alguém já atende o mesmo cliente, para essa pessoa; os mais antigos
+primeiro. Sempre com prévia antes de confirmar; na gravação a conta é
+refeita e só muda o que ainda está com a origem. Cada item ganha uma
+anotação de quem para quem passou, e as tarefas abertas do caso vão junto.
+"Aberto" é o do quadro (o "Aguardando avaliação" fica na tela própria).
+`npm run check:distribuicao`.
+
 ### O relatório que chega sozinho (30/09/2026, 1.105.0)
 
 Fase 30. Na tela do Relatório, **Envio automático**: os e-mails que

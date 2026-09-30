@@ -104,6 +104,14 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.106.0",
+    data: "2026-09-30",
+    titulo: "Distribuição do time",
+    texto: "Em Hoje → Distribuição do time: quanto cada pessoa carrega em cada frente, quem está fora e para quem vai a fila de quem está ausente ou sem responsável — sempre com prévia antes de confirmar.",
+    frentes: ["plataforma"],
+    href: "/distribuicao",
+  },
+  {
     versao: "1.105.0",
     data: "2026-09-30",
     titulo: "O relatório do ciclo chega por e-mail",
