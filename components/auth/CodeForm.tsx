@@ -27,6 +27,8 @@ interface Props {
 
   /** E-mail já mascarado pelo servidor. */
   destino: string;
+  /** "Enviado às 14:05 · vale até 22:05" (1.110). */
+  validade?: string;
 }
 
 function Enviar() {
@@ -72,6 +74,7 @@ export default function CodeForm({
   reenviar,
   cancelar,
   destino,
+  validade,
 }: Props) {
 
   const [estado, conferir] = useActionState(
@@ -109,6 +112,7 @@ export default function CodeForm({
           {destino}
         </strong>
         .
+        {validade && <span className="mt-1 block text-xs text-zinc-500">{validade}</span>}
       </p>
 
       <form action={conferir} className="space-y-4">

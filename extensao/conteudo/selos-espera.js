@@ -72,7 +72,33 @@
     return ENCERRA.test(String(previa ?? "").trim());
   }
 
-  CW.selosEspera = { minutosDesde, seloDaEspera, previaNossa, encerrou };
+  /**
+   * A conversa espera a nossa resposta? (1.110)
+   *
+   * "A espera está indo para conversas em que a última mensagem foi
+   * minha." Em setembro o WhatsApp trocou a marcação das mensagens, e o
+   * ícone de "enviado/lido" deixou de ser achado — sem ele, toda conversa
+   * parecia do cliente. A decisão agora pesa, em ordem:
+   *
+   * 1. **"Não lidas"**: o selo de mensagens não lidas só existe quando o
+   *    cliente falou por último — espera, com certeza.
+   * 2. **Nossa**: marca de enviado/lido, prévia "Você…", ou a conversa
+   *    aberta mostrou que a última foi nossa depois da hora da lista.
+   * 3. **Calibragem**: se nenhuma linha da lista tem marca nossa, a
+   *    leitura dos ícones está quebrada nesta versão do WhatsApp — sem o
+   *    selo de não lidas, não dá para saber, e aí não se marca.
+   */
+  function esperaDaLinha(l) {
+    if (l.grupo || l.minutos === null || l.minutos === undefined) return null;
+    if (l.naoLida) return seloDaEspera(Math.max(l.minutos, 5));
+    if (l.nossa || previaNossa(l.previa) || encerrou(l.previa)) return null;
+    /* A conversa aberta mostrou a nossa resposta depois da hora que a lista mostra. */
+    if (l.respondidaHaMin !== null && l.respondidaHaMin !== undefined && l.respondidaHaMin <= l.minutos + 1) return null;
+    if (!l.calibrado) return null;
+    return seloDaEspera(l.minutos);
+  }
+
+  CW.selosEspera = { minutosDesde, seloDaEspera, previaNossa, encerrou, esperaDaLinha };
 
   /* ------------------------------------------------------------------ */
   /* A parte da página                                                    */
@@ -81,8 +107,42 @@
   if (typeof location === "undefined" || (location.hostname !== "web.whatsapp.com" && CW.bancada !== true)) return;
   if (typeof document === "undefined") return;
 
-  const NOSSO = '[data-icon*="check"], [data-icon="status-time"], [data-icon="msg-time"]';
+  const NOSSO = '[data-icon*="check"], [data-icon="status-time"], [data-icon="msg-time"], [data-icon*="status-dbl"]';
+  /* Os rótulos de acessibilidade do status da nossa mensagem, e o selo de não lidas. */
+  const STATUS_NOSSO = /^\s*(lida|entregue|enviada|pendente|read|delivered|sent|pending)\s*$/i;
+  const NAO_LIDA = '[aria-label*="não lida" i], [aria-label*="nao lida" i], [aria-label*="unread" i]';
   const GRUPO = '[data-icon="default-group"], [data-icon="default-community"]';
+
+  /** A linha tem a marca de mensagem nossa: ícone, título do ícone ou rótulo de status. */
+  function temMarcaNossa(linha) {
+    if (linha.querySelector(NOSSO)) return true;
+    for (const t of linha.querySelectorAll("svg title")) if (/check|status-time|msg-time/i.test(t.textContent || "")) return true;
+    for (const el of linha.querySelectorAll("[aria-label]")) if (STATUS_NOSSO.test(el.getAttribute("aria-label") || "")) return true;
+    return false;
+  }
+
+  /*
+    A conversa aberta diz de quem foi a última mensagem — quando dá para
+    ter certeza. Guardado por nome: se a última foi nossa, a linha da lista
+    com a mesma hora (ou mais antiga) não espera nada.
+  */
+  const respondidaEm = new Map();
+
+  function olharConversaAberta() {
+    const main = document.querySelector("#main");
+    const nome = main?.querySelector("header span[title]")?.getAttribute("title")?.trim();
+    if (!main || !nome) return;
+    const todas = main.querySelectorAll("[data-id]");
+    const ultima = todas[todas.length - 1];
+    if (!ultima) return;
+    const id = ultima.getAttribute("data-id") || "";
+    const nossa =
+      id.startsWith("true_") ||
+      Boolean(ultima.querySelector('.message-out, [data-icon="msg-check"], [data-icon="msg-dblcheck"], [data-icon="msg-dblcheck-ack"], [data-icon="msg-time"]'));
+    const deles = id.startsWith("false_") || Boolean(ultima.querySelector('.message-in, [data-icon="tail-in"]'));
+    if (nossa) respondidaEm.set(nome, Date.now());
+    else if (deles) respondidaEm.delete(nome);
+  }
   const HORA = /^(\d{1,2}:\d{2}|ontem|yesterday|domingo|segunda-feira|terça-feira|quarta-feira|quinta-feira|sexta-feira|sábado|\d{1,2}\/\d{1,2}\/\d{2,4})$/i;
   const TELEFONE = /^\+?\d[\d\s().-]{8,}$/;
 
@@ -103,7 +163,10 @@
 
   function linhas() {
     const lista = document.querySelector("#pane-side") || document.querySelector("[data-testid='chat-list']");
-    return lista ? [...lista.querySelectorAll('[role="listitem"], [role="row"]')] : [];
+    if (!lista) return [];
+    const todas = [...lista.querySelectorAll('[role="listitem"], [role="row"]')];
+    /* Linha dentro de linha (listitem com row dentro) é a mesma conversa: fica a de fora. */
+    return todas.filter((l) => !todas.some((outra) => outra !== l && outra.contains(l)));
   }
 
   function horaDaLinha(linha) {
@@ -131,16 +194,31 @@
   function marcarEspera() {
     const agora = new Date();
     const vistos = [];
-    for (const linha of linhas()) {
-      const antigo = linha.querySelector(".cw-espera");
+    olharConversaAberta();
+    const todas = linhas();
+    const lidas = todas.map((linha) => {
       const hora = horaDaLinha(linha);
       const nome = nomeDaLinha(linha)?.getAttribute("title") || "";
-      const previa = previaDaLinha(linha, nome);
-      const minutos =
-        !linha.querySelector(GRUPO) && hora && !linha.querySelector(NOSSO) && !previaNossa(previa) && !encerrou(previa)
-          ? minutosDesde(hora.textContent, agora)
-          : null;
-      const espera = seloDaEspera(minutos);
+      const quando = respondidaEm.get(nome);
+      return {
+        linha,
+        hora,
+        nome,
+        grupo: Boolean(linha.querySelector(GRUPO)),
+        minutos: hora ? minutosDesde(hora.textContent, agora) : null,
+        nossa: temMarcaNossa(linha),
+        naoLida: Boolean(linha.querySelector(NAO_LIDA)),
+        previa: previaDaLinha(linha, nome),
+        respondidaHaMin: quando ? Math.round((agora.getTime() - quando) / 60000) : null,
+      };
+    });
+    /* Com várias conversas na tela e nenhuma marca nossa, a leitura dos ícones não serve nesta versão. */
+    const calibrado = todas.length < 4 || lidas.some((l) => l.nossa);
+    for (const l of lidas) {
+      const { linha, hora, nome } = l;
+      const antigo = linha.querySelector(".cw-espera");
+      const espera = esperaDaLinha({ ...l, calibrado });
+      const minutos = Math.max(l.minutos ?? 0, 5);
       if (espera && nome) {
         const chave = chaveDaLinha(nome);
         vistos.push({ chave, nome: TELEFONE.test(nome) ? "" : nome, telefone: TELEFONE.test(nome) ? nome : "", minutos, etiquetas: cache.get(chave)?.lista ?? [] });

@@ -31,6 +31,7 @@ import ResponseCeiling from "@/components/reclame-aqui/analytics/ResponseCeiling
 import DisregardedNotice from "@/components/reclame-aqui/DisregardedNotice";
 import GoalEditor from "@/components/reclame-aqui/analytics/GoalEditor";
 import ModuleNav from "@/components/reclame-aqui/ModuleNav";
+import { notaExata } from "@/lib/models/indiceRA";
 import PorCiclo from "@/components/reclame-aqui/analytics/PorCiclo";
 
 import { useScopedCases } from "@/lib/context/useScopedCases";
@@ -333,6 +334,20 @@ export default function ReclameAquiAnalyticsPage() {
                 / 10
               </span>
             </p>
+
+            {/* A nota detalhada (1.110), como no Índice: a que o portal arredonda para uma casa. */}
+            {summary.received > 0 && (
+              <p className="mt-1 text-xs tabular-nums text-zinc-500" title="A nota sem arredondar, com quatro casas">
+                Detalhada <b className="font-semibold text-zinc-800">{notaExata(summary.raScoreExato)}</b>
+                {previous.length > 0 && (
+                  <span className={summary.raScoreExato >= previousSummary.raScoreExato ? "text-emerald-600" : "text-rose-600"}>
+                    {" "}
+                    ({summary.raScoreExato >= previousSummary.raScoreExato ? "+" : "−"}
+                    {notaExata(Math.abs(summary.raScoreExato - previousSummary.raScoreExato))})
+                  </span>
+                )}
+              </p>
+            )}
 
             {scoreDelta === null ? (
 

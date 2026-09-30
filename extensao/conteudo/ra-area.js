@@ -150,6 +150,14 @@
         caso.avaliado ? `Avaliada${caso.nota !== null && caso.nota !== undefined ? ` com nota ${Number(caso.nota)}` : ""}` : "",
       ].filter(Boolean);
       linhas.push(`<p class="sub">${extras.join(" · ")}</p>`);
+      /* Registrar daqui (1.110): o contato ou a tentativa, sem abrir o CW. */
+      if (!caso.avaliado) {
+        linhas.push(`
+          <div class="acoes registrar">
+            <button type="button" data-acao="registrar" data-tipo="contato">Falei com o cliente</button>
+            <button type="button" data-acao="registrar" data-tipo="tentativa">Tentei, sem retorno</button>
+          </div>`);
+      }
       partes.push(`<section><h4>No CW</h4>${linhas.join("")}</section>`);
     } else if (dados.erro) {
       partes.push(`<section><h4>No CW</h4><p class="sub">${e(dados.erro)}</p></section>`);
@@ -163,12 +171,17 @@
     }
 
     /* ---- os atalhos ---- */
+    const nestaArea = area.enderecoDaReclamacao(codigo);
+    const consumidor = [lida?.cliente, lida?.telefone, lida?.email, lida?.documento ? `CPF/CNPJ ${lida.documento}` : ""].filter(Boolean).join("\n");
     const atalhos = [
       caso?.url ? `<a href="${e(caso.url)}" target="_blank" rel="noopener" class="principal">Abrir no CW ↗</a>` : "",
+      caso?.url ? `<button type="button" data-acao="janela" data-url="${e(caso.url)}" title="Abre o caso numa janela separada — dá para levar a outro monitor">Abrir em outra janela</button>` : "",
+      nestaArea ? `<a href="${e(nestaArea)}" target="_blank" rel="noopener" title="Esta reclamação da área da empresa em outra aba">Reclamação em nova aba ↗</a>` : "",
       caso?.urlPortal ? `<a href="${e(caso.urlPortal)}" target="_blank" rel="noopener">Página pública ↗</a>` : "",
       caso?.urlDossie ? `<a href="${e(caso.urlDossie)}" target="_blank" rel="noopener">Dossiê ↗</a>` : "",
       codigo || caso?.protocolo ? `<button type="button" data-acao="copiar" data-texto="${e(caso?.protocolo || `RA-${codigo}`)}">Copiar protocolo</button>` : "",
       caso?.rascunho ? `<button type="button" data-acao="copiar" data-texto="${e(caso.rascunho)}">Copiar o rascunho do CW</button>` : "",
+      consumidor ? `<button type="button" data-acao="copiar" data-texto="${e(consumidor)}">Copiar dados do consumidor</button>` : "",
     ].filter(Boolean);
     if (atalhos.length) partes.push(`<div class="acoes">${atalhos.join("")}</div>`);
 
@@ -374,6 +387,24 @@
       const ok = r?.ok && !r?.dados?.erro;
       if (!ok) delete alvo.dataset.feito;
       alvo.textContent = ok ? "Pedido registrado" : r?.dados?.erro || "Não registrou";
+    } else if (acao === "janela") {
+      /* Uma janela própria, reaproveitada entre reclamações: dá para deixá-la no outro monitor. */
+      window.open(alvo.dataset.url, "cw-reputacao-caso", "popup,width=1180,height=900");
+    } else if (acao === "registrar") {
+      const protocolo = dadosAtuais?.caso?.protocolo;
+      if (!protocolo || alvo.dataset.feito) return;
+      alvo.dataset.feito = "1";
+      const original = alvo.textContent;
+      alvo.textContent = "Registrando…";
+      const r = await CW.enviar({ tipo: "tratativa", corpo: { protocolo, tipo: alvo.dataset.tipo, canal: "WhatsApp" } });
+      const ok = r?.ok && !r?.dados?.erro;
+      if (!ok) {
+        delete alvo.dataset.feito;
+        alvo.textContent = r?.dados?.erro || "Não registrou";
+        setTimeout(() => (alvo.textContent = original), 2500);
+        return;
+      }
+      alvo.textContent = alvo.dataset.tipo === "tentativa" ? "Tentativa registrada" : "Contato registrado";
     } else if (acao === "copiar") {
       const original = alvo.textContent;
       try {

@@ -65,5 +65,19 @@ conferir("vale a nota mais recente do NPS", etiquetasDasFichas([{ tipo: "nps", n
 conferir("telefone: os 8 últimos dígitos; mascarado não", [chaveDoTelefone("+55 (48) 99664-0777"), chaveDoTelefone("(48) 9••••-0777")], ["96640777", null]);
 conferir("nome de uma palavra não etiqueta ninguém", [chaveDoNome("João"), chaveDoNome("João da Silva")], [null, "joao da silva"]);
 
+/* 1.110: a espera só onde o cliente falou por último. */
+console.log("\n  QUEM ESPERA (1.110)\n");
+const linha = (extra: Record<string, unknown>) => ({ grupo: false, minutos: 90, nossa: false, naoLida: false, previa: "preciso de ajuda", respondidaHaMin: null, calibrado: true, ...extra });
+const rotulo = (x: unknown) => (x as { rotulo?: string } | null)?.rotulo ?? null;
+conferir("cliente falou por último: espera", rotulo(s.esperaDaLinha(linha({}))), "espera 1 h e meia");
+conferir("com marca nossa (enviado/lido): não espera", s.esperaDaLinha(linha({ nossa: true })), null);
+conferir("prévia \"Você: …\": não espera", s.esperaDaLinha(linha({ previa: "Você: foto" })), null);
+conferir("a conversa aberta mostrou a nossa resposta depois: não espera", s.esperaDaLinha(linha({ respondidaHaMin: 60 })), null);
+conferir("o cliente escreveu depois da nossa resposta: espera", rotulo(s.esperaDaLinha(linha({ minutos: 20, respondidaHaMin: 60 }))), "espera 20 min");
+conferir("sem marca nossa em lugar nenhum da lista (ícones mudaram): não marca", s.esperaDaLinha(linha({ calibrado: false })), null);
+conferir("mas com \"não lidas\" é espera mesmo sem calibragem", rotulo(s.esperaDaLinha(linha({ calibrado: false, naoLida: true }))), "espera 1 h e meia");
+conferir("não lida há 2 min ainda aparece (no mínimo 5)", rotulo(s.esperaDaLinha(linha({ naoLida: true, minutos: 2 }))), "espera 5 min");
+conferir("grupo nunca", s.esperaDaLinha(linha({ grupo: true, naoLida: true })), null);
+
 console.log(`\n  ${falhas === 0 ? "Tudo certo." : `${falhas} falha(s).`}\n`);
 process.exit(falhas === 0 ? 0 : 1);

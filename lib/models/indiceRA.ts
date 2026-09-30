@@ -150,13 +150,24 @@ export function evolucaoDoMes(casos: Case[], periodo: PeriodoDoIndice, hoje: str
   return dias;
 }
 
-/** "8,52897" — cinco casas, vírgula. */
+/** "8,5290" — a nota detalhada, com quatro casas (1.110: "pode ser somente 4 dígitos após a vírgula"). */
 export function notaExata(valor: number) {
-  return valor.toFixed(5).replace(".", ",");
+  return valor.toFixed(4).replace(".", ",");
 }
 
 export interface MesDoIndice {
   mes: string;
+  /**
+   * A nota do mês (1.110): só as reclamações recebidas no mês, com o que
+   * aconteceu com elas até hoje. `null` sem reclamação no mês.
+   */
+  nota: number | null;
+  notaExata: number | null;
+  /**
+   * A janela de 6 meses que termina no mês, como estava no último dia dele
+   * — a nota que o portal passa a mostrar na virada para o mês seguinte.
+   */
+  notaNoFechamento: number | null;
   recebidas: number;
   respondidas: number;
   semResposta: number;
@@ -178,8 +189,15 @@ export function mesAMes(casos: Case[], hoje: string, meses = 12): MesDoIndice[] 
     const fim = mais(inicioDoMes(hoje, -i + 1), -1);
     const doMes = casos.filter((c) => inRange(c, inicio, fim));
     const r = getRawCounts(doMes);
+    const doMesResumo = doMes.length ? scoreFrom(r) : null;
+    /* A janela de 6 meses que termina no último dia do mês, como estava naquele dia. */
+    const ultimoDia = fim < hoje ? fim : hoje;
+    const janela = casos.filter((c) => inRange(c, inicioDoMes(inicio, -5), fim)).map((c) => comoEstavaNoDia(c, ultimoDia));
     saida.push({
       mes: inicio.slice(0, 7),
+      nota: doMesResumo?.raScore ?? null,
+      notaExata: doMesResumo?.raScoreExato ?? null,
+      notaNoFechamento: janela.length ? scoreFrom(getRawCounts(janela)).raScoreExato : null,
       recebidas: r.received,
       respondidas: r.answered,
       semResposta: r.received - r.answered,

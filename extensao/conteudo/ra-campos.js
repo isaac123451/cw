@@ -792,11 +792,43 @@
    *   vezes não troca o endereço);
    * - o resto é outra página.
    */
+  /*
+    As marcas da reclamação aberta (medidas na área da empresa): o botão
+    "Responder reclamação", a frase de abertura e os blocos de contato.
+    A lista não tem nenhuma delas.
+  */
+  const MARCA_DO_DETALHE = /Responder reclama[çc][ãa]o|Seu consumidor comunicou|Telefones do consumidor informados|Contatos do cadastro do consumidor/i;
+
+  /**
+   * O pedaço do texto que é a reclamação aberta (1.110).
+   *
+   * Quando a reclamação abre por cima da lista (a lista continua na
+   * página) ou traz "outras reclamações deste consumidor", o texto tem
+   * vários COD e ID — e a 1.87 passou a chamar isso de lista: nada era
+   * lido e o cartão sumia. Com a marca do detalhe, a leitura começa nela,
+   * e o primeiro COD/ID dali em diante é o da reclamação aberta.
+   */
+  ra.recorteDaReclamacao = (texto) => {
+    const t = String(texto ?? "");
+    const marca = t.search(MARCA_DO_DETALHE);
+    if (marca < 0) return t;
+    /* O título e o COD vêm logo antes ou logo depois da frase de abertura. */
+    const antes = t.lastIndexOf("\n", Math.max(0, marca - 1));
+    return t.slice(antes < 0 ? marca : antes + 1);
+  };
+
   ra.tipoDaPagina = (href, texto) => {
     const [codigo] = ra.codigosDosLinks([href]);
-    const ids = new Set([...String(texto ?? "").matchAll(/\bID\s*:\s*(\d{6,12})\b/g)].map((m) => m[1]));
-    const cods = new Set([...String(texto ?? "").matchAll(/\bCOD\s*:\s*([A-Za-z0-9._-]{6,40})\b/g)].map((m) => m[1]));
     if (codigo) return { tipo: "reclamacao", codigo };
+    const t = String(texto ?? "");
+    if (MARCA_DO_DETALHE.test(t)) {
+      const detalhe = ra.recorteDaReclamacao(t);
+      const cod = detalhe.match(/\bCOD\s*:\s*([A-Za-z0-9._-]{6,40})\b/);
+      const id = detalhe.match(/\bID\s*:\s*(\d{6,12})\b/);
+      if (cod || id) return { tipo: "reclamacao", codigo: cod ? cod[1] : "" };
+    }
+    const ids = new Set([...t.matchAll(/\bID\s*:\s*(\d{6,12})\b/g)].map((m) => m[1]));
+    const cods = new Set([...t.matchAll(/\bCOD\s*:\s*([A-Za-z0-9._-]{6,40})\b/g)].map((m) => m[1]));
     if (ids.size >= 2 || cods.size >= 2) return { tipo: "lista", codigo: "" };
     if (ids.size === 1 && cods.size === 1) return { tipo: "reclamacao", codigo: [...cods][0] };
     return { tipo: "outra", codigo: "" };

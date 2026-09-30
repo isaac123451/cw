@@ -13,15 +13,17 @@
  *
  *   1. O código certo entra.
  *   2. O código errado não entra.
- *   3. O código serve **uma vez só** — o segundo uso é recusado.
+ *   3. O código vale pelo tempo cadastrado (1.110): o segundo uso,
+ *      dentro da validade, também entra.
  *   4. Código vencido não entra, nem que seja o certo.
  *   5. Esgotadas as tentativas, o código morre — inclusive para o
  *      palpite certo que vier depois.
  *   6. Cada palpite é contado, mesmo o errado (senão o limite é
  *      decorativo).
  *   7. Pedir código novo **mata** o anterior.
- *   8. Há espera entre pedidos, ou o botão vira máquina de encher caixa
- *      de entrada alheia.
+ *   8. Entrar de novo dentro da validade reaproveita o código (nenhum
+ *      e-mail novo); e há espera entre pedidos de código novo, ou o botão
+ *      vira máquina de encher caixa de entrada alheia.
  *   9. O código **não** está no banco em texto claro.
  *  10. Dois códigos seguidos são diferentes — a fonte é aleatória de
  *      verdade, não um contador.
@@ -224,15 +226,15 @@ async function main() {
       "sessão liberada para o usuário do desafio"
     );
 
-    /* ---- 3. e serve uma vez só ---- */
+    /* ---- 3. e vale pelo tempo cadastrado (1.110) ---- */
 
     const r1b = await conferirCodigo(d1.id, "123456");
 
     conferir(
-      "3. o mesmo código não serve duas vezes",
-      !r1b.ok,
-      "o código aceitou o segundo uso — um código visto por cima do ombro serviria de novo",
-      `recusado: "${r1b.erro}"`
+      "3. dentro da validade, o mesmo código entra de novo",
+      r1b.ok && r1b.userId === usuario.id,
+      `recusou o segundo uso dentro da validade: ${r1b.erro}`,
+      "entrou de novo com o mesmo código"
     );
 
     /* ---- 2. o código errado não entra ---- */
@@ -348,10 +350,19 @@ async function main() {
     const pedido2 = await criarDesafio(usuario);
 
     conferir(
-      "8. há espera entre pedidos de código",
-      !pedido2.ok && (pedido2.esperar ?? 0) > 0,
+      "8a. entrar de novo dentro da validade reaproveita o código",
+      pedido2.ok && Boolean(pedido2.reaproveitado) && pedido2.challengeId === pedido1.challengeId,
+      "gerou outro código com um ainda válido — a pessoa teria de esperar outro e-mail",
+      "mesmo desafio, nenhum e-mail novo"
+    );
+
+    const pedido2b = await criarDesafio(usuario, {}, { novo: true });
+
+    conferir(
+      "8b. há espera entre pedidos de código novo",
+      !pedido2b.ok && (pedido2b.esperar ?? 0) > 0,
       "o segundo pedido saiu na mesma hora — o botão de reenviar vira máquina de encher caixa de entrada",
-      `recusado, faltam ${pedido2.esperar}s`
+      `recusado, faltam ${pedido2b.esperar}s`
     );
 
     /**
@@ -367,7 +378,7 @@ async function main() {
         },
       });
 
-      const pedido3 = await criarDesafio(usuario);
+      const pedido3 = await criarDesafio(usuario, {}, { novo: true });
 
       const antigo =
         await prisma.loginChallenge.findUnique({

@@ -284,11 +284,16 @@ export async function signIn(
       };
     }
 
-    await createPendingLogin({
-      challengeId: pedido.challengeId,
-      userId: user.id,
-      email: user.email,
-    });
+    await createPendingLogin(
+      {
+        challengeId: pedido.challengeId,
+        userId: user.id,
+        email: user.email,
+        enviadoEm: pedido.enviadoEm?.toISOString(),
+        validoAte: pedido.validoAte?.toISOString(),
+      },
+      pedido.validoAte ? (pedido.validoAte.getTime() - Date.now()) / 1000 : undefined
+    );
 
     redirect("/login/codigo");
   }
@@ -415,12 +420,17 @@ export async function resendCode(
 
   const cabecalhos = await headers();
 
-  const pedido = await criarDesafio(user, {
-    ip:
-      cabecalhos.get("x-forwarded-for")?.split(",")[0] ??
-      undefined,
-    userAgent: cabecalhos.get("user-agent") ?? undefined,
-  });
+  /* "Enviar outro código" é o único caminho que troca um código ainda válido (1.110). */
+  const pedido = await criarDesafio(
+    user,
+    {
+      ip:
+        cabecalhos.get("x-forwarded-for")?.split(",")[0] ??
+        undefined,
+      userAgent: cabecalhos.get("user-agent") ?? undefined,
+    },
+    { novo: true }
+  );
 
   if (!pedido.ok || !pedido.challengeId) {
     return {
@@ -432,14 +442,19 @@ export async function resendCode(
    * O cookie é reescrito com o desafio novo — o anterior acabou de ser
    * invalidado, e sem isto a tela conferiria contra um código morto.
    */
-  await createPendingLogin({
-    challengeId: pedido.challengeId,
-    userId: user.id,
-    email: user.email,
-  });
+  await createPendingLogin(
+    {
+      challengeId: pedido.challengeId,
+      userId: user.id,
+      email: user.email,
+      enviadoEm: pedido.enviadoEm?.toISOString(),
+      validoAte: pedido.validoAte?.toISOString(),
+    },
+    pedido.validoAte ? (pedido.validoAte.getTime() - Date.now()) / 1000 : undefined
+  );
 
   return {
-    success: "Código novo enviado. Confira seu e-mail.",
+    success: "Código novo enviado. Confira seu e-mail — o anterior deixou de valer.",
   };
 }
 

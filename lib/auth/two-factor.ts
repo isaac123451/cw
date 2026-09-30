@@ -23,8 +23,12 @@ import {
  * - **O código nunca é guardado em claro.** Um milhão de combinações é
  *   pouco; o hash bcrypt faz cada palpite custar caro mesmo com o
  *   banco na mão.
- * - **Uso único.** `consumedAt` fecha a porta. Sem isso, um código
- *   visto por cima do ombro serviria de novo até vencer.
+ * - **Vale pelo tempo cadastrado (1.110).** "O código deve valer
+ *   conforme o tempo cadastrado; não precisa gerar um código novo dentro
+ *   desse período." Entrar de novo dentro da validade reaproveita o
+ *   código já enviado — nada de esperar outro e-mail —, e o código
+ *   continua servindo até vencer. Quem quer um novo pede "Enviar outro
+ *   código", e aí o anterior morre. Errar demais ainda mata o código.
  * - **Vencimento curto** e **limite de palpites**, os dois vindos da
  *   configuração — cinco erros matam o código, e não a conta, para que
  *   ninguém tranque outra pessoa de fora só chutando.
@@ -36,6 +40,17 @@ import {
 
 /** Segundos que o botão "reenviar" fica travado. */
 const ESPERA_PARA_REENVIAR = 60;
+
+/** O maior tempo de validade que a configuração aceita: um dia (1.110; era 60 minutos). */
+export const TTL_MAXIMO_MIN = 24 * 60;
+
+/** "40 minutos", "8 horas", "1 hora e 30 minutos". */
+export function duracaoPorExtenso(minutos: number) {
+  const h = Math.floor(minutos / 60);
+  const m = minutos % 60;
+  const partes = [h ? `${h} hora${h > 1 ? "s" : ""}` : "", m ? `${m} minuto${m > 1 ? "s" : ""}` : ""].filter(Boolean);
+  return partes.join(" e ") || "1 minuto";
+}
 
 export interface ConfiguracaoDeSeguranca {
   twoFactorRequired: boolean;
@@ -74,7 +89,7 @@ export async function lerConfiguracao(): Promise<ConfiguracaoDeSeguranca> {
       twoFactorRequired: linha.twoFactorRequired,
       codeTtlMinutes: Math.min(
         Math.max(linha.codeTtlMinutes, 1),
-        60
+        TTL_MAXIMO_MIN
       ),
       maxAttempts: Math.min(
         Math.max(linha.maxAttempts, 1),
@@ -131,6 +146,10 @@ export function gerarCodigo() {
 export interface PedidoDeCodigo {
   ok: boolean;
   challengeId?: string;
+  /** O código ainda válido foi reaproveitado — nenhum e-mail saiu agora. */
+  reaproveitado?: boolean;
+  enviadoEm?: Date;
+  validoAte?: Date;
   /** Quando falhou, o que dizer para a pessoa. */
   erro?: string;
   /** Segundos que faltam, quando a recusa foi por espera. */
@@ -146,7 +165,8 @@ export interface PedidoDeCodigo {
  */
 export async function criarDesafio(
   usuario: { id: string; email: string; name: string },
-  contexto: { ip?: string; userAgent?: string } = {}
+  contexto: { ip?: string; userAgent?: string } = {},
+  opcoes: { novo?: boolean } = {}
 ): Promise<PedidoDeCodigo> {
 
   const prisma = getPrisma();
@@ -159,6 +179,20 @@ export async function criarDesafio(
   }
 
   const config = await lerConfiguracao();
+
+  /*
+    Dentro da validade, o mesmo código (1.110). Só "Enviar outro código"
+    pede um novo.
+  */
+  if (!opcoes.novo) {
+    const valido = await prisma.loginChallenge.findFirst({
+      where: { userId: usuario.id, consumedAt: null, expiresAt: { gt: new Date() } },
+      orderBy: { createdAt: "desc" },
+    });
+    if (valido) {
+      return { ok: true, challengeId: valido.id, reaproveitado: true, enviadoEm: valido.createdAt, validoAte: valido.expiresAt };
+    }
+  }
 
   /**
    * Espera entre reenvios, medida no desafio mais recente da pessoa.
@@ -256,7 +290,7 @@ export async function criarDesafio(
     };
   }
 
-  return { ok: true, challengeId: desafio.id };
+  return { ok: true, challengeId: desafio.id, enviadoEm: desafio.createdAt, validoAte: desafio.expiresAt };
 }
 
 export interface Conferencia {
@@ -359,9 +393,14 @@ export async function conferirCodigo(
     };
   }
 
+  /*
+    O código continua valendo até vencer (1.110) — entrar de novo, em
+    outra aba ou depois de sair, usa o mesmo. Os erros voltam a zero: quem
+    acertou não deve carregar os palpites errados de antes.
+  */
   await prisma.loginChallenge.update({
     where: { id: desafio.id },
-    data: { consumedAt: new Date() },
+    data: { attempts: 0 },
   });
 
   return { ok: true, userId: desafio.userId };
@@ -416,7 +455,7 @@ function textoDoEmail(
     "",
     `    ${codigo}`,
     "",
-    `Ele vale por ${minutos} minutos e serve uma vez só.`,
+    `Ele vale por ${duracaoPorExtenso(minutos)}. Dentro desse tempo, o mesmo código serve para entrar de novo.`,
     ondeVeio(contexto),
     "",
     "Se não foi você que tentou entrar, ignore este e-mail e troque",
@@ -444,7 +483,7 @@ function htmlDoEmail(
     <p style="margin:0 0 20px;font-size:15px">Olá, ${escapar(nome.split(" ")[0])}.</p>
     <p style="margin:0 0 8px;font-size:14px;color:#52525b">Seu código de acesso ao CW Reputação:</p>
     <p style="margin:0 0 8px;font-size:38px;font-weight:700;letter-spacing:8px;font-family:ui-monospace,Menlo,monospace">${escapar(codigo)}</p>
-    <p style="margin:0 0 24px;font-size:13px;color:#71717a">Vale por ${minutos} minutos e serve uma vez só.${contexto.ip ? ` Pedido a partir de ${escapar(contexto.ip)}.` : ""}</p>
+    <p style="margin:0 0 24px;font-size:13px;color:#71717a">Vale por ${duracaoPorExtenso(minutos)} — dentro desse tempo, o mesmo código serve para entrar de novo.${contexto.ip ? ` Pedido a partir de ${escapar(contexto.ip)}.` : ""}</p>
     <p style="margin:0;padding:14px 16px;background:#fef2f2;border-radius:12px;font-size:13px;color:#991b1b">
       <strong>Não foi você?</strong> Alguém acertou sua senha. Ignore este código e troque a senha assim que puder.
     </p>

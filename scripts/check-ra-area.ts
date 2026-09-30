@@ -74,7 +74,15 @@ const caso = {
 const resumo = { ...r, aconteceu: '<img src=x onerror="alert(1)">' };
 const html = area.htmlDoCartao(lida, { resumo, caso }, false);
 conferir("abrir no CW, página pública e dossiê em nova guia", ["Abrir no CW ↗", "Página pública ↗", "Dossiê ↗"].map((t) => html.includes(t)), [true, true, true]);
-conferir("os três abrem em nova guia", (html.match(/target="_blank"/g) ?? []).length, 3);
+conferir("os quatro links abrem em nova guia (1.110: e a reclamação)", (html.match(/target="_blank"/g) ?? []).length, 4);
+/* 1.110: os botões que ajudam na área da empresa. */
+conferir(
+  "outra janela, reclamação em nova aba, dados do consumidor e registrar",
+  ["Abrir em outra janela", "Reclamação em nova aba ↗", "Copiar dados do consumidor", 'data-tipo="contato"', 'data-tipo="tentativa"'].map((t) =>
+    area.htmlDoCartao({ ...lida, cliente: "Marina", telefone: "51 90000-0000" }, { resumo, caso }, false).includes(t)
+  ),
+  [true, true, true, true, true]
+);
 conferir("sem resposta nem validação: avisa o Passo 6 antes de responder", html.includes("Passo 6"), true);
 conferir("prazo, passo da vez, conta e reincidência", ["1º contato atrasado", "passo 6 — Validação com o cliente", "Conta: Pizzaria Bella (Pro)", "2ª reclamação do mesmo CPF/CNPJ"].map((t) => html.includes(t)), [true, true, true, true]);
 conferir("copiar protocolo e o rascunho do CW", [html.includes('data-texto="RA-uPDvBFKmssmEmxVa"'), html.includes("Copiar o rascunho do CW")], [true, true]);

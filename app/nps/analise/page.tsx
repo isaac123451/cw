@@ -55,13 +55,6 @@ import PorQue from "@/components/shared/PorQue";
 import { diaNoIntervalo, intervaloDoAtalho, type Intervalo } from "@/lib/models/periodo";
 import { diaNaOperacao, hojeNaOperacao } from "@/lib/services/reputation.service";
 
-/** Quantos meses do começo do período até hoje — a tendência mostra os meses do período (até 24). */
-function mesesAteHoje(de: string | null) {
-  if (!de) return 24;
-  const hoje = hojeNaOperacao();
-  const n = (Number(hoje.slice(0, 4)) - Number(de.slice(0, 4))) * 12 + (Number(hoje.slice(5, 7)) - Number(de.slice(5, 7))) + 1;
-  return Math.min(24, Math.max(1, n));
-}
 /** Janelas que a tela oferece, em meses. */
 const JANELAS = [
   { meses: 3, label: "3 meses" },
@@ -151,8 +144,13 @@ export default function NpsAnalisePage() {
   );
 
   const tendencia = useMemo(
-    () => trendByMonth(noPeriodo, personalizado ? mesesAteHoje(intervalo.de) : meses === 0 ? 24 : meses),
-    [noPeriodo, meses, personalizado, intervalo.de]
+    /*
+      O gráfico segue o filtro (1.110): o recorte já está em `noPeriodo`, então
+      "Tudo" e o período por data mostram todos os meses do recorte — antes
+      "Tudo" parava em 24 e o período por data contava até hoje, e não até o fim escolhido.
+    */
+    () => trendByMonth(noPeriodo, personalizado || meses === 0 ? Number.POSITIVE_INFINITY : meses),
+    [noPeriodo, meses, personalizado]
   );
 
   const segmentos = useMemo(

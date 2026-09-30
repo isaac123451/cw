@@ -2,7 +2,7 @@
 
 import { useLargura } from "@/lib/hooks/useLargura";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { PontoDeTendencia } from "@/lib/services/nps.service";
 
@@ -19,6 +19,13 @@ const AXIS_HEIGHT = 28;
 
 /** Largura mínima de um rótulo de mês sem encostar no vizinho. */
 const LARGURA_POR_ROTULO = 64;
+
+/**
+ * Largura de cada mês (1.110): com muitos meses o gráfico fica mais largo
+ * que a tela e rola para os lados, em vez de espremer os rótulos. Abre no
+ * mês mais recente, e dá para arrastar com o mouse.
+ */
+const LARGURA_POR_MES = 68;
 
 /**
  * A evolução do NPS, em SVG puro.
@@ -46,6 +53,14 @@ export default function NpsTrendChart({
 
   const [ativo, setAtivo] = useState<number | null>(null);
   const [medirLargura, WIDTH] = useLargura(LARGURA_BASE);
+  const rolagem = useRef<HTMLDivElement | null>(null);
+  const arrasto = useRef<{ x: number; inicio: number } | null>(null);
+
+  /* Começa no fim: o mês que importa é o mais recente. */
+  useEffect(() => {
+    const el = rolagem.current;
+    if (el) el.scrollLeft = el.scrollWidth;
+  }, [dados.length]);
 
   if (dados.length === 0) {
     return (
@@ -118,10 +133,24 @@ export default function NpsTrendChart({
     )
     .join(" ");
 
-  return (
-    <div className="overflow-x-auto">
+  const larguraMinima = Math.max(560, dados.length * LARGURA_POR_MES);
 
-      <div className="relative min-w-[560px]" ref={medirLargura}>
+  return (
+    <div
+      ref={rolagem}
+      className="cursor-grab overflow-x-auto overscroll-x-contain active:cursor-grabbing"
+      onPointerDown={(e) => {
+        if (e.pointerType !== "mouse" || !rolagem.current || rolagem.current.scrollWidth <= rolagem.current.clientWidth) return;
+        arrasto.current = { x: e.clientX, inicio: rolagem.current.scrollLeft };
+      }}
+      onPointerMove={(e) => {
+        if (arrasto.current && rolagem.current) rolagem.current.scrollLeft = arrasto.current.inicio - (e.clientX - arrasto.current.x);
+      }}
+      onPointerUp={() => (arrasto.current = null)}
+      onPointerLeave={() => (arrasto.current = null)}
+    >
+
+      <div className="relative" style={{ minWidth: larguraMinima }} ref={medirLargura}>
 
       <svg
         viewBox={`0 0 ${WIDTH} ${height}`}
@@ -243,9 +272,10 @@ export default function NpsTrendChart({
         <div
           className="pointer-events-none absolute top-1 z-10 rounded-xl border border-zinc-200 bg-white/95 px-3 py-2 text-xs shadow-lg backdrop-blur"
           style={
-            ativo !== null && ativo > dados.length * 0.6
-              ? { left: "1rem" }
-              : { right: "1rem" }
+            /* Junto do ponto, virando para o outro lado perto da borda — o gráfico pode ser mais largo que a tela. */
+            ativo !== null && toX(ativo) > WIDTH - 200
+              ? { left: Math.max(8, toX(ativo) - 190) }
+              : { left: Math.max(8, (ativo === null ? 0 : toX(ativo)) + 14) }
           }
         >
 

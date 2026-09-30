@@ -104,6 +104,14 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.110.0",
+    data: "2026-09-30",
+    titulo: "Consertos e a nota do mês",
+    texto: "A extensão volta a ler a reclamação aberta na área da empresa (com mais botões no cartão), a espera do WhatsApp não marca mais conversa respondida, o Índice mostra a nota de cada mês e o Analytics a nota detalhada. O código de acesso vale pelo tempo cadastrado, sem pedir outro a cada entrada.",
+    frentes: ["reclame-aqui", "extensao", "plataforma"],
+    href: "/reclame-aqui/indice",
+  },
+  {
     versao: "1.109.0",
     data: "2026-09-30",
     titulo: "Cada resposta com o resultado — e o que funciona, em número",

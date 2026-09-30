@@ -274,13 +274,15 @@ export default function IndicePage() {
 
         <SurfaceCard
           title="Mês a mês"
-          description="O que entrou em cada mês e como está hoje. A faixa marca os meses da janela atual."
+          description="O que entrou em cada mês e como está hoje. A nota do mês é só das reclamações daquele mês; a do fechamento é a janela de 6 meses que termina no mês, como estava no último dia dele — a que o portal passa a mostrar na virada. A faixa marca os meses da janela atual."
         >
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] text-sm">
+            <table className="w-full min-w-[860px] text-sm">
               <thead>
                 <tr className="text-left text-[11px] uppercase tracking-wide text-zinc-400">
                   <th className="py-2 pr-3 font-semibold">Mês</th>
+                  <th className="px-3 py-2 text-right font-semibold" title="Só as reclamações recebidas no mês, com o que aconteceu com elas até hoje">Nota do mês</th>
+                  <th className="px-3 py-2 text-right font-semibold" title="A janela de 6 meses que termina no mês, como estava no último dia dele — a nota que o portal passa a mostrar na virada">6 meses no fechamento</th>
                   <th className="px-3 py-2 text-right font-semibold">Recebidas</th>
                   <th className="px-3 py-2 text-right font-semibold">Sem resposta</th>
                   <th className="px-3 py-2 text-right font-semibold">Avaliadas</th>
@@ -299,6 +301,16 @@ export default function IndicePage() {
                         {nomeDoMes(m.mes)}
                         {m.mes === hoje.slice(0, 7) && <span className="ml-1.5 text-[11px] text-violet-700">em curso</span>}
                       </td>
+                      <td className="px-3 py-2 text-right">
+                        {m.notaExata === null ? (
+                          "—"
+                        ) : (
+                          <span title={`Nota ${ptBR(m.nota ?? 0)} — detalhada ${notaExata(m.notaExata)}`}>
+                            <b className="font-semibold text-zinc-900">{notaExata(m.notaExata)}</b>
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2 text-right">{m.notaNoFechamento === null ? "—" : notaExata(m.notaNoFechamento)}</td>
                       <td className="px-3 py-2 text-right">{m.recebidas}</td>
                       <td className={`px-3 py-2 text-right ${m.semResposta > 0 ? "font-semibold text-amber-700" : ""}`}>{m.semResposta || "—"}</td>
                       <td className="px-3 py-2 text-right">{m.avaliadas || "—"}</td>

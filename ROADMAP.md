@@ -1116,6 +1116,42 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Consertos e a nota do mês (30/09/2026, 1.110.0)
+
+Pedidos de 30/09.
+
+- **Área da empresa do RA**: a reclamação aberta voltou a ser lida. Com a
+  lista por trás (ou "outras reclamações do consumidor"), a página tinha
+  vários COD/ID e a 1.87 a chamava de lista — sem leitura, sem cartão, sem
+  completar. Agora a leitura começa na marca do detalhe ("Responder
+  reclamação", "Telefones do consumidor informados…") — `ra.recorteDaReclamacao`.
+  A caixa de completar volta a aparecer também quando completa sozinha,
+  com o que foi lido e o que entrou. O cartão ganhou: abrir o caso em outra
+  janela (para outro monitor), a reclamação em nova aba, copiar os dados do
+  consumidor e registrar "Falei com o cliente" / "Tentei, sem retorno".
+- **Espera no WhatsApp**: não marca mais conversa cuja última mensagem foi
+  sua. Três fontes: a marca de enviado/lido (ícone, título ou rótulo), o
+  selo de não lidas (prova que o cliente falou por último) e a conversa
+  aberta (se a última foi nossa depois da hora da lista). Sem nenhuma marca
+  nossa na lista inteira, a leitura dos ícones está quebrada — aí só conta
+  quem tem "não lidas".
+- **Prêmio**: ganhou as abas do Reclame Aqui (dava para entrar e não sair).
+- **Gráfico mensal do NPS**: segue o filtro (Tudo e o período por data
+  mostram todos os meses do recorte), cada mês tem largura própria e o
+  gráfico rola para os lados — arrastando com o mouse —, abrindo no mês
+  mais recente; o cartão do mês acompanha o ponto.
+- **Nota do mês**: no Índice, "Mês a mês" mostra a nota só das reclamações
+  do mês e a janela de 6 meses que termina no mês como estava no último
+  dia (a que o portal passa a mostrar na virada). A nota detalhada passou a
+  ter 4 casas, e aparece no Analytics (card de reputação, com a variação, e
+  na composição).
+- **Código de acesso**: vale pelo tempo cadastrado. Entrar de novo dentro
+  da validade reaproveita o código já enviado (sem esperar outro e-mail), e
+  o código continua servindo até vencer; "Enviar outro código" é que troca.
+  A tela diz quando foi enviado e até quando vale; a etapa intermediária
+  dura o mesmo que o código; o tempo pode ir até um dia (era 60 minutos).
+  `check:duas-etapas` refeito para a regra nova.
+
 ### Resposta e resultado (30/09/2026, 1.109.0)
 
 Fase 29, os três itens. Na tela Respostas, abas novas:

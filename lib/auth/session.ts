@@ -130,16 +130,27 @@ export interface PendingLogin {
   userId: string;
   /** Só para a tela dizer "enviamos para j***@cardapioweb.com". */
   email: string;
+  /** Quando o código foi enviado e até quando vale (ISO) — a tela diz (1.110). */
+  enviadoEm?: string;
+  validoAte?: string;
 }
 
+/**
+ * A etapa intermediária dura o mesmo que o código (1.110): com o código
+ * valendo 8 horas, a etapa de 10 minutos obrigava a digitar a senha de
+ * novo para usar um código ainda válido.
+ */
 export async function createPendingLogin(
-  dados: PendingLogin
+  dados: PendingLogin,
+  segundos = PENDING_MAX_AGE
 ) {
+
+  const duracao = Math.min(Math.max(Math.round(segundos), 60), 24 * 60 * 60);
 
   const token = await new SignJWT({ ...dados })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime(`${PENDING_MAX_AGE}s`)
+    .setExpirationTime(`${duracao}s`)
     .sign(secret());
 
   const store = await cookies();
@@ -157,7 +168,7 @@ export async function createPendingLogin(
     sameSite: "strict",
     secure: process.env.NODE_ENV === "production",
     path: "/",
-    maxAge: PENDING_MAX_AGE,
+    maxAge: duracao,
   });
 }
 
@@ -185,6 +196,8 @@ export async function getPendingLogin(): Promise<PendingLogin | null> {
       challengeId: String(payload.challengeId),
       userId: String(payload.userId),
       email: String(payload.email),
+      enviadoEm: payload.enviadoEm ? String(payload.enviadoEm) : undefined,
+      validoAte: payload.validoAte ? String(payload.validoAte) : undefined,
     };
 
   } catch {

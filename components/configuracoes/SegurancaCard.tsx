@@ -427,7 +427,8 @@ export default function SegurancaCard() {
                       id="ttl"
                       type="number"
                       min={1}
-                      max={60}
+                      /* Até um dia (1.110): dentro da validade, o mesmo código serve para entrar de novo. */
+                      max={1440}
                       value={draft.minutosDeValidade}
                       onChange={(e) =>
                         setDraft({
@@ -444,6 +445,9 @@ export default function SegurancaCard() {
                       minutos
                     </span>
                   </div>
+                  <p className="mt-1 text-xs text-zinc-500">
+                    Até 1.440 (um dia). Dentro desse tempo, entrar de novo usa o mesmo código — sem pedir outro.
+                  </p>
                 </div>
 
                 <div>

@@ -240,7 +240,14 @@
      * Custo: um `innerText` por ciclo. Os leitores só rodam quando o
      * número muda, que é o trabalho caro.
      */
-    const conteudo = texto();
+    const bruto = texto();
+
+    /*
+      Só a reclamação aberta (1.110): com a lista por trás, ou "outras
+      reclamações do consumidor" na página, o texto inteiro tinha vários
+      COD/ID e a leitura pegava o primeiro — ou desistia, chamando de lista.
+    */
+    const conteudo = CW.ra.recorteDaReclamacao ? CW.ra.recorteDaReclamacao(bruto) : bruto;
 
     const chave = `${location.href}#${CW.ra.id(conteudo)}`;
 
@@ -255,7 +262,7 @@
       tela, a primeira virava "a aberta" e ganhava captura e "Completar".
       Na lista, quem trabalha são os selos (ra-area.js) e o aviso de novas.
     */
-    const pagina = CW.ra.tipoDaPagina ? CW.ra.tipoDaPagina(location.href, conteudo) : { tipo: "reclamacao" };
+    const pagina = CW.ra.tipoDaPagina ? CW.ra.tipoDaPagina(location.href, bruto) : { tipo: "reclamacao" };
 
     if (pagina.tipo === "lista") {
       CW.raUltimaLida = null;
@@ -390,8 +397,14 @@
     */
     if (dados.sozinho) {
       const resultado = await completarAgora(lida);
+      /*
+        A caixa aparece também quando completa sozinho (1.110): "aparecia
+        para completar as informações da reclamação e agora não tem mais".
+        Um aviso de canto passava sem ninguém ver; a caixa mostra o que
+        foi lido e o que entrou, e some sozinha.
+      */
       if (resultado?.ok && resultado.completou.length > 0) {
-        CW.notificar(`${dados.protocolo}: completei ${juntar(resultado.completou)} no quadro.`, "ok");
+        desenharCompletar(lida, dados, resultado.completou);
       } else if (!resultado?.ok) {
         desenharCompletar(lida, dados);
       }
@@ -423,7 +436,7 @@
   }
 
   /** Montado com DOM, e o texto com `textContent`: é dado de consumidor. */
-  function desenharCompletar(lida, dados) {
+  function desenharCompletar(lida, dados, feito = null) {
 
     fecharCompletar();
 
@@ -473,11 +486,15 @@
 
     const titulo = document.createElement("p");
     titulo.className = "titulo";
-    titulo.textContent = `No quadro, ${dados.protocolo} está sem ${dados.descricao}.`;
+    titulo.textContent = feito
+      ? `${dados.protocolo}: completei ${juntar(feito)} no quadro.`
+      : `No quadro, ${dados.protocolo} está sem ${dados.descricao}.`;
 
     const sub = document.createElement("p");
     sub.className = "sub";
-    sub.textContent = "Esta página mostra — confira antes de gravar. Só entra o que está vazio no quadro.";
+    sub.textContent = feito
+      ? "Lido desta página. Só entrou o que estava vazio no quadro — nada preenchido foi trocado."
+      : "Esta página mostra — confira antes de gravar. Só entra o que está vazio no quadro.";
 
     const lista = document.createElement("dl");
 
@@ -538,7 +555,16 @@
       acoes.replaceWith(resultado);
     });
 
-    acoes.append(sim, nao);
+    if (feito) {
+      nao.textContent = "Fechar";
+      acoes.append(nao);
+      const esta = hospedeiroCompletar;
+      setTimeout(() => {
+        if (hospedeiroCompletar === esta) fecharCompletar();
+      }, 15000);
+    } else {
+      acoes.append(sim, nao);
+    }
     caixa.append(titulo, sub, lista, acoes);
     sombra.append(estilo, caixa);
   }

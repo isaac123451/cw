@@ -14,7 +14,7 @@ import {
   remetenteEhSandbox,
 } from "@/lib/email/enviar";
 
-import { lerConfiguracao } from "@/lib/auth/two-factor";
+import { lerConfiguracao, TTL_MAXIMO_MIN } from "@/lib/auth/two-factor";
 
 /** O módulo a que estas ações pertencem — ver lib/auth/modules.ts. */
 const MODULO: Modulo = "configuracoes";
@@ -228,7 +228,7 @@ export async function salvarSeguranca(
       entrada.minutosDeValidade,
       10,
       1,
-      60
+      TTL_MAXIMO_MIN
     ),
     maxAttempts: dentro(entrada.tentativas, 5, 1, 10),
     updatedBy: ctx.userId,

@@ -3,6 +3,7 @@
 import SurfaceCard from "@/components/shared/SurfaceCard";
 
 import { GoalKey, useGoals } from "@/lib/context/GoalsContext";
+import { notaExata } from "@/lib/models/indiceRA";
 
 import {
   ptBR,
@@ -162,8 +163,9 @@ export default function ScoreComposition({
           redistribuídos entre os demais.
         </p>
 
-        <p className="shrink-0 text-sm font-semibold tabular-nums text-zinc-900">
+        <p className="shrink-0 text-sm font-semibold tabular-nums text-zinc-900" title="A nota arredondada, como o portal mostra, e a detalhada com quatro casas">
           = {ptBR(summary.raScore)}
+          {summary.received > 0 && <span className="ml-1.5 text-xs font-normal text-zinc-500">({notaExata(summary.raScoreExato)})</span>}
         </p>
 
       </div>

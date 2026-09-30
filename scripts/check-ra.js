@@ -606,6 +606,28 @@ conferir(
   ra.tipoDaPagina("https://www.reclameaqui.com.br/area-da-empresa/reclamacoes/", "Reclamações\nCOD: uPDvBFKmssmEmxVa\nID: 256949163\nNão respondida\nCOD: NsdEChv5c5jf349B\nID: 256811234\nRespondida").tipo,
   "lista"
 );
+/* 1.110: a reclamação aberta por cima da lista, e com outras do mesmo consumidor. */
+const LISTA_ATRAS = "Reclamações\nCOD: NsdEChv5c5jf349B\nID: 256811234\nRespondida\nCOD: Xy12Ab34Cd56Ef78\nID: 256700001\nNão respondida\n";
+conferir(
+  "página: reclamação aberta com a lista por trás",
+  JSON.stringify(ra.tipoDaPagina("https://www.reclameaqui.com.br/area-da-empresa/reclamacoes/", LISTA_ATRAS + PAGINA)),
+  JSON.stringify({ tipo: "reclamacao", codigo: "uPDvBFKmssmEmxVa" })
+);
+conferir(
+  "recorte: o ID lido é o da reclamação aberta, não o da lista",
+  ra.id(ra.recorteDaReclamacao(LISTA_ATRAS + PAGINA)),
+  "256949163"
+);
+conferir(
+  "página: reclamação com outras do mesmo consumidor embaixo",
+  ra.tipoDaPagina("https://www.reclameaqui.com.br/area-da-empresa/reclamacoes/", PAGINA + "\nOutras reclamações deste consumidor\nCOD: Qw98Er76Ty54Ui32\nID: 255000111").tipo,
+  "reclamacao"
+);
+conferir(
+  "recorte: sem a marca do detalhe, o texto inteiro",
+  ra.recorteDaReclamacao("Painel\nCOD: a1b2c3d4e5f6g7h8"),
+  "Painel\nCOD: a1b2c3d4e5f6g7h8"
+);
 conferir(
   "página: painel sem reclamação",
   ra.tipoDaPagina("https://www.reclameaqui.com.br/area-da-empresa/painel/", "Painel inicial\nReputação RA1000").tipo,

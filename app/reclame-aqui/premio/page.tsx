@@ -3,6 +3,7 @@
 import MainLayout from "@/components/layout/MainLayout";
 import PageHeading from "@/components/shared/PageHeading";
 import PainelDoPremio from "@/components/premio/PainelDoPremio";
+import ModuleNav from "@/components/reclame-aqui/ModuleNav";
 
 /**
  * O Prêmio Reclame Aqui (Fase 23).
@@ -20,6 +21,8 @@ export default function PremioPage() {
           title="Prêmio Reclame Aqui"
           description="A campanha de votação: quem pedir, a mensagem pronta para o WhatsApp e quem já recebeu o pedido."
         />
+        {/* As abas do Reclame Aqui (1.110): a tela do Prêmio não tinha como voltar ao quadro. */}
+        <ModuleNav />
         <PainelDoPremio />
       </div>
     </MainLayout>
