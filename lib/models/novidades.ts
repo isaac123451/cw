@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.103.0",
+    data: "2026-09-30",
+    titulo: "A hora certa de pedir a avaliação",
+    texto: "Na conversa, quando o cliente diz que deu certo e a reclamação dele no Reclame Aqui ainda não tem avaliação, o painel da extensão avisa que é a hora de pedir — com a mensagem pronta e o link, para copiar.",
+    frentes: ["reclame-aqui", "extensao"],
+  },
+  {
     versao: "1.102.0",
     data: "2026-09-30",
     titulo: "Radar de incidente",

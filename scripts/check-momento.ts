@@ -39,6 +39,15 @@ conferir("nossos textos longos: áudio", acao([n("x".repeat(600)), c("ok"), n("y
 conferir("de bom humor e sem sinal: responder", acao([n("Pronto, resolvido"), c("Obrigado, deu certo!")], 5), "responder");
 conferir("sem mensagem do cliente: nada", oQueFazerAgora({ mensagens: [n("Oi")], humor: 3, agora: quarta10h }), null);
 
+/* 1.103: a hora certa de pedir a avaliação. */
+const pendente = { protocolo: "RA-abc", mensagem: "Oi, Ana! ... o link da reclamação é este: https://..." };
+const hora = (msgs: MensagemDoMomento[], humor: 1 | 2 | 3 | 4 | 5, av?: typeof pendente) => oQueFazerAgora({ mensagens: msgs, humor, agora: quarta10h, avaliacaoPendente: av });
+conferir("deu certo + bom humor + RA sem avaliação: pedir avaliação", hora([n("Pronto, resolvido"), c("Obrigado, deu certo!")], 5, pendente)?.acao, "pedir-avaliacao");
+conferir("e a mensagem vai pronta", hora([n("Pronto, resolvido"), c("Funcionou, valeu!")], 4, pendente)?.mensagem, pendente.mensagem);
+conferir("sem reclamação pendente de avaliação: responder", hora([n("Pronto"), c("Obrigado, deu certo!")], 5)?.acao, "responder");
+conferir("humor 3: ainda não é a hora", hora([n("Pronto"), c("obrigado")], 3, pendente)?.acao, "responder");
+conferir("satisfeito lá atrás, reclamando agora: não é a hora", hora([c("obrigado, funcionou"), n("ok"), c("parou de novo"), c("não imprime")], 4, pendente)?.acao, "responder");
+
 console.log("\n  O porquê, o roteiro e a hora\n");
 const m = oQueFazerAgora({ mensagens: [n("Encaminhei"), c("tem previsão?")], humor: 3, agora: quarta10h, historico: { areaAcionada: "Financeiro", areaVenceEm: "25/09 10:00" } })!;
 conferir("porquê cita a área e a pergunta", m.porque, ["o caso está com Financeiro", "o cliente pergunta do andamento"]);

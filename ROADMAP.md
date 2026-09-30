@@ -1116,6 +1116,16 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### A hora certa de pedir avaliação (30/09/2026, 1.103.0)
+
+Fase 31. No painel da extensão na conversa, o "O que fazer" ganhou a regra
+**A hora certa de pedir a avaliação**: o cliente diz que deu certo nas
+últimas mensagens ("funcionou", "obrigado", "deu certo", 👍), o humor está
+bom (4 ou 5) e a reclamação dele no Reclame Aqui já foi respondida e ainda
+não tem avaliação. O painel mostra o porquê, o roteiro e **a mensagem do
+pedido pronta, com o link**, e "Copiar a mensagem" — quem manda é a pessoa.
+Satisfeito lá atrás e reclamando agora não conta. `check:momento` +5.
+
 ### Radar de incidente (30/09/2026, 1.102.0)
 
 Fase 31. No topo do Meu dia, **só quando há um**: três ou mais clientes

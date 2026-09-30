@@ -16,7 +16,7 @@ import { instanteDe, paredeDe } from "@/lib/services/horasUteis";
  * roteiro curto — é sugestão para quem decide, nunca uma ordem.
  */
 
-export type AcaoDoMomento = "escalar" | "escutar" | "assumir" | "esperar-area" | "meet" | "audio" | "responder";
+export type AcaoDoMomento = "escalar" | "escutar" | "assumir" | "esperar-area" | "meet" | "audio" | "pedir-avaliacao" | "responder";
 
 export interface MensagemDoMomento {
   de: "cliente" | "nos";
@@ -32,6 +32,11 @@ export interface EntradaDoMomento {
   agora: Date;
   /** O que a base sabe: reclamações e casos abertos do contato, e a área que está com o caso. */
   historico?: { casosAbertos?: number; reclamacoes?: number; areaAcionada?: string; areaVenceEm?: string };
+  /**
+   * A reclamação do Reclame Aqui ligada à conversa, respondida e ainda sem
+   * avaliação (1.103) — com o texto do pedido pronto.
+   */
+  avaliacaoPendente?: { protocolo: string; mensagem: string };
 }
 
 export interface Momento {
@@ -41,6 +46,8 @@ export interface Momento {
   roteiro: string[];
   /** Fora do horário: responda curto e marque o retorno. */
   foraDoHorario?: boolean;
+  /** O texto pronto para copiar (a hora certa de pedir a avaliação). */
+  mensagem?: string;
 }
 
 const TITULOS: Record<AcaoDoMomento, string> = {
@@ -50,8 +57,12 @@ const TITULOS: Record<AcaoDoMomento, string> = {
   "esperar-area": "Esperar a área — e dizer quando volta",
   meet: "Propor 15 minutos no Meet",
   audio: "Mandar um áudio curto",
+  "pedir-avaliacao": "A hora certa de pedir a avaliação",
   responder: "Responder com o próximo passo",
 };
+
+/** O cliente diz que deu certo — sobre texto normalizado. */
+const SATISFEITO = /\b(funcionou|funcionando|resolveu|resolvid|deu certo|ficou (otimo|perfeito|certo|bom)|obrigad|valeu|perfeito|excelente|maravilha|show|top|agradeco)\b|👍|🙏|❤|😊|😀/;
 
 /** Mensagens seguidas do cliente, no fim, sem resposta nossa no meio. */
 export function rajadaDoCliente(mensagens: MensagemDoMomento[]) {
@@ -163,6 +174,25 @@ export function oQueFazerAgora(e: EntradaDoMomento): Momento | null {
       "Diga o passo a passo devagar, como se estivesse ao lado dele.",
       "Termine perguntando se ficou claro, e mande o resumo em texto logo depois.",
     ]);
+  }
+
+  /*
+    7. A hora certa de pedir a avaliação (Fase 31, 1.103): o cliente diz que
+    deu certo, o humor está bom e a reclamação dele no Reclame Aqui já foi
+    respondida e ainda não tem avaliação. É o momento de maior chance de
+    nota alta — depois, a satisfação esfria e o pedido vira cobrança.
+  */
+  const ultimas = doCliente.slice(-2).map((m) => normalizarTexto(m.texto)).join("\n");
+  if (e.avaliacaoPendente && e.humor >= 4 && SATISFEITO.test(ultimas)) {
+    porque.push("o cliente diz que deu certo", "o humor está bom", `${e.avaliacaoPendente.protocolo} foi respondida e ainda não tem avaliação`);
+    return {
+      ...nome("pedir-avaliacao", [
+        "Agradeça e confirme que ficou tudo certo, com o nome dele.",
+        "Peça a avaliação agora, com o link da reclamação — a mensagem abaixo está pronta.",
+        "Diga que leva um minuto e que ajuda outros restaurantes a confiar.",
+      ]),
+      mensagem: e.avaliacaoPendente.mensagem,
+    };
   }
 
   porque.push(e.humor >= 4 ? "o cliente está bem" : "nenhum sinal pede outra abordagem");

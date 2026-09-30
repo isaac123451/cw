@@ -15,6 +15,7 @@ import {
 } from "@/lib/services/sinaisDaConversa";
 import { nomeDeContato } from "@/lib/models/case";
 import { oQueFazerAgora } from "@/lib/models/oQueFazerAgora";
+import { mensagemDePedidoDeAvaliacao } from "@/lib/models/mensagens";
 import { condicoesNaConversa } from "@/lib/models/impactoNaConversa";
 import { humorDaConversa } from "@/lib/services/motorProprio";
 import { descreverRegistro, prazoUtil } from "@/lib/services/horasUteis";
@@ -131,6 +132,20 @@ export async function POST(request: Request) {
 
   const numero = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? Math.max(0, Math.round(v)) : undefined);
 
+  /* A reclamação respondida e sem avaliação (1.103): a hora certa de pedir. */
+  let avaliacaoPendente: { protocolo: string; mensagem: string } | undefined;
+  if (protocolo && prisma && !demonstracao && protocolo.startsWith("RA-")) {
+    const caso = await prisma.case
+      .findUnique({ where: { protocol: protocolo }, select: { protocol: true, customer: true, evaluated: true, publicResponse: true, externalUrl: true, pedidosDeAvaliacao: true } })
+      .catch(() => null);
+    if (caso && !caso.evaluated && (caso.publicResponse ?? "").trim()) {
+      avaliacaoPendente = {
+        protocolo: caso.protocol,
+        mensagem: mensagemDePedidoDeAvaliacao({ nome: caso.customer, numero: (caso.pedidosDeAvaliacao ?? 0) + 1, raUrl: caso.externalUrl ?? undefined, agente: usuario?.nome }),
+      };
+    }
+  }
+
   return responder(request, {
     avisos: avisosDaConversa(mensagens, indice),
     completar,
@@ -146,6 +161,7 @@ export async function POST(request: Request) {
         areaAcionada: area?.nome,
         areaVenceEm: area?.venceEm,
       },
+      avaliacaoPendente,
     }),
   });
 }

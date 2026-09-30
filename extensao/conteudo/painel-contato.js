@@ -1645,11 +1645,22 @@
         ${agora.porque?.length ? `<p class="agora-porque">Porque ${CW.escapar(agora.porque.join(", "))}.</p>` : ""}
         <ol class="agora-roteiro">${(agora.roteiro ?? []).map((r) => `<li>${CW.escapar(r)}</li>`).join("")}</ol>
         ${agora.foraDoHorario ? `<p class="agora-porque">Fora do expediente: responda curto agora, diga quando volta e marque o retorno na agenda.</p>` : ""}
+        ${agora.mensagem ? `<p class="agora-porque" style="white-space:pre-wrap;margin-top:6px">${CW.escapar(agora.mensagem)}</p><button type="button" class="copiar" data-acao="copiar-mensagem-do-momento" style="margin-top:6px">Copiar a mensagem</button>` : ""}
       </details>`
     );
   }
 
   P.desenharAgora = desenharAgora;
+
+  /* Copiar a mensagem do momento (1.103) — quem manda é a pessoa, com Enter. */
+  document.addEventListener("click", (ev) => {
+    const botao = ev.composedPath?.().find((el) => el?.dataset?.acao === "copiar-mensagem-do-momento");
+    if (!botao) return;
+    const texto = botao.previousElementSibling?.textContent ?? "";
+    navigator.clipboard?.writeText(texto).then(() => {
+      botao.textContent = "Copiada — cole na conversa";
+    });
+  }, true);
 
   /**
    * O impacto que a conversa mostra (Fase 28): desconto, meses sem
