@@ -1731,6 +1731,12 @@ model OperacaoConfig {
   prazoAreaAlta    Int @default(24)
   prazoAreaNormal  Int @default(48)
 
+  /// O relatório que chega sozinho (1.105): para quem a rotina da madrugada
+  /// manda o relatório do ciclo que acabou. Vazio, nada é enviado.
+  relatorioPara         String[] @default([])
+  /// O último ciclo enviado — uma vez por ciclo, mesmo com a rotina rodando de novo.
+  relatorioEnviadoCiclo String?
+
   updatedAt DateTime @updatedAt
   updatedBy String?
 }

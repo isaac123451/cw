@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.105.0",
+    data: "2026-09-30",
+    titulo: "O relatório do ciclo chega por e-mail",
+    texto: "Na tela do Relatório, cadastre os e-mails em Envio automático: a cada ciclo, o relatório do ciclo que acabou chega sozinho na madrugada, sem ninguém abrir a plataforma.",
+    frentes: ["plataforma"],
+  },
+  {
     versao: "1.104.0",
     data: "2026-09-30",
     titulo: "Voz do cliente para o Produto",

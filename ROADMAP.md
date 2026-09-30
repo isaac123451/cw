@@ -1116,6 +1116,19 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### O relatório que chega sozinho (30/09/2026, 1.105.0)
+
+Fase 30. Na tela do Relatório, **Envio automático**: os e-mails que
+recebem o relatório do ciclo que acabou, mandado pela rotina da madrugada
+no primeiro dia do ciclo seguinte — o mesmo texto do "Copiar para o
+Slack", uma vez por ciclo (`OperacaoConfig.relatorioPara` e
+`relatorioEnviadoCiclo`). **Vazio, nada é enviado** (é como está hoje:
+nenhum destinatário cadastrado). O cartão avisa quando o remetente ainda é
+o de teste do Resend (só entrega ao dono da conta — falta o DNS do
+domínio). Para montar sem sessão, a leitura do NPS e a montagem do
+relatório viraram serviços (`npsLista.service`, `relatorioDoBanco.service`).
+Slack fica pela extensão, como decidido no Roadmap 2.0.
+
 ### Voz do cliente para o Produto (30/09/2026, 1.104.0)
 
 Fase 31. No topo de **Causas raiz**, por mês: as cinco causas que mais

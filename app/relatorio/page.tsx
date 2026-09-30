@@ -1,6 +1,7 @@
 import MainLayout from "@/components/layout/MainLayout";
 
 import RelatorioDoCiclo from "@/components/relatorio/RelatorioDoCiclo";
+import EnvioAutomatico from "@/components/relatorio/EnvioAutomatico";
 
 /**
  * O Relatório de Reputação do ciclo — a atividade semanal da rotina
@@ -11,6 +12,7 @@ export default function RelatorioPage() {
   return (
     <MainLayout>
       <RelatorioDoCiclo />
+      <EnvioAutomatico />
     </MainLayout>
   );
 }

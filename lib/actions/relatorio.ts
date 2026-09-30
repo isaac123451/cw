@@ -2,20 +2,15 @@
 
 import * as XLSX from "xlsx";
 
-import type { PrismaClient } from "@prisma/client";
-
 import { requireRole, SemPermissao, tryRole } from "@/lib/auth/guard";
+import { podeEnviarEmail, remetenteEhSandbox } from "@/lib/email/enviar";
 import type { Modulo } from "@/lib/auth/modules";
 
-import { listNpsResponses } from "@/lib/actions/nps";
 import { lerMetricas } from "@/lib/actions/metricas";
-import { cicloDe, cicloPorId, ciclosAte, type Ciclo } from "@/lib/models/ciclo";
-import { fetchCases } from "@/lib/services/case.repository";
-import { lerPaineis } from "@/lib/services/painelDoPortal.service";
-import { slaRuleDoBanco } from "@/lib/models/sla";
-import { lerExpediente } from "@/lib/services/operacao.service";
+import { cicloDe, cicloPorId, ciclosAte } from "@/lib/models/ciclo";
+import { montarRelatorioDoBanco } from "@/lib/services/relatorioDoBanco.service";
 import { formatElapsed, hojeNaOperacao, ptBR, RA1000_TARGETS } from "@/lib/services/reputation.service";
-import { montarRelatorio, textoDoRelatorio, type DadosDoRelatorio, type GoogleDoRelatorio } from "@/lib/services/relatorio.service";
+import { textoDoRelatorio, type DadosDoRelatorio } from "@/lib/services/relatorio.service";
 
 /**
  * O Relatório de Reputação do ciclo: ler, salvar o que foi enviado e
@@ -46,31 +41,6 @@ export interface RelatorioLido {
   ciclos: CicloNaLista[];
 }
 
-async function montar(prisma: PrismaClient, ciclo: Ciclo) {
-  const [cases, nps, google, regras, expediente, paineis] = await Promise.all([
-    fetchCases(prisma),
-    listNpsResponses(),
-    prisma.avaliacaoGoogle.findMany({
-      select: { id: true, estrelas: true, classificacao: true, publicadaEm: true, respondidaEm: true, notaAtualizada: true, status: true },
-    }),
-    /* As regras e o expediente: é com eles que o 1º contato vira "no prazo". */
-    prisma.slaRule.findMany().then((linhas) => linhas.map(slaRuleDoBanco)),
-    lerExpediente(prisma),
-    lerPaineis(prisma).then((p) => p.atuais).catch(() => ({})),
-  ]);
-
-  const doGoogle: GoogleDoRelatorio[] = google.map((g) => ({
-    id: g.id,
-    estrelas: g.estrelas,
-    classificacao: g.classificacao as GoogleDoRelatorio["classificacao"],
-    publicadaEm: g.publicadaEm.toISOString(),
-    respondidaEm: g.respondidaEm?.toISOString(),
-    notaAtualizada: g.notaAtualizada ?? undefined,
-    status: g.status as GoogleDoRelatorio["status"],
-  }));
-
-  return montarRelatorio({ cases, nps, google: doGoogle, ciclo, hoje: hojeNaOperacao(), regras, expediente, paineis });
-}
 
 /** O relatório de um ciclo — o corrente, quando nenhum é pedido. */
 export async function lerRelatorio(cicloId?: string): Promise<RelatorioLido | Falha> {
@@ -85,7 +55,7 @@ export async function lerRelatorio(cicloId?: string): Promise<RelatorioLido | Fa
 
   try {
     const [dados, salvos] = await Promise.all([
-      montar(ctx.prisma, ciclo),
+      montarRelatorioDoBanco(ctx.prisma, ciclo),
       ctx.prisma.relatorioDoCiclo.findMany({ select: { ciclo: true, texto: true, salvoPor: true, atualizadoEm: true } }),
     ]);
 
@@ -127,7 +97,7 @@ export async function salvarRelatorio(entrada: { ciclo: string; texto: string })
   if (!ctx) return { ok: false, erro: "Sem banco configurado — nada é gravado no modo demonstração." };
 
   try {
-    const dados = await montar(ctx.prisma, ciclo);
+    const dados = await montarRelatorioDoBanco(ctx.prisma, ciclo);
     const quem = await ctx.prisma.user.findUnique({ where: { id: ctx.userId }, select: { name: true } });
     const r = await ctx.prisma.relatorioDoCiclo.upsert({
       where: { ciclo: ciclo.id },
@@ -220,4 +190,32 @@ export async function exportarRelatorio(cicloId: string): Promise<{ ok: true; ar
   const buffer = XLSX.write(book, { type: "buffer", bookType: "xlsx" }) as Buffer;
 
   return { ok: true, arquivo: buffer.toString("base64"), nome: `relatorio-reputacao-${d.ciclo.id}.xlsx` };
+}
+
+/* ============================================================
+   O RELATÓRIO QUE CHEGA SOZINHO (1.105)
+============================================================ */
+
+/** Para quem a rotina da madrugada manda o relatório do ciclo, e o último enviado. */
+export async function lerEnvioDoRelatorio(): Promise<{ ok: true; para: string[]; enviadoCiclo: string | null; sandbox: boolean; semProvedor: boolean } | Falha> {
+  const ctx = await tryRole("LEITURA", MODULO);
+  if (!ctx) return { ok: false, erro: "Sem banco configurado." };
+  const c = await ctx.prisma.operacaoConfig.findUnique({ where: { id: "unico" }, select: { relatorioPara: true, relatorioEnviadoCiclo: true } });
+  return { ok: true, para: c?.relatorioPara ?? [], enviadoCiclo: c?.relatorioEnviadoCiclo ?? null, sandbox: remetenteEhSandbox(), semProvedor: !podeEnviarEmail() };
+}
+
+export async function salvarEnvioDoRelatorio(para: string[]): Promise<{ ok: true; para: string[] } | Falha> {
+  let ctx;
+  try {
+    ctx = await requireRole("AGENTE", MODULO);
+  } catch (erro) {
+    return { ok: false, erro: erro instanceof SemPermissao ? erro.message : "Não foi possível confirmar sua sessão." };
+  }
+  if (!ctx) return { ok: false, erro: "Sem banco configurado." };
+  const limpos = [...new Set(para.map((e) => e.trim().toLowerCase()).filter(Boolean))];
+  const invalido = limpos.find((e) => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
+  if (invalido) return { ok: false, erro: `"${invalido}" não é um e-mail.` };
+  if (limpos.length > 10) return { ok: false, erro: "No máximo 10 destinatários." };
+  await ctx.prisma.operacaoConfig.upsert({ where: { id: "unico" }, update: { relatorioPara: limpos }, create: { id: "unico", relatorioPara: limpos } });
+  return { ok: true, para: limpos };
 }

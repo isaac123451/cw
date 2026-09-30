@@ -35,6 +35,7 @@ import { importarDoWootric } from "@/lib/services/wootric.import";
 import { temWootric } from "@/lib/services/wootric.service";
 import { abrirReincidenciasComDono } from "@/lib/services/reincidencia.service";
 import { guardarBackupDoDia } from "@/lib/services/backup.service";
+import { enviarRelatorioDoCiclo } from "@/lib/services/relatorioAutomatico.service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -152,6 +153,7 @@ export async function GET(request: Request) {
     metricasDeHoje,
     reincidencias,
     backup,
+    relatorio,
   ] = await Promise.all([
     /*
       Depois de encerrar, o Wootric: o que fechou agora e o que a ficha
@@ -226,6 +228,9 @@ export async function GET(request: Request) {
 
     /* A cópia do dia fora do banco (1.99) — liga com SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY. */
     protegida("backup", () => guardarBackupDoDia(prisma)),
+
+    /* O relatório do ciclo que acabou, para quem está cadastrado (1.105). */
+    protegida("relatorio", () => enviarRelatorioDoCiclo(prisma)),
   ]);
 
   /**
@@ -276,6 +281,7 @@ export async function GET(request: Request) {
       metricasDeHoje,
       reincidencias,
       backup,
+      relatorio,
     },
     { status: falhas.length === 0 ? 200 : 500 }
   );
