@@ -60,7 +60,7 @@ export interface AchadoDoRascunho {
  * "Segue o procedimento" não tem nenhuma delas.
  */
 const VALIDACAO =
-  /\b(sinto|lamento|entendo|compreendo|desculp|peço desculpas|pedimos desculpas|transtorno|inc[oô]modo|frustra|chatead|raz[ãa]o|obrigad)/i;
+  /\b(sinto|lament(o|amos)|entendo|compreendo|desculp|peço desculpas|pedimos desculpas|transtorno|inc[oô]modo|frustra|chatead|raz[ãa]o|obrigad)/i;
 
 /**
  * Promessa de prazo em número.

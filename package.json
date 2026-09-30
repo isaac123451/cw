@@ -1,6 +1,6 @@
 {
   "name": "cw-reputacao",
-  "version": "1.93.0",
+  "version": "1.94.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -60,6 +60,7 @@
     "check:cancelamento": "tsx scripts/check-cancelamento.ts",
     "check:por-ciclo": "tsx --env-file=.env scripts/check-por-ciclo.ts",
     "check:relatorio": "tsx --env-file=.env scripts/check-relatorio.ts",
+    "check:analista": "tsx --env-file=.env scripts/check-analista.ts",
     "medir:sugestao": "tsx scripts/medir-sugestao.ts",
     "check:segmentos-redes": "tsx scripts/check-segmentos-redes.ts",
     "check:motor-proprio": "tsx scripts/check-motor-proprio.ts",

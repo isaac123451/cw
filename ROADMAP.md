@@ -1116,6 +1116,29 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Analista de respostas públicas (30/09/2026, 1.94.0)
+
+Fase 35 item 5. "Quero um analista de respostas públicas: que aponte erros
+e o que dá para melhorar."
+
+- **As regras num lugar só** (`lib/models/analistaDeRespostas.ts`): as do
+  rascunho (nome, acolhimento, dado pessoal, texto repetido, prazo) mais as
+  da resposta pública — por onde o cliente segue, convite a avaliar,
+  assinatura, tamanho (200–1600), tom defensivo e "resolvido" antes de o
+  cliente confirmar (cobrado só do que chegou depois do registro de
+  validação). Nota de 0 a 100: erro tira 25, melhoria tira 8.
+- **Antes de publicar:** na ficha, embaixo do rascunho; na extensão, no
+  aviso acima da caixa de resposta da área da empresa.
+- **Depois de publicar:** tela **Reclame Aqui → Respostas** — as do
+  período (30/90/180 dias), a pior primeiro, com o que mais se repete
+  clicável. Medido em 90 dias: 49 respostas, nota média 67; o hábito que
+  mais pesa é o texto repetido (38 — a resposta padrão de encerramento) e a
+  falta de acolhimento (36).
+- **O e-mail da empresa não é dado pessoal:** "suporte@cardapioweb.com"
+  acendia dado pessoal em 36 de 49 respostas; domínio da empresa passa
+  (`LGPD_DOMINIOS_DA_EMPRESA` para outros). "lamentamos" passou a contar
+  como acolhimento. `check:analista` (8 pontos + a base real).
+
 ### Relatório do ciclo corrigido, e a avaliação fecha o caso (30/09/2026, 1.93.0)
 
 Fase 37 item 5. "O relatório do ciclo tem muita coisa incorreta."

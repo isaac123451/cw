@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.94.0",
+    data: "2026-09-30",
+    titulo: "Analista de respostas públicas",
+    texto: "Nova tela Reclame Aqui → Respostas: cada resposta publicada com nota e o que melhorar, a pior primeiro, e o que mais se repete na equipe. As mesmas regras avisam antes de publicar, na ficha e na extensão — nome, acolhimento, próximo passo, convite a avaliar, assinatura, tom e dado pessoal.",
+    frentes: ["reclame-aqui", "extensao"],
+  },
+  {
     versao: "1.93.0",
     data: "2026-09-30",
     titulo: "Relatório do ciclo com os números certos",

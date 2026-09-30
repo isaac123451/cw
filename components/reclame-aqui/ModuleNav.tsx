@@ -13,6 +13,7 @@ import {
   Star,
   Trophy,
   Gauge,
+  MessageSquareText,
 } from "lucide-react";
 
 interface Item {
@@ -52,6 +53,12 @@ const items: Item[] = [
     href: "/reclame-aqui/analytics",
     icon: BarChart3,
     hint: "Nota RA, indicadores e diagnóstico",
+  },
+  {
+    label: "Respostas",
+    href: "/reclame-aqui/respostas",
+    icon: MessageSquareText,
+    hint: "O analista de respostas públicas: erros e o que melhorar",
   },
   {
     label: "Gráficos",

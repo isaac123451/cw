@@ -22,6 +22,7 @@ import { useSession } from "@/lib/context/SessionContext";
 import { useCases } from "@/lib/context/CaseContext";
 import { campoDeParede, descreverRegistro, instanteDeParede } from "@/lib/services/horasUteis";
 import { RESPOSTA_SINTETICA } from "@/lib/services/raMarcadores";
+import { analisarResposta } from "@/lib/models/analistaDeRespostas";
 import { dadosSensiveis, resumoDosAchados } from "@/lib/services/lgpd";
 import { hojeNaOperacao } from "@/lib/services/reputation.service";
 
@@ -330,6 +331,18 @@ export default function EvaluationTab({
 
   const achados = useMemo(() => dadosSensiveis(rascunho), [rascunho]);
 
+  /* O analista (1.94): o resto do documento — dado pessoal e texto repetido já estão na conferência acima. */
+  const doAnalista = useMemo(
+    () =>
+      rascunho.length < 40
+        ? []
+        : analisarResposta(rascunho, {
+            nome: data.customer,
+            validado: data.createdAt < INICIO_DA_TRILHA ? undefined : Boolean(data.validadoEm),
+          }).achados.filter((a) => a.tipo !== "dado-pessoal" && a.tipo !== "parece-macro"),
+    [rascunho, data.customer, data.createdAt, data.validadoEm]
+  );
+
   /* Reclamação anterior ao registro de contatos não tem validação para mostrar. */
   const semValidacao = !data.validadoEm && data.createdAt >= INICIO_DA_TRILHA;
 
@@ -412,6 +425,17 @@ export default function EvaluationTab({
           />
 
           <ConferenciaDaResposta texto={rascunho} protocol={data.protocol} achados={achados} />
+
+          {doAnalista.length > 0 && (
+            <ul className="mt-2 space-y-1 rounded-xl bg-zinc-50 px-3.5 py-2.5 text-xs leading-relaxed ring-1 ring-inset ring-zinc-200" aria-label="O analista de respostas">
+              {doAnalista.map((a) => (
+                <li key={a.tipo} className={a.tom === "perigo" ? "font-medium text-rose-700" : "text-zinc-600"}>
+                  {a.tom === "perigo" ? "Erro: " : ""}
+                  {a.texto}
+                </li>
+              ))}
+            </ul>
+          )}
 
           {confirmando && pendencias.length > 0 && (
             <div className="mt-3 rounded-xl bg-zinc-50 px-3.5 py-3 text-xs leading-relaxed text-zinc-700 ring-1 ring-inset ring-zinc-200">

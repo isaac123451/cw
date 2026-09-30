@@ -139,13 +139,25 @@
       );
     }
 
+    /* O analista de respostas públicas (1.94): um ponto por linha, o erro antes. */
+    const analise = Array.isArray(d.analise) ? d.analise : [];
+    if (analise.length > 0) {
+      partes.push(
+        `<div style="margin-top:4px"><strong>Analista:</strong><ul style="margin:2px 0 0 16px;padding:0">${analise
+          .slice(0, 6)
+          .map((a) => `<li>${a.tom === "perigo" ? "<strong>Erro:</strong> " : ""}${CW.escapar(a.texto)}</li>`)
+          .join("")}</ul></div>`
+      );
+    }
+
     if (partes.length === 0) {
-      partes.push('<div>Sem dado pessoal e sem texto repetido. Pode publicar.</div>');
+      partes.push('<div>Sem dado pessoal, sem texto repetido e segue o documento. Pode publicar.</div>');
     }
 
     caixa.innerHTML = partes.join("");
     caixa.style.display = "block";
-    pintar(caixa, d.achados?.length > 0 ? "perigo" : d.repetida ? "atencao" : "ok");
+    const erroDoAnalista = analise.some((a) => a.tom === "perigo");
+    pintar(caixa, d.achados?.length > 0 || erroDoAnalista ? "perigo" : d.repetida || analise.length > 0 ? "atencao" : "ok");
   }
 
   function ligar(el) {

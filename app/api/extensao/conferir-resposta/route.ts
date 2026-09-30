@@ -11,7 +11,8 @@ import { loadWorkspace } from "@/lib/actions/workspace";
 import { fetchCaseByProtocol } from "@/lib/services/case.repository";
 import { dadosSensiveis, resumoDosAchados, semelhanca } from "@/lib/services/lgpd";
 import { slaStatus } from "@/lib/services/sla.service";
-import { trilhaDoCaso } from "@/lib/models/trilha";
+import { INICIO_DA_TRILHA, trilhaDoCaso } from "@/lib/models/trilha";
+import { analisarResposta } from "@/lib/models/analistaDeRespostas";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -97,6 +98,17 @@ export async function POST(request: Request) {
     achados,
     resumo: achados.length > 0 ? resumoDosAchados(dadosSensiveis(texto)) : "",
     repetida,
+
+    /*
+      O analista (1.94): o que o documento pede além de dado pessoal e texto
+      repetido — nome, acolhimento, por onde o cliente segue, convite a
+      avaliar, assinatura, tamanho, tom defensivo, "resolvido" sem o cliente
+      confirmar. Os dois primeiros já vão acima; aqui vai o resto.
+    */
+    analise: analisarResposta(texto, {
+      nome: caso?.customer,
+      validado: caso ? (caso.createdAt < INICIO_DA_TRILHA ? undefined : Boolean(caso.validadoEm)) : undefined,
+    }).achados.filter((a) => a.tipo !== "dado-pessoal" && a.tipo !== "parece-macro"),
 
     /** O passo e o prazo da reclamação aberta, para o aviso dizer onde ela está. */
     caso: caso

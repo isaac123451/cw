@@ -86,6 +86,21 @@ export function cpfValido(digitos: string) {
 }
 
 /** Os trechos a revisar, na ordem do texto, sem sobreposição. */
+/**
+ * O contato da própria empresa não é dado pessoal (1.94).
+ *
+ * A resposta padrão da operação fecha com "suporte@cardapioweb.com" — o
+ * detector acusava dado pessoal em 36 de 49 respostas publicadas por causa
+ * dele. E-mail do domínio da empresa (e `LGPD_DOMINIOS_DA_EMPRESA`, se
+ * houver outros) passa.
+ */
+const DOMINIOS_DA_EMPRESA = ["cardapioweb.com", "cardapioweb.com.br", ...String(process.env.LGPD_DOMINIOS_DA_EMPRESA ?? "").split(",").map((d) => d.trim().toLowerCase()).filter(Boolean)];
+
+function eDaEmpresa(email: string) {
+  const dominio = email.toLowerCase().split("@")[1] ?? "";
+  return DOMINIOS_DA_EMPRESA.some((d) => dominio === d || dominio.endsWith(`.${d}`));
+}
+
 export function dadosSensiveis(texto: string): AchadoLgpd[] {
 
   const achados: AchadoLgpd[] = [];
@@ -95,6 +110,8 @@ export function dadosSensiveis(texto: string): AchadoLgpd[] {
 
       const inicio = m.index ?? 0;
       const fim = inicio + m[0].length;
+
+      if (regra.tipo === "email" && eDaEmpresa(m[0])) continue;
 
       /* Telefone curto demais é ano, número de pedido ou protocolo. */
       if (regra.tipo === "telefone" && m[0].replace(/\D/g, "").length < 10) continue;
