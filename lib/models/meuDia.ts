@@ -665,8 +665,10 @@ export function contarRotina(
     .filter((t) => !t.done && t.dueDate <= hoje)
     .map((t) => ({
       id: t.id,
+      /* A frente escolhida na atividade (1.98) — sem ela, "geral". */
+      ...(t.frente ? { frente: t.frente } : {}),
       titulo: t.title,
-      detalhe: t.time ? `${t.dueDate.split("-").reverse().slice(0, 2).join("/")} ${t.time}` : t.dueDate.split("-").reverse().slice(0, 2).join("/"),
+      detalhe: [t.time ? `${t.dueDate.split("-").reverse().slice(0, 2).join("/")} ${t.time}` : t.dueDate.split("-").reverse().slice(0, 2).join("/"), t.owner, t.relatedCase].filter(Boolean).join(" · "),
       href: "/agenda",
       atrasado: t.dueDate < hoje,
     }));

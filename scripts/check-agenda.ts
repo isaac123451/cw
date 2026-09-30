@@ -16,7 +16,7 @@ import { PRAZOS_DA_DOCUMENTACAO, type SlaRule } from "../lib/models/sla";
 import { atrasadosDaAgenda, compromissosEntre } from "../lib/models/compromissos";
 import { instanteDe } from "../lib/services/horasUteis";
 import { entenderLinha } from "../lib/models/linhaDaAgenda";
-import { combinadoNaMensagem } from "../lib/models/lembretesAutomaticos";
+import { combinadoNaMensagem, pedidoNaMensagem, reuniaoNaMensagem } from "../lib/models/lembretesAutomaticos";
 import { adiarLembrete, chaveDoAviso, lembretesNaHora } from "../lib/models/lembretes";
 
 let falhas = 0;
@@ -132,6 +132,13 @@ console.log("\n  Criar em uma linha\n");
   conferir("protocolo que não existe não liga", ver("ligar RA-999")?.[4], null);
   conferir("só data e hora, sem o que fazer: nada", entenderLinha("amanhã 10h", "2026-09-16", prot), null);
   conferir("31/11 não existe: fica no título", ver("31/11 ver isso")?.[0], "2026-09-16");
+
+  /* 1.98: a frente, do protocolo ou da palavra. */
+  const frente = (t: string) => entenderLinha(t, "2026-09-16", prot)?.frente ?? null;
+  conferir("frente: RA-123 é Reclame Aqui", frente("ligar RA-123"), "reclame-aqui");
+  conferir("frente: detrator é NPS", frente("amanhã retornar detrator da Ana"), "nps");
+  conferir("frente: google e instagram", [frente("responder avaliação do google"), frente("olhar direct do instagram")], ["google", "redes"]);
+  conferir("frente: sem pista, geral", frente("conferir planilha"), null);
 }
 
 console.log("\n  O lembrete que nasce da conversa\n");
@@ -146,6 +153,16 @@ console.log("\n  O lembrete que nasce da conversa\n");
   conferir("sem dia nem hora não é agendamento", ver("Vou verificar e te retorno"), null);
   conferir("dia sem promessa nossa não é", ver("Amanhã às 10h eu estou na loja"), null);
   conferir("o trecho é a frase da promessa", combinadoNaMensagem("Obrigado! Te ligo amanhã às 10h.", "2026-09-16")?.trecho, "Te ligo amanhã às 10h.");
+
+  /* 1.98: o pedido do cliente e a reunião. */
+  const pedido = (t: string) => { const p = pedidoNaMensagem(t, "2026-09-16"); return p && [p.dueDate, p.time ?? null]; };
+  const reuniao = (t: string) => { const r = reuniaoNaMensagem(t, "2026-09-16"); return r && [r.dueDate, r.time ?? null]; };
+  conferir("cliente: \"me liga amanhã às 15h\"", pedido("Oi, pode me ligar amanhã às 15h?"), ["2026-09-17", "15:00"]);
+  conferir("cliente: \"manda o boleto até sexta\"", pedido("Me manda o boleto até sexta, por favor"), ["2026-09-18", null]);
+  conferir("cliente sem dia nem hora não é pedido agendado", pedido("Me liga quando der"), null);
+  conferir("reunião: \"call na segunda às 14h\"", reuniao("Fechado, marcamos uma call na segunda às 14h"), ["2026-09-21", "14:00"]);
+  conferir("reunião sem hora nem dia não vira compromisso", reuniao("Vamos marcar uma reunião"), null);
+  conferir("reunião na linha única vira o tipo Reunião", entenderLinha("reunião com o financeiro quinta 10h", "2026-09-16")?.type, "Reunião");
 }
 
 console.log(falhas === 0 ? "\n  A Agenda junta o dia inteiro.\n" : `\n  ${falhas} ponto(s) a corrigir.\n`);

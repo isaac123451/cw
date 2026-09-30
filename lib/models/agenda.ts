@@ -3,7 +3,9 @@ export type TaskType =
   | "Cobrança interna"
   | "Solicitação de avaliação"
   | "Pendência"
-  | "Recorrente";
+  | "Recorrente"
+  /** Compromisso com hora marcada — o que vai para a Agenda do Google (1.98). */
+  | "Reunião";
 
 export interface AgendaTask {
   id: string;
@@ -25,4 +27,7 @@ export interface AgendaTask {
   relatedCase?: string;
 
   relatedCompany?: string;
+
+  /** A frente (1.98); vazia é geral. */
+  frente?: "reclame-aqui" | "redes" | "nps" | "google";
 }

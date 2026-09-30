@@ -28,6 +28,10 @@ const TIPOS: { id: TaskType; hint: string }[] = [
     hint: "Acionar outra área que está segurando o caso.",
   },
   {
+    id: "Reunião",
+    hint: "Compromisso com hora marcada — dá para levar à Agenda do Google.",
+  },
+  {
     id: "Solicitação de avaliação",
     hint: "Pedir a nota ao consumidor após a solução.",
   },
@@ -147,6 +151,11 @@ export default function TaskForm({
 
   }, [cases, caseSearch]);
 
+  /* A frente (1.98): do caso vinculado, quando há; senão, escolhida. */
+  const [frente, setFrente] = useState<AgendaTask["frente"] | "">(
+    editing?.frente ?? (presetCase ? (presetCase.protocol.startsWith("RA-") ? "reclame-aqui" : "redes") : "")
+  );
+
   const valido =
     title.trim() !== "" &&
     dueDate !== "" &&
@@ -166,6 +175,7 @@ export default function TaskForm({
       done: editing?.done ?? false,
       relatedCase: caseProtocol || undefined,
       relatedCompany: company || undefined,
+      frente: frente || (caseProtocol ? (caseProtocol.startsWith("RA-") ? "reclame-aqui" : "redes") : undefined),
     };
 
     onSave(
@@ -284,6 +294,32 @@ export default function TaskForm({
           </Field>
 
         </div>
+
+        <Field label="Frente" hint="Em que frente do Meu dia a atividade entra. Com reclamação vinculada, vem dela.">
+          <div className="flex flex-wrap gap-1.5">
+            {(
+              [
+                ["", "Geral"],
+                ["reclame-aqui", "Reclame Aqui"],
+                ["redes", "Redes Sociais"],
+                ["nps", "NPS"],
+                ["google", "Google"],
+              ] as const
+            ).map(([id, rotulo]) => (
+              <button
+                key={id || "geral"}
+                type="button"
+                onClick={() => setFrente(id)}
+                aria-pressed={frente === id}
+                className={`rounded-lg px-3 py-1.5 text-xs font-medium ring-1 ring-inset transition-colors ${
+                  frente === id ? "bg-violet-50 text-violet-800 ring-violet-300" : "text-zinc-600 ring-zinc-200 hover:bg-zinc-50"
+                }`}
+              >
+                {rotulo}
+              </button>
+            ))}
+          </div>
+        </Field>
 
         <Field label="Responsável">
           <select

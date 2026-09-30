@@ -4,7 +4,7 @@ import { updateTag } from "next/cache";
 
 import { requireRole, SemPermissao } from "@/lib/auth/guard";
 import type { AgendaTask } from "@/lib/models/agenda";
-import { combinadoNaMensagem, idDoLembrete } from "@/lib/models/lembretesAutomaticos";
+import { combinadoNaMensagem, idDoLembrete, pedidoNaMensagem, reuniaoNaMensagem } from "@/lib/models/lembretesAutomaticos";
 import { lerExpediente } from "@/lib/services/operacao.service";
 import { movementStatus } from "@/lib/services/movement.service";
 import { paredeDe } from "@/lib/services/horasUteis";
@@ -45,8 +45,9 @@ export async function gerarLembretesAutomaticos(): Promise<{ ok: true; criados: 
         take: 300,
       }),
       prisma.mensagemDaConversa.findMany({
-        where: { de: "nos", em: { gte: new Date(agora.getTime() - JANELA_DAS_CONVERSAS_DIAS * 86_400_000) } },
-        select: { id: true, texto: true, em: true, conversa: { select: { contatoNome: true, case: { select: { id: true, protocol: true } } } } },
+        /* As nossas (o combinado) e, desde a 1.98, as do cliente (o pedido e a reunião). */
+        where: { em: { gte: new Date(agora.getTime() - JANELA_DAS_CONVERSAS_DIAS * 86_400_000) } },
+        select: { id: true, de: true, texto: true, em: true, conversa: { select: { contatoNome: true, case: { select: { id: true, protocol: true } } } } },
         take: 500,
       }),
       prisma.user.findUnique({ where: { id: ctx.userId }, select: { id: true, name: true } }),
@@ -76,11 +77,46 @@ export async function gerarLembretesAutomaticos(): Promise<{ ok: true; criados: 
 
     for (const m of mensagens) {
       if (!m.em) continue;
-      const c = combinadoNaMensagem(m.texto, paredeDe(m.em).dia);
+      const dia = paredeDe(m.em).dia;
+      const quem = m.conversa.contatoNome ? ` com ${m.conversa.contatoNome}` : "";
+
+      /* Reunião combinada, de qualquer lado: vira compromisso (e pode ir ao Google pelo aviso). */
+      const r = reuniaoNaMensagem(m.texto, dia);
+      if (r && r.dueDate >= hoje) {
+        candidatos.push({
+          id: idDoLembrete("reuniao", m.id),
+          title: `Reunião${quem}: “${r.trecho}”`,
+          type: "Reunião",
+          dueDate: r.dueDate,
+          time: r.time,
+          caseId: m.conversa.case?.id,
+          protocolo: m.conversa.case?.protocol,
+        });
+        continue;
+      }
+
+      /* O pedido do cliente com dia ou hora vira atividade. */
+      if (m.de !== "nos") {
+        const p = pedidoNaMensagem(m.texto, dia);
+        if (p && p.dueDate >= hoje) {
+          candidatos.push({
+            id: idDoLembrete("pedido", m.id),
+            title: `Pedido${m.conversa.contatoNome ? ` de ${m.conversa.contatoNome}` : ""}: “${p.trecho}”`,
+            type: "Follow-up",
+            dueDate: p.dueDate,
+            time: p.time,
+            caseId: m.conversa.case?.id,
+            protocolo: m.conversa.case?.protocol,
+          });
+        }
+        continue;
+      }
+
+      const c = combinadoNaMensagem(m.texto, dia);
       if (!c || c.dueDate < hoje) continue;
       candidatos.push({
         id: idDoLembrete("conversa", m.id),
-        title: `Retorno combinado${m.conversa.contatoNome ? ` com ${m.conversa.contatoNome}` : ""}: “${c.trecho}”`,
+        title: `Retorno combinado${quem}: “${c.trecho}”`,
         type: "Follow-up",
         dueDate: c.dueDate,
         time: c.time,

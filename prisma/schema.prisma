@@ -817,6 +817,11 @@ model AgendaTask {
   caseId String?
   case   Case?   @relation(fields: [caseId], references: [id])
 
+  /// A frente da atividade (1.98): reclame-aqui · redes · nps · google.
+  /// Vazia é "geral". Com ela, a atividade manual entra no Meu dia na
+  /// frente certa — "atividade com alvo, frente e prazo, à mão".
+  frente String?
+
   createdAt DateTime @default(now())
 }
 

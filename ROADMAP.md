@@ -1116,6 +1116,28 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Atividade com frente, e a conversa vira atividade e compromisso (30/09/2026, 1.98.0)
+
+Fase 34 ("Atividades manuais direcionadas") e Fase 36 ("IA que cria
+atividades e compromissos").
+
+- **Atividade com alvo, frente e prazo:** a tarefa da agenda ganhou a
+  **frente** (Reclame Aqui, Redes, NPS, Google ou geral) — no formulário,
+  vinda do caso vinculado, ou reconhecida na linha única ("amanhã retornar
+  detrator da Ana" → NPS). No Meu dia a atividade entra na frente dela, com
+  o responsável e o caso no detalhe. Coluna `AgendaTask.frente` (RLS 71 de
+  71).
+- **A conversa vira atividade e compromisso:** além do retorno que
+  **nós** combinamos ("te ligo amanhã às 10h"), agora o **pedido do
+  cliente** com dia ou hora ("pode me ligar amanhã às 15h?", "me manda o
+  boleto até sexta") vira atividade, e a **reunião** combinada ("call na
+  segunda às 14h", "amanhã via Meet às 15h30") vira compromisso do tipo
+  novo **Reunião** — com "levar ao Google" no aviso dos lembretes que
+  nasceram, que cria o evento na Agenda do Google **só no clique**. São
+  regras sobre as conversas guardadas (sem chamar modelo), medidas nas
+  mensagens reais de 14 dias: 3 combinados, 1 pedido, 2 reuniões.
+  `check:agenda` +10 pontos.
+
 ### A planilha de métricas se completa sozinha — só o vazio (30/09/2026, 1.97.0)
 
 Fase 37 item 6. "Automações na planilha — SOMENTE o que está vazio, não pode

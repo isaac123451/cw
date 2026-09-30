@@ -28,6 +28,7 @@ const TIPOS: TaskType[] = [
   "Cobrança interna",
   "Solicitação de avaliação",
   "Pendência",
+  "Reunião",
 ];
 
 /**

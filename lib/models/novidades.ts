@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.98.0",
+    data: "2026-09-30",
+    titulo: "Atividade com frente, e a conversa marca o compromisso",
+    texto: "A atividade da agenda agora tem frente e entra no Meu dia no lugar certo. E das conversas guardadas nascem sozinhas as atividades do que o cliente pediu com dia ou hora e os compromissos das reuniões combinadas — com um clique, a reunião vai para a sua Agenda do Google.",
+    frentes: ["plataforma", "extensao"],
+  },
+  {
     versao: "1.97.0",
     data: "2026-09-30",
     titulo: "A planilha de métricas se completa sozinha",

@@ -15,6 +15,7 @@ const DIAS: Record<string, number> = {
 };
 
 const TIPOS: { tipo: TaskType; padrao: RegExp }[] = [
+  { tipo: "Reunião", padrao: /\breuni(a|ã)o\b|\bcall\b|\bvideochamada\b|\bmeet\b|\bzoom\b/ },
   { tipo: "Solicitação de avaliação", padrao: /\bavalia(c|ç)(a|ã)o\b|\bpedir avalia/ },
   { tipo: "Cobrança interna", padrao: /\bcobrar\b|\bcobran(c|ç)a\b|\bescalonar\b/ },
   { tipo: "Follow-up", padrao: /\bligar\b|\bretornar\b|\bretorno\b|\bfollow|\bfup\b|\bfalar com\b|\bmandar mensagem\b/ },
@@ -32,6 +33,8 @@ export interface LinhaEntendida {
   time?: string;
   type: TaskType;
   relatedCase?: string;
+  /** A frente (1.98): do protocolo, ou de "nps", "google", "redes"/"instagram" na linha. */
+  frente?: AgendaTask["frente"];
   /** Os pedaços reconhecidos, para a prévia mostrar o que foi entendido. */
   entendido: string[];
 }
@@ -116,12 +119,28 @@ export function entenderLinha(texto: string, hoje: string, protocolos: ReadonlyS
 
   const type = TIPOS.find((t) => t.padrao.test(sem(titulo)))?.tipo ?? "Pendência";
 
+  /* A frente (1.98): o protocolo diz; senão, a palavra na linha. */
+  const nt = sem(` ${titulo} `);
+  const frente: AgendaTask["frente"] = relatedCase
+    ? relatedCase.startsWith("RA-") ? "reclame-aqui" : "redes"
+    : /\snps\s|detrator|promotor/.test(nt)
+      ? "nps"
+      : /\sgoogle\s/.test(nt)
+        ? "google"
+        : /\s(redes|instagram|insta)\s/.test(nt)
+          ? "redes"
+          : /reclame aqui|\sra\s/.test(nt)
+            ? "reclame-aqui"
+            : undefined;
+  if (frente && !relatedCase) entendido.push(frente === "reclame-aqui" ? "Reclame Aqui" : frente === "nps" ? "NPS" : frente === "google" ? "Google" : "Redes");
+
   return {
     title: titulo.charAt(0).toUpperCase() + titulo.slice(1),
     dueDate,
     time,
     type,
     relatedCase,
+    frente,
     entendido,
   };
 }
@@ -137,5 +156,6 @@ export function atividadeDaLinha(l: LinhaEntendida, dono: string): Omit<AgendaTa
     priority: "Média",
     done: false,
     ...(l.relatedCase ? { relatedCase: l.relatedCase } : {}),
+    ...(l.frente ? { frente: l.frente } : {}),
   };
 }

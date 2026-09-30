@@ -644,6 +644,7 @@ async function carregarDoBanco(): Promise<Workspace | null> {
       priority: r.priority as AgendaTask["priority"],
       done: r.done,
       relatedCase: r.case?.protocol ?? undefined,
+      frente: (r.frente as AgendaTask["frente"]) ?? undefined,
     })),
 
     impact: impact.map((r) => ({

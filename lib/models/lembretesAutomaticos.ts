@@ -15,7 +15,39 @@ import { entenderLinha } from "@/lib/models/linhaDaAgenda";
  *   nesse dia e hora, contados a partir do dia da mensagem.
  */
 
-export const idDoLembrete = (origem: "area" | "conversa", ref: string) => `auto-${origem}-${ref}`;
+export const idDoLembrete = (origem: "area" | "conversa" | "pedido" | "reuniao", ref: string) => `auto-${origem}-${ref}`;
+
+/**
+ * O pedido do cliente com dia ou hora (Fase 36, 1.98): "me liga amanhã às
+ * 15h", "pode retornar segunda?", "me manda o boleto até sexta". Vira
+ * atividade para quem atende — é o combinado do outro lado da conversa.
+ */
+const PEDIDO =
+  /\b(?:me\s+)?(?:liga|ligue|ligar|chama|chame|retorna|retorne|manda|mande|envia|envie|responde|responda)\b|\bpode(?:ria)?\s+(?:me\s+)?(?:ligar|chamar|retornar|mandar|enviar)\b|\baguardo\s+(?:o\s+|seu\s+)?retorno\b/;
+
+/** Reunião, call, videochamada — de qualquer lado da conversa. */
+const REUNIAO = /\b(?:reuniao|call|videochamada|video chamada|chamada de video|meet|zoom|teams)\b/;
+
+function comDiaOuHora(texto: string, diaDaMensagem: string, padrao: RegExp) {
+  const frases = texto.split(/(?<=[.!?\n])\s+/).map((f) => f.trim()).filter(Boolean);
+  for (const frase of frases) {
+    if (!padrao.test(sem(frase))) continue;
+    const l = entenderLinha(frase, diaDaMensagem);
+    if (!l) continue;
+    if (l.dueDate === diaDaMensagem && !l.time) continue;
+    const trecho = frase.length > 90 ? `${frase.slice(0, 89).trimEnd()}…` : frase;
+    return { dueDate: l.dueDate, time: l.time, trecho };
+  }
+  return null;
+}
+
+export function pedidoNaMensagem(texto: string, diaDaMensagem: string) {
+  return comDiaOuHora(texto, diaDaMensagem, PEDIDO);
+}
+
+export function reuniaoNaMensagem(texto: string, diaDaMensagem: string) {
+  return comDiaOuHora(texto, diaDaMensagem, REUNIAO);
+}
 
 const sem = (t: string) => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 

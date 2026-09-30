@@ -643,6 +643,7 @@ export async function saveAgendaTask(item: AgendaTask): Promise<ResultadoDaGrava
       time: item.time ?? null,
       ownerId: dono?.id ?? null,
       caseId: caso?.id ?? null,
+      frente: item.frente && ["reclame-aqui", "redes", "nps", "google"].includes(item.frente) ? item.frente : null,
     };
 
     await prisma.agendaTask.upsert({

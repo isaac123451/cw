@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 
-import { Sparkles, Undo2, X } from "lucide-react";
+import { CalendarPlus, Loader2, Sparkles, Undo2, X } from "lucide-react";
 
 import { gerarLembretesAutomaticos } from "@/lib/actions/lembretesAutomaticos";
+import { pushTaskToGoogle } from "@/lib/actions/google";
 import { useAgenda } from "@/lib/context/AgendaContext";
 import type { AgendaTask } from "@/lib/models/agenda";
 import { diaCurtoDaMarca } from "@/lib/models/meuDia";
@@ -22,6 +23,18 @@ export default function LembretesQueNasceram() {
   const { receberDoServidor, toggleTask } = useAgenda();
   const [nascidos, setNascidos] = useState<AgendaTask[]>([]);
   const [desfeitos, setDesfeitos] = useState<string[]>([]);
+
+  /*
+    A reunião que nasceu da conversa pode ir para a Agenda do Google (1.98)
+    — só no clique de quem vê: nenhum evento sai sozinho para a agenda de
+    ninguém.
+  */
+  const [noGoogle, setNoGoogle] = useState<Record<string, "enviando" | "ok" | string>>({});
+  async function levarAoGoogle(t: AgendaTask) {
+    setNoGoogle((g) => ({ ...g, [t.id]: "enviando" }));
+    const r = await pushTaskToGoogle({ title: t.title, date: t.dueDate, time: t.time, description: `CW Reputação — ${[t.type, t.relatedCase].filter(Boolean).join(" · ")}` });
+    setNoGoogle((g) => ({ ...g, [t.id]: r.ok ? "ok" : r.error ?? "Não foi possível criar o evento." }));
+  }
 
   useEffect(() => {
     let vivo = true;
@@ -63,13 +76,28 @@ export default function LembretesQueNasceram() {
                   {t.time ? ` ${t.time}` : ""}
                 </span>
                 <span className="min-w-0 flex-1 truncate">{t.title}</span>
+                {t.type === "Reunião" &&
+                  (noGoogle[t.id] === "ok" ? (
+                    <span className="shrink-0 font-medium text-emerald-700">na Agenda do Google</span>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={noGoogle[t.id] === "enviando"}
+                      onClick={() => levarAoGoogle(t)}
+                      title={noGoogle[t.id] && noGoogle[t.id] !== "enviando" ? String(noGoogle[t.id]) : "Criar o evento na sua Agenda do Google"}
+                      className={`flex shrink-0 items-center gap-0.5 rounded px-1 font-medium hover:bg-white ${noGoogle[t.id] && noGoogle[t.id] !== "enviando" ? "text-rose-700" : "text-violet-700"}`}
+                    >
+                      {noGoogle[t.id] === "enviando" ? <Loader2 size={11} className="animate-spin" /> : <CalendarPlus size={11} />}
+                      {noGoogle[t.id] && noGoogle[t.id] !== "enviando" ? "tentar de novo" : "levar ao Google"}
+                    </button>
+                  ))}
                 <button type="button" onClick={() => desfazer([t.id])} className="flex shrink-0 items-center gap-0.5 rounded px-1 font-medium text-zinc-600 hover:bg-white">
                   <Undo2 size={11} /> desfazer
                 </button>
               </li>
             ))}
           </ul>
-          <p className="mt-1 text-[11px] text-zinc-500">Das áreas acionadas sem retorno e dos retornos combinados nas conversas guardadas. Desfazer conclui o lembrete — ele não volta.</p>
+          <p className="mt-1 text-[11px] text-zinc-500">Das áreas acionadas sem retorno, dos retornos combinados, dos pedidos dos clientes e das reuniões marcadas nas conversas guardadas. Desfazer conclui o lembrete — ele não volta.</p>
         </div>
         <div className="flex shrink-0 items-center gap-1">
           {visiveis.length > 1 && (
