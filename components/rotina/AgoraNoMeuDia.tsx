@@ -1,10 +1,10 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import Link from "next/link";
 
-import { ArrowRight, AppWindow, PartyPopper, TrendingUp, TriangleAlert } from "lucide-react";
+import { ArrowRight, AppWindow, ChevronDown, PartyPopper, TrendingUp, TriangleAlert } from "lucide-react";
 
 import SurfaceCard from "@/components/shared/SurfaceCard";
 
@@ -47,6 +47,9 @@ export default function AgoraNoMeuDia() {
   const { abrir } = useJanelas();
   const agora = useAgora();
 
+  /* O aviso aberto: clicar mostra quem está por trás do número (1.90). */
+  const [aberto, setAberto] = useState<string | null>(null);
+
   const calculado = useMemo(() => {
     if (!agora) return null;
     const avisos = avisosDeAbertura({ casos: cases, regras: rules, nps: responses, expediente, agora });
@@ -78,8 +81,46 @@ export default function AgoraNoMeuDia() {
               <li key={a.chave} className="flex items-start gap-2">
                 <TriangleAlert size={14} className={`mt-0.5 shrink-0 ${TOM[a.tom]}`} />
                 <div className="min-w-0 flex-1">
-                  <p className={`text-sm font-medium ${TOM[a.tom]}`}>{a.titulo}</p>
+                  {a.itens?.length ? (
+                    <button
+                      type="button"
+                      onClick={() => setAberto(aberto === a.chave ? null : a.chave)}
+                      aria-expanded={aberto === a.chave}
+                      className={`flex items-center gap-1 text-left text-sm font-medium hover:underline ${TOM[a.tom]}`}
+                    >
+                      {a.titulo}
+                      <ChevronDown size={13} className={`shrink-0 transition-transform ${aberto === a.chave ? "rotate-180" : ""}`} />
+                    </button>
+                  ) : (
+                    <p className={`text-sm font-medium ${TOM[a.tom]}`}>{a.titulo}</p>
+                  )}
                   <p className="text-xs text-zinc-500">{a.detalhe}</p>
+                  {aberto === a.chave && a.itens?.length ? (
+                    <ul className="mt-1.5 max-h-72 divide-y divide-zinc-100 overflow-y-auto rounded-lg ring-1 ring-inset ring-zinc-200">
+                      {a.itens.map((it) => (
+                        <li key={it.href + it.titulo} className="flex items-center gap-2 px-2.5 py-1.5">
+                          <Link href={it.href} className="min-w-0 flex-1 hover:text-violet-700">
+                            <span className="block truncate text-xs font-medium text-zinc-800">{it.titulo}</span>
+                            {it.detalhe && <span className="block truncate text-[11px] text-zinc-500">{it.detalhe}</span>}
+                          </Link>
+                          {it.janela && (
+                            <button
+                              type="button"
+                              onClick={() => abrir(it.janela!)}
+                              title="Abrir em janela, sem sair do Meu dia"
+                              aria-label={`Abrir ${it.titulo} em janela`}
+                              className="shrink-0 rounded p-1 text-zinc-400 hover:bg-zinc-100 hover:text-violet-700"
+                            >
+                              <AppWindow size={12} />
+                            </button>
+                          )}
+                        </li>
+                      ))}
+                      {a.quantidade > a.itens.length && (
+                        <li className="px-2.5 py-1.5 text-[11px] text-zinc-500">e mais {a.quantidade - a.itens.length} — a tela do link mostra todos</li>
+                      )}
+                    </ul>
+                  ) : null}
                   <div className="mt-1 flex flex-wrap gap-2">
                     {a.href === "/meu-dia" ? (
                       <span className="text-xs text-zinc-500">estão na frente no plano abaixo</span>

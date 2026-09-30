@@ -51,6 +51,56 @@ export interface AvisoDeAbertura {
    * Só quando o aviso aponta para **um** caso — prazo e avaliação são listas.
    */
   janela?: { frente: "reclame-aqui" | "redes"; ref: string; titulo: string };
+  /**
+   * Quem está por trás do número (1.90): "o pede ação agora tem de mostrar
+   * as pendências ao clicar". Até 15, na ordem da urgência.
+   */
+  itens?: ItemDoAviso[];
+}
+
+export interface ItemDoAviso {
+  titulo: string;
+  detalhe?: string;
+  href: string;
+  janela?: { frente: "reclame-aqui" | "redes"; ref: string; titulo: string };
+}
+
+const MAXIMO_DE_ITENS = 15;
+
+function itemDoCaso(c: Case, detalhe?: string): ItemDoAviso {
+  return {
+    titulo: `${c.protocol} · ${c.customer}`,
+    detalhe: detalhe ?? c.title,
+    href: caseHref(c),
+    janela: { frente: isSocial(c) ? "redes" : "reclame-aqui", ref: c.id, titulo: `${c.protocol} · ${c.customer}` },
+  };
+}
+
+/** Os casos e ciclos de NPS por trás do aviso de prazo — o estourado primeiro. */
+export function itensDePrazo(abertos: Case[], regras: SlaRule[], nps: NpsResponseView[], expediente: Expediente, agora: Date): ItemDoAviso[] {
+  const hoje = diaNaOperacao(agora);
+  const lista: { item: ItemDoAviso; estourado: boolean; quando: number }[] = [];
+  for (const caso of abertos) {
+    const sla = slaStatus(caso, regras, { expediente });
+    const quando = sla.prazo ? new Date(sla.prazo).getTime() : 0;
+    if (sla.situation === "estourado") lista.push({ item: itemDoCaso(caso, `prazo estourado · ${caso.title}`), estourado: true, quando });
+    else if (sla.prazo && diaNaOperacao(sla.prazo) === hoje) lista.push({ item: itemDoCaso(caso, `vence hoje · ${caso.title}`), estourado: false, quando });
+  }
+  for (const r of nps) {
+    if (r.firstContactAt || r.closedAt || !r.firstContactDueAt) continue;
+    const vence = new Date(r.firstContactDueAt);
+    const estourado = vence.getTime() < agora.getTime();
+    if (!estourado && diaNaOperacao(vence) !== hoje) continue;
+    lista.push({
+      item: { titulo: `NPS nota ${r.score} · ${r.customerName || r.customer}`, detalhe: estourado ? "1º contato atrasado" : "1º contato vence hoje", href: `/nps/${r.id}` },
+      estourado,
+      quando: vence.getTime(),
+    });
+  }
+  return lista
+    .sort((a, b) => Number(b.estourado) - Number(a.estourado) || a.quando - b.quando)
+    .slice(0, MAXIMO_DE_ITENS)
+    .map((x) => x.item);
 }
 
 export interface EntradaDaAbertura {
@@ -138,6 +188,7 @@ export function avisosDeAbertura(entrada: EntradaDaAbertura): AvisoDeAbertura[] 
       quantidade: total,
       href: "/meu-dia",
       pergunta: "O que está fora do prazo hoje?",
+      itens: itensDePrazo(abertos, regras, nps, expediente, agora),
     });
   }
 
@@ -146,9 +197,10 @@ export function avisosDeAbertura(entrada: EntradaDaAbertura): AvisoDeAbertura[] 
   const semNoticias = abertos.filter((c) => semNoticia(c, agora, expediente)?.atrasado);
 
   if (semNoticias.length > 0) {
-    const maisAntigo = semNoticias
+    const porDias = semNoticias
       .map((c) => ({ c, dias: semNoticia(c, agora, expediente)?.dias ?? 0 }))
-      .sort((a, b) => b.dias - a.dias)[0];
+      .sort((a, b) => b.dias - a.dias);
+    const maisAntigo = porDias[0];
 
     avisos.push({
       chave: "sem-noticia",
@@ -163,6 +215,7 @@ export function avisosDeAbertura(entrada: EntradaDaAbertura): AvisoDeAbertura[] 
         ref: maisAntigo.c.id,
         titulo: `${maisAntigo.c.protocol} · ${maisAntigo.c.customer}`,
       },
+      itens: porDias.slice(0, MAXIMO_DE_ITENS).map(({ c, dias }) => itemDoCaso(c, `${dias} dia(s) útil(eis) sem mensagem nossa · ${c.title}`)),
     });
   }
 
@@ -189,6 +242,7 @@ export function avisosDeAbertura(entrada: EntradaDaAbertura): AvisoDeAbertura[] 
       quantidade: fila.hoje.length,
       href: "/reclame-aqui/avaliacoes",
       pergunta: "De quem eu peço avaliação hoje?",
+      itens: fila.hoje.slice(0, MAXIMO_DE_ITENS).map((x) => itemDoCaso(x.item, `pedir avaliação · ${x.item.title}`)),
     });
   }
 
@@ -215,6 +269,7 @@ export function avisosDeAbertura(entrada: EntradaDaAbertura): AvisoDeAbertura[] 
         ref: emCrise[0].caso.id,
         titulo: `${emCrise[0].caso.protocol} · ${emCrise[0].caso.customer}`,
       },
+      itens: emCrise.slice(0, MAXIMO_DE_ITENS).map((x) => itemDoCaso(x.caso, x.sinais.map((s) => s.motivo).join(" · "))),
     });
   }
 
