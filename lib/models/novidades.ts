@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.95.0",
+    data: "2026-09-30",
+    titulo: "Triagem num passo só",
+    texto: "Nova tela Reclame Aqui → Triagem com todas as reclamações em aberto, as a triar primeiro. Triar agora decide também categoria, área e causa raiz, no mesmo Salvar — a aba Investigação da ficha virou Triagem.",
+    frentes: ["reclame-aqui"],
+  },
+  {
     versao: "1.94.0",
     data: "2026-09-30",
     titulo: "Analista de respostas públicas",

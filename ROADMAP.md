@@ -1116,6 +1116,23 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Triagem com a investigação dentro, e todos os casos em aberto (30/09/2026, 1.95.0)
+
+Fase 35 item 7. "Investigação e triagem: juntar e simplificar; uma visão
+de todos os casos em aberto."
+
+- **A classificação entrou na triagem:** o diálogo de triagem decide a
+  criticidade **e** a categoria, a subcategoria, a área e a causa raiz no
+  mesmo Salvar (a classificação vai depois da criticidade, só se mudou, e
+  o aviso só sai com as duas gravadas). A aba "Investigação" da ficha
+  virou **Triagem**, com o resumo no topo (nível, quem triou, critérios) e
+  "Triar agora"/"Refazer a triagem".
+- **Reclame Aqui → Triagem:** todas as reclamações em aberto — a triar
+  primeiro, depois pela criticidade e pela idade —, com o relógio, o
+  próximo passo e o botão que triar/classifica; filtros "A triar" e "Sem
+  categoria ou causa". Medido: 25 em aberto, 6 a triar, 20 sem categoria
+  ou causa raiz.
+
 ### Analista de respostas públicas (30/09/2026, 1.94.0)
 
 Fase 35 item 5. "Quero um analista de respostas públicas: que aponte erros

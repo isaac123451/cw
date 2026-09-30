@@ -9,7 +9,8 @@ import { useEffect, useMemo, useState } from "react";
 
 import { Building2, Check } from "lucide-react";
 
-import { Case } from "@/lib/models/case";
+import { Case, CRITERIOS } from "@/lib/models/case";
+import { descreverRegistro } from "@/lib/services/horasUteis";
 
 import SurfaceCard from "@/components/shared/SurfaceCard";
 import SugestaoDoTexto from "@/components/shared/SugestaoDoTexto";
@@ -64,7 +65,7 @@ export default function InvestigationTab({
 
   const { rootCauses } = useNps();
 
-  const { abrirArea } = useTratativa();
+  const { abrirArea, abrirTriagem } = useTratativa();
 
   const active = useMemo(
     () => checklist.filter((item) => item.active),
@@ -143,6 +144,37 @@ export default function InvestigationTab({
 
   return (
     <div className="space-y-5">
+
+      {/* A triagem no topo (1.95): a criticidade e a classificação se decidem juntas, no mesmo diálogo. */}
+      <SurfaceCard
+        title="Triagem"
+        description={
+          data.triadaEm
+            ? `${data.priority} · triada${data.triadaPor ? ` por ${data.triadaPor}` : ""} em ${descreverRegistro(data.triadaEm)}`
+            : "Ainda não triada: a criticidade decide o prazo do 1º contato."
+        }
+        action={
+          <button
+            type="button"
+            onClick={() => abrirTriagem(data)}
+            className="rounded-xl bg-violet-700 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-violet-800"
+          >
+            {data.triadaEm ? "Refazer a triagem" : "Triar agora"}
+          </button>
+        }
+      >
+        {(data.criterios ?? []).length > 0 ? (
+          <ul className="flex flex-wrap gap-1.5">
+            {(data.criterios ?? []).map((id) => (
+              <li key={id} className="rounded-full bg-zinc-100 px-2.5 py-1 text-xs text-zinc-700">
+                {CRITERIOS.find((c) => c.id === id)?.texto ?? id}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-zinc-500">Nenhum critério marcado.</p>
+        )}
+      </SurfaceCard>
 
       <SurfaceCard
         title="Checklist de resolução"

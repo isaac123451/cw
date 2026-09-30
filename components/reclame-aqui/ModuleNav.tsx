@@ -14,6 +14,7 @@ import {
   Trophy,
   Gauge,
   MessageSquareText,
+  ListFilter,
 } from "lucide-react";
 
 interface Item {
@@ -29,6 +30,12 @@ const items: Item[] = [
     href: "/reclame-aqui",
     icon: LayoutGrid,
     hint: "Kanban e lista das reclamações",
+  },
+  {
+    label: "Triagem",
+    href: "/reclame-aqui/triagem",
+    icon: ListFilter,
+    hint: "Todas as abertas: triar e classificar num passo só",
   },
   {
     label: "Índice",

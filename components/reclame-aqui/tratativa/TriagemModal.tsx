@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Check, Loader2, Sparkles, TriangleAlert } from "lucide-react";
 
 import Modal, { GhostButton } from "@/components/shared/Modal";
+import Combobox from "@/components/shared/Combobox";
 
 import {
   Case,
@@ -23,6 +24,9 @@ import { triarCaso } from "@/lib/actions/tratativa";
 import { useUrgenciaPorDado } from "./useUrgenciaPorDado";
 import { useSla } from "@/lib/context/SlaContext";
 import { useToast } from "@/lib/context/ToastContext";
+import { useSettings } from "@/lib/context/SettingsContext";
+import { useNps } from "@/lib/context/NpsContext";
+import { useCases } from "@/lib/context/CaseContext";
 
 interface Props {
   item: Case;
@@ -46,6 +50,23 @@ const TOM: Record<Prioridade, string> = {
  * quem clica precisa saber disso.
  */
 export default function TriagemModal({ item, onClose, onSalvo }: Props) {
+
+  /*
+    A classificação entra na triagem (Fase 35, 1.95): "a investigação que
+    quase ninguém abre entra na triagem". Categoria, subcategoria, área e
+    causa raiz ficavam numa aba da ficha que ninguém visitava; agora se
+    decidem junto com a criticidade, no mesmo Salvar.
+  */
+  const { categories, subcategories, teams } = useSettings();
+  const { rootCauses } = useNps();
+  const { updateCase } = useCases();
+  const [categoria, setCategoria] = useState(item.category ?? "");
+  const [subcategoria, setSubcategoria] = useState(item.subcategory ?? "");
+  const [area, setArea] = useState(item.department ?? "");
+  const [causa, setCausa] = useState(item.causaRaiz ?? "");
+  const subDaCategoria = useMemo(() => subcategories.filter((s) => s.category === categoria).map((s) => s.name), [subcategories, categoria]);
+  const mudouClassificacao =
+    categoria !== (item.category ?? "") || subcategoria !== (item.subcategory ?? "") || area !== (item.department ?? "") || causa !== (item.causaRaiz ?? "");
 
   const { notify } = useToast();
   const { rules } = useSla();
@@ -114,12 +135,32 @@ export default function TriagemModal({ item, onClose, onSalvo }: Props) {
         return;
       }
 
-      onSalvo({
+      const triagem = {
         priority: r.priority,
         criterios: r.criterios,
         triadaEm: r.triadaEm,
         triadaPor: r.triadaPor,
-      });
+      };
+
+      /* A classificação vai depois da criticidade, e só se mudou — e o aviso só sai com as duas gravadas. */
+      if (mudouClassificacao) {
+        const g = await updateCase({
+          ...item,
+          ...triagem,
+          category: categoria,
+          subcategory: subcategoria || undefined,
+          department: area || undefined,
+          causaRaiz: causa || undefined,
+        });
+        if (!g.ok) {
+          onSalvo(triagem);
+          setErro(`A criticidade foi salva, mas a classificação não: ${g.erro ?? "tente de novo"}.`);
+          return;
+        }
+        onSalvo({ ...triagem, category: categoria, subcategory: subcategoria || undefined, department: area || undefined, causaRaiz: causa || undefined });
+      } else {
+        onSalvo(triagem);
+      }
 
       notify({
         tone: "success",
@@ -278,6 +319,30 @@ export default function TriagemModal({ item, onClose, onSalvo }: Props) {
         </p>
       </div>
 
+      <div className="mt-5">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">Classificação</p>
+        <div className="mt-2 grid gap-2 sm:grid-cols-2">
+          <Campo rotulo="Categoria">
+            <Combobox value={categoria} onChange={(v) => { setCategoria(v); setSubcategoria(""); }} placeholder="Escolher categoria…" options={categories.map((c) => c.name)} />
+          </Campo>
+          <Campo rotulo="Subcategoria">
+            <Combobox value={subcategoria} onChange={setSubcategoria} emptyLabel="Nenhuma" placeholder={categoria ? "Nenhuma" : "Escolha a categoria antes"} options={subDaCategoria} disabled={!categoria} />
+          </Campo>
+          <Campo rotulo="Área envolvida">
+            <Combobox value={area} onChange={setArea} emptyLabel="Nenhuma" placeholder="Nenhuma" options={teams.filter((t) => t.active).map((t) => t.name)} />
+          </Campo>
+          <Campo rotulo="Causa raiz">
+            <Combobox
+              value={causa}
+              onChange={setCausa}
+              emptyLabel="Não definida"
+              placeholder="Não definida"
+              options={[...new Set([...rootCauses.filter((c) => c.active).map((c) => c.name), ...(causa ? [causa] : [])])]}
+            />
+          </Campo>
+        </div>
+      </div>
+
       {erro && (
         <p className="mt-3 flex items-start gap-2 rounded-xl bg-rose-50 px-3.5 py-3 text-sm text-rose-800 ring-1 ring-inset ring-rose-100">
           <TriangleAlert size={16} className="mt-0.5 shrink-0" />
@@ -286,5 +351,14 @@ export default function TriagemModal({ item, onClose, onSalvo }: Props) {
       )}
 
     </Modal>
+  );
+}
+
+function Campo({ rotulo, children }: { rotulo: string; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="text-[11px] text-zinc-500">{rotulo}</span>
+      <div className="mt-1">{children}</div>
+    </label>
   );
 }

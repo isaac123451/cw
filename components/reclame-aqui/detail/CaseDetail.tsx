@@ -87,7 +87,8 @@ const tabs: {
   canais?: ("reclame-aqui" | "social")[];
 }[] = [
   { id: "visao-geral", label: "Visão geral" },
-  { id: "investigacao", label: "Investigação" },
+  /* 1.95: a investigação entrou na triagem — a aba tem o nome do passo. */
+  { id: "investigacao", label: "Triagem" },
   { id: "atendimento", label: "Atendimento" },
   {
     id: "avaliacao",
