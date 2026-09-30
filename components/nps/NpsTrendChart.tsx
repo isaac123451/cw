@@ -1,5 +1,7 @@
 "use client";
 
+import { useLargura } from "@/lib/hooks/useLargura";
+
 import { useState } from "react";
 
 import type { PontoDeTendencia } from "@/lib/services/nps.service";
@@ -9,7 +11,8 @@ interface Props {
   height?: number;
 }
 
-const WIDTH = 720;
+/** Largura de partida; o desenho segue a largura medida (1.86, `useLargura`). */
+const LARGURA_BASE = 720;
 const PADDING_X = 10;
 const PADDING_TOP = 18;
 const AXIS_HEIGHT = 28;
@@ -42,6 +45,7 @@ export default function NpsTrendChart({
 }: Props) {
 
   const [ativo, setAtivo] = useState<number | null>(null);
+  const [medirLargura, WIDTH] = useLargura(LARGURA_BASE);
 
   if (dados.length === 0) {
     return (
@@ -117,7 +121,7 @@ export default function NpsTrendChart({
   return (
     <div className="overflow-x-auto">
 
-      <div className="relative min-w-[560px]">
+      <div className="relative min-w-[560px]" ref={medirLargura}>
 
       <svg
         viewBox={`0 0 ${WIDTH} ${height}`}

@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-import { Award, CheckCircle2, CircleAlert } from "lucide-react";
+import { Award, CheckCircle2, CircleAlert, Globe } from "lucide-react";
 
 import MainLayout from "@/components/layout/MainLayout";
 import PageHeading from "@/components/shared/PageHeading";
@@ -11,29 +11,77 @@ import ModuleNav from "@/components/reclame-aqui/ModuleNav";
 import EvolucaoDoIndice from "@/components/reclame-aqui/indice/EvolucaoDoIndice";
 import ReguaDoIndice from "@/components/reclame-aqui/indice/ReguaDoIndice";
 
+import { lerPainelDoPortal } from "@/lib/actions/painelDoPortal";
 import { useScopedCases } from "@/lib/context/useScopedCases";
-import { evolucaoDoMes, notaExata, retratoDoIndice, type PeriodoDoIndice, type RetratoDoIndice } from "@/lib/models/indiceRA";
-import { displayBand, hojeNaOperacao, ptBR, RA1000_MINIMO_DE_AVALIACOES, RA1000_TARGETS } from "@/lib/services/reputation.service";
+import { respondida } from "@/lib/models/case";
+import { evolucaoDoMes, mesAMes, notaExata, retratoDoIndice, type PeriodoDoIndice, type RetratoDoIndice } from "@/lib/models/indiceRA";
+import { bandOf, displayBand, hojeNaOperacao, inRange, ptBR, RA1000_BAND, RA1000_MINIMO_DE_AVALIACOES, RA1000_TARGETS } from "@/lib/services/reputation.service";
+import type { PainelDoPortal } from "@/lib/services/painelDoPortal.service";
 
 const br = (iso: string) => iso.split("-").reverse().join("/");
+const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+const nomeDoMes = (m: string) => `${MESES[Number(m.slice(5)) - 1]}/${m.slice(2, 4)}`;
+
+const SELO_DO_PORTAL: Record<string, string> = {
+  RA1000: "RA1000",
+  GREAT: "Ótimo",
+  GOOD: "Bom",
+  REGULAR: "Regular",
+  BAD: "Ruim",
+  NOT_RECOMMENDED: "Não recomendada",
+};
 
 /**
- * O índice do Reclame Aqui, como no HugMe (Fase 32, 1.75).
+ * O índice do Reclame Aqui (Fase 32, 1.75; refeito na 1.86).
  *
- * O Isaac olhava o índice no HugMe porque aqui faltavam quatro coisas: a
- * nota que vem na virada do mês (a prévia), a nota sem arredondar, a
- * distância de cada indicador até o RA1000 e o dia a dia do mês. As
- * contas estão em `lib/models/indiceRA.ts`; esta tela só as mostra.
+ * Três notas lado a lado — **no portal** (o painel oficial, lido pelo
+ * vigia), **hoje** (a mesma janela, com o que já foi feito) e a
+ * **prévia** (a janela da virada do mês) — e uma tabela única com os
+ * indicadores das três contra a meta do selo. O portal não recalcula
+ * todo dia: em 29/09 ele mostrava 8,8 com 9 sem resposta, e a conta com
+ * as respostas já publicadas dava 8,86. As duas estão certas; a tela diz
+ * qual é qual.
  */
 export default function IndicePage() {
 
   const { cases } = useScopedCases("reclame-aqui");
   const [periodo, setPeriodo] = useState<PeriodoDoIndice>("6m");
+  const [paineis, setPaineis] = useState<Record<string, PainelDoPortal>>({});
+
+  useEffect(() => {
+    let vivo = true;
+    lerPainelDoPortal().then((r) => {
+      if (vivo && r.ok) setPaineis(r.atuais);
+    });
+    return () => {
+      vivo = false;
+    };
+  }, []);
 
   const hoje = hojeNaOperacao();
   const atual = useMemo(() => retratoDoIndice(cases, periodo, "vigente"), [cases, periodo]);
   const previa = useMemo(() => retratoDoIndice(cases, periodo, "proximo"), [cases, periodo]);
   const evolucao = useMemo(() => evolucaoDoMes(cases, periodo, hoje), [cases, periodo, hoje]);
+  const meses = useMemo(() => mesAMes(cases, hoje, periodo === "6m" ? 7 : 13), [cases, hoje, periodo]);
+
+  /* A avaliação desconsiderada conta em "avaliadas" no portal, mas fica fora da nota. */
+  const desconsideradas = useMemo(
+    () => cases.filter((c) => inRange(c, atual.inicio, atual.fim) && c.evaluated && c.scoreDisregarded).length,
+    [cases, atual.inicio, atual.fim]
+  );
+  const desconsideradasPrevia = useMemo(
+    () => cases.filter((c) => inRange(c, previa.inicio, previa.fim) && c.evaluated && c.scoreDisregarded).length,
+    [cases, previa.inicio, previa.fim]
+  );
+
+  const painel = paineis[periodo === "6m" ? "SIX_MONTHS" : "TWELVE_MONTHS"];
+  /* Só compara se o painel é da mesma janela que a conta daqui. */
+  const painelDaJanela = painel && painel.fim === atual.fim ? painel : undefined;
+
+  const semRespostaAgora = useMemo(
+    () => cases.filter((c) => inRange(c, atual.inicio, atual.fim) && !respondida(c)).length,
+    [cases, atual.inicio, atual.fim]
+  );
 
   return (
     <MainLayout>
@@ -42,53 +90,245 @@ export default function IndicePage() {
         <PageHeading
           eyebrow="Reclame Aqui"
           title="Índice"
-          description="A nota pública de hoje, a que vem na virada do mês, a distância até o RA1000 e o dia a dia do mês — com a nota exata, sem arredondar."
+          description="A nota que o portal mostra, a mesma conta com o que já foi feito, e a que vem na virada do mês."
         />
 
         <ModuleNav />
 
-        <div className="flex flex-wrap items-center gap-2" role="tablist" aria-label="Período">
-          {(["6m", "12m"] as const).map((p) => (
-            <button
-              key={p}
-              type="button"
-              role="tab"
-              aria-selected={periodo === p}
-              onClick={() => setPeriodo(p)}
-              className={`rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
-                periodo === p ? "bg-violet-700 text-white" : "text-zinc-600 ring-1 ring-inset ring-zinc-200 hover:bg-zinc-50"
-              }`}
-            >
-              {p === "6m" ? "6 meses" : "12 meses"}
-            </button>
-          ))}
-          <span className="text-xs text-zinc-500">6 meses é o período do selo; 12 meses aparece ao lado, no portal.</span>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="inline-flex rounded-xl bg-zinc-100 p-1" role="tablist" aria-label="Período">
+            {(["6m", "12m"] as const).map((p) => (
+              <button
+                key={p}
+                type="button"
+                role="tab"
+                aria-selected={periodo === p}
+                onClick={() => setPeriodo(p)}
+                className={`rounded-lg px-4 py-1.5 text-sm font-medium transition-colors ${
+                  periodo === p ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-800"
+                }`}
+              >
+                {p === "6m" ? "6 meses" : "12 meses"}
+              </button>
+            ))}
+          </div>
+          <p className="flex items-center gap-1.5 text-xs text-zinc-500">
+            <Globe size={13} />
+            {painel?.lidoEm
+              ? `Painel do portal lido em ${new Date(painel.lidoEm).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}`
+              : "O painel do portal chega na próxima leitura da extensão"}
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <CartaoDaNota titulo="Atual" subtitulo={`Meses fechados · ${br(atual.inicio)} a ${br(atual.fim)}`} retrato={atual} />
-          <CartaoDaNota
+        {/* As três notas. */}
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          {painelDaJanela ? (
+            <Nota
+              titulo="No portal"
+              janela={`${br(painelDaJanela.inicio)} a ${br(painelDaJanela.fim)}`}
+              nota={painelDaJanela.nota ?? 0}
+              exata={null}
+              faixa={SELO_DO_PORTAL[painelDaJanela.selo] ?? painelDaJanela.selo}
+              selo={painelDaJanela.selo === "RA1000"}
+              rodape="O número que o consumidor vê."
+            />
+          ) : (
+            <Nota titulo="No portal" janela="—" nota={null} exata={null} faixa="" selo={false} rodape="Aparece depois da próxima leitura do Reclame Aqui pela extensão." />
+          )}
+          <Nota
+            titulo="Hoje"
+            janela={`${br(atual.inicio)} a ${br(atual.fim)}`}
+            nota={atual.resumo.raScore}
+            exata={atual.resumo.raScoreExato}
+            faixa={displayBand(atual.resumo).label}
+            selo={atual.selo}
+            delta={painelDaJanela?.nota != null ? atual.resumo.raScoreExato - painelDaJanela.nota : undefined}
+            deltaRotulo="sobre o portal"
+            rodape="A mesma janela, com as respostas e avaliações que já existem."
+          />
+          <Nota
             titulo="Prévia"
-            subtitulo={`Entra o mês corrente · ${br(previa.inicio)} a ${br(previa.fim)}`}
-            retrato={previa}
-            comparar={atual.resumo.raScoreExato}
+            janela={`${br(previa.inicio)} a ${br(previa.fim)}`}
+            nota={previa.resumo.raScore}
+            exata={previa.resumo.raScoreExato}
+            faixa={displayBand(previa.resumo).label}
+            selo={previa.selo}
+            delta={previa.resumo.raScoreExato - atual.resumo.raScoreExato}
+            deltaRotulo="sobre hoje"
+            rodape="A janela que o portal assume na virada do mês."
           />
         </div>
 
+        {painelDaJanela && painelDaJanela.aguardando != null && painelDaJanela.aguardando > semRespostaAgora && (
+          <p className="rounded-xl bg-zinc-50 px-4 py-2.5 text-sm text-zinc-600 ring-1 ring-inset ring-zinc-200">
+            O portal ainda conta <b className="tabular-nums">{painelDaJanela.aguardando}</b> sem resposta nesta janela; aqui já são{" "}
+            <b className="tabular-nums">{semRespostaAgora}</b>. O painel do Reclame Aqui é atualizado com atraso — a diferença entra na próxima atualização dele.
+          </p>
+        )}
+
+        {/* Os indicadores das três, contra a meta. */}
         <SurfaceCard
-          title="Régua até o RA1000"
-          description="Onde a nota está entre as faixas do portal e o que falta, indicador por indicador, para a prévia ter o selo."
-          hint="O selo pede nota 8 ou mais, as quatro metas (resposta 90%, nota do consumidor 7, solução 90%, voltaria 70%) e 50 avaliações no período."
+          title="Indicadores"
+          hint="O selo RA1000 pede nota 8 ou mais, as quatro metas e 50 avaliações no período. Avaliação desconsiderada conta em avaliadas, mas fica fora da nota — como no portal."
         >
-          <ReguaDoIndice atual={atual.resumo.raScoreExato} previa={previa.resumo.raScoreExato} />
-          <OQueFalta retrato={previa} />
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[560px] text-sm">
+              <thead>
+                <tr className="text-left text-[11px] uppercase tracking-wide text-zinc-400">
+                  <th className="py-2 pr-3 font-semibold">Indicador</th>
+                  <th className="px-3 py-2 text-right font-semibold">No portal</th>
+                  <th className="px-3 py-2 text-right font-semibold">Hoje</th>
+                  <th className="px-3 py-2 text-right font-semibold">Prévia</th>
+                  <th className="py-2 pl-3 text-right font-semibold">Meta</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-100 tabular-nums">
+                <Linha
+                  rotulo="Respondidas"
+                  portal={painelDaJanela?.resposta != null ? `${ptBR(painelDaJanela.resposta)}%` : "—"}
+                  portalOk={painelDaJanela?.resposta != null ? painelDaJanela.resposta >= RA1000_TARGETS.resposta : undefined}
+                  hoje={`${ptBR(atual.resumo.responseIndex)}%`}
+                  hojeOk={atual.resumo.responseIndex >= RA1000_TARGETS.resposta}
+                  previa={`${ptBR(previa.resumo.responseIndex)}%`}
+                  previaOk={previa.resumo.responseIndex >= RA1000_TARGETS.resposta}
+                  meta={`${RA1000_TARGETS.resposta}%`}
+                />
+                <Linha
+                  rotulo="Nota do consumidor"
+                  portal={painelDaJanela?.notaConsumidor != null ? ptBR(painelDaJanela.notaConsumidor, 2) : "—"}
+                  portalOk={painelDaJanela?.notaConsumidor != null ? painelDaJanela.notaConsumidor >= RA1000_TARGETS.consumidor : undefined}
+                  hoje={ptBR(atual.resumo.consumerScore, 2)}
+                  hojeOk={atual.resumo.consumerScore >= RA1000_TARGETS.consumidor}
+                  previa={ptBR(previa.resumo.consumerScore, 2)}
+                  previaOk={previa.resumo.consumerScore >= RA1000_TARGETS.consumidor}
+                  meta={String(RA1000_TARGETS.consumidor)}
+                />
+                <Linha
+                  rotulo="Solução"
+                  portal={painelDaJanela?.solucao != null ? `${ptBR(painelDaJanela.solucao)}%` : "—"}
+                  portalOk={painelDaJanela?.solucao != null ? painelDaJanela.solucao >= RA1000_TARGETS.solucao : undefined}
+                  hoje={`${ptBR(atual.resumo.solutionIndex)}%`}
+                  hojeOk={atual.resumo.solutionIndex >= RA1000_TARGETS.solucao}
+                  previa={`${ptBR(previa.resumo.solutionIndex)}%`}
+                  previaOk={previa.resumo.solutionIndex >= RA1000_TARGETS.solucao}
+                  meta={`${RA1000_TARGETS.solucao}%`}
+                />
+                <Linha
+                  rotulo="Voltaria a fazer negócio"
+                  portal={painelDaJanela?.voltaria != null ? `${ptBR(painelDaJanela.voltaria)}%` : "—"}
+                  portalOk={painelDaJanela?.voltaria != null ? painelDaJanela.voltaria >= RA1000_TARGETS["novos-negocios"] : undefined}
+                  hoje={`${ptBR(atual.resumo.wouldReturnIndex)}%`}
+                  hojeOk={atual.resumo.wouldReturnIndex >= RA1000_TARGETS["novos-negocios"]}
+                  previa={`${ptBR(previa.resumo.wouldReturnIndex)}%`}
+                  previaOk={previa.resumo.wouldReturnIndex >= RA1000_TARGETS["novos-negocios"]}
+                  meta={`${RA1000_TARGETS["novos-negocios"]}%`}
+                />
+                <Linha
+                  rotulo="Avaliadas"
+                  portal={painelDaJanela?.avaliadas != null ? String(painelDaJanela.avaliadas) : "—"}
+                  portalOk={painelDaJanela?.avaliadas != null ? painelDaJanela.avaliadas >= RA1000_MINIMO_DE_AVALIACOES : undefined}
+                  hoje={String(atual.resumo.evaluated + desconsideradas)}
+                  hojeOk={atual.resumo.evaluated >= RA1000_MINIMO_DE_AVALIACOES}
+                  previa={String(previa.resumo.evaluated + desconsideradasPrevia)}
+                  previaOk={previa.resumo.evaluated >= RA1000_MINIMO_DE_AVALIACOES}
+                  meta={`${RA1000_MINIMO_DE_AVALIACOES}+`}
+                />
+                <Linha
+                  rotulo="Recebidas"
+                  portal={painelDaJanela?.recebidas != null ? String(painelDaJanela.recebidas) : "—"}
+                  hoje={String(atual.resumo.received)}
+                  previa={String(previa.resumo.received)}
+                  meta=""
+                />
+                <Linha
+                  rotulo="Sem resposta"
+                  portal={painelDaJanela?.aguardando != null ? String(painelDaJanela.aguardando) : "—"}
+                  hoje={String(atual.resumo.received - atual.resumo.answered)}
+                  previa={String(previa.resumo.received - previa.resumo.answered)}
+                  meta=""
+                />
+                {painelDaJanela?.tempoMedio && (
+                  <Linha rotulo="Tempo médio de resposta" portal={painelDaJanela.tempoMedio} hoje="" previa="" meta="" />
+                )}
+              </tbody>
+            </table>
+          </div>
+          {desconsideradas > 0 && (
+            <p className="mt-2 text-xs text-zinc-500">
+              {desconsideradas} avaliação desconsiderada nesta janela: conta em avaliadas, fica fora da nota e das porcentagens.
+            </p>
+          )}
         </SurfaceCard>
 
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-5">
+          <SurfaceCard
+            className="xl:col-span-2"
+            title="Até o RA1000"
+            description="Onde as notas estão entre as faixas e o que falta para a prévia manter o selo."
+          >
+            <ReguaDoIndice atual={atual.resumo.raScoreExato} previa={previa.resumo.raScoreExato} />
+            <OQueFalta retrato={previa} />
+          </SurfaceCard>
+
+          <SurfaceCard
+            className="xl:col-span-3"
+            title="Evolução do mês"
+            description="A nota exata no fim de cada dia, com o que se sabia naquele dia."
+          >
+            <EvolucaoDoIndice dias={evolucao} />
+          </SurfaceCard>
+        </div>
+
         <SurfaceCard
-          title="Evolução do mês"
-          description="A nota exata no fim de cada dia do mês, com o que se sabia naquele dia — a resposta e a avaliação contam do dia em que aconteceram."
+          title="Mês a mês"
+          description="O que entrou em cada mês e como está hoje. A faixa marca os meses da janela atual."
         >
-          <EvolucaoDoIndice dias={evolucao} />
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[640px] text-sm">
+              <thead>
+                <tr className="text-left text-[11px] uppercase tracking-wide text-zinc-400">
+                  <th className="py-2 pr-3 font-semibold">Mês</th>
+                  <th className="px-3 py-2 text-right font-semibold">Recebidas</th>
+                  <th className="px-3 py-2 text-right font-semibold">Sem resposta</th>
+                  <th className="px-3 py-2 text-right font-semibold">Avaliadas</th>
+                  <th className="px-3 py-2 font-semibold">Nota do consumidor</th>
+                  <th className="px-3 py-2 text-right font-semibold">Solução</th>
+                  <th className="py-2 pl-3 text-right font-semibold">Voltaria</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-100 tabular-nums">
+                {meses.map((m) => {
+                  const naJanela = `${m.mes}-01` >= atual.inicio && `${m.mes}-01` <= atual.fim;
+                  return (
+                    <tr key={m.mes} className={naJanela ? "" : "text-zinc-400"}>
+                      <td className="py-2 pr-3">
+                        <span className={`mr-2 inline-block h-3 w-1 rounded-full align-middle ${naJanela ? "bg-violet-500" : m.mes === hoje.slice(0, 7) ? "bg-violet-200" : "bg-transparent"}`} />
+                        {nomeDoMes(m.mes)}
+                        {m.mes === hoje.slice(0, 7) && <span className="ml-1.5 text-[11px] text-violet-700">em curso</span>}
+                      </td>
+                      <td className="px-3 py-2 text-right">{m.recebidas}</td>
+                      <td className={`px-3 py-2 text-right ${m.semResposta > 0 ? "font-semibold text-amber-700" : ""}`}>{m.semResposta || "—"}</td>
+                      <td className="px-3 py-2 text-right">{m.avaliadas || "—"}</td>
+                      <td className="px-3 py-2">
+                        {m.notaConsumidor === null ? (
+                          "—"
+                        ) : (
+                          <span className="flex items-center gap-2">
+                            <span className="h-1.5 w-24 overflow-hidden rounded-full bg-zinc-100">
+                              <span className="block h-full rounded-full" style={{ width: `${m.notaConsumidor * 10}%`, background: bandOf(m.notaConsumidor).color }} />
+                            </span>
+                            {ptBR(m.notaConsumidor, 2)}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2 text-right">{m.solucao === null ? "—" : `${ptBR(m.solucao)}%`}</td>
+                      <td className="py-2 pl-3 text-right">{m.voltaria === null ? "—" : `${ptBR(m.voltaria)}%`}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </SurfaceCard>
 
       </div>
@@ -96,75 +336,100 @@ export default function IndicePage() {
   );
 }
 
-function CartaoDaNota({
+function Nota({
   titulo,
-  subtitulo,
-  retrato,
-  comparar,
+  janela,
+  nota,
+  exata,
+  faixa,
+  selo,
+  delta,
+  deltaRotulo,
+  rodape,
 }: {
   titulo: string;
-  subtitulo: string;
-  retrato: RetratoDoIndice;
-  comparar?: number;
+  janela: string;
+  nota: number | null;
+  exata: number | null;
+  faixa: string;
+  selo: boolean;
+  delta?: number;
+  deltaRotulo?: string;
+  rodape: string;
 }) {
-  const s = retrato.resumo;
-  const faixa = displayBand(s);
-  const delta = comparar === undefined ? null : s.raScoreExato - comparar;
-
-  const indicadores = [
-    { rotulo: "Resposta", valor: `${ptBR(s.responseIndex)}%`, ok: s.responseIndex >= RA1000_TARGETS.resposta, meta: `${RA1000_TARGETS.resposta}%` },
-    { rotulo: "Nota do consumidor", valor: ptBR(s.consumerScore, 2), ok: s.consumerScore >= RA1000_TARGETS.consumidor, meta: String(RA1000_TARGETS.consumidor) },
-    { rotulo: "Solução", valor: `${ptBR(s.solutionIndex)}%`, ok: s.solutionIndex >= RA1000_TARGETS.solucao, meta: `${RA1000_TARGETS.solucao}%` },
-    { rotulo: "Voltaria", valor: `${ptBR(s.wouldReturnIndex)}%`, ok: s.wouldReturnIndex >= RA1000_TARGETS["novos-negocios"], meta: `${RA1000_TARGETS["novos-negocios"]}%` },
-  ];
-
+  const cor = selo ? RA1000_BAND.color : nota === null ? "#a1a1aa" : bandOf(nota).color;
   return (
-    <section className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <section className="rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+      <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">{titulo}</p>
-          <p className="mt-0.5 text-xs text-zinc-500">{subtitulo}</p>
+          <p className="text-xs tabular-nums text-zinc-500">{janela}</p>
         </div>
-        <span
-          className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset"
-          style={{ color: faixa.color, borderColor: faixa.color, boxShadow: `inset 0 0 0 1px ${faixa.color}40` }}
-        >
-          {retrato.selo && <Award size={13} />}
-          {faixa.label}
-        </span>
-      </div>
-
-      <div className="mt-3 flex flex-wrap items-end gap-x-3 gap-y-1">
-        <span className="text-4xl font-semibold tabular-nums text-zinc-900">{ptBR(s.raScore)}</span>
-        <span className="pb-1 font-mono text-sm tabular-nums text-zinc-500" title="A nota exata, sem arredondar">
-          {notaExata(s.raScoreExato)}
-        </span>
-        {delta !== null && Math.abs(delta) >= 0.000005 && (
-          <span className={`pb-1 text-xs font-medium tabular-nums ${delta > 0 ? "text-emerald-700" : "text-rose-700"}`}>
-            {delta > 0 ? "+" : "−"}
-            {notaExata(Math.abs(delta))} sobre a atual
+        {faixa && (
+          <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ color: cor, boxShadow: `inset 0 0 0 1px ${cor}66` }}>
+            {selo && <Award size={12} />}
+            {faixa}
           </span>
         )}
       </div>
-
-      <ul className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {indicadores.map((i) => (
-          <li key={i.rotulo} className="rounded-xl bg-zinc-50 px-3 py-2">
-            <p className="truncate text-[11px] text-zinc-500">{i.rotulo}</p>
-            <p className="mt-0.5 flex items-center gap-1 text-sm font-semibold tabular-nums text-zinc-900">
-              {i.valor}
-              {i.ok ? <CheckCircle2 size={13} className="text-emerald-600" /> : <CircleAlert size={13} className="text-amber-600" />}
-            </p>
-            <p className="text-[10.5px] text-zinc-400">meta {i.meta}</p>
-          </li>
-        ))}
-      </ul>
-
-      <p className="mt-3 text-xs text-zinc-500">
-        {s.received} reclamações · {s.answered} respondidas · {s.evaluated} avaliadas
-        {s.evaluated < RA1000_MINIMO_DE_AVALIACOES ? ` (o selo pede ${RA1000_MINIMO_DE_AVALIACOES})` : ""}
-      </p>
+      <div className="mt-2 flex flex-wrap items-baseline gap-x-2">
+        <span className="text-3xl font-semibold tabular-nums text-zinc-900">{nota === null ? "—" : ptBR(nota)}</span>
+        {exata !== null && (
+          <span className="font-mono text-xs tabular-nums text-zinc-500" title="A nota exata, sem arredondar">
+            {notaExata(exata)}
+          </span>
+        )}
+      </div>
+      {delta !== undefined && Math.abs(delta) >= 0.000005 && (
+        <p className={`text-xs font-medium tabular-nums ${delta > 0 ? "text-emerald-700" : "text-rose-700"}`}>
+          {delta > 0 ? "+" : "−"}
+          {notaExata(Math.abs(delta))} {deltaRotulo}
+        </p>
+      )}
+      <p className="mt-2 text-xs text-zinc-500">{rodape}</p>
     </section>
+  );
+}
+
+function Celula({ texto, ok }: { texto: string; ok?: boolean }) {
+  return (
+    <td className="px-3 py-2 text-right">
+      <span className="inline-flex items-center justify-end gap-1">
+        {texto}
+        {ok === true && <CheckCircle2 size={13} className="text-emerald-600" />}
+        {ok === false && <CircleAlert size={13} className="text-amber-600" />}
+      </span>
+    </td>
+  );
+}
+
+function Linha({
+  rotulo,
+  portal,
+  portalOk,
+  hoje,
+  hojeOk,
+  previa,
+  previaOk,
+  meta,
+}: {
+  rotulo: string;
+  portal: string;
+  portalOk?: boolean;
+  hoje: string;
+  hojeOk?: boolean;
+  previa: string;
+  previaOk?: boolean;
+  meta: string;
+}) {
+  return (
+    <tr>
+      <td className="py-2 pr-3 text-zinc-700">{rotulo}</td>
+      <Celula texto={portal} ok={portalOk} />
+      <Celula texto={hoje} ok={hojeOk} />
+      <Celula texto={previa} ok={previaOk} />
+      <td className="py-2 pl-3 text-right text-zinc-400">{meta}</td>
+    </tr>
   );
 }
 

@@ -3,6 +3,7 @@ import {
   SELECAO_DO_PORTAL,
 } from "@/lib/services/atualizacaoDoPortal";
 import { semApagarVazios } from "@/lib/services/semApagar";
+import { hojeNaOperacao } from "@/lib/services/reputation.service";
 
 import {
   compararEdicao,
@@ -938,6 +939,27 @@ function semApagarVinculo<
   return saida;
 }
 
+/**
+ * A data da avaliação, carimbada quando ela chega (1.86).
+ *
+ * "Quando uma avaliação for atualizada … marque a data para ficar
+ * registrada na parte de analytics, para eu verificar quantas avaliações
+ * tiveram em um ciclo." O vigia do portal já grava a data do portal; a
+ * avaliação marcada à mão ou vinda de planilha sem data ficava nula — e
+ * fora da conta do ciclo. Aqui: passou de não avaliada para avaliada sem
+ * data, a data é hoje (em Brasília). A avaliação antiga sem data não é
+ * tocada — carimbar hoje o que chegou há meses inflaria o ciclo atual.
+ */
+export function carimboDaAvaliacao(
+  antes: { evaluated: boolean; evaluatedAt: Date | null } | null,
+  depois: { evaluated?: unknown; evaluatedAt?: unknown },
+  hoje: string
+): Date | undefined {
+  if (depois.evaluated !== true || depois.evaluatedAt) return undefined;
+  if (antes?.evaluated) return antes.evaluatedAt ?? undefined;
+  return new Date(`${hoje}T00:00:00Z`);
+}
+
 export async function persistCase(
   prisma: PrismaClient,
   item: Case,
@@ -954,6 +976,12 @@ export async function persistCase(
     ...toCaseColumns(item),
     ...relacoes,
   };
+
+  if (dados.evaluated === true && !dados.evaluatedAt) {
+    const antes = await prisma.case.findUnique({ where: { protocol: item.protocol }, select: { evaluated: true, evaluatedAt: true } });
+    const carimbo = carimboDaAvaliacao(antes, dados, hojeNaOperacao());
+    if (carimbo) dados.evaluatedAt = carimbo;
+  }
 
   /**
    * Aqui **não** passa por `semApagarVinculo`, e isso é o ponto.
@@ -1126,6 +1154,16 @@ export async function persistCaseParcial(
   );
 
   const relacoes = mexeuEmRelacao ? await resolverRelacoes(prisma, item) : {};
+
+  /* A avaliação que chegou agora ganha a data de hoje — ver `carimboDaAvaliacao`. */
+  if (dados.evaluated === true && !dados.evaluatedAt) {
+    const carimbo = carimboDaAvaliacao(
+      { evaluated: linha.evaluated, evaluatedAt: linha.evaluatedAt },
+      { evaluated: true, evaluatedAt: colunas.evaluatedAt },
+      hojeNaOperacao()
+    );
+    if (carimbo) dados.evaluatedAt = carimbo;
+  }
 
   if (Object.keys(dados).length > 0 || mexeuEmRelacao) {
     await prisma.case.update({

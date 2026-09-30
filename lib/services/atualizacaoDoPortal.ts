@@ -27,6 +27,7 @@
  * Esta regra toca **apenas o primeiro grupo**, e a lista está escrita
  * como código, não como intenção.
  */
+import { hojeNaOperacao } from "@/lib/services/reputation.service";
 import { Case } from "@/lib/models/case";
 
 /* Do módulo leve, não do leitor de planilha — ver raMarcadores. */
@@ -256,6 +257,15 @@ export function mudancasDoPortal(
     Uma hora já gravada fica: veio do mesmo portal, e duas fontes
     discordando por um minuto não justificam reescrever o relógio.
   */
+  /*
+    Avaliação que chegou agora e o portal não trouxe a data: carimba hoje
+    (1.86), para o Analytics contar a avaliação no ciclo em que chegou.
+  */
+  if (dados.evaluated === true && !dados.evaluatedAt && !atual.evaluatedAt && !atual.evaluated) {
+    dados.evaluatedAt = new Date(`${hojeNaOperacao()}T00:00:00Z`);
+    diferencas.push("evaluatedAt: (vazio) → hoje");
+  }
+
   if (doArquivo.recebidaEm && !atual.recebidaEm) {
     dados.recebidaEm = new Date(doArquivo.recebidaEm);
     diferencas.push(`recebidaEm: (vazio) → ${doArquivo.recebidaEm.slice(0, 16)}`);

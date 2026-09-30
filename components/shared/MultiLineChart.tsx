@@ -1,5 +1,7 @@
 "use client";
 
+import { useLargura } from "@/lib/hooks/useLargura";
+
 import { useRef, useState } from "react";
 
 export interface Series {
@@ -24,7 +26,8 @@ interface Props {
   captions?: string[];
 }
 
-const WIDTH = 900;
+/** Largura de partida; o desenho segue a largura medida (1.86, `useLargura`). */
+const LARGURA_BASE = 900;
 const PAD_L = 42;
 const PAD_R = 16;
 const PAD_T = 18;
@@ -51,6 +54,7 @@ export default function MultiLineChart({
   const ref = useRef<HTMLDivElement>(null);
 
   const [hover, setHover] = useState<number | null>(null);
+  const [medirLargura, WIDTH] = useLargura(LARGURA_BASE);
 
   if (labels.length === 0 || series.length === 0) {
     return (
@@ -166,7 +170,7 @@ export default function MultiLineChart({
 
       </div>
 
-      <div className="w-full overflow-x-auto">
+      <div className="w-full overflow-x-auto" ref={medirLargura}>
 
         <div
           ref={ref}

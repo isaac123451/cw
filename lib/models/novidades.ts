@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.86.0",
+    data: "2026-09-29",
+    titulo: "Reclame Aqui sozinho, e a nota que o portal mostra",
+    texto: "A extensão lê o Reclame Aqui sozinha a cada meia hora com o Chrome aberto. O Índice agora mostra a nota do painel oficial do portal ao lado da conta com o que já foi feito e da prévia, numa tabela só, com o mês a mês e o gráfico que mostra o dia ao passar o mouse. No Analytics, a nova tabela Por ciclo conta as avaliações de cada ciclo pela data em que vieram.",
+    frentes: ["reclame-aqui", "extensao"],
+  },
+  {
     versao: "1.85.0",
     data: "2026-09-25",
     titulo: "Cancelamento e retenção, com o número",

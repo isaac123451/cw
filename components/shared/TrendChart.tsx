@@ -1,5 +1,7 @@
 "use client";
 
+import { useLargura } from "@/lib/hooks/useLargura";
+
 import { useId, useState } from "react";
 
 interface Point {
@@ -17,7 +19,8 @@ interface Props {
   resolvedLabel?: string;
 }
 
-const WIDTH = 720;
+/** Largura de partida; o desenho segue a largura medida (1.86, `useLargura`). */
+const LARGURA_BASE = 720;
 const PADDING_X = 8;
 const PADDING_TOP = 16;
 const AXIS_HEIGHT = 26;
@@ -72,6 +75,7 @@ export default function TrendChart({
   const idDoGradiente = useId();
 
   const [ativo, setAtivo] = useState<number | null>(null);
+  const [medirLargura, WIDTH] = useLargura(LARGURA_BASE);
 
   if (data.length === 0) {
     return (
@@ -174,7 +178,7 @@ export default function TrendChart({
   return (
     <div className="w-full overflow-x-auto">
 
-      <div className="relative min-w-[520px]">
+      <div className="relative min-w-[520px]" ref={medirLargura}>
 
         <svg
           viewBox={`0 0 ${WIDTH} ${height}`}

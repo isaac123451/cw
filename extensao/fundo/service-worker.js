@@ -12,6 +12,7 @@ import {
   enderecoDaLista,
   enderecoDaReclamacao,
   lerLista,
+  lerPainel,
   lerReclamacao,
 } from "../comum/portal-ra.js";
 
@@ -69,6 +70,7 @@ const CAMINHOS = {
   prazos: "/api/extensao/prazos",
   transcrever: "/api/extensao/transcrever",
   etiquetasLista: "/api/extensao/etiquetas-lista",
+  raPainel: "/api/extensao/ra-painel",
 };
 
 /**
@@ -575,7 +577,7 @@ async function tratar(mensagem) {
    * **Só estas duas portas, por pedido do Isaac:** "só verifique a
    * página do Reclame Aqui da Cardápio somente quando eu abra a
    * plataforma, crie um botão de atualizar/leitura". Não há mais relógio
-   * lendo o portal em segundo plano.
+   * lendo o portal em segundo plano. (1.86: voltou — ver `ALARME_VIGIA_RELOGIO`.)
    *
    * Abrir a plataforma várias vezes seguidas — outra aba, um F5 — não
    * vira várias leituras: dentro do intervalo mínimo devolve a última.
@@ -1433,6 +1435,27 @@ async function avisarPrazos() {
 const ALARME_VIGIA_ANTIGO = "cw-vigia-ra";
 
 /**
+ * O relógio do vigia (1.86), de volta — e por pedido do Isaac: "toda
+ * atualização de casos no Reclame Aqui é para ser feita automaticamente".
+ * Com o Chrome aberto, a lista do portal é lida sozinha a cada meia hora;
+ * resposta, avaliação e réplica chegam ao quadro sem abrir a plataforma.
+ * Se o portal pedir verificação de navegador, a volta para e espera —
+ * nada de contornar o Cloudflare.
+ */
+const ALARME_VIGIA_RELOGIO = "cw-vigia-relogio";
+const RELOGIO_DO_VIGIA_MIN = 30;
+
+async function vigiarPeloRelogio() {
+  const config = await lerConfig();
+  if (config.vigia === false) return;
+  const { estado } = await lerEstadoDoVigia();
+  if (estado?.codigo === "portal-desafio" && Date.now() - (estado.em ?? 0) < 2 * 60 * 60_000) return;
+  const idade = estado?.em ? Date.now() - estado.em : Infinity;
+  if (idade < (RELOGIO_DO_VIGIA_MIN - 5) * 60_000) return;
+  await vigiar("relogio");
+}
+
+/**
  * Abrir a plataforma de novo dentro deste intervalo reaproveita a
  * última leitura. Dez minutos cobrem o F5 e a segunda aba sem esconder
  * uma reclamação que chegou de manhã de quem abre à tarde.
@@ -1595,7 +1618,16 @@ async function umaVolta(motivo) {
 
     for (let pagina = 1; pagina <= paginas; pagina += 1) {
 
-      const lista = lerLista(await doPortal(enderecoDaLista(pagina)));
+      const html = await doPortal(enderecoDaLista(pagina));
+      const lista = lerLista(html);
+
+      /* A primeira página traz o painel oficial: vai junto, sem outra ida ao portal. */
+      if (pagina === 1) {
+        const painel = lerPainel(html);
+        if (painel?.length) {
+          chamar(CAMINHOS.raPainel, {}, { paineis: painel }).catch(() => {});
+        }
+      }
 
       if (!lista) {
         throw new FalhaNaChamada(
@@ -1780,6 +1812,11 @@ function agendar() {
   });
 
   chrome.alarms.clear(ALARME_VIGIA_ANTIGO);
+
+  chrome.alarms.create(ALARME_VIGIA_RELOGIO, {
+    delayInMinutes: 2,
+    periodInMinutes: RELOGIO_DO_VIGIA_MIN,
+  });
 }
 
 /* ============================================================
@@ -1896,6 +1933,7 @@ chrome.commands?.onCommand?.addListener(async (comando) => {
 
 chrome.alarms.onAlarm.addListener((alarme) => {
   if (alarme.name === ALARME) atualizarEmSilencio();
+  if (alarme.name === ALARME_VIGIA_RELOGIO) vigiarPeloRelogio();
   if (alarme.name === ALARME_LEMBRETE) {
     cobrarEtapas();
     avisarPrazos();

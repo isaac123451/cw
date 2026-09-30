@@ -31,6 +31,7 @@ import ResponseCeiling from "@/components/reclame-aqui/analytics/ResponseCeiling
 import DisregardedNotice from "@/components/reclame-aqui/DisregardedNotice";
 import GoalEditor from "@/components/reclame-aqui/analytics/GoalEditor";
 import ModuleNav from "@/components/reclame-aqui/ModuleNav";
+import PorCiclo from "@/components/reclame-aqui/analytics/PorCiclo";
 
 import { useScopedCases } from "@/lib/context/useScopedCases";
 
@@ -514,6 +515,8 @@ export default function ReclameAquiAnalyticsPage() {
           />
 
         </div>
+
+        <PorCiclo cases={cases} />
 
         <DisregardedNotice cases={current} />
 

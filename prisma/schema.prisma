@@ -2240,3 +2240,21 @@ model DesfechoDeCancelamento {
   por      String?
   em       DateTime @default(now())
 }
+
+/// O painel oficial do Reclame Aqui, como o portal o publica (1.86).
+///
+/// A nota da tela Índice era calculada pelas reclamações daqui — e o
+/// portal não recalcula todo dia: em 29/09 ele ainda contava 9 sem
+/// resposta no semestre, com 4 de verdade. Calculado dava 8,86; o portal
+/// mostrava 8,8. Agora o vigia lê o painel da própria lista (que ele já
+/// baixa) e a tela mostra o número oficial ao lado do calculado.
+/// Uma linha por período e janela: `SIX_MONTHS:2026-08-31`.
+model PainelDoPortal {
+  id        String   @id
+  tipo      String
+  inicio    String
+  fim       String
+  dados     Json
+  lidoEm    DateTime @default(now())
+  criadoEm  DateTime @default(now())
+}

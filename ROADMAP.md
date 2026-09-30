@@ -1116,6 +1116,43 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Reclame Aqui automático, índice oficial e avaliações por ciclo (29/09/2026, 1.86.0)
+
+Pedidos: "toda atualização de casos no Reclame Aqui é para ser feita
+automaticamente", "os dados atuais do Reclame Aqui estão errados", "quando
+uma avaliação for atualizada, marque a data para eu ver quantas avaliações
+tiveram em um ciclo" e o índice "grande demais, sem prévia, feio".
+
+- **Vigia com relógio:** com o Chrome aberto, a extensão lê a lista do
+  portal sozinha a cada 30 min (`ALARME_VIGIA_RELOGIO`), além de ao abrir
+  a plataforma e no botão. Verificação do Cloudflare: para por 2 h, sem
+  contornar.
+- **O que estava errado:** conferidas as 199 reclamações desde 15/11/2025,
+  uma a uma, contra a lista do portal — respondida e avaliada batem em
+  todas, menos RA-5axK0Vq6 (respondida e avaliada hoje; o texto chega na
+  próxima volta do vigia). O erro era a **nota**: o portal mostra 8,8 com 9
+  sem resposta no semestre, porque o painel dele não é recalculado todo dia;
+  a conta daqui, com as 4 que faltam de verdade, dava 8,86 e aparecia como
+  "atual". Nota do consumidor, solução e voltaria batem nas duas casas
+  (8,12 · 95,1% · 81,5% em 6 meses; 7,75 · 90,7% · 77,9% em 12).
+- **Painel oficial:** o vigia lê a `CompanySidebarIsland` da própria lista
+  (`lerPainel`) e grava em `PainelDoPortal` (RLS 71 de 71); a primeira
+  leitura, de hoje, já está no banco.
+- **Índice refeito:** três notas (no portal · hoje · prévia), uma tabela de
+  indicadores das três contra a meta (avaliadas contando a desconsiderada,
+  como o portal), aviso quando o portal está atrasado, régua e evolução lado
+  a lado, e mês a mês. A evolução passa o mouse e mostra o dia.
+- **Gráficos no tamanho certo:** `useLargura` — os gráficos desenham na
+  largura medida com altura fixa, em vez de escalar pelo `viewBox` (720×220
+  virava 1.400×430). Aplicado no índice, tendência do RA, NPS e nos
+  gráficos compartilhados.
+- **Data da avaliação:** `carimboDaAvaliacao` — a avaliação que chega sem
+  data (à mão, planilha, portal sem a data) ganha o dia de hoje em
+  `persistCase`, `persistCaseParcial` e `mudancasDoPortal`; a antiga sem
+  data não é tocada. **Analytics → Por ciclo**: novas, respondidas,
+  avaliações, nota, resolvidas e voltaria em cada ciclo de 7 dias.
+  `check:por-ciclo` (7 pontos).
+
 ### Cancelamento e retenção (25/09/2026, 1.85.0)
 
 Pedido do Isaac: "identifique automaticamente nos casos, juntando pontos

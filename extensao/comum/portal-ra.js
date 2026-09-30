@@ -292,3 +292,66 @@ export function lerReclamacao(html) {
 
   return null;
 }
+
+/**
+ * O painel oficial da reputação, da barra lateral da lista (1.86).
+ *
+ * A lista que o vigia já baixa traz, na `CompanySidebarIsland`, o painel
+ * exatamente como o portal o publica: 6 meses, 12 meses, anos e geral —
+ * nota final, respondidas, aguardando, avaliadas, solução, voltaria.
+ * O portal não recalcula todo dia; é este número, e não o calculado
+ * aqui, que o consumidor vê. `null` quando a ilha não está lá.
+ */
+export function lerPainel(html) {
+  const ilha = String(html ?? "").match(
+    /<astro-island\b[^>]*component-url="[^"]*CompanySidebarIsland[^"]*"[^>]*\sprops="([^"]*)"/
+  );
+
+  if (!ilha) return null;
+
+  let props;
+
+  try {
+    props = JSON.parse(desescapar(ilha[1]));
+  } catch {
+    return null;
+  }
+
+  const desfazer = (v) => {
+    const d = desfazerAstro(v);
+    if (d && typeof d === "object" && !Array.isArray(d)) {
+      return Object.fromEntries(Object.entries(d).map(([k, x]) => [k, desfazer(x)]));
+    }
+    return Array.isArray(d) ? d.map(desfazer) : d;
+  };
+
+  const tudo = desfazer(props);
+  const lista = tudo?.reputation?.reputation;
+
+  if (!Array.isArray(lista)) return null;
+
+  const num = (v) => {
+    const n = Number(String(v ?? "").replace(",", "."));
+    return Number.isFinite(n) ? n : null;
+  };
+
+  return lista
+    .filter((p) => p && typeof p.type === "string")
+    .map((p) => ({
+      tipo: String(p.type),
+      inicio: String(p.start ?? "").slice(0, 10),
+      fim: String(p.end ?? "").slice(0, 10),
+      recebidas: num(p.complaints),
+      respondidas: num(p.answers),
+      aguardando: num(p.awaiting),
+      avaliadas: num(p.ratings),
+      resposta: num(p.answeredRate),
+      solucao: num(p.solvedRate),
+      voltaria: num(p.dealAgainRate),
+      notaConsumidor: num(p.consumerScore),
+      nota: num(p.finalScore),
+      selo: String(p.status ?? ""),
+      tempoMedio: String(p.averageResponseTime ?? ""),
+    }))
+    .slice(0, 12);
+}

@@ -154,3 +154,40 @@ export function evolucaoDoMes(casos: Case[], periodo: PeriodoDoIndice, hoje: str
 export function notaExata(valor: number) {
   return valor.toFixed(5).replace(".", ",");
 }
+
+export interface MesDoIndice {
+  mes: string;
+  recebidas: number;
+  respondidas: number;
+  semResposta: number;
+  avaliadas: number;
+  notaConsumidor: number | null;
+  solucao: number | null;
+  voltaria: number | null;
+}
+
+/**
+ * Mês a mês (1.86): o que entrou em cada mês e como está hoje — do mais
+ * novo para o mais velho. Mostra de onde vem cada ponto da nota: o mês
+ * que ainda tem reclamação sem resposta, o que recebeu avaliação ruim.
+ */
+export function mesAMes(casos: Case[], hoje: string, meses = 12): MesDoIndice[] {
+  const saida: MesDoIndice[] = [];
+  for (let i = 0; i < meses; i += 1) {
+    const inicio = inicioDoMes(hoje, -i);
+    const fim = mais(inicioDoMes(hoje, -i + 1), -1);
+    const doMes = casos.filter((c) => inRange(c, inicio, fim));
+    const r = getRawCounts(doMes);
+    saida.push({
+      mes: inicio.slice(0, 7),
+      recebidas: r.received,
+      respondidas: r.answered,
+      semResposta: r.received - r.answered,
+      avaliadas: r.evaluated,
+      notaConsumidor: r.evaluated ? r.scoreSum / r.evaluated : null,
+      solucao: r.evaluated ? (100 * r.resolved) / r.evaluated : null,
+      voltaria: r.evaluated ? (100 * r.wouldReturn) / r.evaluated : null,
+    });
+  }
+  return saida;
+}

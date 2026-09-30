@@ -1,5 +1,7 @@
 "use client";
 
+import { useLargura } from "@/lib/hooks/useLargura";
+
 import { useState } from "react";
 
 import SurfaceCard from "@/components/shared/SurfaceCard";
@@ -10,7 +12,8 @@ interface Props {
   data: MonthlyReputation[];
 }
 
-const WIDTH = 680;
+/** Largura de partida; o desenho segue a largura medida (1.86, `useLargura`). */
+const LARGURA_BASE = 680;
 const HEIGHT = 260;
 const PAD_L = 34;
 const PAD_R = 34;
@@ -42,6 +45,7 @@ export default function ReputationTrend({
 }: Props) {
 
   const [ativo, setAtivo] = useState<number | null>(null);
+  const [medirLargura, WIDTH] = useLargura(LARGURA_BASE);
 
   if (data.length === 0) {
     return (
@@ -141,7 +145,7 @@ export default function ReputationTrend({
 
       </div>
 
-      <div className="relative w-full overflow-x-auto">
+      <div className="relative w-full overflow-x-auto" ref={medirLargura}>
 
         <svg
           viewBox={`0 0 ${WIDTH} ${HEIGHT}`}

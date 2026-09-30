@@ -100,7 +100,8 @@ export const PADROES = {
   etiquetasLista: true,
 
   /**
-   * O vigia do Reclame Aqui: ler o portal ao abrir a plataforma.
+   * O vigia do Reclame Aqui: ler o portal ao abrir a plataforma e,
+   * desde a 1.86, sozinho a cada meia hora com o Chrome aberto.
    *
    * Ligado por padrão, porque é o que faz a reclamação nova chegar ao
    * quadro sem ninguém importar planilha. Desligado, a leitura só sai
