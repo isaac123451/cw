@@ -97,7 +97,6 @@ export default function PlacarDaSemana({ dia }: { dia: MeuDia }) {
   }
 
   const { placar, acao } = calculado;
-  const diaDaSemana = new Date(`${placar.hoje}T12:00:00Z`).toLocaleDateString("pt-BR", { weekday: "long", timeZone: "UTC" });
 
   function abrirResumo() {
     setTexto(textoDoResumoDaSemana(placar, { sequencia: dia.sequencia, nota: acao ? um(acao.notaAntes) : undefined }));
