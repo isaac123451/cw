@@ -1,5 +1,5 @@
 -- Row Level Security — CW Reputação
--- Gerado por scripts/apply-rls.js (71 tabelas).
+-- Gerado por scripts/apply-rls.js (72 tabelas).
 -- Preferir: npm run db:rls
 
 ALTER TABLE public."AgendaTask" ENABLE ROW LEVEL SECURITY;
@@ -57,6 +57,7 @@ ALTER TABLE public."Plan" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public."Playbook" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public."Project" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public."RelatorioDoCiclo" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public."ReputacaoNoSegmento" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public."ReputationGoal" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public."SaudeDaIA" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public."SavedFilter" ENABLE ROW LEVEL SECURITY;

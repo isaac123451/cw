@@ -17,6 +17,7 @@ import {
   TETO_POR_VOLTA,
   validarReclamacao,
 } from "@/lib/services/raPortal.service";
+import { pedidoDoSegmento } from "@/lib/services/segmento.service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -61,6 +62,9 @@ export async function GET(request: Request) {
       páginas do portal toda vez para ouvir um 403 no fim.
     */
     podeGravar: Boolean(usuario && usuario.papel !== "LEITURA"),
+
+    /* As empresas parecidas para ler hoje, se ainda não leu (1.107). */
+    segmento: await pedidoDoSegmento(prisma).catch(() => null),
   });
 }
 

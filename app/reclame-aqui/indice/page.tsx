@@ -17,19 +17,12 @@ import { respondida } from "@/lib/models/case";
 import { evolucaoDoMes, mesAMes, notaExata, retratoDoIndice, type PeriodoDoIndice, type RetratoDoIndice } from "@/lib/models/indiceRA";
 import { bandOf, displayBand, hojeNaOperacao, inRange, ptBR, RA1000_BAND, RA1000_MINIMO_DE_AVALIACOES, RA1000_TARGETS } from "@/lib/services/reputation.service";
 import type { PainelDoPortal } from "@/lib/services/painelDoPortal.service";
+import { SELO_DO_PORTAL } from "@/lib/models/segmento";
+import ComparacaoComSegmento from "@/components/reclame-aqui/indice/ComparacaoComSegmento";
 
 const br = (iso: string) => iso.split("-").reverse().join("/");
 const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 const nomeDoMes = (m: string) => `${MESES[Number(m.slice(5)) - 1]}/${m.slice(2, 4)}`;
-
-const SELO_DO_PORTAL: Record<string, string> = {
-  RA1000: "RA1000",
-  GREAT: "Ótimo",
-  GOOD: "Bom",
-  REGULAR: "Regular",
-  BAD: "Ruim",
-  NOT_RECOMMENDED: "Não recomendada",
-};
 
 /**
  * O índice do Reclame Aqui (Fase 32, 1.75; refeito na 1.86).
@@ -330,6 +323,8 @@ export default function IndicePage() {
             </table>
           </div>
         </SurfaceCard>
+
+        <ComparacaoComSegmento />
 
       </div>
     </MainLayout>

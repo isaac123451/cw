@@ -294,15 +294,10 @@ export function lerReclamacao(html) {
 }
 
 /**
- * O painel oficial da reputação, da barra lateral da lista (1.86).
- *
- * A lista que o vigia já baixa traz, na `CompanySidebarIsland`, o painel
- * exatamente como o portal o publica: 6 meses, 12 meses, anos e geral —
- * nota final, respondidas, aguardando, avaliadas, solução, voltaria.
- * O portal não recalcula todo dia; é este número, e não o calculado
- * aqui, que o consumidor vê. `null` quando a ilha não está lá.
+ * As props da barra lateral da lista (`CompanySidebarIsland`), já sem a
+ * serialização do Astro. `null` quando a ilha não está lá.
  */
-export function lerPainel(html) {
+function barraLateral(html) {
   const ilha = String(html ?? "").match(
     /<astro-island\b[^>]*component-url="[^"]*CompanySidebarIsland[^"]*"[^>]*\sprops="([^"]*)"/
   );
@@ -325,7 +320,46 @@ export function lerPainel(html) {
     return Array.isArray(d) ? d.map(desfazer) : d;
   };
 
-  const tudo = desfazer(props);
+  return desfazer(props);
+}
+
+/** A lista pública de reclamações de qualquer empresa (1.107). */
+export function enderecoDaEmpresa(slug) {
+  return `${ORIGEM}/empresa/${slug}/lista-reclamacoes/`;
+}
+
+/**
+ * O nome da empresa e a posição dela no ranking do segmento (1.107), da
+ * mesma barra lateral do painel. Medido em 30/09/2026: a Cardápio Web
+ * aparece como `{ position: 3, type: "BEST", segmentName: "Softwares de
+ * Desenvolvimento e Design" }`; empresa fora do ranking vem sem posição.
+ */
+export function lerEmpresa(html) {
+  const tudo = barraLateral(html);
+  if (!tudo || typeof tudo.companyName !== "string") return null;
+  const p = tudo.companyPosition;
+  const posicao =
+    p && Number.isFinite(Number(p.position)) && Number(p.position) > 0
+      ? {
+          posicao: Number(p.position),
+          tipo: String(p.type ?? ""),
+          segmento: String(p.segmentName ?? ""),
+        }
+      : null;
+  return { nome: tudo.companyName.trim(), posicao };
+}
+
+/**
+ * O painel oficial da reputação, da barra lateral da lista (1.86).
+ *
+ * A lista que o vigia já baixa traz, na `CompanySidebarIsland`, o painel
+ * exatamente como o portal o publica: 6 meses, 12 meses, anos e geral —
+ * nota final, respondidas, aguardando, avaliadas, solução, voltaria.
+ * O portal não recalcula todo dia; é este número, e não o calculado
+ * aqui, que o consumidor vê. `null` quando a ilha não está lá.
+ */
+export function lerPainel(html) {
+  const tudo = barraLateral(html);
   const lista = tudo?.reputation?.reputation;
 
   if (!Array.isArray(lista)) return null;

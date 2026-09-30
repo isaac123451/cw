@@ -9,8 +9,10 @@ import { decidirAvisosDePrazo, dentroDoHorario, horaDeBrasilia } from "../comum/
 
 import {
   ehDesafio,
+  enderecoDaEmpresa,
   enderecoDaLista,
   enderecoDaReclamacao,
+  lerEmpresa,
   lerLista,
   lerListaPelosLinks,
   lerPainel,
@@ -72,6 +74,7 @@ const CAMINHOS = {
   transcrever: "/api/extensao/transcrever",
   etiquetasLista: "/api/extensao/etiquetas-lista",
   raPainel: "/api/extensao/ra-painel",
+  raSegmento: "/api/extensao/ra-segmento",
 };
 
 /**
@@ -1628,6 +1631,7 @@ async function umaVolta(motivo) {
   const novas = [];
   const atrasadas = [];
   let total = null;
+  let htmlDaCasa = null;
 
   try {
 
@@ -1650,6 +1654,7 @@ async function umaVolta(motivo) {
 
       /* A primeira página traz o painel oficial: vai junto, sem outra ida ao portal. */
       if (pagina === 1) {
+        htmlDaCasa = html;
         const painel = lerPainel(html);
         if (painel?.length) {
           chamar(CAMINHOS.raPainel, {}, { paineis: painel }).catch(() => {});
@@ -1783,7 +1788,43 @@ async function umaVolta(motivo) {
   if (estado.criadas.length > 0) avisarNovas(estado.criadas);
   avisarEventos(resultado.completadas ?? []);
 
+  await lerSegmento(plano, htmlDaCasa).catch(() => {});
+
   return estado;
+}
+
+/**
+ * Comparação com o segmento (Fase 30, 1.107).
+ *
+ * Uma vez por dia, depois de uma volta que deu certo, a lista pública de
+ * cada empresa parecida (as de `OperacaoConfig.concorrentesRA`) — a mesma
+ * barra lateral de onde sai o painel oficial da Cardápio Web, que vai
+ * junto sem outra ida ao portal. Na sua sessão, uma página por vez e com
+ * folga entre elas; se o portal pedir verificação, para ali.
+ */
+async function lerSegmento(plano, htmlDaCasa) {
+  const pedido = plano?.segmento;
+  if (!pedido || pedido.lidoHoje || !Array.isArray(pedido.concorrentes)) return;
+
+  const leituras = [];
+  const casa = htmlDaCasa ? lerEmpresa(htmlDaCasa) : null;
+  const painelDaCasa = htmlDaCasa ? lerPainel(htmlDaCasa) : null;
+  if (casa && painelDaCasa) leituras.push({ slug: plano.empresa, ...casa, paineis: painelDaCasa });
+
+  for (const slug of pedido.concorrentes.slice(0, 10)) {
+    if (!/^[a-z0-9-]{2,80}$/.test(slug)) continue;
+    await esperar(800);
+    try {
+      const html = await doPortal(enderecoDaEmpresa(slug));
+      const empresa = lerEmpresa(html);
+      const paineis = lerPainel(html);
+      if (empresa && paineis) leituras.push({ slug, ...empresa, paineis });
+    } catch (erro) {
+      if (erro?.codigo === "portal-desafio") break;
+    }
+  }
+
+  if (leituras.length) await chamar(CAMINHOS.raSegmento, {}, { leituras });
 }
 
 /** Uma notificação por volta, não uma por reclamação. */

@@ -1743,8 +1743,33 @@ model OperacaoConfig {
   /// O último ciclo enviado — uma vez por ciclo, mesmo com a rotina rodando de novo.
   relatorioEnviadoCiclo String?
 
+  /// Comparação com o segmento (1.107): as empresas parecidas cuja página
+  /// pública do Reclame Aqui a extensão lê uma vez por dia. O endereço
+  /// curto de cada uma (`/empresa/<este>/`). Começa com as quatro
+  /// conferidas em 30/09/2026; edita-se na tela Índice.
+  concorrentesRA String[] @default(["anota-ai", "goomer", "saipos", "delivery-much"])
+
   updatedAt DateTime @updatedAt
   updatedBy String?
+}
+
+/// A reputação pública de uma empresa no Reclame Aqui, uma linha por
+/// empresa por dia (1.107) — a da Cardápio Web e a das parecidas, lidas
+/// pela extensão da mesma barra lateral de onde sai o painel oficial.
+/// O histórico diário é o que mostra quem subiu e quem caiu no mês.
+model ReputacaoNoSegmento {
+  id      String   @id @default(cuid())
+  slug    String
+  nome    String
+  dia     DateTime @db.Date
+  /// Os períodos do painel (6 meses, 12 meses, ano passado), como `lerPainel` devolve.
+  paineis Json
+  /// A posição no ranking do segmento: { posicao, tipo, segmento }. Vazio quando o portal não mostra.
+  posicao Json?
+  lidoEm  DateTime @default(now())
+
+  @@unique([slug, dia])
+  @@index([dia])
 }
 
 model WebhookConfig {

@@ -104,6 +104,14 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.107.0",
+    data: "2026-09-30",
+    titulo: "Comparação com o segmento",
+    texto: "No Índice do Reclame Aqui, a nota, a solução e o voltaria da Cardápio Web lado a lado com Goomer, Delivery Much, Saipos e Anota AI, lidos das páginas públicas uma vez por dia pela extensão. A lista de empresas se edita ali mesmo.",
+    frentes: ["reclame-aqui", "extensao"],
+    href: "/reclame-aqui/indice",
+  },
+  {
     versao: "1.106.0",
     data: "2026-09-30",
     titulo: "Distribuição do time",

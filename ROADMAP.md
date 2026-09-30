@@ -1116,6 +1116,21 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Comparação com o segmento (30/09/2026, 1.107.0)
+
+Fase 30. Na tela Índice do Reclame Aqui, **Comparação com o segmento**: a
+reputação das empresas parecidas (começa com Anota AI, Goomer, Saipos e
+Delivery Much — edita-se na própria tela colando o link da empresa) lado a
+lado com a da Cardápio Web, nos períodos 6 meses, 12 meses, ano passado e
+3 anos, com a variação da nota em cerca de 30 dias e a posição no ranking
+do segmento do portal (3º melhor em Softwares de Desenvolvimento e Design).
+Os números vêm da mesma barra lateral de onde sai o painel oficial: a
+extensão lê a lista pública de cada empresa **uma vez por dia**, depois de
+uma volta do vigia que deu certo, na sua sessão e sem atravessar
+verificação (`lerEmpresa`, rota `ra-segmento`, tabela
+`ReputacaoNoSegmento` com uma linha por empresa por dia).
+`npm run check:segmento`. A leitura de 30/09 já está gravada.
+
 ### Distribuição do time (30/09/2026, 1.106.0)
 
 Fase 30. Tela nova em Hoje → **Distribuição do time**: a carga de cada
