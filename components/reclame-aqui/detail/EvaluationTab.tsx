@@ -333,16 +333,17 @@ export default function EvaluationTab({
   const achados = useMemo(() => dadosSensiveis(rascunho), [rascunho]);
 
   /* O analista (1.94): o resto do documento — dado pessoal e texto repetido já estão na conferência acima. */
-  const doAnalista = useMemo(
+  const analiseDoRascunho = useMemo(
     () =>
       rascunho.length < 40
-        ? []
+        ? null
         : analisarResposta(rascunho, {
             nome: data.customer,
             validado: data.createdAt < INICIO_DA_TRILHA ? undefined : Boolean(data.validadoEm),
-          }).achados.filter((a) => a.tipo !== "dado-pessoal" && a.tipo !== "parece-macro"),
+          }),
     [rascunho, data.customer, data.createdAt, data.validadoEm]
   );
+  const doAnalista = (analiseDoRascunho?.achados ?? []).filter((a) => a.tipo !== "dado-pessoal" && a.tipo !== "parece-macro");
 
   /* Reclamação anterior ao registro de contatos não tem validação para mostrar. */
   const semValidacao = !data.validadoEm && data.createdAt >= INICIO_DA_TRILHA;
@@ -434,6 +435,23 @@ export default function EvaluationTab({
           )}
 
           <ConferenciaDaResposta texto={rascunho} protocol={data.protocol} achados={achados} />
+
+          {/* A nota do analista enquanto escreve (1.112), a mesma da tela Respostas e da extensão. */}
+          {analiseDoRascunho && (
+            <p className="mt-2 flex items-center gap-2 text-xs text-zinc-600">
+              <span
+                className={`inline-flex h-7 min-w-10 items-center justify-center rounded-lg px-2 text-sm font-bold tabular-nums text-white ${
+                  analiseDoRascunho.nota >= 85 ? "bg-emerald-600" : analiseDoRascunho.nota >= 60 ? "bg-amber-600" : "bg-rose-600"
+                }`}
+              >
+                {Math.round(analiseDoRascunho.nota)}
+              </span>
+              <span>
+                <b className="font-semibold text-zinc-800">Nota da resposta</b> · de 0 a 100, pelo analista
+                {analiseDoRascunho.nota >= 85 ? " — boa para publicar" : analiseDoRascunho.nota >= 60 ? " — dá para melhorar" : " — revise antes de publicar"}
+              </span>
+            </p>
+          )}
 
           {doAnalista.length > 0 && (
             <ul className="mt-2 space-y-1 rounded-xl bg-zinc-50 px-3.5 py-2.5 text-xs leading-relaxed ring-1 ring-inset ring-zinc-200" aria-label="O analista de respostas">

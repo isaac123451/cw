@@ -1116,6 +1116,18 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Nota da resposta enquanto escreve (30/09/2026, 1.112.0)
+
+Pedido de 30/09: "aquele score tem que aparecer na hora que eu tiver
+criando a mensagem no Reclame Aqui". Na caixa de resposta da área da
+empresa, a extensão mostra no topo do aviso a nota do analista (0 a 100,
+a mesma da tela Respostas), colorida (verde a partir de 85, amarelo a
+partir de 60, vermelho abaixo), atualizando 0,7 s depois de parar de
+digitar — também quando o protocolo não é achado (antes, sem protocolo, a
+rota nem analisava). O protocolo da página usa o recorte da reclamação
+aberta (1.110). Na ficha da plataforma, a mesma nota aparece junto ao
+rascunho da resposta.
+
 ### Tentativa conta nas três (30/09/2026, 1.111.0)
 
 Pedido de 30/09: "conta como tentativa feita, para aquele negócio de 3

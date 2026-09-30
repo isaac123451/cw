@@ -32,7 +32,8 @@
     "textarea",
   ];
 
-  const ESPERA = 1200;
+  /* Quase na hora (1.112): a nota acompanha quem escreve. */
+  const ESPERA = 700;
   const MINIMO = 25;
 
   let caixaAtual = null;
@@ -57,7 +58,9 @@
 
   /** O protocolo da reclamação aberta, pelos leitores que o `check:ra` prova. */
   function protocoloDaPagina() {
-    const conteudo = document.body?.innerText ?? "";
+    const bruto = document.body?.innerText ?? "";
+    /* Só a reclamação aberta (1.110): com a lista por trás, o primeiro ID era de outra. */
+    const conteudo = CW.ra?.recorteDaReclamacao ? CW.ra.recorteDaReclamacao(bruto) : bruto;
     const id = CW.ra?.id?.(conteudo) ?? "";
     return id ? `RA-${id}` : "";
   }
@@ -117,6 +120,18 @@
     const caixa = montarAviso(el);
     const partes = [];
 
+    /*
+      A nota do analista, sempre no topo (1.112) — a mesma de 0 a 100 da tela
+      Respostas. Muda enquanto a pessoa escreve.
+    */
+    if (typeof d.nota === "number") {
+      const n = Math.round(d.nota);
+      const [fundo, texto] = n >= 85 ? ["#16a34a", "#fff"] : n >= 60 ? ["#d97706", "#fff"] : ["#dc2626", "#fff"];
+      partes.push(
+        `<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:44px;height:30px;border-radius:8px;background:${fundo};color:${texto};font:700 17px/1 ui-sans-serif,system-ui,sans-serif">${n}</span><span><strong>Nota da resposta</strong> · de 0 a 100, pelo analista do CW${n >= 85 ? " — boa para publicar" : n >= 60 ? " — dá para melhorar" : " — revise antes de publicar"}</span></div>`
+      );
+    }
+
     if (d.caso?.passo || d.caso?.prazo) {
       partes.push(
         `<div style="opacity:.85">${CW.escapar(d.caso.protocolo)}${
@@ -150,7 +165,7 @@
       );
     }
 
-    if (partes.length === 0) {
+    if (partes.length === (typeof d.nota === "number" ? 1 : 0)) {
       partes.push('<div>Sem dado pessoal, sem texto repetido e segue o documento. Pode publicar.</div>');
     }
 

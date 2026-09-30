@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.112.0",
+    data: "2026-09-30",
+    titulo: "A nota da resposta enquanto você escreve",
+    texto: "Ao escrever a resposta pública na área da empresa do Reclame Aqui, a extensão mostra a nota do analista (0 a 100) e o que melhorar, quase na hora. Na ficha do caso, a mesma nota aparece junto ao rascunho.",
+    frentes: ["reclame-aqui", "extensao"],
+  },
+  {
     versao: "1.111.0",
     data: "2026-09-30",
     titulo: "Tentativa do NPS conta na hora",

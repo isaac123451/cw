@@ -21,6 +21,19 @@ export const dynamic = "force-dynamic";
 const TETO = 20_000;
 
 /**
+ * A nota do analista (0 a 100) e o que melhorar (1.112): "aquele score tem
+ * que aparecer na hora que eu tiver criando a mensagem no Reclame Aqui".
+ * Dado pessoal e texto repetido vão em campos próprios; a nota já os pesa.
+ */
+function doAnalista(texto: string, caso: { customer: string; createdAt: string; validadoEm?: string } | null) {
+  const a = analisarResposta(texto, {
+    nome: caso?.customer,
+    validado: caso ? (caso.createdAt < INICIO_DA_TRILHA ? undefined : Boolean(caso.validadoEm)) : undefined,
+  });
+  return { nota: a.nota, analise: a.achados.filter((x) => x.tipo !== "dado-pessoal" && x.tipo !== "parece-macro") };
+}
+
+/**
  * A conferência da resposta pública, antes de publicar (Fase 8.3).
  *
  * É a mesma conferência da ficha, chamada de dentro do HugMe e do
@@ -54,13 +67,14 @@ export async function POST(request: Request) {
 
   const prisma = getPrisma();
 
-  /* Sem protocolo (ou sem banco), a conferência é só a do texto. */
+  /* Sem protocolo (ou sem banco), a conferência é a do texto — com a nota do analista. */
   if (!prisma || !protocolo) {
     return responder(request, {
       achados,
       resumo: achados.length > 0 ? resumoDosAchados(dadosSensiveis(texto)) : "",
       repetida: null,
       caso: null,
+      ...doAnalista(texto, null),
     });
   }
 
@@ -105,10 +119,7 @@ export async function POST(request: Request) {
       avaliar, assinatura, tamanho, tom defensivo, "resolvido" sem o cliente
       confirmar. Os dois primeiros já vão acima; aqui vai o resto.
     */
-    analise: analisarResposta(texto, {
-      nome: caso?.customer,
-      validado: caso ? (caso.createdAt < INICIO_DA_TRILHA ? undefined : Boolean(caso.validadoEm)) : undefined,
-    }).achados.filter((a) => a.tipo !== "dado-pessoal" && a.tipo !== "parece-macro"),
+    ...doAnalista(texto, caso ? { customer: caso.customer, createdAt: caso.createdAt, validadoEm: caso.validadoEm } : null),
 
     /** O passo e o prazo da reclamação aberta, para o aviso dizer onde ela está. */
     caso: caso
