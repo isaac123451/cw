@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { Check, ChevronDown, Loader2, Pencil, Plus, Search, X } from "lucide-react";
 
@@ -102,6 +103,39 @@ export default function Combobox({
 }: Props) {
 
   const [open, setOpen] = useState(false);
+
+  /*
+    A lista mora no <body>, presa à posição do campo (1.88). Dentro de um
+    diálogo ou de um cartão com rolagem, ela era cortada pela borda de
+    quem a continha — "as caixas de seleção de causa raiz ficam cortadas".
+    Sem espaço embaixo, abre para cima.
+  */
+  const caixa = useRef<HTMLDivElement>(null);
+  const [posicao, setPosicao] = useState<{ left: number; top?: number; bottom?: number; width: number } | null>(null);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    const medir = () => {
+      const r = caixa.current?.getBoundingClientRect();
+      if (!r) return;
+      const largura = Math.max(r.width, 256);
+      const left = Math.max(8, Math.min(r.left, window.innerWidth - largura - 8));
+      const abaixo = window.innerHeight - r.bottom;
+      setPosicao(
+        abaixo < 360 && r.top > abaixo
+          ? { left, bottom: window.innerHeight - r.top + 6, width: largura }
+          : { left, top: r.bottom + 6, width: largura }
+      );
+    };
+    medir();
+    window.addEventListener("resize", medir);
+    window.addEventListener("scroll", medir, true);
+    return () => {
+      window.removeEventListener("resize", medir);
+      window.removeEventListener("scroll", medir, true);
+    };
+  }, [open]);
+
   const [term, setTerm] = useState("");
   const [ativo, setAtivo] = useState(0);
 
@@ -277,7 +311,7 @@ export default function Combobox({
   }
 
   return (
-    <div className="relative">
+    <div className="relative" ref={caixa}>
 
       <button
         type="button"
@@ -309,11 +343,11 @@ export default function Combobox({
 
       </button>
 
-      {open && (
+      {open && posicao && createPortal(
 
         <>
           <div
-            className="fixed inset-0 z-40"
+            className="fixed inset-0 z-[95]"
             onClick={() => {
               setOpen(false);
               setEditando(null);
@@ -321,7 +355,9 @@ export default function Combobox({
           />
 
           <div
-            className={`absolute left-0 top-[calc(100%+6px)] z-50 overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-[0_12px_32px_-12px_rgba(16,24,40,0.25)] ${menuWidth}`}
+            data-menu-largura={menuWidth}
+            style={{ left: posicao.left, top: posicao.top, bottom: posicao.bottom, width: posicao.width }}
+            className="fixed z-[96] overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-[0_12px_32px_-12px_rgba(16,24,40,0.25)]"
           >
 
             <div className="relative border-b border-zinc-100 p-2">
@@ -501,8 +537,8 @@ export default function Combobox({
             )}
 
           </div>
-        </>
-
+        </>,
+        document.body
       )}
 
     </div>

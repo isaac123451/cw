@@ -57,10 +57,10 @@ export default function CaseDrawer({
     <>
       <div
         onClick={onClose}
-        className="fixed inset-0 z-40 bg-black/40"
+        className="fixed inset-0 z-[85] bg-black/40"
       />
 
-      <aside className="fixed right-0 top-0 z-50 flex h-screen w-[860px] max-w-full flex-col bg-white shadow-2xl">
+      <aside className="fixed right-0 top-0 z-[86] flex h-screen w-[860px] max-w-full flex-col bg-white shadow-2xl">
 
         <div className="flex items-center justify-between border-b border-zinc-200/80 px-6 py-3">
 

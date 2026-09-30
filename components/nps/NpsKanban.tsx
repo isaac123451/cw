@@ -18,6 +18,7 @@ import {
 
 import { slaState } from "@/lib/services/nps.service";
 import BotaoAbrirEmJanela from "@/components/janelas/BotaoAbrirEmJanela";
+import { imagemDeArrasto } from "@/lib/ui/imagemDeArrasto";
 
 interface Props {
   itens: NpsResponseView[];
@@ -253,9 +254,10 @@ function Cartao({
   return (
     <article
       draggable
-      onDragStart={(e) =>
-        e.dataTransfer.setData("text/plain", item.id)
-      }
+      onDragStart={(e) => {
+        e.dataTransfer.setData("text/plain", item.id);
+        imagemDeArrasto(e);
+      }}
       onClick={() => onOpen(item)}
       className="cursor-pointer rounded-xl border border-zinc-200 bg-white p-2.5 shadow-sm transition-colors hover:border-violet-300"
     >

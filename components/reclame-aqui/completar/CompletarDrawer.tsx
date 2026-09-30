@@ -79,12 +79,12 @@ export default function CompletarDrawer({ caseId, onClose, posicao, onProximo }:
 
   return (
     <>
-      <div onClick={onClose} className="fixed inset-0 z-40 bg-black/30" />
+      <div onClick={onClose} className="fixed inset-0 z-[85] bg-black/30" />
 
       <aside
         role="dialog"
         aria-label={`Completar ${data.protocol}`}
-        className="fixed right-0 top-0 z-50 flex h-screen w-[460px] max-w-full flex-col bg-white shadow-2xl"
+        className="fixed right-0 top-0 z-[86] flex h-screen w-[460px] max-w-full flex-col bg-white shadow-2xl"
       >
         <Conteudo data={data} onClose={onClose} posicao={posicao} onProximo={onProximo} />
       </aside>

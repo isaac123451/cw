@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.88.0",
+    data: "2026-09-30",
+    titulo: "O cartão aparece ao arrastar, e nada fica escondido",
+    texto: "Ao mudar a etapa, o cartão segue o mouse. Diálogos abertos de dentro de uma janela flutuante aparecem por cima dela, e as listas de seleção (causa raiz, estabelecimento, categoria) não são mais cortadas. Na janela do NPS, a tentativa de contato aceita a data. E registrar tentativa não muda mais a etapa do NPS para Em tratativa.",
+    frentes: ["reclame-aqui", "nps", "plataforma"],
+  },
+  {
     versao: "1.87.0",
     data: "2026-09-30",
     titulo: "Respondida num clique, e a área da empresa completa sozinha",

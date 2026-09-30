@@ -327,6 +327,11 @@ export interface Tentativa {
  * estourado para sempre mesmo com a operação tendo ligado. `updateMany`
  * com `firstContactAt: null` no filtro é o que garante que só a
  * primeira mova a data — a segunda encontra zero linhas e não faz nada.
+ *
+ * **Não mexe na etapa** (1.88). "Quando registro tentativa de contato, vai
+ * para em tratativa" — e não devia: tentar não é falar com o cliente. A
+ * etapa muda pelo pós-contato (`registrarContato`) ou pela mão de quem
+ * atende.
  */
 export async function registrarTentativa(
   prisma: PrismaClient,
@@ -354,7 +359,6 @@ export async function registrarTentativa(
     },
     data: {
       firstContactAt: em,
-      status: "Em tratativa",
     },
   });
 

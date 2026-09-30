@@ -106,7 +106,7 @@ export default function WorkflowModal({
     <>
       <div
         onClick={onClose}
-        className="fixed inset-0 z-40 bg-zinc-900/25"
+        className="fixed inset-0 z-[85] bg-zinc-900/25"
       />
 
       {/*
@@ -121,7 +121,7 @@ export default function WorkflowModal({
         baixa, os campos de cor e de lembrete ficavam abaixo da dobra da
         própria janela, sem jeito de chegar até o botão de salvar.
       */}
-      <div className="fixed left-1/2 top-1/2 z-50 flex max-h-[calc(100dvh-32px)] w-[calc(100vw-32px)] max-w-[560px] -translate-x-1/2 -translate-y-1/2 flex-col overflow-y-auto rounded-2xl bg-white shadow-2xl">
+      <div className="fixed left-1/2 top-1/2 z-[86] flex max-h-[calc(100dvh-32px)] w-[calc(100vw-32px)] max-w-[560px] -translate-x-1/2 -translate-y-1/2 flex-col overflow-y-auto rounded-2xl bg-white shadow-2xl">
 
         {/* Header */}
 

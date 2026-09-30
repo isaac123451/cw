@@ -168,6 +168,19 @@ export function instanteDe(dia: string, min: number): Date {
 }
 
 /**
+ * O valor de um `<input type="datetime-local">` em Brasília:
+ * "2026-09-15T16:20". O caminho de volta é `instanteDeParede`. Vazio
+ * quando não há data.
+ */
+export function campoDeParede(valor?: Date | string | null): string {
+  if (!valor) return "";
+  const d = valor instanceof Date ? valor : new Date(valor);
+  if (Number.isNaN(d.getTime())) return "";
+  const { dia, min } = paredeDe(d);
+  return `${dia}T${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
+}
+
+/**
  * Hora de parede de Brasília, escrita como o portal e a planilha
  * escrevem, virando instante de verdade.
  *

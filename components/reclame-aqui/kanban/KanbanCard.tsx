@@ -21,6 +21,7 @@ import { useOwners } from "@/lib/hooks/useOwners";
 import { caseHref, isSocial } from "@/lib/services/case.service";
 import { hojeNaOperacao } from "@/lib/services/reputation.service";
 import BotaoAbrirEmJanela from "@/components/janelas/BotaoAbrirEmJanela";
+import { imagemDeArrasto } from "@/lib/ui/imagemDeArrasto";
 
 interface Props {
   item: Case;
@@ -96,6 +97,7 @@ export default function KanbanCard({
         onDragStart={(event) => {
           event.dataTransfer.setData("text/plain", item.id);
           event.dataTransfer.effectAllowed = "move";
+          imagemDeArrasto(event);
           setDragging(true);
           onDragStart(item.id);
         }}

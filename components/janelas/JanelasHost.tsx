@@ -39,7 +39,7 @@ function linkDaFicha(j: Janela) {
   return `/reclame-aqui/${j.ref}`;
 }
 
-function Moldura({ janela }: { janela: Janela }) {
+function Moldura({ janela, camada }: { janela: Janela; camada: number }) {
 
   const { fechar, focar, minimizar, mover, alternarCompleta } = useJanelas();
   const comRascunho = useJanelasComRascunho();
@@ -101,7 +101,12 @@ function Moldura({ janela }: { janela: Janela }) {
       style={{
         left: janela.x,
         top: janela.y,
-        zIndex: 70 + janela.z,
+        /*
+          A ordem entre as janelas, e não o `z` guardado: ele cresce a cada
+          foco e passava por cima de diálogos e da busca. Com a ordem, as
+          janelas ficam entre 71 e 78 — abaixo de diálogo e gaveta (85).
+        */
+        zIndex: 70 + camada,
         width: `min(${completa ? LARGURA_DA_FICHA_COMPLETA : LARGURA_DA_JANELA}px, calc(100vw - 16px))`,
         height: completa ? "min(820px, calc(100vh - 72px))" : undefined,
       }}
@@ -194,6 +199,7 @@ export default function JanelasHost() {
   if (janelas.length === 0) return null;
 
   const minimizadas = janelas.filter((j) => j.minimizada);
+  const ordem = [...janelas].sort((a, b) => a.z - b.z).map((j) => j.id);
   const visiveis = janelas.length - minimizadas.length;
 
   return (
@@ -204,7 +210,7 @@ export default function JanelasHost() {
           digitado nela sobrevive a ir para a bandeja e voltar. Tirá-la
           da árvore jogaria fora o que a pessoa escreveu sem salvar.
         */
-        <Moldura key={j.id} janela={j} />
+        <Moldura key={j.id} janela={j} camada={ordem.indexOf(j.id) + 1} />
       ))}
 
       {(minimizadas.length > 0 || visiveis >= 2) && (

@@ -20,7 +20,7 @@ import { INICIO_DA_TRILHA } from "@/lib/models/trilha";
 import { useWorkflow } from "@/lib/context/WorkflowContext";
 import { useSession } from "@/lib/context/SessionContext";
 import { useCases } from "@/lib/context/CaseContext";
-import { descreverRegistro, instanteDe, paredeDe } from "@/lib/services/horasUteis";
+import { campoDeParede, descreverRegistro, instanteDeParede } from "@/lib/services/horasUteis";
 import { RESPOSTA_SINTETICA } from "@/lib/services/raMarcadores";
 import { dadosSensiveis, resumoDosAchados } from "@/lib/services/lgpd";
 import { hojeNaOperacao } from "@/lib/services/reputation.service";
@@ -300,20 +300,6 @@ function SituacaoPicker({
   );
 }
 
-/** "2026-09-15T16:20" em Brasília, para o campo de data e hora. */
-function valorDoCampo(iso?: string) {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  const { dia, min } = paredeDe(d);
-  return `${dia}T${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
-}
-
-function instanteDoCampo(valor: string) {
-  const m = valor.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})/);
-  return m ? instanteDe(m[1], Number(m[2]) * 60 + Number(m[3])) : null;
-}
-
 export default function EvaluationTab({
   data,
   onChange,
@@ -538,11 +524,11 @@ export default function EvaluationTab({
               <span className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">Publicada no portal em</span>
               <input
                 type="datetime-local"
-                value={valorDoCampo(data.publicResponseAt)}
-                max={valorDoCampo(new Date().toISOString())}
+                value={campoDeParede(data.publicResponseAt)}
+                max={campoDeParede(new Date())}
                 disabled={publicada === ""}
                 onChange={(e) => {
-                  const instante = instanteDoCampo(e.target.value);
+                  const instante = instanteDeParede(e.target.value);
                   if (instante) onChange({ publicResponseAt: instante.toISOString() });
                 }}
                 className="mt-1 block h-9 rounded-xl border border-zinc-200 px-3 text-sm tabular-nums outline-none focus:border-violet-400 disabled:cursor-not-allowed disabled:opacity-50"

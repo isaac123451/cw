@@ -99,7 +99,8 @@ export default function Modal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center">
+    /* Acima das janelas flutuantes (71–78): o diálogo aberto de dentro de uma janela ficava atrás dela. */
+    <div className="fixed inset-0 z-[85] flex items-end justify-center sm:items-center">
 
       <div
         onClick={onClose}

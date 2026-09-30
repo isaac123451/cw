@@ -1116,6 +1116,30 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Arrastar que se vê, janelas e seleções inteiras, tentativa que não muda a etapa (30/09/2026, 1.88.0)
+
+Fase 35 itens 6 e 8, Fase 37 item 2.
+
+- **Arrastar que se vê:** o cartão do quadro é link, e o navegador
+  arrastava o endereço; agora a imagem que segue o mouse é o próprio
+  cartão, inclinado e com sombra (`lib/ui/imagemDeArrasto.ts`), no quadro
+  do RA e no do NPS.
+- **Camadas:** diálogos e gavetas passaram para 85/86, acima das janelas
+  flutuantes — o diálogo aberto de dentro de uma janela (acionar a área
+  da causa, por exemplo) ficava atrás dela. As janelas usam a ordem entre
+  elas (71–78) em vez do `z` guardado, que crescia a cada foco.
+- **Seleções inteiras:** a lista do `Combobox` mora no `<body>`, presa ao
+  campo, e abre para cima quando falta espaço — dentro de diálogo, janela
+  ou cartão com rolagem ela era cortada (causa raiz, estabelecimento,
+  categoria). Conferido no diálogo de nova reclamação: escolha funciona,
+  lista inteira na tela.
+- **Datas:** a tentativa de contato da janela do NPS ganhou "Quando" (vazio
+  é agora); `campoDeParede` em `horasUteis` junta o formato do campo de
+  data e hora de Brasília.
+- **Tentativa não muda a etapa (NPS):** registrar tentativa grava o 1º
+  contato para o prazo, mas não leva mais o caso a "Em tratativa" — isso
+  fica com o pós-contato ou com quem atende.
+
 ### Área da empresa que completa sozinha, respondida num clique e a data da resposta (30/09/2026, 1.87.0)
 
 Fase 35, itens 2 a 4.

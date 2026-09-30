@@ -22,7 +22,7 @@ import {
 } from "@/lib/actions/nps";
 
 import { CHANNELS, segmentOf } from "@/lib/models/nps";
-import { descreverRegistro } from "@/lib/services/horasUteis";
+import { campoDeParede, descreverRegistro, instanteDeParede } from "@/lib/services/horasUteis";
 
 /**
  * O ciclo do NPS numa mini-janela.
@@ -69,6 +69,8 @@ export default function JanelaDoNps({ id }: { id: string }) {
   const [assumir, setAssumir] = useState(false);
   const [canal, setCanal] = useState<string>(CHANNELS[0]);
   const [tentativa, setTentativa] = useState("");
+  /* Vazio é agora; preenchido, a tentativa fica com a data e hora de Brasília escolhidas. */
+  const [quandoTentou, setQuandoTentou] = useState("");
   const [nota, setNota] = useState("");
   const [ocupado, setOcupado] = useState<string | null>(null);
 
@@ -256,15 +258,33 @@ export default function JanelaDoNps({ id }: { id: string }) {
                 className={campo}
               />
             </div>
+            <label className="flex items-center gap-2 text-[11px] text-zinc-500">
+              Quando
+              <input
+                type="datetime-local"
+                value={quandoTentou}
+                max={campoDeParede(new Date())}
+                onChange={(e) => setQuandoTentou(e.target.value)}
+                className={`${campo} w-auto`}
+              />
+              <span className="text-zinc-400">{quandoTentou ? "" : "vazio é agora"}</span>
+            </label>
             <button
               type="button"
               disabled={!tentativa.trim() || ocupado !== null}
               onClick={() =>
                 executar(
                   "tentativa",
-                  () => registerNpsAttempt({ responseId: item.id, channel: canal, note: tentativa.trim() }),
+                  () => {
+                    const em = quandoTentou ? instanteDeParede(quandoTentou) : null;
+                    if (quandoTentou && !em) return Promise.resolve({ ok: false as const, erro: "A data da tentativa não é válida." });
+                    return registerNpsAttempt({ responseId: item.id, channel: canal, note: tentativa.trim(), em: em?.toISOString() });
+                  },
                   `Tentativa por ${canal} registrada.`,
-                  () => setTentativa("")
+                  () => {
+                    setTentativa("");
+                    setQuandoTentou("");
+                  }
                 )
               }
               className={botao}
