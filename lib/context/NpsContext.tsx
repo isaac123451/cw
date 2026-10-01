@@ -132,7 +132,9 @@ export function NpsProvider({
     TIPOS_PADRAO
   );
 
-  const [loading, setLoading] = useState(enabled);
+  /* Derivado de `enabled`: depois do login o layout não remonta, só liga o provider — e a tela não pode piscar vazia. */
+  const [carregado, setCarregado] = useState(false);
+  const loading = enabled && !carregado;
 
   /*
     A recarga traz só o que mudou (1.116). Eram as 4.110 respostas (2,3 MB) a
@@ -173,7 +175,7 @@ export function NpsProvider({
     } catch (erro) {
       console.error("[nps] carga falhou", erro);
     } finally {
-      setLoading(false);
+      setCarregado(true);
     }
   }, [enabled, lerTudo]);
 
@@ -241,7 +243,7 @@ export function NpsProvider({
         console.error("[nps] carga falhou", erro);
       })
       .finally(() => {
-        if (ativo) setLoading(false);
+        if (ativo) setCarregado(true);
       });
 
     return () => {

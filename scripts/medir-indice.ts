@@ -13,7 +13,7 @@ import { getPrisma } from "../lib/prisma";
 import { fetchCases } from "../lib/services/case.repository";
 import { isSocial } from "../lib/services/case.service";
 import { hojeNaOperacao } from "../lib/services/reputation.service";
-import { evolucaoDoMes, notaExata, retratoDoIndice } from "../lib/models/indiceRA";
+import { evolucaoDoIndice, notaExata, retratoDoIndice } from "../lib/models/indiceRA";
 
 async function main() {
   const prisma = getPrisma();
@@ -32,9 +32,11 @@ async function main() {
       );
     }
   }
-  console.log(`\n  EVOLUÇÃO DO MÊS (6m)`);
-  for (const d of evolucaoDoMes(casos, "6m", hoje)) {
-    console.log(`  ${d.dia}  atual ${notaExata(d.atual)}  prévia ${notaExata(d.previa)}  +${d.recebidasNoDia} rec. · ${d.avaliadasNoDia} aval.`);
+  for (const escala of ["dia", "ciclo", "mes"] as const) {
+    console.log(`\n  EVOLUÇÃO POR ${escala.toUpperCase()} (6m)`);
+    for (const p of evolucaoDoIndice(casos, "6m", escala, hoje, hoje)) {
+      console.log(`  ${p.rotulo.padEnd(12)} atual ${notaExata(p.atual)}  prévia ${notaExata(p.previa)}  ${p.respondidas} resp. (${notaExata(p.efeitoDasRespostas)}) · ${p.avaliadas} aval. (${notaExata(p.efeitoDasAvaliacoes)}) · +${p.recebidas} rec.`);
+    }
   }
   console.log();
   process.exit(0);

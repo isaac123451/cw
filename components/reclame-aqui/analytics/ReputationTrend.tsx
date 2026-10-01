@@ -51,7 +51,7 @@ export default function ReputationTrend({
     return (
       <SurfaceCard
         title="Evolução da reputação"
-        description="Nota RA derivada do período e volume de reclamações recebidas."
+        description="A nota de cada mês — as avaliações entram no mês em que foram feitas — e as reclamações recebidas."
       >
         <p className="py-10 text-center text-sm text-zinc-400">
           Sem histórico no período selecionado.
@@ -128,7 +128,7 @@ export default function ReputationTrend({
   return (
     <SurfaceCard
       title="Evolução da reputação"
-      description="Nota RA derivada do período e volume de reclamações recebidas."
+      description="A nota de cada mês — as avaliações entram no mês em que foram feitas — e as reclamações recebidas."
     >
 
       <div className="mb-3 flex items-center gap-5 text-xs text-zinc-500">

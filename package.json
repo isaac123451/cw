@@ -1,6 +1,6 @@
 {
   "name": "cw-reputacao",
-  "version": "1.117.0",
+  "version": "1.118.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -51,6 +51,7 @@
     "check:ra-area": "tsx scripts/check-ra-area.ts",
     "check:o-que-fazer": "tsx scripts/check-o-que-fazer.ts",
     "check:indice": "tsx scripts/check-indice.ts",
+    "check:indice-portal": "tsx --env-file=.env --conditions=react-server scripts/check-indice-portal.ts",
     "check:dossie-texto": "tsx scripts/check-dossie-texto.ts",
     "check:disparos": "tsx scripts/check-disparos.ts",
     "check:prazos-extensao": "tsx scripts/check-prazos-extensao.ts",

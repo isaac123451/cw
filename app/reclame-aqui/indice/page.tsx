@@ -14,15 +14,13 @@ import ReguaDoIndice from "@/components/reclame-aqui/indice/ReguaDoIndice";
 import { lerPainelDoPortal } from "@/lib/actions/painelDoPortal";
 import { useScopedCases } from "@/lib/context/useScopedCases";
 import { respondida } from "@/lib/models/case";
-import { evolucaoDoMes, mesAMes, notaExata, retratoDoIndice, type PeriodoDoIndice, type RetratoDoIndice } from "@/lib/models/indiceRA";
+import { notaExata, retratoDoIndice, type PeriodoDoIndice, type RetratoDoIndice } from "@/lib/models/indiceRA";
 import { bandOf, displayBand, hojeNaOperacao, inRange, ptBR, RA1000_BAND, RA1000_MINIMO_DE_AVALIACOES, RA1000_TARGETS } from "@/lib/services/reputation.service";
 import type { PainelDoPortal } from "@/lib/services/painelDoPortal.service";
 import { SELO_DO_PORTAL } from "@/lib/models/segmento";
 import ComparacaoComSegmento from "@/components/reclame-aqui/indice/ComparacaoComSegmento";
 
 const br = (iso: string) => iso.split("-").reverse().join("/");
-const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
-const nomeDoMes = (m: string) => `${MESES[Number(m.slice(5)) - 1]}/${m.slice(2, 4)}`;
 
 /**
  * O índice do Reclame Aqui (Fase 32, 1.75; refeito na 1.86).
@@ -54,8 +52,6 @@ export default function IndicePage() {
   const hoje = hojeNaOperacao();
   const atual = useMemo(() => retratoDoIndice(cases, periodo, "vigente"), [cases, periodo]);
   const previa = useMemo(() => retratoDoIndice(cases, periodo, "proximo"), [cases, periodo]);
-  const evolucao = useMemo(() => evolucaoDoMes(cases, periodo, hoje), [cases, periodo, hoje]);
-  const meses = useMemo(() => mesAMes(cases, hoje, periodo === "6m" ? 7 : 13), [cases, hoje, periodo]);
 
   /* A avaliação desconsiderada conta em "avaliadas" no portal, mas fica fora da nota. */
   const desconsideradas = useMemo(
@@ -253,87 +249,19 @@ export default function IndicePage() {
           )}
         </SurfaceCard>
 
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-5">
-          <SurfaceCard
-            className="xl:col-span-2"
-            title="Até o RA1000"
-            description="Onde as notas estão entre as faixas e o que falta para a prévia manter o selo."
-          >
-            <ReguaDoIndice atual={atual.resumo.raScoreExato} previa={previa.resumo.raScoreExato} />
-            <OQueFalta retrato={previa} />
-          </SurfaceCard>
-
-          <SurfaceCard
-            className="xl:col-span-3"
-            title="Evolução do mês"
-            description="A nota exata no fim de cada dia, com o que se sabia naquele dia."
-          >
-            <EvolucaoDoIndice dias={evolucao} />
-          </SurfaceCard>
-        </div>
+        <SurfaceCard
+          title="Até o RA1000"
+          description="Onde as notas estão entre as faixas e o que falta para a prévia manter o selo."
+        >
+          <ReguaDoIndice atual={atual.resumo.raScoreExato} previa={previa.resumo.raScoreExato} />
+          <OQueFalta retrato={previa} />
+        </SurfaceCard>
 
         <SurfaceCard
-          title="Mês a mês"
-          description="O que entrou em cada mês e como está hoje. A nota do mês é só das reclamações daquele mês; a do fechamento é a janela de 6 meses que termina no mês, como estava no último dia dele — a que o portal passa a mostrar na virada. A faixa marca os meses da janela atual."
+          title="Evolução"
+          description="A nota no fim de cada dia, ciclo ou mês, com o que se sabia naquele dia — e quanto as respostas e as avaliações de cada período somaram à prévia. A avaliação conta no dia em que foi feita; a janela segue a regra do portal (a reclamação aberta nela)."
         >
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[860px] text-sm">
-              <thead>
-                <tr className="text-left text-[11px] uppercase tracking-wide text-zinc-400">
-                  <th className="py-2 pr-3 font-semibold">Mês</th>
-                  <th className="px-3 py-2 text-right font-semibold" title="Só as reclamações recebidas no mês, com o que aconteceu com elas até hoje">Nota do mês</th>
-                  <th className="px-3 py-2 text-right font-semibold" title="A janela de 6 meses que termina no mês, como estava no último dia dele — a nota que o portal passa a mostrar na virada">6 meses no fechamento</th>
-                  <th className="px-3 py-2 text-right font-semibold">Recebidas</th>
-                  <th className="px-3 py-2 text-right font-semibold">Sem resposta</th>
-                  <th className="px-3 py-2 text-right font-semibold">Avaliadas</th>
-                  <th className="px-3 py-2 font-semibold">Nota do consumidor</th>
-                  <th className="px-3 py-2 text-right font-semibold">Solução</th>
-                  <th className="py-2 pl-3 text-right font-semibold">Voltaria</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-100 tabular-nums">
-                {meses.map((m) => {
-                  const naJanela = `${m.mes}-01` >= atual.inicio && `${m.mes}-01` <= atual.fim;
-                  return (
-                    <tr key={m.mes} className={naJanela ? "" : "text-zinc-400"}>
-                      <td className="py-2 pr-3">
-                        <span className={`mr-2 inline-block h-3 w-1 rounded-full align-middle ${naJanela ? "bg-violet-500" : m.mes === hoje.slice(0, 7) ? "bg-violet-200" : "bg-transparent"}`} />
-                        {nomeDoMes(m.mes)}
-                        {m.mes === hoje.slice(0, 7) && <span className="ml-1.5 text-[11px] text-violet-700">em curso</span>}
-                      </td>
-                      <td className="px-3 py-2 text-right">
-                        {m.notaExata === null ? (
-                          "—"
-                        ) : (
-                          <span title={`Nota ${ptBR(m.nota ?? 0)} — detalhada ${notaExata(m.notaExata)}`}>
-                            <b className="font-semibold text-zinc-900">{notaExata(m.notaExata)}</b>
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-3 py-2 text-right">{m.notaNoFechamento === null ? "—" : notaExata(m.notaNoFechamento)}</td>
-                      <td className="px-3 py-2 text-right">{m.recebidas}</td>
-                      <td className={`px-3 py-2 text-right ${m.semResposta > 0 ? "font-semibold text-amber-700" : ""}`}>{m.semResposta || "—"}</td>
-                      <td className="px-3 py-2 text-right">{m.avaliadas || "—"}</td>
-                      <td className="px-3 py-2">
-                        {m.notaConsumidor === null ? (
-                          "—"
-                        ) : (
-                          <span className="flex items-center gap-2">
-                            <span className="h-1.5 w-24 overflow-hidden rounded-full bg-zinc-100">
-                              <span className="block h-full rounded-full" style={{ width: `${m.notaConsumidor * 10}%`, background: bandOf(m.notaConsumidor).color }} />
-                            </span>
-                            {ptBR(m.notaConsumidor, 2)}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-3 py-2 text-right">{m.solucao === null ? "—" : `${ptBR(m.solucao)}%`}</td>
-                      <td className="py-2 pl-3 text-right">{m.voltaria === null ? "—" : `${ptBR(m.voltaria)}%`}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <EvolucaoDoIndice casos={cases} periodo={periodo} hoje={hoje} />
         </SurfaceCard>
 
         <ComparacaoComSegmento />

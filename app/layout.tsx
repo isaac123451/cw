@@ -156,7 +156,8 @@ export default async function RootLayout({
                                   <GoogleEventsProvider
                                     enabled={hasDatabase() && hasGoogle()}
                                   >
-                                  <NpsProvider enabled={hasDatabase()}>
+                                  {/* Sem sessão (tela de login) não há o que ler: a rota responderia 401 a cada recarga. */}
+                                  <NpsProvider enabled={hasDatabase() && Boolean(session)}>
                                   <PortalProvider>
                                   <CompletarProvider>
                                   <TratativaProvider>

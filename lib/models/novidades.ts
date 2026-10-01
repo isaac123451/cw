@@ -104,6 +104,14 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.118.0",
+    data: "2026-10-01",
+    titulo: "Índice por dia, ciclo e mês",
+    texto: "A evolução do Índice voltou, melhor: escolha dia, ciclo ou mês e veja a nota no fim de cada um e quanto as suas respostas e as avaliações somaram. Nos gráficos, a avaliação agora conta no dia em que foi feita.",
+    frentes: ["reclame-aqui"],
+    href: "/reclame-aqui/indice",
+  },
+  {
     versao: "1.117.0",
     data: "2026-10-01",
     titulo: "Busca e menus consertados",

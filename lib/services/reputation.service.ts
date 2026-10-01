@@ -1383,11 +1383,18 @@ export interface MonthlyReputation {
   score: number;
 }
 
+/**
+ * A nota de cada mês: recebidas e respondidas das reclamações abertas no
+ * mês; as avaliações, das **feitas** no mês (1.118) — "elas precisam entrar
+ * quando foram avaliadas". Sem data de avaliação (carga antiga), no mês da
+ * reclamação.
+ */
 export function getReputationTrend(
   cases: Case[]
 ): MonthlyReputation[] {
 
   const months = new Map<string, Case[]>();
+  const avaliadasNoMes = new Map<string, Case[]>();
 
   for (const item of cases) {
     const key = item.createdAt.slice(0, 7);
@@ -1395,7 +1402,28 @@ export function getReputationTrend(
       ...(months.get(key) ?? []),
       item,
     ]);
+    if (item.evaluated) {
+      const quando = (item.evaluatedAt ? diaNaOperacao(item.evaluatedAt) : item.createdAt).slice(0, 7);
+      avaliadasNoMes.set(quando, [...(avaliadasNoMes.get(quando) ?? []), item]);
+    }
   }
+
+  /* O mês que só teve avaliação (de reclamação de antes) também é um ponto. */
+  for (const mes of avaliadasNoMes.keys()) {
+    if (!months.has(mes)) months.set(mes, []);
+  }
+
+  const notaDoMes = (month: string, items: Case[]) => {
+    const raw = getRawCounts(items);
+    const avaliacoes = getRawCounts(avaliadasNoMes.get(month) ?? []);
+    return scoreFrom({
+      ...raw,
+      evaluated: avaliacoes.evaluated,
+      scoreSum: avaliacoes.scoreSum,
+      resolved: avaliacoes.resolved,
+      wouldReturn: avaliacoes.wouldReturn,
+    }).raScore;
+  };
 
   const names = [
     "jan",
@@ -1419,7 +1447,7 @@ export function getReputationTrend(
         names[Number(month.slice(5, 7)) - 1]
       }/${month.slice(2, 4)}`,
       received: items.length,
-      score: getReputation(items).raScore,
+      score: notaDoMes(month, items),
     }));
 }
 

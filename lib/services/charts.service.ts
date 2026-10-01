@@ -3,9 +3,11 @@ import {
   respondida,
 } from "@/lib/models/case";
 import { parseElapsedText } from "@/lib/services/case.mapper";
+import { comoEstavaNoDia } from "@/lib/models/indiceRA";
 
 import {
   bandOf,
+  diaNaOperacao,
   getRange,
   getRawCounts,
   inRange,
@@ -30,6 +32,21 @@ function addDays(date: string, days: number) {
 
 function monthKey(date: string) {
   return date.slice(0, 7);
+}
+
+/*
+  O dia em que cada coisa aconteceu (1.118). Pedido de 01/10/2026: "as
+  avaliações que estão contabilizando ... são somente referente as suas
+  datas de criadas. elas precisam entrar quando foram avaliadas". A
+  resposta conta no dia em que foi publicada e a avaliação no dia em que
+  foi feita; sem data (a carga antiga), no dia da reclamação.
+*/
+function diaDaResposta(item: Case) {
+  return item.publicResponseAt ? diaNaOperacao(item.publicResponseAt) : item.createdAt;
+}
+
+function diaDaAvaliacao(item: Case) {
+  return item.evaluatedAt ? diaNaOperacao(item.evaluatedAt) : item.createdAt;
 }
 
 const MONTHS = [
@@ -137,12 +154,26 @@ function parseMinutes(value?: string): number | null {
   return null;
 }
 
+/**
+ * Os índices de um ponto. `avaliadas` é de onde saem as avaliações: no
+ * mês isolado, as feitas no mês (que podem ser de reclamações de antes);
+ * sem ela, as das próprias reclamações.
+ */
 function indicesOf(
   key: string,
-  items: Case[]
+  items: Case[],
+  avaliadas: Case[] = items
 ): MonthlyIndices {
 
-  const raw = getRawCounts(items);
+  const daCoorte = getRawCounts(items);
+  const dasAvaliacoes = avaliadas === items ? daCoorte : getRawCounts(avaliadas);
+  const raw = {
+    ...daCoorte,
+    evaluated: dasAvaliacoes.evaluated,
+    scoreSum: dasAvaliacoes.scoreSum,
+    resolved: dasAvaliacoes.resolved,
+    wouldReturn: dasAvaliacoes.wouldReturn,
+  };
   const summary = scoreFrom(raw);
   const band = bandOf(summary.raScore);
 
@@ -202,7 +233,14 @@ function windowLabel(startKey: string, endKey: string) {
   return `${fmt(first)} – ${fmt(last)}`;
 }
 
-/** Indicadores calculados para cada mês isoladamente. */
+/**
+ * Indicadores calculados para cada mês isoladamente.
+ *
+ * Recebidas, respondidas e o índice de resposta são das reclamações
+ * abertas no mês; nota do consumidor, solução e voltaria, das avaliações
+ * **feitas** no mês (1.118) — a de setembro de uma reclamação de julho é
+ * de setembro.
+ */
 export function getMonthlyIndices(
   cases: Case[],
   period: ChartPeriod,
@@ -218,16 +256,22 @@ export function getMonthlyIndices(
    * intervalo personalizado —, contar o mês inteiro somaria dias fora do
    * período e o gráfico deixaria de bater com a nota da tela.
    */
-  return monthsIn(period, custom).map((key) =>
-    indicesOf(
+  return monthsIn(period, custom).map((key) => {
+    const avaliadas = cases.filter((item) => {
+      if (!item.evaluated) return false;
+      const dia = diaDaAvaliacao(item);
+      return monthKey(dia) === key && dia >= range.start && dia <= range.end;
+    });
+    return indicesOf(
       key,
       cases.filter(
         (item) =>
           monthKey(item.createdAt) === key &&
           inRange(item, range.start, range.end)
-      )
-    )
-  );
+      ),
+      avaliadas
+    );
+  });
 }
 
 /**
@@ -266,10 +310,19 @@ export function getRollingIndices(
      * a menos: a de 12 meses somava 197 reclamações onde a nota oficial
      * conta 212, e o gráfico divergia do painel do Reclame Aqui.
      */
-    const items = cases.filter((item) => {
-      const m = monthKey(item.createdAt);
-      return m >= first && m <= key;
-    });
+    /*
+      Como a janela estava no último dia do mês (1.118): a avaliação que
+      chegou depois não volta no tempo para mudar o ponto de um mês que já
+      tinha passado — ela entra no mês em que foi feita.
+    */
+    const ultimoDia = new Date(Date.UTC(year, month, 0)).toISOString().slice(0, 10);
+    const ateQuando = ultimoDia < hojeNaOperacao() ? ultimoDia : hojeNaOperacao();
+    const items = cases
+      .filter((item) => {
+        const m = monthKey(item.createdAt);
+        return m >= first && m <= key;
+      })
+      .map((item) => comoEstavaNoDia(item, ateQuando));
 
     return {
       ...indicesOf(key, items),
@@ -393,12 +446,9 @@ export function getTimeSeries(
       ? addDays(proximo, -1)
       : end;
 
-    const items = cases.filter(
-      (item) =>
-        item.createdAt >= inicio &&
-        item.createdAt <= fim &&
-        item.createdAt >= start
-    );
+    const no = (dia: string) => dia >= inicio && dia <= fim && dia >= start;
+    const items = cases.filter((item) => no(item.createdAt));
+    const avaliadas = cases.filter((item) => item.evaluated && no(diaDaAvaliacao(item)));
 
     const [ano, mes, dia] = inicio.split("-");
 
@@ -411,13 +461,13 @@ export function getTimeSeries(
       date: inicio,
       label,
       received: items.length,
-      answered: items.filter(
+      /* Pela data da resposta e da avaliação, não da reclamação (1.118). */
+      answered: cases.filter(
         (item) =>
-          respondida(item)
+          respondida(item) && no(diaDaResposta(item))
       ).length,
-      evaluated: items.filter((item) => item.evaluated)
-        .length,
-      resolved: items.filter((item) => item.resolved)
+      evaluated: avaliadas.length,
+      resolved: avaliadas.filter((item) => item.resolved)
         .length,
     };
   });

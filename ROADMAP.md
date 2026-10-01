@@ -1116,6 +1116,58 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Índice por dia, ciclo e mês; avaliação no dia em que foi avaliada (01/10/2026, 1.118.0)
+
+Dois pedidos de 01/10/2026:
+
+- "eu gostava quando aparecia na parte dos índices como foi cada dia e o
+  quanto aumentou quando eu respondia reclamação, pode fazer algo melhorado
+  que tenha a possibilidade de ver por dia, ciclo, mês". A evolução era só
+  do mês corrente — no dia 1º ela tinha um ponto, e parecia ter sumido.
+- "as avaliações que estão contabilizando para cálculo são somente
+  referente as suas datas de criadas. elas precisam entrar quando foram
+  avaliadas."
+
+**Antes de mudar a conta, a prova.** O painel oficial do portal (lido pela
+extensão) foi comparado com as duas regras possíveis. A janela de 6 e de 12
+meses do Reclame Aqui conta **as reclamações abertas nela**, com a avaliação
+de cada uma valendo a partir do dia em que chegou: nos 6 meses, 72
+avaliadas, solução 95,8%, voltaria 83,3%, nota do consumidor 8,49 e nota
+8,9 — iguais nas cinco. Contar a avaliação pela data em que foi feita dava
+81 avaliadas e 7,91. Então a nota oficial ficou como estava, e o pedido vale
+onde ele é verdade: **quando** a avaliação muda a nota, e os gráficos de
+acompanhamento.
+
+- **Evolução no Índice** (`components/reclame-aqui/indice/EvolucaoDoIndice.tsx`,
+  `evolucaoDoIndice` em `lib/models/indiceRA.ts`): Dia (31 dias corridos —
+  não o mês do calendário, que no dia 1º teria um ponto), Ciclo (10 ciclos,
+  1–7, 8–14…) ou Mês (12 meses), com setas para andar no tempo. Cada ponto é
+  o fim de um período: a atual e a prévia como estavam naquele dia, quanto
+  andaram, e — separado — **o que as respostas e as avaliações do período
+  somaram à prévia** (a nota no fim dele, menos a mesma conta com as
+  respostas, ou as avaliações, paradas no dia anterior). Barras no pé com as
+  respostas publicadas; tabela por período com respostas, avaliações (com a
+  média), novas e, no mês, a nota das reclamações do mês e quantas seguem
+  sem resposta. A virada do mês aparece marcada: a janela troca de meses e
+  a nota anda sem nada feito no dia (em 01/10, +0,1877 na prévia). Substitui
+  a "Evolução do mês" e a tabela "Mês a mês".
+- **A avaliação no dia em que foi feita**, nos gráficos: Movimento (respostas
+  pela data da resposta, avaliadas e resolvidas pela data da avaliação),
+  Índices por mês (nota do consumidor, solução e voltaria das avaliações
+  feitas no mês; resposta das reclamações abertas nele), a Evolução da
+  reputação do Analytics (com o mês que só teve avaliação aparecendo) e a
+  janela móvel de 12 meses (cada ponto como estava no fim do mês — a
+  avaliação que chega depois não volta no tempo).
+- `check:indice` prova as regras com casos montados (a avaliação de agosto
+  feita em setembro conta em setembro; a resposta sobe a nota no dia em que
+  saiu; a variação fecha com o período anterior) e o novo
+  `check:indice-portal` prova sobre a base real: a janela bate com o painel
+  do portal, o último ponto é a "Hoje" e a "Prévia" do topo, e nenhuma
+  avaliação ou resposta se perde nem se repete.
+- Achado na conferência: o NPS era pedido também na tela de login, sem
+  sessão (um 401 a cada recarga). Agora só liga com alguém logado, e o
+  "carregando" acompanha.
+
 ### Bugs corrigidos e dependências seguras (01/10/2026, 1.117.0)
 
 Pedido de 30/09: "verifique bugs, funcionalidades que foram criadas e não
