@@ -10,9 +10,12 @@ import {
   ReactNode,
 } from "react";
 
-import { getUpcomingEvents } from "@/lib/actions/google";
+import { leitura } from "@/lib/lote";
 
 import { GoogleEvent } from "@/lib/models/google";
+
+/* Em lote, por rota (1.116): sai junto com as outras leituras da tela, em paralelo e fora da fila. */
+const getUpcomingEvents = leitura("googleEventos");
 
 interface GoogleEventsContextType {
   events: GoogleEvent[];

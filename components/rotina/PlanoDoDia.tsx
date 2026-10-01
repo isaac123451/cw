@@ -13,9 +13,14 @@ import { frente } from "@/lib/models/frentes";
 import type { Contagem, PlanoDoDia as Plano } from "@/lib/models/meuDia";
 import type { AtividadeDaRotina, ChaveDaRotina } from "@/lib/models/rotina";
 import { eventosDoPlano } from "@/lib/models/planoNaAgenda";
-import { getGoogleStatus, levarPlanoParaAgenda } from "@/lib/actions/google";
+import { levarPlanoParaAgenda } from "@/lib/actions/google";
+import { leitura } from "@/lib/lote";
+
 import { useToast } from "@/lib/context/ToastContext";
 import { descreverMinutos } from "@/components/rotina/formato";
+
+/* Em lote, por rota (1.116): sai junto com as outras leituras da tela, em paralelo e fora da fila. */
+const getGoogleStatus = leitura("googleStatus");
 
 interface Leitura {
   origem: "ia" | "regras";

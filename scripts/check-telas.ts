@@ -207,6 +207,11 @@ async function main() {
   const idDoCaso =
     caso?.externalId ?? caso?.protocol ?? "";
 
+  const respostaNps = await prisma.npsResponse.findFirst({ select: { id: true }, orderBy: { respondedAt: "desc" } });
+  const casoSocial = await prisma.case.findFirst({ where: { channel: { not: "RECLAME_AQUI" } }, select: { externalId: true, id: true } });
+  /* O caso pelo protocolo, como as telas novas linkam (1.113): a ficha tem de achar. */
+  const protocolo = caso?.protocol ?? "";
+
   const fixas = [
     "/",
     "/meu-dia",
@@ -219,6 +224,14 @@ async function main() {
     "/reclame-aqui/configuracoes",
     "/reclame-aqui/graficos",
     "/reclame-aqui/novo",
+    /* As telas que vieram depois da lista (1.116). */
+    "/reclame-aqui/triagem",
+    "/reclame-aqui/respostas",
+    "/reclame-aqui/premio",
+    "/distribuicao",
+    "/retencao",
+    "/causas-raiz",
+    "/novidades",
     "/redes-sociais",
     "/nps",
     "/google",
@@ -265,6 +278,9 @@ async function main() {
       estabelecimento?.slug,
     ],
     [`/clientes/${cliente?.slug}`, cliente?.slug],
+    [`/nps/${respostaNps?.id}`, respostaNps?.id],
+    [`/redes-sociais/${casoSocial?.externalId ?? casoSocial?.id}`, casoSocial?.externalId ?? casoSocial?.id],
+    [`/reclame-aqui/${encodeURIComponent(protocolo)}`, protocolo || undefined],
   ];
 
   for (const [caminho, existe] of comParametro) {

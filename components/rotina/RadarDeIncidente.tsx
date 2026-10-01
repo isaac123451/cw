@@ -6,9 +6,13 @@ import { useEffect, useState } from "react";
 
 import { Siren } from "lucide-react";
 
-import { lerRadarDeIncidente } from "@/lib/actions/radar";
+import { leitura } from "@/lib/lote";
+
 import type { Incidente } from "@/lib/models/radarDeIncidente";
 import { descreverRegistro } from "@/lib/services/horasUteis";
+
+/* Em lote, por rota (1.116): sai junto com as outras leituras da tela, em paralelo e fora da fila. */
+const lerRadarDeIncidente = leitura("radar");
 
 const FRENTE: Record<Incidente["frentes"][number], string> = {
   "reclame-aqui": "Reclame Aqui",

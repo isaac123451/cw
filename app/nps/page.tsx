@@ -143,6 +143,7 @@ function NpsPagina({ abrirInicial = null }: { abrirInicial?: "etapas" | "causas"
     kinds,
     loading,
     recarregar,
+    recarregarTudo,
     recarregarCausas,
     recarregarCadastro,
     aplicarLocal,
@@ -1031,7 +1032,7 @@ function NpsPagina({ abrirInicial = null }: { abrirInicial?: "etapas" | "causas"
               return;
             }
 
-            await recarregar();
+            await recarregarTudo();
 
             notify({
               tone: "success",

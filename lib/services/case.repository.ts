@@ -159,7 +159,7 @@ interface CaseRowCru {
 
 export async function fetchCases(
   prisma: PrismaClient,
-  { withDescription = false } = {}
+  { withDescription = false, desde }: { withDescription?: boolean; desde?: Date } = {}
 ): Promise<Case[]> {
   /**
    * Uma ida ao banco, com JOIN — e não sete.
@@ -274,8 +274,9 @@ export async function fetchCases(
            AND COALESCE(cc."resultado", '') NOT IN ('respondeu', 'aguardando')
            AND (c."ultimaRespostaEm" IS NULL OR cc."em" > c."ultimaRespostaEm")
       ) tent ON true
+     ${desde ? 'WHERE c."updatedAt" > $1' : ""}
      ORDER BY c."publishedAt" DESC
-  `);
+  `, ...(desde ? [desde] : []));
 
   return rows.map((row) =>
     toCaseModel({

@@ -14,8 +14,24 @@ function dia(value?: Date | null) {
  * rotina da madrugada, que manda o relatório do ciclo, precisa da mesma
  * leitura sem sessão. A action continua checando o acesso e chama esta.
  */
-export async function lerRespostasDoNps(prisma: PrismaClient): Promise<NpsResponseView[]> {
+export async function lerRespostasDoNps(prisma: PrismaClient, opcoes: { desde?: Date } = {}): Promise<NpsResponseView[]> {
+  /*
+    Só o que mudou desde `desde` (1.116): a recarga de 3 em 3 minutos baixava
+    as 4.110 respostas inteiras (2,3 MB) toda vez. Mudou a resposta, ou ganhou
+    tentativa ou anotação, ou chegou uma avaliação do Google ligada a ela.
+  */
+  const desde = opcoes.desde;
   const linhas = await prisma.npsResponse.findMany({
+    where: desde
+      ? {
+          OR: [
+            { updatedAt: { gt: desde } },
+            { attempts: { some: { createdAt: { gt: desde } } } },
+            { notes: { some: { createdAt: { gt: desde } } } },
+            { avaliacoesGoogle: { some: { updatedAt: { gt: desde } } } },
+          ],
+        }
+      : undefined,
     include: {
       owner: { select: { name: true } },
       attempts: { orderBy: { createdAt: "asc" } },

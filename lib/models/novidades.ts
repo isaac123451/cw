@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.116.0",
+    data: "2026-10-01",
+    titulo: "Telas mais rápidas",
+    texto: "As leituras de cada tela agora saem juntas, em vez de uma esperando a outra, e a atualização automática traz só o que mudou — o NPS deixou de baixar as 4 mil respostas a cada poucos minutos. O Meu dia fica pronto bem antes.",
+    frentes: ["plataforma"],
+  },
+  {
     versao: "1.115.0",
     data: "2026-10-01",
     titulo: "Configurações num lugar só",

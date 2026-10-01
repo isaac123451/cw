@@ -6,6 +6,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useMemo,
   useState,
   ReactNode,
@@ -14,7 +15,7 @@ import {
 import { useAtualizarSozinho } from "@/lib/hooks/useAtualizarSozinho";
 
 import {
-  listNpsResponses,
+
   listNpsRootCauses,
   NpsDraft,
 } from "@/lib/actions/nps";
@@ -52,6 +53,8 @@ interface NpsContextType {
   kinds: NpsKindOption[];
   loading: boolean;
   recarregar: () => Promise<void>;
+  /** A lista inteira de novo — depois de apagar, que a recarga do que mudou não vê (1.116). */
+  recarregarTudo: () => Promise<void>;
   recarregarCausas: () => Promise<void>;
   /** Depois de gravar etapa ou tipo: descarta o cache e relê. */
   recarregarCadastro: () => Promise<void>;
@@ -83,6 +86,27 @@ const NpsContext = createContext<NpsContextType | null>(
  * duas telas usam, então não vale carregar em toda sessão junto dos
  * doze contextos.
  */
+/**
+ * As respostas pela rota `/api/leitura/nps` (1.116): 2,3 MB que, como server
+ * action, seguravam as outras leituras da tela na fila. `desde` traz só o
+ * que mudou.
+ */
+let listaEmAndamento: Promise<{ respostas: NpsResponseView[]; agora: string }> | null = null;
+
+async function buscarNps(desde?: string): Promise<{ respostas: NpsResponseView[]; agora: string }> {
+  /* A lista inteira pedida duas vezes ao mesmo tempo é um pedido só (2,3 MB). */
+  if (!desde && listaEmAndamento) return listaEmAndamento;
+  const pedido = fetch(`/api/leitura/nps${desde ? `?desde=${encodeURIComponent(desde)}` : ""}`, { cache: "no-store" }).then((resposta) => {
+    if (!resposta.ok) throw new Error(`NPS: ${resposta.status}`);
+    return resposta.json() as Promise<{ respostas: NpsResponseView[]; agora: string }>;
+  });
+  if (desde) return pedido;
+  listaEmAndamento = pedido.finally(() => {
+    listaEmAndamento = null;
+  });
+  return listaEmAndamento;
+}
+
 export function NpsProvider({
   children,
   enabled = false,
@@ -110,18 +134,57 @@ export function NpsProvider({
 
   const [loading, setLoading] = useState(enabled);
 
+  /*
+    A recarga traz só o que mudou (1.116). Eram as 4.110 respostas (2,3 MB) a
+    cada 3 minutos e a cada gravação; agora só as alteradas desde a última
+    leitura, e a lista inteira a cada 30 minutos — é ela que pega o que foi
+    apagado.
+  */
+  const ultimaLeitura = useRef<string | null>(null);
+  const ultimaCompleta = useRef(0);
+
+  const lerTudo = useCallback(async () => {
+    const { respostas, agora } = await buscarNps();
+    ultimaLeitura.current = agora;
+    ultimaCompleta.current = Date.now();
+    return respostas;
+  }, []);
+
   const recarregar = useCallback(async () => {
 
     if (!enabled) return;
 
     try {
-      setResponses(await listNpsResponses());
+      if (!ultimaLeitura.current || Date.now() - ultimaCompleta.current > 30 * 60_000) {
+        setResponses(await lerTudo());
+        return;
+      }
+      const { respostas, agora } = await buscarNps(ultimaLeitura.current);
+      ultimaLeitura.current = agora;
+      if (respostas.length === 0) return;
+      const novas = new Map(respostas.map((r) => [r.id, r]));
+      setResponses((atual) => {
+        const conhecidas = new Set(atual.map((r) => r.id));
+        const trocadas = atual.map((r) => novas.get(r.id) ?? r);
+        const chegaram = respostas.filter((r) => !conhecidas.has(r.id));
+        /* A lista vem da mais recente para a mais antiga. */
+        return chegaram.length ? [...chegaram, ...trocadas].sort((a, b) => b.respondedAt.localeCompare(a.respondedAt)) : trocadas;
+      });
     } catch (erro) {
       console.error("[nps] carga falhou", erro);
     } finally {
       setLoading(false);
     }
-  }, [enabled]);
+  }, [enabled, lerTudo]);
+
+  const recarregarTudo = useCallback(async () => {
+    if (!enabled) return;
+    try {
+      setResponses(await lerTudo());
+    } catch (erro) {
+      console.error("[nps] carga falhou", erro);
+    }
+  }, [enabled, lerTudo]);
 
   /* As respostas do NPS se atualizam sozinhas, como as reclamações. */
   useAtualizarSozinho(recarregar, enabled);
@@ -160,13 +223,16 @@ export function NpsProvider({
     if (!enabled) return;
 
     Promise.all([
-      daCargaInicial("nps", listNpsResponses),
+      /* Por rota, fora da fila das server actions (1.116). */
+      buscarNps(),
       daCargaInicial("causasDoNps", listNpsRootCauses),
       carregarWorkspace(),
     ])
       .then(([lista, causas, workspace]) => {
         if (!ativo) return;
-        setResponses(lista);
+        setResponses(lista.respostas);
+        ultimaLeitura.current = lista.agora;
+        ultimaCompleta.current = Date.now();
         setRootCauses(causas);
         setStages(workspace.npsStages);
         setKinds(workspace.npsKinds);
@@ -205,6 +271,7 @@ export function NpsProvider({
       kinds,
       loading,
       recarregar,
+      recarregarTudo,
       recarregarCausas,
       recarregarCadastro,
       aplicarLocal,
@@ -216,6 +283,7 @@ export function NpsProvider({
       kinds,
       loading,
       recarregar,
+      recarregarTudo,
       recarregarCausas,
       recarregarCadastro,
       aplicarLocal,

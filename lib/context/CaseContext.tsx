@@ -19,6 +19,7 @@ import { Case, SEM_ESTABELECIMENTO } from "@/lib/models/case";
 import {
   deleteCase as removeCase,
   listCases,
+  listCasesDesde,
   saveCase,
 } from "@/lib/actions/cases";
 
@@ -248,6 +249,23 @@ const CaseContext =
     null
   );
 
+/**
+ * De onde a recarga do que mudou parte, depois de uma lista inteira (1.116).
+ *
+ * Não do relógio de agora: a lista inteira passa pelo cache do servidor, que
+ * devolve o guardado e só renova por trás — depois de um tempo parada, ela
+ * chega velha, e partir de agora perderia o que mudou nesse meio. Parte do
+ * começo do dia da alteração mais recente da própria lista (`updatedAt` vem
+ * só com o dia; meia-noite em UTC é 21h da véspera em Brasília, folga a
+ * favor). Da segunda recarga em diante vale o instante do servidor.
+ */
+function desdeDaLista(lista: Case[]): string {
+  let maior = "";
+  for (const c of lista) if (c.updatedAt && c.updatedAt > maior) maior = c.updatedAt;
+  const dia = /^\d{4}-\d{2}-\d{2}/.exec(maior)?.[0];
+  return dia ? `${dia}T00:00:00.000Z` : new Date(Date.now() - 86_400_000).toISOString();
+}
+
 export function CaseProvider({
   children,
   hasDatabase = false,
@@ -361,10 +379,43 @@ export function CaseProvider({
     };
   }, []);
 
+  /*
+    A recarga traz só o que mudou (1.116): eram as reclamações inteiras a cada
+    3 minutos. A lista inteira volta a cada 30 minutos (e quando a leitura do
+    que mudou falha); o que é apagado pela tela já sai da lista na hora.
+  */
+  const ultimaLeitura = useRef<string | null>(null);
+  const ultimaCompleta = useRef(0);
+
   /** Relê do banco. Chamado depois de importar uma planilha — e sozinho, ver `useAtualizarSozinho`. */
   async function recarregar() {
 
     if (!hasDatabase) return;
+
+    if (ultimaLeitura.current && Date.now() - ultimaCompleta.current < 30 * 60_000) {
+      try {
+        const mudou = await listCasesDesde(ultimaLeitura.current);
+        if (mudou.ok) {
+          ultimaLeitura.current = mudou.dados.agora;
+          if (mudou.dados.casos.length) {
+            const novos = new Map(mudou.dados.casos.map((c) => [c.id, c]));
+            const juntar = (lista: Case[]) => {
+              const conhecidos = new Set(lista.map((c) => c.id));
+              const trocados = lista.map((c) => novos.get(c.id) ?? c);
+              const chegaram = mudou.dados.casos.filter((c) => !conhecidos.has(c.id));
+              return chegaram.length ? [...chegaram, ...trocados].sort((a, b) => b.createdAt.localeCompare(a.createdAt)) : trocados;
+            };
+            baseRef.current = juntar(baseRef.current);
+            setCases((atual) => juntar(atual));
+          }
+          setFalhaDeLeitura(null);
+          setCarregadoEm(new Date());
+          return;
+        }
+      } catch (error) {
+        console.error("[casos] recarga do que mudou falhou", error);
+      }
+    }
 
     try {
       const leitura = await listCases();
@@ -386,6 +437,8 @@ export function CaseProvider({
       setCases(leitura.dados);
       setFalhaDeLeitura(null);
       setCarregadoEm(new Date());
+      ultimaLeitura.current = desdeDaLista(leitura.dados);
+      ultimaCompleta.current = Date.now();
     } catch (error) {
       console.error("[casos] recarga falhou", error);
       setFalhaDeLeitura(
@@ -477,6 +530,8 @@ export function CaseProvider({
 
         baseRef.current = rows;
         setCarregadoEm(new Date());
+        ultimaLeitura.current = desdeDaLista(rows);
+        ultimaCompleta.current = Date.now();
 
         if (hasDatabase) {
           setCases(rows);

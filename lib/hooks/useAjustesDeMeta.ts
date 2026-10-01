@@ -2,8 +2,12 @@
 
 import { useCallback, useSyncExternalStore } from "react";
 
-import { lerAjustesDeMeta } from "@/lib/actions/ajusteDeMeta";
+import { leitura } from "@/lib/lote";
+
 import { SEM_AJUSTES, type AjustesDeMeta } from "@/lib/models/ajusteDeMeta";
+
+/* Em lote, por rota (1.116): sai junto com as outras leituras da tela, em paralelo e fora da fila. */
+const lerAjustesDeMeta = leitura("ajustesDeMeta");
 
 /**
  * Os ajustes de metas da pessoa (1.114) — um pedido só para as metas de

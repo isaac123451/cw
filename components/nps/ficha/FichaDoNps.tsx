@@ -60,7 +60,7 @@ type Dialogo =
 export default function FichaDoNps({ id, naJanela = false }: { id: string; naJanela?: boolean }) {
 
   const router = useRouter();
-  const { responses, stages, kinds, loading, aplicarLocal, recarregar } = useNps();
+  const { responses, stages, kinds, loading, aplicarLocal, recarregar, recarregarTudo } = useNps();
   const session = useSession();
   const { expediente } = useSla();
   const { notify } = useToast();
@@ -361,7 +361,7 @@ export default function FichaDoNps({ id, naJanela = false }: { id: string; naJan
             notify({ tone: "error", title: "Não foi excluído.", detail: r.erro });
             return;
           }
-          await recarregar();
+          await recarregarTudo();
           notify({ tone: "success", title: "Resposta excluída.", detail: `${nomeDoCliente(ciclo)} — o NPS do período foi recalculado.` });
           router.push("/nps");
         }}

@@ -3,7 +3,7 @@
 import { tryRole } from "@/lib/auth/guard";
 import { listarAvaliacoesGoogle } from "@/lib/actions/avaliacoesGoogle";
 import { listCases } from "@/lib/actions/cases";
-import { listNpsResponses, listNpsRootCauses } from "@/lib/actions/nps";
+import { listNpsRootCauses } from "@/lib/actions/nps";
 import { getPreferences } from "@/lib/actions/preferences";
 import { listSavedFilters } from "@/lib/actions/savedFilters";
 import { loadWorkspace } from "@/lib/actions/workspace";
@@ -44,24 +44,24 @@ export async function cargaInicial() {
   */
   if (!(await tryRole("LEITURA"))) {
     const nada = { ok: false } as const;
-    return { workspace: nada, casos: nada, nps: nada, causasDoNps: nada, preferencias: nada, filtros: nada, google: nada } as unknown as Awaited<ReturnType<typeof lerTudo>>;
+    return { workspace: nada, casos: nada, causasDoNps: nada, preferencias: nada, filtros: nada, google: nada } as unknown as Awaited<ReturnType<typeof lerTudo>>;
   }
 
   return lerTudo();
 }
 
 async function lerTudo() {
-  const [workspace, casos, nps, causasDoNps, preferencias, filtros, google] = await Promise.all([
+  /* O NPS saiu (1.116): vem por rota, em paralelo — eram 2,3 MB segurando a fila. */
+  const [workspace, casos, causasDoNps, preferencias, filtros, google] = await Promise.all([
     parte("workspace", loadWorkspace),
     parte("casos", listCases),
-    parte("nps", listNpsResponses),
     parte("causas do NPS", listNpsRootCauses),
     parte("preferências", getPreferences),
     parte("filtros", listSavedFilters),
     parte("google", listarAvaliacoesGoogle),
   ]);
 
-  return { workspace, casos, nps, causasDoNps, preferencias, filtros, google };
+  return { workspace, casos, causasDoNps, preferencias, filtros, google };
 }
 
 export type CargaInicial = Awaited<ReturnType<typeof cargaInicial>>;

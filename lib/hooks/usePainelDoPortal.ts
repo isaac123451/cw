@@ -2,8 +2,12 @@
 
 import { useEffect, useState } from "react";
 
-import { lerPainelDoPortal } from "@/lib/actions/painelDoPortal";
+import { leitura } from "@/lib/lote";
+
 import type { PainelDoPortal } from "@/lib/services/painelDoPortal.service";
+
+/* Em lote, por rota (1.116): sai junto com as outras leituras da tela, em paralelo e fora da fila. */
+const lerPainelDoPortal = leitura("painelDoPortal");
 
 /* Uma leitura por carga da página: o quadro e o índice pedem o mesmo painel. */
 let emCurso: Promise<Record<string, PainelDoPortal>> | null = null;

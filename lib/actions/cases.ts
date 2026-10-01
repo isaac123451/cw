@@ -137,6 +137,29 @@ const lerDoBanco = unstable_cache(
  * erro atirado de server action chega ao navegador sanitizado em
  * produção, e perderia justamente esta informação.
  */
+/**
+ * Só as reclamações que mudaram desde `desde` (1.116) — a recarga de 3 em 3
+ * minutos, que baixava as 367 inteiras (400 kB) toda vez. Sem o cache da
+ * lista: é uma consulta pequena, direto no banco. Volta o instante do
+ * servidor para a próxima pergunta.
+ */
+export async function listCasesDesde(desde: string): Promise<Leitura<{ casos: Case[]; agora: string }>> {
+  if (!(await podeLer())) return falhou(await motivoDaRecusa("LEITURA", MODULO));
+  const quando = new Date(desde);
+  const agora = new Date();
+  const prisma = getPrisma();
+  if (!prisma) return falhou("sem-banco");
+  if (!Number.isFinite(quando.getTime())) return leu({ casos: [], agora: agora.toISOString() });
+  try {
+    /* Um minuto de folga: o que gravou no meio da leitura anterior não escapa. */
+    const casos = await fetchCases(prisma, { desde: new Date(quando.getTime() - 60_000) });
+    return leu({ casos, agora: agora.toISOString() });
+  } catch (erro) {
+    console.error("[casos] leitura do que mudou falhou", erro);
+    return falhou("banco-recusou");
+  }
+}
+
 export async function listCases(): Promise<
   Leitura<Case[]>
 > {

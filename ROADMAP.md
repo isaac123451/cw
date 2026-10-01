@@ -1116,6 +1116,38 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Desempenho: leituras fora da fila (01/10/2026, 1.116.0)
+
+Pedido de 30/09: "verifique ... problemas de desempenho. quero que tu fique
+rodando certinho". Medido antes de mexer, no Meu dia:
+
+- **A fila das server actions.** O Next despacha as server actions de uma
+  aba uma de cada vez ("Server Actions are queued", na documentação). O Meu
+  dia fazia dez leituras em fila, atrás da carga inicial — pronto em 9,6 s
+  no dev. Agora as leituras da tela vão juntas por rota
+  (`/api/leitura/lote`, registro em `lib/leituras/registro.ts`, cliente em
+  `lib/lote.ts`) e rodam em paralelo: 6,2 s no dev, e em produção cada rota
+  roda em instância própria. Cada leitura continua sendo a própria action,
+  com a própria checagem de acesso.
+- **O NPS inteiro em toda tela.** As 4.110 respostas (2,3 MB) vinham dentro
+  da carga inicial e voltavam inteiras a cada 3 minutos e a cada gravação.
+  Agora vêm por rota (`/api/leitura/nps`, fora da fila) e a recarga traz só
+  o que mudou (`?desde=`): de 2,3 MB/1,3 s para 0–26 kB/0,14 s. A lista
+  inteira volta a cada 30 minutos — é ela que tira o que foi apagado — e
+  logo depois de apagar pela tela.
+- **As reclamações também**: a recarga de 3 em 3 minutos baixava as 367
+  (400 kB); agora só as alteradas (~11 kB). Como a lista inteira passa pelo
+  cache do servidor (que pode chegar velho), a primeira recarga parte do dia
+  da alteração mais recente da própria lista, não do relógio de agora.
+- Registrar tentativa sem retorno no NPS agora toca a resposta, para a
+  recarga do que mudou enxergar.
+- `check-telas` passou a abrir também triagem, respostas, prêmio,
+  distribuição, retenção, causas raiz, novidades e uma ficha de cada frente
+  (NPS, Redes, Reclame Aqui).
+
+O pool continua em 5 conexões por instância (ver `lib/prisma.ts`): no dev,
+com tudo num processo só, é ele que limita o paralelo — em produção não.
+
 ### Configurações remodeladas (01/10/2026, 1.115.0)
 
 Pedido de 30/09: "remodele as configurações do CW Reputação". Eram nove

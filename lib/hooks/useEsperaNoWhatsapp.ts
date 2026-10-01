@@ -2,8 +2,12 @@
 
 import { useEffect, useSyncExternalStore } from "react";
 
-import { lerEsperaNoWhatsapp } from "@/lib/actions/esperaNoWhatsapp";
+import { leitura } from "@/lib/lote";
+
 import type { RetratoDaEspera } from "@/lib/models/esperaNoWhatsapp";
+
+/* Em lote, por rota (1.116): sai junto com as outras leituras da tela, em paralelo e fora da fila. */
+const lerEsperaNoWhatsapp = leitura("espera");
 
 /**
  * O retrato da lista do WhatsApp (1.108), lido a cada minuto — um só

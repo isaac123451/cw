@@ -608,7 +608,9 @@ export async function marcarTentativaNpsSemRetorno(attemptId: string): Promise<{
     if (!podeMarcarSemRetorno(t.createdAt)) {
       return { ok: false, erro: `Ainda dá tempo de o cliente responder: sem retorno a partir das ${quandoLiberaSemRetorno(t.createdAt)}.` };
     }
-    await quem.ctx.prisma.npsAttempt.update({ where: { id: attemptId }, data: { resultado: "sem-resposta" } });
+    const marcada = await quem.ctx.prisma.npsAttempt.update({ where: { id: attemptId }, data: { resultado: "sem-resposta" }, select: { responseId: true } });
+    /* Toca a resposta: a recarga do que mudou (1.116) olha o updatedAt dela. */
+    await quem.ctx.prisma.npsResponse.update({ where: { id: marcada.responseId }, data: { updatedAt: new Date() } });
   } catch (erro) {
     console.error("[nps] sem retorno", erro);
     return { ok: false, erro: "O banco não aceitou a gravação agora. Tente de novo em instantes." };

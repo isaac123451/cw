@@ -14,8 +14,6 @@ import { itensDaEspera } from "@/lib/models/esperaNoWhatsapp";
 
 import {
   desfazerMarcasDeItens,
-  lerMeuDia,
-  listarRotina,
   marcarItensDaRotina,
   salvarMarcas,
   type CargaDoMeuDia,
@@ -26,6 +24,7 @@ import { atividadesDoDia, sequenciaDeDias, type AtividadeDaRotina } from "@/lib/
 import { contarRotina, planoDoDia, type MarcaDeItem, type TipoDeMarcaDeItem } from "@/lib/models/meuDia";
 import { paredeDe } from "@/lib/services/horasUteis";
 import { useToast } from "@/lib/context/ToastContext";
+import { leitura } from "@/lib/lote";
 
 /**
  * As atividades de lista que fecham sozinhas quando não resta nada (1.91).
@@ -48,6 +47,10 @@ const FECHAM_SOZINHAS = new Set(["novos", "em-aberto", "fups", "moderacoes", "av
  * métrica do dia, as ligações pela cadência e o resumo de ontem.
  */
 const SEM_MARCAS: MarcaDeItem[] = [];
+
+/* Em lote, por rota (1.116): saem junto com as outras leituras da tela, em paralelo e fora da fila. */
+const lerMeuDia = leitura("meuDia");
+const listarRotina = leitura("rotina");
 
 export function useMeuDia() {
 
