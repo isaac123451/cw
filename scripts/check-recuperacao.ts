@@ -17,6 +17,8 @@ import {
   cotaSugerida,
   frentesNoPlano,
   planoDeRecuperacao,
+  restanteDeHoje,
+  separarOQueValeHoje,
 } from "../lib/models/recuperacao";
 
 let falhas = 0;
@@ -50,6 +52,25 @@ conferir(
   [true, 1, 30, null, null]
 );
 conferir("frente que não veio no ajuste fica com o padrão", ajuste.google, AJUSTE_PADRAO);
+
+console.log("\n  O QUE VALE HOJE (1.124)\n");
+
+const item = (frente: FrenteId, atrasado: boolean, n: number) => ({ frente, atrasado, n });
+const filaDoDia = [
+  item("reclame-aqui", true, 1),
+  item("nps", true, 2),
+  item("nps", false, 3),
+  item("nps", true, 4),
+  item("nps", true, 5),
+  item("google", true, 6),
+];
+const { hoje, paraDepois } = separarOQueValeHoje(filaDoDia, new Map<FrenteId, number>([["nps", 2]]));
+conferir("o fora do prazo da frente com plano entra só até a cota, na ordem", hoje.map((i) => i.n), [1, 2, 3, 4, 6]);
+conferir("e o resto fica para depois, contado", [...paraDepois.entries()], [["nps", 1]]);
+conferir("o que está no prazo entra inteiro", hoje.filter((i) => !i.atrasado).length, 1);
+conferir("frente sem plano entra inteira", hoje.filter((i) => i.frente === "google" || i.frente === "reclame-aqui").length, 2);
+conferir("cota batida: nada mais do acumulado hoje", separarOQueValeHoje(filaDoDia, new Map<FrenteId, number>([["nps", 0]])).paraDepois.get("nps"), 3);
+conferir("o restante: a cota menos o que saiu, mais o adiantado", [restanteDeHoje(25, 10), restanteDeHoje(25, 30), restanteDeHoje(25, 30, 10)], [15, 0, 10]);
 
 console.log(falhas === 0 ? "\n  O plano segue o ajuste de cada um.\n" : `\n  ${falhas} falha(s).\n`);
 process.exit(falhas === 0 ? 0 : 1);

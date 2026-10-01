@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useSyncExternalStore, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 
 import { Loader2, SlidersHorizontal } from "lucide-react";
 
@@ -8,131 +8,68 @@ import SurfaceCard from "@/components/shared/SurfaceCard";
 import IconeDaFrente from "@/components/shared/IconeDaFrente";
 
 import { salvarAjusteDaRecuperacao } from "@/lib/actions/recuperacao";
-import { leitura } from "@/lib/lote";
-import { filaDoDia } from "@/lib/models/guiaParaFechar";
 import { frente as frenteInfo, type FrenteId } from "@/lib/models/frentes";
 import { diaCurtoDaMarca } from "@/lib/models/meuDia";
 import {
   AJUSTE_PADRAO,
-  ajusteValido,
-  cotaDaFrente,
   cotasOferecidas,
-  frentesNoPlano,
   FRENTES_DA_RECUPERACAO,
   LIMITES,
   planoDeRecuperacao,
-  ritmoDeHoje,
   type AjusteDaFrente,
   type AjusteDaRecuperacao,
 } from "@/lib/models/recuperacao";
 import { useSla } from "@/lib/context/SlaContext";
 import { useToast } from "@/lib/context/ToastContext";
 
+import {
+  adiantarHoje,
+  chaveDaCota,
+  chaveDoInicio,
+  definirAjusteDaRecuperacao,
+  esquecerCotasDoDia,
+  gravarGuardado,
+  lerTexto,
+  useAjusteDaRecuperacao,
+  useOQueValeHoje,
+  type PlanoDaFrenteHoje,
+} from "@/components/rotina/recuperacaoDoDia";
 import type { useMeuDia } from "@/components/rotina/useMeuDia";
 
 type MeuDia = ReturnType<typeof useMeuDia>;
 
-/* Em lote, por rota (1.116): sai junto com as outras leituras do Meu dia. */
-const lerAjusteDaRecuperacao = leitura("recuperacao");
-
-/*
-  A cota escolhida no dia (os botões da linha) e o número da primeira
-  abertura do dia ficam no navegador de quem trabalha: são conveniência de
-  quem olha, não dado da operação. O ajuste de cada frente (aparecer,
-  mínimo, prazo, cota fixa) fica na conta (1.122).
-*/
-const EVENTO = "cw:recuperacao";
-const PREFIXO_DA_COTA = "cw:recuperacao:cota:";
-
-function lerTexto(chave: string) {
-  try {
-    return window.localStorage.getItem(chave);
-  } catch {
-    return null;
-  }
-}
-function gravar(chave: string, valor: unknown) {
-  try {
-    window.localStorage.setItem(chave, JSON.stringify(valor));
-  } catch {
-    /* sem armazenamento: segue com o que está na tela */
-  }
-  window.dispatchEvent(new Event(EVENTO));
-}
-/** Depois de salvar o ajuste, as escolhas rápidas do dia saem — vale o que foi salvo. */
-function esquecerCotasDoDia() {
-  try {
-    for (const f of FRENTES_DA_RECUPERACAO) window.localStorage.removeItem(`${PREFIXO_DA_COTA}${f}`);
-  } catch {
-    /* sem armazenamento: nada guardado */
-  }
-  window.dispatchEvent(new Event(EVENTO));
-}
-function ouvir(avisar: () => void) {
-  window.addEventListener(EVENTO, avisar);
-  window.addEventListener("storage", avisar);
-  return () => {
-    window.removeEventListener(EVENTO, avisar);
-    window.removeEventListener("storage", avisar);
-  };
-}
-
-/* No servidor e na hidratação, nada guardado: o valor do navegador entra logo depois, sem divergir. */
-function useGuardado<T>(chave: string): T | null {
-  const texto = useSyncExternalStore(ouvir, () => lerTexto(chave), () => null);
-  try {
-    return texto ? (JSON.parse(texto) as T) : null;
-  } catch {
-    return null;
-  }
-}
-
 const DIA_DA_SEMANA = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
 const nomeDoDia = (dia: string) => DIA_DA_SEMANA[new Date(`${dia}T12:00:00Z`).getUTCDay()];
 
+/** De quanto em quanto "adiantar" soma ao dia, depois de batida a cota. */
+const PASSO_DE_ADIANTAR = 10;
+
 /**
  * O plano de recuperação do acumulado, no Meu dia (Fase 24; ajustável na
- * 1.122).
+ * 1.122; "o que vale hoje" na 1.124).
  *
  * Aparece para as frentes que passam do mínimo de cada uma (10 fora do
  * prazo, se ninguém ajustou). Diz a cota que zera no prazo escolhido ("30
- * por dia, zera na quarta"), deixa trocar a cota do dia, e mostra quanto
- * saiu hoje. "Ajustar" abre, na própria tela, o ajuste por frente —
- * também pela central de Configurações (`/meu-dia?configurar=recuperacao`),
- * que abre mesmo sem acumulado.
+ * por dia, zera na quarta"), deixa trocar a cota do dia, mostra quanto
+ * saiu hoje — e, desde a 1.124, quantos do acumulado ficam para os
+ * próximos dias: a fila do dia só leva a cota. Batida a cota, "adiantar"
+ * traz mais 10 para hoje.
  */
 export default function PlanoDeRecuperacao({ dia, ajustarInicial = false }: { dia: MeuDia; ajustarInicial?: boolean }) {
 
-  const [ajuste, setAjuste] = useState<AjusteDaRecuperacao | null>(null);
+  const ajuste = useAjusteDaRecuperacao();
   const [ajustando, setAjustando] = useState(ajustarInicial);
-
-  useEffect(() => {
-    let vivo = true;
-    lerAjusteDaRecuperacao()
-      .then((a) => vivo && setAjuste(ajusteValido(a)))
-      .catch(() => vivo && setAjuste(ajusteValido(null)));
-    return () => {
-      vivo = false;
-    };
-  }, []);
-
-  const acumulados = useMemo(() => {
-    if (!dia.contagens || !ajuste) return [];
-    const vencidos = filaDoDia(dia.doDia, dia.contagens).filter((i) => i.atrasado && i.frente);
-    const porFrente = new Map<FrenteId, number>();
-    for (const i of vencidos) porFrente.set(i.frente!, (porFrente.get(i.frente!) ?? 0) + 1);
-    return frentesNoPlano(porFrente, ajuste);
-  }, [dia.doDia, dia.contagens, ajuste]);
+  const { planos, paraDepois } = useOQueValeHoje(dia, dia.feitasHoje);
 
   if (dia.carregando || !dia.hoje || !ajuste) return null;
-  if (acumulados.length === 0 && !ajustando) return null;
+  if (planos.length === 0 && !ajustando) return null;
 
   return (
     <SurfaceCard className="p-0">
       <div className="flex flex-wrap items-start justify-between gap-2 border-b border-zinc-100 px-5 py-3">
         <div>
           <h2 className="text-[13px] font-semibold text-zinc-900">Plano de recuperação do acumulado</h2>
-          <p className="mt-0.5 text-xs text-zinc-500">O que está fora do prazo não cabe num dia. Uma cota por dia útil, e o dia em que zera.</p>
+          <p className="mt-0.5 text-xs text-zinc-500">O que está fora do prazo não cabe num dia. Uma cota por dia útil — só ela entra na fila de hoje —, e o dia em que zera.</p>
         </div>
         {!ajustando && (
           <button
@@ -150,16 +87,16 @@ export default function PlanoDeRecuperacao({ dia, ajustarInicial = false }: { di
           ajuste={ajuste}
           onFechar={() => setAjustando(false)}
           onSalvo={(novo) => {
-            setAjuste(novo);
+            definirAjusteDaRecuperacao(novo);
             setAjustando(false);
           }}
         />
       )}
 
-      {acumulados.length > 0 ? (
+      {planos.length > 0 ? (
         <ul className="divide-y divide-zinc-100">
-          {acumulados.map(([f, n]) => (
-            <LinhaDaFrente key={f} frente={f} acumulado={n} hoje={dia.hoje!} ajuste={ajuste[f]} />
+          {planos.map((p) => (
+            <LinhaDaFrente key={p.frente} plano={p} depois={paraDepois.get(p.frente) ?? 0} hoje={dia.hoje!} />
           ))}
         </ul>
       ) : (
@@ -309,51 +246,60 @@ function EditorDoPlano({ ajuste, onFechar, onSalvo }: { ajuste: AjusteDaRecupera
   );
 }
 
-function LinhaDaFrente({ frente, acumulado, hoje, ajuste }: { frente: FrenteId; acumulado: number; hoje: string; ajuste: AjusteDaFrente }) {
+function LinhaDaFrente({ plano, depois, hoje }: { plano: PlanoDaFrenteHoje; depois: number; hoje: string }) {
 
   const { expediente } = useSla();
-  const chaveDaCota = `${PREFIXO_DA_COTA}${frente}`;
-  const chaveDoInicio = `cw:recuperacao:inicio:${frente}`;
-
-  const cota = useGuardado<number>(chaveDaCota) ?? cotaDaFrente(acumulado, ajuste);
-  const salvo = useGuardado<{ dia: string; n: number }>(chaveDoInicio);
-  const inicio = salvo?.dia === hoje ? salvo.n : acumulado;
+  const { frente, acumulado, cota, saiu, restante, adiantado, ajuste } = plano;
 
   /* A primeira abertura do dia fica guardada: é a régua do "saiu hoje". */
   useEffect(() => {
     let guardado: { dia?: string } | null = null;
     try {
-      guardado = JSON.parse(lerTexto(chaveDoInicio) ?? "null");
+      guardado = JSON.parse(lerTexto(chaveDoInicio(frente)) ?? "null");
     } catch {
       guardado = null;
     }
-    if (guardado?.dia !== hoje) gravar(chaveDoInicio, { dia: hoje, n: acumulado });
-  }, [chaveDoInicio, hoje, acumulado]);
+    if (guardado?.dia !== hoje) gravarGuardado(chaveDoInicio(frente), { dia: hoje, n: acumulado });
+  }, [frente, hoje, acumulado]);
 
-  const plano = planoDeRecuperacao(acumulado, cota, hoje, expediente);
-  const ritmo = ritmoDeHoje(inicio, acumulado, cota);
-  const pct = cota > 0 ? Math.min(100, Math.round((ritmo.saiu / cota) * 100)) : 0;
+  const zera = planoDeRecuperacao(acumulado, cota, hoje, expediente);
+  const dandoConta = cota > 0 && saiu >= cota;
+  const pct = cota > 0 ? Math.min(100, Math.round((saiu / cota) * 100)) : 0;
   const info = frenteInfo(frente);
 
   return (
     <li className="grid gap-2 px-5 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
       <div className="min-w-0">
-        <p className="flex items-center gap-1.5 text-sm text-zinc-800">
+        <p className="flex flex-wrap items-center gap-1.5 text-sm text-zinc-800">
           <IconeDaFrente frente={frente} size={13} />
           <strong className="font-semibold tabular-nums">{acumulado}</strong> {info.nome} fora do prazo
-          {plano && (
+          {zera && (
             <span className="text-zinc-500">
-              {" "}· {cota} por dia, zera {plano.dias === 1 ? "hoje" : `${plano.zeraEm === hoje ? "hoje" : `na ${nomeDoDia(plano.zeraEm)}`} (${diaCurtoDaMarca(plano.zeraEm)})`}
+              · {cota} por dia, zera {zera.dias === 1 ? "hoje" : `${zera.zeraEm === hoje ? "hoje" : `na ${nomeDoDia(zera.zeraEm)}`} (${diaCurtoDaMarca(zera.zeraEm)})`}
             </span>
           )}
         </p>
-        <div className="mt-1.5 flex items-center gap-2 text-xs">
-          <span className="h-1.5 w-32 overflow-hidden rounded-full bg-zinc-100" role="img" aria-label={`${ritmo.saiu} de ${cota} hoje`}>
-            <span className={`block h-full rounded-full ${ritmo.dandoConta ? "bg-emerald-500" : "bg-violet-500"}`} style={{ width: `${pct}%` }} />
+        <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs">
+          <span className="h-1.5 w-32 overflow-hidden rounded-full bg-zinc-100" role="img" aria-label={`${saiu} de ${cota} hoje`}>
+            <span className={`block h-full rounded-full ${dandoConta ? "bg-emerald-500" : "bg-violet-500"}`} style={{ width: `${pct}%` }} />
           </span>
-          <span className={`tabular-nums ${ritmo.dandoConta ? "font-medium text-emerald-700" : "text-zinc-500"}`}>
-            {ritmo.dandoConta ? `cota de hoje batida: ${ritmo.saiu} saíram` : `hoje: ${ritmo.saiu} de ${cota} · faltam ${ritmo.falta}`}
+          <span className={`tabular-nums ${dandoConta ? "font-medium text-emerald-700" : "text-zinc-500"}`}>
+            {dandoConta ? `cota de hoje batida: ${saiu} saíram` : `hoje: ${saiu} de ${cota} · faltam ${Math.max(0, cota - saiu)}`}
           </span>
+          {depois > 0 && (
+            <span className="text-zinc-500">
+              · <span className="tabular-nums">{depois}</span> ficam para os próximos dias
+              {restante === 0 && (
+                <button
+                  type="button"
+                  onClick={() => adiantarHoje(frente, hoje, adiantado, PASSO_DE_ADIANTAR)}
+                  className="ml-1.5 font-medium text-violet-700 underline-offset-2 hover:underline"
+                >
+                  adiantar mais {Math.min(PASSO_DE_ADIANTAR, depois)}
+                </button>
+              )}
+            </span>
+          )}
         </div>
       </div>
       <div role="group" aria-label={`Cota por dia de ${info.nome}`} className="flex items-center gap-0.5 text-xs">
@@ -363,7 +309,7 @@ function LinhaDaFrente({ frente, acumulado, hoje, ajuste }: { frente: FrenteId; 
             key={c}
             type="button"
             aria-pressed={cota === c}
-            onClick={() => gravar(chaveDaCota, c)}
+            onClick={() => gravarGuardado(chaveDaCota(frente), c)}
             className={`rounded-md px-2 py-1 font-medium tabular-nums ${cota === c ? "bg-zinc-900 text-white" : "text-zinc-600 hover:bg-zinc-100"}`}
           >
             {c}

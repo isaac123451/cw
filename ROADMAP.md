@@ -1116,6 +1116,40 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Meu dia só com o que vale hoje, e a rotina repaginada (01/10/2026, 1.124.0)
+
+Fase 36, "Meu dia só com o que vale hoje — sem NPS antigo; atividades mais
+claras e na ordem certa"; Fase 34, "rotina de hoje repaginada — a lista do
+dia mais clara e mais rápida de trabalhar". A 1.89 já tirava o NPS de mais
+de 30 dias; faltava o resto: com 117 NPS fora do prazo e o plano dizendo "25
+por dia", a fila do dia ainda trazia os 117.
+
+- **O que vale hoje** (`separarOQueValeHoje` em `lib/models/recuperacao.ts`,
+  `useOQueValeHoje` em `components/rotina/recuperacaoDoDia.ts`): numa frente
+  com plano de recuperação, o fora do prazo entra no dia só até a cota de
+  hoje (o que falta dela, mais o que a pessoa adiantou), na ordem da fila;
+  o resto fica para os próximos dias — contado, não escondido. O que está
+  no prazo, e as frentes sem plano, entram inteiros. Uma conta só para o
+  plano, o próximo passo (cartão do topo, flutuante e extensão), o Um por
+  vez e a rotina.
+- **No plano de recuperação:** "N ficam para os próximos dias" em cada
+  frente, e, batida a cota, "adiantar mais 10" (só hoje, neste navegador).
+  O ajuste da conta passou a ser lido uma vez e compartilhado por todas as
+  partes da tela.
+- **A rotina repaginada:** as atividades que faltam primeiro, na ordem do
+  documento; as feitas descem para "Feitas hoje (8)", recolhido. Cada uma
+  diz "13 para hoje · 2 do acumulado ficam para os próximos dias" quando o
+  plano corta, e ganhou **Começar**: abre o Um por vez só com os itens dela
+  ("Só: Fazer os FUPs…", com o X para voltar à fila inteira).
+- **No Um por vez:** a mesma fila do dia, e a linha "N do acumulado ficam
+  para os próximos dias".
+- `check:recuperacao` ganhou as regras do que vale hoje (a cota na ordem
+  da fila, o no prazo inteiro, frente sem plano inteira, cota batida, o
+  restante com o adiantado). Conferido na tela: 4 atividades a fazer e as 8
+  feitas recolhidas, a linha "13 para hoje · 2 ficam para depois" nos FUPs
+  (cota 5 do Reclame Aqui), o Começar abrindo o Um por vez focado, e o
+  plano com "2 ficam para os próximos dias".
+
 ### O próximo passo à vista, em qualquer tela e na extensão (01/10/2026, 1.123.0)
 
 Fase 34, "cards e pop-ups de foco — lembretes curtos e o próximo passo à

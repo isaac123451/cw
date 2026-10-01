@@ -4,7 +4,7 @@ import Link from "next/link";
 
 import { useEffect, useMemo, useState } from "react";
 
-import { ArrowUpRight, Check, ChevronDown, ChevronRight, Flame, ListChecks, Loader2, Save, Settings2 } from "lucide-react";
+import { ArrowUpRight, Check, ChevronDown, ChevronRight, Flame, ListChecks, Loader2, Play, Save, Settings2 } from "lucide-react";
 
 import SurfaceCard from "@/components/shared/SurfaceCard";
 import IconeDaFrente from "@/components/shared/IconeDaFrente";
@@ -18,6 +18,7 @@ import { minutosDaAtividade } from "@/lib/models/meuDia";
 import { descreverMinutos } from "@/components/rotina/formato";
 
 import type { useMeuDia } from "@/components/rotina/useMeuDia";
+import { useOQueValeHoje } from "@/components/rotina/recuperacaoDoDia";
 
 import PorQue from "@/components/shared/PorQue";
 import ItensDaAtividade from "@/components/rotina/ItensDaAtividade";
@@ -31,6 +32,8 @@ interface Props {
   onConfigurar?: () => void;
   /** Abre o modo um por vez — a fila do dia com os passos de cada item. */
   onUmPorVez?: () => void;
+  /** Abre o modo um por vez só com os itens de uma atividade (1.124). */
+  onComecar?: (atividade: { chave: string; titulo: string }) => void;
   /**
    * As marcas como estão na tela — vivem fora porque o plano do dia
    * também as lê. `null` em setRascunho volta ao que está salvo.
@@ -51,7 +54,7 @@ interface Props {
  * As marcas ficam no banco, por pessoa e por dia, com Salvar: é o que
  * dá a barra de progresso e a sequência de dias com a rotina completa.
  */
-export default function RotinaDoDia({ dia, compacto = false, onConfigurar, onUmPorVez, rascunho, setRascunho }: Props) {
+export default function RotinaDoDia({ dia, compacto = false, onConfigurar, onUmPorVez, onComecar, rascunho, setRascunho }: Props) {
 
   const { notify } = useToast();
   const [aberta, setAberta] = useState<string | null>(null);
@@ -65,6 +68,31 @@ export default function RotinaDoDia({ dia, compacto = false, onConfigurar, onUmP
     const b = [...feitasHoje].filter((id) => !rascunho.has(id)).length;
     return a + b;
   }, [rascunho, feitasHoje]);
+
+  /*
+    O que vale hoje (1.124): quanto de cada atividade entra no dia e quanto
+    do acumulado fica para os próximos — a mesma conta do plano de
+    recuperação e do Um por vez.
+  */
+  const { fila: filaInteira, hoje: filaDeHoje } = useOQueValeHoje(dia, rascunho);
+  const porAtividade = useMemo(() => {
+    const mapa = new Map<string, { hoje: number; total: number }>();
+    const somar = (lista: typeof filaInteira, campo: "hoje" | "total") => {
+      for (const item of lista) {
+        for (const k of item.chaves as string[]) {
+          const atual = mapa.get(k) ?? { hoje: 0, total: 0 };
+          atual[campo] += 1;
+          mapa.set(k, atual);
+        }
+      }
+    };
+    somar(filaInteira, "total");
+    somar(filaDeHoje, "hoje");
+    return mapa;
+  }, [filaInteira, filaDeHoje]);
+
+  /* As feitas descem para um grupo recolhido no fim (1.124): a lista mostra o que falta. */
+  const [verFeitas, setVerFeitas] = useState(false);
 
   /* Sair com marca por salvar pede confirmação, como o resto da plataforma. */
   useEffect(() => {
@@ -119,6 +147,134 @@ export default function RotinaDoDia({ dia, compacto = false, onConfigurar, onUmP
   }
 
   const dow = (a: AtividadeDaRotina) => a.diasDaSemana.map((d) => DIAS_DA_SEMANA.find((x) => x.n === d)?.curto).join(", ");
+
+  const aFazer = doDia.filter((a) => !rascunho.has(a.id));
+  const jaFeitas = doDia.filter((a) => rascunho.has(a.id));
+
+  const linha = (a: AtividadeDaRotina) => {
+          const c = a.chave ? contagens[a.chave] : undefined;
+          const marcada = rascunho.has(a.id);
+          const expandida = aberta === a.id;
+          const minutos = minutosDaAtividade(a, c);
+          const temLista = Boolean(c && (c.itens.length || c.tirados.length));
+          /* Todos os itens saíram por marca: a atividade está feita, falta só marcar. */
+          const esvaziada = Boolean(c && c.total === 0 && c.tirados.length > 0 && !marcada);
+          const alternarLista = () => setAberta(expandida ? null : a.id);
+          const doDiaDeHoje = a.chave ? porAtividade.get(a.chave) : undefined;
+          const ficamParaDepois = doDiaDeHoje ? doDiaDeHoje.total - doDiaDeHoje.hoje : 0;
+
+          return (
+            <li key={a.id} className={`rounded-xl border transition-colors ${marcada ? "border-emerald-200 bg-emerald-50/40" : "border-zinc-200"}`}>
+              <div className="flex items-start gap-3 p-3">
+
+                <button
+                  type="button"
+                  onClick={() => alternar(a.id)}
+                  aria-pressed={marcada}
+                  aria-label={marcada ? `Desmarcar ${a.titulo}` : `Marcar ${a.titulo} como feita`}
+                  className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors ${marcada ? "border-emerald-600 bg-emerald-600 text-white" : "border-zinc-300 hover:border-violet-400"}`}
+                >
+                  {marcada && <Check size={13} strokeWidth={3} />}
+                </button>
+
+                <div
+                  className={`min-w-0 flex-1 ${temLista ? "cursor-pointer" : ""}`}
+                  onClick={temLista ? alternarLista : undefined}
+                >
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className={`text-sm font-medium ${marcada ? "text-zinc-400 line-through" : "text-zinc-800"}`}>{a.titulo}</span>
+                    {a.frequencia === "semanal" && (
+                      <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-semibold text-violet-700 ring-1 ring-inset ring-violet-100">semanal · {dow(a)}</span>
+                    )}
+                    {a.horario && <span className="text-[11px] tabular-nums text-zinc-400">{a.horario}</span>}
+                  </div>
+
+                  {c && (
+                    <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                      {FRENTES_DA_OPERACAO.filter((f) => (c.porFrente[f.id] ?? 0) > 0).map((f) => (
+                        <span key={f.id} title={`${c.porFrente[f.id]} em ${f.nome}`} className="flex items-center gap-1 rounded-md bg-zinc-100 px-1.5 py-0.5 text-[11px] font-medium text-zinc-700">
+                          <IconeDaFrente frente={f.id} size={11} />
+                          {c.porFrente[f.id]}
+                        </span>
+                      ))}
+                      {c.atrasados > 0 && (
+                        <span className="rounded-md bg-rose-50 px-1.5 py-0.5 text-[11px] font-semibold text-rose-700 ring-1 ring-inset ring-rose-100">
+                          {c.atrasados} fora do prazo
+                        </span>
+                      )}
+                      <span className="text-[11px] text-zinc-500">{c.resumo}</span>
+                    </div>
+                  )}
+                  {/* O que vale hoje (1.124): o acumulado além da cota fica para os próximos dias. */}
+                  {!marcada && ficamParaDepois > 0 && doDiaDeHoje && (
+                    <p className="mt-1 text-[11px] text-zinc-600">
+                      <strong className="font-semibold tabular-nums text-zinc-900">{doDiaDeHoje.hoje}</strong> para hoje ·{" "}
+                      <span className="tabular-nums">{ficamParaDepois}</span> do acumulado ficam para os próximos dias, pelo plano de recuperação
+                    </p>
+                  )}
+                  {esvaziada && (
+                    <p className="mt-1 flex flex-wrap items-center gap-x-2 text-[11px] text-emerald-700">
+                      Todos os itens saíram da lista.
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          alternar(a.id);
+                        }}
+                        className="font-semibold underline-offset-2 hover:underline"
+                      >
+                        Marcar a atividade
+                      </button>
+                    </p>
+                  )}
+                  {!c && a.descricao && !compacto && <p className="mt-0.5 text-[11px] text-zinc-500">{a.descricao}</p>}
+                </div>
+
+                <div className="flex shrink-0 items-center gap-1">
+                  {minutos > 0 && !compacto && <span className="hidden text-[11px] tabular-nums text-zinc-400 sm:inline">~{descreverMinutos(minutos)}</span>}
+                  {a.link && (
+                    <Link href={a.link} title="Abrir a lista" className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-violet-50 hover:text-violet-700">
+                      <ArrowUpRight size={15} />
+                    </Link>
+                  )}
+                  {onComecar && !marcada && a.chave && c && c.total > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => onComecar({ chave: a.chave!, titulo: a.titulo })}
+                      title="Abrir o Um por vez só com os itens desta atividade"
+                      className="flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-medium text-violet-700 transition-colors hover:bg-violet-50"
+                    >
+                      <Play size={12} /> Começar
+                    </button>
+                  )}
+                  {temLista && (
+                    <button
+                      type="button"
+                      onClick={alternarLista}
+                      data-tour="itens-da-atividade"
+                      aria-expanded={expandida}
+                      title={expandida ? "Fechar a lista" : "Ver os itens, marcar como feito ou tirar da atividade"}
+                      className={`flex items-center gap-0.5 rounded-lg py-1 pl-2 pr-1 text-[11px] font-medium transition-colors ${expandida ? "bg-zinc-100 text-zinc-800" : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800"}`}
+                    >
+                      {c!.total ? `${c!.total} ${c!.total === 1 ? "item" : "itens"}` : "Tirados"}
+                      {expandida ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {expandida && c && a.chave && (
+                <ItensDaAtividade
+                  chave={a.chave}
+                  atividade={a.titulo}
+                  contagem={c}
+                  marcarItens={dia.marcarItens}
+                  desfazerMarcas={dia.desfazerMarcas}
+                />
+              )}
+            </li>
+          );
+  };
 
   return (
     <SurfaceCard
@@ -186,113 +342,26 @@ export default function RotinaDoDia({ dia, compacto = false, onConfigurar, onUmP
         </div>
       )}
 
-      <ul className="space-y-2">
-        {doDia.map((a) => {
-          const c = a.chave ? contagens[a.chave] : undefined;
-          const marcada = rascunho.has(a.id);
-          const expandida = aberta === a.id;
-          const minutos = minutosDaAtividade(a, c);
-          const temLista = Boolean(c && (c.itens.length || c.tirados.length));
-          /* Todos os itens saíram por marca: a atividade está feita, falta só marcar. */
-          const esvaziada = Boolean(c && c.total === 0 && c.tirados.length > 0 && !marcada);
-          const alternarLista = () => setAberta(expandida ? null : a.id);
+      <ul className="space-y-2">{aFazer.map(linha)}</ul>
 
-          return (
-            <li key={a.id} className={`rounded-xl border transition-colors ${marcada ? "border-emerald-200 bg-emerald-50/40" : "border-zinc-200"}`}>
-              <div className="flex items-start gap-3 p-3">
+      {aFazer.length === 0 && doDia.length > 0 && (
+        <p className="py-2 text-sm text-emerald-700">Todas as atividades de hoje marcadas.</p>
+      )}
 
-                <button
-                  type="button"
-                  onClick={() => alternar(a.id)}
-                  aria-pressed={marcada}
-                  aria-label={marcada ? `Desmarcar ${a.titulo}` : `Marcar ${a.titulo} como feita`}
-                  className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors ${marcada ? "border-emerald-600 bg-emerald-600 text-white" : "border-zinc-300 hover:border-violet-400"}`}
-                >
-                  {marcada && <Check size={13} strokeWidth={3} />}
-                </button>
-
-                <div
-                  className={`min-w-0 flex-1 ${temLista ? "cursor-pointer" : ""}`}
-                  onClick={temLista ? alternarLista : undefined}
-                >
-                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <span className={`text-sm font-medium ${marcada ? "text-zinc-400 line-through" : "text-zinc-800"}`}>{a.titulo}</span>
-                    {a.frequencia === "semanal" && (
-                      <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-semibold text-violet-700 ring-1 ring-inset ring-violet-100">semanal · {dow(a)}</span>
-                    )}
-                    {a.horario && <span className="text-[11px] tabular-nums text-zinc-400">{a.horario}</span>}
-                  </div>
-
-                  {c && (
-                    <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                      {FRENTES_DA_OPERACAO.filter((f) => (c.porFrente[f.id] ?? 0) > 0).map((f) => (
-                        <span key={f.id} title={`${c.porFrente[f.id]} em ${f.nome}`} className="flex items-center gap-1 rounded-md bg-zinc-100 px-1.5 py-0.5 text-[11px] font-medium text-zinc-700">
-                          <IconeDaFrente frente={f.id} size={11} />
-                          {c.porFrente[f.id]}
-                        </span>
-                      ))}
-                      {c.atrasados > 0 && (
-                        <span className="rounded-md bg-rose-50 px-1.5 py-0.5 text-[11px] font-semibold text-rose-700 ring-1 ring-inset ring-rose-100">
-                          {c.atrasados} fora do prazo
-                        </span>
-                      )}
-                      <span className="text-[11px] text-zinc-500">{c.resumo}</span>
-                    </div>
-                  )}
-                  {esvaziada && (
-                    <p className="mt-1 flex flex-wrap items-center gap-x-2 text-[11px] text-emerald-700">
-                      Todos os itens saíram da lista.
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          alternar(a.id);
-                        }}
-                        className="font-semibold underline-offset-2 hover:underline"
-                      >
-                        Marcar a atividade
-                      </button>
-                    </p>
-                  )}
-                  {!c && a.descricao && !compacto && <p className="mt-0.5 text-[11px] text-zinc-500">{a.descricao}</p>}
-                </div>
-
-                <div className="flex shrink-0 items-center gap-1">
-                  {minutos > 0 && !compacto && <span className="hidden text-[11px] tabular-nums text-zinc-400 sm:inline">~{descreverMinutos(minutos)}</span>}
-                  {a.link && (
-                    <Link href={a.link} title="Abrir a lista" className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-violet-50 hover:text-violet-700">
-                      <ArrowUpRight size={15} />
-                    </Link>
-                  )}
-                  {temLista && (
-                    <button
-                      type="button"
-                      onClick={alternarLista}
-                      data-tour="itens-da-atividade"
-                      aria-expanded={expandida}
-                      title={expandida ? "Fechar a lista" : "Ver os itens, marcar como feito ou tirar da atividade"}
-                      className={`flex items-center gap-0.5 rounded-lg py-1 pl-2 pr-1 text-[11px] font-medium transition-colors ${expandida ? "bg-zinc-100 text-zinc-800" : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800"}`}
-                    >
-                      {c!.total ? `${c!.total} ${c!.total === 1 ? "item" : "itens"}` : "Tirados"}
-                      {expandida ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {expandida && c && a.chave && (
-                <ItensDaAtividade
-                  chave={a.chave}
-                  atividade={a.titulo}
-                  contagem={c}
-                  marcarItens={dia.marcarItens}
-                  desfazerMarcas={dia.desfazerMarcas}
-                />
-              )}
-            </li>
-          );
-        })}
-      </ul>
+      {jaFeitas.length > 0 && (
+        <div className="mt-3">
+          <button
+            type="button"
+            onClick={() => setVerFeitas((v) => !v)}
+            aria-expanded={verFeitas}
+            className="flex items-center gap-1 text-xs font-medium text-zinc-500 hover:text-zinc-800"
+          >
+            {verFeitas ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+            Feitas hoje ({jaFeitas.length})
+          </button>
+          {verFeitas && <ul className="mt-2 space-y-2">{jaFeitas.map(linha)}</ul>}
+        </div>
+      )}
 
       {!compacto && doDia.length > 0 && !rules.some((r) => r.active) && (
         <p className="mt-3 text-[11px] leading-relaxed text-zinc-400">

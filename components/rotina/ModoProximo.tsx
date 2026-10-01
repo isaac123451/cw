@@ -15,7 +15,7 @@ import { useCases } from "@/lib/context/CaseContext";
 import { useJanelas } from "@/lib/context/JanelasContext";
 import { useSla } from "@/lib/context/SlaContext";
 import { useToast } from "@/lib/context/ToastContext";
-import { filaDoDia, posicaoNaFila, resumoDosPassos, type ItemDaFila, type PassoParaFechar } from "@/lib/models/guiaParaFechar";
+import { posicaoNaFila, resumoDosPassos, type ItemDaFila, type PassoParaFechar } from "@/lib/models/guiaParaFechar";
 import { FRENTES_DA_OPERACAO, frente as frenteInfo, type FrenteId } from "@/lib/models/frentes";
 import { JANELA_DO_G_MS } from "@/lib/models/atalhosDeTeclado";
 import { diaCurtoDaMarca, opcoesDeAdiar } from "@/lib/models/meuDia";
@@ -23,6 +23,7 @@ import { idDaJanela, type PedidoDeJanela } from "@/lib/models/janelas";
 import { isSocial } from "@/lib/services/case.service";
 import { proximoDiaUtil } from "@/lib/services/horasUteis";
 
+import { useOQueValeHoje } from "@/components/rotina/recuperacaoDoDia";
 import type { useMeuDia } from "@/components/rotina/useMeuDia";
 import { usePassosParaFechar } from "@/components/rotina/usePassosParaFechar";
 
@@ -33,6 +34,13 @@ interface Props {
   /** As marcas como estão na tela: atividade marcada sai da fila. */
   marcadas: Set<string>;
   onFechar: () => void;
+  /**
+   * Só os itens de uma atividade (1.124): o "Começar" de cada linha da
+   * rotina abre o modo já focado nela. `onLimparAtividade` volta à fila
+   * inteira.
+   */
+  atividade?: { chave: string; titulo: string } | null;
+  onLimparAtividade?: () => void;
 }
 
 /**
@@ -51,7 +59,7 @@ interface Props {
  * se reordenava e o modo seguia o caso até a nova posição. Agora cada
  * item guarda o lugar em que apareceu; o que entra depois vai para o fim.
  */
-export default function ModoProximo({ dia, marcadas, onFechar }: Props) {
+export default function ModoProximo({ dia, marcadas, onFechar, atividade = null, onLimparAtividade }: Props) {
 
   const { janelas, abrir, alternarCompleta } = useJanelas();
   const passosDe = usePassosParaFechar();
@@ -66,10 +74,17 @@ export default function ModoProximo({ dia, marcadas, onFechar }: Props) {
   /* Os marcados na lista da fila, para fazer de uma vez. */
   const [selecionados, setSelecionados] = useState<string[]>([]);
 
+  /*
+    O que vale hoje (1.124): a fila com o acumulado de cada frente cortado
+    pela cota do plano de recuperação — o resto fica para os próximos dias.
+    Com uma atividade escolhida, só os itens dela.
+  */
+  const { hoje: daFila, paraDepois } = useOQueValeHoje(dia, marcadas);
   const todos = useMemo(
-    () => (dia.contagens ? filaDoDia(dia.doDia, dia.contagens, marcadas) : []),
-    [dia.doDia, dia.contagens, marcadas]
+    () => (atividade ? daFila.filter((i) => (i.chaves as string[]).includes(atividade.chave)) : daFila),
+    [daFila, atividade]
   );
+  const ficamParaDepois = [...paraDepois.values()].reduce((s, n) => s + n, 0);
 
   /*
     Foco por frente (Fase 24): "só Reclame Aqui", "só os críticos", "só
@@ -389,8 +404,18 @@ export default function ModoProximo({ dia, marcadas, onFechar }: Props) {
         </div>
       </header>
 
-      {opcoesDeFoco.length > 2 && (
+      {(opcoesDeFoco.length > 2 || atividade || ficamParaDepois > 0) && (
         <div role="group" aria-label="Foco da fila" className="flex flex-wrap items-center gap-1 border-b border-zinc-100 px-5 py-1.5">
+          {atividade && (
+            <button
+              type="button"
+              onClick={onLimparAtividade}
+              title="Voltar à fila inteira do dia"
+              className="mr-1 flex items-center gap-1 rounded-md bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-800 ring-1 ring-inset ring-violet-200 hover:bg-violet-100"
+            >
+              Só: {atividade.titulo} <X size={12} />
+            </button>
+          )}
           {opcoesDeFoco.map((o) => (
             <button
               key={o.id}
@@ -402,6 +427,11 @@ export default function ModoProximo({ dia, marcadas, onFechar }: Props) {
               {o.rotulo} <span className={foco === o.id ? "text-white/60" : "text-zinc-400"}>{o.n}</span>
             </button>
           ))}
+          {ficamParaDepois > 0 && (
+            <span className="ml-auto text-[11px] text-zinc-500" title="O plano de recuperação: só a cota de hoje do acumulado entra na fila">
+              <span className="tabular-nums">{ficamParaDepois}</span> do acumulado ficam para os próximos dias
+            </span>
+          )}
         </div>
       )}
 

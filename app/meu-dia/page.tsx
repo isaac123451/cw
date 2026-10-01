@@ -67,6 +67,8 @@ function MeuDiaPagina({ configurarInicial = false, ajustarRecuperacao = false }:
   );
   const [escolha, setUmPorVez] = useState<boolean | null>(null);
   const umPorVez = escolha ?? pedidoPeloEndereco;
+  /* O "Começar" de uma atividade da rotina abre o Um por vez só com ela (1.124). */
+  const [atividadeDoFoco, setAtividadeDoFoco] = useState<{ chave: string; titulo: string } | null>(null);
 
   /* O rascunho das marcas é o salvo até alguém mexer. */
   const efetivas = marcas ?? dia.feitasHoje;
@@ -119,7 +121,18 @@ function MeuDiaPagina({ configurarInicial = false, ajustarRecuperacao = false }:
 
         <MetasDoCiclo />
 
-        {umPorVez && <ModoProximo dia={dia} marcadas={efetivas} onFechar={() => setUmPorVez(false)} />}
+        {umPorVez && (
+          <ModoProximo
+            dia={dia}
+            marcadas={efetivas}
+            atividade={atividadeDoFoco}
+            onLimparAtividade={() => setAtividadeDoFoco(null)}
+            onFechar={() => {
+              setUmPorVez(false);
+              setAtividadeDoFoco(null);
+            }}
+          />
+        )}
 
         <CartaoDoPrimeiroAcesso />
 
@@ -131,7 +144,7 @@ function MeuDiaPagina({ configurarInicial = false, ajustarRecuperacao = false }:
 
         <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
 
-          <RotinaDoDia dia={dia} rascunho={efetivas} setRascunho={setMarcas} onConfigurar={() => setConfigurando(true)} onUmPorVez={() => { setUmPorVez(true); window.scrollTo({ top: 0, behavior: "smooth" }); }} />
+          <RotinaDoDia dia={dia} rascunho={efetivas} setRascunho={setMarcas} onConfigurar={() => setConfigurando(true)} onUmPorVez={() => { setUmPorVez(true); window.scrollTo({ top: 0, behavior: "smooth" }); }} onComecar={(a) => { setAtividadeDoFoco(a); setUmPorVez(true); window.scrollTo({ top: 0, behavior: "smooth" }); }} />
 
           <div className="space-y-6">
             <PlanoDoDia plano={plano} atividades={dia.doDia} contagens={dia.contagens} hoje={dia.hoje} />

@@ -94,6 +94,42 @@ export function frentesNoPlano(porFrente: Map<FrenteId, number>, ajuste: AjusteD
 }
 
 /**
+ * O que vale hoje (1.124, Fase 36: "Meu dia só com o que vale hoje").
+ *
+ * Com o plano de recuperação ligado numa frente, o fora do prazo dela não
+ * entra inteiro no dia: entra o que cabe na cota de hoje (o que falta dela,
+ * mais o que a pessoa escolheu adiantar), na ordem da fila. O resto fica
+ * para os próximos dias — contado, não escondido. O que está no prazo, e
+ * as frentes sem plano, entram inteiros.
+ *
+ * `restante` é por frente: quantos fora do prazo ainda cabem hoje. Frente
+ * que não está no mapa não tem plano — tudo entra.
+ */
+export function separarOQueValeHoje<T extends { frente?: FrenteId; atrasado: boolean }>(
+  fila: T[],
+  restante: Map<FrenteId, number>
+): { hoje: T[]; paraDepois: Map<FrenteId, number> } {
+  const usados = new Map<FrenteId, number>();
+  const paraDepois = new Map<FrenteId, number>();
+  const hoje = fila.filter((item) => {
+    if (!item.atrasado || !item.frente || !restante.has(item.frente)) return true;
+    const ja = usados.get(item.frente) ?? 0;
+    if (ja < (restante.get(item.frente) ?? 0)) {
+      usados.set(item.frente, ja + 1);
+      return true;
+    }
+    paraDepois.set(item.frente, (paraDepois.get(item.frente) ?? 0) + 1);
+    return false;
+  });
+  return { hoje, paraDepois };
+}
+
+/** Quanto do acumulado ainda cabe hoje: a cota menos o que já saiu, mais o adiantado. */
+export function restanteDeHoje(cota: number, saiu: number, adiantado = 0) {
+  return Math.max(0, cota - saiu) + Math.max(0, adiantado);
+}
+
+/**
  * Em que dia útil o acumulado zera com `porDia` por dia útil.
  *
  * Hoje conta como o primeiro dia quando é útil. Sem cota, `null`.

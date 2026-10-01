@@ -3,16 +3,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { guardarProximoPasso } from "@/lib/actions/proximoPasso";
-import { filaDoDia, type ItemDaFila } from "@/lib/models/guiaParaFechar";
 import { resumoDaFila, retratoDoProximoPasso } from "@/lib/models/proximoPasso";
 
+import { useOQueValeHoje } from "@/components/rotina/recuperacaoDoDia";
 import type { useMeuDia } from "@/components/rotina/useMeuDia";
 
 type MeuDia = ReturnType<typeof useMeuDia>;
 
 /**
- * O próximo passo (1.123): o primeiro da fila do Um por vez, menos os que a
- * pessoa pulou nesta tela.
+ * O próximo passo (1.123): o primeiro da fila do Um por vez — o que vale
+ * hoje, desde a 1.124 —, menos os que a pessoa pulou nesta tela.
  *
  * Quando o primeiro da fila muda (não a cada recarga), grava na conta — é
  * dali que o popup da extensão mostra "o próximo". Espera 3 s parado antes
@@ -20,10 +20,8 @@ type MeuDia = ReturnType<typeof useMeuDia>;
  * virar três gravações.
  */
 export function useProximoPasso(dia: MeuDia, marcadas: Set<string>) {
-  const fila = useMemo<ItemDaFila[]>(
-    () => (dia.carregando || !dia.contagens ? [] : filaDoDia(dia.doDia, dia.contagens, marcadas)),
-    [dia.carregando, dia.contagens, dia.doDia, marcadas]
-  );
+  /* O que vale hoje (1.124): a fila com o acumulado cortado pela cota do plano. */
+  const { hoje: fila } = useOQueValeHoje(dia, marcadas);
 
   const [pulados, setPulados] = useState<string[]>([]);
   const visivel = useMemo(() => {

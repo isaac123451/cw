@@ -104,6 +104,14 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.124.0",
+    data: "2026-10-01",
+    titulo: "Meu dia só com o que vale hoje",
+    texto: "O acumulado fora do prazo entra no dia só até a cota do plano de recuperação — o resto fica contado para os próximos dias. A rotina mostra primeiro o que falta (as feitas ficam recolhidas) e cada atividade tem \"Começar\", que abre o Um por vez só com ela.",
+    frentes: ["plataforma"],
+    href: "/meu-dia",
+  },
+  {
     versao: "1.123.0",
     data: "2026-10-01",
     titulo: "O próximo passo à vista",
