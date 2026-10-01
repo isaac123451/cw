@@ -82,6 +82,11 @@ model UserPreference {
   /// sai do registro de contatos.
   primeiroAcesso Json?
 
+  /// O plano de recuperação do acumulado, do jeito de cada um (1.122):
+  /// `{ [frente]: { ligado, minimo, dias, cota } }`. JSON pelo mesmo motivo
+  /// dos avisos — frente nova não pede migração.
+  recuperacao Json?
+
   updatedAt DateTime @updatedAt
 }
 

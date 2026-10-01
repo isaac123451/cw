@@ -36,12 +36,13 @@ const nadaParaOuvir = () => () => {};
 
 /*
   ?configurar=rotina (1.115): o atalho da central de Configurações abre a
-  configuração da rotina direto. O parâmetro é lido dentro de Suspense e
+  configuração da rotina direto; ?configurar=recuperacao (1.122), o ajuste
+  do plano de recuperação. O parâmetro é lido dentro de Suspense e
   entra no `useState` inicial — sem efeito que acerta o estado depois.
 */
 function ComParametro() {
   const parametros = useSearchParams();
-  return <MeuDiaPagina configurarInicial={parametros.get("configurar") === "rotina"} />;
+  return <MeuDiaPagina configurarInicial={parametros.get("configurar") === "rotina"} ajustarRecuperacao={parametros.get("configurar") === "recuperacao"} />;
 }
 
 export default function MeuDiaPage() {
@@ -52,7 +53,7 @@ export default function MeuDiaPage() {
   );
 }
 
-function MeuDiaPagina({ configurarInicial = false }: { configurarInicial?: boolean }) {
+function MeuDiaPagina({ configurarInicial = false, ajustarRecuperacao = false }: { configurarInicial?: boolean; ajustarRecuperacao?: boolean }) {
 
   const dia = useMeuDia();
   const [marcas, setMarcas] = useState<Set<string> | null>(null);
@@ -112,8 +113,8 @@ function MeuDiaPagina({ configurarInicial = false }: { configurarInicial?: boole
         {/* O que pede ação, o que move a nota e o que já deu certo — antes da lista de tarefas. */}
         <AgoraNoMeuDia />
 
-        {/* Só aparece com acumulado: 10 ou mais fora do prazo numa frente. */}
-        <PlanoDeRecuperacao dia={dia} />
+        {/* Só aparece com acumulado (o mínimo de cada frente, 1.122) — ou aberto pelo ?configurar=recuperacao. */}
+        <PlanoDeRecuperacao dia={dia} ajustarInicial={ajustarRecuperacao} />
 
         <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
 

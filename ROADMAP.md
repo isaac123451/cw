@@ -1116,6 +1116,31 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Plano de recuperação do seu jeito (01/10/2026, 1.122.0)
+
+Fase 34, "plano de recuperação configurável — cotas, prazos e frentes do
+jeito das suas demandas". O plano (1.46) tinha tudo fixo: aparecia com 10
+fora do prazo, mirava zerar em 5 dias úteis, e a cota escolhida ficava só
+no navegador.
+
+- **Por frente**, na conta de cada pessoa (`UserPreference.recuperacao`):
+  se o plano aparece, a partir de quantos itens fora do prazo, em quantos
+  dias úteis zerar (a cota sugerida segue esse prazo: 149 em 10 dias → 15
+  por dia) e uma **cota fixa** opcional (com ela, o prazo deixa de valer e o
+  dia em que zera sai da cota).
+- **Onde ajustar:** "Ajustar" no próprio cartão do Meu dia (a tabela abre
+  ali, sem modal; Salvar só acende com mudança e avisa depois de gravar), e
+  "Plano de recuperação" na central de Configurações, que abre o Meu dia já
+  no ajuste (`?configurar=recuperacao`) — mesmo sem acumulado, quando o
+  cartão não apareceria.
+- Os botões de cota da linha continuam como escolha rápida do dia; salvar o
+  ajuste limpa essas escolhas, para valer o que foi salvo.
+- `check:recuperacao`: o padrão de sempre sem ajuste, a sugerida pelo
+  prazo, mínimo e liga-desliga por frente, cota fixa, e o que chega fora
+  dos limites (cota 0 volta a ser a sugerida). Conferido na tela: o editor
+  abre pelo atalho com as quatro frentes, o Salvar acende com a mudança e
+  "Descartar" fecha sem gravar — não salvei para não mexer no seu plano.
+
 ### Uma nota do mês só, e as não respondidas à vista (01/10/2026, 1.121.0)
 
 Dois pedidos de 01/10/2026, à tarde:

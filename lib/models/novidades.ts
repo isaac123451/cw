@@ -104,6 +104,14 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.122.0",
+    data: "2026-10-01",
+    titulo: "Plano de recuperação do seu jeito",
+    texto: "No Meu dia, \"Ajustar\" no plano de recuperação: por frente, se ele aparece, a partir de quantos fora do prazo, em quantos dias zerar e uma cota fixa por dia. Também pela central de Configurações.",
+    frentes: ["plataforma"],
+    href: "/meu-dia?configurar=recuperacao",
+  },
+  {
     versao: "1.121.0",
     data: "2026-10-01",
     titulo: "Nota do mês igual em toda tela, e as sem resposta à vista",

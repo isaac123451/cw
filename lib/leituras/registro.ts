@@ -5,6 +5,7 @@ import { lerEsperaNoWhatsapp } from "@/lib/actions/esperaNoWhatsapp";
 import { getGoogleStatus, getUpcomingEvents } from "@/lib/actions/google";
 import { lerPainelDoPortal } from "@/lib/actions/painelDoPortal";
 import { lerRadarDeIncidente } from "@/lib/actions/radar";
+import { lerAjusteDaRecuperacao } from "@/lib/actions/recuperacao";
 import { lerMeuDia, listarRotina } from "@/lib/actions/rotina";
 
 /**
@@ -24,6 +25,7 @@ export const LEITURAS = {
   painelDoPortal: lerPainelDoPortal,
   googleStatus: getGoogleStatus,
   googleEventos: getUpcomingEvents,
+  recuperacao: lerAjusteDaRecuperacao,
 } as const;
 
 export type Leituras = typeof LEITURAS;
