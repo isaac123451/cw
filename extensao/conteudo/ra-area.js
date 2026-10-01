@@ -38,6 +38,9 @@
   const e = (valor) => CW.escapar(valor ?? "");
 
   const COR_DO_NIVEL = { Urgente: "urgente", Alta: "alta", Normal: "normal" };
+  const COR_DO_RISCO = { alto: "urgente", medio: "alta", baixo: "normal", cancelou: "cancelou" };
+  const ROTULO_DO_RISCO = { alto: "Chance alta de cancelar", medio: "Chance média de cancelar", baixo: "Chance baixa de cancelar", cancelou: "Já cancelou — recuperação" };
+
   const COR_DO_PRAZO = { estourado: "perigo", atencao: "atencao", dentro: "ok", concluido: "neutro", "sem-regra": "neutro", "sem-registro": "neutro" };
 
   /** A reclamação na área da empresa, pelo código de 16 caracteres. */
@@ -117,6 +120,25 @@
           <p class="linha-estado"><b>${e(caso.prioridade || "Sem triagem")}</b>${caso.sla?.rotulo ? ` · <span class="prazo ${e(COR_DO_PRAZO[caso.sla.situacao] || "neutro")}">${e(caso.sla.rotulo)}</span>` : ""} · ${e(caso.status)}</p>
           ${caso.conselho ? `<p class="frase">${e(caso.conselho.frase)}</p>` : ""}
         </div>`);
+    }
+
+    /*
+      ---- a chance de cancelar (1.113) ----
+      "Reclamações precisam ter alguma coisa de identificação pela extensão
+      para verificar uma chance do cliente cancelar." Os motivos e, abaixo, o
+      que fazer — retenção enquanto está, recuperação quando já saiu. O risco
+      baixo não ocupa espaço.
+    */
+    const risco = dados?.risco ?? null;
+    if (risco && risco.nivel !== "baixo") {
+      const motivos = (risco.motivos ?? []).slice(0, 4).map((m) => `<li>${e(m.texto)}${m.trecho ? `<span class="trecho">“${e(m.trecho)}”</span>` : ""}</li>`).join("");
+      const atitudes = (risco.atitudes ?? []).slice(0, 3).map((a) => `<li>${e(a.texto)}</li>`).join("");
+      partes.push(`
+        <section class="risco ${e(COR_DO_RISCO[risco.nivel] || "normal")}">
+          <h4><span class="nivel ${e(COR_DO_RISCO[risco.nivel] || "normal")}">${e(ROTULO_DO_RISCO[risco.nivel] || "")}</span></h4>
+          ${motivos ? `<ul class="sinais">${motivos}</ul>` : ""}
+          ${atitudes ? `<p class="sub"><em>${risco.nivel === "cancelou" ? "Recuperar" : "Reter"}</em></p><ol class="atitudes">${atitudes}</ol>` : ""}
+        </section>`);
     }
 
     /* ---- pedir avaliação daqui (1.79) ---- */
@@ -270,6 +292,12 @@
     .nivel.urgente { background: #ffe4e6; color: #9f1239; }
     .nivel.alta { background: #ffedd5; color: #9a3412; }
     .nivel.normal { background: #dcfce7; color: #166534; }
+    .nivel.cancelou { background: #27272a; color: #fff; }
+    .risco { border-radius: 10px; padding: 4px 9px 7px; margin: 6px 0; background: #fff7ed; border: 1px solid #fed7aa; }
+    .risco.urgente { background: #fff1f2; border-color: #fecdd3; }
+    .risco.cancelou { background: #f4f4f5; border-color: #e4e4e7; }
+    .risco h4 { margin-top: 4px; }
+    .atitudes { margin: 2px 0 0 16px; padding: 0; display: grid; gap: 3px; }
     .prazo { font-weight: 600; }
     .prazo.perigo { color: #be123c; } .prazo.atencao { color: #b45309; } .prazo.ok { color: #15803d; } .prazo.neutro { color: #6b6b76; }
     .estado { border-radius: 10px; padding: 7px 9px; margin: 2px 0 6px; border-left: 4px solid #16a34a; background: #f0fdf4; }
@@ -297,6 +325,7 @@
       .aviso { background: #3a2a0c; color: #fbbf24; } .alerta { background: #3b1119; color: #fda4af; }
       .estado { background: #13261a; } .estado.alta { background: #2e1c0d; } .estado.urgente { background: #3b1119; }
       .estado.urgente-agora .frase { color: #fda4af; }
+      .risco { background: #2e1c0d; border-color: #5a3a17; } .risco.urgente { background: #3b1119; border-color: #5c1a26; } .risco.cancelou { background: #26272e; border-color: #3a3b44; }
       .prazo.perigo { color: #fda4af; } .prazo.atencao { color: #fbbf24; } .prazo.ok { color: #4ade80; } .prazo.neutro { color: #9a9ba5; }
     }
   `;

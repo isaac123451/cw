@@ -13,6 +13,7 @@ import { canaisSemResposta, oQueFazer, primeiraTentativaSemResposta } from "@/li
 import { pedidoDeAvaliacao } from "@/lib/models/cadencia";
 import { mensagemDePedidoDeAvaliacao } from "@/lib/models/mensagens";
 import { telefoneDoDisparo } from "@/lib/models/disparos";
+import { riscoDeCancelamento } from "@/lib/models/riscoDeCancelamento";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -58,11 +59,13 @@ export async function POST(request: Request) {
   const resumo = resumoDaReclamacao(titulo, relato);
 
   const prisma = getPrisma();
-  if (!prisma || (!cod && !id)) return responder(request, { resumo, caso: null });
+  /* Sem caso no CW, a chance de cancelar sai só do relato (1.113). */
+  const riscoDoRelato = () => riscoDeCancelamento({ titulo, relato });
+  if (!prisma || (!cod && !id)) return responder(request, { resumo, caso: null, risco: riscoDoRelato() });
 
   try {
     const caso = await fetchCaseByPortalCode(prisma, cod, id);
-    if (!caso) return responder(request, { resumo, caso: null });
+    if (!caso) return responder(request, { resumo, caso: null, risco: riscoDoRelato() });
 
     const origem = new URL(request.url).origin;
 
@@ -71,7 +74,7 @@ export async function POST(request: Request) {
     const referencia = Date.parse(`${caso.createdAt.slice(0, 10)}T12:00:00Z`);
 
     /* Tudo o que falta de uma vez: regras e expediente têm um minuto de memória. */
-    const [regras, expediente, reincidencia, conta] = await Promise.all([
+    const [regras, expediente, reincidencia, conta, detrator] = await Promise.all([
       lerRegrasDePrazo(prisma),
       lerExpediente(prisma),
       documento
@@ -85,6 +88,21 @@ export async function POST(request: Request) {
         : Promise.resolve(0),
       caso.establishmentId
         ? prisma.establishment.findUnique({ where: { id: caso.establishmentId }, select: { name: true, plan: true, status: true } })
+        : Promise.resolve(null),
+      /* O NPS da mesma conta (ou e-mail): detrator nos últimos 60 dias pesa na chance de cancelar. */
+      caso.establishmentId || caso.email
+        ? prisma.npsResponse.findFirst({
+            where: {
+              score: { lte: 6 },
+              respondedAt: { gte: new Date(Date.now() - 60 * DIA_MS) },
+              OR: [
+                ...(caso.establishmentId ? [{ establishmentId: caso.establishmentId }] : []),
+                ...(caso.email ? [{ email: { equals: caso.email, mode: "insensitive" as const } }] : []),
+              ],
+            },
+            orderBy: { respondedAt: "desc" },
+            select: { score: true },
+          })
         : Promise.resolve(null),
     ]);
 
@@ -123,8 +141,25 @@ export async function POST(request: Request) {
 
     const base = `${origem}/reclame-aqui/${caso.id}`;
 
+    /* A chance de cancelar (1.113): o relato da página (ou o do CW), a triagem, a repetição, o NPS e o relógio. */
+    const risco = riscoDeCancelamento({
+      titulo: titulo || caso.title,
+      relato: relato || caso.description || "",
+      categoria: caso.category,
+      subcategoria: caso.subcategory,
+      criterios: caso.criterios,
+      reincidencia,
+      detratorRecente: detrator ? detrator.score : null,
+      prazoEstourado: sla.situation === "estourado",
+      churn: caso.churnRisk,
+      avaliado: Boolean(caso.evaluated),
+      voltaria: caso.wouldDoBusiness,
+      resolvido: caso.resolved,
+    });
+
     return responder(request, {
       resumo,
+      risco,
       caso: {
         protocolo: caso.protocol,
         url: base,

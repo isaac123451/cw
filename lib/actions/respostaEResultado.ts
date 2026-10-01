@@ -89,9 +89,10 @@ export async function modelosParaOCaso(caseId: string): Promise<{ ok: true; cate
   const ctx = await tryRole("LEITURA", "reclame-aqui").catch(() => null);
   if (!ctx) return { ok: false, erro: "Entre na aplicação." };
   try {
-    const caso = await ctx.prisma.case.findUnique({ where: { id: caseId }, select: { categoryId: true, category: { select: { name: true } } } });
+    /* A ficha manda o id da tela (o do portal); o banco aceita os dois (1.113). */
+    const caso = await ctx.prisma.case.findFirst({ where: { OR: [{ id: caseId }, { externalId: caseId }] }, select: { id: true, categoryId: true, category: { select: { name: true } } } });
     if (!caso?.categoryId) return { ok: true, categoria: null, modelos: [] };
-    const respostas = (await lerRespostas(ctx.prisma, { categoryId: caso.categoryId })).filter((r) => r.id !== caseId);
+    const respostas = (await lerRespostas(ctx.prisma, { categoryId: caso.categoryId })).filter((r) => r.id !== caso.id);
     const modelos = melhoresRespostas(respostas, undefined, 3).map((r) => ({ id: r.id, protocolo: r.protocolo, nota: r.nota, texto: anonimizar(r.texto, r.cliente) }));
     return { ok: true, categoria: caso.category?.name ?? null, modelos };
   } catch (erro) {
@@ -119,8 +120,8 @@ export async function virarRespostaPronta(caseId: string): Promise<{ ok: true; j
     const existente = await ctx.prisma.macro.findFirst({ where: { tags: { has: marca } }, select: { id: true } });
     if (existente) return { ok: true, jaExistia: true };
 
-    const caso = await ctx.prisma.case.findUnique({
-      where: { id: caseId },
+    const caso = await ctx.prisma.case.findFirst({
+      where: { OR: [{ id: caseId }, { externalId: caseId }] },
       select: { customer: true, publicResponse: true, evaluated: true, resolved: true, score: true, category: { select: { name: true } } },
     });
     if (!caso?.publicResponse) return { ok: false, erro: "A reclamação não tem resposta pública." };

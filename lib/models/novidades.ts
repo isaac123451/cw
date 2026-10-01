@@ -104,6 +104,14 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.113.0",
+    data: "2026-09-30",
+    titulo: "Retenção no Reclame Aqui",
+    texto: "Cada reclamação mostra a chance de o cliente cancelar e o porquê, com o que fazer — na ficha, no cartão da extensão e na aba de retenção. A aba conta pelo dia em que a reclamação chegou e quem cancelou antes do prazo do 1º contato não entra na taxa.",
+    frentes: ["reclame-aqui", "extensao"],
+    href: "/retencao",
+  },
+  {
     versao: "1.112.0",
     data: "2026-09-30",
     titulo: "A nota da resposta enquanto você escreve",

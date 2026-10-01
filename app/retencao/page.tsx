@@ -11,8 +11,10 @@ import StatTile from "@/components/shared/StatTile";
 import SurfaceCard from "@/components/shared/SurfaceCard";
 
 import { lerRetencao, marcarDesfecho } from "@/lib/actions/retencao";
+import type { ReclamacaoComRisco } from "@/lib/services/cancelamento.service";
+import { ROTULO_DO_NIVEL } from "@/lib/models/riscoDeCancelamento";
 import { useToast } from "@/lib/context/ToastContext";
-import type { ClienteEmCancelamento, Desfecho, DesfechoManual, ResumoDeRetencao } from "@/lib/models/cancelamento";
+import { resumoDeRetencao, type ClienteEmCancelamento, type Desfecho, type DesfechoManual, type ResumoDeRetencao } from "@/lib/models/cancelamento";
 import { ROTULO_DO_RISCO, type ClienteEmRisco } from "@/lib/models/clienteEmRisco";
 
 const ROTULO: Record<Desfecho, string> = { retido: "Retido", cancelado: "Cancelado", "em-aberto": "Em aberto" };
@@ -24,6 +26,12 @@ const COR: Record<Desfecho, string> = {
 const FRENTE: Record<string, string> = { "reclame-aqui": "RA", redes: "Redes", nps: "NPS", conversa: "WhatsApp" };
 const MES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 const mes = (aaaamm: string) => `${MES[Number(aaaamm.slice(5, 7)) - 1]}/${aaaamm.slice(2, 4)}`;
+const COR_DO_RISCO: Record<ReclamacaoComRisco["risco"]["nivel"], string> = {
+  alto: "bg-rose-50 text-rose-800 ring-rose-200",
+  medio: "bg-amber-50 text-amber-900 ring-amber-200",
+  baixo: "bg-zinc-50 text-zinc-600 ring-zinc-200",
+  cancelou: "bg-zinc-800 text-white ring-zinc-800",
+};
 const pct = (v: number | null) => (v === null ? "—" : `${Math.round(v * 100)}%`);
 
 /**
@@ -38,7 +46,11 @@ const pct = (v: number | null) => (v === null ? "—" : `${Math.round(v * 100)}%
  */
 export default function RetencaoPage() {
   const { notify } = useToast();
-  const [dados, setDados] = useState<{ clientes: ClienteEmCancelamento[]; resumo: ResumoDeRetencao; emRisco: ClienteEmRisco[] } | null>(null);
+  const [dados, setDados] = useState<{ clientes: ClienteEmCancelamento[]; resumo: ResumoDeRetencao; emRisco: ClienteEmRisco[]; reclamacoes: ReclamacaoComRisco[] } | null>(null);
+  /* O período (1.113): as reclamações antigas distorciam a conta — o padrão é o semestre. */
+  const [periodo, setPeriodo] = useState<6 | 12 | 0>(6);
+  /* O instante de quando a tela abriu: o recorte não muda enquanto ela está aberta. */
+  const [abertaEm] = useState(() => Date.now());
   const [erro, setErro] = useState<string | null>(null);
   const [ver, setVer] = useState<Desfecho | "todos">("em-aberto");
   const [gravando, setGravando] = useState<string | null>(null);
@@ -48,7 +60,7 @@ export default function RetencaoPage() {
     if (!r.ok) setErro(r.erro);
     else {
       setErro(null);
-      setDados({ clientes: r.clientes, resumo: r.resumo, emRisco: r.emRisco });
+      setDados({ clientes: r.clientes, resumo: r.resumo, emRisco: r.emRisco, reclamacoes: r.reclamacoes });
     }
   }
 
@@ -57,7 +69,7 @@ export default function RetencaoPage() {
     lerRetencao().then((r) => {
       if (!vivo) return;
       if (!r.ok) setErro(r.erro);
-      else setDados({ clientes: r.clientes, resumo: r.resumo, emRisco: r.emRisco });
+      else setDados({ clientes: r.clientes, resumo: r.resumo, emRisco: r.emRisco, reclamacoes: r.reclamacoes });
     });
     return () => {
       vivo = false;
@@ -79,7 +91,14 @@ export default function RetencaoPage() {
     await carregar();
   }
 
-  const visiveis = useMemo(() => (dados ? (ver === "todos" ? dados.clientes : dados.clientes.filter((c) => c.desfecho === ver)) : []), [dados, ver]);
+  const doPeriodo = useMemo(() => {
+    if (!dados) return [];
+    if (periodo === 0) return dados.clientes;
+    const limite = new Date(abertaEm - periodo * 30.5 * 86_400_000).toISOString();
+    return dados.clientes.filter((c) => c.desde >= limite);
+  }, [dados, periodo, abertaEm]);
+  const resumo = useMemo(() => resumoDeRetencao(doPeriodo), [doPeriodo]);
+  const visiveis = useMemo(() => (ver === "todos" ? doPeriodo : doPeriodo.filter((c) => c.desfecho === ver)), [doPeriodo, ver]);
 
   return (
     <MainLayout>
@@ -100,16 +119,78 @@ export default function RetencaoPage() {
 
         {dados && (
           <>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="inline-flex rounded-xl bg-zinc-100 p-1" role="tablist" aria-label="Período">
+                {([6, 12, 0] as const).map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    role="tab"
+                    aria-selected={periodo === p}
+                    onClick={() => setPeriodo(p)}
+                    className={`rounded-lg px-3.5 py-1.5 text-sm font-medium transition-colors ${periodo === p ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-800"}`}
+                  >
+                    {p === 0 ? "Tudo" : `Últimos ${p} meses`}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-zinc-500">Pelo dia em que a reclamação chegou — não pelo dia em que entrou no CW.</p>
+            </div>
+
+            {/* A chance de cancelar, reclamação por reclamação (1.113): o que está aberto e pede ação agora. */}
+            {dados.reclamacoes.length > 0 && (
+              <SurfaceCard
+                title={`Reclamações abertas com chance de cancelar · ${dados.reclamacoes.length}`}
+                description="Os motivos saem do relato, da triagem, da repetição pelo CPF/CNPJ e do NPS da conta. Embaixo, o que fazer — retenção enquanto o cliente está, recuperação quando já saiu."
+              >
+                <ul className="divide-y divide-zinc-100">
+                  {dados.reclamacoes.slice(0, 25).map((r) => (
+                    <li key={r.id} className="py-2.5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ring-inset ${COR_DO_RISCO[r.risco.nivel]}`}>{ROTULO_DO_NIVEL[r.risco.nivel]}</span>
+                        <Link href={r.frente === "reclame-aqui" ? `/reclame-aqui/${r.id}` : `/redes-sociais/${r.id}`} className="min-w-0 truncate text-sm font-medium text-zinc-900 hover:text-violet-700">
+                          {r.protocolo} · {r.cliente}
+                        </Link>
+                        <span className="text-xs text-zinc-400">
+                          {r.status}
+                          {r.responsavel ? ` · ${r.responsavel}` : " · sem responsável"}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs text-zinc-600">{r.risco.motivos.map((m) => m.texto).join(" · ")}</p>
+                      {r.risco.atitudes.length > 0 && (
+                        <ul className="mt-1 space-y-0.5">
+                          {r.risco.atitudes.slice(0, 2).map((a) => (
+                            <li key={a.id} className="text-xs text-zinc-700">
+                              <span className="mr-1 font-semibold text-violet-700">{a.tipo === "recuperacao" ? "Recuperar:" : "Fazer:"}</span>
+                              {a.texto}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </SurfaceCard>
+            )}
+
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-              <StatTile label="Pediram para cancelar" value={dados.resumo.clientes} hint="clientes" icon={Users} onClick={() => setVer("todos")} ativo={ver === "todos"} />
-              <StatTile label="Retidos" value={dados.resumo.retidos} hint="ficaram" icon={ShieldCheck} tone="success" onClick={() => setVer("retido")} ativo={ver === "retido"} />
-              <StatTile label="Cancelados" value={dados.resumo.cancelados} hint="saíram" icon={UserRoundX} tone="danger" onClick={() => setVer("cancelado")} ativo={ver === "cancelado"} />
-              <StatTile label="Em aberto" value={dados.resumo.emAberto} hint="sem desfecho ainda" icon={UserMinus} tone="warning" onClick={() => setVer("em-aberto")} ativo={ver === "em-aberto"} />
+              <StatTile label="Pediram para cancelar" value={resumo.clientes} hint="clientes" icon={Users} onClick={() => setVer("todos")} ativo={ver === "todos"} />
+              <StatTile label="Retidos" value={resumo.retidos} hint="ficaram" icon={ShieldCheck} tone="success" onClick={() => setVer("retido")} ativo={ver === "retido"} />
+              <StatTile
+                label="Cancelados"
+                value={resumo.cancelados}
+                hint={resumo.canceladosNoPrazo ? `${resumo.canceladosNoPrazo} no prazo do contato — não contam` : "saíram"}
+                icon={UserRoundX}
+                tone="danger"
+                onClick={() => setVer("cancelado")}
+                ativo={ver === "cancelado"}
+              />
+              <StatTile label="Em aberto" value={resumo.emAberto} hint="sem desfecho ainda" icon={UserMinus} tone="warning" onClick={() => setVer("em-aberto")} ativo={ver === "em-aberto"} />
               <StatTile
                 label="Retenção"
-                value={pct(dados.resumo.taxaDeRetencao)}
+                value={pct(resumo.taxaDeRetencao)}
                 hint="retidos sobre quem teve desfecho"
-                description="Retidos ÷ (retidos + cancelados). Os em aberto ficam fora até terem desfecho."
+                description="Retidos ÷ (retidos + cancelados que contam). Quem cancelou antes do prazo do 1º contato (1 dia útil) — ou já chegou cancelado — não conta. Os em aberto ficam fora até terem desfecho."
                 icon={ShieldCheck}
                 tone="success"
               />
@@ -156,19 +237,21 @@ export default function RetencaoPage() {
                       <th className="py-1.5 pr-3 font-semibold">Pediram</th>
                       <th className="py-1.5 pr-3 font-semibold">Retidos</th>
                       <th className="py-1.5 pr-3 font-semibold">Cancelados</th>
+                      <th className="py-1.5 pr-3 font-semibold" title="Cancelaram antes do prazo do 1º contato — não contam">No prazo</th>
                       <th className="py-1.5 pr-3 font-semibold">Em aberto</th>
                       <th className="py-1.5 font-semibold">Retenção</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-100 tabular-nums">
-                    {dados.resumo.porMes.slice(0, 12).map((m) => (
+                    {resumo.porMes.slice(0, 12).map((m) => (
                       <tr key={m.mes}>
                         <td className="py-1.5 pr-3 font-medium text-zinc-800">{mes(m.mes)}</td>
                         <td className="py-1.5 pr-3">{m.clientes}</td>
                         <td className="py-1.5 pr-3 text-emerald-700">{m.retidos}</td>
                         <td className="py-1.5 pr-3 text-rose-700">{m.cancelados}</td>
+                        <td className="py-1.5 pr-3 text-zinc-500">{m.canceladosNoPrazo || "—"}</td>
                         <td className="py-1.5 pr-3 text-amber-800">{m.emAberto}</td>
-                        <td className="py-1.5">{pct(m.retidos + m.cancelados ? m.retidos / (m.retidos + m.cancelados) : null)}</td>
+                        <td className="py-1.5">{pct(m.retidos + m.cancelados - m.canceladosNoPrazo ? m.retidos / (m.retidos + m.cancelados - m.canceladosNoPrazo) : null)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -190,6 +273,11 @@ export default function RetencaoPage() {
                         <span className="font-medium text-zinc-900">{c.nome}</span>
                         <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ring-inset ${COR[c.desfecho]}`}>{ROTULO[c.desfecho]}</span>
                         <span className="text-xs text-zinc-400">desde {mes(c.desde.slice(0, 7))}</span>
+                        {c.canceladoNoPrazo && (
+                          <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] font-medium text-zinc-600" title="Cancelou antes do prazo do 1º contato (1 dia útil) — não conta na retenção">
+                            no prazo do contato · não conta
+                          </span>
+                        )}
                         {c.protocolos.slice(0, 3).map((p) => (
                           <Link key={p} href={`/reclame-aqui/${encodeURIComponent(p)}`} className="font-mono text-xs text-violet-700 hover:underline">
                             {p}

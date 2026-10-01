@@ -27,6 +27,7 @@ import { idExterno, idLabel, isSocial } from "@/lib/services/case.service";
 import { descreverRegistro } from "@/lib/services/horasUteis";
 import { eFinalDasRedes, etapaDasRedes } from "@/lib/models/redes";
 import ConversasGuardadas from "@/components/conversas/ConversasGuardadas";
+import ChanceDeCancelar from "@/components/retencao/ChanceDeCancelar";
 
 interface Props {
   data: Case;
@@ -145,6 +146,9 @@ export default function CaseSidebar({
 
   return (
     <div className="space-y-4">
+
+      {/* A chance de cancelar (1.113) — só aparece de média para cima, ou quando o cliente já cancelou. */}
+      <ChanceDeCancelar caseId={data.id} />
 
       {/* As conversas do WhatsApp guardadas deste caso — some quando não há. */}
       <ConversasGuardadas protocolo={data.protocol} />

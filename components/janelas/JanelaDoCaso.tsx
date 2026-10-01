@@ -1,5 +1,6 @@
 "use client";
 
+import { acharCaso } from "@/lib/models/case";
 import { useMemo, useState } from "react";
 
 import { useRascunhoNaJanela } from "@/lib/context/rascunhosDasJanelas";
@@ -64,7 +65,7 @@ export default function JanelaDoCaso({
   const { abrirArea } = useTratativa();
   const { notify } = useToast();
 
-  const caso = cases.find((item) => item.id === id);
+  const caso = acharCaso(cases, id);
 
   const [rascunho, setRascunho] = useState<Rascunho>({});
   const [salvando, setSalvando] = useState(false);

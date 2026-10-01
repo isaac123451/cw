@@ -205,6 +205,7 @@ export function toCaseModel(row: {
   return {
     // O id do portal é o que as URLs usam; o cuid só existe no banco.
     id: row.externalId ?? row.id,
+    ...(row.externalId ? { dbId: row.id } : {}),
     protocol: row.protocol,
     /**
      * A empresa é o **estabelecimento**, não o consumidor.

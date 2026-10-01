@@ -2,19 +2,22 @@
 
 import { requireRole, SemPermissao, tryRole } from "@/lib/auth/guard";
 import { resumoDeRetencao, type ClienteEmCancelamento, type DesfechoManual, type ResumoDeRetencao } from "@/lib/models/cancelamento";
-import { lerClientesEmCancelamento, lerClientesEmRisco } from "@/lib/services/cancelamento.service";
+import { lerClientesEmCancelamento, lerClientesEmRisco, lerReclamacoesComRisco, type ReclamacaoComRisco } from "@/lib/services/cancelamento.service";
 import type { ClienteEmRisco } from "@/lib/models/clienteEmRisco";
 
 type Falha = { ok: false; erro: string };
 
 /** A conta de cancelamento e retenção, montada agora a partir da base (1.85). */
-export async function lerRetencao(): Promise<{ ok: true; clientes: ClienteEmCancelamento[]; resumo: ResumoDeRetencao; emRisco: ClienteEmRisco[] } | Falha> {
+export async function lerRetencao(): Promise<{ ok: true; clientes: ClienteEmCancelamento[]; resumo: ResumoDeRetencao; emRisco: ClienteEmRisco[]; reclamacoes: ReclamacaoComRisco[] } | Falha> {
   const ctx = await tryRole("LEITURA").catch(() => null);
   if (!ctx) return { ok: false, erro: "Entre na aplicação para ver a retenção." };
   try {
     const clientes = await lerClientesEmCancelamento(ctx.prisma);
-    const emRisco = await lerClientesEmRisco(ctx.prisma, clientes).catch(() => []);
-    return { ok: true, clientes, resumo: resumoDeRetencao(clientes), emRisco };
+    const [emRisco, reclamacoes] = await Promise.all([
+      lerClientesEmRisco(ctx.prisma, clientes).catch(() => []),
+      lerReclamacoesComRisco(ctx.prisma).catch(() => []),
+    ]);
+    return { ok: true, clientes, resumo: resumoDeRetencao(clientes), emRisco, reclamacoes };
   } catch (erro) {
     console.error("[retencao]", erro);
     return { ok: false, erro: "O banco não respondeu agora. Tente de novo em instantes." };
@@ -52,5 +55,18 @@ export async function marcarDesfecho(chave: string, desfecho: DesfechoManual | n
   } catch (erro) {
     console.error("[retencao] marcar", erro);
     return { ok: false, erro: "O banco não aceitou agora. Tente de novo." };
+  }
+}
+
+/** A chance de cancelar de um caso, para a ficha (1.113). */
+export async function lerRiscoDoCaso(caseId: string): Promise<ReclamacaoComRisco | null> {
+  const ctx = await tryRole("LEITURA").catch(() => null);
+  if (!ctx || !/^[\w-]{6,60}$/.test(caseId)) return null;
+  try {
+    const [um] = await lerReclamacoesComRisco(ctx.prisma, { caseId, incluirBaixo: true });
+    return um ?? null;
+  } catch (erro) {
+    console.error("[retencao] risco do caso", erro);
+    return null;
   }
 }

@@ -92,6 +92,13 @@ export const CRITERIO_NORMAL =
 export interface Case {
   id: string;
 
+  /**
+   * O id do banco (cuid), quando difere do `id` — que é o do portal (1.113).
+   * Telas que montam o link direto do banco usavam este, e a ficha não o
+   * achava: "Caso não encontrado". Ver `acharCaso`.
+   */
+  dbId?: string;
+
   protocol: string;
 
   company: string;
@@ -457,4 +464,19 @@ export function descreverFaltas(faltas: FaltaNoCadastro[]) {
   return nomes.length <= 1
     ? nomes.join("")
     : `${nomes.slice(0, -1).join(", ")} e ${nomes[nomes.length - 1]}`;
+}
+
+/**
+ * O caso de um endereço (1.113): pelo id da tela (o do portal), pelo id do
+ * banco ou pelo protocolo — os três chegam em links de telas diferentes, e
+ * qualquer um tem de abrir a ficha.
+ */
+export function acharCaso<T extends Pick<Case, "id" | "protocol" | "dbId">>(casos: T[], ref: string): T | undefined {
+  let alvo = ref;
+  try {
+    alvo = decodeURIComponent(ref);
+  } catch {
+    /* endereço com % solto: vale como veio */
+  }
+  return casos.find((c) => c.id === alvo) ?? casos.find((c) => c.dbId === alvo) ?? casos.find((c) => c.protocol === alvo);
 }

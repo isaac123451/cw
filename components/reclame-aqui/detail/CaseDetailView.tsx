@@ -1,5 +1,6 @@
 "use client";
 
+import { acharCaso } from "@/lib/models/case";
 import Link from "next/link";
 
 import { useEffect } from "react";
@@ -39,7 +40,7 @@ export default function CaseDetailView({
   const { cases, loading } = useCases();
   const router = useRouter();
 
-  const data = cases.find((item) => item.id === id);
+  const data = acharCaso(cases, id);
 
   /**
    * Endereço errado para a frente do caso corrige sozinho.
@@ -70,6 +71,12 @@ export default function CaseDetailView({
     );
 
   }, [precisaTrocar, moduloDoCaso, data, router]);
+
+  /* Achado pelo protocolo ou pelo id do banco (1.113): o endereço vira o da ficha, sem recarregar. */
+  useEffect(() => {
+    if (!data || precisaTrocar || data.id === id) return;
+    router.replace(moduloDoCaso === "social" ? `/redes-sociais/${data.id}` : `/reclame-aqui/${data.id}`);
+  }, [data, id, precisaTrocar, moduloDoCaso, router]);
 
   if (precisaTrocar) {
     return (

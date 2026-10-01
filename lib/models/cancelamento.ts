@@ -101,6 +101,8 @@ export interface CasoParaCancelamento {
   voltaria?: boolean;
   avaliadoEm?: string;
   criadoEm: string;
+  /** O prazo do 1º contato (1 dia útil depois de chegar) — ISO (1.113). */
+  prazoDoContato?: string;
   contaId?: string;
   contaNome?: string;
   documento?: string;
@@ -141,6 +143,13 @@ export interface ClienteEmCancelamento {
   desde: string;
   /** Os protocolos envolvidos, para abrir. */
   protocolos: string[];
+  /**
+   * Cancelou antes de vencer o prazo do 1º contato (1 dia útil) — não conta
+   * contra quem atende (1.113). Inclui quem já chegou dizendo que cancelou.
+   */
+  canceladoNoPrazo?: boolean;
+  /** O prazo do 1º contato da primeira reclamação do cliente. */
+  prazoDoContato?: string;
 }
 
 const digitos = (v?: string) => String(v ?? "").replace(/\D/g, "");
@@ -166,13 +175,13 @@ export function clientesEmCancelamento(entrada: {
   mensagens: MensagemParaCancelamento[];
   manuais?: Map<string, { desfecho: DesfechoManual; por?: string }>;
 }): ClienteEmCancelamento[] {
-  const grupos = new Map<string, { nome: string; contaId?: string; sinais: SinalDeCancelamento[]; protocolos: Set<string> }>();
+  const grupos = new Map<string, { nome: string; contaId?: string; sinais: SinalDeCancelamento[]; protocolos: Set<string>; prazos: string[] }>();
   const porProtocolo = new Map<string, string>();
   const porEmail = new Map<string, string>();
   const porNps = new Map<string, string>();
 
   const grupo = (chave: string, nome: string, contaId?: string) => {
-    const g = grupos.get(chave) ?? { nome, contaId, sinais: [], protocolos: new Set<string>() };
+    const g = grupos.get(chave) ?? { nome, contaId, sinais: [], protocolos: new Set<string>(), prazos: [] as string[] };
     if (!g.contaId && contaId) g.contaId = contaId;
     grupos.set(chave, g);
     return g;
@@ -208,6 +217,7 @@ export function clientesEmCancelamento(entrada: {
       const g = grupo(chave, c.contaNome || c.cliente, c.contaId);
       g.sinais.push(...sinais);
       g.protocolos.add(c.protocolo);
+      if (c.prazoDoContato) g.prazos.push(c.prazoDoContato);
     }
   }
 
@@ -250,7 +260,13 @@ export function clientesEmCancelamento(entrada: {
         ? ultimo.trecho
         : "pediu, e ainda não há sinal de que ficou ou saiu";
     const desde = [...pedidos, ...desfechos].map((s) => s.quando).sort()[0];
+    /* O prazo do 1º contato da primeira reclamação; cancelou até ele, não conta. */
+    const prazo = [...g.prazos].sort()[0];
+    const primeiroCancelado = desfechos.filter((s) => s.tipo === "cancelado").map((s) => s.quando).sort()[0];
+    const canceladoNoPrazo = desfecho === "cancelado" && Boolean(prazo && primeiroCancelado && primeiroCancelado <= prazo);
     saida.push({
+      canceladoNoPrazo,
+      prazoDoContato: prazo,
       chave,
       nome: g.nome,
       contaId: g.contaId,
@@ -269,10 +285,12 @@ export interface ResumoDeRetencao {
   clientes: number;
   retidos: number;
   cancelados: number;
+  /** Dos cancelados, os que saíram antes do prazo do 1º contato — não contam (1.113). */
+  canceladosNoPrazo: number;
   emAberto: number;
-  /** Retidos sobre os que têm desfecho; `null` sem desfecho nenhum. */
+  /** Retidos sobre os que têm desfecho e contam; `null` sem desfecho nenhum. */
   taxaDeRetencao: number | null;
-  porMes: { mes: string; clientes: number; retidos: number; cancelados: number; emAberto: number }[];
+  porMes: { mes: string; clientes: number; retidos: number; cancelados: number; canceladosNoPrazo: number; emAberto: number }[];
 }
 
 export function resumoDeRetencao(clientes: ClienteEmCancelamento[]): ResumoDeRetencao {
@@ -280,13 +298,16 @@ export function resumoDeRetencao(clientes: ClienteEmCancelamento[]): ResumoDeRet
     clientes: lista.length,
     retidos: lista.filter((c) => c.desfecho === "retido").length,
     cancelados: lista.filter((c) => c.desfecho === "cancelado").length,
+    canceladosNoPrazo: lista.filter((c) => c.desfecho === "cancelado" && c.canceladoNoPrazo).length,
     emAberto: lista.filter((c) => c.desfecho === "em-aberto").length,
   });
   const total = contar(clientes);
   const meses = [...new Set(clientes.map((c) => c.desde.slice(0, 7)))].sort().reverse();
+  /* Quem cancelou antes do prazo do 1º contato sai da taxa: não havia o que fazer ainda. */
+  const contam = total.cancelados - total.canceladosNoPrazo;
   return {
     ...total,
-    taxaDeRetencao: total.retidos + total.cancelados > 0 ? total.retidos / (total.retidos + total.cancelados) : null,
+    taxaDeRetencao: total.retidos + contam > 0 ? total.retidos / (total.retidos + contam) : null,
     porMes: meses.map((mes) => ({ mes, ...contar(clientes.filter((c) => c.desde.startsWith(mes))) })),
   };
 }

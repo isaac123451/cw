@@ -1116,6 +1116,42 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Retenção no Reclame Aqui (30/09/2026, 1.113.0)
+
+Pedidos de 30/09 sobre retenção.
+
+- **Chance de cancelar em cada reclamação** (`lib/models/riscoDeCancelamento.ts`):
+  os motivos saem do relato (pedido de cancelamento, ameaça de trocar de
+  sistema, "já cancelei"), dos critérios da triagem (operação parada,
+  jurídico, prejuízo, cobrança depois de cancelar, prazo descumprido), da
+  repetição pelo CPF/CNPJ em 90 dias, do NPS da conta (detrator em 60
+  dias), do tom e do prazo; cada motivo pesa e a soma dá alta, média ou
+  baixa — ou "já cancelou", que vira recuperação. Aparece no cartão da
+  extensão na área da empresa, na lateral da ficha do caso e no topo da
+  aba de retenção ("Reclamações abertas com chance de cancelar").
+- **Atitudes de retenção e recuperação** por motivo: ligar no mesmo dia útil
+  antes de responder no portal, entender o motivo real, proposta por voz e
+  registrada, responsável com nome, acertar o valor antes, ler o histórico,
+  prazo concreto; e, para quem já cancelou, resolver mesmo assim,
+  registrar o motivo e um contato de reconquista entre 7 e 15 dias.
+- **A aba de retenção estava errada por causa da data**: usava o dia em que
+  a reclamação entrou no banco (a importação de 23/08 punha 20 clientes
+  naquele dia, e reclamações de 2024 como deste mês). Agora vale o dia em
+  que chegou, com o período (6 meses por padrão, 12 meses, tudo). A lista
+  "Em risco agora" também (a "reincidência" vinha de quem só foi importado
+  junto).
+- **Cancelou no prazo do contato não conta**: quem cancelou antes do prazo
+  do 1º contato — 1 dia útil, pelo expediente cadastrado — ou já chegou
+  dizendo que cancelou fica marcado "no prazo do contato · não conta" e sai
+  da taxa de retenção (retidos ÷ retidos + cancelados que contam).
+- **Links que abriam "Caso não encontrado"**: radar, distribuição, Respostas
+  e retenção montavam o link com o id do banco, e a ficha só achava pelo id
+  do portal. A ficha (e a janela) agora acham pelo id da tela, pelo do
+  banco ou pelo protocolo, e o endereço se ajusta ao oficial
+  (`acharCaso`).
+
+`npm run check:retencao`.
+
 ### Nota da resposta enquanto escreve (30/09/2026, 1.112.0)
 
 Pedido de 30/09: "aquele score tem que aparecer na hora que eu tiver
