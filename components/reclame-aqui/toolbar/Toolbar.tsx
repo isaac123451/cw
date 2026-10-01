@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 
 import {
   LayoutGrid,
@@ -27,7 +26,7 @@ import LerPortalButton from "@/components/reclame-aqui/toolbar/LerPortalButton";
 import SavedFilters from "@/components/reclame-aqui/toolbar/SavedFilters";
 import SearchSelect from "@/components/shared/SearchSelect";
 import { hojeNaOperacao } from "@/lib/services/reputation.service";
-import { ROTULO_DA_SITUACAO } from "@/lib/services/case.service";
+import { naSituacao, ROTULO_DA_SITUACAO, seteDiasAtras, type SituacaoDoCaso } from "@/lib/services/case.service";
 
 interface Props {
   view: "kanban" | "list";
@@ -140,6 +139,17 @@ export default function Toolbar({
       [...new Set(cases.map((c) => c.category))].sort(),
     [cases]
   );
+
+  /*
+    Quantas em cada situação (1.121), pela mesma regra que filtra — o
+    número do seletor é o tamanho da lista que ele abre.
+  */
+  const porSituacao = useMemo(() => {
+    const corte = seteDiasAtras();
+    return Object.fromEntries(
+      (Object.keys(ROTULO_DA_SITUACAO) as SituacaoDoCaso[]).map((s) => [s, cases.filter((c) => naSituacao(c, s, corte)).length])
+    ) as Record<SituacaoDoCaso, number>;
+  }, [cases]);
 
   // A mesma lista que o cartão do Kanban usa para atribuir.
   const owners = useOwners();
@@ -320,21 +330,35 @@ export default function Toolbar({
           })}
 
           {/*
-            A situação, quando se chega por um cartão do painel.
+            A situação — "sem resposta pública", "vencidas", "na fila",
+            "risco" — com quantas há em cada uma (1.121).
 
-            Não tem seletor próprio: ninguém escolhe "vencidas há +7
-            dias" numa caixa de opções, chega-se aqui clicando no número
-            que apontou para elas. O que faltava era o caminho de volta
-            — sem esta etiqueta, a fila mostrava onze de trezentas e
-            quarenta e uma sem dizer por quê, e parecia base sumida.
+            Até aqui não tinha seletor: a ideia era chegar clicando no
+            número do painel. Não funcionou — "não vi ainda como consigo
+            visualizar as não respondidas" (01/10/2026): o menu dizia 12 e
+            não havia caminho visível até as doze. Selecionada, a caixa fica
+            destacada, e o X ao lado volta à fila inteira.
           */}
+          <select
+            value={filters.situacao}
+            onChange={(e) => setFilter("situacao", e.target.value)}
+            title="Recortar a fila pelo que pede ação"
+            className={`${selectClass} ${filters.situacao ? "border-violet-300 bg-violet-50 font-medium text-violet-800" : ""}`}
+          >
+            <option value="">Toda situação</option>
+            {(Object.keys(ROTULO_DA_SITUACAO) as SituacaoDoCaso[]).map((s) => (
+              <option key={s} value={s}>
+                {ROTULO_DA_SITUACAO[s]} ({porSituacao[s]})
+              </option>
+            ))}
+          </select>
           {filters.situacao && (
             <button
               onClick={() => setFilter("situacao", "")}
               title="Remover o recorte por situação e ver a fila inteira"
-              className="flex h-9 items-center gap-1.5 rounded-lg bg-violet-50 px-3 text-sm font-medium text-violet-700 ring-1 ring-inset ring-violet-200 transition-colors hover:bg-violet-100"
+              aria-label="Remover o recorte por situação"
+              className="flex h-9 items-center rounded-lg px-2 text-violet-700 transition-colors hover:bg-violet-50"
             >
-              {ROTULO_DA_SITUACAO[filters.situacao]}
               <X size={14} />
             </button>
           )}

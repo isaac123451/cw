@@ -1383,47 +1383,79 @@ export interface MonthlyReputation {
   score: number;
 }
 
+/** O dia da avaliação; sem data (3 da carga antiga), o da reclamação. */
+export function diaDaAvaliacao(item: Case) {
+  return item.evaluatedAt ? diaNaOperacao(item.evaluatedAt) : item.createdAt;
+}
+
 /**
- * A nota de cada mês: recebidas e respondidas das reclamações abertas no
- * mês; as avaliações, das **feitas** no mês (1.118) — "elas precisam entrar
- * quando foram avaliadas". Sem data de avaliação (carga antiga), no mês da
- * reclamação.
+ * **A** conta da nota de um mês — a única (1.121).
+ *
+ * "Os cálculos da nota do RA de cada mês estão inconsistentes" (01/10/2026):
+ * eram quatro contas — o Índice com as reclamações do mês, os Gráficos e o
+ * Analytics com a avaliação no mês em que foi feita, mas cada um recortando
+ * as avaliações de um jeito (o Analytics só via as de reclamações abertas
+ * dentro do período). O mesmo mês saía com números diferentes conforme a
+ * tela. Agora todas chamam esta:
+ *
+ * - **recebidas, respondidas e o tempo de resposta**: das reclamações
+ *   abertas no mês ("das que chegaram, quantas respondi");
+ * - **nota do consumidor, solução e voltaria**: das avaliações **feitas** no
+ *   mês, de qualquer reclamação — "elas precisam entrar quando foram
+ *   avaliadas".
+ *
+ * `limites` recorta o mês quando o período começa ou termina no meio dele
+ * ("30 dias", personalizado).
  */
-export function getReputationTrend(
-  cases: Case[]
-): MonthlyReputation[] {
+export function contasDoMes(
+  casos: Case[],
+  mes: string,
+  limites?: { inicio: string; fim: string }
+): ReputationRaw {
+  const dentro = (dia: string) => dia.slice(0, 7) === mes && (!limites || (dia >= limites.inicio && dia <= limites.fim));
+  const daCoorte = getRawCounts(casos.filter((item) => dentro(item.createdAt)));
+  const dasAvaliacoes = getRawCounts(casos.filter((item) => item.evaluated && dentro(diaDaAvaliacao(item))));
+  return {
+    ...daCoorte,
+    evaluated: dasAvaliacoes.evaluated,
+    scoreSum: dasAvaliacoes.scoreSum,
+    resolved: dasAvaliacoes.resolved,
+    wouldReturn: dasAvaliacoes.wouldReturn,
+  };
+}
 
-  const months = new Map<string, Case[]>();
-  const avaliadasNoMes = new Map<string, Case[]>();
-
-  for (const item of cases) {
-    const key = item.createdAt.slice(0, 7);
-    months.set(key, [
-      ...(months.get(key) ?? []),
-      item,
-    ]);
-    if (item.evaluated) {
-      const quando = (item.evaluatedAt ? diaNaOperacao(item.evaluatedAt) : item.createdAt).slice(0, 7);
-      avaliadasNoMes.set(quando, [...(avaliadasNoMes.get(quando) ?? []), item]);
+/** Os meses de `inicio` a `fim`, "AAAA-MM". */
+export function mesesEntre(inicio: string, fim: string): string[] {
+  const meses: string[] = [];
+  let [a, m] = inicio.split("-").map(Number);
+  const ultimo = fim.slice(0, 7);
+  while (meses.length < 240) {
+    const chave = `${a}-${String(m).padStart(2, "0")}`;
+    if (chave > ultimo) break;
+    meses.push(chave);
+    m += 1;
+    if (m > 12) {
+      m = 1;
+      a += 1;
     }
   }
+  return meses;
+}
 
-  /* O mês que só teve avaliação (de reclamação de antes) também é um ponto. */
-  for (const mes of avaliadasNoMes.keys()) {
-    if (!months.has(mes)) months.set(mes, []);
-  }
+/**
+ * A nota de cada mês (a conta de `contasDoMes`), do mais antigo ao mais novo.
+ *
+ * Sem `limites`, todos os meses que tiveram reclamação aberta ou avaliação
+ * feita; com eles, os meses do período, recortados nas pontas.
+ */
+export function getReputationTrend(
+  cases: Case[],
+  limites?: { inicio: string; fim: string }
+): MonthlyReputation[] {
 
-  const notaDoMes = (month: string, items: Case[]) => {
-    const raw = getRawCounts(items);
-    const avaliacoes = getRawCounts(avaliadasNoMes.get(month) ?? []);
-    return scoreFrom({
-      ...raw,
-      evaluated: avaliacoes.evaluated,
-      scoreSum: avaliacoes.scoreSum,
-      resolved: avaliacoes.resolved,
-      wouldReturn: avaliacoes.wouldReturn,
-    }).raScore;
-  };
+  const meses = limites
+    ? mesesEntre(limites.inicio, limites.fim)
+    : [...new Set(cases.flatMap((item) => [item.createdAt.slice(0, 7), ...(item.evaluated ? [diaDaAvaliacao(item).slice(0, 7)] : [])]))].sort();
 
   const names = [
     "jan",
@@ -1440,14 +1472,16 @@ export function getReputationTrend(
     "dez",
   ];
 
-  return [...months.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([month, items]) => ({
+  return meses
+    .map((month) => ({ month, raw: contasDoMes(cases, month, limites) }))
+    /* Mês sem nada (nem reclamação, nem avaliação) não é ponto. */
+    .filter(({ raw }) => raw.received > 0 || raw.evaluated > 0)
+    .map(({ month, raw }) => ({
       label: `${
         names[Number(month.slice(5, 7)) - 1]
       }/${month.slice(2, 4)}`,
-      received: items.length,
-      score: notaDoMes(month, items),
+      received: raw.received,
+      score: scoreFrom(raw).raScore,
     }));
 }
 

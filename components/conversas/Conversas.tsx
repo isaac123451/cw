@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Building2, ChevronDown, ChevronUp, Clock, FileDown, FileSpreadsheet, FileUp, Link2, Loader2, MessageCircle, Phone, Search, Sparkles, Trash2, X } from "lucide-react";
 
 import PageHeading from "@/components/shared/PageHeading";
+import EsperandoResposta from "@/components/conversas/EsperandoResposta";
 import { ConfirmDelete } from "@/components/shared/Modal";
 import { ErroDoServidor, RodapeDeSalvar } from "@/components/shared/Rodape";
 
@@ -156,6 +157,9 @@ export default function Conversas() {
           <FileUp size={16} /> Guardar pelo arquivo
         </button>
       </PageHeading>
+
+      {/* Quem espera resposta agora, lido do WhatsApp Web pela extensão (1.121). */}
+      <EsperandoResposta />
 
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
         <aside className="lg:sticky lg:top-0">

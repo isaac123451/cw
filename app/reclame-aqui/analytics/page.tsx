@@ -171,9 +171,19 @@ export default function ReclameAquiAnalyticsPage() {
     [previous]
   );
 
+  /*
+    A nota de cada mês pela conta única (1.121): todas as reclamações (com o
+    filtro do clique), recortadas pelo período — e não só as abertas nele,
+    que deixavam de fora a avaliação feita no período de uma reclamação de
+    antes. O mesmo número do Índice e dos Gráficos.
+  */
   const trend = useMemo(
-    () => getReputationTrend(current),
-    [current]
+    () =>
+      getReputationTrend(
+        cases.filter((item) => matchesDrill(item, drill)),
+        { inicio: range.start, fim: range.end }
+      ),
+    [cases, drill, range]
   );
 
   /**

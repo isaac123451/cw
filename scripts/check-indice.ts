@@ -97,7 +97,8 @@ const mes = (m: string) => meses.find((p) => p.chave === m)!;
 conferir("mês: 12 meses até a âncora", [meses.length, meses[0].rotulo, meses[11].rotulo], [12, "out/25", "set/26"]);
 conferir("a avaliação feita em setembro conta em setembro", [mes("2026-08").avaliadas, mes("2026-09").avaliadas], [0, 1]);
 conferir("e a reclamação, no mês em que entrou", [mes("2026-08").recebidas, mes("2026-09").recebidas], [1, 0]);
-conferir("a nota das reclamações do mês segue a regra do portal", [mes("2026-08").doMes?.nota !== null, mes("2026-09").doMes?.nota], [true, null]);
+/* A nota do mês (1.121): agosto só com a resposta (a reclamação chegou nele); setembro com a avaliação nota 2 feita nele. */
+conferir("a nota do mês: agosto pela resposta, setembro pela avaliação", [mes("2026-08").doMes?.nota !== null, (mes("2026-09").doMes?.nota ?? 99) < (mes("2026-08").doMes?.nota ?? 0)], [true, true]);
 const setembro = evolucaoDoIndice([antiga], "6m", "dia", "2026-09-20", "2026-09-20");
 const dia15 = setembro.find((p) => p.chave === "2026-09-15")!;
 conferir("no dia da avaliação, a nota atual muda (mês fechado, avaliação nova)", [dia15.avaliadas, dia15.variacaoAtual < 0], [1, true]);

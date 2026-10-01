@@ -1,6 +1,7 @@
 import { respondida, type Case } from "@/lib/models/case";
 import { cicloAnterior, cicloDe, type Ciclo } from "@/lib/models/ciclo";
 import {
+  contasDoMes,
   diaNaOperacao,
   evaluationsToReach,
   getRange,
@@ -187,7 +188,11 @@ export interface PontoDaEvolucao extends PeriodoDaEvolucao {
   notaDasAvaliacoes: number | null;
   resolvidas: number;
   voltaria: number;
-  /** Só no mês: as reclamações abertas nele, como estão hoje (a regra do portal, numa janela de um mês). */
+  /**
+   * Só no mês: a nota do mês pela conta única (`contasDoMes`, 1.121) — a
+   * mesma dos Gráficos, do Analytics e da extensão — e quantas das
+   * reclamações abertas nele seguem sem resposta.
+   */
   doMes?: { nota: number | null; semResposta: number };
   /**
    * O período tem um dia 1º: a janela trocou de meses — sai o mais antigo,
@@ -317,10 +322,10 @@ export function evolucaoDoIndice(
     };
 
     if (escala === "mes") {
-      const doMes = casos.filter((c) => inRange(c, p.inicio, mais(inicioDoMes(p.inicio, 1), -1)));
+      const raw = contasDoMes(casos, p.inicio.slice(0, 7));
       ponto.doMes = {
-        nota: doMes.length ? scoreFrom(getRawCounts(doMes)).raScoreExato : null,
-        semResposta: doMes.filter((c) => !respondida(c)).length,
+        nota: raw.received > 0 || raw.evaluated > 0 ? scoreFrom(raw).raScoreExato : null,
+        semResposta: raw.received - raw.answered,
       };
     }
 

@@ -29,7 +29,7 @@ import { getPrisma } from "../lib/prisma";
 import { getMonthlyIndices } from "../lib/services/charts.service";
 import { fetchCases } from "../lib/services/case.repository";
 import { isSocial } from "../lib/services/case.service";
-import { diaNaOperacao, getRawCounts, getRange, hojeNaOperacao, inRange, scoreFrom } from "../lib/services/reputation.service";
+import { diaNaOperacao, getRawCounts, getRange, getReputationTrend, hojeNaOperacao, inRange, scoreFrom } from "../lib/services/reputation.service";
 
 let falhas = 0;
 function conferir(titulo: string, obtido: unknown, esperado: unknown) {
@@ -117,6 +117,34 @@ async function main() {
     porMes.reduce((s, m) => s + m.evaluated, 0),
     casos.filter((c) => c.evaluated && !c.scoreDisregarded && (c.evaluatedAt ? diaNaOperacao(c.evaluatedAt) : c.createdAt) >= range.start && (c.evaluatedAt ? diaNaOperacao(c.evaluatedAt) : c.createdAt) <= range.end).length
   );
+
+  /*
+    4. A nota de cada mês é a mesma em todas as telas (1.121). Pedido de
+    01/10/2026: "os cálculos da nota do RA de cada mês estão
+    inconsistentes" — eram quatro contas. Agora é uma (`contasDoMes`), e
+    aqui as quatro telas são chamadas como elas chamam.
+  */
+  console.log("\n  A nota de cada mês, tela a tela (12 meses fechados)\n");
+  const umaCasa = (v: number) => Math.round(v * 10) / 10;
+  /* A visão Mês do Índice com a seta de volta um mês: os 12 fechados, como os Gráficos. */
+  const mesesFechados = evolucaoDoIndice(casos, "6m", "mes", range.end, hoje);
+  const doIndice = new Map(mesesFechados.map((m) => [m.chave, m.doMes?.nota == null ? null : umaCasa(m.doMes.nota)]));
+  const dosGraficos = new Map(porMes.map((m) => [m.key, m.raScore]));
+  const rotuloParaChave = (rotulo: string) => {
+    const nomes = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+    const [m, a] = rotulo.split("/");
+    return `20${a}-${String(nomes.indexOf(m) + 1).padStart(2, "0")}`;
+  };
+  const doAnalytics = new Map(getReputationTrend(casos, { inicio: range.start, fim: range.end }).map((m) => [rotuloParaChave(m.label), m.score]));
+  const daExtensao = new Map(getReputationTrend(casos).map((m) => [rotuloParaChave(m.label), m.score]));
+  const diferentes: string[] = [];
+  for (const chave of porMes.map((m) => m.key)) {
+    const valores = [doIndice.get(chave) ?? null, dosGraficos.get(chave) ?? null, doAnalytics.get(chave) ?? null, daExtensao.get(chave) ?? null];
+    const iguais = valores.every((v) => v === valores[0]);
+    if (!iguais) diferentes.push(chave);
+    console.log(`  ${chave}  Índice ${valores[0]}  Gráficos ${valores[1]}  Analytics ${valores[2]}  extensão ${valores[3]}${iguais ? "" : "   ← diferente"}`);
+  }
+  conferir("a nota de cada mês é a mesma nas quatro telas", diferentes, []);
 
   console.log(falhas === 0 ? "\n  A nota daqui é a do portal, e a evolução fecha a conta.\n" : `\n  ${falhas} falha(s).\n`);
   process.exit(falhas === 0 ? 0 : 1);

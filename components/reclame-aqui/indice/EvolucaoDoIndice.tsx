@@ -285,7 +285,7 @@ function TabelaDaEvolucao({ pontos, escala }: { pontos: PontoDaEvolucao[]; escal
             <th className="px-2 py-2 text-right font-semibold">Novas</th>
             {doMes && (
               <>
-                <th className="px-2 py-2 text-right font-semibold" title="Só as reclamações abertas no mês, como estão hoje — a regra do portal numa janela de um mês">Nota das reclamações do mês</th>
+                <th className="px-2 py-2 text-right font-semibold" title="A mesma conta dos Gráficos e do Analytics: resposta das reclamações que chegaram no mês; nota do consumidor, solução e voltaria das avaliações feitas no mês">Nota do mês</th>
                 <th className="py-2 pl-2 pr-3 text-right font-semibold" title="Das reclamações abertas no mês, as que ainda estão sem resposta">Sem resposta</th>
               </>
             )}

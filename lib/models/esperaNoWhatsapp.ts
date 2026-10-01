@@ -94,7 +94,21 @@ export function rotuloDaEspera(minutos: number) {
   return `espera há ${Math.floor(minutos / 1440)} dias`;
 }
 
-const nomeDe = (c: ConversaEsperando) => c.nome || c.telefone || "Contato";
+export const nomeDe = (c: ConversaEsperando) => c.nome || c.telefone || "Contato";
+
+/**
+ * Onde abrir a conversa (1.121): com telefone, direto nela; com só o nome
+ * (contato salvo, que a lista mostra sem número), o WhatsApp Web.
+ */
+export function linkDaConversa(c: ConversaEsperando) {
+  const digitos = c.telefone.replace(/\D/g, "");
+  return digitos.length >= 10 ? `https://web.whatsapp.com/send?phone=${digitos}` : "https://web.whatsapp.com/";
+}
+
+/** Quantas esperam agora — o número do menu (1.121). Zero com o retrato vencido. */
+export function quantasEsperando(r: RetratoDaEspera | null, agora: Date) {
+  return retratoValido(r, agora) ? r.conversas.length : 0;
+}
 
 /** As conversas como itens da atividade "casos em aberto" do Meu dia. */
 export function itensDaEspera(r: RetratoDaEspera | null, agora: Date): ItemDaRotina[] {
@@ -106,7 +120,7 @@ export function itensDaEspera(r: RetratoDaEspera | null, agora: Date): ItemDaRot
       id: `whatsapp:${c.chave}`,
       titulo: `${nomeDe(c)} espera resposta no WhatsApp`,
       detalhe: [rotuloDaEspera(c.minutos), ...c.etiquetas.map((e) => e.rotulo)].join(" · "),
-      href: "https://web.whatsapp.com/",
+      href: linkDaConversa(c),
       atrasado: longa,
       urgencia: serio || longa ? 0 : 1,
       critico: serio,
@@ -134,7 +148,7 @@ export function resumoDaEspera(r: RetratoDaEspera | null, agora: Date) {
     itens: ordenadas.slice(0, 15).map((c) => ({
       titulo: nomeDe(c),
       detalhe: [rotuloDaEspera(c.minutos), ...c.etiquetas.map((e) => e.rotulo)].join(" · "),
-      href: "https://web.whatsapp.com/",
+      href: linkDaConversa(c),
     })),
   };
 }

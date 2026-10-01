@@ -1116,6 +1116,42 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Uma nota do mês só, e as não respondidas à vista (01/10/2026, 1.121.0)
+
+Dois pedidos de 01/10/2026, à tarde:
+
+- **"Os cálculos da nota do RA de cada mês estão inconsistentes."** Eram
+  quatro contas: o Índice (as reclamações do mês, como estão hoje), os
+  Gráficos e o Analytics (a avaliação no mês em que foi feita, desde a
+  1.118 — mas recortando as avaliações de jeitos diferentes: o Analytics
+  só via as de reclamações abertas dentro do período) e o resumo da
+  extensão. O mesmo mês saía com números diferentes conforme a tela.
+  Agora é **uma** conta, `contasDoMes` em `reputation.service`:
+  resposta e tempo de resposta das reclamações **que chegaram** no mês;
+  nota do consumidor, solução e voltaria das avaliações **feitas** no mês,
+  de qualquer reclamação. O Índice (modo Mês, coluna "Nota do mês"), os
+  Gráficos (Índices por mês e Nota final), o Analytics (Evolução da
+  reputação) e a extensão chamam a mesma função. Provado no
+  `check:indice-portal`: nos 12 meses fechados, as quatro telas dão o
+  mesmo número (out/25 7,6 … set/26 8,1). A nota oficial de 6 e 12 meses
+  segue a regra do portal (a 1.118 provou), e é outra coisa — está no topo
+  do Índice.
+- **"Não vi ainda como consigo visualizar as não respondidas."**
+  - **Reclame Aqui:** a barra da fila ganhou o seletor **Situação** — sem
+    resposta pública, vencidas há +7 dias, na fila, risco de cancelamento —
+    com quantas há em cada uma (a mesma regra que filtra e que dá o número
+    do menu). O cartão "Reclamações" do topo diz "12 sem resposta pública ·
+    ver quais" e, clicado, abre a fila só com elas. Até aqui o filtro
+    existia, mas só se chegava por link: o menu dizia 12 e não havia
+    caminho visível até as doze.
+  - **WhatsApp:** a tela Conversas ganhou **Esperando resposta**, a lista
+    que a extensão lê do WhatsApp Web a cada minuto (1.108), na ordem da
+    prioridade, com quanto tempo cada um espera, as etiquetas e "abrir a
+    conversa" (direto nela quando há telefone). Diz quando a leitura está
+    velha (WhatsApp fechado). O menu mostra quantos esperam, e os itens do
+    Meu dia passaram a abrir a conversa da pessoa, e não o WhatsApp
+    genérico.
+
 ### Dispositivo lembrado: entrada mais rápida, sem abrir mão da segurança (01/10/2026, 1.120.0)
 
 Fase 34, "entrada mais rápida e segura — por exemplo, lembrar o dispositivo

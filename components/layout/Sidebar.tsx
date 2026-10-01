@@ -20,6 +20,8 @@ import { useAgora } from "@/lib/hooks/useAgora";
 import { gravarLocal, usePreferenciaLocal } from "@/lib/hooks/usePreferenciaLocal";
 import { CHAVE_DA_VERSAO_VISTA, compararVersoes } from "@/lib/models/novidades";
 import { contadoresDoMenu, numeroCurto, type ContadorDoMenu } from "@/lib/models/contadoresDoMenu";
+import { quantasEsperando } from "@/lib/models/esperaNoWhatsapp";
+import { useEsperaNoWhatsapp } from "@/lib/hooks/useEsperaNoWhatsapp";
 
 /**
  * O menu lateral (roadmap 2.0, Fase 11).
@@ -48,6 +50,7 @@ function useContadores(): Record<string, ContadorDoMenu> {
   const { rules, expediente } = useSla();
   const { avaliacoes } = useAvaliacoesGoogle();
   const agora = useAgora();
+  const espera = useEsperaNoWhatsapp();
 
   return useMemo(() => {
     if (!agora) return {};
@@ -55,12 +58,13 @@ function useContadores(): Record<string, ContadorDoMenu> {
       casos: cases,
       nps: responses,
       googleAbertas: avaliacoes.filter((a) => a.status === "aberta").length,
+      esperandoNoWhatsapp: quantasEsperando(espera, agora),
       tarefas: tasks,
       regras: rules,
       expediente,
       agora,
     });
-  }, [cases, responses, tasks, rules, expediente, avaliacoes, agora]);
+  }, [cases, responses, tasks, rules, expediente, avaliacoes, agora, espera]);
 }
 
 export default function Sidebar({ forcarAberto = false }: { forcarAberto?: boolean }) {

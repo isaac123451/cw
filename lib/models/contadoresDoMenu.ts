@@ -38,6 +38,8 @@ export function contadoresDoMenu(entrada: {
   casos: Case[];
   nps: NpsResponseView[];
   googleAbertas: number;
+  /** Conversas do WhatsApp esperando resposta, pela extensão (1.121). */
+  esperandoNoWhatsapp?: number;
   tarefas: AgendaTask[];
   regras: SlaRule[];
   expediente: Expediente;
@@ -63,6 +65,7 @@ export function contadoresDoMenu(entrada: {
     "/nps": c(npsForaDoPrazo, npsForaDoPrazo > 0, `${npsForaDoPrazo} ciclo(s) com o 1º contato fora do prazo`),
     "/google": c(entrada.googleAbertas, false, `${entrada.googleAbertas} avaliação(ões) aberta(s)`),
     "/agenda": c(tarefasDoDia.length, tarefasAtrasadas > 0, `${tarefasDoDia.length} atividade(s) para hoje${tarefasAtrasadas ? `, ${tarefasAtrasadas} atrasada(s)` : ""}`),
+    "/conversas": c(entrada.esperandoNoWhatsapp ?? 0, false, `${entrada.esperandoNoWhatsapp ?? 0} conversa(s) esperando resposta no WhatsApp`),
   };
 }
 

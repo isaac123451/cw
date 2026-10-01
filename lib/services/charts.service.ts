@@ -7,6 +7,8 @@ import { comoEstavaNoDia } from "@/lib/models/indiceRA";
 
 import {
   bandOf,
+  contasDoMes,
+  diaDaAvaliacao,
   diaNaOperacao,
   getRange,
   getRawCounts,
@@ -14,6 +16,7 @@ import {
   PeriodKey,
   hojeNaOperacao,
   scoreFrom,
+  type ReputationRaw,
 } from "@/lib/services/reputation.service";
 
 /**
@@ -43,10 +46,6 @@ function monthKey(date: string) {
 */
 function diaDaResposta(item: Case) {
   return item.publicResponseAt ? diaNaOperacao(item.publicResponseAt) : item.createdAt;
-}
-
-function diaDaAvaliacao(item: Case) {
-  return item.evaluatedAt ? diaNaOperacao(item.evaluatedAt) : item.createdAt;
 }
 
 const MONTHS = [
@@ -155,25 +154,16 @@ function parseMinutes(value?: string): number | null {
 }
 
 /**
- * Os índices de um ponto. `avaliadas` é de onde saem as avaliações: no
- * mês isolado, as feitas no mês (que podem ser de reclamações de antes);
- * sem ela, as das próprias reclamações.
+ * Os índices de um ponto. `raw` vem pronto no mês isolado — a conta única
+ * de `contasDoMes` (1.121); sem ele, a das próprias reclamações (a janela
+ * móvel). `items` dá o tempo de resposta.
  */
 function indicesOf(
   key: string,
   items: Case[],
-  avaliadas: Case[] = items
+  raw: ReputationRaw = getRawCounts(items)
 ): MonthlyIndices {
 
-  const daCoorte = getRawCounts(items);
-  const dasAvaliacoes = avaliadas === items ? daCoorte : getRawCounts(avaliadas);
-  const raw = {
-    ...daCoorte,
-    evaluated: dasAvaliacoes.evaluated,
-    scoreSum: dasAvaliacoes.scoreSum,
-    resolved: dasAvaliacoes.resolved,
-    wouldReturn: dasAvaliacoes.wouldReturn,
-  };
   const summary = scoreFrom(raw);
   const band = bandOf(summary.raScore);
 
@@ -256,22 +246,18 @@ export function getMonthlyIndices(
    * intervalo personalizado —, contar o mês inteiro somaria dias fora do
    * período e o gráfico deixaria de bater com a nota da tela.
    */
-  return monthsIn(period, custom).map((key) => {
-    const avaliadas = cases.filter((item) => {
-      if (!item.evaluated) return false;
-      const dia = diaDaAvaliacao(item);
-      return monthKey(dia) === key && dia >= range.start && dia <= range.end;
-    });
-    return indicesOf(
+  return monthsIn(period, custom).map((key) =>
+    indicesOf(
       key,
       cases.filter(
         (item) =>
           monthKey(item.createdAt) === key &&
           inRange(item, range.start, range.end)
       ),
-      avaliadas
-    );
-  });
+      /* A conta única da nota do mês (1.121) — a mesma do Índice e do Analytics. */
+      contasDoMes(cases, key, { inicio: range.start, fim: range.end })
+    )
+  );
 }
 
 /**

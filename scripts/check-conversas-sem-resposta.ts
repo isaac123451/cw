@@ -5,7 +5,9 @@
  *   npm run check:conversas-sem-resposta
  */
 import { avisosDeAbertura } from "../lib/models/aberturaDoAgente";
-import { itensDaEspera, ordenarEspera, resumoDaEspera, retratoValido, rotuloDaEspera, validarConversas, type RetratoDaEspera } from "../lib/models/esperaNoWhatsapp";
+import { itensDaEspera, linkDaConversa, ordenarEspera, quantasEsperando, resumoDaEspera, retratoValido, rotuloDaEspera, validarConversas, type RetratoDaEspera } from "../lib/models/esperaNoWhatsapp";
+import { contadoresDoMenu } from "../lib/models/contadoresDoMenu";
+import { EXPEDIENTE_PADRAO } from "../lib/services/horasUteis";
 import { contarRotina } from "../lib/models/meuDia";
 
 let falhas = 0;
@@ -69,6 +71,16 @@ ok("4 itens em 'casos em aberto'", emAberto.total === 4, emAberto.resumo);
 ok("resumo diz quantos são do WhatsApp", emAberto.resumo.includes("(4 no WhatsApp)"), emAberto.resumo);
 ok("o detrator é o primeiro e é crítico", emAberto.itens[0].id === "whatsapp:nome:ana pizzaria" && emAberto.itens[0].critico === true);
 ok("espera de mais de 1 h conta como fora do prazo", emAberto.atrasados === 2, String(emAberto.atrasados));
+
+/* 1.121: "não vi ainda como consigo visualizar as não respondidas" — a lista em Conversas e o número do menu. */
+const comTelefone = { chave: "tel:5512982947571", nome: "", telefone: "+5512982947571", minutos: 90, etiquetas: [] };
+const soNome = { chave: "nome:ana", nome: "Ana", telefone: "", minutos: 30, etiquetas: [] };
+ok("com telefone, o link abre a conversa", linkDaConversa(comTelefone) === "https://web.whatsapp.com/send?phone=5512982947571", linkDaConversa(comTelefone));
+ok("só com o nome, abre o WhatsApp Web", linkDaConversa(soNome) === "https://web.whatsapp.com/");
+const retratoAgora: RetratoDaEspera = { conversas: [comTelefone, soNome], lidoEm: new Date(agora.getTime() - 60_000).toISOString() };
+ok("o menu conta quem espera agora", quantasEsperando(retratoAgora, agora) === 2);
+ok("e zera com o retrato vencido (WhatsApp fechado)", quantasEsperando({ ...retratoAgora, lidoEm: new Date(agora.getTime() - 60 * 60_000).toISOString() }, agora) === 0);
+ok("o menu de Conversas mostra o número", contadoresDoMenu({ casos: [], nps: [], googleAbertas: 0, esperandoNoWhatsapp: 2, tarefas: [], regras: [], expediente: EXPEDIENTE_PADRAO, agora })["/conversas"].valor === 2);
 
 console.log(falhas ? `\n${falhas} falha(s)` : "\ntudo certo");
 process.exit(falhas ? 1 : 0);

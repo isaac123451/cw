@@ -104,6 +104,14 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.121.0",
+    data: "2026-10-01",
+    titulo: "Nota do mês igual em toda tela, e as sem resposta à vista",
+    texto: "A nota de cada mês agora é a mesma no Índice, nos Gráficos, no Analytics e na extensão. No Reclame Aqui, o seletor Situação mostra as sem resposta (e o cartão do topo leva até elas); em Conversas, a lista de quem espera resposta no WhatsApp.",
+    frentes: ["reclame-aqui", "extensao"],
+    href: "/reclame-aqui",
+  },
+  {
     versao: "1.120.0",
     data: "2026-10-01",
     titulo: "Lembrar este dispositivo",

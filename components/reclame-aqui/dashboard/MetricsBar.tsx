@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 
 import { useScopedCases } from "@/lib/context/useScopedCases";
-import { isOpen } from "@/lib/services/case.service";
+import { isOpen, naSituacao, seteDiasAtras } from "@/lib/services/case.service";
 import { useGoals } from "@/lib/context/GoalsContext";
 import { parseElapsedText } from "@/lib/services/case.mapper";
 import { usePainelDoPortal } from "@/lib/hooks/usePainelDoPortal";
@@ -38,7 +38,7 @@ import {
 
 export default function MetricsBar() {
 
-  const { cases } = useScopedCases("reclame-aqui");
+  const { cases, setFilter } = useScopedCases("reclame-aqui");
   const router = useRouter();
   const { goals } = useGoals();
 
@@ -72,6 +72,12 @@ export default function MetricsBar() {
     : displayBand(reputacao);
 
   const abertos = cases.filter(isOpen).length;
+
+  /* As abertas sem resposta pública — a mesma regra do filtro e do número do menu (1.121). */
+  const semRespostaAbertas = useMemo(() => {
+    const corte = seteDiasAtras();
+    return cases.filter((c) => naSituacao(c, "sem-resposta", corte)).length;
+  }, [cases]);
 
   /**
    * A espera típica e a pior, das reclamações respondidas na janela.
@@ -159,13 +165,15 @@ export default function MetricsBar() {
 
       </Link>
 
+      {/* Clicável (1.121): o "sem resposta" do rodapé abre a lista delas. */}
       <StatTile
         label="Reclamações"
-        description="Total recebido na janela de 6 meses que define a nota pública."
+        description="Total recebido na janela de 6 meses que define a nota pública. Clique para ver as abertas sem resposta pública."
         value={reputacao.received}
-        hint={`${reputacao.unanswered} sem resposta`}
+        hint={semRespostaAbertas > 0 ? `${semRespostaAbertas} sem resposta pública · ver quais` : "todas respondidas"}
         icon={CircleAlert}
         tone="danger"
+        onClick={semRespostaAbertas > 0 ? () => setFilter("situacao", "sem-resposta") : undefined}
       />
 
       {/*
