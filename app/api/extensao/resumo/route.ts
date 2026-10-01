@@ -28,6 +28,7 @@ import { isOpen } from "@/lib/services/case.service";
 
 import { getPrisma } from "@/lib/prisma";
 import { conquistasDoDia, oQueMoveANota } from "@/lib/models/motivacaoDoDia";
+import { proximoPassoValido } from "@/lib/models/proximoPasso";
 import { NpsResponseView } from "@/lib/models/nps";
 import { summarize } from "@/lib/services/nps.service";
 import { provedorDeIA } from "@/lib/services/ia.service";
@@ -233,7 +234,22 @@ async function meuDiaDeBolso(
   const moveANota = oQueMoveANota(casos).map((a) => ({ titulo: a.titulo, efeito: a.efeito, notaAntes: a.notaAntes, notaDepois: a.notaDepois, href: a.href }));
   const conquistas = conquistasDoDia({ casos, nps: revertidosHoje, prazosEstourados: estourados }).map((c) => ({ titulo: c.titulo, detalhe: c.detalhe, href: c.href }));
 
-  return { dia: hoje, rotina, prazos: { estourados, vencemHoje }, moveANota, conquistas };
+  /*
+    O próximo passo (1.123): o primeiro da fila do Meu dia, como a plataforma
+    viu por último — gravado pelo navegador quando ele muda. Mais velho que
+    12 h não vale (o dia mudou); sem conta (demonstração), não há.
+  */
+  let proximoPasso = null;
+  if (prisma && userId) {
+    try {
+      const pref = await prisma.userPreference.findUnique({ where: { userId }, select: { proximoPasso: true } });
+      proximoPasso = proximoPassoValido(pref?.proximoPasso, new Date());
+    } catch {
+      /* Sem o próximo passo, o popup mostra o resto do Meu dia. */
+    }
+  }
+
+  return { dia: hoje, rotina, prazos: { estourados, vencemHoje }, moveANota, conquistas, proximoPasso };
 }
 
 export async function GET(request: Request) {

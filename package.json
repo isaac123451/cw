@@ -1,6 +1,6 @@
 {
   "name": "cw-reputacao",
-  "version": "1.122.0",
+  "version": "1.123.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -159,6 +159,7 @@
     "check:conversas-retrato": "tsx scripts/check-conversas-retrato.ts",
     "check:urgencia": "tsx scripts/check-urgencia.ts",
     "check:primeiro-contato": "tsx scripts/check-primeiro-contato.ts",
+    "check:proximo-passo": "tsx scripts/check-proximo-passo.ts",
     "check:telas-sem-saida": "tsx scripts/check-telas-sem-saida.ts",
     "check:celular": "tsx scripts/check-celular.ts",
     "check:captura-redes": "tsx scripts/check-captura-redes.ts",

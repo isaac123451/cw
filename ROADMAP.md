@@ -1116,6 +1116,44 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### O próximo passo à vista, em qualquer tela e na extensão (01/10/2026, 1.123.0)
+
+Fase 34, "cards e pop-ups de foco — lembretes curtos e o próximo passo à
+vista, para quem perde o foco rápido"; Fase 36, "cards que empurram — na
+plataforma e na extensão, a informação fácil e o próximo passo à vista".
+
+O próximo passo é **o primeiro da fila do Um por vez** (`filaDoDia`: frente,
+urgência, ordem do documento) — a mesma régua em todos os lugares, para o
+cartão, o flutuante e a extensão nunca discordarem do modo de foco.
+
+- **No topo do Meu dia**, antes de placar e listas: uma coisa só — o
+  título, o porquê ("fora do prazo", "crítico"…), Abrir (a ficha em
+  mini-janela quando há; senão a tela, ou o WhatsApp em outra aba), Pular
+  (passa para o seguinte só nesta tela) e Um por vez. Embaixo, "1 de 17 na
+  fila de hoje · 7 fora do prazo". Com a fila vazia, diz que está vazia.
+- **Em qualquer outra tela**, um cartão pequeno no canto
+  (`ProximoPassoFlutuante`, no layout): o mesmo primeiro da fila, Abrir,
+  Pular e o atalho para o Meu dia. Arrastável pelo cabeçalho, sem desfoque
+  (como as mini-janelas), minimizável numa pílula "Próximo passo · 17" —
+  posição e estado ficam no navegador. Não aparece no Meu dia (lá ele está
+  no topo) nem nas telas de entrada.
+- **O lembrete de foco:** se a fila fica parada o intervalo inteiro (25
+  min; 15, 45 ou nunca, no próprio cartão), ele se abre sozinho com uma
+  linha curta — sem som, sem faixa — e volta a fechar em 20 s se estava
+  minimizado. Cada item que sai zera o relógio: quem está trabalhando não é
+  interrompido.
+- **Na extensão:** o Meu dia grava na conta o primeiro da fila quando ele
+  muda (`UserPreference.proximoPasso`, 3 s depois de parar de mexer), o
+  resumo devolve conferido (12 h de validade; só caminho da aplicação ou
+  https — `javascript:` e `//outro.site` são recusados) e o popup mostra
+  "Próximo passo · fora do prazo" no topo do bloco do Meu dia; clicar abre.
+- `check:proximo-passo`: o porquê, o resumo, o lembrete (não antes do
+  intervalo, não repetido, zerado quando um item sai, desligado), o retrato
+  e a conferência do que vai para a extensão, e a fiação. Conferido na tela:
+  o cartão no topo com "Pular" passando ao seguinte, o flutuante no canto de
+  outra tela com o mesmo item, minimizar e reabrir, e o resumo da extensão
+  trazendo o próximo passo gravado.
+
 ### Plano de recuperação do seu jeito (01/10/2026, 1.122.0)
 
 Fase 34, "plano de recuperação configurável — cotas, prazos e frentes do

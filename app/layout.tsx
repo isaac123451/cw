@@ -32,6 +32,7 @@ import { CompletarProvider } from "@/components/reclame-aqui/completar/Completar
 import { TratativaProvider } from "@/components/reclame-aqui/tratativa/TratativaProvider";
 import { JanelasProvider } from "@/lib/context/JanelasContext";
 import AvisosDeLembrete from "@/components/agenda/AvisosDeLembrete";
+import ProximoPassoFlutuante from "@/components/rotina/ProximoPassoFlutuante";
 import JanelasHost from "@/components/janelas/JanelasHost";
 import ToastHost from "@/components/shared/ToastHost";
 
@@ -173,6 +174,8 @@ export default async function RootLayout({
                                     <JanelasHost />
                                     {/* O lembrete com hora marcada avisa em qualquer tela (Fase 25). */}
                                     <AvisosDeLembrete />
+                                    {/* O próximo passo em qualquer tela (1.123): no Meu dia ele já está no topo. */}
+                                    <ProximoPassoFlutuante />
                                   </JanelasProvider>
 
                                   </TratativaProvider>

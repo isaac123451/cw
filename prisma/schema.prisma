@@ -87,6 +87,11 @@ model UserPreference {
   /// dos avisos — frente nova não pede migração.
   recuperacao Json?
 
+  /// O próximo passo da fila do Meu dia, como a plataforma viu por último
+  /// (1.123) — é dele que o popup da extensão mostra "o próximo". Gravado
+  /// pelo navegador quando o primeiro da fila muda.
+  proximoPasso Json?
+
   updatedAt DateTime @updatedAt
 }
 

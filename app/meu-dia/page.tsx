@@ -20,6 +20,7 @@ import MetasDoDia from "@/components/rotina/MetasDoDia";
 import MetasDoCiclo from "@/components/rotina/MetasDoCiclo";
 import RadarDeIncidente from "@/components/rotina/RadarDeIncidente";
 import PlanoDeRecuperacao from "@/components/rotina/PlanoDeRecuperacao";
+import ProximoPasso from "@/components/rotina/ProximoPasso";
 
 /**
  * Meu dia — a primeira tela do dia.
@@ -97,6 +98,18 @@ function MeuDiaPagina({ configurarInicial = false, ajustarRecuperacao = false }:
 
         {/* O radar de incidente (1.102): só aparece quando há um, e vem antes de tudo. */}
         <RadarDeIncidente />
+
+        {/* O próximo passo (1.123): uma coisa só, antes de placar e listas — o primeiro da fila do Um por vez. */}
+        {!umPorVez && (
+          <ProximoPasso
+            dia={dia}
+            marcadas={efetivas}
+            onUmPorVez={() => {
+              setUmPorVez(true);
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+          />
+        )}
 
         {/* O placar da semana vem antes de tudo: é o que diz se o trabalho está andando. */}
         <PlacarDaSemana dia={dia} />

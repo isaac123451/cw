@@ -230,6 +230,7 @@ function blocoDoDia(meuDia, base) {
   return [
     `<div class="bloco">`,
     `  <p class="rotulo">Meu dia <span class="todos" data-url="${escapar(`${base}/meu-dia`)}">abrir</span></p>`,
+    linhaDoProximo(meuDia.proximoPasso, base),
     `  <div class="numeros">`,
     `    <div class="numero"><b>${r.feitas}/${r.total}</b><span>rotina</span></div>`,
     `    <div class="numero"><b>${p.vencemHoje}</b><span>vencem hoje</span></div>`,
@@ -238,6 +239,24 @@ function blocoDoDia(meuDia, base) {
     `  </div>`,
     blocoDaNota(meuDia, base),
     `</div>`,
+  ].join("");
+}
+
+/**
+ * O próximo passo (1.123): o primeiro da fila do Meu dia, como a
+ * plataforma viu por último. Clicar abre o item — na aplicação, ou o
+ * WhatsApp quando é uma conversa esperando.
+ */
+function linhaDoProximo(proximo, base) {
+  if (!proximo || !proximo.titulo) return "";
+  const destino = /^https?:\/\//.test(proximo.href) ? proximo.href : `${base}${proximo.href}`;
+  const fila = `${proximo.total} na fila${proximo.atrasados ? ` · ${proximo.atrasados} fora do prazo` : ""}`;
+  return [
+    `  <div class="proximo" data-url="${escapar(destino)}">`,
+    `    <span class="porque">Próximo passo · ${escapar(proximo.porque)}</span>`,
+    `    <b>${escapar(proximo.titulo)}</b>`,
+    `    <span class="fila">${escapar(fila)}</span>`,
+    `  </div>`,
   ].join("");
 }
 

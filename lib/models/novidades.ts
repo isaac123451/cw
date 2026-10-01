@@ -104,6 +104,14 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.123.0",
+    data: "2026-10-01",
+    titulo: "O próximo passo à vista",
+    texto: "O Meu dia abre com uma coisa só: o próximo passo e o botão para fazer. Nas outras telas ele fica num cartão pequeno no canto (arraste ou minimize), que lembra com uma linha curta se a fila ficar parada. E o popup da extensão mostra o próximo passo também.",
+    frentes: ["plataforma", "extensao"],
+    href: "/meu-dia",
+  },
+  {
     versao: "1.122.0",
     data: "2026-10-01",
     titulo: "Plano de recuperação do seu jeito",
