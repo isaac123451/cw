@@ -1116,6 +1116,26 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Metas do dia editáveis e metas do ciclo (30/09/2026, 1.114.0)
+
+Pedido de 30/09: "as metas do dia são para serem geradas automaticamente,
+mas deve ser possível alterar; precisa-se também de algo para o ciclo".
+
+- **Metas de hoje** ganharam "Ajustar", na própria faixa (sem modal): o
+  número de cada meta, com o automático ao lado, valendo **só hoje** ou
+  **daqui para frente** (o padrão da pessoa vira o teto da conta, que nunca
+  passa do que existe para fazer); "voltar ao automático" desfaz. Meta
+  ajustada mostra um ponto ao lado do número.
+- **Metas do ciclo** (1–7, 8–14…), no Meu dia: respostas públicas (zerar a
+  fila), avaliações no portal (uma a mais que o ciclo anterior, mínimo 3),
+  pedidos de avaliação, detratores contatados (todos os do ciclo) e
+  revertidos — cada uma dizendo de onde veio o número, com os dias que
+  faltam. Ajustáveis só neste ciclo ou em todos.
+- Os ajustes ficam por pessoa no banco (`AjusteDeMeta`); só confirmam
+  depois do servidor.
+
+`npm run check:metas`.
+
 ### Retenção no Reclame Aqui (30/09/2026, 1.113.0)
 
 Pedidos de 30/09 sobre retenção.

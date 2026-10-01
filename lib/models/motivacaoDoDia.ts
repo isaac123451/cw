@@ -1,4 +1,5 @@
 import type { Case } from "@/lib/models/case";
+import { alvoComAjuste, type AjustesDeMeta, type OrigemDoAlvo } from "@/lib/models/ajusteDeMeta";
 import type { NpsResponseView } from "@/lib/models/nps";
 
 import {
@@ -468,6 +469,10 @@ export interface MetaDoDia {
   feito: number;
   alvo: number;
   href: string;
+  /** O que a plataforma geraria sem ajuste (1.114). */
+  automatico?: number;
+  /** De onde veio o alvo: gerado, ajustado só hoje ou o padrão da pessoa. */
+  origem?: OrigemDoAlvo;
 }
 
 /**
@@ -482,13 +487,16 @@ export function metasDoDia(entrada: {
   nps: NpsResponseView[];
   rotina?: { feitas: number; total: number };
   agora?: Date;
+  /** Os ajustes da pessoa (1.114): só hoje, ou o padrão daqui para frente. */
+  ajustes?: AjustesDeMeta;
 }): MetaDoDia[] {
   const agora = entrada.agora ?? new Date();
   const hoje = diaNaOperacao(agora);
   const deHoje = (iso?: string | null) => Boolean(iso) && diaNaOperacao(iso!) === hoje;
   const meta = (m: Omit<MetaDoDia, "alvo"> & { pendentes: number; teto: number }): MetaDoDia | null => {
-    const alvo = Math.min(m.teto, m.feito + m.pendentes);
-    return alvo > 0 ? { chave: m.chave, titulo: m.titulo, feito: Math.min(m.feito, alvo), alvo, href: m.href } : null;
+    /* O padrão da pessoa vira o teto da conta; o ajuste de hoje vale como veio (1.114). */
+    const { alvo, automatico, origem } = alvoComAjuste(m.chave, entrada.ajustes, (teto = m.teto) => Math.min(teto, m.feito + m.pendentes));
+    return alvo > 0 ? { chave: m.chave, titulo: m.titulo, feito: Math.min(m.feito, alvo), alvo, href: m.href, automatico, origem } : null;
   };
 
   const abertos = entrada.casos.filter((c) => !["Resolvido", "Não resolvido", "Aguardando avaliação", "Sem contato", "Sem identificação", "Encaminhado"].includes(c.status));

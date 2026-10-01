@@ -104,6 +104,14 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.114.0",
+    data: "2026-09-30",
+    titulo: "Metas que você ajusta, e metas do ciclo",
+    texto: "As metas de hoje continuam automáticas, mas agora dá para trocar o número — só hoje ou daqui para frente. E o Meu dia ganhou as metas do ciclo, com o que falta e quantos dias restam.",
+    frentes: ["plataforma"],
+    href: "/meu-dia",
+  },
+  {
     versao: "1.113.0",
     data: "2026-09-30",
     titulo: "Retenção no Reclame Aqui",

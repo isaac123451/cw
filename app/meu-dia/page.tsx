@@ -16,6 +16,7 @@ import AgoraNoMeuDia from "@/components/rotina/AgoraNoMeuDia";
 import ModoProximo from "@/components/rotina/ModoProximo";
 import PlacarDaSemana from "@/components/rotina/PlacarDaSemana";
 import MetasDoDia from "@/components/rotina/MetasDoDia";
+import MetasDoCiclo from "@/components/rotina/MetasDoCiclo";
 import RadarDeIncidente from "@/components/rotina/RadarDeIncidente";
 import PlanoDeRecuperacao from "@/components/rotina/PlanoDeRecuperacao";
 
@@ -82,6 +83,8 @@ export default function MeuDiaPage() {
 
         {/* As mini conquistas (1.96): metas do tamanho do dia, com aviso quando fecham. */}
         <MetasDoDia rotina={rotinaDoDia} />
+
+        <MetasDoCiclo />
 
         {umPorVez && <ModoProximo dia={dia} marcadas={efetivas} onFechar={() => setUmPorVez(false)} />}
 

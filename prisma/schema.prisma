@@ -1759,6 +1759,24 @@ model OperacaoConfig {
 /// o nome que a lista mostra (ou o número do contato não salvo) e as
 /// etiquetas do CW; mensagem nenhuma. Uma linha por pessoa, trocada a
 /// cada envio; velha demais, o Meu dia a ignora.
+/// O ajuste de uma meta por pessoa (1.114): "as metas do dia são geradas
+/// automaticamente, mas deve ser possível alterar; e algo para o ciclo".
+/// `escopo` é "dia" ou "ciclo"; `periodo` é o dia (AAAA-MM-DD), o id do
+/// ciclo ("2026-09-c5") ou "padrao" — o número que vale daqui para frente.
+/// Sem linha, vale o que a plataforma gera.
+model AjusteDeMeta {
+  id           String   @id @default(cuid())
+  userId       String
+  escopo       String
+  chave        String
+  periodo      String
+  alvo         Int
+  atualizadoEm DateTime @updatedAt
+
+  @@unique([userId, escopo, chave, periodo])
+  @@index([userId])
+}
+
 model EsperaNoWhatsapp {
   userId    String   @id
   conversas Json

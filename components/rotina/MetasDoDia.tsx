@@ -2,9 +2,12 @@
 
 import Link from "next/link";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-import { Check, Target } from "lucide-react";
+import { Check, SlidersHorizontal, Target } from "lucide-react";
+
+import EditorDeMetas from "@/components/rotina/EditorDeMetas";
+import { useAjustesDeMeta } from "@/lib/hooks/useAjustesDeMeta";
 
 import { useCases } from "@/lib/context/CaseContext";
 import { useNps } from "@/lib/context/NpsContext";
@@ -24,10 +27,13 @@ export default function MetasDoDia({ rotina }: { rotina?: { feitas: number; tota
   const { responses, loading: carregandoNps } = useNps();
   const agora = useAgora();
   const { notify } = useToast();
+  /* Os ajustes da pessoa (1.114): o automático, trocado só hoje ou daqui para frente. */
+  const { dia: ajustes, recarregar } = useAjustesDeMeta();
+  const [ajustando, setAjustando] = useState(false);
 
   const metas = useMemo(
-    () => (agora && !carregandoCasos && !carregandoNps ? metasDoDia({ casos: cases, nps: responses, rotina, agora }) : []),
-    [agora, carregandoCasos, carregandoNps, cases, responses, rotina]
+    () => (agora && !carregandoCasos && !carregandoNps ? metasDoDia({ casos: cases, nps: responses, rotina, agora, ajustes }) : []),
+    [agora, carregandoCasos, carregandoNps, cases, responses, rotina, ajustes]
   );
 
   /* Meta batida vira aviso uma vez — o navegador guarda quais já avisaram hoje. */
@@ -61,10 +67,18 @@ export default function MetasDoDia({ rotina }: { rotina?: { feitas: number; tota
           <Target size={14} className="text-violet-600" />
           Metas de hoje
         </p>
-        <span className="text-xs tabular-nums text-zinc-500">
+        <span className="flex items-center gap-3 text-xs tabular-nums text-zinc-500">
           {batidas} de {metas.length} batidas
+          {!ajustando && (
+            <button type="button" onClick={() => setAjustando(true)} className="flex items-center gap-1 font-medium text-zinc-500 hover:text-violet-700" title="Trocar o número das metas">
+              <SlidersHorizontal size={12} /> Ajustar
+            </button>
+          )}
         </span>
       </div>
+      {ajustando && (
+        <EditorDeMetas escopo="dia" metas={metas.filter((m) => m.chave !== "rotina")} onFechar={() => setAjustando(false)} onSalvo={recarregar} />
+      )}
       <ul className="mt-2.5 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
         {metas.map((m) => {
           const pronta = m.feito >= m.alvo;
@@ -76,8 +90,9 @@ export default function MetasDoDia({ rotina }: { rotina?: { feitas: number; tota
                     {pronta && <Check size={12} className="shrink-0" />}
                     {m.titulo}
                   </span>
-                  <span className="shrink-0 tabular-nums text-zinc-500">
+                  <span className="shrink-0 tabular-nums text-zinc-500" title={m.origem === "periodo" ? "Ajustado só para hoje" : m.origem === "padrao" ? "O seu número padrão" : undefined}>
                     {m.feito}/{m.alvo}
+                    {m.origem && m.origem !== "automatico" && <span className="ml-0.5 text-violet-600">•</span>}
                   </span>
                 </span>
                 <span className="mt-1 block h-1.5 overflow-hidden rounded-full bg-zinc-100">
