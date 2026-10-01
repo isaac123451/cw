@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.117.0",
+    data: "2026-10-01",
+    titulo: "Busca e menus consertados",
+    texto: "A busca (Ctrl+K) volta a escurecer a tela inteira, o menu no celular abre na tela toda e clicar fora fecha o sino e o menu do usuário. Também atualizamos peças com aviso de segurança.",
+    frentes: ["plataforma"],
+  },
+  {
     versao: "1.116.0",
     data: "2026-10-01",
     titulo: "Telas mais rápidas",

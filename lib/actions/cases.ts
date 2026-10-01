@@ -117,27 +117,6 @@ const lerDoBanco = unstable_cache(
 );
 
 /**
- * As reclamações, **ou o motivo de não terem vindo.**
- *
- * **Sem banco, nenhuma reclamação — nunca dado inventado.** Até
- * 23/08/2026 aqui havia `?? mockCases`, e o `??` disparava quando a
- * *leitura falhava*, não só quando não havia banco. Uma queda de
- * conexão com o Supabase — coisa de segundos, que acontece — fazia a
- * plataforma inteira exibir 334 reclamações inventadas, com nomes de
- * consumidores que não existem, indistinguíveis das reais.
- *
- * A troca foi por lista vazia, e resolveu o perigo. Sobrou o **outro**
- * defeito, que levou mais tempo para aparecer porque parece inofensivo:
- * vazio por falha e vazio de verdade viraram a mesma tela. Zero em
- * todos os contadores, quadro em branco, nenhuma palavra. Foi o que
- * chegou como "os dados não carregam" quatro vezes em duas semanas —
- * sempre igual, e cada vez por uma causa diferente.
- *
- * Agora a resposta carrega qual dos dois foi. Devolvida e não lançada:
- * erro atirado de server action chega ao navegador sanitizado em
- * produção, e perderia justamente esta informação.
- */
-/**
  * Só as reclamações que mudaram desde `desde` (1.116) — a recarga de 3 em 3
  * minutos, que baixava as 367 inteiras (400 kB) toda vez. Sem o cache da
  * lista: é uma consulta pequena, direto no banco. Volta o instante do
@@ -160,6 +139,27 @@ export async function listCasesDesde(desde: string): Promise<Leitura<{ casos: Ca
   }
 }
 
+/**
+ * As reclamações, **ou o motivo de não terem vindo.**
+ *
+ * **Sem banco, nenhuma reclamação — nunca dado inventado.** Até
+ * 23/08/2026 aqui havia `?? mockCases`, e o `??` disparava quando a
+ * *leitura falhava*, não só quando não havia banco. Uma queda de
+ * conexão com o Supabase — coisa de segundos, que acontece — fazia a
+ * plataforma inteira exibir 334 reclamações inventadas, com nomes de
+ * consumidores que não existem, indistinguíveis das reais.
+ *
+ * A troca foi por lista vazia, e resolveu o perigo. Sobrou o **outro**
+ * defeito, que levou mais tempo para aparecer porque parece inofensivo:
+ * vazio por falha e vazio de verdade viraram a mesma tela. Zero em
+ * todos os contadores, quadro em branco, nenhuma palavra. Foi o que
+ * chegou como "os dados não carregam" quatro vezes em duas semanas —
+ * sempre igual, e cada vez por uma causa diferente.
+ *
+ * Agora a resposta carrega qual dos dois foi. Devolvida e não lançada:
+ * erro atirado de server action chega ao navegador sanitizado em
+ * produção, e perderia justamente esta informação.
+ */
 export async function listCases(): Promise<
   Leitura<Case[]>
 > {

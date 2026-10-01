@@ -105,11 +105,14 @@ console.log("\n— A fiação —\n");
   conferir("no texto do Slack", servico.includes("*1º contato no ciclo:*"), true);
 
   const acao = ler("lib/actions/relatorio.ts");
-  conferir("o relatório lê as regras e o expediente do banco", /slaRuleDoBanco/.test(acao) && /lerExpediente\(prisma\)/.test(acao), true);
+  /* Desde a 1.105 a leitura do banco mora no serviço, que o envio automático também usa. */
+  const doBanco = ler("lib/services/relatorioDoBanco.service.ts");
+  conferir("o relatório lê as regras e o expediente do banco", /montarRelatorioDoBanco/.test(acao) && /slaRuleDoBanco/.test(doBanco) && /lerExpediente\(prisma\)/.test(doBanco), true);
   conferir("e a planilha leva as três linhas por frente", acao.includes("1º contato: % no prazo"), true);
 
   const tela = ler("components/relatorio/RelatorioDoCiclo.tsx");
-  conferir("a tela mostra a linha e o cartão", tela.includes("1º contato (horas úteis)") && tela.includes("Tempo até o 1º contato no ciclo"), true);
+  /* A linha por aba saiu na 1.93 (as abas vão a março, antes do registro de contato); fica o cartão do ciclo. */
+  conferir("a tela mostra o cartão do ciclo", tela.includes("Tempo até o 1º contato no ciclo"), true);
 }
 
 console.log(falhas === 0 ? "\n  A meta de 1º contato agora é medida, pelo mesmo relógio dos prazos.\n" : `\n  ${falhas} ponto(s) a corrigir.\n`);

@@ -251,7 +251,15 @@ async function main() {
   */
   const [{ diferentes }] = await prisma.$queryRaw<
     { diferentes: bigint }[]
-  >`SELECT COUNT(*)::bigint AS diferentes FROM "Case" WHERE "companyName" <> "customer" AND TRIM("companyName") <> ''`;
+  >`SELECT COUNT(*)::bigint AS diferentes FROM "Case" WHERE "companyName" <> "customer" AND TRIM("companyName") <> '' AND TRIM("companyName") !~* '^n[ãa]o informad[oa]$'`;
+
+  /*
+    "Não informado" também não é empresa: é o que a leitura do portal e a
+    planilha gravam quando o nome não vem (`raPortal.service`,
+    `raImport.service`), e o mapeamento já o trata como vazio
+    (`case.mapper`). Com o vigia lendo o portal sozinho desde a 1.86, eles
+    passaram a existir na base — 9 em 01/10/2026 — e não ligam a nada.
+  */
 
   const [{ vazios }] = await prisma.$queryRaw<
     { vazios: bigint }[]

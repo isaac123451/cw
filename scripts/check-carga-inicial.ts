@@ -18,6 +18,10 @@
  * O check segura a fiação: a action roda tudo em paralelo, cada provider
  * pega a sua parte, e a parte só vale na abertura — depois, cada um volta
  * ao caminho próprio, para nunca servir dado velho.
+ *
+ * **1.116:** o NPS saiu da ida única. São 2,3 MB, e dentro dela ele segurava
+ * as outras partes; agora vem pela rota `/api/leitura/nps`, que corre em
+ * paralelo com a ida única em vez de dentro dela. Ficaram seis partes.
  */
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -37,7 +41,8 @@ const ler = (arquivo: string) => readFileSync(resolve(RAIZ, arquivo), "utf8");
 console.log("\n  CARGA INICIAL — uma ida, em paralelo\n");
 
 const acao = ler("lib/actions/cargaInicial.ts");
-conferir("a action lê as sete partes com Promise.all", /await Promise\.all\(\[/.test(acao) && (acao.match(/parte\("/g) ?? []).length, 7);
+conferir("a action lê as seis partes com Promise.all", /await Promise\.all\(\[/.test(acao) && (acao.match(/parte\("/g) ?? []).length, 6);
+conferir("o NPS não vai mais na ida única (vem pela rota)", /parte\("nps"/.test(acao), false);
 conferir("parte que falha não derruba as outras", /return \{ ok: false \}/.test(acao), true);
 
 const cliente = ler("lib/context/cargaInicial.ts");
@@ -46,7 +51,6 @@ conferir("a parte só vale na abertura (validade curta)", /VALIDADE_MS = 10_000/
 const usos: [string, string][] = [
   ["lib/context/useWorkspace.ts", 'daCargaInicial("workspace"'],
   ["lib/context/CaseContext.tsx", 'daCargaInicial("casos"'],
-  ["lib/context/NpsContext.tsx", 'daCargaInicial("nps"'],
   ["lib/context/NpsContext.tsx", 'daCargaInicial("causasDoNps"'],
   ["lib/context/PreferencesContext.tsx", 'daCargaInicial("preferencias"'],
   ["lib/context/SavedFiltersContext.tsx", 'daCargaInicial("filtros"'],
@@ -61,6 +65,7 @@ conferir(
   /descartarDaCargaInicial\("workspace"\)/.test(ler("lib/context/useWorkspace.ts")) && /descartadas\.has\(chave\)/.test(cliente),
   true
 );
+conferir("o NPS vem pela rota, fora da fila das server actions", ler("lib/context/NpsContext.tsx").includes("/api/leitura/nps"), true);
 conferir("recarregar o Google depois de gravar vai direto", ler("lib/context/useAvaliacoesGoogle.ts").includes("forcar ? listarAvaliacoesGoogle()"), true);
 
 console.log(falhas === 0 ? "\n  A abertura faz uma ida só.\n" : `\n  ${falhas} ponto(s) a corrigir.\n`);

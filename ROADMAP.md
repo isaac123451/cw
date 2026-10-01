@@ -1116,6 +1116,48 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Bugs corrigidos e dependências seguras (01/10/2026, 1.117.0)
+
+Pedido de 30/09: "verifique bugs, funcionalidades que foram criadas e não
+estão funcionando perfeitamente". Rodados os 139 `check:*` (os que gravam,
+um por vez e só os que apagam o que eles mesmos criam; fora `cron`,
+`canais` — mexe num estabelecimento real — e os que chamam a IA ou enviam
+e-mail) e o `check-telas` em todas as telas.
+
+- **A sombra da busca cobria só a barra do topo** (relato com print). O
+  cabeçalho tinha `backdrop-blur`, e com `backdrop-filter` ele vira o bloco
+  de referência de todo `position: fixed` dentro dele. O mesmo defeito
+  prendia a gaveta do menu no celular nos 64 px do topo e impedia que clicar
+  na página fechasse o sino, o menu do usuário e o tema. Cabeçalho com fundo
+  sólido; a busca e a ajuda de atalhos vão para o `body` por portal.
+- **A rota de leituras em lote (1.116) não conferia a sessão na porta** —
+  cada leitura conferia a sua, mas a rota rodava todas antes. Agora recusa
+  sem sessão (401). Achado pelo `check-seguranca`.
+- **Dependências com aviso de segurança:** next 16.3.4 → 16.3.6 (execução
+  remota no `next/og` — não usado aqui, corrigido mesmo assim), nodemailer
+  9 → 10 (a única quebra da 10 é exigir Node 20+) e fast-uri 3.1.8 (só nas
+  ferramentas do Prisma e do shadcn). Provado com instalação do zero e
+  `next build` numa cópia isolada, e com o novo `check:smtp-local`: um
+  servidor SMTP de mentira em 127.0.0.1 recebe o e-mail do `enviarEmail` de
+  verdade — autenticação, remetente, destinatário, assunto, texto e HTML, e
+  destinatário recusado não vira enviado. Nenhum e-mail sai da máquina.
+- `listCasesDesde` tinha ficado entre o comentário do `listCases` e a
+  função; voltou para o lugar.
+- **Checks que tinham ficado para trás** do que mudou de propósito, e que
+  voltaram a provar algo: `carga-inicial` (o NPS saiu da ida única na 1.116),
+  `indice` (quatro casas desde a 1.110), `primeiro-contato` (a leitura do
+  banco foi para o serviço na 1.105; a linha por aba saiu na 1.93),
+  `campos` (as tabelas novas, cada uma com o motivo de não estar na carga
+  de toda tela), `avisos-extensao` (o painel passou a ouvir cliques no
+  documento na 1.103), `silencio` (achava `listCasesDesde` no lugar de
+  `listCases`), `carga` (a referência agora calcula as tentativas sem
+  resposta, com a mesma regra do JOIN) e `vinculo` ("Não informado", que o
+  vigia grava quando o portal não traz o nome, não é empresa).
+
+Nenhum defeito de código nos checks de banco e da extensão (47 de 47). O
+servidor de dev caiu duas vezes por falta de memória do Turbopack depois de
+compilar dezenas de rotas — limite do dev, não da aplicação.
+
 ### Desempenho: leituras fora da fila (01/10/2026, 1.116.0)
 
 Pedido de 30/09: "verifique ... problemas de desempenho. quero que tu fique

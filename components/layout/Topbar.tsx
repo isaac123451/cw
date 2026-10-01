@@ -23,8 +23,15 @@ export default function Topbar() {
       pathname.startsWith(`${item.href}/`)
   );
 
+  /*
+    Fundo sólido, sem backdrop-blur (01/10/2026). Com backdrop-filter, o
+    cabeçalho vira o bloco de referência de todo `position: fixed` dentro
+    dele: a sombra da busca cobria só a barra, a gaveta do celular ficava
+    presa nos 64 px do topo, e clicar na página não fechava o sino nem o
+    menu do usuário — os véus de "clicar fora" não passavam da barra.
+  */
   return (
-    <header className="sticky top-0 z-40 flex h-16 items-center justify-between gap-3 border-b border-zinc-200/80 bg-white/85 px-4 backdrop-blur-md sm:gap-6 sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-40 flex h-16 items-center justify-between gap-3 border-b border-zinc-200/80 bg-white px-4 sm:gap-6 sm:px-6 lg:px-8">
 
       <MobileNav />
 

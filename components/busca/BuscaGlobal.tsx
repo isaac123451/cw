@@ -2,6 +2,7 @@
 
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { createPortal } from "react-dom";
 
 import {
   AppWindow,
@@ -151,7 +152,8 @@ export default function BuscaGlobal() {
         <span className="hidden flex-1 truncate whitespace-nowrap text-left md:inline">Buscar casos, clientes, telas…</span>
         <kbd className="hidden rounded-md border border-zinc-200 bg-white px-1.5 py-0.5 font-sans text-[11px] text-zinc-500 md:inline">Ctrl K</kbd>
       </button>
-      {aberta && <Paleta onFechar={() => setAberta(false)} />}
+      {/* No body: dentro do cabeçalho ela herdaria a camada dele, e mini-janelas e painéis da página passariam por cima. */}
+      {aberta && createPortal(<Paleta onFechar={() => setAberta(false)} />, document.body)}
     </>
   );
 }

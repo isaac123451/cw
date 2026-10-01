@@ -79,11 +79,27 @@ async function peloPrisma(): Promise<Case[]> {
         include: { tag: { select: { name: true } } },
       },
       establishment: { select: { name: true } },
+      contatos: { where: { tipo: "tentativa" }, select: { canal: true, resultado: true, em: true } },
     },
     orderBy: { publishedAt: "desc" },
   });
 
-  return rows.map((row) => toCaseModel(row));
+  /*
+    As tentativas sem resposta (canais e a primeira), que o caminho novo tira
+    do LATERAL JOIN: aqui a mesma regra em JavaScript, sobre os contatos —
+    tentativa que não respondeu nem está aguardando, depois da última
+    resposta do cliente, e só quando o caso conta tentativas.
+  */
+  return rows.map(({ contatos, ...row }) => {
+    const valem = row.tentativasSemResposta > 0
+      ? contatos.filter((c) => !["respondeu", "aguardando"].includes(c.resultado ?? "") && (!row.ultimaRespostaEm || c.em > row.ultimaRespostaEm))
+      : [];
+    return toCaseModel({
+      ...row,
+      canaisSemResposta: [...new Set(valem.map((c) => c.canal))].sort(),
+      primeiraTentativaEm: valem.length ? new Date(Math.min(...valem.map((c) => c.em.getTime()))) : null,
+    });
+  });
 }
 
 function comparavel(valor: unknown) {

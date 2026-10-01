@@ -28,7 +28,8 @@ const P: Record<string, unknown> = {};
 const janela = { CWReputacao: { escapar: (t: string) => t }, __cwPainel: P };
 runInNewContext(readFileSync(resolve(__dirname, "../extensao/conteudo/painel-contato.js"), "utf8"), {
   window: janela,
-  document: {},
+  /* O painel ouve cliques no documento (copiar a mensagem do momento, 1.103). */
+  document: { addEventListener: () => {} },
   chrome: undefined,
   console,
 });

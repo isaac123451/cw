@@ -1,3 +1,4 @@
+import { getSession } from "@/lib/auth/session";
 import { LEITURAS, type NomeDaLeitura } from "@/lib/leituras/registro";
 
 export const runtime = "nodejs";
@@ -13,10 +14,12 @@ export const dynamic = "force-dynamic";
  * leituras pedidas juntas rodam juntas, e em paralelo com a carga inicial.
  *
  * Só as do registro (`lib/leituras/registro.ts`); cada uma é a própria action,
- * com a própria checagem de acesso — sem sessão, ela devolve o mesmo vazio
- * ou a mesma recusa de sempre. Uma que falha não derruba as outras.
+ * com a própria checagem de acesso; a porta, além disso, recusa quem chega
+ * sem sessão antes de rodar qualquer uma. Uma que falha não derruba as outras.
  */
 export async function POST(request: Request) {
+  if (!(await getSession())) return Response.json({ erro: "Entre na aplicação." }, { status: 401 });
+
   const corpo = (await request.json().catch(() => ({}))) as { pedidos?: { nome?: string; args?: unknown[] }[] };
   const pedidos = Array.isArray(corpo.pedidos) ? corpo.pedidos.slice(0, 30) : [];
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { createPortal } from "react-dom";
 
 import { Keyboard, X } from "lucide-react";
 
@@ -61,7 +62,8 @@ export default function AtalhosDeTeclado() {
 
   if (!ajuda) return null;
 
-  return (
+  /* No body, como a busca: dentro do cabeçalho ficaria na camada dele. */
+  return createPortal(
     <div className="fixed inset-0 z-[80] flex items-start justify-center bg-zinc-900/20 px-3 pt-[12vh]" onMouseDown={() => setAjuda(false)}>
       <div
         role="dialog"
@@ -102,7 +104,8 @@ export default function AtalhosDeTeclado() {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

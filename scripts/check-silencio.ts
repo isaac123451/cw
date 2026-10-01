@@ -218,7 +218,7 @@ const LEITURAS: {
 /** O corpo de uma função exportada, do cabeçalho até a chave que fecha. */
 function corpoDe(fonte: string, funcao: string) {
   const inicio = fonte.indexOf(
-    `export async function ${funcao}`
+    `export async function ${funcao}(`
   );
 
   if (inicio < 0) return "";

@@ -212,8 +212,14 @@ const INTERNAS: Record<string, string[]> = {
   Conversa: ["*"],
   MensagemDaConversa: ["*"],
 
-  /** Quem mudou o expediente por último — registro, não conteúdo. */
-  OperacaoConfig: ["updatedBy"],
+  /**
+   * Quem mudou o expediente por último — registro, não conteúdo. Os
+   * destinatários do relatório automático (1.105) e o ciclo já enviado têm
+   * leitura própria (`lib/actions/relatorio.ts`, na Central de
+   * Configurações); os concorrentes do segmento (1.107), também
+   * (`lib/actions/segmento.ts`, no Índice).
+   */
+  OperacaoConfig: ["updatedBy", "relatorioPara", "relatorioEnviadoCiclo", "concorrentesRA"],
 
   /**
    * Os itens tirados de uma atividade no Meu dia (1.31): carga própria
@@ -252,6 +258,28 @@ const INTERNAS: Record<string, string[]> = {
    * três tons (1.67): só a rota `aprender-resposta` da extensão lê.
    */
   EdicaoDeResposta: ["*"],
+
+  /** As imagens do dossiê: carga própria (`lib/actions/dossie.ts` e a rota `api/dossie/imagem`). */
+  ImagemDoDossie: ["*"],
+
+  /** Os disparos em lote do WhatsApp: só `lib/services/disparos.service.ts`, na tela dos disparos. */
+  LoteDeDisparo: ["*"],
+  ItemDeDisparo: ["*"],
+
+  /** O desfecho de cada cancelamento: carga própria (`lib/actions/retencao.ts`), na Retenção. */
+  DesfechoDeCancelamento: ["*"],
+
+  /** O retrato do painel do portal, gravado pela extensão: `lerPainelDoPortal`, por lote. */
+  PainelDoPortal: ["*"],
+
+  /** As metas ajustadas (1.114): `lerAjustesDeMeta`, por lote, no Meu dia. */
+  AjusteDeMeta: ["*"],
+
+  /** As conversas esperando resposta no WhatsApp (1.108): `lerEsperaNoWhatsapp`, por lote. */
+  EsperaNoWhatsapp: ["*"],
+
+  /** A reputação dos concorrentes (1.107): `lib/actions/segmento.ts`, no Índice. */
+  ReputacaoNoSegmento: ["*"],
 };
 
 
