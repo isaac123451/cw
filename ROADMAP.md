@@ -1116,6 +1116,28 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Funções conferidas tela a tela e tempo das telas com meta (01/10/2026, 1.119.0)
+
+Fase 38 ("funções conferidas") e Fase 34 ("desempenho medido: páginas
+lentas medidas e cortadas, com meta de tempo").
+
+- **Conferência tela a tela, no navegador:** as 44 telas abertas uma a uma,
+  cada uma com tempo para carregar os dados, procurando erro de JavaScript,
+  promessa rejeitada, tela de erro e texto quebrado (NaN, undefined, data
+  inválida, [object Object], Infinity). Um achado só, e falso: "Infinity"
+  na /nps era a InfinityPay, citada no comentário de um cliente. Somado aos
+  checks da 1.117 (todos os `check:*` que não mexem em dado real), ao
+  `check-telas` e aos 47 do contrato da extensão.
+- **`check:tempo-das-telas`** (novo): contra a aplicação no ar, a mediana
+  de cinco idas de cada leitura de que as telas dependem e de cada página
+  principal, com meta de tempo e de tamanho — falha quando estoura.
+  Medido em 01/10/2026 (dev): NPS inteiro 1,5 s / 2,3 MB (meta 4 s), NPS
+  só do que mudou 0,36 s / 0 kB (meta 1,5 s / 100 kB), leituras do Meu dia
+  em lote 0,53 s / 11 kB (meta 4 s), páginas entre 0,3 e 0,4 s (meta
+  2,5 s). As metas pegam regressão de ordem de grandeza — a recarga
+  voltando a baixar a lista inteira, uma leitura caindo de volta na fila
+  das server actions.
+
 ### Índice por dia, ciclo e mês; avaliação no dia em que foi avaliada (01/10/2026, 1.118.0)
 
 Dois pedidos de 01/10/2026:

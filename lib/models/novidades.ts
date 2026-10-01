@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.119.0",
+    data: "2026-10-01",
+    titulo: "Tudo conferido, tela a tela",
+    texto: "Abrimos cada tela da plataforma procurando erro e número quebrado, e passamos a medir o tempo das principais com meta — se alguma voltar a ficar lenta, a gente vê antes de você.",
+    frentes: ["plataforma"],
+  },
+  {
     versao: "1.118.0",
     data: "2026-10-01",
     titulo: "Índice por dia, ciclo e mês",
