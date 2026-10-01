@@ -533,6 +533,11 @@
         CW.enviar({ tipo: "abrir", url: alvo.dataset.url });
       }
 
+      /* A pergunta ao assistente sobre o cliente aberto (1.125). */
+      if (acao === "perguntar-assistente") {
+        P.perguntarAoAssistente?.(alvo);
+      }
+
       /* Uma tela da plataforma pelo caminho, no endereço configurado (o dossiê do caso, por exemplo). */
       if (acao === "abrir-na-plataforma") {
         CW.enviar({ tipo: "abrirNaPlataforma", caminho: alvo.dataset.caminho ?? "/" });
@@ -551,6 +556,14 @@
      * categoria anterior — que é como se grava "Cobrança indevida"
      * dentro de "Entrega".
      */
+    /* Enter no campo da pergunta ao assistente pergunta (Shift+Enter quebra a linha). */
+    P.raiz.addEventListener("keydown", (evento) => {
+      if (evento.target?.dataset?.acao === "pergunta-assistente-campo" && evento.key === "Enter" && !evento.shiftKey) {
+        evento.preventDefault();
+        P.perguntarAoAssistente?.(evento.target);
+      }
+    });
+
     P.raiz.addEventListener("change", (evento) => {
 
       /**

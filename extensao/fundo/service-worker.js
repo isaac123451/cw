@@ -76,6 +76,7 @@ const CAMINHOS = {
   raPainel: "/api/extensao/ra-painel",
   raSegmento: "/api/extensao/ra-segmento",
   esperaWhatsapp: "/api/extensao/espera-whatsapp",
+  assistente: "/api/extensao/assistente",
 };
 
 /**
@@ -721,6 +722,25 @@ async function tratar(mensagem) {
    * cópia guardada responderia essa pergunta com o estado de antes,
    * que é a única resposta pior do que não responder.
    */
+  /*
+    Pergunta ao assistente sobre o cliente aberto (1.125): a resposta volta
+    para o próprio painel. Sem cache — cada pergunta é uma pergunta.
+  */
+  if (mensagem?.tipo === "perguntarAoAssistente") {
+    const dados = await chamar(
+      CAMINHOS.assistente,
+      {},
+      {
+        pergunta: mensagem.pergunta,
+        protocolos: mensagem.protocolos,
+        nome: mensagem.nome,
+        telefone: mensagem.telefone,
+        historico: mensagem.historico,
+      }
+    );
+    return { ok: true, dados };
+  }
+
   if (mensagem?.tipo === "resumoCaso") {
 
     /**

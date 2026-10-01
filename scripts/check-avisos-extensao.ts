@@ -36,6 +36,15 @@ runInNewContext(readFileSync(resolve(__dirname, "../extensao/conteudo/painel-con
 
 type Aviso = { tom: string; texto: string };
 const avisos = P.avisosDoContato as (dados: unknown, agora?: number) => Aviso[];
+
+/* 1.125: a pergunta ao assistente responde no próprio painel, e não mais numa aba nova. */
+const fonteDoPainel = readFileSync(resolve(__dirname, "../extensao/conteudo/painel-contato.js"), "utf8");
+const fonteDaBase = readFileSync(resolve(__dirname, "../extensao/conteudo/painel-base.js"), "utf8");
+const fonteDoWorker = readFileSync(resolve(__dirname, "../extensao/fundo/service-worker.js"), "utf8");
+conferir("o painel pergunta ao assistente ali mesmo", typeof P.perguntarAoAssistente, "function");
+conferir("e não abre mais a página do assistente numa aba", fonteDoPainel.includes("/assistente?pergunta="), false);
+conferir("o clique e o Enter chegam à pergunta", fonteDaBase.includes('acao === "perguntar-assistente"') && fonteDaBase.includes('"pergunta-assistente-campo"'), true);
+conferir("o worker leva a pergunta à rota do assistente", /assistente: "\/api\/extensao\/assistente"/.test(fonteDoWorker) && fonteDoWorker.includes('mensagem?.tipo === "perguntarAoAssistente"'), true);
 const textos = (d: unknown, agora?: number) => avisos(d, agora).map((a) => a.texto);
 
 const agora = new Date("2026-09-18T12:00:00-03:00").getTime();

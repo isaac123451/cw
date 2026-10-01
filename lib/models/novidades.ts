@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.125.0",
+    data: "2026-10-01",
+    titulo: "O assistente em qualquer tela",
+    texto: "Um botão no canto abre o assistente sem sair da tela — e ele já sabe o caso ou a resposta do NPS que está aberto. Na extensão, a pergunta sobre o cliente é respondida no próprio painel.",
+    frentes: ["plataforma", "extensao"],
+  },
+  {
     versao: "1.124.0",
     data: "2026-10-01",
     titulo: "Meu dia só com o que vale hoje",

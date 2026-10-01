@@ -1116,6 +1116,40 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### O assistente em todo lugar, com o contexto da tela (01/10/2026, 1.125.0)
+
+Fase 28, "assistente em todo lugar — na extensão, perguntas sobre o cliente
+aberto. Na plataforma, um botão flutuante e arrastável que abre o assistente
+com o contexto da tela". Até aqui os outros lugares só levavam à página do
+assistente com a pergunta pronta, numa aba nova.
+
+- **A conversa saiu da página** para `lib/hooks/useConversaDoAssistente.ts`:
+  o mesmo retrato da operação, os mesmos prazos, os casos citados por
+  inteiro e a resposta pelas regras quando a IA cai — na página
+  `/assistente` (que caiu de 769 para 458 linhas) e no botão flutuante.
+- **O botão flutuante** (`AssistenteFlutuante`, no layout): redondo, no
+  canto, ao lado do cartão do próximo passo, arrastável (sem desfoque;
+  clique, Enter ou leitor de tela abrem — o clique que encerra um arrasto
+  não). Abre a conversa ali mesmo, com "Sobre: RA-… · Gabriel" no topo,
+  sugestões que mudam com o que está aberto, limpar e tela cheia. Não
+  aparece na página do assistente nem nas telas de entrada.
+- **O contexto da tela** (`contextoDaTela`): a mini-janela na frente vence
+  a página; depois, a ficha aberta pelo endereço (reclamação, Redes, NPS)
+  com o caso ou a resposta por inteiro; senão, o nome da tela. Vai junto do
+  retrato, para o modelo saber o que é "este caso".
+- **Na extensão**, o painel do contato pergunta e recebe a resposta ali
+  mesmo (rota `/api/extensao/assistente`, com sessão): os casos do cliente
+  por inteiro e o contato vão junto, a conversa fica separada por contato e
+  só a conversa se redesenha — o resto do painel não pisca. Sugestões
+  prontas ("o que fazer agora neste caso?") e Enter para enviar.
+- `check:assistente-em-todo-lugar` (o contexto e a fiação) e
+  `check:avisos-extensao` (o painel responde ali, sem abrir aba). Conferido
+  de ponta a ponta: na ficha de uma reclamação o botão abriu "Sobre: RA-…
+  · Gabriel Beltramini" e respondeu com os dados do caso (status Novo,
+  aberto em 19/09, sem responsável, sem resposta pública); a rota da
+  extensão respondeu sobre o mesmo caso e recusou sem sessão (401); a
+  página do assistente segue igual.
+
 ### Meu dia só com o que vale hoje, e a rotina repaginada (01/10/2026, 1.124.0)
 
 Fase 36, "Meu dia só com o que vale hoje — sem NPS antigo; atividades mais

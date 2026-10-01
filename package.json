@@ -1,6 +1,6 @@
 {
   "name": "cw-reputacao",
-  "version": "1.124.0",
+  "version": "1.125.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -89,6 +89,7 @@
     "check:imports": "tsx scripts/check-imports.ts",
     "check:vercel": "tsx scripts/check-vercel.ts",
     "check:assistente": "tsx scripts/check-assistente.ts",
+    "check:assistente-em-todo-lugar": "tsx scripts/check-assistente-em-todo-lugar.ts",
     "check:canais": "tsx scripts/check-canais.ts",
     "check:whatsapp-numero": "tsx scripts/check-whatsapp-numero.ts",
     "check:resumo-caso": "tsx scripts/check-resumo-caso.ts",

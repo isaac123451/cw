@@ -931,25 +931,97 @@
      PERGUNTAR AO ASSISTENTE (Fase 16)
   ============================================================ */
 
+  /*
+    A conversa com o assistente, por contato (1.125): trocar de conversa no
+    WhatsApp não mistura as perguntas de um cliente com as de outro.
+  */
+  P.conversasDoAssistente = P.conversasDoAssistente ?? {};
+
+  function conversaDoContato() {
+    const chave = P.chaveConsulta ?? "";
+    P.conversasDoAssistente[chave] = P.conversasDoAssistente[chave] ?? [];
+    return P.conversasDoAssistente[chave];
+  }
+
+  function htmlDaConversa(conversa) {
+    return conversa
+      .map((t) =>
+        [
+          `<p class="sub" style="margin:8px 0 2px;font-weight:600;color:inherit">${CW.escapar(t.pergunta)}</p>`,
+          t.resposta
+            ? `<p style="margin:0;white-space:pre-wrap;font-size:12.5px;line-height:1.45">${CW.escapar(t.resposta)}</p>`
+            : t.erro
+              ? `<p class="sub falha" style="margin:0">${CW.escapar(t.erro)}</p>`
+              : `<p class="sub" style="margin:0">Pensando…</p>`,
+        ].join("")
+      )
+      .join("");
+  }
+
   /**
-   * Leva a pergunta sobre o caso aberto ao assistente da plataforma, já
-   * feita. O endereço sai do próprio link do caso, que é da plataforma
-   * que a extensão está usando — nada de endereço fixo.
+   * Perguntar ao assistente sobre o cliente aberto, ali mesmo (1.125, Fase
+   * 28). Até a 1.124 era um link que abria a página do assistente numa aba
+   * nova; agora a resposta vem no painel, com os casos do cliente junto.
    */
   function blocoPerguntar(dados) {
     const casos = dados?.casos ?? [];
     const caso = casos.find((c) => c.aberto) ?? casos[0];
-    if (!caso?.url || !caso.protocolo) return "";
-    let origem = "";
-    try {
-      origem = new URL(caso.url).origin;
-    } catch {
-      return "";
-    }
-    const pergunta = `O que fazer agora no caso ${caso.protocolo}? O que falta para ele fechar?`;
-    const url = `${origem}/assistente?pergunta=${encodeURIComponent(pergunta)}`;
-    return `<div class="bloco"><a class="tag marca" data-acao="abrir" data-url="${CW.escapar(url)}" style="cursor:pointer">Perguntar ao assistente sobre ${CW.escapar(caso.protocolo)} &rarr;</a></div>`;
+    const sobre = caso?.protocolo ? `o caso ${caso.protocolo}` : dados?.cliente?.nome || "este cliente";
+    const sugestoes = caso?.protocolo
+      ? ["O que fazer agora neste caso?", "O que falta para ele fechar?", "Como responder a última mensagem?"]
+      : ["O que já sabemos deste cliente?", "Como abordar este cliente?"];
+    return [
+      `<div class="bloco" data-bloco="assistente">`,
+      `  <div class="rotulo">Perguntar ao assistente · sobre ${CW.escapar(sobre)}</div>`,
+      `  <div class="assistente-conversa">${htmlDaConversa(conversaDoContato())}</div>`,
+      `  <textarea class="campo" rows="2" data-acao="pergunta-assistente-campo" maxlength="500" placeholder="Pergunte sobre este cliente — Enter envia"></textarea>`,
+      `  <div class="linha" style="margin-top:6px;align-items:center;flex-wrap:wrap;gap:6px">`,
+      ...sugestoes.map((s) => `    <a class="tag" data-acao="perguntar-assistente" data-pergunta="${CW.escapar(s)}" style="cursor:pointer">${CW.escapar(s)}</a>`),
+      `    <button class="acao" style="margin-top:0;margin-left:auto" data-acao="perguntar-assistente">Perguntar</button>`,
+      `  </div>`,
+      `</div>`,
+    ].join("");
   }
+
+  /** Redesenha só a conversa — o resto do painel não pisca nem perde a rolagem. */
+  function redesenharConversa() {
+    const alvo = P.corpo?.querySelector('[data-bloco="assistente"] .assistente-conversa');
+    if (alvo) alvo.innerHTML = htmlDaConversa(conversaDoContato());
+  }
+
+  P.perguntarAoAssistente = async function (alvo) {
+    const bloco = alvo.closest('[data-bloco="assistente"]');
+    const campo = bloco?.querySelector('[data-acao="pergunta-assistente-campo"]');
+    const pergunta = String(alvo.dataset.pergunta || campo?.value || "").trim();
+    if (!pergunta) return;
+    const conversa = conversaDoContato();
+    if (conversa.some((t) => !t.resposta && !t.erro)) return;
+    if (campo) campo.value = "";
+
+    const turno = { pergunta, resposta: "", erro: "" };
+    const historico = conversa
+      .filter((t) => t.resposta)
+      .flatMap((t) => [
+        { role: "user", content: t.pergunta },
+        { role: "assistant", content: t.resposta },
+      ]);
+    conversa.push(turno);
+    redesenharConversa();
+
+    const dados = P.ultimoDado ?? {};
+    const resposta = await CW.enviar({
+      tipo: "perguntarAoAssistente",
+      pergunta,
+      protocolos: (dados.casos ?? []).map((c) => c.protocolo).filter(Boolean).slice(0, 3),
+      nome: dados.cliente?.nome ?? "",
+      telefone: dados.cliente?.telefone ?? "",
+      historico,
+    });
+
+    if (resposta?.ok && resposta.dados?.ok) turno.resposta = String(resposta.dados.resposta ?? "");
+    else turno.erro = resposta?.dados?.erro || resposta?.erro || "O assistente não respondeu agora.";
+    redesenharConversa();
+  };
 
   /* ============================================================
      GUARDAR SOZINHO (Fase 18)
