@@ -139,7 +139,20 @@ export async function changePassword(
     },
   });
 
-  return { success: "Senha alterada." };
+  /*
+    Senha nova, dispositivos esquecidos (1.120): quem troca a senha porque
+    desconfia de alguém não pode deixar um navegador dispensando o código.
+  */
+  const esquecidos = await prisma.dispositivoConfiavel.updateMany({
+    where: { userId: user.id, revogadoEm: null },
+    data: { revogadoEm: new Date() },
+  });
+
+  return {
+    success: esquecidos.count
+      ? `Senha alterada. ${esquecidos.count === 1 ? "O dispositivo lembrado foi esquecido" : `Os ${esquecidos.count} dispositivos lembrados foram esquecidos`} — o próximo login pede o código.`
+      : "Senha alterada.",
+  };
 }
 
 /**

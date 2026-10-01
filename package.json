@@ -1,6 +1,6 @@
 {
   "name": "cw-reputacao",
-  "version": "1.119.0",
+  "version": "1.120.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -108,6 +108,7 @@
     "check:silencio": "tsx scripts/check-silencio.ts",
     "check:smtp-local": "tsx --conditions=react-server scripts/check-smtp-local.ts",
     "check:dia": "tsx scripts/check-dia.ts",
+    "check:dispositivo": "tsx scripts/check-dispositivo.ts",
     "check:freio": "tsx --conditions=react-server scripts/check-freio.ts",
     "check:importacao": "tsx scripts/check-importacao.ts",
     "check:nps-importacao": "tsx scripts/check-nps-importacao.ts",

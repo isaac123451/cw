@@ -13,6 +13,7 @@ import SurfaceCard from "@/components/shared/SurfaceCard";
 import StateForm from "@/components/conta/StateForm";
 import NotificationPrefs from "@/components/conta/NotificationPrefs";
 import AccessAdmin from "@/components/conta/AccessAdmin";
+import DispositivosLembrados from "@/components/conta/DispositivosLembrados";
 
 import {
   AccessData,
@@ -193,6 +194,7 @@ export default function AccountTabs({
       )}
 
       {tab === "senha" && (
+        <>
 
         <SurfaceCard
           title="Alterar senha"
@@ -280,6 +282,9 @@ export default function AccountTabs({
 
         </SurfaceCard>
 
+        <DispositivosLembrados hasDatabase={hasDatabase} />
+
+        </>
       )}
 
       {tab === "notificacoes" && <NotificationPrefs />}

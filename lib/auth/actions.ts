@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import bcrypt from "bcryptjs";
 
 import { getPrisma, hasDatabase } from "@/lib/prisma";
+import { esteDispositivoDispensaOCodigo, lembrarEsteDispositivo } from "@/lib/auth/dispositivo";
 
 import {
   HASH_CORROMPIDO,
@@ -264,7 +265,12 @@ export async function signIn(
    * quem provou a senha não deve continuar acumulando bloqueio por
    * errar o código, que tem freio próprio e mais apertado.
    */
-  if (await exigeSegundaEtapa(user)) {
+  /*
+    O navegador lembrado (1.120) dispensa o código — a senha já foi
+    conferida acima, e ela continua sendo pedida sempre. Qualquer dúvida
+    na conferência do dispositivo cai no caminho do código.
+  */
+  if ((await exigeSegundaEtapa(user)) && !(await esteDispositivoDispensaOCodigo(user.id))) {
 
     const cabecalhos = await headers();
 
@@ -377,6 +383,11 @@ export async function verifyCode(
   }
 
   await clearPendingLogin();
+
+  /* "Lembrar este dispositivo" (1.120): só depois do código conferido. */
+  if (formData.get("lembrar") === "on") {
+    await lembrarEsteDispositivo(user.id).catch((erro) => console.error("[dispositivo] não consegui lembrar", erro));
+  }
 
   await createSession({
     id: user.id,

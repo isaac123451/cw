@@ -104,6 +104,14 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.120.0",
+    data: "2026-10-01",
+    titulo: "Lembrar este dispositivo",
+    texto: "Na tela do código, marque \"lembrar este dispositivo\" e, naquele navegador, o login pede só a senha pelos próximos dias. Em Minha conta você vê e esquece os dispositivos lembrados — e trocar a senha esquece todos.",
+    frentes: ["plataforma"],
+    href: "/conta?aba=senha",
+  },
+  {
     versao: "1.119.0",
     data: "2026-10-01",
     titulo: "Tudo conferido, tela a tela",

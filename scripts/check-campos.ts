@@ -280,6 +280,13 @@ const INTERNAS: Record<string, string[]> = {
 
   /** A reputação dos concorrentes (1.107): `lib/actions/segmento.ts`, no Índice. */
   ReputacaoNoSegmento: ["*"],
+
+  /**
+   * Os dispositivos lembrados (1.120): carga própria
+   * (`lib/actions/dispositivos.ts`, em Minha conta). O hash do segredo
+   * nunca sai do servidor.
+   */
+  DispositivoConfiavel: ["*"],
 };
 
 

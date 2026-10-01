@@ -14,7 +14,7 @@ import {
   remetenteEhSandbox,
 } from "@/lib/email/enviar";
 
-import { lerConfiguracao, TTL_MAXIMO_MIN } from "@/lib/auth/two-factor";
+import { DIAS_MAXIMOS_DO_DISPOSITIVO, lerConfiguracao, TTL_MAXIMO_MIN } from "@/lib/auth/two-factor";
 
 /** O módulo a que estas ações pertencem — ver lib/auth/modules.ts. */
 const MODULO: Modulo = "configuracoes";
@@ -27,6 +27,10 @@ export interface RetratoDaSeguranca {
 
   minutosDeValidade: number;
   tentativas: number;
+  /** Dias que um navegador lembrado dispensa o código; 0 desliga (1.120). */
+  diasDoDispositivo: number;
+  /** Navegadores lembrados valendo agora, de todo mundo. */
+  dispositivosLembrados: number;
 
   /** Dá para enviar e-mail neste ambiente? */
   podeEnviar: boolean;
@@ -62,7 +66,7 @@ export async function lerSeguranca(): Promise<
 
   const config = await lerConfiguracao();
 
-  const [comSegundaEtapa, total, eu] = await Promise.all([
+  const [comSegundaEtapa, total, eu, dispositivosLembrados] = await Promise.all([
     ctx.prisma.user.count({
       where: { twoFactorEnabled: true },
     }),
@@ -71,6 +75,9 @@ export async function lerSeguranca(): Promise<
       where: { id: ctx.userId },
       select: { twoFactorEnabled: true },
     }),
+    ctx.prisma.dispositivoConfiavel.count({
+      where: { revogadoEm: null, validoAte: { gt: new Date() } },
+    }),
   ]);
 
   return {
@@ -78,6 +85,8 @@ export async function lerSeguranca(): Promise<
     exigirParaMim: eu?.twoFactorEnabled ?? false,
     minutosDeValidade: config.codeTtlMinutes,
     tentativas: config.maxAttempts,
+    diasDoDispositivo: config.diasDoDispositivo,
+    dispositivosLembrados,
     podeEnviar: podeEnviarEmail(),
     provedor: provedorAtivo(),
     remetenteDeSandbox: remetenteEhSandbox(),
@@ -90,6 +99,7 @@ export interface EntradaDeSeguranca {
   exigirParaTodos: boolean;
   minutosDeValidade: number;
   tentativas: number;
+  diasDoDispositivo: number;
 }
 
 export async function salvarSeguranca(
@@ -231,6 +241,7 @@ export async function salvarSeguranca(
       TTL_MAXIMO_MIN
     ),
     maxAttempts: dentro(entrada.tentativas, 5, 1, 10),
+    diasDoDispositivo: dentro(entrada.diasDoDispositivo, 30, 0, DIAS_MAXIMOS_DO_DISPOSITIVO),
     updatedBy: ctx.userId,
   };
 

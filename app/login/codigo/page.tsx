@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import AuthShell from "@/components/auth/AuthShell";
 import CodeForm from "@/components/auth/CodeForm";
+import { lerConfiguracao } from "@/lib/auth/two-factor";
 
 import {
   cancelPendingLogin,
@@ -69,6 +70,8 @@ export default async function CodigoPage() {
    */
   if (!pendente) redirect("/login");
 
+  const { diasDoDispositivo } = await lerConfiguracao();
+
   return (
     <AuthShell
       title="Verificação em duas etapas"
@@ -82,6 +85,7 @@ export default async function CodigoPage() {
         cancelar={cancelPendingLogin}
         destino={mascarar(pendente.email)}
         validade={descreverValidade(pendente.enviadoEm, pendente.validoAte)}
+        diasDoDispositivo={diasDoDispositivo}
       />
 
     </AuthShell>

@@ -44,6 +44,7 @@ model User {
   moduleRoles   UserModuleRole[]
   challenges    LoginChallenge[]
   caseContatos  CaseContato[]
+  dispositivos  DispositivoConfiavel[]
 
   /// Exige código por e-mail no login desta pessoa, mesmo que a
   /// exigência global esteja desligada.
@@ -1881,6 +1882,11 @@ model SecurityConfig {
   /// Quantos palpites errados antes de o código morrer.
   maxAttempts Int @default(5)
 
+  /// Por quantos dias um navegador lembrado dispensa o código (1.120).
+  /// 0 desliga — a caixa "lembrar este dispositivo" some da tela. A senha
+  /// continua sendo pedida sempre; o que se dispensa é só o código.
+  diasDoDispositivo Int @default(30)
+
   updatedAt DateTime @updatedAt
   /// Quem mexeu por último — é configuração de acesso, tem de ter dono.
   updatedBy String?
@@ -1912,6 +1918,32 @@ model TentativaDeLogin {
 /// Fica no banco, e não na memória do processo como o freio de
 /// tentativas de senha, porque a Vercel roda várias instâncias: um
 /// código gerado numa e conferido em outra precisa existir nas duas.
+/// Um navegador que dispensa o código por alguns dias (1.120, "entrada
+/// mais rápida e segura").
+///
+/// O cookie leva `id.segredo`; aqui fica só o SHA-256 do segredo — quem
+/// lesse o banco não conseguiria montar o cookie. O segredo tem 32 bytes
+/// aleatórios, então um hash rápido basta (o bcrypt do código existe porque
+/// seis dígitos são um espaço pequeno; 256 bits não são).
+model DispositivoConfiavel {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  segredoHash String
+  /// "Chrome no Windows" — para a pessoa reconhecer na lista.
+  nome        String
+  criadoEm    DateTime  @default(now())
+  ultimoUsoEm DateTime  @default(now())
+  validoAte   DateTime
+  /// Esquecido pela pessoa, ou pela troca de senha. Não apaga: fica o
+  /// registro de que existiu e quando deixou de valer.
+  revogadoEm  DateTime?
+
+  @@index([userId])
+}
+
 model LoginChallenge {
   id String @id @default(cuid())
 

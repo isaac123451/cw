@@ -1116,6 +1116,36 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Dispositivo lembrado: entrada mais rápida, sem abrir mão da segurança (01/10/2026, 1.120.0)
+
+Fase 34, "entrada mais rápida e segura — por exemplo, lembrar o dispositivo
+ou chave de acesso, sem abrir mão da segurança". A sessão dura 8 horas e,
+com a segunda etapa ligada, todo dia era senha e código.
+
+- **"Lembrar este dispositivo"** na tela do código (desmarcada: num
+  computador compartilhado ninguém sai lembrado sem escolher). Marcada,
+  aquele navegador pede **só a senha** pelos dias definidos em Segurança —
+  a senha nunca é dispensada; o que se dispensa é o código.
+- **Como fica guardado:** o cookie `cw_dispositivo` (httpOnly, lax) leva
+  `id.segredo`, com 32 bytes aleatórios; a tabela `DispositivoConfiavel`
+  guarda só o SHA-256 do segredo — quem lesse o banco não montaria o
+  cookie. A conferência compara em tempo constante, exige que seja da
+  mesma pessoa que acabou de acertar a senha, dentro da validade e dentro
+  do prazo **de hoje** (encurtar de 30 para 7 dias derruba na hora os
+  lembrados há mais de 7; "Desligado" derruba todos). Qualquer erro na
+  conferência cai no caminho do código.
+- **Minha conta → Senha → Dispositivos lembrados:** cada navegador com
+  nome ("Chrome no Windows"), último uso e validade, marca "este
+  navegador", esquecer um ou todos (com confirmação na linha, aviso só
+  depois de gravar). **Trocar a senha esquece todos.**
+- **Configurações → Código de acesso:** "Lembrar o dispositivo" — desligado,
+  7, 15, 30 (padrão), 60 ou 90 dias — e quantos estão lembrados hoje.
+- `check:dispositivo` prova as regras (dono, segredo, esquecido, vencido,
+  prazo encurtado, desligado, cookie forjado) e a fiação (só consulta o
+  dispositivo depois da senha, só lembra depois do código, trocar a senha
+  esquece). Conferido na tela: um dispositivo de teste apareceu na lista,
+  foi esquecido com confirmação, o banco gravou, e o registro foi apagado.
+
 ### Funções conferidas tela a tela e tempo das telas com meta (01/10/2026, 1.119.0)
 
 Fase 38 ("funções conferidas") e Fase 34 ("desempenho medido: páginas

@@ -44,6 +44,9 @@ const ESPERA_PARA_REENVIAR = 60;
 /** O maior tempo de validade que a configuração aceita: um dia (1.110; era 60 minutos). */
 export const TTL_MAXIMO_MIN = 24 * 60;
 
+/** O prazo mais longo que um dispositivo lembrado pode ter (1.120). */
+export const DIAS_MAXIMOS_DO_DISPOSITIVO = 90;
+
 /** "40 minutos", "8 horas", "1 hora e 30 minutos". */
 export function duracaoPorExtenso(minutos: number) {
   const h = Math.floor(minutos / 60);
@@ -56,12 +59,15 @@ export interface ConfiguracaoDeSeguranca {
   twoFactorRequired: boolean;
   codeTtlMinutes: number;
   maxAttempts: number;
+  /** Dias que um navegador lembrado dispensa o código; 0 desliga (1.120). */
+  diasDoDispositivo: number;
 }
 
 const PADRAO: ConfiguracaoDeSeguranca = {
   twoFactorRequired: false,
   codeTtlMinutes: 10,
   maxAttempts: 5,
+  diasDoDispositivo: 30,
 };
 
 /**
@@ -95,6 +101,7 @@ export async function lerConfiguracao(): Promise<ConfiguracaoDeSeguranca> {
         Math.max(linha.maxAttempts, 1),
         10
       ),
+      diasDoDispositivo: Math.min(Math.max(linha.diasDoDispositivo, 0), DIAS_MAXIMOS_DO_DISPOSITIVO),
     };
 
   } catch {

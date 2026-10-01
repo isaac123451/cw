@@ -61,6 +61,7 @@ export default function SegurancaCard() {
     exigirParaTodos: boolean;
     minutosDeValidade: number;
     tentativas: number;
+    diasDoDispositivo: number;
   } | null>(null);
 
   useEffect(() => {
@@ -82,6 +83,7 @@ export default function SegurancaCard() {
         exigirParaTodos: resposta.exigirParaTodos,
         minutosDeValidade: resposta.minutosDeValidade,
         tentativas: resposta.tentativas,
+        diasDoDispositivo: resposta.diasDoDispositivo,
       });
     });
 
@@ -122,7 +124,8 @@ export default function SegurancaCard() {
     draft.exigirParaTodos !== retrato.exigirParaTodos ||
     draft.minutosDeValidade !==
       retrato.minutosDeValidade ||
-    draft.tentativas !== retrato.tentativas;
+    draft.tentativas !== retrato.tentativas ||
+    draft.diasDoDispositivo !== retrato.diasDoDispositivo;
 
   function salvar() {
     if (!draft) return;
@@ -148,6 +151,7 @@ export default function SegurancaCard() {
           exigirParaTodos: fresco.exigirParaTodos,
           minutosDeValidade: fresco.minutosDeValidade,
           tentativas: fresco.tentativas,
+          diasDoDispositivo: fresco.diasDoDispositivo,
         });
       }
 
@@ -481,6 +485,39 @@ export default function SegurancaCard() {
                   </div>
                 </div>
 
+                {/* 1.120: o navegador lembrado dispensa o código — a senha continua. */}
+                <div>
+                  <label
+                    htmlFor="dias-do-dispositivo"
+                    className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400"
+                  >
+                    Lembrar o dispositivo
+                  </label>
+                  <div className="mt-1.5 flex items-center gap-2">
+                    <select
+                      id="dias-do-dispositivo"
+                      value={draft.diasDoDispositivo}
+                      onChange={(e) =>
+                        setDraft({
+                          ...draft,
+                          diasDoDispositivo: Number(e.target.value),
+                        })
+                      }
+                      className={campo}
+                    >
+                      {[0, 7, 15, 30, 60, 90].map((dias) => (
+                        <option key={dias} value={dias}>
+                          {dias === 0 ? "Desligado" : `${dias} dias`}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <p className="mt-1 max-w-xs text-xs text-zinc-500">
+                    Quem marcar &ldquo;lembrar este dispositivo&rdquo; não digita o código naquele navegador por esse tempo. A senha continua sendo pedida.
+                    {retrato.dispositivosLembrados > 0 && ` Hoje: ${retrato.dispositivosLembrados} lembrado(s).`}
+                  </p>
+                </div>
+
               </div>
 
               {/*
@@ -519,6 +556,7 @@ export default function SegurancaCard() {
                     minutosDeValidade:
                       retrato.minutosDeValidade,
                     tentativas: retrato.tentativas,
+                    diasDoDispositivo: retrato.diasDoDispositivo,
                   })
                 }
                 className="h-9 rounded-xl px-3 text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-900"

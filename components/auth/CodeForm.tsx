@@ -29,6 +29,8 @@ interface Props {
   destino: string;
   /** "Enviado às 14:05 · vale até 22:05" (1.110). */
   validade?: string;
+  /** Por quantos dias "lembrar este dispositivo" dispensa o código; 0 esconde a caixa (1.120). */
+  diasDoDispositivo?: number;
 }
 
 function Enviar() {
@@ -75,6 +77,7 @@ export default function CodeForm({
   cancelar,
   destino,
   validade,
+  diasDoDispositivo = 0,
 }: Props) {
 
   const [estado, conferir] = useActionState(
@@ -153,6 +156,21 @@ export default function CodeForm({
           </p>
 
         </div>
+
+        {/*
+          Desmarcada de propósito (1.120): num computador compartilhado,
+          ninguém deve sair lembrado sem ter escolhido. A senha continua
+          sendo pedida de qualquer jeito — o que se dispensa é o código.
+        */}
+        {diasDoDispositivo > 0 && (
+          <label className="flex cursor-pointer items-start gap-2.5 text-sm text-zinc-600">
+            <input type="checkbox" name="lembrar" className="mt-0.5 h-4 w-4 rounded border-zinc-300 accent-violet-700" />
+            <span>
+              Lembrar este dispositivo por {diasDoDispositivo} dias
+              <span className="block text-xs text-zinc-400">Neste navegador, o próximo login pede só a senha. Use apenas num computador seu.</span>
+            </span>
+          </label>
+        )}
 
         {estado.error && (
           <p
