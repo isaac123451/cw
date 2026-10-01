@@ -105,6 +105,9 @@ function colunaDe(
  * já documentada no Kanban do Reclame Aqui — com `h-full` as colunas
  * espremem para ~126 px, com `min-h-full` a página estica sem fim.
  */
+/** Quantos cartões cada coluna desenha de cada vez (1.126). */
+const LOTE_DA_COLUNA = 40;
+
 export default function NpsKanban({
   itens,
   etapas,
@@ -114,6 +117,8 @@ export default function NpsKanban({
 }: Props) {
 
   const [sobre, setSobre] = useState<string>();
+  /* Quantos cartões cada coluna mostra (1.126): "Mostrar mais" soma um lote. */
+  const [porColuna, setPorColuna] = useState<Record<string, number>>({});
 
   const colunas = useMemo(
     () => colunasDe(etapas),
@@ -216,7 +221,7 @@ export default function NpsKanban({
                 </p>
               )}
 
-              {daColuna.map((item) => (
+              {daColuna.slice(0, porColuna[coluna.id] ?? LOTE_DA_COLUNA).map((item) => (
                 <Cartao
                   key={item.id}
                   item={item}
@@ -224,6 +229,17 @@ export default function NpsKanban({
                   onOpen={onOpen}
                 />
               ))}
+
+              {/* Em lotes (1.126): a coluna "Encerrado" chega a 3 mil cartões. */}
+              {daColuna.length > (porColuna[coluna.id] ?? LOTE_DA_COLUNA) && (
+                <button
+                  type="button"
+                  onClick={() => setPorColuna((p) => ({ ...p, [coluna.id]: (p[coluna.id] ?? LOTE_DA_COLUNA) + LOTE_DA_COLUNA }))}
+                  className="w-full rounded-xl border border-dashed border-zinc-300 py-2 text-[11px] font-medium text-zinc-500 transition-colors hover:border-violet-300 hover:bg-violet-50/40 hover:text-violet-700"
+                >
+                  Mostrar mais {Math.min(daColuna.length - (porColuna[coluna.id] ?? LOTE_DA_COLUNA), LOTE_DA_COLUNA)} de {daColuna.length - (porColuna[coluna.id] ?? LOTE_DA_COLUNA)}
+                </button>
+              )}
 
             </div>
 

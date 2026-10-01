@@ -18,6 +18,9 @@ import {
 } from "@/lib/models/nps";
 
 import { slaState } from "@/lib/services/nps.service";
+
+/** Quantas linhas a lista desenha de cada vez (1.126). */
+const LOTE_DA_LISTA = 100;
 import BotaoAbrirEmJanela from "@/components/janelas/BotaoAbrirEmJanela";
 import VazioComSaida from "@/components/shared/VazioComSaida";
 
@@ -109,6 +112,14 @@ export default function NpsList({
     coluna: string;
     desc: boolean;
   } | null>(null);
+
+  /*
+    Em lotes (1.126, "listas grandes paginadas"): com o período em "Tudo"
+    são 4 mil respostas, e montar todas as linhas de uma vez travava a
+    tela. A ordenação e os filtros valem para a lista inteira; só o
+    desenho vem aos poucos.
+  */
+  const [visiveis, setVisiveis] = useState(LOTE_DA_LISTA);
 
   const ordenados = useMemo(() => {
 
@@ -216,7 +227,7 @@ export default function NpsList({
 
         <tbody className="divide-y divide-zinc-100">
 
-          {ordenados.map((item) => {
+          {ordenados.slice(0, visiveis).map((item) => {
 
             const seg = segmentOf(item.score);
             const estado = slaState(item);
@@ -329,6 +340,18 @@ export default function NpsList({
         </tbody>
 
       </table>
+
+      {ordenados.length > visiveis && (
+        <div className="border-t border-zinc-100 p-3">
+          <button
+            type="button"
+            onClick={() => setVisiveis((v) => v + LOTE_DA_LISTA)}
+            className="w-full rounded-xl border border-dashed border-zinc-300 py-2.5 text-xs font-medium text-zinc-500 transition-colors hover:border-violet-300 hover:bg-violet-50/40 hover:text-violet-700"
+          >
+            Mostrar mais {Math.min(ordenados.length - visiveis, LOTE_DA_LISTA)} de {ordenados.length - visiveis}
+          </button>
+        </div>
+      )}
 
       {itens.length === 0 && (
         <VazioComSaida

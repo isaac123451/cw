@@ -104,6 +104,14 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.126.0",
+    data: "2026-10-01",
+    titulo: "NPS leve mesmo com tudo aberto",
+    texto: "A lista e o quadro do NPS passaram a mostrar as respostas aos poucos — 100 linhas, 40 cartões por coluna, com \"Mostrar mais\" — em vez de desenhar as 4 mil de uma vez.",
+    frentes: ["nps"],
+    href: "/nps",
+  },
+  {
     versao: "1.125.0",
     data: "2026-10-01",
     titulo: "O assistente em qualquer tela",

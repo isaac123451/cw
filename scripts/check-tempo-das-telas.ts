@@ -7,7 +7,7 @@
  * de tempo". O `check:desempenho` mede as consultas no banco; este mede o
  * que a tela espera, contra a aplicação no ar — as leituras de que ela
  * depende e a resposta das páginas principais —, cada uma com meta de tempo
- * e de tamanho. Mediana de cinco idas, depois de uma de aquecimento (no
+ * e de tamanho (a página, menos de 1,5 s — a meta da Fase 21). Mediana de cinco idas, depois de uma de aquecimento (no
  * dev, a primeira compila a rota).
  *
  * O que foi cortado para chegar aqui (1.116, medido em 01/10/2026):
@@ -85,7 +85,7 @@ const METAS: Meta[] = [
   ...["/meu-dia", "/dashboard", "/reclame-aqui", "/reclame-aqui/indice", "/nps", "/agenda"].map(
     (rota): Meta => ({
       nome: `Página ${rota}`,
-      ms: 2500,
+      ms: 1500,
       kb: 600,
       ir: (s) => fetch(`${BASE}${rota}`, comSessao(s)),
     })

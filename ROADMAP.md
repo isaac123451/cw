@@ -1116,6 +1116,26 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Listas grandes em lotes e a meta de 1,5 s (01/10/2026, 1.126.0)
+
+Fecha o "Bugs e desempenho" da Fase 21 ("tempo de carga das telas principais
+medido e com meta — menos de 1,5 s —, erros de console e do servidor zerados
+em cada tela, listas grandes paginadas"), que estava parcial desde a 1.68.2.
+O console e o servidor zerados vieram na 1.119 (as 44 telas, uma a uma); o
+tempo medido também (`check:tempo-das-telas`). Faltavam:
+
+- **A meta de 1,5 s** nas páginas principais: a meta do check era 2,5 s;
+  agora é 1,5 s, como o item pede. Medido (dev): Meu dia 0,37 s, Dashboard
+  0,45, Reclame Aqui 0,44, Índice 0,51, NPS 0,43, Agenda 0,41.
+- **As listas grandes em lotes:** a lista do Reclame Aqui já vinha de 50 em
+  50; a do NPS desenhava o recorte inteiro (com "Tudo", 4 mil linhas) e o
+  quadro do NPS, cada coluna inteira. Agora a lista vem de 100 em 100 e
+  cada coluna do quadro de 40 em 40, com "Mostrar mais N de M" — a
+  ordenação e os filtros continuam valendo para a lista inteira; só o
+  desenho vem aos poucos. Conferido: 100 linhas e "Mostrar mais 97 de 97"
+  (que leva a 197); no quadro, 80 cartões desenhados com "Mostrar mais 40 de
+  92" na coluna cheia.
+
 ### O assistente em todo lugar, com o contexto da tela (01/10/2026, 1.125.0)
 
 Fase 28, "assistente em todo lugar — na extensão, perguntas sobre o cliente
