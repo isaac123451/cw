@@ -1116,6 +1116,25 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Configurações remodeladas (01/10/2026, 1.115.0)
+
+Pedido de 30/09: "remodele as configurações do CW Reputação". Eram nove
+cartões numa grade, e metade do que se ajusta morava em outras telas. Agora
+`/configuracoes` é uma central por assunto — Operação, Pessoas e acesso,
+Cadastros, Automações, Integrações —, com busca (acha por sinônimo: "senha"
+leva ao código de acesso, "férias" à distribuição) e cada item numa linha:
+
+- o que é curto **abre ali mesmo**, sem modal: IA, Wootric, código de
+  acesso (duas etapas), backup diário e o relatório que chega sozinho;
+- o que é grande leva à tela dele, já no lugar certo — etapas do quadro,
+  categorias, etiquetas, checklist e times (na aba certa), prazos e
+  expediente, permissões, e agora também a rotina do dia
+  (`/meu-dia?configurar=rotina`) e as etapas e causas do NPS
+  (`/nps?configurar=etapas` / `causas`), que só abriam por dentro das telas.
+
+`?secao=…&abrir=…` abre direto uma seção e um ajuste. As páginas antigas
+continuam no ar para os links que já existem.
+
 ### Metas do dia editáveis e metas do ciclo (30/09/2026, 1.114.0)
 
 Pedido de 30/09: "as metas do dia são para serem geradas automaticamente,

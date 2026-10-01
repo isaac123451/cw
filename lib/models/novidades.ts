@@ -104,6 +104,14 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.115.0",
+    data: "2026-10-01",
+    titulo: "Configurações num lugar só",
+    texto: "Configurações virou uma central por assunto, com busca: IA, Wootric, código de acesso, backup e relatório automático se ajustam ali mesmo, e o resto leva direto ao lugar certo — inclusive a rotina do dia e as etapas do NPS.",
+    frentes: ["plataforma"],
+    href: "/configuracoes",
+  },
+  {
     versao: "1.114.0",
     data: "2026-09-30",
     titulo: "Metas que você ajusta, e metas do ciclo",

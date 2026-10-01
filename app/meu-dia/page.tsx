@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useMemo, useState, useSyncExternalStore, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 
 import MainLayout from "@/components/layout/MainLayout";
 import PageHeading from "@/components/shared/PageHeading";
@@ -33,11 +34,29 @@ import PlanoDeRecuperacao from "@/components/rotina/PlanoDeRecuperacao";
  */
 const nadaParaOuvir = () => () => {};
 
+/*
+  ?configurar=rotina (1.115): o atalho da central de Configurações abre a
+  configuração da rotina direto. O parâmetro é lido dentro de Suspense e
+  entra no `useState` inicial — sem efeito que acerta o estado depois.
+*/
+function ComParametro() {
+  const parametros = useSearchParams();
+  return <MeuDiaPagina configurarInicial={parametros.get("configurar") === "rotina"} />;
+}
+
 export default function MeuDiaPage() {
+  return (
+    <Suspense fallback={null}>
+      <ComParametro />
+    </Suspense>
+  );
+}
+
+function MeuDiaPagina({ configurarInicial = false }: { configurarInicial?: boolean }) {
 
   const dia = useMeuDia();
   const [marcas, setMarcas] = useState<Set<string> | null>(null);
-  const [configurando, setConfigurando] = useState(false);
+  const [configurando, setConfigurando] = useState(configurarInicial);
   /* A Agenda chega aqui com ?um-por-vez: o modo já abre (no servidor, fechado). */
   const pedidoPeloEndereco = useSyncExternalStore(
     nadaParaOuvir,

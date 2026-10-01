@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition, Suspense } from "react";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import {
   CircleAlert,
@@ -119,7 +119,22 @@ function somenteDigitos(valor: string) {
   return valor.replace(/\D/g, "");
 }
 
+/* ?configurar=etapas | causas (1.115): o atalho da central de Configurações abre o cadastro direto. */
+function ComParametro() {
+  const parametros = useSearchParams();
+  const c = parametros.get("configurar");
+  return <NpsPagina abrirInicial={c === "etapas" || c === "causas" ? c : null} />;
+}
+
 export default function NpsPage() {
+  return (
+    <Suspense fallback={null}>
+      <ComParametro />
+    </Suspense>
+  );
+}
+
+function NpsPagina({ abrirInicial = null }: { abrirInicial?: "etapas" | "causas" | null }) {
 
   const {
     responses,
@@ -198,8 +213,8 @@ export default function NpsPage() {
 
   const [exportando, setExportando] = useState(false);
 
-  const [causasOpen, setCausasOpen] = useState(false);
-  const [etapasOpen, setEtapasOpen] = useState(false);
+  const [causasOpen, setCausasOpen] = useState(abrirInicial === "causas");
+  const [etapasOpen, setEtapasOpen] = useState(abrirInicial === "etapas");
   const [planilhaOpen, setPlanilhaOpen] =
     useState(false);
 
