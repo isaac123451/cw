@@ -221,6 +221,7 @@ async function main() {
     "/reclame-aqui/avaliacoes",
     "/reclame-aqui/calculadora",
     "/reclame-aqui/indice",
+    "/reclame-aqui/tempo-ideal",
     "/reclame-aqui/configuracoes",
     "/reclame-aqui/graficos",
     "/reclame-aqui/novo",

@@ -1116,6 +1116,42 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Tempo ideal e teto do Reclame Aqui (02/10/2026, 1.130.0)
+
+Pedido de 02/10: "um cálculo que eu entenda qual é o tempo ideal para
+finalizar um caso do reclame aqui e o teto máximo", com o índice de
+resposta sem cair de 90%. Veio de uma conversa fora daqui que montou as
+fórmulas sem os dados; aqui a conta roda sobre a base real.
+
+- **Tela nova, Reclame Aqui → Tempo ideal** (`/reclame-aqui/tempo-ideal`),
+  calculada ao vivo por `lib/models/tempoIdeal.ts` — nenhum número fixo.
+- **Finalizar** (da abertura à avaliação): as avaliadas em faixas de dias,
+  cada uma contra as três metas de avaliação do RA1000 (nota 7, solução
+  90%, voltaria 70%). *Ideal* = enquanto cada faixa, desde o dia 0, bate as
+  três; *teto* = o primeiro corte a partir do qual tudo o que finaliza
+  depois fica abaixo das três ao mesmo tempo. Nos últimos 12 meses (134
+  avaliadas): **ideal até 7 dias** (nota 8,69 · 98,2% resolvidas · 89,1%
+  voltariam, 55 casos), zona de atenção de 8 a 30 dias (7,50 · 92,6% ·
+  72,2%) e **teto de 30 dias** (depois: 6,60 · 68% · 68%, 25 casos). Na
+  base inteira, com 2024, dá 3 e 7 — a operação era outra.
+- **Pedir a avaliação** (da resposta à avaliação): 51,5% avaliam até o dia
+  seguinte à resposta, 73,1% em 7 dias e só 9% depois de 30. O 1º lembrete
+  da documentação (2 dias depois) chega quando metade já avaliou.
+- **Responder** (da abertura à resposta): simulação com as chegadas reais —
+  se toda reclamação fosse respondida em **6 dias**, a janela de 6 meses
+  ficaria em 90% em todos os dias dos últimos 12 meses; com 7, cairia para
+  89,0% em 01/11/2025. O pior dia é sempre o 1º do mês.
+- **A folga de agora:** a janela de hoje (abr–set) tem 12 sem resposta, o
+  máximo para 90,7% — folga zero; a prévia de novembro (mai–out) está em
+  87,6% e precisa de 3 respostas até 31/10.
+- Provado no `check:tempo-ideal`: as regras com casos montados à mão e o
+  estudo da tela contra uma conta feita à parte, direto nas linhas do
+  banco. A tela entrou na varredura do `check:telas`.
+- É correlação, não causa — caso difícil demora e avalia pior —, e a tela
+  diz isso. Os pedidos de avaliação registrados ainda são poucos (10) para
+  medir qual cadência rende mais; a curva de quando a avaliação chega é o
+  que dá para medir hoje.
+
 ### Nada se perde do roadmap (02/10/2026, 1.129.0)
 
 Fase 21, o último item da Parte 2: "conferência item a item das duas

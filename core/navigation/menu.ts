@@ -70,6 +70,7 @@ export const menuItems: MenuItem[] = [
     children: [
       { title: "Quadro", href: "/reclame-aqui" },
       { title: "Pedir avaliação", href: "/reclame-aqui/avaliacoes" },
+      { title: "Tempo ideal", href: "/reclame-aqui/tempo-ideal" },
       { title: "Prêmio", href: "/reclame-aqui/premio" },
       { title: "Analytics", href: "/reclame-aqui/analytics" },
       { title: "Gráficos", href: "/reclame-aqui/graficos" },

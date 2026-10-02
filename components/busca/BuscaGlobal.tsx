@@ -68,6 +68,7 @@ const TELAS_EXTRAS: TelaDaBusca[] = [
 const SINONIMOS: Record<string, string[]> = {
   "/processos": ["sla", "prazos", "expediente", "feriados", "areas", "movimentacoes"],
   "/reclame-aqui/avaliacoes": ["pedir avaliacao", "fila de avaliacao"],
+  "/reclame-aqui/tempo-ideal": ["prazo ideal", "teto", "tempo de finalizacao", "tempo de resposta", "folga do indice"],
   "/relatorio": ["relatorio de reputacao", "ciclo", "gestao"],
   "/base-conhecimento": ["macros", "modelos de resposta", "respostas prontas"],
   "/meu-dia": ["rotina", "plano do dia", "hoje"],

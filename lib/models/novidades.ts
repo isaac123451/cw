@@ -104,6 +104,14 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.130.0",
+    data: "2026-10-02",
+    titulo: "Tempo ideal e teto no Reclame Aqui",
+    texto: "Nova aba Tempo ideal: medido nas próprias reclamações, o prazo ideal para finalizar (até a avaliação), o teto a partir do qual a nota cai abaixo das metas do selo, o prazo de resposta que segura os 90% e a folga de respostas de agora.",
+    frentes: ["reclame-aqui"],
+    href: "/reclame-aqui/tempo-ideal",
+  },
+  {
     versao: "1.129.0",
     data: "2026-10-02",
     titulo: "Roadmap conferido item a item",
