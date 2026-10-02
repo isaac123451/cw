@@ -77,6 +77,7 @@ const CAMINHOS = {
   raSegmento: "/api/extensao/ra-segmento",
   esperaWhatsapp: "/api/extensao/espera-whatsapp",
   assistente: "/api/extensao/assistente",
+  editarCaso: "/api/extensao/editar-caso",
 };
 
 /**
@@ -726,6 +727,17 @@ async function tratar(mensagem) {
     Pergunta ao assistente sobre o cliente aberto (1.125): a resposta volta
     para o próprio painel. Sem cache — cada pergunta é uma pergunta.
   */
+  /* Mexer no caso sem sair da extensão (1.127): ler o formulário e gravar. */
+  if (mensagem?.tipo === "lerEdicaoDoCaso") {
+    const dados = await chamar(CAMINHOS.editarCaso, { protocolo: mensagem.protocolo });
+    return { ok: true, dados };
+  }
+
+  if (mensagem?.tipo === "salvarEdicaoDoCaso") {
+    const dados = await chamar(CAMINHOS.editarCaso, {}, { protocolo: mensagem.protocolo, mudancas: mensagem.mudancas, antes: mensagem.antes });
+    return { ok: true, dados };
+  }
+
   if (mensagem?.tipo === "perguntarAoAssistente") {
     const dados = await chamar(
       CAMINHOS.assistente,

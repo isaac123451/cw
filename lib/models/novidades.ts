@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.127.0",
+    data: "2026-10-01",
+    titulo: "Mexa no caso sem sair do WhatsApp",
+    texto: "A extensão ganhou a aba Caso: o que falta no cadastro e os campos — responsável, categoria, prioridade, estabelecimento, risco e o contato — para preencher e salvar ali mesmo. Se alguém mudou o mesmo campo no meio, ela avisa em vez de sobrescrever.",
+    frentes: ["extensao"],
+  },
+  {
     versao: "1.126.0",
     data: "2026-10-01",
     titulo: "NPS leve mesmo com tudo aberto",

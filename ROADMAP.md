@@ -1116,6 +1116,39 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### O caso editável dentro da extensão (01/10/2026, 1.127.0)
+
+Fase 33, "a plataforma dentro da extensão — uma tela na extensão para mexer no
+caso e preencher o que falta sem ir e voltar". A extensão já criava caso,
+completava o contato vazio, movia de etapa, anotava e registrava contato;
+não dava para mexer no caso em si sem abrir a plataforma.
+
+- **Aba Caso** no painel do contato: o caso aberto do cliente com **o que
+  falta** no topo (responsável, categoria — "Não classificado" conta como
+  falta —, estabelecimento, telefone, e-mail, CPF/CNPJ) e os campos:
+  responsável, categoria e subcategoria (que segue a categoria), prioridade,
+  estabelecimento, risco de cancelamento e o contato. Carrega quando a aba
+  abre; Salvar grava só o que mudou e avisa depois de o servidor gravar
+  ("Salvo no CW Reputação."); erro e "nada mudou" aparecem na linha de
+  status, sem apagar o que foi digitado.
+- **A rota** `/api/extensao/editar-caso`: GET devolve o caso, as opções
+  (categorias com subcategorias, pessoas ativas, prioridades,
+  estabelecimentos) e o que falta; POST confere cada campo contra as opções
+  (responsável ativo, subcategoria da categoria, telefone com DDD, e-mail,
+  CPF com 11 e CNPJ com 14 dígitos), exige AGENTE no módulo do Reclame Aqui
+  (como as telas; a sessão vem no cabeçalho) e grava pela mesma gravação
+  parcial da plataforma (`persistCaseParcial`). **Conflito:** o painel manda
+  o retrato que carregou, e o servidor recusa (409, dizendo qual campo) se
+  alguém mudou um dos campos alterados desde então.
+- Achado no teste: o `saveCase` invalida o cache com `updateTag`, que o Next
+  só aceita em server action — numa rota a gravação acontecia e a resposta
+  quebrava. A rota usa `revalidateTag`, como as outras da extensão.
+- Provado de ponta a ponta numa reclamação descartável (criada e apagada no
+  teste): a leitura com o que falta, a recusa de e-mail inválido (400), a
+  gravação dos oito campos conferida no banco, e o conflito recusado com
+  "outra pessoa mudou prioridade". `check:avisos-extensao` cobre a aba, as
+  funções e a fiação; `check:escape` passa (as opções escapam por dentro).
+
 ### Listas grandes em lotes e a meta de 1,5 s (01/10/2026, 1.126.0)
 
 Fecha o "Bugs e desempenho" da Fase 21 ("tempo de carga das telas principais

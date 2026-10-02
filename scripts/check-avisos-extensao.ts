@@ -45,6 +45,13 @@ conferir("o painel pergunta ao assistente ali mesmo", typeof P.perguntarAoAssist
 conferir("e não abre mais a página do assistente numa aba", fonteDoPainel.includes("/assistente?pergunta="), false);
 conferir("o clique e o Enter chegam à pergunta", fonteDaBase.includes('acao === "perguntar-assistente"') && fonteDaBase.includes('"pergunta-assistente-campo"'), true);
 conferir("o worker leva a pergunta à rota do assistente", /assistente: "\/api\/extensao\/assistente"/.test(fonteDoWorker) && fonteDoWorker.includes('mensagem?.tipo === "perguntarAoAssistente"'), true);
+
+/* 1.127: o caso se edita na aba Caso, sem ir à plataforma — e manda o retrato carregado, para o servidor recusar conflito. */
+conferir("o painel tem a aba Caso", /\{ id: "caso", nome: "Caso" \}/.test(fonteDoPainel), true);
+conferir("e as funções de abrir, salvar e trocar a subcategoria", [typeof P.carregarEdicaoDoCaso, typeof P.salvarEdicaoDoCaso, typeof P.atualizarSubcategorias], ["function", "function", "function"]);
+conferir("salvar manda o retrato carregado (conflito)", fonteDoPainel.includes('tipo: "salvarEdicaoDoCaso", protocolo: c.protocolo, mudancas, antes: c'), true);
+conferir("o worker lê e grava pela rota de edição", /editarCaso: "\/api\/extensao\/editar-caso"/.test(fonteDoWorker) && fonteDoWorker.includes("antes: mensagem.antes"), true);
+conferir("o clique de salvar e a troca de categoria chegam ao painel", fonteDaBase.includes('acao === "salvar-edicao-caso"') && fonteDaBase.includes('campoCaso === "categoria"'), true);
 const textos = (d: unknown, agora?: number) => avisos(d, agora).map((a) => a.texto);
 
 const agora = new Date("2026-09-18T12:00:00-03:00").getTime();

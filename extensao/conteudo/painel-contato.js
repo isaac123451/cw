@@ -675,7 +675,13 @@
     const partes = [];
 
     /* O que fica em cada aba; o que está em `partes` fica fixo, acima delas. */
-    const abas = { agora: [], dossie: [], responder: [], historico: [] };
+    const abas = { agora: [], dossie: [], responder: [], historico: [], caso: [] };
+
+    /* A aba Caso (1.127): o formulário carrega quando a aba abre. */
+    const casoParaEditar = (dados.casos ?? []).find((c) => c.aberto) ?? (dados.casos ?? [])[0];
+    if (casoParaEditar?.protocolo) {
+      abas.caso.push(`<div class="bloco" data-bloco="editar-caso" data-protocolo="${CW.escapar(casoParaEditar.protocolo)}"><p class="sub">Carregando o caso ${CW.escapar(casoParaEditar.protocolo)}…</p></div>`);
+    }
 
     if (dados.aviso) {
       partes.push(
@@ -1254,6 +1260,7 @@
     { id: "dossie", nome: "Dossiê" },
     { id: "responder", nome: "Responder" },
     { id: "historico", nome: "Histórico" },
+    { id: "caso", nome: "Caso" },
   ];
 
   P.blocoAbas = function blocoAbas(abas, dados) {
@@ -1276,6 +1283,7 @@
       dossie: "O dossiê aparece quando houver caso ou conversa para montar.",
       responder: "Sem textos aprovados para este caso. O resumo da conversa, na aba Agora, traz três rascunhos.",
       historico: "Nenhuma reclamação registrada.",
+      caso: "Sem caso para este contato — crie pela aba Agora.",
     };
 
     const paineis = ABAS_DO_CONTATO.map(
@@ -1297,6 +1305,130 @@
     for (const sec of P.corpo.querySelectorAll(".aba-painel")) {
       sec.hidden = sec.dataset.aba !== aba;
     }
+    if (aba === "caso") P.carregarEdicaoDoCaso();
+  };
+
+  /* ============================================================
+     O CASO, SEM SAIR DA EXTENSÃO (1.127, Fase 33)
+  ============================================================ */
+
+  /*
+    "Uma tela na extensão para mexer no caso e preencher o que falta sem
+    ir e voltar." Responsável, categoria, prioridade, estabelecimento,
+    risco e o contato que falta — gravados pelo mesmo caminho da
+    plataforma (só o que mudou; recusa se outra pessoa mexeu no meio).
+  */
+  const edicaoDoCaso = { protocolo: "", caso: null, opcoes: null, falta: [] };
+
+  /* As opções dos seletores, escapadas aqui dentro — nomes vêm do cadastro. */
+  function opcoesDe(lista, escolhido) {
+    return lista.map((n) => `<option value="${CW.escapar(n)}"${n === escolhido ? " selected" : ""}>${CW.escapar(n)}</option>`).join("");
+  }
+
+  function opcoesDeEstabelecimento(lista, escolhido) {
+    return lista.map((e) => `<option value="${CW.escapar(e.id)}"${e.id === escolhido ? " selected" : ""}>${CW.escapar(e.nome)}</option>`).join("");
+  }
+
+  function htmlDaEdicao(aviso) {
+    const c = edicaoDoCaso.caso;
+    const o = edicaoDoCaso.opcoes;
+    if (!c || !o) return `<p class="sub">Carregando…</p>`;
+    const categoria = o.categorias.find((x) => x.nome === c.categoria);
+    const campo = (rotulo, html) => `<label class="rotulo" style="display:block;margin-top:8px">${CW.escapar(rotulo)}${html}</label>`;
+    return [
+      `<div class="rotulo">Caso ${CW.escapar(c.protocolo)} · ${CW.escapar(c.status)}</div>`,
+      edicaoDoCaso.falta.length
+        ? `<p class="sub" style="margin:4px 0 0">Falta: ${edicaoDoCaso.falta.map((f) => `<span class="tag">${CW.escapar(f)}</span>`).join(" ")}</p>`
+        : `<p class="sub" style="margin:4px 0 0">Nada faltando no cadastro.</p>`,
+      `<div class="cartao" style="margin-top:8px">`,
+      campo("Responsável", `<select class="campo" data-campo-caso="responsavel"><option value="">— ninguém —</option>${opcoesDe(o.responsaveis, c.responsavel)}</select>`),
+      campo("Categoria", `<select class="campo" data-campo-caso="categoria">${opcoesDe(o.categorias.map((x) => x.nome), c.categoria)}</select>`),
+      campo("Subcategoria", `<select class="campo" data-campo-caso="subcategoria"><option value="">—</option>${opcoesDe(categoria?.subcategorias ?? [], c.subcategoria)}</select>`),
+      campo("Prioridade", `<select class="campo" data-campo-caso="prioridade">${opcoesDe(o.prioridades, c.prioridade)}</select>`),
+      campo("Estabelecimento", `<select class="campo" data-campo-caso="estabelecimentoId"><option value="">— sem vínculo —</option>${opcoesDeEstabelecimento(o.estabelecimentos, c.estabelecimentoId)}</select>`),
+      `<label class="sub" style="display:flex;gap:6px;align-items:center;margin-top:8px"><input type="checkbox" data-campo-caso="risco"${c.risco ? " checked" : ""}> Risco de cancelamento</label>`,
+      campo("Telefone", `<input class="campo" data-campo-caso="telefone" value="${CW.escapar(c.telefone)}" placeholder="DDD e número">`),
+      campo("E-mail", `<input class="campo" data-campo-caso="email" value="${CW.escapar(c.email)}">`),
+      campo("CPF/CNPJ", `<input class="campo" data-campo-caso="documento" value="${CW.escapar(c.documento)}" placeholder="só números">`),
+      `<div class="linha" style="margin-top:10px;align-items:center">`,
+      `  <span class="sub${aviso?.erro ? " falha" : ""}" data-aviso-caso>${aviso ? CW.escapar(aviso.texto) : "Grava só o que você mudar."}</span>`,
+      `  <button class="acao" style="margin-top:0" data-acao="salvar-edicao-caso">Salvar</button>`,
+      `</div>`,
+      `</div>`,
+    ].join("");
+  }
+
+  function desenharEdicao(aviso) {
+    const bloco = P.corpo?.querySelector('[data-bloco="editar-caso"]');
+    if (bloco) bloco.innerHTML = htmlDaEdicao(aviso);
+  }
+
+  P.carregarEdicaoDoCaso = async function () {
+    const bloco = P.corpo?.querySelector('[data-bloco="editar-caso"]');
+    const protocolo = bloco?.dataset?.protocolo;
+    if (!protocolo) return;
+    if (edicaoDoCaso.protocolo === protocolo && edicaoDoCaso.caso) {
+      desenharEdicao();
+      return;
+    }
+    const r = await CW.enviar({ tipo: "lerEdicaoDoCaso", protocolo });
+    if (!r?.ok || !r.dados?.ok) {
+      if (bloco) bloco.innerHTML = `<p class="sub falha">${CW.escapar(r?.dados?.erro || r?.erro || "Não consegui abrir o caso agora.")}</p>`;
+      return;
+    }
+    Object.assign(edicaoDoCaso, { protocolo, caso: r.dados.caso, opcoes: r.dados.opcoes, falta: r.dados.falta ?? [] });
+    desenharEdicao();
+  };
+
+  P.atualizarSubcategorias = function (seletor) {
+    const o = edicaoDoCaso.opcoes;
+    const sub = seletor.closest('[data-bloco="editar-caso"]')?.querySelector('[data-campo-caso="subcategoria"]');
+    if (!o || !sub) return;
+    const categoria = o.categorias.find((x) => x.nome === seletor.value);
+    sub.innerHTML = `<option value="">—</option>${opcoesDe(categoria?.subcategorias ?? [], "")}`;
+  };
+
+  P.salvarEdicaoDoCaso = async function (botao) {
+    const c = edicaoDoCaso.caso;
+    const bloco = botao.closest('[data-bloco="editar-caso"]');
+    if (!c || !bloco) return;
+    const valor = (campo) => {
+      const el = bloco.querySelector(`[data-campo-caso="${campo}"]`);
+      return el?.type === "checkbox" ? el.checked : String(el?.value ?? "").trim();
+    };
+    const mudancas = {};
+    for (const campo of ["responsavel", "prioridade", "estabelecimentoId", "risco", "telefone", "email", "documento"]) {
+      if (valor(campo) !== c[campo]) mudancas[campo] = valor(campo);
+    }
+    if (valor("categoria") !== c.categoria || valor("subcategoria") !== c.subcategoria) {
+      mudancas.categoria = valor("categoria");
+      mudancas.subcategoria = valor("subcategoria");
+    }
+    /* Aviso só na linha de status: o que foi digitado fica onde está. */
+    const avisar = (texto, erro) => {
+      const linha = bloco.querySelector("[data-aviso-caso]");
+      if (linha) {
+        linha.textContent = texto;
+        linha.classList.toggle("falha", Boolean(erro));
+      }
+    };
+    if (Object.keys(mudancas).length === 0) {
+      avisar("Nada mudou.");
+      return;
+    }
+    botao.disabled = true;
+    botao.textContent = "Salvando…";
+    /* O retrato carregado vai junto: o servidor recusa se alguém mexeu nesses campos no meio. */
+    const r = await CW.enviar({ tipo: "salvarEdicaoDoCaso", protocolo: c.protocolo, mudancas, antes: c });
+    if (r?.ok && r.dados?.ok) {
+      edicaoDoCaso.caso = r.dados.caso;
+      edicaoDoCaso.falta = r.dados.falta ?? [];
+      desenharEdicao({ texto: "Salvo no CW Reputação." });
+      return;
+    }
+    botao.disabled = false;
+    botao.textContent = "Salvar";
+    avisar(r?.dados?.erro || r?.erro || "Não consegui salvar agora.", true);
   };
 
   /* ============================================================

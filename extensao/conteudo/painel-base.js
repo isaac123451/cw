@@ -383,6 +383,7 @@
       if (acao === "atalhos") alternarAjudaDosAtalhos();
       if (acao === "completar-conversa") P.completarPelaConversa(alvo);
       if (acao === "aba-contato") P.trocarAbaDoContato(alvo);
+      if (acao === "salvar-edicao-caso") P.salvarEdicaoDoCaso?.(alvo);
       if (acao === "pausar-guardar") P.alternarPausaDeGuardar();
       if (acao === "vincular") P.vincularContato(alvo);
       if (acao === "desvincular") P.desvincularContato();
@@ -565,6 +566,12 @@
     });
 
     P.raiz.addEventListener("change", (evento) => {
+
+      /* A subcategoria segue a categoria no formulário do caso (1.127). */
+      if (evento.target?.dataset?.campoCaso === "categoria") {
+        P.atualizarSubcategorias?.(evento.target);
+        return;
+      }
 
       /**
        * Mover para uma etapa qualquer é `change`, não `click`: escolher
