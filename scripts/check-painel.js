@@ -48,7 +48,8 @@ const DO_NAVEGADOR = new Set([
   "getComputedStyle", "matchMedia", "alert", "atob", "btoa", "crypto",
   "performance", "Intl", "AbortController", "TextEncoder", "TextDecoder",
   "FontFace", "CSS", "HTMLElement", "DocumentFragment", "Range",
-  "DataTransfer", "ClipboardEvent",
+  "DataTransfer", "ClipboardEvent", "HTMLMediaElement", "localStorage",
+  "sessionStorage",
 ]);
 
 const arquivos = fs

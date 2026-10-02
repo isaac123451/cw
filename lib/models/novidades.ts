@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.129.0",
+    data: "2026-10-02",
+    titulo: "Roadmap conferido item a item",
+    texto: "As listas 1.0 e 2.0 foram conferidas uma a uma contra o que está no ar: todas as telas abrem com conteúdo, dentro da meta de tempo, e as 126 conferências automáticas passam. O que ficou de fora tem nome e motivo no roadmap.",
+    frentes: ["plataforma"],
+  },
+  {
     versao: "1.128.0",
     data: "2026-10-01",
     titulo: "Copiloto na conversa",

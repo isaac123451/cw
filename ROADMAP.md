@@ -1116,6 +1116,44 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Nada se perde do roadmap (02/10/2026, 1.129.0)
+
+Fase 21, o último item da Parte 2: "conferência item a item das duas
+listas (1.0 e 2.0) na tela real: prometido × funcionando. O que faltar vira
+item aqui, com nome."
+
+- **As listas, item a item.** Um script leu a página da 1.0 e a da 2.0,
+  tirou de cada item a versão e o commit citados e conferiu no git se o
+  commit existe. Nenhum commit citado falta no histórico, e toda fase da
+  1.0 tem o seu. Placar: 1.0 com 77 de 79; Parte 1 com 36 de 38; Parte 2
+  com 140 de 140, contando este.
+- **Na tela real.** `check:telas` abriu todas as telas com sessão — as com
+  id usam registro real — e todas vieram com conteúdo.
+  `check:tempo-das-telas` ficou dentro da meta (páginas de 0,5 a 0,8 s,
+  meta de 1,5 s; o NPS só do que mudou em 0,48 s). Console sem erro nas
+  telas principais.
+- **A bateria inteira.** 126 checks; 124 passaram na primeira volta. As
+  duas falhas eram do check, não do app: o `check:whatsapp` quebrava desde
+  a 1.82 — a ponte do áudio escuta mensagens da janela e a janela de
+  mentira do check não tinha `addEventListener` —, e o `check:painel` não
+  reconhecia `localStorage`, `sessionStorage` e `HTMLMediaElement` como
+  nomes do navegador. Corrigidos: 126 de 126.
+- **O que não fechou, com nome:**
+  - *Imagens e vídeos no Google Drive* (Parte 1) — fora do plano por
+    decisão de 23/09, junto com o backup no Drive. A conversa guardada
+    leva o texto e a transcrição dos áudios.
+  - *Cadeia de provedores gratuitos* (Parte 1) — pronta no código e
+    provada com servidor local (`check:ia-cadeia`); a chamada real espera
+    `GROQ_API_KEY` e `OPENROUTER_API_KEY`.
+  - *Nota interna no Wootric* (1.0) — encerrar já conclui e manda a nota;
+    a nota em `/v1/notes` espera `WOOTRIC_USUARIO` e `WOOTRIC_SENHA`.
+  - *Corrigir os defeitos que aparecerem* (1.0) — contínuo por definição.
+- **Lido no banco em 02/10, e que é seu:** Prazos da documentação sem
+  nenhuma regra salva; 5 das 244 contas sem plano; a causa raiz "a", de
+  teste, ainda cadastrada; 348 das 366 reclamações sem a hora de chegada
+  (só a reimportação da planilha completa traz); nenhuma conta com o link
+  do Crisp.
+
 ### O copiloto da tratativa (01/10/2026, 1.128.0)
 
 Fase 33, "IA como copiloto da tratativa — a cada momento da conversa, o

@@ -320,8 +320,9 @@ const executar = new Function(
 );
 
 executar(
-  // O detector procura o painel em `window.CWReputacao`.
-  { CWReputacao: CW },
+  // O detector procura o painel em `window.CWReputacao`; a ponte do áudio
+  // (1.82) escuta mensagens da página, que aqui não chegam.
+  { CWReputacao: CW, addEventListener() {} },
   documento,
   { href: "https://web.whatsapp.com/" },
   CW,
