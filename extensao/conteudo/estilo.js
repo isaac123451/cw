@@ -1147,6 +1147,21 @@ ${CORES}
 .agora-conversa .agora-roteiro { margin: 6px 0 0; padding-left: 18px; }
 .agora-conversa .agora-roteiro li { margin: 2px 0; }
 
+/* O copiloto da tratativa (1.128): o próximo passo e o texto da IA, embaixo do "o que fazer". */
+.copiloto-conversa {
+  margin: 6px 0 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  font-size: 12.5px;
+}
+.copiloto-conversa .copiloto-rotulo { font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; color: var(--fraco); }
+.copiloto-conversa .copiloto-passo { margin: 3px 0 0; font-weight: 600; }
+.copiloto-conversa .copiloto-porque { margin: 2px 0 0; color: var(--fraco); }
+.copiloto-conversa .copiloto-texto { margin: 6px 0 0; padding: 6px 8px; border-radius: 8px; background: var(--fundo); white-space: pre-wrap; }
+.copiloto-conversa .copiloto-acoes { display: flex; gap: 6px; margin-top: 6px; }
+
 /* O resumo que situa (Fase 28): quer, feito, prometido, falta, risco — com a citação. */
 .situacao { margin: 8px 0 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; font-size: 12.5px; }
 .situacao dt { color: var(--fraco); font-weight: 600; }

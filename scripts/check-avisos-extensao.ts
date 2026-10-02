@@ -52,6 +52,13 @@ conferir("e as funções de abrir, salvar e trocar a subcategoria", [typeof P.ca
 conferir("salvar manda o retrato carregado (conflito)", fonteDoPainel.includes('tipo: "salvarEdicaoDoCaso", protocolo: c.protocolo, mudancas, antes: c'), true);
 conferir("o worker lê e grava pela rota de edição", /editarCaso: "\/api\/extensao\/editar-caso"/.test(fonteDoWorker) && fonteDoWorker.includes("antes: mensagem.antes"), true);
 conferir("o clique de salvar e a troca de categoria chegam ao painel", fonteDaBase.includes('acao === "salvar-edicao-caso"') && fonteDaBase.includes('campoCaso === "categoria"'), true);
+
+/* 1.128: o copiloto pede à IA só quando a última mensagem é nova e do cliente, e só com a aba à vista. */
+conferir("o painel tem o copiloto", typeof P.pedirCopiloto, "function");
+conferir("sozinho, só com mensagem nova do cliente", fonteDoPainel.includes('if (!forcar && (chave === copiloto.chave || ultima.de !== "cliente"))'), true);
+conferir("e só com a aba à vista", fonteDoPainel.includes('if (document.visibilityState === "visible") P.pedirCopiloto(false);'), true);
+conferir("o worker leva a conversa à rota do copiloto", /copiloto: "\/api\/extensao\/copiloto"/.test(fonteDoWorker) && fonteDoWorker.includes('mensagem?.tipo === "copiloto"'), true);
+conferir("sugerir de novo chega ao painel", fonteDaBase.includes('acao === "copiloto-de-novo"'), true);
 const textos = (d: unknown, agora?: number) => avisos(d, agora).map((a) => a.texto);
 
 const agora = new Date("2026-09-18T12:00:00-03:00").getTime();
@@ -237,7 +244,7 @@ conferir("conversa sem identificador: não refaz a busca", tentar(), false);
 
 /* ---------- as quatro abas ---------- */
 
-console.log("\n  AS QUATRO ABAS\n");
+console.log("\n  AS CINCO ABAS (a Caso desde a 1.127)\n");
 
 type Abas = Record<"agora" | "dossie" | "responder" | "historico", string[]>;
 const blocoAbas = P.blocoAbas as (abas: Abas, dados: unknown) => string;
@@ -246,8 +253,9 @@ const abasHtml = blocoAbas(
   { totalCasos: 3, macros: [] }
 );
 const botoesDasAbas = [...abasHtml.matchAll(/data-aba="([a-z]+)"\s+aria-selected="(true|false)">([^<]+)/g)].map((m) => `${m[1]}:${m[2]}`);
-conferir("quatro abas, a primeira é Agora", botoesDasAbas, ["agora:true", "dossie:false", "responder:false", "historico:false"]);
-conferir("só a aba ativa aparece", [...abasHtml.matchAll(/data-aba="([a-z]+)"( hidden)?>/g)].map((m) => `${m[1]}${m[2] ? ":oculta" : ""}`), ["agora", "dossie:oculta", "responder:oculta", "historico:oculta"]);
+conferir("cinco abas, a primeira é Agora", botoesDasAbas, ["agora:true", "dossie:false", "responder:false", "historico:false", "caso:false"]);
+conferir("só a aba ativa aparece", [...abasHtml.matchAll(/data-aba="([a-z]+)"( hidden)?>/g)].map((m) => `${m[1]}${m[2] ? ":oculta" : ""}`), ["agora", "dossie:oculta", "responder:oculta", "historico:oculta", "caso:oculta"]);
+conferir("aba que não veio no objeto (a Caso sem caso) não derruba o painel", abasHtml.includes("Sem caso para este contato"), true);
 conferir("Histórico conta as reclamações", /Histórico <span class="aba-contagem">3<\/span>/.test(abasHtml), true);
 conferir("aba vazia explica o que falta", abasHtml.includes("Sem textos aprovados para este caso"), true);
 Pm.abaDoContato = "historico";

@@ -384,6 +384,7 @@
       if (acao === "completar-conversa") P.completarPelaConversa(alvo);
       if (acao === "aba-contato") P.trocarAbaDoContato(alvo);
       if (acao === "salvar-edicao-caso") P.salvarEdicaoDoCaso?.(alvo);
+      if (acao === "copiloto-de-novo") P.pedirCopiloto?.(true);
       if (acao === "pausar-guardar") P.alternarPausaDeGuardar();
       if (acao === "vincular") P.vincularContato(alvo);
       if (acao === "desvincular") P.desvincularContato();

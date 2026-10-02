@@ -78,6 +78,7 @@ const CAMINHOS = {
   esperaWhatsapp: "/api/extensao/espera-whatsapp",
   assistente: "/api/extensao/assistente",
   editarCaso: "/api/extensao/editar-caso",
+  copiloto: "/api/extensao/copiloto",
 };
 
 /**
@@ -727,6 +728,12 @@ async function tratar(mensagem) {
     Pergunta ao assistente sobre o cliente aberto (1.125): a resposta volta
     para o próprio painel. Sem cache — cada pergunta é uma pergunta.
   */
+  /* O copiloto da tratativa (1.128): o próximo passo e o texto, lidos da conversa. */
+  if (mensagem?.tipo === "copiloto") {
+    const dados = await chamar(CAMINHOS.copiloto, {}, { mensagens: mensagem.mensagens, protocolos: mensagem.protocolos, nome: mensagem.nome });
+    return { ok: true, dados };
+  }
+
   /* Mexer no caso sem sair da extensão (1.127): ler o formulário e gravar. */
   if (mensagem?.tipo === "lerEdicaoDoCaso") {
     const dados = await chamar(CAMINHOS.editarCaso, { protocolo: mensagem.protocolo });

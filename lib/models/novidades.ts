@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.128.0",
+    data: "2026-10-01",
+    titulo: "Copiloto na conversa",
+    texto: "No painel do WhatsApp, o copiloto lê a conversa e sugere o próximo passo e o texto da próxima mensagem, pronto para copiar — e se atualiza a cada mensagem nova do cliente. Nada é enviado sozinho.",
+    frentes: ["extensao"],
+  },
+  {
     versao: "1.127.0",
     data: "2026-10-01",
     titulo: "Mexa no caso sem sair do WhatsApp",

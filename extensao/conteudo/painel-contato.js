@@ -617,6 +617,7 @@
         P.corpo.insertAdjacentHTML("beforeend", P.blocoResumo());
         marcarSelo(null);
         P.pedirSinaisDaConversa();
+        ligarCopiloto();
         return;
       }
 
@@ -664,6 +665,7 @@
 
       // Sem cadastro é quando mais vale saber que a mensagem é a de um RA.
       P.pedirSinaisDaConversa();
+      ligarCopiloto();
       return;
     }
 
@@ -931,6 +933,7 @@
 
     P.pedirSinaisDaConversa();
     ligarRelogioDeGuardar();
+    ligarCopiloto();
   };
 
   /* ============================================================
@@ -1266,7 +1269,9 @@
   P.blocoAbas = function blocoAbas(abas, dados) {
 
     const ativa = ABAS_DO_CONTATO.some((a) => a.id === P.abaDoContato) ? P.abaDoContato : "agora";
-    const vazio = (id) => abas[id].every((html) => !String(html ?? "").trim());
+    /* Aba que quem montou não trouxe (a Caso, nos caminhos sem caso) é aba vazia — nunca derruba o painel. */
+    const daAba = (id) => abas[id] ?? [];
+    const vazio = (id) => daAba(id).every((html) => !String(html ?? "").trim());
 
     const contagem = {
       historico: dados?.totalCasos ?? (dados?.casos ?? []).length,
@@ -1288,7 +1293,7 @@
 
     const paineis = ABAS_DO_CONTATO.map(
       (a) => `<section class="aba-painel" role="tabpanel" data-aba="${a.id}"${a.id === ativa ? "" : " hidden"}>${
-        vazio(a.id) ? `<p class="aba-vazia">${VAZIO[a.id]}</p>` : abas[a.id].join("")
+        vazio(a.id) ? `<p class="aba-vazia">${VAZIO[a.id]}</p>` : daAba(a.id).join("")
       }</section>`
     ).join("");
 
@@ -1855,6 +1860,110 @@
   }
 
   P.desenharAgora = desenharAgora;
+
+  /* ============================================================
+     O COPILOTO DA TRATATIVA (1.128, Fase 33)
+  ============================================================ */
+
+  /*
+    "A cada momento da conversa, o próximo passo e o texto sugeridos pela
+    IA." O "o que fazer" acima é por regras; o copiloto lê a conversa de
+    verdade e escreve a próxima mensagem. Pede de novo a cada mensagem nova
+    do cliente — uma vez por mensagem, e só com a aba à vista, para não
+    gastar a cota da IA com quem não está olhando. Quem manda a mensagem é
+    sempre a pessoa.
+  */
+  const copiloto = { contato: "", chave: "", pedindo: false, sugestao: null, erro: "" };
+  const INTERVALO_DO_COPILOTO_MS = 15_000;
+  let relogioDoCopiloto = null;
+
+  function mensagensDaTela() {
+    const leitura = P.lerConversa?.();
+    return (Array.isArray(leitura) ? leitura : leitura?.mensagens ?? [])
+      .filter((m) => m && typeof m.texto === "string" && m.texto.trim())
+      .map((m) => ({ de: m.de === "nos" ? "nos" : "cliente", texto: m.texto.slice(0, 600) }));
+  }
+
+  function htmlDoCopiloto() {
+    if (copiloto.pedindo && !copiloto.sugestao) {
+      return `<span class="copiloto-rotulo">Copiloto</span><p class="copiloto-porque">Lendo a conversa…</p>`;
+    }
+    if (copiloto.erro && !copiloto.sugestao) {
+      return `<span class="copiloto-rotulo">Copiloto</span><p class="copiloto-porque">${CW.escapar(copiloto.erro)}</p><div class="copiloto-acoes"><button type="button" class="copiar" data-acao="copiloto-de-novo">Tentar de novo</button></div>`;
+    }
+    const s = copiloto.sugestao;
+    if (!s) return "";
+    return [
+      `<span class="copiloto-rotulo">Copiloto · sugestão da IA${copiloto.pedindo ? " · atualizando…" : ""}</span>`,
+      `<p class="copiloto-passo">${CW.escapar(s.passo)}</p>`,
+      s.porque ? `<p class="copiloto-porque">${CW.escapar(s.porque)}</p>` : "",
+      `<p class="copiloto-texto">${CW.escapar(s.texto)}</p>`,
+      `<div class="copiloto-acoes">`,
+      `  <button type="button" class="copiar" data-acao="copiar" data-texto="${CW.escapar(s.texto)}">Copiar o texto</button>`,
+      `  <button type="button" class="copiar" data-acao="copiloto-de-novo">Sugerir de novo</button>`,
+      `</div>`,
+    ].join("");
+  }
+
+  function desenharCopiloto() {
+    if (!P.corpo) return;
+    const html = htmlDoCopiloto();
+    let caixa = P.corpo.querySelector(".copiloto-conversa");
+    if (!html) {
+      caixa?.remove();
+      return;
+    }
+    if (!caixa) {
+      const depoisDe = P.corpo.querySelector(".agora-conversa") ?? P.corpo.querySelector(".cabecalho-cliente");
+      if (!depoisDe) return;
+      depoisDe.insertAdjacentHTML("afterend", `<div class="copiloto-conversa"></div>`);
+      caixa = P.corpo.querySelector(".copiloto-conversa");
+    }
+    caixa.innerHTML = html;
+  }
+
+  P.pedirCopiloto = async function pedirCopiloto(forcar) {
+    if (!P.corpo?.querySelector(".cabecalho-cliente")) return;
+    const contato = P.chaveConsulta ?? "";
+    if (copiloto.contato !== contato) Object.assign(copiloto, { contato, chave: "", sugestao: null, erro: "" });
+    const mensagens = mensagensDaTela();
+    if (mensagens.length === 0) return;
+    const ultima = mensagens[mensagens.length - 1];
+    const chave = [contato, mensagens.length, ultima.de, ultima.texto.slice(-80)].join("|");
+    /* Sozinho, só quando a última mensagem é do cliente e é nova. */
+    if (!forcar && (chave === copiloto.chave || ultima.de !== "cliente")) {
+      desenharCopiloto();
+      return;
+    }
+    if (copiloto.pedindo) return;
+    Object.assign(copiloto, { chave, pedindo: true, erro: "" });
+    desenharCopiloto();
+    const dados = P.ultimoDado ?? {};
+    const r = await CW.enviar({
+      tipo: "copiloto",
+      mensagens: mensagens.slice(-20),
+      protocolos: (dados.casos ?? []).map((c) => c.protocolo).filter(Boolean).slice(0, 3),
+      nome: dados.cliente?.nome ?? "",
+    });
+    copiloto.pedindo = false;
+    /* Trocou de conversa no meio: a resposta é de outro cliente. */
+    if (copiloto.contato !== (P.chaveConsulta ?? "")) return;
+    if (r?.ok && r.dados?.ok) {
+      copiloto.sugestao = r.dados.sugestao;
+      copiloto.erro = "";
+    } else {
+      copiloto.erro = r?.dados?.erro || r?.erro || "O copiloto não respondeu agora.";
+    }
+    desenharCopiloto();
+  };
+
+  function ligarCopiloto() {
+    setTimeout(() => P.pedirCopiloto(false), 1200);
+    if (relogioDoCopiloto) return;
+    relogioDoCopiloto = setInterval(() => {
+      if (document.visibilityState === "visible") P.pedirCopiloto(false);
+    }, INTERVALO_DO_COPILOTO_MS);
+  }
 
   /* Copiar a mensagem do momento (1.103) — quem manda é a pessoa, com Enter. */
   document.addEventListener("click", (ev) => {

@@ -1116,6 +1116,36 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### O copiloto da tratativa (01/10/2026, 1.128.0)
+
+Fase 33, "IA como copiloto da tratativa — a cada momento da conversa, o
+próximo passo e o texto sugeridos pela IA". O painel do contato já dizia "o
+que fazer agora" por regras (Fase 28): a abordagem e um roteiro. Faltava ler
+a conversa de verdade e escrever a próxima mensagem.
+
+- **A rota** `/api/extensao/copiloto` (com sessão): as últimas 20
+  mensagens como estão na tela, os casos do cliente por inteiro e o nome
+  vão à IA (o modelo rápido), que devolve **o próximo passo**, **o porquê**
+  (citando o que o cliente disse), **o texto da próxima mensagem** pronto
+  para colar e o tom (acolher, apurar, resolver, encerrar, escalar). A
+  instrução proíbe prometer prazo ("hoje", "amanhã", "em X horas"),
+  reembolso, desconto ou solução que quem atende não confirmou — no teste,
+  a primeira versão escreveu "ainda hoje", e a regra ficou explícita.
+- **No painel**, logo abaixo do "o que fazer": "Copiloto · sugestão da IA",
+  o passo, o porquê, o texto, "Copiar o texto" e "Sugerir de novo".
+  Atualiza sozinho a cada mensagem nova do cliente — uma vez por mensagem,
+  e só com a aba à vista, para não gastar a cota da IA com quem não está
+  olhando —; trocar de conversa descarta a resposta que chegar atrasada.
+  Nada é enviado: quem manda é a pessoa.
+- Testado com uma conversa de cliente que ameaça cancelar: o copiloto
+  reconheceu a frustração, citou "se não resolver até amanhã vou cancelar"
+  e propôs escalar, sem marcar prazo. A rota recusa sem sessão (401).
+- **Achado no caminho:** a aba Caso (1.127) fazia o `check:avisos-extensao`
+  quebrar no meio — a função das abas supunha toda aba presente no objeto.
+  Em produção o único caminho já trazia a aba; agora aba ausente é aba
+  vazia ("Sem caso para este contato"), e o check passa inteiro, com as
+  cinco abas e o copiloto.
+
 ### O caso editável dentro da extensão (01/10/2026, 1.127.0)
 
 Fase 33, "a plataforma dentro da extensão — uma tela na extensão para mexer no
