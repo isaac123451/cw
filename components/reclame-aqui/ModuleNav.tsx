@@ -14,6 +14,7 @@ import {
   Trophy,
   Gauge,
   MessageSquareText,
+  Target,
   Timer,
   ListFilter,
 } from "lucide-react";
@@ -43,6 +44,12 @@ const items: Item[] = [
     href: "/reclame-aqui/indice",
     icon: Gauge,
     hint: "Nota atual e prévia, a exata, a régua até o RA1000 e o dia a dia do mês",
+  },
+  {
+    label: "Plano de ação",
+    href: "/reclame-aqui/plano",
+    icon: Target,
+    hint: "Metas por mês e ciclo, previsão de reclamações, o que fazer e o que mais está chegando",
   },
   {
     label: "Tempo ideal",

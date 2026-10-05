@@ -1,3 +1,4 @@
+import { assuntosDoPeriodo, type Tendencia } from "@/lib/models/assuntosEmAlta";
 import type { Case } from "@/lib/models/case";
 import { respondida } from "@/lib/models/case";
 import { cicloAnterior, type Ciclo } from "@/lib/models/ciclo";
@@ -99,6 +100,31 @@ export interface DadosDoRelatorio {
   /** O tempo até o 1º contato do que chegou no ciclo, por frente — a meta do documento, medida. */
   primeiroContato: { ra: IndicadorDoPrimeiroContato; redes: IndicadorDoPrimeiroContato; nps: IndicadorDoPrimeiroContato };
   pontos: { texto: string; href?: string }[];
+  /**
+   * Os assuntos das reclamações que chegaram no ciclo (1.133), contra os três
+   * ciclos de antes — "preciso adicionar no relatório". Opcional: relatório
+   * salvo antes da 1.133 não tem.
+   */
+  assuntos?: AssuntosDoRelatorio;
+}
+
+export interface AssuntoDoRelatorio {
+  nome: string;
+  noCiclo: number;
+  deCostume: number;
+  parte: number;
+  tendencia: Tendencia;
+  nota: number | null;
+  solucao: number | null;
+  pesoNaNota: number | null;
+}
+
+export interface AssuntosDoRelatorio {
+  total: number;
+  deCostume: number;
+  linhas: AssuntoDoRelatorio[];
+  /** Assuntos e subcategorias em alta — o nome da subcategoria vem como "Assunto › Sub". */
+  emAlta: { nome: string; noCiclo: number; deCostume: number }[];
 }
 
 export interface GoogleDoRelatorio extends AvaliacaoParaIndicador {
@@ -279,6 +305,17 @@ export function montarRelatorio(entrada: {
     pontos: [],
   };
 
+  const a = assuntosDoPeriodo(ra, inicio, ateDia, seis.janela);
+  dados.assuntos = {
+    total: a.total,
+    deCostume: a.totalEsperado,
+    linhas: a.linhas
+      .filter((l) => l.recente > 0 || l.esperado >= 1)
+      .slice(0, 10)
+      .map((l) => ({ nome: l.nome, noCiclo: l.recente, deCostume: l.esperado, parte: l.parte, tendencia: l.tendencia, nota: l.nota, solucao: l.solucao, pesoNaNota: l.pesoNaNota })),
+    emAlta: a.emAlta.slice(0, 5).map((l) => ({ nome: l.nome, noCiclo: l.recente, deCostume: l.esperado })),
+  };
+
   dados.pontos = pontosDeAtencao(dados, seis, proxima);
   return dados;
 }
@@ -380,6 +417,14 @@ export function textoDoRelatorio(d: DadosDoRelatorio, analise?: string) {
     `*Próxima aba de 6 meses:* nota ${ptBR(proxima.resumo.raScore)} · resposta ${pct(proxima.resumo.responseIndex)} · ${proxima.resumo.evaluated} avaliações`,
     `*Reclame Aqui (12 meses):* nota ${ptBR(doze.resumo.raScore)} · selo ${doze.selo ? "sim" : "não"}`,
     `*Selo RA1000:* ${projecao}.`,
+    ...(d.assuntos && d.assuntos.total
+      ? [
+          `*Assuntos das reclamações do ciclo:* ${d.assuntos.linhas
+            .filter((l) => l.noCiclo > 0)
+            .map((l) => `${l.nome} ${l.noCiclo}${l.tendencia === "alta" || l.tendencia === "novo" ? " ↑" : l.tendencia === "queda" ? " ↓" : ""}`)
+            .join(" · ")} (de costume, ${ptBR(d.assuntos.deCostume)} por ciclo)${d.assuntos.emAlta.length ? `. Em alta: ${d.assuntos.emAlta.map((e) => `${e.nome} (${e.noCiclo}, de costume ${ptBR(e.deCostume)})`).join("; ")}` : ""}.`,
+        ]
+      : []),
     `*No ciclo:* ${d.ra.noCiclo.entrantes} reclamação(ões) nova(s) · ${d.ra.noCiclo.respondidas} respondida(s) · ${d.ra.noCiclo.avaliadas} avaliada(s), ${d.ra.noCiclo.resolvidas} resolvida(s). Em aberto sem resposta: ${d.ra.abertas.semResposta}.`,
     `*NPS do ciclo:* ${d.nps.respostas} resposta(s)${d.nps.nps !== null ? ` · NPS ${d.nps.nps}` : ""} · ${d.nps.detratores} detrator(es)${d.nps.percentualContatados !== null ? `, ${d.nps.percentualContatados}% contatados` : ""}${d.nps.humorMedioDoDetrator !== null ? ` · humor do detrator depois do contato ${ptBR(d.nps.humorMedioDoDetrator)}/5` : ""} · ${d.nps.fechadosNoCiclo} encerrada(s) com tratativa${d.nps.fechadosPelaRegra ? `, ${d.nps.fechadosPelaRegra} pela regra dos 30 dias` : ""}.`,
     `*1º contato no ciclo:* Reclame Aqui ${descreverIndicadorDoPrimeiroContato(d.primeiroContato.ra, (m) => descreverMinutosUteis(m))} · redes ${descreverIndicadorDoPrimeiroContato(d.primeiroContato.redes, (m) => descreverMinutosUteis(m))} · NPS ${descreverIndicadorDoPrimeiroContato(d.primeiroContato.nps, (m) => descreverMinutosUteis(m))}.`,

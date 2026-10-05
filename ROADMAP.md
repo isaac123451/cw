@@ -1116,6 +1116,58 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Plano de ação do Reclame Aqui (05/10/2026, 1.133.0)
+
+Pedido de 05/10: "adicionar as métricas que quero alcançar o número ou até
+mesmo a nota de reputação", "prever com base na média de últimos meses a
+quantidade de reclamações", "o que preciso fazer não somente no mês, mas
+para os próximos", "margens … como não resolvidas", "verificar metas por
+ciclo", "o que mais está caindo como reclamação" — "seja muito analítico".
+
+- **Tela Reclame Aqui → Plano de ação** (`/reclame-aqui/plano`), calculada
+  por `lib/models/planoDeAcao.ts` e `previsaoDeReclamacoes.ts`.
+- **Metas por mês, gravadas** (tabela `MetaDoReclameAqui`, RLS 78 de 78):
+  nota de reputação, respondidas, consumidor, solução, voltaria,
+  avaliações e, se quiser, as reclamações previstas à mão. A meta de um mês
+  vale para a janela que fecha nele (a nota que o portal mostra no mês
+  seguinte — a "prévia" do Índice). Salvar com confirmação; administrador
+  define, a equipe vê.
+- **Previsão de reclamações:** seis métodos testados contra os últimos 12
+  meses fechados; vale o que menos errou. Hoje: média de 6 meses e
+  tendência de 12 juntas, erro médio de 4,5 por mês (viés −0,7); 19
+  previstas em outubro, 23 a 24 nos seguintes, com a faixa onde 8 em 10
+  meses ficaram.
+- **Se continuar como está:** a janela no fim de cada mês com as
+  reclamações previstas e a chance de cada uma em aberto ser respondida e
+  avaliada até lá pela idade dela (79% respondidas em 30 dias; 51%
+  avaliadas em 30 dias, 71% em 6 meses), com a qualidade das avaliações
+  dos últimos 6 meses (nota 8,04, 91% resolvidas, 79% voltariam). A janela
+  "de hoje" é exatamente a prévia do Índice (conferido no check).
+- **A projeção contra o passado:** o plano como estaria na véspera de cada
+  mês, contra a nota do último dia — errou 0,21 em média de abril a
+  setembro; janelas de premissas mais curtas erraram mais (testadas).
+- **O que fazer:** cada meta vira número — respostas a fazer e quantas
+  podem ficar sem resposta, avaliações a conseguir e de onde pedir, a
+  margem de não resolvidas e de "não voltaria", a nota mínima das novas; a
+  nota de reputação vira o que falta além das métricas. E quanto cada coisa
+  vale: em outubro, uma resposta +0,017, uma avaliação perfeita +0,014 e
+  uma ruim −0,097 (desfaz 7 boas).
+- **Mês a mês e por ciclo:** o que cabe a cada mês (não o acumulado),
+  repartido pelos ciclos; no mês corrente e nos fechados, a meta do ciclo
+  é a do plano do 1º dia, contra o feito. Os dois meses fechados aparecem
+  com a nota do último dia contra a meta.
+- **O que mais está chegando:** os assuntos (categorias oficiais) em 30
+  dias, no mês ou no ciclo, contra a média dos três períodos de antes; "em
+  alta" pelo teste de Poisson (chance de acaso abaixo de 10%), com o peso
+  de cada assunto na nota de 6 meses.
+- **No relatório do ciclo:** os assuntos do ciclo contra os três ciclos
+  anteriores, na tela e no texto do e-mail/Slack ("preciso adicionar no
+  relatório").
+- Provado: `check:plano` (37 conferências — previsão, margens com o
+  arredondamento do portal, ciclos, Poisson, a prévia do Índice e o erro
+  da projeção na base real). Testado na tela gravando e limpando uma meta
+  de março; a base ficou sem meta nenhuma.
+
 ### Categorias corretas: unificar e a IA revisa (05/10/2026, 1.132.0)
 
 Pedido de 05/10: "ajeite também a parte de categorias de reclamações, os

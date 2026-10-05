@@ -2442,3 +2442,28 @@ model PropostaDeCategoria {
 
   @@index([status])
 }
+
+/// A meta do Reclame Aqui para um mês (1.133) — da equipe, não de uma pessoa.
+///
+/// "Adicionar as métricas que quero alcançar o número ou até mesmo a nota
+/// de reputação", mês a mês. A meta de um mês vale para a janela de 6 meses
+/// que fecha nele (a nota que o portal mostra no mês seguinte). Campo vazio
+/// é "sem meta" para aquela métrica.
+model MetaDoReclameAqui {
+  id  String @id @default(cuid())
+  /// "2026-10"
+  mes String @unique
+
+  nota       Float?
+  resposta   Float?
+  consumidor Float?
+  solucao    Float?
+  voltaria   Float?
+  avaliacoes Int?
+  /// Quando a previsão não serve (campanha, mudança conhecida): o número digitado vence.
+  recebidasPrevistas Int?
+  observacao String?
+
+  atualizadoEm  DateTime @updatedAt
+  atualizadoPor String?
+}

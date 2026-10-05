@@ -16,7 +16,7 @@ import { exportarRelatorio, lerRelatorio, salvarRelatorio, type RelatorioLido } 
 import { useToast } from "@/lib/context/ToastContext";
 import { formatElapsed, ptBR, RA1000_MINIMO_DE_AVALIACOES, RA1000_TARGETS } from "@/lib/services/reputation.service";
 import { descreverMinutosUteis, descreverRegistro } from "@/lib/services/horasUteis";
-import type { AbaDoRelatorio } from "@/lib/services/relatorio.service";
+import type { AbaDoRelatorio, AssuntosDoRelatorio } from "@/lib/services/relatorio.service";
 
 import PorQue from "@/components/shared/PorQue";
 /** "01/09/25" — com o ano: a aba de 12 meses atravessa a virada. */
@@ -390,6 +390,8 @@ export default function RelatorioDoCiclo() {
         ))}
       </div>
 
+      {d.assuntos && <AssuntosDoCiclo assuntos={d.assuntos} />}
+
       <SurfaceCard
         title="Tempo até o 1º contato no ciclo"
         description="Do que chegou no ciclo: da publicação (ou da resposta do NPS) ao 1º contato registrado, em horas de expediente. No prazo conta só o que já se decidiu — contatado, ou sem contato com o prazo vencido."
@@ -503,5 +505,67 @@ export default function RelatorioDoCiclo() {
         </div>
       </SurfaceCard>
     </div>
+  );
+}
+
+const TENDENCIA = {
+  alta: { rotulo: "em alta", classe: "text-rose-700" },
+  novo: { rotulo: "novo", classe: "text-rose-700" },
+  queda: { rotulo: "em queda", classe: "text-emerald-700" },
+  estavel: { rotulo: "como de costume", classe: "text-zinc-500" },
+} as const;
+
+/** Os assuntos das reclamações do ciclo, contra os três ciclos de antes (1.133). */
+function AssuntosDoCiclo({ assuntos }: { assuntos: AssuntosDoRelatorio }) {
+  return (
+    <SurfaceCard
+      title="Assuntos das reclamações do ciclo"
+      description={`${assuntos.total} reclamação(ões) no ciclo; de costume, ${ptBR(assuntos.deCostume)} — a média dos três ciclos anteriores. "Em alta" só quando a diferença não cabe no acaso. Nota e peso na nota são da janela de 6 meses.`}
+      action={
+        <Link href="/reclame-aqui/plano#assuntos" className="text-sm font-medium text-violet-700 hover:underline">
+          Ver os assuntos
+        </Link>
+      }
+    >
+      {assuntos.emAlta.length > 0 && (
+        <p className="mb-3 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-800 ring-1 ring-inset ring-rose-200">
+          Em alta: {assuntos.emAlta.map((e) => `${e.nome} (${e.noCiclo}; de costume ${ptBR(e.deCostume)})`).join(" · ")}
+        </p>
+      )}
+      {assuntos.linhas.length === 0 ? (
+        <p className="text-sm text-zinc-500">Nenhuma reclamação no ciclo nem nos três anteriores.</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[560px] text-sm">
+            <thead>
+              <tr className="text-left text-[11px] uppercase tracking-wide text-zinc-400">
+                <th className="py-2 pr-3 font-semibold">Assunto</th>
+                <th className="px-3 py-2 text-right font-semibold">No ciclo</th>
+                <th className="px-3 py-2 text-right font-semibold">De costume</th>
+                <th className="px-3 py-2 font-semibold">Tendência</th>
+                <th className="px-3 py-2 text-right font-semibold">Nota (6m)</th>
+                <th className="py-2 pl-3 text-right font-semibold">Peso na nota</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-zinc-100 tabular-nums">
+              {assuntos.linhas.map((l) => {
+                const t = TENDENCIA[l.tendencia];
+                return (
+                  <tr key={l.nome}>
+                    <td className="py-2 pr-3 text-zinc-800">{l.nome}</td>
+                    <td className="px-3 py-2 text-right">{l.noCiclo}</td>
+                    <td className="px-3 py-2 text-right text-zinc-500">{ptBR(l.deCostume)}</td>
+                    <td className={`px-3 py-2 text-xs font-medium ${t.classe}`}>{t.rotulo}</td>
+                    <td className="px-3 py-2 text-right">{l.nota !== null ? l.nota.toFixed(2).replace(".", ",") : "—"}</td>
+                    <td className="py-2 pl-3 text-right text-zinc-600">{l.pesoNaNota !== null && Math.abs(l.pesoNaNota) >= 0.005 ? `${l.pesoNaNota > 0 ? "−" : "+"}${Math.abs(l.pesoNaNota).toFixed(2).replace(".", ",")}` : "—"}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          <p className="mt-2 text-xs text-zinc-500">Peso na nota: quanto o assunto tira (−) ou soma (+) da nota de 6 meses — a nota sem as reclamações dele, comparada com a de hoje.</p>
+        </div>
+      )}
+    </SurfaceCard>
   );
 }

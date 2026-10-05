@@ -1,6 +1,7 @@
 import "server-only";
 
 import { lerAjustesDeMeta } from "@/lib/actions/ajusteDeMeta";
+import { lerMetasDoReclameAqui } from "@/lib/actions/metasDoReclameAqui";
 import { lerEsperaNoWhatsapp } from "@/lib/actions/esperaNoWhatsapp";
 import { getGoogleStatus, getUpcomingEvents } from "@/lib/actions/google";
 import { lerPainelDoPortal } from "@/lib/actions/painelDoPortal";
@@ -26,6 +27,7 @@ export const LEITURAS = {
   googleStatus: getGoogleStatus,
   googleEventos: getUpcomingEvents,
   recuperacao: lerAjusteDaRecuperacao,
+  metasDoReclameAqui: lerMetasDoReclameAqui,
 } as const;
 
 export type Leituras = typeof LEITURAS;

@@ -68,6 +68,7 @@ const TELAS_EXTRAS: TelaDaBusca[] = [
 const SINONIMOS: Record<string, string[]> = {
   "/processos": ["sla", "prazos", "expediente", "feriados", "areas", "movimentacoes"],
   "/reclame-aqui/avaliacoes": ["pedir avaliacao", "fila de avaliacao"],
+  "/reclame-aqui/plano": ["plano de acao", "metas", "meta do mes", "previsao", "previsao de reclamacoes", "assuntos", "em alta", "o que mais chega", "ciclo"],
   "/reclame-aqui/categorias": ["categorias", "classificacao", "reclassificar", "subcategorias", "unificar categorias"],
   "/reclame-aqui/tempo-ideal": ["prazo ideal", "teto", "tempo de finalizacao", "tempo de resposta", "folga do indice"],
   "/relatorio": ["relatorio de reputacao", "ciclo", "gestao"],

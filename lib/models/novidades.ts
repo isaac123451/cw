@@ -104,6 +104,14 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.133.0",
+    data: "2026-10-05",
+    titulo: "Plano de ação do Reclame Aqui",
+    texto: "Defina a nota ou as métricas de cada mês e veja o que fazer para chegar lá: quantas responder, quantas avaliações conseguir, as margens de não resolvidas, mês a mês e por ciclo — com a previsão de reclamações e o que mais está chegando. Os assuntos do ciclo também entraram no relatório.",
+    frentes: ["reclame-aqui"],
+    href: "/reclame-aqui/plano",
+  },
+  {
     versao: "1.132.0",
     data: "2026-10-05",
     titulo: "Categorias corretas",
