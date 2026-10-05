@@ -132,7 +132,10 @@ conferir("somente leitura não grava", rota.includes('acao === "gravar" && usuar
 conferir("a extensão chama a rota", ler("extensao/fundo/service-worker.js").includes('capturaRedes: "/api/extensao/captura-redes"'), true);
 conferir("a planilha só grava no clique", /aoClicar: async[\s\S]{0,200}acao: "gravar"/.test(ler("extensao/conteudo/planilha.js")), true);
 conferir("o manifesto carrega a planilha e o Slack", ler("extensao/manifest.json").includes('"conteudo/planilha.js"') && ler("extensao/manifest.json").includes('"conteudo/slack.js"'), true);
-conferir("o Slack só grava no clique", /aoClicar: async[\s\S]{0,200}acao: "gravar"/.test(ler("extensao/conteudo/slack.js")), true);
+/* Desde a 1.134 o Slack grava em lotes de 200: o "gravar" fica dentro do laço, mais longe do clique — mas é um só, e dentro dele. */
+const slackJs = ler("extensao/conteudo/slack.js");
+conferir("o Slack só grava no clique", /aoClicar: async[\s\S]{0,900}acao: "gravar"/.test(slackJs) && (slackJs.match(/acao: "gravar"/g) ?? []).length === 1, true);
+conferir("o Slack junta o que passa na tela e marca pelo ts", slackJs.includes("new MutationObserver") && slackJs.includes("data-cw-ts") && slackJs.includes("chrome.storage.local"), true);
 conferir("a gravação avisa a tela das Redes", ler("app/api/extensao/captura-redes/route.ts").includes("revalidateTag(CASES_TAG"), true);
 
 console.log(falhas === 0 ? "\n  A captura lê a planilha e o Slack como a operação escreve.\n" : `\n  ${falhas} ponto(s) a corrigir.\n`);

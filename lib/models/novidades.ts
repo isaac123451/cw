@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.134.0",
+    data: "2026-10-05",
+    titulo: "Slack lê o canal inteiro que você rolou",
+    texto: "No Slack, a extensão junta cada mensagem que passa na tela enquanto você rola — inclusive as antigas carregadas depois — e o Ler o canal manda todas, dizendo de quando a quando leu. A marca de \"já no CW\" não pula mais para mensagens que não foram lidas.",
+    frentes: ["extensao", "redes"],
+  },
+  {
     versao: "1.133.0",
     data: "2026-10-05",
     titulo: "Plano de ação do Reclame Aqui",

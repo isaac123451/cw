@@ -300,10 +300,14 @@ rótulo vira "confirmado" sem mudar uma linha de código.
   a planilha. A aplicação mostra a prévia (novas, já no CW, repetidas, sem
   rede) e só *Gravar* cria os atendimentos.
 - **Slack (canal aberto no navegador):** o texto da mensagem em que se
-  clicou *CW · Redes*, ou das mensagens visíveis no lançador *Ler o canal
-  para as Redes*. Sem token nem app instalado no Slack; os seletores
-  (`data-item-key`, `data-qa="message-text"`) são os do cliente web e
-  podem mudar com ele.
+  clicou *CW · Redes*, ou, no lançador, todas as mensagens que passaram na
+  tela desde que o canal foi aberto — a extensão junta o que aparece
+  enquanto se rola (o Slack só mantém na página o pedaço visível). O
+  lançador diz quantas juntou e desde quando; para ler as mais antigas,
+  role o canal para cima antes de clicar. A marca de "já no CW" segue a
+  mensagem e fica guardada na extensão. Sem token nem app instalado no
+  Slack; os seletores (`data-item-key`, `data-qa="message-text"`) são os
+  do cliente web e podem mudar com ele.
 
 Nada sai da máquina a não ser para o seu próprio CW Reputação, e só três
 coisas saem: a **consulta** (um telefone, um nome ou um protocolo — nunca

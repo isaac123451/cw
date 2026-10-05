@@ -1116,6 +1116,33 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Slack das Redes lido certo (05/10/2026, 1.134.0)
+
+Pedido de 05/10: "ela lê, depois que lê informa que já leu tudo, mas só
+leu o que tava aparecendo; quando vou carregar mensagens mais antigas ela
+acaba já apontando como lida mas não leu".
+
+- **Duas causas.** O Slack mantém na página só o pedaço visível do
+  histórico (lista virtual): "Ler o canal" mandava as mensagens do instante
+  do clique, e as carregadas depois nunca iam. E a marca de "feito" ficava
+  no elemento da página — o Slack reaproveita o elemento ao rolar, e a
+  mensagem antiga que entrava no lugar herdava a marca.
+- **Agora a extensão junta** cada mensagem que passa na tela, na hora em
+  que a página muda (não só a cada 2 s), e "Ler o canal" manda todas as
+  juntadas, em lotes de 200. O lançador diz "Ler 37 mensagens · desde
+  01/10"; a prévia diz quantas leu e de quando a quando, e que as mais
+  antigas ainda não foram lidas.
+- **A marca segue a mensagem** (o `ts`), guardada na memória da extensão
+  por canal; elemento reaproveitado é reconhecido e redesenhado.
+- **Provado num canal de mentira** com os scripts reais da extensão no
+  navegador: 300 mensagens, 8 na tela, elementos reaproveitados ao rolar.
+  Ler 8, gravar e rolar: as antigas chegam sem marca; ler de novo manda 16
+  (8 novas, 8 já no CW). Rolando o canal inteiro trocando a tela a cada 30
+  ms: 300 de 300 juntadas, lidas e gravadas em dois lotes. A primeira
+  versão esperava o quadro da tela e juntou 56 de 300 com a aba escondida
+  — trocada por juntar na hora. `check:captura-redes` confere que gravar
+  continua só no clique.
+
 ### Plano de ação do Reclame Aqui (05/10/2026, 1.133.0)
 
 Pedido de 05/10: "adicionar as métricas que quero alcançar o número ou até
