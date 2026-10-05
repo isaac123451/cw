@@ -1116,6 +1116,33 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Promotor sem comentário entra na fila (05/10/2026, 1.131.0)
+
+Pedido de 05/10: "você está também encerrando os promotores sem
+comentários e não é para ocorrer isso".
+
+- **A regra antiga:** desde o começo, a importação do Wootric e a da
+  planilha faziam o promotor calado (9 ou 10 sem comentário) nascer em
+  "[Encerrado] Sem tratativa", para ~790 respostas por mês não lotarem a
+  fila. Nunca escreveu no Wootric — a escrita ignora esse status —, mas
+  fechava o ciclo aqui.
+- **Agora toda resposta entra aberta**, como "Novo", com o prazo de 1º
+  contato de sempre — decisão dele entre "fila normal" e uma fila própria.
+  Saíram `exigeTratativa` e o contador "entraram sem abrir ciclo".
+- **Defeito achado junto:** o Wootric grava a nota antes do texto; a
+  importação que passava entre os dois encerrava o promotor, e o comentário
+  chegava depois numa resposta já fechada. Eram 120 assim. Agora o
+  comentário novo numa resposta encerrada sem tratativa a reabre, com uma
+  anotação na ficha.
+- **Reabertas, por decisão dele:** as 73 de outubro sem comentário e as 120
+  com comentário presas — 193, cada uma com a anotação do porquê. O estado
+  de antes ficou salvo fora do repositório (contém comentários de
+  clientes). As 2.934 de abril a setembro ficam como estão.
+- Medido no caminho: há 627 respostas com nota até 8 ou com comentário em
+  "Sem tratativa", todas da recarga de 6 meses do Wootric de 28/09 (abril a
+  julho). Não são da regra do promotor; ficam para ele decidir.
+- `check:nps` e `check:nps-planilha` passaram para a regra nova.
+
 ### Tempo ideal e teto do Reclame Aqui (02/10/2026, 1.130.0)
 
 Pedido de 02/10: "um cálculo que eu entenda qual é o tempo ideal para

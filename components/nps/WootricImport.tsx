@@ -136,7 +136,7 @@ export default function WootricImport({
       lidas: 0,
       novas: 0,
       atualizadas: 0,
-      semTratativa: 0,
+      reabertas: 0,
     };
 
     /** Sem janela escolhida é uma chamada só, incremental. */
@@ -232,7 +232,7 @@ export default function WootricImport({
         soma.lidas += r.lidas;
         soma.novas += r.novas;
         soma.atualizadas += r.atualizadas;
-        soma.semTratativa += r.semTratativa;
+        soma.reabertas += r.reabertas;
 
         if (!r.parcial || !r.proximoDesde) break;
 
@@ -281,7 +281,7 @@ export default function WootricImport({
     onDone(
       soma.novas === 0 && soma.atualizadas === 0
         ? "Nada novo — a base já está em dia."
-        : `${automatica ? "Atualizado ao abrir: " : ""}${soma.novas} nova(s), ${soma.atualizadas} atualizada(s). ${soma.semTratativa} promotor(es) sem comentário entraram na conta sem abrir ciclo.`,
+        : `${automatica ? "Atualizado ao abrir: " : ""}${soma.novas} nova(s), ${soma.atualizadas} atualizada(s)${soma.reabertas ? `, ${soma.reabertas} reaberta(s) porque o comentário chegou depois` : ""}.`,
       false
     );
   }

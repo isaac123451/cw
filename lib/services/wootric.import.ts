@@ -78,7 +78,8 @@ export interface ResultadoImportacao {
   lidas: number;
   novas: number;
   atualizadas: number;
-  semTratativa: number;
+  /** Respostas encerradas como promotor calado que o comentário novo reabriu. */
+  reabertas: number;
   desde: string;
   ate?: string;
 
@@ -135,11 +136,11 @@ export async function gravarLote(
 
   let novas = 0;
   let atualizadas = 0;
-  let semTratativa = 0;
+  let reabertas = 0;
 
   const expediente = await lerExpediente(prisma);
 
-  const existentes = new Set(
+  const existentes = new Map(
     (
       await prisma.npsResponse.findMany({
         where: {
@@ -147,9 +148,9 @@ export async function gravarLote(
             in: itens.map((i) => i.externalId),
           },
         },
-        select: { externalId: true },
+        select: { externalId: true, status: true, comment: true },
       })
-    ).map((r) => r.externalId as string)
+    ).map((r) => [r.externalId as string, r])
   );
 
   for (let i = 0; i < itens.length; i += 5) {
@@ -159,7 +160,22 @@ export async function gravarLote(
     await Promise.all(
       lote.map(async (item) => {
 
-        const jaExiste = existentes.has(item.externalId);
+        const antes = existentes.get(item.externalId);
+        const jaExiste = Boolean(antes);
+
+        /*
+          O comentário que chega depois da nota (05/10/2026).
+
+          O Wootric grava a nota primeiro e o texto depois; a importação que
+          passava entre os dois via um promotor calado e o encerrava. O
+          comentário chegava na rodada seguinte e a resposta ficava fechada,
+          sem ninguém ler — eram 120 assim. Agora o comentário novo numa
+          resposta encerrada sem tratativa a reabre.
+        */
+        const reabrirPeloComentario =
+          antes?.status === STATUS_SEM_TRATATIVA &&
+          !(antes.comment ?? "").trim() &&
+          item.comment.trim() !== "";
 
         const doWootric = {
           score: item.score,
@@ -190,13 +206,27 @@ export async function gravarLote(
           const atual =
             await prisma.npsResponse.update({
               where: { externalId: item.externalId },
-              data: semApagarContato(doWootric),
+              data: {
+                ...semApagarContato(doWootric),
+                ...(reabrirPeloComentario ? { status: "Novo", closedAt: null, outcome: null } : {}),
+              },
               select: {
                 id: true,
                 status: true,
                 firstContactAt: true,
               },
             });
+
+          if (reabrirPeloComentario) {
+            await prisma.npsNote.create({
+              data: {
+                responseId: atual.id,
+                actor: "Sistema",
+                body: "Reaberta: o comentário chegou depois da nota, e a resposta tinha sido encerrada como promotor sem comentário.",
+              },
+            });
+            reabertas += 1;
+          }
 
           await refletirContato(prisma, atual, item);
 
@@ -217,22 +247,13 @@ export async function gravarLote(
               expediente
             ),
 
-            status: item.exigeTratativa
-              ? "Novo"
-              : STATUS_SEM_TRATATIVA,
+            /*
+              Toda resposta entra aberta (05/10/2026). Até aqui o promotor
+              calado nascia "[Encerrado] Sem tratativa"; o Isaac pediu que
+              não — o promotor tem as ações dele na trilha.
+            */
+            status: "Novo",
 
-            /**
-             * Promotor calado nasce fechado, com a data da própria
-             * resposta: deixar `closedAt` nulo faria a tela mostrar um
-             * encerramento sem quando.
-             */
-            closedAt: item.exigeTratativa
-              ? null
-              : item.respondedAt,
-
-            outcome: item.exigeTratativa
-              ? null
-              : STATUS_SEM_TRATATIVA,
           },
           select: {
             id: true,
@@ -245,12 +266,11 @@ export async function gravarLote(
 
         novas += 1;
 
-        if (!item.exigeTratativa) semTratativa += 1;
       })
     );
   }
 
-  return { novas, atualizadas, semTratativa };
+  return { novas, atualizadas, reabertas };
 }
 
 /**
@@ -412,7 +432,7 @@ export async function importarDoWootric(
     lidas: 0,
     novas: 0,
     atualizadas: 0,
-    semTratativa: 0,
+    reabertas: 0,
     desde: "",
   };
 

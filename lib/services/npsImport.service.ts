@@ -2,7 +2,6 @@ import { createHash } from "node:crypto";
 
 import * as XLSX from "xlsx";
 
-import { segmentOf } from "@/lib/models/nps";
 import { diaNaOperacao } from "@/lib/services/reputation.service";
 import { instanteDeParede } from "@/lib/services/horasUteis";
 
@@ -34,8 +33,6 @@ export interface LinhaDeNps {
   company?: string;
   kind?: string;
   rootCause?: string;
-  /** Falso para promotor calado: entra na conta, não abre ciclo. */
-  exigeTratativa: boolean;
 }
 
 export interface ResultadoDaLeitura {
@@ -396,18 +393,6 @@ export function parseNpsPlanilha(
         col.rootCause >= 0 ? linha[col.rootCause] : null,
         120
       ),
-
-      /**
-       * Promotor calado não abre ciclo.
-       *
-       * A mesma regra da importação do Wootric, e pelo mesmo motivo:
-       * abrir tratativa para cada nota 10 sem comentário enterraria os
-       * detratores no meio da fila. Aqui ela precisa ser repetida
-       * porque a planilha não passa pelo `traduzir` do Wootric.
-       */
-      exigeTratativa:
-        segmentOf(Math.round(nota)).label !== "Promotor" ||
-        (comentario ?? "").trim() !== "",
     };
 
     if (vistas.has(item.externalId)) {

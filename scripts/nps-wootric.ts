@@ -25,7 +25,6 @@ import {
 } from "../lib/services/wootric.service";
 
 import { prazoPrimeiroContato } from "../lib/services/nps.service";
-import { STATUS_SEM_TRATATIVA } from "../lib/models/nps";
 
 const args = process.argv.slice(2);
 
@@ -90,9 +89,8 @@ async function main() {
       (i): i is RespostaImportada => i !== null
     );
 
-  const comTratativa = itens.filter(
-    (i) => i.exigeTratativa
-  ).length;
+  /* Desde 05/10/2026 toda resposta abre ciclo, inclusive o promotor calado. */
+  const comTratativa = itens.length;
 
   console.log(`  Lidas:      ${brutas.length}`);
   console.log(
@@ -174,15 +172,7 @@ async function main() {
               item.score,
               null
             ),
-            status: item.exigeTratativa
-              ? "Novo"
-              : STATUS_SEM_TRATATIVA,
-            closedAt: item.exigeTratativa
-              ? null
-              : item.respondedAt,
-            outcome: item.exigeTratativa
-              ? null
-              : STATUS_SEM_TRATATIVA,
+            status: "Novo",
           },
         });
       })

@@ -1194,7 +1194,7 @@ export async function importWootric(input?: {
       lidas: 0,
       novas: 0,
       atualizadas: 0,
-      semTratativa: 0,
+      reabertas: 0,
       desde: "",
       erro: "Sem banco configurado — a importação precisa de onde gravar.",
     };
@@ -1372,17 +1372,8 @@ export async function importNpsPlanilha(
               expediente
             ),
 
-            status: item.exigeTratativa
-              ? "Novo"
-              : STATUS_SEM_TRATATIVA,
-
-            closedAt: item.exigeTratativa
-              ? null
-              : item.respondedAt,
-
-            outcome: item.exigeTratativa
-              ? null
-              : STATUS_SEM_TRATATIVA,
+            /* Toda resposta entra aberta, como na importação do Wootric (05/10/2026). */
+            status: "Novo",
           },
         });
 

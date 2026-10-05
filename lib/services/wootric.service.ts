@@ -50,9 +50,11 @@
  *    chave que liga NPS a estabelecimento, e por isso é guardada mesmo
  *    sem ter onde casar ainda.
  *
- * 5. **Volume:** ~790 respostas por mês. É o número que obriga a regra
- *    de fila em `exigeTratativa()` — 790 ciclos abertos por mês não é
- *    uma fila, é um aterro.
+ * 5. **Volume:** ~790 respostas por mês. Até 05/10/2026 o promotor
+ *    calado (9 ou 10 sem comentário) nascia encerrado para não lotar a
+ *    fila; a pedido do Isaac ("não é para ocorrer isso"), toda resposta
+ *    entra aberta — o promotor tem as ações dele na trilha (avaliação no
+ *    Google, case, indicação).
  */
 
 /** Ambiente. O Wootric espelha a API em três regiões. */
@@ -405,9 +407,6 @@ export interface RespostaImportada {
    * tela diz isso em vez de inventar quem escreveu.
    */
   notasDoWootric: string[];
-
-  /** Falso para promotor calado: entra na conta, não entra na fila. */
-  exigeTratativa: boolean;
 }
 
 function texto(valor: unknown) {
@@ -467,28 +466,6 @@ function nomeDe(usuario?: WootricEndUser) {
   return externo ? `Cliente ${externo}` : "Não identificado";
 }
 
-/**
- * Esta resposta precisa de tratativa individual?
- *
- * A régua: **nota até 8, ou qualquer comentário escrito**. Detrator e
- * neutro são o trabalho de retenção; o comentário é de onde sai a causa
- * raiz, venha de quem vier. O que fica de fora é o promotor calado —
- * nota 9 ou 10 sem uma palavra.
- *
- * Não é preguiça: são ~790 respostas por mês, e 1.051 notas 10 no
- * primeiro ano medido. Abrir ciclo individual para cada uma
- * transformaria a fila em ruído e enterraria os detratores no meio.
- * Eles continuam **entrando na base** — o NPS calculado segue correto,
- * porque tirá-los da conta mudaria o indicador — só não nascem com
- * status "Novo" esperando alguém.
- */
-export function exigeTratativa(
-  score: number,
-  comentario: string
-) {
-  return score <= 8 || comentario.trim() !== "";
-}
-
 export function traduzir(
   resposta: WootricResponse
 ): RespostaImportada | null {
@@ -543,10 +520,5 @@ export function traduzir(
           .map((nota) => String(nota ?? "").trim())
           .filter((nota) => nota !== "")
       : [],
-
-    exigeTratativa: exigeTratativa(
-      resposta.score,
-      comentario
-    ),
   };
 }

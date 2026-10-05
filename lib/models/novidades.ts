@@ -104,6 +104,14 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.131.0",
+    data: "2026-10-05",
+    titulo: "Promotor sem comentário entra na fila",
+    texto: "Nenhuma resposta do NPS nasce mais encerrada: o promotor sem comentário entra como Novo, igual aos outros. E quando o comentário chega depois da nota, a resposta que estava fechada reabre sozinha.",
+    frentes: ["nps"],
+    href: "/nps",
+  },
+  {
     versao: "1.130.0",
     data: "2026-10-02",
     titulo: "Tempo ideal e teto no Reclame Aqui",

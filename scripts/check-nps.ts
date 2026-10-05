@@ -16,7 +16,6 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 
 import {
-  exigeTratativa,
   listarRespostas,
   temWootric,
   traduzir,
@@ -155,9 +154,8 @@ async function main() {
 
   /* ---- fila ---- */
 
-  const precisam = nossas.filter((r) =>
-    exigeTratativa(r.score, r.comment)
-  );
+  /* Desde 05/10/2026 toda resposta entra na fila, inclusive o promotor calado. */
+  const precisam = nossas;
 
   const abertos = nossas.filter(
     (r) => !r.status.startsWith("[Encerrado]")
@@ -172,7 +170,7 @@ async function main() {
     `    em aberto na tela:           ${abertos.length}`
   );
   console.log(
-    `    promotor calado (fora da fila): ${nossas.length - precisam.length}`
+    `    encerradas sem tratativa (antes de 05/10): ${nossas.filter((r) => r.status === "[Encerrado] Sem tratativa").length}`
   );
 
   const porSegmento = new Map<string, number>();

@@ -161,29 +161,16 @@ conferir(
 );
 
 /**
- * Promotor calado não abre ciclo.
+ * Toda linha entra, inclusive o promotor sem comentário (05/10/2026).
  *
- * Mesma regra da importação do Wootric: são centenas de nota 10 sem uma
- * palavra escrita, e abrir tratativa para cada uma enterraria os
- * detratores no meio da fila. Aqui ela precisa valer também, senão a
- * mesma base entra de dois jeitos diferentes conforme o caminho.
+ * Até aqui o promotor calado não abria ciclo; o Isaac pediu que não fosse
+ * encerrado. A leitura da planilha não decide mais nada sobre a fila — a
+ * resposta nasce aberta na gravação, como a do Wootric.
  */
 conferir(
-  "promotor sem comentário não abre ciclo",
-  exportado.itens[1].exigeTratativa,
-  false
-);
-
-conferir(
-  "promotor COM comentário abre",
-  exportado.itens[2].exigeTratativa,
-  true
-);
-
-conferir(
-  "detrator abre",
-  exportado.itens[0].exigeTratativa,
-  true
+  "o promotor sem comentário é lido como os outros",
+  [exportado.itens[1].score >= 9, (exportado.itens[1].comment ?? "").trim()],
+  [true, ""]
 );
 
 conferir("nenhuma linha ignorada", exportado.ignoradas, []);
