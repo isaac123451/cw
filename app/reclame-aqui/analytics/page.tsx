@@ -552,6 +552,11 @@ export default function ReclameAquiAnalyticsPage() {
           <RankingCard
             title="Reclamações por categoria"
             description="Clique em uma categoria para filtrar toda a tela."
+            action={
+              <Link href="/reclame-aqui/categorias" className="text-sm font-medium text-violet-700 hover:underline">
+                Revisar categorias
+              </Link>
+            }
             hint="A variação compara com o mesmo intervalo imediatamente anterior. Vermelho significa que a categoria cresceu."
             rows={byCategory}
             onSelect={(value) =>

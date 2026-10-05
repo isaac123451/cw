@@ -1,6 +1,6 @@
 {
   "name": "cw-reputacao",
-  "version": "1.131.0",
+  "version": "1.132.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -76,6 +76,7 @@
     "check:motor-proprio": "tsx scripts/check-motor-proprio.ts",
     "check:seguranca": "tsx scripts/check-seguranca.ts",
     "check:telas": "tsx scripts/check-telas.ts",
+    "check:categorias": "tsx scripts/check-categorias.ts",
     "check:tempo-ideal": "tsx scripts/check-tempo-ideal.ts",
     "check:tempo-das-telas": "tsx scripts/check-tempo-das-telas.ts",
     "check:fiacao": "tsx scripts/check-fiacao.ts",

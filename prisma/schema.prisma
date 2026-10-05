@@ -528,6 +528,8 @@ model Case {
   avaliacoesGoogle AvaliacaoGoogle[]
   conversas Conversa[]
   imagensDoDossie ImagemDoDossie[]
+  reclassificacoes ReclassificacaoDeCaso[]
+  propostaDeCategoria PropostaDeCategoria?
 
   @@index([channel, publishedAt])
   @@index([status])
@@ -2371,4 +2373,72 @@ model PainelDoPortal {
   dados     Json
   lidoEm    DateTime @default(now())
   criadoEm  DateTime @default(now())
+}
+
+/// Cada troca de categoria feita pela revisão das categorias (1.131).
+///
+/// A base misturava as categorias da documentação com as do portal ("Qualidade
+/// Do Atendimento", "Financeiro E Cobranças"), e muita reclamação estava na
+/// categoria errada. Unificar e aceitar a sugestão da IA mudam dado de
+/// produção — então toda troca fica aqui, com o antes e o depois por id, e o
+/// lote inteiro pode ser desfeito. Os nomes ficam junto para a tela ler sem
+/// consultar o cadastro.
+model ReclassificacaoDeCaso {
+  id     String @id @default(cuid())
+  caseId String
+  case   Case   @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  /// "unificacao-<instante>" ou "ia-<instante>": o que se desfaz junto.
+  lote   String
+  /// unificacao · ia
+  origem String
+
+  deCategoriaId      String?
+  deCategoria        String?
+  deSubcategoriaId   String?
+  deSubcategoria     String?
+  paraCategoriaId    String?
+  paraCategoria      String?
+  paraSubcategoriaId String?
+  paraSubcategoria   String?
+
+  motivo String?
+  por    String
+  em     DateTime @default(now())
+  /// Preenchido quando o lote é desfeito — a linha fica, como registro.
+  desfeitaEm DateTime?
+
+  @@index([caseId])
+  @@index([lote])
+}
+
+/// A categoria que a IA propõe para uma reclamação, lendo o relato (1.131).
+///
+/// Proposta não é troca: fica pendente até alguém aceitar ou recusar na tela
+/// de categorias. A categoria e a subcategoria atuais são guardadas no momento
+/// da proposta — se alguém mudar o caso antes da decisão, a tela vê que a
+/// proposta envelheceu e não aplica por cima.
+model PropostaDeCategoria {
+  id     String @id @default(cuid())
+  caseId String @unique
+  case   Case   @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  categoria    String
+  subcategoria String?
+  /// alta · media · baixa
+  confianca    String
+  motivo       String
+
+  categoriaAtual    String?
+  subcategoriaAtual String?
+
+  /// pendente · igual · aceita · recusada
+  status String @default("pendente")
+  modelo String?
+
+  geradaEm    DateTime  @default(now())
+  decididaEm  DateTime?
+  decididaPor String?
+
+  @@index([status])
 }

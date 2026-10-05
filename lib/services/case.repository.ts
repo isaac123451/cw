@@ -28,6 +28,7 @@ import {
   type ConflitoDeEdicao,
 } from "@/lib/models/edicaoSimultanea";
 import { Case } from "@/lib/models/case";
+import { categoriaOficial, chaveDaSubcategoria } from "@/lib/models/taxonomia";
 import {
   Prisma,
   PrismaClient,
@@ -436,22 +437,29 @@ async function resolverRelacoes(
 
   const c = cacheValido();
 
+  /*
+    O nome do portal vira o oficial (1.132): "Financeiro E Cobranças" entra
+    como Financeiro. Sem isso, a unificação das categorias desmancharia a
+    cada reclamação nova que chegasse com o nome da planilha.
+  */
+  const nomeDaCategoria = categoriaOficial(item.category) ?? item.category;
+
   const temCategoria =
-    Boolean(item.category) &&
-    item.category !== "Não classificado";
+    Boolean(nomeDaCategoria) &&
+    nomeDaCategoria !== "Não classificado";
 
   let categoryId: string | null = null;
 
   if (temCategoria) {
 
-    categoryId = c.categoria.get(item.category) ?? null;
+    categoryId = c.categoria.get(nomeDaCategoria) ?? null;
 
     if (!categoryId) {
       const row = await prisma.category.upsert({
-        where: { name: item.category },
+        where: { name: nomeDaCategoria },
         update: {},
         create: {
-          name: item.category,
+          name: nomeDaCategoria,
           description: "Criada pela tela de reclamações.",
           order: 999,
           active: true,
@@ -460,7 +468,7 @@ async function resolverRelacoes(
       });
 
       categoryId = row.id;
-      c.categoria.set(item.category, row.id);
+      c.categoria.set(nomeDaCategoria, row.id);
     }
   }
 
@@ -471,6 +479,19 @@ async function resolverRelacoes(
     const chave = `${categoryId}::${item.subcategory}`;
 
     subcategoryId = c.subcategoria.get(chave) ?? null;
+
+    /* A gêmea que já existe ("Cobrança Indevida" e "Cobrança indevida") é a mesma. */
+    if (!subcategoryId) {
+      const gemea = (
+        await prisma.subcategory.findMany({ where: { categoryId }, select: { id: true, name: true, active: true } })
+      )
+        .filter((s) => chaveDaSubcategoria(s.name) === chaveDaSubcategoria(item.subcategory!))
+        .sort((a, b) => Number(b.active) - Number(a.active))[0];
+      if (gemea) {
+        subcategoryId = gemea.id;
+        c.subcategoria.set(chave, gemea.id);
+      }
+    }
 
     if (!subcategoryId) {
       const row = await prisma.subcategory.upsert({
@@ -1399,8 +1420,24 @@ export async function importCasesBulk(
 
 async function gravarLote(
   prisma: PrismaClient,
-  cases: Case[]
+  recebidos: Case[]
 ) {
+
+  /*
+    A categoria oficial e a subcategoria gêmea, antes de gravar (1.132): a
+    importação era o caminho por onde "Qualidade Do Atendimento" e "Cobrança
+    Indevida" entravam ao lado de "Atendimento" e "Cobrança indevida".
+  */
+  const subsExistentes = await prisma.subcategory.findMany({ select: { name: true, active: true, category: { select: { name: true } } } });
+  const grafiaDaSub = new Map<string, string>();
+  for (const s of [...subsExistentes].sort((a, b) => Number(a.active) - Number(b.active))) {
+    grafiaDaSub.set(`${s.category.name}::${chaveDaSubcategoria(s.name)}`, s.name);
+  }
+  const cases = recebidos.map((item) => {
+    const category = categoriaOficial(item.category) ?? item.category;
+    const subcategory = item.subcategory ? (grafiaDaSub.get(`${category}::${chaveDaSubcategoria(item.subcategory)}`) ?? item.subcategory) : item.subcategory;
+    return category === item.category && subcategory === item.subcategory ? item : { ...item, category, subcategory };
+  });
 
   // 1. Categorias — dezenas, não centenas.
   const categorias = new Map<string, string>();

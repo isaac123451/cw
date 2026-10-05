@@ -1116,6 +1116,53 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Categorias corretas: unificar e a IA revisa (05/10/2026, 1.132.0)
+
+Pedido de 05/10: "ajeite também a parte de categorias de reclamações, os
+dados estão incorretos". Decisão dele: unificar nas categorias da
+documentação e a IA propor a categoria certa de cada reclamação, com
+aprovação antes de gravar.
+
+- **O diagnóstico.** A base misturava as 12 categorias da documentação com
+  as que a planilha do portal trouxe — o mesmo assunto em 3 a 6 fatias
+  (Financeiro, Financeiro E Cobranças, Financeiro E Faturamento). E muita
+  reclamação estava no lugar errado: "Atendimento" tinha 180 e escondia
+  sistema parado, cancelamento e impressora. A sugestão por texto que já
+  existia acerta 65% — aprende com as categorias gravadas, que eram o
+  problema.
+- **A lista oficial** (`lib/models/taxonomia.ts`): as 12 da documentação,
+  Impressão de pedidos e WhatsApp e robô (da 1.74) e Outros — com a
+  definição que separa uma da vizinha, que é o que a IA lê.
+- **Tela Reclame Aqui → Categorias**, em três passos e um histórico:
+  1. *Unificar:* cada categoria do portal vai para a oficial dela, as
+     subcategorias gêmeas ("Demora No Atendimento" e "Demora no
+     atendimento") viram uma só, a de origem fica desativada. Feito em
+     05/10 pela tela: 139 reclamações, 12 categorias e 12 subcategorias.
+  2. *A IA lê cada relato* e propõe categoria e subcategoria, com a
+     confiança e o trecho que decidiu. Rodou nas 367: 39 já estavam
+     certas, 191 mudam a categoria (184 com confiança alta) e 137 só a
+     subcategoria. As maiores: Atendimento → Sistema 32, Financeiro →
+     Cancelamento 20, Atendimento → Implantação 19.
+  3. *Aprovar:* nada muda sem aprovação. Filtro por tipo de mudança,
+     confiança e categoria; aceitar troca e registra de onde veio;
+     proposta de caso que alguém mudou depois não é aplicada por cima.
+  - *Histórico:* cada unificação e aprovação é um lote, e desfazer devolve
+    as reclamações à categoria de antes — menos as que alguém mudou
+    depois — e as propostas voltam a pendentes.
+- **Não volta a bagunçar:** a importação da planilha e o salvar do caso
+  passam o nome do portal pela oficial e reaproveitam a subcategoria gêmea
+  (`categoriaOficial`, `chaveDaSubcategoria`). A reimportação e o vigia
+  não mexem na categoria de reclamação que já existe (conferido).
+- **Duas tabelas novas**, `ReclassificacaoDeCaso` (cada troca, para
+  desfazer) e `PropostaDeCategoria`, com RLS (77 de 77).
+- **Achado no caminho:** a primeira unificação passou dos 5 s padrão da
+  transação e foi desfeita inteira — nada ficou pela metade, conferido no
+  banco. As gravações agora são agrupadas e a transação tem prazo de 60 s.
+- Provado: `check:categorias` (regras com cadastro montado à mão, a
+  resposta da IA validada, a base real só leitura) e aceitar, recusar,
+  desfazer e proposta desatualizada com duas reclamações descartáveis,
+  apagadas no fim.
+
 ### Promotor sem comentário entra na fila (05/10/2026, 1.131.0)
 
 Pedido de 05/10: "você está também encerrando os promotores sem

@@ -104,6 +104,14 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.132.0",
+    data: "2026-10-05",
+    titulo: "Categorias corretas",
+    texto: "As categorias que vieram do portal foram unificadas nas da documentação, e a IA leu cada reclamação e propôs a categoria certa. Em Reclame Aqui → Categorias você aprova o que muda — e pode desfazer qualquer lote.",
+    frentes: ["reclame-aqui"],
+    href: "/reclame-aqui/categorias",
+  },
+  {
     versao: "1.131.0",
     data: "2026-10-05",
     titulo: "Promotor sem comentário entra na fila",

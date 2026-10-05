@@ -17,6 +17,8 @@ interface Props {
 
   /** Linha atualmente aplicada como filtro. */
   active?: string;
+  /** Ação no cabeçalho do card — "Revisar categorias". */
+  action?: React.ReactNode;
 }
 
 export default function RankingCard({
@@ -27,6 +29,7 @@ export default function RankingCard({
   limit = 6,
   onSelect,
   active,
+  action,
 }: Props) {
 
   const items = rows.slice(0, limit);
@@ -41,6 +44,7 @@ export default function RankingCard({
       title={title}
       description={description}
       hint={hint}
+      action={action}
     >
 
       {items.length === 0 ? (

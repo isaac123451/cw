@@ -71,6 +71,7 @@ export const menuItems: MenuItem[] = [
       { title: "Quadro", href: "/reclame-aqui" },
       { title: "Pedir avaliação", href: "/reclame-aqui/avaliacoes" },
       { title: "Tempo ideal", href: "/reclame-aqui/tempo-ideal" },
+      { title: "Categorias", href: "/reclame-aqui/categorias" },
       { title: "Prêmio", href: "/reclame-aqui/premio" },
       { title: "Analytics", href: "/reclame-aqui/analytics" },
       { title: "Gráficos", href: "/reclame-aqui/graficos" },

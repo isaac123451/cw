@@ -1,8 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
-import { Combine, Plus, Search, Trash2 } from "lucide-react";
+import { Sparkles, Combine, Plus, Search, Trash2 } from "lucide-react";
 
 import { useSession } from "@/lib/context/SessionContext";
 import { useSettings } from "@/lib/context/SettingsContext";
@@ -73,6 +74,14 @@ export default function CategoriesSettings() {
       description="Agrupam as reclamações por tipo de problema. Mantenha nomes claros e descrição enxuta."
       action={
         <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <Link
+            href="/reclame-aqui/categorias"
+            title="Unificar nas categorias da documentação e revisar a classificação de cada reclamação com a IA"
+            className="flex items-center gap-2 rounded-xl border border-zinc-200 px-3.5 py-2 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-50"
+          >
+            <Sparkles size={15} />
+            Revisar com IA
+          </Link>
           {sessao?.role === "ADMIN" && (
             <button
               onClick={() => setUnificando(true)}
