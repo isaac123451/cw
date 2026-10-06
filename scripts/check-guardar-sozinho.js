@@ -25,7 +25,7 @@ const codigo = readFileSync(resolve(__dirname, "../extensao/conteudo/painel-cont
 
 function montar() {
   const enviados = [];
-  const gatilho = { classList: { _: new Set(), toggle(c, v) { v ? this._.add(c) : this._.delete(c); }, contains(c) { return this._.has(c); } }, title: "" };
+  const gatilho = { classList: { _: new Set(), toggle(c, v) { if (v) this._.add(c); else this._.delete(c); }, contains(c) { return this._.has(c); } }, title: "" };
   const P = {
     config: {},
     raiz: { querySelector: (s) => (s === ".gatilho" ? gatilho : null) },

@@ -39,6 +39,13 @@ const eslintConfig = defineConfig([
        * exceção.
        */
       "react-hooks/set-state-in-effect": "error",
+
+      /*
+        O "_" na frente é o jeito de dizer "este parâmetro existe porque a
+        assinatura pede" — a server action do `useActionState` recebe o
+        estado anterior e o formulário mesmo quando não usa (out/2026).
+      */
+      "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
     },
   },
   {

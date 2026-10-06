@@ -23,7 +23,6 @@
  * passaria a dar verde sobre código que não existe mais.
  */
 
-import fs from "node:fs";
 
 import { fonteDoPainel } from "./fonte-do-painel";
 
