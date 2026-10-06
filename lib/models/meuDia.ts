@@ -1,7 +1,7 @@
 import type { Case } from "@/lib/models/case";
 import type { CaseMovement } from "@/lib/models/movement";
 import type { AgendaTask } from "@/lib/models/agenda";
-import { PRAZOS_DA_DOCUMENTACAO, type SlaRule } from "@/lib/models/sla";
+import { regrasQueValem, type SlaRule } from "@/lib/models/sla";
 import type { AvaliacaoGoogleView } from "@/lib/actions/avaliacoesGoogle";
 import type { LinhaDeMetrica } from "@/lib/actions/metricas";
 
@@ -246,18 +246,8 @@ function diasCorridosDesde(iso: string, agora: Date) {
   return (agora.getTime() - Date.parse(iso)) / 86_400_000;
 }
 
-/**
- * As regras de prazo que valem na conta.
- *
- * Sem nenhuma cadastrada em Processos, valem as da documentação (a
- * tabela de criticidade do Reclame Aqui e o 1º contato das Redes) —
- * senão nenhum caso fica "fora do prazo" e a rotina não sabe o que vem
- * primeiro.
- */
-export function regrasQueValem(regras: SlaRule[]): SlaRule[] {
-  if (regras.some((r) => r.active)) return regras;
-  return PRAZOS_DA_DOCUMENTACAO.map((p, i) => ({ ...p, id: `documentacao-${i}`, active: true }));
-}
+/* Mora em `lib/models/sla` desde out/2026, junto do relógio que a usa. */
+export { regrasQueValem };
 
 const CRITICIDADE: Record<string, number> = { urgente: 0, alta: 1, normal: 2 };
 

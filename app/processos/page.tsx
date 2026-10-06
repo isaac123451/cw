@@ -254,7 +254,7 @@ export default function ProcessosPage() {
             value={
               rules.filter((item) => item.active).length
             }
-            hint={`de ${rules.length} cadastradas`}
+            hint={rules.length > 0 ? `de ${rules.length} ${pluralDe(rules.length, "cadastrada", "cadastradas")}` : "valem os prazos da documentação"}
             icon={Timer}
             tone="primary"
           />
@@ -287,7 +287,9 @@ export default function ProcessosPage() {
             hint={
               metrics.semRegra > 0
                 ? `${metrics.semRegra} sem regra aplicável`
-                : "todos cobertos por uma regra"
+                : rules.some((r) => r.active)
+                  ? "todos cobertos por uma regra"
+                  : "pelos prazos da documentação"
             }
             icon={BookOpenCheck}
             tone="info"
@@ -378,9 +380,10 @@ export default function ProcessosPage() {
                         Nenhuma regra de SLA cadastrada.
                       </p>
                       <p className="mx-auto mt-1.5 max-w-md text-sm text-zinc-400">
-                        Enquanto não houver regra, nenhum
-                        caso é marcado como fora do prazo —
-                        não há prazo contra o que comparar.
+                        Enquanto não houver regra cadastrada,
+                        valem os prazos da documentação — a tabela
+                        de criticidade do Reclame Aqui e o 1º contato
+                        das Redes. Cadastrá-los aqui deixa ajustar.
                       </p>
                       <button
                         type="button"

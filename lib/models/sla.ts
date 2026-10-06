@@ -143,6 +143,23 @@ export const PRAZOS_DA_DOCUMENTACAO: PrazoDaDocumentacao[] = [
   },
 ];
 
+/**
+ * As regras de prazo que valem na conta.
+ *
+ * Sem nenhuma cadastrada em Processos, valem as da documentação (a
+ * tabela de criticidade do Reclame Aqui e o 1º contato das Redes).
+ *
+ * **Desde out/2026 vale em todo lugar** — está dentro de `resolveRule`.
+ * Antes só o Meu dia e três rotas da extensão aplicavam: o Meu dia dizia
+ * "19 do Reclame Aqui fora do prazo", e a ficha de cada um deles, o
+ * quadro, o painel da extensão e o "Pede ação agora" diziam "Sem prazo" —
+ * a mesma reclamação atrasada e em dia ao mesmo tempo.
+ */
+export function regrasQueValem(regras: SlaRule[]): SlaRule[] {
+  if (regras.some((r) => r.active)) return regras;
+  return PRAZOS_DA_DOCUMENTACAO.map((p, i) => ({ ...p, id: `documentacao-${i}`, active: true }));
+}
+
 /** A mesma regra? Frente, categoria, prioridade e alcance iguais. */
 export function mesmaRegra(
   a: Pick<SlaRule, "category" | "priority" | "canal" | "seguidoresMin">,

@@ -541,6 +541,16 @@ export const MUDANCAS: Mudanca[] = [
       "O botão das listas longas dizia \"Mostrar mais 40 de 253\" — lido como 40 de um total de 253, quando 253 era o que faltava. Agora diz \"faltam\", e no último lote \"Mostrar os 9 restantes\". Nos quadros e listas do Reclame Aqui e do NPS, nas categorias, no prêmio e nos itens da atividade.",
   },
   {
+    id: "prazos-da-documentacao-em-todo-lugar",
+    dia: "2026-10-06",
+    tipo: "correcao",
+    frente: "reclame-aqui",
+    titulo: "Prazo de verdade em todo caso: os da documentação, enquanto nada for cadastrado",
+    texto:
+      "Nenhuma regra de prazo está cadastrada em Processos. O Meu dia já usava, nesse caso, os prazos da documentação (a tabela de criticidade do Reclame Aqui e o 1º contato das Redes) e dizia \"19 do Reclame Aqui fora do prazo\" — mas a ficha de cada um desses casos, o quadro, o painel da extensão, o \"Pede ação agora\" e Processos diziam \"Sem prazo\". A mesma reclamação estava atrasada e em dia ao mesmo tempo. Agora a regra vale dentro do próprio relógio: Processos passou de 0 para 13 fora do prazo (o mais antigo com a solução atrasada 37 dias úteis), e o \"Pede ação agora\" conta os casos junto do NPS. Cadastrar regras em Processos continua valendo por cima.",
+    href: "/processos",
+  },
+  {
     id: "meu-dia-nao-afirma-na-carga",
     dia: "2026-10-06",
     tipo: "correcao",

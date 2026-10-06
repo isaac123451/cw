@@ -6,6 +6,7 @@ import {
 import {
   ANY_CATEGORY,
   canalDoCaso,
+  regrasQueValem,
   SlaRule,
 } from "@/lib/models/sla";
 
@@ -49,7 +50,8 @@ export function resolveRule(
   let melhor: SlaRule | undefined;
   let melhorPeso = -1;
 
-  for (const rule of rules) {
+  /* Nada cadastrado em Processos: valem os prazos da documentação, aqui e em toda tela. */
+  for (const rule of regrasQueValem(rules)) {
 
     if (!rule.active) continue;
 
