@@ -306,6 +306,17 @@ export const MUDANCAS: Mudanca[] = [
     onde: "Extensão → NPS",
   },
 
+  {
+    id: "ext-contato-novo",
+    dia: "2026-10-06",
+    tipo: "melhoria",
+    frente: "extensao",
+    titulo: "\"Contato novo\" em vez de \"Nada encontrado\"",
+    texto:
+      "Uma conversa de quem ainda não está na base abria com \"Nada encontrado\", como se a busca tivesse falhado. Agora diz \"Contato novo\", com o Cadastrar caso e o \"quem é este contato\" logo abaixo. \"Nada encontrado\" ficou para a busca digitada que não acha nada.",
+    onde: "Extensão → Cliente",
+  },
+
   /* ---------------- extensão: popup e opções ---------------- */
   {
     id: "popup-abria-rolado",

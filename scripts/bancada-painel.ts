@@ -190,12 +190,14 @@ ${fontes}
 
   /* ?cliente=nps: o contato é alguém com ciclo de NPS aberto. */
   const doNps = new URLSearchParams(location.search).get("cliente") === "nps" && capturas.contatoNps;
+  /* ?cliente=novo: um número que a base não conhece. */
+  const novo = new URLSearchParams(location.search).get("cliente") === "novo";
 
   CW.enviar = async (mensagem) => {
     const t = mensagem?.tipo;
     if (t === "config") return { ok: true, dados: capturas.config };
     if (t === "sessao") return { ok: true, dados: capturas.sessao };
-    if (t === "contexto") return { ok: true, dados: doNps ? capturas.contextoNps : capturas.contexto };
+    if (t === "contexto") return { ok: true, dados: novo ? { cliente: null, casos: [], usuario: capturas.contexto.usuario } : doNps ? capturas.contextoNps : capturas.contexto };
     if (t === "resumo") return { ok: true, dados: capturas.resumo };
     if (t === "fila") return { ok: true, dados: capturas.fila };
     if (t === "agenda") return { ok: true, dados: capturas.agenda };
@@ -231,7 +233,9 @@ ${fontes}
     linhas.push({ canal: "montagem", ok: Boolean(raiz()), nota: raiz() ? "gaveta e gatilho no shadow" : "não montou" });
 
     CW.painel.definirContexto(
-      doNps
+      novo
+        ? { canalDaPagina: "WhatsApp", telefone: "11987654321", nome: "Bruno Lanches", rotulo: "Bruno Lanches" }
+        : doNps
         ? { canalDaPagina: "WhatsApp", telefone: capturas.contatoNps.telefone, email: capturas.contatoNps.email, nome: capturas.contatoNps.nome, rotulo: capturas.contatoNps.nome }
         : { canalDaPagina: "WhatsApp", telefone: capturas.telefone, nome: capturas.nome, rotulo: capturas.nome || capturas.telefone }
     );

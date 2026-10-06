@@ -641,7 +641,8 @@
       }
 
       P.vazio(
-        "Nada encontrado",
+        /* Conversa de quem a base não conhece é contato novo, não erro de busca (out/2026). */
+        P.consulta?.termo || doPortal ? "Nada encontrado" : "Contato novo",
         doPortal
           ? `A reclamação ${P.captura.id} não está no CW Reputação.`
           : daConversa
