@@ -199,6 +199,7 @@ ${fontes}
     if (t === "pendencias") return { ok: true, dados: capturas.pendencias };
     if (t === "detalhe" || t === "caso") return { ok: true, dados: capturas.detalhe };
     if (t === "nps") return { ok: true, dados: capturas.nps };
+    if (t === "lerEdicaoDoCaso") return { ok: true, dados: capturas.edicao };
     if (t === "abrir" || t === "opcoes") return { ok: true };
     return { ok: true, dados: SOMENTE_LEITURA };
   };
@@ -348,6 +349,8 @@ async function main() {
   capturas.nome = nome;
   capturas.contexto = telefone ? await pegar("/api/extensao/contexto", { telefone }) : {};
   capturas.nps = {};
+  /* A aba Caso: o formulário com as opções reais (GET, só leitura). */
+  capturas.edicao = primeiro?.protocolo ? await pegar("/api/extensao/editar-caso", { protocolo: primeiro.protocolo }) : {};
 
   const arquivos = arquivosDoPainel();
 

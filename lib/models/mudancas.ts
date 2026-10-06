@@ -274,6 +274,17 @@ export const MUDANCAS: Mudanca[] = [
     onde: "Extensão → Cliente",
   },
 
+  {
+    id: "ext-aba-caso-em-grade",
+    dia: "2026-10-06",
+    tipo: "melhoria",
+    frente: "extensao",
+    titulo: "Editar o caso pela extensão, em duas colunas",
+    texto:
+      "Na aba Caso, responsável e prioridade, categoria e subcategoria, telefone e e-mail ficam lado a lado, e o que falta no cadastro é marcado no próprio campo (\"falta\", com a borda laranja) — eram nove campos empilhados e uma lista \"Falta:\" no alto. Ao salvar, um aviso confirma o protocolo e quantos campos foram gravados, depois da resposta do servidor.",
+    onde: "Extensão → Cliente → Caso",
+  },
+
   /* ---------------- extensão: popup e opções ---------------- */
   {
     id: "popup-abria-rolado",

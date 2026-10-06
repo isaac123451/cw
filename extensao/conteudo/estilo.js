@@ -1489,6 +1489,13 @@ ${CORES}
 
 .acao-chip span { flex: 1; }
 
+/* A aba Caso: campos em duas colunas, o que falta marcado no campo. */
+.grade-campos { display: grid; grid-template-columns: 1fr 1fr; gap: 0 8px; }
+.campo-caso { display: block; margin-top: 8px; }
+.campo-caso .campo { margin-top: 4px; }
+.campo-caso.faltando .campo { border-color: color-mix(in srgb, var(--laranja) 70%, var(--borda)); }
+.falta-ponto { margin-left: 4px; padding: 0 5px; border-radius: 999px; background: color-mix(in srgb, var(--laranja) 20%, transparent); color: var(--atencao); font-size: 9.5px; letter-spacing: .02em; }
+
 /* Outras frentes do contato: uma linha cada, clicável inteira. */
 .frente-linha {
   width: 100%;

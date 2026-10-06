@@ -1413,22 +1413,33 @@
     const o = edicaoDoCaso.opcoes;
     if (!c || !o) return `<p class="sub">Carregando…</p>`;
     const categoria = o.categorias.find((x) => x.nome === c.categoria);
-    const campo = (rotulo, html) => `<label class="rotulo" style="display:block;margin-top:8px">${CW.escapar(rotulo)}${html}</label>`;
+    /*
+      Em grade de duas colunas, e o que falta preencher marcado no próprio
+      campo (out/2026) — eram nove campos empilhados, e a lista "Falta:"
+      no alto obrigava a procurar cada um.
+    */
+    const falta = (chave) => edicaoDoCaso.falta.some((f) => String(f).toLowerCase().includes(chave));
+    const campo = (rotulo, html, faltando = false) =>
+      `<label class="rotulo campo-caso${faltando ? " faltando" : ""}">${CW.escapar(rotulo)}${faltando ? ' <span class="falta-ponto">falta</span>' : ""}${html}</label>`;
     return [
-      `<div class="rotulo">Caso ${CW.escapar(c.protocolo)} · ${CW.escapar(c.status)}</div>`,
+      `<div class="linha"><span class="rotulo" style="margin:0">Caso ${CW.escapar(c.protocolo)}</span><span class="tag neutro">${CW.escapar(c.status)}</span></div>`,
       edicaoDoCaso.falta.length
-        ? `<p class="sub" style="margin:4px 0 0">Falta: ${edicaoDoCaso.falta.map((f) => `<span class="tag">${CW.escapar(f)}</span>`).join(" ")}</p>`
-        : `<p class="sub" style="margin:4px 0 0">Nada faltando no cadastro.</p>`,
+        ? `<p class="sub" style="margin:4px 0 0;color:var(--atencao)">Falta no cadastro: ${edicaoDoCaso.falta.map((f) => CW.escapar(f)).join(", ")}.</p>`
+        : `<p class="sub feito" style="margin:4px 0 0">${CW.icone("ok", 13)} Cadastro completo.</p>`,
       `<div class="cartao" style="margin-top:8px">`,
-      campo("Responsável", `<select class="campo" data-campo-caso="responsavel"><option value="">— ninguém —</option>${opcoesDe(o.responsaveis, c.responsavel)}</select>`),
-      campo("Categoria", `<select class="campo" data-campo-caso="categoria">${opcoesDe(o.categorias.map((x) => x.nome), c.categoria)}</select>`),
-      campo("Subcategoria", `<select class="campo" data-campo-caso="subcategoria"><option value="">—</option>${opcoesDe(categoria?.subcategorias ?? [], c.subcategoria)}</select>`),
+      `<div class="grade-campos">`,
+      campo("Responsável", `<select class="campo" data-campo-caso="responsavel"><option value="">— ninguém —</option>${opcoesDe(o.responsaveis, c.responsavel)}</select>`, falta("respons")),
       campo("Prioridade", `<select class="campo" data-campo-caso="prioridade">${opcoesDe(o.prioridades, c.prioridade)}</select>`),
-      campo("Estabelecimento", `<select class="campo" data-campo-caso="estabelecimentoId"><option value="">— sem vínculo —</option>${opcoesDeEstabelecimento(o.estabelecimentos, c.estabelecimentoId)}</select>`),
-      `<label class="sub" style="display:flex;gap:6px;align-items:center;margin-top:8px"><input type="checkbox" data-campo-caso="risco"${c.risco ? " checked" : ""}> Risco de cancelamento</label>`,
-      campo("Telefone", `<input class="campo" data-campo-caso="telefone" value="${CW.escapar(c.telefone)}" placeholder="DDD e número">`),
-      campo("E-mail", `<input class="campo" data-campo-caso="email" value="${CW.escapar(c.email)}">`),
-      campo("CPF/CNPJ", `<input class="campo" data-campo-caso="documento" value="${CW.escapar(c.documento)}" placeholder="só números">`),
+      campo("Categoria", `<select class="campo" data-campo-caso="categoria">${opcoesDe(o.categorias.map((x) => x.nome), c.categoria)}</select>`, falta("categ")),
+      campo("Subcategoria", `<select class="campo" data-campo-caso="subcategoria"><option value="">—</option>${opcoesDe(categoria?.subcategorias ?? [], c.subcategoria)}</select>`, falta("subcat")),
+      `</div>`,
+      campo("Estabelecimento", `<select class="campo" data-campo-caso="estabelecimentoId"><option value="">— sem vínculo —</option>${opcoesDeEstabelecimento(o.estabelecimentos, c.estabelecimentoId)}</select>`, falta("estabelec")),
+      `<div class="grade-campos">`,
+      campo("Telefone", `<input class="campo" data-campo-caso="telefone" value="${CW.escapar(c.telefone)}" placeholder="DDD e número">`, falta("telefone")),
+      campo("E-mail", `<input class="campo" data-campo-caso="email" value="${CW.escapar(c.email)}">`, falta("e-mail") || falta("email")),
+      `</div>`,
+      campo("CPF/CNPJ", `<input class="campo" data-campo-caso="documento" value="${CW.escapar(c.documento)}" placeholder="só números">`, falta("cpf") || falta("cnpj") || falta("document")),
+      `<label class="sub" style="display:flex;gap:6px;align-items:center;margin-top:9px"><input type="checkbox" data-campo-caso="risco"${c.risco ? " checked" : ""}> Risco de cancelamento</label>`,
       `<div class="linha" style="margin-top:10px;align-items:center">`,
       `  <span class="sub${aviso?.erro ? " falha" : ""}" data-aviso-caso>${aviso ? CW.escapar(aviso.texto) : "Grava só o que você mudar."}</span>`,
       `  <button class="acao" style="margin-top:0" data-acao="salvar-edicao-caso">Salvar</button>`,
@@ -1502,7 +1513,10 @@
     if (r?.ok && r.dados?.ok) {
       edicaoDoCaso.caso = r.dados.caso;
       edicaoDoCaso.falta = r.dados.falta ?? [];
+      const quantos = Object.keys(mudancas).length;
       desenharEdicao({ texto: "Salvo no CW Reputação." });
+      /* A confirmação depois da resposta do servidor, com o que foi gravado. */
+      CW.notificar?.(`${c.protocolo} salvo · ${quantos} ${CW.plural(quantos, "campo", "campos")}`);
       return;
     }
     botao.disabled = false;
