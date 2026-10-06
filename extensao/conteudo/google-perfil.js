@@ -208,7 +208,7 @@
 
   function estilo(botao, tom) {
     const cores = {
-      acao: ["#111827", "#111827", "#ffffff"],
+      acao: ["#5B2A86", "#5B2A86", "#ffffff"],
       espera: ["#fafafa", "#e4e4e7", "#3f3f46"],
       ok: ["#f0fdf4", "#bbf7d0", "#14532d"],
       erro: ["#fef2f2", "#fecaca", "#7f1d1d"],
@@ -238,7 +238,7 @@
     botao.style.cssText = [
       "padding: 5px 10px",
       "border-radius: 8px",
-      "border: 1px solid #111827",
+      "border: 1px solid #5B2A86",
       "cursor: pointer",
       "font: inherit",
     ].join(";");

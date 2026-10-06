@@ -383,10 +383,10 @@ export const MUDANCAS: Mudanca[] = [
     dia: "2026-10-06",
     tipo: "melhoria",
     frente: "extensao",
-    titulo: "Janela de captura das Redes na cor da marca",
+    titulo: "Captura das Redes e botão do Google na cor da marca",
     texto:
-      "Na planilha do Google e no Slack, os botões da janela de captura eram pretos, diferentes de todo o resto da extensão. Agora são roxos, no claro e no escuro.",
-    onde: "Extensão → Planilha do Google e Slack",
+      "Na planilha do Google e no Slack, os botões da janela de captura eram pretos, e o \"Registrar no CW\" das avaliações do Google também — diferentes de todo o resto da extensão. Agora são roxos, no claro e no escuro.",
+    onde: "Extensão → Planilha do Google, Slack e Google Perfil",
   },
   {
     id: "ext-so-abre-http",
