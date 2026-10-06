@@ -8,6 +8,7 @@ import { criarLoteDeDisparo, lerLotesDeDisparo, pararLoteDeDisparo } from "@/lib
 import { useToast } from "@/lib/context/ToastContext";
 import type { LoteView, OrigemDoDisparo } from "@/lib/models/disparos";
 import { pluralDe } from "@/lib/plural";
+import { telefoneLegivel } from "@/lib/models/telefone";
 
 export interface CandidatoAoDisparo {
   chave: string;
@@ -140,7 +141,7 @@ export default function DispararEmLote({
                     <span className="font-medium text-zinc-800">{c.nome}</span>
                     {c.motivo && <span className="text-xs text-zinc-500"> · {c.motivo}</span>}
                   </span>
-                  <span className="shrink-0 text-xs tabular-nums text-zinc-400">{c.telefone}</span>
+                  <span className="shrink-0 text-xs tabular-nums text-zinc-400">{telefoneLegivel(c.telefone)}</span>
                 </label>
               </li>
             ))}

@@ -660,6 +660,15 @@ export const MUDANCAS: Mudanca[] = [
     href: "/meu-dia",
   },
   {
+    id: "telefone-legivel-nas-fichas",
+    dia: "2026-10-06",
+    tipo: "melhoria",
+    frente: "plataforma",
+    titulo: "Telefone legível nas fichas",
+    texto:
+      "A ficha do caso, a do cliente, a do estabelecimento, a conversa guardada, a importação e o disparo em lote mostravam o número como estava gravado — \"11960599984\", \"+5511960599984\". Agora \"(11) 96059-9984\" e \"+55 11 96059-9984\". O mascarado da base e o de outro país ficam como vieram.",
+  },
+  {
     id: "indicadores-sem-zero-na-carga",
     dia: "2026-10-06",
     tipo: "correcao",

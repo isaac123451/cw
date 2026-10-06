@@ -21,6 +21,7 @@ import { slugify } from "@/lib/services/slug";
 import CampoQueSalva from "@/components/shared/CampoQueSalva";
 import { nomearConsumidor } from "@/lib/actions/tratativa";
 import { pluralDe } from "@/lib/plural";
+import { telefoneLegivel } from "@/lib/models/telefone";
 
 function iniciais(nome: string) {
   return nome.split(" ").map((p) => p[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
@@ -426,7 +427,7 @@ export default function OverviewTab({
                   className="flex items-center gap-1.5 rounded-lg bg-white px-2 py-1 text-[11px] text-zinc-700 ring-1 ring-inset ring-violet-100 hover:text-emerald-700 hover:ring-emerald-200"
                 >
                   <Phone size={10} />
-                  {data.phone}
+                  {telefoneLegivel(data.phone)}
                 </a>
               ) : (
                 <span className="flex items-center gap-1.5 rounded-lg bg-white px-2 py-1 text-[11px] text-zinc-400 ring-1 ring-inset ring-violet-100">

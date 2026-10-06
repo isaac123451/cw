@@ -51,6 +51,7 @@ import BotaoAbrirEmJanela from "@/components/janelas/BotaoAbrirEmJanela";
 
 import { kindTone } from "@/lib/models/client";
 import { pluralDe } from "@/lib/plural";
+import { telefoneLegivel } from "@/lib/models/telefone";
 
 const money = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -341,7 +342,7 @@ export default function ClientDetail({
         {client.phone && (
           <span className="flex items-center gap-1.5 rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-600">
             <Phone size={11} />
-            {client.phone}
+            {telefoneLegivel(client.phone)}
           </span>
         )}
 

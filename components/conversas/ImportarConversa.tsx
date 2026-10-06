@@ -21,6 +21,7 @@ import {
 } from "@/lib/models/conversa";
 import { textoDoZip } from "@/lib/models/zipDoWhatsApp";
 import { pluralDe } from "@/lib/plural";
+import { telefoneLegivel } from "@/lib/models/telefone";
 
 const campo =
   "h-10 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm outline-none transition-colors placeholder:text-zinc-400 focus:border-violet-400";
@@ -219,7 +220,7 @@ export default function ImportarConversa({ onClose, onGuardada }: { onClose: () 
                   <label key={c.id} className={`flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2 ring-1 ring-inset ${destino === c.id ? "bg-violet-50 ring-violet-200" : "ring-zinc-200"}`}>
                     <input type="radio" name="destino" checked={destino === c.id} onChange={() => setDestino(c.id)} className="accent-violet-700" />
                     <span className="min-w-0 flex-1 text-sm">
-                      Juntar à conversa de <strong>{c.contatoNome || `+${c.telefone}`}</strong>
+                      Juntar à conversa de <strong>{c.contatoNome || telefoneLegivel(c.telefone)}</strong>
                       <span className="block text-xs text-zinc-500">
                         {c.mensagens} já guardadas · {c.novas === 0 ? "nada novo neste arquivo" : `${c.novas} ${c.novas === 1 ? "nova" : "novas"}`}
                       </span>

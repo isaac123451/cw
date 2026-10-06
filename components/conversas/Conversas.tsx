@@ -34,6 +34,7 @@ import {
 import { ladosDaConversa, retratoDaConversa, type ConversaResumo, type ConversaView } from "@/lib/models/conversa";
 import { descreverMinutosUteis, descreverRegistro } from "@/lib/services/horasUteis";
 import { pluralDe } from "@/lib/plural";
+import { telefoneLegivel } from "@/lib/models/telefone";
 
 /*
   Os recortes da lista. "Esperando a gente" é o que mais importa: o
@@ -372,7 +373,7 @@ function DetalheDaConversa({
         <div className="min-w-0">
           <h2 className="text-lg font-semibold text-zinc-900">{c.contatoNome}</h2>
           <p className="mt-0.5 text-xs text-zinc-500">
-            {c.telefone ? `+${c.telefone} · ` : ""}
+            {c.telefone ? `${telefoneLegivel(c.telefone)} · ` : ""}
             {c.mensagens} mensagens · guardada por {c.guardadaPor}
           </p>
           {retrato && (
