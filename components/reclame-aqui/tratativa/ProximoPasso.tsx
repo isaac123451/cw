@@ -20,6 +20,13 @@ import { useTratativa } from "./TratativaProvider";
 interface Props {
   item: Case;
   className?: string;
+  /**
+   * O cartão do quadro desenha as duas partes em lugares diferentes
+   * (out/2026): o passo vira uma linha de ação logo abaixo do cliente, e o
+   * aviso de "sem notícia" fica com os outros selos de estado. Sem `parte`,
+   * as duas juntas, como nas outras telas.
+   */
+  parte?: "passo" | "avisos";
 }
 
 /**
@@ -36,7 +43,7 @@ interface Props {
  * A triagem e o 1º contato ficam de fora: o chip de prioridade e o
  * relógio do cartão já são o botão desses dois.
  */
-export default function ProximoPasso({ item, className = "" }: Props) {
+export default function ProximoPasso({ item, className = "", parte }: Props) {
 
   const { movements } = useMovements();
   const { expediente } = useSla();
@@ -56,7 +63,8 @@ export default function ProximoPasso({ item, className = "" }: Props) {
 
   const avaliacao = passo?.id === "pedir-avaliacao" ? pedidoDeAvaliacao(item, agora) : null;
 
-  const mostrarPasso = passo && passo.id !== "triar" && passo.id !== "contato";
+  const mostrarPasso = parte !== "avisos" && passo && passo.id !== "triar" && passo.id !== "contato";
+  const mostrarVacuo = parte !== "passo" && Boolean(vacuo?.atrasado);
   const conselho = mostrarPasso
     ? oQueFazer(item, passo, {
         agora,
@@ -65,7 +73,7 @@ export default function ProximoPasso({ item, className = "" }: Props) {
       })
     : null;
 
-  if (!mostrarPasso && !vacuo?.atrasado) return null;
+  if (!mostrarPasso && !mostrarVacuo) return null;
 
   function abrir(e: MouseEvent, acao?: AcaoDoPasso, canal?: string) {
 
@@ -120,9 +128,14 @@ export default function ProximoPasso({ item, className = "" }: Props) {
             draggable={false}
             onDragStart={(e) => e.preventDefault()}
             title={`Passo ${passo.numero} da documentação: ${passo.titulo}. ${conselho?.porque ?? passo.detalhe ?? ""}`}
-            className={`${chip.replace("items-center", "items-start")} text-left ${
-              conselho?.urgente ? "bg-amber-50 text-amber-900 ring-amber-300" : "bg-violet-50 text-violet-800 ring-violet-200"
-            }`}
+            className={
+              parte === "passo"
+                ? /* No cartão, uma linha de ação — não mais uma pílula com a frase inteira. */
+                  `inline-flex max-w-full items-start gap-1 text-left text-[11.5px] font-medium leading-snug hover:underline ${conselho?.urgente ? "text-amber-700" : "text-violet-700"}`
+                : `${chip.replace("items-center", "items-start")} text-left ${
+                    conselho?.urgente ? "bg-amber-50 text-amber-900 ring-amber-300" : "bg-violet-50 text-violet-800 ring-violet-200"
+                  }`
+            }
           >
             <ArrowRight size={10} className="mt-[3px] shrink-0" />
             <span className="line-clamp-2">{conselho?.frase ?? passo.curto.replace(/^./, (c) => c.toUpperCase())}</span>
@@ -130,7 +143,7 @@ export default function ProximoPasso({ item, className = "" }: Props) {
         )
       )}
 
-      {vacuo?.atrasado && (
+      {mostrarVacuo && vacuo && (
         <button
           type="button"
           onClick={(e) => {

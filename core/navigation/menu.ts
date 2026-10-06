@@ -27,6 +27,8 @@ import {
   Workflow,
 } from "lucide-react";
 
+import { TELAS_DO_RA } from "@/core/navigation/moduloReclameAqui";
+
 export interface MenuItem {
   title: string;
   href: string;
@@ -67,18 +69,8 @@ export const menuItems: MenuItem[] = [
     href: "/reclame-aqui",
     icon: MessageSquareWarning,
     group: "Frentes",
-    children: [
-      { title: "Quadro", href: "/reclame-aqui" },
-      { title: "Pedir avaliação", href: "/reclame-aqui/avaliacoes" },
-      { title: "Plano de ação", href: "/reclame-aqui/plano" },
-      { title: "Tempo ideal", href: "/reclame-aqui/tempo-ideal" },
-      { title: "Categorias", href: "/reclame-aqui/categorias" },
-      { title: "Prêmio", href: "/reclame-aqui/premio" },
-      { title: "Analytics", href: "/reclame-aqui/analytics" },
-      { title: "Gráficos", href: "/reclame-aqui/graficos" },
-      { title: "Calculadora", href: "/reclame-aqui/calculadora" },
-      { title: "Configurar fluxo", href: "/reclame-aqui/configuracoes" },
-    ],
+    /* As mesmas telas e na mesma ordem das abas do módulo (out/2026). */
+    children: TELAS_DO_RA.map((tela) => ({ title: tela.label, href: tela.href })),
   },
   { title: "Redes Sociais", href: "/redes-sociais", icon: MessagesSquare, group: "Frentes" },
   {

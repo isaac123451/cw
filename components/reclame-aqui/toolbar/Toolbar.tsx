@@ -7,6 +7,7 @@ import {
   Plus,
   RefreshCw,
   Search,
+  SlidersHorizontal,
   Table,
   Upload,
   X,
@@ -161,6 +162,21 @@ export default function Toolbar({
   // (estabelecimento vem da tela do estabelecimento).
   const hasFilters = countCriteria(filters) > 0;
 
+  /* Os filtros que moram em "Mais filtros" e estão em uso: com algum, a fileira abre sozinha. */
+  const periodoDeAtalho = ATALHOS.some((atalho) => {
+    const [de, ate] = atalho.janela();
+    return filters.de === de && filters.ate === ate;
+  });
+  const secundariosAtivos = [
+    filters.company,
+    filters.category,
+    filters.tag,
+    filters.owner,
+    (filters.de || filters.ate) && !periodoDeAtalho ? "datas" : "",
+  ].filter(Boolean).length;
+  const [maisFiltros, setMaisFiltros] = useState(false);
+  const mostrarMais = maisFiltros || secundariosAtivos > 0;
+
   return (
     <div className="rounded-xl border border-zinc-200/80 bg-white p-3 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
 
@@ -186,15 +202,34 @@ export default function Toolbar({
 
           </div>
 
-          <SearchSelect
-            value={filters.company}
-            onChange={(value) =>
-              setFilter("company", value)
-            }
-            options={companies}
-            allLabel="Todos os estabelecimentos"
-            title="Filtrar pelo estabelecimento vinculado à reclamação"
-          />
+          {/*
+            A situação — "sem resposta pública", "vencidas", "na fila",
+            "risco" — com quantas há em cada uma (1.121). Fica logo depois
+            da busca: é o recorte que pede ação.
+          */}
+          <select
+            value={filters.situacao}
+            onChange={(e) => setFilter("situacao", e.target.value)}
+            title="Recortar a fila pelo que pede ação"
+            className={`${selectClass} ${filters.situacao ? "border-violet-300 bg-violet-50 font-medium text-violet-800" : ""}`}
+          >
+            <option value="">Toda situação</option>
+            {(Object.keys(ROTULO_DA_SITUACAO) as SituacaoDoCaso[]).map((s) => (
+              <option key={s} value={s}>
+                {ROTULO_DA_SITUACAO[s]} ({porSituacao[s]})
+              </option>
+            ))}
+          </select>
+          {filters.situacao && (
+            <button
+              onClick={() => setFilter("situacao", "")}
+              title="Remover o recorte por situação e ver a fila inteira"
+              aria-label="Remover o recorte por situação"
+              className="-ml-1.5 flex h-9 items-center rounded-lg px-2 text-violet-700 transition-colors hover:bg-violet-50"
+            >
+              <X size={14} />
+            </button>
+          )}
 
           <select
             value={filters.status}
@@ -211,96 +246,6 @@ export default function Toolbar({
               </option>
             ))}
           </select>
-
-          <select
-            value={filters.category}
-            onChange={(e) =>
-              setFilter("category", e.target.value)
-            }
-            className={selectClass}
-          >
-            <option value="">Todas Categorias</option>
-
-            {categories.map((item) => (
-              <option key={item} value={item}>
-                {item}
-              </option>
-            ))}
-          </select>
-
-          <select
-            value={filters.tag}
-            onChange={(e) =>
-              setFilter("tag", e.target.value)
-            }
-            title="Filtrar por etiqueta operacional"
-            className={selectClass}
-          >
-            <option value="">Todas Etiquetas</option>
-
-            {tags
-              .filter((item) => item.active)
-              .map((item) => (
-                <option key={item.id} value={item.name}>
-                  {item.name}
-                </option>
-              ))}
-          </select>
-
-          <select
-            value={filters.owner}
-            onChange={(e) =>
-              setFilter("owner", e.target.value)
-            }
-            title="Filtrar por responsável pelo atendimento"
-            className={selectClass}
-          >
-            <option value="">Todos Responsáveis</option>
-
-            {owners.map((item) => (
-              <option key={item} value={item}>
-                {item}
-              </option>
-            ))}
-          </select>
-
-          {/*
-            O recorte por data de abertura.
-
-            Faltava, e sem ele não havia como responder a pergunta mais
-            comum de uma revisão — "o que entrou este mês?". Os atalhos
-            existem porque digitar duas datas para ver os últimos 30
-            dias é trabalho demais para a pergunta mais frequente.
-          */}
-          <div className="flex shrink-0 items-center gap-1 rounded-lg border border-zinc-200 px-1">
-
-            <input
-              type="date"
-              value={filters.de}
-              max={filters.ate || undefined}
-              onChange={(e) =>
-                setFilter("de", e.target.value)
-              }
-              title="Abertas a partir desta data"
-              className="h-9 rounded-lg bg-transparent px-2 text-sm text-zinc-700 outline-none"
-            />
-
-            <span className="text-xs text-zinc-400">
-              até
-            </span>
-
-            <input
-              type="date"
-              value={filters.ate}
-              min={filters.de || undefined}
-              onChange={(e) =>
-                setFilter("ate", e.target.value)
-              }
-              title="Abertas até esta data"
-              className="h-9 rounded-lg bg-transparent px-2 text-sm text-zinc-700 outline-none"
-            />
-
-          </div>
 
           {ATALHOS.map((atalho) => {
 
@@ -330,38 +275,25 @@ export default function Toolbar({
           })}
 
           {/*
-            A situação — "sem resposta pública", "vencidas", "na fila",
-            "risco" — com quantas há em cada uma (1.121).
-
-            Até aqui não tinha seletor: a ideia era chegar clicando no
-            número do painel. Não funcionou — "não vi ainda como consigo
-            visualizar as não respondidas" (01/10/2026): o menu dizia 12 e
-            não havia caminho visível até as doze. Selecionada, a caixa fica
-            destacada, e o X ao lado volta à fila inteira.
+            Os outros filtros atrás de um botão (out/2026). A barra tinha
+            três fileiras de seletores; os do dia a dia ficam à vista, e
+            estes abrem no clique — e já abertos quando algum está em uso,
+            para nenhum filtro ficar escondido.
           */}
-          <select
-            value={filters.situacao}
-            onChange={(e) => setFilter("situacao", e.target.value)}
-            title="Recortar a fila pelo que pede ação"
-            className={`${selectClass} ${filters.situacao ? "border-violet-300 bg-violet-50 font-medium text-violet-800" : ""}`}
+          <button
+            type="button"
+            onClick={() => setMaisFiltros((v) => !v)}
+            aria-expanded={mostrarMais}
+            className={`flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-medium transition-colors ${
+              mostrarMais ? "bg-zinc-100 text-zinc-800" : "text-zinc-600 hover:bg-zinc-100"
+            }`}
           >
-            <option value="">Toda situação</option>
-            {(Object.keys(ROTULO_DA_SITUACAO) as SituacaoDoCaso[]).map((s) => (
-              <option key={s} value={s}>
-                {ROTULO_DA_SITUACAO[s]} ({porSituacao[s]})
-              </option>
-            ))}
-          </select>
-          {filters.situacao && (
-            <button
-              onClick={() => setFilter("situacao", "")}
-              title="Remover o recorte por situação e ver a fila inteira"
-              aria-label="Remover o recorte por situação"
-              className="flex h-9 items-center rounded-lg px-2 text-violet-700 transition-colors hover:bg-violet-50"
-            >
-              <X size={14} />
-            </button>
-          )}
+            <SlidersHorizontal size={15} />
+            Mais filtros
+            {secundariosAtivos > 0 && (
+              <span className="rounded-full bg-violet-600 px-1.5 text-[11px] font-semibold tabular-nums text-white">{secundariosAtivos}</span>
+            )}
+          </button>
 
           <SavedFilters
             criteria={filters}
@@ -483,6 +415,108 @@ export default function Toolbar({
         </div>
 
       </div>
+
+      {mostrarMais && (
+        <div className="mt-2.5 flex flex-wrap items-center gap-2.5 border-t border-zinc-100 pt-2.5">
+
+          <SearchSelect
+            value={filters.company}
+            onChange={(value) =>
+              setFilter("company", value)
+            }
+            options={companies}
+            allLabel="Todos os estabelecimentos"
+            title="Filtrar pelo estabelecimento vinculado à reclamação"
+          />
+
+          <select
+            value={filters.category}
+            onChange={(e) =>
+              setFilter("category", e.target.value)
+            }
+            className={selectClass}
+          >
+            <option value="">Todas Categorias</option>
+
+            {categories.map((item) => (
+              <option key={item} value={item}>
+                {item}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={filters.tag}
+            onChange={(e) =>
+              setFilter("tag", e.target.value)
+            }
+            title="Filtrar por etiqueta operacional"
+            className={selectClass}
+          >
+            <option value="">Todas Etiquetas</option>
+
+            {tags
+              .filter((item) => item.active)
+              .map((item) => (
+                <option key={item.id} value={item.name}>
+                  {item.name}
+                </option>
+              ))}
+          </select>
+
+          <select
+            value={filters.owner}
+            onChange={(e) =>
+              setFilter("owner", e.target.value)
+            }
+            title="Filtrar por responsável pelo atendimento"
+            className={selectClass}
+          >
+            <option value="">Todos Responsáveis</option>
+
+            {owners.map((item) => (
+              <option key={item} value={item}>
+                {item}
+              </option>
+            ))}
+          </select>
+
+          {/*
+            O recorte por data de abertura — "o que entrou este mês?". Os
+            atalhos ficam na fileira de cima; aqui, o intervalo livre.
+          */}
+          <div className="flex shrink-0 items-center gap-1 rounded-lg border border-zinc-200 px-1">
+
+            <input
+              type="date"
+              value={filters.de}
+              max={filters.ate || undefined}
+              onChange={(e) =>
+                setFilter("de", e.target.value)
+              }
+              title="Abertas a partir desta data"
+              className="h-9 rounded-lg bg-transparent px-2 text-sm text-zinc-700 outline-none"
+            />
+
+            <span className="text-xs text-zinc-400">
+              até
+            </span>
+
+            <input
+              type="date"
+              value={filters.ate}
+              min={filters.de || undefined}
+              onChange={(e) =>
+                setFilter("ate", e.target.value)
+              }
+              title="Abertas até esta data"
+              className="h-9 rounded-lg bg-transparent px-2 text-sm text-zinc-700 outline-none"
+            />
+
+          </div>
+
+        </div>
+      )}
 
       {hasFilters && (
         <p className="mt-3 border-t border-zinc-100 pt-3 text-xs text-zinc-500">

@@ -211,7 +211,7 @@ export function avisosDeAbertura(entrada: EntradaDaAbertura): AvisoDeAbertura[] 
       chave: "sem-noticia",
       tom: "atencao",
       titulo: `${semNoticias.length} ${pluralDe(semNoticias.length, "cliente", "clientes")} sem notícia`,
-      detalhe: `o mais parado está há ${maisAntigo.dias} ${pluralDe(maisAntigo.dias, "dia", "dias")} útil(eis) sem nenhuma mensagem nossa`,
+      detalhe: `o mais parado está há ${maisAntigo.dias} ${pluralDe(maisAntigo.dias, "dia útil", "dias úteis")} sem nenhuma mensagem nossa`,
       quantidade: semNoticias.length,
       href: caseHref(maisAntigo.c),
       pergunta: "Quem está sem notícia há mais tempo?",
@@ -220,7 +220,7 @@ export function avisosDeAbertura(entrada: EntradaDaAbertura): AvisoDeAbertura[] 
         ref: maisAntigo.c.id,
         titulo: `${maisAntigo.c.protocol} · ${maisAntigo.c.customer}`,
       },
-      itens: porDias.slice(0, MAXIMO_DE_ITENS).map(({ c, dias }) => itemDoCaso(c, `${dias} ${pluralDe(dias, "dia", "dias")} útil(eis) sem mensagem nossa · ${c.title}`)),
+      itens: porDias.slice(0, MAXIMO_DE_ITENS).map(({ c, dias }) => itemDoCaso(c, `${dias} ${pluralDe(dias, "dia útil", "dias úteis")} sem mensagem nossa · ${c.title}`)),
     });
   }
 

@@ -84,7 +84,14 @@ function Cartao() {
   const dia = useMeuDia();
   const { item, resumo, pular, carregando } = useProximoPasso(dia, dia.feitasHoje);
 
-  const aberto = useGuardado(CHAVE_ABERTO) !== "0";
+  /*
+    Nasce como a pílula "Próximo passo · 202" (out/2026): aberto por padrão,
+    o cartão de 300 px ficava por cima do quadro, das tabelas e dos
+    formulários em toda tela. A pílula continua à vista (com o ponto âmbar
+    quando há atraso), o lembrete de foco ainda abre o cartão sozinho, e
+    quem abrir uma vez fica com ele aberto.
+  */
+  const aberto = useGuardado(CHAVE_ABERTO) === "1";
   const posicaoGuardada = useGuardado(CHAVE_POSICAO);
   const intervalo = Number(useGuardado(CHAVE_LEMBRETE) ?? INTERVALO_PADRAO_DO_LEMBRETE);
 

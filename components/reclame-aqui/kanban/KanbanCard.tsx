@@ -158,11 +158,19 @@ export default function KanbanCard({
           {item.company && item.company !== item.customer ? ` · ${item.company}` : ""}
         </p>
 
-        <div className="mt-2 flex flex-wrap items-center gap-1 empty:hidden">
+        {/*
+          O que fazer, numa linha de ação; abaixo, só selos de estado
+          (out/2026). Antes eram quatro estilos de pílula na mesma fileira —
+          o passo com a frase inteira, "Respondida" verde em todo caso,
+          "Marcar respondida" sempre à vista.
+        */}
+        <ProximoPasso item={item} parte="passo" className="mt-1.5" />
+
+        <div className="mt-1.5 flex flex-wrap items-center gap-1 empty:hidden">
           <RelogioDoCaso item={item} esconderSemRegra />
-          <ProximoPasso item={item} />
+          <ProximoPasso item={item} parte="avisos" />
           <BotaoCompletar item={item} />
-          <SeloRespondida item={item} />
+          <SeloRespondida item={item} discreto />
         </div>
 
         {etiquetas.length > 0 && (

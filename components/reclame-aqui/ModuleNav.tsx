@@ -3,115 +3,40 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import {
-  BarChart3,
-  Calculator,
-  LayoutGrid,
-  LineChart,
-  LucideIcon,
-  Settings2,
-  Star,
-  Trophy,
-  Gauge,
-  MessageSquareText,
-  Target,
-  Timer,
-  ListFilter,
-} from "lucide-react";
+import { Fragment, useEffect, useRef } from "react";
 
-interface Item {
-  label: string;
-  href: string;
-  icon: LucideIcon;
-  hint: string;
-}
+import { TELAS_DO_RA } from "@/core/navigation/moduloReclameAqui";
 
-const items: Item[] = [
-  {
-    label: "Quadro",
-    href: "/reclame-aqui",
-    icon: LayoutGrid,
-    hint: "Kanban e lista das reclamações",
-  },
-  {
-    label: "Triagem",
-    href: "/reclame-aqui/triagem",
-    icon: ListFilter,
-    hint: "Todas as abertas: triar e classificar num passo só",
-  },
-  {
-    label: "Índice",
-    href: "/reclame-aqui/indice",
-    icon: Gauge,
-    hint: "Nota atual e prévia, a exata, a régua até o RA1000 e o dia a dia do mês",
-  },
-  {
-    label: "Plano de ação",
-    href: "/reclame-aqui/plano",
-    icon: Target,
-    hint: "Metas por mês e ciclo, previsão de reclamações, o que fazer e o que mais está chegando",
-  },
-  {
-    label: "Tempo ideal",
-    href: "/reclame-aqui/tempo-ideal",
-    icon: Timer,
-    hint: "O tempo ideal para finalizar, o teto e o prazo de resposta que segura 90%",
-  },
-  {
-    label: "Pedir avaliação",
-    href: "/reclame-aqui/avaliacoes",
-    icon: Star,
-    hint: "Quem pedir a avaliação hoje, na cadência da documentação",
-  },
-  {
-    label: "Prêmio",
-    href: "/reclame-aqui/premio",
-    icon: Trophy,
-    hint: "A campanha de votação do Prêmio Reclame Aqui",
-  },
-  {
-    label: "Analytics",
-    href: "/reclame-aqui/analytics",
-    icon: BarChart3,
-    hint: "Nota RA, indicadores e diagnóstico",
-  },
-  {
-    label: "Respostas",
-    href: "/reclame-aqui/respostas",
-    icon: MessageSquareText,
-    hint: "O analista de respostas públicas: erros e o que melhorar",
-  },
-  {
-    label: "Gráficos",
-    href: "/reclame-aqui/graficos",
-    icon: LineChart,
-    hint: "Índices por mês, janela móvel e série diária",
-  },
-  {
-    label: "Calculadora",
-    href: "/reclame-aqui/calculadora",
-    icon: Calculator,
-    hint: "Simule a reputação do período atual ou do próximo",
-  },
-  {
-    label: "Configurar fluxo",
-    href: "/reclame-aqui/configuracoes",
-    icon: Settings2,
-    hint: "Status, categorias, times, tags e checklist",
-  },
-];
-
-/** Subnavegação do módulo: dá acesso direto às funcionalidades do RA. */
+/**
+ * Subnavegação do módulo: dá acesso direto às funcionalidades do RA.
+ *
+ * Uma fileira só (out/2026). Eram doze abas grandes que quebravam em duas
+ * linhas e uma lista diferente da do menu lateral. Agora as telas vêm de
+ * `TELAS_DO_RA` — a mesma do menu —, separadas por grupo (trabalhar,
+ * acompanhar, ajustar), e a fileira rola de lado quando a tela é estreita
+ * em vez de crescer para baixo. A ativa entra na vista sozinha, só de lado.
+ */
 export default function ModuleNav() {
 
   const pathname = usePathname();
+  const fileira = useRef<HTMLDivElement>(null);
+
+  /* A aba ativa entra na vista — só de lado, nunca rolando a página. */
+  useEffect(() => {
+    const caixa = fileira.current;
+    const ativa = caixa?.querySelector<HTMLElement>("[aria-current=page]");
+    if (!caixa || !ativa) return;
+    const fora = ativa.offsetLeft + ativa.offsetWidth - (caixa.scrollLeft + caixa.clientWidth);
+    if (fora > 0) caixa.scrollLeft += fora + 16;
+    else if (ativa.offsetLeft < caixa.scrollLeft) caixa.scrollLeft = ativa.offsetLeft - 16;
+  }, [pathname]);
 
   return (
-    <nav>
+    <nav aria-label="Telas do Reclame Aqui">
 
-      <div className="flex flex-wrap items-center gap-1 rounded-2xl border border-zinc-200/80 bg-white p-1.5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+      <div ref={fileira} className="relative flex items-center gap-0.5 overflow-x-auto rounded-2xl border border-zinc-200/80 bg-white p-1 shadow-[0_1px_2px_rgba(16,24,40,0.04)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
 
-        {items.map((item) => {
+        {TELAS_DO_RA.map((item, i) => {
 
           const Icon = item.icon;
 
@@ -120,24 +45,26 @@ export default function ModuleNav() {
               ? pathname === "/reclame-aqui"
               : pathname.startsWith(item.href);
 
+          const novoGrupo = i > 0 && TELAS_DO_RA[i - 1].grupo !== item.grupo;
+
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              data-tour={`modulo-${item.href.split("/").pop()}`}
-              title={item.hint}
-              className={`flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-medium transition-colors ${
-                active
-                  ? "bg-violet-700 text-white shadow-sm shadow-violet-700/25"
-                  : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
-              }`}
-            >
-
-              <Icon size={16} />
-
-              {item.label}
-
-            </Link>
+            <Fragment key={item.href}>
+              {novoGrupo && <span aria-hidden className="mx-1 h-5 w-px shrink-0 bg-zinc-200" />}
+              <Link
+                href={item.href}
+                data-tour={`modulo-${item.href.split("/").pop()}`}
+                title={item.hint}
+                aria-current={active ? "page" : undefined}
+                className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl px-3 py-1.5 text-[13px] font-medium transition-colors ${
+                  active
+                    ? "bg-violet-700 text-white shadow-sm shadow-violet-700/25"
+                    : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
+                }`}
+              >
+                <Icon size={15} />
+                {item.label}
+              </Link>
+            </Fragment>
           );
         })}
 

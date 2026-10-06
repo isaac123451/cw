@@ -137,7 +137,7 @@ export default function RotinaDoDia({ dia, compacto = false, onConfigurar, onUmP
         tone: "success",
         title: completo ? "Rotina de hoje completa." : `${r.feitas.length} de ${doDia.length} atividades feitas.`,
         detail: completo
-          ? `Sequência de ${sequencia + (feitasHoje.size === doDia.length ? 0 : 1)} ${pluralDe(sequencia + (feitasHoje.size === doDia.length ? 0 : 1), "dia", "dias")} útil(eis) com a rotina inteira.`
+          ? `Sequência de ${sequencia + (feitasHoje.size === doDia.length ? 0 : 1)} ${pluralDe(sequencia + (feitasHoje.size === doDia.length ? 0 : 1), "dia útil", "dias úteis")} com a rotina inteira.`
           : [r.marcadas ? `${r.marcadas} ${pluralDe(r.marcadas, "marcada", "marcadas")}` : null, r.desmarcadas ? `${r.desmarcadas} ${pluralDe(r.desmarcadas, "desmarcada", "desmarcadas")}` : null].filter(Boolean).join(" · ") || "Nada mudou.",
       });
     } catch {

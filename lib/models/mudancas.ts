@@ -410,6 +410,54 @@ export const MUDANCAS: Mudanca[] = [
       "Mais de 440 textos em 132 telas, avisos, relatórios e respostas do assistente usavam o plural com parênteses — \"2 caso(s)\", \"1 detrator(es)\", \"3 dia(s)\". Agora cada um usa o número que está ao lado: \"1 caso\", \"2 casos\".",
   },
   {
+    id: "ra-uma-lista-de-telas",
+    dia: "2026-10-06",
+    tipo: "melhoria",
+    frente: "reclame-aqui",
+    titulo: "As telas do Reclame Aqui numa lista só, numa fileira só",
+    texto:
+      "As abas do módulo eram 12 em duas fileiras, e o menu lateral tinha outra lista, com itens diferentes — Categorias só no menu; Triagem, Índice e Respostas só nas abas. Agora as duas mostram as mesmas 13 telas, na mesma ordem, agrupadas em Trabalhar, Acompanhar e Ajustar. As abas cabem numa fileira e rolam de lado na tela estreita, com a aba aberta sempre à vista.",
+    href: "/reclame-aqui",
+  },
+  {
+    id: "ra-cartao-mais-limpo",
+    dia: "2026-10-06",
+    tipo: "melhoria",
+    frente: "reclame-aqui",
+    titulo: "Cartão do quadro mais limpo",
+    texto:
+      "O próximo passo deixou de ser uma pílula com a frase inteira e virou uma linha de ação logo abaixo do cliente (\"→ Confirme com o cliente se tudo voltou a funcionar\"). \"Respondida\" virou um \"✓ 29/09\" discreto — quase todo caso depois do Novo está respondido, e a pílula verde em todos virava ruído —, e \"Marcar respondida\" só aparece ao passar o mouse. Os selos que sobram são só de estado: prazo, sem notícia, completar.",
+    href: "/reclame-aqui",
+  },
+  {
+    id: "ra-filtros-em-uma-linha",
+    dia: "2026-10-06",
+    tipo: "melhoria",
+    frente: "reclame-aqui",
+    titulo: "Filtros do quadro em uma linha",
+    texto:
+      "A barra tinha três fileiras de seletores. Ficaram à vista os do dia a dia — busca, situação, status, \"Este mês\" e \"30 dias\" e os filtros salvos —, e estabelecimento, categoria, etiqueta, responsável e datas foram para \"Mais filtros\". Com algum deles em uso, a fileira já abre aberta e o botão mostra quantos, para nenhum filtro ficar escondido.",
+    href: "/reclame-aqui",
+  },
+  {
+    id: "proximo-passo-em-pilula",
+    dia: "2026-10-06",
+    tipo: "melhoria",
+    frente: "plataforma",
+    titulo: "O próximo passo flutuante não cobre mais a tela",
+    texto:
+      "O cartão do próximo passo nascia aberto, com 300 px, por cima do quadro, das tabelas e dos formulários em toda tela. Agora nasce como a pílula \"Próximo passo · 202\" no canto, com o ponto âmbar quando há atraso; um clique abre, e quem abrir fica com ele aberto. O lembrete de foco continua abrindo o cartão sozinho.",
+  },
+  {
+    id: "dias-uteis",
+    dia: "2026-10-06",
+    tipo: "correcao",
+    frente: "plataforma",
+    titulo: "\"10 dias úteis\", e não \"10 dias útil(eis)\"",
+    texto: "No Meu dia, o aviso de cliente sem notícia e a sequência da rotina ainda diziam \"dias útil(eis)\".",
+    href: "/meu-dia",
+  },
+  {
     id: "nota-do-periodo-so-do-periodo",
     dia: "2026-10-06",
     tipo: "correcao",
@@ -426,7 +474,7 @@ export const MUDANCAS: Mudanca[] = [
     frente: "plataforma",
     titulo: "A tela de entrar ficou leve",
     texto:
-      "Sem ninguém logado, a tela de login carregava a plataforma inteira por trás e disparava oito leituras ao servidor a cada abertura — reclamações, cadastros, filtros, preferências —, todas recusadas por falta de sessão. Agora login e cadastro abrem só com o tema e os avisos; o resto carrega depois de entrar.",
+      "Sem ninguém logado, a tela de login carregava a plataforma inteira por trás e disparava oito leituras ao servidor a cada abertura — reclamações, cadastros, filtros, preferências —, todas recusadas por falta de sessão. Agora login e cadastro abrem só com o tema e os avisos; o resto carrega depois de entrar. (Num primeiro momento isso fez a tela de destino quebrar logo depois do código de duas etapas; corrigido no mesmo dia: a tela leve vale só ao abrir o login, nunca no envio que redireciona.)",
     href: "/login",
   },
   {

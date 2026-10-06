@@ -63,7 +63,13 @@ export async function middleware(request: NextRequest) {
   */
   const cabecalhos = new Headers(request.headers);
   cabecalhos.delete("x-cw-publica");
-  if (isPublic) cabecalhos.set("x-cw-publica", "1");
+  /*
+    Só ao abrir a tela (GET). O envio do código de duas etapas é um POST em
+    /login/codigo que redireciona para o Meu dia, e o Next desenha o destino
+    na mesma requisição: com a marca, o Meu dia saía sem os provedores e
+    quebrava ("usePreferences deve estar dentro de PreferencesProvider").
+  */
+  if (isPublic && request.method === "GET") cabecalhos.set("x-cw-publica", "1");
   const seguir = () => NextResponse.next({ request: { headers: cabecalhos } });
 
   if (!authRequired()) {
