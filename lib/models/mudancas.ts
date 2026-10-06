@@ -63,6 +63,16 @@ export const MUDANCAS: Mudanca[] = [
     onde: "Extensão → WhatsApp Web",
   },
   {
+    id: "ext-nao-informado-fora-dos-titulos",
+    dia: "2026-10-06",
+    tipo: "correcao",
+    frente: "extensao",
+    titulo: "\"Não informado\" saiu também dos títulos das abas",
+    texto:
+      "As abas Reclame Aqui e NPS diziam \"RECLAME AQUI · NÃO INFORMADO\" quando a reclamação chegou sem o consumidor. Agora o título fica só com a frente, e o cabeçalho do cliente mostra o telefone da conversa no lugar de \"Sem nome\", com a nota \"a reclamação está sem o nome do consumidor\".",
+    onde: "Extensão → abas Cliente, RA e NPS",
+  },
+  {
     id: "sem-resposta-uma-conta",
     dia: "2026-10-06",
     tipo: "correcao",

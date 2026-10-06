@@ -747,7 +747,8 @@
 
     const casos = dados.casos ?? [];
 
-    const nome = dados.cliente?.nome;
+    /* "Não informado" não vai no título da aba (out/2026). */
+    const nome = P.nomeParaMostrar?.(dados.cliente?.nome) ?? dados.cliente?.nome;
 
     if (P.canal === "nps") {
       return desenharNpsDoCliente(dados);
@@ -781,10 +782,11 @@
   function desenharNpsDoCliente(dados) {
 
     const ciclos = dados.npsLista ?? [];
+    const nome = P.nomeParaMostrar?.(dados.cliente?.nome) ?? dados.cliente?.nome;
 
     P.corpo.innerHTML = [
       '<div class="bloco">',
-      `  <div class="rotulo">NPS${dados.cliente?.nome ? ` · ${CW.escapar(dados.cliente.nome)}` : ""}</div>`,
+      `  <div class="rotulo">NPS${nome ? ` · ${CW.escapar(nome)}` : ""}</div>`,
       chipsDeEscopo(),
       '</div>',
       ciclos.length === 0

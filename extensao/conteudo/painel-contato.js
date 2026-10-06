@@ -1700,6 +1700,19 @@
   ============================================================ */
 
   /**
+   * O nome para mostrar (out/2026). "Não informado" é a reclamação que
+   * chegou sem o consumidor — não é nome: dá lugar ao nome do contato da
+   * tela, quando há um que não seja número, ou a nada.
+   */
+  const ehSemNome = (n) => ["", "não informado", "nao informado", "sem nome"].includes(String(n ?? "").trim().toLowerCase());
+
+  P.nomeParaMostrar = function nomeParaMostrar(nome) {
+    if (!ehSemNome(nome)) return String(nome).trim();
+    const daConversa = String(P.consulta?.nome ?? "").trim();
+    return !ehSemNome(daConversa) && !CW.telefoneDoTexto(daConversa) ? daConversa : "";
+  };
+
+  /**
    * Quem é, de qual conta, o que está aberto em cada frente e como está
    * o humor da conversa — antes de qualquer outra coisa do painel.
    *
@@ -1736,8 +1749,11 @@
       contato na tela, ele vai no lugar — dizendo de onde veio.
     */
     const semNome = ["", "não informado", "nao informado"].includes(String(cliente.nome ?? "").trim().toLowerCase());
-    const daConversa = String(P.consulta?.nome ?? "").trim();
-    const nome = semNome && daConversa && !CW.telefoneDoTexto(daConversa) ? daConversa : cliente.nome || "Sem nome";
+    /* Sem nome em lugar nenhum, o telefone da conversa é o que identifica — e não "Sem nome". */
+    const doContato = semNome ? P.nomeParaMostrar(cliente.nome) : "";
+    const telefone = String(P.consulta?.telefone ?? "").trim();
+    const nome = semNome ? doContato || telefone || "Sem nome" : String(cliente.nome).trim();
+    const avisoDoNome = !semNome ? "" : doContato ? "nome do contato · a reclamação está sem o nome do consumidor" : "a reclamação está sem o nome do consumidor";
 
     return `
       <div class="cabecalho-cliente">
@@ -1747,7 +1763,7 @@
           <span class="termometro" hidden></span>
         </div>
         ${conta ? `<div class="cab-conta">${CW.escapar(conta)}</div>` : ""}
-        ${nome !== cliente.nome && semNome && daConversa ? `<div class="cab-conta">nome do contato · a reclamação está sem o nome do consumidor</div>` : ""}
+        ${avisoDoNome ? `<div class="cab-conta">${avisoDoNome}</div>` : ""}
         ${P.consulta?.pelaConversa ? `<div class="cab-conta">achado pelo ${CW.escapar(P.consulta.pelaConversa)} escrito na conversa</div>` : ""}
         <div class="cab-frentes">${frentes.join("")}</div>
       </div>`;
