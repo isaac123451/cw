@@ -679,6 +679,16 @@ export const MUDANCAS: Mudanca[] = [
       "Os textos da ficha e do Analytics mandavam para \"a aba Investigação\", que se chama Triagem desde a tela de triagem; o cartão dentro dela também. E o bloco de contatos mostrava \"Nenhum contato registrado\" e \"Carregando contatos…\" ao mesmo tempo — o segundo só aparece agora quando há contato a carregar.",
   },
   {
+    id: "historico-de-trocas",
+    dia: "2026-10-06",
+    tipo: "novo",
+    frente: "reclame-aqui",
+    titulo: "O histórico do caso diz quem trocou o responsável e a etapa",
+    texto:
+      "Três reclamações reais apareceram com o usuário de teste \"Conferência\" como responsável, e não havia como saber desde quando nem por quem: o histórico do caso era montado só das datas, das movimentações e dos contatos. A tabela de eventos existia no banco e nada gravava nela. Agora toda troca de responsável ou de etapa — pela ficha, pelo quadro ou pela extensão — fica no Histórico, com \"de → para\" e quem trocou. Vale daqui para a frente.",
+    onde: "Ficha do caso → Histórico",
+  },
+  {
     id: "ra-respondida-nao-e-encerrado",
     dia: "2026-10-06",
     tipo: "correcao",

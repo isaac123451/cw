@@ -35,6 +35,8 @@ import {
 } from "@/lib/services/case.repository";
 
 import { toPublicCase } from "@/lib/api/source";
+import type { EventoDoCaso } from "@/lib/services/timeline.service";
+import { eventosDoCaso, registrarTrocas } from "@/lib/services/historicoDoCaso.service";
 import { dispatchWebhookEvent } from "@/lib/services/webhook.service";
 
 /** O módulo a que estas ações pertencem — ver lib/auth/modules.ts. */
@@ -64,6 +66,13 @@ async function autorizado() {
   const ctx = await requireRole("AGENTE", MODULO);
 
   return ctx?.prisma ?? null;
+}
+
+/** O que foi trocado no caso (responsável, etapa), na ordem em que aconteceu. */
+export async function listarEventosDoCaso(protocolo: string): Promise<EventoDoCaso[]> {
+  const prisma = await podeLer();
+  if (!prisma) return [];
+  return eventosDoCaso(prisma, protocolo);
 }
 
 /**
@@ -281,7 +290,8 @@ async function gravarCaso(
   }
 ): Promise<{ ok: true } | { ok: false; conflito: ConflitoDeEdicao }> {
 
-  const prisma = await autorizado();
+  const ctx = await requireRole("AGENTE", MODULO);
+  const prisma = ctx?.prisma ?? null;
 
   if (!prisma) return { ok: true };
 
@@ -302,6 +312,10 @@ async function gravarCaso(
       comum — a barra aparece por qualquer foco em campo.
     */
     if (r.alterados.length === 0) return { ok: true };
+
+    if (r.alterados.includes("ownerId") || r.alterados.includes("status")) {
+      await registrarTrocas(prisma, { userId: ctx?.userId ?? null }, item.protocol, options.anterior, item);
+    }
 
     updateTag(CASES_TAG);
 
@@ -335,10 +349,15 @@ async function gravarCaso(
    */
   const anterior = await prisma.case.findUnique({
     where: { protocol: item.protocol },
-    select: { evaluated: true },
+    select: { evaluated: true, status: true, owner: { select: { name: true } } },
   });
 
   await persistCase(prisma, item, options);
+
+  /* O quadro move por aqui: a etapa (e o responsável) trocados ficam no histórico. */
+  if (anterior) {
+    await registrarTrocas(prisma, { userId: ctx?.userId ?? null }, item.protocol, { owner: anterior.owner?.name ?? null, status: anterior.status }, item);
+  }
 
   // `updateTag` e não `revalidateTag`: garante que a própria sessão que
   // gravou leia o valor novo na sequência, sem esperar o cache expirar.

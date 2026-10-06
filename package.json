@@ -39,6 +39,7 @@
     "metricas:preencher": "tsx scripts/metricas-preencher.ts",
     "check:whatsapp": "node scripts/check-whatsapp.js",
     "check:barras": "tsx scripts/check-barras.ts",
+    "check:historico": "tsx --conditions=react-server scripts/check-historico.ts",
     "conferir": "node scripts/conferir-tudo.cjs",
     "check:busca-texto": "tsx scripts/check-busca-texto.ts",
     "check:busca-nps": "tsx scripts/check-busca-nps.ts",

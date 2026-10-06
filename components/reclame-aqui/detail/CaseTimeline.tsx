@@ -8,6 +8,8 @@ import { Case } from "@/lib/models/case";
 import type { ContatoView } from "@/lib/models/tratativa";
 
 import { listarContatos } from "@/lib/actions/tratativa";
+import { listarEventosDoCaso } from "@/lib/actions/cases";
+import type { EventoDoCaso } from "@/lib/services/timeline.service";
 import { useMovements } from "@/lib/context/MovementsContext";
 
 import {
@@ -35,18 +37,23 @@ export default function CaseTimeline({
   const { movements } = useMovements();
 
   const [contatos, setContatos] = useState<ContatoView[] | null>(null);
+  const [eventos, setEventos] = useState<EventoDoCaso[]>([]);
 
   useEffect(() => {
     let ativo = true;
     listarContatos(data.protocol)
       .then((lista) => ativo && setContatos(lista))
       .catch(() => ativo && setContatos([]));
+    /* Responsável e etapa trocados, com quem trocou (out/2026). */
+    listarEventosDoCaso(data.protocol)
+      .then((lista) => ativo && setEventos(lista))
+      .catch(() => undefined);
     return () => {
       ativo = false;
     };
-  }, [data.protocol, data.ultimoContatoEm]);
+  }, [data.protocol, data.ultimoContatoEm, data.status, data.owner]);
 
-  const entries = buildTimeline(data, movements, contatos ?? []);
+  const entries = buildTimeline(data, movements, contatos ?? [], eventos);
 
   return (
     <SurfaceCard

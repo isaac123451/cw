@@ -15,6 +15,7 @@ import {
   fetchCaseByProtocol,
   persistCase,
 } from "@/lib/services/case.repository";
+import { registrarTrocas } from "@/lib/services/historicoDoCaso.service";
 import {
   etapaVizinha,
   moverPara,
@@ -196,6 +197,9 @@ export async function POST(request: Request) {
 
   // Mover não mexe em etiqueta: uma ida ao banco em vez de três.
   await persistCase(prisma, movido, { syncTags: false });
+
+  /* A etapa trocada pela extensão também fica no histórico do caso, com quem trocou. */
+  await registrarTrocas(prisma, { nome: usuario?.nome ?? null }, protocolo, { status: caso.status }, { status: alvo });
 
   revalidateTag(WORKSPACE_TAG, "max");
 

@@ -33,6 +33,20 @@ export interface TimelineEntry {
   aproximado?: boolean;
 }
 
+/**
+ * Uma troca registrada no momento em que aconteceu (out/2026): de
+ * responsável ou de etapa, com quem trocou. A tabela `CaseEvent` existia
+ * e nada gravava nela — três reclamações apareceram com um responsável de
+ * teste e não havia como saber desde quando nem por quem.
+ */
+export interface EventoDoCaso {
+  id: string;
+  tipo: "responsavel" | "etapa";
+  detalhe: string;
+  por: string | null;
+  em: string;
+}
+
 export const TIMELINE_TONE: Record<TimelineTone, string> = {
   origem: "bg-violet-500",
   andamento: "bg-sky-500",
@@ -85,7 +99,8 @@ function chave(at: string) {
 export function buildTimeline(
   item: Case,
   movements: CaseMovement[] = [],
-  contatos: ContatoView[] = []
+  contatos: ContatoView[] = [],
+  eventos: EventoDoCaso[] = []
 ): TimelineEntry[] {
 
   const chegada = item.recebidaEm ?? item.createdAt;
@@ -266,6 +281,16 @@ export function buildTimeline(
       at: item.updatedAt ?? item.createdAt,
       aproximado: true,
       tone: "encerramento",
+    });
+  }
+
+  for (const e of eventos) {
+    entries.push({
+      id: `evento-${e.id}`,
+      title: e.tipo === "responsavel" ? "Responsável trocado" : "Etapa trocada",
+      detail: e.por ? `${e.detalhe} · por ${e.por}` : e.detalhe,
+      at: e.em,
+      tone: "andamento",
     });
   }
 
