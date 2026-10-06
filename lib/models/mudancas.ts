@@ -536,7 +536,7 @@ export const MUDANCAS: Mudanca[] = [
     frente: "plataforma",
     titulo: "Conversas certas também na ficha do caso e no dossiê",
     texto:
-      "A lista de Conversas já tinha o nome e a última fala corrigidos, mas o bloco \"Conversas do WhatsApp\" da ficha do caso lia por outro caminho: mostrava \"clique para mostrar os dados do contato\" e, como última mensagem da cliente, \"Aguardando mensagem. Essa ação pode levar alguns instantes\". O dossiê, que sustenta um pedido diante de terceiro, levava junto o aviso de criptografia como fala. Agora os dois usam o nome de verdade (ou o telefone formatado) e deixam os avisos do WhatsApp de fora.",
+      "A lista de Conversas já tinha o nome e a última fala corrigidos, mas o bloco \"Conversas do WhatsApp\" da ficha do caso lia por outro caminho: mostrava \"clique para mostrar os dados do contato\" e, como última mensagem da cliente, \"Aguardando mensagem. Essa ação pode levar alguns instantes\". O dossiê, que sustenta um pedido diante de terceiro, levava junto o aviso de criptografia como fala e assinava cada fala da cliente com o nome falso. Agora a ficha, o dossiê, o resumo por IA, o Radar, o cancelamento e a análise de respostas usam o nome de verdade (ou o telefone) e deixam os avisos do WhatsApp de fora.",
     href: "/conversas",
   },
   {

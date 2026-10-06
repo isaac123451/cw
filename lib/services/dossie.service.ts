@@ -1,5 +1,6 @@
 import type { PrismaClient } from "@prisma/client";
 import { pluralDe } from "@/lib/plural";
+import { nomeDeContatoValido } from "@/lib/models/conversa";
 
 /**
  * O dossiê, na estrutura de nove seções.
@@ -428,7 +429,7 @@ export async function montarDossie(
     if (!quando) continue;
 
     const transcricao = comData
-      .map((m) => `[${iso(m.em)?.slice(0, 16).replace("T", " ")}] ${m.de === "nos" ? m.autor ?? "Nós" : m.de === "cliente" ? c.contatoNome || "Cliente" : "Sistema"}: ${m.texto}`)
+      .map((m) => `[${iso(m.em)?.slice(0, 16).replace("T", " ")}] ${m.de === "nos" ? m.autor ?? "Nós" : m.de === "cliente" ? nomeDeContatoValido(c.contatoNome) || "Cliente" : "Sistema"}: ${m.texto}`)
       .join("\n");
 
     eventos.push({

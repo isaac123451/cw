@@ -27,6 +27,7 @@ import * as XLSX from "xlsx";
 import {
   assinatura,
   chaveDoConteudo,
+  nomeDeContatoValido,
   omitirDadosBancarios,
   planilhaDaConversa,
   textoDaConversaExportada,
@@ -107,7 +108,7 @@ export async function previaDaGravacao(entrada: {
           !assinaturas.has(assinatura(m)) &&
           !assinaturas.has(assinatura({ ...m, texto: omitirDadosBancarios(m.texto).texto }))
       ).length;
-      resultado.push({ id: c.id, contatoNome: c.contatoNome, telefone: c.telefone ?? undefined, mensagens: c._count.mensagens, novas });
+      resultado.push({ id: c.id, contatoNome: nomeDeContatoValido(c.contatoNome) || (c.telefone ? `+${c.telefone}` : "Contato"), telefone: c.telefone ?? undefined, mensagens: c._count.mensagens, novas });
     }
     return { ok: true, candidatas: resultado };
   } catch (erro) {

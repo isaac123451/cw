@@ -20,6 +20,7 @@ import { pedirEstruturado } from "@/lib/services/ia.service";
 import { dossieSemIA } from "@/lib/services/motorProprio";
 import { diaNaOperacao } from "@/lib/services/reputation.service";
 import { conversasParaODossie } from "@/lib/services/conversas.service";
+import { nomeDeContatoValido } from "@/lib/models/conversa";
 import { paredeDe } from "@/lib/services/horasUteis";
 
 export const runtime = "nodejs";
@@ -333,7 +334,7 @@ export async function POST(request: Request) {
 
   const blocosDasConversas = conversasGuardadas.map((c) =>
     [
-      `\n--- CONVERSA DO WHATSAPP GUARDADA NA PLATAFORMA (${c.contatoNome || "contato"}, ${c._count.mensagens} mensagens; as últimas ${c.mensagens.length} abaixo) ---`,
+      `\n--- CONVERSA DO WHATSAPP GUARDADA NA PLATAFORMA (${nomeDeContatoValido(c.contatoNome) || "contato"}, ${c._count.mensagens} mensagens; as últimas ${c.mensagens.length} abaixo) ---`,
       c.resumo ? `Resumo salvo: ${c.resumo}` : "",
       ...c.mensagens.map((m) => `${hora(m.em)} ${m.de === "nos" ? "Nós" : m.de === "sistema" ? "Sistema" : "Cliente"}: ${m.texto.slice(0, 600)}`),
       "--- fim da conversa ---",

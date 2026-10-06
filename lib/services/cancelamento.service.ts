@@ -11,6 +11,7 @@ import {
 import { clientesEmRisco } from "@/lib/models/clienteEmRisco";
 import { riscoDeCancelamento, type RiscoDeCancelamento } from "@/lib/models/riscoDeCancelamento";
 import { CLOSED_STATUS } from "@/lib/services/case.service";
+import { nomeDeContatoValido } from "@/lib/models/conversa";
 import { EXPEDIENTE_PADRAO, instanteDe, prazoUtil, type Expediente } from "@/lib/services/horasUteis";
 import { lerExpediente } from "@/lib/services/operacao.service";
 
@@ -125,7 +126,7 @@ export async function lerClientesEmCancelamento(prisma: PrismaClient) {
     contaId: m.conversa.establishmentId ?? undefined,
     npsId: m.conversa.npsResponseId ?? undefined,
     telefone: m.conversa.telefone ?? undefined,
-    contato: m.conversa.contatoNome || undefined,
+    contato: nomeDeContatoValido(m.conversa.contatoNome) || undefined,
   }));
 
   return clientesEmCancelamento({ casos: paraCasos, nps: paraNps, mensagens: paraMensagens, manuais });

@@ -1,6 +1,7 @@
 "use server";
 
 import { tryRole } from "@/lib/auth/guard";
+import { nomeDeContatoValido } from "@/lib/models/conversa";
 import { radarDeIncidente, JANELA_DO_RADAR_HORAS, type Incidente, type SinalParaRadar } from "@/lib/models/radarDeIncidente";
 
 /**
@@ -37,7 +38,7 @@ export async function lerRadarDeIncidente(): Promise<Incidente[]> {
       ...nps.map((r) => ({ frente: "nps" as const, cliente: r.customer, quando: r.respondedAt.toISOString(), texto: r.comment, rotulo: `NPS · ${r.customerName || r.customer}`, href: `/nps/${r.id}` })),
       ...msgs
         .filter((m) => m.em)
-        .map((m) => ({ frente: "conversa" as const, cliente: m.conversa.telefone ?? m.conversa.id, quando: m.em!.toISOString(), texto: m.texto, rotulo: `Conversa · ${m.conversa.contatoNome ?? m.conversa.telefone ?? ""}` })),
+        .map((m) => ({ frente: "conversa" as const, cliente: m.conversa.telefone ?? m.conversa.id, quando: m.em!.toISOString(), texto: m.texto, rotulo: `Conversa · ${nomeDeContatoValido(m.conversa.contatoNome) || m.conversa.telefone || ""}` })),
     ];
     return radarDeIncidente(sinais);
   } catch (erro) {

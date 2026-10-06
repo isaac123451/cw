@@ -8,6 +8,7 @@ import { WORKSPACE_TAG } from "@/lib/actions/tags";
 import { requireRole, SemPermissao, tryRole } from "@/lib/auth/guard";
 import { anonimizar, comResultado, melhoresRespostas, vezesComResultado, type RespostaComResultado, type VezComResultado } from "@/lib/models/respostaEResultado";
 import { RESPOSTA_SINTETICA } from "@/lib/services/raMarcadores";
+import { nomeDeContatoValido } from "@/lib/models/conversa";
 
 type Falha = { ok: false; erro: string };
 
@@ -71,7 +72,7 @@ export async function lerRespostaEResultado(): Promise<{ ok: true; respostas: Re
       }),
     ]);
     const vezes = vezesComResultado(
-      conversas.map((c) => ({ id: c.id, contato: c.contatoNome || c.telefone || "Contato", mensagens: c.mensagens.map((m) => ({ de: m.de, texto: m.texto, em: m.em?.toISOString() ?? null })) }))
+      conversas.map((c) => ({ id: c.id, contato: nomeDeContatoValido(c.contatoNome) || c.telefone || "Contato", mensagens: c.mensagens.map((m) => ({ de: m.de, texto: m.texto, em: m.em?.toISOString() ?? null })) }))
     );
     return { ok: true, respostas, vezes };
   } catch (erro) {
