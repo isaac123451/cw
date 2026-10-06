@@ -108,7 +108,7 @@ document
 
     if (!base) {
       mostrar(
-        "Endereço inválido. Use algo como https://cw-reputacao.vercel.app",
+        "Endereço inválido. Use algo como https://cw-rho-eight.vercel.app",
         "erro"
       );
       return;

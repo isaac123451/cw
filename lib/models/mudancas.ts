@@ -53,6 +53,16 @@ export const REVISAO = {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- extensão: o painel ---------------- */
   {
+    id: "ext-endereco-de-exemplo",
+    dia: "2026-10-06",
+    tipo: "correcao",
+    frente: "extensao",
+    titulo: "O exemplo de endereço nas Opções é o de produção",
+    texto:
+      "A tela de Opções sugeria \"https://cw-reputacao.vercel.app\" — um endereço que não é o da plataforma. Quem copiasse o exemplo ficava sem conexão. Agora o exemplo (e a mensagem de endereço inválido) é o de produção, https://cw-rho-eight.vercel.app.",
+    onde: "Extensão → Opções",
+  },
+  {
     id: "ext-telefone-legivel",
     dia: "2026-10-06",
     tipo: "melhoria",
