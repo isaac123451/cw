@@ -359,6 +359,26 @@ export const MUDANCAS: Mudanca[] = [
     onde: "Extensão → Opções",
   },
   {
+    id: "opcoes-em-grupos",
+    dia: "2026-10-06",
+    tipo: "melhoria",
+    frente: "extensao",
+    titulo: "Opções em quatro grupos",
+    texto:
+      "Os dez interruptores estavam numa seção só, \"Comportamento\", misturando WhatsApp, Reclame Aqui e avisos. Agora: O painel (abrir sozinho, empurrar a página), No WhatsApp Web (etiquetas, conversas sem resposta), Reclame Aqui (vigia, completar ao abrir) e Avisos (número no ícone, prazos, cobrança das etapas, aviso diário).",
+    onde: "Extensão → Opções",
+  },
+  {
+    id: "captura-redes-na-marca",
+    dia: "2026-10-06",
+    tipo: "melhoria",
+    frente: "extensao",
+    titulo: "Janela de captura das Redes na cor da marca",
+    texto:
+      "Na planilha do Google e no Slack, os botões da janela de captura eram pretos, diferentes de todo o resto da extensão. Agora são roxos, no claro e no escuro.",
+    onde: "Extensão → Planilha do Google e Slack",
+  },
+  {
     id: "ext-so-abre-http",
     dia: "2026-10-05",
     tipo: "correcao",
