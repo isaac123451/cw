@@ -788,6 +788,15 @@ export const MUDANCAS: Mudanca[] = [
 
   /* ---------------- por dentro ---------------- */
   {
+    id: "conferir-tudo",
+    dia: "2026-10-06",
+    tipo: "novo",
+    frente: "bastidores",
+    titulo: "Todas as conferências com um comando",
+    texto:
+      "São mais de 150 conferências e não havia jeito de rodar todas: depois de uma mudança grande, a regressão aparecia dias depois numa que ninguém lembrou. Agora \"npm run conferir\" roda as 123 que só leem, seis por vez, em pouco mais de um minuto, e diz quais falharam e quais ficaram de fora (as que gravam no banco ou falam com o servidor). Todas passaram.",
+  },
+  {
     id: "dependencia-sharp",
     dia: "2026-10-06",
     tipo: "correcao",
