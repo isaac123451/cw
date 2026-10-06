@@ -92,7 +92,7 @@
       '  <div class="cartao">',
       '    <div class="linha">',
       `      <span class="nome" style="font-size:22px">${
-        rep.indisponivel ? "—" : CW.numero(rep.nota)
+        rep.indisponivel ? "—" : CW.numero(rep.nota, 1, true)
       }</span>`,
       `      <span class="tag ${rep.ra1000 ? "laranja" : "marca"}">${CW.escapar(
         rep.ra1000 ? "RA1000" : (rep.faixa ?? "")
@@ -121,6 +121,27 @@
       '  </div>',
       '</div>',
     ];
+
+    /*
+      O que move a nota (out/2026): a mesma conta do topo do Meu dia e do
+      popup — "responder as 12 leva a 9,0" —, que o painel não mostrava.
+      É a resposta para "por onde eu começo" com o número ao lado.
+    */
+    const moveANota = (dados.meuDia?.moveANota ?? []).slice(0, 3);
+    if (moveANota.length > 0) {
+      partes.push(
+        '<div class="bloco">',
+        '  <div class="rotulo">O que move a nota</div>',
+        ...moveANota.map(
+          (a) =>
+            `  <button class="frente-linha" type="button" data-acao="abrir-na-plataforma" data-caminho="${CW.escapar(String(a.href ?? "/").startsWith("/") ? a.href : "/")}" title="${CW.escapar(a.efeito ?? "")}">` +
+            `<span class="frente-nome" style="flex:1">${CW.escapar(a.titulo)}</span>` +
+            `<span class="sub">${CW.numero(a.notaAntes, 1, true)} → <b style="color:var(--ok)">${CW.numero(a.notaDepois, 1, true)}</b></span>` +
+            `${CW.icone("direita", 14)}</button>`
+        ),
+        '</div>'
+      );
+    }
 
     if (dados.nps && dados.nps.total > 0) {
       partes.push(

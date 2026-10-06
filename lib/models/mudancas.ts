@@ -83,6 +83,16 @@ export const MUDANCAS: Mudanca[] = [
     onde: "Extensão → barra de abas",
   },
   {
+    id: "ext-painel-move-a-nota",
+    dia: "2026-10-06",
+    tipo: "novo",
+    frente: "extensao",
+    titulo: "\"O que move a nota\" no Painel da extensão",
+    texto:
+      "Logo abaixo da nota do Reclame Aqui, as ações que mais sobem a nota agora, com o número ao lado: \"Responder as 12 sem resposta pública · 8,8 → 9,0\", \"Pedir avaliação às 7 da vez · 8,8 → 8,9\". Um clique abre a tela certa na plataforma. É a mesma conta do Meu dia e do popup.",
+    onde: "Extensão → Painel",
+  },
+  {
     id: "ext-abas-com-icone",
     dia: "2026-10-05",
     tipo: "melhoria",

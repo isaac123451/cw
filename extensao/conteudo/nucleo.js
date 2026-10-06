@@ -192,10 +192,10 @@
   };
 
   /** Número com vírgula, como se escreve aqui: 8,8 e não 8.8. */
-  CW.numero = (valor, casas = 1) => {
+  CW.numero = (valor, casas = 1, fixo = false) => {
     const n = Number(valor);
     if (valor === null || valor === undefined || valor === "" || !Number.isFinite(n)) return "—";
-    return n.toLocaleString("pt-BR", { minimumFractionDigits: Number.isInteger(n) ? 0 : casas, maximumFractionDigits: casas });
+    return n.toLocaleString("pt-BR", { minimumFractionDigits: fixo || !Number.isInteger(n) ? casas : 0, maximumFractionDigits: casas });
   };
 
   CW.debounce = (fn, ms) => {
