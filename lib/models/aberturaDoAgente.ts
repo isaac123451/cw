@@ -183,10 +183,10 @@ export function avisosDeAbertura(entrada: EntradaDaAbertura): AvisoDeAbertura[] 
       titulo:
         prazos.estourados > 0
           ? `${prazos.estourados} ${pluralDe(prazos.estourados, "prazo", "prazos")} ${pluralDe(prazos.estourados, "estourado", "estourados")}`
-          : `${prazos.vencemHoje} ${pluralDe(prazos.vencemHoje, "prazo", "prazos")} vencem hoje`,
+          : `${prazos.vencemHoje} ${pluralDe(prazos.vencemHoje, "prazo vence", "prazos vencem")} hoje`,
       detalhe:
         prazos.estourados > 0 && prazos.vencemHoje > 0
-          ? `e outros ${prazos.vencemHoje} vencem ainda hoje`
+          ? `e mais ${prazos.vencemHoje} ${pluralDe(prazos.vencemHoje, "vence", "vencem")} ainda hoje`
           : prazos.estourados > 0
             ? "o relógio do documento já passou nesses"
             : "dá tempo, se começar por eles",

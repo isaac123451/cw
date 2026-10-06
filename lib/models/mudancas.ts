@@ -501,6 +501,26 @@ export const MUDANCAS: Mudanca[] = [
       "O botão das listas longas dizia \"Mostrar mais 40 de 253\" — lido como 40 de um total de 253, quando 253 era o que faltava. Agora diz \"faltam\", e no último lote \"Mostrar os 9 restantes\". Nos quadros e listas do Reclame Aqui e do NPS, nas categorias, no prêmio e nos itens da atividade.",
   },
   {
+    id: "meu-dia-nao-afirma-na-carga",
+    dia: "2026-10-06",
+    tipo: "correcao",
+    frente: "plataforma",
+    titulo: "O Meu dia e o Dashboard não dizem \"nada pendente\" antes de saber",
+    texto:
+      "Nos primeiros segundos, o Meu dia dizia \"Nada vencendo, ninguém parado e nenhum sinal de crise\", \"Nada pendente que mova a nota\" e a conquista \"Nenhum prazo estourado\" — com 188 prazos estourados, que apareciam depois. O Dashboard fazia o mesmo com \"Nenhum caso crítico em aberto\", \"Nada pendente para hoje\" e \"Nenhum resultado financeiro\"; a Agenda, Clientes, Estabelecimentos, Impacto, Respostas prontas e Processos, com as listas vazias. Agora cada bloco mostra linhas pulsando até os dados chegarem, e só então diz o que tem — ou que não tem.",
+    href: "/meu-dia",
+  },
+  {
+    id: "vence-hoje-concordancia",
+    dia: "2026-10-06",
+    tipo: "correcao",
+    frente: "plataforma",
+    titulo: "\"e mais 1 vence ainda hoje\"",
+    texto:
+      "O aviso de prazos dizia \"e outros 1 vencem ainda hoje\" e \"1 prazo vencem hoje\". Agora concorda com o número, aqui e no que o assistente lê sobre o dia.",
+    href: "/meu-dia",
+  },
+  {
     id: "indicadores-sem-zero-na-carga",
     dia: "2026-10-06",
     tipo: "correcao",

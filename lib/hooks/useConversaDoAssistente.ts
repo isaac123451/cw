@@ -168,8 +168,8 @@ export function useConversaDoAssistente() {
       const doNps = prazosDeHoje([], rules, responses, expediente, agora);
       const prazosPorFrente = [
         "PRAZOS DO RELÓGIO DO DOCUMENTO AGORA (a mesma conta do Meu dia):",
-        `- Reclame Aqui e Redes (casos abertos): ${doCaso.estourados} ${pluralDe(doCaso.estourados, "estourado", "estourados")}, ${doCaso.vencemHoje} vencem hoje.`,
-        `- NPS (ciclos sem 1º contato): ${doNps.estourados} ${pluralDe(doNps.estourados, "estourado", "estourados")}, ${doNps.vencemHoje} vencem hoje.`,
+        `- Reclame Aqui e Redes (casos abertos): ${doCaso.estourados} ${pluralDe(doCaso.estourados, "estourado", "estourados")}, ${doCaso.vencemHoje} ${pluralDe(doCaso.vencemHoje, "vence", "vencem")} hoje.`,
+        `- NPS (ciclos sem 1º contato): ${doNps.estourados} ${pluralDe(doNps.estourados, "estourado", "estourados")}, ${doNps.vencemHoje} ${pluralDe(doNps.vencemHoje, "vence", "vencem")} hoje.`,
       ].join("\n");
 
       const response = await fetch("/api/assistente", {

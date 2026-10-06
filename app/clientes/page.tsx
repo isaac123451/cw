@@ -19,6 +19,7 @@ import MainLayout from "@/components/layout/MainLayout";
 import PageHeading from "@/components/shared/PageHeading";
 import StatTile from "@/components/shared/StatTile";
 import SurfaceCard from "@/components/shared/SurfaceCard";
+import LinhasCarregando from "@/components/shared/LinhasCarregando";
 import VazioComSaida from "@/components/shared/VazioComSaida";
 
 import ClientForm from "@/components/clientes/ClientForm";
@@ -266,7 +267,11 @@ export default function ClientesPage() {
 
         </SurfaceCard>
 
-        {visible.length === 0 ? (
+        {loading && visible.length === 0 ? (
+          <SurfaceCard>
+            <LinhasCarregando className="py-4" />
+          </SurfaceCard>
+        ) : visible.length === 0 ? (
 
           <SurfaceCard>
             <VazioComSaida

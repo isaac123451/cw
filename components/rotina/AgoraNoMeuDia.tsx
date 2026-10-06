@@ -55,8 +55,8 @@ const um = (n: number) => n.toLocaleString("pt-BR", { minimumFractionDigits: 1, 
 
 export default function AgoraNoMeuDia() {
 
-  const { cases } = useCases();
-  const { responses } = useNps();
+  const { cases, loading: carregandoCasos } = useCases();
+  const { responses, loading: carregandoNps } = useNps();
   const { rules, expediente } = useSla();
   const { abrir } = useJanelas();
   const agora = useAgora();
@@ -77,6 +77,26 @@ export default function AgoraNoMeuDia() {
   }, [cases, responses, rules, expediente, agora, espera]);
 
   if (!calculado) return null;
+
+  /*
+    Sem as reclamações e o NPS na mão, as três caixas não afirmam nada
+    (out/2026). Antes diziam "Nada vencendo, ninguém parado" e "Nenhum
+    prazo estourado" durante a carga — com 188 prazos estourados.
+  */
+  if (carregandoCasos || carregandoNps) {
+    return (
+      <div className="grid gap-4 lg:grid-cols-3" aria-busy="true">
+        {["Pede ação agora", "O que move a nota", "Conquistas"].map((titulo) => (
+          <SurfaceCard key={titulo} title={titulo}>
+            <div className="space-y-2">
+              <span className="block h-3.5 w-3/4 animate-pulse rounded bg-zinc-100" />
+              <span className="block h-3.5 w-1/2 animate-pulse rounded bg-zinc-100" />
+            </div>
+          </SurfaceCard>
+        ))}
+      </div>
+    );
+  }
 
   const { avisos, acoes, conquistas } = calculado;
 

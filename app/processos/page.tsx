@@ -19,6 +19,7 @@ import MainLayout from "@/components/layout/MainLayout";
 import PageHeading from "@/components/shared/PageHeading";
 import StatTile from "@/components/shared/StatTile";
 import SurfaceCard from "@/components/shared/SurfaceCard";
+import LinhasCarregando from "@/components/shared/LinhasCarregando";
 import { ConfirmDelete } from "@/components/shared/Modal";
 
 import SlaRuleForm from "@/components/processos/SlaRuleForm";
@@ -731,7 +732,9 @@ export default function ProcessosPage() {
           description="Casos parados com uma área interna ou esperando o cliente."
         >
 
-          {movimentacoesAtrasadas.length === 0 ? (
+          {carregandoCasos && movimentacoesAtrasadas.length === 0 ? (
+            <LinhasCarregando className="py-4" />
+          ) : movimentacoesAtrasadas.length === 0 ? (
 
             <p className="rounded-xl border border-dashed border-zinc-200 py-10 text-center text-sm text-zinc-400">
               Nenhuma movimentação atrasada. Todas as áreas
@@ -808,7 +811,9 @@ export default function ProcessosPage() {
           hint="Enquanto não há resposta pública vale o prazo de resposta; depois dela, passa a valer o de solução."
         >
 
-          {atrasados.length === 0 ? (
+          {carregandoCasos && atrasados.length === 0 ? (
+            <LinhasCarregando className="py-4" />
+          ) : atrasados.length === 0 ? (
 
             <p className="rounded-xl border border-dashed border-zinc-200 py-10 text-center text-sm text-zinc-400">
               Nenhum caso fora do prazo. Operação em dia.

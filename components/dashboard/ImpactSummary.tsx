@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import SurfaceCard from "@/components/shared/SurfaceCard";
+import LinhasCarregando from "@/components/shared/LinhasCarregando";
 
 import { useImpact } from "@/lib/context/ImpactContext";
 import { hojeNaOperacao } from "@/lib/services/reputation.service";
@@ -56,7 +57,7 @@ function mesAnterior(chave: string) {
  */
 export default function ImpactSummary() {
 
-  const { records } = useImpact();
+  const { records, loading } = useImpact();
 
   const dados = useMemo(() => {
 
@@ -122,7 +123,9 @@ export default function ImpactSummary() {
     <SurfaceCard
       title="Impacto no negócio"
       description={
-        dados.total.quantidade === 0
+        loading && dados.total.quantidade === 0
+          ? "Carregando…"
+          : dados.total.quantidade === 0
           ? "Nenhum resultado financeiro registrado ainda."
           : `${dados.mes.quantidade} ${pluralDe(dados.mes.quantidade, "lançamento", "lançamentos")} neste mês · ${dados.total.quantidade} no total.`
       }
@@ -145,7 +148,9 @@ export default function ImpactSummary() {
         como "ninguém registrou". São coisas muito diferentes, e a
         segunda tem conserto num clique.
       */}
-      {dados.total.quantidade === 0 ? (
+      {loading && dados.total.quantidade === 0 ? (
+        <LinhasCarregando />
+      ) : dados.total.quantidade === 0 ? (
 
         <div className="rounded-xl border border-dashed border-zinc-200 px-5 py-8 text-center">
 

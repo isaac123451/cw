@@ -18,6 +18,7 @@ import MainLayout from "@/components/layout/MainLayout";
 import PageHeading from "@/components/shared/PageHeading";
 import StatTile from "@/components/shared/StatTile";
 import SurfaceCard from "@/components/shared/SurfaceCard";
+import LinhasCarregando from "@/components/shared/LinhasCarregando";
 import { ConfirmDelete } from "@/components/shared/Modal";
 
 import TaskForm from "@/components/agenda/TaskForm";
@@ -570,7 +571,13 @@ export default function AgendaPage() {
             );
           })}
 
-          {days.length === 0 && (
+          {days.length === 0 && carregandoTarefas && (
+            <SurfaceCard>
+              <LinhasCarregando className="py-6" />
+            </SurfaceCard>
+          )}
+
+          {days.length === 0 && !carregandoTarefas && (
             <SurfaceCard>
               <div className="flex flex-col items-center py-12 text-center">
 

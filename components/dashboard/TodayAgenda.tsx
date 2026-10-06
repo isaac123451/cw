@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import SurfaceCard from "@/components/shared/SurfaceCard";
+import LinhasCarregando from "@/components/shared/LinhasCarregando";
 
 import { useAgenda } from "@/lib/context/AgendaContext";
 import { useGoogleEvents } from "@/lib/context/GoogleEventsContext";
@@ -63,7 +64,7 @@ interface Linha {
  */
 export default function TodayAgenda() {
 
-  const { tasks, toggleTask } = useAgenda();
+  const { tasks, toggleTask, loading } = useAgenda();
 
   /*
     Quem não conectou a conta não tem eventos, e isso não é erro.
@@ -177,7 +178,9 @@ export default function TodayAgenda() {
       bodyClassName="p-0"
     >
 
-      {lista.length === 0 ? (
+      {loading && lista.length === 0 ? (
+        <LinhasCarregando className="px-6 py-6" />
+      ) : lista.length === 0 ? (
 
         <div className="flex flex-col items-center px-6 py-10 text-center">
 

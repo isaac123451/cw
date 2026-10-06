@@ -21,6 +21,7 @@ import MainLayout from "@/components/layout/MainLayout";
 import PageHeading from "@/components/shared/PageHeading";
 import StatTile from "@/components/shared/StatTile";
 import SurfaceCard from "@/components/shared/SurfaceCard";
+import LinhasCarregando from "@/components/shared/LinhasCarregando";
 import BarList from "@/components/shared/BarList";
 import { ConfirmDelete } from "@/components/shared/Modal";
 
@@ -354,7 +355,9 @@ export default function ImpactoPage() {
           }
         >
 
-          {records.length === 0 ? (
+          {loading && records.length === 0 ? (
+            <LinhasCarregando className="px-6 py-8" />
+          ) : records.length === 0 ? (
 
             <p className="px-6 py-12 text-center text-sm text-zinc-400">
               Nenhum impacto registrado ainda. Comece

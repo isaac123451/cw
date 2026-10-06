@@ -7,6 +7,7 @@ import { useMemo } from "react";
 import { ArrowUpRight, ShieldAlert } from "lucide-react";
 
 import { useCases } from "@/lib/context/CaseContext";
+import LinhasCarregando from "@/components/shared/LinhasCarregando";
 import { getCriticalCases,
   caseHref,
 } from "@/lib/services/case.service";
@@ -15,7 +16,7 @@ import SurfaceCard from "@/components/shared/SurfaceCard";
 
 export default function CriticalCases() {
 
-  const { cases } = useCases();
+  const { cases, loading } = useCases();
 
   const critical = useMemo(
     () => getCriticalCases(cases).slice(0, 5),
@@ -36,7 +37,9 @@ export default function CriticalCases() {
       }
     >
 
-      {critical.length === 0 ? (
+      {loading && critical.length === 0 ? (
+        <LinhasCarregando className="py-4" />
+      ) : critical.length === 0 ? (
 
         <div className="flex flex-col items-center py-8 text-center">
 

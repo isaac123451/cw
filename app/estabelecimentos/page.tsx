@@ -21,6 +21,7 @@ import MainLayout from "@/components/layout/MainLayout";
 import PageHeading from "@/components/shared/PageHeading";
 import StatTile from "@/components/shared/StatTile";
 import SurfaceCard from "@/components/shared/SurfaceCard";
+import LinhasCarregando from "@/components/shared/LinhasCarregando";
 import { ConfirmDelete } from "@/components/shared/Modal";
 
 import EstablishmentForm from "@/components/estabelecimentos/EstablishmentForm";
@@ -398,7 +399,11 @@ export default function EstabelecimentosPage() {
 
         </SurfaceCard>
 
-        {visible.length === 0 ? (
+        {carregandoBase && visible.length === 0 ? (
+          <SurfaceCard>
+            <LinhasCarregando className="py-4" />
+          </SurfaceCard>
+        ) : visible.length === 0 ? (
 
           <SurfaceCard>
 
