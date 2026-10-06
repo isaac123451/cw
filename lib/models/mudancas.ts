@@ -644,9 +644,9 @@ export const MUDANCAS: Mudanca[] = [
     dia: "2026-10-06",
     tipo: "correcao",
     frente: "plataforma",
-    titulo: "Analytics e Impacto também esperam os dados",
+    titulo: "Analytics, Impacto e Projetos também esperam os dados",
     texto:
-      "A Análise da operação abria com \"0 de 0 casos no recorte\", \"Nenhum responsável atribuído ainda\", \"Sem dados para exibir\" e \"Nenhuma causa raiz marcada nos últimos 90 dias\" — e o Impacto, com \"Nenhum tipo cadastrado\". Uma amostragem do que cada tela mostra no primeiro instante, comparada com o que mostra depois, achou os dois; agora esperam a base. As outras seis telas amostradas (Agenda, Causas raiz, Google, Processos, Cancelamento e a ficha do estabelecimento) já não afirmavam nada antes da hora.",
+      "A Análise da operação abria com \"0 de 0 casos no recorte\", \"Nenhum responsável atribuído ainda\", \"Sem dados para exibir\" e \"Nenhuma causa raiz marcada nos últimos 90 dias\" — o Impacto, com \"Nenhum tipo cadastrado\", e o quadro de Projetos, com \"Nenhuma iniciativa\" em todas as colunas. Uma amostragem do que cada tela mostra no primeiro instante, comparada com o que mostra depois, achou os dois; agora esperam a base. As outras 25 telas amostradas já não afirmavam nada antes da hora.",
     href: "/analytics",
   },
   {

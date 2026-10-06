@@ -255,7 +255,9 @@ export default function ProjetosPage() {
                       <p className="rounded-xl border border-dashed border-zinc-200 py-8 text-center text-xs text-zinc-400">
                         {isOver
                           ? "Solte aqui"
-                          : "Nenhuma iniciativa"}
+                          : loading
+                            ? "Carregando…"
+                            : "Nenhuma iniciativa"}
                       </p>
 
                     ) : (
