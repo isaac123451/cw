@@ -488,6 +488,16 @@ export const MUDANCAS: Mudanca[] = [
       "O cartão do próximo passo nascia aberto, com 300 px, por cima do quadro, das tabelas e dos formulários em toda tela. Agora nasce como a pílula \"Próximo passo · 202\" no canto, com o ponto âmbar quando há atraso; um clique abre, e quem abrir fica com ele aberto. O lembrete de foco continua abrindo o cartão sozinho.",
   },
   {
+    id: "placar-encerrados-com-tratativa",
+    dia: "2026-10-06",
+    tipo: "correcao",
+    frente: "nps",
+    titulo: "Placar: \"ciclos encerrados\" conta só o que teve tratativa",
+    texto:
+      "O placar do Meu dia dizia \"88 ciclos de NPS encerrados, −519 que a semana passada\" em vermelho: em 30/09 a importação fechou 520 respostas de uma vez como \"Sem tratativa\", e o placar contava isso como trabalho. Agora vale a mesma regra do NPS por ciclo — o lote sem tratativa fica de fora —, e o número passou a \"87, +11 que a semana passada\". A conquista \"ciclos encerrados com a tratativa registrada\" segue a mesma conta.",
+    href: "/meu-dia",
+  },
+  {
     id: "dias-uteis",
     dia: "2026-10-06",
     tipo: "correcao",

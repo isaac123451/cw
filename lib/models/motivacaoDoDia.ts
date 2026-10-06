@@ -1,6 +1,15 @@
 import type { Case } from "@/lib/models/case";
 import { alvoComAjuste, type AjustesDeMeta, type OrigemDoAlvo } from "@/lib/models/ajusteDeMeta";
-import type { NpsResponseView } from "@/lib/models/nps";
+import { isEncerrado, STATUS_SEM_TRATATIVA, type NpsResponseView } from "@/lib/models/nps";
+
+/**
+ * Encerrado com trabalho: o lote "Sem tratativa" (fechado pela importação,
+ * sem ninguém atender) fica de fora (out/2026) — a mesma regra do NPS por
+ * ciclo. Contado, ele fazia o placar do Meu dia dizer "88 encerrados, −519
+ * que a semana passada": 520 tinham sido fechados de uma vez em 30/09.
+ */
+const encerradoComTratativa = (r: NpsResponseView) =>
+  r.status ? isEncerrado(r.status) && r.status !== STATUS_SEM_TRATATIVA : Boolean(r.closedAt);
 
 import {
   diaNaOperacao,
@@ -344,7 +353,7 @@ export function conquistasDaSemana(entrada: {
     });
   }
 
-  const encerrados = entrada.nps.filter((r) => naSemana(r.closedAt));
+  const encerrados = entrada.nps.filter((r) => naSemana(r.closedAt) && encerradoComTratativa(r));
   if (encerrados.length > 0) {
     conquistas.push({
       chave: "encerrados",
@@ -389,7 +398,7 @@ export function numerosDaJanela(entrada: { casos: Case[]; nps: NpsResponseView[]
     npsNoPrazo: contatados.filter((r) => r.firstContactDueAt && new Date(r.firstContactAt!).getTime() <= new Date(r.firstContactDueAt).getTime()).length,
     npsContatados: contatados.length,
     revertidos: entrada.nps.filter((r) => r.score <= 6 && dentro(r.postContactAt) && (r.resolvedAfter === true || (r.moodAfter ?? 0) >= 4)).length,
-    encerrados: entrada.nps.filter((r) => dentro(r.closedAt)).length,
+    encerrados: entrada.nps.filter((r) => dentro(r.closedAt) && encerradoComTratativa(r)).length,
   };
 }
 
