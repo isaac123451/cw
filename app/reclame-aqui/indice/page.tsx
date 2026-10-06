@@ -379,7 +379,8 @@ function OQueFalta({ retrato }: { retrato: RetratoDoIndice }) {
   const itens: { texto: string; ok: boolean }[] = [
     {
       ok: falta.respostas === 0,
-      texto: falta.respostas === 0 ? `Resposta em ${ptBR(s.responseIndex)}%: meta cumprida.` : `Responder mais ${falta.respostas} ${pluralDe(falta.respostas, "reclamação", "reclamações")} no portal: ${ptBR(s.responseIndex)}% → 90%.`,
+      /* Janela vazia não é "0%: meta cumprida" (out/2026). */
+      texto: s.received === 0 ? "Nenhuma reclamação nesta janela: nada a responder." : falta.respostas === 0 ? `Resposta em ${ptBR(s.responseIndex)}%: meta cumprida.` :`Responder mais ${falta.respostas} ${pluralDe(falta.respostas, "reclamação", "reclamações")} no portal: ${ptBR(s.responseIndex)}% → 90%.`,
     },
     {
       ok: falta.avaliacoesMinimas === 0,
