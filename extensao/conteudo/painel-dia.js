@@ -111,7 +111,7 @@
       '  <div class="numeros">',
       ...[
         ["", "abertos", dados.contagens?.abertos ?? 0, "Tudo que está em aberto, em todos os canais"],
-        ["sem-resposta", "s/ resposta", dados.contagens?.semResposta ?? 0, "Reclamações ainda na coluna Novo"],
+        ["sem-resposta", "s/ resposta", dados.contagens?.semResposta ?? 0, "Abertas e ainda sem resposta pública no portal"],
         ["replicas", "réplicas", dados.contagens?.replicas ?? 0, "Aguardando nossa réplica"],
         ["risco", "risco", dados.contagens?.risco ?? 0, "Casos abertos com risco de churn"],
       ].map(

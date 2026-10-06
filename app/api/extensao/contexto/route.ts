@@ -1276,8 +1276,9 @@ function sugerir(
 
   const lista: Sugestao[] = [];
 
+  /* Aberta e sem resposta pública, como no resto da plataforma (out/2026). */
   const semResposta = casos.filter(
-    (item) => item.status === "Novo"
+    (item) => isOpen(item) && isReclameAqui(item) && !respondida(item)
   );
 
   if (semResposta.length > 0) {

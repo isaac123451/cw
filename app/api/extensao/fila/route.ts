@@ -12,7 +12,9 @@ import { getPrisma } from "@/lib/prisma";
 import {
   byChannel,
   isOpen,
+  isReclameAqui,
 } from "@/lib/services/case.service";
+import { respondida } from "@/lib/models/case";
 import { slaStatus } from "@/lib/services/sla.service";
 
 import {
@@ -112,7 +114,13 @@ export async function GET(request: Request) {
     string,
     (item: (typeof abertos)[number]) => boolean
   > = {
-    "sem-resposta": (item) => item.status === "Novo",
+    /*
+      Aberta e sem resposta pública no portal — a mesma conta do menu da
+      plataforma (out/2026). Era "status Novo": a reclamação já "Em
+      tratativa", ainda sem resposta no portal, saía do número — e o painel
+      dizia 5 enquanto o menu e o Meu dia diziam 12.
+    */
+    "sem-resposta": (item) => isReclameAqui(item) && !respondida(item),
     replicas: (item) =>
       item.status === "Aguardando nossa réplica",
     risco: (item) => Boolean(item.churnRisk),

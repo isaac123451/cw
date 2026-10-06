@@ -5,6 +5,7 @@ import { updateTag } from "next/cache";
 import { requireRole, SemPermissao } from "@/lib/auth/guard";
 import type { AgendaTask } from "@/lib/models/agenda";
 import { combinadoNaMensagem, idDoLembrete, pedidoNaMensagem, reuniaoNaMensagem } from "@/lib/models/lembretesAutomaticos";
+import { nomeDeContatoValido } from "@/lib/models/conversa";
 import { lerExpediente } from "@/lib/services/operacao.service";
 import { movementStatus } from "@/lib/services/movement.service";
 import { paredeDe } from "@/lib/services/horasUteis";
@@ -78,7 +79,9 @@ export async function gerarLembretesAutomaticos(): Promise<{ ok: true; criados: 
     for (const m of mensagens) {
       if (!m.em) continue;
       const dia = paredeDe(m.em).dia;
-      const quem = m.conversa.contatoNome ? ` com ${m.conversa.contatoNome}` : "";
+      /* O nome gravado errado (o subtítulo do WhatsApp) não entra no título da atividade. */
+      const nome = nomeDeContatoValido(m.conversa.contatoNome);
+      const quem = nome ? ` com ${nome}` : "";
 
       /* Reunião combinada, de qualquer lado: vira compromisso (e pode ir ao Google pelo aviso). */
       const r = reuniaoNaMensagem(m.texto, dia);
@@ -101,7 +104,7 @@ export async function gerarLembretesAutomaticos(): Promise<{ ok: true; criados: 
         if (p && p.dueDate >= hoje) {
           candidatos.push({
             id: idDoLembrete("pedido", m.id),
-            title: `Pedido${m.conversa.contatoNome ? ` de ${m.conversa.contatoNome}` : ""}: “${p.trecho}”`,
+            title: `Pedido${nome ? ` de ${nome}` : ""}: “${p.trecho}”`,
             type: "Follow-up",
             dueDate: p.dueDate,
             time: p.time,

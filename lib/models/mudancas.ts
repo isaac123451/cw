@@ -63,6 +63,16 @@ export const MUDANCAS: Mudanca[] = [
     onde: "Extensão → WhatsApp Web",
   },
   {
+    id: "sem-resposta-uma-conta",
+    dia: "2026-10-06",
+    tipo: "correcao",
+    frente: "extensao",
+    titulo: "\"Sem resposta\" com uma conta só",
+    texto:
+      "O popup e o Painel da extensão diziam \"5 sem resposta\" — contavam só a coluna Novo —, enquanto o menu da plataforma e o Meu dia diziam 12: a reclamação já \"Em tratativa\", ainda sem resposta no portal, sumia do número da extensão. Agora todos contam a reclamação aberta sem resposta pública: o popup, o Painel, a lista que o número abre, o aviso do sino e as sugestões da conversa. O aviso do sino leva direto à lista filtrada.",
+    onde: "Extensão → popup e Painel · sino de avisos",
+  },
+  {
     id: "ext-selo-de-espera-pelo-nome-certo",
     dia: "2026-10-06",
     tipo: "correcao",
@@ -430,6 +440,16 @@ export const MUDANCAS: Mudanca[] = [
   },
 
   /* ---------------- plataforma ---------------- */
+  {
+    id: "lembrete-com-nome-certo",
+    dia: "2026-10-06",
+    tipo: "correcao",
+    frente: "plataforma",
+    titulo: "Lembrete da conversa sem \"clique para mostrar os dados do contato\"",
+    texto:
+      "Os lembretes que nascem das conversas guardadas (\"Retorno combinado com…\", \"Pedido de…\", \"Reunião com…\") levavam o nome gravado da conversa — que em 20 delas era o subtítulo do WhatsApp. Agora só entra nome de verdade; sem ele, o título fica \"Retorno combinado: …\".",
+    href: "/agenda",
+  },
   {
     id: "conversas-nome-e-ultima-fala",
     dia: "2026-10-06",
