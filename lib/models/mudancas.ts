@@ -53,6 +53,26 @@ export const REVISAO = {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- extensão: o painel ---------------- */
   {
+    id: "ext-nome-do-contato-no-whatsapp",
+    dia: "2026-10-06",
+    tipo: "correcao",
+    frente: "extensao",
+    titulo: "O nome do contato no WhatsApp é o nome, e não o subtítulo",
+    texto:
+      "A extensão lia o nome no primeiro texto com dica do cabeçalho — e no WhatsApp de agora quem tem dica é o subtítulo. Das 30 conversas guardadas, 20 tinham o contato \"clique para mostrar os dados do contato\", 3 \"Conta comercial\", 2 \"online\" e 1 \"ic-person-filled\" (o ícone do avatar). Como o nome também é a chave do painel, ele recarregava a cada \"online\" → \"digitando…\". Agora a leitura pega o primeiro texto do cabeçalho que é nome de verdade, e a conferência do leitor prova seis cabeçalhos diferentes.",
+    onde: "Extensão → WhatsApp Web",
+  },
+  {
+    id: "ext-aviso-do-whatsapp-nao-e-fala",
+    dia: "2026-10-06",
+    tipo: "correcao",
+    frente: "extensao",
+    titulo: "O aviso de criptografia não é mais mensagem do cliente",
+    texto:
+      "Numa tela só com foto e áudio, o \"As mensagens e ligações são protegidas com a criptografia de ponta a ponta\" e o \"Aguardando mensagem…\" eram guardados como fala do cliente. Agora a extensão os descarta, e o servidor marca como aviso o que chegar assim.",
+    onde: "Extensão → Guardar a conversa",
+  },
+  {
     id: "ext-aba-cliente",
     dia: "2026-10-05",
     tipo: "novo",
@@ -401,6 +421,26 @@ export const MUDANCAS: Mudanca[] = [
 
   /* ---------------- plataforma ---------------- */
   {
+    id: "conversas-nome-e-ultima-fala",
+    dia: "2026-10-06",
+    tipo: "correcao",
+    frente: "plataforma",
+    titulo: "Conversas com o nome certo e a última fala de verdade",
+    texto:
+      "A lista de Conversas mostrava \"clique para mostrar os dados do contato\" em 20 conversas e, em várias, o aviso de criptografia como última mensagem — o aviso não tem hora, e o banco põe o que não tem hora primeiro na ordem decrescente. Por isso \"Esperando a gente\" dizia 12 quando eram 6. Agora o nome falso dá lugar ao estabelecimento, ao cliente do NPS ou ao telefone formatado (+55 67 98289-1760); os avisos são lidos como avisos, e a conversa guardada de novo recebe o nome certo.",
+    href: "/conversas",
+  },
+  {
+    id: "exportar-metricas-voltou",
+    dia: "2026-10-06",
+    tipo: "correcao",
+    frente: "plataforma",
+    titulo: "Exportar a Planilha de Métricas voltou a funcionar",
+    texto:
+      "O botão respondia \"Intervalo de datas inválido\" para qualquer período: a conferência da data tinha perdido as barras numa edição e só aceitava o texto literal \"dddd-dd-dd\". No mesmo tipo de defeito, a exportação da conversa trocava cada \"s\" do resumo por espaço (\"Re umo salvo\"), e a prova de envio dos disparos da extensão não juntava os espaços.",
+    href: "/analytics",
+  },
+  {
     id: "nps-tentativa-em-um-clique",
     dia: "2026-10-06",
     tipo: "novo",
@@ -410,6 +450,16 @@ export const MUDANCAS: Mudanca[] = [
       "\"O que aconteceu\" é obrigatório porque é o que sustenta encerrar por falta de retorno — e virou pedágio: das 118 tentativas gravadas, 33 diziam só \".\" e 72 \"não tive retorno\" ou \"tentativa de contato feita\". Agora o campo traz atalhos do canal escolhido (\"Caixa postal\", \"Número errado\", \"Mensagem não entregue\", \"Visualizou e não respondeu\"…); um clique preenche, outro soma. O mesmo na extensão. Texto sem letra nem número deixou de passar, e os \".\" que já estavam gravados não aparecem mais como anotação.",
     href: "/nps",
     onde: "Ficha do NPS → Tentei contato · Extensão → NPS → Tentei contato",
+  },
+  {
+    id: "nps-analise-numeros",
+    dia: "2026-10-06",
+    tipo: "correcao",
+    frente: "nps",
+    titulo: "Análise do NPS: média com uma casa e nada de \"0%\" para quem existe",
+    texto:
+      "Na tabela da tendência a média aparecia \"9\" logo abaixo de \"9,1\", como se fosse outra escala; agora é sempre \"9,0\". E nas barras de tipo e causa, 2 respostas em 4 mil apareciam como \"(0%)\" — como se fossem nenhuma. Agora dizem \"(< 0,1%)\". Vale para todas as barras da plataforma.",
+    href: "/nps/analise",
   },
   {
     id: "nps-quatro-frentes-sem-o-proprio",
@@ -637,6 +687,15 @@ export const MUDANCAS: Mudanca[] = [
   },
 
   /* ---------------- por dentro ---------------- */
+  {
+    id: "conferencia-das-barras",
+    dia: "2026-10-06",
+    tipo: "novo",
+    frente: "bastidores",
+    titulo: "Conferência das expressões sem barra",
+    texto:
+      "Uma expressão como /^d{4}-d{2}-d{2}$/ compila e não funciona — foi o que quebrou a exportação de métricas sem nenhum aviso. A conferência nova lê todas as expressões do código e acusa \\d, \\s e \\w que perderam a barra.",
+  },
   {
     id: "lint-mais-rapido",
     dia: "2026-10-05",

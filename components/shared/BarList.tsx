@@ -98,7 +98,8 @@ export default function BarList({
                   contagem inteira ao lado a leitura errada é a mais
                   natural.
                 */}
-                ({ptBR(item.percent)}%)
+                {/* Dois casos em 4 mil arredondavam para "(0%)" — como se fossem nenhum (out/2026). */}
+                ({item.value > 0 && item.percent < 0.1 ? "< 0,1" : ptBR(item.percent)}%)
               </span>
             </span>
 

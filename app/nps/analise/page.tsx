@@ -480,10 +480,8 @@ export default function NpsAnalisePage() {
                             {ponto.score}
                           </td>
                           <td className="px-3 py-2 tabular-nums text-zinc-600">
-                            {String(ponto.media).replace(
-                              ".",
-                              ","
-                            )}
+                            {/* Sempre com uma casa: "9" ao lado de "9,1" parecia outra escala. */}
+                            {typeof ponto.media === "number" ? ponto.media.toFixed(1).replace(".", ",") : "—"}
                           </td>
                           <td className="px-3 py-2 tabular-nums text-zinc-600">
                             {ponto.total}

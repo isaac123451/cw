@@ -167,7 +167,7 @@ export async function exportarMetricas(
   ate: string
 ): Promise<{ ok: true; arquivo: string; nome: string; dias: number } | { ok: false; erro: string }> {
 
-  if (!/^d{4}-d{2}-d{2}$/.test(de) || !/^d{4}-d{2}-d{2}$/.test(ate) || de > ate) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(de) || !/^\d{4}-\d{2}-\d{2}$/.test(ate) || de > ate) {
     return { ok: false, erro: "Intervalo de datas inválido." };
   }
 

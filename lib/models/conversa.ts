@@ -14,6 +14,77 @@ import { pluralDe } from "@/lib/plural";
 
 export type Lado = "cliente" | "nos" | "sistema";
 
+/**
+ * O que o WhatsApp põe entre as mensagens e não é fala de ninguém
+ * (out/2026) — a mesma lista do leitor da extensão (`whatsapp.js`).
+ *
+ * Numa tela só de mídia a extensão mandava o aviso de criptografia como
+ * mensagem do cliente: 7 das 30 conversas guardadas até 06/10 tinham. Sem
+ * hora, ele virava a "última fala" e a conversa aparecia como "esperando
+ * a gente". Ao guardar, vira aviso; o que já está gravado é lido como
+ * aviso também.
+ */
+const AVISOS_DO_WHATSAPP = [
+  /criptografia de ponta a ponta/i,
+  /end-to-end encrypted/i,
+  /cifrad[oa]s? de extremo a extremo/i,
+  /^aguardando (esta )?mensagem/i,
+  /^waiting for this message/i,
+  /^esperando (el|este) mensaje/i,
+  /^\d[.,]\d\s*[×x]$/,
+  /^(hoje|ontem|today|yesterday|hoy|ayer)$/i,
+];
+
+export function ehAvisoDoWhatsApp(texto: string | null | undefined) {
+  const t = (texto ?? "").trim();
+  return AVISOS_DO_WHATSAPP.some((r) => r.test(t));
+}
+
+/**
+ * O lado de uma mensagem gravada: o aviso do WhatsApp é "sistema", seja
+ * qual for o lado com que chegou.
+ */
+export function ladoDe(de: string, texto: string): Lado {
+  if (ehAvisoDoWhatsApp(texto)) return "sistema";
+  return de === "nos" || de === "sistema" ? de : "cliente";
+}
+
+/**
+ * O subtítulo do cabeçalho do WhatsApp e o nome do ícone do avatar —
+ * o que a extensão gravou como nome do contato até out/2026 (20 de 30
+ * conversas eram "clique para mostrar os dados do contato").
+ */
+const NAO_E_NOME = [
+  /^clique (aqui )?para/i,
+  /^click (here )?(for|to)/i,
+  /^haz clic/i,
+  /^on-?line$/i,
+  /^(digitando|gravando( [aá]udio)?|typing|recording( audio)?|escribiendo|grabando)(…|\.\.\.)?$/i,
+  /^visto por [uú]ltimo/i,
+  /^last seen/i,
+  /^conta comercial$/i,
+  /^business account$/i,
+  /^cuenta (de )?empresa$/i,
+  /^conta oficial/i,
+  /^(ic|wds-ic|default)-[\w-]+$/i,
+  /^dados do (perfil|contato)$/i,
+];
+
+/**
+ * O número como o WhatsApp mostra: "+55 67 98289-1760". Só para os
+ * brasileiros completos (55 + DDD + 8 ou 9 dígitos); o resto vai com "+".
+ */
+export function telefoneLegivel(digitos: string) {
+  const m = digitos.match(/^55(\d{2})(\d{4,5})(\d{4})$/);
+  return m ? `+55 ${m[1]} ${m[2]}-${m[3]}` : `+${digitos}`;
+}
+
+/** O nome, se for nome; "" se for subtítulo, ícone ou vazio. */
+export function nomeDeContatoValido(nome: string | null | undefined) {
+  const t = (nome ?? "").replace(/\s+/g, " ").trim();
+  return t && !NAO_E_NOME.some((r) => r.test(t)) ? t : "";
+}
+
 export interface MensagemRecebida {
   /** O id da mensagem no WhatsApp (extensão); o arquivo não tem — a chave sai do conteúdo. */
   chave?: string;
@@ -447,7 +518,7 @@ export function textoDaConversaExportada(
     conversa.caso ? `Caso: ${conversa.caso.protocolo} (${conversa.caso.frente})` : "",
     conversa.nps ? `NPS: ${conversa.nps.cliente} — nota ${conversa.nps.nota}` : "",
     conversa.estabelecimento ? `Estabelecimento: ${conversa.estabelecimento.nome}` : "",
-    conversa.resumo ? `Resumo salvo: ${conversa.resumo.replace(/s+/g, " ")}` : "",
+    conversa.resumo ? `Resumo salvo: ${conversa.resumo.replace(/\s+/g, " ")}` : "",
     `Exportada por ${contexto.exportadaPor} em ${carimboDoExport(contexto.exportadaEm)}. Dados bancários e de cartão foram omitidos quando a conversa foi guardada.`,
     "",
   ].filter((l) => l !== "");

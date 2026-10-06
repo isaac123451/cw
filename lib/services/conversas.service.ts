@@ -6,7 +6,11 @@ import {
   assinatura,
   chaveDoConteudo,
   chaveDoTelefone,
+  ehAvisoDoWhatsApp,
+  ladoDe,
+  nomeDeContatoValido,
   omitirDadosBancarios,
+  telefoneLegivel,
   type ConversaResumo,
   type ConversaView,
   type Lado,
@@ -78,7 +82,7 @@ export async function gravarMensagens(
     .map((m) => {
       const r = omitirDadosBancarios(m.texto.slice(0, MAXIMO_POR_MENSAGEM));
       const em = m.em && !Number.isNaN(Date.parse(m.em)) ? new Date(m.em).toISOString() : null;
-      const base = { de: m.de, autor: m.autor?.slice(0, 120) ?? null, texto: r.texto, em, omitidos: r.omitidos, transcricao: m.transcricao === true };
+      const base = { de: ladoDe(m.de, m.texto), autor: m.autor?.slice(0, 120) ?? null, texto: r.texto, em, omitidos: r.omitidos, transcricao: m.transcricao === true };
       /*
         A chave e a assinatura saem do texto original (antes da omissão):
         guardar de novo precisa reconhecer a mesma mensagem, com ou sem o
@@ -93,7 +97,7 @@ export async function gravarMensagens(
       const criada = await tx.conversa.create({
         data: {
           telefone,
-          contatoNome: entrada.contatoNome.trim().slice(0, 120),
+          contatoNome: nomeDeContatoValido(entrada.contatoNome).slice(0, 120),
           nosNome: entrada.nosNome?.slice(0, 120) ?? null,
           guardadaPor: entrada.autor,
           caseId: entrada.vinculo?.caseId ?? null,
@@ -104,13 +108,17 @@ export async function gravarMensagens(
       });
       id = criada.id;
     } else {
-      const existe = await tx.conversa.findUnique({ where: { id }, select: { id: true, telefone: true, caseId: true, npsResponseId: true, establishmentId: true } });
+      const existe = await tx.conversa.findUnique({ where: { id }, select: { id: true, telefone: true, contatoNome: true, caseId: true, npsResponseId: true, establishmentId: true } });
       if (!existe) throw new Error("CONVERSA_SUMIU");
       /* O que a conversa ainda não tinha, a gravação completa; o que já tinha, fica. */
       await tx.conversa.update({
         where: { id },
         data: {
           telefone: existe.telefone ?? telefone,
+          /* O nome gravado errado (o subtítulo do WhatsApp) é trocado pelo certo na próxima vez que alguém guardar. */
+          ...(!nomeDeContatoValido(existe.contatoNome) && nomeDeContatoValido(entrada.contatoNome)
+            ? { contatoNome: nomeDeContatoValido(entrada.contatoNome).slice(0, 120) }
+            : {}),
           ...(entrada.nosNome ? { nosNome: entrada.nosNome.slice(0, 120) } : {}),
           ...(existe.caseId || !entrada.vinculo?.caseId ? {} : { caseId: entrada.vinculo.caseId }),
           ...(existe.npsResponseId || !entrada.vinculo?.npsResponseId ? {} : { npsResponseId: entrada.vinculo.npsResponseId }),
@@ -249,7 +257,11 @@ type LinhaDaConversa = {
 function resumoDe(c: LinhaDaConversa, total: number, ultima?: { em: Date | null; texto: string }, ultimaDe?: "cliente" | "nos"): ConversaResumo {
   return {
     id: c.id,
-    contatoNome: c.contatoNome || (c.telefone ? `+${c.telefone}` : "Contato sem nome"),
+    contatoNome:
+      nomeDeContatoValido(c.contatoNome) ||
+      c.establishment?.name ||
+      (c.npsResponse ? c.npsResponse.customerName || c.npsResponse.customer : "") ||
+      (c.telefone ? telefoneLegivel(c.telefone) : "Contato sem nome"),
     telefone: c.telefone ?? undefined,
     mensagens: total,
     ultimaEm: ultima?.em?.toISOString(),
@@ -265,8 +277,8 @@ function resumoDe(c: LinhaDaConversa, total: number, ultima?: { em: Date | null;
 }
 
 /** Da mais nova para a mais velha: o lado da primeira que não é aviso do sistema. */
-function ladoDaUltimaFala(maisNovasPrimeiro: { de: string }[]): "cliente" | "nos" | undefined {
-  const fala = maisNovasPrimeiro.find((m) => m.de === "cliente" || m.de === "nos");
+function ladoDaUltimaFala(maisNovasPrimeiro: { de: string; texto: string }[]): "cliente" | "nos" | undefined {
+  const fala = maisNovasPrimeiro.find((m) => ladoDe(m.de, m.texto) !== "sistema");
   return fala?.de as "cliente" | "nos" | undefined;
 }
 
@@ -293,27 +305,30 @@ export async function listar(prisma: Db, termo: string) {
       ...VINCULOS,
       _count: { select: { mensagens: true } },
       /* Seis bastam para achar quem falou por último sem contar os avisos do sistema. */
-      mensagens: { orderBy: [{ em: "desc" }, { criadoEm: "desc" }], take: 6, select: { em: true, texto: true, de: true } },
+      /* Sem hora vai por último: o Postgres põe NULL primeiro no "desc", e o aviso sem hora virava a última mensagem. */
+      mensagens: { orderBy: [{ em: { sort: "desc", nulls: "last" } }, { criadoEm: "desc" }], take: 6, select: { em: true, texto: true, de: true } },
     },
   });
-  return linhas.map((c) => resumoDe(c, c._count.mensagens, c.mensagens[0], ladoDaUltimaFala(c.mensagens)));
+  return linhas.map((c) =>
+    resumoDe(c, c._count.mensagens, c.mensagens.find((m) => !ehAvisoDoWhatsApp(m.texto)), ladoDaUltimaFala(c.mensagens))
+  );
 }
 
 export async function ler(prisma: Db, id: string): Promise<ConversaView | null> {
   const c = await prisma.conversa.findUnique({
     where: { id },
-    include: { ...VINCULOS, mensagens: { orderBy: [{ em: "asc" }, { criadoEm: "asc" }] } },
+    include: { ...VINCULOS, mensagens: { orderBy: [{ em: { sort: "asc", nulls: "first" } }, { criadoEm: "asc" }] } },
   });
   if (!c) return null;
   const lista = c.mensagens.map((m) => ({
     id: m.id,
-    de: (["cliente", "nos", "sistema"].includes(m.de) ? m.de : "cliente") as Lado,
+    de: ladoDe(m.de, m.texto),
     autor: m.autor ?? undefined,
     texto: m.texto,
     em: m.em?.toISOString(),
     origem: (m.origem === "arquivo" ? "arquivo" : m.origem === "transcricao" ? "transcricao" : "extensao") as "arquivo" | "extensao" | "transcricao",
   }));
-  const ultima = c.mensagens[c.mensagens.length - 1];
+  const ultima = [...c.mensagens].reverse().find((m) => !ehAvisoDoWhatsApp(m.texto)) ?? c.mensagens[c.mensagens.length - 1];
   return {
     ...resumoDe(c, c.mensagens.length, ultima, ladoDaUltimaFala([...c.mensagens].reverse())),
     nosNome: c.nosNome ?? undefined,

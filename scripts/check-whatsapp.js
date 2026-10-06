@@ -277,6 +277,7 @@ const documento = {
 };
 
 let lerMensagens = null;
+let lerContato = null;
 
 /**
  * O painel de mentira.
@@ -297,6 +298,9 @@ const CW = {
     permitirAutoAbrir() {},
     definirCaptura() {},
     definirContexto() {},
+    definirLeitorDoContato(fn) {
+      lerContato = fn;
+    },
     definirLeitorDeConversa(fn) {
       lerMensagens = fn;
     },
@@ -468,6 +472,41 @@ conferir("7. o contato do cabeçalho é o cliente", g.mensagens[1]?.de, "cliente
 const h = ler(marcacaoDeSetembro({ comTique: false }));
 
 conferir("8. sem tique, o carimbo decide pelo contato", h.mensagens.map((m) => m.de), ["nos", "cliente", "nos"]);
+
+/* ---- 9. o nome no cabeçalho (out/2026) ---- */
+
+console.log("\n  O nome no cabeçalho, e não o subtítulo");
+
+/**
+ * O cabeçalho de outubro de 2026: o avatar (ícone, cujo texto é o nome
+ * do ícone), o nome **sem** `title`, e o subtítulo **com** `title`.
+ * O leitor antigo pegava o primeiro `span[title]` — o subtítulo.
+ */
+function cabecalho(...spans) {
+  raiz = no("div", { id: "main" }, [], [no("header", {}, [], spans)]);
+  return lerContato?.()?.nome ?? "";
+}
+const avatar = () => no("span", { "data-icon": "ic-person-filled" }, [], "ic-person-filled");
+const subtitulo = (t) => no("span", { title: t }, [], t);
+
+conferir("9. nome sem title, subtítulo com title", cabecalho(avatar(), no("span", { dir: "auto" }, [], "Pizzaria Bella"), subtitulo("clique para mostrar os dados do contato")), "Pizzaria Bella");
+conferir("9. 'online' não é nome", cabecalho(avatar(), no("span", { dir: "auto" }, [], "Doces da Lili"), subtitulo("online")), "Doces da Lili");
+conferir("9. 'Conta comercial' não é nome", cabecalho(no("span", {}, [], "BB beer"), subtitulo("Conta comercial")), "BB beer");
+conferir("9. só o avatar e o subtítulo: sem nome", cabecalho(avatar(), subtitulo("clique para mostrar os dados do contato")), "");
+conferir("9. a marcação antiga (nome com title) segue valendo", cabecalho(no("span", { title: "Maki Sushi Bar" }, [], "Maki Sushi Bar"), subtitulo("digitando…")), "Maki Sushi Bar");
+conferir("9. contato fora da agenda: o número é o nome", cabecalho(avatar(), no("span", { dir: "auto" }, [], "+55 31 9226-7690")), "+55 31 9226-7690");
+
+/* ---- 10. tela só de mídia: os avisos não viram fala ---- */
+
+console.log("\n  Tela sem mensagem de texto: o aviso não vira fala do cliente");
+
+const i = ler(no("div", { id: "main" }, [], [
+  no("div", { "data-id": "3EB0C40F7B3FDAB9E001" }, [], [no("span", {}, [], "As mensagens e ligações são protegidas com a criptografia de ponta a ponta. Somente as pessoas que fazem parte da conversa podem ler, ouvir ou compartilhar esse conteúdo.")]),
+  no("div", { "data-id": "3EB0747CAFA648D9109504" }, [], [no("span", {}, [], "Aguardando mensagem. Essa ação pode levar alguns instantes. Saiba mais")]),
+  no("div", { "data-id": "false_5511999@c.us_F1" }, ["message-in"], [no("span", {}, ["selectable-text"], "segue a foto do cardápio")]),
+]));
+
+conferir("10. só a mensagem de verdade", i.mensagens.map((m) => m.texto), ["segue a foto do cardápio"]);
 
 console.log(
   falhas === 0

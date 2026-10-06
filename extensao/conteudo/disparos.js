@@ -119,7 +119,7 @@
   const campo = () => CAMPOS.map((s) => document.querySelector(s)).find(Boolean) || null;
   const textoDoCampo = () => (campo()?.innerText || "").trim();
   const saidas = () => document.querySelectorAll(`#main ${NOSSAS.split(", ").join(", #main ")}`).length;
-  const normal = (t) => String(t || "").replace(/s+/g, " ").trim().toLowerCase();
+  const normal = (t) => String(t || "").replace(/\s+/g, " ").trim().toLowerCase();
   /** A última mensagem da conversa começa como a nossa? É a outra prova de que saiu. */
   function ultimaEhANossa(mensagem) {
     const linhas = document.querySelectorAll("#main [data-id], #main [role=\"row\"]");

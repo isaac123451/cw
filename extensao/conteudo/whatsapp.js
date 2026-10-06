@@ -147,6 +147,76 @@
     return "";
   }
 
+  /**
+   * O que o cabeçalho mostra e não é nome (out/2026).
+   *
+   * O leitor pegava o primeiro `span[title]` — e no WhatsApp de agora o
+   * nome não tem `title`; quem tem é o subtítulo. Das 30 conversas
+   * guardadas até 06/10, 20 tinham o contato "clique para mostrar os
+   * dados do contato", 3 "Conta comercial", 2 "online" e 1
+   * "ic-person-filled" (o ícone do avatar, quando não havia subtítulo).
+   * E como o nome entra na chave do detector, o painel recarregava a
+   * cada "online" → "digitando…".
+   */
+  const NAO_E_NOME = [
+    /^clique (aqui )?para/i,
+    /^click (here )?(for|to)/i,
+    /^haz clic/i,
+    /^on-?line$/i,
+    /^(digitando|gravando( [aá]udio)?|typing|recording( audio)?|escribiendo|grabando)(…|\.\.\.)?$/i,
+    /^visto por [uú]ltimo/i,
+    /^last seen/i,
+    /^conta comercial$/i,
+    /^business account$/i,
+    /^cuenta (de )?empresa$/i,
+    /^conta oficial/i,
+    /^(ic|wds-ic|default)-[\w-]+$/i,
+    /^dados do (perfil|contato)$/i,
+  ];
+
+  /**
+   * O que o WhatsApp põe entre as mensagens e não é fala de ninguém.
+   *
+   * Com mensagem de texto na tela, o carimbo já separava. Mas numa tela
+   * só de mídia não há carimbo, o filtro reserva deixa tudo passar, e o
+   * aviso de criptografia foi guardado como mensagem do cliente em 7
+   * conversas — sem hora, ele virava a "última fala" e marcava a conversa
+   * como "esperando a gente".
+   */
+  const AVISOS_DO_WHATSAPP = [
+    /criptografia de ponta a ponta/i,
+    /end-to-end encrypted/i,
+    /cifrad[oa]s? de extremo a extremo/i,
+    /^aguardando (esta )?mensagem/i,
+    /^waiting for this message/i,
+    /^esperando (el|este) mensaje/i,
+    /^\d[.,]\d\s*[×x]$/,
+    /^(hoje|ontem|today|yesterday|hoy|ayer)$/i,
+  ];
+
+  const ehAvisoDoWhatsApp = (texto) => AVISOS_DO_WHATSAPP.some((r) => r.test(String(texto ?? "").trim()));
+
+  CW.pareceNomeDeContato = (texto) => {
+    const t = String(texto ?? "").replace(/\s+/g, " ").trim();
+    return t.length > 0 && t.length <= 80 && !NAO_E_NOME.some((r) => r.test(t));
+  };
+
+  /**
+   * O nome no cabeçalho: o primeiro texto que parece nome, na ordem da
+   * tela — o nome vem antes do subtítulo. Só folhas (o `span` sem outro
+   * `span` dentro), para não juntar nome e subtítulo num texto só.
+   */
+  function nomeDoCabecalho(cabecalho) {
+    for (const el of cabecalho.querySelectorAll("span")) {
+      if (el.getAttribute?.("data-icon") || el.querySelector?.("span")) continue;
+      const candidatos = [el.getAttribute?.("title"), CW.texto(el, 80)];
+      for (const c of candidatos) {
+        if (CW.pareceNomeDeContato(c)) return String(c).replace(/\s+/g, " ").trim();
+      }
+    }
+    return "";
+  }
+
   function lerConversa() {
 
     const principal = document.querySelector("#main");
@@ -163,15 +233,7 @@
 
     let nome = "";
 
-    if (cabecalho) {
-
-      const comTitulo =
-        cabecalho.querySelector("span[title]");
-
-      nome =
-        comTitulo?.getAttribute("title")?.trim() ??
-        CW.texto(cabecalho.querySelector("span"), 80);
-    }
+    if (cabecalho) nome = nomeDoCabecalho(cabecalho);
 
     if (!telefone && !nome) return null;
 
@@ -440,7 +502,7 @@
 
       const texto = limpar(textoDaLinha(linha));
 
-      if (!texto) continue;
+      if (!texto || ehAvisoDoWhatsApp(texto)) continue;
 
       const id = linha.getAttribute?.("data-id") ?? "";
 
@@ -538,6 +600,8 @@
   }
 
   CW.painel.definirLeitorDeConversa?.(lerMensagens);
+  /* Para a conferência (check:whatsapp): o mesmo leitor do cabeçalho que o detector usa. */
+  CW.painel.definirLeitorDoContato?.(lerConversa);
 
   /*
     Os áudios da conversa (1.82).
