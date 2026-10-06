@@ -108,7 +108,8 @@ async function painel() {
   corpo.innerHTML = "";
   render({ cliente: null, nps: { id: "n1", nota: 3, cliente: "treduartepizzaria", encerrado: false }, estabelecimento: null, casos: [] });
   conferir("conhecido pelo NPS não é mais 'nada encontrado'", [corpo.innerHTML.includes("reconhecido"), corpo.innerHTML.includes("Nada encontrado")], [true, false]);
-  conferir("e leva ao NPS, com a nota", [corpo.innerHTML.includes("Abrir no NPS"), corpo.innerHTML.includes("NPS 3 · ciclo aberto")], [true, true]);
+  /* Desde out/2026 o ciclo aberto aparece ali mesmo, sem botão para ir buscá-lo noutra aba. */
+  conferir("e mostra o NPS ali mesmo, com a nota", [corpo.innerHTML.includes("Abrir no NPS"), corpo.innerHTML.includes("NPS 3 · ciclo aberto")], [false, true]);
 
   /* Desconhecido: candidatos pelo nome. */
   respostaQuemE = { candidatos: [{ tipo: "nps", ref: "n9", titulo: "treduartepizzaria", detalhe: "NPS nota 3 · 20/09", semelhanca: 0.8 }] };
