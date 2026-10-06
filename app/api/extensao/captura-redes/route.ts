@@ -95,6 +95,7 @@ export async function POST(request: Request) {
           texto: texto(m.texto, 4000),
           quando: texto(m.quando, 40),
           links: Array.isArray(m.links) ? m.links.slice(0, 10).map((l) => texto(l, 500)) : [],
+          mencoes: Array.isArray(m.mencoes) ? m.mencoes.slice(0, 10).map((x) => texto(x, 80)) : [],
         })
       );
     if (itens.length === 0) return responder(request, { erro: "Nenhuma mensagem com texto para registrar." }, 400);

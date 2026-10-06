@@ -259,7 +259,8 @@ export default function PrazoECriticidade({ data, aoMudarNoServidor }: Props) {
           </p>
         )}
 
-        {contatos === null ? (
+        {/* Sem contato nenhum no resumo, não há o que carregar — e o "Carregando" contradizia o "Nenhum contato" logo acima. */}
+        {contatos === null && (data.primeiroContatoEm || data.ultimoContatoEm || (data.tentativasSemResposta ?? 0) > 0) ? (
           <p className="mt-2 flex items-center gap-1.5 text-xs text-zinc-400">
             <Loader2 size={12} className="animate-spin" /> Carregando contatos…
           </p>

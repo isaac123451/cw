@@ -258,15 +258,43 @@ export function itensDaPlanilha(
 }
 
 /**
+ * O texto da mensagem sem as menções do Slack e sem o "Olá" do começo.
+ *
+ * A automação do canal escreve "Olá @Carlos Isaac Cliente Janaina entrou
+ * em contato no Instagram…": a menção é a quem vai atender, e o leitor a
+ * tomava pelo perfil do cliente — o caso nascia com o cliente "@Carlos" e
+ * o título "Olá @Carlos Isaac Cliente…" (out/2026). A extensão manda a
+ * lista das menções; sem ela (extensão antiga), "@Nome Sobrenome" com
+ * maiúsculas é menção — perfil do Instagram não tem espaço.
+ */
+export function semMencoesDoSlack(texto: string, mencoes: string[] = []) {
+  let t = texto;
+  for (const m of mencoes) {
+    const limpa = m.trim();
+    if (limpa.length > 1) t = t.split(limpa).join(" ");
+  }
+  /* Nome e sobrenome, e só: com mais palavras ela comia o "Cliente Janaina" que vem logo depois. */
+  t = t.replace(/@[A-ZÀ-Ú][\wÀ-ú]+\s+[A-ZÀ-Ú][\wÀ-ú]+/g, " ");
+  return t
+    /* Sem "\b": depois do "á" ele não existe, e o "Olá" ficava. */
+    .replace(/^\s*(?:olá|ola|oi|bom dia|boa tarde|boa noite)(?=[\s,!.]|$)[\s,!.]*/i, "")
+    .replace(/[ \t]+/g, " ")
+    .trim();
+}
+
+/**
  * Uma mensagem do Slack vira item: o texto inteiro é o relato, e rede,
  * perfil, link e seguidores saem de dentro dele.
  */
-export function itemDoSlack(entrada: { canal: string; ts: string; texto: string; autor?: string; quando?: string; links?: string[] }): ItemCapturado {
-  const texto = entrada.texto.trim();
+export function itemDoSlack(entrada: { canal: string; ts: string; texto: string; autor?: string; quando?: string; links?: string[]; mencoes?: string[] }): ItemCapturado {
+  const texto = semMencoesDoSlack(entrada.texto.trim(), entrada.mencoes) || entrada.texto.trim();
   const links = [...(entrada.links ?? []), ...(texto.match(/https?:\/\/\S+/g) ?? [])].map((l) => l.replace(/[>)\]]+$/, ""));
   const link = links.find((l) => /instagram\.com|facebook\.com|fb\.com|wa\.me|manychat/i.test(l)) ?? links[0] ?? "";
   const seguidores = texto.match(/(\d+(?:[.,]\d+)*\s*(?:mil|k|mi|m)?)\s*seguidores/i);
-  const nome = texto.match(/(?:cliente|nome)\s*[:\-–]\s*([^\n,;|]{2,60})/i);
+  /* "Cliente: Joana Souza" ou, como a automação escreve, "Cliente Janaina entrou em contato". */
+  const nome =
+    texto.match(/(?:cliente|nome)\s*[:\-–]\s*([^\n,;|]{2,60})/i) ??
+    texto.match(/\b[Cc]liente\s+([A-ZÀ-Ú][\wÀ-ú'-]+(?:\s+(?:d[aeo]s?\s+)?[A-ZÀ-Ú][\wÀ-ú'-]+){0,3})/);
   const telefone = texto.match(/(?:\+?55\s*)?\(?\d{2}\)?\s*9?\d{4}[\s.-]?\d{4}/);
   return {
     origem: "slack",
@@ -276,7 +304,8 @@ export function itemDoSlack(entrada: { canal: string; ts: string; texto: string;
       : "mensagem",
     rede: redeDoTexto(texto, link),
     perfil: perfilDoTexto(texto.match(/@[A-Za-z0-9._]{2,40}/)?.[0] ?? "", link),
-    nome: nome ? nome[1].trim() : "",
+    /* "Cliente Outras" é o que a automação escreve quando não sabe o nome. */
+    nome: nome && !/^(outr[oa]s?|n[ãa]o informado|desconhecido)$/i.test(nome[1].trim()) ? nome[1].trim() : "",
     seguidores: seguidores ? seguidoresDoTexto(seguidores[1]) : null,
     telefone: telefone ? telefone[0].replace(/\D/g, "") : "",
     link,

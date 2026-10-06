@@ -122,6 +122,22 @@ conferir("Slack: seguidores", slack.seguidores, 12300);
 conferir("Slack: link", slack.link, "https://www.instagram.com/p/Cx9/");
 conferir("Slack: nome", slack.nome, "Joana Souza");
 conferir("Slack: chave pelo canal e ts", slack.chave, "slack:C0123:1726590000.000100");
+/* A automação do canal (out/2026): a menção é a quem atende, e o nome vem sem dois-pontos. */
+const automacao = itemDoSlack({
+  canal: "C0A7",
+  ts: "1791148843.399419",
+  texto: "Olá @Carlos Isaac Cliente Janaina entrou em contato no Instagram solicitando atendimento.",
+});
+conferir("Slack: a menção ao agente não é o perfil", automacao.perfil, "");
+conferir("Slack: 'Cliente Janaina entrou' dá o nome", automacao.nome, "Janaina");
+conferir("Slack: 'Cliente Outras' não é nome", itemDoSlack({ canal: "C0A7", ts: "3.1", texto: "Olá @Carlos Isaac Cliente Outras entrou em contato no Instagram solicitando atendimento." }).nome, "");
+conferir("Slack: o título começa no que importa", tituloDaCaptura(automacao), "Cliente Janaina entrou em contato no Instagram solicitando atendimento.");
+conferir(
+  "Slack: com a lista da extensão, menção de uma palavra também sai",
+  itemDoSlack({ canal: "C1", ts: "2.1", texto: "Oi @Carlos, @maria.doces reclamou no Instagram", mencoes: ["@Carlos"] }).perfil,
+  "maria.doces"
+);
+
 conferir("Slack: referência em Brasília", itemDoSlack({ canal: "C1", ts: "1.000001", texto: "oi", quando: "2026-09-17T13:05:00.000Z" }).referencia, "mensagem de 17/09, 10:05");
 
 /* ---- 6. fiação ---- */

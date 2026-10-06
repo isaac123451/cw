@@ -265,7 +265,7 @@ export default function InvestigationTab({
       </SurfaceCard>
 
       <SurfaceCard
-        title="Investigação e acompanhamento operacional"
+        title="Triagem e acompanhamento operacional"
         description="Vínculos e classificação usados no diagnóstico da reclamação."
       >
 

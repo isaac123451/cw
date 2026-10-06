@@ -245,7 +245,7 @@ export default function OverviewTab({
 
       <SurfaceCard
         title="Dados base da reclamação"
-        description="Campos principais do caso. Classificação e checklist ficam na aba Investigação."
+        description="Campos principais do caso. Classificação e checklist ficam na aba Triagem."
       >
 
         <div className="space-y-4">

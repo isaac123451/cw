@@ -53,6 +53,16 @@ export const REVISAO = {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- extensão: o painel ---------------- */
   {
+    id: "slack-mencao-nao-e-cliente",
+    dia: "2026-10-06",
+    tipo: "correcao",
+    frente: "extensao",
+    titulo: "Slack das Redes: a menção a quem atende não vira o cliente",
+    texto:
+      "A automação do canal escreve \"Olá @Carlos Isaac Cliente Janaina entrou em contato no Instagram…\". O leitor tomava a menção pelo perfil do cliente: os atendimentos nasciam com o cliente \"@Carlos\" e o título \"Olá @Carlos Isaac Cliente…\". Agora a extensão manda as menções da mensagem, o servidor as tira junto com o \"Olá\", reconhece \"Cliente Janaina entrou\" (sem dois-pontos) como nome e não aceita \"Outras\", que é o que a automação escreve quando não sabe. O título passa a ser \"Cliente Janaina entrou em contato no Instagram…\".",
+    onde: "Extensão → Slack · Redes Sociais",
+  },
+  {
     id: "ext-nome-do-contato-no-whatsapp",
     dia: "2026-10-06",
     tipo: "correcao",
@@ -638,6 +648,15 @@ export const MUDANCAS: Mudanca[] = [
     titulo: "\"1 reclamação\" e \"5 reclamações\", nunca \"reclamação(ões)\"",
     texto:
       "Mais de 440 textos em 132 telas, avisos, relatórios e respostas do assistente usavam o plural com parênteses — \"2 caso(s)\", \"1 detrator(es)\", \"3 dia(s)\". Agora cada um usa o número que está ao lado: \"1 caso\", \"2 casos\".",
+  },
+  {
+    id: "ficha-aba-triagem",
+    dia: "2026-10-06",
+    tipo: "correcao",
+    frente: "reclame-aqui",
+    titulo: "A ficha manda para a aba que existe",
+    texto:
+      "Os textos da ficha e do Analytics mandavam para \"a aba Investigação\", que se chama Triagem desde a tela de triagem; o cartão dentro dela também. E o bloco de contatos mostrava \"Nenhum contato registrado\" e \"Carregando contatos…\" ao mesmo tempo — o segundo só aparece agora quando há contato a carregar.",
   },
   {
     id: "ra-respondida-nao-e-encerrado",

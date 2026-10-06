@@ -59,17 +59,23 @@
     const texto = (alvo.innerText ?? "").replace(/ /g, " ").trim().slice(0, 4000);
     if (!texto) return null;
     const links = [...alvo.querySelectorAll("a[href]")].map((a) => a.href).filter((h) => /^https?:/.test(h)).slice(0, 10);
+    /* As menções (@Carlos Isaac): é a quem vai atender, não o perfil do cliente — o servidor tira do texto. */
+    const mencoes = [...alvo.querySelectorAll('[data-stringify-type="mention"], .c-member_slug, [data-member-id]')]
+      .map((m) => (m.innerText ?? "").trim())
+      .filter(Boolean)
+      .slice(0, 10);
     return {
       canal,
       ts,
       texto,
       links,
+      mencoes,
       quando: new Date(Number(ts.split(".")[0]) * 1000).toISOString(),
       elemento: el,
     };
   }
 
-  const corpoDe = (mensagens) => mensagens.map(({ canal, ts, texto, links, quando }) => ({ canal, ts, texto, links, quando }));
+  const corpoDe = (mensagens) => mensagens.map(({ canal, ts, texto, links, mencoes, quando }) => ({ canal, ts, texto, links, mencoes, quando }));
 
   /* ============================================================
      O QUE JÁ PASSOU NA TELA, E O QUE JÁ ESTÁ NO CW

@@ -144,7 +144,7 @@ export default function CausaRaizCruzada() {
         <div className="py-6 text-center">
           <p className="text-sm font-medium text-zinc-700">Nenhuma causa raiz marcada nos últimos {dias} dias.</p>
           <p className="mx-auto mt-1.5 max-w-md text-sm text-zinc-500">
-            A causa se marca no caso (aba Investigação), no encerramento das redes, na ficha do NPS e na tratativa do Google.
+            A causa se marca no caso (aba Triagem), no encerramento das redes, na ficha do NPS e na tratativa do Google.
           </p>
         </div>
       ) : (
