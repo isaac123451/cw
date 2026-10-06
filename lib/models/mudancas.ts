@@ -63,6 +63,16 @@ export const MUDANCAS: Mudanca[] = [
     onde: "Extensão → WhatsApp Web",
   },
   {
+    id: "ext-agenda-sem-protocolo-repetido",
+    dia: "2026-10-06",
+    tipo: "melhoria",
+    frente: "extensao",
+    titulo: "Agenda da extensão sem o protocolo repetido",
+    texto:
+      "A atividade \"Cobrar retorno de Desenvolvimento — RA-JJ45…\" mostrava o protocolo de novo na linha de baixo, antes do assunto do caso. Quando o título já tem o protocolo, a linha traz só o assunto.",
+    onde: "Extensão → aba Agenda",
+  },
+  {
     id: "ext-nao-informado-fora-dos-titulos",
     dia: "2026-10-06",
     tipo: "correcao",

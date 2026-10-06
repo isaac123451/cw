@@ -755,6 +755,11 @@
         ? `<span class="tag perigo">${CW.data(t.quando)}</span>`
         : `<span class="tag neutro">${CW.data(t.quando)}</span>`;
 
+    /* O título já traz o protocolo ("Cobrar retorno — RA-…"): a linha do caso não repete (out/2026). */
+    const protocoloNoTitulo = Boolean(t.protocolo) && String(t.titulo ?? "").includes(t.protocolo);
+    const textoDoCaso = protocoloNoTitulo ? t.caso ?? "" : [t.protocolo, t.caso].filter(Boolean).join(" — ");
+    const linhaDoCaso = textoDoCaso ? `<div class="sub" style="margin-top:3px">${CW.escapar(textoDoCaso)}</div>` : "";
+
     return `
       <div class="cartao" style="margin-bottom:7px">
         <div class="linha">
@@ -764,11 +769,7 @@
         <div class="sub" style="margin-top:3px">
           ${CW.escapar(t.tipo ?? "")}${t.hora ? ` · ${CW.escapar(t.hora)}` : ""}${t.responsavel ? ` · ${CW.escapar(t.responsavel)}` : ""}
         </div>
-        ${
-          t.protocolo
-            ? `<div class="sub" style="margin-top:3px">${CW.escapar(t.protocolo)}${t.caso ? ` — ${CW.escapar(t.caso)}` : ""}</div>`
-            : ""
-        }
+        ${linhaDoCaso}
         <div class="etapas">
           ${
             t.concluida
