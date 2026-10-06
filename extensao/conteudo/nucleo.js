@@ -140,6 +140,64 @@
         })
       : "";
 
+  /**
+   * Ícones de traço, no lugar de emoji e de entidade HTML (📌, &#9681;).
+   *
+   * Emoji muda de cara em cada sistema e não segue a cor do tema; o
+   * traço em `currentColor` herda a cor de quem o usa, no claro e no
+   * escuro. Desenho no estilo do Lucide, o mesmo da aplicação.
+   */
+  const ICONES = {
+    cliente: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+    ra: '<path d="M3 11l16-6v14L3 13z"/><path d="M7 13.5V17a2 2 0 0 0 4 0v-2"/>',
+    nps: '<path d="M12 3l2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3l-5.6 2.9 1.1-6.2L3 9.6l6.2-.9z"/>',
+    redes: '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"/>',
+    painel: '<path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/>',
+    agenda: '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+    fixar: '<path d="M12 17v5"/><path d="M9 3h6l-1 6 3 3v2H7v-2l3-3z"/>',
+    tema: '<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/>',
+    voltar: '<path d="M19 12H5M12 19l-7-7 7-7"/>',
+    recarregar: '<path d="M21 12a9 9 0 1 1-2.6-6.4L21 8"/><path d="M21 3v5h-5"/>',
+    fechar: '<path d="M18 6 6 18M6 6l12 12"/>',
+    mais: '<g fill="currentColor"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></g>',
+    buscar: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
+    opcoes: '<path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/>',
+    teclado: '<rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/>',
+    lateral: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3v18"/>',
+    canto: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="16" cy="16" r="2"/>',
+    abrir: '<path d="M4 12h12M12 6l6 6-6 6"/><path d="M20 4v16"/>',
+    anotar: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
+    lembrete: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/>',
+    assistente: '<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.7 1.8 1.8.7-1.8.7L19 20l-.7-1.8-1.8-.7 1.8-.7z"/>',
+    ok: '<path d="M20 6 9 17l-5-5"/>',
+    copiar: '<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+    fora: '<path d="M15 3h6v6M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
+    direita: '<path d="m9 18 6-6-6-6"/>',
+    baixo: '<path d="m6 9 6 6 6-6"/>',
+    alerta: '<path d="M12 3 2 21h20z"/><path d="M12 10v4M12 17.5h.01"/>',
+    relogio: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    documento: '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/>',
+  };
+
+  CW.icone = (nome, tamanho = 16) =>
+    `<svg class="ic" width="${tamanho}" height="${tamanho}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONES[nome] ?? ""}</svg>`;
+
+  /**
+   * A palavra no número certo — no lugar do "reclamação(ões)".
+   * Devolve só a palavra: `${n} ${CW.plural(n, "caso", "casos")}`.
+   */
+  CW.plural = (n, um, varios) => {
+    const numero = typeof n === "number" ? n : Number(String(n ?? "").replace(/\./g, "").replace(",", "."));
+    return Math.abs(numero) === 1 ? um : varios;
+  };
+
+  /** Número com vírgula, como se escreve aqui: 8,8 e não 8.8. */
+  CW.numero = (valor, casas = 1) => {
+    const n = Number(valor);
+    if (valor === null || valor === undefined || valor === "" || !Number.isFinite(n)) return "—";
+    return n.toLocaleString("pt-BR", { minimumFractionDigits: Number.isInteger(n) ? 0 : casas, maximumFractionDigits: casas });
+  };
+
   CW.debounce = (fn, ms) => {
     let id = null;
     return (...args) => {

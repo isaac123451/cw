@@ -9,6 +9,7 @@ import { descreverRegistro } from "@/lib/services/horasUteis";
 
 import { salvarAcoesDoPromotor, type AcoesDoPromotor as Acoes } from "@/lib/actions/nps";
 import { useToast } from "@/lib/context/ToastContext";
+import { pluralDe } from "@/lib/plural";
 
 interface Props {
   item: NpsResponseView;
@@ -131,7 +132,7 @@ export default function AcoesDoPromotor({ item, onSalvo }: Props) {
         detail: [
           a.reviewFeita === true ? "review publicada no Google" : a.reviewAsked ? "review pedida" : null,
           a.aceitaCase === true ? "aceitou ser case" : a.aceitaCase === false ? "não quis ser case" : a.testimonialAsked ? "case perguntado" : null,
-          a.indicacoes ? `${a.indicacoes} indicação(ões)` : a.referralAsked ? "indicação pedida" : null,
+          a.indicacoes ? `${a.indicacoes} ${pluralDe(a.indicacoes, "indicação", "indicações")}` : a.referralAsked ? "indicação pedida" : null,
         ]
           .filter(Boolean)
           .join(" · "),

@@ -25,6 +25,7 @@ import { PRIORIDADES, type Case, type Prioridade } from "@/lib/models/case";
 import { ETAPAS_DAS_REDES, eFinalDasRedes } from "@/lib/models/redes";
 import { moverPara } from "@/lib/services/case.service";
 import { hojeNaOperacao } from "@/lib/services/reputation.service";
+import { pluralDe } from "@/lib/plural";
 
 /**
  * A reclamação (ou o atendimento das redes) numa mini-janela.
@@ -141,7 +142,7 @@ export default function JanelaDoCaso({
     }
 
     setRascunho({});
-    notify({ tone: "success", title: `${caso.protocol} salvo.`, detail: `${mudou.length} campo(s) gravado(s).` });
+    notify({ tone: "success", title: `${caso.protocol} salvo.`, detail: `${mudou.length} ${pluralDe(mudou.length, "campo", "campos")} ${pluralDe(mudou.length, "gravado", "gravados")}.` });
   }
 
   async function anotar() {
@@ -282,7 +283,7 @@ export default function JanelaDoCaso({
 
       {mudou.length > 0 && (
         <div className="flex items-center gap-2 rounded-xl bg-violet-50 px-3 py-2 ring-1 ring-violet-100">
-          <span className="flex-1 text-xs text-violet-800">{mudou.length} alteração(ões) por salvar</span>
+          <span className="flex-1 text-xs text-violet-800">{mudou.length} {pluralDe(mudou.length, "alteração", "alterações")} por salvar</span>
           <button
             type="button"
             onClick={() => {

@@ -37,6 +37,7 @@ import { useEstablishments } from "@/lib/context/EstablishmentsContext";
 import { useClients } from "@/lib/context/ClientsContext";
 
 import { ImpactRecord } from "@/lib/models/impact";
+import { pluralDe } from "@/lib/plural";
 
 const money = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -332,7 +333,7 @@ export default function ImpactoPage() {
 
         <SurfaceCard
           title="Registros de impacto"
-          description={`${records.length} movimentação(ões) registradas.`}
+          description={`${records.length} ${pluralDe(records.length, "movimentação", "movimentações")} registradas.`}
           bodyClassName="p-0"
           action={
             <button

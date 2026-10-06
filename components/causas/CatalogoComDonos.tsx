@@ -13,6 +13,7 @@ import { useNps } from "@/lib/context/NpsContext";
 import { useToast } from "@/lib/context/ToastContext";
 import { rotuloDoPrazo } from "@/lib/models/catalogoDeCausas";
 import type { RootCauseOption } from "@/lib/models/nps";
+import { pluralDe } from "@/lib/plural";
 
 /**
  * O catálogo como está, com o dono de cada causa (Fase 27).
@@ -41,7 +42,7 @@ export default function CatalogoComDonos() {
     try {
       const emUso = await removeNpsRootCause(causa.id);
       await recarregarCausas();
-      if (emUso) notify({ tone: "info", title: "Causa desativada, não excluída.", detail: `${emUso} registro(s) já usam "${causa.name}".` });
+      if (emUso) notify({ tone: "info", title: "Causa desativada, não excluída.", detail: `${emUso} ${pluralDe(emUso, "registro", "registros")} já usam "${causa.name}".` });
     } catch {
       notify({ tone: "error", title: "A causa não foi excluída.", detail: "Tente de novo em instantes." });
     }

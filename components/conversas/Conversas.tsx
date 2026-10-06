@@ -33,6 +33,7 @@ import {
 } from "@/lib/actions/conversas";
 import { ladosDaConversa, retratoDaConversa, type ConversaResumo, type ConversaView } from "@/lib/models/conversa";
 import { descreverMinutosUteis, descreverRegistro } from "@/lib/services/horasUteis";
+import { pluralDe } from "@/lib/plural";
 
 /*
   Os recortes da lista. "Esperando a gente" é o que mais importa: o
@@ -478,7 +479,7 @@ function ExportarConversa({ conversa }: { conversa: ConversaView }) {
       link.click();
       URL.revokeObjectURL(url);
 
-      notify({ tone: "success", title: `${r.mensagens} mensagem(ns) exportada(s)`, detail: r.nome });
+      notify({ tone: "success", title: `${r.mensagens} ${pluralDe(r.mensagens, "mensagem", "mensagens")} ${pluralDe(r.mensagens, "exportada", "exportadas")}`, detail: r.nome });
     } catch {
       notify({ tone: "error", title: "Sem resposta do servidor", detail: "O arquivo não foi gerado." });
     } finally {
@@ -698,7 +699,7 @@ function CorrigirLados({ conversa: c, onMudou }: { conversa: ConversaView; onMud
       notify({
         tone: "success",
         title: "Lados corrigidos",
-        detail: `${r.nossas} nossa(s), ${r.deles} do cliente${r.avisos ? `, ${r.avisos} aviso(s)` : ""}.`,
+        detail: `${r.nossas} ${pluralDe(r.nossas, "nossa", "nossas")}, ${r.deles} do cliente${r.avisos ? `, ${r.avisos} ${pluralDe(r.avisos, "aviso", "avisos")}` : ""}.`,
       });
     } catch {
       setErro("Sem resposta do servidor. Nada foi mudado.");
@@ -747,7 +748,7 @@ function CorrigirLados({ conversa: c, onMudou }: { conversa: ConversaView; onMud
       {lados.semAutorESemHora > 0 && (
         <label className="flex items-center gap-2 text-xs text-zinc-600">
           <input type="checkbox" checked={avisos} onChange={(e) => setAvisos(e.target.checked)} />
-          Marcar como aviso as {lados.semAutorESemHora} linha(s) sem autor e sem hora (o aviso de criptografia, a velocidade do áudio) — não apaga nada
+          Marcar como aviso as {lados.semAutorESemHora} {pluralDe(lados.semAutorESemHora, "linha", "linhas")} sem autor e sem hora (o aviso de criptografia, a velocidade do áudio) — não apaga nada
         </label>
       )}
       <ErroDoServidor erro={erro} />

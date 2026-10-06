@@ -15,6 +15,7 @@ import {
   type PontoDaEvolucao,
 } from "@/lib/models/indiceRA";
 import { ptBR } from "@/lib/services/reputation.service";
+import { pluralDe } from "@/lib/plural";
 
 const A = 200;
 const M = { esq: 48, dir: 12, cima: 12, baixo: 26 };
@@ -241,17 +242,17 @@ export default function EvolucaoDoIndice({ casos, periodo, hoje }: { casos: Case
             </p>
             <div className="mt-1 space-y-0.5 border-t border-zinc-100 pt-1 text-zinc-600">
               <p className="flex justify-between tabular-nums">
-                <span>{p.respondidas} resposta(s)</span>
+                <span>{p.respondidas} {pluralDe(p.respondidas, "resposta", "respostas")}</span>
                 {p.respondidas > 0 && <Variacao valor={p.efeitoDasRespostas} />}
               </p>
               <p className="flex justify-between tabular-nums">
                 <span>
-                  {p.avaliadas} avaliação(ões)
+                  {p.avaliadas} {pluralDe(p.avaliadas, "avaliação", "avaliações")}
                   {p.notaDasAvaliacoes !== null && <span className="text-zinc-400"> · média {ptBR(p.notaDasAvaliacoes, 1)}</span>}
                 </span>
                 {p.avaliadas > 0 && <Variacao valor={p.efeitoDasAvaliacoes} />}
               </p>
-              <p>{p.recebidas} reclamação(ões) nova(s)</p>
+              <p>{p.recebidas} {pluralDe(p.recebidas, "reclamação", "reclamações")} {pluralDe(p.recebidas, "nova", "novas")}</p>
             </div>
           </div>
         )}

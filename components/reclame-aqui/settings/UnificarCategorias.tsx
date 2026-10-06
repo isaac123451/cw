@@ -16,6 +16,7 @@ import { contarCategorias, unificarCategorias } from "@/lib/actions/categorias";
 import { useCases } from "@/lib/context/CaseContext";
 import { useSettings } from "@/lib/context/SettingsContext";
 import { useToast } from "@/lib/context/ToastContext";
+import { pluralDe } from "@/lib/plural";
 
 interface Props {
   onClose: () => void;
@@ -91,7 +92,7 @@ export default function UnificarCategorias({ onClose }: Props) {
       notify({
         tone: "success",
         title: `Unificado em "${destino.nome}".`,
-        detail: `${r.casos} caso(s) movidos${r.subcategoriasMovidas + r.subcategoriasFundidas ? `, ${r.subcategoriasMovidas + r.subcategoriasFundidas} subcategoria(s)` : ""}${r.macros ? `, ${r.macros} resposta(s) pronta(s)` : ""}. ${r.desativadas.join(", ")} ficaram desativadas.`,
+        detail: `${r.casos} ${pluralDe(r.casos, "caso", "casos")} movidos${r.subcategoriasMovidas + r.subcategoriasFundidas ? `, ${r.subcategoriasMovidas + r.subcategoriasFundidas} ${pluralDe(r.subcategoriasMovidas + r.subcategoriasFundidas, "subcategoria", "subcategorias")}` : ""}${r.macros ? `, ${r.macros} ${pluralDe(r.macros, "resposta", "respostas")} ${pluralDe(r.macros, "pronta", "prontas")}` : ""}. ${r.desativadas.join(", ")} ficaram desativadas.`,
       });
 
       /* A contagem nova, para seguir com o próximo grupo. */
@@ -212,7 +213,7 @@ export default function UnificarCategorias({ onClose }: Props) {
                           {m.nome}
                         </span>
                         <span className="shrink-0 text-xs tabular-nums text-zinc-500">
-                          {m.casos} caso(s)
+                          {m.casos} {pluralDe(m.casos, "caso", "casos")}
                           {m.subcategorias ? ` · ${m.subcategorias} sub.` : ""}
                           {m.macros ? ` · ${m.macros} resp.` : ""}
                         </span>

@@ -1,0 +1,15 @@
+/**
+ * A palavra no número certo: `${n} ${pluralDe(n, "reclamação", "reclamações")}`.
+ *
+ * Substituiu o "reclamação(ões)" que aparecia em mais de 400 lugares —
+ * texto de formulário, não de quem conversa. Devolve só a palavra para o
+ * número continuar formatado como cada tela já formata (tabular, negrito,
+ * `toLocaleString`).
+ *
+ * Um é singular; zero e qualquer outro número, plural ("0 reclamações").
+ * Aceita texto também, porque algumas telas já recebem o número formatado.
+ */
+export function pluralDe(n: number | string | null | undefined, um: string, varios: string) {
+  const numero = typeof n === "number" ? n : Number(String(n ?? "").replace(/\./g, "").replace(",", "."));
+  return Math.abs(numero) === 1 ? um : varios;
+}

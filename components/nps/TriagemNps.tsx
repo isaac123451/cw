@@ -15,6 +15,7 @@ import { useEstablishments } from "@/lib/context/EstablishmentsContext";
 import { useSla } from "@/lib/context/SlaContext";
 import { useToast } from "@/lib/context/ToastContext";
 import { useAgora } from "@/lib/hooks/useAgora";
+import { pluralDe } from "@/lib/plural";
 
 interface Props {
   itens: NpsResponseView[];
@@ -125,8 +126,8 @@ export default function TriagemNps({ itens, tipos, onOpen, onAplicado }: Props) 
 
       notify({
         tone: "success",
-        title: qual === "tipo" ? `${r.atualizados} ciclo(s) classificados como ${tipo}.` : `${r.atualizados} ciclo(s) com ${r.responsavel ?? "você"} como responsável.`,
-        detail: r.revisoes > 0 ? `${r.revisoes} revisão(ões) de processo abertas em Projetos e Melhorias.` : "A fila continua na mesma ordem; o próximo passo é o contato, na ficha.",
+        title: qual === "tipo" ? `${r.atualizados} ${pluralDe(r.atualizados, "ciclo", "ciclos")} classificados como ${tipo}.` : `${r.atualizados} ${pluralDe(r.atualizados, "ciclo", "ciclos")} com ${r.responsavel ?? "você"} como responsável.`,
+        detail: r.revisoes > 0 ? `${r.revisoes} ${pluralDe(r.revisoes, "revisão", "revisões")} de processo abertas em Projetos e Melhorias.` : "A fila continua na mesma ordem; o próximo passo é o contato, na ficha.",
       });
 
       setSelecionados(new Set());
@@ -145,7 +146,7 @@ export default function TriagemNps({ itens, tipos, onOpen, onAplicado }: Props) 
     <SurfaceCard
       tour="triagem-nps"
       title="Triagem do que está parado"
-      description={`${fila.length} ciclo(s) abertos sem primeiro contato${estourados ? `, ${estourados} fora do prazo` : ""}. A ordem é a da rotina: detratores críticos primeiro.`}
+      description={`${fila.length} ${pluralDe(fila.length, "ciclo", "ciclos")} abertos sem primeiro contato${estourados ? `, ${estourados} fora do prazo` : ""}. A ordem é a da rotina: detratores críticos primeiro.`}
       action={
         <button
           type="button"
@@ -173,7 +174,7 @@ export default function TriagemNps({ itens, tipos, onOpen, onAplicado }: Props) 
           })}
           {criticos > 0 && (
             <button type="button" onClick={() => setAberta(true)} className="text-xs font-medium text-violet-700 hover:underline">
-              Começar pelos {criticos} crítico(s)
+              Começar pelos {criticos} {pluralDe(criticos, "crítico", "críticos")}
             </button>
           )}
         </div>
@@ -183,7 +184,7 @@ export default function TriagemNps({ itens, tipos, onOpen, onAplicado }: Props) 
           {/* A barra do lote */}
           <div className="sticky top-0 z-10 flex flex-wrap items-center gap-2 border-b border-zinc-100 bg-white/95 px-4 py-3 backdrop-blur">
             <span className="text-sm text-zinc-600">
-              <strong className="tabular-nums text-zinc-900">{escolhidos.length}</strong> selecionado(s)
+              <strong className="tabular-nums text-zinc-900">{escolhidos.length}</strong> {pluralDe(escolhidos.length, "selecionado", "selecionados")}
             </span>
 
             <select
@@ -223,8 +224,8 @@ export default function TriagemNps({ itens, tipos, onOpen, onAplicado }: Props) 
             {confirmando && (
               <span className="flex w-full flex-wrap items-center gap-2 rounded-lg bg-violet-50 px-3 py-2 text-sm text-violet-900 ring-1 ring-inset ring-violet-100 sm:w-auto">
                 {confirmando === "tipo"
-                  ? `Classificar ${escolhidos.length} ciclo(s) como ${tipo}${tipo === "Erro Processual" ? " (abre uma revisão de processo para cada)" : ""}?`
-                  : `Ficar como responsável por ${escolhidos.length} ciclo(s)?`}
+                  ? `Classificar ${escolhidos.length} ${pluralDe(escolhidos.length, "ciclo", "ciclos")} como ${tipo}${tipo === "Erro Processual" ? " (abre uma revisão de processo para cada)" : ""}?`
+                  : `Ficar como responsável por ${escolhidos.length} ${pluralDe(escolhidos.length, "ciclo", "ciclos")}?`}
                 <button type="button" onClick={() => setConfirmando(null)} className="rounded-md px-2 py-1 text-xs font-medium text-violet-800 hover:bg-violet-100">
                   Cancelar
                 </button>

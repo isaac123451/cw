@@ -21,6 +21,7 @@ import { atrasadosDaAgenda, compromissosEntre, type Compromisso, type OrigemDoCo
 import { diaCurtoDaMarca, type ItemDaRotina } from "@/lib/models/meuDia";
 import { paredeDe, proximoDiaUtil } from "@/lib/services/horasUteis";
 import { isSocial } from "@/lib/services/case.service";
+import { pluralDe } from "@/lib/plural";
 
 /**
  * O dia e a semana numa linha do tempo (Fase 25).
@@ -154,7 +155,7 @@ export default function LinhaDoTempo({ ligacoes }: { ligacoes?: { dia: string; i
           </ul>
           {atrasados.prazosEstourados > 0 && (
             <Link href="/meu-dia" className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-rose-700 hover:underline">
-              {atrasados.prazosEstourados} prazo(s) de caso, NPS ou área já estourados — estão no Meu dia <ArrowUpRight size={12} />
+              {atrasados.prazosEstourados} {pluralDe(atrasados.prazosEstourados, "prazo", "prazos")} de caso, NPS ou área já estourados — estão no Meu dia <ArrowUpRight size={12} />
             </Link>
           )}
         </div>

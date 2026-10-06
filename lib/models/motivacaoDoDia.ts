@@ -18,6 +18,7 @@ import { respondida } from "@/lib/models/case";
 import { cicloAnterior, cicloDe } from "@/lib/models/ciclo";
 
 import { filaDeAvaliacao } from "@/lib/models/cadencia";
+import { pluralDe } from "@/lib/plural";
 
 /**
  * O que faz a tela pagar o tempo gasto nela (roadmap, "Para dar vontade
@@ -295,7 +296,7 @@ export function conquistasDaSemana(entrada: {
     conquistas.push({
       chave: "avaliacoes",
       titulo: `${positivas.length} ${positivas.length === 1 ? "avaliação positiva" : "avaliações positivas"}`,
-      detalhe: `de ${avaliadas.length} avaliada(s) no Reclame Aqui`,
+      detalhe: `de ${avaliadas.length} ${pluralDe(avaliadas.length, "avaliada", "avaliadas")} no Reclame Aqui`,
       href: "/reclame-aqui",
     });
   }
@@ -313,7 +314,7 @@ export function conquistasDaSemana(entrada: {
       detalhe:
         mediana === null
           ? "no Reclame Aqui"
-          : `${esperas.length === 1 ? "esperou" : "espera mediana de"} ${mediana < 1 ? "menos de 1 dia" : `${Math.round(mediana)} dia(s)`} desde a publicação`,
+          : `${esperas.length === 1 ? "esperou" : "espera mediana de"} ${mediana < 1 ? "menos de 1 dia" : `${Math.round(mediana)} ${pluralDe(Math.round(mediana), "dia", "dias")}`} desde a publicação`,
       href: "/reclame-aqui",
     });
   }
@@ -326,7 +327,7 @@ export function conquistasDaSemana(entrada: {
     conquistas.push({
       chave: "nps-no-prazo",
       titulo: `${noPrazo.length} ${noPrazo.length === 1 ? "primeiro contato do NPS no prazo" : "primeiros contatos do NPS no prazo"}`,
-      detalhe: `de ${contatados.length} feito(s) no ciclo`,
+      detalhe: `de ${contatados.length} ${pluralDe(contatados.length, "feito", "feitos")} no ciclo`,
       href: "/nps",
     });
   }

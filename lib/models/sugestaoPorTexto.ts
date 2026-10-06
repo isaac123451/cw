@@ -1,3 +1,4 @@
+import { pluralDe } from "@/lib/plural";
 /**
  * Sugestão de triagem pelo texto — e o que a operação já corrigiu.
  *
@@ -167,7 +168,7 @@ export function sugerir(
   const [valor, pontos] = [...votos.entries()].sort((a, b) => b[1] - a[1])[0];
   const doValor = vizinhos.filter((p) => p.rotulo === valor);
   const partes = [
-    doValor.length ? `parecido com ${doValor.length} caso(s) já classificado(s) assim` : null,
+    doValor.length ? `parecido com ${doValor.length} ${pluralDe(doValor.length, "caso", "casos")} já ${pluralDe(doValor.length, "classificado", "classificados")} assim` : null,
     ...(motivos.get(valor) ?? []),
   ].filter(Boolean);
 

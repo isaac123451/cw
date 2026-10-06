@@ -1,4 +1,5 @@
 import { familiaDoTexto } from "@/lib/models/catalogoDeCausas";
+import { pluralDe } from "@/lib/plural";
 
 /**
  * A voz do cliente para o Produto (Fase 31, 1.104).
@@ -101,7 +102,7 @@ export function textoDaVoz(v: VozDoMes) {
   const linhas = [`*Voz do cliente — ${MESES[m - 1]} de ${a}*`, `${v.total} registros com causa no mês (marcada ou pelo texto)${v.notaGeralDoRA != null ? ` · nota média das avaliações do RA: ${um(v.notaGeralDoRA)}` : ""}.`, ""];
   v.causas.forEach((c, i) => {
     const frentes = [c.porFrente["reclame-aqui"] ? `${c.porFrente["reclame-aqui"]} no RA` : null, c.porFrente.redes ? `${c.porFrente.redes} nas Redes` : null, c.porFrente.nps ? `${c.porFrente.nps} no NPS` : null].filter(Boolean).join(", ");
-    const efeito = [c.notaDoRA != null ? `nota do RA ${um(c.notaDoRA)} em ${c.avaliacoes} avaliação(ões)` : null, c.detratores ? `${c.detratores} detrator(es)` : null].filter(Boolean).join(" · ");
+    const efeito = [c.notaDoRA != null ? `nota do RA ${um(c.notaDoRA)} em ${c.avaliacoes} ${pluralDe(c.avaliacoes, "avaliação", "avaliações")}` : null, c.detratores ? `${c.detratores} ${pluralDe(c.detratores, "detrator", "detratores")}` : null].filter(Boolean).join(" · ");
     linhas.push(`${i + 1}. *${c.causa}* — ${c.total} (${frentes})${efeito ? ` · ${efeito}` : ""}`);
     for (const q of c.citacoes) linhas.push(`   “${q}”`);
   });

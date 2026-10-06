@@ -38,6 +38,7 @@ import {
   escolherMedicoesLocalmente,
   medir,
 } from "./assistant.catalogo";
+import { pluralDe } from "@/lib/plural";
 
 export interface AssistantLink {
   label: string;
@@ -211,7 +212,7 @@ const skills: Skill[] = [
           paragraphs: [
             `A nota já está em ${ptBR(atual.raScore)}, acima de ${ptBR(meta)} — não falta nenhuma avaliação para essa meta.`,
             base.received - base.answered > 0
-              ? `Para segurar: ${base.received - base.answered} reclamação(ões) da janela ainda estão sem resposta, e resposta é o único indicador que depende só de nós.`
+              ? `Para segurar: ${base.received - base.answered} ${pluralDe(base.received - base.answered, "reclamação", "reclamações")} da janela ainda estão sem resposta, e resposta é o único indicador que depende só de nós.`
               : "Todas as reclamações da janela foram respondidas.",
           ],
           links: [
@@ -261,10 +262,10 @@ const skills: Skill[] = [
       return {
         intent: "meta-de-nota",
         paragraphs: [
-          `Faltam ${resultado.needed} avaliação(ões) nota 10, resolvidas e favoráveis, para a nota sair de ${ptBR(atual.raScore)} e chegar a ${ptBR(resultado.projected)}.`,
-          `Cabem no período: há ${teto} reclamação(ões) da janela ainda sem avaliação, e cada avaliação pertence a uma reclamação.`,
+          `Faltam ${resultado.needed} ${pluralDe(resultado.needed, "avaliação", "avaliações")} nota 10, resolvidas e favoráveis, para a nota sair de ${ptBR(atual.raScore)} e chegar a ${ptBR(resultado.projected)}.`,
+          `Cabem no período: há ${teto} ${pluralDe(teto, "reclamação", "reclamações")} da janela ainda sem avaliação, e cada avaliação pertence a uma reclamação.`,
           base.received - base.answered > 0
-            ? `Antes disso, ${base.received - base.answered} reclamação(ões) seguem sem resposta — responder é mais rápido do que conquistar avaliação, e o índice de resposta pesa 20% da nota.`
+            ? `Antes disso, ${base.received - base.answered} ${pluralDe(base.received - base.answered, "reclamação", "reclamações")} seguem sem resposta — responder é mais rápido do que conquistar avaliação, e o índice de resposta pesa 20% da nota.`
             : "Todas as reclamações da janela já foram respondidas, então o ganho vem mesmo de avaliação.",
         ],
         links: [
@@ -481,7 +482,7 @@ const skills: Skill[] = [
         paragraphs: [
           `${risco.length} reclamações estão sinalizadas como risco de cancelamento, sendo ${abertos.length} ainda em aberto.`,
           top
-            ? `${top[0]} é quem mais aparece, com ${top[1]} ocorrência(s) de risco — vale um contato direto.`
+            ? `${top[0]} é quem mais aparece, com ${top[1]} ${pluralDe(top[1], "ocorrência", "ocorrências")} de risco — vale um contato direto.`
             : "Nenhum cliente concentra ocorrências de risco.",
           "Cada cancelamento evitado pode ser registrado em Impacto no Negócio para medir o retorno da operação.",
         ],
@@ -662,7 +663,7 @@ const skills: Skill[] = [
       return {
         intent: "agenda",
         paragraphs: [
-          `A agenda tem ${vencidas.length} atividade(s) vencida(s) e ${hoje.length} para hoje.`,
+          `A agenda tem ${vencidas.length} ${pluralDe(vencidas.length, "atividade", "atividades")} ${pluralDe(vencidas.length, "vencida", "vencidas")} e ${hoje.length} para hoje.`,
           vencidas.length > 0
             ? `A mais antiga é "${
                 [...vencidas].sort((a, b) =>
@@ -760,7 +761,7 @@ const skills: Skill[] = [
       return {
         intent: "tempo-resposta",
         paragraphs: [
-          `Metade das respostas saiu em até ${formatElapsed(mediana)}, e a pior levou ${formatElapsed(pior)} — sobre ${minutos.length} reclamação(ões) respondidas da janela de 6 meses.`,
+          `Metade das respostas saiu em até ${formatElapsed(mediana)}, e a pior levou ${formatElapsed(pior)} — sobre ${minutos.length} ${pluralDe(minutos.length, "reclamação", "reclamações")} respondidas da janela de 6 meses.`,
           `${dentroDeUmDia} (${parte(dentroDeUmDia)}%) foram respondidas em até 24 h; ${acimaDeQuinze} (${parte(acimaDeQuinze)}%) passaram de 15 dias, que é onde a avaliação vem baixa mesmo com a resposta certa.`,
           `A média é ${formatElapsed(resumo.responseMinutes)}, e ela esconde essa cauda: alguns casos muito longos puxam o número sem que a maioria se pareça com ele. Prefira a mediana para decidir.`,
         ],
@@ -855,12 +856,12 @@ const skills: Skill[] = [
       return {
         intent: "nps",
         paragraphs: [
-          `O NPS da base é ${indicador}, sobre ${nps.length} resposta(s): ${promotores} promotor(es), ${neutros} neutro(s) e ${detratores} detrator(es).`,
+          `O NPS da base é ${indicador}, sobre ${nps.length} ${pluralDe(nps.length, "resposta", "respostas")}: ${promotores} ${pluralDe(promotores, "promotor", "promotores")}, ${neutros} ${pluralDe(neutros, "neutro", "neutros")} e ${detratores} ${pluralDe(detratores, "detrator", "detratores")}.`,
           semTratativa > 0
-            ? `${semTratativa} resposta(s) ainda estão sem tratativa — é a fila que fecha o ciclo, e detrator sem retorno vira reclamação pública.`
+            ? `${semTratativa} ${pluralDe(semTratativa, "resposta", "respostas")} ainda estão sem tratativa — é a fila que fecha o ciclo, e detrator sem retorno vira reclamação pública.`
             : "Todas as respostas já entraram em tratativa.",
           emRisco > 0
-            ? `${emRisco} conta(s) estão marcadas como caso de retenção a partir da pesquisa.`
+            ? `${emRisco} ${pluralDe(emRisco, "conta", "contas")} estão marcadas como caso de retenção a partir da pesquisa.`
             : "Nenhuma conta foi marcada como retenção a partir da pesquisa.",
         ],
         links: [
@@ -938,9 +939,9 @@ const skills: Skill[] = [
       return {
         intent: "retencao",
         paragraphs: [
-          `${total} conta(s) estão marcadas como retenção: ${doRa.length} vinda(s) de reclamação e ${doNps.length} do NPS. É o mesmo número do cartão "Risco de cancelamento" no painel.`,
+          `${total} ${pluralDe(total, "conta", "contas")} estão marcadas como retenção: ${doRa.length} ${pluralDe(doRa.length, "vinda", "vindas")} de reclamação e ${doNps.length} do NPS. É o mesmo número do cartão "Risco de cancelamento" no painel.`,
           abertas.length > 0
-            ? `Dessas, ${abertas.length} reclamação(ões) ainda estão em aberto — a mais antiga é de ${brDate([...abertas].sort((a, b) => a.createdAt.localeCompare(b.createdAt))[0].createdAt)}.`
+            ? `Dessas, ${abertas.length} ${pluralDe(abertas.length, "reclamação", "reclamações")} ainda estão em aberto — a mais antiga é de ${brDate([...abertas].sort((a, b) => a.createdAt.localeCompare(b.createdAt))[0].createdAt)}.`
             : `Nenhuma das ${doRa.length} reclamações marcadas segue em aberto: foram encerradas, a maioria como "não resolvido". A conta continua precisando de retenção mesmo assim — o caso fechou, a relação não.`,
           nps === undefined
             ? "Não recebi as respostas de NPS nesta tela, então a contagem acima cobre só as reclamações."

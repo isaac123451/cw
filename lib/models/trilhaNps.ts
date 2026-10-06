@@ -27,6 +27,7 @@ import {
   minutosUteisEntre,
   type Expediente,
 } from "@/lib/services/horasUteis";
+import { pluralDe } from "@/lib/plural";
 
 /**
  * A trilha do NPS, na ordem do guia de encerramento do ciclo.
@@ -238,7 +239,7 @@ export function trilhaDoNps(item: NpsResponseView, contexto: ContextoDaTrilhaNps
     const resultados = [
       item.reviewFeita ? "review publicada" : null,
       item.aceitaCase ? "aceita ser case" : null,
-      item.indicacoes ? `${item.indicacoes} indicação(ões)` : null,
+      item.indicacoes ? `${item.indicacoes} ${pluralDe(item.indicacoes, "indicação", "indicações")}` : null,
     ].filter(Boolean);
     passos.push({
       id: "promotor",
@@ -265,7 +266,7 @@ export function trilhaDoNps(item: NpsResponseView, contexto: ContextoDaTrilhaNps
   } else if (abandono.deve) {
     detalheFinal = `Critério de falta de retorno atingido: ${abandono.motivo}`;
   } else if (faltaDeRetorno) {
-    detalheFinal = `Faltam ${Math.max(0, minimas - naJanela)} tentativa(s) em 7 dias para encerrar sem retorno.`;
+    detalheFinal = `Faltam ${Math.max(0, minimas - naJanela)} ${pluralDe(Math.max(0, minimas - naJanela), "tentativa", "tentativas")} em 7 dias para encerrar sem retorno.`;
   } else {
     detalheFinal = "Aplique o status final que o tipo aceita.";
   }

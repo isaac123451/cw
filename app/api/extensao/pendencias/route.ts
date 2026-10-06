@@ -153,7 +153,7 @@ export async function POST(request: Request) {
 
     if (sla.situation === "estourado") {
       falta.push(
-        `fora do prazo há ${Math.abs(Math.round(sla.remainingHours / 24))} dia(s)`
+        `fora do prazo há ${Math.abs(Math.round(sla.remainingHours / 24))} ${Number(Math.abs(Math.round(sla.remainingHours / 24))) === 1 ? "dia" : "dias"}`
       );
     } else if (sla.situation === "atencao") {
       falta.push("prazo perto de vencer");
@@ -299,7 +299,7 @@ export async function POST(request: Request) {
     .slice(-12_000);
 
   const prompt = [
-    `Fila de ${contagens.abertos} reclamação(ões) em aberto no Reclame Aqui. Mostrando as ${ordenados.length} mais urgentes.`,
+    `Fila de ${contagens.abertos} ${Number(contagens.abertos) === 1 ? "reclamação" : "reclamações"} em aberto no Reclame Aqui. Mostrando as ${ordenados.length} mais urgentes.`,
     `Sem resposta pública: ${contagens.semResposta}. Fora do prazo: ${contagens.foraDoPrazo}. Sem responsável: ${contagens.semResponsavel}. Risco de cancelamento: ${contagens.risco}.`,
     "",
     "Casos, do mais urgente para o menos:",

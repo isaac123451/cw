@@ -27,6 +27,7 @@ import { useNps } from "@/lib/context/NpsContext";
 import { useToast } from "@/lib/context/ToastContext";
 import { useProjects } from "@/lib/context/ProjectsContext";
 import { useAgora } from "@/lib/hooks/useAgora";
+import { pluralDe } from "@/lib/plural";
 
 const JANELAS = [30, 90, 180];
 
@@ -67,7 +68,7 @@ export default function CausaRaizCruzada() {
     }
     for (const g of google) {
       if (g.status === "denunciada") continue;
-      lista.push({ frente: "google", causa: g.causaRaiz, em: g.publicadaEm, rotulo: `Google — ${g.autor}, ${g.estrelas} estrela(s)` });
+      lista.push({ frente: "google", causa: g.causaRaiz, em: g.publicadaEm, rotulo: `Google — ${g.autor}, ${g.estrelas} ${pluralDe(g.estrelas, "estrela", "estrelas")}` });
     }
     return lista;
   }, [cases, responses, google]);

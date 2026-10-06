@@ -14,6 +14,7 @@ import {
   EXPEDIENTE_PADRAO,
   type Expediente,
 } from "@/lib/services/horasUteis";
+import { pluralDe } from "@/lib/plural";
 
 /**
  * O que o agente diz antes de alguém perguntar (Fase 9.2).
@@ -181,8 +182,8 @@ export function avisosDeAbertura(entrada: EntradaDaAbertura): AvisoDeAbertura[] 
       tom: prazos.estourados > 0 ? "perigo" : "atencao",
       titulo:
         prazos.estourados > 0
-          ? `${prazos.estourados} prazo(s) estourado(s)`
-          : `${prazos.vencemHoje} prazo(s) vencem hoje`,
+          ? `${prazos.estourados} ${pluralDe(prazos.estourados, "prazo", "prazos")} ${pluralDe(prazos.estourados, "estourado", "estourados")}`
+          : `${prazos.vencemHoje} ${pluralDe(prazos.vencemHoje, "prazo", "prazos")} vencem hoje`,
       detalhe:
         prazos.estourados > 0 && prazos.vencemHoje > 0
           ? `e outros ${prazos.vencemHoje} vencem ainda hoje`
@@ -209,8 +210,8 @@ export function avisosDeAbertura(entrada: EntradaDaAbertura): AvisoDeAbertura[] 
     avisos.push({
       chave: "sem-noticia",
       tom: "atencao",
-      titulo: `${semNoticias.length} cliente(s) sem notícia`,
-      detalhe: `o mais parado está há ${maisAntigo.dias} dia(s) útil(eis) sem nenhuma mensagem nossa`,
+      titulo: `${semNoticias.length} ${pluralDe(semNoticias.length, "cliente", "clientes")} sem notícia`,
+      detalhe: `o mais parado está há ${maisAntigo.dias} ${pluralDe(maisAntigo.dias, "dia", "dias")} útil(eis) sem nenhuma mensagem nossa`,
       quantidade: semNoticias.length,
       href: caseHref(maisAntigo.c),
       pergunta: "Quem está sem notícia há mais tempo?",
@@ -219,7 +220,7 @@ export function avisosDeAbertura(entrada: EntradaDaAbertura): AvisoDeAbertura[] 
         ref: maisAntigo.c.id,
         titulo: `${maisAntigo.c.protocol} · ${maisAntigo.c.customer}`,
       },
-      itens: porDias.slice(0, MAXIMO_DE_ITENS).map(({ c, dias }) => itemDoCaso(c, `${dias} dia(s) útil(eis) sem mensagem nossa · ${c.title}`)),
+      itens: porDias.slice(0, MAXIMO_DE_ITENS).map(({ c, dias }) => itemDoCaso(c, `${dias} ${pluralDe(dias, "dia", "dias")} útil(eis) sem mensagem nossa · ${c.title}`)),
     });
   }
 
@@ -240,7 +241,7 @@ export function avisosDeAbertura(entrada: EntradaDaAbertura): AvisoDeAbertura[] 
     avisos.push({
       chave: "avaliacao",
       tom: "neutro",
-      titulo: `${fila.hoje.length} avaliação(ões) para pedir hoje`,
+      titulo: `${fila.hoje.length} ${pluralDe(fila.hoje.length, "avaliação", "avaliações")} para pedir hoje`,
       detalhe:
         "é a maior alavanca da nota: solução e intenção de voltar pesam 30% cada",
       quantidade: fila.hoje.length,
@@ -263,7 +264,7 @@ export function avisosDeAbertura(entrada: EntradaDaAbertura): AvisoDeAbertura[] 
     avisos.push({
       chave: "crise",
       tom: "perigo",
-      titulo: `${emCrise.length} caso(s) com sinal de crise`,
+      titulo: `${emCrise.length} ${pluralDe(emCrise.length, "caso", "casos")} com sinal de crise`,
       detalhe: motivos.slice(0, 3).join(" · "),
       quantidade: emCrise.length,
       href: caseHref(emCrise[0].caso),

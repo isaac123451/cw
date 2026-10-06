@@ -6,6 +6,7 @@ import {
 } from "@/lib/services/lgpd";
 
 import { primeiroNome } from "@/lib/models/mensagens";
+import { pluralDe } from "@/lib/plural";
 
 /**
  * Rascunho que segue as regras do documento (Fase 9.3).
@@ -180,6 +181,6 @@ export function resumoDoRascunho(achados: AchadoDoRascunho[]) {
   const grave = achados.filter((a) => a.tom === "perigo").length;
 
   return grave > 0
-    ? `${grave} ponto(s) que impedem publicar como está`
-    : `${achados.length} ajuste(s) sugerido(s) pelo documento`;
+    ? `${grave} ${pluralDe(grave, "ponto", "pontos")} que impedem publicar como está`
+    : `${achados.length} ${pluralDe(achados.length, "ajuste", "ajustes")} ${pluralDe(achados.length, "sugerido", "sugeridos")} pelo documento`;
 }

@@ -88,17 +88,21 @@
     const antes = vizinha(caso.status, "voltar");
     const depois = vizinha(caso.status, "avancar");
 
+    /*
+      Uma linha só (1.135): voltar, avançar e "outra etapa". A ponta do
+      fluxo não vira mais uma caixa tracejada "início do fluxo" do
+      tamanho de um botão — some, e o vizinho ocupa o lugar.
+    */
     return [
       '<div class="etapas">',
       antes
         ? `<button class="passo" data-acao="mover" data-protocolo="${CW.escapar(caso.protocolo)}" data-direcao="voltar" title="Voltar para ${CW.escapar(antes)}">&larr; ${CW.escapar(antes)}</button>`
-        : '<span class="passo vazio">início do fluxo</span>',
+        : "",
       depois
-        ? `<button class="passo" data-acao="mover" data-protocolo="${CW.escapar(caso.protocolo)}" data-direcao="avancar" title="Avançar para ${CW.escapar(depois)}">${CW.escapar(depois)} &rarr;</button>`
-        : '<span class="passo vazio">fim do fluxo</span>',
-      '</div>',
+        ? `<button class="passo avancar" data-acao="mover" data-protocolo="${CW.escapar(caso.protocolo)}" data-direcao="avancar" title="Avançar para ${CW.escapar(depois)}">${CW.escapar(depois)} &rarr;</button>`
+        : "",
       `<select class="campo etapa-direta" data-acao="mover-para" data-protocolo="${CW.escapar(caso.protocolo)}" title="Mover para qualquer etapa">`,
-      `  <option value="">mover para…</option>`,
+      `  <option value="">outra etapa…</option>`,
       ...etapas
         .filter((nome) => nome !== caso.status)
         .map(
@@ -106,6 +110,7 @@
             `  <option value="${CW.escapar(nome)}">${CW.escapar(nome)}</option>`
         ),
       '</select>',
+      '</div>',
     ].join("");
   };
 

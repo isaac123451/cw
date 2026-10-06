@@ -47,6 +47,7 @@ import { Case } from "@/lib/models/case";
 import BotaoAbrirEmJanela from "@/components/janelas/BotaoAbrirEmJanela";
 import { useJanelas } from "@/lib/context/JanelasContext";
 import { idDaJanela } from "@/lib/models/janelas";
+import { pluralDe } from "@/lib/plural";
 
 function RedesSociaisConteudo() {
 
@@ -217,7 +218,7 @@ function RedesSociaisConteudo() {
               <strong className="font-semibold">
                 {social.length} de {todosOsSociais.length}
               </strong>{" "}
-              atendimento(s){statusFiltrado ? ` na etapa ${statusFiltrado}` : ""}.
+              {pluralDe(todosOsSociais.length, "atendimento", "atendimentos")}{statusFiltrado ? ` na etapa ${statusFiltrado}` : ""}.
             </span>
 
             <button
@@ -359,7 +360,7 @@ function RedesSociaisConteudo() {
 
             <SurfaceCard
               title="Conversas registradas"
-              description={`${social.length} atendimento(s) no canal.`}
+              description={`${social.length} ${pluralDe(social.length, "atendimento", "atendimentos")} no canal.`}
               bodyClassName="p-0"
             >
 

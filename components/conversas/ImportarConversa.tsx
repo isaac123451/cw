@@ -20,6 +20,7 @@ import {
   type LeituraDoArquivo,
 } from "@/lib/models/conversa";
 import { textoDoZip } from "@/lib/models/zipDoWhatsApp";
+import { pluralDe } from "@/lib/plural";
 
 const campo =
   "h-10 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm outline-none transition-colors placeholder:text-zinc-400 focus:border-violet-400";
@@ -201,7 +202,7 @@ export default function ImportarConversa({ onClose, onGuardada }: { onClose: () 
             <p className="text-xs text-zinc-500">
               {leitura.mensagens.length} mensagens
               {primeira && ultima ? `, de ${new Date(primeira).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })} a ${new Date(ultima).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}` : ""}
-              {leitura.ignoradas ? ` · ${leitura.ignoradas} linha(s) sem data no começo foram ignoradas` : ""}
+              {leitura.ignoradas ? ` · ${leitura.ignoradas} ${pluralDe(leitura.ignoradas, "linha", "linhas")} sem data no começo foram ignoradas` : ""}
             </p>
 
             {omitidos > 0 && (

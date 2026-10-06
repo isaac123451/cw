@@ -19,6 +19,7 @@ import { TaskType } from "@/lib/models/agenda";
 import { useAgenda } from "@/lib/context/AgendaContext";
 import { useSession } from "@/lib/context/SessionContext";
 import { hojeNaOperacao } from "@/lib/services/reputation.service";
+import { pluralDe } from "@/lib/plural";
 
 const campo =
   "h-10 w-full rounded-xl border border-zinc-200 px-3 text-sm outline-none transition-colors placeholder:text-zinc-400 focus:border-violet-400";
@@ -103,7 +104,7 @@ export default function LembretesCard({
         <div className="flex shrink-0 items-center gap-2">
 
           <span className="rounded-xl bg-zinc-50 px-3 py-1.5 text-xs font-medium text-zinc-600">
-            {pendentes.length} pendente(s)
+            {pendentes.length} {pluralDe(pendentes.length, "pendente", "pendentes")}
           </span>
 
           <button

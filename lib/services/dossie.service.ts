@@ -1,4 +1,5 @@
 import type { PrismaClient } from "@prisma/client";
+import { pluralDe } from "@/lib/plural";
 
 /**
  * O dossiê, na estrutura de nove seções.
@@ -432,7 +433,7 @@ export async function montarDossie(
 
     eventos.push({
       quando,
-      evento: `Conversa ${c.canal === "whatsapp" ? "no WhatsApp" : `(${c.canal})`} guardada: ${comData.length} mensagem(ns)${ate && ate !== quando ? `, até ${ate.slice(8, 10)}/${ate.slice(5, 7)}` : ""}`,
+      evento: `Conversa ${c.canal === "whatsapp" ? "no WhatsApp" : `(${c.canal})`} guardada: ${comData.length} ${pluralDe(comData.length, "mensagem", "mensagens")}${ate && ate !== quando ? `, até ${ate.slice(8, 10)}/${ate.slice(5, 7)}` : ""}`,
       canal: c.canal === "whatsapp" ? "WhatsApp" : c.canal,
       evidencia: anexar({ data: quando, descricao: "conversa guardada", conteudo: transcricao, canal: c.canal }),
       origem: `Conversa.${c.id}`,
@@ -568,7 +569,7 @@ export async function montarDossie(
     versao: {
       numero: 1,
       geradoEm: agora,
-      base: `caso ${caso.protocol}, ${linhaDoTempo.length} evento(s), ${anexos.length} anexo(s)`,
+      base: `caso ${caso.protocol}, ${linhaDoTempo.length} ${pluralDe(linhaDoTempo.length, "evento", "eventos")}, ${anexos.length} ${pluralDe(anexos.length, "anexo", "anexos")}`,
     },
 
     lacunas,

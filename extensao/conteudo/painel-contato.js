@@ -159,12 +159,13 @@
       ...new Set(casos.map((caso) => caso.canal)),
     ].filter(Boolean);
 
+    /* Uma linha com a ação ao lado (1.135) — era um aviso âmbar e um botão roxo da largura da gaveta. */
     return [
       '<div class="bloco">',
-      '  <div class="aviso">',
-      `    Este cliente já está em <strong>${CW.escapar(outros.join(", "))}</strong>, mas ainda não em <strong>${CW.escapar(daPagina)}</strong>.`,
+      '  <div class="aviso aviso-linha">',
+      `    <span>Já está em <strong>${CW.escapar(outros.join(", "))}</strong>, ainda não em <strong>${CW.escapar(daPagina)}</strong>.</span>`,
+      `    <button class="link-mais" data-acao="cadastrar-canal" title="Abre a prévia do caso neste canal, com nome e telefone já preenchidos">Cadastrar aqui</button>`,
       '  </div>',
-      `  <button class="acao" data-acao="cadastrar-canal" style="width:100%;margin-top:0">Cadastrar neste canal (${CW.escapar(daPagina)})</button>`,
       '</div>',
     ].join("");
   }
@@ -244,8 +245,17 @@
 
     const pedido = alvo.dataset.canal;
 
+    /*
+      Clicar na aba em que já se está **recarrega** aquela tela (1.135).
+
+      Até a 1.134 voltava ao contato — e como não havia aba do contato,
+      era o único caminho de volta, escondido num gesto que ninguém
+      adivinha. Agora o contato tem aba própria.
+    */
+    if (pedido === "contato") return P.voltarAoContato();
+
     if (pedido === "painel") {
-      if (P.vista === "painel") return P.voltarAoContato();
+      if (P.vista === "painel") return P.carregarPainel();
       P.vista = "painel";
       P.canal = "todos";
       P.refletirCanal();
@@ -255,7 +265,7 @@
 
     if (pedido === "atividades") {
       if (P.vista === "atividades") {
-        return P.voltarAoContato();
+        return P.carregarAtividades();
       }
       P.vista = "atividades";
       P.canal = "todos";
@@ -264,8 +274,8 @@
       return;
     }
 
-    if (P.vista !== "contato" && P.canal === pedido) {
-      return P.voltarAoContato();
+    if (P.vista === "fila" && P.canal === pedido) {
+      return P.carregarFila();
     }
 
     P.canal = pedido;
@@ -364,6 +374,16 @@
     P.carregarFila();
   };
 
+  /** O nome da tela para onde o voltar do caso leva. */
+  P.rotuloDeOnde = function rotuloDeOnde() {
+    if (P.vistaAnterior === "atividades") return "Agenda";
+    if (P.vistaAnterior === "painel") return "Painel";
+    if (P.veioDaFila && P.vistaAnterior === "fila") {
+      return { "reclame-aqui": "Reclame Aqui", nps: "NPS", social: "Redes Sociais" }[P.canal] ?? "Lista";
+    }
+    return "Cliente";
+  };
+
   P.voltarAoContato = function voltarAoContato() {
 
     P.vista = "contato";
@@ -380,37 +400,33 @@
 
   P.refletirCanal = function refletirCanal() {
 
-    /**
-     * O voltar só existe quando há de onde voltar.
-     *
-     * Um botão permanente que não faz nada na tela inicial ensina a
-     * pessoa a ignorá-lo — e aí ele não serve quando passa a servir.
-     */
-    const voltar = P.raiz?.querySelector(
-      '[data-acao="voltar-da-vista"]'
-    );
-
-    if (voltar) {
-      voltar.style.display =
-        P.vista === "contato" ? "none" : "";
-    }
-
+    /*
+      O voltar do cabeçalho saiu na 1.135: as telas de cima têm aba
+      própria, e o caso aberto mostra no alto "← de onde veio".
+    */
+    /*
+      Qual aba fica marcada. O caso aberto mantém marcada a aba de onde
+      veio — a fila do canal, o Painel ou a Agenda —, e o caso aberto a
+      partir do contato mantém o Cliente.
+    */
+    const daVista = P.vista === "caso" ? P.vistaAnterior : P.vista;
     const ativo =
-      P.vista === "painel"
+      daVista === "painel"
         ? "painel"
-        : P.vista === "atividades"
+        : daVista === "atividades"
           ? "atividades"
-          : P.canal;
+          : daVista === "fila" && P.canal !== "todos"
+            ? P.canal
+            : daVista === "fila"
+              ? ""
+              : "contato";
 
     for (const botao of P.raiz.querySelectorAll(
       '[data-acao="canal"]'
     )) {
       botao.setAttribute(
         "aria-pressed",
-        botao.dataset.canal === ativo &&
-          P.vista !== "contato"
-          ? "true"
-          : "false"
+        botao.dataset.canal === ativo ? "true" : "false"
       );
     }
   };
@@ -921,8 +937,7 @@
         </div>`);
     }
 
-    abas.agora.push(blocoPerguntar(dados));
-    abas.agora.push(P.blocoAnotar(dados));
+    abas.agora.push(blocoAcoesRapidas(dados));
 
     partes.push(P.blocoAbas(abas, dados));
 
@@ -972,6 +987,53 @@
    * 28). Até a 1.124 era um link que abria a página do assistente numa aba
    * nova; agora a resposta vem no painel, com os casos do cliente junto.
    */
+  /**
+   * Perguntar, anotar e lembrar, atrás de três botões (1.135).
+   *
+   * Até a 1.134 os três formulários ficavam abertos um embaixo do outro
+   * no "Agora": dez campos e três botões roxos antes de chegar ao fim
+   * da tela, todo atendimento. Agora é uma linha; o formulário abre no
+   * clique, um de cada vez, e continua aberto se a tela redesenhar.
+   */
+  P.acaoRapida = P.acaoRapida ?? "";
+
+  function blocoAcoesRapidas(dados) {
+    const podeAnotar = P.podeEscrever(dados) && (dados?.casos ?? []).length > 0;
+    /* Uma conversa com o assistente em andamento já abre o painel dele. */
+    const aberta = P.acaoRapida || (conversaDoContato().length ? "assistente" : "");
+    const botao = (qual, icone, rotulo) =>
+      `<button class="acao-chip" type="button" data-acao="acao-rapida" data-qual="${qual}" aria-expanded="${aberta === qual}">${CW.icone(icone, 14)}<span>${rotulo}</span></button>`;
+    return [
+      '<div class="bloco acoes-rapidas">',
+      '  <div class="grade-acoes tres">',
+      botao("assistente", "assistente", "Perguntar"),
+      podeAnotar ? botao("anotar", "anotar", "Anotar") : "",
+      podeAnotar ? botao("lembrete", "lembrete", "Lembrete") : "",
+      '  </div>',
+      `  <div class="painel-acao" data-painel="assistente"${aberta === "assistente" ? "" : " hidden"}>${blocoPerguntar(dados)}</div>`,
+      podeAnotar ? `  <div class="painel-acao" data-painel="anotar"${aberta === "anotar" ? "" : " hidden"}>${P.blocoAnotar(dados, "caso")}</div>` : "",
+      podeAnotar ? `  <div class="painel-acao" data-painel="lembrete"${aberta === "lembrete" ? "" : " hidden"}>${P.blocoAnotar(dados, "lembrete")}</div>` : "",
+      '</div>',
+    ].join("");
+  }
+
+  P.alternarAcaoRapida = function alternarAcaoRapida(alvo) {
+    const qual = alvo.dataset.qual ?? "";
+    const bloco = alvo.closest(".acoes-rapidas");
+    if (!bloco) return;
+    P.acaoRapida = P.acaoRapida === qual ? "" : qual;
+    for (const b of bloco.querySelectorAll('[data-acao="acao-rapida"]')) {
+      b.setAttribute("aria-expanded", String(b.dataset.qual === P.acaoRapida));
+    }
+    for (const painel of bloco.querySelectorAll(".painel-acao")) {
+      painel.hidden = painel.dataset.painel !== P.acaoRapida;
+    }
+    /* O primeiro campo do formulário que abriu já recebe o cursor. */
+    bloco
+      .querySelector(`.painel-acao[data-painel="${P.acaoRapida}"] textarea, .painel-acao[data-painel="${P.acaoRapida}"] input`)
+      ?.focus({ preventScroll: false });
+  };
+
   function blocoPerguntar(dados) {
     const casos = dados?.casos ?? [];
     const caso = casos.find((c) => c.aberto) ?? casos[0];
@@ -980,13 +1042,15 @@
       ? ["O que fazer agora neste caso?", "O que falta para ele fechar?", "Como responder a última mensagem?"]
       : ["O que já sabemos deste cliente?", "Como abordar este cliente?"];
     return [
-      `<div class="bloco" data-bloco="assistente">`,
-      `  <div class="rotulo">Perguntar ao assistente · sobre ${CW.escapar(sobre)}</div>`,
+      `<div class="cartao" data-bloco="assistente">`,
+      `  <div class="sub" style="margin-bottom:2px">Sobre ${CW.escapar(sobre)}</div>`,
       `  <div class="assistente-conversa">${htmlDaConversa(conversaDoContato())}</div>`,
-      `  <textarea class="campo" rows="2" data-acao="pergunta-assistente-campo" maxlength="500" placeholder="Pergunte sobre este cliente — Enter envia"></textarea>`,
-      `  <div class="linha" style="margin-top:6px;align-items:center;flex-wrap:wrap;gap:6px">`,
-      ...sugestoes.map((s) => `    <a class="tag" data-acao="perguntar-assistente" data-pergunta="${CW.escapar(s)}" style="cursor:pointer">${CW.escapar(s)}</a>`),
-      `    <button class="acao" style="margin-top:0;margin-left:auto" data-acao="perguntar-assistente">Perguntar</button>`,
+      `  <div class="sugestoes-pergunta">`,
+      ...sugestoes.map((s) => `    <button type="button" class="chip" data-acao="perguntar-assistente" data-pergunta="${CW.escapar(s)}">${CW.escapar(s)}</button>`),
+      `  </div>`,
+      `  <div class="pergunta-linha">`,
+      `    <textarea class="campo" rows="1" data-acao="pergunta-assistente-campo" maxlength="500" placeholder="Ou escreva — Enter envia"></textarea>`,
+      `    <button class="acao" data-acao="perguntar-assistente">Perguntar</button>`,
       `  </div>`,
       `</div>`,
     ].join("");
@@ -1190,7 +1254,7 @@
         const entraram = Number(resposta.dados.novas) || 0;
         if (entraram > 0) {
           CW.notificar?.(
-            `Conversa guardada · ${entraram} nova(s)${transcritas.length ? ` · ${transcritas.length} áudio(s) transcrito(s)` : ""}${caso?.protocolo ? ` · ${caso.protocolo}` : ""}`
+            `Conversa guardada · ${entraram} ${CW.plural(entraram, "nova", "novas")}${transcritas.length ? ` · ${transcritas.length} ${CW.plural(transcritas.length, "áudio", "áudios")} ${CW.plural(transcritas.length, "transcrito", "transcritos")}` : ""}${caso?.protocolo ? ` · ${caso.protocolo}` : ""}`
           );
         }
         ultimoAvisoDeFalha.delete(tel);
@@ -2444,7 +2508,7 @@
     const contexto = P.ultimoDado?.cliente
       ? [
           `Cliente: ${P.ultimoDado.cliente.nome}`,
-          `${P.ultimoDado.cliente.total} caso(s), ${P.ultimoDado.cliente.abertos} aberto(s)`,
+          `${P.ultimoDado.cliente.total} ${CW.plural(P.ultimoDado.cliente.total, "caso", "casos")}, ${P.ultimoDado.cliente.abertos} ${CW.plural(P.ultimoDado.cliente.abertos, "aberto", "abertos")}`,
           ...(P.ultimoDado.casos ?? [])
             .slice(0, 3)
             .map((c) => `${c.protocolo} \u2014 ${c.status} \u2014 ${c.titulo}`),
@@ -2548,7 +2612,7 @@
       return [
         '<div class="bloco">',
         '  <div class="linha">',
-        `    <span class="sub"><span class="tag ok">guardada</span> ${r.novas} ${r.novas === 1 ? "mensagem nova" : "mensagens novas"}${r.repetidas ? ` · ${r.repetidas} já estavam` : ""}${r.omitidos ? ` · ${r.omitidos} dado(s) bancário(s) omitido(s)` : ""}</span>`,
+        `    <span class="sub"><span class="tag ok">guardada</span> ${r.novas} ${r.novas === 1 ? "mensagem nova" : "mensagens novas"}${r.repetidas ? ` · ${r.repetidas} já estavam` : ""}${r.omitidos ? ` · ${r.omitidos} ${CW.plural(r.omitidos, "dado", "dados")} ${CW.plural(r.omitidos, "bancário", "bancários")} ${CW.plural(r.omitidos, "omitido", "omitidos")}` : ""}</span>`,
         `    <button class="passo" data-acao="abrir-url" data-url="${CW.escapar(r.url ?? "")}">abrir</button>`,
         '  </div>',
         '</div>',

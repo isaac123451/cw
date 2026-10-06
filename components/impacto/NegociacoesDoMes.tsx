@@ -18,6 +18,7 @@ import {
 import { descreverRegistro } from "@/lib/services/horasUteis";
 
 import { resumoDoMes } from "@/lib/actions/negociacao";
+import { pluralDe } from "@/lib/plural";
 
 const MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
 
@@ -88,7 +89,7 @@ export default function NegociacoesDoMes() {
           <div className="grid gap-3 sm:grid-cols-4">
             {[
               ["Ofertas", String(dados.ofertas)],
-              ["Renegociações", `${dados.renegociacoes}${dados.aplicadas ? ` · ${dados.aplicadas} aplicada(s)` : ""}`],
+              ["Renegociações", `${dados.renegociacoes}${dados.aplicadas ? ` · ${dados.aplicadas} ${pluralDe(dados.aplicadas, "aplicada", "aplicadas")}` : ""}`],
               ["Concedido (aceitas)", reais(dados.concedidoCents)],
               ["Clientes retidos", String(dados.retidos)],
             ].map(([k, v]) => (

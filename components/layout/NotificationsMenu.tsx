@@ -28,6 +28,7 @@ import {
   type Notification,
   type NotificationTone,
 } from "@/lib/services/notifications.service";
+import { pluralDe } from "@/lib/plural";
 
 /**
  * O sino (roadmap 2.0, Fase 11).
@@ -182,9 +183,9 @@ export default function NotificationsMenu() {
         type="button"
         onClick={() => setOpen((v) => !v)}
         data-tour="sino"
-        aria-label={novos.length ? `Notificações: ${novos.length} nova(s)` : "Notificações"}
+        aria-label={novos.length ? `Notificações: ${novos.length} ${pluralDe(novos.length, "nova", "novas")}` : "Notificações"}
         aria-expanded={open}
-        title={novos.length === 0 ? "Nada novo" : `${novos.length} aviso(s) novo(s)`}
+        title={novos.length === 0 ? "Nada novo" : `${novos.length} ${pluralDe(novos.length, "aviso", "avisos")} ${pluralDe(novos.length, "novo", "novos")}`}
         className="relative rounded-lg p-2 text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-800"
       >
         <Bell size={18} />

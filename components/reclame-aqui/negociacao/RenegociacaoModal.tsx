@@ -20,6 +20,7 @@ import { paredeDe } from "@/lib/services/horasUteis";
 
 import { registrarRenegociacao, resumoDoMes } from "@/lib/actions/negociacao";
 import { useToast } from "@/lib/context/ToastContext";
+import { pluralDe } from "@/lib/plural";
 
 interface Props {
   item: Case;
@@ -179,8 +180,8 @@ export default function RenegociacaoModal({ item, onClose, onSalvo }: Props) {
           <ShieldAlert size={15} className="mt-0.5 shrink-0 text-amber-600" />
           <span>
             <strong>
-              {doMes.renegociacoes} renegociação(ões) já registrada(s) em {nomeDoMes}
-              {doMes.aplicadas > 0 ? `, ${doMes.aplicadas} aplicada(s)` : ""}.
+              {doMes.renegociacoes} {pluralDe(doMes.renegociacoes, "renegociação", "renegociações")} já {pluralDe(doMes.renegociacoes, "registrada", "registradas")} em {nomeDoMes}
+              {doMes.aplicadas > 0 ? `, ${doMes.aplicadas} ${pluralDe(doMes.aplicadas, "aplicada", "aplicadas")}` : ""}.
             </strong>{" "}
             O documento: se precisou aplicar mais de uma vez no mês, reveja o que está sendo feito.
           </span>

@@ -9,6 +9,7 @@ import {
   type Establishment,
 } from "@/lib/models/establishment";
 import type { NpsResponseView } from "@/lib/models/nps";
+import { pluralDe } from "@/lib/plural";
 
 /**
  * Urgência sugerida por dado, não por memória ("Ideias além" do roadmap).
@@ -107,7 +108,7 @@ export function urgenciaPorDado(
       const lista = anteriores.slice(0, 3).map((c) => `${c.protocol} (${ddmm(c.createdAt)})`).join(", ");
       sinais.push({
         criterio: "reincidencia",
-        motivo: `${anteriores.length} outra(s) reclamação(ões) do mesmo ${documento.length === 14 ? "CNPJ" : "CPF"} nos ${JANELA_DE_REINCIDENCIA_DIAS} dias anteriores: ${lista}${anteriores.length > 3 ? "…" : ""}`,
+        motivo: `${anteriores.length} ${pluralDe(anteriores.length, "outra", "outras")} ${pluralDe(anteriores.length, "reclamação", "reclamações")} do mesmo ${documento.length === 14 ? "CNPJ" : "CPF"} nos ${JANELA_DE_REINCIDENCIA_DIAS} dias anteriores: ${lista}${anteriores.length > 3 ? "…" : ""}`,
       });
     }
   }

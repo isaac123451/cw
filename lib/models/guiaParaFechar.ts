@@ -32,6 +32,7 @@ import { trilhaDoCaso, type ContextoDaTrilha, type EstadoDoPasso } from "@/lib/m
 import { trilhaDoNps, type ContextoDaTrilhaNps } from "@/lib/models/trilhaNps";
 import { eFinalDasRedes } from "@/lib/models/redes";
 import { janelaDoEndereco, type PedidoDeJanela } from "@/lib/models/janelas";
+import { pluralDe } from "@/lib/plural";
 
 export interface ItemDaFila {
   /** `frente:id` — o mesmo caso em duas atividades é um item só. */
@@ -225,7 +226,7 @@ export function passosParaFechar(entrada: EntradaDoGuia): PassoParaFechar[] {
       id: "resposta",
       titulo: "Responder publicamente",
       feito: Boolean(a.respondidaEm) || a.status === "denunciada",
-      detalhe: a.respondidaEm ? undefined : `${a.classificacao}, ${a.estrelas} estrela(s) — em até 48h úteis.`,
+      detalhe: a.respondidaEm ? undefined : `${a.classificacao}, ${a.estrelas} ${pluralDe(a.estrelas, "estrela", "estrelas")} — em até 48h úteis.`,
     },
     ...(negativa
       ? [

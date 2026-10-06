@@ -63,6 +63,7 @@ import { descreverPrazo } from "@/lib/services/horasUteis";
 
 import { MovementRule } from "@/lib/models/movement";
 import { AREAS_INTERNAS } from "@/lib/models/mensagens";
+import { pluralDe } from "@/lib/plural";
 
 /** Prefixo das linhas das áreas do documento, que não têm regra própria. */
 const AREA_DO_DOCUMENTO = "area-do-documento:";
@@ -645,7 +646,7 @@ export default function ProcessosPage() {
                               className="rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700 ring-1 ring-inset ring-rose-100"
                               title="Movimentações deste destino que já passaram do prazo"
                             >
-                              {atrasadas} atrasada(s)
+                              {atrasadas} {pluralDe(atrasadas, "atrasada", "atrasadas")}
                             </span>
                           )}
 

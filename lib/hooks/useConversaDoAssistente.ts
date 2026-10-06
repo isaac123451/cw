@@ -13,6 +13,7 @@ import type { Case } from "@/lib/models/case";
 import { buildOperationSnapshot } from "@/lib/services/assistant.context";
 import { ask, type AssistantAnswer } from "@/lib/services/assistant.service";
 import { isOpen } from "@/lib/services/case.service";
+import { pluralDe } from "@/lib/plural";
 
 /**
  * A conversa com o assistente (1.125) — a mesma na página `/assistente` e
@@ -167,8 +168,8 @@ export function useConversaDoAssistente() {
       const doNps = prazosDeHoje([], rules, responses, expediente, agora);
       const prazosPorFrente = [
         "PRAZOS DO RELÓGIO DO DOCUMENTO AGORA (a mesma conta do Meu dia):",
-        `- Reclame Aqui e Redes (casos abertos): ${doCaso.estourados} estourado(s), ${doCaso.vencemHoje} vencem hoje.`,
-        `- NPS (ciclos sem 1º contato): ${doNps.estourados} estourado(s), ${doNps.vencemHoje} vencem hoje.`,
+        `- Reclame Aqui e Redes (casos abertos): ${doCaso.estourados} ${pluralDe(doCaso.estourados, "estourado", "estourados")}, ${doCaso.vencemHoje} vencem hoje.`,
+        `- NPS (ciclos sem 1º contato): ${doNps.estourados} ${pluralDe(doNps.estourados, "estourado", "estourados")}, ${doNps.vencemHoje} vencem hoje.`,
       ].join("\n");
 
       const response = await fetch("/api/assistente", {

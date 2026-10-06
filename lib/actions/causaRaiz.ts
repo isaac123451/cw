@@ -13,6 +13,7 @@ import {
 } from "@/lib/models/causaRaiz";
 import { acharCausa } from "@/lib/models/catalogoDeCausas";
 import { abrirItemDaReincidencia, catalogoComDono, registrosComCausa } from "@/lib/services/reincidencia.service";
+import { pluralDe } from "@/lib/plural";
 
 type Falha = { ok: false; erro: string };
 
@@ -55,7 +56,7 @@ export async function abrirProjetoDeReincidencia(entrada: {
     if (!achada) {
       return {
         ok: false,
-        erro: `"${causa}" tem ${registros.length} registro(s) nos últimos ${REINCIDENCIA_DIAS} dias — reincidência começa em ${REINCIDENCIA_MINIMA}.`,
+        erro: `"${causa}" tem ${registros.length} ${pluralDe(registros.length, "registro", "registros")} nos últimos ${REINCIDENCIA_DIAS} dias — reincidência começa em ${REINCIDENCIA_MINIMA}.`,
       };
     }
 

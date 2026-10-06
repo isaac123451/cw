@@ -11,6 +11,7 @@ import { usePlans } from "@/lib/hooks/usePlans";
 import { invalidarWorkspace } from "@/lib/context/useWorkspace";
 
 import { precoEmReais } from "@/lib/models/plan";
+import { pluralDe } from "@/lib/plural";
 
 /**
  * Planos e módulos, na tela onde o dinheiro é contado.
@@ -62,7 +63,7 @@ export default function PlanosDoImpacto() {
         carregando
           ? "Carregando a tabela de preços…"
           : mensalidades.length > 0
-            ? `${contagem("plano")} plano(s) de ${precoEmReais(mensalidades[0])} a ${precoEmReais(mensalidades[mensalidades.length - 1])} por mês, e ${contagem("modulo")} módulo(s). É desta tabela que sai o valor de um cancelamento evitado.`
+            ? `${contagem("plano")} ${pluralDe(contagem("plano"), "plano", "planos")} de ${precoEmReais(mensalidades[0])} a ${precoEmReais(mensalidades[mensalidades.length - 1])} por mês, e ${contagem("modulo")} ${pluralDe(contagem("modulo"), "módulo", "módulos")}. É desta tabela que sai o valor de um cancelamento evitado.`
             : "Nenhum plano cadastrado ainda."
       }
       action={

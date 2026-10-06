@@ -10,6 +10,7 @@ import {
   enviarEmail,
   podeEnviarEmail,
 } from "@/lib/email/enviar";
+import { pluralDe } from "@/lib/plural";
 
 /**
  * A segunda etapa do login: um código de seis dígitos por e-mail.
@@ -223,7 +224,7 @@ export async function criarDesafio(
     if (segundos > 0) {
       return {
         ok: false,
-        erro: `Aguarde ${segundos} segundo(s) para pedir outro código.`,
+        erro: `Aguarde ${segundos} ${pluralDe(segundos, "segundo", "segundos")} para pedir outro código.`,
         esperar: segundos,
       };
     }
@@ -394,7 +395,7 @@ export async function conferirCodigo(
       ok: false,
       erro:
         restantes > 0
-          ? `Código inválido. ${restantes} tentativa(s) restante(s).`
+          ? `Código inválido. ${restantes} ${pluralDe(restantes, "tentativa", "tentativas")} ${pluralDe(restantes, "restante", "restantes")}.`
           : "Código inválido. Peça um código novo.",
       recomecar: restantes <= 0,
     };

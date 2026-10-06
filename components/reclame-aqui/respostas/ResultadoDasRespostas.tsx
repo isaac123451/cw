@@ -21,13 +21,14 @@ import {
   type TracosDaResposta,
   type VezComResultado,
 } from "@/lib/models/respostaEResultado";
+import { pluralDe } from "@/lib/plural";
 
 export type AbaDoResultado = "resultado" | "funciona" | "modelos" | "whatsapp";
 
 const pct = (v: number | null) => (v === null ? "—" : `${String(v).replace(".", ",")}%`);
 const um = (v: number | null) => (v === null ? "—" : String(v).replace(".", ","));
 const dataCurta = (iso: string) => new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", timeZone: "America/Sao_Paulo" });
-const espera = (min: number) => (min < 60 ? `${min} min` : min < 1440 ? `${Math.round(min / 60)} h` : `${Math.round(min / 1440)} dia(s)`);
+const espera = (min: number) => (min < 60 ? `${min} min` : min < 1440 ? `${Math.round(min / 60)} h` : `${Math.round(min / 1440)} ${pluralDe(Math.round(min / 1440), "dia", "dias")}`);
 
 const ROTULO_DO_RESULTADO: Record<RespostaComResultado["resultado"], { rotulo: string; cor: string }> = {
   funcionou: { rotulo: "Funcionou", cor: "bg-emerald-50 text-emerald-800 ring-emerald-200" },
@@ -149,9 +150,9 @@ export default function ResultadoDasRespostas({ aba }: { aba: AbaDoResultado }) 
                   </span>
                   <span className="block truncate text-xs text-zinc-500">
                     {r.categoria}
-                    {r.diasAteResponder !== null && ` · respondida ${r.diasAteResponder === 0 ? "no mesmo dia" : `em ${r.diasAteResponder} dia(s)`}`}
+                    {r.diasAteResponder !== null && ` · respondida ${r.diasAteResponder === 0 ? "no mesmo dia" : `em ${r.diasAteResponder} ${pluralDe(r.diasAteResponder, "dia", "dias")}`}`}
                     {r.avaliada
-                      ? ` · ${r.resolvida ? "resolvida" : "não resolvida"}, nota ${r.nota ?? "—"}${r.voltaria ? ", voltaria" : ""}${r.diasAteAvaliar !== null ? ` · avaliou ${r.diasAteAvaliar} dia(s) depois` : ""}`
+                      ? ` · ${r.resolvida ? "resolvida" : "não resolvida"}, nota ${r.nota ?? "—"}${r.voltaria ? ", voltaria" : ""}${r.diasAteAvaliar !== null ? ` · avaliou ${r.diasAteAvaliar} ${pluralDe(r.diasAteAvaliar, "dia", "dias")} depois` : ""}`
                       : " · ainda sem avaliação"}
                   </span>
                 </span>

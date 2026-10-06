@@ -10,6 +10,7 @@ import { useScopedCases } from "@/lib/context/useScopedCases";
 
 import SurfaceCard from "@/components/shared/SurfaceCard";
 import BarraDeSalvar from "@/components/shared/BarraDeSalvar";
+import { pluralDe } from "@/lib/plural";
 
 /**
  * As cores que uma etiqueta pode ter.
@@ -294,7 +295,7 @@ export default function TagsSettings() {
                       aria-label={`Excluir ${item.name}`}
                       title={
                         count > 0
-                          ? `${count} caso(s) usam esta etiqueta`
+                          ? `${count} ${pluralDe(count, "caso", "casos")} usam esta etiqueta`
                           : "Excluir"
                       }
                       className="rounded-lg p-2 text-zinc-400 transition-colors hover:bg-rose-50 hover:text-rose-600"

@@ -10,6 +10,7 @@ import { isOpen, isReclameAqui, isSocial } from "@/lib/services/case.service";
 import type { Expediente } from "@/lib/services/horasUteis";
 import { summarize } from "@/lib/services/nps.service";
 import { diaNaOperacao } from "@/lib/services/reputation.service";
+import { pluralDe } from "@/lib/plural";
 
 /**
  * O número ao lado de cada item do menu (Fase 11).
@@ -59,13 +60,13 @@ export function contadoresDoMenu(entrada: {
   const c = (valor: number, urgente: boolean, explicacao: string): ContadorDoMenu => ({ valor, urgente, explicacao });
 
   return {
-    "/meu-dia": c(prazos.estourados, prazos.estourados > 0, `${prazos.estourados} prazo(s) estourado(s)`),
-    "/reclame-aqui": c(semResposta, false, `${semResposta} reclamação(ões) aberta(s) sem resposta pública`),
-    "/redes-sociais": c(redesAbertas, false, `${redesAbertas} atendimento(s) em aberto`),
-    "/nps": c(npsForaDoPrazo, npsForaDoPrazo > 0, `${npsForaDoPrazo} ciclo(s) com o 1º contato fora do prazo`),
-    "/google": c(entrada.googleAbertas, false, `${entrada.googleAbertas} avaliação(ões) aberta(s)`),
-    "/agenda": c(tarefasDoDia.length, tarefasAtrasadas > 0, `${tarefasDoDia.length} atividade(s) para hoje${tarefasAtrasadas ? `, ${tarefasAtrasadas} atrasada(s)` : ""}`),
-    "/conversas": c(entrada.esperandoNoWhatsapp ?? 0, false, `${entrada.esperandoNoWhatsapp ?? 0} conversa(s) esperando resposta no WhatsApp`),
+    "/meu-dia": c(prazos.estourados, prazos.estourados > 0, `${prazos.estourados} ${pluralDe(prazos.estourados, "prazo", "prazos")} ${pluralDe(prazos.estourados, "estourado", "estourados")}`),
+    "/reclame-aqui": c(semResposta, false, `${semResposta} ${pluralDe(semResposta, "reclamação", "reclamações")} ${pluralDe(semResposta, "aberta", "abertas")} sem resposta pública`),
+    "/redes-sociais": c(redesAbertas, false, `${redesAbertas} ${pluralDe(redesAbertas, "atendimento", "atendimentos")} em aberto`),
+    "/nps": c(npsForaDoPrazo, npsForaDoPrazo > 0, `${npsForaDoPrazo} ${pluralDe(npsForaDoPrazo, "ciclo", "ciclos")} com o 1º contato fora do prazo`),
+    "/google": c(entrada.googleAbertas, false, `${entrada.googleAbertas} ${pluralDe(entrada.googleAbertas, "avaliação", "avaliações")} ${pluralDe(entrada.googleAbertas, "aberta", "abertas")}`),
+    "/agenda": c(tarefasDoDia.length, tarefasAtrasadas > 0, `${tarefasDoDia.length} ${pluralDe(tarefasDoDia.length, "atividade", "atividades")} para hoje${tarefasAtrasadas ? `, ${tarefasAtrasadas} ${pluralDe(tarefasAtrasadas, "atrasada", "atrasadas")}` : ""}`),
+    "/conversas": c(entrada.esperandoNoWhatsapp ?? 0, false, `${entrada.esperandoNoWhatsapp ?? 0} ${pluralDe(entrada.esperandoNoWhatsapp ?? 0, "conversa", "conversas")} esperando resposta no WhatsApp`),
   };
 }
 

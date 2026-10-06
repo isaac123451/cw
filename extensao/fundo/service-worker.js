@@ -1260,7 +1260,7 @@ async function avisar(resumo, graves, config) {
 
   const resto =
     graves.length > 1
-      ? `\n+ ${graves.length - 1} outro(s) alerta(s).`
+      ? `\n+ ${graves.length - 1} ${Number(graves.length - 1) === 1 ? "outro" : "outros"} ${Number(graves.length - 1) === 1 ? "alerta" : "alertas"}.`
       : "";
 
   chrome.notifications.create(`cw-${hoje}`, {
@@ -1353,7 +1353,7 @@ async function cobrarEtapas() {
         iconUrl: chrome.runtime.getURL(
           "icones/icone-128.png"
         ),
-        title: `${etapa.parados} caso(s) em "${etapa.nome}"`,
+        title: `${etapa.parados} ${Number(etapa.parados) === 1 ? "caso" : "casos"} em "${etapa.nome}"`,
         message: primeiro
           ? `${primeiro.cliente} — ${primeiro.titulo}`.slice(
               0,
@@ -1428,7 +1428,7 @@ async function avisarPrazos() {
       type: "basic",
       iconUrl: icone,
       title: `${novos.length} prazos pedindo atenção`,
-      message: `${estourados ? `${estourados} estourado(s). ` : ""}${novos.slice(0, 3).map((c) => c.protocolo).join(", ")}${novos.length > 3 ? "…" : ""}`,
+      message: `${estourados ? `${estourados} ${Number(estourados) === 1 ? "estourado" : "estourados"}. ` : ""}${novos.slice(0, 3).map((c) => c.protocolo).join(", ")}${novos.length > 3 ? "…" : ""}`,
       priority: estourados ? 2 : 1,
     });
   }

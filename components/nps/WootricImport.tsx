@@ -17,6 +17,7 @@ import {
   importWootric,
   precisaBuscarNoWootric,
 } from "@/lib/actions/nps";
+import { pluralDe } from "@/lib/plural";
 
 interface Props {
   onDone: (resumo: string, houveErro: boolean) => void;
@@ -198,7 +199,7 @@ export default function WootricImport({
               fatia.dias === 0
                 ? "Continuando"
                 : `Fatia ${i + 1} de ${fatias.length}`
-            } — rodada ${rodada}, ${soma.novas} nova(s) até agora`
+            } — rodada ${rodada}, ${soma.novas} ${pluralDe(soma.novas, "nova", "novas")} até agora`
           );
         }
 
@@ -281,7 +282,7 @@ export default function WootricImport({
     onDone(
       soma.novas === 0 && soma.atualizadas === 0
         ? "Nada novo — a base já está em dia."
-        : `${automatica ? "Atualizado ao abrir: " : ""}${soma.novas} nova(s), ${soma.atualizadas} atualizada(s)${soma.reabertas ? `, ${soma.reabertas} reaberta(s) porque o comentário chegou depois` : ""}.`,
+        : `${automatica ? "Atualizado ao abrir: " : ""}${soma.novas} ${pluralDe(soma.novas, "nova", "novas")}, ${soma.atualizadas} ${pluralDe(soma.atualizadas, "atualizada", "atualizadas")}${soma.reabertas ? `, ${soma.reabertas} ${pluralDe(soma.reabertas, "reaberta", "reabertas")} porque o comentário chegou depois` : ""}.`,
       false
     );
   }

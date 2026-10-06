@@ -18,6 +18,7 @@ import {
 import { patchDoResumo } from "@/lib/models/tratativa";
 import type { Case } from "@/lib/models/case";
 import { gravarContato, triar } from "@/lib/services/tratativa.service";
+import { pluralDe } from "@/lib/plural";
 
 /**
  * Encerrar e reabrir um atendimento das Redes Sociais.
@@ -89,7 +90,7 @@ export async function encerrarAtendimento(entrada: {
       const faltam = TENTATIVAS_DAS_REDES - caso.tentativasSemResposta;
       return {
         ok: false,
-        erro: `Faltam ${faltam} tentativa(s) antes de encerrar sem contato — a 2ª em até 24h (WhatsApp e canal de origem), a 3ª em até 48h (e-mail ou telefone).`,
+        erro: `Faltam ${faltam} ${pluralDe(faltam, "tentativa", "tentativas")} antes de encerrar sem contato — a 2ª em até 24h (WhatsApp e canal de origem), a 3ª em até 48h (e-mail ou telefone).`,
       };
     }
 

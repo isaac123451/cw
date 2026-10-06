@@ -19,6 +19,7 @@ import { formatElapsed } from "@/lib/services/reputation.service";
 import { formatHours } from "@/lib/models/sla";
 
 import SurfaceCard from "@/components/shared/SurfaceCard";
+import { pluralDe } from "@/lib/plural";
 
 /**
  * Tempo de resposta por categoria contra o teto declarado.
@@ -102,7 +103,7 @@ export default function ResponseCeiling({
 
                 <span
                   className="w-32 shrink-0 text-right text-sm font-semibold tabular-nums text-zinc-900"
-                  title={`Pior tempo de resposta da categoria. Base: ${item.samples} reclamação(ões) com tempo preenchido.`}
+                  title={`Pior tempo de resposta da categoria. Base: ${item.samples} ${pluralDe(item.samples, "reclamação", "reclamações")} com tempo preenchido.`}
                 >
                   {formatElapsed(item.worstMinutes)}
                 </span>
@@ -158,7 +159,7 @@ export default function ResponseCeiling({
               ? `Nenhuma categoria tem teto cadastrado — sem prazo definido, nada pode ser apontado como estouro. O pior tempo acima já é real: defina os tetos em Configurar fluxo.`
               : estouradas === 0
                 ? "Nenhuma reclamação passou do teto da sua categoria no período."
-                : `${reclamacoesEstouradas} reclamação(ões) passaram do teto, em ${estouradas} categoria(s).`}
+                : `${reclamacoesEstouradas} ${pluralDe(reclamacoesEstouradas, "reclamação", "reclamações")} passaram do teto, em ${estouradas} ${pluralDe(estouradas, "categoria", "categorias")}.`}
 
           </p>
         </>

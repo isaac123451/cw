@@ -45,6 +45,7 @@ import { montarJornadas } from "@/lib/services/journey.service";
 import { descreverRegistro } from "@/lib/services/horasUteis";
 import { slugify } from "@/lib/services/slug";
 import { FRENTES_DA_OPERACAO, frente as frenteDaOperacao, type FrenteId } from "@/lib/models/frentes";
+import { pluralDe } from "@/lib/plural";
 
 /*
   As quatro frentes, na ordem do documento. Era "Todos os canais,
@@ -369,7 +370,7 @@ export default function JornadaPage() {
                         </span>
 
                         <span className="mt-0.5 block truncate text-xs text-zinc-500">
-                          {stage?.name} · {item.total} registro(s) ·
+                          {stage?.name} · {item.total} {pluralDe(item.total, "registro", "registros")} ·
                           nota {item.averageScore}
                         </span>
 
@@ -407,7 +408,7 @@ export default function JornadaPage() {
 
             <SurfaceCard
               title={current.company}
-              description={`${current.customers.length} nome(s) · última interação ${current.lastInteraction.split("-").reverse().join("/")}`}
+              description={`${current.customers.length} ${pluralDe(current.customers.length, "nome", "nomes")} · última interação ${current.lastInteraction.split("-").reverse().join("/")}`}
               hint="Abra o perfil completo para ver o histórico, o estabelecimento vinculado e as notas dadas por esta pessoa."
               action={
                 <span

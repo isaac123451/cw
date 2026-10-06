@@ -12,6 +12,7 @@ import { nomeDoMes, somarMeses, ultimoDia } from "@/lib/models/previsaoDeReclama
 import { RA1000_TARGETS } from "@/lib/services/reputation.service";
 
 import { br, efeito, inteiro, nota, pct, plural } from "./formato";
+import { pluralDe } from "@/lib/plural";
 
 export const STATUS = {
   "sem-meta": { rotulo: "sem meta", classe: "bg-zinc-100 text-zinc-600 ring-zinc-200", Icone: CircleAlert },
@@ -238,7 +239,7 @@ export function ResultadoDoMesFechado({ r, ciclos }: { r: ResultadoDoMes; ciclos
       </div>
       {r.cumpridas.length > 0 && (
         <p className="mt-3 text-sm text-zinc-700">
-          {r.cumpridas.filter((c) => c.ok).length} de {r.cumpridas.length} meta(s) cumprida(s)
+          {r.cumpridas.filter((c) => c.ok).length} de {r.cumpridas.length} {pluralDe(r.cumpridas.length, "meta", "metas")} {pluralDe(r.cumpridas.length, "cumprida", "cumpridas")}
           {r.cumpridas.some((c) => !c.ok) ? ` — ficou abaixo: ${r.cumpridas.filter((c) => !c.ok).map((c) => ROTULO_DA_META[c.chave].toLowerCase()).join(", ")}` : ""}.
         </p>
       )}

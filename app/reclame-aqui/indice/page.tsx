@@ -19,6 +19,7 @@ import { bandOf, displayBand, hojeNaOperacao, inRange, ptBR, RA1000_BAND, RA1000
 import type { PainelDoPortal } from "@/lib/services/painelDoPortal.service";
 import { SELO_DO_PORTAL } from "@/lib/models/segmento";
 import ComparacaoComSegmento from "@/components/reclame-aqui/indice/ComparacaoComSegmento";
+import { pluralDe } from "@/lib/plural";
 
 const br = (iso: string) => iso.split("-").reverse().join("/");
 
@@ -373,11 +374,11 @@ function OQueFalta({ retrato }: { retrato: RetratoDoIndice }) {
   const itens: { texto: string; ok: boolean }[] = [
     {
       ok: falta.respostas === 0,
-      texto: falta.respostas === 0 ? `Resposta em ${ptBR(s.responseIndex)}%: meta cumprida.` : `Responder mais ${falta.respostas} reclamação(ões) no portal: ${ptBR(s.responseIndex)}% → 90%.`,
+      texto: falta.respostas === 0 ? `Resposta em ${ptBR(s.responseIndex)}%: meta cumprida.` : `Responder mais ${falta.respostas} ${pluralDe(falta.respostas, "reclamação", "reclamações")} no portal: ${ptBR(s.responseIndex)}% → 90%.`,
     },
     {
       ok: falta.avaliacoesMinimas === 0,
-      texto: falta.avaliacoesMinimas === 0 ? `${s.evaluated} avaliações: acima do mínimo de ${RA1000_MINIMO_DE_AVALIACOES}.` : `Mais ${falta.avaliacoesMinimas} avaliação(ões) para o mínimo de ${RA1000_MINIMO_DE_AVALIACOES}.`,
+      texto: falta.avaliacoesMinimas === 0 ? `${s.evaluated} avaliações: acima do mínimo de ${RA1000_MINIMO_DE_AVALIACOES}.` : `Mais ${falta.avaliacoesMinimas} ${pluralDe(falta.avaliacoesMinimas, "avaliação", "avaliações")} para o mínimo de ${RA1000_MINIMO_DE_AVALIACOES}.`,
     },
     {
       ok: falta.avaliacoesIdeais.needed === 0 && falta.avaliacoesIdeais.reachable,
@@ -385,7 +386,7 @@ function OQueFalta({ retrato }: { retrato: RetratoDoIndice }) {
         falta.avaliacoesIdeais.needed === 0 && falta.avaliacoesIdeais.reachable
           ? "Nota do consumidor, solução e voltaria: metas cumpridas."
           : falta.avaliacoesIdeais.reachable
-            ? `Mais ${falta.avaliacoesIdeais.needed} avaliação(ões) nota 10, resolvidas e "voltaria" levam a nota do consumidor, a solução e o voltaria às metas.`
+            ? `Mais ${falta.avaliacoesIdeais.needed} ${pluralDe(falta.avaliacoesIdeais.needed, "avaliação", "avaliações")} nota 10, resolvidas e "voltaria" levam a nota do consumidor, a solução e o voltaria às metas.`
             : falta.avaliacoesIdeais.reason === "sem-avaliacoes"
               ? "As reclamações sem avaliação do período não bastam para as metas de avaliação — só o tempo traz mais."
               : "Mesmo com todas nota 10, as metas de avaliação não fecham neste período.",

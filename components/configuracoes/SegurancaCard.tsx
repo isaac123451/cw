@@ -22,6 +22,7 @@ import {
   salvarSeguranca,
   type RetratoDaSeguranca,
 } from "@/lib/actions/seguranca";
+import { pluralDe } from "@/lib/plural";
 
 const campo =
   "h-10 w-24 rounded-xl border border-zinc-200 px-3 text-sm tabular-nums outline-none transition-colors focus:border-violet-400";
@@ -514,7 +515,7 @@ export default function SegurancaCard() {
                   </div>
                   <p className="mt-1 max-w-xs text-xs text-zinc-500">
                     Quem marcar &ldquo;lembrar este dispositivo&rdquo; não digita o código naquele navegador por esse tempo. A senha continua sendo pedida.
-                    {retrato.dispositivosLembrados > 0 && ` Hoje: ${retrato.dispositivosLembrados} lembrado(s).`}
+                    {retrato.dispositivosLembrados > 0 && ` Hoje: ${retrato.dispositivosLembrados} ${pluralDe(retrato.dispositivosLembrados, "lembrado", "lembrados")}.`}
                   </p>
                 </div>
 

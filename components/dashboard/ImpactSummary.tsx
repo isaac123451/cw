@@ -15,6 +15,7 @@ import SurfaceCard from "@/components/shared/SurfaceCard";
 
 import { useImpact } from "@/lib/context/ImpactContext";
 import { hojeNaOperacao } from "@/lib/services/reputation.service";
+import { pluralDe } from "@/lib/plural";
 
 const money = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -123,7 +124,7 @@ export default function ImpactSummary() {
       description={
         dados.total.quantidade === 0
           ? "Nenhum resultado financeiro registrado ainda."
-          : `${dados.mes.quantidade} lançamento(s) neste mês · ${dados.total.quantidade} no total.`
+          : `${dados.mes.quantidade} ${pluralDe(dados.mes.quantidade, "lançamento", "lançamentos")} neste mês · ${dados.total.quantidade} no total.`
       }
       action={
         <Link
@@ -266,8 +267,8 @@ export default function ImpactSummary() {
               <>
                 <span>·</span>
                 <span className="font-medium text-emerald-700">
-                  {dados.retencoes} cancelamento(s)
-                  evitado(s)
+                  {dados.retencoes} {pluralDe(dados.retencoes, "cancelamento", "cancelamentos")}
+                  {pluralDe(dados.retencoes, "evitado", "evitados")}
                 </span>
               </>
             )}

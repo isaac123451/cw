@@ -4,6 +4,7 @@ import SurfaceCard from "@/components/shared/SurfaceCard";
 
 import { DIMENSOES_DAS_REDES, type DimensaoDasRedes, type Faceta } from "@/lib/models/segmentosDasRedes";
 import { cn } from "@/lib/utils";
+import { pluralDe } from "@/lib/plural";
 
 interface Props {
   facetas: Record<DimensaoDasRedes, Faceta[]>;
@@ -26,11 +27,11 @@ export default function SegmentosDasRedes({ facetas, total, filtrados, ativos, o
     <SurfaceCard
       tour="segmentos"
       title="Segmentos"
-      description={ativos ? `${filtrados} de ${total} atendimento(s) com os filtros escolhidos.` : `${total} atendimento(s). Clique num segmento para filtrar o quadro e a lista.`}
+      description={ativos ? `${filtrados} de ${total} ${pluralDe(total, "atendimento", "atendimentos")} com os filtros escolhidos.` : `${total} ${pluralDe(total, "atendimento", "atendimentos")}. Clique num segmento para filtrar o quadro e a lista.`}
       action={
         ativos > 0 ? (
           <button type="button" onClick={onLimpar} className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900">
-            Limpar {ativos} filtro(s)
+            Limpar {ativos} {pluralDe(ativos, "filtro", "filtros")}
           </button>
         ) : undefined
       }

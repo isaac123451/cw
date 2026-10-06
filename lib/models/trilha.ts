@@ -2,6 +2,7 @@ import { respondida, type Case } from "@/lib/models/case";
 import { pedidoDeAvaliacao } from "@/lib/models/cadencia";
 import type { EstadoDaValidacao } from "@/lib/models/tratativa";
 import { descreverRegistro } from "@/lib/services/horasUteis";
+import { pluralDe } from "@/lib/plural";
 
 /**
  * A trilha do Reclame Aqui, na ordem da documentação.
@@ -179,7 +180,7 @@ export function trilhaDoCaso(
         ? "O cliente respondeu."
         : "Não precisou: o caso seguiu com o cliente."
       : tentativas > 0
-        ? `${tentativas} tentativa(s) seguida(s) sem resposta · até 5 ligações em 7 dias, horários variados`
+        ? `${tentativas} ${pluralDe(tentativas, "tentativa", "tentativas")} ${pluralDe(tentativas, "seguida", "seguidas")} sem resposta · até 5 ligações em 7 dias, horários variados`
         : contatoFeito
           ? `Aguardando o retorno do cliente desde ${item.ultimoContatoEm ? descreverRegistro(item.ultimoContatoEm) : "o 1º contato"}. Sem resposta, siga a cadência: até 5 tentativas em 7 dias.`
           : "Só se o cliente não responder.",
@@ -199,7 +200,7 @@ export function trilhaDoCaso(
     detalhe: area
       ? `Com ${area.destino}${area.vence ? ` · retorno até ${area.vence}` : ""}. Manter o cliente informado.`
       : (contexto.areasConcluidas ?? 0) > 0
-        ? `${contexto.areasConcluidas} área(s) já devolveram o caso.`
+        ? `${contexto.areasConcluidas} ${pluralDe(contexto.areasConcluidas, "área", "áreas")} já devolveram o caso.`
         : "Suporte N2, Financeiro, Comercial ou Desenvolvimento — só quando necessário.",
     acao: "acionar-area",
   });
@@ -284,7 +285,7 @@ export function trilhaDoCaso(
       : foraDaJanela
         ? "Encerrado sem avaliação: mais de 6 meses desde a resposta."
         : (item.pedidosDeAvaliacao ?? 0) > 0
-          ? `${item.pedidosDeAvaliacao} pedido(s) feito(s).`
+          ? `${item.pedidosDeAvaliacao} ${pluralDe(item.pedidosDeAvaliacao, "pedido", "pedidos")} ${pluralDe(item.pedidosDeAvaliacao, "feito", "feitos")}.`
           : "Lembretes a cada 2 dias depois da resposta; depois, semanais.",
     acao: "pedir-avaliacao",
   });

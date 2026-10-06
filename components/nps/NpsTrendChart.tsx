@@ -5,6 +5,7 @@ import { useLargura } from "@/lib/hooks/useLargura";
 import { useEffect, useRef, useState } from "react";
 
 import type { PontoDeTendencia } from "@/lib/services/nps.service";
+import { pluralDe } from "@/lib/plural";
 
 interface Props {
   dados: PontoDeTendencia[];
@@ -205,7 +206,7 @@ export default function NpsTrendChart({
             />
 
             <title>
-              {`${ponto.rotulo}: NPS ${ponto.score} · ${ponto.total} resposta(s) · ${ponto.comentarios} com comentário`}
+              {`${ponto.rotulo}: NPS ${ponto.score} · ${ponto.total} ${pluralDe(ponto.total, "resposta", "respostas")} · ${ponto.comentarios} com comentário`}
             </title>
 
             {mostraRotulo(i) && (

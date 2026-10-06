@@ -41,6 +41,7 @@ import BotaoAbrirEmJanela from "@/components/janelas/BotaoAbrirEmJanela";
 import { useCases } from "@/lib/context/CaseContext";
 import { useSession } from "@/lib/context/SessionContext";
 import { isSocial } from "@/lib/services/case.service";
+import { pluralDe } from "@/lib/plural";
 
 const typeTone: Record<string, string> = {
   "Follow-up": "bg-sky-50 text-sky-700 ring-sky-100",
@@ -375,7 +376,7 @@ export default function AgendaPage() {
                 key={date}
                 tour="dia-da-agenda"
                 title={formatDay(date)}
-                description={`${items.length} atividade(s)${
+                description={`${items.length} ${pluralDe(items.length, "atividade", "atividades")}${
                   atrasado ? " · há pendências atrasadas" : ""
                 }`}
                 bodyClassName="p-0"

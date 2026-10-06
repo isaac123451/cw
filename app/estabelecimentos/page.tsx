@@ -43,6 +43,7 @@ import {
   planoDaConta,
   statusTone,
 } from "@/lib/models/establishment";
+import { pluralDe } from "@/lib/plural";
 
 const money = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -266,7 +267,7 @@ export default function EstabelecimentosPage() {
             value={money.format(metrics.mrr)}
             hint={
               metrics.semValor > 0
-                ? `${metrics.semValor} conta(s) sem plano nem mensalidade`
+                ? `${metrics.semValor} ${pluralDe(metrics.semValor, "conta", "contas")} sem plano nem mensalidade`
                 : metrics.pelaTabela > 0
                   ? `${metrics.pelaTabela} pela tabela de planos`
                   : "mensalidade somada"

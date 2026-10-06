@@ -1,6 +1,7 @@
 import type { Case } from "@/lib/models/case";
 import { nomeDoCliente, type NpsResponseView } from "@/lib/models/nps";
 import { emptySimulation, getRawCounts, pendingEvaluations, scoreFrom, simulate } from "@/lib/services/reputation.service";
+import { pluralDe } from "@/lib/plural";
 
 /**
  * O Prêmio Reclame Aqui (Fase 23).
@@ -403,12 +404,12 @@ export function ideiasDoPremio(entrada: {
     {
       titulo: "Comece por quem lembra do atendimento",
       texto: "Quem avaliou 10, resolvido e voltaria nos últimos 90 dias tem o atendimento fresco na memória — é o pedido com mais chance. Eles vêm primeiro em Pedir o voto.",
-      numero: `${recentes} pessoa(s) assim, com telefone`,
+      numero: `${recentes} ${pluralDe(recentes, "pessoa", "pessoas")} assim, com telefone`,
     },
     {
       titulo: "Promotores do NPS",
       texto: "Quem deu 9 ou 10 no NPS já disse que recomenda a Cardápio Web. O pedido de voto é o mesmo gesto, em outro lugar.",
-      numero: `${promotores} promotor(es) com telefone, fora da campanha`,
+      numero: `${promotores} ${pluralDe(promotores, "promotor", "promotores")} com telefone, fora da campanha`,
     },
     {
       titulo: "Peça no fim de um atendimento que deu certo",
@@ -417,7 +418,7 @@ export function ideiasDoPremio(entrada: {
     {
       titulo: "Um lembrete só",
       texto: `Depois do pedido, um lembrete ${DIAS_PARA_LEMBRAR} dias depois, e só. Insistir mais vira incômodo e pode virar reclamação.`,
-      numero: lembrar > 0 ? `${lembrar} pedido(s) já passaram de ${DIAS_PARA_LEMBRAR} dias sem lembrete` : undefined,
+      numero: lembrar > 0 ? `${lembrar} ${pluralDe(lembrar, "pedido", "pedidos")} já passaram de ${DIAS_PARA_LEMBRAR} dias sem lembrete` : undefined,
     },
     {
       titulo: "O link onde o cliente já está",
@@ -433,7 +434,7 @@ export function ideiasDoPremio(entrada: {
     ideias.unshift({
       titulo: restam >= 0 ? "O relógio da votação" : "A votação fechou",
       texto: restam >= 0 ? "Distribua os pedidos até a última semana e deixe os lembretes para os dias finais." : "Registre quem disse que votou e guarde a lista para o próximo ano.",
-      numero: restam >= 0 ? `${restam} dia(s) até fechar` : undefined,
+      numero: restam >= 0 ? `${restam} ${pluralDe(restam, "dia", "dias")} até fechar` : undefined,
     });
   }
   return ideias;

@@ -47,6 +47,7 @@ import SurfaceCard from "@/components/shared/SurfaceCard";
 import BarList from "@/components/shared/BarList";
 import PeriodPicker from "@/components/shared/PeriodPicker";
 import TrendChart from "@/components/shared/TrendChart";
+import { pluralDe } from "@/lib/plural";
 
 interface Props {
   eyebrow?: string;
@@ -470,7 +471,7 @@ export default function AnalyticsOverview({
 
         <SurfaceCard
           title="Tempo até a primeira resposta"
-          description={`Distribuição de ${tempoMedio} caso(s) com resposta registrada.`}
+          description={`Distribuição de ${tempoMedio} ${pluralDe(tempoMedio, "caso", "casos")} com resposta registrada.`}
         >
 
           <ul className="space-y-4">

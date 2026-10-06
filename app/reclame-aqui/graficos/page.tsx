@@ -32,6 +32,7 @@ import {
   hojeNaOperacao,
   scoreBands,
 } from "@/lib/services/reputation.service";
+import { pluralDe } from "@/lib/plural";
 
 const COLORS = {
   reclamacoes: "#0EA5E9",
@@ -579,7 +580,7 @@ export default function GraficosPage() {
           description={
             distribuicao.medidas === 0
               ? "Nenhuma reclamação respondida com tempo registrado neste período."
-              : `${distribuicao.medidas} resposta(s) com tempo medido. Metade saiu em até ${emTexto(distribuicao.mediana)}; a pior levou ${emTexto(distribuicao.pior)}.`
+              : `${distribuicao.medidas} ${pluralDe(distribuicao.medidas, "resposta", "respostas")} com tempo medido. Metade saiu em até ${emTexto(distribuicao.mediana)}; a pior levou ${emTexto(distribuicao.pior)}.`
           }
           hint="A média some com a cauda: 100 respostas em 2 h e 5 em 40 dias dão uma média de menos de dois dias, e os cinco consumidores abandonados desaparecem dela. Aqui cada faixa é uma experiência diferente, e a última é a que gera avaliação baixa mesmo com a resposta certa."
         >
@@ -636,7 +637,7 @@ export default function GraficosPage() {
               */}
               {distribuicao.semMedida > 0 && (
                 <p className="pt-1 text-[11px] text-zinc-400">
-                  {distribuicao.semMedida} resposta(s)
+                  {distribuicao.semMedida} {pluralDe(distribuicao.semMedida, "resposta", "respostas")}
                   ficaram fora: foram publicadas, mas sem
                   tempo registrado na importação.
                 </p>

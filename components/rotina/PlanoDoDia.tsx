@@ -18,6 +18,7 @@ import { leitura } from "@/lib/lote";
 
 import { useToast } from "@/lib/context/ToastContext";
 import { descreverMinutos } from "@/components/rotina/formato";
+import { pluralDe } from "@/lib/plural";
 
 /* Em lote, por rota (1.116): sai junto com as outras leituras da tela, em paralelo e fora da fila. */
 const getGoogleStatus = leitura("googleStatus");
@@ -106,9 +107,9 @@ export default function PlanoDoDia({
         title: "Plano na sua Google Agenda.",
         detail:
           [
-            r.criados ? `${r.criados} bloco(s) novo(s)` : null,
-            r.atualizados ? `${r.atualizados} atualizado(s)` : null,
-            r.removidos ? `${r.removidos} tirado(s) — saíram do plano` : null,
+            r.criados ? `${r.criados} ${pluralDe(r.criados, "bloco", "blocos")} ${pluralDe(r.criados, "novo", "novos")}` : null,
+            r.atualizados ? `${r.atualizados} ${pluralDe(r.atualizados, "atualizado", "atualizados")}` : null,
+            r.removidos ? `${r.removidos} ${pluralDe(r.removidos, "tirado", "tirados")} — saíram do plano` : null,
           ]
             .filter(Boolean)
             .join(" · ") || "Nada mudou.",
@@ -191,7 +192,7 @@ export default function PlanoDoDia({
           ) : (
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
               <p className="min-w-0 flex-1 basis-60 leading-relaxed">
-                Vão <strong className="text-zinc-900">{plano.blocos.length} bloco(s)</strong>, das {plano.blocos[0]?.inicio} às{" "}
+                Vão <strong className="text-zinc-900">{plano.blocos.length} {pluralDe(plano.blocos.length, "bloco", "blocos")}</strong>, das {plano.blocos[0]?.inicio} às{" "}
                 {plano.blocos[plano.blocos.length - 1]?.fim}, para a agenda{agenda.email ? ` de ${agenda.email}` : ""}. Mandar de novo depois
                 atualiza os mesmos blocos, sem duplicar; o que não coube hoje não vai.
               </p>
@@ -273,7 +274,7 @@ export default function PlanoDoDia({
                     <span className="text-sm font-medium text-zinc-800">{b.titulo}</span>
                   )}
                   <span className="flex flex-wrap items-center gap-1.5 text-[11px] text-zinc-500">
-                    {b.itens > 0 && <span>{b.itens} item(ns) · ~{descreverMinutos(b.minutos)}</span>}
+                    {b.itens > 0 && <span>{b.itens} {pluralDe(b.itens, "item", "itens")} · ~{descreverMinutos(b.minutos)}</span>}
                     {b.atrasados > 0 && <span className="font-semibold text-rose-700">{b.atrasados} fora do prazo</span>}
                     <span className="text-zinc-400">{b.motivo}</span>
                   </span>

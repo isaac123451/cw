@@ -42,6 +42,7 @@ import {
 
 import { useToast } from "@/lib/context/ToastContext";
 import { hojeNaOperacao } from "@/lib/services/reputation.service";
+import { pluralDe } from "@/lib/plural";
 
 const DIAS = [
   "Domingo",
@@ -485,7 +486,7 @@ export default function GoogleCalendarCard() {
           ))}
 
           <span className="ml-auto text-xs tabular-nums text-zinc-400">
-            {eventos.length} evento(s)
+            {eventos.length} {pluralDe(eventos.length, "evento", "eventos")}
           </span>
 
         </div>

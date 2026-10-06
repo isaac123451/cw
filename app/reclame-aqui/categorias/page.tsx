@@ -15,6 +15,7 @@ import { decidirPropostasDeCategoria, desfazerReclassificacao, lerRevisaoDeCateg
 import { useSettings } from "@/lib/context/SettingsContext";
 import { useToast } from "@/lib/context/ToastContext";
 import type { PropostaNaTela } from "@/lib/services/propostaDeCategoria.service";
+import { pluralDe } from "@/lib/plural";
 
 const br = (iso: string) => iso.slice(0, 10).split("-").reverse().join("/");
 const LOTE_DA_TELA = 60;
@@ -116,7 +117,7 @@ export default function CategoriasPage() {
       return;
     }
     aplicarCategorias(r.categorias, r.subcategorias);
-    notify({ tone: "success", title: "Categorias unificadas.", detail: `${r.casos} reclamação(ões) mudaram de categoria ou subcategoria; ${r.categoriasDesativadas} categoria(s) e ${r.subcategoriasJuntadas} subcategoria(s) ficaram desativadas. Dá para desfazer no histórico.` });
+    notify({ tone: "success", title: "Categorias unificadas.", detail: `${r.casos} ${pluralDe(r.casos, "reclamação", "reclamações")} mudaram de categoria ou subcategoria; ${r.categoriasDesativadas} ${pluralDe(r.categoriasDesativadas, "categoria", "categorias")} e ${r.subcategoriasJuntadas} ${pluralDe(r.subcategoriasJuntadas, "subcategoria", "subcategorias")} ficaram desativadas. Dá para desfazer no histórico.` });
     await recarregar();
   }
 
@@ -162,7 +163,7 @@ export default function CategoriasPage() {
     setSelecionadas(new Set());
     notify({
       tone: "success",
-      title: decisao === "aceitar" ? `${r.aplicadas} reclamação(ões) reclassificada(s).` : `${r.recusadas} proposta(s) recusada(s).`,
+      title: decisao === "aceitar" ? `${r.aplicadas} ${pluralDe(r.aplicadas, "reclamação", "reclamações")} ${pluralDe(r.aplicadas, "reclassificada", "reclassificadas")}.` : `${r.recusadas} ${pluralDe(r.recusadas, "proposta", "propostas")} ${pluralDe(r.recusadas, "recusada", "recusadas")}.`,
       detail: r.desatualizadas ? `${r.desatualizadas} tinham mudado depois da proposta e voltaram para a fila da IA — nada foi aplicado por cima.` : undefined,
     });
     await recarregar();
@@ -178,7 +179,7 @@ export default function CategoriasPage() {
       return;
     }
     aplicarCategorias(r.categorias, r.subcategorias);
-    notify({ tone: "success", title: `${r.desfeitas} troca(s) desfeita(s).`, detail: r.preservadas ? `${r.preservadas} reclamação(ões) tinham sido mudadas depois e ficaram como estão.` : undefined });
+    notify({ tone: "success", title: `${r.desfeitas} ${pluralDe(r.desfeitas, "troca", "trocas")} ${pluralDe(r.desfeitas, "desfeita", "desfeitas")}.`, detail: r.preservadas ? `${r.preservadas} ${pluralDe(r.preservadas, "reclamação", "reclamações")} tinham sido mudadas depois e ficaram como estão.` : undefined });
     await recarregar();
   }
 
@@ -235,7 +236,7 @@ export default function CategoriasPage() {
                   </ul>
                   {revisao.unificacao.fusoes.length > 0 && (
                     <details className="text-sm text-zinc-600">
-                      <summary className="cursor-pointer">{revisao.unificacao.fusoes.length} grupo(s) de subcategorias repetidas viram uma só</summary>
+                      <summary className="cursor-pointer">{revisao.unificacao.fusoes.length} {pluralDe(revisao.unificacao.fusoes.length, "grupo", "grupos")} de subcategorias repetidas viram uma só</summary>
                       <ul className="mt-2 space-y-1">
                         {revisao.unificacao.fusoes.map((f) => (
                           <li key={`${f.categoria}-${f.fica}`}>
@@ -248,7 +249,7 @@ export default function CategoriasPage() {
                   <div className="flex flex-wrap items-center gap-2">
                     {confirmar === "unificar" ? (
                       <>
-                        <span className="text-sm text-zinc-700">{revisao.unificacao.trocas} reclamação(ões) mudam de categoria ou subcategoria. Confirmar?</span>
+                        <span className="text-sm text-zinc-700">{revisao.unificacao.trocas} {pluralDe(revisao.unificacao.trocas, "reclamação", "reclamações")} mudam de categoria ou subcategoria. Confirmar?</span>
                         <button type="button" onClick={unificar} className="rounded-lg bg-violet-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-violet-800">
                           Confirmar
                         </button>
@@ -375,7 +376,7 @@ export default function CategoriasPage() {
                       {confirmar === "aceitar" || confirmar === "recusar" ? (
                         <>
                           <span className="text-zinc-700">
-                            {confirmar === "aceitar" ? "Trocar a categoria de" : "Recusar"} {selecionadas.size} reclamação(ões)?
+                            {confirmar === "aceitar" ? "Trocar a categoria de" : "Recusar"} {selecionadas.size} {pluralDe(selecionadas.size, "reclamação", "reclamações")}?
                           </span>
                           <button type="button" onClick={() => decidir(confirmar)} className="rounded-lg bg-violet-700 px-3 py-1.5 font-medium text-white hover:bg-violet-800">
                             Confirmar
@@ -430,13 +431,13 @@ export default function CategoriasPage() {
                     <li key={l.lote} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
                       <span className="font-medium text-zinc-800">{l.origem === "ia" ? "Aprovação de propostas da IA" : "Unificação"}</span>
                       <span className="tabular-nums text-zinc-500">
-                        {l.trocas} troca(s) · {br(l.em)} · {l.por}
+                        {l.trocas} {pluralDe(l.trocas, "troca", "trocas")} · {br(l.em)} · {l.por}
                       </span>
                       {l.desfeito ? (
                         <span className="text-xs text-zinc-400">desfeito</span>
                       ) : confirmar && typeof confirmar === "object" && confirmar.lote === l.lote ? (
                         <span className="ml-auto flex items-center gap-2">
-                          <span className="text-zinc-700">Desfazer {l.trocas} troca(s)?</span>
+                          <span className="text-zinc-700">Desfazer {l.trocas} {pluralDe(l.trocas, "troca", "trocas")}?</span>
                           <button type="button" onClick={() => desfazer(l.lote)} className="rounded-lg bg-violet-700 px-3 py-1 font-medium text-white hover:bg-violet-800">
                             Confirmar
                           </button>

@@ -79,8 +79,14 @@ function arquivosDoPainel() {
     readFileSync(resolve(RAIZ, "extensao/manifest.json"), "utf8")
   ) as { content_scripts: { matches: string[]; js: string[] }[] };
 
-  const doWhatsApp = manifesto.content_scripts.find((c) =>
-    c.matches.some((m) => m.includes("whatsapp"))
+  /*
+   * O bloco do WhatsApp que tem o painel — não o primeiro do WhatsApp:
+   * desde a ponte de áudio (MAIN world) há dois, e o primeiro só tem ela.
+   */
+  const doWhatsApp = manifesto.content_scripts.find(
+    (c) =>
+      c.matches.some((m) => m.includes("whatsapp")) &&
+      c.js.some((caminho) => caminho.endsWith("painel-base.js"))
   );
 
   /* Os detectores de site leem DOM que não existe aqui; ficam de fora. */
@@ -235,6 +241,15 @@ ${fontes}
         : "<p class=\\"ok\\">Nenhum erro no console.</p>");
 
     window.__bancada = { linhas, erros };
+
+    /*
+     * ?vista=painel (ou contato, nps…) deixa o painel parado numa tela —
+     * é o que a captura de tela sem navegador (Chrome headless) precisa.
+     */
+    const vista = new URLSearchParams(location.search).get("vista");
+    if (vista && vista !== "caso") {
+      raiz()?.querySelector(\`[data-acao="canal"][data-canal="\${vista}"]\`)?.click();
+    }
   })();
 })();
 </script>
@@ -313,7 +328,8 @@ async function main() {
       process.exit(0);
     }
     resposta.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-    resposta.end(pagina);
+    /* Relê os arquivos a cada pedido: mexeu no painel, F5 mostra. */
+    resposta.end(montarPagina(capturas, arquivosDoPainel()));
   }).listen(PORTA, () => {
     console.log(`  Abra http://localhost:${PORTA} — Ctrl+C para parar.\n`);
   });

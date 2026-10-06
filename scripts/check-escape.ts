@@ -194,6 +194,10 @@ const SEGURAS: RegExp[] = [
   /\?\s*["'][^"']*["']\s*:\s*["'][^"']*["']$/,
   /\.length\b/,
   /^CW\.(?:data|hora)\(/,
+  /* 1.135: ícone por nome literal (SVG fixo do mapa), plural entre dois literais e número formatado. */
+  /^CW\.icone\(["'][a-z]+["'](?:,\s*\d+)?\)$/,
+  /^CW\.plural\([^"'`]*,\s*["'][^"']*["'],\s*["'][^"']*["']\)$/,
+  /^CW\.numero\(/,
 ];
 
 /**

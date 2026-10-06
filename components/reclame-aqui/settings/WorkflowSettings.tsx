@@ -23,6 +23,7 @@ import BarraDeSalvar from "@/components/shared/BarraDeSalvar";
 import { useRascunho } from "@/lib/hooks/useRascunho";
 
 import WorkflowModal from "./WorkflowModal";
+import { pluralDe } from "@/lib/plural";
 
 export default function WorkflowSettings() {
   const {
@@ -231,7 +232,7 @@ export default function WorkflowSettings() {
                 </p>
 
                 <p className="mt-0.5 text-xs text-zinc-500">
-                  {countByStatus.get(item.name) ?? 0} caso(s)
+                  {countByStatus.get(item.name) ?? 0} {pluralDe(countByStatus.get(item.name) ?? 0, "caso", "casos")}
                 </p>
 
                 <p className="mt-2 text-[10px] font-semibold uppercase tracking-wide text-zinc-400">
@@ -450,7 +451,7 @@ export default function WorkflowSettings() {
                             aria-label={`Excluir ${item.name}`}
                             title={
                               count > 0
-                                ? `${count} caso(s) usam esta etapa`
+                                ? `${count} ${pluralDe(count, "caso", "casos")} usam esta etapa`
                                 : "Excluir"
                             }
                             className="rounded-lg p-2 text-zinc-400 transition-colors hover:bg-rose-50 hover:text-rose-600"

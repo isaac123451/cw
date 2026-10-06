@@ -17,6 +17,7 @@ import { useNps } from "@/lib/context/NpsContext";
 import { useToast } from "@/lib/context/ToastContext";
 import { contatosDoPremio, FILTROS_PADRAO, ideiasDoPremio, indicadosParaPedir, type FiltrosDoPremio } from "@/lib/models/premio";
 import { hojeNaOperacao } from "@/lib/services/reputation.service";
+import { pluralDe } from "@/lib/plural";
 
 /* Curta: o Isaac pediu "menos texto de mensagem". Quem lê no WhatsApp lê a primeira linha. */
 const MENSAGEM_PADRAO = "Oi, {nome}! Aqui é da Cardápio Web. Estamos no Prêmio Reclame Aqui e o seu voto ajuda muito: {link}";
@@ -128,7 +129,7 @@ export default function PainelDoPremio({ aoMudar }: { aoMudar?: (campanha: Campa
     link.download = r.nome;
     link.click();
     URL.revokeObjectURL(url);
-    notify({ tone: "success", title: `${lista.length} contato(s) na planilha.`, detail: `${r.novos} registrado(s) na campanha como exportados — não voltam na próxima exportação.` });
+    notify({ tone: "success", title: `${lista.length} ${pluralDe(lista.length, "contato", "contatos")} na planilha.`, detail: `${r.novos} ${pluralDe(r.novos, "registrado", "registrados")} na campanha como exportados — não voltam na próxima exportação.` });
     await carregar(escolhida);
   }
 
@@ -300,7 +301,7 @@ export default function PainelDoPremio({ aoMudar }: { aoMudar?: (campanha: Campa
 
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-zinc-100 pt-3">
           <p className="text-sm text-zinc-700">
-            <strong className="font-semibold tabular-nums">{lista.length}</strong> pessoa(s) · <span className="tabular-nums">{comTelefone}</span> com telefone para o WhatsApp
+            <strong className="font-semibold tabular-nums">{lista.length}</strong> {pluralDe(lista.length, "pessoa", "pessoas")} · <span className="tabular-nums">{comTelefone}</span> com telefone para o WhatsApp
             {jaNaCampanha.size > 0 && <span className="text-zinc-500"> · {jaNaCampanha.size} já na campanha, fora da lista</span>}
           </p>
           <button

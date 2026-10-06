@@ -1,6 +1,7 @@
 "use client";
 
 import { Sparkles } from "lucide-react";
+import { pluralDe } from "@/lib/plural";
 
 /**
  * A sugestão pelo texto, como um chip: valor, o porquê e um "Usar".
@@ -32,7 +33,7 @@ export default function SugestaoDoTexto({
         </p>
         {(motivo || acerto) && (
           <p className="mt-0.5 text-[11px] leading-snug text-violet-700/80">
-            {[motivo, acerto ? `acerto medido em ${(acerto.taxa * 100).toFixed(0)}% de ${acerto.base} caso(s) parecidos` : null].filter(Boolean).join(" · ")}
+            {[motivo, acerto ? `acerto medido em ${(acerto.taxa * 100).toFixed(0)}% de ${acerto.base} ${pluralDe(acerto.base, "caso", "casos")} parecidos` : null].filter(Boolean).join(" · ")}
           </p>
         )}
       </div>

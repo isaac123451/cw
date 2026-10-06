@@ -1,4 +1,5 @@
 import { conferirDossie, type DossieMontado } from "@/lib/services/dossie.service";
+import { pluralDe } from "@/lib/plural";
 
 /**
  * As partes escritas do dossiê (Fase 26) e a conferência antes de usar.
@@ -60,8 +61,8 @@ export function rascunhoSemIA(d: DossieMontado): PartesEscritas {
   const setores = d.partes.setoresAcionados.length ? ` Setores acionados: ${d.partes.setoresAcionados.join(", ")}.` : "";
   const sumario = primeiro
     ? `${d.partes.consumidor} abriu a reclamação ${d.identificacao.protocolo} (${d.identificacao.canal}) em ${dataCurta(d.identificacao.abertoEm)}. ` +
-      `O sistema registra ${eventos.length} evento(s), de ${dataCurta(primeiro.quando)} a ${dataCurta(ultimo.quando)}, com ${d.anexos.filter((a) => a.noSistema).length} peça(s) no sistema.${setores}` +
-      (d.lacunas.length ? ` Faltam ${d.lacunas.length} peça(s) de fora do sistema.` : "")
+      `O sistema registra ${eventos.length} ${pluralDe(eventos.length, "evento", "eventos")}, de ${dataCurta(primeiro.quando)} a ${dataCurta(ultimo.quando)}, com ${d.anexos.filter((a) => a.noSistema).length} ${pluralDe(d.anexos.filter((a) => a.noSistema).length, "peça", "peças")} no sistema.${setores}` +
+      (d.lacunas.length ? ` Faltam ${d.lacunas.length} ${pluralDe(d.lacunas.length, "peça", "peças")} de fora do sistema.` : "")
     : `${d.partes.consumidor} abriu a reclamação ${d.identificacao.protocolo} em ${dataCurta(d.identificacao.abertoEm)}. Ainda não há eventos registrados.`;
   const comPeca = new Set(d.anexos.filter((a) => a.noSistema).map((a) => `Anexo ${String(a.numero).padStart(2, "0")}`));
   return {
@@ -87,10 +88,10 @@ export function conferenciaAntesDeUsar(d: DossieMontado, p: PartesEscritas): str
   if (!p.sumario?.trim()) problemas.push("Falta o sumário executivo.");
   if (!p.pedido?.trim()) problemas.push("Falta o pedido: o que se quer do destinatário.");
   else if (!CITA_REGRA.test(`${p.pedido} ${p.enquadramento ?? ""}`)) problemas.push("O pedido não cita a regra (do regulamento, dos termos ou da política) que o sustenta.");
-  if (p.alegado.length) problemas.push(`${p.alegado.length} alegação(ões) sem prova: junte a evidência ou tire do pedido.`);
+  if (p.alegado.length) problemas.push(`${p.alegado.length} ${pluralDe(p.alegado.length, "alegação", "alegações")} sem prova: junte a evidência ou tire do pedido.`);
   const semData = d.anexos.filter((a) => !/^\d{4}-\d{2}-\d{2}_/.test(a.nome));
-  if (semData.length) problemas.push(`${semData.length} evidência(s) sem data no nome do arquivo.`);
-  if (d.lacunas.length) problemas.push(`${d.lacunas.length} peça(s) de fora do sistema ainda por anexar.`);
+  if (semData.length) problemas.push(`${semData.length} ${pluralDe(semData.length, "evidência", "evidências")} sem data no nome do arquivo.`);
+  if (d.lacunas.length) problemas.push(`${d.lacunas.length} ${pluralDe(d.lacunas.length, "peça", "peças")} de fora do sistema ainda por anexar.`);
   return problemas;
 }
 
@@ -107,6 +108,6 @@ export function textoParaModeracao(d: DossieMontado, p: PartesEscritas) {
   const fatos = p.verificado.length ? p.verificado : d.linhaDoTempo.slice(0, 8).map((e) => `${dataCurta(e.quando)}: ${e.evento}`);
   if (fatos.length) l.push("Fatos registrados:", ...fatos.slice(0, 8).map((f) => `- ${f}`), "");
   if (p.enquadramento?.trim()) l.push(p.enquadramento.trim(), "");
-  l.push(`Dossiê completo em anexo (${d.anexos.length} peça(s)). Protocolo ${d.identificacao.protocolo}.`);
+  l.push(`Dossiê completo em anexo (${d.anexos.length} ${pluralDe(d.anexos.length, "peça", "peças")}). Protocolo ${d.identificacao.protocolo}.`);
   return l.join("\n").trim();
 }

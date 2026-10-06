@@ -17,6 +17,7 @@ import {
   type ChaveDaRotina,
   type Frequencia,
 } from "@/lib/models/rotina";
+import { pluralDe } from "@/lib/plural";
 
 const CATEGORIAS: CategoriaDaRotina[] = ["Operacional", "Organização", "Demandas Internas", "Gestão"];
 const FREQUENCIAS: Frequencia[] = ["diaria", "semanal", "continua"];
@@ -145,9 +146,9 @@ export default function ConfigurarRotina({ atividades, onClose, onSalvo }: Props
         title: "Rotina salva.",
         detail:
           [
-            r.criadas ? `${r.criadas} nova(s)` : null,
-            r.alteradas ? `${r.alteradas} alterada(s)` : null,
-            r.desativadas ? `${r.desativadas} desativada(s)` : null,
+            r.criadas ? `${r.criadas} ${pluralDe(r.criadas, "nova", "novas")}` : null,
+            r.alteradas ? `${r.alteradas} ${pluralDe(r.alteradas, "alterada", "alteradas")}` : null,
+            r.desativadas ? `${r.desativadas} ${pluralDe(r.desativadas, "desativada", "desativadas")}` : null,
           ]
             .filter(Boolean)
             .join(" · ") || "Nada mudou.",
@@ -174,7 +175,7 @@ export default function ConfigurarRotina({ atividades, onClose, onSalvo }: Props
         <>
           <span className="mr-auto text-xs text-zinc-500">
             {mudou
-              ? [novas ? `${novas} nova(s)` : null, alteradas ? `${alteradas} alterada(s)` : null, reordenou ? "ordem mudou" : null]
+              ? [novas ? `${novas} ${pluralDe(novas, "nova", "novas")}` : null, alteradas ? `${alteradas} ${pluralDe(alteradas, "alterada", "alteradas")}` : null, reordenou ? "ordem mudou" : null]
                   .filter(Boolean)
                   .join(" · ") + " — por salvar"
               : "Nada mudou ainda."}
@@ -203,7 +204,7 @@ export default function ConfigurarRotina({ atividades, onClose, onSalvo }: Props
               <section key={g.f}>
                 <div className="mb-1.5 flex items-center justify-between gap-2">
                   <p className={campo}>
-                    {g.titulo} <span className="font-normal normal-case tracking-normal text-zinc-400">· {g.dica} · {doGrupo.filter((a) => a.ativa).length} ativa(s)</span>
+                    {g.titulo} <span className="font-normal normal-case tracking-normal text-zinc-400">· {g.dica} · {doGrupo.filter((a) => a.ativa).length} {pluralDe(doGrupo.filter((a) => a.ativa).length, "ativa", "ativas")}</span>
                   </p>
                   <button
                     type="button"

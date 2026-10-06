@@ -8,6 +8,7 @@ import {
   isSocial,
 } from "@/lib/services/case.service";
 import { diaNaOperacao } from "@/lib/services/reputation.service";
+import { pluralDe } from "@/lib/plural";
 
 export type Sentiment =
   | "Promotor"
@@ -255,7 +256,7 @@ export function montarJornadas(entrada: {
         ...g.google.map((a): PontoDaJornada => ({
           id: `google:${a.id}`,
           frente: "google",
-          titulo: `${a.notaAtualizada ?? a.estrelas} estrela(s) no Google${a.texto ? ` — “${trecho(a.texto)}”` : ""}`,
+          titulo: `${a.notaAtualizada ?? a.estrelas} ${pluralDe(a.notaAtualizada ?? a.estrelas, "estrela", "estrelas")} no Google${a.texto ? ` — “${trecho(a.texto)}”` : ""}`,
           detalhe: a.autor,
           em: a.publicadaEm,
           href: `/google?avaliacao=${a.id}`,

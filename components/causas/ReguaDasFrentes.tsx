@@ -6,6 +6,7 @@ import SurfaceCard from "@/components/shared/SurfaceCard";
 
 import { FRENTES_DA_OPERACAO } from "@/lib/models/frentes";
 import type { Regua } from "@/lib/models/catalogoDeCausas";
+import { pluralDe } from "@/lib/plural";
 
 type Resultado = { ok: true; registros: number } | { ok: false; erro: string };
 
@@ -30,7 +31,7 @@ export default function ReguaDasFrentes({ regua, causas, aoUnificar }: { regua: 
     setGravando(de);
     const r = await aoUnificar(de, para);
     setGravando(null);
-    setFeitos((atual) => ({ ...atual, [de]: r.ok ? `${r.registros} registro(s) agora em "${para}".` : r.erro }));
+    setFeitos((atual) => ({ ...atual, [de]: r.ok ? `${r.registros} ${pluralDe(r.registros, "registro", "registros")} agora em "${para}".` : r.erro }));
   }
 
   return (
@@ -97,7 +98,7 @@ export default function ReguaDasFrentes({ regua, causas, aoUnificar }: { regua: 
             {regua.foraDoCatalogo.slice(0, 20).map((x) => (
               <li key={x.causa} className="flex flex-wrap items-center gap-2 text-sm">
                 <span className="font-medium text-zinc-800">“{x.causa}”</span>
-                <span className="tabular-nums text-xs text-zinc-500">{x.registros} registro(s)</span>
+                <span className="tabular-nums text-xs text-zinc-500">{x.registros} {pluralDe(x.registros, "registro", "registros")}</span>
                 {feitos[x.causa] ? (
                   <span role="status" className="text-xs text-emerald-700">{feitos[x.causa]}</span>
                 ) : (

@@ -40,6 +40,7 @@ import { useTratativa } from "@/components/reclame-aqui/tratativa/TratativaProvi
 
 import EncerrarRedesModal from "./EncerrarRedesModal";
 import TriagemDasRedes from "./TriagemDasRedes";
+import { pluralDe } from "@/lib/plural";
 
 interface Props {
   data: Case;
@@ -261,10 +262,10 @@ export default function TrilhaDasRedes({ data, aoMudarNoServidor, irParaAreas, m
           <span>
             <strong>Já tentou outro canal:</strong>{" "}
             {[
-              historico.ra ? `${historico.ra} reclamação(ões) no Reclame Aqui` : null,
-              historico.redes ? `${historico.redes} atendimento(s) em rede social` : null,
-              historico.nps ? `${historico.nps} resposta(s) de NPS` : null,
-              historico.google ? `${historico.google} avaliação(ões) no Google` : null,
+              historico.ra ? `${historico.ra} ${pluralDe(historico.ra, "reclamação", "reclamações")} no Reclame Aqui` : null,
+              historico.redes ? `${historico.redes} ${pluralDe(historico.redes, "atendimento", "atendimentos")} em rede social` : null,
+              historico.nps ? `${historico.nps} ${pluralDe(historico.nps, "resposta", "respostas")} de NPS` : null,
+              historico.google ? `${historico.google} ${pluralDe(historico.google, "avaliação", "avaliações")} no Google` : null,
             ]
               .filter(Boolean)
               .join(", ")}

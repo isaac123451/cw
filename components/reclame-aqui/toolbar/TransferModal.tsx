@@ -22,6 +22,7 @@ import {
 } from "@/lib/actions/transfer";
 
 import { useCases } from "@/lib/context/CaseContext";
+import { pluralDe } from "@/lib/plural";
 
 /**
  * Importar e exportar a base de reclamações.
@@ -196,12 +197,12 @@ export default function TransferModal({
                 <CircleCheck size={15} />
                 {resultado.gravadas === 0
                   ? "Nada a atualizar — a base já está igual à planilha."
-                  : `${resultado.gravadas} reclamação(ões) gravada(s).`}
+                  : `${resultado.gravadas} ${pluralDe(resultado.gravadas, "reclamação", "reclamações")} ${pluralDe(resultado.gravadas, "gravada", "gravadas")}.`}
               </p>
 
               <p className="mt-1 text-xs leading-relaxed text-emerald-700">
-                {resultado.novas} nova(s),{" "}
-                {resultado.atualizadas} atualizada(s) e{" "}
+                {resultado.novas} {pluralDe(resultado.novas, "nova", "novas")},{" "}
+                {resultado.atualizadas} {pluralDe(resultado.atualizadas, "atualizada", "atualizadas")} e{" "}
                 {resultado.inalteradas} sem mudança — de{" "}
                 {resultado.de} a {resultado.ate}.
               </p>

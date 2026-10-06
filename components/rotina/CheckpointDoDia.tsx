@@ -7,6 +7,7 @@ import type { ResumoDeOntem } from "@/lib/actions/rotina";
 import type { Contagem, PlanoDoDia } from "@/lib/models/meuDia";
 import type { ChaveDaRotina } from "@/lib/models/rotina";
 import { descreverMinutos } from "@/components/rotina/formato";
+import { pluralDe } from "@/lib/plural";
 
 /**
  * O checkpoint diário com a gestão, pronto para colar no Slack.
@@ -32,14 +33,14 @@ export function textoDoCheckpoint(entrada: {
 
   if (ontem) {
     const feitos = [
-      ontem.primeirosContatos ? `${ontem.primeirosContatos} 1º(s) contato(s)` : null,
-      ontem.contatos ? `${ontem.contatos} contato(s) registrados` : null,
-      ontem.respostasPublicas ? `${ontem.respostasPublicas} resposta(s) pública(s) no Reclame Aqui` : null,
-      ontem.pedidosDeAvaliacao ? `${ontem.pedidosDeAvaliacao} pedido(s) de avaliação` : null,
-      ontem.tentativasNps ? `${ontem.tentativasNps} tentativa(s) no NPS` : null,
-      ontem.googleRespondidas ? `${ontem.googleRespondidas} avaliação(ões) respondida(s) no Google` : null,
+      ontem.primeirosContatos ? `${ontem.primeirosContatos} ${pluralDe(ontem.primeirosContatos, "1º contato", "1ºs contatos")}` : null,
+      ontem.contatos ? `${ontem.contatos} ${pluralDe(ontem.contatos, "contato", "contatos")} registrados` : null,
+      ontem.respostasPublicas ? `${ontem.respostasPublicas} ${pluralDe(ontem.respostasPublicas, "resposta", "respostas")} ${pluralDe(ontem.respostasPublicas, "pública", "públicas")} no Reclame Aqui` : null,
+      ontem.pedidosDeAvaliacao ? `${ontem.pedidosDeAvaliacao} ${pluralDe(ontem.pedidosDeAvaliacao, "pedido", "pedidos")} de avaliação` : null,
+      ontem.tentativasNps ? `${ontem.tentativasNps} ${pluralDe(ontem.tentativasNps, "tentativa", "tentativas")} no NPS` : null,
+      ontem.googleRespondidas ? `${ontem.googleRespondidas} ${pluralDe(ontem.googleRespondidas, "avaliação", "avaliações")} ${pluralDe(ontem.googleRespondidas, "respondida", "respondidas")} no Google` : null,
     ].filter(Boolean);
-    linhas.push(`*Ontem (${dm(ontem.dia)}):* ${feitos.length ? feitos.join(", ") : "nenhum registro na plataforma"}.${ontem.atividadesFeitas ? ` Rotina: ${ontem.atividadesFeitas} atividade(s) marcadas.` : ""}`);
+    linhas.push(`*Ontem (${dm(ontem.dia)}):* ${feitos.length ? feitos.join(", ") : "nenhum registro na plataforma"}.${ontem.atividadesFeitas ? ` Rotina: ${ontem.atividadesFeitas} ${pluralDe(ontem.atividadesFeitas, "atividade", "atividades")} marcadas.` : ""}`);
   }
 
   if (plano && entrada.total === 0 && plano.minutosDisponiveis === 0) {
@@ -61,11 +62,11 @@ export function textoDoCheckpoint(entrada: {
 
   if (contagens) {
     const riscos = [
-      contagens.novos.atrasados ? `${contagens.novos.atrasados} 1º(s) contato(s) fora do prazo` : null,
-      contagens["em-aberto"].atrasados ? `${contagens["em-aberto"].atrasados} caso(s) com a solução fora do prazo` : null,
-      contagens.areas.atrasados ? `${contagens.areas.atrasados} solicitação(ões) às áreas atrasadas` : null,
-      contagens.fups.total ? `${contagens.fups.total} cliente(s) sem notícia há 2 dias úteis` : null,
-      contagens.moderacoes.atrasados ? `${contagens.moderacoes.atrasados} moderação(ões) paradas há mais de 10 dias` : null,
+      contagens.novos.atrasados ? `${contagens.novos.atrasados} ${pluralDe(contagens.novos.atrasados, "1º contato", "1ºs contatos")} fora do prazo` : null,
+      contagens["em-aberto"].atrasados ? `${contagens["em-aberto"].atrasados} ${pluralDe(contagens["em-aberto"].atrasados, "caso", "casos")} com a solução fora do prazo` : null,
+      contagens.areas.atrasados ? `${contagens.areas.atrasados} ${pluralDe(contagens.areas.atrasados, "solicitação", "solicitações")} às áreas atrasadas` : null,
+      contagens.fups.total ? `${contagens.fups.total} ${pluralDe(contagens.fups.total, "cliente", "clientes")} sem notícia há 2 dias úteis` : null,
+      contagens.moderacoes.atrasados ? `${contagens.moderacoes.atrasados} ${pluralDe(contagens.moderacoes.atrasados, "moderação", "moderações")} paradas há mais de 10 dias` : null,
     ].filter(Boolean);
     linhas.push(`*Riscos:* ${riscos.length ? riscos.join("; ") : "nenhum prazo estourado agora"}.`);
   }

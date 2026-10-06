@@ -19,6 +19,7 @@ import { avisosDeAbertura } from "@/lib/models/aberturaDoAgente";
 import { summarize } from "@/lib/services/nps.service";
 import { slaStatus } from "@/lib/services/sla.service";
 import { diaNaOperacao } from "@/lib/services/reputation.service";
+import { pluralDe } from "@/lib/plural";
 
 export type NotificationTone =
   | "danger"
@@ -179,10 +180,10 @@ export function buildNotifications(
       list.push({
         id: "sem-resposta",
         tone: dias > 5 ? "danger" : "warning",
-        title: `${semResposta.length} reclamação(ões) sem resposta`,
+        title: `${semResposta.length} ${pluralDe(semResposta.length, "reclamação", "reclamações")} sem resposta`,
         detail:
           dias > 0
-            ? `A mais antiga está parada há ${dias} dia(s).`
+            ? `A mais antiga está parada há ${dias} ${pluralDe(dias, "dia", "dias")}.`
             : "Registradas hoje, ainda sem resposta pública.",
         href: "/reclame-aqui",
         count: semResposta.length,
@@ -200,7 +201,7 @@ export function buildNotifications(
       list.push({
         id: "replica",
         tone: "danger",
-        title: `${replicas.length} réplica(s) aguardando resposta`,
+        title: `${replicas.length} ${pluralDe(replicas.length, "réplica", "réplicas")} aguardando resposta`,
         detail:
           "O consumidor respondeu e espera um retorno da empresa.",
         href: "/reclame-aqui",
@@ -221,7 +222,7 @@ export function buildNotifications(
       list.push({
         id: "nao-resolvido",
         tone: "warning",
-        title: `${naoResolvidas.length} avaliação(ões) negativa(s) no último mês`,
+        title: `${naoResolvidas.length} ${pluralDe(naoResolvidas.length, "avaliação", "avaliações")} ${pluralDe(naoResolvidas.length, "negativa", "negativas")} no último mês`,
         detail:
           "Reclamações avaliadas como não resolvidas derrubam o índice de solução.",
         href: "/reclame-aqui/analytics",
@@ -254,7 +255,7 @@ export function buildNotifications(
       list.push({
         id: "movimentacao-atrasada",
         tone: "danger",
-        title: `${atrasadas.length} movimentação(ões) fora do prazo`,
+        title: `${atrasadas.length} ${pluralDe(atrasadas.length, "movimentação", "movimentações")} fora do prazo`,
         detail: `Casos parados aguardando retorno — ${pior[1]} com ${pior[0]}.`,
         href: "/processos",
         count: atrasadas.length,
@@ -280,7 +281,7 @@ export function buildNotifications(
       list.push({
         id: "agenda-vencida",
         tone: "danger",
-        title: `${vencidas.length} atividade(s) vencida(s)`,
+        title: `${vencidas.length} ${pluralDe(vencidas.length, "atividade", "atividades")} ${pluralDe(vencidas.length, "vencida", "vencidas")}`,
         detail: owner
           ? "Atribuídas a você e ainda não concluídas."
           : "Ainda não concluídas na agenda da operação.",
@@ -293,7 +294,7 @@ export function buildNotifications(
       list.push({
         id: "agenda-hoje",
         tone: "info",
-        title: `${paraHoje.length} atividade(s) para hoje`,
+        title: `${paraHoje.length} ${pluralDe(paraHoje.length, "atividade", "atividades")} para hoje`,
         detail: "Programadas para a data de hoje.",
         href: "/agenda",
         count: paraHoje.length,
@@ -331,7 +332,7 @@ export function buildNotifications(
       list.push({
         id: "google-hoje",
         tone: "info",
-        title: `${eventosHoje.length} compromisso(s) hoje na sua agenda`,
+        title: `${eventosHoje.length} ${pluralDe(eventosHoje.length, "compromisso", "compromissos")} hoje na sua agenda`,
         detail: comHora
           ? `O próximo é "${comHora.title}", às ${comHora.time}.`
           : eventosHoje[0].title,
@@ -376,7 +377,7 @@ export function buildNotifications(
       list.push({
         id: "cadastro-incompleto",
         tone: "warning",
-        title: `${incompletas.length} reclamação(ões) com dados do consumidor incompletos`,
+        title: `${incompletas.length} ${pluralDe(incompletas.length, "reclamação", "reclamações")} com dados do consumidor incompletos`,
         detail: `Falta ${descreverFaltas(faltas)}. Use "Completar" no quadro.`,
         href: "/reclame-aqui",
         count: incompletas.length,
@@ -394,7 +395,7 @@ export function buildNotifications(
       list.push({
         id: "nps-fora-do-prazo",
         tone: "danger",
-        title: `${resumo.estourados} ciclo(s) do NPS com o 1º contato fora do prazo`,
+        title: `${resumo.estourados} ${pluralDe(resumo.estourados, "ciclo", "ciclos")} do NPS com o 1º contato fora do prazo`,
         detail: "Detratores e passivos esperando o primeiro contato além do prazo do segmento.",
         href: "/nps",
         count: resumo.estourados,
@@ -409,7 +410,7 @@ export function buildNotifications(
       list.push({
         id: "nps-detratores-hoje",
         tone: "warning",
-        title: `${detratoresDeHoje.length} detrator(es) novo(s) hoje`,
+        title: `${detratoresDeHoje.length} ${pluralDe(detratoresDeHoje.length, "detrator", "detratores")} ${pluralDe(detratoresDeHoje.length, "novo", "novos")} hoje`,
         detail: detratoresDeHoje.length === 1 ? `${nome} deu nota ${primeiro.score} e ainda não teve contato.` : "Responderam hoje e ainda não tiveram contato.",
         href: detratoresDeHoje.length === 1 ? `/nps/${primeiro.id}` : "/nps",
         count: detratoresDeHoje.length,
@@ -425,7 +426,7 @@ export function buildNotifications(
       list.push({
         id: "google-negativas",
         tone: "warning",
-        title: `${negativas.length} avaliação(ões) negativa(s) no Google sem resposta`,
+        title: `${negativas.length} ${pluralDe(negativas.length, "avaliação", "avaliações")} ${pluralDe(negativas.length, "negativa", "negativas")} no Google sem resposta`,
         detail: "A resposta pública é para quem avaliou e para quem vai ler antes de decidir.",
         href: "/google",
         count: negativas.length,
@@ -441,7 +442,7 @@ export function buildNotifications(
       list.push({
         id: "redes-fora-do-prazo",
         tone: "danger",
-        title: `${redesAtrasadas.length} atendimento(s) das Redes fora do prazo`,
+        title: `${redesAtrasadas.length} ${pluralDe(redesAtrasadas.length, "atendimento", "atendimentos")} das Redes fora do prazo`,
         detail: "O 1º contato das Redes é em 4 horas úteis.",
         href: "/redes-sociais",
         count: redesAtrasadas.length,

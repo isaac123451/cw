@@ -30,6 +30,7 @@ import {
   createSession,
   getSession,
 } from "@/lib/auth/session";
+import { pluralDe } from "@/lib/plural";
 
 export interface ActionState {
   error?: string;
@@ -345,9 +346,9 @@ export async function excluirConta(
   const { reclamacoes, nps, tarefas } = resultado.transferidas;
 
   const movidas = [
-    reclamacoes && `${reclamacoes} reclamação(ões)`,
-    nps && `${nps} ciclo(s) de NPS`,
-    tarefas && `${tarefas} tarefa(s)`,
+    reclamacoes && `${reclamacoes} ${pluralDe(reclamacoes, "reclamação", "reclamações")}`,
+    nps && `${nps} ${pluralDe(nps, "ciclo", "ciclos")} de NPS`,
+    tarefas && `${tarefas} ${pluralDe(tarefas, "tarefa", "tarefas")}`,
   ].filter(Boolean);
 
   return {

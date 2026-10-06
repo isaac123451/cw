@@ -10,6 +10,7 @@ import SurfaceCard from "@/components/shared/SurfaceCard";
 
 import { useCases } from "@/lib/context/CaseContext";
 import { useSettings } from "@/lib/context/SettingsContext";
+import { pluralDe } from "@/lib/plural";
 
 /**
  * Categorias que aparecem nas reclamações mas não existem em
@@ -86,7 +87,7 @@ export default function OrphanCategories() {
   return (
     <SurfaceCard
       title="Categorias fora da configuração"
-      description={`${orfas.length} categoria(s) aparecem nas reclamações mas não existem em Configurar fluxo.`}
+      description={`${orfas.length} ${pluralDe(orfas.length, "categoria", "categorias")} aparecem nas reclamações mas não existem em Configurar fluxo.`}
       hint="Enquanto não estiverem configuradas, elas não podem receber regra de SLA própria e caem sempre na regra padrão."
       action={
         <button

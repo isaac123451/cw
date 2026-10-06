@@ -19,6 +19,7 @@ import { ptBR } from "@/lib/services/reputation.service";
 import { FRENTES_DA_OPERACAO, type FrenteId } from "@/lib/models/frentes";
 import { isEncerrado, segmentOf } from "@/lib/models/nps";
 import { indicadoresGoogle } from "@/lib/models/avaliacoesGoogle";
+import { pluralDe } from "@/lib/plural";
 
 /**
  * As quatro frentes lado a lado, no painel.
@@ -66,13 +67,13 @@ export default function FrentesResumo() {
       },
       nps: {
         principal: nps === null ? "—" : ptBR(nps),
-        rotulo: `de ${responses.length} resposta(s)`,
+        rotulo: `de ${responses.length} ${pluralDe(responses.length, "resposta", "respostas")}`,
         abertos: responses.filter((r) => !isEncerrado(r.status)).length,
         aberturaRotulo: "em tratativa",
       },
       google: {
         principal: google.notaMedia === null ? "—" : google.notaMedia.toLocaleString("pt-BR"),
-        rotulo: `nota média de ${google.total} avaliação(ões)`,
+        rotulo: `nota média de ${google.total} ${pluralDe(google.total, "avaliação", "avaliações")}`,
         abertos: avaliacoes.filter((a) => a.status === "aberta").length,
         aberturaRotulo: "abertas",
       },

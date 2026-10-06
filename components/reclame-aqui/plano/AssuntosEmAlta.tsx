@@ -14,6 +14,7 @@ import { cicloDe } from "@/lib/models/ciclo";
 import { getRange } from "@/lib/services/reputation.service";
 
 import { br, efeito, nota, num, pct } from "./formato";
+import { pluralDe } from "@/lib/plural";
 
 type Periodo = "30d" | "mes" | "ciclo";
 
@@ -68,7 +69,7 @@ export default function AssuntosEmAlta({ casos, hoje }: { casos: Case[]; hoje: s
       }
     >
       <p className="mb-3 text-sm text-zinc-700">
-        <b className="tabular-nums">{a.total}</b> reclamação(ões) {intervalo.rotulo}; de costume, <span className="tabular-nums">{num(a.totalEsperado)}</span>.
+        <b className="tabular-nums">{a.total}</b> {pluralDe(a.total, "reclamação", "reclamações")} {intervalo.rotulo}; de costume, <span className="tabular-nums">{num(a.totalEsperado)}</span>.
       </p>
       {a.emAlta.length > 0 && (
         <div className="mb-3 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-800 ring-1 ring-inset ring-rose-200">

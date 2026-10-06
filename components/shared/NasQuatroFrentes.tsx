@@ -15,6 +15,7 @@ import { FRENTES_DA_OPERACAO, type FrenteId } from "@/lib/models/frentes";
 import { isEncerrado, nomeDoCliente } from "@/lib/models/nps";
 import { caseHref, isOpen, isSocial } from "@/lib/services/case.service";
 import { descreverRegistro } from "@/lib/services/horasUteis";
+import { pluralDe } from "@/lib/plural";
 
 /** O que identifica o cliente em cada frente — quanto mais, mais o cruzamento acha. */
 export interface AlvoNasFrentes {
@@ -115,7 +116,7 @@ export default function NasQuatroFrentes({
       })),
       google: google.map((a) => ({
         id: a.id,
-        titulo: `${a.notaAtualizada ?? a.estrelas} estrela(s)${a.texto ? ` — ${a.texto}` : ""} · ${a.autor}`,
+        titulo: `${a.notaAtualizada ?? a.estrelas} ${pluralDe(a.notaAtualizada ?? a.estrelas, "estrela", "estrelas")}${a.texto ? ` — ${a.texto}` : ""} · ${a.autor}`,
         em: a.publicadaEm,
         href: `/google?avaliacao=${a.id}`,
         aberto: a.status === "aberta",

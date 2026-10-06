@@ -1116,6 +1116,43 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### A extensão repaginada, parte 1, e o fim do "(ões)" (05/10/2026, 1.135.0)
+
+Pedido de 05/10: "a extensão é o principal ponto, devido a desorganização,
+algo feio e preso … preciso que tudo que a extensão promete faça com
+maestria", e o resto da plataforma "fluido, ágil, intuitivo".
+
+- **Cabeçalho e abas.** Cabeçalho sólido (sem gradiente), ícones de traço
+  no lugar de emoji/entidade (📌, &#9681;), e um menu "⋯" que junta fixar,
+  tema, voltar à lateral, abrir sozinho, botão no canto, atalhos e opções —
+  o rodapé próprio que tomava uma linha da gaveta saiu. A barra de abas
+  ganhou ícone e a aba **Cliente**: até a 1.134 não havia aba para a
+  conversa aberta, e voltar a ela era clicar de novo na aba ativa. Clicar
+  na aba em que se está agora recarrega. Teclas 1–6.
+- **Agora sem formulário aberto.** Perguntar, Anotar e Lembrete viraram três
+  botões; o formulário abre no clique, um por vez. No Painel e na Agenda, o
+  "Marcar uma atividade" também. O aviso "já está em outro canal" virou uma
+  linha com "Cadastrar aqui".
+- **Caso aberto.** "← de onde veio" no alto; os passos do documento em
+  grade (Registrar / Copiar texto) no lugar de oito botões da largura da
+  gaveta; voltar/avançar/outra etapa numa linha, sem a caixa "início do
+  fluxo"; dossiê e resumo lado a lado; relato longo recolhido em oito
+  linhas. Sem "(~10 s)" nos rótulos — o tempo foi para a dica.
+- **"reclamação(ões)" → "reclamações".** 440 textos em 132 arquivos
+  (aplicação, extensão e servidor) passaram a usar o número ao lado:
+  `pluralDe` em `lib/plural.ts` e `CW.plural` na extensão. Nota do
+  painel com vírgula (`CW.numero`).
+- **Bugs de carona.** O agente escrevia "faltam [object Object]
+  avaliação(ões)" no caminho para a nota (interpolava o objeto inteiro).
+  A aba NPS dizia "este contato não tem reclamação cadastrada" logo abaixo
+  do cartão da reclamação aberta dele. A bancada do painel carregava só a
+  ponte de áudio desde que ela entrou no manifesto, e agora relê os
+  arquivos a cada F5 e aceita `?vista=`.
+- **Prova:** tsc limpo, `check:fiacao`, `check:escape` (ensinado que
+  `CW.icone`/`CW.plural`/`CW.numero` são seguros pela forma) e
+  `check:painel` verdes; bancada com as seis telas desenhando e nenhum
+  erro no console, claro e escuro.
+
 ### Slack das Redes lido certo (05/10/2026, 1.134.0)
 
 Pedido de 05/10: "ela lê, depois que lê informa que já leu tudo, mas só

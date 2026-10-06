@@ -10,6 +10,7 @@ import {
   retratoDoWootric,
   type RetratoDoWootric,
 } from "@/lib/actions/wootricStatus";
+import { pluralDe } from "@/lib/plural";
 
 /**
  * Wootric: o que funciona e o que falta, separado.
@@ -105,7 +106,7 @@ export default function WootricCard() {
             titulo="Concluir a resposta lá ao encerrar aqui"
             detalhe={
               retrato.conclusao.concluidas > 0
-                ? `Funcionando. ${retrato.conclusao.concluidas} resposta(s) marcadas como concluídas no Wootric; a última em ${quando(retrato.conclusao.ultimaEm)}.`
+                ? `Funcionando. ${retrato.conclusao.concluidas} ${pluralDe(retrato.conclusao.concluidas, "resposta", "respostas")} marcadas como concluídas no Wootric; a última em ${quando(retrato.conclusao.ultimaEm)}.`
                 : "Ainda nenhuma. Acontece ao encerrar um ciclo de NPS que veio do Wootric."
             }
           />
@@ -117,9 +118,9 @@ export default function WootricCard() {
             detalhe={
               retrato.nota.loginConfigurado
                 ? retrato.nota.recusadas > 0
-                  ? `Login configurado, mas ${retrato.nota.recusadas} nota(s) foram recusadas. Última resposta: "${retrato.nota.ultimoErro}". Conferir usuário e senha.`
-                  : `Funcionando. ${retrato.nota.enviadas} nota(s) enviadas.`
-                : `Parada por configuração: ${retrato.nota.recusadas} nota(s) esperando. O Wootric só aceita criar nota com login de usuário — a chave de integração só lê. Cadastre WOOTRIC_USUARIO e WOOTRIC_SENHA (de um usuário da conta Wootric) nas variáveis de ambiente da Vercel e faça um novo deploy; o reenvio automático manda as que ficaram para trás.`
+                  ? `Login configurado, mas ${retrato.nota.recusadas} ${pluralDe(retrato.nota.recusadas, "nota", "notas")} foram recusadas. Última resposta: "${retrato.nota.ultimoErro}". Conferir usuário e senha.`
+                  : `Funcionando. ${retrato.nota.enviadas} ${pluralDe(retrato.nota.enviadas, "nota", "notas")} enviadas.`
+                : `Parada por configuração: ${retrato.nota.recusadas} ${pluralDe(retrato.nota.recusadas, "nota", "notas")} esperando. O Wootric só aceita criar nota com login de usuário — a chave de integração só lê. Cadastre WOOTRIC_USUARIO e WOOTRIC_SENHA (de um usuário da conta Wootric) nas variáveis de ambiente da Vercel e faça um novo deploy; o reenvio automático manda as que ficaram para trás.`
             }
           />
 

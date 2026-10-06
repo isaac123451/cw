@@ -13,6 +13,7 @@ import { nomeDoMes, type MesPrevisto } from "@/lib/models/previsaoDeReclamacoes"
 import { RA1000_MINIMO_DE_AVALIACOES, RA1000_TARGETS } from "@/lib/services/reputation.service";
 
 import { br } from "./formato";
+import { pluralDe } from "@/lib/plural";
 
 type Campo = "nota" | "resposta" | "consumidor" | "solucao" | "voltaria" | "avaliacoes" | "recebidasPrevistas";
 
@@ -124,7 +125,7 @@ export default function MetasDoPlano({ meses, gravadas, previsoes, aoGravar }: {
       return;
     }
     aoGravar(res);
-    notify({ tone: "success", title: `Metas de ${mudados.length} mês(es) gravadas.` });
+    notify({ tone: "success", title: `Metas de ${mudados.length} ${pluralDe(mudados.length, "mês", "meses")} gravadas.` });
   }
 
   return (
@@ -207,7 +208,7 @@ export default function MetasDoPlano({ meses, gravadas, previsoes, aoGravar }: {
           <span className="ml-auto flex items-center gap-2">
             {confirmar ? (
               <>
-                <span className="text-zinc-700">Gravar as metas de {mudados.length} mês(es)?</span>
+                <span className="text-zinc-700">Gravar as metas de {mudados.length} {pluralDe(mudados.length, "mês", "meses")}?</span>
                 <button type="button" onClick={salvar} className="rounded-lg bg-violet-700 px-3 py-1.5 font-medium text-white hover:bg-violet-800">
                   Confirmar
                 </button>

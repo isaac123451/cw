@@ -532,8 +532,8 @@
         mensagens.length > 0
           ? undefined
           : brutas.length > 0
-            ? `li ${brutas.length} linha(s) por "${encontro.seletor}", mas nenhuma sobrou depois da limpeza`
-            : `achei ${encontro.achados.length} linha(s) por "${encontro.seletor}", e nenhuma tem texto — provavelmente a conversa ainda está carregando`,
+            ? `li ${brutas.length} ${CW.plural(brutas.length, "linha", "linhas")} por "${encontro.seletor}", mas nenhuma sobrou depois da limpeza`
+            : `achei ${encontro.achados.length} ${CW.plural(encontro.achados.length, "linha", "linhas")} por "${encontro.seletor}", e nenhuma tem texto — provavelmente a conversa ainda está carregando`,
     };
   }
 

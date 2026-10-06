@@ -1,5 +1,6 @@
 import { conferirRascunho, type AchadoDoRascunho } from "@/lib/models/rascunho";
 import { RESPOSTA_SINTETICA } from "@/lib/services/raMarcadores";
+import { pluralDe } from "@/lib/plural";
 
 /**
  * O analista de respostas públicas (Fase 35, 1.94).
@@ -134,7 +135,7 @@ export function analisarResposta(texto: string, contexto: ContextoDaAnalise = {}
       achados.length === 0
         ? "Segue o documento: pode publicar."
         : erros > 0
-          ? `${erros} erro(s) e ${melhorias} melhoria(s)`
-          : `${melhorias} melhoria(s)`,
+          ? `${erros} ${pluralDe(erros, "erro", "erros")} e ${melhorias} ${pluralDe(melhorias, "melhoria", "melhorias")}`
+          : `${melhorias} ${pluralDe(melhorias, "melhoria", "melhorias")}`,
   };
 }

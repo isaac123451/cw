@@ -8,6 +8,7 @@ import SurfaceCard from "@/components/shared/SurfaceCard";
 
 import { lerEnvioDoRelatorio, salvarEnvioDoRelatorio } from "@/lib/actions/relatorio";
 import { useToast } from "@/lib/context/ToastContext";
+import { pluralDe } from "@/lib/plural";
 
 /**
  * O relatório que chega sozinho (Fase 30, 1.105): para quem a rotina da
@@ -49,7 +50,7 @@ export default function EnvioAutomatico() {
     notify({
       tone: "success",
       title: r.para.length ? "Envio automático salvo." : "Envio automático desligado.",
-      detail: r.para.length ? `O relatório de cada ciclo vai para ${r.para.length} e-mail(s) na madrugada do dia seguinte.` : "Nenhum relatório sai sozinho.",
+      detail: r.para.length ? `O relatório de cada ciclo vai para ${r.para.length} ${pluralDe(r.para.length, "e-mail", "e-mails")} na madrugada do dia seguinte.` : "Nenhum relatório sai sozinho.",
     });
   }
 

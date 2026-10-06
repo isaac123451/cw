@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.135.0",
+    data: "2026-10-05",
+    titulo: "Extensão mais leve de usar",
+    texto: "O painel ganhou abas com ícone — inclusive Cliente, para voltar à conversa —, um menu ⋯ com tema, fixar e opções, e nada de formulário aberto: Perguntar, Anotar e Lembrete abrem no clique. No caso, os passos ficam em grade e o relato longo vem recolhido. E em toda a plataforma, \"reclamação(ões)\" virou \"1 reclamação\" ou \"5 reclamações\".",
+    frentes: ["extensao", "plataforma"],
+  },
+  {
     versao: "1.134.0",
     data: "2026-10-05",
     titulo: "Slack lê o canal inteiro que você rolou",

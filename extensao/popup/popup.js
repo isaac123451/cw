@@ -124,7 +124,7 @@ function tendencia(serie) {
         <div class="topo">
           <span>
             <span class="valor">${ultimo.nota.toFixed(1).replace(".", ",")}</span>
-            <span class="mes">em ${escapar(ultimo.rotulo)} · ${ultimo.recebidas} reclamação(ões)</span>
+            <span class="mes">em ${escapar(ultimo.rotulo)} · ${ultimo.recebidas} ${Number(ultimo.recebidas) === 1 ? "reclamação" : "reclamações"}</span>
           </span>
           <span class="delta ${tom}">
             ${sinal} ${Math.abs(variacao).toFixed(1).replace(".", ",")}
@@ -185,7 +185,7 @@ function blocoNps(nps) {
           <span class="valor">${nps.nota}</span>
           <span class="sub">
             média ${String(nps.media).replace(".", ",")} ·
-            ${nps.total} resposta(s)
+            ${nps.total} ${Number(nps.total) === 1 ? "resposta" : "respostas"}
           </span>
           <span class="lado">
             ${nps.abertos} em aberto<br />
@@ -204,9 +204,9 @@ function blocoNps(nps) {
         </div>
 
         <div class="legenda">
-          <span>${nps.detratores} detrator(es)</span>
-          <span>${nps.passivos} passivo(s)</span>
-          <span>${nps.promotores} promotor(es)</span>
+          <span>${nps.detratores} ${Number(nps.detratores) === 1 ? "detrator" : "detratores"}</span>
+          <span>${nps.passivos} ${Number(nps.passivos) === 1 ? "passivo" : "passivos"}</span>
+          <span>${nps.promotores} ${Number(nps.promotores) === 1 ? "promotor" : "promotores"}</span>
         </div>
 
       </div>
@@ -634,7 +634,7 @@ async function buscar(termo) {
     <div class="resultado">
       <div class="titulo-caso">${escapar(cliente.nome)}</div>
       <div class="sub">
-        ${Number(cliente.total ?? 0)} caso(s) · ${Number(cliente.abertos ?? 0)} aberto(s) ·
+        ${Number(cliente.total ?? 0)} ${Number(Number(cliente.total ?? 0)) === 1 ? "caso" : "casos"} · ${Number(cliente.abertos ?? 0)} ${Number(Number(cliente.abertos ?? 0)) === 1 ? "aberto" : "abertos"} ·
         ${escapar(dados.porQue ?? "")}
       </div>
       ${dados.casos

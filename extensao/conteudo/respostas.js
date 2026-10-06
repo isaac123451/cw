@@ -862,7 +862,7 @@
 
     if (item.preencher?.length > 0) {
       pendencias.push(
-        `${item.preencher.length} trecho(s) entre colchetes para escrever`
+        `${item.preencher.length} ${CW.plural(item.preencher.length, "trecho", "trechos")} entre colchetes para escrever`
       );
     }
 

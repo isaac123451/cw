@@ -18,6 +18,7 @@ import {
   salvarMetricaManual,
   type LinhaDeMetrica,
 } from "@/lib/actions/metricas";
+import { pluralDe } from "@/lib/plural";
 
 /**
  * O histórico diário da reputação — a planilha, dentro do sistema.
@@ -196,7 +197,7 @@ export default function MetricasDiariasCard() {
 
       notify({
         tone: "success",
-        title: `${dias.length} dia(s) salvos.`,
+        title: `${dias.length} ${pluralDe(dias.length, "dia", "dias")} salvos.`,
         detail:
           "Os números do portal ficam gravados; os da base continuam sendo recalculados pela rotina.",
       });
@@ -239,7 +240,7 @@ export default function MetricasDiariasCard() {
       link.download = r.nome;
       link.click();
       URL.revokeObjectURL(url);
-      notify({ tone: "success", title: `Planilha de ${r.dias} dia(s) gerada.`, detail: r.nome });
+      notify({ tone: "success", title: `Planilha de ${r.dias} ${pluralDe(r.dias, "dia", "dias")} gerada.`, detail: r.nome });
     } catch {
       notify({ tone: "error", title: "Não deu para falar com o servidor." });
     } finally {

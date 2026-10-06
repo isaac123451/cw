@@ -12,6 +12,7 @@ import { useAgora } from "@/lib/hooks/useAgora";
 
 import { adiarLembrete, chaveDoAviso, lembretesNaHora, type AdiamentoDoLembrete } from "@/lib/models/lembretes";
 import { isSocial } from "@/lib/services/case.service";
+import { pluralDe } from "@/lib/plural";
 
 /*
   O que já foi dispensado fica no navegador de quem trabalha — é o aviso
@@ -154,7 +155,7 @@ export default function AvisosDeLembrete() {
           </section>
         );
       })}
-      {naHora.length > 3 && <p className="pointer-events-auto self-end rounded-md bg-white px-2 py-1 text-xs text-zinc-600 shadow">+{naHora.length - 3} lembrete(s) na hora — na Agenda</p>}
+      {naHora.length > 3 && <p className="pointer-events-auto self-end rounded-md bg-white px-2 py-1 text-xs text-zinc-600 shadow">+{naHora.length - 3} {pluralDe(naHora.length - 3, "lembrete", "lembretes")} na hora — na Agenda</p>}
       {podePedirPermissao && (
         <button
           type="button"

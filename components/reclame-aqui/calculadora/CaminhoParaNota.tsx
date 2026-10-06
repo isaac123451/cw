@@ -17,6 +17,7 @@ import {
   ptBR,
   ReputationRaw,
 } from "@/lib/services/reputation.service";
+import { pluralDe } from "@/lib/plural";
 
 /**
  * "Quantas avaliações preciso para chegar a 9,0?"
@@ -208,7 +209,7 @@ export default function CaminhoParaNota({
                   <>
                     <p className="text-sm font-semibold text-zinc-900">
                       Depois disso, {depois.needed}{" "}
-                      avaliação(ões) nota 10
+                      {pluralDe(depois.needed, "avaliação", "avaliações")} nota 10
                     </p>
 
                     <p className="mt-0.5 text-sm text-zinc-600">
@@ -233,7 +234,7 @@ export default function CaminhoParaNota({
                       {depois.reason === "sem-avaliacoes" ? (
                         <>
                           Só existem {depois.ceiling}{" "}
-                          reclamação(ões) sem avaliação no
+                          {pluralDe(depois.ceiling, "reclamação", "reclamações")} sem avaliação no
                           período, e não dá para pedir
                           avaliação de quem já avaliou.
                           Mesmo todas nota 10, a nota para

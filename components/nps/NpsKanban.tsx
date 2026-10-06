@@ -19,6 +19,7 @@ import {
 import { slaState } from "@/lib/services/nps.service";
 import BotaoAbrirEmJanela from "@/components/janelas/BotaoAbrirEmJanela";
 import { imagemDeArrasto } from "@/lib/ui/imagemDeArrasto";
+import { pluralDe } from "@/lib/plural";
 
 interface Props {
   itens: NpsResponseView[];
@@ -344,7 +345,7 @@ function Cartao({
 
         {item.attempts.length > 0 && (
           <span className="rounded-md bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-500">
-            {item.attempts.length} tentativa(s)
+            {item.attempts.length} {pluralDe(item.attempts.length, "tentativa", "tentativas")}
           </span>
         )}
 

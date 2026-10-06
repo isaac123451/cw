@@ -15,6 +15,7 @@ import type { ProjectStage } from "@/lib/models/project";
 import { descreverRegistro } from "@/lib/services/horasUteis";
 import { SOCIAL_SOURCES } from "@/lib/services/case.service";
 import { CANAL_PARA_ORIGEM } from "@/lib/services/case.mapper";
+import { pluralDe } from "@/lib/plural";
 
 /*
   A reincidência que vira item em Projetos (Fases 4 e 27).
@@ -62,7 +63,7 @@ export async function registrosComCausa(prisma: PrismaClient, desde: Date, causa
       return { frente, causa: c.causaRaiz ?? "", em, rotulo: `${frente === "reclame-aqui" ? "RA" : CANAL_PARA_ORIGEM[c.channel]} ${c.externalId ?? c.protocol} — ${c.title}` };
     }),
     ...nps.map((n) => ({ frente: "nps" as const, causa: n.rootCause ?? "", em: n.respondedAt.toISOString(), rotulo: `NPS — ${n.customerName ?? n.customer}, nota ${n.score}` })),
-    ...google.map((g) => ({ frente: "google" as const, causa: g.causaRaiz ?? "", em: g.publicadaEm.toISOString(), rotulo: `Google — ${g.autor}, ${g.estrelas} estrela(s)` })),
+    ...google.map((g) => ({ frente: "google" as const, causa: g.causaRaiz ?? "", em: g.publicadaEm.toISOString(), rotulo: `Google — ${g.autor}, ${g.estrelas} ${pluralDe(g.estrelas, "estrela", "estrelas")}` })),
   ];
 }
 

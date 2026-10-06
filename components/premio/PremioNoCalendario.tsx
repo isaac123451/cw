@@ -11,6 +11,7 @@ import { useCases } from "@/lib/context/CaseContext";
 import { useAgora } from "@/lib/hooks/useAgora";
 import { premioNoCalendario } from "@/lib/models/premio";
 import { paredeDe } from "@/lib/services/horasUteis";
+import { pluralDe } from "@/lib/plural";
 
 const br = (dia: string) => dia.split("-").reverse().join("/");
 const um = (n: number) => n.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
@@ -47,13 +48,13 @@ export default function PremioNoCalendario({ campanha }: { campanha: CampanhaVie
               : "datas não cadastradas"}
           </dd>
           <dd className="text-xs text-zinc-500">
-            {fecha !== null && fecha < 0 ? "encerrada" : abre !== null && abre > 0 ? `abre em ${abre} dia(s)` : fecha !== null ? `fecha em ${fecha} dia(s)` : ""}
+            {fecha !== null && fecha < 0 ? "encerrada" : abre !== null && abre > 0 ? `abre em ${abre} ${pluralDe(abre, "dia", "dias")}` : fecha !== null ? `fecha em ${fecha} ${pluralDe(fecha, "dia", "dias")}` : ""}
           </dd>
         </div>
         <div className="bg-white px-3 py-2">
           <dt className="text-xs text-zinc-500">Data de corte</dt>
           <dd className="font-medium text-zinc-900">{campanha.dataDeCorte ? br(campanha.dataDeCorte) : "não cadastrada"}</dd>
-          {conta && <dd className="text-xs text-zinc-500">{conta.diasAteOCorte >= 0 ? `em ${conta.diasAteOCorte} dia(s)` : "já passou"} · janela {br(conta.janela.inicio)} a {br(conta.janela.fim)}</dd>}
+          {conta && <dd className="text-xs text-zinc-500">{conta.diasAteOCorte >= 0 ? `em ${conta.diasAteOCorte} ${pluralDe(conta.diasAteOCorte, "dia", "dias")}` : "já passou"} · janela {br(conta.janela.inicio)} a {br(conta.janela.fim)}</dd>}
         </div>
         <div className="bg-white px-3 py-2">
           <dt className="text-xs text-zinc-500">Nota na janela do corte</dt>
@@ -61,7 +62,7 @@ export default function PremioNoCalendario({ campanha }: { campanha: CampanhaVie
             {conta?.nota !== null && conta?.nota !== undefined ? um(conta.nota) : "—"}
             {campanha.notaMeta !== undefined && <span className="font-normal text-zinc-500"> · meta {um(campanha.notaMeta)}</span>}
           </dd>
-          {conta && <dd className="text-xs text-zinc-500">{conta.reclamacoes} reclamação(ões) na janela, {conta.avaliaveis} ainda sem avaliação</dd>}
+          {conta && <dd className="text-xs text-zinc-500">{conta.reclamacoes} {pluralDe(conta.reclamacoes, "reclamação", "reclamações")} na janela, {conta.avaliaveis} ainda sem avaliação</dd>}
         </div>
       </dl>
 
@@ -73,7 +74,7 @@ export default function PremioNoCalendario({ campanha }: { campanha: CampanhaVie
             ? "A nota da janela do corte já está na meta. Manter: cada avaliação ruim nessa janela pesa até a data de corte."
             : conta.faltam === null
               ? `Nem com as ${conta.avaliaveis} avaliações que faltam na janela, todas nota 10, a nota chega à meta. O que ainda mexe: responder as sem resposta e pedir moderação do que cabe.`
-              : `Faltam ${conta.faltam} avaliação(ões) nota 10 entre as ${conta.avaliaveis} reclamações da janela ainda sem avaliação — é o teto do que o pedido pode render, pela conta da calculadora.`}{" "}
+              : `Faltam ${conta.faltam} ${pluralDe(conta.faltam, "avaliação", "avaliações")} nota 10 entre as ${conta.avaliaveis} reclamações da janela ainda sem avaliação — é o teto do que o pedido pode render, pela conta da calculadora.`}{" "}
           {conta.faltam !== 0 && (
             <Link href="/reclame-aqui/avaliacoes" className="font-medium text-violet-700 hover:underline">
               Pedir avaliação

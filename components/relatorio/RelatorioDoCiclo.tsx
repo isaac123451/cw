@@ -19,6 +19,7 @@ import { descreverMinutosUteis, descreverRegistro } from "@/lib/services/horasUt
 import type { AbaDoRelatorio, AssuntosDoRelatorio } from "@/lib/services/relatorio.service";
 
 import PorQue from "@/components/shared/PorQue";
+import { pluralDe } from "@/lib/plural";
 /** "01/09/25" — com o ano: a aba de 12 meses atravessa a virada. */
 const br = (d: string) => { const [a, m, dd] = d.split("-"); return `${dd}/${m}/${a.slice(2)}`; };
 
@@ -28,11 +29,11 @@ function falta(aba: AbaDoRelatorio) {
   const passos = [
     aba.faltamRespostas ? `responder ${aba.faltamRespostas}` : null,
     aba.avaliacoesParaOSelo.alcancavel && aba.avaliacoesParaOSelo.necessarias
-      ? `${aba.avaliacoesParaOSelo.necessarias} avaliação(ões) nota 10 resolvidas`
+      ? `${aba.avaliacoesParaOSelo.necessarias} ${pluralDe(aba.avaliacoesParaOSelo.necessarias, "avaliação", "avaliações")} nota 10 resolvidas`
       : !aba.avaliacoesParaOSelo.alcancavel
         ? aba.avaliacoesParaOSelo.motivo
         : null,
-    aba.faltamParaOMinimo ? `mais ${aba.faltamParaOMinimo} avaliação(ões) (mínimo de ${RA1000_MINIMO_DE_AVALIACOES})` : null,
+    aba.faltamParaOMinimo ? `mais ${aba.faltamParaOMinimo} ${pluralDe(aba.faltamParaOMinimo, "avaliação", "avaliações")} (mínimo de ${RA1000_MINIMO_DE_AVALIACOES})` : null,
   ].filter(Boolean);
   return passos.join(" · ");
 }
@@ -249,7 +250,7 @@ export default function RelatorioDoCiclo() {
             <p className="mt-1 text-xs leading-relaxed text-zinc-600">
               {aba.selo
                 ? aba.modo === "vigente" && aba.meses === 6
-                  ? `${d.ra.ciclosComSelo} ciclo(s) seguido(s) com o selo.`
+                  ? `${d.ra.ciclosComSelo} ${pluralDe(d.ra.ciclosComSelo, "ciclo", "ciclos")} ${pluralDe(d.ra.ciclosComSelo, "seguido", "seguidos")} com o selo.`
                   : "As cinco metas fechadas."
                 : `Para o selo: ${falta(aba)}.`}
             </p>
@@ -338,9 +339,9 @@ export default function RelatorioDoCiclo() {
             frente: "reclame-aqui" as const,
             titulo: "Reclame Aqui",
             linhas: [
-              `${d.ra.noCiclo.entrantes} nova(s) no ciclo`,
-              `${d.ra.noCiclo.respondidas} respondida(s) · ${d.ra.noCiclo.avaliadas} avaliada(s)`,
-              `${d.ra.noCiclo.resolvidas} resolvida(s) no ciclo`,
+              `${d.ra.noCiclo.entrantes} ${pluralDe(d.ra.noCiclo.entrantes, "nova", "novas")} no ciclo`,
+              `${d.ra.noCiclo.respondidas} ${pluralDe(d.ra.noCiclo.respondidas, "respondida", "respondidas")} · ${d.ra.noCiclo.avaliadas} ${pluralDe(d.ra.noCiclo.avaliadas, "avaliada", "avaliadas")}`,
+              `${d.ra.noCiclo.resolvidas} ${pluralDe(d.ra.noCiclo.resolvidas, "resolvida", "resolvidas")} no ciclo`,
               `${d.ra.abertas.semResposta} sem resposta agora`,
             ],
             href: "/reclame-aqui",
@@ -348,16 +349,16 @@ export default function RelatorioDoCiclo() {
           {
             frente: "redes" as const,
             titulo: "Redes Sociais",
-            linhas: [`${d.redes.entrantes} atendimento(s)`, `${d.redes.resolvidos} resolvido(s)`, `${d.redes.abertos} em aberto`],
+            linhas: [`${d.redes.entrantes} ${pluralDe(d.redes.entrantes, "atendimento", "atendimentos")}`, `${d.redes.resolvidos} ${pluralDe(d.redes.resolvidos, "resolvido", "resolvidos")}`, `${d.redes.abertos} em aberto`],
             href: "/redes-sociais",
           },
           {
             frente: "nps" as const,
             titulo: "NPS",
             linhas: [
-              `${d.nps.respostas} resposta(s)${d.nps.nps !== null ? ` · NPS ${d.nps.nps}` : ""}`,
-              `${d.nps.detratores} detrator(es)${d.nps.percentualContatados !== null ? ` · ${d.nps.percentualContatados}% contatados` : ""}`,
-              `${d.nps.fechadosNoCiclo} encerrada(s) com tratativa`,
+              `${d.nps.respostas} ${pluralDe(d.nps.respostas, "resposta", "respostas")}${d.nps.nps !== null ? ` · NPS ${d.nps.nps}` : ""}`,
+              `${d.nps.detratores} ${pluralDe(d.nps.detratores, "detrator", "detratores")}${d.nps.percentualContatados !== null ? ` · ${d.nps.percentualContatados}% contatados` : ""}`,
+              `${d.nps.fechadosNoCiclo} ${pluralDe(d.nps.fechadosNoCiclo, "encerrada", "encerradas")} com tratativa`,
               d.nps.fechadosPelaRegra ? `${d.nps.fechadosPelaRegra} pela regra dos 30 dias, sem contato` : null,
               d.nps.humorMedioDoDetrator !== null ? `humor depois do contato ${ptBR(d.nps.humorMedioDoDetrator)}/5` : null,
             ],
@@ -367,9 +368,9 @@ export default function RelatorioDoCiclo() {
             frente: "google" as const,
             titulo: "Google",
             linhas: [
-              `${d.google.total} avaliação(ões)${d.google.notaMedia !== null ? ` · nota ${ptBR(d.google.notaMedia)}` : ""}`,
+              `${d.google.total} ${pluralDe(d.google.total, "avaliação", "avaliações")}${d.google.notaMedia !== null ? ` · nota ${ptBR(d.google.notaMedia)}` : ""}`,
               d.google.percentualRespondidas !== null ? `${d.google.percentualRespondidas}% respondidas` : null,
-              `${d.google.negativasSemResposta} negativa(s) sem resposta`,
+              `${d.google.negativasSemResposta} ${pluralDe(d.google.negativasSemResposta, "negativa", "negativas")} sem resposta`,
             ],
             href: "/google",
           },
@@ -423,7 +424,7 @@ export default function RelatorioDoCiclo() {
                   </p>
                   <p className="mt-0.5 text-xs text-zinc-500">
                     {ind.contatados} de {ind.total} contatados
-                    {ind.vencidosSemContato ? ` · ${ind.vencidosSemContato} vencido(s) sem contato` : ""}
+                    {ind.vencidosSemContato ? ` · ${ind.vencidosSemContato} ${pluralDe(ind.vencidosSemContato, "vencido", "vencidos")} sem contato` : ""}
                   </p>
                 </>
               )}
@@ -520,7 +521,7 @@ function AssuntosDoCiclo({ assuntos }: { assuntos: AssuntosDoRelatorio }) {
   return (
     <SurfaceCard
       title="Assuntos das reclamações do ciclo"
-      description={`${assuntos.total} reclamação(ões) no ciclo; de costume, ${ptBR(assuntos.deCostume)} — a média dos três ciclos anteriores. "Em alta" só quando a diferença não cabe no acaso. Nota e peso na nota são da janela de 6 meses.`}
+      description={`${assuntos.total} ${pluralDe(assuntos.total, "reclamação", "reclamações")} no ciclo; de costume, ${ptBR(assuntos.deCostume)} — a média dos três ciclos anteriores. "Em alta" só quando a diferença não cabe no acaso. Nota e peso na nota são da janela de 6 meses.`}
       action={
         <Link href="/reclame-aqui/plano#assuntos" className="text-sm font-medium text-violet-700 hover:underline">
           Ver os assuntos

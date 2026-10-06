@@ -1284,7 +1284,7 @@ function sugerir(
 
     lista.push({
       tom: dias > 5 ? "danger" : "warning",
-      texto: `${semResposta.length} reclamação(ões) sem resposta pública — a mais antiga há ${dias} dia(s). É o indicador de maior peso na nota.`,
+      texto: `${semResposta.length} ${Number(semResposta.length) === 1 ? "reclamação" : "reclamações"} sem resposta pública — a mais antiga há ${dias} ${Number(dias) === 1 ? "dia" : "dias"}. É o indicador de maior peso na nota.`,
     });
   }
 
@@ -1295,7 +1295,7 @@ function sugerir(
   if (replicas.length > 0) {
     lista.push({
       tom: "danger",
-      texto: `${replicas.length} réplica(s) aguardando retorno da empresa.`,
+      texto: `${replicas.length} ${Number(replicas.length) === 1 ? "réplica" : "réplicas"} aguardando retorno da empresa.`,
     });
   }
 
@@ -1306,7 +1306,7 @@ function sugerir(
   if (aguardandoAvaliacao.length > 0) {
     lista.push({
       tom: "info",
-      texto: `${aguardandoAvaliacao.length} caso(s) respondido(s) esperando a avaliação do consumidor. É a hora de pedir a avaliação.`,
+      texto: `${aguardandoAvaliacao.length} ${Number(aguardandoAvaliacao.length) === 1 ? "caso" : "casos"} ${Number(aguardandoAvaliacao.length) === 1 ? "respondido" : "respondidos"} esperando a avaliação do consumidor. É a hora de pedir a avaliação.`,
     });
   }
 
@@ -1319,7 +1319,7 @@ function sugerir(
   if (negativas.length > 0) {
     lista.push({
       tom: "warning",
-      texto: `${negativas.length} avaliação(ões) negativa(s) no último mês — cabe FUP pós-finalização.`,
+      texto: `${negativas.length} ${Number(negativas.length) === 1 ? "avaliação" : "avaliações"} ${Number(negativas.length) === 1 ? "negativa" : "negativas"} no último mês — cabe FUP pós-finalização.`,
     });
   }
 
@@ -1338,7 +1338,7 @@ function sugerir(
   if (atrasados.length > 0) {
     lista.push({
       tom: "danger",
-      texto: `${atrasados.length} caso(s) com prazo estourado (${atrasados[0].sla.rotulo}).`,
+      texto: `${atrasados.length} ${Number(atrasados.length) === 1 ? "caso" : "casos"} com prazo estourado (${atrasados[0].sla.rotulo}).`,
     });
   }
 
@@ -1349,7 +1349,7 @@ function sugerir(
   if (paradas.length > 0) {
     lista.push({
       tom: "danger",
-      texto: `${paradas.length} caso(s) parado(s) aguardando retorno interno — ${paradas[0].movimentacao?.rotulo}.`,
+      texto: `${paradas.length} ${Number(paradas.length) === 1 ? "caso" : "casos"} ${Number(paradas.length) === 1 ? "parado" : "parados"} aguardando retorno interno — ${paradas[0].movimentacao?.rotulo}.`,
     });
   }
 
@@ -1363,7 +1363,7 @@ function sugerir(
     } else {
       lista.push({
         tom: nps.nota <= 6 ? "danger" : "info",
-        texto: `NPS ${nps.nota}/10 em aberto (${nps.status}), prazo de primeiro contato ${nps.prazoPrimeiroContato}. ${nps.tentativas} tentativa(s) até agora.`,
+        texto: `NPS ${nps.nota}/10 em aberto (${nps.status}), prazo de primeiro contato ${nps.prazoPrimeiroContato}. ${nps.tentativas} ${Number(nps.tentativas) === 1 ? "tentativa" : "tentativas"} até agora.`,
       });
     }
   }

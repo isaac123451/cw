@@ -127,53 +127,64 @@
     const c = d.contatos ?? {};
     const textos = d.textos ?? {};
 
+    /*
+      Dois grupos de botões pequenos, lado a lado (1.135): o que eu fiz
+      (registra no caso) e o texto pronto (copia). Até a 1.134 eram oito
+      botões da largura da gaveta, um embaixo do outro, e o relato do
+      consumidor ficava três rolagens abaixo.
+    */
     const passo = (tipo, rotulo, dica) =>
-      '  <button class="passo" data-acao="tratativa" data-tipo="' +
+      '<button class="acao-chip" data-acao="tratativa" data-tipo="' +
       tipo +
       '" data-protocolo="' +
       CW.escapar(d.protocolo) +
       '" title="' +
       CW.escapar(dica) +
-      '" style="width:100%;margin-top:6px">' +
-      rotulo +
-      '</button>';
+      '">' +
+      CW.icone("ok", 14) +
+      "<span>" + rotulo + "</span></button>";
 
     const texto = (rotulo, valor) =>
       valor
-        ? '  <button class="copiar" data-acao="copiar" data-texto="' + CW.escapar(valor) + '" style="width:100%;margin-top:6px">' + rotulo + '</button>'
+        ? '<button class="acao-chip copia" data-acao="copiar" data-texto="' + CW.escapar(valor) + '" title="Copia o texto pronto">' + CW.icone("copiar", 14) + "<span>" + rotulo + "</span></button>"
         : "";
+
+    const feitos = [
+      c.primeiroContatoEm
+        ? "1º contato feito" + (c.tentativasSemResposta ? " · " + c.tentativasSemResposta + " " + CW.plural(c.tentativasSemResposta, "tentativa", "tentativas") + " sem resposta" : "")
+        : "",
+      c.validadoEm ? "cliente confirmou a solução" : "",
+    ].filter(Boolean);
+
+    const registrar = [
+      c.primeiroContatoEm ? "" : passo("contato", "1º contato", "Registra o contato agora, pelo mesmo caminho da ficha"),
+      passo("tentativa", "Tentei contato", "Fica aguardando retorno; sem retorno só 2 horas depois, pela ficha do caso"),
+      passo("atualizacao", "Mandei atualização", "O documento pede não deixar o cliente no vácuo"),
+      c.validadoEm ? "" : passo("validacao", "Cliente confirmou", "O Passo 6: tudo voltou a funcionar"),
+      passo("pedido-avaliacao", "Pedi a avaliação", "O Passo 8, na cadência da documentação"),
+    ].filter(Boolean);
+
+    const copiar = [
+      texto("Atualização", textos.atualizacao),
+      texto("Pedido de avaliação", textos.pedidoAvaliacao),
+      texto("#incidentes", textos.acionamento),
+      (c.tentativasSemResposta ?? 0) >= 5 ? texto("Pública transparente", textos.publicaTransparente) : "",
+      texto("Proposta de oferta", textos.oferta),
+    ].filter(Boolean);
 
     return [
       '<div class="bloco">',
       '  <div class="linha">',
       '    <span class="rotulo">Passos do documento</span>',
-      d.trilha ? '    <span class="tag neutro">agora: ' + CW.escapar(d.trilha.titulo) + '</span>' : "",
+      d.trilha ? '    <span class="tag marca">agora: ' + CW.escapar(d.trilha.titulo) + '</span>' : "",
       '  </div>',
-      d.trilha && d.trilha.detalhe ? '  <p class="sub" style="margin:4px 0 2px">' + CW.escapar(d.trilha.detalhe) + '</p>' : "",
-
-      c.primeiroContatoEm
-        ? '  <p class="sub" style="margin:6px 0 0">1º contato registrado.' + (c.tentativasSemResposta ? ' ' + c.tentativasSemResposta + ' tentativa(s) sem resposta.' : "") + '</p>'
-        : passo("contato", "Fiz o 1º contato", "Registra o contato agora, pelo mesmo caminho da ficha"),
-
-      passo("tentativa", "Tentei contato", "Fica aguardando retorno; sem retorno só 2 horas depois, pela ficha do caso"),
-      passo("atualizacao", "Mandei uma atualização", "O documento pede não deixar o cliente no vácuo"),
-      texto("Copiar a mensagem de atualização", textos.atualizacao),
-
-      c.validadoEm
-        ? '  <p class="sub" style="margin:6px 0 0">Cliente já confirmou a solução.</p>'
-        : passo("validacao", "Cliente confirmou a solução", "O Passo 6: tudo voltou a funcionar"),
-
-      passo("pedido-avaliacao", "Pedi a avaliação", "O Passo 8, na cadência da documentação"),
-      texto("Copiar o pedido de avaliação", textos.pedidoAvaliacao),
-      texto("Copiar o acionamento para o #incidentes", textos.acionamento),
-
-      (c.tentativasSemResposta ?? 0) >= 5 ? texto("Copiar a mensagem pública transparente", textos.publicaTransparente) : "",
-
+      d.trilha && d.trilha.detalhe ? '  <p class="sub" style="margin:2px 0 8px">' + CW.escapar(d.trilha.detalhe) + '</p>' : "",
+      feitos.length ? '  <p class="sub feito">' + CW.icone("ok", 13) + " " + CW.escapar(feitos.join(" · ")) + "</p>" : "",
+      '  <div class="grupo-acoes"><span class="grupo-rotulo">Registrar</span><div class="grade-acoes">' + registrar.join("") + "</div></div>",
+      copiar.length ? '  <div class="grupo-acoes"><span class="grupo-rotulo">Copiar texto</span><div class="grade-acoes">' + copiar.join("") + "</div></div>" : "",
       d.oferta
         ? '  <p class="sub" style="margin:8px 0 0">Oferta que a criticidade permite: <strong>' + CW.escapar(d.oferta.titulo) + '</strong>. Quem registra é a aplicação.</p>'
         : "",
-      texto("Copiar a proposta de oferta", textos.oferta),
-
       '</div>',
     ]
       .filter(Boolean)
@@ -187,7 +198,7 @@
     const tipo = botao.dataset.tipo;
     if (!protocolo || !tipo) return;
 
-    const rotulo = botao.textContent;
+    const rotulo = botao.innerHTML;
     botao.disabled = true;
     botao.textContent = "registrando\u2026";
 
@@ -197,7 +208,7 @@
     });
 
     botao.disabled = false;
-    botao.textContent = rotulo;
+    botao.innerHTML = rotulo;
 
     if (!resposta.ok || resposta.dados?.erro) {
       P.avisar(resposta.dados?.erro ?? resposta.erro ?? "Não deu para registrar.", "perigo");
@@ -220,7 +231,7 @@
 
     const partes = [
       '<div class="bloco">',
-      '  <button class="copiar" data-acao="voltar-da-vista" style="margin-bottom:10px">&larr; voltar</button>',
+      `  <button class="migalha" data-acao="voltar-da-vista">${CW.icone("voltar", 14)}<span>${CW.escapar(P.rotuloDeOnde?.() ?? "Voltar")}</span></button>`,
       '  <div class="cartao">',
       '    <div class="linha">',
       `      <span class="sub">${CW.escapar(d.protocolo)}</span>`,
@@ -293,15 +304,15 @@
                 O rótulo diz o tempo porque é isso que se está
                 escolhendo: "rápido" sozinho não deixa ninguém decidir.
               */
-              '  <div class="etapas" style="margin-top:0">',
-              '    <button class="passo" data-acao="triar" data-protocolo="' +
+              '  <p class="sub" style="margin:0 0 7px">A IA lê o relato e os textos aprovados e diz se dá para responder agora ou se precisa de apuração. Só sugere.</p>',
+              '  <div class="grade-acoes">',
+              '    <button class="acao-chip" data-acao="triar" data-protocolo="' +
                 CW.escapar(d.protocolo) +
-                '" style="flex:1">Ler com calma (~10 s)</button>',
-              '    <button class="passo" data-acao="triar" data-rapido="1" data-protocolo="' +
+                '" title="Modelo maior: uns 10 segundos, julga melhor">' + CW.icone("assistente", 14) + '<span>Ler com calma</span></button>',
+              '    <button class="acao-chip" data-acao="triar" data-rapido="1" data-protocolo="' +
                 CW.escapar(d.protocolo) +
-                '" style="flex:1">Ler rápido (~1 s)</button>',
+                '" title="Modelo menor: responde na hora e erra mais no julgamento">' + CW.icone("relogio", 14) + '<span>Ler rápido</span></button>',
               '  </div>',
-              '  <p class="sub" style="margin-top:6px">Lê o relato e os textos aprovados e diz se dá para responder agora ou se precisa de apuração. Sugere — não grava nem envia nada. A leitura rápida usa o modelo menor: responde na hora e erra mais no julgamento.</p>',
             ].join(""),
         '</div>'
       );
@@ -311,7 +322,8 @@
       partes.push(
         '<div class="bloco">',
         '  <div class="rotulo">Relato do consumidor</div>',
-        `  <div class="macro"><pre style="max-height:none">${CW.escapar(d.relato)}</pre></div>`,
+        /* Recolhido em oito linhas: o relato inteiro empurrava as anotações para fora da vista. */
+        `  <div class="relato-caixa${d.relato.length > 700 ? " recolhido" : ""}"><div class="macro"><pre style="max-height:none">${CW.escapar(d.relato)}</pre></div></div>${d.relato.length > 700 ? '<button class="link-mais" data-acao="alternar-recolhido">ler o relato inteiro</button>' : ""}`,
         '</div>'
       );
     }
@@ -485,7 +497,7 @@
             ? `      <span class="tag atencao">${f.abertos} em aberto</span>`
             : '      <span class="tag neutro">sem nada em aberto</span>',
           '    </div>',
-          `    <p class="sub" style="margin-top:3px;color:var(--suave)">${f.total} caso(s) deste contato. Esta aba não os mostra — a fila é outra.</p>`,
+          `    <p class="sub" style="margin-top:3px;color:var(--suave)">${f.total} ${CW.plural(f.total, "caso", "casos")} deste contato. Esta aba não os mostra — a fila é outra.</p>`,
           '    <div class="etapas">',
           `      <button class="passo" data-acao="canal" data-canal="${CW.escapar(f.canal)}">ver em ${CW.escapar(f.nome)}</button>`,
           '    </div>',
@@ -509,6 +521,13 @@
   */
   P.blocoDossie = function blocoDossie(protocolo) {
 
+    /*
+      Sem reclamação, nada (1.135). O bloco dizia "este contato não tem
+      reclamação cadastrada" até na aba do NPS de quem tinha uma aberta
+      no Reclame Aqui, logo abaixo do cartão que a mostrava.
+    */
+    if (!protocolo) return "";
+
     const pronto =
       resumoDoCaso &&
       (resumoDoCaso.protocolo ?? "") === (protocolo ?? "");
@@ -517,18 +536,15 @@
       '<div class="bloco">',
       '  <div class="rotulo">Dossiê</div>',
 
+      /* Lado a lado (1.135): o dossiê das 8 partes abre na plataforma; o resumo é leitura aqui mesmo. */
       protocolo
-        ? `  <button class="acao" data-acao="abrir-na-plataforma" data-caminho="/reclame-aqui/${CW.escapar(encodeURIComponent(protocolo))}/dossie" style="width:100%;margin-top:0">Abrir o dossiê na plataforma</button>
-  <p class="sub" style="margin-top:6px">As 8 partes, montadas dos registros deste caso, com a conferência antes de pedir moderação. Abre na plataforma, já neste caso.</p>`
+        ? `  <div class="grade-acoes">
+    <button class="acao-chip" data-acao="abrir-na-plataforma" data-caminho="/reclame-aqui/${CW.escapar(encodeURIComponent(protocolo))}/dossie" title="As 8 partes, montadas dos registros deste caso, com a conferência antes de pedir moderação">${CW.icone("documento", 14)}<span>Abrir o dossiê</span>${CW.icone("fora", 12)}</button>
+    ${pronto ? "" : `<button class="acao-chip" data-acao="resumir-caso" data-rapido="1" data-protocolo="${CW.escapar(protocolo)}" title="Leva uns 2 segundos">${CW.icone("assistente", 14)}<span>Resumo rápido</span></button>`}
+  </div>`
         : '  <p class="sub" style="margin-top:0">O dossiê é feito na plataforma, a partir da reclamação — este contato não tem reclamação cadastrada.</p>',
 
-      pronto
-        ? blocoResumoDoCaso(resumoDoCaso)
-        : protocolo
-          ? '  <div class="etapas" style="margin-top:8px"><button class="passo" data-acao="resumir-caso" data-rapido="1" data-protocolo="' +
-            CW.escapar(protocolo) +
-            '" style="flex:1">Resumo rápido do caso (~2 s)</button></div>'
-          : "",
+      pronto ? blocoResumoDoCaso(resumoDoCaso) : "",
 
       '</div>',
     ].join("");
@@ -614,7 +630,7 @@
 
       '    <div class="linha">',
       '      <span class="rotulo">As peças deste dossiê</span>',
-      `      <span class="tag neutro">${pecas.length} documento(s)</span>`,
+      `      <span class="tag neutro">${pecas.length} ${CW.plural(pecas.length, "documento", "documentos")}</span>`,
       '    </div>',
 
       /*
@@ -749,10 +765,10 @@
       r.npsLidos || r.casosLidos
         ? `  <div class="sub" style="margin-top:6px;color:var(--suave)">Leu também ${[
             r.npsLidos
-              ? `${r.npsLidos} ciclo(s) de NPS`
+              ? `${r.npsLidos} ${CW.plural(r.npsLidos, "ciclo", "ciclos")} de NPS`
               : "",
             r.casosLidos
-              ? `${r.casosLidos} caso(s) de outros canais`
+              ? `${r.casosLidos} ${CW.plural(r.casosLidos, "caso", "casos")} de outros canais`
               : "",
           ]
             .filter(Boolean)
@@ -775,7 +791,7 @@
             ? `    <div class="sub" style="margin-top:6px;color:var(--suave)">${
                 r.fatos === 0
                   ? "Nenhuma anotação ou movimentação interna registrada."
-                  : `Lido sobre ${r.fatos} registro(s) internos.`
+                  : `Lido sobre ${r.fatos} ${CW.plural(r.fatos, "registro", "registros")} internos.`
               }</div>`
             : "",
         ].join("")
@@ -908,7 +924,7 @@
       .sort();
 
     const capa = [
-      `${lista.length} documento(s)`,
+      `${lista.length} ${CW.plural(lista.length, "documento", "documentos")}`,
       datas.length > 0
         ? `de ${CW.data(datas[0])} a ${CW.data(datas[datas.length - 1])}`
         : "",

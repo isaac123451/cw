@@ -26,6 +26,7 @@ import {
   naSituacao,
   seteDiasAtras,
 } from "@/lib/services/case.service";
+import { pluralDe } from "@/lib/plural";
 
 /**
  * O agente do assistente: o modelo escolhe o que medir, nós medimos.
@@ -156,11 +157,20 @@ export const CATALOGO: Medicao[] = [
 
       return [
         `alvo ${ptBR(c.alvo)}, atual ${ptBR(c.atual)}`,
-        `${c.pendentes} reclamação(ões) sem resposta`,
+        `${c.pendentes} ${pluralDe(c.pendentes, "reclamação", "reclamações")} sem resposta`,
         c.respondendoBasta
           ? "só responder o que está parado já alcança a meta"
           : `respondendo tudo, a nota vai a ${ptBR(c.soRespondendo)}`,
-        `faltam ${c.avaliacoesDepoisDeResponder} avaliação(ões) nota 10 depois de responder (${c.avaliacoesSemResponder} sem responder nada)`,
+        /*
+          Até a 1.134 isto interpolava o objeto inteiro e o agente lia
+          "faltam [object Object] avaliação(ões)". O número é `needed`; quando
+          não dá para chegar, o motivo vale mais que o número.
+        */
+        c.avaliacoesDepoisDeResponder.reachable
+          ? `faltam ${c.avaliacoesDepoisDeResponder.needed} ${pluralDe(c.avaliacoesDepoisDeResponder.needed, "avaliação", "avaliações")} nota 10 depois de responder (${c.avaliacoesSemResponder.reachable ? `${c.avaliacoesSemResponder.needed} sem responder nada` : "sem responder, não chega"})`
+          : c.avaliacoesDepoisDeResponder.reason === "sem-avaliacoes"
+            ? "nem com todas as avaliações nota 10 chega: não sobram reclamações sem avaliação no período"
+            : "nem com todas as avaliações nota 10 chega: o teto é o índice de resposta",
       ].join(" · ");
     },
   },
@@ -214,7 +224,7 @@ export const CATALOGO: Medicao[] = [
             `${s.categoria} (${s.total} no total): ${s.valores.join(", ")}`
         ),
         c.outras > 0
-          ? `mais ${c.outras} categoria(s) fora do recorte`
+          ? `mais ${c.outras} ${pluralDe(c.outras, "categoria", "categorias")} fora do recorte`
           : "",
       ]
         .filter(Boolean)
@@ -388,7 +398,7 @@ export const CATALOGO: Medicao[] = [
 
       return [
         `últimos ${dias} dias (desde ${desde})`,
-        `${recentes.length} reclamação(ões) entraram`,
+        `${recentes.length} ${pluralDe(recentes.length, "reclamação", "reclamações")} entraram`,
         `${respondidas} já respondidas`,
         `${recentes.filter((i) => i.evaluated).length} avaliadas`,
         `${recentes.filter(isSocial).length} vieram das redes sociais`,
@@ -431,7 +441,7 @@ export const CATALOGO: Medicao[] = [
         de === 0 ? "—" : `${Math.round((n / de) * 100)}%`;
 
       return [
-        `${cases.length} reclamação(ões)`,
+        `${cases.length} ${pluralDe(cases.length, "reclamação", "reclamações")}`,
         `${resolvidas} resolvidas (${pct(resolvidas, cases.length)})`,
         `${voltaria} voltariam a fazer negócio (${pct(voltaria, avaliadas.length)} das avaliadas)`,
         `${avaliadas.length} avaliadas (${pct(avaliadas.length, cases.length)})`,
@@ -562,8 +572,8 @@ export const CATALOGO: Medicao[] = [
       );
 
       return [
-        `${repetidos.length} consumidor(es) reclamaram mais de uma vez`,
-        `concentram ${concentradas} reclamação(ões)`,
+        `${repetidos.length} ${pluralDe(repetidos.length, "consumidor", "consumidores")} reclamaram mais de uma vez`,
+        `concentram ${concentradas} ${pluralDe(concentradas, "reclamação", "reclamações")}`,
         `o mais recorrente tem ${Math.max(...repetidos)}`,
         `base de ${mapa.size} identificados por documento ou e-mail`,
       ].join(" · ");
@@ -605,7 +615,7 @@ export const CATALOGO: Medicao[] = [
               86_400_000
           );
 
-          return `${item.protocol} (${item.category}, ${dias} dia(s))`;
+          return `${item.protocol} (${item.category}, ${dias} ${pluralDe(dias, "dia", "dias")})`;
         })
         .join(" · ");
     },
@@ -633,9 +643,9 @@ export const CATALOGO: Medicao[] = [
       ).length;
 
       return [
-        `${emRisco.length} reclamação(ões) marcadas para retenção`,
+        `${emRisco.length} ${pluralDe(emRisco.length, "reclamação", "reclamações")} marcadas para retenção`,
         `${semResposta} delas ainda sem resposta`,
-        `${npsEmRisco.length} resposta(s) de NPS marcadas`,
+        `${npsEmRisco.length} ${pluralDe(npsEmRisco.length, "resposta", "respostas")} de NPS marcadas`,
         `${emRisco.filter(isSocial).length} vieram das redes sociais`,
       ].join(" · ");
     },

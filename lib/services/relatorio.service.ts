@@ -29,6 +29,7 @@ import {
   RA1000_TARGETS,
   type ReputationSummary,
 } from "@/lib/services/reputation.service";
+import { pluralDe } from "@/lib/plural";
 
 /**
  * O Relatório de Reputação do ciclo.
@@ -332,14 +333,14 @@ function pontosDeAtencao(d: DadosDoRelatorio, seis: AbaDoRelatorio, proxima: Aba
   if (seis.selo && !proxima.selo) p.push({ texto: `O selo está em risco: a próxima aba de 6 meses (${br(proxima.janela.inicio)} a ${br(proxima.janela.fim)}) ainda não fecha as metas.`, href: "/reclame-aqui/analytics" });
 
   if (r.responseIndex < RA1000_TARGETS.resposta) {
-    p.push({ texto: `Índice de resposta em ${ptBR(r.responseIndex)}% (6 meses vigente): faltam ${seis.faltamRespostas} resposta(s) para os 90% do RA1000.`, href: "/reclame-aqui" });
+    p.push({ texto: `Índice de resposta em ${ptBR(r.responseIndex)}% (6 meses vigente): faltam ${seis.faltamRespostas} ${pluralDe(seis.faltamRespostas, "resposta", "respostas")} para os 90% do RA1000.`, href: "/reclame-aqui" });
   }
   if (proxima.resumo.responseIndex < RA1000_TARGETS.resposta && proxima.faltamRespostas > 0) {
-    p.push({ texto: `Na próxima aba de 6 meses a resposta está em ${ptBR(proxima.resumo.responseIndex)}%: faltam ${proxima.faltamRespostas} resposta(s).`, href: "/reclame-aqui" });
+    p.push({ texto: `Na próxima aba de 6 meses a resposta está em ${ptBR(proxima.resumo.responseIndex)}%: faltam ${proxima.faltamRespostas} ${pluralDe(proxima.faltamRespostas, "resposta", "respostas")}.`, href: "/reclame-aqui" });
   }
   if (d.ra.abertas.semResposta > 0) {
     p.push({
-      texto: `${d.ra.abertas.semResposta} reclamação(ões) sem resposta pública${d.ra.abertas.maisDe7Dias ? `, ${d.ra.abertas.maisDe7Dias} há mais de 7 dias` : ""}.`,
+      texto: `${d.ra.abertas.semResposta} ${pluralDe(d.ra.abertas.semResposta, "reclamação", "reclamações")} sem resposta pública${d.ra.abertas.maisDe7Dias ? `, ${d.ra.abertas.maisDe7Dias} há mais de 7 dias` : ""}.`,
       href: "/reclame-aqui",
     });
   }
@@ -362,15 +363,15 @@ function pontosDeAtencao(d: DadosDoRelatorio, seis: AbaDoRelatorio, proxima: Aba
     { nome: "redes", ind: d.primeiroContato.redes, href: "/redes-sociais" },
   ];
   for (const { nome, ind, href } of frentes) {
-    if (ind.vencidosSemContato > 0) p.push({ texto: `${ind.vencidosSemContato} atendimento(s) do ciclo em ${nome} sem 1º contato e com o prazo vencido.`, href: "/meu-dia" });
+    if (ind.vencidosSemContato > 0) p.push({ texto: `${ind.vencidosSemContato} ${pluralDe(ind.vencidosSemContato, "atendimento", "atendimentos")} do ciclo em ${nome} sem 1º contato e com o prazo vencido.`, href: "/meu-dia" });
     else if (ind.percentualNoPrazo !== null && ind.percentualNoPrazo < 90) p.push({ texto: `1º contato no prazo em ${ind.percentualNoPrazo}% dos casos do ciclo em ${nome}.`, href });
   }
 
-  if (d.nps.abertosForaDoPrazo > 0) p.push({ texto: `${d.nps.abertosForaDoPrazo} resposta(s) do NPS em aberto com o 1º contato fora do prazo.`, href: "/nps" });
-  if (d.nps.fechadosPelaRegra > 0) p.push({ texto: `${d.nps.fechadosPelaRegra} resposta(s) do NPS encerradas pela regra dos 30 dias sem nenhum contato.`, href: "/nps" });
+  if (d.nps.abertosForaDoPrazo > 0) p.push({ texto: `${d.nps.abertosForaDoPrazo} ${pluralDe(d.nps.abertosForaDoPrazo, "resposta", "respostas")} do NPS em aberto com o 1º contato fora do prazo.`, href: "/nps" });
+  if (d.nps.fechadosPelaRegra > 0) p.push({ texto: `${d.nps.fechadosPelaRegra} ${pluralDe(d.nps.fechadosPelaRegra, "resposta", "respostas")} do NPS encerradas pela regra dos 30 dias sem nenhum contato.`, href: "/nps" });
   if (d.nps.percentualContatados !== null && d.nps.percentualContatados < 100) p.push({ texto: `${d.nps.percentualContatados}% dos detratores do ciclo contatados.`, href: "/nps" });
-  if (d.google.negativasSemResposta > 0) p.push({ texto: `${d.google.negativasSemResposta} avaliação(ões) negativa(s) no Google sem resposta.`, href: "/google" });
-  if (d.redes.abertos > 0) p.push({ texto: `${d.redes.abertos} atendimento(s) das redes do ciclo ainda em aberto.`, href: "/redes-sociais" });
+  if (d.google.negativasSemResposta > 0) p.push({ texto: `${d.google.negativasSemResposta} ${pluralDe(d.google.negativasSemResposta, "avaliação", "avaliações")} ${pluralDe(d.google.negativasSemResposta, "negativa", "negativas")} no Google sem resposta.`, href: "/google" });
+  if (d.redes.abertos > 0) p.push({ texto: `${d.redes.abertos} ${pluralDe(d.redes.abertos, "atendimento", "atendimentos")} das redes do ciclo ainda em aberto.`, href: "/redes-sociais" });
 
   return p;
 }
@@ -390,7 +391,7 @@ export function projecaoDoSelo(aba: AbaDoRelatorio) {
   const passos = [
     aba.faltamRespostas ? `responder ${aba.faltamRespostas}` : null,
     aba.avaliacoesParaOSelo.alcancavel && aba.avaliacoesParaOSelo.necessarias
-      ? `conquistar ${aba.avaliacoesParaOSelo.necessarias} avaliação(ões) nota 10 resolvidas`
+      ? `conquistar ${aba.avaliacoesParaOSelo.necessarias} ${pluralDe(aba.avaliacoesParaOSelo.necessarias, "avaliação", "avaliações")} nota 10 resolvidas`
       : !aba.avaliacoesParaOSelo.alcancavel
         ? `(${aba.avaliacoesParaOSelo.motivo})`
         : null,
@@ -405,7 +406,7 @@ export function textoDoRelatorio(d: DadosDoRelatorio, analise?: string) {
   const a = d.ra.anterior;
 
   const projecao = [
-    `vigente (${br(seis.janela.inicio)} a ${br(seis.janela.fim)}): ${seis.selo ? `sim, ${d.ra.ciclosComSelo} ciclo(s) seguido(s)` : `não — ${projecaoDoSelo(seis)}`}`,
+    `vigente (${br(seis.janela.inicio)} a ${br(seis.janela.fim)}): ${seis.selo ? `sim, ${d.ra.ciclosComSelo} ${pluralDe(d.ra.ciclosComSelo, "ciclo", "ciclos")} ${pluralDe(d.ra.ciclosComSelo, "seguido", "seguidos")}` : `não — ${projecaoDoSelo(seis)}`}`,
     `próxima (${br(proxima.janela.inicio)} a ${br(proxima.janela.fim)}, em andamento): ${proxima.selo ? "fecha as metas hoje" : projecaoDoSelo(proxima)}`,
   ].join("; ");
 
@@ -425,11 +426,11 @@ export function textoDoRelatorio(d: DadosDoRelatorio, analise?: string) {
             .join(" · ")} (de costume, ${ptBR(d.assuntos.deCostume)} por ciclo)${d.assuntos.emAlta.length ? `. Em alta: ${d.assuntos.emAlta.map((e) => `${e.nome} (${e.noCiclo}, de costume ${ptBR(e.deCostume)})`).join("; ")}` : ""}.`,
         ]
       : []),
-    `*No ciclo:* ${d.ra.noCiclo.entrantes} reclamação(ões) nova(s) · ${d.ra.noCiclo.respondidas} respondida(s) · ${d.ra.noCiclo.avaliadas} avaliada(s), ${d.ra.noCiclo.resolvidas} resolvida(s). Em aberto sem resposta: ${d.ra.abertas.semResposta}.`,
-    `*NPS do ciclo:* ${d.nps.respostas} resposta(s)${d.nps.nps !== null ? ` · NPS ${d.nps.nps}` : ""} · ${d.nps.detratores} detrator(es)${d.nps.percentualContatados !== null ? `, ${d.nps.percentualContatados}% contatados` : ""}${d.nps.humorMedioDoDetrator !== null ? ` · humor do detrator depois do contato ${ptBR(d.nps.humorMedioDoDetrator)}/5` : ""} · ${d.nps.fechadosNoCiclo} encerrada(s) com tratativa${d.nps.fechadosPelaRegra ? `, ${d.nps.fechadosPelaRegra} pela regra dos 30 dias` : ""}.`,
+    `*No ciclo:* ${d.ra.noCiclo.entrantes} ${pluralDe(d.ra.noCiclo.entrantes, "reclamação", "reclamações")} ${pluralDe(d.ra.noCiclo.entrantes, "nova", "novas")} · ${d.ra.noCiclo.respondidas} ${pluralDe(d.ra.noCiclo.respondidas, "respondida", "respondidas")} · ${d.ra.noCiclo.avaliadas} ${pluralDe(d.ra.noCiclo.avaliadas, "avaliada", "avaliadas")}, ${d.ra.noCiclo.resolvidas} ${pluralDe(d.ra.noCiclo.resolvidas, "resolvida", "resolvidas")}. Em aberto sem resposta: ${d.ra.abertas.semResposta}.`,
+    `*NPS do ciclo:* ${d.nps.respostas} ${pluralDe(d.nps.respostas, "resposta", "respostas")}${d.nps.nps !== null ? ` · NPS ${d.nps.nps}` : ""} · ${d.nps.detratores} ${pluralDe(d.nps.detratores, "detrator", "detratores")}${d.nps.percentualContatados !== null ? `, ${d.nps.percentualContatados}% contatados` : ""}${d.nps.humorMedioDoDetrator !== null ? ` · humor do detrator depois do contato ${ptBR(d.nps.humorMedioDoDetrator)}/5` : ""} · ${d.nps.fechadosNoCiclo} ${pluralDe(d.nps.fechadosNoCiclo, "encerrada", "encerradas")} com tratativa${d.nps.fechadosPelaRegra ? `, ${d.nps.fechadosPelaRegra} pela regra dos 30 dias` : ""}.`,
     `*1º contato no ciclo:* Reclame Aqui ${descreverIndicadorDoPrimeiroContato(d.primeiroContato.ra, (m) => descreverMinutosUteis(m))} · redes ${descreverIndicadorDoPrimeiroContato(d.primeiroContato.redes, (m) => descreverMinutosUteis(m))} · NPS ${descreverIndicadorDoPrimeiroContato(d.primeiroContato.nps, (m) => descreverMinutosUteis(m))}.`,
-    `*Redes sociais:* ${d.redes.entrantes} atendimento(s) · ${d.redes.resolvidos} resolvido(s) · ${d.redes.abertos} em aberto.`,
-    `*Google:* ${d.google.total} avaliação(ões)${d.google.notaMedia !== null ? ` · nota média ${ptBR(d.google.notaMedia)}` : ""}${d.google.percentualRespondidas !== null ? ` · ${d.google.percentualRespondidas}% respondidas` : ""}.`,
+    `*Redes sociais:* ${d.redes.entrantes} ${pluralDe(d.redes.entrantes, "atendimento", "atendimentos")} · ${d.redes.resolvidos} ${pluralDe(d.redes.resolvidos, "resolvido", "resolvidos")} · ${d.redes.abertos} em aberto.`,
+    `*Google:* ${d.google.total} ${pluralDe(d.google.total, "avaliação", "avaliações")}${d.google.notaMedia !== null ? ` · nota média ${ptBR(d.google.notaMedia)}` : ""}${d.google.percentualRespondidas !== null ? ` · ${d.google.percentualRespondidas}% respondidas` : ""}.`,
     "",
     `*Pontos de atenção:*${d.pontos.length ? "" : " nenhum."}`,
     ...d.pontos.map((p) => `• ${p.texto}`),

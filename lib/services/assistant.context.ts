@@ -21,6 +21,7 @@ import {
 
 import { slaStatus } from "@/lib/services/sla.service";
 import { isOpen } from "@/lib/services/case.service";
+import { pluralDe } from "@/lib/plural";
 
 export interface OperationInput {
   cases: Case[];
@@ -195,7 +196,7 @@ export function buildOperationSnapshot(
     const alvo = evaluationsToReach(base6, meta.band);
 
     return alvo.reachable
-      ? `- Para a nota ${ptBR(meta.nota)} (${meta.comoChamar}): faltam ${alvo.needed} avaliação(ões) nota 10, resolvidas e favoráveis — a nota iria a ${ptBR(alvo.projected)}.`
+      ? `- Para a nota ${ptBR(meta.nota)} (${meta.comoChamar}): faltam ${alvo.needed} ${pluralDe(alvo.needed, "avaliação", "avaliações")} nota 10, resolvidas e favoráveis — a nota iria a ${ptBR(alvo.projected)}.`
       : `- Para a nota ${ptBR(meta.nota)} (${meta.comoChamar}): NÃO alcançável só com avaliação neste período. Mesmo avaliando nota 10 as ${tetoDeAvaliacoes} reclamações sem avaliação, a nota chega a ${ptBR(alvo.projected)}.`;
   });
 
@@ -226,7 +227,7 @@ ${
     selo.needed === 0
       ? "já atendido."
       : selo.reachable
-        ? `faltam ${selo.needed} avaliação(ões) nota 10 resolvidas e favoráveis.`
+        ? `faltam ${selo.needed} ${pluralDe(selo.needed, "avaliação", "avaliações")} nota 10 resolvidas e favoráveis.`
         : `não alcançável só com avaliação neste período — chegaria a ${ptBR(selo.projected)}.`
   }
 
@@ -266,7 +267,7 @@ ${
       (row) =>
         `${resumo(row.item)} | atraso de ${Math.abs(
           Math.round(row.status.remainingHours / 24)
-        )} dia(s) | regra: ${
+        )} ${pluralDe(Math.abs(Math.round(row.status.remainingHours / 24)), "dia", "dias")} | regra: ${
           row.status.rule?.responseHours ?? "?"
         }h de resposta, time ${row.status.rule?.team ?? "não definido"}`
     )

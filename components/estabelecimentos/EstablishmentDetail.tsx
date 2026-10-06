@@ -69,6 +69,7 @@ import { kindTone } from "@/lib/models/client";
 
 import { caseHref, isSocial } from "@/lib/services/case.service";
 import BotaoAbrirEmJanela from "@/components/janelas/BotaoAbrirEmJanela";
+import { pluralDe } from "@/lib/plural";
 
 const money = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -383,7 +384,7 @@ export default function EstablishmentDetail({
               ? "—"
               : money.format(stats.impact)
           }
-          hint={`${stats.impactCount} registro(s)`}
+          hint={`${stats.impactCount} ${pluralDe(stats.impactCount, "registro", "registros")}`}
           icon={Wallet}
           tone="success"
         />
@@ -486,7 +487,7 @@ export default function EstablishmentDetail({
                         </span>
 
                         <span className="block truncate text-[11px] text-zinc-500">
-                          {item.total} reclamação(ões)
+                          {item.total} {pluralDe(item.total, "reclamação", "reclamações")}
                         </span>
 
                       </span>
@@ -517,7 +518,7 @@ export default function EstablishmentDetail({
 
           <SurfaceCard
             title="Reclamações vinculadas"
-            description={`${vinculados.length} caso(s) ligados a este estabelecimento.`}
+            description={`${vinculados.length} ${pluralDe(vinculados.length, "caso", "casos")} ligados a este estabelecimento.`}
           >
 
             <div className="relative">

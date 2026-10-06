@@ -26,6 +26,7 @@ import { proximoDiaUtil } from "@/lib/services/horasUteis";
 import { useOQueValeHoje } from "@/components/rotina/recuperacaoDoDia";
 import type { useMeuDia } from "@/components/rotina/useMeuDia";
 import { usePassosParaFechar } from "@/components/rotina/usePassosParaFechar";
+import { pluralDe } from "@/lib/plural";
 
 type MeuDia = ReturnType<typeof useMeuDia>;
 
@@ -353,7 +354,7 @@ export default function ModoProximo({ dia, marcadas, onFechar, atividade = null,
               return (
                 <span className={`flex items-center gap-1.5 rounded-md px-2 py-1 text-xs tabular-nums ${resta === 0 ? "bg-emerald-50 text-emerald-800" : "bg-violet-50 text-violet-900"}`}>
                   <Timer size={13} />
-                  {resta === 0 ? `Bloco de ${bloco.minutos} min: ${noBloco} fechado(s)` : `${mm}:${ss} · ${noBloco} fechado(s)`}
+                  {resta === 0 ? `Bloco de ${bloco.minutos} min: ${noBloco} ${pluralDe(noBloco, "fechado", "fechados")}` : `${mm}:${ss} · ${noBloco} ${pluralDe(noBloco, "fechado", "fechados")}`}
                   <button type="button" onClick={() => setBloco(null)} aria-label="Encerrar o bloco de foco" className="rounded p-0.5 text-current/60 hover:bg-white/60">
                     <X size={12} />
                   </button>
@@ -392,7 +393,7 @@ export default function ModoProximo({ dia, marcadas, onFechar, atividade = null,
           )}
           {fechados.length > 0 && (
             <span className="hidden items-center gap-2 text-xs text-zinc-500 sm:flex">
-              <span className="tabular-nums">{fechados.length} fechado(s) agora</span>
+              <span className="tabular-nums">{fechados.length} {pluralDe(fechados.length, "fechado", "fechados")} agora</span>
               <span className="h-1 w-20 overflow-hidden rounded-full bg-zinc-100">
                 <span className="block h-full rounded-full bg-emerald-500 transition-[width]" style={{ width: `${pct}%` }} />
               </span>
@@ -458,7 +459,7 @@ export default function ModoProximo({ dia, marcadas, onFechar, atividade = null,
                 <span className="text-zinc-400">Marque itens para fazer de uma vez — ou use os botões de cada linha.</span>
               ) : (
                 <>
-                  <span className="font-medium tabular-nums text-zinc-700">{escolhidos.length} marcado(s)</span>
+                  <span className="font-medium tabular-nums text-zinc-700">{escolhidos.length} {pluralDe(escolhidos.length, "marcado", "marcados")}</span>
                   <button type="button" disabled={gravando !== null} onClick={() => void marcarDaFila(escolhidos, "feito")} className="rounded-md px-2 py-1 font-medium text-emerald-700 hover:bg-emerald-50 disabled:opacity-50">
                     Feito hoje
                   </button>

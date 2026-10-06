@@ -16,6 +16,7 @@ import {
   type CausaAprovada,
   type PropostaDoCatalogo as Proposta,
 } from "@/lib/models/catalogoDeCausas";
+import { pluralDe } from "@/lib/plural";
 
 type Escolha = { marcada: boolean; area: string; prazoHoras: number };
 
@@ -61,7 +62,7 @@ export default function PropostaDoCatalogo({ proposta, aoAprovar }: { proposta: 
     }
     setSaida({
       tom: "ok",
-      texto: [r.criadas ? `${r.criadas} causa(s) nova(s) no catálogo` : "", r.atualizadas ? `${r.atualizadas} com área e prazo atualizados` : ""].filter(Boolean).join(" e ") + ".",
+      texto: [r.criadas ? `${r.criadas} ${pluralDe(r.criadas, "causa", "causas")} ${pluralDe(r.criadas, "nova", "novas")} no catálogo` : "", r.atualizadas ? `${r.atualizadas} com área e prazo atualizados` : ""].filter(Boolean).join(" e ") + ".",
     });
     setEscolhas((atual) => Object.fromEntries(Object.entries(atual).map(([id, e]) => [id, { ...e, marcada: false }])));
   }
@@ -101,7 +102,7 @@ export default function PropostaDoCatalogo({ proposta, aoAprovar }: { proposta: 
                 <div className="min-w-0 flex-1 basis-64">
                   <label htmlFor={id} className="flex flex-wrap items-baseline gap-x-2 text-sm">
                     <span className="font-semibold text-zinc-900">{l.familia.nome}</span>
-                    <span className="tabular-nums text-zinc-500">{l.total} registro(s)</span>
+                    <span className="tabular-nums text-zinc-500">{l.total} {pluralDe(l.total, "registro", "registros")}</span>
                     {l.total < MINIMO_PARA_PROPOR && <span className="text-xs text-zinc-400">pouco caso para virar causa sozinha</span>}
                     {l.jaNoCatalogo && <span className="rounded bg-emerald-50 px-1.5 text-xs font-medium text-emerald-700">já no catálogo — marcar atualiza área e prazo</span>}
                   </label>
@@ -153,7 +154,7 @@ export default function PropostaDoCatalogo({ proposta, aoAprovar }: { proposta: 
       {proposta.semFamilia.total > 0 && (
         <div className="mt-4 rounded-xl bg-zinc-50 px-3.5 py-3">
           <p className="text-sm text-zinc-700">
-            <strong className="tabular-nums">{proposta.semFamilia.total}</strong> registro(s) não couberam em nenhuma — as palavras que mais se repetem neles são candidatas a causa nova:
+            <strong className="tabular-nums">{proposta.semFamilia.total}</strong> {pluralDe(proposta.semFamilia.total, "registro não coube", "registros não couberam")} em nenhuma — as palavras que mais se repetem neles são candidatas a causa nova:
           </p>
           {proposta.semFamilia.palavras.length > 0 ? (
             <p className="mt-2 flex flex-wrap gap-1.5">
@@ -184,7 +185,7 @@ export default function PropostaDoCatalogo({ proposta, aoAprovar }: { proposta: 
           className="flex items-center gap-1.5 rounded-lg bg-violet-700 px-3 py-2 text-sm font-semibold text-white hover:bg-violet-800 disabled:opacity-50"
         >
           {gravando ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-          Aprovar {marcadas.length} causa(s)
+          Aprovar {marcadas.length} {pluralDe(marcadas.length, "causa", "causas")}
         </button>
         <p role="status" className={`text-sm ${saida?.tom === "erro" ? "text-rose-700" : "text-emerald-700"}`}>
           {saida?.texto ?? (marcadas.length ? "As causas de antes continuam: os registros antigos apontam para elas." : "")}

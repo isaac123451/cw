@@ -1,4 +1,5 @@
 import { EXPEDIENTE_PADRAO, instanteDe, minutosUteisEntre, paredeDe, type Expediente } from "@/lib/services/horasUteis";
+import { pluralDe } from "@/lib/plural";
 
 /**
  * Conversas de WhatsApp guardadas.
@@ -442,7 +443,7 @@ export function textoDaConversaExportada(
 
   const cabecalho = [
     `Conversa do WhatsApp com ${doCliente}${conversa.telefone ? ` (+${conversa.telefone})` : ""}`,
-    `${conversa.mensagens} mensagem(ns) · guardada no CW Reputação por ${conversa.guardadaPor}`,
+    `${conversa.mensagens} ${pluralDe(conversa.mensagens, "mensagem", "mensagens")} · guardada no CW Reputação por ${conversa.guardadaPor}`,
     conversa.caso ? `Caso: ${conversa.caso.protocolo} (${conversa.caso.frente})` : "",
     conversa.nps ? `NPS: ${conversa.nps.cliente} — nota ${conversa.nps.nota}` : "",
     conversa.estabelecimento ? `Estabelecimento: ${conversa.estabelecimento.nome}` : "",

@@ -20,6 +20,7 @@ import OpcoesDeAdiar from "@/components/rotina/OpcoesDeAdiar";
 import type { ChaveDaRotina } from "@/lib/models/rotina";
 import { resumoDosPassos } from "@/lib/models/guiaParaFechar";
 import { janelaDoEndereco } from "@/lib/models/janelas";
+import { pluralDe } from "@/lib/plural";
 
 type Resultado = { ok: true } | { ok: false; erro: string };
 
@@ -196,7 +197,7 @@ export default function ItensDaAtividade({ chave, atividade, contagem, marcarIte
               aria-expanded={verTirados}
               className="text-[11px] font-medium text-zinc-500 hover:text-zinc-800"
             >
-              {verTirados ? "Esconder" : "Ver"} os {contagem.tirados.length} tirado(s) desta atividade
+              {verTirados ? "Esconder" : "Ver"} os {contagem.tirados.length} {pluralDe(contagem.tirados.length, "tirado", "tirados")} desta atividade
             </button>
             {verTirados && contagem.tirados.length > 1 && (
               <button

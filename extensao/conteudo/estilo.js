@@ -155,8 +155,8 @@ ${CORES}
   height: 48px;
   border-radius: 999px;
   border: none;
-  background: linear-gradient(145deg, var(--violeta), var(--roxo));
-  box-shadow: 0 6px 22px rgba(91, 42, 134, .4);
+  background: var(--roxo);
+  box-shadow: 0 6px 18px -4px rgba(91, 42, 134, .55), inset 0 0 0 1px rgba(255, 255, 255, .12);
   cursor: pointer;
   pointer-events: auto;
   display: grid;
@@ -300,34 +300,41 @@ ${CORES}
 .topo {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 13px 14px;
-  background: linear-gradient(135deg, var(--roxo), var(--violeta));
+  gap: 4px;
+  padding: 9px 8px 9px 12px;
+  background: var(--roxo);
   color: #fff;
+  position: relative;
 }
 
-.topo svg { width: 23px; height: 23px; flex: none; }
+.topo-marca { display: grid; place-items: center; margin-right: 6px; color: #fff; }
+.topo-marca svg { width: 22px; height: 22px; flex: none; }
+.topo-texto { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
 
 .topo .titulo {
   font-weight: 600;
-  font-size: 13.5px;
+  font-size: 13px;
   letter-spacing: -.01em;
 }
 
 .topo .quem {
-  font-size: 11.5px;
-  opacity: .82;
+  font-size: 11px;
+  opacity: .78;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 190px;
 }
 
 .topo .espaco { flex: 1; }
 
 .icone-botao {
   border: none;
-  background: rgba(255, 255, 255, .15);
-  color: #fff;
-  width: 29px;
-  height: 29px;
-  border-radius: 9px;
+  background: transparent;
+  color: rgba(255, 255, 255, .88);
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
   cursor: pointer;
   display: grid;
   place-items: center;
@@ -337,7 +344,8 @@ ${CORES}
   transition: background .15s ease;
 }
 
-.icone-botao:hover { background: rgba(255, 255, 255, .28); }
+.icone-botao:hover { background: rgba(255, 255, 255, .16); color: #fff; }
+.icone-botao[aria-expanded="true"] { background: rgba(255, 255, 255, .22); color: #fff; }
 .icone-botao:focus-visible {
   outline: 2px solid #fff;
   outline-offset: 1px;
@@ -348,15 +356,26 @@ ${CORES}
 .busca {
   display: flex;
   gap: 6px;
-  padding: 10px 14px;
+  padding: 8px 12px;
   border-bottom: 1px solid var(--borda);
   background: var(--superficie);
+  position: relative;
+}
+
+.busca-icone {
+  position: absolute;
+  left: 22px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--fraco);
+  display: grid;
+  pointer-events: none;
 }
 
 .busca input {
   flex: 1;
   min-width: 0;
-  padding: 8px 11px;
+  padding: 7px 10px 7px 31px;
   border: 1px solid var(--borda);
   border-radius: 9px;
   background: var(--elevado);
@@ -798,17 +817,24 @@ ${CORES}
  */
 .canais {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   border-top: 1px solid var(--borda);
-  background: var(--superficie);
+  background: var(--fundo);
+  padding: 3px 4px 4px;
+  gap: 2px;
 }
 
 .canais button {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
   border: none;
-  border-right: 1px solid var(--borda);
+  border-radius: 8px;
   background: transparent;
   color: var(--fraco);
-  padding: 9px 3px;
+  padding: 6px 2px 5px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -816,19 +842,20 @@ ${CORES}
   font-weight: 500;
   font-family: var(--fonte);
   cursor: pointer;
-  border-bottom: 2px solid transparent;
+  transition: color .12s ease, background .12s ease;
 }
 
-.canais button:last-child { border-right: none; }
+.canais button span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 
-.canais button:hover { color: var(--texto); }
+.canais button:hover { color: var(--texto); background: var(--superficie); }
 
 .canais button[aria-pressed="true"] {
   color: var(--violeta);
   font-weight: 600;
-  border-bottom-color: var(--violeta);
-  background: color-mix(in srgb, var(--violeta) 9%, transparent);
+  background: color-mix(in srgb, var(--violeta) 10%, transparent);
 }
+
+.canais button:focus-visible { outline: 2px solid var(--violeta); outline-offset: -2px; }
 
 /* ---------- filtros em chip ---------- */
 
@@ -1269,21 +1296,192 @@ ${CORES}
   color: var(--texto, inherit);
 }
 
-/* Interruptor do "abrir sozinho" — some fora do WhatsApp Web. */
-.rodape-painel .auto {
-  display: flex;
+/* ---------- ícones de traço (1.135) ---------- */
+
+.ic { flex: none; display: block; }
+
+/* ---------- o menu do cabeçalho (1.135) ---------- */
+
+.menu-painel {
+  position: absolute;
+  top: 50px;
+  right: 8px;
+  z-index: 5;
+  width: 252px;
+  padding: 5px;
+  border: 1px solid var(--borda);
+  border-radius: 12px;
+  background: var(--elevado);
+  box-shadow: var(--sombra);
+  animation: cw-surgir .14s ease-out;
+}
+
+.menu-painel[hidden] { display: none; }
+
+.menu-painel button,
+.menu-painel .auto {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 18px 1fr auto;
   align-items: center;
-  gap: 6px;
+  gap: 9px;
+  padding: 7px 9px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--texto);
+  font: inherit;
+  font-size: 12.5px;
+  text-align: left;
   cursor: pointer;
   user-select: none;
 }
 
-.rodape-painel .auto input {
-  width: 13px;
-  height: 13px;
+.menu-painel button:hover,
+.menu-painel button:focus-visible,
+.menu-painel .auto:hover { background: var(--superficie); outline: none; }
+
+.menu-painel .ic { color: var(--fraco); }
+.menu-painel .menu-estado { color: var(--fraco); font-size: 11.5px; display: flex; }
+.menu-painel [aria-checked="true"] .menu-estado { color: var(--violeta); }
+.menu-painel kbd { font: inherit; font-size: 10.5px; padding: 0 5px; border: 1px solid var(--borda); border-radius: 4px; }
+.menu-painel hr { border: none; border-top: 1px solid var(--borda); margin: 4px 2px; }
+
+.menu-painel .auto input {
+  width: 14px;
+  height: 14px;
   margin: 0;
   accent-color: var(--violeta);
   cursor: pointer;
+}
+
+@keyframes cw-surgir {
+  from { opacity: 0; transform: translateY(-4px) scale(.98); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu-painel, .gaveta { animation: none; transition: none; }
+}
+
+/* ---------- caso: voltar, passos em grade, relato recolhido (1.135) ---------- */
+
+.migalha {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0 0 9px;
+  padding: 3px 8px 3px 5px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--suave);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.migalha:hover { background: var(--superficie); color: var(--violeta); }
+
+.grupo-acoes { margin-top: 9px; }
+
+.grupo-rotulo {
+  display: block;
+  font-size: 11px;
+  color: var(--fraco);
+  margin-bottom: 5px;
+}
+
+.grade-acoes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 5px;
+}
+
+.acao-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 6px 9px;
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  background: var(--elevado);
+  color: var(--texto);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .12s ease, background .12s ease;
+}
+
+.acao-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.acao-chip .ic { color: var(--violeta); }
+.acao-chip.copia .ic { color: var(--fraco); }
+.acao-chip:hover { border-color: var(--violeta); background: color-mix(in srgb, var(--violeta) 6%, var(--elevado)); }
+.acao-chip:disabled { opacity: .55; cursor: progress; }
+
+.sub.feito { display: flex; align-items: center; gap: 5px; color: var(--ok); margin: 2px 0 0; }
+
+.relato-caixa.recolhido .macro pre {
+  max-height: 10.5em !important;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(#000 65%, transparent);
+  mask-image: linear-gradient(#000 65%, transparent);
+}
+
+.link-mais {
+  margin-top: 4px;
+  padding: 2px 0;
+  border: none;
+  background: none;
+  color: var(--violeta);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.link-mais:hover { text-decoration: underline; }
+
+.acao-chip span { flex: 1; }
+
+.aviso-linha { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 0; }
+.aviso-linha .link-mais { margin: 0; white-space: nowrap; color: var(--atencao); font-weight: 600; }
+
+/* Perguntar, anotar e lembrar: três botões, um formulário por vez. */
+.grade-acoes.tres { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.acao-chip[aria-expanded="true"] {
+  border-color: var(--violeta);
+  background: color-mix(in srgb, var(--violeta) 11%, var(--elevado));
+  color: var(--violeta);
+}
+.painel-acao { margin-top: 7px; animation: cw-surgir .14s ease-out; }
+.painel-acao[hidden] { display: none; }
+.painel-acao .cartao .rotulo:first-child { margin-bottom: 4px; }
+.sugestoes-pergunta { display: flex; flex-wrap: wrap; gap: 5px; margin: 6px 0 2px; }
+.sugestoes-pergunta .chip { white-space: normal; text-align: left; line-height: 1.35; padding: 4px 9px; }
+.pergunta-linha { display: flex; gap: 6px; align-items: flex-end; }
+.pergunta-linha .campo { flex: 1; min-height: 34px; resize: vertical; }
+.pergunta-linha .acao { margin: 0; padding: 7px 12px; font-size: 12.5px; }
+
+/* Voltar, avançar e "outra etapa" numa linha só. */
+.etapas .etapa-direta {
+  flex: 0 1 118px;
+  width: auto;
+  min-width: 0;
+  margin: 0;
+  padding: 5px 6px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.passo.avancar {
+  border-color: color-mix(in srgb, var(--violeta) 45%, var(--borda));
+  color: var(--violeta);
+  font-weight: 600;
 }
 `;
 

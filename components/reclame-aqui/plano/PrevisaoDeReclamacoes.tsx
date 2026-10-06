@@ -5,6 +5,7 @@ import SurfaceCard from "@/components/shared/SurfaceCard";
 import { nomeDoMes, ROTULO_DO_METODO, type PrevisaoDeReclamacoes } from "@/lib/models/previsaoDeReclamacoes";
 
 import { num } from "./formato";
+import { pluralDe } from "@/lib/plural";
 
 const curto = (mes: string) => `${nomeDoMes(mes).slice(0, 3)}/${mes.slice(2, 4)}`;
 
@@ -79,7 +80,7 @@ export default function PrevisaoDeReclamacoesCard({ previsao }: { previsao: Prev
       </svg>
       <p className="mt-2 text-sm text-zinc-600">
         Barras escuras: chegaram. Claras: previstas, com a faixa onde 8 em cada 10 meses ficaram.
-        {teste ? ` Nos últimos 12 meses o método errou em média ${num(teste.erroMedio)} reclamações por mês${teste.vies ? `, ${teste.vies < 0 ? "mais para baixo" : "mais para cima"} (${teste.vies < 0 ? "−" : "+"}${num(Math.abs(teste.vies))})` : ""}.` : ""} Em {nomeDoMes(previsao.atual.mes)}, {previsao.atual.ateHoje} chegaram em {previsao.atual.diasPassados} dia(s) — no ritmo de agora seriam {previsao.atual.ritmo} no mês.
+        {teste ? ` Nos últimos 12 meses o método errou em média ${num(teste.erroMedio)} reclamações por mês${teste.vies ? `, ${teste.vies < 0 ? "mais para baixo" : "mais para cima"} (${teste.vies < 0 ? "−" : "+"}${num(Math.abs(teste.vies))})` : ""}.` : ""} Em {nomeDoMes(previsao.atual.mes)}, {previsao.atual.ateHoje} chegaram em {previsao.atual.diasPassados} {pluralDe(previsao.atual.diasPassados, "dia", "dias")} — no ritmo de agora seriam {previsao.atual.ritmo} no mês.
       </p>
       <details className="mt-2 text-sm text-zinc-600">
         <summary className="cursor-pointer">Os métodos testados</summary>

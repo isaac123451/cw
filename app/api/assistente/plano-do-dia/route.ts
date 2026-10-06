@@ -5,6 +5,7 @@ import { pedirEstruturado } from "@/lib/services/ia.service";
 
 import type { BlocoDoPlano, PlanoDoDia } from "@/lib/models/meuDia";
 import { frente } from "@/lib/models/frentes";
+import { pluralDe } from "@/lib/plural";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -51,7 +52,7 @@ function horas(min: number) {
 }
 
 function linha(b: BlocoDoPlano) {
-  return `- ${b.inicio}–${b.fim} ${b.titulo}${b.frente ? ` (${frente(b.frente).nome})` : ""}: ${b.itens} item(ns), ${b.atrasados} fora do prazo, ~${horas(b.minutos)}`;
+  return `- ${b.inicio}–${b.fim} ${b.titulo}${b.frente ? ` (${frente(b.frente).nome})` : ""}: ${b.itens} ${pluralDe(b.itens, "item", "itens")}, ${b.atrasados} fora do prazo, ~${horas(b.minutos)}`;
 }
 
 /** A leitura pelas regras — o mesmo formato, sem modelo. */
@@ -64,7 +65,7 @@ function pelasRegras(plano: PlanoDoDia) {
     falta > 0
       ? `O dia pede ${horas(plano.minutosNecessarios)} e o expediente tem ${horas(plano.minutosDisponiveis)}: faltam ${horas(falta)}.`
       : `O dia pede ${horas(plano.minutosNecessarios)} e cabe no expediente, com ${horas(-falta)} de folga.`,
-    primeiro ? `Comece por "${primeiro.titulo}"${primeiro.atrasados ? `, que tem ${primeiro.atrasados} item(ns) fora do prazo` : ""}.` : "",
+    primeiro ? `Comece por "${primeiro.titulo}"${primeiro.atrasados ? `, que tem ${primeiro.atrasados} ${pluralDe(primeiro.atrasados, "item", "itens")} fora do prazo` : ""}.` : "",
   ]
     .filter(Boolean)
     .join(" ");

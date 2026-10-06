@@ -9,6 +9,7 @@ import {
   paredeDe,
   proximoDiaUtil,
 } from "@/lib/services/horasUteis";
+import { pluralDe } from "@/lib/plural";
 
 /**
  * As cadências da documentação, calculadas.
@@ -115,7 +116,7 @@ export function persistencia(
       tentativas: seguidas.length,
       esgotada: true,
       janelaAte,
-      resumo: `${seguidas.length} tentativa(s) sem resposta — a cadência se esgotou. Publique a mensagem transparente no Reclame Aqui e siga com follow-up a cada 2 dias.`,
+      resumo: `${seguidas.length} ${pluralDe(seguidas.length, "tentativa", "tentativas")} sem resposta — a cadência se esgotou. Publique a mensagem transparente no Reclame Aqui e siga com follow-up a cada 2 dias.`,
     };
   }
 

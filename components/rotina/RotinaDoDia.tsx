@@ -23,6 +23,7 @@ import { useOQueValeHoje } from "@/components/rotina/recuperacaoDoDia";
 import PorQue from "@/components/shared/PorQue";
 import ItensDaAtividade from "@/components/rotina/ItensDaAtividade";
 import { useSla } from "@/lib/context/SlaContext";
+import { pluralDe } from "@/lib/plural";
 type MeuDia = ReturnType<typeof useMeuDia>;
 
 interface Props {
@@ -136,8 +137,8 @@ export default function RotinaDoDia({ dia, compacto = false, onConfigurar, onUmP
         tone: "success",
         title: completo ? "Rotina de hoje completa." : `${r.feitas.length} de ${doDia.length} atividades feitas.`,
         detail: completo
-          ? `Sequência de ${sequencia + (feitasHoje.size === doDia.length ? 0 : 1)} dia(s) útil(eis) com a rotina inteira.`
-          : [r.marcadas ? `${r.marcadas} marcada(s)` : null, r.desmarcadas ? `${r.desmarcadas} desmarcada(s)` : null].filter(Boolean).join(" · ") || "Nada mudou.",
+          ? `Sequência de ${sequencia + (feitasHoje.size === doDia.length ? 0 : 1)} ${pluralDe(sequencia + (feitasHoje.size === doDia.length ? 0 : 1), "dia", "dias")} útil(eis) com a rotina inteira.`
+          : [r.marcadas ? `${r.marcadas} ${pluralDe(r.marcadas, "marcada", "marcadas")}` : null, r.desmarcadas ? `${r.desmarcadas} ${pluralDe(r.desmarcadas, "desmarcada", "desmarcadas")}` : null].filter(Boolean).join(" · ") || "Nada mudou.",
       });
     } catch {
       notify({ tone: "error", title: "As marcas não foram salvas.", detail: "Tente de novo em instantes." });
@@ -291,7 +292,7 @@ export default function RotinaDoDia({ dia, compacto = false, onConfigurar, onUmP
               title="Dias úteis seguidos com a rotina inteira marcada."
               className="flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 ring-1 ring-inset ring-amber-100"
             >
-              <Flame size={13} /> {sequencia} dia(s)
+              <Flame size={13} /> {sequencia} {pluralDe(sequencia, "dia", "dias")}
             </span>
           )}
           {onUmPorVez && doDia.length > 0 && (
@@ -401,7 +402,7 @@ export default function RotinaDoDia({ dia, compacto = false, onConfigurar, onUmP
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-400" />
               </span>
               <span>
-                <strong className="font-semibold text-white">{pendentes} marca(s)</strong> por salvar
+                <strong className="font-semibold text-white">{pendentes} {pluralDe(pendentes, "marca", "marcas")}</strong> por salvar
               </span>
             </p>
             <div className="flex items-center gap-2">

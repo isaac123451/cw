@@ -39,6 +39,7 @@ import {
   limparFalhas,
   registrarFalha,
 } from "@/lib/auth/throttle";
+import { pluralDe } from "@/lib/plural";
 
 export interface FormState {
   error?: string;
@@ -208,7 +209,7 @@ export async function signIn(
 
   if (trava.bloqueado) {
     return {
-      error: `Muitas tentativas. Tente de novo em ${trava.minutos} minuto(s).`,
+      error: `Muitas tentativas. Tente de novo em ${trava.minutos} ${pluralDe(trava.minutos, "minuto", "minutos")}.`,
     };
   }
 

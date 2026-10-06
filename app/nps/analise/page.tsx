@@ -54,6 +54,7 @@ import {
 import PorQue from "@/components/shared/PorQue";
 import { diaNoIntervalo, intervaloDoAtalho, type Intervalo } from "@/lib/models/periodo";
 import { diaNaOperacao, hojeNaOperacao } from "@/lib/services/reputation.service";
+import { pluralDe } from "@/lib/plural";
 
 /** Janelas que a tela oferece, em meses. */
 const JANELAS = [
@@ -273,7 +274,7 @@ export default function NpsAnalisePage() {
                 value={resumo.score}
                 hint={
                   variacao === null
-                    ? `${resumo.total} resposta(s)`
+                    ? `${resumo.total} ${pluralDe(resumo.total, "resposta", "respostas")}`
                     : `${variacao > 0 ? "+" : ""}${variacao} contra o mês anterior`
                 }
                 icon={Gauge}
@@ -346,7 +347,7 @@ export default function NpsAnalisePage() {
                   label="Detratores contatados"
                   description="Detratores com primeiro contato registrado — tentativa ou conversa. É o SLA de 24h úteis do segmento, visto pelo resultado."
                   value={guia.percentualContatados === null ? "—" : `${guia.percentualContatados}%`}
-                  hint={`${guia.detratoresContatados} de ${guia.detratores} detrator(es)`}
+                  hint={`${guia.detratoresContatados} de ${guia.detratores} ${pluralDe(guia.detratores, "detrator", "detratores")}`}
                   icon={PhoneCall}
                   tone="danger"
                 />
@@ -368,7 +369,7 @@ export default function NpsAnalisePage() {
                   label="Indicações"
                   description="Indicações que os promotores trouxeram, registradas na ficha. O pedido sozinho não conta."
                   value={guia.indicacoes}
-                  hint={`${guia.indicacoesPedidas} promotor(es) convidados · ${guia.aceitaramCase} aceitaram ser case`}
+                  hint={`${guia.indicacoesPedidas} ${pluralDe(guia.indicacoesPedidas, "promotor", "promotores")} convidados · ${guia.aceitaramCase} aceitaram ser case`}
                   icon={UsersRound}
                   tone="primary"
                 />
@@ -377,7 +378,7 @@ export default function NpsAnalisePage() {
                   label="Avaliações no Google"
                   description="Promotores que publicaram a review — marcado na ficha, ou ligado sozinho quando a avaliação é registrada em Google Avaliações com o mesmo nome."
                   value={guia.reviewsNoGoogle}
-                  hint={`de ${guia.reviewsPedidas} pedida(s)`}
+                  hint={`de ${guia.reviewsPedidas} ${pluralDe(guia.reviewsPedidas, "pedida", "pedidas")}`}
                   icon={Star}
                   tone="warning"
                 />
@@ -534,7 +535,7 @@ export default function NpsAnalisePage() {
                     />
                     <span>
                       <strong className="font-semibold">
-                        {semCausa} resposta(s) com
+                        {semCausa} {pluralDe(semCausa, "resposta", "respostas")} com
                         comentário e sem causa raiz.
                       </strong>{" "}
                       Elas não aparecem neste gráfico — e
@@ -643,7 +644,7 @@ export default function NpsAnalisePage() {
 
                     <p className="pt-1 text-xs text-zinc-500">
                       Sobre {recuperados.comRegistro}{" "}
-                      resposta(s) com pós-contato
+                      {pluralDe(recuperados.comRegistro, "resposta", "respostas")} com pós-contato
                       registrado — e não sobre a base
                       inteira: dividir por todas
                       transformaria um indicador de

@@ -20,6 +20,7 @@ import { useEstablishments } from "@/lib/context/EstablishmentsContext";
 import { slugify } from "@/lib/services/slug";
 import CampoQueSalva from "@/components/shared/CampoQueSalva";
 import { nomearConsumidor } from "@/lib/actions/tratativa";
+import { pluralDe } from "@/lib/plural";
 
 function iniciais(nome: string) {
   return nome.split(" ").map((p) => p[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
@@ -479,7 +480,7 @@ export default function OverviewTab({
         description="Andamento, decisões e contexto interno. É a mesma lista que a extensão grava e lê — anotar aqui ou pelo painel dá no mesmo."
         action={
           <span className="shrink-0 rounded-xl bg-zinc-50 px-3 py-1.5 text-xs font-medium text-zinc-600">
-            {comments.length} anotação(ões)
+            {comments.length} {pluralDe(comments.length, "anotação", "anotações")}
           </span>
         }
       >

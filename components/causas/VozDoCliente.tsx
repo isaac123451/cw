@@ -10,6 +10,7 @@ import { lerVozDoCliente } from "@/lib/actions/vozDoCliente";
 import { useToast } from "@/lib/context/ToastContext";
 import { textoDaVoz, type VozDoMes } from "@/lib/models/vozDoCliente";
 import { hojeNaOperacao } from "@/lib/services/reputation.service";
+import { pluralDe } from "@/lib/plural";
 
 const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 const um = (n: number) => n.toFixed(1).replace(".", ",");
@@ -91,7 +92,7 @@ export default function VozDoCliente() {
                     nota do RA {um(c.notaDoRA)} ({c.avaliacoes})
                   </span>
                 )}
-                {c.detratores > 0 && <span className="text-xs font-medium text-rose-700">{c.detratores} detrator(es)</span>}
+                {c.detratores > 0 && <span className="text-xs font-medium text-rose-700">{c.detratores} {pluralDe(c.detratores, "detrator", "detratores")}</span>}
               </p>
               {c.citacoes.length > 0 && (
                 <ul className="mt-1.5 space-y-0.5">

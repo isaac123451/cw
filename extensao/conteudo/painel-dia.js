@@ -41,7 +41,7 @@
       '  <div class="cartao">',
       '    <div class="linha">',
       `      <span class="nome" style="font-size:22px">${
-        rep.indisponivel ? "—" : CW.escapar(rep.nota)
+        rep.indisponivel ? "—" : CW.numero(rep.nota)
       }</span>`,
       `      <span class="tag ${rep.ra1000 ? "laranja" : "marca"}">${CW.escapar(
         rep.ra1000 ? "RA1000" : (rep.faixa ?? "")
@@ -78,9 +78,9 @@
         '  <div class="cartao">',
         '    <div class="linha">',
         `      <span class="nome">${dados.nps.nota}</span>`,
-        `      <span class="sub">média ${String(dados.nps.media).replace(".", ",")} · ${dados.nps.total} resposta(s)</span>`,
+        `      <span class="sub">média ${String(dados.nps.media).replace(".", ",")} · ${dados.nps.total} ${CW.plural(dados.nps.total, "resposta", "respostas")}</span>`,
         '    </div>',
-        `    <div class="sub" style="margin-top:4px">${dados.nps.detratores} detrator(es) · ${dados.nps.passivos} passivo(s) · ${dados.nps.promotores} promotor(es)</div>`,
+        `    <div class="sub" style="margin-top:4px">${dados.nps.detratores} ${CW.plural(dados.nps.detratores, "detrator", "detratores")} · ${dados.nps.passivos} ${CW.plural(dados.nps.passivos, "passivo", "passivos")} · ${dados.nps.promotores} ${CW.plural(dados.nps.promotores, "promotor", "promotores")}</div>`,
         `    <div class="sub" style="margin-top:4px">${dados.nps.abertos} em aberto${
           dados.nps.estourados > 0
             ? ` · <strong style="color:var(--perigo)">${dados.nps.estourados} fora do prazo</strong>`
@@ -142,7 +142,7 @@
           ${
             t.protocolo
               ? `<button class="passo" data-acao="ver" data-protocolo="${CW.escapar(t.protocolo)}">abrir o caso</button>`
-              : '<span class="passo vazio">sem caso ligado</span>'
+              : ""
           }
         </div>
       </div>`
@@ -368,7 +368,7 @@
       ),
 
       contagens.atrasadas > 0 && P.escopoAtividades !== ""
-        ? `  <p class="sub" style="margin-top:8px;color:var(--perigo)"><strong>${contagens.atrasadas} atrasada(s)</strong> esperando em "Vencendo".</p>`
+        ? `  <p class="sub" style="margin-top:8px;color:var(--perigo)"><strong>${contagens.atrasadas} ${CW.plural(contagens.atrasadas, "atrasada", "atrasadas")}</strong> esperando em "Vencendo".</p>`
         : "",
 
       '</div>',
@@ -706,7 +706,7 @@
           ${
             t.protocolo
               ? `<button class="passo" data-acao="ver" data-protocolo="${CW.escapar(t.protocolo)}">abrir o caso</button>`
-              : '<span class="passo vazio">sem caso ligado</span>'
+              : ""
           }
         </div>
       </div>`;
@@ -714,10 +714,11 @@
 
   /** Marcar uma atividade nova, sem sair da aba. */
   function blocoNovaAtividade() {
+    /* Recolhida atrás de um botão (1.135): o formulário aberto em toda visita ocupava meia tela. */
     return [
       '<div class="bloco">',
-      '  <div class="rotulo">Marcar uma atividade</div>',
-      '  <div class="cartao">',
+      `  <button class="acao-chip" type="button" data-acao="alternar-proximo" aria-expanded="false" style="width:100%">${CW.icone("agenda", 14)}<span>Marcar uma atividade</span>${CW.icone("baixo", 13)}</button>`,
+      '  <div class="cartao painel-acao" hidden>',
       '    <input class="campo" id="dia-tarefa" type="text" style="margin-top:0" placeholder="Ex.: cobrar o time de pagamentos sobre o caso do pixel" />',
       /*
         Data e hora lado a lado.

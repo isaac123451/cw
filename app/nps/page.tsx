@@ -74,6 +74,7 @@ import {
 import FiltroDePeriodo from "@/components/shared/FiltroDePeriodo";
 import { diaNoIntervalo, intervaloDoAtalho, type AtalhoDoPeriodo, type Intervalo } from "@/lib/models/periodo";
 import { diaNaOperacao, hojeNaOperacao } from "@/lib/services/reputation.service";
+import { pluralDe } from "@/lib/plural";
 /**
  * "Detrator" vira "Detratores"; "Passivo" vira "Passivos".
  *
@@ -499,7 +500,7 @@ function NpsPagina({ abrirInicial = null }: { abrirInicial?: "etapas" | "causas"
 
       notify({
         tone: "success",
-        title: `${saida.total} resposta(s) exportada(s).`,
+        title: `${saida.total} ${pluralDe(saida.total, "resposta", "respostas")} ${pluralDe(saida.total, "exportada", "exportadas")}.`,
         detail: saida.nome,
       });
 
@@ -549,7 +550,7 @@ function NpsPagina({ abrirInicial = null }: { abrirInicial?: "etapas" | "causas"
         notify({
           tone: "info",
           title: "Causa desativada, não excluída.",
-          detail: `${emUso} resposta(s) já usam "${causa.name}" — apagar mudaria a série histórica.`,
+          detail: `${emUso} ${pluralDe(emUso, "resposta", "respostas")} já usam "${causa.name}" — apagar mudaria a série histórica.`,
         });
       }
 
@@ -640,7 +641,7 @@ function NpsPagina({ abrirInicial = null }: { abrirInicial?: "etapas" | "causas"
             label="NPS"
             description="Percentual de promotores menos o de detratores."
             value={resumo.score}
-            hint={`${resumo.total} resposta(s)`}
+            hint={`${resumo.total} ${pluralDe(resumo.total, "resposta", "respostas")}`}
             icon={Gauge}
             tone="primary"
           />
@@ -894,7 +895,7 @@ function NpsPagina({ abrirInicial = null }: { abrirInicial?: "etapas" | "causas"
               <p className="mt-2 text-xs text-zinc-500">
                 {visiveis.length === 0
                   ? "Nenhum ciclo com esse nome, e-mail ou telefone. O telefone só existe em 77 das respostas — o Wootric não o envia."
-                  : `${visiveis.length} ciclo(s) encontrado(s).`}
+                  : `${visiveis.length} ${pluralDe(visiveis.length, "ciclo", "ciclos")} ${pluralDe(visiveis.length, "encontrado", "encontrados")}.`}
               </p>
             )}
           </div>

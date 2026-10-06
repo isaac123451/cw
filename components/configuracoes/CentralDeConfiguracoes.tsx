@@ -37,6 +37,7 @@ import IaCard from "@/components/configuracoes/IaCard";
 import SegurancaCard from "@/components/configuracoes/SegurancaCard";
 import WootricCard from "@/components/configuracoes/WootricCard";
 import EnvioAutomatico from "@/components/relatorio/EnvioAutomatico";
+import { pluralDe } from "@/lib/plural";
 
 /**
  * A central de configurações (1.115): "remodele as configurações do CW
@@ -209,7 +210,7 @@ export default function CentralDeConfiguracoes({ versao, secaoInicial, abertoIni
 
       <section aria-label={achados ? "Resultado da busca" : atual.titulo}>
         <header className="mb-3">
-          <h2 className="text-base font-semibold text-zinc-900">{achados ? `${achados.length} resultado(s) para "${busca.trim()}"` : atual.titulo}</h2>
+          <h2 className="text-base font-semibold text-zinc-900">{achados ? `${achados.length} ${pluralDe(achados.length, "resultado", "resultados")} para "${busca.trim()}"` : atual.titulo}</h2>
           {!achados && <p className="text-sm text-zinc-500">{atual.descricao}</p>}
         </header>
 

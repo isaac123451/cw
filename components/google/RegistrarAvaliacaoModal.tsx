@@ -15,6 +15,7 @@ import { descreverPrazo, paredeDe } from "@/lib/services/horasUteis";
 
 import { registrarAvaliacaoGoogle, type AvaliacaoGoogleView } from "@/lib/actions/avaliacoesGoogle";
 import { useToast } from "@/lib/context/ToastContext";
+import { pluralDe } from "@/lib/plural";
 
 interface Props {
   onClose: () => void;
@@ -124,7 +125,7 @@ export default function RegistrarAvaliacaoModal({ onClose, onSalvo }: Props) {
                 key={n}
                 type="button"
                 onClick={() => setEstrelas(n)}
-                aria-label={`${n} estrela(s)`}
+                aria-label={`${n} ${pluralDe(n, "estrela", "estrelas")}`}
                 className="rounded-lg p-1 transition-transform hover:scale-110"
               >
                 <Star size={26} className={n <= estrelas ? "fill-amber-400 text-amber-400" : "text-zinc-300"} />

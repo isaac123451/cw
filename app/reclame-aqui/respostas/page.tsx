@@ -15,6 +15,7 @@ import ResultadoDasRespostas, { type AbaDoResultado } from "@/components/reclame
 import { lerRespostasAnalisadas, type RespostaAnalisada } from "@/lib/actions/analistaDeRespostas";
 import type { ProblemaDaResposta } from "@/lib/models/analistaDeRespostas";
 import { descreverRegistro } from "@/lib/services/horasUteis";
+import { pluralDe } from "@/lib/plural";
 
 const ROTULO: Record<ProblemaDaResposta, string> = {
   "sem-nome": "Sem o nome",
@@ -140,7 +141,7 @@ export default function RespostasPage() {
             ))}
           </div>
           {dados && dados.semTexto > 0 && (
-            <p className="text-xs text-zinc-500">{dados.semTexto} respondida(s) sem o texto ainda — ele chega na próxima leitura do portal.</p>
+            <p className="text-xs text-zinc-500">{dados.semTexto} {pluralDe(dados.semTexto, "respondida", "respondidas")} sem o texto ainda — ele chega na próxima leitura do portal.</p>
           )}
         </div>
 
@@ -183,7 +184,7 @@ export default function RespostasPage() {
               )}
             </SurfaceCard>
 
-            <SurfaceCard title={filtro ? `${ROTULO[filtro]} — ${lista.length} resposta(s)` : "Cada resposta, a pior primeiro"}>
+            <SurfaceCard title={filtro ? `${ROTULO[filtro]} — ${lista.length} ${pluralDe(lista.length, "resposta", "respostas")}` : "Cada resposta, a pior primeiro"}>
               <ul className="divide-y divide-zinc-100">
                 {lista.map((r) => (
                   <li key={r.id} className="py-2.5">

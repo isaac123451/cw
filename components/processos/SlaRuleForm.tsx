@@ -27,6 +27,7 @@ import {
 } from "@/lib/models/sla";
 import { PRIORIDADES } from "@/lib/models/case";
 import { descreverPrazo } from "@/lib/services/horasUteis";
+import { pluralDe } from "@/lib/plural";
 
 interface Props {
   open: boolean;
@@ -380,7 +381,7 @@ export default function SlaRuleForm({
           <p className="text-sm text-violet-900">
             Esta regra alcança{" "}
             <strong className="font-semibold">
-              {alcance} reclamação(ões)
+              {alcance} {pluralDe(alcance, "reclamação", "reclamações")}
             </strong>{" "}
             da base atual.
           </p>

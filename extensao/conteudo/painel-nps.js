@@ -347,7 +347,7 @@
       '    </div>',
       '    <div class="sub">',
       `      ${CW.escapar(nps.tipo ?? "sem classificação")} ·`,
-      `      ${nps.tentativas} tentativa(s) ·`,
+      `      ${nps.tentativas} ${CW.plural(nps.tentativas, "tentativa", "tentativas")} ·`,
       `      prazo ${CW.data(nps.prazoPrimeiroContato)}`,
       '    </div>',
       registrado
@@ -456,7 +456,13 @@
    * **Não é resposta ao consumidor.** É registro interno — a extensão
    * segue sem mandar mensagem em site nenhum.
    */
-  P.blocoAnotar = function blocoAnotar(dados) {
+  /**
+   * `parte`: "caso" (a anotação), "lembrete" (a tarefa na agenda) ou
+   * nada (as duas). Desde a 1.135 o "Agora" mostra cada uma atrás do seu
+   * botão — a do lembrete continua lendo o caso escolhido na anotação,
+   * que fica no documento mesmo recolhida.
+   */
+  P.blocoAnotar = function blocoAnotar(dados, parte) {
 
     if (!P.podeEscrever(dados)) return "";
 
@@ -464,9 +470,7 @@
 
     if (casos.length === 0) return "";
 
-    return [
-      '<div class="bloco">',
-      '  <div class="rotulo">Anotar</div>',
+    const doCaso = [
       '  <div class="cartao">',
       '    <label class="rotulo" for="anota-caso">No caso</label>',
       '    <select class="campo" id="anota-caso" style="margin-top:0">',
@@ -482,8 +486,10 @@
       '    </div>',
       '    <p class="sub falha" id="anota-erro"></p>',
       '  </div>',
+    ];
 
-      '  <div class="cartao" style="margin-top:7px">',
+    const lembrete = [
+      '  <div class="cartao">',
       '    <label class="rotulo" for="anota-tarefa">Lembrar depois</label>',
       '    <input class="campo" id="anota-tarefa" type="text" style="margin-top:0" placeholder="Ex.: cobrar retorno do time de pagamentos" />',
       '    <div style="display:grid;grid-template-columns:1.2fr .9fr;gap:8px">',
@@ -503,8 +509,12 @@
       '    </div>',
       '    <p class="sub falha" id="tarefa-erro"></p>',
       '  </div>',
-      '</div>',
-    ].join("");
+    ];
+
+    if (parte === "caso") return doCaso.join("");
+    if (parte === "lembrete") return lembrete.join("");
+
+    return ['<div class="bloco">', '  <div class="rotulo">Anotar</div>', ...doCaso, '<div style="margin-top:7px"></div>', ...lembrete, '</div>'].join("");
   };
 
   P.anotarCaso = async function anotarCaso(botao) {

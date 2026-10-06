@@ -50,6 +50,7 @@ import { isOpen,
 import BotaoAbrirEmJanela from "@/components/janelas/BotaoAbrirEmJanela";
 
 import { kindTone } from "@/lib/models/client";
+import { pluralDe } from "@/lib/plural";
 
 const money = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -274,7 +275,7 @@ export default function ClientDetail({
         description={
           client.manual
             ? "Cadastrado manualmente pela operação."
-            : `Histórico extraído de ${client.total} reclamação(ões) reais do Reclame Aqui.`
+            : `Histórico extraído de ${client.total} ${pluralDe(client.total, "reclamação", "reclamações")} reais do Reclame Aqui.`
         }
       >
 
@@ -363,7 +364,7 @@ export default function ClientDetail({
           hint={
             client.evaluated === 0
               ? "ainda não avaliou"
-              : `${client.evaluated} avaliação(ões)`
+              : `${client.evaluated} ${pluralDe(client.evaluated, "avaliação", "avaliações")}`
           }
           icon={Star}
           tone="info"
@@ -652,7 +653,7 @@ export default function ClientDetail({
             description={
               client.total === 0
                 ? "Nenhuma reclamação registrada para esta pessoa."
-                : `${client.total} reclamação(ões), da mais recente para a mais antiga.`
+                : `${client.total} ${pluralDe(client.total, "reclamação", "reclamações")}, da mais recente para a mais antiga.`
             }
           >
 

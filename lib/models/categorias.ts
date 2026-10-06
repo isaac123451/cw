@@ -1,3 +1,4 @@
+import { pluralDe } from "@/lib/plural";
 /**
  * Categorias parecidas, para unificar — com prévia e decisão de quem usa.
  *
@@ -115,12 +116,12 @@ export function previaDaUnificacao(destino: CategoriaContada, origens: Categoria
   const nomes = origens.map((o) => `"${o.nome}"`).join(", ");
 
   return [
-    `${casos} caso(s) passam de ${nomes} para "${destino.nome}" — que fica com ${destino.casos + casos}.`,
+    `${casos} ${pluralDe(casos, "caso", "casos")} passam de ${nomes} para "${destino.nome}" — que fica com ${destino.casos + casos}.`,
     subcategorias > 0
-      ? `${subcategorias} subcategoria(s) vão para "${destino.nome}"; as de mesmo nome se juntam.`
+      ? `${subcategorias} ${pluralDe(subcategorias, "subcategoria", "subcategorias")} vão para "${destino.nome}"; as de mesmo nome se juntam.`
       : null,
-    macros > 0 ? `${macros} resposta(s) pronta(s) passam a ser de "${destino.nome}".` : null,
-    regras > 0 ? `${regras} regra(s) de prazo passam a valer para "${destino.nome}".` : null,
+    macros > 0 ? `${macros} ${pluralDe(macros, "resposta", "respostas")} ${pluralDe(macros, "pronta", "prontas")} passam a ser de "${destino.nome}".` : null,
+    regras > 0 ? `${regras} ${pluralDe(regras, "regra", "regras")} de prazo passam a valer para "${destino.nome}".` : null,
     `${nomes} ficam desativadas, sem casos — dá para reativar ou excluir depois.`,
   ].filter((f): f is string => Boolean(f));
 }

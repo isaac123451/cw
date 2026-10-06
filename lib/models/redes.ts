@@ -6,6 +6,7 @@ import {
   type Expediente,
   prazoUtil,
 } from "@/lib/services/horasUteis";
+import { pluralDe } from "@/lib/plural";
 
 /**
  * O fluxo das Redes Sociais, como o documento dele descreve.
@@ -115,7 +116,7 @@ export function cadenciaDasRedes(
       ate,
       canal: numero === 2 ? "WhatsApp e o canal de origem" : "canal alternativo (e-mail ou telefone, se houver cadastro)",
     },
-    resumo: `${seguidas.length} tentativa(s) sem resposta. A ${numero}ª vai por ${numero === 2 ? "WhatsApp e o canal de origem" : "e-mail ou telefone"}.`,
+    resumo: `${seguidas.length} ${pluralDe(seguidas.length, "tentativa", "tentativas")} sem resposta. A ${numero}ª vai por ${numero === 2 ? "WhatsApp e o canal de origem" : "e-mail ou telefone"}.`,
   };
 }
 
@@ -268,7 +269,7 @@ export function faltaNaTriagem(
   }
   if (t.saida === "Sem contato") {
     const feitas = caso.tentativasSemResposta ?? 0;
-    if (feitas < TENTATIVAS_DAS_REDES) falta.push(`fazer mais ${TENTATIVAS_DAS_REDES - feitas} tentativa(s) de contato — hoje são ${feitas}`);
+    if (feitas < TENTATIVAS_DAS_REDES) falta.push(`fazer mais ${TENTATIVAS_DAS_REDES - feitas} ${pluralDe(TENTATIVAS_DAS_REDES - feitas, "tentativa", "tentativas")} de contato — hoje são ${feitas}`);
   }
   if (t.saida === "Encaminhado" && !t.area.trim()) falta.push("dizer para qual área foi");
   return falta;

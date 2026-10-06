@@ -19,6 +19,7 @@ import {
   pedirAExtensao,
   versaoDaExtensao,
 } from "@/lib/extensao/ponte";
+import { pluralDe } from "@/lib/plural";
 
 /**
  * A leitura do Reclame Aqui, vista da plataforma.
@@ -140,7 +141,7 @@ export function PortalProvider({ children }: { children: ReactNode }) {
             title: "Nada novo no Reclame Aqui.",
             detail:
               completadas > 0
-                ? `${completadas} reclamação(ões) completada(s) com o que o portal mostra.`
+                ? `${completadas} ${pluralDe(completadas, "reclamação", "reclamações")} ${pluralDe(completadas, "completada", "completadas")} com o que o portal mostra.`
                 : "Todas as reclamações do portal já estão no quadro.",
           });
         }

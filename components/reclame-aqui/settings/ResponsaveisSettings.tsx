@@ -13,6 +13,7 @@ import { useTeams } from "@/lib/context/TeamsContext";
 
 import SurfaceCard from "@/components/shared/SurfaceCard";
 import { ConfirmDelete } from "@/components/shared/Modal";
+import { pluralDe } from "@/lib/plural";
 
 const campo =
   "h-10 w-full rounded-xl border border-zinc-200 px-3 text-sm outline-none transition-colors placeholder:text-zinc-400 focus:border-violet-400";
@@ -127,7 +128,7 @@ export default function ResponsaveisSettings() {
         description="Quem pode receber uma reclamação, e em que time. É a mesma lista que aparece no seletor de responsável do caso."
         action={
           <span className="shrink-0 rounded-xl bg-zinc-50 px-3 py-1.5 text-xs font-medium text-zinc-600">
-            {total} pessoa(s)
+            {total} {pluralDe(total, "pessoa", "pessoas")}
           </span>
         }
       >

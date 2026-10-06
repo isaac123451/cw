@@ -15,6 +15,7 @@ import { ETAPAS_DAS_REDES, TENTATIVAS_DAS_REDES } from "@/lib/models/redes";
 import { encerrarAtendimento } from "@/lib/actions/redes";
 import { useNps } from "@/lib/context/NpsContext";
 import { useToast } from "@/lib/context/ToastContext";
+import { pluralDe } from "@/lib/plural";
 
 interface Props {
   item: Case;
@@ -57,7 +58,7 @@ export default function EncerrarRedesModal({ item, resultadoInicial, onClose, on
       : resultado === "Encaminhado" && solucao.trim().length < 8
         ? ["dizer para qual área foi e por quê"]
         : resultado === "Sem contato" && tentativas < TENTATIVAS_DAS_REDES
-        ? [`fazer mais ${TENTATIVAS_DAS_REDES - tentativas} tentativa(s) — hoje são ${tentativas}`]
+        ? [`fazer mais ${TENTATIVAS_DAS_REDES - tentativas} ${pluralDe(TENTATIVAS_DAS_REDES - tentativas, "tentativa", "tentativas")} — hoje são ${tentativas}`]
         : [];
 
   async function salvar() {

@@ -3,6 +3,7 @@ import type { ContatoView, EstadoDaValidacao } from "@/lib/models/tratativa";
 import type { AcaoDoPasso, PassoDaTrilha } from "@/lib/models/trilha";
 import { JANELA_DA_CADENCIA_DIAS, TENTATIVAS_DA_CADENCIA } from "@/lib/models/cadencia";
 import { descreverRegistro, paredeDe } from "@/lib/services/horasUteis";
+import { pluralDe } from "@/lib/plural";
 
 /**
  * O que fazer com a reclamação agora, em uma frase.
@@ -167,7 +168,7 @@ export function oQueFazer(
     case "pedir-avaliacao":
       return {
         frase: (item.pedidosDeAvaliacao ?? 0) > 0 ? "Resposta publicada: lembre o cliente de avaliar" : "Resposta publicada: peça a avaliação",
-        porque: (item.pedidosDeAvaliacao ?? 0) > 0 ? `${item.pedidosDeAvaliacao} pedido(s) feito(s).` : "Avise o cliente, com o link, e peça a avaliação.",
+        porque: (item.pedidosDeAvaliacao ?? 0) > 0 ? `${item.pedidosDeAvaliacao} ${pluralDe(item.pedidosDeAvaliacao, "pedido", "pedidos")} ${pluralDe(item.pedidosDeAvaliacao, "feito", "feitos")}.` : "Avise o cliente, com o link, e peça a avaliação.",
         acao: "pedir-avaliacao",
       };
   }

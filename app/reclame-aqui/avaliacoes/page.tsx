@@ -45,6 +45,7 @@ import { useCases } from "@/lib/context/CaseContext";
 import { useAgora } from "@/lib/hooks/useAgora";
 import { useToast } from "@/lib/context/ToastContext";
 import { dispensarPedidoDeAvaliacao, dispensarPedidosDeAvaliacao } from "@/lib/actions/tratativa";
+import { pluralDe } from "@/lib/plural";
 
 function diaCurto(dia?: string) {
   return dia ? dia.split("-").reverse().slice(0, 2).join("/") : "—";
@@ -385,7 +386,7 @@ function Lista({
                 <span>· respondida {item.publicResponseAt ? descreverRegistro(item.publicResponseAt) : "(sem data)"}</span>
                 {(item.pedidosDeAvaliacao ?? 0) > 0 && (
                   <span>
-                    · {item.pedidosDeAvaliacao} pedido(s), o último em {descreverRegistro(item.ultimoPedidoAvaliacaoEm)}
+                    · {item.pedidosDeAvaliacao} {pluralDe(item.pedidosDeAvaliacao, "pedido", "pedidos")}, o último em {descreverRegistro(item.ultimoPedidoAvaliacaoEm)}
                   </span>
                 )}
                 {semTelefone && (

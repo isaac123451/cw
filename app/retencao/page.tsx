@@ -16,6 +16,7 @@ import { ROTULO_DO_NIVEL } from "@/lib/models/riscoDeCancelamento";
 import { useToast } from "@/lib/context/ToastContext";
 import { resumoDeRetencao, type ClienteEmCancelamento, type Desfecho, type DesfechoManual, type ResumoDeRetencao } from "@/lib/models/cancelamento";
 import { ROTULO_DO_RISCO, type ClienteEmRisco } from "@/lib/models/clienteEmRisco";
+import { pluralDe } from "@/lib/plural";
 
 const ROTULO: Record<Desfecho, string> = { retido: "Retido", cancelado: "Cancelado", "em-aberto": "Em aberto" };
 const COR: Record<Desfecho, string> = {
@@ -322,7 +323,7 @@ export default function RetencaoPage() {
                             <span className="font-medium text-zinc-600">{FRENTE[s.frente]} · {s.tipo}</span> — {s.trecho}
                           </li>
                         ))}
-                        {c.sinais.length > 4 && <li className="text-xs text-zinc-400">e mais {c.sinais.length - 4} ponto(s)</li>}
+                        {c.sinais.length > 4 && <li className="text-xs text-zinc-400">e mais {c.sinais.length - 4} {pluralDe(c.sinais.length - 4, "ponto", "pontos")}</li>}
                       </ul>
                     </li>
                   ))}

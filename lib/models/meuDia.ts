@@ -26,6 +26,7 @@ import {
   proximoDiaUtil,
 } from "@/lib/services/horasUteis";
 import { prioridadeNormalizada, respondida } from "@/lib/models/case";
+import { pluralDe } from "@/lib/plural";
 
 /**
  * O "Meu dia": o número de cada atividade da rotina, e o plano.
@@ -556,7 +557,7 @@ export function contarRotina(
         id: c.id,
         frente: frenteDoCaso(c),
         titulo: c.title,
-        detalhe: `${s!.dias} dia(s) útil(eis) sem notícia · ${c.customer}`,
+        detalhe: `${s!.dias} ${pluralDe(s!.dias, "dia", "dias")} útil(eis) sem notícia · ${c.customer}`,
         href: caseHref(c),
         ...(frenteDoCaso(c) === "reclame-aqui" ? { ra: { protocol: c.protocol, raUrl: c.raUrl } } : {}),
         atrasado: true,
@@ -714,17 +715,17 @@ export function contarRotina(
 
   return {
     metricas,
-    pendencias: montar("pendencias", pendencias, (n) => (n ? `${n} tarefa(s) da agenda para hoje ou atrasadas.` : "Nenhuma tarefa da agenda vencendo.")),
+    pendencias: montar("pendencias", pendencias, (n) => (n ? `${n} ${pluralDe(n, "tarefa", "tarefas")} da agenda para hoje ou atrasadas.` : "Nenhuma tarefa da agenda vencendo.")),
     "em-aberto": montar("em-aberto", emAberto, (n, l) => {
       const whats = l.filter((i) => i.id.startsWith("whatsapp:")).length;
       return n ? `${n} em andamento esperando o nosso retorno${whats ? ` (${whats} no WhatsApp)` : ""}${foraDoPrazoTexto(l)}.` : "Nada em andamento esperando retorno.";
     }),
     novos: montar("novos", novos, (n, l) => (n ? `${n} sem 1º contato${foraDoPrazoTexto(l)}.` : "Nenhum caso novo esperando.")),
     fups: montar("fups", fups, (n) => (n ? `${n} sem notícia ou sem resposta a uma tentativa.` : "Ninguém sem notícia.")),
-    moderacoes: montar("moderacoes", moderacoes, (n) => (n ? `${n} moderação(ões) aguardando o Reclame Aqui.` : "Nenhuma moderação em aberto.")),
-    avaliacoes: montar("avaliacoes", avaliacoes, (n) => (n ? `${n} pedido(s) de avaliação para hoje.` : "Nenhum pedido de avaliação para hoje.")),
-    ligacoes: montar("ligacoes", ligacoes, (n) => (n ? `${n} tentativa(s) da cadência para hoje.` : "Nenhuma tentativa marcada para hoje.")),
-    concluidos: montar("concluidos", concluidos, (n) => (n ? `${n} concluído(s) sem o registro final.` : "Tudo o que terminou está registrado.")),
+    moderacoes: montar("moderacoes", moderacoes, (n) => (n ? `${n} ${pluralDe(n, "moderação", "moderações")} aguardando o Reclame Aqui.` : "Nenhuma moderação em aberto.")),
+    avaliacoes: montar("avaliacoes", avaliacoes, (n) => (n ? `${n} ${pluralDe(n, "pedido", "pedidos")} de avaliação para hoje.` : "Nenhum pedido de avaliação para hoje.")),
+    ligacoes: montar("ligacoes", ligacoes, (n) => (n ? `${n} ${pluralDe(n, "tentativa", "tentativas")} da cadência para hoje.` : "Nenhuma tentativa marcada para hoje.")),
+    concluidos: montar("concluidos", concluidos, (n) => (n ? `${n} ${pluralDe(n, "concluído", "concluídos")} sem o registro final.` : "Tudo o que terminou está registrado.")),
     areas: montar("areas", areas, (n, l) => (n ? `${n} com as áreas, ${l.filter((i) => i.atrasado).length} fora do prazo.` : "Nada com as áreas.")),
     checkpoint: semItens("O texto de ontem, hoje e riscos sai pronto no fim desta tela."),
     indicadores: semItens("Analytics e as projeções da semana."),

@@ -9,6 +9,7 @@ import SurfaceCard from "@/components/shared/SurfaceCard";
 import { marcarPedidos, type CampanhaView, type PedidoView } from "@/lib/actions/premio";
 import { useToast } from "@/lib/context/ToastContext";
 import { linkDoWhatsApp, mensagemDaVez, ORDEM_DA_SITUACAO, resumoDaCampanha, ROTULO_DA_SITUACAO, type SituacaoDoVoto } from "@/lib/models/premio";
+import { pluralDe } from "@/lib/plural";
 
 /** O próximo passo de cada situação — o que o botão principal da linha faz. */
 const PROXIMO: Record<SituacaoDoVoto, SituacaoDoVoto | null> = { exportado: "pedido", pedido: "lembrete", lembrete: "votou", votou: null };
@@ -84,7 +85,7 @@ export default function CampanhaDeVotacao({ campanha, pedidos, recarregar }: { c
         </button>
         {marcados.length > 0 && (
           <>
-            <span className="ml-2 font-medium tabular-nums text-zinc-700">{marcados.length} marcado(s):</span>
+            <span className="ml-2 font-medium tabular-nums text-zinc-700">{marcados.length} {pluralDe(marcados.length, "marcado", "marcados")}:</span>
             {(["pedido", "lembrete", "votou"] as const).map((s) => (
               <button key={s} type="button" disabled={gravando} onClick={() => marcar(marcados, s)} className="rounded-md px-2 py-1 font-medium text-violet-700 hover:bg-violet-50 disabled:opacity-50">
                 {ROTULO_DA_SITUACAO[s]}

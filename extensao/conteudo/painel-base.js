@@ -239,84 +239,95 @@
       <aside class="gaveta" tabindex="-1">
         <div class="punho" title="Arraste para redimensionar"></div>
         <header class="topo">
-          <span style="color:#fff;display:grid;place-items:center">${MARCA}</span>
-          <span>
-            <span class="titulo">CW Reputação</span><br>
+          <span class="topo-marca">${MARCA}</span>
+          <span class="topo-texto">
+            <span class="titulo">CW Reputação</span>
             <span class="quem">verificando conexão…</span>
           </span>
           <span class="espaco"></span>
-          <button class="icone-botao" data-acao="fixar"
-                  title="Manter aberto (não minimizar sozinho)"
-                  type="button">&#128204;</button>
-          <button class="icone-botao" data-acao="ancorar"
-                  title="Voltar para a lateral direita"
-                  type="button" style="display:none">&#8677;</button>
-          <button class="icone-botao" data-acao="tema"
-                  title="Tema: automático, claro ou escuro"
-                  type="button">&#9681;</button>
-          <button class="icone-botao" data-acao="voltar-da-vista"
-                  title="Voltar" style="display:none">&#8592;</button>
           <button class="icone-botao" data-acao="recarregar"
-                  title="Consultar de novo" type="button">&#8635;</button>
+                  title="Consultar de novo" type="button">${CW.icone("recarregar")}</button>
+          <button class="icone-botao" data-acao="menu" aria-haspopup="menu"
+                  aria-expanded="false" title="Mais opções" type="button">${CW.icone("mais")}</button>
           <button class="icone-botao" data-acao="fechar"
-                  title="Fechar" type="button">&times;</button>
+                  title="Fechar (Esc)" type="button">${CW.icone("fechar")}</button>
         </header>
 
+        <!--
+          O menu do cabeçalho (1.135).
+
+          Fixar, tema, voltar à lateral, abrir sozinho, botão no canto,
+          atalhos e opções moravam espalhados entre o cabeçalho (com
+          emoji) e um rodapé próprio que tomava uma linha inteira da
+          gaveta. Aqui ficam juntos, a um clique, e a gaveta ganha altura
+          para o que importa.
+        -->
+        <div class="menu-painel" role="menu" hidden>
+          <button type="button" role="menuitemcheckbox" data-acao="fixar" aria-checked="false">
+            ${CW.icone("fixar")}<span>Manter aberto</span><span class="menu-estado"></span>
+          </button>
+          <button type="button" role="menuitem" data-acao="tema">
+            ${CW.icone("tema")}<span>Tema</span><span class="menu-estado" data-estado="tema">automático</span>
+          </button>
+          <label class="auto" role="menuitemcheckbox" title="Abrir o painel sozinho ao trocar de conversa (só no WhatsApp Web)">
+            ${CW.icone("abrir")}<span>Abrir sozinho na conversa</span>
+            <input type="checkbox" data-acao="auto" />
+          </label>
+          <button type="button" role="menuitem" data-acao="ancorar" style="display:none">
+            ${CW.icone("lateral")}<span>Voltar para a lateral</span>
+          </button>
+          <button type="button" role="menuitem" data-acao="botao-no-canto" hidden>
+            ${CW.icone("canto")}<span>Botão redondo no canto</span>
+          </button>
+          <hr />
+          <button type="button" role="menuitem" data-acao="atalhos">
+            ${CW.icone("teclado")}<span>Atalhos</span><span class="menu-estado"><kbd>?</kbd></span>
+          </button>
+          <button type="button" role="menuitem" data-acao="opcoes">
+            ${CW.icone("opcoes")}<span>Opções da extensão</span>
+          </button>
+        </div>
+
         <div class="busca">
-          <input type="text" placeholder="Telefone, nome ou protocolo"
-                 spellcheck="false" />
+          <span class="busca-icone">${CW.icone("buscar", 15)}</span>
+          <input type="text" placeholder="Telefone, nome ou protocolo  /"
+                 spellcheck="false" aria-label="Buscar cliente" />
           <button type="button" data-acao="buscar">Buscar</button>
         </div>
 
         <div class="corpo"></div>
 
-        <!--
-          O rodapé de canais.
-
-          Os três não são a mesma fila, e o NPS é o motivo: a pesquisa
-          fala com o cliente por um **WhatsApp próprio**, então uma
-          conversa aberta ali não casa com reclamação nenhuma do Reclame
-          Aqui. Sem separar, o painel dizia "nada encontrado" para um
-          cliente que estava ali, com ciclo de NPS aberto.
-        -->
-        <nav class="canais">
-          <button type="button" data-acao="canal" data-canal="reclame-aqui"
-                  aria-pressed="false">Reclame Aqui</button>
-          <button type="button" data-acao="canal" data-canal="nps"
-                  aria-pressed="false">NPS</button>
-          <button type="button" data-acao="canal" data-canal="social"
-                  aria-pressed="false">Redes Sociais</button>
-          <button type="button" data-acao="canal" data-canal="painel"
-                  aria-pressed="false" title="Nota, contadores e alertas do dia">Painel</button>
-          <!--
-            Atividades é aba própria, e não só um bloco do Painel.
-
-            No Painel a agenda divide espaço com a nota, os contadores e
-            os alertas — cabem as de hoje e nada mais. A pergunta "o que
-            eu tenho para fazer, e o que ficou para trás" é uma tela
-            inteira: pede o atrasado junto, o que vem pela frente, e o
-            caso vinculado a um clique de distância.
-          -->
-          <button type="button" data-acao="canal" data-canal="atividades"
-                  aria-pressed="false" title="O que está marcado: hoje, atrasado e o que vem">Atividades</button>
-        </nav>
-
         <p class="ajuda-atalhos" hidden>
-          <kbd>/</kbd> busca · <kbd>1</kbd>–<kbd>5</kbd> abas · <kbd>Esc</kbd> fecha ·
+          <kbd>/</kbd> busca · <kbd>1</kbd>–<kbd>6</kbd> abas · <kbd>Esc</kbd> fecha ·
           <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>C</kbd> abre de qualquer tela
         </p>
 
-        <footer class="rodape-painel">
-          <label class="auto" title="Abrir o painel sozinho ao trocar de conversa (só no WhatsApp Web)">
-            <input type="checkbox" data-acao="auto" />
-            <span>abrir sozinho</span>
-          </label>
-          <span class="rodape-direita">
-            <a data-acao="botao-no-canto" title="O botão redondo volta para o canto de baixo, à direita, neste site" hidden>Botão no canto</a>
-            <a data-acao="atalhos" title="Atalhos do painel (?)">Atalhos</a>
-            <a data-acao="opcoes">Opções</a>
-          </span>
-        </footer>
+        <!--
+          A barra de abas, com ícone (1.135).
+
+          "Cliente" é a conversa aberta. Até a 1.134 não havia aba para
+          ela: o contato era o que sobrava quando nenhuma aba estava
+          marcada, e voltar dependia de clicar de novo na aba ativa — um
+          gesto que ninguém adivinha.
+
+          Os canais não são a mesma fila, e o NPS é o motivo: a pesquisa
+          fala com o cliente por um WhatsApp próprio, então uma conversa
+          aberta ali não casa com reclamação nenhuma do Reclame Aqui.
+        -->
+        <nav class="canais" aria-label="Telas do painel">
+          <button type="button" data-acao="canal" data-canal="contato"
+                  aria-pressed="false" title="A conversa aberta (1)">${CW.icone("cliente", 17)}<span>Cliente</span></button>
+          <button type="button" data-acao="canal" data-canal="reclame-aqui"
+                  aria-pressed="false" title="Reclame Aqui (2)">${CW.icone("ra", 17)}<span>RA</span></button>
+          <button type="button" data-acao="canal" data-canal="nps"
+                  aria-pressed="false" title="NPS (3)">${CW.icone("nps", 17)}<span>NPS</span></button>
+          <button type="button" data-acao="canal" data-canal="social"
+                  aria-pressed="false" title="Redes Sociais (4)">${CW.icone("redes", 17)}<span>Redes</span></button>
+          <button type="button" data-acao="canal" data-canal="painel"
+                  aria-pressed="false" title="Nota, contadores e alertas do dia (5)">${CW.icone("painel", 17)}<span>Painel</span></button>
+          <button type="button" data-acao="canal" data-canal="atividades"
+                  aria-pressed="false" title="O que está marcado: hoje, atrasado e o que vem (6)">${CW.icone("agenda", 17)}<span>Agenda</span></button>
+        </nav>
       </aside>`;
 
     shadow.appendChild(P.raiz);
@@ -361,11 +372,30 @@
 
     P.raiz.addEventListener("click", (evento) => {
 
+      /* Clicou fora do menu aberto: ele fecha, como todo menu. */
+      if (!evento.target.closest(".menu-painel, [data-acao='menu']")) {
+        alternarMenu(false);
+      }
+
       const alvo = evento.target.closest("[data-acao]");
 
       if (!alvo) return;
 
       const acao = alvo.dataset.acao;
+
+      /*
+        O menu do cabeçalho: abre e fecha no próprio botão, e qualquer
+        escolha dentro dele o fecha — menos o tema, que se escolhe
+        clicando até chegar no que se quer, e o interruptor de abrir
+        sozinho, que é uma caixa de marcar.
+      */
+      if (acao === "menu") {
+        alternarMenu();
+        return;
+      }
+      if (alvo.closest(".menu-painel") && acao !== "tema" && acao !== "auto") {
+        alternarMenu(false);
+      }
 
       if (acao === "fechar") P.fechar();
       if (acao === "recarregar") P.recarregarVista(true);
@@ -390,6 +420,7 @@
       if (acao === "desvincular") P.desvincularContato();
       if (acao === "cadastrar-canal") P.cadastrarNesteCanal();
       if (acao === "anotar-caso") P.anotarCaso(alvo);
+      if (acao === "acao-rapida") P.alternarAcaoRapida?.(alvo);
       if (acao === "anotar-tarefa") P.anotarTarefa(alvo);
       if (acao === "cancelar-captura") {
         P.captura = null;
@@ -547,6 +578,25 @@
 
       if (acao === "copiar") {
         P.copiar(alvo, alvo.dataset.texto ?? "");
+      }
+
+      /* Um formulário recolhido atrás do botão: o botão abre e fecha o que vem logo depois dele. */
+      if (acao === "alternar-proximo") {
+        const alvoDoBotao = alvo.nextElementSibling;
+        if (alvoDoBotao) {
+          alvoDoBotao.hidden = !alvoDoBotao.hidden;
+          alvo.setAttribute("aria-expanded", String(!alvoDoBotao.hidden));
+          if (!alvoDoBotao.hidden) alvoDoBotao.querySelector("input, textarea")?.focus();
+        }
+      }
+
+      /* Texto longo recolhido (o relato): o botão logo depois da caixa abre e fecha. */
+      if (acao === "alternar-recolhido") {
+        const caixa = alvo.previousElementSibling;
+        if (caixa) {
+          const recolhido = caixa.classList.toggle("recolhido");
+          alvo.textContent = recolhido ? "ler o relato inteiro" : "recolher";
+        }
       }
     });
 
@@ -725,8 +775,26 @@
       P.raiz.dataset.tema = TEMAS.includes(tema)
         ? tema
         : "auto";
+      const estado = P.raiz.querySelector('[data-estado="tema"]');
+      if (estado) estado.textContent = ROTULO_CURTO_DO_TEMA[P.raiz.dataset.tema];
     }
   }
+
+  const ROTULO_CURTO_DO_TEMA = { auto: "automático", claro: "claro", escuro: "escuro" };
+
+  /* ---------- o menu do cabeçalho ---------- */
+
+  function alternarMenu(abrir) {
+    const menu = P.raiz?.querySelector(".menu-painel");
+    const botao = P.raiz?.querySelector('[data-acao="menu"]');
+    if (!menu) return;
+    const vaiAbrir = abrir ?? menu.hidden;
+    menu.hidden = !vaiAbrir;
+    botao?.setAttribute("aria-expanded", String(vaiAbrir));
+    if (vaiAbrir) menu.querySelector("button:not([hidden])")?.focus({ preventScroll: true });
+  }
+
+  P.fecharMenu = () => alternarMenu(false);
 
   function aplicarLargura(px) {
 
@@ -775,9 +843,10 @@
 
     if (!botao) return;
 
-    botao.style.background = P.config.fixado
-      ? "rgba(255,255,255,.4)"
-      : "";
+    botao.setAttribute("aria-checked", String(Boolean(P.config.fixado)));
+
+    const estado = botao.querySelector(".menu-estado");
+    if (estado) estado.innerHTML = P.config.fixado ? CW.icone("ok", 14) : "";
 
     botao.title = P.config.fixado
       ? "Fixado — não minimiza sozinho. Clique para soltar."
@@ -1155,6 +1224,8 @@
     if (botao) {
       botao.title = `Tema: ${ROTULO_TEMA[proximo]}`;
     }
+
+    CW.notificar?.(`Tema ${ROTULO_CURTO_DO_TEMA[proximo]}`);
   }
 
   /**
@@ -1506,7 +1577,7 @@
    * conversa). Dentro da gaveta não há disputa: abrir pelo Alt+Shift+C
    * já põe o foco nela, e clicar em qualquer coisa do painel também.
    */
-  const ABA_DA_TECLA = { 1: "reclame-aqui", 2: "nps", 3: "social", 4: "painel", 5: "atividades" };
+  const ABA_DA_TECLA = { 1: "contato", 2: "reclame-aqui", 3: "nps", 4: "social", 5: "painel", 6: "atividades" };
 
   function ligarAtalhos() {
     P.raiz.addEventListener("keydown", (evento) => {
@@ -1522,7 +1593,10 @@
 
       let tratou = true;
 
+      const menuAberto = P.raiz.querySelector(".menu-painel:not([hidden])");
+
       if (evento.key === "/") P.campoBusca?.focus();
+      else if (evento.key === "Escape" && menuAberto) alternarMenu(false);
       else if (evento.key === "Escape") P.fechar();
       else if (evento.key === "?") alternarAjudaDosAtalhos();
       else if (ABA_DA_TECLA[evento.key]) {

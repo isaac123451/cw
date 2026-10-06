@@ -12,6 +12,7 @@ import { descreverPrazo } from "@/lib/services/horasUteis";
 import { aplicarPrazosDaDocumentacao } from "@/lib/actions/tratativa";
 import { useSla } from "@/lib/context/SlaContext";
 import { useToast } from "@/lib/context/ToastContext";
+import { pluralDe } from "@/lib/plural";
 
 interface Props {
   onClose: () => void;
@@ -52,8 +53,8 @@ export default function PrazosDaDocumentacaoModal({ onClose }: Props) {
         tone: "success",
         title: "Prazos da documentação gravados.",
         detail: [
-          r.criadas > 0 && `${r.criadas} regra(s) criada(s)`,
-          r.atualizadas > 0 && `${r.atualizadas} atualizada(s)`,
+          r.criadas > 0 && `${r.criadas} ${pluralDe(r.criadas, "regra", "regras")} ${pluralDe(r.criadas, "criada", "criadas")}`,
+          r.atualizadas > 0 && `${r.atualizadas} ${pluralDe(r.atualizadas, "atualizada", "atualizadas")}`,
         ]
           .filter(Boolean)
           .join(" · "),

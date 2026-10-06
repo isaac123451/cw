@@ -31,6 +31,7 @@ import { useTratativa } from "./TratativaProvider";
 import { useUrgenciaPorDado } from "./useUrgenciaPorDado";
 
 import PorQue from "@/components/shared/PorQue";
+import { pluralDe } from "@/lib/plural";
 interface Props {
   data: Case;
   /**
@@ -253,7 +254,7 @@ export default function PrazoECriticidade({ data, aoMudarNoServidor }: Props) {
 
         {(data.tentativasSemResposta ?? 0) > 0 && (
           <p className="mt-1.5 rounded-lg bg-amber-50 px-2.5 py-1.5 text-xs leading-relaxed text-amber-800 ring-1 ring-inset ring-amber-100">
-            {data.tentativasSemResposta} tentativa(s) seguida(s) sem resposta. A documentação pede até 5
+            {data.tentativasSemResposta} {pluralDe(data.tentativasSemResposta, "tentativa", "tentativas")} {pluralDe(data.tentativasSemResposta, "seguida", "seguidas")} sem resposta. A documentação pede até 5
             ligações em horários variados ao longo de 7 dias, com e-mail complementar.
           </p>
         )}

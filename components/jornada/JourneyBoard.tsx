@@ -11,6 +11,7 @@ import type { JornadaNasFrentes } from "@/lib/services/journey.service";
 import { FRENTES_DA_OPERACAO } from "@/lib/models/frentes";
 import IconeDaFrente from "@/components/shared/IconeDaFrente";
 import { JourneyStage } from "@/lib/models/journey";
+import { pluralDe } from "@/lib/plural";
 
 interface Props {
   journeys: JornadaNasFrentes[];
@@ -157,7 +158,7 @@ export default function JourneyBoard({
                       onClick={() =>
                         onSelect(journey.company)
                       }
-                      title={`${journey.company} — ${journey.total} registro(s) nas frentes`}
+                      title={`${journey.company} — ${journey.total} ${pluralDe(journey.total, "registro", "registros")} nas frentes`}
                       className={`w-full cursor-grab rounded-xl border bg-white p-3 text-left transition-all active:cursor-grabbing hover:-translate-y-0.5 hover:shadow-[0_8px_20px_-8px_rgba(91,42,134,0.3)] ${
                         selected === journey.company
                           ? "border-violet-400 ring-2 ring-violet-100"
@@ -190,11 +191,11 @@ export default function JourneyBoard({
                           {journey.averageScore}
                         </span>
 
-                        <span>{journey.total} registro(s)</span>
+                        <span>{journey.total} {pluralDe(journey.total, "registro", "registros")}</span>
 
                         {journey.open > 0 && (
                           <span className="text-amber-600">
-                            {journey.open} aberto(s)
+                            {journey.open} {pluralDe(journey.open, "aberto", "abertos")}
                           </span>
                         )}
 

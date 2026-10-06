@@ -300,7 +300,7 @@
       motivo:
         mensagens.length > 0
           ? undefined
-          : `li ${folhas.length} linha(s) por "${encontro.seletor}", e nenhuma sobrou depois da limpeza`,
+          : `li ${folhas.length} ${CW.plural(folhas.length, "linha", "linhas")} por "${encontro.seletor}", e nenhuma sobrou depois da limpeza`,
     };
   }
 

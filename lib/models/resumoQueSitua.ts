@@ -3,6 +3,7 @@ import { instanteDoCarimbo, rajadaDoCliente } from "@/lib/models/oQueFazerAgora"
 import { CRITERIOS_NO_TEXTO, normalizarTexto } from "@/lib/models/sugestaoPorTexto";
 import { instanteDe, paredeDe } from "@/lib/services/horasUteis";
 import { estadoDaConversa, humorDaConversa } from "@/lib/services/motorProprio";
+import { pluralDe } from "@/lib/plural";
 
 /**
  * O resumo que situa (Fase 28).
@@ -98,7 +99,7 @@ function riscoDaConversa(mensagens: MensagemParaSituar[], prometido: Promessa[])
   const motivos = [
     ...acesos.map((c) => `o cliente ${c.motivo}`),
     ...(humor <= 2 ? ["o humor está baixo"] : []),
-    ...(vencidas ? [`${vencidas} promessa(s) nossa(s) com o prazo vencido`] : []),
+    ...(vencidas ? [`${vencidas} ${pluralDe(vencidas, "promessa", "promessas")} ${pluralDe(vencidas, "nossa", "nossas")} com o prazo vencido`] : []),
     ...(rajada >= 3 ? [`${rajada} mensagens seguidas sem resposta`] : []),
   ];
   const alto = acesos.some((c) => ["juridico", "exposicao", "cancelamento", "operacao-parada"].includes(c.criterio)) || (humor === 1 && (vencidas > 0 || acesos.length > 0));

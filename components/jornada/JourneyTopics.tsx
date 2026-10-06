@@ -15,6 +15,7 @@ import BarraDeSalvar from "@/components/shared/BarraDeSalvar";
 
 import { useJourney } from "@/lib/context/JourneyContext";
 import { useRascunho } from "@/lib/hooks/useRascunho";
+import { pluralDe } from "@/lib/plural";
 
 interface Props {
   company: string;
@@ -212,7 +213,7 @@ export default function JourneyTopics({
                     onClick={() => apagarTopico(topic.id)}
                     title={
                       list.length > 0
-                        ? `Remove o tópico e ${list.length} registro(s)`
+                        ? `Remove o tópico e ${list.length} ${pluralDe(list.length, "registro", "registros")}`
                         : "Excluir tópico"
                     }
                     className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-rose-50 hover:text-rose-600"

@@ -31,6 +31,7 @@ import { useAgora } from "@/lib/hooks/useAgora";
 
 import PorQue from "@/components/shared/PorQue";
 import BotaoAbrirEmJanela from "@/components/janelas/BotaoAbrirEmJanela";
+import { pluralDe } from "@/lib/plural";
 
 type Filtro = "abertas" | "encerradas" | "todas";
 
@@ -137,7 +138,7 @@ export default function GooglePage() {
             label="Nota média"
             description="Percepção geral consolidada — com a nota atualizada, quando o cliente atualizou."
             value={indicadores.notaMedia === null ? "—" : indicadores.notaMedia.toLocaleString("pt-BR")}
-            hint={`${indicadores.total} avaliação(ões)`}
+            hint={`${indicadores.total} ${pluralDe(indicadores.total, "avaliação", "avaliações")}`}
             icon={Star}
             tone="warning"
           />
@@ -161,7 +162,7 @@ export default function GooglePage() {
             label="Negativas revertidas"
             description="Eficácia da tratativa privada: negativas cuja nota foi atualizada para 4 ou 5."
             value={indicadores.percentualRevertidas === null ? "—" : `${indicadores.percentualRevertidas}%`}
-            hint={`${indicadores.revertidas} de ${indicadores.negativas} negativa(s)`}
+            hint={`${indicadores.revertidas} de ${indicadores.negativas} ${pluralDe(indicadores.negativas, "negativa", "negativas")}`}
             icon={TrendingUp}
             tone="success"
           />

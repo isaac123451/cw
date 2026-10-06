@@ -30,6 +30,7 @@ import {
 import { useCases } from "@/lib/context/CaseContext";
 import { useToast } from "@/lib/context/ToastContext";
 import { enderecoNaAreaDaEmpresa } from "@/lib/extensao/ponte";
+import { pluralDe } from "@/lib/plural";
 
 interface Props {
   caseId: string;
@@ -465,7 +466,7 @@ function Conteudo({
 
         <span className="text-xs text-zinc-500">
           {mudancas.length > 0
-            ? `${mudancas.length} campo(s) alterado(s), ainda não salvo(s).`
+            ? `${mudancas.length} ${pluralDe(mudancas.length, "campo", "campos")} ${pluralDe(mudancas.length, "alterado", "alterados")}, ainda não ${pluralDe(mudancas.length, "salvo", "salvos")}.`
             : ""}
         </span>
 

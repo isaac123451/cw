@@ -16,6 +16,7 @@ import SurfaceCard from "@/components/shared/SurfaceCard";
 import { useAgenda } from "@/lib/context/AgendaContext";
 import { useGoogleEvents } from "@/lib/context/GoogleEventsContext";
 import { hojeNaOperacao } from "@/lib/services/reputation.service";
+import { pluralDe } from "@/lib/plural";
 
 const priorityTone: Record<string, string> = {
   Alta: "bg-rose-500",
@@ -151,10 +152,10 @@ export default function TodayAgenda() {
   const lista = linhas.slice(0, 7);
 
   const resumo = [
-    `${hoje} atividade(s) para hoje`,
-    atrasadas > 0 ? `${atrasadas} atrasada(s)` : null,
+    `${hoje} ${pluralDe(hoje, "atividade", "atividades")} para hoje`,
+    atrasadas > 0 ? `${atrasadas} ${pluralDe(atrasadas, "atrasada", "atrasadas")}` : null,
     doGoogle > 0
-      ? `${doGoogle} compromisso(s) do Google`
+      ? `${doGoogle} ${pluralDe(doGoogle, "compromisso", "compromissos")} do Google`
       : null,
   ]
     .filter(Boolean)

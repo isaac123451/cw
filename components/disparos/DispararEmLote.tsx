@@ -7,6 +7,7 @@ import { Loader2, Send, Square } from "lucide-react";
 import { criarLoteDeDisparo, lerLotesDeDisparo, pararLoteDeDisparo } from "@/lib/actions/disparos";
 import { useToast } from "@/lib/context/ToastContext";
 import type { LoteView, OrigemDoDisparo } from "@/lib/models/disparos";
+import { pluralDe } from "@/lib/plural";
 
 export interface CandidatoAoDisparo {
   chave: string;
@@ -76,7 +77,7 @@ export default function DispararEmLote({
       return;
     }
     setAberto(false);
-    notify({ tone: "success", title: `Lista com ${r.itens} contato(s) criada.`, detail: "Abra o WhatsApp Web: o painel CW mostra a fila. Quem aperta Enter é você." });
+    notify({ tone: "success", title: `Lista com ${r.itens} ${pluralDe(r.itens, "contato", "contatos")} criada.`, detail: "Abra o WhatsApp Web: o painel CW mostra a fila. Quem aperta Enter é você." });
     await recarregar();
   }
 
@@ -110,7 +111,7 @@ export default function DispararEmLote({
       {aberto && (
         <div className="mt-3">
           <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-600">
-            <span className="tabular-nums">{marcados.size} marcado(s)</span>
+            <span className="tabular-nums">{marcados.size} {pluralDe(marcados.size, "marcado", "marcados")}</span>
             <button type="button" onClick={() => setMarcados(new Set(candidatos.map((c) => c.chave)))} className="font-medium text-violet-700 hover:underline">
               todos
             </button>
@@ -172,8 +173,8 @@ export default function DispararEmLote({
             <li key={l.id} className="flex flex-wrap items-center gap-x-2">
               <span className="font-medium text-zinc-800">{l.nome}</span>
               <span className="tabular-nums">
-                {l.enviados} enviado(s) de {l.total}
-                {l.pulados ? ` · ${l.pulados} pulado(s)` : ""}
+                {l.enviados} {pluralDe(l.enviados, "enviado", "enviados")} de {l.total}
+                {l.pulados ? ` · ${l.pulados} ${pluralDe(l.pulados, "pulado", "pulados")}` : ""}
               </span>
               <span className="text-zinc-400">· {ROTULO_DA_SITUACAO[l.situacao] ?? l.situacao}</span>
               {(l.situacao === "ativo" || l.situacao === "pausado") && (

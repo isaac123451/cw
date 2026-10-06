@@ -2,6 +2,7 @@ import type { Case } from "@/lib/models/case";
 import type { Establishment } from "@/lib/models/establishment";
 import type { FrenteDaJanela } from "@/lib/models/janelas";
 import { segmentOf, type NpsResponseView } from "@/lib/models/nps";
+import { pluralDe } from "@/lib/plural";
 
 /**
  * A busca global (Ctrl+K) — Fase 11 do roadmap 2.0.
@@ -210,8 +211,8 @@ export function buscarNaPlataforma(entrada: EntradaDaBusca): ResultadoDaBusca[] 
       tipo: "cliente" as const,
       id: c.slug,
       titulo: c.name,
-      subtitulo: [c.city, c.total ? `${c.total} reclamação(ões)` : null].filter(Boolean).join(" · "),
-      etiqueta: c.total ? `${c.total} reclamação(ões)` : undefined,
+      subtitulo: [c.city, c.total ? `${c.total} ${pluralDe(c.total, "reclamação", "reclamações")}` : null].filter(Boolean).join(" · "),
+      etiqueta: c.total ? `${c.total} ${pluralDe(c.total, "reclamação", "reclamações")}` : undefined,
       detalhe: c.city,
       href: `/clientes/${c.slug}`,
       pontos: Math.max(pontuarCampos([c.name, c.email], termo), pontuarDigitos(c.phone, numeros), pontuarDigitos(c.document, numeros, 1.1)),

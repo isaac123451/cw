@@ -1,5 +1,6 @@
 import type { Case } from "@/lib/models/case";
 import { normalizarTexto, REGRAS_DE_ASSUNTO } from "@/lib/models/sugestaoPorTexto";
+import { pluralDe } from "@/lib/plural";
 
 /**
  * O motor próprio: lê e resume uma conversa sem nenhuma IA externa
@@ -455,7 +456,7 @@ export function dossieSemIA(ctx: {
         : "Caso já avaliado: só voltar a falar se o consumidor se manifestar de novo.";
 
   return {
-    geral: `${c.customer} abriu ${c.protocol} em ${c.createdAt} pelo ${c.source}. Situação: ${c.status}, ${avaliacao}.${c.churnRisk ? " Marcado como risco de cancelamento." : ""}${ctx.historico.length ? ` Há mais ${ctx.historico.length} registro(s) deste contato em outras frentes.` : ""}`,
+    geral: `${c.customer} abriu ${c.protocol} em ${c.createdAt} pelo ${c.source}. Situação: ${c.status}, ${avaliacao}.${c.churnRisk ? " Marcado como risco de cancelamento." : ""}${ctx.historico.length ? ` Há mais ${ctx.historico.length} ${pluralDe(ctx.historico.length, "registro", "registros")} deste contato em outras frentes.` : ""}`,
     ultimo:
       ctx.linhaDoTempo.at(-1) ??
       (semResposta ? "Nada aconteceu depois do relato: ainda sem resposta pública." : "A última ação registrada foi a nossa resposta pública."),

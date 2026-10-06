@@ -11,6 +11,7 @@ import { porQueDoItem } from "@/lib/models/proximoPasso";
 
 import { useProximoPasso } from "@/components/rotina/useProximoPasso";
 import type { useMeuDia } from "@/components/rotina/useMeuDia";
+import { pluralDe } from "@/lib/plural";
 
 type MeuDia = ReturnType<typeof useMeuDia>;
 
@@ -110,7 +111,7 @@ export default function ProximoPasso({ dia, marcadas, onUmPorVez }: { dia: MeuDi
       <p className="mt-2 text-xs tabular-nums text-zinc-500">
         {posicao} de {resumo.total} na fila de hoje
         {resumo.atrasados > 0 && ` · ${resumo.atrasados} fora do prazo`}
-        {resumo.criticos > 0 && ` · ${resumo.criticos} crítico(s)`}
+        {resumo.criticos > 0 && ` · ${resumo.criticos} ${pluralDe(resumo.criticos, "crítico", "críticos")}`}
       </p>
     </section>
   );
