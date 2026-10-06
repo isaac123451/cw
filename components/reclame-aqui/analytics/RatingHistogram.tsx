@@ -32,7 +32,7 @@ export default function RatingHistogram({
     <SurfaceCard
       title="Distribuição das avaliações"
       description="Histograma das notas recebidas no período."
-      hint="Só entram reclamações já avaliadas pelo consumidor. Notas de 7 a 10 contam como promotor no cálculo da reputação."
+      hint="Só entram reclamações já avaliadas pelo consumidor. Na reputação a nota conta pela média (30%); resolvido e voltaria contam pelo que o consumidor respondeu."
     >
 
       <div className="flex flex-col gap-6 sm:flex-row">

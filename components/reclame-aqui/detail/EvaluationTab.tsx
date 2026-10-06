@@ -820,8 +820,8 @@ export default function EvaluationTab({
           )}
 
           <p className="mt-4 border-t border-zinc-100 pt-3 text-xs leading-relaxed text-zinc-400">
-            Notas de 7 a 10 contam como promotor no cálculo da
-            reputação.
+            A nota entra pela média (30% da reputação). Resolvido (30%) e
+            voltaria (20%) contam pelo que o consumidor respondeu, não pela nota.
           </p>
 
         </SurfaceCard>

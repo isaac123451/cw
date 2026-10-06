@@ -708,6 +708,15 @@ export const MUDANCAS: Mudanca[] = [
       "Os textos da ficha e do Analytics mandavam para \"a aba Investigação\", que se chama Triagem desde a tela de triagem; o cartão dentro dela também. E o bloco de contatos mostrava \"Nenhum contato registrado\" e \"Carregando contatos…\" ao mesmo tempo — o segundo só aparece agora quando há contato a carregar.",
   },
   {
+    id: "pesos-da-nota-certos",
+    dia: "2026-10-06",
+    tipo: "correcao",
+    frente: "reclame-aqui",
+    titulo: "Os pesos da nota explicados como a conta faz",
+    texto:
+      "A fórmula da plataforma é a oficial — resposta 20%, média das notas 30%, solução 30%, voltaria 20% —, mas os textos diziam outra coisa. O assistente de IA recebia \"nota do consumidor 20%\" e \"voltaria 30%\", trocados, e aconselhava em cima disso. O Meu dia e a análise de respostas diziam \"solução e voltaria pesam 30% cada\". E a aba Avaliação e o histograma diziam \"notas de 7 a 10 contam como promotor no cálculo\", corte que só existe como palpite na Calculadora. Agora todos dizem o que a conta usa, e o assistente lê os pesos da mesma constante do cálculo.",
+  },
+  {
     id: "checklist-de-verdade",
     dia: "2026-10-06",
     tipo: "correcao",

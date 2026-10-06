@@ -16,8 +16,16 @@ import {
   ptBR,
   RA1000_BAND,
   hojeNaOperacao,
+  SCORE_WEIGHTS,
   scoreBands,
 } from "@/lib/services/reputation.service";
+
+/*
+  Os pesos da fórmula, lidos da mesma constante da conta (out/2026). O texto
+  dizia nota do consumidor 20% e voltaria 30% — trocados —, e o assistente
+  aconselhava em cima disso.
+*/
+const peso = (chave: keyof typeof SCORE_WEIGHTS) => `${Math.round(SCORE_WEIGHTS[chave] * 100)}%`;
 
 import { slaStatus } from "@/lib/services/sla.service";
 import { isOpen } from "@/lib/services/case.service";
@@ -236,10 +244,10 @@ ${
 Janela de 6 meses (${seis.start} a ${seis.end}) — é a que define a nota pública:
 - Nota: ${ptBR(r6.raScore)} de 10 — faixa "${displayBand(r6).label}"
 - Reclamações: ${r6.received} | respondidas: ${r6.answered} | sem resposta: ${r6.unanswered}
-- Índice de resposta: ${ptBR(r6.responseIndex)}% (peso 20%)
-- Nota do consumidor: ${ptBR(r6.consumerScore, 2)} de 10 (peso 20%)
-- Índice de solução: ${ptBR(r6.solutionIndex)}% (peso 30%)
-- Voltaria a fazer negócio: ${ptBR(r6.wouldReturnIndex)}% (peso 30%)
+- Índice de resposta: ${ptBR(r6.responseIndex)}% (peso ${peso("resposta")})
+- Nota do consumidor: ${ptBR(r6.consumerScore, 2)} de 10 (peso ${peso("consumidor")})
+- Índice de solução: ${ptBR(r6.solutionIndex)}% (peso ${peso("solucao")})
+- Voltaria a fazer negócio: ${ptBR(r6.wouldReturnIndex)}% (peso ${peso("novos-negocios")})
 - Avaliações: ${r6.evaluated} (taxa de ${ptBR(r6.evaluationRate)}%)
 - Tempo médio de resposta: ${formatElapsed(r6.responseMinutes)}
 

@@ -255,7 +255,7 @@ export function avisosDeAbertura(entrada: EntradaDaAbertura): AvisoDeAbertura[] 
       tom: "neutro",
       titulo: `${fila.hoje.length} ${pluralDe(fila.hoje.length, "avaliação", "avaliações")} para pedir hoje`,
       detalhe:
-        "é a maior alavanca da nota: solução e intenção de voltar pesam 30% cada",
+        "é a maior alavanca da nota: a avaliação traz a média e a solução, 30% cada, e o \"voltaria\", 20%",
       quantidade: fila.hoje.length,
       href: "/reclame-aqui/avaliacoes",
       pergunta: "De quem eu peço avaliação hoje?",

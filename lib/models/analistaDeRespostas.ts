@@ -52,7 +52,7 @@ export interface ContextoDaAnalise {
 /** Por onde o cliente segue: o canal privado, o chat, o e-mail, a central. */
 const CAMINHO = /\b(mensagem privada|privad[oa]|chat|e-?mail|whats ?app|central de ajuda|entr(aremos|amos) em contato|retorn(aremos|amos)|suporte@|ajuda\.cardapioweb)/i;
 
-/** O convite a avaliar — é o que move solução e voltaria, 30% da nota cada. */
+/** O convite a avaliar — é o que move a média e a solução (30% cada) e o voltaria (20%). */
 const CONVITE = /\bavali(e|ar|a[çc][ãa]o)\b/i;
 
 /** Assinatura: o nome de quem atende ou a marca no fim. */
@@ -110,7 +110,7 @@ export function analisarResposta(texto: string, contexto: ContextoDaAnalise = {}
     achados.push({
       tipo: "sem-convite",
       tom: "atencao",
-      texto: "Não convida a avaliar. A avaliação é o que move a nota: solução e \"voltaria\" pesam 30% cada.",
+      texto: "Não convida a avaliar. A avaliação é o que move a nota: média e solução pesam 30% cada, e o \"voltaria\", 20%.",
     });
   }
 
