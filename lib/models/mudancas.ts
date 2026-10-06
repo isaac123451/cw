@@ -242,6 +242,38 @@ export const MUDANCAS: Mudanca[] = [
     onde: "Extensão → Painel",
   },
 
+  {
+    id: "ext-textos-do-canal-certo",
+    dia: "2026-10-06",
+    tipo: "correcao",
+    frente: "extensao",
+    titulo: "Textos prontos do canal certo",
+    texto:
+      "A aba Responder escolhia os textos só pela categoria: numa reclamação do Reclame Aqui aberta no WhatsApp, o único sugerido era \"NPS — promotor, pedido de indicação\". Agora o texto da pesquisa só aparece com ciclo de NPS aberto, o do direct só para caso das Redes, e a ordem segue a página onde o painel está.",
+    onde: "Extensão → Cliente → Responder",
+  },
+  {
+    id: "ext-textos-preenchidos",
+    dia: "2026-10-06",
+    tipo: "melhoria",
+    frente: "extensao",
+    titulo: "Textos prontos já preenchidos",
+    texto:
+      "O texto copiado na aba Responder já sai com o primeiro nome do cliente, o protocolo, quem está atendendo e o estabelecimento. O que só você pode escrever ([SEU NOME], [NOTA]…) aparece avisado embaixo, antes de mandar. Cada texto mostra também o canal para que foi escrito.",
+    onde: "Extensão → Cliente → Responder",
+  },
+
+  {
+    id: "ext-cabecalho-sem-nao-informado",
+    dia: "2026-10-06",
+    tipo: "correcao",
+    frente: "extensao",
+    titulo: "\"Não informado\" não aparece mais como nome",
+    texto:
+      "A reclamação que o vigia traz do portal chega sem o nome do consumidor, e o cabeçalho do painel estampava \"Não informado\" em negrito com a conversa da pessoa aberta ao lado. Agora vai o nome do contato, com a observação de que a reclamação está sem o nome.",
+    onde: "Extensão → Cliente",
+  },
+
   /* ---------------- extensão: popup e opções ---------------- */
   {
     id: "popup-abria-rolado",

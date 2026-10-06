@@ -282,6 +282,12 @@ ${fontes}
      * é o que a captura de tela sem navegador (Chrome headless) precisa.
      */
     const vista = new URLSearchParams(location.search).get("vista");
+    /* ?aba=dossie (responder, historico, caso): a aba do contato, depois da vista. */
+    const aba = new URLSearchParams(location.search).get("aba");
+    if (aba) {
+      setTimeout(() => raiz()?.querySelector(\`[data-acao="aba-contato"][data-aba="\${aba}"]\`)?.click(), 400);
+    }
+
     if (vista && vista !== "caso") {
       raiz()?.querySelector(\`[data-acao="canal"][data-canal="\${vista}"]\`)?.click();
     }

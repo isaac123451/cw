@@ -16,7 +16,9 @@ import { fetchCandidateCases } from "@/lib/services/case.repository";
 import {
   Case,
   respondida,
+  semNome,
 } from "@/lib/models/case";
+import { prepararRespostas } from "@/lib/services/respostas.service";
 import { Establishment } from "@/lib/models/establishment";
 
 import {
@@ -438,7 +440,12 @@ export async function GET(request: Request) {
 
     sugestoes: sugerir(encontro.casos, resumos, nps),
 
-    macros: macrosDe(encontro.casos, workspace, origem),
+    macros: macrosDe(encontro.casos, workspace, origem, {
+      npsAberto: listaNps.some((ciclo) => !ciclo.encerrado),
+      site: params.get("site") ?? "",
+      atendente: usuario?.nome ?? "",
+      estabelecimento: estabelecimento?.name ?? "",
+    }),
 
     // `todos`, e não o recorte do canal: o mapa de UF por cidade fica
     // pobre se a aba filtrar as reclamações que o alimentam.
@@ -1388,7 +1395,13 @@ function sugerir(
 function macrosDe(
   casos: Case[],
   workspace: Workspace,
-  origem: string
+  origem: string,
+  {
+    npsAberto,
+    site,
+    atendente,
+    estabelecimento,
+  }: { npsAberto: boolean; site: string; atendente: string; estabelecimento: string }
 ) {
 
   if (casos.length === 0) return [];
@@ -1397,14 +1410,46 @@ function macrosDe(
     casos.map((item) => item.category)
   );
 
-  return workspace.macros
-    .filter((macro) => categorias.has(macro.category))
+  /*
+    O canal conta, não só a categoria (out/2026).
+
+    Para uma reclamação do Reclame Aqui aberta no WhatsApp, o único texto
+    sugerido era "NPS — promotor, pedido de indicação": a categoria
+    batia, o canal não. Agora o texto da pesquisa só vem com ciclo de NPS
+    aberto, o do direct só para caso das Redes, e a ordem segue a página
+    em que o painel está (`AFINIDADE`, a mesma do atalho de respostas).
+  */
+  const canaisDosCasos = new Set(casos.map((item) => item.source));
+  const cabe = (canal: string) =>
+    canal === "NPS"
+      ? npsAberto
+      : canal === "Instagram"
+        ? !canaisDosCasos.has("Reclame Aqui") || canaisDosCasos.size > 1
+        : true;
+
+  const caso = casos.find(isOpen) ?? casos[0];
+  const primeiroNome = (nome: string | undefined) =>
+    semNome(nome) ? "" : String(nome).trim().split(/\s+/)[0];
+
+  /* Nome, protocolo e quem atende já preenchidos; o que não se sabe fica marcado para escrever. */
+  return prepararRespostas(
+    workspace.macros.filter((macro) => categorias.has(macro.category) && cabe(macro.channel)),
+    site === "Reclame Aqui" || site === "Instagram" || site === "NPS" ? site : "WhatsApp",
+    {
+      cliente: primeiroNome(caso?.customer),
+      protocolo: caso?.protocol,
+      responsavel: atendente,
+      estabelecimento,
+    }
+  )
     .slice(0, 3)
-    .map((macro) => ({
-      id: macro.id,
-      titulo: macro.title,
-      categoria: macro.category,
-      texto: macro.body,
+    .map((pronta) => ({
+      id: pronta.id,
+      titulo: pronta.titulo,
+      categoria: pronta.categoria,
+      canal: pronta.canal,
+      texto: pronta.texto,
+      preencher: pronta.preencher,
       url: `${origem}/base-conhecimento`,
     }));
 }

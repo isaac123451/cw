@@ -227,6 +227,9 @@
 
       termo: P.consulta?.termo ?? "",
       canal: P.canal,
+
+      /* Onde o painel está: decide a ordem dos textos prontos (out/2026). */
+      site: canalDaPagina(),
     };
   };
 
@@ -930,7 +933,14 @@
                 <button class="copiar" data-acao="copiar"
                         data-texto="${CW.escapar(macro.texto)}">copiar</button>
               </div>
+              ${macro.canal ? `<span class="tag neutro" style="margin-top:4px">${CW.escapar(macro.canal)}</span>` : ""}
               <pre>${CW.escapar(macro.texto)}</pre>
+              ${
+                /* Nome, protocolo e quem atende já vêm preenchidos; o que é para escrever fica dito. */
+                (macro.preencher ?? []).length
+                  ? `<p class="sub" style="margin-top:6px;color:var(--atencao)">Para escrever antes de mandar: ${macro.preencher.map((t) => CW.escapar(t)).join(", ")}</p>`
+                  : ""
+              }
             </div>`
             )
             .join("")}
@@ -1704,14 +1714,25 @@
 
     const conta = dados.estabelecimento?.nome;
 
+    /*
+      "Não informado" não é nome (out/2026). A reclamação que o vigia trouxe
+      do portal chega sem o consumidor, e o cabeçalho estampava isso em
+      negrito com a conversa da pessoa aberta ao lado. Com o nome do
+      contato na tela, ele vai no lugar — dizendo de onde veio.
+    */
+    const semNome = ["", "não informado", "nao informado"].includes(String(cliente.nome ?? "").trim().toLowerCase());
+    const daConversa = String(P.consulta?.nome ?? "").trim();
+    const nome = semNome && daConversa && !CW.telefoneDoTexto(daConversa) ? daConversa : cliente.nome || "Sem nome";
+
     return `
       <div class="cabecalho-cliente">
         <div class="cab-linha">
-          <span class="cab-nome" title="${CW.escapar(cliente.nome)}">${CW.escapar(cliente.nome)}</span>
+          <span class="cab-nome" title="${CW.escapar(nome)}">${CW.escapar(nome)}</span>
           <span class="tag ${tom}">${rotuloConfianca}</span>
           <span class="termometro" hidden></span>
         </div>
         ${conta ? `<div class="cab-conta">${CW.escapar(conta)}</div>` : ""}
+        ${nome !== cliente.nome && semNome && daConversa ? `<div class="cab-conta">nome do contato · a reclamação está sem o nome do consumidor</div>` : ""}
         ${P.consulta?.pelaConversa ? `<div class="cab-conta">achado pelo ${CW.escapar(P.consulta.pelaConversa)} escrito na conversa</div>` : ""}
         <div class="cab-frentes">${frentes.join("")}</div>
       </div>`;
