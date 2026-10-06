@@ -204,7 +204,7 @@ export default function ImpactoPage() {
       <div className="space-y-6">
 
         <PageHeading
-          eyebrow="Resultado"
+          eyebrow="Inteligência"
           title="Impacto no Negócio"
           description="Retorno financeiro gerado pela operação de Reputação."
         >

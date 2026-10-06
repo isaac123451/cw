@@ -197,8 +197,12 @@ export default function TrilhaDoCaso({ data, aoMudarNoServidor, irParaResposta, 
           Trilha do Reclame Aqui
         </h2>
         <div className="flex items-center gap-2.5">
-          <span className="text-xs font-medium tabular-nums text-zinc-500">
-            {feitos} de {obrigatorios} passos
+          {/* "de 6", com 8 passos na tela, parecia conta errada: os que faltam no total são os opcionais deste caso. */}
+          <span
+            className="text-xs font-medium tabular-nums text-zinc-500"
+            title={passos.length > obrigatorios ? `${passos.length - obrigatorios} dos ${passos.length} passos são opcionais neste caso e não entram na conta.` : undefined}
+          >
+            {feitos} de {obrigatorios} {passos.length > obrigatorios ? "obrigatórios" : "passos"}
           </span>
           <span className="h-1.5 w-28 overflow-hidden rounded-full bg-zinc-100" aria-hidden>
             <span
@@ -255,6 +259,8 @@ export default function TrilhaDoCaso({ data, aoMudarNoServidor, irParaResposta, 
                           {p.estado === "feito" ? <Check size={11} strokeWidth={3} /> : p.numero}
                         </span>
                         <span className="whitespace-nowrap">{p.titulo}</span>
+                        {/* O tracejado do contorno não aparecia (o anel é sombra, não borda): o opcional diz que é. */}
+                        {p.estado === "opcional" && <span className="text-[10px] font-normal text-zinc-400">· opcional</span>}
                       </button>
                     </li>
                   ))}

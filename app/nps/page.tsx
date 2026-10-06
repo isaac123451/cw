@@ -572,7 +572,7 @@ function NpsPagina({ abrirInicial = null }: { abrirInicial?: "etapas" | "causas"
       <div className="space-y-6">
 
         <PageHeading
-          eyebrow="Inteligência"
+          eyebrow="Frentes"
           title="NPS"
           description="Pesquisa do portal e o ciclo de feedback até o encerramento — reter quem está insatisfeito e aproveitar quem está satisfeito."
         >

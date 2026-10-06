@@ -35,7 +35,7 @@ export default function LinksDoRa({ caso, variante = "icones", dentroDeLink = fa
         const Icone = l.tipo === "empresa" ? Building2 : ExternalLink;
         const estilo =
           variante === "botoes"
-            ? "flex items-center gap-2 rounded-xl border border-violet-200 px-3.5 py-2.5 text-sm font-medium text-violet-700 transition-colors hover:bg-violet-50"
+            ? "flex h-9 items-center gap-2 rounded-xl border border-zinc-200 px-3.5 text-sm font-medium text-zinc-700 transition-colors hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700"
             : "rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-violet-50 hover:text-violet-700";
         const conteudo = (
           <>

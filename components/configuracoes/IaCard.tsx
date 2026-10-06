@@ -564,7 +564,7 @@ export default function IaCard() {
                     <strong className="font-semibold tabular-nums">
                       {(
                         (medicao.ms ?? 0) / 1000
-                      ).toFixed(1)}{" "}
+                      ).toFixed(1).replace(".", ",")}{" "}
                       s
                     </strong>{" "}
                     na via de {medicao.via} ·{" "}

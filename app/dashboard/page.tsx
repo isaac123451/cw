@@ -184,7 +184,7 @@ export default function DashboardPage() {
       <div className="space-y-6">
 
         <PageHeading
-          eyebrow="Visão geral"
+          eyebrow="Hoje"
           title={
             primeiroNome
               ? `Bom trabalho, ${primeiroNome}`

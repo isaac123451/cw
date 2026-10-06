@@ -482,7 +482,7 @@ export default function CaseDetail({
                   target="_blank"
                   rel="noopener noreferrer"
                   title="Abrir a interação original"
-                  className="flex items-center gap-2 rounded-xl border border-violet-200 px-4 py-2.5 text-sm font-medium text-violet-700 transition-colors hover:bg-violet-50"
+                  className="flex h-9 items-center gap-2 rounded-xl border border-zinc-200 px-3.5 text-sm font-medium text-zinc-700 transition-colors hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700"
                 >
                   <ExternalLink size={15} />
                   {data.source}
@@ -502,7 +502,7 @@ export default function CaseDetail({
               <Link
                 href={`/${canal === "reclame-aqui" ? "reclame-aqui" : "redes-sociais"}/${encodeURIComponent(data.id)}/dossie`}
                 title="O dossiê do caso: o texto corrido com os fatos e as imagens, e o formato de moderação"
-                className="flex items-center gap-2 rounded-xl border border-zinc-200 px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
+                className="flex h-9 items-center gap-2 rounded-xl border border-zinc-200 px-3.5 text-sm font-medium text-zinc-700 transition-colors hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700"
               >
                 <FileText size={15} />
                 Dossiê
@@ -515,7 +515,7 @@ export default function CaseDetail({
                 target="_blank"
                 rel="noopener noreferrer"
                 title={`Conversar com ${data.customer}`}
-                className="flex items-center gap-2 rounded-xl bg-violet-800 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-violet-900"
+                className="flex h-9 items-center gap-2 rounded-xl bg-violet-700 px-4 text-sm font-medium text-white shadow-sm transition-colors hover:bg-violet-800"
               >
                 <MessageCircle size={16} />
                 WhatsApp
@@ -540,10 +540,10 @@ export default function CaseDetail({
               type="button"
               onClick={() => setConfirmandoExclusao(true)}
               title="Excluir esta reclamação da base"
-              className="flex items-center gap-2 rounded-xl border border-zinc-200 px-3.5 py-2.5 text-sm font-medium text-zinc-500 transition-colors hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700"
+              aria-label="Excluir esta reclamação"
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-zinc-200 text-zinc-400 transition-colors hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700"
             >
               <Trash2 size={15} />
-              Excluir
             </button>
 
           </div>

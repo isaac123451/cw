@@ -15,7 +15,7 @@ export default function SegurancaPage() {
       <div className="space-y-6">
 
         <PageHeading
-          eyebrow="Configurações"
+          eyebrow="Plataforma"
           title="Segurança do acesso"
           description="Quem entra na plataforma, e o que é preciso provar para entrar."
         />

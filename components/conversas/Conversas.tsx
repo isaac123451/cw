@@ -146,7 +146,7 @@ export default function Conversas() {
   return (
     <div className="space-y-6">
       <PageHeading
-        eyebrow="Operação"
+        eyebrow="Frentes"
         title="Conversas do WhatsApp"
         description="As conversas que alguém guardou — pela extensão ou pelo arquivo que o WhatsApp exporta —, ligadas ao caso, ao NPS ou ao estabelecimento."
       >

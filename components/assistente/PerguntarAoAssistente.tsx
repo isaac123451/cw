@@ -24,7 +24,7 @@ export default function PerguntarAoAssistente({
     <Link
       href={`/assistente?pergunta=${encodeURIComponent(pergunta.slice(0, 500))}`}
       title={`Abre o assistente já perguntando: "${pergunta}"`}
-      className={`flex items-center gap-2 rounded-xl border border-zinc-200 px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:border-violet-300 hover:text-violet-700 ${className}`}
+      className={`flex h-9 items-center gap-2 rounded-xl border border-zinc-200 px-3.5 text-sm font-medium text-zinc-700 transition-colors hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700 ${className}`}
     >
       <Bot size={15} />
       {rotulo}

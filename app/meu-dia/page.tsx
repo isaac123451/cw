@@ -93,7 +93,7 @@ function MeuDiaPagina({ configurarInicial = false, ajustarRecuperacao = false }:
       <div className="space-y-6">
 
         <PageHeading
-          eyebrow="Operação"
+          eyebrow="Hoje"
           title="Meu dia"
           description={`${dataPorExtenso ? `${dataPorExtenso[0].toUpperCase()}${dataPorExtenso.slice(1)}. ` : ""}A rotina do documento com os números de hoje nas quatro frentes, o plano que cabe no expediente e o checkpoint com a gestão.`}
         />

@@ -217,7 +217,7 @@ export default function NpsAnalisePage() {
       <div className="space-y-6">
 
         <PageHeading
-          eyebrow="Inteligência"
+          eyebrow="NPS"
           title="Análise do NPS"
           description="A tela do NPS responde o que fazer agora. Esta responde se está melhorando — e por causa de quê."
         >

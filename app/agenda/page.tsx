@@ -237,7 +237,7 @@ export default function AgendaPage() {
       <div className="space-y-6">
 
         <PageHeading
-          eyebrow="Rotina"
+          eyebrow="Hoje"
           title="Agenda Operacional"
           description="Atividades, follow-ups, cobranças internas e pendências do time."
         >

@@ -139,7 +139,7 @@ export default function ClientesPage() {
       <div className="space-y-6">
 
         <PageHeading
-          eyebrow="Base de pessoas"
+          eyebrow="Pessoas e contas"
           title="Clientes"
           description="As pessoas por trás de cada reclamação — consumidores, donos e operadores dos estabelecimentos."
         >

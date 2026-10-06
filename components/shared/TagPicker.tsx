@@ -29,7 +29,7 @@ export default function TagPicker({
       <button
         onClick={() => setOpen((value) => !value)}
         title="Aplicar etiquetas ao caso"
-        className="flex items-center gap-2 rounded-xl border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-50"
+        className="flex h-9 items-center gap-2 rounded-xl border border-zinc-200 px-3.5 text-sm font-medium text-zinc-700 transition-colors hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700"
       >
         <TagIcon size={15} />
         Etiquetas

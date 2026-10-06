@@ -78,7 +78,7 @@ export default function CaseActions({
         <button
           onClick={() => setImpactOpen(true)}
           title="Registrar o resultado financeiro gerado por esta tratativa"
-          className="flex items-center gap-2 rounded-xl border border-zinc-200 px-3.5 py-2 text-sm font-medium text-zinc-700 transition-colors hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700"
+          className="flex h-9 items-center gap-2 rounded-xl border border-zinc-200 px-3.5 text-sm font-medium text-zinc-700 transition-colors hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700"
         >
           <Wallet size={15} />
           Registrar impacto
@@ -99,7 +99,7 @@ export default function CaseActions({
         <button
           onClick={() => setTaskOpen(true)}
           title="Criar uma atividade na agenda já vinculada a esta reclamação"
-          className="flex items-center gap-2 rounded-xl border border-zinc-200 px-3.5 py-2 text-sm font-medium text-zinc-700 transition-colors hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700"
+          className="flex h-9 items-center gap-2 rounded-xl border border-zinc-200 px-3.5 text-sm font-medium text-zinc-700 transition-colors hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700"
         >
           <CalendarPlus size={15} />
           Criar atividade
@@ -114,7 +114,7 @@ export default function CaseActions({
         <Link
           href={`/clientes/${slugify(data.customer)}`}
           title={`Ver o histórico completo de ${data.customer}`}
-          className="flex items-center gap-2 rounded-xl border border-zinc-200 px-3.5 py-2 text-sm font-medium text-zinc-700 transition-colors hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700"
+          className="flex h-9 items-center gap-2 rounded-xl border border-zinc-200 px-3.5 text-sm font-medium text-zinc-700 transition-colors hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700"
         >
           <UserRound size={15} />
           Ver cliente
@@ -124,7 +124,7 @@ export default function CaseActions({
           <Link
             href={`/estabelecimentos/${estabelecimento.slug}`}
             title={`Abrir ${estabelecimento.name}`}
-            className="flex items-center gap-2 rounded-xl border border-zinc-200 px-3.5 py-2 text-sm font-medium text-zinc-700 transition-colors hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700"
+            className="flex h-9 items-center gap-2 rounded-xl border border-zinc-200 px-3.5 text-sm font-medium text-zinc-700 transition-colors hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700"
           >
             <Building2 size={15} />
             {estabelecimento.name}

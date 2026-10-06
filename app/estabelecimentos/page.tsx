@@ -225,7 +225,7 @@ export default function EstabelecimentosPage() {
       <div className="space-y-6">
 
         <PageHeading
-          eyebrow="Base de contas"
+          eyebrow="Pessoas e contas"
           title="Estabelecimentos"
           description="Os restaurantes que contratam a Cardápio Web. As pessoas ficam em Clientes."
         >

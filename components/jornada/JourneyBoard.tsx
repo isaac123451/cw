@@ -12,6 +12,7 @@ import { FRENTES_DA_OPERACAO } from "@/lib/models/frentes";
 import IconeDaFrente from "@/components/shared/IconeDaFrente";
 import { JourneyStage } from "@/lib/models/journey";
 import { pluralDe } from "@/lib/plural";
+import { ptBR } from "@/lib/services/reputation.service";
 
 interface Props {
   journeys: JornadaNasFrentes[];
@@ -188,7 +189,7 @@ export default function JourneyBoard({
                             size={10}
                             className="fill-amber-400 text-amber-400"
                           />
-                          {journey.averageScore}
+                          {ptBR(journey.averageScore)}
                         </span>
 
                         <span>{journey.total} {pluralDe(journey.total, "registro", "registros")}</span>

@@ -183,7 +183,7 @@ function RedesSociaisConteudo() {
       <div className="space-y-6">
 
         <PageHeading
-          eyebrow="Atendimento"
+          eyebrow="Frentes"
           title="Redes Sociais"
           description="Instagram, Facebook, WhatsApp e ManyChat, no fluxo do documento das Redes: 1º contato em 4 horas úteis (1 hora acima de 10 mil seguidores)."
         >

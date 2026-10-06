@@ -120,7 +120,7 @@ export default function GooglePage() {
       <div className="space-y-6">
 
         <PageHeading
-          eyebrow="Operação"
+          eyebrow="Frentes"
           title="Google Avaliações"
           description="O perfil da Cardápio Web no Google: a resposta é para quem avaliou e para todo futuro cliente que vai ler antes de decidir."
         >

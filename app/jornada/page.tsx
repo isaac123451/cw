@@ -46,6 +46,7 @@ import { descreverRegistro } from "@/lib/services/horasUteis";
 import { slugify } from "@/lib/services/slug";
 import { FRENTES_DA_OPERACAO, frente as frenteDaOperacao, type FrenteId } from "@/lib/models/frentes";
 import { pluralDe } from "@/lib/plural";
+import { ptBR } from "@/lib/services/reputation.service";
 
 /*
   As quatro frentes, na ordem do documento. Era "Todos os canais,
@@ -125,7 +126,7 @@ export default function JornadaPage() {
       <div className="space-y-6">
 
         <PageHeading
-          eyebrow="Clientes"
+          eyebrow="Pessoas e contas"
           title="Jornada do Cliente"
           description="Ciclo de vida, histórico e pontos críticos de cada cliente — no Reclame Aqui, nas redes, no NPS e no Google."
         >
@@ -371,7 +372,7 @@ export default function JornadaPage() {
 
                         <span className="mt-0.5 block truncate text-xs text-zinc-500">
                           {stage?.name} · {item.total} {pluralDe(item.total, "registro", "registros")} ·
-                          nota {item.averageScore}
+                          nota {ptBR(item.averageScore)}
                         </span>
 
                       </span>

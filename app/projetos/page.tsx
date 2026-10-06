@@ -115,7 +115,7 @@ export default function ProjetosPage() {
       <div className="space-y-6">
 
         <PageHeading
-          eyebrow="Evolução contínua"
+          eyebrow="Conhecimento"
           title="Projetos e Melhorias"
           description="Roadmap da área: ideias, planos de ação e entregas."
         >

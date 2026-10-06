@@ -65,6 +65,9 @@ function CampoManual({
   );
 }
 
+/** 8,49 e não 8.49 — a tabela é lida por gente; a exportação continua com o número cru. */
+const virgula = (n: number, casas: number) => n.toFixed(casas).replace(".", ",");
+
 const mesAtual = () =>
   new Date().toISOString().slice(0, 7);
 
@@ -358,7 +361,7 @@ export default function MetricasDiariasCard() {
                       {l.entrantes}
                     </td>
                     <td className="border-b border-zinc-100 px-2 py-1.5 font-semibold text-violet-700">
-                      {l.notaReputacao.toFixed(1)}
+                      {virgula(l.notaReputacao, 1)}
                     </td>
                     <td className="border-b border-zinc-100 px-2 py-1.5">
                       {l.respondidas}
@@ -367,16 +370,16 @@ export default function MetricasDiariasCard() {
                       {l.naoRespondidas}
                     </td>
                     <td className="border-b border-zinc-100 px-2 py-1.5">
-                      {l.notaConsumidor.toFixed(2)}
+                      {virgula(l.notaConsumidor, 2)}
                     </td>
                     <td className="border-b border-zinc-100 px-2 py-1.5">
-                      {l.voltariam.toFixed(1)}%
+                      {virgula(l.voltariam, 1)}%
                     </td>
                     <td className="border-b border-zinc-100 px-2 py-1.5">
-                      {l.resolvidasPct.toFixed(1)}%
+                      {virgula(l.resolvidasPct, 1)}%
                     </td>
                     <td className="border-b border-zinc-100 px-2 py-1.5">
-                      {l.tempoMedioHoras.toFixed(1)}
+                      {virgula(l.tempoMedioHoras, 1)}
                     </td>
                     <td className="border-b border-zinc-100 px-2 py-1.5">
                       {l.resolvidasCiclo ?? "—"}

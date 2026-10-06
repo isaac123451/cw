@@ -38,7 +38,7 @@ export default function ReclameAquiPage() {
         </Suspense>
 
         <PageHeading
-          eyebrow="Módulo"
+          eyebrow="Frentes"
           title="Reclame Aqui"
           description="Gestão das reclamações registradas e da tratativa com o consumidor."
         />

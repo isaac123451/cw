@@ -440,6 +440,45 @@ export const MUDANCAS: Mudanca[] = [
     href: "/reclame-aqui",
   },
   {
+    id: "ficha-botoes-de-um-jeito-so",
+    dia: "2026-10-06",
+    tipo: "melhoria",
+    frente: "reclame-aqui",
+    titulo: "Botões da ficha do caso com um estilo só",
+    texto:
+      "O cabeçalho da reclamação misturava três estilos e três alturas de botão — contorno roxo em Página pública e Área da empresa, neutro nos outros, cada um de um tamanho. Agora todos têm a mesma altura e o mesmo contorno; só o WhatsApp fica preenchido, como ação principal, e o Excluir virou um ícone discreto no fim da fileira.",
+    href: "/reclame-aqui",
+  },
+  {
+    id: "trilha-obrigatorios",
+    dia: "2026-10-06",
+    tipo: "correcao",
+    frente: "reclame-aqui",
+    titulo: "Trilha: \"1 de 6 obrigatórios\", com os opcionais marcados",
+    texto:
+      "O contador dizia \"1 de 6 passos\" com oito passos na tela, e parecia conta errada: dois são opcionais no caso (persistência no contato e resolução interna) e não entram na conta. Agora diz \"obrigatórios\", explica ao passar o mouse, e os passos opcionais trazem \"· opcional\" — o tracejado que deveria marcá-los não aparecia.",
+    href: "/reclame-aqui",
+  },
+  {
+    id: "rotulos-iguais-ao-menu",
+    dia: "2026-10-06",
+    tipo: "melhoria",
+    frente: "plataforma",
+    titulo: "O rótulo de cada tela é o grupo dela no menu",
+    texto:
+      "O texto pequeno acima do título de cada tela não tinha padrão — \"Rotina\", \"Visão geral\", \"Operação\", \"Base de pessoas\", \"Evolução contínua\", \"Módulo\", \"Atendimento\" — e o NPS aparecia como \"Inteligência\" estando em Frentes no menu. Agora cada tela mostra o grupo em que está no menu (Hoje, Frentes, Pessoas e contas, Inteligência, Conhecimento), e as telas internas de um módulo mostram o nome dele.",
+  },
+  {
+    id: "virgula-nas-tabelas",
+    dia: "2026-10-06",
+    tipo: "correcao",
+    frente: "plataforma",
+    titulo: "Vírgula na Jornada, nas métricas diárias e na medição da IA",
+    texto:
+      "A Jornada do Cliente mostrava a nota média como \"3.5\", a tabela de métricas diárias da Analytics como \"8.49\", \"83.3%\" e \"361.0\", e a medição da IA em Configurações como \"1.4 s\". Agora tudo com vírgula; a exportação da planilha continua com o número cru.",
+    href: "/jornada",
+  },
+  {
     id: "proximo-passo-em-pilula",
     dia: "2026-10-06",
     tipo: "melhoria",
