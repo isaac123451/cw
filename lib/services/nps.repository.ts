@@ -2,7 +2,7 @@ import { PrismaClient } from "@prisma/client";
 
 import type { Prisma } from "@prisma/client";
 
-import { isEncerrado } from "@/lib/models/nps";
+import { isEncerrado, tentativasMinimas } from "@/lib/models/nps";
 import { normalizarNome } from "@/lib/services/contato.service";
 import { diaNaOperacao } from "@/lib/services/reputation.service";
 
@@ -88,6 +88,8 @@ export interface RetratoNps {
   prazoPrimeiroContato?: string;
   primeiroContatoEm?: string;
   tentativas: number;
+  /** Quantas tentativas o guia pede antes de encerrar sem retorno — 5 para "Falta de Retorno", 3 para o resto. */
+  tentativasMinimas: number;
   establishmentId: string | null;
   encerrado: boolean;
 
@@ -193,6 +195,7 @@ export function retratoNps(linha: LinhaNps): RetratoNps {
     prazoPrimeiroContato: dia(linha.firstContactDueAt),
     primeiroContatoEm: dia(linha.firstContactAt),
     tentativas: linha._count.attempts,
+    tentativasMinimas: tentativasMinimas(linha.kind),
     establishmentId: linha.establishmentId,
     encerrado: isEncerrado(linha.status),
 

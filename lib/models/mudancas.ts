@@ -53,6 +53,16 @@ export const REVISAO = {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- extensão: o painel ---------------- */
   {
+    id: "ext-tentativas-pelo-tipo",
+    dia: "2026-10-06",
+    tipo: "correcao",
+    frente: "extensao",
+    titulo: "Quantas tentativas o NPS pede, pelo tipo do ciclo",
+    texto:
+      "O formulário de tentativa da extensão dizia \"Três tentativas em 7 dias autorizam encerrar por falta de retorno\" para todo ciclo. Para o tipo \"Falta de Retorno\" o guia pede cinco — e a ficha da plataforma já contava cinco. Agora a extensão recebe o mínimo do próprio ciclo.",
+    onde: "Extensão → NPS → Tentei contato",
+  },
+  {
     id: "ext-endereco-de-exemplo",
     dia: "2026-10-06",
     tipo: "correcao",

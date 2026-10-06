@@ -434,7 +434,8 @@
     if (!nps.encerrado) {
       partes.push(
         '  <div class="cartao painel-acao" data-painel-de="tentativa" hidden>',
-        `    <p class="sub" style="margin-bottom:2px">Três tentativas em 7 dias autorizam encerrar por falta de retorno — esta é a ${nps.tentativas + 1}ª.</p>`,
+        /* O mínimo vem do tipo do ciclo: 5 para "Falta de Retorno", 3 para o resto (out/2026) — era "Três" fixo. */
+        `    <p class="sub" style="margin-bottom:2px">${CW.escapar(String(nps.tentativasMinimas ?? 3))} tentativas em 7 dias autorizam encerrar por falta de retorno — esta é a ${CW.escapar(String(nps.tentativas + 1))}ª.</p>`,
         '    <select class="campo" id="nps-canal">',
         ...P.CANAIS.map(
           (c) => `      <option value="${c}">${c}</option>`
