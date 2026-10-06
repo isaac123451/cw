@@ -18,7 +18,8 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 
-import { NOVIDADES, compararVersoes, eraDaVersao, filtrarNovidades, novasDesde, tourPorId } from "../lib/models/novidades";
+import { MUDANCAS } from "../lib/models/mudancas";
+import { NOVIDADES, compararVersoes, diaDaUltimaNovidade, eraDaVersao, filtrarNovidades, novasDesde, tourPorId } from "../lib/models/novidades";
 
 const RAIZ = resolve(__dirname, "..");
 
@@ -35,10 +36,10 @@ console.log("\n  NOVIDADES\n");
 
 /* ---- 1. versões ---- */
 
-const pacote = JSON.parse(readFileSync(resolve(RAIZ, "package.json"), "utf8")) as { version: string };
-const menor = pacote.version.replace(/\.\d+$/, ".0");
-conferir(`a versão atual (${pacote.version}) tem novidade`, NOVIDADES.some((n) => n.versao === pacote.version || n.versao === menor), true);
+/* Desde 05/10/2026 a aplicação não sobe de versão (fica em 1.0.0): o "novo" é pelo dia. */
 conferir("da mais nova para a mais antiga", NOVIDADES.every((n, i) => i === 0 || compararVersoes(NOVIDADES[i - 1].versao, n.versao) > 0), true);
+conferir("o dia nunca anda para trás", NOVIDADES.every((n, i) => i === 0 || NOVIDADES[i - 1].data >= n.data), true);
+conferir("o dia visto é o da entrada mais nova", diaDaUltimaNovidade(), NOVIDADES[0].data);
 conferir("toda novidade tem frente e texto", NOVIDADES.every((n) => n.frentes.length > 0 && n.texto.length > 20), true);
 conferir("datas no formato do dia", NOVIDADES.every((n) => /^\d{4}-\d{2}-\d{2}$/.test(n.data)), true);
 
@@ -71,10 +72,18 @@ conferir("a página monta o tour", readFileSync(resolve(RAIZ, "components/layout
 
 conferir("eras", ["1.8.0", "1.1.0", "1.0.1", "1.0.0", "0.48.0", "0.47.0"].map(eraDaVersao), ["2.0", "2.0", "1.0", "1.0", "1.0", "antes"]);
 conferir("quem nunca abriu vê só a era atual", [...novasDesde(NOVIDADES, null)].every((v) => eraDaVersao(v) === "2.0"), true);
-conferir("quem viu a 1.5.0 vê o que veio depois", [...novasDesde(NOVIDADES, "1.5.0")].every((v) => compararVersoes(v, "1.5.0") > 0) && novasDesde(NOVIDADES, "1.5.0").size > 0, true);
-conferir("quem viu a atual não tem novidade", novasDesde(NOVIDADES, NOVIDADES[0].versao).size, 0);
+conferir("quem viu em 01/09 vê o que veio depois", [...novasDesde(NOVIDADES, "2026-09-01")].every((v) => (NOVIDADES.find((n) => n.versao === v)?.data ?? "") > "2026-09-01") && novasDesde(NOVIDADES, "2026-09-01").size > 0, true);
+conferir("quem viu a mais nova não tem novidade", novasDesde(NOVIDADES, diaDaUltimaNovidade()).size, 0);
 conferir("filtro por frente", filtrarNovidades(NOVIDADES, "google").every((n) => n.frentes.includes("google")), true);
-conferir("o menu marca a novidade não vista", readFileSync(resolve(RAIZ, "components/layout/Sidebar.tsx"), "utf8").includes("CHAVE_DA_VERSAO_VISTA"), true);
+conferir("o menu marca a novidade não vista", readFileSync(resolve(RAIZ, "components/layout/Sidebar.tsx"), "utf8").includes("CHAVE_DA_NOVIDADE_VISTA"), true);
 
-console.log(falhas === 0 ? "\n  As novidades acompanham as versões.\n" : `\n  ${falhas} ponto(s) a corrigir.\n`);
+/* ---- 4. a revisão item a item (out/2026) ---- */
+
+conferir("revisão: ids únicos", new Set(MUDANCAS.map((m) => m.id)).size, MUDANCAS.length);
+conferir("revisão: dia no formato", MUDANCAS.every((m) => /^\d{4}-\d{2}-\d{2}$/.test(m.dia)), true);
+conferir("revisão: todo endereço é uma página", MUDANCAS.flatMap((m) => (m.href && !paginaExiste(m.href) ? [m.href] : [])), []);
+conferir("revisão: texto de quem usa (sem plural com parênteses)", MUDANCAS.filter((m) => m.id !== "plural-de-verdade" && /\((s|es|ões)\)/.test(m.titulo + m.texto)).map((m) => m.id), []);
+conferir("revisão: o menu acende com ela", diaDaUltimaNovidade() >= MUDANCAS[0].dia, true);
+
+console.log(falhas === 0 ? "\n  As novidades estão em dia.\n" : `\n  ${falhas} ponto(s) a corrigir.\n`);
 process.exit(falhas === 0 ? 0 : 1);

@@ -299,7 +299,7 @@ export async function GET(request: Request) {
    * sintoma foi um número plausível e errado.
    */
   /*
-    Os doze meses **fechados** (1.135). Sem limites, a função devolvia
+    Os doze meses **fechados** (out/2026). Sem limites, a função devolvia
     também o mês corrente — e no dia 5 de outubro o popup estampava
     "2,6 em out/26 · 1 reclamação ▼ 5,5" como a nota do mês, um mês de
     cinco dias com uma reclamação. Com os limites, é a mesma conta da

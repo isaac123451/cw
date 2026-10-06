@@ -128,7 +128,7 @@
     const textos = d.textos ?? {};
 
     /*
-      Dois grupos de botões pequenos, lado a lado (1.135): o que eu fiz
+      Dois grupos de botões pequenos, lado a lado (out/2026): o que eu fiz
       (registra no caso) e o texto pronto (copia). Até a 1.134 eram oito
       botões da largura da gaveta, um embaixo do outro, e o relato do
       consumidor ficava três rolagens abaixo.
@@ -230,7 +230,7 @@
   /**
    * Os protocolos da lista de onde o caso foi aberto, na ordem da tela.
    *
-   * É o que deixa trabalhar a fila caso a caso (1.135): abrir, registrar,
+   * É o que deixa trabalhar a fila caso a caso (out/2026): abrir, registrar,
    * próximo — sem voltar à lista a cada um, que era o vai e vem que mais
    * custava numa manhã de vinte reclamações.
    */
@@ -521,7 +521,7 @@
   P.blocoOutrasFrentes = function blocoOutrasFrentes(frentes) {
 
     /*
-      A frente da aba aberta não é "outra" (1.135): na aba do Reclame Aqui
+      A frente da aba aberta não é "outra" (out/2026): na aba do Reclame Aqui
       o bloco chegou a dizer "Reclame Aqui · esta aba não os mostra".
     */
     const outras = (Array.isArray(frentes) ? frentes : []).filter((f) => f.canal !== P.canal);
@@ -565,7 +565,7 @@
   P.blocoDossie = function blocoDossie(protocolo) {
 
     /*
-      Sem reclamação, nada (1.135). O bloco dizia "este contato não tem
+      Sem reclamação, nada (out/2026). O bloco dizia "este contato não tem
       reclamação cadastrada" até na aba do NPS de quem tinha uma aberta
       no Reclame Aqui, logo abaixo do cartão que a mostrava.
     */
@@ -579,7 +579,7 @@
       '<div class="bloco">',
       '  <div class="rotulo">Dossiê</div>',
 
-      /* Lado a lado (1.135): o dossiê das 8 partes abre na plataforma; o resumo é leitura aqui mesmo. */
+      /* Lado a lado (out/2026): o dossiê das 8 partes abre na plataforma; o resumo é leitura aqui mesmo. */
       protocolo
         ? `  <div class="grade-acoes">
     <button class="acao-chip" data-acao="abrir-na-plataforma" data-caminho="/reclame-aqui/${CW.escapar(encodeURIComponent(protocolo))}/dossie" title="As 8 partes, montadas dos registros deste caso, com a conferência antes de pedir moderação">${CW.icone("documento", 14)}<span>Abrir o dossiê</span>${CW.icone("fora", 12)}</button>

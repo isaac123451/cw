@@ -1296,11 +1296,11 @@ ${CORES}
   color: var(--texto, inherit);
 }
 
-/* ---------- ícones de traço (1.135) ---------- */
+/* ---------- ícones de traço (out/2026) ---------- */
 
 .ic { flex: none; display: block; }
 
-/* ---------- o menu do cabeçalho (1.135) ---------- */
+/* ---------- o menu do cabeçalho (out/2026) ---------- */
 
 .menu-painel {
   position: absolute;
@@ -1364,7 +1364,7 @@ ${CORES}
   .menu-painel, .gaveta { animation: none; transition: none; }
 }
 
-/* ---------- caso: voltar, passos em grade, relato recolhido (1.135) ---------- */
+/* ---------- caso: voltar, passos em grade, relato recolhido (out/2026) ---------- */
 
 .migalha {
   display: inline-flex;
@@ -1446,7 +1446,7 @@ ${CORES}
 
 .link-mais:hover { text-decoration: underline; }
 
-/* Os números nas abas (1.135): pequenos, no canto do ícone. */
+/* Os números nas abas (out/2026): pequenos, no canto do ícone. */
 .canais .conta {
   position: absolute;
   top: 2px;

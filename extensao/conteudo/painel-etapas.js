@@ -89,7 +89,7 @@
     const depois = vizinha(caso.status, "avancar");
 
     /*
-      Uma linha só (1.135): voltar, avançar e "outra etapa". A ponta do
+      Uma linha só (out/2026): voltar, avançar e "outra etapa". A ponta do
       fluxo não vira mais uma caixa tracejada "início do fluxo" do
       tamanho de um botão — some, e o vizinho ocupa o lugar.
     */

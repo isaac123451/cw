@@ -18,7 +18,7 @@ import { useSla } from "@/lib/context/SlaContext";
 import { useAvaliacoesGoogle } from "@/lib/context/useAvaliacoesGoogle";
 import { useAgora } from "@/lib/hooks/useAgora";
 import { gravarLocal, usePreferenciaLocal } from "@/lib/hooks/usePreferenciaLocal";
-import { CHAVE_DA_VERSAO_VISTA, compararVersoes } from "@/lib/models/novidades";
+import { CHAVE_DA_NOVIDADE_VISTA, diaDaUltimaNovidade } from "@/lib/models/novidades";
 import { contadoresDoMenu, numeroCurto, type ContadorDoMenu } from "@/lib/models/contadoresDoMenu";
 import { quantasEsperando } from "@/lib/models/esperaNoWhatsapp";
 import { useEsperaNoWhatsapp } from "@/lib/hooks/useEsperaNoWhatsapp";
@@ -76,9 +76,11 @@ export default function Sidebar({ forcarAberto = false }: { forcarAberto?: boole
   const recolhido = !forcarAberto && recolhidoBruto === "1";
 
   /* O ponto ao lado da versão: há novidade que a pessoa ainda não abriu. */
-  const versaoVista = usePreferenciaLocal(CHAVE_DA_VERSAO_VISTA);
-  const versao = process.env.NEXT_PUBLIC_VERSAO ?? "";
-  const temNovidade = Boolean(versao) && (versaoVista === null || compararVersoes(versao, versaoVista) > 0);
+  const diaVisto = usePreferenciaLocal(CHAVE_DA_NOVIDADE_VISTA);
+  const ultima = diaDaUltimaNovidade();
+  const temNovidade = Boolean(ultima) && (diaVisto === null || ultima > diaVisto);
+  /* "Versão 1.0": desde 05/10/2026 a aplicação não sobe de versão, e o terceiro número não diz nada. */
+  const versao = (process.env.NEXT_PUBLIC_VERSAO ?? "").split(".").slice(0, 2).join(".");
 
   const fixados = useMemo<string[]>(() => {
     try {

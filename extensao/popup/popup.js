@@ -399,7 +399,7 @@ async function carregar() {
   }
 
   /*
-    A busca vai para o topo (1.135). Ela ficava no fim e recebia o foco ao
+    A busca vai para o topo (out/2026). Ela ficava no fim e recebia o foco ao
     abrir — o popup abria rolado 800 px para baixo, com a nota fora da
     vista. No topo, o foco não rola nada, e é a primeira coisa que se usa.
   */

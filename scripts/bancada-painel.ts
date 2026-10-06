@@ -364,7 +364,7 @@ async function main() {
     }
 
     /*
-      O popup e as opções, fora do Chrome (1.135): a página da extensão
+      O popup e as opções, fora do Chrome (out/2026): a página da extensão
       com um \`chrome\` de mentira que responde com as mesmas capturas.
       /popup e /opcoes; os arquivos da extensão saem de /ext/.
     */

@@ -254,7 +254,7 @@
         </header>
 
         <!--
-          O menu do cabeçalho (1.135).
+          O menu do cabeçalho (out/2026).
 
           Fixar, tema, voltar à lateral, abrir sozinho, botão no canto,
           atalhos e opções moravam espalhados entre o cabeçalho (com
@@ -303,7 +303,7 @@
         </p>
 
         <!--
-          A barra de abas, com ícone (1.135).
+          A barra de abas, com ícone (out/2026).
 
           "Cliente" é a conversa aberta. Até a 1.134 não havia aba para
           ela: o contato era o que sobrava quando nenhuma aba estava
@@ -1536,7 +1536,7 @@
     P.aberto = true;
     gaveta?.classList.add("aberta");
 
-    /* Os números nas abas, no máximo a cada 5 minutos (1.135). */
+    /* Os números nas abas, no máximo a cada 5 minutos (out/2026). */
     P.atualizarContadoresDasAbas?.();
 
     P.empurrarPagina(true);
@@ -1598,7 +1598,7 @@
 
       const menuAberto = P.raiz.querySelector(".menu-painel:not([hidden])");
 
-      /* No caso aberto, ← e → andam pela lista de onde ele veio (1.135). */
+      /* No caso aberto, ← e → andam pela lista de onde ele veio (out/2026). */
       const navegar =
         P.vista === "caso" && (evento.key === "ArrowLeft" || evento.key === "ArrowRight")
           ? P.raiz.querySelector(`[data-navegar="${evento.key === "ArrowLeft" ? "anterior" : "proximo"}"]`)

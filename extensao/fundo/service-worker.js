@@ -1138,7 +1138,7 @@ async function tratar(mensagem) {
 
   if (mensagem?.tipo === "abrir") {
     /*
-      Só http(s) (1.135). O endereço vem de dado do servidor e, em alguns
+      Só http(s) (out/2026). O endereço vem de dado do servidor e, em alguns
       botões, de texto lido da página — e `data:` ou `javascript:` numa aba
       nova é exatamente o que não se abre às cegas. O popup já filtrava;
       o painel passava direto.

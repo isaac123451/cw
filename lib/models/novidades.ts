@@ -1,3 +1,5 @@
+import { diaDaUltimaMudanca } from "@/lib/models/mudancas";
+
 /**
  * As novidades de todas as versões, em linguagem de quem usa.
  *
@@ -16,10 +18,17 @@
  * o passo é pulado, e não quebra o tour.
  */
 
-/** A última versão que a pessoa viu na página, no navegador dela. */
-export const CHAVE_DA_VERSAO_VISTA = "cw:novidades-vista";
+/**
+ * O dia da novidade mais recente que a pessoa viu, no navegador dela.
+ *
+ * Era a versão da aplicação (`cw:novidades-vista`). Em 05/10/2026 o Isaac
+ * decidiu: "não quero versões, tudo vai voltar para 1.0" — e com a
+ * aplicação em 1.0.0 a comparação por versão deixaria de enxergar
+ * novidade. O dia da entrada é o que de fato muda quando algo entra.
+ */
+export const CHAVE_DA_NOVIDADE_VISTA = "cw:novidades-vista-dia";
 
-export type FrenteDaNovidade = "reclame-aqui" | "redes" | "nps" | "google" | "extensao" | "plataforma";
+export type FrenteDaNovidade = "reclame-aqui" | "redes" | "nps" | "google" | "extensao" | "plataforma" | "bastidores";
 
 export const FRENTES_DAS_NOVIDADES: { id: FrenteDaNovidade; nome: string }[] = [
   { id: "reclame-aqui", nome: "Reclame Aqui" },
@@ -28,6 +37,8 @@ export const FRENTES_DAS_NOVIDADES: { id: FrenteDaNovidade; nome: string }[] = [
   { id: "google", nome: "Google" },
   { id: "extensao", nome: "Extensão" },
   { id: "plataforma", nome: "Plataforma" },
+  /* O que não aparece na tela mas muda a confiança nela: conferências, segurança, tempo de build. */
+  { id: "bastidores", nome: "Por dentro" },
 ];
 
 export interface PassoDoTour {
@@ -82,14 +93,21 @@ export function compararVersoes(a: string, b: string) {
 }
 
 /**
- * O que é novo para quem viu a página pela última vez em `vista`.
+ * O que é novo para quem viu a página pela última vez no dia `vista`.
  *
  * Quem nunca abriu (vista nula) não ganha 60 marcações de "novo": só a
  * era atual conta como novidade.
  */
 export function novasDesde(novidades: Novidade[], vista: string | null) {
   if (!vista) return new Set(novidades.filter((n) => eraDaVersao(n.versao) === "2.0").map((n) => n.versao));
-  return new Set(novidades.filter((n) => compararVersoes(n.versao, vista) > 0).map((n) => n.versao));
+  return new Set(novidades.filter((n) => n.data > vista).map((n) => n.versao));
+}
+
+/** O dia da entrada mais nova — da revisão ou do histórico —, o que a página grava como "visto". */
+export function diaDaUltimaNovidade() {
+  const doHistorico = NOVIDADES.reduce((maior, n) => (n.data > maior ? n.data : maior), "");
+  const daRevisao = diaDaUltimaMudanca();
+  return daRevisao > doHistorico ? daRevisao : doHistorico;
 }
 
 export function filtrarNovidades(novidades: Novidade[], frente: FrenteDaNovidade | null) {
@@ -103,20 +121,6 @@ export function tourPorId(id: string | null | undefined) {
 
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
-  {
-    versao: "1.136.0",
-    data: "2026-10-05",
-    titulo: "Caso a caso, sem voltar à lista",
-    texto: "Na extensão, o caso aberto a partir de uma lista mostra \"‹ 3 de 12 ›\" — e as setas ← e → passam para o anterior ou o próximo. As abas RA, NPS e Agenda ganharam um número com o que espera por você. No popup, a busca subiu para o topo e a curva da nota mostra só meses fechados.",
-    frentes: ["extensao"],
-  },
-  {
-    versao: "1.135.0",
-    data: "2026-10-05",
-    titulo: "Extensão mais leve de usar",
-    texto: "O painel ganhou abas com ícone — inclusive Cliente, para voltar à conversa —, um menu ⋯ com tema, fixar e opções, e nada de formulário aberto: Perguntar, Anotar e Lembrete abrem no clique. No caso, os passos ficam em grade e o relato longo vem recolhido. E em toda a plataforma, \"reclamação(ões)\" virou \"1 reclamação\" ou \"5 reclamações\".",
-    frentes: ["extensao", "plataforma"],
-  },
   {
     versao: "1.134.0",
     data: "2026-10-05",

@@ -1116,7 +1116,7 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
-### Caso a caso na fila, números nas abas e o popup que abria rolado (05/10/2026, 1.136.0)
+### Caso a caso na fila, números nas abas e o popup que abria rolado (05/10/2026)
 
 Continuação do pedido de 05/10 ("tudo que a extensão promete faça com
 maestria").
@@ -1153,7 +1153,7 @@ maestria").
   (o vigia aparecia como "tratador sem quem chame"). A bancada serve
   `/popup` e `/opcoes` com um `chrome` de mentira e dados reais.
 
-### A extensão repaginada, parte 1, e o fim do "(ões)" (05/10/2026, 1.135.0)
+### A extensão repaginada, parte 1, e o fim do "(ões)" (05/10/2026)
 
 Pedido de 05/10: "a extensão é o principal ponto, devido a desorganização,
 algo feio e preso … preciso que tudo que a extensão promete faça com

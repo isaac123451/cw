@@ -135,7 +135,7 @@ reportar(
  */
 const enviados = unicos(
   quemChama,
-  /* O popup e as opções têm a sua própria `enviar`, fora do `CW` (1.135). */
+  /* O popup e as opções têm a sua própria `enviar`, fora do `CW` (out/2026). */
   /(?:CW\.|\b)enviar\(\{\s*tipo:\s*"([a-zA-Z]+)"/g
 );
 

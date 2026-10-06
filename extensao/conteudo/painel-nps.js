@@ -458,7 +458,7 @@
    */
   /**
    * `parte`: "caso" (a anotação), "lembrete" (a tarefa na agenda) ou
-   * nada (as duas). Desde a 1.135 o "Agora" mostra cada uma atrás do seu
+   * nada (as duas). Desde out/2026 o "Agora" mostra cada uma atrás do seu
    * botão — a do lembrete continua lendo o caso escolhido na anotação,
    * que fica no documento mesmo recolhida.
    */

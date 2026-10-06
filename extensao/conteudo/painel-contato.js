@@ -159,7 +159,7 @@
       ...new Set(casos.map((caso) => caso.canal)),
     ].filter(Boolean);
 
-    /* Uma linha com a ação ao lado (1.135) — era um aviso âmbar e um botão roxo da largura da gaveta. */
+    /* Uma linha com a ação ao lado (out/2026) — era um aviso âmbar e um botão roxo da largura da gaveta. */
     return [
       '<div class="bloco">',
       '  <div class="aviso aviso-linha">',
@@ -246,7 +246,7 @@
     const pedido = alvo.dataset.canal;
 
     /*
-      Clicar na aba em que já se está **recarrega** aquela tela (1.135).
+      Clicar na aba em que já se está **recarrega** aquela tela (out/2026).
 
       Até a 1.134 voltava ao contato — e como não havia aba do contato,
       era o único caminho de volta, escondido num gesto que ninguém
@@ -401,7 +401,7 @@
   P.refletirCanal = function refletirCanal() {
 
     /*
-      O voltar do cabeçalho saiu na 1.135: as telas de cima têm aba
+      O voltar do cabeçalho saiu em out/2026: as telas de cima têm aba
       própria, e o caso aberto mostra no alto "← de onde veio".
     */
     /*
@@ -988,7 +988,7 @@
    * nova; agora a resposta vem no painel, com os casos do cliente junto.
    */
   /**
-   * Perguntar, anotar e lembrar, atrás de três botões (1.135).
+   * Perguntar, anotar e lembrar, atrás de três botões (out/2026).
    *
    * Até a 1.134 os três formulários ficavam abertos um embaixo do outro
    * no "Agora": dez campos e três botões roxos antes de chegar ao fim

@@ -22,7 +22,7 @@
   ============================================================ */
 
   /* ============================================================
-     OS NÚMEROS NAS ABAS (1.135)
+     OS NÚMEROS NAS ABAS (out/2026)
   ============================================================ */
 
   /**
@@ -765,7 +765,7 @@
 
   /** Marcar uma atividade nova, sem sair da aba. */
   function blocoNovaAtividade() {
-    /* Recolhida atrás de um botão (1.135): o formulário aberto em toda visita ocupava meia tela. */
+    /* Recolhida atrás de um botão (out/2026): o formulário aberto em toda visita ocupava meia tela. */
     return [
       '<div class="bloco">',
       `  <button class="acao-chip" type="button" data-acao="alternar-proximo" aria-expanded="false" style="width:100%">${CW.icone("agenda", 14)}<span>Marcar uma atividade</span>${CW.icone("baixo", 13)}</button>`,
