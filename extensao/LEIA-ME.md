@@ -437,15 +437,17 @@ Para regerar os ícones: `npm run extensao:icones`.
 
 ## Limites conhecidos
 
-- **Estabelecimento quase nunca aparece.** O vínculo cliente →
-  estabelecimento não persiste hoje (o enriquecimento vive em memória no
-  `ClientsContext`, e `Case` não tem coluna de estabelecimento no
-  banco). O painel procura pelo registro de NPS, telefone, e-mail e
-  nome — e com três estabelecimentos de exemplo cadastrados, o normal é
-  não achar. Inventar o vínculo seria pior.
-- **O aviso diário só existe com o navegador aberto.** O resumo que
-  chega de manhã sem depender disso é a Peça B do `EXTENSAO.md`, que
-  precisa do cron da Vercel.
+- **A conta (estabelecimento) aparece quando há vínculo de verdade.** A
+  reclamação casa com o estabelecimento pelo CPF ou CNPJ, nunca pelo nome
+  (em 06/10/2026: 293 das 371 reclamações vinculadas, 244 contas na base),
+  e o NPS traz o id da conta. Um contato que só existe no WhatsApp, sem
+  reclamação nem NPS, não tem de onde tirar a conta — o painel não chuta.
+- **O aviso do dia só chega com o navegador aberto.** A rotina das 6h
+  (`/api/cron`, Peça B do `EXTENSAO.md`) já roda sozinha — encerra o NPS
+  abandonado, avisa movimentação atrasada, guarda o backup e manda o
+  relatório do ciclo —, mas o resumo de "o que pede ação hoje" ainda só
+  chega pela notificação da extensão — não sai por e-mail como o relatório
+  do ciclo (Configurações → Relatório que chega sozinho).
 - **Hugme e ManyChat são melhor-esforço.** O identificador sai do
   endereço da página, que é a parte estável; se a ferramenta mudar, a
   busca manual continua funcionando.
