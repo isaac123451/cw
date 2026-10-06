@@ -640,6 +640,26 @@ export const MUDANCAS: Mudanca[] = [
       "Mais de 440 textos em 132 telas, avisos, relatórios e respostas do assistente usavam o plural com parênteses — \"2 caso(s)\", \"1 detrator(es)\", \"3 dia(s)\". Agora cada um usa o número que está ao lado: \"1 caso\", \"2 casos\".",
   },
   {
+    id: "ra-respondida-nao-e-encerrado",
+    dia: "2026-10-06",
+    tipo: "correcao",
+    frente: "reclame-aqui",
+    titulo: "Caso respondido e ainda aberto não aparece como \"Encerrado\"",
+    texto:
+      "Na Triagem e no quadro, a reclamação aguardando a nossa réplica mostrava o relógio como \"Encerrado\" logo acima de \"O consumidor respondeu no portal: responda a réplica\". O relógio para quando há resposta pública, mas o caso não acabou: agora diz \"Respondida no portal\", e \"Encerrado\" fica para o que está de fato encerrado.",
+    href: "/reclame-aqui/triagem",
+  },
+  {
+    id: "ra-idade-no-plural",
+    dia: "2026-10-06",
+    tipo: "correcao",
+    frente: "reclame-aqui",
+    titulo: "\"5 meses\", e não \"5 mês\"",
+    texto:
+      "A idade curta dos cartões do quadro e da Triagem dizia \"5 mês\" e \"2 ano\". Continua curta para caber, agora no plural certo.",
+    href: "/reclame-aqui",
+  },
+  {
     id: "ra-uma-lista-de-telas",
     dia: "2026-10-06",
     tipo: "melhoria",

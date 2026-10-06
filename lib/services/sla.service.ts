@@ -271,7 +271,12 @@ export function slaStatus(
       fase: "concluido",
       restanteMin: 0,
       remainingHours: 0,
-      label: solucaoEntregue(item) ? "Encerrado" : "1º contato feito",
+      /* Respondida e ainda aberta (réplica, avaliação) não é "Encerrado" — o relógio parou, o caso não (out/2026). */
+      label: !solucaoEntregue(item)
+        ? "1º contato feito"
+        : item.resolved || CLOSED_STATUS.includes(item.status)
+          ? "Encerrado"
+          : "Respondida no portal",
     };
   }
 

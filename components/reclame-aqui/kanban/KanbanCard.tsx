@@ -32,15 +32,18 @@ interface Props {
 /** A etiqueta automática da captura é origem, não assunto: fica na ficha. */
 const ETIQUETA_DA_CAPTURA = "Capturada pela extensão";
 
-/** "hoje", "ontem", "3d", "5 sem", "2 mês", "1 ano" — pela data de publicação, no dia de Brasília. */
+/** "hoje", "ontem", "3d", "5 sem", "2 meses", "1 ano" — pela data de publicação, no dia de Brasília. */
 export function idadeCurta(dia: string, hoje = hojeNaOperacao()) {
   const dias = Math.round((Date.parse(`${hoje}T12:00:00Z`) - Date.parse(`${String(dia).slice(0, 10)}T12:00:00Z`)) / 86_400_000);
   if (!Number.isFinite(dias) || dias <= 0) return "hoje";
   if (dias === 1) return "ontem";
   if (dias < 14) return `${dias}d`;
   if (dias < 60) return `${Math.floor(dias / 7)} sem`;
-  if (dias < 365) return `${Math.floor(dias / 30)} mês`;
-  return `${Math.floor(dias / 365)} ano`;
+  /* Curto para caber no cartão, mas no plural certo: era "5 mês" e "2 ano" (out/2026). */
+  const meses = Math.floor(dias / 30);
+  if (dias < 365) return `${meses} ${meses === 1 ? "mês" : "meses"}`;
+  const anos = Math.floor(dias / 365);
+  return `${anos} ${anos === 1 ? "ano" : "anos"}`;
 }
 
 /**
