@@ -1293,7 +1293,7 @@ function sugerir(
 
     lista.push({
       tom: dias > 5 ? "danger" : "warning",
-      texto: `${semResposta.length} ${Number(semResposta.length) === 1 ? "reclamação" : "reclamações"} sem resposta pública — a mais antiga há ${dias} ${Number(dias) === 1 ? "dia" : "dias"}. É o indicador de maior peso na nota.`,
+      texto: `${semResposta.length} ${Number(semResposta.length) === 1 ? "reclamação" : "reclamações"} sem resposta pública — a mais antiga há ${dias} ${Number(dias) === 1 ? "dia" : "dias"}. É o único item da nota (20%) que depende só de nós.`,
     });
   }
 

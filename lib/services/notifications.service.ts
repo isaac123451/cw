@@ -92,7 +92,7 @@ export const prefLabels: Record<
 > = {
   semResposta: {
     label: "Reclamações sem resposta",
-    hint: "Avisa quando existem casos ainda não respondidos no portal — é o item de maior peso na nota.",
+    hint: "Avisa quando existem casos ainda não respondidos no portal — é o único item da nota que depende só de nós.",
   },
   replica: {
     label: "Réplicas do consumidor",

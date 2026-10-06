@@ -234,7 +234,7 @@ export default function DashboardPage() {
           <StatTile
             carregando={loading}
             label="Sem resposta pública"
-            description="Reclamações que ainda não foram respondidas no portal. É o que mais pesa na nota. Clique para ver a lista."
+            description="Reclamações que ainda não foram respondidas no portal — o item da nota (20%) que depende só de nós. Clique para ver a lista."
             value={metrics.semResposta}
             hint="em toda a base"
             icon={MessageSquareWarning}

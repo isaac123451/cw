@@ -200,7 +200,7 @@ export default function MetricsBar() {
       <StatTile
         carregando={loading}
         label="Índice de resposta"
-        description="Percentual respondido publicamente. É o item de maior peso na nota."
+        description="Percentual respondido publicamente: 20% da nota, e o único item que depende só de nós."
         value={`${ptBR(reputacao.responseIndex)}%`}
         hint={
           goals.resposta === RA1000_TARGETS.resposta

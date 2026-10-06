@@ -613,7 +613,7 @@ export default function EvaluationTab({
           */}
           <p className="mt-3 text-xs leading-relaxed text-zinc-400">
             {publicada === ""
-              ? "Sem resposta pública — o fator de maior peso no índice. Respondeu no portal? Marque acima; a data se ajusta no campo e vale depois de Salvar."
+              ? "Sem resposta pública — o índice de resposta (20% da nota) é o único que depende só de nós. Respondeu no portal? Marque acima; a data se ajusta no campo e vale depois de Salvar."
               : data.publicResponseAt
                 ? `Respondida em ${descreverRegistro(data.publicResponseAt)}. Se foi em outro dia, ajuste a data acima e salve.`
                 : "Respondida, sem a data da publicação — informe no campo acima e salve."}

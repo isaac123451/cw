@@ -753,7 +753,7 @@ export const MUDANCAS: Mudanca[] = [
     frente: "reclame-aqui",
     titulo: "Os pesos da nota explicados como a conta faz",
     texto:
-      "A fórmula da plataforma é a oficial — resposta 20%, média das notas 30%, solução 30%, voltaria 20% —, mas os textos diziam outra coisa. O assistente de IA recebia \"nota do consumidor 20%\" e \"voltaria 30%\", trocados, e aconselhava em cima disso. O Meu dia e a análise de respostas diziam \"solução e voltaria pesam 30% cada\". E a aba Avaliação e o histograma diziam \"notas de 7 a 10 contam como promotor no cálculo\", corte que só existe como palpite na Calculadora. Agora todos dizem o que a conta usa, e o assistente lê os pesos da mesma constante do cálculo.",
+      "A fórmula da plataforma é a oficial — resposta 20%, média das notas 30%, solução 30%, voltaria 20% —, mas os textos diziam outra coisa. O assistente de IA recebia \"nota do consumidor 20%\" e \"voltaria 30%\", trocados, e aconselhava em cima disso. O Meu dia e a análise de respostas diziam \"solução e voltaria pesam 30% cada\". E a aba Avaliação e o histograma diziam \"notas de 7 a 10 contam como promotor no cálculo\", corte que só existe como palpite na Calculadora. E cinco lugares — o Dashboard, o painel do Reclame Aqui, a aba Avaliação, o aviso do sino e a sugestão da extensão — chamavam a resposta pública de \"o item de maior peso na nota\"; ela pesa 20%, e o que vale dizer é que é o único item que depende só de nós. Agora todos dizem o que a conta usa, e o assistente lê os pesos da mesma constante do cálculo.",
   },
   {
     id: "checklist-de-verdade",
