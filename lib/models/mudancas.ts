@@ -53,6 +53,25 @@ export const REVISAO = {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- extensão: o painel ---------------- */
   {
+    id: "ext-telefone-legivel",
+    dia: "2026-10-06",
+    tipo: "melhoria",
+    frente: "extensao",
+    titulo: "Telefone legível no cartão do cliente; textos prontos sem o canal repetido",
+    texto:
+      "O cartão do cliente, na aba Histórico, mostrava o número cru — \"11960599984\". Agora \"(11) 96059-9984\". E na aba Responder cada texto pronto repetia o canal num selo logo abaixo do título (\"WhatsApp — primeiro contato\" e, embaixo, \"WhatsApp\"); o selo só aparece quando o título não diz o canal.",
+    onde: "Extensão → conversa → Histórico e Responder",
+  },
+  {
+    id: "ext-leia-me-limites",
+    dia: "2026-10-06",
+    tipo: "correcao",
+    frente: "bastidores",
+    titulo: "O manual da extensão diz o que vale hoje",
+    texto:
+      "Os \"limites conhecidos\" do LEIA-ME diziam que o vínculo com o estabelecimento não era gravado e que havia três contas de exemplo; hoje 293 das 371 reclamações têm a conta, pelo CPF ou CNPJ. E diziam que a rotina diária dependia de ligar um agendamento — ela já roda às 6h. O texto conta o estado de agora, inclusive o que falta: o resumo do dia ainda não sai por e-mail.",
+  },
+  {
     id: "rascunho-sem-em-breve",
     dia: "2026-10-06",
     tipo: "correcao",

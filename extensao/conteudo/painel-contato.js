@@ -736,7 +736,7 @@
                 `${CW.escapar(cliente.cidade)}/${CW.escapar(
                   cliente.estado ?? ""
                 )}`,
-              cliente.telefone && CW.escapar(cliente.telefone),
+              cliente.telefone && CW.escapar(CW.telefoneLegivel(cliente.telefone)),
               cliente.categoriaTop &&
                 CW.escapar(cliente.categoriaTop),
             ]
@@ -922,10 +922,16 @@
     /* ---- macros ---- */
 
     if ((dados.macros ?? []).length > 0) {
+      /* O canal só vai no selo quando o título não começa por ele ("WhatsApp — primeiro contato"). */
+      const macrosDoResponder = dados.macros.map((m) => ({
+        ...m,
+        seloDoCanal: Boolean(m.canal) && !String(m.titulo ?? "").toLowerCase().startsWith(String(m.canal).toLowerCase()),
+      }));
+
       abas.responder.push(`
         <div class="bloco">
           <div class="rotulo">Textos aprovados</div>
-          ${dados.macros
+          ${macrosDoResponder
             .map(
               (macro) => `
             <div class="macro">
@@ -936,7 +942,7 @@
                 <button class="copiar" data-acao="copiar"
                         data-texto="${CW.escapar(macro.texto)}">copiar</button>
               </div>
-              ${macro.canal ? `<span class="tag neutro" style="margin-top:4px">${CW.escapar(macro.canal)}</span>` : ""}
+              ${macro.seloDoCanal ? `<span class="tag neutro" style="margin-top:4px">${CW.escapar(macro.canal)}</span>` : ""}
               <pre>${CW.escapar(macro.texto)}</pre>
               ${
                 /* Nome, protocolo e quem atende já vêm preenchidos; o que é para escrever fica dito. */
