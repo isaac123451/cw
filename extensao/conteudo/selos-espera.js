@@ -130,7 +130,8 @@
 
   function olharConversaAberta() {
     const main = document.querySelector("#main");
-    const nome = main?.querySelector("header span[title]")?.getAttribute("title")?.trim();
+    /* Era o `header span[title]` — que hoje é o subtítulo ("clique para mostrar os dados do contato"), igual para toda conversa. */
+    const nome = CW.nomeNoCabecalho?.() || "";
     if (!main || !nome) return;
     const todas = main.querySelectorAll("[data-id]");
     const ultima = todas[todas.length - 1];
@@ -177,9 +178,19 @@
   }
 
   /** O nome é o primeiro texto com `title` da linha; a prévia, a primeira linha depois do nome e da hora. */
+  /**
+   * O nome da linha: o `span[title]` que parece nome, ou o primeiro texto
+   * `dir="auto"` sem filhos (o nome vem antes da prévia). Sem o segundo,
+   * a linha sem `title` ficava sem selo e sem etiqueta.
+   */
   function nomeDaLinha(linha) {
-    return linha.querySelector("span[title]") || null;
+    const parece = CW.pareceNomeDeContato ?? ((t) => Boolean(String(t ?? "").trim()));
+    const comTitulo = [...linha.querySelectorAll("span[title]")].find((el) => parece(el.getAttribute("title")));
+    if (comTitulo) return comTitulo;
+    return [...linha.querySelectorAll('span[dir="auto"]')].find((el) => !el.querySelector("span") && parece(el.textContent) && !HORA.test((el.textContent || "").trim())) || null;
   }
+
+  const textoDoNome = (el) => (el?.getAttribute("title") || el?.textContent || "").trim();
 
   function previaDaLinha(linha, nome) {
     /* Os selos e etiquetas da própria extensão não são prévia. */
@@ -198,7 +209,7 @@
     const todas = linhas();
     const lidas = todas.map((linha) => {
       const hora = horaDaLinha(linha);
-      const nome = nomeDaLinha(linha)?.getAttribute("title") || "";
+      const nome = textoDoNome(nomeDaLinha(linha));
       const quando = respondidaEm.get(nome);
       return {
         linha,
@@ -272,7 +283,7 @@
     const agora = Date.now();
     const faltam = [];
     for (const linha of linhas()) {
-      const nome = nomeDaLinha(linha)?.getAttribute("title") || "";
+      const nome = textoDoNome(nomeDaLinha(linha));
       if (!nome || linha.querySelector(GRUPO)) continue;
       const chave = chaveDaLinha(nome);
       const guardado = cache.get(chave);
@@ -293,7 +304,7 @@
   function marcarEtiquetas() {
     for (const linha of linhas()) {
       const alvo = nomeDaLinha(linha);
-      const nome = alvo?.getAttribute("title") || "";
+      const nome = textoDoNome(alvo);
       const antigo = linha.querySelector(".cw-etiquetas");
       const lista = nome ? cache.get(chaveDaLinha(nome))?.lista ?? [] : [];
       if (!lista.length) {

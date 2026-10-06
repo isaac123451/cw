@@ -217,6 +217,12 @@
     return "";
   }
 
+  /* O nome da conversa aberta, para os outros leitores da página (os selos de espera). */
+  CW.nomeNoCabecalho = () => {
+    const cabecalho = document.querySelector("#main header");
+    return cabecalho ? nomeDoCabecalho(cabecalho) : "";
+  };
+
   function lerConversa() {
 
     const principal = document.querySelector("#main");

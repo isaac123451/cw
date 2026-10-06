@@ -63,6 +63,16 @@ export const MUDANCAS: Mudanca[] = [
     onde: "Extensão → WhatsApp Web",
   },
   {
+    id: "ext-selo-de-espera-pelo-nome-certo",
+    dia: "2026-10-06",
+    tipo: "correcao",
+    frente: "extensao",
+    titulo: "Selo de espera e etiquetas pelo nome certo",
+    texto:
+      "O selo \"espera 20 min\" da lista do WhatsApp guardava a sua resposta pelo nome da conversa aberta — e lia o subtítulo, igual para toda conversa. A marca de \"já respondida\" nunca casava com a linha. Agora usa o mesmo leitor do nome corrigido, e a linha da lista sem dica de nome também ganha selo e etiqueta.",
+    onde: "Extensão → lista de conversas do WhatsApp Web",
+  },
+  {
     id: "ext-aviso-do-whatsapp-nao-e-fala",
     dia: "2026-10-06",
     tipo: "correcao",
