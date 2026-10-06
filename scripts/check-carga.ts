@@ -147,8 +147,18 @@ async function main() {
     "\n  CARGA DO QUADRO — mais rápida, e igual\n"
   );
 
-  const novo = await fetchCases(prisma);
-  const antigo = await peloPrisma();
+  let novo = await fetchCases(prisma);
+  let antigo = await peloPrisma();
+
+  /*
+    Banco vivo: se algo gravou entre as duas leituras (a sincronização, o
+    vigia, alguém usando), a quantidade difere sem defeito nenhum. Lê as
+    duas de novo uma vez antes de acusar (out/2026).
+  */
+  if (novo.length !== antigo.length) {
+    novo = await fetchCases(prisma);
+    antigo = await peloPrisma();
+  }
 
   console.log(
     `  ${novo.length} pelo caminho novo · ${antigo.length} pelo antigo\n`
