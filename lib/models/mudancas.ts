@@ -561,6 +561,16 @@ export const MUDANCAS: Mudanca[] = [
     href: "/processos",
   },
   {
+    id: "jornada-sem-nota-nao-e-detrator",
+    dia: "2026-10-06",
+    tipo: "correcao",
+    frente: "plataforma",
+    titulo: "Jornada: quem não deu nota não é detrator",
+    texto:
+      "O cliente sem nenhuma nota — nem no Reclame Aqui, nem no NPS, nem no Google — ficava com média 0 e entrava como \"Detrator\". A Jornada contava 218 detratores; 79 eram só quem ainda não avaliou. Agora são 139, e o cartão desse cliente não mostra mais \"★ 0\", que parecia uma nota péssima. A reclamação não avaliada também deixou de pesar na média. E o quadro mostra linhas pulsando enquanto carrega, em vez de \"Nenhum cliente\" em todas as colunas.",
+    href: "/jornada",
+  },
+  {
     id: "meu-dia-nao-afirma-na-carga",
     dia: "2026-10-06",
     tipo: "correcao",

@@ -219,7 +219,7 @@ export default function JornadaPage() {
           <StatTile
             carregando={carregandoCasos}
             label="Detratores"
-            description="Nota média abaixo de 5, somando as frentes na escala de 0 a 10: a do Reclame Aqui e a do NPS como vêm, a do Google em dobro."
+            description="Nota média abaixo de 5, somando as frentes na escala de 0 a 10: a do Reclame Aqui e a do NPS como vêm, a do Google em dobro. Quem ainda não deu nota em frente nenhuma não entra."
             value={detractors}
             hint="nota média abaixo de 5"
             icon={Frown}
@@ -325,6 +325,7 @@ export default function JornadaPage() {
               selected={current?.company ?? null}
               onSelect={setSelected}
               onMove={moveCompany}
+              carregando={carregandoCasos}
             />
 
           </SurfaceCard>
@@ -376,7 +377,7 @@ export default function JornadaPage() {
 
                         <span className="mt-0.5 block truncate text-xs text-zinc-500">
                           {stage?.name} · {item.total} {pluralDe(item.total, "registro", "registros")} ·
-                          nota {ptBR(item.averageScore)}
+                          {item.temNota ? `nota ${ptBR(item.averageScore)}` : "sem nota"}
                         </span>
 
                       </span>

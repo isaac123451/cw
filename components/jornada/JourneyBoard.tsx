@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 
 import type { JornadaNasFrentes } from "@/lib/services/journey.service";
+import LinhasCarregando from "@/components/shared/LinhasCarregando";
 import { FRENTES_DA_OPERACAO } from "@/lib/models/frentes";
 import IconeDaFrente from "@/components/shared/IconeDaFrente";
 import { JourneyStage } from "@/lib/models/journey";
@@ -21,6 +22,8 @@ interface Props {
   selected: string | null;
   onSelect: (company: string) => void;
   onMove: (company: string, stageId: string) => void;
+  /** A base ainda chegando: a coluna vazia não diz "Nenhum cliente" (out/2026). */
+  carregando?: boolean;
 }
 
 /** Etapa efetiva: ajuste manual tem precedência sobre a sugestão. */
@@ -53,6 +56,7 @@ export default function JourneyBoard({
   selected,
   onSelect,
   onMove,
+  carregando = false,
 }: Props) {
 
   const [over, setOver] = useState<string | null>(null);
@@ -133,7 +137,11 @@ export default function JourneyBoard({
 
               <div className="flex-1 space-y-2 overflow-y-auto p-2.5">
 
-                {items.length === 0 ? (
+                {items.length === 0 && carregando ? (
+
+                  <LinhasCarregando linhas={2} className="p-1" />
+
+                ) : items.length === 0 ? (
 
                   <p className="rounded-xl border border-dashed border-zinc-200 py-8 text-center text-xs text-zinc-400">
                     {isOver
@@ -184,13 +192,15 @@ export default function JourneyBoard({
 
                       <div className="mt-1.5 flex items-center gap-2.5 text-[11px] text-zinc-500">
 
-                        <span className="flex items-center gap-1">
-                          <Star
-                            size={10}
-                            className="fill-amber-400 text-amber-400"
-                          />
-                          {ptBR(journey.averageScore)}
-                        </span>
+                        {journey.temNota && (
+                          <span className="flex items-center gap-1">
+                            <Star
+                              size={10}
+                              className="fill-amber-400 text-amber-400"
+                            />
+                            {ptBR(journey.averageScore)}
+                          </span>
+                        )}
 
                         <span>{journey.total} {pluralDe(journey.total, "registro", "registros")}</span>
 

@@ -13,7 +13,9 @@ import { pluralDe } from "@/lib/plural";
 export type Sentiment =
   | "Promotor"
   | "Neutro"
-  | "Detrator";
+  | "Detrator"
+  /* Nenhuma nota em frente nenhuma (out/2026) — não é detrator. */
+  | "Sem nota";
 
 export interface CustomerJourney {
   company: string;
@@ -109,6 +111,8 @@ export interface PontoDaJornada {
 }
 
 export interface JornadaNasFrentes extends CustomerJourney {
+  /** Alguma frente deu nota. Sem nenhuma, `averageScore` é 0 e não quer dizer nada. */
+  temNota: boolean;
   porFrente: Record<FrenteId, number>;
   pontos: PontoDaJornada[];
 }
@@ -212,7 +216,7 @@ export function montarJornadas(entrada: {
       const casosOrdenados = [...g.casos].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
       const notas = [
-        ...g.casos.filter((c) => typeof c.score === "number").map((c) => c.score as number),
+        ...g.casos.filter((c) => c.evaluated && typeof c.score === "number").map((c) => c.score as number),
         ...g.nps.map((r) => r.score),
         ...g.google.filter((a) => a.status !== "denunciada").map((a) => (a.notaAtualizada ?? a.estrelas) * 2),
       ];
@@ -285,7 +289,13 @@ export function montarJornadas(entrada: {
         open: abertos,
         resolved: resolvidos,
         averageScore: nota,
-        sentiment: sentimentOf(media),
+        temNota: notas.length > 0,
+        /*
+          Sem nenhuma nota, a média era 0 e o cliente virava "Detrator":
+          a Jornada contava 218 detratores, e a maior parte era só quem
+          ainda não avaliou nada (out/2026).
+        */
+        sentiment: notas.length > 0 ? sentimentOf(media) : "Sem nota",
         churnRisk,
         recurring: total > 1,
         lastInteraction: pontos[0] ? diaNaOperacao(pontos[0].em) : "-",
