@@ -64,7 +64,7 @@ const ORDEM: FrenteDaNovidade[] = ["extensao", "reclame-aqui", "nps", "redes", "
 const FRENTES = ORDEM.map((id) => FRENTES_DAS_NOVIDADES.find((f) => f.id === id)).filter((f): f is (typeof FRENTES_DAS_NOVIDADES)[number] => Boolean(f));
 
 const dataLonga = (iso: string) =>
-  new Date(`${iso}T12:00:00Z`).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", timeZone: "UTC" });
+  new Date(`${iso}T12:00:00Z`).toLocaleDateString("pt-BR", { day: "numeric", month: "long", timeZone: "UTC" });
 
 export default function RevisaoGeral({ novas }: { novas: Set<string> }) {
 
