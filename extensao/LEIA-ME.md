@@ -18,7 +18,7 @@ O painel usa a **Geist**, a mesma fonte da aplicação, empacotada junto
 máquina nem de rede.
 
 O tema tem três estados: **automático** (segue o sistema), **claro** e
-**escuro**. Troque pelo botão &#9681; no cabeçalho do painel, ou em
+**escuro**. Troque pelo menu **⋯** no cabeçalho do painel (Tema), ou em
 Opções. A escolha vale para o painel, o popup e a tela de opções.
 
 A largura da gaveta é ajustável: arraste a borda esquerda. Fica gravada.
@@ -30,7 +30,7 @@ gesto seu; no Hugme e no ManyChat o que muda é uma página que se
 redesenha sozinha, e tratar isso como "contato novo" fazia a gaveta
 reabrir por cima de quem estava lendo.
 
-O interruptor fica no rodapé do próprio painel — **abrir sozinho** —
+O interruptor fica no menu **⋯** do cabeçalho — **abrir sozinho na conversa** —
 porque é o ajuste que se quer mudar exatamente no momento em que ele
 incomoda. Fechar a gaveta na mão também vale como decisão: ela não
 reabre até o contato mudar de verdade.
@@ -213,9 +213,26 @@ e prazo.
 telefone estiver visível na tela ele consulta sozinho; se não, use a
 busca.
 
-**Qualquer lugar.** O popup do ícone mostra a nota do Reclame Aqui, os
-alertas do dia e tem uma busca por telefone, nome ou protocolo — serve
-no meio de uma ligação, sem precisar abrir a aplicação.
+**Qualquer lugar.** O popup do ícone tem a busca por telefone, nome ou
+protocolo no topo, a nota do Reclame Aqui, o Meu dia e os alertas —
+serve no meio de uma ligação, sem precisar abrir a aplicação.
+
+### A gaveta
+
+- **Abas embaixo:** Cliente (a conversa aberta), RA, NPS, Redes, Painel e
+  Agenda. RA, NPS e Agenda mostram um número com o que espera por você.
+  Com o foco no painel, as teclas **1 a 6** trocam de aba, **/** vai para a
+  busca e **Esc** fecha. Clicar na aba em que se está recarrega.
+- **Menu ⋯ no cabeçalho:** manter aberto, tema, voltar para a lateral,
+  abrir sozinho na conversa, botão no canto, atalhos e opções.
+- **Cliente → Agora:** o que pede cuidado, o que fazer, e três botões —
+  Perguntar (ao assistente), Anotar (no caso) e Lembrete (na agenda) —
+  que abrem o formulário um de cada vez. Quem chega pelo NPS vê o ciclo
+  aberto ali mesmo, com Tentei contato e Depois do contato.
+- **Caso aberto:** "← de onde veio" e, quando veio de uma lista,
+  "‹ 3 de 12 ›" — as setas **←** e **→** passam para o anterior e o
+  próximo. Os passos do documento ficam em grade (Registrar / Copiar
+  texto), e o relato longo vem recolhido.
 
 ## Respostas rápidas ao lado da caixa de mensagem
 
@@ -286,7 +303,11 @@ rótulo vira "confirmado" sem mudar uma linha de código.
 ## O que a extensão lê
 
 - **WhatsApp Web:** o identificador da conversa aberta (`data-id`, que
-  carrega o telefone) e o nome no cabeçalho. **Mensagem não é lida.**
+  carrega o telefone) e o nome no cabeçalho. Com o contato **conhecido**
+  (reclamação, NPS ou estabelecimento), as mensagens da conversa aberta
+  se guardam sozinhas no caso — só as novas, com dado bancário omitido, e
+  dá para pausar por conversa. De quem não é conhecido, só com o clique em
+  "Guardar a conversa". Enviar, nunca.
 - **Hugme / Reclame Aqui:** dígitos do endereço da página; o texto da
   tela só como segunda tentativa. Ao clicar em "Ler e adicionar ao
   Kanban", também o título, a data, o local e o relato — para a prévia.
