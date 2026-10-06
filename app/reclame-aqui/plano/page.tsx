@@ -147,13 +147,13 @@ export default function PlanoPage() {
             <SurfaceCard title="Como o plano é calculado" description="As premissas vêm das reclamações da base e mudam quando elas mudam.">
               <div className="space-y-2 text-sm text-zinc-600">
                 <p>
-                  <b className="text-zinc-800">A meta de um mês</b> vale para a janela de 6 meses que fecha nele — a nota que o portal mostra no mês seguinte, a mesma "prévia" da tela Índice.
+                  <b className="text-zinc-800">A meta de um mês</b> vale para a janela de 6 meses que fecha nele — a nota que o portal mostra no mês seguinte, a mesma “prévia” da tela Índice.
                 </p>
                 <p>
                   <b className="text-zinc-800">Se continuar como está:</b> as reclamações previstas chegam espalhadas pelos dias; cada reclamação em aberto tem a chance de ser respondida e avaliada até o fim do mês que a idade dela dá. Hoje: {pct(premissas.respondidaAte[6] * 100)} são respondidas em até 6 dias e {pct(premissas.respondidaAte[30] * 100)} em até 30; {pct(premissas.avaliadaAte[30] * 100)} são avaliadas em até 30 dias da abertura e {pct(premissas.avaliadaAte[180] * 100)} em até 6 meses. As novas avaliações vêm com a nota, a solução e o voltaria dos últimos 6 meses: {num(premissas.notaDasNovas, 2)}, {pct(premissas.solucaoDasNovas * 100)} e {pct(premissas.voltariaDasNovas * 100)} ({premissas.avaliacoesNaAmostra} avaliações).
                 </p>
                 <p>
-                  <b className="text-zinc-800">O que a meta exige:</b> cada métrica vira número — respostas a fazer, avaliações a conseguir, quantas das novas podem vir não resolvidas ou sem "voltaria", a nota mínima das novas — com o arredondamento do portal (89,96% conta como 90,0%). A nota de reputação é o que falta depois das métricas: primeiro as respostas que ainda cabem, depois avaliações nota 10, resolvidas e com "voltaria".
+                  <b className="text-zinc-800">O que a meta exige:</b> cada métrica vira número — respostas a fazer, avaliações a conseguir, quantas das novas podem vir não resolvidas ou sem “voltaria”, a nota mínima das novas — com o arredondamento do portal (89,96% conta como 90,0%). A nota de reputação é o que falta depois das métricas: primeiro as respostas que ainda cabem, depois avaliações nota 10, resolvidas e com “voltaria”.
                 </p>
                 <p>
                   <b className="text-zinc-800">Os ciclos:</b> o plano do mês repartido pelos dias de cada ciclo. No mês corrente e nos fechados, a meta do ciclo é a do plano como estava no 1º dia do mês — meta que muda todo dia não se verifica.

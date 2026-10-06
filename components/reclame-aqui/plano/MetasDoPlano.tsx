@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Loader2 } from "lucide-react";
 
@@ -60,7 +60,16 @@ export default function MetasDoPlano({ meses, gravadas, previsoes, aoGravar }: {
   const [confirmar, setConfirmar] = useState(false);
   const [gravando, setGravando] = useState(false);
 
-  useEffect(() => setRascunho(original), [original]);
+  /*
+    Gravou ou chegou mês novo: o rascunho volta ao que está no banco. Ajuste
+    durante o render, e não num efeito — o efeito desenhava uma vez com o
+    rascunho velho e logo outra com o novo.
+  */
+  const [base, setBase] = useState(original);
+  if (base !== original) {
+    setBase(original);
+    setRascunho(original);
+  }
 
   const mudados = meses.filter((mes) => JSON.stringify(rascunho[mes]) !== JSON.stringify(original[mes]));
   const podeEditar = Boolean(gravadas?.podeEditar);

@@ -1137,7 +1137,17 @@ async function tratar(mensagem) {
   }
 
   if (mensagem?.tipo === "abrir") {
-    await chrome.tabs.create({ url: mensagem.url });
+    /*
+      Só http(s) (1.135). O endereço vem de dado do servidor e, em alguns
+      botões, de texto lido da página — e `data:` ou `javascript:` numa aba
+      nova é exatamente o que não se abre às cegas. O popup já filtrava;
+      o painel passava direto.
+    */
+    const url = String(mensagem.url ?? "");
+    if (!/^https?:\/\//i.test(url)) {
+      return { ok: false, erro: "Endereço que a extensão não abre." };
+    }
+    await chrome.tabs.create({ url });
     return { ok: true };
   }
 

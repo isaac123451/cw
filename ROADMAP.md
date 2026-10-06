@@ -1116,6 +1116,43 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Caso a caso na fila, números nas abas e o popup que abria rolado (05/10/2026, 1.136.0)
+
+Continuação do pedido de 05/10 ("tudo que a extensão promete faça com
+maestria").
+
+- **Novo: caso a caso.** O caso aberto a partir de uma lista mostra
+  "‹ 3 de 12 ›" ao lado do voltar, e ← / → andam pela lista. Trabalhar a
+  fila era abrir, registrar, voltar, rolar, abrir o próximo.
+- **Novo: números nas abas.** RA (sem resposta + réplicas), NPS (fora do
+  prazo, 30 dias) e Agenda (hoje + atrasadas), pelas mesmas contas do
+  Painel e do popup; pedidos ao abrir a gaveta, no máximo a cada 5 min, e
+  de graça quando o Painel já trouxe o resumo.
+- **Popup abria rolado 800 px para baixo**: o campo de busca, no fim, levava
+  o foco ao abrir. A busca foi para o topo (e o foco não rola). Nota com
+  vírgula, janela em dd/mm/aaaa, "RA1000" que aparecia duas vezes, 🎉 →
+  marcador, cabeçalho sólido.
+- **Cálculo: a curva do popup usava o mês corrente.** A rota prometia "os
+  doze meses fechados" e devolvia outubro, com 5 dias e 1 reclamação: o
+  popup estampava "2,6 em out/26 ▼ 5,5". Agora são os 12 meses fechados,
+  com a mesma conta da Análise (1.121): "8,1 em set/26 · 19 reclamações".
+- **Opções sem promessa falsa.** A página dizia "mensagem, histórico e
+  mídia não são lidos" e "nada é gravado sem você confirmar" — deixou de
+  ser verdade na 1.26 (conversa guardada sozinha), 1.86 (vigia) e 1.87
+  (completar ao abrir). Reescrita com o que a extensão faz hoje.
+- **Segurança:** o service worker abria em aba nova qualquer endereço
+  pedido pelo painel; agora só http(s).
+- **"Outras frentes" na própria frente:** na aba Reclame Aqui o bloco
+  dizia "Reclame Aqui · esta aba não os mostra". Filtrado, e cada frente
+  virou uma linha clicável.
+- **`npm run lint` de mais de 1 h para 2 min 34 s** — varria a build do
+  servidor de conferência (`.next-conferencia`). Os 11 erros que
+  apareceram (Plano de ação, 1.133) corrigidos: aspas tipográficas e o
+  rascunho das metas ajustado no render em vez de efeito.
+- **Conferências:** `check:fiacao` agora lê também o `enviar` do popup
+  (o vigia aparecia como "tratador sem quem chame"). A bancada serve
+  `/popup` e `/opcoes` com um `chrome` de mentira e dados reais.
+
 ### A extensão repaginada, parte 1, e o fim do "(ões)" (05/10/2026, 1.135.0)
 
 Pedido de 05/10: "a extensão é o principal ponto, devido a desorganização,

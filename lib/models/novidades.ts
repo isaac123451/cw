@@ -104,6 +104,13 @@ export function tourPorId(id: string | null | undefined) {
 /** A mais nova primeiro. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: "1.136.0",
+    data: "2026-10-05",
+    titulo: "Caso a caso, sem voltar à lista",
+    texto: "Na extensão, o caso aberto a partir de uma lista mostra \"‹ 3 de 12 ›\" — e as setas ← e → passam para o anterior ou o próximo. As abas RA, NPS e Agenda ganharam um número com o que espera por você. No popup, a busca subiu para o topo e a curva da nota mostra só meses fechados.",
+    frentes: ["extensao"],
+  },
+  {
     versao: "1.135.0",
     data: "2026-10-05",
     titulo: "Extensão mais leve de usar",

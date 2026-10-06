@@ -43,6 +43,18 @@ function abrir(url) {
   if (url) chrome.tabs.create({ url });
 }
 
+/** 8,8 — a nota com vírgula, como no painel e na aplicação. */
+const comVirgula = (valor) =>
+  Number.isFinite(Number(valor))
+    ? Number(valor).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+    : "—";
+
+/** AAAA-MM-DD → DD/MM/AAAA; o que não tem cara de data sai escapado. */
+const dataBr = (iso) => {
+  const p = String(iso ?? "").slice(0, 10).split("-");
+  return p.length === 3 && p.every((x) => /^\d+$/.test(x)) ? `${p[2]}/${p[1]}/${p[0]}` : escapar(iso);
+};
+
 /* ============================================================
    TENDÊNCIA
 ============================================================ */
@@ -281,7 +293,7 @@ function blocoDaNota(meuDia, base) {
   );
 
   const linhasDeConquista = conquistas.map((c) =>
-    `  <p class="conquista"${c.href ? ` data-url="${escapar(`${base}${c.href}`)}"` : ""}>🎉 <b>${escapar(c.titulo)}</b> <span>${escapar(c.detalhe)}</span></p>`
+    `  <p class="conquista"${c.href ? ` data-url="${escapar(`${base}${c.href}`)}"` : ""}><b>${escapar(c.titulo)}</b> <span>${escapar(c.detalhe)}</span></p>`
   );
 
   return [...linhasDeAcao, ...linhasDeConquista].join("");
@@ -319,14 +331,12 @@ async function carregar() {
     <div class="bloco">
       <p class="rotulo">Nota do Reclame Aqui</p>
       <div class="nota">
-        <b>${rep.indisponivel ? "—" : escapar(rep.nota)}</b>
+        <b>${rep.indisponivel ? "—" : comVirgula(rep.nota)}</b>
         <span>
           <span class="faixa">${escapar(rep.faixa)}</span><br />
-          <span class="janela">${escapar(rep.inicio)} a ${escapar(
-            rep.fim
-          )}</span>
+          <span class="janela">${dataBr(rep.inicio)} a ${dataBr(rep.fim)}</span>
         </span>
-        ${rep.ra1000 ? `<span class="selo-ra">RA1000</span>` : ""}
+        ${rep.ra1000 && rep.faixa !== "RA1000" ? `<span class="selo-ra">RA1000</span>` : ""}
       </div>
     </div>
 
@@ -388,13 +398,17 @@ async function carregar() {
       </div>`);
   }
 
-  partes.push(`
+  /*
+    A busca vai para o topo (1.135). Ela ficava no fim e recebia o foco ao
+    abrir — o popup abria rolado 800 px para baixo, com a nota fora da
+    vista. No topo, o foco não rola nada, e é a primeira coisa que se usa.
+  */
+  partes.unshift(`
     <div class="bloco">
-      <p class="rotulo">Buscar cliente</p>
       <div class="busca">
         <input id="termo" type="text"
-               placeholder="Telefone, nome ou protocolo"
-               spellcheck="false" />
+               placeholder="Buscar cliente: telefone, nome ou protocolo"
+               spellcheck="false" aria-label="Buscar cliente" />
         <button id="buscar" type="button">Buscar</button>
       </div>
       <div id="resultado"></div>
@@ -435,7 +449,7 @@ async function carregar() {
     if (evento.key === "Enter") buscar(campo.value);
   });
 
-  campo.focus();
+  campo.focus({ preventScroll: true });
 }
 
 /* ============================================================
@@ -634,7 +648,7 @@ async function buscar(termo) {
     <div class="resultado">
       <div class="titulo-caso">${escapar(cliente.nome)}</div>
       <div class="sub">
-        ${Number(cliente.total ?? 0)} ${Number(Number(cliente.total ?? 0)) === 1 ? "caso" : "casos"} · ${Number(cliente.abertos ?? 0)} ${Number(Number(cliente.abertos ?? 0)) === 1 ? "aberto" : "abertos"} ·
+        ${Number(cliente.total ?? 0)} ${Number(cliente.total ?? 0) === 1 ? "caso" : "casos"} · ${Number(cliente.abertos ?? 0)} ${Number(cliente.abertos ?? 0) === 1 ? "aberto" : "abertos"} ·
         ${escapar(dados.porQue ?? "")}
       </div>
       ${dados.casos

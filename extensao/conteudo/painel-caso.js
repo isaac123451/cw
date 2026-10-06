@@ -227,11 +227,51 @@
     if (host.includes("manychat")) return "Instagram";
     return "WhatsApp";
   }
+  /**
+   * Os protocolos da lista de onde o caso foi aberto, na ordem da tela.
+   *
+   * É o que deixa trabalhar a fila caso a caso (1.135): abrir, registrar,
+   * próximo — sem voltar à lista a cada um, que era o vai e vem que mais
+   * custava numa manhã de vinte reclamações.
+   */
+  function listaDeOnde() {
+    const daFila = P.soDoCliente ? P.ultimoDado?.casos : P.filaAtual?.itens;
+    const itens =
+      P.vistaAnterior === "fila"
+        ? daFila
+        : P.vistaAnterior === "contato"
+          ? P.ultimoDado?.casos
+          : null;
+    return (Array.isArray(itens) ? itens : []).map((i) => i?.protocolo).filter(Boolean);
+  }
+
+  function navegacaoNaLista(protocolo) {
+    const lista = listaDeOnde();
+    const i = lista.indexOf(protocolo);
+    if (i < 0 || lista.length < 2) return "";
+    const antes = lista[i - 1];
+    const depois = lista[i + 1];
+    const botao = (alvo, icone, dica, tecla) =>
+      alvo
+        ? `<button class="icone-chip" data-acao="ver" data-navegar="${tecla}" data-protocolo="${CW.escapar(alvo)}" title="${dica} (${tecla === "anterior" ? "←" : "→"})">${CW.icone(icone, 15)}</button>`
+        : `<button class="icone-chip" disabled>${CW.icone(icone, 15)}</button>`;
+    return [
+      '<span class="navegar">',
+      botao(antes, "voltar", "Caso anterior", "anterior"),
+      `<span class="sub">${i + 1} de ${lista.length}</span>`,
+      botao(depois, "direita", "Próximo caso", "proximo"),
+      "</span>",
+    ].join("");
+  }
+
   function desenharDetalhe(d) {
 
     const partes = [
       '<div class="bloco">',
-      `  <button class="migalha" data-acao="voltar-da-vista">${CW.icone("voltar", 14)}<span>${CW.escapar(P.rotuloDeOnde?.() ?? "Voltar")}</span></button>`,
+      `  <div class="migalha-linha">`,
+      `    <button class="migalha" data-acao="voltar-da-vista">${CW.icone("voltar", 14)}<span>${CW.escapar(P.rotuloDeOnde?.() ?? "Voltar")}</span></button>`,
+      navegacaoNaLista(d.protocolo),
+      `  </div>`,
       '  <div class="cartao">',
       '    <div class="linha">',
       `      <span class="sub">${CW.escapar(d.protocolo)}</span>`,
@@ -480,28 +520,31 @@
    */
   P.blocoOutrasFrentes = function blocoOutrasFrentes(frentes) {
 
-    if (!Array.isArray(frentes) || frentes.length === 0) {
+    /*
+      A frente da aba aberta não é "outra" (1.135): na aba do Reclame Aqui
+      o bloco chegou a dizer "Reclame Aqui · esta aba não os mostra".
+    */
+    const outras = (Array.isArray(frentes) ? frentes : []).filter((f) => f.canal !== P.canal);
+
+    if (outras.length === 0) {
       return "";
     }
 
+    /* Uma linha por frente, com a ação ao lado — era um cartão de quatro linhas cada. */
     return [
       '<div class="bloco">',
       '  <div class="rotulo">Este contato em outras frentes</div>',
 
-      ...frentes.map((f) =>
+      ...outras.map((f) =>
         [
-          '  <div class="cartao" style="margin-top:6px">',
-          '    <div class="linha">',
-          `      <span class="sub" style="color:var(--texto);font-weight:600">${CW.escapar(f.nome)}</span>`,
+          '  <button class="frente-linha" type="button" data-acao="canal" data-canal="' + CW.escapar(f.canal) + '" title="Abrir ' + CW.escapar(f.nome) + ' deste contato">',
+          `    <span class="frente-nome">${CW.escapar(f.nome)}</span>`,
+          `    <span class="sub">${f.total} ${CW.plural(f.total, "caso", "casos")}</span>`,
           f.abertos > 0
-            ? `      <span class="tag atencao">${f.abertos} em aberto</span>`
-            : '      <span class="tag neutro">sem nada em aberto</span>',
-          '    </div>',
-          `    <p class="sub" style="margin-top:3px;color:var(--suave)">${f.total} ${CW.plural(f.total, "caso", "casos")} deste contato. Esta aba não os mostra — a fila é outra.</p>`,
-          '    <div class="etapas">',
-          `      <button class="passo" data-acao="canal" data-canal="${CW.escapar(f.canal)}">ver em ${CW.escapar(f.nome)}</button>`,
-          '    </div>',
-          '  </div>',
+            ? `    <span class="tag atencao">${f.abertos} em aberto</span>`
+            : '    <span class="tag neutro">nada em aberto</span>',
+          `    ${CW.icone("direita", 14)}`,
+          '  </button>',
         ].join("")
       ),
 

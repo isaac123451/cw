@@ -298,10 +298,22 @@ export async function GET(request: Request) {
    * divergiram uma vez nesta base — a do gráfico e a da nota — e o
    * sintoma foi um número plausível e errado.
    */
+  /*
+    Os doze meses **fechados** (1.135). Sem limites, a função devolvia
+    também o mês corrente — e no dia 5 de outubro o popup estampava
+    "2,6 em out/26 · 1 reclamação ▼ 5,5" como a nota do mês, um mês de
+    cinco dias com uma reclamação. Com os limites, é a mesma conta da
+    tela de Análise (1.121).
+  */
+  const [anoHoje, mesHoje] = hojeNaOperacao().split("-").map(Number);
+  const ultimoFechado = new Date(Date.UTC(anoHoje, mesHoje - 1, 0)).toISOString().slice(0, 10);
+  const primeiroDosDoze = new Date(Date.UTC(anoHoje, mesHoje - 13, 1)).toISOString().slice(0, 10);
+
   const tendencia = getReputationTrend(
     casos.filter(
       (item) => item.source === "Reclame Aqui"
-    )
+    ),
+    { inicio: primeiroDosDoze, fim: ultimoFechado }
   ).slice(-12);
 
   const nps = await resumoDoNps(

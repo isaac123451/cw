@@ -97,6 +97,41 @@ function arquivosDoPainel() {
   );
 }
 
+/** O `chrome` que o popup e as opções esperam, respondendo com as capturas. */
+function chromeDeMentira(capturas: Record<string, unknown>) {
+  return `
+(() => {
+  const capturas = ${JSON.stringify(capturas)};
+  const guardado = { ...capturas.config };
+  const area = {
+    get: (chaves, fim) => { const r = { ...guardado }; if (fim) fim(r); return Promise.resolve(r); },
+    set: (valores, fim) => { Object.assign(guardado, valores); if (fim) fim(); return Promise.resolve(); },
+    remove: (_c, fim) => { if (fim) fim(); return Promise.resolve(); },
+  };
+  const responder = (m) => {
+    const t = m && m.tipo;
+    if (t === "resumo") return { ok: true, dados: { ...capturas.resumo, aplicacao: capturas.config.base } };
+    if (t === "config") return { ok: true, dados: capturas.config };
+    if (t === "sessao") return { ok: true, dados: capturas.sessao };
+    if (t === "contexto") return { ok: true, dados: capturas.contexto };
+    if (t === "vigiaEstado") return { ok: true, dados: { ultima: Date.now() - 600000, novas: 0, situacao: "ok" } };
+    return { ok: true, dados: {} };
+  };
+  window.chrome = {
+    runtime: {
+      lastError: undefined,
+      sendMessage: (m, fim) => setTimeout(() => fim && fim(responder(m)), 30),
+      openOptionsPage: () => Promise.resolve(),
+      getURL: (p) => "/ext/" + p,
+      getManifest: () => ({ version: "bancada" }),
+    },
+    tabs: { create: () => {}, query: (_q, fim) => fim && fim([]) },
+    storage: { sync: area, local: area, session: area, onChanged: { addListener() {} } },
+    permissions: { request: () => Promise.resolve(true), contains: () => Promise.resolve(true) },
+  };
+})();`;
+}
+
 function montarPagina(capturas: Record<string, unknown>, arquivos: string[]) {
   const fontes = arquivos
     .map((caminho) => {
@@ -327,6 +362,46 @@ async function main() {
       resposta.end("tchau");
       process.exit(0);
     }
+
+    /*
+      O popup e as opções, fora do Chrome (1.135): a página da extensão
+      com um \`chrome\` de mentira que responde com as mesmas capturas.
+      /popup e /opcoes; os arquivos da extensão saem de /ext/.
+    */
+    const caminho = (pedido.url ?? "/").split("?")[0];
+    if (caminho.startsWith("/ext/")) {
+      const arquivo = resolve(RAIZ, "extensao", decodeURIComponent(caminho.slice(5)));
+      if (!arquivo.startsWith(resolve(RAIZ, "extensao"))) {
+        resposta.writeHead(403).end();
+        return;
+      }
+      try {
+        const corpo = readFileSync(arquivo);
+        const tipo = arquivo.endsWith(".js")
+          ? "text/javascript"
+          : arquivo.endsWith(".woff2")
+            ? "font/woff2"
+            : arquivo.endsWith(".png")
+              ? "image/png"
+              : "text/html; charset=utf-8";
+        resposta.writeHead(200, { "Content-Type": tipo }).end(corpo);
+      } catch {
+        resposta.writeHead(404).end();
+      }
+      return;
+    }
+    if (caminho === "/popup" || caminho === "/opcoes") {
+      const pasta = caminho.slice(1);
+      const html = readFileSync(resolve(RAIZ, "extensao", pasta, `${pasta}.html`), "utf8");
+      resposta.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      resposta.end(
+        html
+          .replace("<head>", `<head><base href="/ext/${pasta}/">`)
+          .replace('<script type="module"', `<script>${chromeDeMentira(capturas)}</script><script type="module"`)
+      );
+      return;
+    }
+
     resposta.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
     /* Relê os arquivos a cada pedido: mexeu no painel, F5 mostra. */
     resposta.end(montarPagina(capturas, arquivosDoPainel()));

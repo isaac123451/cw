@@ -21,6 +21,54 @@
      PAINEL DO DIA
   ============================================================ */
 
+  /* ============================================================
+     OS NÚMEROS NAS ABAS (1.135)
+  ============================================================ */
+
+  /**
+   * Um número pequeno em RA, NPS e Agenda: o que espera por você em cada
+   * frente, sem abrir a aba. RA conta sem resposta + réplicas; NPS, os
+   * ciclos fora do prazo; Agenda, o que vence hoje ou já venceu.
+   *
+   * São as mesmas contas do Painel e do popup (`/api/extensao/resumo` e
+   * `/agenda`). Pedidas ao abrir a gaveta, no máximo a cada 5 minutos —
+   * o resumo é a conta mais pesada da extensão.
+   */
+  let contadoresEm = 0;
+
+  function marcarAba(canal, numero, dica) {
+    const botao = P.raiz?.querySelector(`[data-acao="canal"][data-canal="${canal}"]`);
+    const conta = botao?.querySelector(".conta");
+    if (!conta) return;
+    const n = Number(numero) || 0;
+    conta.hidden = n <= 0;
+    conta.textContent = n > 99 ? "99+" : String(n);
+    if (!botao.dataset.titulo) botao.dataset.titulo = botao.title;
+    botao.title = n > 0 && dica ? dica : botao.dataset.titulo;
+  }
+
+  P.contadoresDoResumo = function contadoresDoResumo(dados) {
+    if (!dados) return;
+    const ra = (dados.contagens?.semResposta ?? 0) + (dados.contagens?.replicas ?? 0);
+    marcarAba("reclame-aqui", ra, `Reclame Aqui (2) · ${ra} esperando resposta ou réplica`);
+    const nps = dados.nps?.estourados ?? 0;
+    marcarAba("nps", nps, `NPS (3) · ${nps} fora do prazo nos últimos 30 dias`);
+  };
+
+  P.atualizarContadoresDasAbas = async function atualizarContadoresDasAbas(forcar = false) {
+    if (!P.raiz || (!forcar && Date.now() - contadoresEm < 5 * 60_000)) return;
+    contadoresEm = Date.now();
+    const [resumo, agenda] = await Promise.all([CW.enviar({ tipo: "resumo" }), CW.enviar({ tipo: "agenda" })]);
+    if (resumo.ok) P.contadoresDoResumo(resumo.dados);
+    if (agenda.ok) {
+      const itens = agenda.dados?.itens ?? [];
+      const atrasadas = itens.filter((t) => t.atrasada).length;
+      marcarAba("atividades", itens.length, `Agenda (6) · ${itens.length} para hoje${atrasadas ? `, ${atrasadas} ${CW.plural(atrasadas, "atrasada", "atrasadas")}` : ""}`);
+    }
+    /* Falhou (sem sessão, sem rede): tenta de novo na próxima abertura. */
+    if (!resumo.ok) contadoresEm = 0;
+  };
+
   P.carregarPainel = async function carregarPainel() {
 
     P.corpo.innerHTML = `<div class="carregando">Carregando o painel…</div>`;
@@ -34,6 +82,9 @@
 
     const dados = resposta.dados;
     const rep = dados.reputacao ?? {};
+
+    /* O Painel já trouxe o resumo: os números das abas saem dele, sem outro pedido. */
+    P.contadoresDoResumo?.(dados);
 
     const partes = [
       '<div class="bloco">',

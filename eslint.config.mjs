@@ -12,6 +12,12 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // A build do servidor de conferência (porta 3201), a bancada do
+    // painel e o pacote da extensão: código gerado. Varrer
+    // `.next-conferencia` fazia o `npm run lint` passar de uma hora.
+    ".next-conferencia/**",
+    ".bancada/**",
+    "dist/**",
   ]),
   {
     rules: {

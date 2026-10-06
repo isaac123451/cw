@@ -126,7 +126,7 @@ export default function MesDoPlano({ plano, erroDaProjecao, hoje }: { plano: Pla
 
         {plano.voltaria && (
           <Acao titulo={plano.voltaria.voltariaAMais > 0 ? `Faltam ${plural(plano.voltaria.voltariaAMais, "avaliação com \"voltaria\"", "avaliações com \"voltaria\"")} além das previstas` : `Margem de "não voltaria": ${plano.voltaria.margemDeNaoVoltaria}`} ok={plano.voltaria.noCaminho}>
-            {atual ? `Das ${plano.avaliacoesNoPlano} novas até o fim do mês` : `Das ${plano.avaliacoesNoPlano} novas de hoje até o fim de ${nomeDoMes(plano.mes)}`}, no máximo {plano.voltaria.margemDeNaoVoltaria} podem vir sem "voltaria a fazer negócio" para ficar em {pct(plano.voltaria.meta)} — a janela já tem {plano.voltaria.jaNaoVoltaria}.
+            {atual ? `Das ${plano.avaliacoesNoPlano} novas até o fim do mês` : `Das ${plano.avaliacoesNoPlano} novas de hoje até o fim de ${nomeDoMes(plano.mes)}`}, no máximo {plano.voltaria.margemDeNaoVoltaria} podem vir sem “voltaria a fazer negócio” para ficar em {pct(plano.voltaria.meta)} — a janela já tem {plano.voltaria.jaNaoVoltaria}.
           </Acao>
         )}
 
@@ -153,7 +153,7 @@ export default function MesDoPlano({ plano, erroDaProjecao, hoje }: { plano: Pla
       </ul>
 
       <p className="mt-4 rounded-xl bg-violet-50/60 px-3 py-2 text-sm text-zinc-700 ring-1 ring-inset ring-violet-100">
-        <b className="font-medium">Quanto cada coisa move a nota desta janela:</b> uma resposta {efeito(v.resposta)} · uma avaliação nota 10, resolvida e com "voltaria" {efeito(v.avaliacaoPerfeita)} · uma avaliação ruim {efeito(v.avaliacaoRuim)}
+        <b className="font-medium">Quanto cada coisa move a nota desta janela:</b> uma resposta {efeito(v.resposta)} · uma avaliação nota 10, resolvida e com “voltaria” {efeito(v.avaliacaoPerfeita)} · uma avaliação ruim {efeito(v.avaliacaoRuim)}
         {v.avaliacaoPerfeita > 0 && v.avaliacaoRuim < 0 ? ` — uma ruim desfaz ${Math.round(-v.avaliacaoRuim / v.avaliacaoPerfeita)} boas` : ""}.
       </p>
 

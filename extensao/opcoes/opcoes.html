@@ -215,7 +215,7 @@
         </svg>
         <span>
           <h1>CW Reputação — painel de contexto</h1>
-          <p>Lê e mostra. Só grava reclamação quando você confirma.</p>
+          <p>O cliente ao lado da conversa, a reclamação entrando sozinha, e nada enviado por você sem você.</p>
         </span>
       </header>
 
@@ -406,26 +406,40 @@
       <section>
         <h2>O que a extensão faz e o que não faz</h2>
 
+        <!--
+          Reescrito na 1.135: a lista antiga dizia "mensagem, histórico e
+          mídia não são lidos" e "nada é gravado sem você confirmar", e as
+          duas deixaram de ser verdade com a conversa guardada sozinha
+          (1.26), o vigia (1.86) e o completar ao abrir (1.87). Promessa
+          da extensão tem de ser a que ela cumpre.
+        -->
         <ul>
           <li>
-            Lê o telefone e o nome da conversa aberta no WhatsApp Web —
-            e nada mais. Mensagem, histórico e mídia não são lidos.
+            <strong>No WhatsApp Web</strong>, lê o nome e o telefone da
+            conversa aberta para achar o cliente. Quando o contato já é
+            conhecido (reclamação, NPS ou estabelecimento), a conversa
+            aberta <strong>se guarda sozinha</strong> no caso — só as
+            mensagens novas, e dá para pausar por conversa no painel.
+            Conversa de quem não é conhecido só vai com o seu clique.
           </li>
           <li>
-            No Hugme e no Reclame Aqui, lê o identificador, o título e o
-            relato da reclamação aberta — e oferece adicioná-la ao
-            Kanban. <strong>Nada é gravado sem você conferir a prévia e
-            confirmar</strong>, e reclamação que já existe nunca é
-            sobrescrita.
+            <strong>Reclame Aqui:</strong> o vigia lê a lista pública da
+            Cardápio Web e põe no quadro as reclamações que faltam; na
+            área da empresa, completa nome, contato e CPF/CNPJ que estão
+            vazios. <strong>Nada que a operação preencheu é
+            sobrescrito</strong>, e reclamação que já existe nunca é
+            recriada.
           </li>
           <li>
-            Nunca envia mensagem e nunca responde reclamação em nome da
-            empresa. O risco de bloqueio no WhatsApp está ligado a
-            comportamento de envio, não a leitura de tela.
+            <strong>Nunca envia mensagem nem publica resposta.</strong> Nos
+            disparos em lote, a conversa abre com o texto escrito e quem
+            aperta Enter é você. O risco de bloqueio no WhatsApp está no
+            envio automático, e ele não existe aqui.
           </li>
           <li>
-            A consulta vai só para o seu CW Reputação, autenticada com a
-            sua própria sessão — a mesma que as telas usam.
+            Tudo vai só para o seu CW Reputação, com a sua própria sessão —
+            a mesma das telas. Dado bancário que aparece numa conversa é
+            omitido antes de gravar.
           </li>
         </ul>
       </section>

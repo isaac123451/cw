@@ -1446,7 +1446,69 @@ ${CORES}
 
 .link-mais:hover { text-decoration: underline; }
 
+/* Os números nas abas (1.135): pequenos, no canto do ícone. */
+.canais .conta {
+  position: absolute;
+  top: 2px;
+  left: calc(50% + 5px);
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--perigo);
+  color: #fff;
+  font-style: normal;
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 0 0 2px var(--fundo);
+}
+.canais .conta[hidden] { display: none; }
+.canais [data-canal="atividades"] .conta { background: var(--laranja); color: #2b1a00; }
+
+/* O caso aberto: voltar à esquerda, anterior · 3 de 12 · próximo à direita. */
+.migalha-linha { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 9px; }
+.migalha-linha .migalha { margin: 0; }
+.navegar { display: inline-flex; align-items: center; gap: 4px; }
+.navegar .sub { font-variant-numeric: tabular-nums; min-width: 48px; text-align: center; }
+.icone-chip {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 26px;
+  border: 1px solid var(--borda);
+  border-radius: 7px;
+  background: var(--elevado);
+  color: var(--suave);
+  cursor: pointer;
+}
+.icone-chip:hover:not(:disabled) { border-color: var(--violeta); color: var(--violeta); }
+.icone-chip:disabled { opacity: .35; cursor: default; }
+
 .acao-chip span { flex: 1; }
+
+/* Outras frentes do contato: uma linha cada, clicável inteira. */
+.frente-linha {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 5px;
+  padding: 8px 10px;
+  border: 1px solid var(--borda);
+  border-radius: 9px;
+  background: var(--superficie);
+  color: var(--texto);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.frente-linha:hover { border-color: var(--violeta); }
+.frente-linha .frente-nome { font-weight: 600; font-size: 12.5px; }
+.frente-linha .sub { flex: 1; }
+.frente-linha .ic { color: var(--fraco); }
 
 .aviso-linha { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 0; }
 .aviso-linha .link-mais { margin: 0; white-space: nowrap; color: var(--atencao); font-weight: 600; }

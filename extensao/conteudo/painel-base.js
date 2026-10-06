@@ -318,15 +318,15 @@
           <button type="button" data-acao="canal" data-canal="contato"
                   aria-pressed="false" title="A conversa aberta (1)">${CW.icone("cliente", 17)}<span>Cliente</span></button>
           <button type="button" data-acao="canal" data-canal="reclame-aqui"
-                  aria-pressed="false" title="Reclame Aqui (2)">${CW.icone("ra", 17)}<span>RA</span></button>
+                  aria-pressed="false" title="Reclame Aqui (2)">${CW.icone("ra", 17)}<span>RA</span><i class="conta" hidden></i></button>
           <button type="button" data-acao="canal" data-canal="nps"
-                  aria-pressed="false" title="NPS (3)">${CW.icone("nps", 17)}<span>NPS</span></button>
+                  aria-pressed="false" title="NPS (3)">${CW.icone("nps", 17)}<span>NPS</span><i class="conta" hidden></i></button>
           <button type="button" data-acao="canal" data-canal="social"
                   aria-pressed="false" title="Redes Sociais (4)">${CW.icone("redes", 17)}<span>Redes</span></button>
           <button type="button" data-acao="canal" data-canal="painel"
                   aria-pressed="false" title="Nota, contadores e alertas do dia (5)">${CW.icone("painel", 17)}<span>Painel</span></button>
           <button type="button" data-acao="canal" data-canal="atividades"
-                  aria-pressed="false" title="O que está marcado: hoje, atrasado e o que vem (6)">${CW.icone("agenda", 17)}<span>Agenda</span></button>
+                  aria-pressed="false" title="O que está marcado: hoje, atrasado e o que vem (6)">${CW.icone("agenda", 17)}<span>Agenda</span><i class="conta" hidden></i></button>
         </nav>
       </aside>`;
 
@@ -1536,6 +1536,9 @@
     P.aberto = true;
     gaveta?.classList.add("aberta");
 
+    /* Os números nas abas, no máximo a cada 5 minutos (1.135). */
+    P.atualizarContadoresDasAbas?.();
+
     P.empurrarPagina(true);
 
     // Fila ou painel já desenhados continuam onde estão.
@@ -1595,7 +1598,14 @@
 
       const menuAberto = P.raiz.querySelector(".menu-painel:not([hidden])");
 
-      if (evento.key === "/") P.campoBusca?.focus();
+      /* No caso aberto, ← e → andam pela lista de onde ele veio (1.135). */
+      const navegar =
+        P.vista === "caso" && (evento.key === "ArrowLeft" || evento.key === "ArrowRight")
+          ? P.raiz.querySelector(`[data-navegar="${evento.key === "ArrowLeft" ? "anterior" : "proximo"}"]`)
+          : null;
+
+      if (navegar) navegar.click();
+      else if (evento.key === "/") P.campoBusca?.focus();
       else if (evento.key === "Escape" && menuAberto) alternarMenu(false);
       else if (evento.key === "Escape") P.fechar();
       else if (evento.key === "?") alternarAjudaDosAtalhos();
