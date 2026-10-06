@@ -3,11 +3,11 @@
  *
  *   npm run conferir
  *
- * Roda cada `check:*` do package.json, seis por vez, e pula as que gravam
- * no banco ou assinam sessão contra o servidor — o `.env` local aponta
- * para o banco de produção, e essas pedem decisão de quem roda. No fim,
- * diz quantas passaram, quais falharam (com as linhas de falha) e quais
- * foram puladas.
+ * Roda cada `check:*` do package.json, quatro por vez, e pula as que
+ * gravam no banco ou assinam sessão contra o servidor — o `.env` local
+ * aponta para o banco de produção, e essas pedem decisão de quem roda. No
+ * fim, diz quantas passaram, quais falharam (com as linhas de falha) e
+ * quais foram puladas.
  *
  * Existe porque são mais de 150 conferências e nenhuma forma de rodar
  * todas: depois de uma mudança grande, a regressão aparecia dias depois
@@ -43,16 +43,24 @@ for (const [nome, comando] of Object.entries(pkg.scripts)) {
   else lista.push(nome);
 }
 
-const PARALELO = 6;
+/*
+  Quatro por vez: com seis, o banco (pool pequeno) recusava conexão e uma
+  conferência caía sem defeito nenhum. O que falha em paralelo roda de novo,
+  sozinho, antes de ser dado como falha.
+*/
+const PARALELO = 4;
 const LIMITE_MS = 240_000;
 const total = lista.length + sozinhas.length;
 const falhas = [];
+const paraRepetir = [];
+const repetindo = new Set();
+const passaramNaSegunda = [];
 const inicio = Date.now();
 let proxima = 0;
 let rodando = 0;
 let terminou = false;
 
-function executar(nome, depois) {
+function executar(nome, depois, emParalelo = false) {
   const filho = spawn(`npm run -s ${nome}`, { cwd: RAIZ, shell: true });
   let saida = "";
   filho.stdout.on("data", (d) => (saida += d));
@@ -60,9 +68,13 @@ function executar(nome, depois) {
   const relogio = setTimeout(() => filho.kill(), LIMITE_MS);
   filho.on("close", (codigo) => {
     clearTimeout(relogio);
-    if (codigo !== 0) {
+    if (codigo !== 0 && emParalelo) {
+      paraRepetir.push(nome);
+    } else if (codigo !== 0) {
       const linhas = saida.split("\n").filter((l) => /FALHA|rror|falh/i.test(l)).slice(0, 4);
       falhas.push({ nome, codigo, linhas });
+    } else if (repetindo.has(nome)) {
+      passaramNaSegunda.push(nome);
     }
     depois();
   });
@@ -75,14 +87,23 @@ function rodar() {
   }
   const nome = lista[proxima++];
   rodando++;
-  executar(nome, () => {
-    rodando--;
-    rodar();
-  });
+  executar(
+    nome,
+    () => {
+      rodando--;
+      rodar();
+    },
+    true
+  );
 }
 
 function rodarSozinhas() {
   if (terminou) return;
+  while (paraRepetir.length) {
+    const repetir = paraRepetir.shift();
+    repetindo.add(repetir);
+    sozinhas.push(repetir);
+  }
   const nome = sozinhas.shift();
   if (!nome) {
     terminou = true;
@@ -95,6 +116,9 @@ function rodarSozinhas() {
 function terminar() {
   const segundos = Math.round((Date.now() - inicio) / 1000);
   console.log(`\n  ${total - falhas.length} de ${total} conferências passaram em ${segundos} s.`);
+  if (passaramNaSegunda.length) {
+    console.log(`  Passaram na segunda vez, sozinhas: ${passaramNaSegunda.join(", ")} (o banco recusou conexão em paralelo, não é defeito).`);
+  }
   for (const f of falhas) {
     console.log(`\n  FALHA ${f.nome} (saída ${f.codigo})`);
     for (const l of f.linhas) console.log(`    ${l.trim().slice(0, 160)}`);

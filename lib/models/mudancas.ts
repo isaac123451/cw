@@ -998,7 +998,7 @@ export const MUDANCAS: Mudanca[] = [
     frente: "bastidores",
     titulo: "Conferência de tempo roda sozinha",
     texto:
-      "A conferência de desempenho mede o tempo das consultas; rodando ao lado de outras cinco, o tempo inflava e ela falhava sem motivo. No \"npm run conferir\" ela agora roda por último, sozinha.",
+      "A conferência de desempenho mede o tempo das consultas; rodando ao lado de outras cinco, o tempo inflava e ela falhava sem motivo. No \"npm run conferir\" ela agora roda por último, sozinha. E as conferências rodam quatro por vez, não seis: com seis o banco recusava conexão; o que falhar em paralelo roda de novo, sozinho, antes de ser dado como falha.",
   },
   {
     id: "dependencia-sharp",
