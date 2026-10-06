@@ -1547,6 +1547,9 @@ ${CORES}
   cursor: pointer;
 }
 
+/* Voltar é raro: só a seta, e o nome fica na dica. O avançar ganha o espaço e não corta o nome. */
+.etapas .passo[data-direcao="voltar"] { flex: 0 0 34px; padding-left: 0; padding-right: 0; }
+
 .passo.avancar {
   border-color: color-mix(in srgb, var(--violeta) 45%, var(--borda));
   color: var(--violeta);

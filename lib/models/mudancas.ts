@@ -63,6 +63,16 @@ export const MUDANCAS: Mudanca[] = [
     onde: "Extensão → WhatsApp Web",
   },
   {
+    id: "ext-etapa-sem-nome-cortado",
+    dia: "2026-10-06",
+    tipo: "melhoria",
+    frente: "extensao",
+    titulo: "Mudar de etapa sem o nome cortado",
+    texto:
+      "Voltar, avançar e \"outra etapa\" dividiam a mesma linha, e os dois botões cortavam o nome (\"← Aguardand…\", \"Aguardando a…\"). Voltar é raro: virou só a seta, com o nome na dica. O avançar ganhou o espaço e mostra a etapa inteira.",
+    onde: "Extensão → cartão do caso",
+  },
+  {
     id: "ext-agenda-sem-protocolo-repetido",
     dia: "2026-10-06",
     tipo: "melhoria",
