@@ -493,7 +493,7 @@ export const MUDANCAS: Mudanca[] = [
     frente: "bastidores",
     titulo: "Todas as conferências de novo no verde",
     texto:
-      "Rodadas as 117 conferências que só leem a base. Dez estavam vermelhas por motivo errado — esperavam o texto antigo com \"(s)\", não conheciam as tabelas novas do Plano de ação e da revisão de categorias, ou contavam um caso do Instagram na métrica diária do Reclame Aqui. A conta estava certa em todas; as conferências foram acertadas para continuar valendo de alarme.",
+      "Rodadas as 117 conferências que só leem a base. Dez estavam vermelhas por motivo errado — esperavam o texto antigo, com o plural entre parênteses, não conheciam as tabelas novas do Plano de ação e da revisão de categorias, ou contavam um caso do Instagram na métrica diária do Reclame Aqui. A conta estava certa em todas; as conferências foram acertadas para continuar valendo de alarme.",
   },
   {
     id: "bancada-do-painel",
