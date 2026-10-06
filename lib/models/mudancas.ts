@@ -53,6 +53,16 @@ export const REVISAO = {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- extensão: o painel ---------------- */
   {
+    id: "rascunho-sem-em-breve",
+    dia: "2026-10-06",
+    tipo: "correcao",
+    frente: "extensao",
+    titulo: "O rascunho \"Responder agora\" sem o \"em breve\"",
+    texto:
+      "O primeiro rascunho das conversas dizia \"te retorno com uma posição em breve\" — e a análise de respostas da própria plataforma marca \"em breve\" como vago, um erro. O rascunho nascia com o defeito que ela aponta. Agora diz \"te dou uma posição ainda hoje\"; como todo rascunho, é para revisar antes de enviar.",
+    onde: "Extensão → conversa → textos prontos",
+  },
+  {
     id: "slack-mencao-nao-e-cliente",
     dia: "2026-10-06",
     tipo: "correcao",
@@ -864,6 +874,15 @@ export const MUDANCAS: Mudanca[] = [
     titulo: "Todas as conferências com um comando",
     texto:
       "São mais de 150 conferências e não havia jeito de rodar todas: depois de uma mudança grande, a regressão aparecia dias depois numa que ninguém lembrou. Agora \"npm run conferir\" roda as 123 que só leem, seis por vez, em pouco mais de um minuto, e diz quais falharam e quais ficaram de fora (as que gravam no banco ou falam com o servidor). Todas passaram.",
+  },
+  {
+    id: "conferir-tempo-sozinho",
+    dia: "2026-10-06",
+    tipo: "melhoria",
+    frente: "bastidores",
+    titulo: "Conferência de tempo roda sozinha",
+    texto:
+      "A conferência de desempenho mede o tempo das consultas; rodando ao lado de outras cinco, o tempo inflava e ela falhava sem motivo. No \"npm run conferir\" ela agora roda por último, sozinha.",
   },
   {
     id: "dependencia-sharp",

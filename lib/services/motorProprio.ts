@@ -218,6 +218,11 @@ export function estadoDaConversa(mensagens: MensagemDaConversa[]): {
    RASCUNHOS — os três caminhos, sempre para revisar antes de enviar
 ============================================================ */
 
+/*
+  "Em breve" saiu do primeiro rascunho (out/2026): a análise de respostas da
+  própria plataforma marca "em breve" como vago — o rascunho nascia com o
+  defeito que ela aponta. Prazo dito, e quem revisa ajusta se não der.
+*/
 export function rascunhosDaConversa(entrada: {
   nome?: string;
   assunto: string;
@@ -230,7 +235,7 @@ export function rascunhosDaConversa(entrada: {
     {
       titulo: "Responder agora",
       quando: "O que já se sabe é suficiente para dar uma notícia ao cliente.",
-      texto: `${saudacao} Vi sua mensagem sobre ${entrada.assunto.toLowerCase()}. Já estou olhando com atenção e te retorno com uma posição em breve — obrigado pela paciência.`,
+      texto: `${saudacao} Vi sua mensagem sobre ${entrada.assunto.toLowerCase()}. Já estou olhando com atenção e te dou uma posição ainda hoje — obrigado pela paciência.`,
     },
     {
       titulo: "Pedir o que falta",
