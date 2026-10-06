@@ -410,6 +410,16 @@ export const MUDANCAS: Mudanca[] = [
       "Mais de 440 textos em 132 telas, avisos, relatórios e respostas do assistente usavam o plural com parênteses — \"2 caso(s)\", \"1 detrator(es)\", \"3 dia(s)\". Agora cada um usa o número que está ao lado: \"1 caso\", \"2 casos\".",
   },
   {
+    id: "nota-do-periodo-so-do-periodo",
+    dia: "2026-10-06",
+    tipo: "correcao",
+    frente: "reclame-aqui",
+    titulo: "A nota de um mês conta só as avaliações daquele mês",
+    texto:
+      "Na Análise, ao escolher 30 dias, um trimestre ou um intervalo (um mês, por exemplo), a nota juntava as reclamações abertas no período com as avaliações que chegaram depois — em abril/2026 eram 20 avaliações, 12 feitas em outros meses, e a nota saía 8,4 onde as de abril davam 6,9. Agora o período conta só as avaliações feitas dentro dele, e a nota de cada mês é a mesma da Análise, dos Gráficos, do Índice e da extensão. A janela oficial de 6 e 12 meses não muda: continua a conta do portal. Fora dela, o cartão se chama \"Nota do período\", e o histograma também usa as avaliações do período.",
+    href: "/reclame-aqui/analytics",
+  },
+  {
     id: "login-mais-leve",
     dia: "2026-10-06",
     tipo: "melhoria",

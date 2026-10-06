@@ -127,7 +127,6 @@
     "check:lgpd": "tsx scripts/check-lgpd.ts",
     "check:trilha": "tsx scripts/check-trilha.ts",
     "check:negociacao": "tsx scripts/check-negociacao.ts",
-    "check:categorias": "tsx scripts/check-categorias.ts",
     "check:redes": "tsx scripts/check-redes.ts",
     "check:google": "tsx scripts/check-google.ts",
     "check:nps-guia": "tsx scripts/check-nps-guia.ts",
@@ -177,7 +176,8 @@
     "check:momento": "tsx scripts/check-momento.ts",
     "check:situacao": "tsx scripts/check-situacao.ts",
     "check:tons": "tsx scripts/check-tons.ts",
-    "check:impacto-conversa": "tsx scripts/check-impacto-conversa.ts"
+    "check:impacto-conversa": "tsx scripts/check-impacto-conversa.ts",
+    "check:nota-do-periodo": "tsx scripts/check-nota-do-periodo.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",

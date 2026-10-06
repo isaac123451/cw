@@ -38,19 +38,21 @@ import { useScopedCases } from "@/lib/context/useScopedCases";
 
 import {
   CustomRange,
+  diaDaAvaliacao,
   displayBand,
+  ehJanelaOficial,
   formatElapsed,
   getBacklog,
   getRange,
   getRanking,
   getRatingDistribution,
-  getReputation,
   getReputationTrend,
   inRange,
   PeriodKey,
   PeriodMode,
   ptBR,
   hojeNaOperacao,
+  reputacaoDoPeriodo,
 } from "@/lib/services/reputation.service";
 
 const backlogTone: Record<string, string> = {
@@ -161,14 +163,39 @@ export default function ReclameAquiAnalyticsPage() {
     );
   }
 
+  /*
+    A nota do período pela regra certa para ele (out/2026): na janela
+    oficial de 6 ou 12 meses, a do portal (reclamações abertas nela, com a
+    avaliação de cada uma); em 30 dias, trimestre ou intervalo escolhido,
+    só as avaliações feitas dentro do período — antes entravam as que
+    vieram depois, e um mês carregava avaliações de outros meses.
+  */
+  const oficial = ehJanelaOficial(period);
+
+  const comDrill = useMemo(
+    () => cases.filter((item) => matchesDrill(item, drill)),
+    [cases, drill]
+  );
+
   const summary = useMemo(
-    () => getReputation(current),
-    [current]
+    () => reputacaoDoPeriodo(comDrill, period, range.start, range.end),
+    [comDrill, period, range]
   );
 
   const previousSummary = useMemo(
-    () => getReputation(previous),
-    [previous]
+    () => reputacaoDoPeriodo(comDrill, period, range.previousStart, range.previousEnd),
+    [comDrill, period, range]
+  );
+
+  /* As avaliações feitas no período — a base do histograma fora da janela oficial. */
+  const avaliadasNoPeriodo = useMemo(
+    () =>
+      cases.filter((item) => {
+        if (!item.evaluated) return false;
+        const dia = diaDaAvaliacao(item);
+        return dia >= range.start && dia <= range.end;
+      }),
+    [cases, range]
   );
 
   /*
@@ -211,8 +238,15 @@ export default function ReclameAquiAnalyticsPage() {
   );
 
   const buckets = useMemo(
-    () => getRatingDistribution(without("score")),
-    [without]
+    () =>
+      getRatingDistribution(
+        oficial
+          ? without("score")
+          : drill && drill.field !== "score"
+            ? avaliadasNoPeriodo.filter((item) => matchesDrill(item, drill))
+            : avaliadasNoPeriodo
+      ),
+    [oficial, without, drill, avaliadasNoPeriodo]
   );
 
   const backlog = useMemo(
@@ -325,8 +359,8 @@ export default function ReclameAquiAnalyticsPage() {
 
             <div className="flex items-start justify-between gap-3">
 
-              <p className="text-sm font-medium text-zinc-600">
-                Reputação atual
+              <p className="text-sm font-medium text-zinc-600" title={oficial ? "A janela que o portal publica: as reclamações abertas nela, com a avaliação de cada uma." : "Só as avaliações feitas dentro do período; recebidas e respondidas, das reclamações abertas nele."}>
+                {oficial ? "Reputação atual" : "Nota do período"}
               </p>
 
               <span

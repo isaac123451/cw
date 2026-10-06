@@ -1424,6 +1424,62 @@ export function contasDoMes(
   };
 }
 
+/**
+ * A conta de um período que **não** é a janela oficial (out/2026).
+ *
+ * O pedido do Isaac: "existem meses que está contando outros para a nota
+ * daquele mês em específico, precisa somente ter as avaliações daquele
+ * mês". A Análise, num período de 30 dias, num trimestre ou num intervalo
+ * escolhido, contava as reclamações abertas nele **com as avaliações que
+ * vieram depois** — em abril/2026 eram 20 avaliações, 12 delas feitas em
+ * outros meses, e a nota saía 8,4 onde as avaliações de abril davam 6,9.
+ *
+ * Aqui é a mesma regra de `contasDoMes`, para qualquer intervalo:
+ * recebidas e respondidas são das reclamações abertas no período;
+ * nota do consumidor, solução e voltaria, das avaliações **feitas** nele.
+ *
+ * A janela oficial de 6 e 12 meses continua pela outra conta (as
+ * reclamações abertas nela, com a avaliação de cada uma) — é a do portal,
+ * provada contra o painel oficial. Ver `reputacaoDoPeriodo`.
+ */
+export function contasDoPeriodo(
+  casos: Case[],
+  inicio: string,
+  fim: string
+): ReputationRaw {
+  const dentro = (dia: string) => dia >= inicio && dia <= fim;
+  const daCoorte = getRawCounts(casos.filter((item) => dentro(item.createdAt)));
+  const dasAvaliacoes = getRawCounts(casos.filter((item) => item.evaluated && dentro(diaDaAvaliacao(item))));
+  return {
+    ...daCoorte,
+    evaluated: dasAvaliacoes.evaluated,
+    scoreSum: dasAvaliacoes.scoreSum,
+    resolved: dasAvaliacoes.resolved,
+    wouldReturn: dasAvaliacoes.wouldReturn,
+  };
+}
+
+/** 6 e 12 meses são as janelas que o portal publica; o resto é acompanhamento. */
+export function ehJanelaOficial(period: PeriodKey) {
+  return period === "6m" || period === "12m";
+}
+
+/**
+ * A nota de um período, pela regra certa para ele: janela oficial, a do
+ * portal; qualquer outro período, as avaliações feitas dentro dele.
+ */
+export function reputacaoDoPeriodo(
+  casos: Case[],
+  period: PeriodKey,
+  inicio: string,
+  fim: string
+): ReputationSummary {
+  if (ehJanelaOficial(period)) {
+    return getReputation(casos.filter((item) => item.createdAt >= inicio && item.createdAt <= fim));
+  }
+  return scoreFrom(contasDoPeriodo(casos, inicio, fim));
+}
+
 /** Os meses de `inicio` a `fim`, "AAAA-MM". */
 export function mesesEntre(inicio: string, fim: string): string[] {
   const meses: string[] = [];
