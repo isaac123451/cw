@@ -778,6 +778,15 @@ export const MUDANCAS: Mudanca[] = [
 
   /* ---------------- por dentro ---------------- */
   {
+    id: "dependencia-sharp",
+    dia: "2026-10-06",
+    tipo: "correcao",
+    frente: "bastidores",
+    titulo: "Falha de segurança no tratamento de imagens corrigida",
+    texto:
+      "Saiu um alerta de gravidade alta para a biblioteca de imagens que o Next usa (sharp 0.35.4, por uma falha no leitor de SVG). Atualizada para 0.35.5 — a mesma faixa que o Next pede, sem mexer em mais nada. A conferência de dependências voltou ao verde.",
+  },
+  {
     id: "conferencia-das-barras",
     dia: "2026-10-06",
     tipo: "novo",
