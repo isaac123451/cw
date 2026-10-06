@@ -28,7 +28,7 @@ const campo =
  */
 export default function ImpactTypesCard() {
 
-  const { types, records, saveType, removeType } =
+  const { types, records, saveType, removeType, loading } =
     useImpact();
 
   /**
@@ -225,7 +225,8 @@ export default function ImpactTypesCard() {
 
           {rascunho.itens.length === 0 && (
             <p className="py-10 text-center text-sm text-zinc-400">
-              Nenhum tipo cadastrado.
+              {/* Na carga a lista ainda não chegou: não é "nenhum" (out/2026). */}
+              {loading ? "Carregando os tipos…" : "Nenhum tipo cadastrado."}
             </p>
           )}
 

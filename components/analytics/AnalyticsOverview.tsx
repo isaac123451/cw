@@ -48,6 +48,7 @@ import BarList from "@/components/shared/BarList";
 import PeriodPicker from "@/components/shared/PeriodPicker";
 import TrendChart from "@/components/shared/TrendChart";
 import { pluralDe } from "@/lib/plural";
+import EsperaAsReclamacoes from "@/components/reclame-aqui/EsperaAsReclamacoes";
 
 interface Props {
   eyebrow?: string;
@@ -188,6 +189,8 @@ export default function AnalyticsOverview({
       />
 
       <FrenteTabs atual={frente} onChange={setFrente} />
+
+      <EsperaAsReclamacoes>
 
       <SurfaceCard bodyClassName="p-4">
 
@@ -662,6 +665,8 @@ export default function AnalyticsOverview({
         </SurfaceCard>
 
       </div>
+
+      </EsperaAsReclamacoes>
 
     </div>
   );

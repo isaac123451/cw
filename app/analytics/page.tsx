@@ -3,6 +3,7 @@ import MainLayout from "@/components/layout/MainLayout";
 import AnalyticsOverview from "@/components/analytics/AnalyticsOverview";
 import CausaRaizCruzada from "@/components/analytics/CausaRaizCruzada";
 import MetricasDiariasCard from "@/components/analytics/MetricasDiariasCard";
+import EsperaAsReclamacoes from "@/components/reclame-aqui/EsperaAsReclamacoes";
 
 export default function AnalyticsPage() {
   return (
@@ -15,7 +16,9 @@ export default function AnalyticsPage() {
         sua lista, esta é a única tela que soma as quatro.
       */}
       <div className="mt-4">
-        <CausaRaizCruzada />
+        <EsperaAsReclamacoes tambemNps>
+          <CausaRaizCruzada />
+        </EsperaAsReclamacoes>
       </div>
 
       {/*
