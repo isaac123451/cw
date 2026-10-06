@@ -184,7 +184,7 @@ export default function DossieCard({
           .replace(/^\n+/, "");
 
   /*
-    A primeira linha do resto é a capa: "4 documento(s) · de … · …".
+    A primeira linha do resto é a capa: "4 documentos · de … · …".
 
     Ela sobe para o cabeçalho do `<details>` porque é exatamente o que
     responde "vale a pena abrir?".
