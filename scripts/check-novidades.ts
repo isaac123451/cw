@@ -39,7 +39,7 @@ console.log("\n  NOVIDADES\n");
 /* Desde 05/10/2026 a aplicação não sobe de versão (fica em 1.0.0): o "novo" é pelo dia. */
 conferir("da mais nova para a mais antiga", NOVIDADES.every((n, i) => i === 0 || compararVersoes(NOVIDADES[i - 1].versao, n.versao) > 0), true);
 conferir("o dia nunca anda para trás", NOVIDADES.every((n, i) => i === 0 || NOVIDADES[i - 1].data >= n.data), true);
-conferir("o dia visto é o da entrada mais nova", diaDaUltimaNovidade(), NOVIDADES[0].data);
+conferir("o dia visto é o da entrada mais nova (histórico ou revisão)", diaDaUltimaNovidade(), [NOVIDADES[0].data, ...MUDANCAS.map((m) => m.dia)].sort().at(-1));
 conferir("toda novidade tem frente e texto", NOVIDADES.every((n) => n.frentes.length > 0 && n.texto.length > 20), true);
 conferir("datas no formato do dia", NOVIDADES.every((n) => /^\d{4}-\d{2}-\d{2}$/.test(n.data)), true);
 
