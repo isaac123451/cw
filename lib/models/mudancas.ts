@@ -581,6 +581,16 @@ export const MUDANCAS: Mudanca[] = [
     href: "/meu-dia",
   },
   {
+    id: "clientes-nao-informado",
+    dia: "2026-10-06",
+    tipo: "correcao",
+    frente: "plataforma",
+    titulo: "\"Não informado\" não é um cliente",
+    texto:
+      "A lista de Clientes juntava pelo nome, e as reclamações que chegaram sem o consumidor viravam um cliente \"Não informado\" com três reclamações abertas — três pessoas diferentes. Agora ficam fora da lista (continuam no Reclame Aqui, com o aviso de dados incompletos), e nem a ficha do caso nem a extensão oferecem \"Ver cliente\" para quem não tem nome.",
+    href: "/clientes",
+  },
+  {
     id: "jornada-sem-nota-nao-e-detrator",
     dia: "2026-10-06",
     tipo: "correcao",

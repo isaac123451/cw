@@ -762,9 +762,11 @@
                 ? `<span class="tag perigo">risco de cancelamento</span>`
                 : ""
             }
-            <a class="tag marca" data-acao="abrir"
-               data-url="${CW.escapar(cliente.url)}"
-               style="cursor:pointer">abrir ficha &rarr;</a>
+            ${
+              cliente.url
+                ? `<a class="tag marca" data-acao="abrir" data-url="${CW.escapar(cliente.url)}" style="cursor:pointer">abrir ficha &rarr;</a>`
+                : ""
+            }
           </div>
         </div>
       </div>`);

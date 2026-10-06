@@ -951,7 +951,8 @@ function perfil(casos: Case[], origem: string) {
       (a, b) => b[1] - a[1]
     )[0]?.[0],
 
-    url: `${origem}/clientes/${slugify(nome)}`,
+    /* Sem nome não há ficha de cliente: a reclamação sem consumidor não abre "/clientes/nao-informado". */
+    url: semNome(nome) ? null : `${origem}/clientes/${slugify(nome)}`,
   };
 }
 

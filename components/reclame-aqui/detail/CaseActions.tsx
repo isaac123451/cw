@@ -23,7 +23,7 @@ import { useToast } from "@/lib/context/ToastContext";
 
 import { slugify } from "@/lib/services/slug";
 
-import { Case } from "@/lib/models/case";
+import { Case, semNome } from "@/lib/models/case";
 
 /**
  * Atalhos que ligam a reclamação ao resto da plataforma.
@@ -111,14 +111,15 @@ export default function CaseActions({
           )}
         </button>
 
-        <Link
+        {/* Sem o nome do consumidor não há ficha de cliente para abrir. */}
+        {!semNome(data.customer) && <Link
           href={`/clientes/${slugify(data.customer)}`}
           title={`Ver o histórico completo de ${data.customer}`}
           className="flex h-9 items-center gap-2 rounded-xl border border-zinc-200 px-3.5 text-sm font-medium text-zinc-700 transition-colors hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700"
         >
           <UserRound size={15} />
           Ver cliente
-        </Link>
+        </Link>}
 
         {estabelecimento && (
           <Link

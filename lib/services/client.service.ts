@@ -1,4 +1,4 @@
-import { Case } from "@/lib/models/case";
+import { Case, semNome } from "@/lib/models/case";
 import {
   ClientEnrichment,
   ClientKind,
@@ -81,7 +81,13 @@ export function buildClients(
 
   for (const item of cases) {
     const key = slugify(item.customer);
-    if (!key) continue;
+    /*
+      "Não informado" não é uma pessoa (out/2026): eram três consumidores
+      diferentes, sem nome no portal, somados num "cliente" só com três
+      reclamações abertas. A reclamação continua no Reclame Aqui, com o
+      aviso de dados incompletos.
+    */
+    if (!key || semNome(item.customer)) continue;
 
     map.set(key, [...(map.get(key) ?? []), item]);
   }
