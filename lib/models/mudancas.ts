@@ -378,6 +378,33 @@ export const MUDANCAS: Mudanca[] = [
       "O verificador de código varria também a cópia compilada do servidor de testes. Fora dela, o mesmo verificador termina em 2 min 34 s — e os 11 erros que apareceram no Plano de ação foram corrigidos.",
   },
   {
+    id: "dependencia-source-map",
+    dia: "2026-10-06",
+    tipo: "correcao",
+    frente: "bastidores",
+    titulo: "Nenhuma dependência com falha conhecida sem decisão",
+    texto:
+      "Uma biblioteca usada para montar o CSS (source-map-js) tinha uma falha publicada de travamento por arquivo malformado; foi para a versão corrigida. As outras quatro da lista são do instalador do banco, que não roda em produção, e seguem com o motivo escrito.",
+  },
+  {
+    id: "contas-conferidas",
+    dia: "2026-10-06",
+    tipo: "melhoria",
+    frente: "bastidores",
+    titulo: "Contas conferidas de novo contra a base real",
+    texto:
+      "Nota do Reclame Aqui, calculadora, índice, plano de ação (a previsão erra em média 0,2 ponto contra os meses fechados), prazos em horas úteis com feriados, ciclos do mês, metas e períodos: todas as provas passaram. As telas principais abrem dentro da meta de 1,5 s.",
+  },
+  {
+    id: "extensao-provada-site-a-site",
+    dia: "2026-10-06",
+    tipo: "melhoria",
+    frente: "bastidores",
+    titulo: "O que a extensão promete, provado site a site",
+    texto:
+      "As 17 provas dos leitores de página passaram: Reclame Aqui (pública e área da empresa), WhatsApp (conversa, número, selos de espera, guardar sozinho), Crisp, Portal Cardápio Web, Google, planilha e Slack das Redes, disparos, prazos, identificação do contato e o atalho de respostas ao lado da caixa de mensagem.",
+  },
+  {
     id: "bancada-do-painel",
     dia: "2026-10-05",
     tipo: "melhoria",
