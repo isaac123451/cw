@@ -294,6 +294,21 @@ ${fontes}
       setTimeout(() => raiz()?.querySelector('[data-acao="menu"]')?.click(), 600);
     }
 
+    /* ?clicar=Tentei contato: o primeiro botão com esse texto, depois da vista — para fotografar o que ele abre. */
+    const clicar = new URLSearchParams(location.search).get("clicar");
+    if (clicar) {
+      /* O contato chega depois da montagem: tenta por até 8 s, até o botão existir. */
+      let tentativas = 0;
+      const procurar = setInterval(() => {
+        const alvo = [...(raiz()?.querySelectorAll("button") ?? [])].find((b) => b.textContent.includes(clicar));
+        if (alvo || ++tentativas > 40) {
+          clearInterval(procurar);
+          /* Depois de achar, espera o contato terminar de redesenhar — o redesenho fecharia o que o clique abriu. */
+          setTimeout(() => [...(raiz()?.querySelectorAll("button") ?? [])].find((b) => b.textContent.includes(clicar))?.click(), 2500);
+        }
+      }, 200);
+    }
+
     /* ?aba=dossie (responder, historico, caso): a aba do contato, depois da vista. */
     const aba = new URLSearchParams(location.search).get("aba");
     if (aba) {
