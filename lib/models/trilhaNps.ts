@@ -266,7 +266,7 @@ export function trilhaDoNps(item: NpsResponseView, contexto: ContextoDaTrilhaNps
   } else if (abandono.deve) {
     detalheFinal = `Critério de falta de retorno atingido: ${abandono.motivo}`;
   } else if (faltaDeRetorno) {
-    detalheFinal = `Faltam ${Math.max(0, minimas - naJanela)} ${pluralDe(Math.max(0, minimas - naJanela), "tentativa", "tentativas")} em 7 dias para encerrar sem retorno.`;
+    detalheFinal = `${pluralDe(Math.max(0, minimas - naJanela), "Falta", "Faltam")} ${Math.max(0, minimas - naJanela)} ${pluralDe(Math.max(0, minimas - naJanela), "tentativa", "tentativas")} em 7 dias para encerrar sem retorno.`;
   } else {
     detalheFinal = "Aplique o status final que o tipo aceita.";
   }

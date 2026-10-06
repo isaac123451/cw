@@ -79,6 +79,10 @@ async function painel() {
   };
   const CW = {
     escapar: (t: unknown) => String(t ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;"),
+    /* Os de `nucleo.js` desde out/2026: ícone de traço, plural e número. */
+    icone: () => "",
+    plural: (n: unknown, um: string, varios: string) => (Math.abs(Number(n)) === 1 ? um : varios),
+    numero: (n: unknown) => String(n ?? "—"),
     enviar: async (m: { tipo: string }) => {
       enviados.push(m);
       if (m.tipo === "quemE") return { ok: true, dados: respostaQuemE };

@@ -235,6 +235,21 @@ const INTERNAS: Record<string, string[]> = {
   SaudeDaIA: ["*"],
 
   /**
+   * A revisão das categorias (1.132): carga própria (`lerRevisaoDeCategorias`,
+   * em `lib/actions/revisaoDeCategorias.ts`), só na tela Reclame Aqui →
+   * Categorias. As propostas da IA e o histórico para desfazer não viajam na
+   * carga que toda tela recebe.
+   */
+  PropostaDeCategoria: ["*"],
+  ReclassificacaoDeCaso: ["*"],
+
+  /**
+   * As metas do mês (1.133): carga própria (`lerMetasDoReclameAqui`, em
+   * `lib/actions/metasDoReclameAqui.ts`), só no Plano de ação.
+   */
+  MetaDoReclameAqui: ["*"],
+
+  /**
    * O telefone confirmado como de um cliente (1.36): só a extensão lê,
    * pela rota `quem-e` e pelo `contexto`.
    */

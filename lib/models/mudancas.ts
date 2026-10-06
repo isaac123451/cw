@@ -410,6 +410,15 @@ export const MUDANCAS: Mudanca[] = [
       "Mais de 440 textos em 132 telas, avisos, relatórios e respostas do assistente usavam o plural com parênteses — \"2 caso(s)\", \"1 detrator(es)\", \"3 dia(s)\". Agora cada um usa o número que está ao lado: \"1 caso\", \"2 casos\".",
   },
   {
+    id: "falta-um",
+    dia: "2026-10-06",
+    tipo: "correcao",
+    frente: "plataforma",
+    titulo: "\"Falta 1 tentativa\", e não \"Faltam 1\"",
+    texto:
+      "Com o plural certo, a concordância apareceu: \"Faltam 1 peça\", \"Faltam 1 tentativa\". Agora o verbo acompanha o número no dossiê, no guia do NPS, nas Redes, no Prêmio, no Plano de ação e nas respostas do assistente.",
+  },
+  {
     id: "assistente-object-object",
     dia: "2026-10-05",
     tipo: "correcao",
@@ -476,6 +485,15 @@ export const MUDANCAS: Mudanca[] = [
     titulo: "O que a extensão promete, provado site a site",
     texto:
       "As 17 provas dos leitores de página passaram: Reclame Aqui (pública e área da empresa), WhatsApp (conversa, número, selos de espera, guardar sozinho), Crisp, Portal Cardápio Web, Google, planilha e Slack das Redes, disparos, prazos, identificação do contato e o atalho de respostas ao lado da caixa de mensagem.",
+  },
+  {
+    id: "conferencias-em-dia",
+    dia: "2026-10-06",
+    tipo: "melhoria",
+    frente: "bastidores",
+    titulo: "Todas as conferências de novo no verde",
+    texto:
+      "Rodadas as 117 conferências que só leem a base. Dez estavam vermelhas por motivo errado — esperavam o texto antigo com \"(s)\", não conheciam as tabelas novas do Plano de ação e da revisão de categorias, ou contavam um caso do Instagram na métrica diária do Reclame Aqui. A conta estava certa em todas; as conferências foram acertadas para continuar valendo de alarme.",
   },
   {
     id: "bancada-do-painel",

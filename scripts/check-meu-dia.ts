@@ -122,7 +122,7 @@ console.log("\n— A fiação —\n");
     /filaDeAvaliacao\(casos\.filter\(\(c\) => c\.source === "Reclame Aqui"\), agora\)/.test(abertura),
     true
   );
-  conferir("sem notícia e crise levam o caso para a mini-janela", (abertura.match(/janela: \{\n\s+frente/g) ?? []).length, 2);
+  conferir("sem notícia e crise levam o caso para a mini-janela", (abertura.match(/janela: \{\r?\n\s+frente/g) ?? []).length, 2);
   /* 1.91: cada aviso de lista traz quem está por trás do número. */
   /* 1.108: e quem espera resposta no WhatsApp. */
   conferir("prazo, sem notícia, avaliação, crise e WhatsApp trazem os itens", (abertura.match(/^ {6}itens: /gm) ?? []).length, 5);
@@ -177,10 +177,10 @@ console.log("\n— Conquistas da semana —\n");
   const semana = conquistasDaSemana({ casos, nps: ciclos, agora: AGORA });
   const por = Object.fromEntries(semana.conquistas.map((c) => [c.chave, `${c.titulo} · ${c.detalhe}`]));
 
-  conferir("só as avaliações da semana, e quantas foram positivas", por.avaliacoes, "1 avaliação positiva · de 2 avaliada(s) no Reclame Aqui");
+  conferir("só as avaliações da semana, e quantas foram positivas", por.avaliacoes, "1 avaliação positiva · de 2 avaliadas no Reclame Aqui");
   /* Pelo ciclo (15 a 21/09): a resposta de 14/09 é do ciclo anterior. */
-  conferir("respondidas no ciclo, com a espera de verdade", por.respondidas, "1 reclamação respondida · esperou 6 dia(s) desde a publicação");
-  conferir("NPS no prazo pelo prazo do próprio ciclo", por["nps-no-prazo"], "1 primeiro contato do NPS no prazo · de 2 feito(s) no ciclo");
+  conferir("respondidas no ciclo, com a espera de verdade", por.respondidas, "1 reclamação respondida · esperou 6 dias desde a publicação");
+  conferir("NPS no prazo pelo prazo do próprio ciclo", por["nps-no-prazo"], "1 primeiro contato do NPS no prazo · de 2 feitos no ciclo");
   conferir("detrator revertido na semana", por.revertidos, "1 detrator revertido · resolvidos ou satisfeitos depois do contato");
   conferir("ciclo encerrado na semana", por.encerrados, "1 ciclo de NPS encerrado · com a tratativa registrada");
 

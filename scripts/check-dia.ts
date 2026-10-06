@@ -318,7 +318,14 @@ async function main() {
 
     /* ---------------- 3. a métrica diária ---------------- */
 
-    const comEntrada = [...cases]
+    /*
+      Só as do Reclame Aqui: a métrica diária é dele (`medirDia` filtra).
+      Em 06/10 o dia mais recente com entrada era um caso do Instagram, e a
+      conferência acusava a métrica por não contá-lo — a conta estava certa.
+    */
+    const doRA = cases.filter((c) => c.source === "Reclame Aqui");
+
+    const comEntrada = [...doRA]
       .map((c) => c.createdAt)
       .sort()
       .reverse();
@@ -328,7 +335,7 @@ async function main() {
     if (!alvo) {
       console.log("  --     sem reclamação para medir o dia");
     } else {
-      const noDia = cases.filter((c) => c.createdAt === alvo).length;
+      const noDia = doRA.filter((c) => c.createdAt === alvo).length;
 
       const vespera = new Date(`${alvo}T00:00:00Z`);
       vespera.setUTCDate(vespera.getUTCDate() - 1);

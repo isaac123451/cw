@@ -89,7 +89,7 @@ conferir(
   faltaNaTriagem(com({ saida: "Resolvido", naoIdentificado: true, customer: "", clienteConfirmou: true, solucao: "Estorno feito no mesmo dia", causaRaiz: "Cobrança" }), caso).length,
   1
 );
-conferir("sem contato com 1 tentativa pede mais 2", faltaNaTriagem(com({ saida: "Sem contato" }), { validadoEm: null, tentativasSemResposta: 1 })[0], "fazer mais 2 tentativa(s) de contato — hoje são 1");
+conferir("sem contato com 1 tentativa pede mais 2", faltaNaTriagem(com({ saida: "Sem contato" }), { validadoEm: null, tentativasSemResposta: 1 })[0], "fazer mais 2 tentativas de contato — hoje são 1");
 conferir("sem contato com 3 tentativas passa", faltaNaTriagem(com({ saida: "Sem contato" }), { validadoEm: null, tentativasSemResposta: 3 }), []);
 conferir("sem identificação não pede nada a mais", faltaNaTriagem(com({ saida: "Sem identificação", naoIdentificado: true, customer: "" }), caso), []);
 conferir("encaminhado pede a área", faltaNaTriagem(com({ saida: "Encaminhado" }), caso), ["dizer para qual área foi"]);

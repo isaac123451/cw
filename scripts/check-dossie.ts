@@ -108,6 +108,8 @@ function main() {
   /** O mínimo do `CW` que a função usa. */
   const CW = {
     escapar: (valor: unknown) => String(valor ?? ""),
+    /* O mesmo de `nucleo.js` (out/2026): a palavra no número certo. */
+    plural: (n: unknown, um: string, varios: string) => (Math.abs(Number(n)) === 1 ? um : varios),
     data: (iso: unknown) =>
       String(iso ?? "")
         .slice(0, 10)
@@ -161,7 +163,7 @@ function main() {
 
   conferir(
     "diz quantos documentos a pasta tem",
-    texto.includes("4 documento(s)")
+    texto.includes("4 documentos")
   );
 
   conferir(
@@ -224,7 +226,7 @@ function main() {
     "peça sem data não vira período inventado",
     !semData.includes("de undefined") &&
       !/de\s+a\s/.test(semData),
-    semData.includes("1 documento(s)")
+    semData.includes("1 documento")
       ? "e ainda assim conta o documento"
       : ""
   );

@@ -98,7 +98,7 @@ confere("Engano encerra só com o tipo", motivoParaNaoEncerrar(engano, "[Encerra
 const promotor = resposta({ score: 10, kind: "Elogio", comment: "Adoro!" });
 confere("Promotor tem as ações do promotor, opcionais", passo(promotor, "promotor")?.estado, "opcional");
 const promotorFeito = resposta({ ...promotor, id: "pf", reviewAsked: true, testimonialAsked: true, referralAsked: true, reviewFeita: true, indicacoes: 2 });
-confere("e mostram o que voltou", passo(promotorFeito, "promotor")?.detalhe, "review publicada · 2 indicação(ões)");
+confere("e mostram o que voltou", passo(promotorFeito, "promotor")?.detalhe, "review publicada · 2 indicações");
 confere("Detrator não tem ações do promotor", passo(novo, "promotor"), undefined);
 
 console.log("\n— Sem retorno —");
@@ -109,7 +109,7 @@ const faltaTres = resposta({
   attempts: [tentativa("2026-09-10 10:00", 1), tentativa("2026-09-11 10:00", 2), tentativa("2026-09-14 10:00", 3)],
 });
 confere("Falta de Retorno com 3: a vez é tentar de novo", atual(faltaTres)?.acao, "tentativa");
-confere("e diz quantas faltam", atual(faltaTres)?.detalhe, "Faltam 2 tentativa(s) em 7 dias para encerrar sem retorno.");
+confere("e diz quantas faltam", atual(faltaTres)?.detalhe, "Faltam 2 tentativas em 7 dias para encerrar sem retorno.");
 confere("Sem Retorno ainda travado, com o número", motivoParaNaoEncerrar(faltaTres, "[Encerrado] Sem Retorno", undefined, agora)?.endsWith("Até agora: 3."), true);
 
 const faltaCinco = resposta({ ...faltaTres, id: "f5", attempts: [...faltaTres.attempts, tentativa("2026-09-14 11:00", 4), tentativa("2026-09-14 14:00", 5)] });

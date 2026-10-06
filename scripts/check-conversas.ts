@@ -148,7 +148,7 @@ const brasilia = (iso: string) => {
   confere(
     "o cabeçalho diz de quem é e o que está ligado",
     exportado.split("\n").slice(0, 3).join(" | "),
-    "Conversa do WhatsApp com Maria Silva (+5527999996862) | 4 mensagem(ns) · guardada no CW Reputação por Carlos Isaac | Caso: RA-123 (Reclame Aqui)"
+    "Conversa do WhatsApp com Maria Silva (+5527999996862) | 4 mensagens · guardada no CW Reputação por Carlos Isaac | Caso: RA-123 (Reclame Aqui)"
   );
   confere(
     "a mensagem sai no formato do WhatsApp",

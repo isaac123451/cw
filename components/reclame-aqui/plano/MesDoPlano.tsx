@@ -119,13 +119,13 @@ export default function MesDoPlano({ plano, erroDaProjecao, hoje }: { plano: Pla
         )}
 
         {plano.solucao && (
-          <Acao titulo={plano.solucao.resolvidasAMais > 0 ? `Faltam ${plural(plano.solucao.resolvidasAMais, "avaliação resolvida", "avaliações resolvidas")} além das previstas` : `Margem de não resolvidas: ${plano.solucao.margemDeNaoResolvidas}`} ok={plano.solucao.noCaminho}>
+          <Acao titulo={plano.solucao.resolvidasAMais > 0 ? `${Math.round(plano.solucao.resolvidasAMais) === 1 ? "Falta" : "Faltam"} ${plural(plano.solucao.resolvidasAMais, "avaliação resolvida", "avaliações resolvidas")} além das previstas` : `Margem de não resolvidas: ${plano.solucao.margemDeNaoResolvidas}`} ok={plano.solucao.noCaminho}>
             {atual ? `Das ${plano.avaliacoesNoPlano} novas avaliações até o fim do mês` : `Das ${plano.avaliacoesNoPlano} novas avaliações de hoje até o fim de ${nomeDoMes(plano.mes)}`}, no máximo {plano.solucao.margemDeNaoResolvidas} podem vir como não resolvidas para a solução ficar em {pct(plano.solucao.meta)} — a janela já tem {plano.solucao.jaNaoResolvidas}.
           </Acao>
         )}
 
         {plano.voltaria && (
-          <Acao titulo={plano.voltaria.voltariaAMais > 0 ? `Faltam ${plural(plano.voltaria.voltariaAMais, "avaliação com \"voltaria\"", "avaliações com \"voltaria\"")} além das previstas` : `Margem de "não voltaria": ${plano.voltaria.margemDeNaoVoltaria}`} ok={plano.voltaria.noCaminho}>
+          <Acao titulo={plano.voltaria.voltariaAMais > 0 ? `${Math.round(plano.voltaria.voltariaAMais) === 1 ? "Falta" : "Faltam"} ${plural(plano.voltaria.voltariaAMais, "avaliação com \"voltaria\"", "avaliações com \"voltaria\"")} além das previstas` : `Margem de "não voltaria": ${plano.voltaria.margemDeNaoVoltaria}`} ok={plano.voltaria.noCaminho}>
             {atual ? `Das ${plano.avaliacoesNoPlano} novas até o fim do mês` : `Das ${plano.avaliacoesNoPlano} novas de hoje até o fim de ${nomeDoMes(plano.mes)}`}, no máximo {plano.voltaria.margemDeNaoVoltaria} podem vir sem “voltaria a fazer negócio” para ficar em {pct(plano.voltaria.meta)} — a janela já tem {plano.voltaria.jaNaoVoltaria}.
           </Acao>
         )}

@@ -1009,7 +1009,7 @@
   P.acaoRapida = P.acaoRapida ?? "";
 
   function blocoAcoesRapidas(dados) {
-    const podeAnotar = P.podeEscrever(dados) && (dados?.casos ?? []).length > 0;
+    const podeAnotar = Boolean(P.podeEscrever?.(dados)) && (dados?.casos ?? []).length > 0;
     /* Uma conversa com o assistente em andamento já abre o painel dele. */
     const aberta = P.acaoRapida || (conversaDoContato().length ? "assistente" : "");
     const botao = (qual, icone, rotulo) =>
@@ -1871,7 +1871,7 @@
           de humor e a anotação estão onde a conversa está.
         */
         nps && !nps.encerrado
-          ? P.blocoNps(nps, P.podeEscrever(dados), false, conta?.whatsappNps ?? null)
+          ? P.blocoNps?.(nps, Boolean(P.podeEscrever?.(dados)), false, conta?.whatsappNps ?? null) ?? ""
           : ""
       }
       <div class="bloco">

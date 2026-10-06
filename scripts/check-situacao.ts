@@ -40,7 +40,7 @@ conferir("prometido: com a data da mensagem — 'amanhã' de 22/09 é 23/09", s.
 conferir("falta: o cliente falou por último", s.falta, "O cliente escreveu por último e aguarda retorno da operação.");
 conferir("risco: perdendo vendas (operação parada) — alto", s.risco.nivel, "alto");
 conferir("promessa vencida sozinha — médio", situarSemIA(conversa.slice(0, 4), agora).risco.nivel, "medio");
-conferir("o porquê do risco cita a promessa vencida", s.risco.porque.includes("1 promessa(s) nossa(s) com o prazo vencido"), true);
+conferir("o porquê do risco cita a promessa vencida", s.risco.porque.includes("1 promessa nossa com o prazo vencido"), true);
 conferir("toda citação das regras existe na conversa", [s.quer, ...s.feito, ...s.prometido].every((p) => citacaoExiste(p.citacao, conversa)), true);
 conferir("Procon: risco alto", situarSemIA([n("Olá"), c("Vou abrir reclamação no Procon")], agora).risco.nivel, "alto");
 conferir("conversa tranquila: risco baixo", situarSemIA([n("Pronto, resolvido"), c("Obrigado, deu certo")], agora).risco, { nivel: "baixo", porque: "nenhum sinal de risco na conversa" });

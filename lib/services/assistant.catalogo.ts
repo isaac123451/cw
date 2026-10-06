@@ -167,7 +167,7 @@ export const CATALOGO: Medicao[] = [
           não dá para chegar, o motivo vale mais que o número.
         */
         c.avaliacoesDepoisDeResponder.reachable
-          ? `faltam ${c.avaliacoesDepoisDeResponder.needed} ${pluralDe(c.avaliacoesDepoisDeResponder.needed, "avaliação", "avaliações")} nota 10 depois de responder (${c.avaliacoesSemResponder.reachable ? `${c.avaliacoesSemResponder.needed} sem responder nada` : "sem responder, não chega"})`
+          ? `${pluralDe(c.avaliacoesDepoisDeResponder.needed, "falta", "faltam")} ${c.avaliacoesDepoisDeResponder.needed} ${pluralDe(c.avaliacoesDepoisDeResponder.needed, "avaliação", "avaliações")} nota 10 depois de responder (${c.avaliacoesSemResponder.reachable ? `${c.avaliacoesSemResponder.needed} sem responder nada` : "sem responder, não chega"})`
           : c.avaliacoesDepoisDeResponder.reason === "sem-avaliacoes"
             ? "nem com todas as avaliações nota 10 chega: não sobram reclamações sem avaliação no período"
             : "nem com todas as avaliações nota 10 chega: o teto é o índice de resposta",

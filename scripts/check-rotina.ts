@@ -175,8 +175,8 @@ const texto = textoDoCheckpoint({
   total: doDia.length,
 });
 confere("três partes, na ordem da gestão", ["*Ontem (14/09):*", "*Hoje:*", "*Riscos:*"].map((p) => texto.indexOf(p) > 0), [true, true, true]);
-confere("ontem conta só o que aconteceu (sem 'zero tentativas no NPS')", texto.includes("tentativa(s) no NPS"), false);
-confere("os riscos saem das contagens", texto.includes("1 solicitação(ões) às áreas atrasadas"), true);
+confere("ontem conta só o que aconteceu (sem 'zero tentativas no NPS')", /tentativas? no NPS/.test(texto), false);
+confere("os riscos saem das contagens", texto.includes("1 solicitação às áreas atrasadas"), true);
 
 console.log(falhas === 0 ? "\nTudo certo.\n" : `\n${falhas} falha(s).\n`);
 process.exit(falhas === 0 ? 0 : 1);

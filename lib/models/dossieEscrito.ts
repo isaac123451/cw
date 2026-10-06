@@ -62,7 +62,7 @@ export function rascunhoSemIA(d: DossieMontado): PartesEscritas {
   const sumario = primeiro
     ? `${d.partes.consumidor} abriu a reclamação ${d.identificacao.protocolo} (${d.identificacao.canal}) em ${dataCurta(d.identificacao.abertoEm)}. ` +
       `O sistema registra ${eventos.length} ${pluralDe(eventos.length, "evento", "eventos")}, de ${dataCurta(primeiro.quando)} a ${dataCurta(ultimo.quando)}, com ${d.anexos.filter((a) => a.noSistema).length} ${pluralDe(d.anexos.filter((a) => a.noSistema).length, "peça", "peças")} no sistema.${setores}` +
-      (d.lacunas.length ? ` Faltam ${d.lacunas.length} ${pluralDe(d.lacunas.length, "peça", "peças")} de fora do sistema.` : "")
+      (d.lacunas.length ? ` ${pluralDe(d.lacunas.length, "Falta", "Faltam")} ${d.lacunas.length} ${pluralDe(d.lacunas.length, "peça", "peças")} de fora do sistema.` : "")
     : `${d.partes.consumidor} abriu a reclamação ${d.identificacao.protocolo} em ${dataCurta(d.identificacao.abertoEm)}. Ainda não há eventos registrados.`;
   const comPeca = new Set(d.anexos.filter((a) => a.noSistema).map((a) => `Anexo ${String(a.numero).padStart(2, "0")}`));
   return {

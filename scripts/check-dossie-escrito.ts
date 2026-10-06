@@ -37,8 +37,8 @@ const d: DossieMontado = {
 
 console.log("\n  O rascunho sem IA\n");
 const r = rascunhoSemIA(d);
-conferir("o sumário diz quem, quando e quantos eventos", r.sumario?.startsWith("Ana Souza abriu a reclamação RA-1 (Reclame Aqui) em 10/09/2026. O sistema registra 3 evento(s)"), true);
-conferir("e a peça que falta", r.sumario?.endsWith("Faltam 1 peça(s) de fora do sistema."), true);
+conferir("o sumário diz quem, quando e quantos eventos", r.sumario?.startsWith("Ana Souza abriu a reclamação RA-1 (Reclame Aqui) em 10/09/2026. O sistema registra 3 eventos"), true);
+conferir("e a peça que falta", r.sumario?.endsWith("Falta 1 peça de fora do sistema."), true);
 conferir("verificado: só o fato com peça no sistema", r.verificado, ["10/09/2026: Reclamação publicada (Anexo 01)", "11/09/2026: Estorno solicitado ao Financeiro (Anexo 02)"]);
 conferir("o que é julgamento fica para quem conhece o caso", [r.sustentado.length, r.alegado.length, r.enquadramento ?? null], [0, 0, null]);
 
@@ -49,9 +49,9 @@ const semRegra = conferenciaAntesDeUsar(d, { ...r, pedido: "Pedimos a moderaçã
 conferir("pedido sem regra do regulamento", semRegra.includes("O pedido não cita a regra (do regulamento, dos termos ou da política) que o sustenta."), true);
 const comRegra = conferenciaAntesDeUsar(d, { ...r, pedido: "Pedimos a moderação pelo item 4.2 do regulamento: o problema foi resolvido." });
 conferir("com a regra citada, não acusa", comRegra.some((x) => x.startsWith("O pedido não cita")), false);
-conferir("evidência sem data no nome", comRegra.includes("1 evidência(s) sem data no nome do arquivo."), true);
-conferir("peça de fora do sistema por anexar", comRegra.includes("1 peça(s) de fora do sistema ainda por anexar."), true);
-conferir("alegação sem prova", conferenciaAntesDeUsar(d, { ...r, alegado: ["Diz que foi cobrado três vezes"] }).includes("1 alegação(ões) sem prova: junte a evidência ou tire do pedido."), true);
+conferir("evidência sem data no nome", comRegra.includes("1 evidência sem data no nome do arquivo."), true);
+conferir("peça de fora do sistema por anexar", comRegra.includes("1 peça de fora do sistema ainda por anexar."), true);
+conferir("alegação sem prova", conferenciaAntesDeUsar(d, { ...r, alegado: ["Diz que foi cobrado três vezes"] }).includes("1 alegação sem prova: junte a evidência ou tire do pedido."), true);
 conferir("anexo citado que não existe (da conferência do documento)", conferenciaAntesDeUsar(d, { ...r, sumario: "Ver Anexo 09." }).some((x) => x.includes("Anexo 09")), true);
 
 console.log("\n  O documento e o pedido\n");
@@ -59,7 +59,7 @@ const texto = renderizarDossie(aplicarPartes(d, { ...r, pedido: "Moderação pel
 conferir("o documento leva o sumário escrito", texto.includes("Ana Souza abriu a reclamação RA-1"), true);
 const mod = textoParaModeracao(d, { ...r, pedido: "Pedimos a moderação pelo item 4.2 do regulamento." });
 conferir("o pedido de moderação abre pelo pedido", mod.split("\n")[0], "Pedimos a moderação pelo item 4.2 do regulamento.");
-conferir("e fecha com o anexo e o protocolo", mod.endsWith("Dossiê completo em anexo (3 peça(s)). Protocolo RA-1."), true);
+conferir("e fecha com o anexo e o protocolo", mod.endsWith("Dossiê completo em anexo (3 peças). Protocolo RA-1."), true);
 
 console.log("\n  A montagem dos registros\n");
 const montagem = (async () => {

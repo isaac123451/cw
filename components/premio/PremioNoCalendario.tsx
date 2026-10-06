@@ -74,7 +74,7 @@ export default function PremioNoCalendario({ campanha }: { campanha: CampanhaVie
             ? "A nota da janela do corte já está na meta. Manter: cada avaliação ruim nessa janela pesa até a data de corte."
             : conta.faltam === null
               ? `Nem com as ${conta.avaliaveis} avaliações que faltam na janela, todas nota 10, a nota chega à meta. O que ainda mexe: responder as sem resposta e pedir moderação do que cabe.`
-              : `Faltam ${conta.faltam} ${pluralDe(conta.faltam, "avaliação", "avaliações")} nota 10 entre as ${conta.avaliaveis} reclamações da janela ainda sem avaliação — é o teto do que o pedido pode render, pela conta da calculadora.`}{" "}
+              : `${pluralDe(conta.faltam, "Falta", "Faltam")} ${conta.faltam} ${pluralDe(conta.faltam, "avaliação", "avaliações")} nota 10 entre as ${conta.avaliaveis} reclamações da janela ainda sem avaliação — é o teto do que o pedido pode render, pela conta da calculadora.`}{" "}
           {conta.faltam !== 0 && (
             <Link href="/reclame-aqui/avaliacoes" className="font-medium text-violet-700 hover:underline">
               Pedir avaliação

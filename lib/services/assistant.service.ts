@@ -262,7 +262,7 @@ const skills: Skill[] = [
       return {
         intent: "meta-de-nota",
         paragraphs: [
-          `Faltam ${resultado.needed} ${pluralDe(resultado.needed, "avaliação", "avaliações")} nota 10, resolvidas e favoráveis, para a nota sair de ${ptBR(atual.raScore)} e chegar a ${ptBR(resultado.projected)}.`,
+          `${pluralDe(resultado.needed, "Falta", "Faltam")} ${resultado.needed} ${pluralDe(resultado.needed, "avaliação", "avaliações")} nota 10, resolvidas e favoráveis, para a nota sair de ${ptBR(atual.raScore)} e chegar a ${ptBR(resultado.projected)}.`,
           `Cabem no período: há ${teto} ${pluralDe(teto, "reclamação", "reclamações")} da janela ainda sem avaliação, e cada avaliação pertence a uma reclamação.`,
           base.received - base.answered > 0
             ? `Antes disso, ${base.received - base.answered} ${pluralDe(base.received - base.answered, "reclamação", "reclamações")} seguem sem resposta — responder é mais rápido do que conquistar avaliação, e o índice de resposta pesa 20% da nota.`
