@@ -33,7 +33,8 @@ import {
  */
 export default function ReputationHero() {
 
-  const { cases } = useScopedCases("reclame-aqui");
+  /* Enquanto a base chega, a nota não é "0/10 · Não recomendada" (out/2026). */
+  const { cases, loading } = useScopedCases("reclame-aqui");
   const { goals } = useGoals();
 
   const range = useMemo(() => getRange("6m"), []);
@@ -121,7 +122,7 @@ export default function ReputationHero() {
         <div
           className="relative flex flex-col justify-between p-6"
           style={{
-            background: `linear-gradient(160deg, ${band.color}14, transparent 70%)`,
+            background: loading ? undefined : `linear-gradient(160deg, ${band.color}14, transparent 70%)`,
           }}
         >
 
@@ -139,7 +140,7 @@ export default function ReputationHero() {
 
             </div>
 
-            <span
+            {!loading && <span
               className="shrink-0 rounded-full px-3 py-1 text-[11px] font-semibold"
               style={{
                 background: band.color,
@@ -152,20 +153,22 @@ export default function ReputationHero() {
               }
             >
               {band.label}
-            </span>
+            </span>}
 
           </div>
 
           <div className="mt-6">
 
             <p className="text-6xl font-semibold tracking-tight tabular-nums text-zinc-900">
-              {ptBR(atual.raScore)}
+              {loading ? <span aria-label="Carregando" className="inline-block animate-pulse rounded-md bg-zinc-100 h-14 w-24 align-top" /> : ptBR(atual.raScore)}
               <span className="ml-1.5 text-2xl font-normal text-zinc-300">
                 /10
               </span>
             </p>
 
-            {delta === null ? (
+            {loading ? (
+              <p className="mt-2 text-xs text-zinc-400">Carregando a base…</p>
+            ) : delta === null ? (
               <p className="mt-2 text-xs text-zinc-400">
                 Sem base no período anterior
               </p>
@@ -207,7 +210,7 @@ export default function ReputationHero() {
             <span className="flex items-center gap-1.5 rounded-lg bg-zinc-50 px-2.5 py-1 text-[11px] font-medium text-zinc-600">
               <Timer size={12} />
               resposta em{" "}
-              {formatElapsed(atual.responseMinutes)}
+              {loading ? "…" : formatElapsed(atual.responseMinutes)}
             </span>
 
           </div>
@@ -246,11 +249,11 @@ export default function ReputationHero() {
 
                     <span className="flex items-center gap-1.5 text-sm font-semibold tabular-nums text-zinc-900">
 
-                      {ptBR(
+                      {loading ? <span aria-label="Carregando" className="inline-block animate-pulse rounded-md bg-zinc-100 h-4 w-10" /> : <>{ptBR(
                         item.value,
                         item.unit === "%" ? 1 : 2
                       )}
-                      {item.unit}
+                      {item.unit}</>}
 
                       <span
                         className={`flex h-4 w-4 items-center justify-center rounded-full ${

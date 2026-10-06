@@ -50,7 +50,7 @@ const sorts: { id: SortKey; label: string }[] = [
 
 export default function ClientesPage() {
 
-  const { clients, createClient } = useClients();
+  const { clients, createClient, loading } = useClients();
   const { establishments } = useEstablishments();
 
   const [search, setSearch] = useState("");
@@ -155,6 +155,7 @@ export default function ClientesPage() {
         <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
 
           <StatTile
+            carregando={loading}
             label="Clientes na base"
             description="Pessoas distintas extraídas das reclamações, mais os cadastros manuais."
             value={clients.length}
@@ -164,6 +165,7 @@ export default function ClientesPage() {
           />
 
           <StatTile
+            carregando={loading}
             label="Com risco de churn"
             description="Clientes com ao menos uma reclamação sinalizada como risco de cancelamento."
             value={atRisk}
@@ -173,6 +175,7 @@ export default function ClientesPage() {
           />
 
           <StatTile
+            carregando={loading}
             label="Sem estabelecimento"
             description="Pessoas ainda não vinculadas a um restaurante da base."
             value={semEstabelecimento}
@@ -182,6 +185,7 @@ export default function ClientesPage() {
           />
 
           <StatTile
+            carregando={loading}
             label="Pior nota média"
             description="Cliente com a menor média de avaliação entre os que avaliaram."
             value={

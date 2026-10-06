@@ -70,7 +70,7 @@ const AREA_DO_DOCUMENTO = "area-do-documento:";
 
 export default function ProcessosPage() {
 
-  const { cases } = useCases();
+  const { cases, loading: carregandoCasos } = useCases();
 
   const {
     rules,
@@ -247,6 +247,7 @@ export default function ProcessosPage() {
         <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
 
           <StatTile
+            carregando={carregandoCasos}
             label="Regras ativas"
             description="Regras que estão governando os prazos agora."
             value={
@@ -258,6 +259,7 @@ export default function ProcessosPage() {
           />
 
           <StatTile
+            carregando={carregandoCasos}
             label="Fora do prazo"
             description="Casos em aberto que já passaram do prazo da regra aplicável."
             value={metrics.estourado}
@@ -267,6 +269,7 @@ export default function ProcessosPage() {
           />
 
           <StatTile
+            carregando={carregandoCasos}
             label="Perto de vencer"
             description="Casos em aberto nos últimos 25% do prazo."
             value={metrics.atencao}
@@ -276,6 +279,7 @@ export default function ProcessosPage() {
           />
 
           <StatTile
+            carregando={carregandoCasos}
             label="Casos em aberto"
             description="Total de tratativas ainda não encerradas."
             value={abertos.length}

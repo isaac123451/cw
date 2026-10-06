@@ -61,7 +61,7 @@ export default function AnalyticsOverview({
   description = "Visão consolidada de todos os canais: volume, produtividade, causas e tempo de resposta.",
 }: Props) {
 
-  const { cases } = useCases();
+  const { cases, loading } = useCases();
 
   const [regiao, setRegiao] = useState<"state" | "city">(
     "state"
@@ -211,6 +211,7 @@ export default function AnalyticsOverview({
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
 
         <StatTile
+          carregando={loading}
           label="Total de casos"
           description="Todas as ocorrências registradas, somando os canais."
           value={metrics.total}
@@ -220,6 +221,7 @@ export default function AnalyticsOverview({
         />
 
         <StatTile
+          carregando={loading}
           label="Na fila"
           description="Casos que ainda dependem de ação da operação."
           value={metrics.open}
@@ -229,6 +231,7 @@ export default function AnalyticsOverview({
         />
 
         <StatTile
+          carregando={loading}
           label="Índice de solução"
           description="Percentual de casos encerrados com solução confirmada."
           value={`${metrics.solutionRate}%`}
@@ -238,6 +241,7 @@ export default function AnalyticsOverview({
         />
 
         <StatTile
+          carregando={loading}
           label="Nota média"
           description="Média das notas dadas pelo consumidor, de 0 a 10."
           value={ptBR(metrics.averageScore)}
@@ -247,6 +251,7 @@ export default function AnalyticsOverview({
         />
 
         <StatTile
+          carregando={loading}
           label="Clientes atendidos"
           description="Clientes distintos com ocorrência registrada."
           value={metrics.companies}

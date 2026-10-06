@@ -37,6 +37,7 @@ export default function BaseConhecimentoPage() {
 
   const {
     macros,
+    loading,
     createMacro,
     updateMacro,
     removeMacro,
@@ -134,6 +135,7 @@ export default function BaseConhecimentoPage() {
         <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
 
           <StatTile
+            carregando={loading}
             label="Respostas prontas"
             description="Textos aprovados disponíveis para a operação."
             value={macros.length}
@@ -143,6 +145,7 @@ export default function BaseConhecimentoPage() {
           />
 
           <StatTile
+            carregando={loading}
             label="Categorias cobertas"
             description="Tipos de caso que já têm resposta padrão."
             value={categorias.length}
@@ -152,6 +155,7 @@ export default function BaseConhecimentoPage() {
           />
 
           <StatTile
+            carregando={loading}
             label="Inserções"
             description="Quantas vezes as respostas foram usadas em um caso."
             value={macros.reduce(
@@ -164,6 +168,7 @@ export default function BaseConhecimentoPage() {
           />
 
           <StatTile
+            carregando={loading}
             label="Mais usada"
             description="Resposta que a operação mais aproveita."
             value={maisUsada?.uses ?? 0}

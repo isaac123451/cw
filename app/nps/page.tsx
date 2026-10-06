@@ -638,6 +638,7 @@ function NpsPagina({ abrirInicial = null }: { abrirInicial?: "etapas" | "causas"
         <div data-tour="indicadores-nps" className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-5">
 
           <StatTile
+            carregando={loading}
             label="NPS"
             description="Percentual de promotores menos o de detratores."
             value={resumo.score}
@@ -647,6 +648,7 @@ function NpsPagina({ abrirInicial = null }: { abrirInicial?: "etapas" | "causas"
           />
 
           <StatTile
+            carregando={loading}
             label="Promotores"
             description="Notas 9 e 10 — base para review, depoimento e indicação. Clique para ver só estes."
             value={porSegmento.Promotor.total}
@@ -662,6 +664,7 @@ function NpsPagina({ abrirInicial = null }: { abrirInicial?: "etapas" | "causas"
           />
 
           <StatTile
+            carregando={loading}
             label="Passivos"
             description="Notas 7 e 8 — satisfeitos sem entusiasmo. Costuma ser onde mora a sugestão útil. Clique para ver só estes."
             value={porSegmento.Passivo.total}
@@ -677,6 +680,7 @@ function NpsPagina({ abrirInicial = null }: { abrirInicial?: "etapas" | "causas"
           />
 
           <StatTile
+            carregando={loading}
             label="Detratores"
             description="Notas 0 a 6 — risco de cancelamento. Clique para ver só estes."
             value={porSegmento.Detrator.total}
@@ -692,6 +696,7 @@ function NpsPagina({ abrirInicial = null }: { abrirInicial?: "etapas" | "causas"
           />
 
           <StatTile
+            carregando={loading}
             label="Fora do prazo"
             description="Sem primeiro contato dentro do SLA do segmento."
             value={resumo.estourados}
@@ -757,7 +762,7 @@ function NpsPagina({ abrirInicial = null }: { abrirInicial?: "etapas" | "causas"
                   onClick={() => setFiltro(id)}
                   title={
                     id === "sem-tratativa"
-                      ? "Promotores sem comentário: entram na conta do NPS, não abrem ciclo."
+                      ? "Encerradas em lote, sem ninguém atender. Contam no NPS, não estão na fila."
                       : undefined
                   }
                   className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ring-1 ring-inset ${filtro === id ? "bg-violet-50 text-violet-700 ring-violet-200" : "text-zinc-600 ring-zinc-200 hover:bg-zinc-50"}`}

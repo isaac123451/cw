@@ -79,7 +79,7 @@ const sorts: { id: SortKey; label: string; hint: string }[] =
 
 export default function EstabelecimentosPage() {
 
-  const { cases } = useCases();
+  const { cases, loading: carregandoCasos } = useCases();
   const { records } = useImpact();
 
   /** A tabela de Configurações → Planos: é dela que sai o plano e, sem mensalidade, o valor. */
@@ -87,6 +87,7 @@ export default function EstabelecimentosPage() {
 
   const {
     establishments,
+    loading: carregandoBase,
     createEstablishment,
     updateEstablishment,
     removeEstablishment,
@@ -244,6 +245,7 @@ export default function EstabelecimentosPage() {
         <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
 
           <StatTile
+            carregando={carregandoBase || carregandoCasos}
             label="Estabelecimentos"
             description="Contas cadastradas na base, incluindo canceladas."
             value={establishments.length}
@@ -253,6 +255,7 @@ export default function EstabelecimentosPage() {
           />
 
           <StatTile
+            carregando={carregandoBase || carregandoCasos}
             label="Em risco"
             description="Contas que sinalizaram cancelamento ou têm tratativa grave aberta."
             value={metrics.emRisco}
@@ -262,6 +265,7 @@ export default function EstabelecimentosPage() {
           />
 
           <StatTile
+            carregando={carregandoBase || carregandoCasos}
             label="Receita recorrente"
             description="Soma da mensalidade das contas não canceladas — a informada na conta ou, sem ela, o preço do plano na tabela de Configurações → Planos."
             value={money.format(metrics.mrr)}
@@ -277,6 +281,7 @@ export default function EstabelecimentosPage() {
           />
 
           <StatTile
+            carregando={carregandoBase || carregandoCasos}
             label="Receita em risco"
             description="Mensalidade das contas marcadas como em risco."
             value={money.format(metrics.mrrEmRisco)}

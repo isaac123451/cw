@@ -98,6 +98,7 @@ export default function AgendaPage() {
 
   const {
     tasks,
+    loading: carregandoTarefas,
     createTask,
     updateTask,
     removeTask,
@@ -256,6 +257,7 @@ export default function AgendaPage() {
         <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
 
           <StatTile
+            carregando={carregandoTarefas}
             label="Atividades de hoje"
             description="Tarefas agendadas para a data de referência."
             value={today.length}
@@ -265,6 +267,7 @@ export default function AgendaPage() {
           />
 
           <StatTile
+            carregando={carregandoTarefas}
             label="Concluídas"
             description="Atividades já finalizadas."
             value={done}
@@ -274,6 +277,7 @@ export default function AgendaPage() {
           />
 
           <StatTile
+            carregando={carregandoTarefas}
             label="Em aberto"
             description="Atividades ainda não concluídas, de qualquer data."
             value={tasks.length - done}
@@ -283,6 +287,7 @@ export default function AgendaPage() {
           />
 
           <StatTile
+            carregando={carregandoTarefas}
             label="Atrasadas"
             description="Atividades que venceram sem conclusão."
             value={late}

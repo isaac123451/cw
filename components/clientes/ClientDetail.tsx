@@ -85,6 +85,7 @@ export default function ClientDetail({
     updateManual,
     removeClient,
     isManual,
+    loading,
   } = useClients();
 
   const { notify } = useToast();
@@ -166,6 +167,17 @@ export default function ClientDetail({
   const estabelecimento = client?.establishmentId
     ? findEstablishment(client.establishmentId)
     : undefined;
+
+  /* Carga em andamento não é cliente inexistente (out/2026): o link
+     direto num navegador frio dizia "Cliente não encontrado" por alguns
+     segundos, e quem estava com pressa voltava. */
+  if (!client && loading) {
+    return (
+      <div className="flex items-center justify-center py-20 text-sm text-zinc-500">
+        Carregando o cliente…
+      </div>
+    );
+  }
 
   if (!client) {
     return (

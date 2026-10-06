@@ -65,6 +65,7 @@ export default function ProjetosPage() {
 
   const {
     projects,
+    loading,
     createProject,
     updateProject,
     removeProject,
@@ -131,6 +132,7 @@ export default function ProjetosPage() {
         <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
 
           <StatTile
+            carregando={loading}
             label="Iniciativas"
             description="Total de itens no roadmap da área."
             value={projects.length}
@@ -140,6 +142,7 @@ export default function ProjetosPage() {
           />
 
           <StatTile
+            carregando={loading}
             label="Em andamento"
             description="Iniciativas sendo executadas agora."
             value={running}
@@ -149,6 +152,7 @@ export default function ProjetosPage() {
           />
 
           <StatTile
+            carregando={loading}
             label="Concluídas"
             description="Entregas já em uso pela operação."
             value={done}
@@ -158,6 +162,7 @@ export default function ProjetosPage() {
           />
 
           <StatTile
+            carregando={loading}
             label="Ideias"
             description="Registradas, aguardando priorização."
             value={ideas}

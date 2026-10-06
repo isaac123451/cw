@@ -64,6 +64,7 @@ export default function ImpactoPage() {
 
   const {
     records,
+    loading,
     createRecord,
     updateRecord,
     removeRecord,
@@ -223,6 +224,7 @@ export default function ImpactoPage() {
         <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
 
           <StatTile
+            carregando={loading}
             label="Receita preservada"
             description="Valor mantido por cancelamentos evitados e clientes recuperados."
             value={money.format(metrics.preserved)}
@@ -232,6 +234,7 @@ export default function ImpactoPage() {
           />
 
           <StatTile
+            carregando={loading}
             label="Receita gerada"
             description="Valor novo vindo de módulos contratados após a tratativa."
             value={money.format(metrics.generated)}
@@ -241,6 +244,7 @@ export default function ImpactoPage() {
           />
 
           <StatTile
+            carregando={loading}
             label="Valor recuperado"
             description="Cobranças indevidas reconciliadas junto ao cliente."
             value={money.format(metrics.recovered)}
@@ -250,6 +254,7 @@ export default function ImpactoPage() {
           />
 
           <StatTile
+            carregando={loading}
             label="Clientes recuperados"
             description="Clientes que voltaram a usar a plataforma após a tratativa."
             value={metrics.recoveredClients}

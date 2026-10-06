@@ -38,7 +38,7 @@ import {
 
 export default function MetricsBar() {
 
-  const { cases, setFilter } = useScopedCases("reclame-aqui");
+  const { cases, setFilter, loading } = useScopedCases("reclame-aqui");
   const router = useRouter();
   const { goals } = useGoals();
 
@@ -109,6 +109,9 @@ export default function MetricsBar() {
 
   }, [noPeriodo]);
 
+  /* Sem o número do portal e com a base chegando, a nota não é "0/10" (out/2026). */
+  const semNota = loading && !oficial;
+
   return (
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
 
@@ -127,7 +130,7 @@ export default function MetricsBar() {
         <span
           aria-hidden
           className="absolute inset-y-0 left-0 w-[3px]"
-          style={{ background: band.color }}
+          style={{ background: semNota ? "transparent" : band.color }}
         />
 
         <div className="flex items-start justify-between gap-3">
@@ -136,7 +139,7 @@ export default function MetricsBar() {
             Reputação
           </p>
 
-          <span
+          {!semNota && <span
             className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
             style={{
               background: band.color,
@@ -144,12 +147,16 @@ export default function MetricsBar() {
             }}
           >
             {band.label}
-          </span>
+          </span>}
 
         </div>
 
         <p className="mt-1.5 text-[26px] font-semibold leading-none tracking-tight tabular-nums text-zinc-900">
-          {ptBR(oficial ? (oficial.nota as number) : reputacao.raScore)}
+          {semNota ? (
+            <span aria-label="Carregando" className="inline-block h-[26px] w-14 animate-pulse rounded-md bg-zinc-100 align-top" />
+          ) : (
+            ptBR(oficial ? (oficial.nota as number) : reputacao.raScore)
+          )}
           <span className="ml-1 text-base font-normal text-zinc-400">
             /10
           </span>
@@ -167,6 +174,7 @@ export default function MetricsBar() {
 
       {/* Clicável (1.121): o "sem resposta" do rodapé abre a lista delas. */}
       <StatTile
+        carregando={loading}
         label="Reclamações"
         description="Total recebido na janela de 6 meses que define a nota pública. Clique para ver as abertas sem resposta pública."
         value={reputacao.received}
@@ -190,6 +198,7 @@ export default function MetricsBar() {
         diante de um critério que o Reclame Aqui já daria por cumprido.
       */}
       <StatTile
+        carregando={loading}
         label="Índice de resposta"
         description="Percentual respondido publicamente. É o item de maior peso na nota."
         value={`${ptBR(reputacao.responseIndex)}%`}
@@ -222,6 +231,7 @@ export default function MetricsBar() {
         não respondam melhor.
       */}
       <StatTile
+        carregando={loading}
         label="Espera do consumidor"
         description="Metade das reclamações foi respondida em menos que isto. A mediana, e não a média: alguns casos muito longos distorcem a média sem representar a experiência da maioria."
         value={
@@ -250,6 +260,7 @@ export default function MetricsBar() {
       />
 
       <StatTile
+        carregando={loading}
         label="Na fila"
         description="Casos que ainda dependem de ação da operação, de qualquer período."
         value={abertos}

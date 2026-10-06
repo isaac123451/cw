@@ -31,6 +31,12 @@ interface Props {
   onClick?: () => void;
   /** Realce de quem está filtrando a lista agora. */
   ativo?: boolean;
+  /**
+   * Os dados ainda não chegaram (out/2026). Sem isto o indicador dizia
+   * "0" durante a carga — "0 respostas", "0 fora do prazo" — e quem
+   * olhava primeiro acreditava. Agora o lugar do número pulsa.
+   */
+  carregando?: boolean;
 }
 
 const tones: Record<Tone, string> = {
@@ -51,6 +57,7 @@ export default function StatTile({
   trend,
   onClick,
   ativo,
+  carregando = false,
 }: Props) {
 
   const Elemento = onClick ? "button" : "div";
@@ -61,6 +68,7 @@ export default function StatTile({
       onClick={onClick}
       type={onClick ? "button" : undefined}
       aria-pressed={onClick ? Boolean(ativo) : undefined}
+      aria-busy={carregando || undefined}
       className={cn(
         "group relative rounded-xl border bg-white px-4 py-3.5 text-left shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-colors",
         ativo
@@ -88,12 +96,18 @@ export default function StatTile({
       </div>
 
       <p className="mt-1.5 text-[22px] font-semibold leading-none tracking-tight text-zinc-900 tabular-nums sm:text-[26px]">
-        {value}
+        {carregando ? (
+          <span aria-label="Carregando" className="inline-block h-[22px] w-14 animate-pulse rounded-md bg-zinc-100 align-top sm:h-[26px]" />
+        ) : (
+          value
+        )}
       </p>
 
       <div className="mt-2 flex items-center gap-2">
 
-        {trend && (
+        {carregando && <span className="h-3 w-20 animate-pulse rounded bg-zinc-100" />}
+
+        {!carregando && trend && (
           <span
             className={cn(
               "inline-flex items-center gap-1 text-xs font-semibold",
@@ -111,7 +125,7 @@ export default function StatTile({
           </span>
         )}
 
-        {hint && (
+        {!carregando && hint && (
           <span className="text-xs text-zinc-400">
             {hint}
           </span>

@@ -401,6 +401,36 @@ export const MUDANCAS: Mudanca[] = [
 
   /* ---------------- plataforma ---------------- */
   {
+    id: "indicadores-sem-zero-na-carga",
+    dia: "2026-10-06",
+    tipo: "correcao",
+    frente: "plataforma",
+    titulo: "Nenhum indicador diz \"0\" enquanto carrega",
+    texto:
+      "Nos primeiros segundos de cada tela os números apareciam zerados: o Dashboard abria com \"0/10 · Não recomendada\", o NPS com \"0 respostas\" e \"0 fora do prazo\", a Agenda com \"0 de 0\". Quem olhava primeiro acreditava. Agora o lugar do número pulsa até o dado chegar — em 13 telas: Dashboard, Reclame Aqui, NPS, Redes Sociais, Agenda, Clientes, Estabelecimentos, Impacto, Jornada, Processos, Projetos, Base de conhecimento e Analytics. A nota do Reclame Aqui aparece na hora quando o número do portal já está gravado.",
+    href: "/dashboard",
+  },
+  {
+    id: "ficha-carregando-nao-e-inexistente",
+    dia: "2026-10-06",
+    tipo: "correcao",
+    frente: "plataforma",
+    titulo: "Ficha de cliente e de estabelecimento não acusa \"não encontrado\" na carga",
+    texto:
+      "Abrir o link de um cliente ou de um estabelecimento num navegador recém-aberto mostrava \"Cliente não encontrado\" até a base chegar — e quem estava com pressa voltava. Agora diz \"Carregando o cliente…\" e só acusa a ausência depois que a base inteira chegou, como a ficha do caso já fazia.",
+    href: "/clientes",
+  },
+  {
+    id: "nps-sem-tratativa-explicado",
+    dia: "2026-10-06",
+    tipo: "correcao",
+    frente: "nps",
+    titulo: "O filtro \"Sem tratativa\" explicado como é",
+    texto:
+      "A dica do filtro dizia \"promotores sem comentário: não abrem ciclo\" — regra que deixou de existir em 05/10, quando todo promotor passou a entrar na fila. Agora diz o que o filtro mostra: as respostas encerradas em lote, sem ninguém atender, que contam no NPS e não estão na fila.",
+    href: "/nps",
+  },
+  {
     id: "plural-de-verdade",
     dia: "2026-10-05",
     tipo: "melhoria",

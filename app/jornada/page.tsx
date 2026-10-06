@@ -60,7 +60,7 @@ const channels: { id: FrenteId | "all"; label: string }[] = [
 
 export default function JornadaPage() {
 
-  const { cases } = useCases();
+  const { cases, loading: carregandoCasos } = useCases();
   const { responses } = useNps();
   const { avaliacoes } = useAvaliacoesGoogle();
 
@@ -187,6 +187,7 @@ export default function JornadaPage() {
         <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
 
           <StatTile
+            carregando={carregandoCasos}
             label="Clientes acompanhados"
             description="Clientes com ao menos um registro na frente escolhida. No NPS, entram as respostas que abriram ciclo — o promotor calado fica na análise do NPS."
             value={journeys.length}
@@ -196,6 +197,7 @@ export default function JornadaPage() {
           />
 
           <StatTile
+            carregando={carregandoCasos}
             label="Risco de cancelamento"
             description="Clientes marcados como risco de cancelamento, numa reclamação ou no NPS."
             value={atRisk}
@@ -205,6 +207,7 @@ export default function JornadaPage() {
           />
 
           <StatTile
+            carregando={carregandoCasos}
             label="Reincidentes"
             description="Clientes com mais de um registro, somando as frentes — sinal de problema recorrente."
             value={recurring}
@@ -214,6 +217,7 @@ export default function JornadaPage() {
           />
 
           <StatTile
+            carregando={carregandoCasos}
             label="Detratores"
             description="Nota média abaixo de 5, somando as frentes na escala de 0 a 10: a do Reclame Aqui e a do NPS como vêm, a do Google em dobro."
             value={detractors}

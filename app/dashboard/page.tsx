@@ -112,7 +112,7 @@ const atalhos: {
 
 export default function DashboardPage() {
 
-  const { cases } = useCases();
+  const { cases, loading } = useCases();
   const session = useSession();
   const { responses } = useNps();
   const { tasks } = useAgenda();
@@ -232,6 +232,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
 
           <StatTile
+            carregando={loading}
             label="Sem resposta pública"
             description="Reclamações que ainda não foram respondidas no portal. É o que mais pesa na nota. Clique para ver a lista."
             value={metrics.semResposta}
@@ -250,6 +251,7 @@ export default function DashboardPage() {
           />
 
           <StatTile
+            carregando={loading}
             label="Vencidas há +7 dias"
             description="Sem resposta há mais de uma semana — prioridade máxima. Clique para ver a lista."
             value={metrics.vencidos}
@@ -266,6 +268,7 @@ export default function DashboardPage() {
           />
 
           <StatTile
+            carregando={loading}
             label="Na fila da operação"
             description="Casos que dependem de alguma ação do time. Clique para ver a lista."
             value={metrics.abertos}
@@ -278,6 +281,7 @@ export default function DashboardPage() {
           />
 
           <StatTile
+            carregando={loading}
             label="Risco de cancelamento"
             description="Contas marcadas como caso de retenção — o cliente sinalizou que pode cancelar. Clique para ver a lista."
             onClick={() =>

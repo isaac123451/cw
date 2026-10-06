@@ -113,6 +113,7 @@ export default function EstablishmentDetail({
     findEstablishment,
     updateEstablishment,
     removeEstablishment,
+    loading,
   } = useEstablishments();
 
   const [formOpen, setFormOpen] = useState(false);
@@ -173,6 +174,15 @@ export default function EstablishmentDetail({
       .slice(0, 6);
 
   }, [cases, caseSearch, establishment]);
+
+  /* Carga em andamento não é estabelecimento inexistente (out/2026). */
+  if (!establishment && loading) {
+    return (
+      <div className="flex items-center justify-center py-20 text-sm text-zinc-500">
+        Carregando o estabelecimento…
+      </div>
+    );
+  }
 
   if (!establishment) {
     return (

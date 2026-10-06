@@ -37,9 +37,17 @@ import { pluralDe } from "@/lib/plural";
  */
 export default function FrentesResumo() {
 
-  const { cases } = useCases();
-  const { responses } = useNps();
-  const { avaliacoes } = useAvaliacoesGoogle();
+  const { cases, loading: carregandoCasos } = useCases();
+  const { responses, loading: carregandoNps } = useNps();
+  const { avaliacoes, carregando: carregandoGoogle } = useAvaliacoesGoogle();
+
+  /* Cada frente chega no seu tempo; a que não chegou não diz "0" (out/2026). */
+  const carregando: Record<FrenteId, boolean> = {
+    "reclame-aqui": carregandoCasos,
+    redes: carregandoCasos,
+    nps: carregandoNps,
+    google: carregandoGoogle,
+  };
 
   const porFrente = useMemo(() => {
 
@@ -106,10 +114,19 @@ export default function FrentesResumo() {
               <ArrowUpRight size={14} className="shrink-0 text-zinc-300 transition-colors group-hover:text-violet-600" />
             </div>
 
-            <p className="mt-3 text-2xl font-semibold tabular-nums text-zinc-900">{f.principal}</p>
-            <p className="text-xs text-zinc-500">{f.rotulo}</p>
+            {carregando[f.id] ? (
+              <>
+                <span aria-label="Carregando" className="mt-3 h-8 w-16 animate-pulse rounded-md bg-zinc-100" />
+                <span className="mt-1 h-3 w-24 animate-pulse rounded bg-zinc-100" />
+              </>
+            ) : (
+              <>
+                <p className="mt-3 text-2xl font-semibold tabular-nums text-zinc-900">{f.principal}</p>
+                <p className="text-xs text-zinc-500">{f.rotulo}</p>
+              </>
+            )}
 
-            <p
+            {!carregando[f.id] && <p
               className={`mt-3 inline-flex w-fit items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${
                 f.abertos > 0
                   ? "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-100"
@@ -117,7 +134,7 @@ export default function FrentesResumo() {
               }`}
             >
               {f.abertos} {f.aberturaRotulo}
-            </p>
+            </p>}
 
           </Link>
         ))}

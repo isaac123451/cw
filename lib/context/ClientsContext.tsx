@@ -65,6 +65,9 @@ interface ClientsContextType {
   removeClient: (slug: string) => void;
 
   isManual: (slug: string) => boolean;
+
+  /** A base (reclamações + cadastro manual) ainda está chegando. */
+  loading: boolean;
 }
 
 const ClientsContext =
@@ -76,7 +79,7 @@ export function ClientsProvider({
   children: ReactNode;
 }) {
 
-  const { cases } = useCases();
+  const { cases, loading: carregandoCasos } = useCases();
 
   /**
    * Enriquecimento e cadastro manual saem da carga compartilhada.
@@ -91,10 +94,12 @@ export function ClientsProvider({
     {} as Record<string, ClientEnrichment>
   );
 
-  const [manual, setManual] = useWorkspaceSlice(
+  const [manual, setManual, carregandoManual] = useWorkspaceSlice(
     (dados) => dados.manualClients,
     [] as ManualClient[]
   );
+
+  const loading = carregandoCasos || carregandoManual;
 
   const clients = useMemo(
     () => buildClients(cases, enrichment, manual),
@@ -213,8 +218,10 @@ export function ClientsProvider({
 
       isManual: (slug) =>
         manual.some((item) => item.slug === slug),
+
+      loading,
     }),
-    [clients, manual, enrichment, setManual, setEnrichment]
+    [clients, manual, enrichment, setManual, setEnrichment, loading]
   );
 
   return (

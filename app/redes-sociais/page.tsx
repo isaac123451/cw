@@ -235,6 +235,7 @@ function RedesSociaisConteudo() {
         <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
 
           <StatTile
+            carregando={loading}
             label="Total de casos"
             description="Atendimentos registrados vindos do Instagram, Facebook, WhatsApp e ManyChat."
             value={social.length}
@@ -244,6 +245,7 @@ function RedesSociaisConteudo() {
           />
 
           <StatTile
+            carregando={loading}
             label="Em aberto"
             description="Conversas que ainda dependem de ação da operação."
             value={open}
@@ -253,6 +255,7 @@ function RedesSociaisConteudo() {
           />
 
           <StatTile
+            carregando={loading}
             label="Resolvidos"
             description="Encerrados com a solução confirmada pelo cliente — o único final que conta como resolvido."
             value={resolved}
@@ -262,6 +265,7 @@ function RedesSociaisConteudo() {
           />
 
           <StatTile
+            carregando={loading}
             label="Encerrados sem solução"
             description="Sem contato (três tentativas sem resposta), sem identificação ou encaminhados para outra área. Não contam como resolvidos."
             value={semSolucao}
