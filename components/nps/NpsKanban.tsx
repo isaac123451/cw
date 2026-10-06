@@ -19,7 +19,7 @@ import {
 import { slaState } from "@/lib/services/nps.service";
 import BotaoAbrirEmJanela from "@/components/janelas/BotaoAbrirEmJanela";
 import { imagemDeArrasto } from "@/lib/ui/imagemDeArrasto";
-import { pluralDe } from "@/lib/plural";
+import { mostrarMais, pluralDe } from "@/lib/plural";
 
 interface Props {
   itens: NpsResponseView[];
@@ -61,7 +61,8 @@ function colunasDe(etapas: NpsStageOption[]) {
     {
       id: ENCERRADO,
       titulo: "Encerrado",
-      dica: "Ciclo fechado.",
+      /* Vazia quando o filtro é "Em aberto" — vale dizer para que ela serve ali. */
+      dica: "Solte um cartão aqui para encerrar: a ficha abre para escolher o desfecho.",
       cor: "#71717A",
     },
   ];
@@ -238,7 +239,7 @@ export default function NpsKanban({
                   onClick={() => setPorColuna((p) => ({ ...p, [coluna.id]: (p[coluna.id] ?? LOTE_DA_COLUNA) + LOTE_DA_COLUNA }))}
                   className="w-full rounded-xl border border-dashed border-zinc-300 py-2 text-[11px] font-medium text-zinc-500 transition-colors hover:border-violet-300 hover:bg-violet-50/40 hover:text-violet-700"
                 >
-                  Mostrar mais {Math.min(daColuna.length - (porColuna[coluna.id] ?? LOTE_DA_COLUNA), LOTE_DA_COLUNA)} de {daColuna.length - (porColuna[coluna.id] ?? LOTE_DA_COLUNA)}
+                  {mostrarMais(LOTE_DA_COLUNA, daColuna.length - (porColuna[coluna.id] ?? LOTE_DA_COLUNA))}
                 </button>
               )}
 

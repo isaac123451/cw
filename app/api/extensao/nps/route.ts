@@ -15,6 +15,7 @@ import {
   FLUXO_EM_ANDAMENTO,
   isEncerrado,
   MOODS,
+  temConteudo,
 } from "@/lib/models/nps";
 import {
   aplicarPosContato,
@@ -317,7 +318,7 @@ export async function POST(request: Request) {
      * tentativas" sem dizer o que houve em cada uma não sustenta um
      * encerramento por falta de retorno.
      */
-    if (!nota) {
+    if (!nota || !temConteudo(nota)) {
       return responder(
         request,
         {

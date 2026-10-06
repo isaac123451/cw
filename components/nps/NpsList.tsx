@@ -18,6 +18,7 @@ import {
 } from "@/lib/models/nps";
 
 import { slaState } from "@/lib/services/nps.service";
+import { mostrarMais } from "@/lib/plural";
 
 /** Quantas linhas a lista desenha de cada vez (1.126). */
 const LOTE_DA_LISTA = 100;
@@ -348,7 +349,7 @@ export default function NpsList({
             onClick={() => setVisiveis((v) => v + LOTE_DA_LISTA)}
             className="w-full rounded-xl border border-dashed border-zinc-300 py-2.5 text-xs font-medium text-zinc-500 transition-colors hover:border-violet-300 hover:bg-violet-50/40 hover:text-violet-700"
           >
-            Mostrar mais {Math.min(ordenados.length - visiveis, LOTE_DA_LISTA)} de {ordenados.length - visiveis}
+            {mostrarMais(LOTE_DA_LISTA, ordenados.length - visiveis)}
           </button>
         </div>
       )}

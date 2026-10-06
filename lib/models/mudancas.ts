@@ -401,6 +401,46 @@ export const MUDANCAS: Mudanca[] = [
 
   /* ---------------- plataforma ---------------- */
   {
+    id: "nps-tentativa-em-um-clique",
+    dia: "2026-10-06",
+    tipo: "novo",
+    frente: "nps",
+    titulo: "Tentativa de contato registrada em um clique",
+    texto:
+      "\"O que aconteceu\" é obrigatório porque é o que sustenta encerrar por falta de retorno — e virou pedágio: das 118 tentativas gravadas, 33 diziam só \".\" e 72 \"não tive retorno\" ou \"tentativa de contato feita\". Agora o campo traz atalhos do canal escolhido (\"Caixa postal\", \"Número errado\", \"Mensagem não entregue\", \"Visualizou e não respondeu\"…); um clique preenche, outro soma. O mesmo na extensão. Texto sem letra nem número deixou de passar, e os \".\" que já estavam gravados não aparecem mais como anotação.",
+    href: "/nps",
+    onde: "Ficha do NPS → Tentei contato · Extensão → NPS → Tentei contato",
+  },
+  {
+    id: "nps-quatro-frentes-sem-o-proprio",
+    dia: "2026-10-06",
+    tipo: "correcao",
+    frente: "nps",
+    titulo: "\"Nas quatro frentes\" não conta o próprio ciclo",
+    texto:
+      "Na ficha do NPS, o bloco que mostra o cliente nas outras frentes listava o ciclo aberto na tela como \"NPS · 1 em aberto\" — parecia que havia outro esperando. Agora ele fica de fora, e a frente diz \"Nenhum além deste\" quando é o único.",
+    href: "/nps",
+  },
+  {
+    id: "nps-coluna-encerrado",
+    dia: "2026-10-06",
+    tipo: "melhoria",
+    frente: "nps",
+    titulo: "A coluna \"Encerrado\" diz para que serve",
+    texto:
+      "No filtro \"Em aberto\" a coluna fica vazia e dizia só \"Ciclo fechado.\". Agora explica o gesto: solte um cartão ali para encerrar, e a ficha abre para escolher o desfecho.",
+    href: "/nps",
+  },
+  {
+    id: "mostrar-mais-faltam",
+    dia: "2026-10-06",
+    tipo: "melhoria",
+    frente: "plataforma",
+    titulo: "\"Mostrar mais 40 · faltam 253\"",
+    texto:
+      "O botão das listas longas dizia \"Mostrar mais 40 de 253\" — lido como 40 de um total de 253, quando 253 era o que faltava. Agora diz \"faltam\", e no último lote \"Mostrar os 9 restantes\". Nos quadros e listas do Reclame Aqui e do NPS, nas categorias, no prêmio e nos itens da atividade.",
+  },
+  {
     id: "indicadores-sem-zero-na-carga",
     dia: "2026-10-06",
     tipo: "correcao",

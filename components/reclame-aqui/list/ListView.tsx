@@ -7,6 +7,7 @@ import { useScopedCases } from "@/lib/context/useScopedCases";
 import CasesTable from "./CasesTable";
 import VazioComSaida from "@/components/shared/VazioComSaida";
 import CaseDrawer from "../drawer/CaseDrawer";
+import { mostrarMais } from "@/lib/plural";
 
 /** Mesmo lote do Kanban: cobre a rolagem inicial sem montar a base toda. */
 const LOTE = 50;
@@ -86,8 +87,7 @@ export default function ListView() {
                   }
                   className="w-full rounded-xl border border-dashed border-zinc-300 py-2.5 text-xs font-medium text-zinc-500 transition-colors hover:border-violet-300 hover:bg-violet-50/40 hover:text-violet-700"
                 >
-                  Mostrar mais {Math.min(restantes, LOTE)}{" "}
-                  de {restantes}
+                  {mostrarMais(LOTE, restantes)}
                 </button>
 
               </div>

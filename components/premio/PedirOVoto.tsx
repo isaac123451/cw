@@ -10,6 +10,7 @@ import DispararEmLote from "@/components/disparos/DispararEmLote";
 import { marcarPedidos, pedirVoto, type CampanhaView, type PedidoView } from "@/lib/actions/premio";
 import { useToast } from "@/lib/context/ToastContext";
 import { DIAS_PARA_LEMBRAR, lembretesDaVez, linkDoWhatsApp, mensagemDaVez, mensagemParaContato, type ContatoDoPremio } from "@/lib/models/premio";
+import { mostrarMais } from "@/lib/plural";
 
 const POR_VEZ = 15;
 const br = (iso: string) => (iso ? iso.slice(0, 10).split("-").reverse().join("/") : "");
@@ -166,7 +167,7 @@ export default function PedirOVoto({
           </ul>
           {indicados.length > mostrar && (
             <button type="button" onClick={() => setMostrar((m) => m + POR_VEZ)} className="mt-2 text-xs font-medium text-violet-700 hover:underline">
-              Mostrar mais {Math.min(POR_VEZ, indicados.length - mostrar)} de {indicados.length - mostrar}
+              {mostrarMais(POR_VEZ, indicados.length - mostrar)}
             </button>
           )}
         </>

@@ -6,6 +6,7 @@ import { WorkflowStatus } from "@/lib/models/workflow";
 import { Case } from "@/lib/models/case";
 
 import KanbanCard from "./KanbanCard";
+import { mostrarMais } from "@/lib/plural";
 
 interface Props {
   workflow: WorkflowStatus;
@@ -135,8 +136,7 @@ export default function KanbanColumn({
                 }
                 className="w-full rounded-xl border border-dashed border-zinc-300 py-2.5 text-xs font-medium text-zinc-500 transition-colors hover:border-violet-300 hover:bg-white hover:text-violet-700"
               >
-                Mostrar mais {Math.min(restantes, LOTE)} de{" "}
-                {restantes}
+                {mostrarMais(LOTE, restantes)}
               </button>
             )}
 

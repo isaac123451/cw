@@ -316,10 +316,10 @@
         P.corpo.querySelector("#nps-tentativa")?.value ?? ""
       ).trim();
 
-      if (!registro.nota) {
+      if (!/[\p{L}\p{N}]/u.test(registro.nota)) {
         if (erro) {
           erro.textContent =
-            "Descreva a tentativa — ex.: ligou, caiu na caixa postal.";
+            "Diga o que aconteceu — um dos atalhos serve.";
         }
         return;
       }

@@ -562,6 +562,18 @@
         P.registrarNps(alvo, "tentativa");
       }
 
+      /* O atalho do "o que aconteceu" na tentativa: preenche, ou soma ao que já está escrito. */
+      if (acao === "preencher-tentativa") {
+        const campo = alvo.closest(".painel-acao")?.querySelector("#nps-tentativa");
+        if (campo) {
+          const texto = alvo.dataset.texto ?? "";
+          const atual = campo.value.trim().replace(/[.;]$/, "");
+          if (!atual) campo.value = texto;
+          else if (!atual.includes(texto)) campo.value = atual + "; " + texto.charAt(0).toLowerCase() + texto.slice(1);
+          campo.focus();
+        }
+      }
+
       if (acao === "abrir") {
         CW.enviar({ tipo: "abrir", url: alvo.dataset.url });
       }

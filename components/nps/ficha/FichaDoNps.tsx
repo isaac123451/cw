@@ -339,6 +339,7 @@ export default function FichaDoNps({ id, naJanela = false }: { id: string; naJan
           <NasQuatroFrentes
             alvo={{ establishmentId: ciclo.establishmentId, contaExterna: ciclo.externalCompanyId, emails: ciclo.email ? [ciclo.email] : [] }}
             descricao="O mesmo cliente nas outras frentes — antes de ligar, veja se ele também reclamou ou avaliou."
+            atual={ciclo.id}
           />
         </div>
 

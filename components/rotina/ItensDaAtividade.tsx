@@ -20,7 +20,7 @@ import OpcoesDeAdiar from "@/components/rotina/OpcoesDeAdiar";
 import type { ChaveDaRotina } from "@/lib/models/rotina";
 import { resumoDosPassos } from "@/lib/models/guiaParaFechar";
 import { janelaDoEndereco } from "@/lib/models/janelas";
-import { pluralDe } from "@/lib/plural";
+import { mostrarMais, pluralDe } from "@/lib/plural";
 
 type Resultado = { ok: true } | { ok: false; erro: string };
 
@@ -179,7 +179,7 @@ export default function ItensDaAtividade({ chave, atividade, contagem, marcarIte
                     onClick={() => setLimite((l) => ({ ...l, [k]: ate + POR_VEZ }))}
                     className="mt-1 rounded-md px-1.5 py-1 text-[11px] font-medium text-violet-700 hover:bg-violet-50"
                   >
-                    Mostrar mais {Math.min(POR_VEZ, g.itens.length - ate)} de {g.itens.length - ate}
+                    {mostrarMais(POR_VEZ, g.itens.length - ate)}
                   </button>
                 )}
               </section>

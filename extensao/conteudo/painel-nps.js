@@ -441,6 +441,12 @@
         ),
         '    </select>',
         '    <input class="campo" id="nps-tentativa" type="text" placeholder="Ex.: ligou, caiu na caixa postal" />',
+        /* Um clique registra o fato (out/2026): sem atalho, 1 em cada 4 tentativas dizia só ".". */
+        '    <div class="chips" style="margin-top:6px">',
+        ...["Não atendeu", "Caixa postal", "Mensagem sem resposta", "Mensagem não entregue", "Número errado"].map(
+          (o) => `      <button class="chip" type="button" data-acao="preencher-tentativa" data-texto="${o}">${o}</button>`
+        ),
+        '    </div>',
         '    <div class="linha" style="margin-top:9px;align-items:center">',
         `      <span class="sub">${nps.tentativas} até agora.</span>`,
         `      <button class="copiar" data-acao="nps-tentativa" data-id="${CW.escapar(nps.id)}">Registrar tentativa</button>`,

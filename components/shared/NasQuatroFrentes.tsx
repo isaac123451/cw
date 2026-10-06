@@ -52,9 +52,16 @@ const limpar = (s?: string | null) =>
 export default function NasQuatroFrentes({
   alvo,
   descricao = "Tudo o que esta conta tem em cada frente, na ordem de prioridade do documento.",
+  atual,
 }: {
   alvo: AlvoNasFrentes;
   descricao?: string;
+  /**
+   * O registro da ficha aberta (out/2026). Fica de fora da lista: a ficha
+   * do NPS mostrava o próprio ciclo em "NPS · 1 em aberto", como se o
+   * cliente tivesse outro ciclo esperando.
+   */
+  atual?: string;
 }) {
 
   const { cases } = useCases();
@@ -123,16 +130,23 @@ export default function NasQuatroFrentes({
       })),
     };
 
-    for (const lista of Object.values(mapa)) lista.sort((a, b) => Date.parse(b.em) - Date.parse(a.em));
+    const soEste = new Set<FrenteId>();
+    for (const [frente, lista] of Object.entries(mapa) as [FrenteId, Registro[]][]) {
+      if (atual && lista.some((r) => r.id === atual)) {
+        mapa[frente] = lista.filter((r) => r.id !== atual);
+        soEste.add(frente);
+      }
+      mapa[frente].sort((a, b) => Date.parse(b.em) - Date.parse(a.em));
+    }
 
-    return mapa;
-  }, [alvo, cases, responses, avaliacoes]);
+    return { mapa, soEste };
+  }, [alvo, cases, responses, avaliacoes, atual]);
 
   return (
     <SurfaceCard title="Nas quatro frentes" description={descricao}>
       <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
         {FRENTES_DA_OPERACAO.map((f) => {
-          const lista = porFrente[f.id];
+          const lista = porFrente.mapa[f.id];
           const abertos = lista.filter((r) => r.aberto).length;
           return (
             <div key={f.id} className="flex min-w-0 flex-col rounded-xl border border-zinc-200/80 p-3.5">
@@ -145,7 +159,9 @@ export default function NasQuatroFrentes({
               </div>
               {abertos > 0 && <p className="mt-0.5 text-[11px] font-medium text-amber-700">{abertos} em aberto</p>}
               {lista.length === 0 ? (
-                <p className="mt-2 text-xs text-zinc-400">Nada ligado a esta conta.</p>
+                <p className="mt-2 text-xs text-zinc-400">
+                  {porFrente.soEste.has(f.id) ? "Nenhum além deste." : "Nada ligado a esta conta."}
+                </p>
               ) : (
                 <ul className="mt-2 space-y-1.5">
                   {lista.slice(0, 3).map((r) => (

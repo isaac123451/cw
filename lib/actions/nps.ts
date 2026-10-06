@@ -24,6 +24,7 @@ import {
   rotuloDeEtapa,
   segmentOf,
   STATUS_SEM_TRATATIVA,
+  temConteudo,
   TIPOS_PADRAO,
 } from "@/lib/models/nps";
 import { ProjectStage } from "@/lib/models/project";
@@ -551,7 +552,7 @@ export async function registerNpsAttempt(input: {
 
   const note = input.note.trim().slice(0, 1000);
   if (!CHANNELS.includes(input.channel)) return { ok: false, erro: "Escolha o canal: e-mail, telefone ou WhatsApp." };
-  if (!note) return { ok: false, erro: "Diga o que aconteceu na tentativa." };
+  if (!temConteudo(note)) return { ok: false, erro: "Diga o que aconteceu na tentativa — um dos atalhos serve." };
 
   const agora = new Date();
   const em = input.em ? new Date(input.em) : agora;

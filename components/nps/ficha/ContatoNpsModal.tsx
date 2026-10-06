@@ -14,7 +14,9 @@ import {
   JANELA_TENTATIVAS_DIAS,
   MOODS,
   nomeDoCliente,
+  OCORRENCIAS_DA_TENTATIVA,
   segmentOf,
+  temConteudo,
   tentativasMinimas,
   type NpsResponseView,
 } from "@/lib/models/nps";
@@ -159,7 +161,7 @@ export default function ContatoNpsModal({
       footer={
         <RodapeDeSalvar
           salvando={salvando}
-          desabilitado={modo === "tentativa" && !aconteceu.trim()}
+          desabilitado={modo === "tentativa" && !temConteudo(aconteceu)}
           rotulo={modo === "contato" ? "Salvar o contato" : "Salvar a tentativa"}
           onSalvar={salvar}
           onCancelar={onClose}
@@ -292,6 +294,18 @@ export default function ContatoNpsModal({
                 placeholder="Ex.: liguei às 10h, caixa postal; mandei mensagem no WhatsApp."
                 className={`mt-1.5 ${textareaClass}`}
               />
+              <span className="mt-1.5 flex flex-wrap gap-1.5">
+                {(OCORRENCIAS_DA_TENTATIVA[canal] ?? []).map((o) => (
+                  <button
+                    key={o}
+                    type="button"
+                    onClick={() => setAconteceu((t) => (!t.trim() ? o : t.includes(o) ? t : `${t.trim().replace(/[.;]$/, "")}; ${o.charAt(0).toLowerCase()}${o.slice(1)}`))}
+                    className="rounded-full border border-zinc-200 px-2.5 py-0.5 text-[11px] font-medium text-zinc-600 transition-colors hover:border-violet-300 hover:text-violet-700"
+                  >
+                    {o}
+                  </button>
+                ))}
+              </span>
             </label>
 
             <div className="grid gap-3 sm:grid-cols-2">

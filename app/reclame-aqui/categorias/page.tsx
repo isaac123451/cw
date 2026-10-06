@@ -15,7 +15,7 @@ import { decidirPropostasDeCategoria, desfazerReclassificacao, lerRevisaoDeCateg
 import { useSettings } from "@/lib/context/SettingsContext";
 import { useToast } from "@/lib/context/ToastContext";
 import type { PropostaNaTela } from "@/lib/services/propostaDeCategoria.service";
-import { pluralDe } from "@/lib/plural";
+import { mostrarMais, pluralDe } from "@/lib/plural";
 
 const br = (iso: string) => iso.slice(0, 10).split("-").reverse().join("/");
 const LOTE_DA_TELA = 60;
@@ -416,7 +416,7 @@ export default function CategoriasPage() {
                   </ul>
                   {filtradas.length > mostrar && (
                     <button type="button" onClick={() => setMostrar((m) => m + LOTE_DA_TELA)} className="text-sm font-medium text-violet-700 hover:underline">
-                      Mostrar mais {Math.min(LOTE_DA_TELA, filtradas.length - mostrar)} de {filtradas.length - mostrar}
+                      {mostrarMais(LOTE_DA_TELA, filtradas.length - mostrar)}
                     </button>
                   )}
                 </div>

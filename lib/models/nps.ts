@@ -692,3 +692,24 @@ export const CHANNELS = [
   "Telefone",
   "WhatsApp",
 ];
+
+/**
+ * O que costuma acontecer numa tentativa, por canal — os atalhos do
+ * "O que aconteceu" (out/2026).
+ *
+ * A descrição é obrigatória porque é ela que sustenta o encerramento
+ * por falta de retorno. Mas, sem atalho, das 118 tentativas gravadas
+ * até 06/10, 33 diziam só "." e 72 "não tive retorno" ou "tentativa de
+ * contato feita" — o campo virou pedágio. Um clique agora registra o
+ * fato de verdade (caixa postal, número errado, mensagem não entregue).
+ */
+export const OCORRENCIAS_DA_TENTATIVA: Record<string, string[]> = {
+  "E-mail": ["E-mail enviado, sem resposta", "E-mail voltou — endereço inválido"],
+  Telefone: ["Não atendeu", "Caixa postal", "Número errado ou inexistente", "Pediu para ligar mais tarde"],
+  WhatsApp: ["Mensagem enviada, sem resposta", "Visualizou e não respondeu", "Mensagem não entregue", "Número sem WhatsApp"],
+};
+
+/** Tem ao menos uma letra ou um número — "." e "-" não descrevem nada. */
+export function temConteudo(texto: string | null | undefined) {
+  return /[\p{L}\p{N}]/u.test(texto ?? "");
+}

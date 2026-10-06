@@ -12,6 +12,7 @@ import {
   moodOf,
   rotuloDeEtapa,
   STATUS_SEM_TRATATIVA,
+  temConteudo,
   tentativasMinimas,
   type NpsResponseView,
 } from "@/lib/models/nps";
@@ -64,7 +65,8 @@ export default function ContatosDoNps({ item, registrar }: { item: NpsResponseVi
       icone: Phone,
       cor: a.resultado === "aguardando" ? "text-amber-500" : "text-zinc-400",
       titulo: `Tentativa por ${a.channel} · ${a.resultado === "aguardando" ? "aguardando retorno" : "sem retorno"}`,
-      texto: a.note,
+      /* "." era o que se digitava para passar do campo obrigatório: não é anotação. */
+      texto: temConteudo(a.note) ? a.note : undefined,
       quem: a.actor,
       aguardando: a.resultado === "aguardando" && !encerrado ? a.id : undefined,
     })),
