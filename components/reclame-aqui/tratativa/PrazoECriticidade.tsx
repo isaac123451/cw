@@ -212,8 +212,9 @@ export default function PrazoECriticidade({ data, aoMudarNoServidor }: Props) {
           </div>
           {status.prazo && status.fase !== "concluido" && (
             <div className="flex items-center justify-between gap-3">
-              <dt className="text-zinc-500">Vence</dt>
-              <dd className="text-right font-medium text-zinc-800">{quandoVence(status.prazo)}</dd>
+              {/* Prazo que já passou "venceu" — "Vence 13/08" num caso 38 dias atrasado lia como futuro (out/2026). */}
+              <dt className="text-zinc-500">{status.situation === "estourado" ? "Venceu" : "Vence"}</dt>
+              <dd className={`text-right font-medium ${status.situation === "estourado" ? "text-rose-700" : "text-zinc-800"}`}>{quandoVence(status.prazo)}</dd>
             </div>
           )}
         </dl>

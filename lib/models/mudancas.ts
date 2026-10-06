@@ -708,6 +708,25 @@ export const MUDANCAS: Mudanca[] = [
       "Os textos da ficha e do Analytics mandavam para \"a aba Investigação\", que se chama Triagem desde a tela de triagem; o cartão dentro dela também. E o bloco de contatos mostrava \"Nenhum contato registrado\" e \"Carregando contatos…\" ao mesmo tempo — o segundo só aparece agora quando há contato a carregar.",
   },
   {
+    id: "checklist-de-verdade",
+    dia: "2026-10-06",
+    tipo: "correcao",
+    frente: "reclame-aqui",
+    titulo: "O checklist de resolução grava e enxerga o caso",
+    texto:
+      "As marcas do checklist viviam só na tela: marcar e recarregar perdia tudo, e nada foi gravado até hoje. Ele também não enxergava o caso — \"Cliente contatado: pendente\" com o 1º contato registrado na mesma ficha —, dizia \"Concluído por\" o dono do caso fosse quem fosse que marcou, e dava tudo como cumprido só porque o caso estava encerrado. Agora o que o caso registra marca sozinho, dizendo de onde (\"Pelo registro: 1º contato registrado\", \"causa raiz: Atendimento\"), e não se desmarca à mão; o resto, como \"Reclamação original lida\", vai para o banco com quem marcou e quando. Na reclamação conferida, foi de 0 para 3 de 8.",
+    onde: "Ficha do caso → Triagem → Checklist de resolução",
+  },
+  {
+    id: "prazo-venceu",
+    dia: "2026-10-06",
+    tipo: "correcao",
+    frente: "reclame-aqui",
+    titulo: "\"Venceu\", e não \"Vence\", para prazo que já passou",
+    texto:
+      "Em Criticidade e prazo, um caso com a solução atrasada 38 dias úteis mostrava \"Vence qui, 13/08\" — como se fosse adiante. Agora diz \"Venceu\", em vermelho.",
+  },
+  {
     id: "historico-de-trocas",
     dia: "2026-10-06",
     tipo: "novo",

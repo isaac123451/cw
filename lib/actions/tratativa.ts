@@ -16,6 +16,7 @@ import {
   type SlaRule,
 } from "@/lib/models/sla";
 import type { ContatoView, ResultadoDoContato, ResumoDosContatos } from "@/lib/models/tratativa";
+import type { MarcaDoChecklist } from "@/lib/models/checklistDoCaso";
 
 import { expedienteValido, type Expediente } from "@/lib/services/horasUteis";
 import type { Prisma } from "@prisma/client";
@@ -118,6 +119,46 @@ export async function triarCaso(entrada: {
 /* ============================================================
    CONTATOS
 ============================================================ */
+
+/* ============================================================
+   CHECKLIST DE RESOLUÇÃO (out/2026)
+============================================================ */
+
+/** As marcas feitas à mão no checklist do caso — com quem marcou e quando. */
+export async function marcasDoChecklist(protocol: string): Promise<MarcaDoChecklist[]> {
+  const ctx = await tryRole("LEITURA", MODULO);
+  if (!ctx || !protocol) return [];
+  const caso = await ctx.prisma.case.findUnique({ where: { protocol }, select: { id: true } });
+  if (!caso) return [];
+  const marcas = await ctx.prisma.caseChecklistMark.findMany({ where: { caseId: caso.id } });
+  return marcas.map((m) => ({ itemId: m.itemId, feito: m.done, por: m.doneBy, em: m.doneAt?.toISOString() ?? null }));
+}
+
+/** Marca ou desmarca um item do checklist, gravando quem e quando. */
+export async function marcarItemDoChecklist(entrada: {
+  protocol: string;
+  itemId: string;
+  feito: boolean;
+}): Promise<{ ok: true; marca: MarcaDoChecklist } | Falha> {
+  const quem = await quemGrava("AGENTE", MODULO);
+  if ("erro" in quem) return { ok: false, erro: quem.erro! };
+  try {
+    const caso = await quem.ctx.prisma.case.findUnique({ where: { protocol: entrada.protocol }, select: { id: true } });
+    if (!caso) return { ok: false, erro: "Esta reclamação não existe mais." };
+    const item = await quem.ctx.prisma.checklistItem.findUnique({ where: { id: entrada.itemId }, select: { id: true } });
+    if (!item) return { ok: false, erro: "Este item saiu do checklist. Recarregue a página." };
+    const agora = new Date();
+    const dados = { done: entrada.feito, doneBy: entrada.feito ? quem.nome : null, doneAt: entrada.feito ? agora : null };
+    await quem.ctx.prisma.caseChecklistMark.upsert({
+      where: { caseId_itemId: { caseId: caso.id, itemId: item.id } },
+      create: { caseId: caso.id, itemId: item.id, ...dados },
+      update: dados,
+    });
+    return { ok: true, marca: { itemId: item.id, feito: entrada.feito, por: dados.doneBy, em: dados.doneAt?.toISOString() ?? null } };
+  } catch (erro) {
+    return falha(erro, "checklist");
+  }
+}
 
 export async function listarContatos(protocol: string): Promise<ContatoView[]> {
 

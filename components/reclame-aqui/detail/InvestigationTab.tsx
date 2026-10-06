@@ -25,6 +25,11 @@ import { sugerirAssuntoDoRelato, type SugestaoComAcerto } from "@/lib/actions/su
 import DonoDaCausa from "@/components/causas/DonoDaCausa";
 import CausaSugerida from "@/components/causas/CausaSugerida";
 import { useTratativa } from "@/components/reclame-aqui/tratativa/TratativaProvider";
+import { useMovements } from "@/lib/context/MovementsContext";
+import { useToast } from "@/lib/context/ToastContext";
+import { movementsOf } from "@/lib/services/movement.service";
+import { provaDoItem, type MarcaDoChecklist } from "@/lib/models/checklistDoCaso";
+import { marcarItemDoChecklist, marcasDoChecklist } from "@/lib/actions/tratativa";
 
 interface Props {
   data: Case;
@@ -72,31 +77,53 @@ export default function InvestigationTab({
     [checklist]
   );
 
-  /**
-   * Casos encerrados chegam com o checklist cumprido; os demais
-   * começam vazios e o agente vai marcando.
-   */
-  const [done, setDone] = useState<Set<string>>(
-    () =>
-      new Set(
-        data.resolved
-          ? active.map((item) => item.id)
-          : []
-      )
-  );
+  /*
+    O checklist de verdade (out/2026): o que o caso registra marca
+    sozinho, e a marca à mão vai para o banco com quem marcou e quando.
+    Antes as marcas viviam só nesta tela — recarregar perdia tudo — e o
+    caso encerrado já nascia com tudo "cumprido".
+  */
+  const { movements } = useMovements();
+  const { notify } = useToast();
+  const areasAcionadas = useMemo(() => movementsOf(data.id, movements).length, [data.id, movements]);
 
-  function toggle(id: string) {
-    setDone((prev) => {
-      const next = new Set(prev);
+  const [marcas, setMarcas] = useState<Record<string, MarcaDoChecklist>>({});
+  const [gravando, setGravando] = useState<string | null>(null);
 
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
+  useEffect(() => {
+    let vivo = true;
+    marcasDoChecklist(data.protocol)
+      .then((lista) => vivo && setMarcas(Object.fromEntries(lista.map((m) => [m.itemId, m]))))
+      .catch(() => undefined);
+    return () => {
+      vivo = false;
+    };
+  }, [data.protocol]);
 
-      return next;
-    });
+  const prova = (item: (typeof active)[number]) => provaDoItem(item.key, data, areasAcionadas);
+  const feito = (item: (typeof active)[number]) => Boolean(prova(item)) || Boolean(marcas[item.id]?.feito);
+  const done = new Set(active.filter(feito).map((item) => item.id));
+
+  async function toggle(item: (typeof active)[number]) {
+    /* O que o caso prova não se desmarca: é fato registrado em outro lugar. */
+    if (prova(item) || gravando) return;
+    const anterior = marcas[item.id];
+    const novo = !anterior?.feito;
+    setGravando(item.id);
+    setMarcas((m) => ({ ...m, [item.id]: { itemId: item.id, feito: novo, por: null, em: null } }));
+    const r = await marcarItemDoChecklist({ protocol: data.protocol, itemId: item.id, feito: novo });
+    setGravando(null);
+    if (!r.ok) {
+      setMarcas((m) => {
+        const copia = { ...m };
+        if (anterior) copia[item.id] = anterior;
+        else delete copia[item.id];
+        return copia;
+      });
+      notify({ tone: "error", title: "A marca não foi gravada.", detail: r.erro });
+      return;
+    }
+    setMarcas((m) => ({ ...m, [item.id]: r.marca }));
   }
 
   const required = active.filter((item) => item.required);
@@ -210,11 +237,15 @@ export default function InvestigationTab({
           {active.map((item) => {
 
             const checked = done.has(item.id);
+            const deOnde = prova(item);
+            const marca = marcas[item.id];
 
             return (
               <button
                 key={item.id}
-                onClick={() => toggle(item.id)}
+                onClick={() => toggle(item)}
+                disabled={gravando === item.id}
+                title={deOnde ? "Marcado pelo que o caso registra — não se desmarca à mão." : undefined}
                 className={`flex items-start gap-3 rounded-xl border p-3.5 text-left transition-colors ${
                   checked
                     ? "border-violet-200 bg-violet-50/40"
@@ -249,9 +280,13 @@ export default function InvestigationTab({
                   </span>
 
                   <span className="mt-0.5 block text-[11px] text-zinc-400">
-                    {checked
-                      ? `Concluído por ${data.owner ?? "—"}`
-                      : "Pendente"}
+                    {deOnde
+                      ? `Pelo registro: ${deOnde}`
+                      : checked
+                        ? marca?.por
+                          ? `Marcado por ${marca.por}${marca.em ? ` em ${descreverRegistro(marca.em)}` : ""}`
+                          : "Marcado"
+                        : "Pendente"}
                   </span>
 
                 </span>
