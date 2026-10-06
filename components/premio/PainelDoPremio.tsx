@@ -18,6 +18,7 @@ import { useToast } from "@/lib/context/ToastContext";
 import { contatosDoPremio, FILTROS_PADRAO, ideiasDoPremio, indicadosParaPedir, type FiltrosDoPremio } from "@/lib/models/premio";
 import { hojeNaOperacao } from "@/lib/services/reputation.service";
 import { pluralDe } from "@/lib/plural";
+import { telefoneLegivel } from "@/lib/models/telefone";
 
 /* Curta: o Isaac pediu "menos texto de mensagem". Quem lê no WhatsApp lê a primeira linha. */
 const MENSAGEM_PADRAO = "Oi, {nome}! Aqui é da Cardápio Web. Estamos no Prêmio Reclame Aqui e o seu voto ajuda muito: {link}";
@@ -329,7 +330,7 @@ export default function PainelDoPremio({ aoMudar }: { aoMudar?: (campanha: Campa
                 {lista.slice(0, 8).map((c) => (
                   <tr key={`${c.origem}:${c.ref}`}>
                     <td className="py-1.5 pr-3 text-zinc-800">{c.nome}</td>
-                    <td className="py-1.5 pr-3 tabular-nums text-zinc-600">{c.telefoneInternacional ?? <span className="text-zinc-400">sem telefone</span>}</td>
+                    <td className="py-1.5 pr-3 tabular-nums text-zinc-600">{c.telefoneInternacional ? telefoneLegivel(c.telefoneInternacional) : <span className="text-zinc-400">sem telefone</span>}</td>
                     <td className="py-1.5 text-zinc-600">{c.motivo}</td>
                   </tr>
                 ))}

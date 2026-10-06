@@ -10,6 +10,7 @@ import { marcarPedidos, type CampanhaView, type PedidoView } from "@/lib/actions
 import { useToast } from "@/lib/context/ToastContext";
 import { linkDoWhatsApp, mensagemDaVez, ORDEM_DA_SITUACAO, resumoDaCampanha, ROTULO_DA_SITUACAO, type SituacaoDoVoto } from "@/lib/models/premio";
 import { pluralDe } from "@/lib/plural";
+import { telefoneLegivel } from "@/lib/models/telefone";
 
 /** O próximo passo de cada situação — o que o botão principal da linha faz. */
 const PROXIMO: Record<SituacaoDoVoto, SituacaoDoVoto | null> = { exportado: "pedido", pedido: "lembrete", lembrete: "votou", votou: null };
@@ -116,7 +117,7 @@ export default function CampanhaDeVotacao({ campanha, pedidos, recarregar }: { c
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium text-zinc-800">{p.nome}</p>
                 <p className="truncate text-xs text-zinc-500">
-                  {[p.telefone ?? "sem telefone", p.motivo, ROTULO_DA_SITUACAO[p.situacao]].filter(Boolean).join(" · ")}
+                  {[p.telefone ? telefoneLegivel(p.telefone) : "sem telefone", p.motivo, ROTULO_DA_SITUACAO[p.situacao]].filter(Boolean).join(" · ")}
                 </p>
               </div>
               {zap ? (

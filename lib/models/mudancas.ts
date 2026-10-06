@@ -696,7 +696,7 @@ export const MUDANCAS: Mudanca[] = [
     frente: "plataforma",
     titulo: "Telefone legível nas fichas",
     texto:
-      "A ficha do caso, a do cliente, a do estabelecimento, a conversa guardada, a importação e o disparo em lote mostravam o número como estava gravado — \"11960599984\", \"+5511960599984\". Agora \"(11) 96059-9984\" e \"+55 11 96059-9984\". O mascarado da base e o de outro país ficam como vieram.",
+      "A ficha do caso, a do cliente, a do estabelecimento, a conversa guardada, a importação, o disparo em lote e a campanha do Prêmio mostravam o número como estava gravado — \"11960599984\", \"+5511960599984\". Agora \"(11) 96059-9984\" e \"+55 11 96059-9984\". O mascarado da base e o de outro país ficam como vieram.",
   },
   {
     id: "indicadores-sem-zero-na-carga",
