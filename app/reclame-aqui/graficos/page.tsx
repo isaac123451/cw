@@ -10,6 +10,7 @@ import MultiLineChart from "@/components/shared/MultiLineChart";
 import PeriodPicker from "@/components/shared/PeriodPicker";
 
 import ModuleNav from "@/components/reclame-aqui/ModuleNav";
+import EsperaAsReclamacoes from "@/components/reclame-aqui/EsperaAsReclamacoes";
 
 import { useScopedCases } from "@/lib/context/useScopedCases";
 
@@ -174,6 +175,8 @@ export default function GraficosPage() {
         />
 
         <ModuleNav />
+
+        <EsperaAsReclamacoes>
 
         <SurfaceCard bodyClassName="p-4">
 
@@ -786,6 +789,8 @@ export default function GraficosPage() {
           />
 
         </SurfaceCard>
+
+        </EsperaAsReclamacoes>
 
       </div>
 

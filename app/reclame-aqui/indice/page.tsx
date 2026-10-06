@@ -8,6 +8,7 @@ import MainLayout from "@/components/layout/MainLayout";
 import PageHeading from "@/components/shared/PageHeading";
 import SurfaceCard from "@/components/shared/SurfaceCard";
 import ModuleNav from "@/components/reclame-aqui/ModuleNav";
+import EsperaAsReclamacoes from "@/components/reclame-aqui/EsperaAsReclamacoes";
 import EvolucaoDoIndice from "@/components/reclame-aqui/indice/EvolucaoDoIndice";
 import ReguaDoIndice from "@/components/reclame-aqui/indice/ReguaDoIndice";
 
@@ -84,6 +85,8 @@ export default function IndicePage() {
         />
 
         <ModuleNav />
+
+        <EsperaAsReclamacoes>
 
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="inline-flex rounded-xl bg-zinc-100 p-1" role="tablist" aria-label="Período">
@@ -266,6 +269,8 @@ export default function IndicePage() {
         </SurfaceCard>
 
         <ComparacaoComSegmento />
+
+        </EsperaAsReclamacoes>
 
       </div>
     </MainLayout>

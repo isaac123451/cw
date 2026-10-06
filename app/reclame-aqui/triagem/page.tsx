@@ -8,6 +8,7 @@ import MainLayout from "@/components/layout/MainLayout";
 import PageHeading from "@/components/shared/PageHeading";
 import SurfaceCard from "@/components/shared/SurfaceCard";
 import ModuleNav from "@/components/reclame-aqui/ModuleNav";
+import EsperaAsReclamacoes from "@/components/reclame-aqui/EsperaAsReclamacoes";
 import ChipPrioridade from "@/components/reclame-aqui/tratativa/ChipPrioridade";
 import RelogioDoCaso from "@/components/reclame-aqui/tratativa/RelogioDoCaso";
 import ProximoPasso from "@/components/reclame-aqui/tratativa/ProximoPasso";
@@ -66,6 +67,8 @@ export default function TriagemPage() {
 
         <ModuleNav />
 
+        <EsperaAsReclamacoes>
+
         <div className="flex flex-wrap gap-2" role="tablist" aria-label="Filtro">
           {(
             [
@@ -123,6 +126,8 @@ export default function TriagemPage() {
             </ul>
           )}
         </SurfaceCard>
+        </EsperaAsReclamacoes>
+
       </div>
     </MainLayout>
   );

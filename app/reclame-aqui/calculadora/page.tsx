@@ -19,6 +19,7 @@ import PageHeading from "@/components/shared/PageHeading";
 import SurfaceCard from "@/components/shared/SurfaceCard";
 
 import ModuleNav from "@/components/reclame-aqui/ModuleNav";
+import EsperaAsReclamacoes from "@/components/reclame-aqui/EsperaAsReclamacoes";
 import DisregardedNotice from "@/components/reclame-aqui/DisregardedNotice";
 import PeriodPicker from "@/components/reclame-aqui/calculadora/PeriodPicker";
 import ScoreScale from "@/components/reclame-aqui/calculadora/ScoreScale";
@@ -251,6 +252,8 @@ export default function CalculadoraPage() {
         />
 
         <ModuleNav />
+
+        <EsperaAsReclamacoes>
 
         <PeriodPicker
           period={period}
@@ -1124,6 +1127,8 @@ export default function CalculadoraPage() {
           </div>
 
         </div>
+
+        </EsperaAsReclamacoes>
 
       </div>
 

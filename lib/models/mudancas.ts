@@ -717,6 +717,16 @@ export const MUDANCAS: Mudanca[] = [
       "Os textos da ficha e do Analytics mandavam para \"a aba Investigação\", que se chama Triagem desde a tela de triagem; o cartão dentro dela também. E o bloco de contatos mostrava \"Nenhum contato registrado\" e \"Carregando contatos…\" ao mesmo tempo — o segundo só aparece agora quando há contato a carregar.",
   },
   {
+    id: "ra-telas-esperam-a-base",
+    dia: "2026-10-06",
+    tipo: "correcao",
+    frente: "reclame-aqui",
+    titulo: "As telas do Reclame Aqui não mostram nota zero enquanto carregam",
+    texto:
+      "Nos primeiros segundos, o Índice pintava \"Não recomendada · 0\" e escrevia \"Resposta em 0%: meta cumprida\" e \"Mais 50 avaliações para o mínimo de 50\" — antes de virar \"RA1000 · 8,8\". A Análise, os Gráficos, a Calculadora, a Triagem e o Pedir avaliação faziam o mesmo com os seus números. Agora as seis esperam a base com \"Carregando as reclamações…\" e só então mostram a conta.",
+    href: "/reclame-aqui/indice",
+  },
+  {
     id: "pesos-da-nota-certos",
     dia: "2026-10-06",
     tipo: "correcao",

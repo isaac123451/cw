@@ -31,6 +31,7 @@ import ResponseCeiling from "@/components/reclame-aqui/analytics/ResponseCeiling
 import DisregardedNotice from "@/components/reclame-aqui/DisregardedNotice";
 import GoalEditor from "@/components/reclame-aqui/analytics/GoalEditor";
 import ModuleNav from "@/components/reclame-aqui/ModuleNav";
+import EsperaAsReclamacoes from "@/components/reclame-aqui/EsperaAsReclamacoes";
 import { notaExata } from "@/lib/models/indiceRA";
 import PorCiclo from "@/components/reclame-aqui/analytics/PorCiclo";
 
@@ -304,6 +305,8 @@ export default function ReclameAquiAnalyticsPage() {
         />
 
         <ModuleNav />
+
+        <EsperaAsReclamacoes>
 
         <SurfaceCard bodyClassName="p-4">
 
@@ -629,6 +632,8 @@ export default function ReclameAquiAnalyticsPage() {
           </p>
 
         </SurfaceCard>
+
+        </EsperaAsReclamacoes>
 
       </div>
 

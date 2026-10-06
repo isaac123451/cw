@@ -19,6 +19,7 @@ import MainLayout from "@/components/layout/MainLayout";
 import PageHeading from "@/components/shared/PageHeading";
 import SurfaceCard from "@/components/shared/SurfaceCard";
 import ModuleNav from "@/components/reclame-aqui/ModuleNav";
+import EsperaAsReclamacoes from "@/components/reclame-aqui/EsperaAsReclamacoes";
 import { useTratativa } from "@/components/reclame-aqui/tratativa/TratativaProvider";
 import DispararEmLote from "@/components/disparos/DispararEmLote";
 import { mensagemDePedidoDeAvaliacao } from "@/lib/models/mensagens";
@@ -194,6 +195,8 @@ export default function AvaliacoesPage() {
 
         <ModuleNav />
 
+        <EsperaAsReclamacoes>
+
         {!fila || !impacto ? (
           <p className="text-sm text-zinc-400">Montando a fila…</p>
         ) : (
@@ -316,6 +319,8 @@ export default function AvaliacoesPage() {
             )}
           </>
         )}
+
+        </EsperaAsReclamacoes>
 
       </div>
 
