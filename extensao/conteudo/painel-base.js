@@ -580,6 +580,24 @@
         P.copiar(alvo, alvo.dataset.texto ?? "");
       }
 
+      /*
+        Vários formulários atrás de botões, um aberto por vez: o botão
+        abre o painel de mesmo `data-qual` dentro do grupo e fecha os outros.
+      */
+      if (acao === "alternar-painel") {
+        const grupo = alvo.closest("[data-grupo-alternavel]");
+        if (grupo) {
+          const abrir = alvo.getAttribute("aria-expanded") !== "true";
+          for (const b of grupo.querySelectorAll('[data-acao="alternar-painel"]')) {
+            b.setAttribute("aria-expanded", String(abrir && b === alvo));
+          }
+          for (const painel of grupo.querySelectorAll("[data-painel-de]")) {
+            painel.hidden = !(abrir && painel.dataset.painelDe === alvo.dataset.qual);
+          }
+          if (abrir) grupo.querySelector(`[data-painel-de="${alvo.dataset.qual}"] input, [data-painel-de="${alvo.dataset.qual}"] select`)?.focus();
+        }
+      }
+
       /* Um formulário recolhido atrás do botão: o botão abre e fecha o que vem logo depois dele. */
       if (acao === "alternar-proximo") {
         const alvoDoBotao = alvo.nextElementSibling;

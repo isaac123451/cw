@@ -1862,13 +1862,25 @@
         ${linhas.join("")}
       </div>
       ${blocoVinculo(dados)}
+      ${
+        /*
+          O ciclo aberto aqui mesmo (out/2026). Quem chega pelo NPS está
+          conversando sobre o NPS — e a tela dizia só "o ciclo está na aba
+          NPS", com um botão para ir buscá-lo. Agora a tentativa, a régua
+          de humor e a anotação estão onde a conversa está.
+        */
+        nps && !nps.encerrado
+          ? P.blocoNps(nps, P.podeEscrever(dados), false, conta?.whatsappNps ?? null)
+          : ""
+      }
       <div class="bloco">
-        <p class="sub">Sem reclamação registrada. ${nps ? "O ciclo do NPS está na aba NPS." : ""}</p>
+        <p class="sub">Sem reclamação registrada.${nps?.encerrado ? " O último ciclo do NPS está encerrado." : ""}</p>
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
-          ${nps ? '<button type="button" class="copiar" data-acao="canal" data-canal="nps">Abrir no NPS</button>' : ""}
+          ${(dados.npsLista ?? []).length > 1 || nps?.encerrado ? `<button type="button" class="copiar" data-acao="canal" data-canal="nps">${(dados.npsLista ?? []).length > 1 ? `Os ${(dados.npsLista ?? []).length} ciclos do NPS` : "Ver no NPS"}</button>` : ""}
           ${conta?.url ? `<a class="tag marca" data-acao="abrir" data-url="${CW.escapar(conta.url)}" style="cursor:pointer">abrir a conta &rarr;</a>` : ""}
         </div>
-      </div>`;
+      </div>
+      ${blocoAcoesRapidas(dados)}`;
   }
 
   /** Quem ligou este número à ficha — e o "não é este" para desfazer. Numa busca manual, o "É este" do número da conversa. */

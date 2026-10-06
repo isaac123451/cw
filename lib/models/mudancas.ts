@@ -285,6 +285,27 @@ export const MUDANCAS: Mudanca[] = [
     onde: "Extensão → Cliente → Caso",
   },
 
+  {
+    id: "ext-nps-no-cliente",
+    dia: "2026-10-06",
+    tipo: "melhoria",
+    frente: "extensao",
+    titulo: "O ciclo do NPS direto na conversa",
+    texto:
+      "Quem chega pelo NPS, sem reclamação, via só \"o ciclo do NPS está na aba NPS\" e um botão para ir buscá-lo — justamente na conversa sobre o NPS. Agora o ciclo aberto aparece ali: nota, prazo, etapa, tentativa e pós-contato, além do Perguntar. Com mais de um ciclo, um botão leva aos outros.",
+    onde: "Extensão → Cliente (contato do NPS)",
+  },
+  {
+    id: "ext-nps-compacto",
+    dia: "2026-10-06",
+    tipo: "melhoria",
+    frente: "extensao",
+    titulo: "Tentativa e pós-contato do NPS atrás de dois botões",
+    texto:
+      "\"Tentei contato\" e \"Depois do contato\" abrem cada um o seu formulário, um por vez — eram dois cartões abertos com um parágrafo de regra cada. A regra ficou numa linha dentro do que abre (\"três tentativas em 7 dias autorizam encerrar… esta é a 2ª\"). A etapa perdeu a caixa \"início do ciclo\" e o avançar ficou destacado.",
+    onde: "Extensão → NPS",
+  },
+
   /* ---------------- extensão: popup e opções ---------------- */
   {
     id: "popup-abria-rolado",

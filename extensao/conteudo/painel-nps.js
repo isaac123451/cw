@@ -240,7 +240,7 @@
   function passosDoNps(nps) {
 
     if (nps.encerrado) {
-      return '    <div class="etapas"><span class="passo vazio">ciclo encerrado — reabrir é pela tela do NPS</span></div>';
+      return '    <p class="sub" style="margin-top:8px">Ciclo encerrado — reabrir é pela tela do NPS.</p>';
     }
 
     const fluxo = escadaDoNps();
@@ -254,12 +254,13 @@
 
     return [
       '    <div class="etapas">',
+      /* Sem caixa tracejada nas pontas (out/2026): o vizinho ocupa o lugar. */
       antes
         ? `      <button class="passo" data-acao="nps-mover" data-id="${CW.escapar(nps.id)}" data-direcao="voltar">&larr; ${CW.escapar(antes)}</button>`
-        : '      <span class="passo vazio">início do ciclo</span>',
+        : "",
       depois
-        ? `      <button class="passo" data-acao="nps-mover" data-id="${CW.escapar(nps.id)}" data-direcao="avancar">${CW.escapar(depois)} &rarr;</button>`
-        : '      <span class="passo vazio">encerrar é pela tela</span>',
+        ? `      <button class="passo avancar" data-acao="nps-mover" data-id="${CW.escapar(nps.id)}" data-direcao="avancar">${CW.escapar(depois)} &rarr;</button>`
+        : '      <span class="sub" style="flex:1">Encerrar é pela tela do NPS, com o checklist.</span>',
       '    </div>',
     ].join("");
   }
@@ -382,12 +383,26 @@
       return partes.filter(Boolean).join("");
     }
 
+    /*
+      Tentativa e pós-contato atrás de dois botões (out/2026): eram dois
+      cartões abertos, cada um com um parágrafo de regra, em todo cliente
+      do NPS. A regra continua dita — numa linha, dentro do que abre.
+    */
+    partes.push(
+      '  <div data-grupo-alternavel>',
+      '  <div class="grade-acoes" style="margin-top:7px">',
+      nps.encerrado
+        ? ""
+        : `    <button class="acao-chip" type="button" data-acao="alternar-painel" data-qual="tentativa" aria-expanded="false" title="Liguei ou mandei mensagem e não tive resposta">${CW.icone("relogio", 14)}<span>Tentei contato</span></button>`,
+      `    <button class="acao-chip" type="button" data-acao="alternar-painel" data-qual="pos" aria-expanded="false" title="Falei com o cliente: como ele ficou">${CW.icone("ok", 14)}<span>${nps.posContatoEm ? "Atualizar o pós-contato" : "Depois do contato"}</span></button>`,
+      '  </div>'
+    );
+
     /* ---- pós-contato ---- */
 
     partes.push(
-      '  <div class="cartao" style="margin-top:7px">',
-      '    <div class="rotulo" style="margin-bottom:5px">Depois do contato</div>',
-      `    <p class="sub" style="margin-bottom:9px">A nota ${nps.nota} é de <strong>antes</strong> e não muda — é ela que compõe o NPS. A régua abaixo mede outra coisa: se o contato moveu a agulha.</p>`,
+      '  <div class="cartao painel-acao" data-painel-de="pos" hidden>',
+      `    <p class="sub" style="margin-bottom:8px">A nota ${nps.nota} é de antes e não muda; a régua mede se o contato moveu a agulha.</p>`,
       '    <div class="humores">',
       ...HUMORES.map(
         (h) => `
@@ -418,9 +433,8 @@
 
     if (!nps.encerrado) {
       partes.push(
-        '  <div class="cartao" style="margin-top:7px">',
-        '    <div class="rotulo" style="margin-bottom:5px">Tentou contato?</div>',
-        '    <p class="sub" style="margin-bottom:9px">A tentativa conta na hora para a regra das três em 7 dias (que autoriza encerrar por falta de retorno). Sem resposta em 2 horas, vira sem retorno sozinha.</p>',
+        '  <div class="cartao painel-acao" data-painel-de="tentativa" hidden>',
+        `    <p class="sub" style="margin-bottom:2px">Três tentativas em 7 dias autorizam encerrar por falta de retorno — esta é a ${nps.tentativas + 1}ª.</p>`,
         '    <select class="campo" id="nps-canal">',
         ...P.CANAIS.map(
           (c) => `      <option value="${c}">${c}</option>`
@@ -436,7 +450,7 @@
       );
     }
 
-    partes.push('</div>');
+    partes.push('  </div>', '</div>');
 
     return partes.filter(Boolean).join("");
   };

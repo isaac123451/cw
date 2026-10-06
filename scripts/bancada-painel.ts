@@ -188,11 +188,14 @@ ${fontes}
     erro: "A bancada não grava: esta é uma cópia do painel para conferência, sem escrita na base.",
   };
 
+  /* ?cliente=nps: o contato é alguém com ciclo de NPS aberto. */
+  const doNps = new URLSearchParams(location.search).get("cliente") === "nps" && capturas.contatoNps;
+
   CW.enviar = async (mensagem) => {
     const t = mensagem?.tipo;
     if (t === "config") return { ok: true, dados: capturas.config };
     if (t === "sessao") return { ok: true, dados: capturas.sessao };
-    if (t === "contexto") return { ok: true, dados: capturas.contexto };
+    if (t === "contexto") return { ok: true, dados: doNps ? capturas.contextoNps : capturas.contexto };
     if (t === "resumo") return { ok: true, dados: capturas.resumo };
     if (t === "fila") return { ok: true, dados: capturas.fila };
     if (t === "agenda") return { ok: true, dados: capturas.agenda };
@@ -227,12 +230,11 @@ ${fontes}
     CW.painel.montar();
     linhas.push({ canal: "montagem", ok: Boolean(raiz()), nota: raiz() ? "gaveta e gatilho no shadow" : "não montou" });
 
-    CW.painel.definirContexto({
-      canalDaPagina: "WhatsApp",
-      telefone: capturas.telefone,
-      nome: capturas.nome,
-      rotulo: capturas.nome || capturas.telefone,
-    });
+    CW.painel.definirContexto(
+      doNps
+        ? { canalDaPagina: "WhatsApp", telefone: capturas.contatoNps.telefone, email: capturas.contatoNps.email, nome: capturas.contatoNps.nome, rotulo: capturas.contatoNps.nome }
+        : { canalDaPagina: "WhatsApp", telefone: capturas.telefone, nome: capturas.nome, rotulo: capturas.nome || capturas.telefone }
+    );
 
     CW.painel.abrir();
     await espera(900);
@@ -349,6 +351,22 @@ async function main() {
   capturas.nome = nome;
   capturas.contexto = telefone ? await pegar("/api/extensao/contexto", { telefone }) : {};
   capturas.nps = {};
+  /*
+    Um cliente com ciclo de NPS aberto, para ?cliente=nps: o bloco do NPS no
+    contato (régua de humor, tentativas) só aparece para quem tem um.
+  */
+  const comNps = await prisma.npsResponse.findFirst({
+    where: { closedAt: null, score: { lte: 6 }, OR: [{ phone: { not: null } }, { email: { not: null } }] },
+    orderBy: { respondedAt: "desc" },
+    select: { phone: true, email: true, customerName: true, customer: true },
+  });
+  capturas.contatoNps = comNps
+    ? { telefone: comNps.phone ?? "", email: comNps.email ?? "", nome: comNps.customerName ?? comNps.customer }
+    : null;
+  capturas.contextoNps = comNps
+    ? await pegar("/api/extensao/contexto", { telefone: comNps.phone ?? undefined, email: comNps.email ?? undefined, nome: comNps.customerName ?? undefined })
+    : {};
+
   /* A aba Caso: o formulário com as opções reais (GET, só leitura). */
   capturas.edicao = primeiro?.protocolo ? await pegar("/api/extensao/editar-caso", { protocolo: primeiro.protocolo }) : {};
 
