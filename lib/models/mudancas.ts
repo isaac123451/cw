@@ -561,6 +561,16 @@ export const MUDANCAS: Mudanca[] = [
     href: "/processos",
   },
   {
+    id: "prazos-estourados-de-onde",
+    dia: "2026-10-06",
+    tipo: "melhoria",
+    frente: "plataforma",
+    titulo: "\"201 prazos estourados\" diz de onde vêm",
+    texto:
+      "O aviso do Meu dia somava NPS e casos num número só, e logo abaixo o plano falava em 108 do NPS e 19 do Reclame Aqui — ninguém sabia o que somava com o quê. Agora diz \"188 do NPS e 13 casos\", e explica que os atrasados vão na frente do plano na cota de cada dia (antes prometia que todos estavam na frente).",
+    href: "/meu-dia",
+  },
+  {
     id: "jornada-sem-nota-nao-e-detrator",
     dia: "2026-10-06",
     tipo: "correcao",

@@ -176,6 +176,18 @@ export function avisosDeAbertura(entrada: EntradaDaAbertura): AvisoDeAbertura[] 
 
   const total = prazos.estourados + prazos.vencemHoje;
 
+  /*
+    De onde vem o número (out/2026). "201 prazos estourados" sozinho não
+    batia com o plano logo abaixo (108 do NPS, 19 do Reclame Aqui) e
+    ninguém sabia o que somava com o quê.
+  */
+  const casosEstourados = prazosDeHoje(abertos, regras, [], expediente, agora).estourados;
+  const npsEstourados = prazos.estourados - casosEstourados;
+  const deOnde = [
+    npsEstourados > 0 ? `${npsEstourados} do NPS` : "",
+    casosEstourados > 0 ? `${casosEstourados} ${pluralDe(casosEstourados, "caso", "casos")}` : "",
+  ].filter(Boolean).join(" e ");
+
   if (total > 0) {
     avisos.push({
       chave: "prazo",
@@ -186,9 +198,9 @@ export function avisosDeAbertura(entrada: EntradaDaAbertura): AvisoDeAbertura[] 
           : `${prazos.vencemHoje} ${pluralDe(prazos.vencemHoje, "prazo vence", "prazos vencem")} hoje`,
       detalhe:
         prazos.estourados > 0 && prazos.vencemHoje > 0
-          ? `e mais ${prazos.vencemHoje} ${pluralDe(prazos.vencemHoje, "vence", "vencem")} ainda hoje`
+          ? `${deOnde} · e mais ${prazos.vencemHoje} ${pluralDe(prazos.vencemHoje, "vence", "vencem")} ainda hoje`
           : prazos.estourados > 0
-            ? "o relógio do documento já passou nesses"
+            ? `${deOnde} · o relógio do documento já passou nesses`
             : "dá tempo, se começar por eles",
       quantidade: total,
       href: "/meu-dia",

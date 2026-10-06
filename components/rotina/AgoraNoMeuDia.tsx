@@ -158,7 +158,7 @@ export default function AgoraNoMeuDia() {
                   ) : null}
                   <div className="mt-1 flex flex-wrap gap-2">
                     {a.href === "/meu-dia" ? (
-                      <span className="text-xs text-zinc-500">estão na frente no plano abaixo</span>
+                      <span className="text-xs text-zinc-500">vão na frente no plano abaixo, na cota de cada dia</span>
                     ) : (
                       <Destino href={a.href} className="flex items-center gap-1 text-xs font-medium text-violet-700 hover:underline">
                         {a.chave === "whatsapp" ? "Abrir o WhatsApp" : "Resolver"} <ArrowRight size={12} />
