@@ -39,6 +39,8 @@ import ToastHost from "@/components/shared/ToastHost";
 
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
+import { headers } from "next/headers";
+
 import { getSessionViva } from "@/lib/auth/session";
 import SessionGuard from "@/components/auth/SessionGuard";
 import { hasDatabase } from "@/lib/prisma";
@@ -90,6 +92,36 @@ export default async function RootLayout({
    * quem não entrou: o caminho de volta ao login.
    */
   const session = await getSessionViva();
+
+  /*
+    Login e cadastro, sem ninguém entrar (out/2026): só tema, sessão e
+    avisos. Os ~25 provedores de dados abaixo faziam oito leituras ao
+    servidor por carga da tela de login — todas recusadas por falta de
+    sessão. Rota protegida com sessão órfã continua com a árvore inteira:
+    é ela que mostra o caminho de volta ao login sem quebrar a tela.
+  */
+  const publica = (await headers()).get("x-cw-publica") === "1";
+
+  if (publica && !session) {
+    return (
+      <html lang="pt-BR" className={`${GeistSans.variable} ${GeistMono.variable}`} suppressHydrationWarning>
+        <head>
+          <script dangerouslySetInnerHTML={{ __html: TEMA_ANTES_DA_PINTURA }} />
+        </head>
+        <body>
+          <ThemeProvider>
+            <SessionProvider value={null}>
+              <ToastProvider>
+                {children}
+                <ToastHost />
+              </ToastProvider>
+            </SessionProvider>
+          </ThemeProvider>
+          <SpeedInsights />
+        </body>
+      </html>
+    );
+  }
 
   return (
     /*

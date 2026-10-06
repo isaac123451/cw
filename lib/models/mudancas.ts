@@ -410,6 +410,16 @@ export const MUDANCAS: Mudanca[] = [
       "Mais de 440 textos em 132 telas, avisos, relatórios e respostas do assistente usavam o plural com parênteses — \"2 caso(s)\", \"1 detrator(es)\", \"3 dia(s)\". Agora cada um usa o número que está ao lado: \"1 caso\", \"2 casos\".",
   },
   {
+    id: "login-mais-leve",
+    dia: "2026-10-06",
+    tipo: "melhoria",
+    frente: "plataforma",
+    titulo: "A tela de entrar ficou leve",
+    texto:
+      "Sem ninguém logado, a tela de login carregava a plataforma inteira por trás e disparava oito leituras ao servidor a cada abertura — reclamações, cadastros, filtros, preferências —, todas recusadas por falta de sessão. Agora login e cadastro abrem só com o tema e os avisos; o resto carrega depois de entrar.",
+    href: "/login",
+  },
+  {
     id: "falta-um",
     dia: "2026-10-06",
     tipo: "correcao",

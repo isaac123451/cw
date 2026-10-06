@@ -54,8 +54,20 @@ export async function middleware(request: NextRequest) {
       pathname === path || pathname.startsWith(`${path}/`)
   );
 
+  /*
+    O layout raiz precisa saber se a rota é pública (out/2026): nela, sem
+    sessão, ele não monta os provedores de dados — a tela de login
+    disparava oito leituras (casos, workspace, filtros, preferências…) a
+    cada carga, sem ter o que receber. O cabeçalho é sempre reescrito
+    aqui: o que o navegador mandar com esse nome não chega ao servidor.
+  */
+  const cabecalhos = new Headers(request.headers);
+  cabecalhos.delete("x-cw-publica");
+  if (isPublic) cabecalhos.set("x-cw-publica", "1");
+  const seguir = () => NextResponse.next({ request: { headers: cabecalhos } });
+
   if (!authRequired()) {
-    return NextResponse.next();
+    return seguir();
   }
 
   const token = request.cookies.get(SESSION_COOKIE)?.value;
@@ -74,7 +86,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  return NextResponse.next();
+  return seguir();
 }
 
 export const config = {
