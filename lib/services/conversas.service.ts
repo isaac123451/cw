@@ -186,16 +186,17 @@ export async function conversasDoRegistro(prisma: Db, alvo: { caseId?: string | 
       telefone: true,
       resumo: true,
       _count: { select: { mensagens: true } },
-      mensagens: { orderBy: [{ em: "desc" }, { criadoEm: "desc" }], take: 30, select: { de: true, texto: true, em: true } },
+      mensagens: { orderBy: [{ em: { sort: "desc", nulls: "last" } }, { criadoEm: "desc" }], take: 30, select: { de: true, texto: true, em: true } },
     },
   });
   return linhas.map((c) => {
-    const ultimaDoCliente = c.mensagens.find((m) => m.de === "cliente");
+    /* O aviso do WhatsApp ("Aguardando mensagem…") não é fala do cliente, e o subtítulo não é nome (out/2026). */
+    const ultimaDoCliente = c.mensagens.find((m) => ladoDe(m.de, m.texto) === "cliente");
     return {
       id: c.id,
-      contatoNome: c.contatoNome || (c.telefone ? `+${c.telefone}` : "Contato"),
+      contatoNome: nomeDeContatoValido(c.contatoNome) || (c.telefone ? telefoneLegivel(c.telefone) : "Contato"),
       mensagens: c._count.mensagens,
-      ultimaEm: c.mensagens[0]?.em?.toISOString(),
+      ultimaEm: c.mensagens.find((m) => !ehAvisoDoWhatsApp(m.texto))?.em?.toISOString(),
       ultimaDoCliente: ultimaDoCliente ? { texto: ultimaDoCliente.texto.slice(0, 280), em: ultimaDoCliente.em?.toISOString() } : undefined,
       resumo: c.resumo ?? undefined,
     };
@@ -223,10 +224,22 @@ export async function conversasParaODossie(prisma: Db, alvo: { caseId?: string |
       resumo: true,
       guardadaPor: true,
       _count: { select: { mensagens: true } },
-      mensagens: { orderBy: [{ em: "desc" }, { criadoEm: "desc" }], take: 120, select: { de: true, texto: true, em: true } },
+      mensagens: { orderBy: [{ em: { sort: "desc", nulls: "last" } }, { criadoEm: "desc" }], take: 120, select: { de: true, texto: true, em: true } },
     },
   });
-  return linhas.map((c) => ({ ...c, mensagens: [...c.mensagens].reverse() }));
+  /*
+    O dossiê sustenta um pedido diante de terceiro: o aviso de criptografia
+    e o "Aguardando mensagem…" não entram como fala, e o contato vai com o
+    nome de verdade, não com o subtítulo do WhatsApp (out/2026).
+  */
+  return linhas.map((c) => ({
+    ...c,
+    contatoNome: nomeDeContatoValido(c.contatoNome) || "Contato",
+    mensagens: [...c.mensagens]
+      .filter((m) => !ehAvisoDoWhatsApp(m.texto))
+      .map((m) => ({ ...m, de: ladoDe(m.de, m.texto) }))
+      .reverse(),
+  }));
 }
 
 /* ============================================================

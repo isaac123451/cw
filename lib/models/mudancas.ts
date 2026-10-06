@@ -530,6 +530,16 @@ export const MUDANCAS: Mudanca[] = [
     href: "/conversas",
   },
   {
+    id: "conversas-na-ficha-e-no-dossie",
+    dia: "2026-10-06",
+    tipo: "correcao",
+    frente: "plataforma",
+    titulo: "Conversas certas também na ficha do caso e no dossiê",
+    texto:
+      "A lista de Conversas já tinha o nome e a última fala corrigidos, mas o bloco \"Conversas do WhatsApp\" da ficha do caso lia por outro caminho: mostrava \"clique para mostrar os dados do contato\" e, como última mensagem da cliente, \"Aguardando mensagem. Essa ação pode levar alguns instantes\". O dossiê, que sustenta um pedido diante de terceiro, levava junto o aviso de criptografia como fala. Agora os dois usam o nome de verdade (ou o telefone formatado) e deixam os avisos do WhatsApp de fora.",
+    href: "/conversas",
+  },
+  {
     id: "exportar-metricas-voltou",
     dia: "2026-10-06",
     tipo: "correcao",
