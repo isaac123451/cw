@@ -197,7 +197,14 @@ ${fontes}
     const t = mensagem?.tipo;
     if (t === "config") return { ok: true, dados: capturas.config };
     if (t === "sessao") return { ok: true, dados: capturas.sessao };
-    if (t === "contexto") return { ok: true, dados: novo ? { cliente: null, casos: [], usuario: capturas.contexto.usuario } : doNps ? capturas.contextoNps : capturas.contexto };
+    if (t === "contexto") {
+      const base = novo ? { cliente: null, casos: [], usuario: capturas.contexto.usuario } : doNps ? capturas.contextoNps : capturas.contexto;
+      /* A aba RA ou Redes pede só o seu canal, e o servidor filtra (byChannel) — a captura é de "todos". */
+      const canal = mensagem?.consulta?.canal;
+      if (canal !== "reclame-aqui" && canal !== "social") return { ok: true, dados: base };
+      const doCanal = (c) => (String(c?.canal ?? "") === "Reclame Aqui") === (canal === "reclame-aqui");
+      return { ok: true, dados: { ...base, casos: (base?.casos ?? []).filter(doCanal) } };
+    }
     if (t === "resumo") return { ok: true, dados: capturas.resumo };
     if (t === "fila") return { ok: true, dados: capturas.fila };
     if (t === "agenda") return { ok: true, dados: capturas.agenda };
