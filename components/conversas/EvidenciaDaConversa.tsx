@@ -92,7 +92,7 @@ export default function EvidenciaDaConversa({
   return (
     <section aria-label="Evidência" className="space-y-2 border-b border-zinc-100 px-5 py-3">
       <div className="flex flex-wrap items-center gap-1.5">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">O que esta conversa prova em {caso.protocolo}</p>
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">O que esta conversa prova em <span className="font-mono normal-case tracking-normal">{caso.protocolo}</span></p>
         <PorQue chave={caso.frente === "Reclame Aqui" ? "ra.primeiro-contato" : "redes.primeiro-contato"} />
       </div>
       <ul className="space-y-1.5 text-sm">

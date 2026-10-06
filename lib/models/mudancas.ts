@@ -650,6 +650,16 @@ export const MUDANCAS: Mudanca[] = [
     href: "/reclame-aqui/triagem",
   },
   {
+    id: "ra-protocolo-como-e",
+    dia: "2026-10-06",
+    tipo: "correcao",
+    frente: "reclame-aqui",
+    titulo: "Protocolo com a grafia do portal em toda tela",
+    texto:
+      "O protocolo do Reclame Aqui distingue maiúscula de minúscula (RA-7nIYAcGmxS9RRgYD). Em \"Pedir avaliação\" ele aparecia todo em maiúsculas — RA-MPDZCGFW-TNKWAZI —, diferente das outras telas e do portal, e assim também no título da prova de uma conversa. Agora aparece como é.",
+    href: "/reclame-aqui/avaliacoes",
+  },
+  {
     id: "ra-idade-no-plural",
     dia: "2026-10-06",
     tipo: "correcao",
