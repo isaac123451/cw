@@ -289,6 +289,11 @@ ${fontes}
      * é o que a captura de tela sem navegador (Chrome headless) precisa.
      */
     const vista = new URLSearchParams(location.search).get("vista");
+    /* ?menu=1: o menu do cabeçalho aberto, para conferir o visual. */
+    if (new URLSearchParams(location.search).get("menu")) {
+      setTimeout(() => raiz()?.querySelector('[data-acao="menu"]')?.click(), 600);
+    }
+
     /* ?aba=dossie (responder, historico, caso): a aba do contato, depois da vista. */
     const aba = new URLSearchParams(location.search).get("aba");
     if (aba) {
