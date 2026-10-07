@@ -36,6 +36,7 @@ import { notaExata } from "@/lib/models/indiceRA";
 import PorCiclo from "@/components/reclame-aqui/analytics/PorCiclo";
 
 import { useScopedCases } from "@/lib/context/useScopedCases";
+import { isOpen } from "@/lib/services/case.service";
 
 import {
   CustomRange,
@@ -251,7 +252,7 @@ export default function ReclameAquiAnalyticsPage() {
   );
 
   const backlog = useMemo(
-    () => getBacklog(current),
+    () => getBacklog(current, isOpen),
     [current]
   );
 
@@ -521,7 +522,7 @@ export default function ReclameAquiAnalyticsPage() {
 
           <SurfaceCard
             title="Backlog crítico"
-            description="Alertas para leitura rápida das urgências operacionais."
+            description="Do período escolhido, só as reclamações ainda abertas — o que pede ação."
           >
 
             <ul className="space-y-2.5">

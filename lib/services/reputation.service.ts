@@ -1548,16 +1548,23 @@ export interface BacklogAlert {
   tone: "danger" | "warning" | "info";
 }
 
+/**
+ * `aberta` vem de quem chama (`isOpen`, em case.service — que importa
+ * daqui, e importar de volta faria um ciclo). As duas primeiras contas são
+ * urgência operacional: reclamação fechada sem resposta não pede ação, e
+ * contada aqui fazia o Analytics discordar do Dashboard (07/10/2026).
+ */
 export function getBacklog(
-  cases: Case[]
+  cases: Case[],
+  aberta: (item: Case) => boolean = () => true
 ): BacklogAlert[] {
 
   const unanswered = cases.filter(
-    (item) => !respondida(item)
+    (item) => aberta(item) && !respondida(item)
   ).length;
 
   const stale = cases.filter((item) => {
-    if (respondida(item))
+    if (!aberta(item) || respondida(item))
       return false;
 
     return item.createdAt < shift(hojeNaOperacao(), -7);

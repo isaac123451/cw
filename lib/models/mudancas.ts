@@ -63,6 +63,16 @@ export const MUDANCAS: Mudanca[] = [
     href: "/meu-dia",
   },
   {
+    id: "analytics-backlog-so-abertas",
+    dia: "2026-10-07",
+    tipo: "correcao",
+    frente: "reclame-aqui",
+    titulo: "O backlog crítico do Analytics conta só o que ainda pede ação",
+    texto:
+      "O bloco \"Backlog crítico\" contava como \"sem resposta\" e \"com mais de 7 dias\" também reclamação já fechada, e dizia 11 onde o Dashboard dizia 10. Agora, no período escolhido, conta só as abertas — e a descrição do bloco diz isso.",
+    href: "/reclame-aqui/analytics",
+  },
+  {
     id: "agenda-prazos-iguais-ao-menu",
     dia: "2026-10-07",
     tipo: "correcao",
