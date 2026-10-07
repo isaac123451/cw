@@ -278,7 +278,7 @@ export const MUDANCAS: Mudanca[] = [
     frente: "extensao",
     titulo: "\"O que move a nota\" no Painel da extensão",
     texto:
-      "Logo abaixo da nota do Reclame Aqui, as ações que mais sobem a nota agora, com o número ao lado: \"Responder as 12 sem resposta pública · 8,8 → 9,0\", \"Pedir avaliação às 7 da vez · 8,8 → 8,9\". Um clique abre a tela certa na plataforma. É a mesma conta do Meu dia e do popup.",
+      "Logo abaixo da nota do Reclame Aqui, as ações que mais sobem a nota agora, com o número ao lado: \"Responder às 12 sem resposta pública · 8,8 → 9,0\", \"Pedir avaliação às 7 da vez · 8,8 → 8,9\". Um clique abre a tela certa na plataforma. É a mesma conta do Meu dia e do popup.",
     onde: "Extensão → Painel",
   },
   {
@@ -718,6 +718,16 @@ export const MUDANCAS: Mudanca[] = [
     texto:
       "O ciclo de vida desenhava todos os clientes de uma vez — só \"Primeiro contato\" passava de 800 cartões, quase 15 mil elementos na tela, e arrastar um cliente engasgava. Cada etapa agora mostra 30 e um \"Mostrar mais 30 · faltam 808\" embaixo; o número no topo da coluna continua sendo o total, e o cliente aberto ao lado fica à vista mesmo além do lote. A tela caiu para menos de 3 mil elementos, e a separação por etapa passou a ser feita numa passada só.",
     href: "/jornada",
+  },
+  {
+    id: "texto-crase-e-busca-do-popup",
+    dia: "2026-10-07",
+    tipo: "correcao",
+    frente: "extensao",
+    titulo: "\"Responder às 12\", com crase, e a busca do popup sem texto cortado",
+    texto:
+      "A alavanca do dia dizia \"Responder as 12 sem resposta pública\" — responder pede \"a\", e \"a + as\" é \"às\". Corrigido ali (popup, Meu dia e painel), na dica do assistente e no passo 3 da Calculadora. E o campo de busca do popup cortava o próprio texto de ajuda (\"…nome ou protoco\"); agora diz só \"Telefone, nome ou protocolo\", como no painel.",
+    onde: "Extensão → popup; Meu dia; Calculadora",
   },
   {
     id: "vazio-falso-agenda-e-cadastros",

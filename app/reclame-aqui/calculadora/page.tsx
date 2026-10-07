@@ -606,7 +606,7 @@ export default function CalculadoraPage() {
 
                   <>
                     <SurfaceCard
-                      title="3. Responder as pendentes"
+                      title="3. Responder às pendentes"
                       description="Reclamações que já estão na base sem resposta pública. Responder todas leva o índice de resposta a 100%."
                     >
 

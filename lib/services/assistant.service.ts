@@ -299,7 +299,7 @@ const skills: Skill[] = [
           `A nota atual é ${ptBR(resumo.raScore)} de 10, faixa "${band.label}", apurada sobre ${resumo.received} reclamações da janela oficial de 6 meses.`,
           `Índice de resposta em ${ptBR(resumo.responseIndex)}% (${resumo.answered} respondidas, ${resumo.unanswered} sem resposta), índice de solução em ${ptBR(resumo.solutionIndex)}% e intenção de retorno em ${ptBR(resumo.wouldReturnIndex)}%.`,
           resumo.unanswered > 0
-            ? `Responder as ${resumo.unanswered} reclamações em aberto é a alavanca mais rápida: resposta tem peso 20% e é o único indicador que depende só de nós.`
+            ? `Responder às ${resumo.unanswered} reclamações em aberto é a alavanca mais rápida: resposta tem peso 20% e é o único indicador que depende só de nós.`
             : "Todas as reclamações da janela foram respondidas — o ganho agora vem de solução e avaliação.",
         ],
         links: [

@@ -85,7 +85,7 @@ export function oQueMoveANota(casos: Case[], agora = new Date()): AcaoQueMoveANo
     acoes.push({
       chave: "responder",
       quantidade: semResposta,
-      titulo: `Responder as ${semResposta} sem resposta pública`,
+      titulo: `Responder às ${semResposta} sem resposta pública`,
       efeito: `índice de resposta ${um(atual.responseIndex)}% → ${um(depois.responseIndex)}%`,
       notaAntes: atual.raScore,
       notaDepois: depois.raScore,

@@ -407,7 +407,7 @@ async function carregar() {
     <div class="bloco">
       <div class="busca">
         <input id="termo" type="text"
-               placeholder="Buscar cliente: telefone, nome ou protocolo"
+               placeholder="Telefone, nome ou protocolo"
                spellcheck="false" aria-label="Buscar cliente" />
         <button id="buscar" type="button">Buscar</button>
       </div>
