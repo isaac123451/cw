@@ -254,7 +254,7 @@
     const botao = (alvo, icone, dica, tecla) =>
       alvo
         ? `<button class="icone-chip" data-acao="ver" data-navegar="${tecla}" data-protocolo="${CW.escapar(alvo)}" title="${dica} (${tecla === "anterior" ? "←" : "→"})">${CW.icone(icone, 15)}</button>`
-        : `<button class="icone-chip" disabled>${CW.icone(icone, 15)}</button>`;
+        : `<button class="icone-chip" disabled title="${tecla === "anterior" ? "Este é o primeiro da lista" : "Este é o último da lista"}" aria-label="${dica}: não há">${CW.icone(icone, 15)}</button>`;
     return [
       '<span class="navegar">',
       botao(antes, "voltar", "Caso anterior", "anterior"),

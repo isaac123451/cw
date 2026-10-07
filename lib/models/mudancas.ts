@@ -53,6 +53,16 @@ export const REVISAO = {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- extensão: o painel ---------------- */
   {
+    id: "ext-navegacao-explica-a-ponta",
+    dia: "2026-10-06",
+    tipo: "melhoria",
+    frente: "extensao",
+    titulo: "\"‹ 3 de 12 ›\" diz quando chegou na ponta",
+    texto:
+      "No primeiro ou no último caso da lista, a seta apagada não dizia nada — nem ao passar o mouse, nem ao leitor de tela. Agora diz \"Este é o primeiro da lista\" ou \"Este é o último da lista\".",
+    onde: "Extensão → caso aberto a partir de uma lista",
+  },
+  {
     id: "ext-tentativas-pelo-tipo",
     dia: "2026-10-06",
     tipo: "correcao",
