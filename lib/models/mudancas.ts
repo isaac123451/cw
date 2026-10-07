@@ -700,6 +700,16 @@ export const MUDANCAS: Mudanca[] = [
     href: "/clientes",
   },
   {
+    id: "jornada-quadro-em-lotes",
+    dia: "2026-10-07",
+    tipo: "melhoria",
+    frente: "plataforma",
+    titulo: "Quadro da Jornada desenha 30 clientes por etapa, e não mil",
+    texto:
+      "O ciclo de vida desenhava todos os clientes de uma vez — só \"Primeiro contato\" passava de 800 cartões, quase 15 mil elementos na tela, e arrastar um cliente engasgava. Cada etapa agora mostra 30 e um \"Mostrar mais 30 · faltam 808\" embaixo; o número no topo da coluna continua sendo o total, e o cliente aberto ao lado fica à vista mesmo além do lote. A tela caiu para menos de 3 mil elementos, e a separação por etapa passou a ser feita numa passada só.",
+    href: "/jornada",
+  },
+  {
     id: "respostas-nome-e-seu-nome",
     dia: "2026-10-07",
     tipo: "melhoria",

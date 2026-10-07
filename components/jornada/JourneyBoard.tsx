@@ -12,7 +12,16 @@ import LinhasCarregando from "@/components/shared/LinhasCarregando";
 import { FRENTES_DA_OPERACAO } from "@/lib/models/frentes";
 import IconeDaFrente from "@/components/shared/IconeDaFrente";
 import { JourneyStage } from "@/lib/models/journey";
-import { pluralDe } from "@/lib/plural";
+import { mostrarMais, pluralDe } from "@/lib/plural";
+
+/**
+ * Quantos cartões cada coluna desenha de saída.
+ *
+ * A base tem mil clientes, e "Primeiro contato" sozinho passava de 800:
+ * a tela desenhava todos, quase 15 mil elementos, e travava ao arrastar
+ * (out/2026). O contador da coluna continua dizendo o total.
+ */
+const LOTE = 30;
 import { ptBR } from "@/lib/services/reputation.service";
 
 interface Props {
@@ -60,8 +69,19 @@ export default function JourneyBoard({
 }: Props) {
 
   const [over, setOver] = useState<string | null>(null);
+  const [limite, setLimite] = useState<Record<string, number>>({});
 
   const active = stages.filter((item) => item.active);
+
+  /* Uma passada só: antes cada coluna percorria a base inteira. */
+  const porEtapa = new Map<string, JornadaNasFrentes[]>();
+  for (const journey of journeys) {
+    const id = stageOf(journey, stages, placement)?.id;
+    if (!id) continue;
+    const lista = porEtapa.get(id);
+    if (lista) lista.push(journey);
+    else porEtapa.set(id, [journey]);
+  }
 
   return (
     /* Etapas em fileiras, como o quadro do Reclame Aqui: nada de rolar de lado. */
@@ -71,11 +91,15 @@ export default function JourneyBoard({
 
         {active.map((stage) => {
 
-          const items = journeys.filter(
-            (journey) =>
-              stageOf(journey, stages, placement)?.id ===
-              stage.id
-          );
+          const items = porEtapa.get(stage.id) ?? [];
+          const quantos = limite[stage.id] ?? LOTE;
+          const visiveis = items.slice(0, quantos);
+
+          /* O cliente aberto ao lado fica à vista, mesmo além do lote. */
+          const escolhido = selected ? items.find((j) => j.company === selected) : undefined;
+          if (escolhido && !visiveis.includes(escolhido)) visiveis.push(escolhido);
+
+          const restantes = items.length - quantos;
 
           const isOver = over === stage.id;
 
@@ -151,7 +175,7 @@ export default function JourneyBoard({
 
                 ) : (
 
-                  items.map((journey) => (
+                  visiveis.map((journey) => (
 
                     <button
                       key={journey.company}
@@ -229,6 +253,16 @@ export default function JourneyBoard({
 
                   ))
 
+                )}
+
+                {restantes > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setLimite((atual) => ({ ...atual, [stage.id]: quantos + LOTE }))}
+                    className="w-full rounded-xl border border-dashed border-zinc-300 py-2 text-xs font-medium text-zinc-600 hover:border-violet-300 hover:text-violet-700"
+                  >
+                    {mostrarMais(LOTE, restantes)}
+                  </button>
                 )}
 
               </div>
