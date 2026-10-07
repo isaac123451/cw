@@ -123,6 +123,8 @@ export default function WootricImport({
       vivo = false;
     };
 
+    /* Uma vez ao abrir a tela (a ref acima garante): `importar` de fora de propósito. */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function importar(

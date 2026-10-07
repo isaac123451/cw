@@ -879,6 +879,13 @@ export function CaseProvider({
 
       carregadoEm,
     }),
+    /*
+      As funções (createCase, updateCase, moveCase…) ficam fora de propósito:
+      são recriadas a cada render e só leem `cases`, `hasDatabase` e refs,
+      que já estão aqui — incluí-las refaria o valor do contexto a cada
+      render e redesenharia todas as telas que o usam (conferido em out/2026).
+    */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       cases,
       filteredCases,
