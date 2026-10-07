@@ -24,8 +24,7 @@ import {
   inRange,
 } from "@/lib/services/reputation.service";
 
-import { isOpen, isReclameAqui } from "@/lib/services/case.service";
-import { respondida } from "@/lib/models/case";
+import { isOpen, semRespostaPublica } from "@/lib/services/case.service";
 
 import { getPrisma } from "@/lib/prisma";
 import { conquistasDoDia, oQueMoveANota } from "@/lib/models/motivacaoDoDia";
@@ -391,7 +390,7 @@ export async function GET(request: Request) {
       abertos: casos.filter(isOpen).length,
       /* Aberta e sem resposta pública — a mesma conta do menu e do recorte "sem-resposta" da fila. */
       semResposta: casos.filter(
-        (item) => isOpen(item) && isReclameAqui(item) && !respondida(item)
+        semRespostaPublica
       ).length,
       replicas: casos.filter(
         (item) =>

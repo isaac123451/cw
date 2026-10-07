@@ -24,6 +24,7 @@ import {
   isReclameAqui,
   isSocial,
   naSituacao,
+  semRespostaPublica,
   seteDiasAtras,
 } from "@/lib/services/case.service";
 import { pluralDe } from "@/lib/plural";
@@ -346,10 +347,7 @@ export const CATALOGO: Medicao[] = [
 
         atual.total += 1;
 
-        if (
-          isReclameAqui(item) &&
-          !respondida(item)
-        ) {
+        if (semRespostaPublica(item)) {
           atual.semResposta += 1;
         }
 
@@ -471,10 +469,7 @@ export const CATALOGO: Medicao[] = [
 
           if (doNivel.length === 0) return "";
 
-          const semResposta = doNivel.filter(
-            (item) =>
-              !respondida(item)
-          ).length;
+          const semResposta = doNivel.filter(semRespostaPublica).length;
 
           return `${nivel}: ${doNivel.length} (${semResposta} sem resposta)`;
         })
@@ -591,10 +586,7 @@ export const CATALOGO: Medicao[] = [
       ).getTime();
 
       const paradas = cases
-        .filter(
-          (item) =>
-            !respondida(item)
-        )
+        .filter(semRespostaPublica)
         .sort((a, b) =>
           a.createdAt.localeCompare(b.createdAt)
         )
@@ -638,9 +630,7 @@ export const CATALOGO: Medicao[] = [
         return "nenhum caso marcado para retenção.";
       }
 
-      const semResposta = emRisco.filter(
-        (item) => !respondida(item)
-      ).length;
+      const semResposta = emRisco.filter(semRespostaPublica).length;
 
       return [
         `${emRisco.length} ${pluralDe(emRisco.length, "reclamação", "reclamações")} marcadas para retenção`,
@@ -675,7 +665,7 @@ export const CATALOGO: Medicao[] = [
 
         atual.total += 1;
 
-        if (!respondida(item)) {
+        if (semRespostaPublica(item)) {
           atual.semResposta += 1;
         }
 

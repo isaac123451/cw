@@ -12,9 +12,8 @@ import { getPrisma } from "@/lib/prisma";
 import {
   byChannel,
   isOpen,
-  isReclameAqui,
+  semRespostaPublica,
 } from "@/lib/services/case.service";
-import { respondida } from "@/lib/models/case";
 import { slaStatus } from "@/lib/services/sla.service";
 
 import {
@@ -120,7 +119,7 @@ export async function GET(request: Request) {
       tratativa", ainda sem resposta no portal, saía do número — e o painel
       dizia 5 enquanto o menu e o Meu dia diziam 12.
     */
-    "sem-resposta": (item) => isReclameAqui(item) && !respondida(item),
+    "sem-resposta": semRespostaPublica,
     replicas: (item) =>
       item.status === "Aguardando nossa réplica",
     risco: (item) => Boolean(item.churnRisk),

@@ -24,6 +24,7 @@ import {
   type RemovedComplaint,
 } from "@/lib/services/reputation.service";
 import { respondida } from "@/lib/models/case";
+import { semRespostaPublica } from "@/lib/services/case.service";
 import { cicloAnterior, cicloDe } from "@/lib/models/ciclo";
 
 import { filaDeAvaliacao } from "@/lib/models/cadencia";
@@ -527,7 +528,7 @@ export function metasDoDia(entrada: {
       chave: "respostas",
       titulo: "Respostas públicas",
       feito: ra.filter((c) => respondida(c) && deHoje(c.publicResponseAt)).length,
-      pendentes: ra.filter((c) => !respondida(c)).length,
+      pendentes: ra.filter(semRespostaPublica).length,
       teto: 3,
       href: "/reclame-aqui",
     }),

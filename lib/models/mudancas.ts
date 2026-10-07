@@ -750,6 +750,16 @@ export const MUDANCAS: Mudanca[] = [
     href: "/reclame-aqui/configuracoes?tab=status",
   },
   {
+    id: "sem-resposta-uma-regra",
+    dia: "2026-10-07",
+    tipo: "correcao",
+    frente: "reclame-aqui",
+    titulo: "\"Sem resposta\" com o mesmo número em todo lugar: 12, e não 13",
+    texto:
+      "O Meu dia mostrava \"Respostas públicas 0/13 — zerar a fila: 13 ainda sem resposta\" logo acima de \"Responder às 12 sem resposta pública\". A 13ª era uma reclamação já fechada, avaliada como não resolvida sem resposta nossa: não há mais o que responder nela. A meta do ciclo, a meta do dia, o relatório (\"sem resposta agora\"), o Dashboard e o Assistente contavam qualquer reclamação sem texto de resposta — fechada ou aberta, e o Assistente ainda somava atendimentos das Redes, que nunca têm resposta pública. Agora existe uma regra só, usada por todos que pedem ação: reclamação do Reclame Aqui, aberta e sem resposta pública. A conta da nota segue o portal e continua considerando a fechada. Uma conferência nova prova contra o banco que todos dizem o mesmo número.",
+    href: "/meu-dia",
+  },
+  {
     id: "celular-e-leitor-de-tela-34-telas",
     dia: "2026-10-07",
     tipo: "melhoria",

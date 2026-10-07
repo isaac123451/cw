@@ -5,7 +5,7 @@ import { cicloAnterior, type Ciclo } from "@/lib/models/ciclo";
 import { etapaDasRedes } from "@/lib/models/redes";
 import { isEncerrado, type NpsResponseView } from "@/lib/models/nps";
 import { indicadoresGoogle, type AvaliacaoParaIndicador } from "@/lib/models/avaliacoesGoogle";
-import { isReclameAqui, isSocial } from "@/lib/services/case.service";
+import { isReclameAqui, isSocial, semRespostaPublica } from "@/lib/services/case.service";
 import type { SlaRule } from "@/lib/models/sla";
 import {
   descreverIndicadorDoPrimeiroContato,
@@ -227,7 +227,7 @@ export function montarRelatorio(entrada: {
 
   /* O que está aberto agora, e não no fim do ciclo: é o que pede ação. */
   const hojeMs = Date.parse(`${hoje}T12:00:00Z`);
-  const semResposta = ra.filter((c) => !respondida(c));
+  const semResposta = ra.filter(semRespostaPublica);
   const maisDe7Dias = semResposta.filter((c) => (hojeMs - Date.parse(`${diaNaOperacao(c.createdAt)}T12:00:00Z`)) / 86400000 > 7).length;
 
   const metricaDoDia = medirDia(cases, [], ateDia);

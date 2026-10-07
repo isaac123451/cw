@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 
-import { respondida } from "@/lib/models/case";
 import { useRouter } from "next/navigation";
 import { useMemo } from "react";
 
@@ -36,8 +35,8 @@ import { STATUS_SEM_TRATATIVA } from "@/lib/models/nps";
 
 import {
   isOpen,
-  isReclameAqui,
   isSocial,
+  semRespostaPublica,
   seteDiasAtras,
 } from "@/lib/services/case.service";
 import { hojeNaOperacao } from "@/lib/services/reputation.service";
@@ -122,11 +121,7 @@ export default function DashboardPage() {
 
     const abertos = cases.filter(isOpen);
 
-    const semResposta = cases.filter(
-      (item) =>
-        isReclameAqui(item) &&
-        !respondida(item)
-    );
+    const semResposta = cases.filter(semRespostaPublica);
 
     /*
       Sem resposta há mais de 7 dias — o que derruba a nota.

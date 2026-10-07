@@ -2,7 +2,6 @@ import {
   Case,
   descreverFaltas,
   faltaNoCadastro,
-  respondida,
   type FaltaNoCadastro,
 } from "@/lib/models/case";
 import { AgendaTask } from "@/lib/models/agenda";
@@ -12,7 +11,7 @@ import { GoogleEvent } from "@/lib/models/google";
 import { hojeNaOperacao } from "@/lib/services/reputation.service";
 import { lateMovements } from "@/lib/services/movement.service";
 import type { Expediente } from "@/lib/services/horasUteis";
-import { isOpen, isReclameAqui, isSocial } from "@/lib/services/case.service";
+import { isOpen, isSocial, semRespostaPublica } from "@/lib/services/case.service";
 import type { FrenteDaJanela } from "@/lib/models/janelas";
 import type { NpsResponseView } from "@/lib/models/nps";
 import type { SlaRule } from "@/lib/models/sla";
@@ -167,7 +166,7 @@ export function buildNotifications(
 
     /* Aberta e sem resposta pública — a conta do menu, do Meu dia e da extensão (out/2026). Era só a coluna "Novo". */
     const semResposta = cases.filter(
-      (item) => isOpen(item) && isReclameAqui(item) && !respondida(item)
+      semRespostaPublica
     );
 
     if (semResposta.length > 0) {

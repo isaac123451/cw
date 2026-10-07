@@ -4,6 +4,7 @@ import { respondida, type Case } from "@/lib/models/case";
 import { cicloAnterior, cicloDe, type Ciclo } from "@/lib/models/ciclo";
 import type { NpsResponseView } from "@/lib/models/nps";
 import { diaNaOperacao } from "@/lib/services/reputation.service";
+import { semRespostaPublica } from "@/lib/services/case.service";
 
 /**
  * As metas do ciclo (1.114): "precisa-se também de algo para o ciclo".
@@ -54,7 +55,7 @@ export function metasDoCiclo(entrada: { casos: Case[]; nps: NpsResponseView[]; a
 
   const ra = entrada.casos.filter((c) => c.source === "Reclame Aqui");
   const respondidasNoCiclo = ra.filter((c) => respondida(c) && no(ciclo, c.publicResponseAt)).length;
-  const semResposta = ra.filter((c) => !respondida(c)).length;
+  const semResposta = entrada.casos.filter(semRespostaPublica).length;
   const avaliadasNoCiclo = ra.filter((c) => c.evaluated && no(ciclo, c.evaluatedAt)).length;
   const avaliadasAntes = ra.filter((c) => c.evaluated && no(anterior, c.evaluatedAt)).length;
   const pedidosNoCiclo = ra.filter((c) => no(ciclo, c.ultimoPedidoAvaliacaoEm)).length;

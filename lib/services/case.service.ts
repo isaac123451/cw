@@ -93,6 +93,23 @@ export function isOpen(item: Case) {
 }
 
 /**
+ * "Sem resposta" em todo lugar que pede ação: reclamação do Reclame Aqui,
+ * aberta, sem resposta pública.
+ *
+ * Uma regra, um lugar (out/2026). Cada tela escrevia a sua, e algumas
+ * esqueciam o "aberta": a meta do ciclo dizia "13 ainda sem resposta" ao
+ * lado de "Responder às 12" — a 13ª era uma reclamação já fechada (avaliada
+ * como não resolvida sem resposta nossa), que não tem mais o que responder.
+ * Atendimento das Redes nunca tem resposta pública e também entrava.
+ *
+ * A conta **da nota** é outra: lá vale como o portal apura, toda
+ * reclamação da janela, aberta ou não.
+ */
+export function semRespostaPublica(item: Case) {
+  return isOpen(item) && isReclameAqui(item) && !respondida(item);
+}
+
+/**
  * O endereço deste caso, no módulo a que ele pertence.
  *
  * Existe porque **oito telas** montavam `/reclame-aqui/${id}` à mão —

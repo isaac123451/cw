@@ -26,6 +26,7 @@ import {
   isOpen,
   isReclameAqui,
   isSocial,
+  semRespostaPublica,
 } from "@/lib/services/case.service";
 import { slaStatus } from "@/lib/services/sla.service";
 import {
@@ -1279,7 +1280,7 @@ function sugerir(
 
   /* Aberta e sem resposta pública, como no resto da plataforma (out/2026). */
   const semResposta = casos.filter(
-    (item) => isOpen(item) && isReclameAqui(item) && !respondida(item)
+    semRespostaPublica
   );
 
   if (semResposta.length > 0) {
