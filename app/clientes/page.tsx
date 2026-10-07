@@ -33,6 +33,10 @@ import { useEstablishments } from "@/lib/context/EstablishmentsContext";
 import { ptBR } from "@/lib/services/reputation.service";
 
 import { CLIENT_KINDS, kindTone } from "@/lib/models/client";
+import { mostrarMais } from "@/lib/plural";
+
+/** Cartões desenhados de saída: a grade inteira eram 9 mil elementos (out/2026). */
+const LOTE_DA_GRADE = 60;
 
 type SortKey =
   | "recente"
@@ -57,6 +61,7 @@ export default function ClientesPage() {
   const [search, setSearch] = useState("");
   const [kind, setKind] = useState<string>("Todos");
   const [sort, setSort] = useState<SortKey>("volume");
+  const [quantos, setQuantos] = useState(LOTE_DA_GRADE);
   const [formOpen, setFormOpen] = useState(false);
 
   const estabelecimentoPorId = useMemo(
@@ -293,7 +298,7 @@ export default function ClientesPage() {
 
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
 
-            {visible.map((item) => {
+            {visible.slice(0, quantos).map((item) => {
 
               const estabelecimento = item.establishmentId
                 ? estabelecimentoPorId.get(
@@ -435,6 +440,16 @@ export default function ClientesPage() {
                 </Link>
               );
             })}
+
+            {visible.length > quantos && (
+              <button
+                type="button"
+                onClick={() => setQuantos((n) => n + LOTE_DA_GRADE)}
+                className="col-span-full rounded-xl border border-dashed border-zinc-300 py-2.5 text-xs font-medium text-zinc-500 transition-colors hover:border-violet-300 hover:bg-violet-50/40 hover:text-violet-700"
+              >
+                {mostrarMais(LOTE_DA_GRADE, visible.length - quantos)}
+              </button>
+            )}
 
           </div>
 

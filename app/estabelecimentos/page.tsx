@@ -44,7 +44,14 @@ import {
   planoDaConta,
   statusTone,
 } from "@/lib/models/establishment";
-import { pluralDe } from "@/lib/plural";
+import { mostrarMais, pluralDe } from "@/lib/plural";
+
+/**
+ * Cartões desenhados de saída. A base passa de 300 estabelecimentos, e a
+ * grade inteira eram 10 mil elementos (out/2026); a busca e os filtros
+ * continuam valendo para a base toda.
+ */
+const LOTE_DA_GRADE = 60;
 
 const money = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -99,6 +106,7 @@ export default function EstabelecimentosPage() {
     EstablishmentStatus | "Todos"
   >("Todos");
   const [sort, setSort] = useState<SortKey>("nome");
+  const [quantos, setQuantos] = useState(LOTE_DA_GRADE);
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Establishment>();
@@ -443,7 +451,7 @@ export default function EstabelecimentosPage() {
 
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
 
-            {visible.map(({ establishment, stats }) => (
+            {visible.slice(0, quantos).map(({ establishment, stats }) => (
 
               <div
                 key={establishment.id}
@@ -611,6 +619,16 @@ export default function EstabelecimentosPage() {
               </div>
 
             ))}
+
+            {visible.length > quantos && (
+              <button
+                type="button"
+                onClick={() => setQuantos((n) => n + LOTE_DA_GRADE)}
+                className="col-span-full rounded-xl border border-dashed border-zinc-300 py-2.5 text-xs font-medium text-zinc-500 transition-colors hover:border-violet-300 hover:bg-violet-50/40 hover:text-violet-700"
+              >
+                {mostrarMais(LOTE_DA_GRADE, visible.length - quantos)}
+              </button>
+            )}
 
           </div>
 
