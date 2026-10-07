@@ -282,12 +282,41 @@ export function semMencoesDoSlack(texto: string, mencoes: string[] = []) {
     .trim();
 }
 
+/*
+  Um acento de UTF-8 lido como Latin-1 vira dois caracteres: o primeiro entre
+  Â e ô, o segundo entre 0x80 e 0xBF. Montado por código de caractere para o
+  arquivo não depender de escape.
+*/
+const INICIO_QUEBRADO = `${String.fromCharCode(0xc2)}-${String.fromCharCode(0xf4)}`;
+const CONTINUACAO = `${String.fromCharCode(0x80)}-${String.fromCharCode(0xbf)}`;
+const ACENTO_QUEBRADO = new RegExp(`[${INICIO_QUEBRADO}][${CONTINUACAO}]{1,3}`, "g");
+
+/**
+ * "nÃ£o estÃ¡" → "não está".
+ *
+ * A automação que avisa no canal do Slack manda o texto com a codificação
+ * trocada (out/2026): os atendimentos nasciam com "Minha impressora nÃ£o
+ * estÃ¡ funcionando". Cada trecho quebrado é decodificado de volta; o que
+ * não for UTF-8 válido fica como estava — texto certo nunca é mexido.
+ */
+export function consertarAcentos(texto: string) {
+  return texto.replace(ACENTO_QUEBRADO, (trecho) => {
+    try {
+      const bytes = Uint8Array.from(trecho, (c) => c.charCodeAt(0));
+      return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    } catch {
+      return trecho;
+    }
+  });
+}
+
 /**
  * Uma mensagem do Slack vira item: o texto inteiro é o relato, e rede,
  * perfil, link e seguidores saem de dentro dele.
  */
 export function itemDoSlack(entrada: { canal: string; ts: string; texto: string; autor?: string; quando?: string; links?: string[]; mencoes?: string[] }): ItemCapturado {
-  const texto = semMencoesDoSlack(entrada.texto.trim(), entrada.mencoes) || entrada.texto.trim();
+  const bruto = consertarAcentos(entrada.texto.trim());
+  const texto = semMencoesDoSlack(bruto, entrada.mencoes) || bruto;
   const links = [...(entrada.links ?? []), ...(texto.match(/https?:\/\/\S+/g) ?? [])].map((l) => l.replace(/[>)\]]+$/, ""));
   const link = links.find((l) => /instagram\.com|facebook\.com|fb\.com|wa\.me|manychat/i.test(l)) ?? links[0] ?? "";
   const seguidores = texto.match(/(\d+(?:[.,]\d+)*\s*(?:mil|k|mi|m)?)\s*seguidores/i);

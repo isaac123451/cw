@@ -24,7 +24,7 @@ import {
   type RemovedComplaint,
 } from "@/lib/services/reputation.service";
 import { respondida } from "@/lib/models/case";
-import { semRespostaPublica } from "@/lib/services/case.service";
+import { isOpen, semRespostaPublica } from "@/lib/services/case.service";
 import { cicloAnterior, cicloDe } from "@/lib/models/ciclo";
 
 import { filaDeAvaliacao } from "@/lib/models/cadencia";
@@ -510,7 +510,8 @@ export function metasDoDia(entrada: {
     return alvo > 0 ? { chave: m.chave, titulo: m.titulo, feito: Math.min(m.feito, alvo), alvo, href: m.href, automatico, origem } : null;
   };
 
-  const abertos = entrada.casos.filter((c) => !["Resolvido", "Não resolvido", "Aguardando avaliação", "Sem contato", "Sem identificação", "Encaminhado"].includes(c.status));
+  /* A mesma lista de fechados do resto da plataforma — era uma cópia, sem o "Finalizado" (out/2026). */
+  const abertos = entrada.casos.filter(isOpen);
   const npsAbertos = entrada.nps.filter((r) => !r.closedAt);
   const ra = entrada.casos.filter((c) => c.source === "Reclame Aqui");
   const fila = filaDeAvaliacao(ra, agora);

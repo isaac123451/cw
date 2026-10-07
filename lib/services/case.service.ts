@@ -36,6 +36,13 @@ export const CLOSED_STATUS = [
   "Aguardando avaliação",
   "Resolvido",
   "Não resolvido",
+  /*
+    Etapa criada no fluxo do Reclame Aqui (28/09/2026) para o caso que a
+    operação dá por encerrado sem avaliação do consumidor. Contava como
+    aberta, porque a lista é de exclusão; o Isaac decidiu em 07/10 que ela
+    encerra o caso.
+  */
+  "Finalizado",
   /* Os finais das Redes Sociais que não são "Resolvido" — ver lib/models/redes.ts. */
   "Sem contato",
   "Sem identificação",

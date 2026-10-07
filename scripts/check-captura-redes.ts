@@ -24,6 +24,7 @@ import { resolve } from "node:path";
 
 import {
   classificarItens,
+  consertarAcentos,
   dataDaCelula,
   itemDoSlack,
   itensDaPlanilha,
@@ -141,6 +142,11 @@ conferir(
 conferir("Slack: referência em Brasília", itemDoSlack({ canal: "C1", ts: "1.000001", texto: "oi", quando: "2026-09-17T13:05:00.000Z" }).referencia, "mensagem de 17/09, 10:05");
 
 /* ---- 6. fiação ---- */
+
+/* A automação do Slack manda acento com a codificação trocada (out/2026). */
+conferir("acento quebrado volta: \"nÃ£o estÃ¡\"", consertarAcentos("Minha impressora nÃ£o estÃ¡ funcionando"), "Minha impressora não está funcionando");
+conferir("texto certo não é mexido", consertarAcentos("Ação já está ótima — NÃO É POSSÍVEL"), "Ação já está ótima — NÃO É POSSÍVEL");
+conferir("o item do Slack já sai consertado", itemDoSlack({ canal: "C1", ts: "1.1", texto: ["Olá @Carlos Isaac", "Cliente Janaina entrou em contato no Instagram", "Motivo : preÃ§o do cartÃ£o"].join(String.fromCharCode(10)), mencoes: ["@Carlos Isaac"] }).texto.endsWith("preço do cartão"), true);
 
 const rota = ler("app/api/extensao/captura-redes/route.ts");
 conferir("a prévia não grava", rota.indexOf("previaDaCaptura") < rota.indexOf("gravarCaptura(prisma"), true);
