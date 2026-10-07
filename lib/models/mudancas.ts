@@ -710,6 +710,16 @@ export const MUDANCAS: Mudanca[] = [
     href: "/jornada",
   },
   {
+    id: "clientes-estabelecimentos-em-lotes",
+    dia: "2026-10-07",
+    tipo: "melhoria",
+    frente: "plataforma",
+    titulo: "Clientes e Estabelecimentos abrem com 60 cartões e \"mostrar mais\"",
+    texto:
+      "As duas grades desenhavam a base inteira de uma vez — 244 estabelecimentos e cerca de 300 clientes, de 9 a 10 mil elementos na tela, o que pesava ao rolar e ao filtrar. Agora entram 60 e um \"Mostrar mais 60 · faltam 184\" no fim. Busca, filtros, ordenação e os números do topo continuam valendo para a base toda.",
+    href: "/estabelecimentos",
+  },
+  {
     id: "respostas-nome-e-seu-nome",
     dia: "2026-10-07",
     tipo: "melhoria",
