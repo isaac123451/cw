@@ -304,13 +304,17 @@ export default function EstabelecimentosPage() {
 
             <p className="flex-1 text-sm leading-relaxed text-amber-900">
 
+              {/*
+                O vínculo se faz sozinho pelo CPF ou CNPJ desde set/2026;
+                o texto ainda mandava vincular caso a caso (out/2026).
+              */}
               <span className="font-semibold">
-                {semVinculo} reclamações
+                {semVinculo} {pluralDe(semVinculo, "reclamação", "reclamações")}
               </span>{" "}
-              ainda não estão vinculadas a um
-              estabelecimento. O export do Reclame Aqui não
-              traz essa coluna — o vínculo é feito no
-              detalhe de cada caso.
+              sem estabelecimento. O vínculo se faz sozinho pelo CPF ou
+              CNPJ quando o restaurante está cadastrado — estas não têm
+              documento ou o documento não casa com nenhum cadastro.
+              Dá para vincular à mão no detalhe do caso.
 
             </p>
 

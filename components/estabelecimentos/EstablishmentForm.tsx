@@ -26,6 +26,7 @@ import {
 import { hojeNaOperacao } from "@/lib/services/reputation.service";
 import { usePlans } from "@/lib/hooks/usePlans";
 import { precoEmReais } from "@/lib/models/plan";
+import { lerReais, reaisNoCampo } from "@/lib/models/dinheiro";
 
 const UFS = [
   "AC", "AL", "AM", "AP", "BA", "CE", "DF", "ES", "GO",
@@ -137,7 +138,8 @@ export default function EstablishmentForm({
       editing?.status ?? "Ativo"
     );
   const [mrr, setMrr] = useState(
-    editing?.mrr ? String(editing.mrr) : ""
+    /* "209,99", e não "209.99": o ponto virava milhar ao salvar e a mensalidade saía ×100 (out/2026). */
+    editing?.mrr ? reaisNoCampo(editing.mrr) : ""
   );
   const [owner, setOwner] = useState(
     editing?.owner ?? session?.name ?? "Operação"
@@ -193,9 +195,7 @@ export default function EstablishmentForm({
     [people, session]
   );
 
-  const valorMrr = Number(
-    mrr.replace(/\./g, "").replace(",", ".")
-  );
+  const valorMrr = lerReais(mrr);
 
   const mrrValido =
     mrr.trim() === "" ||

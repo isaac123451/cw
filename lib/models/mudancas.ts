@@ -660,6 +660,16 @@ export const MUDANCAS: Mudanca[] = [
     href: "/clientes",
   },
   {
+    id: "mensalidade-x100",
+    dia: "2026-10-07",
+    tipo: "correcao",
+    frente: "plataforma",
+    titulo: "Abrir e salvar um estabelecimento não multiplica mais a mensalidade por 100",
+    texto:
+      "O formulário de estabelecimento abria a mensalidade como \"209.99\" e, ao salvar, tratava o ponto como milhar: bastava abrir e salvar, sem mexer no valor, para R$ 209,99 virar R$ 20.999. Aconteceu com a Kantinho Burger, que passou a ser sozinha toda a \"receita recorrente\" e toda a \"receita em risco\" da tela. Agora o campo abre como \"209,99\", e a leitura entende \"209.99\" digitado com ponto como decimal — no estabelecimento, no Impacto e no preço dos Planos, que tinham a mesma conta. O valor já gravado da Kantinho Burger continua R$ 20.999 até alguém corrigir na ficha. E o aviso de reclamações sem estabelecimento passou a dizer que o vínculo se faz sozinho pelo CPF ou CNPJ — mandava vincular caso a caso.",
+    href: "/estabelecimentos",
+  },
+  {
     id: "jornada-sem-nota-nao-e-detrator",
     dia: "2026-10-06",
     tipo: "correcao",

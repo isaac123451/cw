@@ -1,3 +1,5 @@
+import { lerReais } from "@/lib/models/dinheiro";
+
 /**
  * Planos e módulos vendidos, com o preço vigente.
  *
@@ -39,15 +41,14 @@ export function precoEmReais(centavos: number) {
   return REAIS.format(centavos / 100);
 }
 
-/** "169,99" → 16999. Aceita o que a pessoa digitar. */
+/**
+ * "169,99" → 16999. Aceita o que a pessoa digitar — inclusive "169.99",
+ * que antes virava R$ 16.999 porque todo ponto era tratado como milhar
+ * (out/2026, ver `lib/models/dinheiro`).
+ */
 export function centavosDoTexto(valor: string) {
 
-  const limpo = valor
-    .replace(/[^\d,.-]/g, "")
-    .replace(/\./g, "")
-    .replace(",", ".");
-
-  const numero = Number(limpo);
+  const numero = lerReais(valor.replace(/[^\d,.-]/g, ""));
 
   return Number.isFinite(numero)
     ? Math.round(numero * 100)

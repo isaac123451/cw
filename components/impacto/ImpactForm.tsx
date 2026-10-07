@@ -27,6 +27,7 @@ import {
   useImpact,
 } from "@/lib/context/ImpactContext";
 import { slugify } from "@/lib/services/slug";
+import { lerReais } from "@/lib/models/dinheiro";
 
 // Os tipos vêm do cadastro (Impacto → Tipos de impacto), não daqui.
 
@@ -197,9 +198,8 @@ export default function ImpactForm({
 
   }, [cases, caseSearch]);
 
-  const valor = Number(
-    amount.replace(/\./g, "").replace(",", ".")
-  );
+  /* "209.99" digitado com ponto é decimal, não milhar (out/2026) — ver lib/models/dinheiro. */
+  const valor = lerReais(amount);
 
   const valido =
     company.trim() !== "" &&
