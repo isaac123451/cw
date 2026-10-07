@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { Plus, Search, Trash2 } from "lucide-react";
 
+import LinhasCarregando from "@/components/shared/LinhasCarregando";
 import { useSettings } from "@/lib/context/SettingsContext";
 import { useRascunho } from "@/lib/hooks/useRascunho";
 import { useScopedCases } from "@/lib/context/useScopedCases";
@@ -63,7 +64,7 @@ const PALETTE = [
 
 export default function TagsSettings() {
 
-  const { tags, saveTag, removeTag } = useSettings();
+  const { tags, saveTag, removeTag, loading } = useSettings();
 
   /**
    * Editar não grava; o botão Salvar grava.
@@ -313,7 +314,8 @@ export default function TagsSettings() {
 
         </table>
 
-        {visible.length === 0 && (
+        {visible.length === 0 && loading && <LinhasCarregando linhas={3} className="p-6" />}
+        {visible.length === 0 && !loading && (
           <p className="py-10 text-center text-sm text-zinc-400">
             Nenhuma etiqueta encontrada.
           </p>

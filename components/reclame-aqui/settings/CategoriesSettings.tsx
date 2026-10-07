@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Sparkles, Combine, Plus, Search, Trash2 } from "lucide-react";
 
 import { useSession } from "@/lib/context/SessionContext";
+import LinhasCarregando from "@/components/shared/LinhasCarregando";
 import { useSettings } from "@/lib/context/SettingsContext";
 import { useRascunho } from "@/lib/hooks/useRascunho";
 
@@ -23,6 +24,7 @@ export default function CategoriesSettings() {
     categories,
     saveCategory,
     removeCategory,
+    loading,
   } = useSettings();
 
   /**
@@ -257,7 +259,8 @@ export default function CategoriesSettings() {
 
         </table>
 
-        {visible.length === 0 && (
+        {visible.length === 0 && loading && <LinhasCarregando linhas={3} className="p-6" />}
+        {visible.length === 0 && !loading && (
           <p className="py-10 text-center text-sm text-zinc-400">
             Nenhuma categoria encontrada.
           </p>

@@ -720,6 +720,16 @@ export const MUDANCAS: Mudanca[] = [
     href: "/jornada",
   },
   {
+    id: "vazio-falso-agenda-e-cadastros",
+    dia: "2026-10-07",
+    tipo: "correcao",
+    frente: "plataforma",
+    titulo: "Agenda e cadastros não dizem mais \"nada\" enquanto carregam",
+    texto:
+      "Uma varredura nova fotografou o texto de 23 telas durante a carga e comparou com o final: frase de vazio que aparece e depois some é vazio falso. Além de Causas raiz, ela achou a Agenda (\"Nada marcado e nenhum prazo vencendo neste dia\" antes de os compromissos chegarem) e as cinco listas de Configurações — categorias, subcategorias, checklist, etiquetas e times —, que diziam \"Nenhum… encontrado\" nos primeiros segundos. Todas passam a mostrar as linhas de carregando até os dados chegarem.",
+    href: "/agenda",
+  },
+  {
     id: "causas-semana-e-voz",
     dia: "2026-10-07",
     tipo: "correcao",

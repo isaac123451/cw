@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { Plus, Search, Trash2 } from "lucide-react";
 
+import LinhasCarregando from "@/components/shared/LinhasCarregando";
 import { useSettings } from "@/lib/context/SettingsContext";
 import { useRascunho } from "@/lib/hooks/useRascunho";
 
@@ -25,7 +26,7 @@ import { ConfirmDelete } from "@/components/shared/Modal";
  */
 export default function TeamsSettings() {
 
-  const { teams, saveTeam, removeTeam } = useSettings();
+  const { teams, saveTeam, removeTeam, loading } = useSettings();
 
   const rascunho = useRascunho(teams, saveTeam);
 
@@ -216,7 +217,8 @@ export default function TeamsSettings() {
 
           </table>
 
-          {visible.length === 0 && (
+          {visible.length === 0 && loading && <LinhasCarregando linhas={3} className="p-6" />}
+          {visible.length === 0 && !loading && (
             <p className="py-10 text-center text-sm text-zinc-400">
               Nenhum time encontrado.
             </p>

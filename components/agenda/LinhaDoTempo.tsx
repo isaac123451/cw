@@ -9,6 +9,7 @@ import { ArrowUpRight, CalendarArrowUp, Check, ChevronLeft, ChevronRight } from 
 import SurfaceCard from "@/components/shared/SurfaceCard";
 import BotaoAbrirEmJanela from "@/components/janelas/BotaoAbrirEmJanela";
 
+import LinhasCarregando from "@/components/shared/LinhasCarregando";
 import { useAgenda } from "@/lib/context/AgendaContext";
 import { useCases } from "@/lib/context/CaseContext";
 import { useGoogleEvents } from "@/lib/context/GoogleEventsContext";
@@ -53,11 +54,17 @@ const hhmm = (min: number) => `${String(Math.floor(min / 60)).padStart(2, "0")}:
 export default function LinhaDoTempo({ ligacoes }: { ligacoes?: { dia: string; itens: ItemDaRotina[] } }) {
 
   const agora = useAgora();
-  const { tasks, toggleTask, moveTask } = useAgenda();
+  const { tasks, toggleTask, moveTask, loading: carregandoAgenda } = useAgenda();
   const { events } = useGoogleEvents();
-  const { cases } = useCases();
+  const { cases, loading: carregandoCasos } = useCases();
   const { movements } = useMovements();
-  const { responses } = useNps();
+  const { responses, loading: carregandoNps } = useNps();
+
+  /* As fontes do dia ainda chegando: "Nada marcado" antes delas era vazio falso (out/2026). */
+  const carregando =
+    (carregandoAgenda && tasks.length === 0) ||
+    (carregandoCasos && cases.length === 0) ||
+    (carregandoNps && responses.length === 0);
   const { rules, expediente } = useSla();
 
   const [modo, setModo] = useState<"dia" | "semana">("dia");
@@ -163,6 +170,7 @@ export default function LinhaDoTempo({ ligacoes }: { ligacoes?: { dia: string; i
 
       {modo === "dia" ? (
         <VistaDoDia
+          carregando={carregando}
           lista={lista}
           agoraMin={foco === hoje ? agoraMin : null}
           gravando={gravando}
@@ -206,6 +214,7 @@ export default function LinhaDoTempo({ ligacoes }: { ligacoes?: { dia: string; i
 }
 
 export function VistaDoDia({
+  carregando = false,
   lista,
   agoraMin,
   gravando,
@@ -213,6 +222,7 @@ export function VistaDoDia({
   onAdiar,
   casos,
 }: {
+  carregando?: boolean;
   lista: Compromisso[];
   agoraMin: number | null;
   gravando: string | null;
@@ -223,6 +233,10 @@ export function VistaDoDia({
   const comHora = lista.filter((c) => c.minuto !== undefined);
   const semHora = lista.filter((c) => c.minuto === undefined);
   const indiceDoAgora = agoraMin === null ? -1 : comHora.findIndex((c) => c.minuto! >= agoraMin);
+
+  if (lista.length === 0 && carregando) {
+    return <LinhasCarregando linhas={3} className="px-4 py-6 sm:px-6" />;
+  }
 
   if (lista.length === 0) {
     return <p className="px-4 py-6 text-center text-sm text-zinc-500 sm:px-6">Nada marcado e nenhum prazo vencendo neste dia.</p>;

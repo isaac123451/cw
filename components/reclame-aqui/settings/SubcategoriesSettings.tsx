@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { Plus, Search, Trash2 } from "lucide-react";
 
+import LinhasCarregando from "@/components/shared/LinhasCarregando";
 import { useSettings } from "@/lib/context/SettingsContext";
 import { useRascunho } from "@/lib/hooks/useRascunho";
 
@@ -17,6 +18,7 @@ export default function SubcategoriesSettings() {
     subcategories,
     saveSubcategory,
     removeSubcategory,
+    loading,
   } = useSettings();
 
   /**
@@ -252,7 +254,8 @@ export default function SubcategoriesSettings() {
 
         </table>
 
-        {visible.length === 0 && (
+        {visible.length === 0 && loading && <LinhasCarregando linhas={3} className="p-6" />}
+        {visible.length === 0 && !loading && (
           <p className="py-10 text-center text-sm text-zinc-400">
             Nenhuma subcategoria encontrada.
           </p>
