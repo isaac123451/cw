@@ -48,6 +48,8 @@ async function main() {
   conferir("dono de teste num caso aberto acende", chaves({ ...limpa, casos: [{ ...limpa.casos[0], dono: "Conferência" }] }), ["dono-de-teste"]);
   conferir("dono de teste num caso fechado não acende", chaves({ ...limpa, casos: [{ ...limpa.casos[0], dono: "Conferência", aberto: false }] }), []);
   conferir("menção do Slack no cliente acende", chaves({ ...limpa, casos: [{ ...limpa.casos[1], cliente: "@Carlos", titulo: "Olá @Carlos Isaac Cliente Janaina…" }] }), ["mencao"]);
+  conferir("link do perfil do Slack de quem foi mencionado acende, mesmo com o título certo", chaves({ ...limpa, casos: [{ ...limpa.casos[1], link: "https://cardpioweb.slack.com/team/U07KTLG1EKB" }] }), ["mencao"]);
+  conferir("link do Instagram não acende", chaves({ ...limpa, casos: [{ ...limpa.casos[1], link: "https://instagram.com/maria.doces" }] }), []);
   conferir("resposta sem data acende", chaves({ ...limpa, casos: [{ ...limpa.casos[0], temResposta: true, respostaEm: null }] }), ["resposta-sem-data"]);
   conferir("etapa \"Finalizado\" com casos acende", chaves({ ...limpa, etapasQueContamComoAbertas: [{ nome: "Finalizado", casos: 4 }] }), ["etapa-fim"]);
   conferir("etapa \"Finalizado\" vazia não acende", chaves({ ...limpa, etapasQueContamComoAbertas: [{ nome: "Finalizado", casos: 0 }] }), []);

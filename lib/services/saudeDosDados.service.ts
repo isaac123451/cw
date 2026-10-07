@@ -13,7 +13,7 @@ export async function lerEntradaDaSaude(prisma: PrismaClient): Promise<EntradaDa
     prisma.establishment.findMany({ select: { name: true, slug: true, plan: true, mrrCents: true } }),
     prisma.plan.findMany({ select: { name: true, priceCents: true, active: true, kind: true } }),
     prisma.case.findMany({
-      select: { id: true, protocol: true, channel: true, customer: true, title: true, status: true, owner: { select: { name: true } } },
+      select: { id: true, protocol: true, channel: true, customer: true, title: true, status: true, externalUrl: true, owner: { select: { name: true } } },
     }),
     /* O texto é pesado: só o das que não têm data, que são poucas. */
     prisma.case.findMany({
@@ -38,6 +38,7 @@ export async function lerEntradaDaSaude(prisma: PrismaClient): Promise<EntradaDa
       canal: c.channel === "RECLAME_AQUI" ? "RECLAME_AQUI" : "SOCIAL",
       cliente: c.customer,
       titulo: c.title,
+      link: c.externalUrl ?? undefined,
       status: c.status,
       aberto: !CLOSED_STATUS.includes(c.status),
       dono: c.owner?.name ?? null,

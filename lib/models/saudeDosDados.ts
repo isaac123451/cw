@@ -40,6 +40,8 @@ export interface EntradaDaSaude {
     canal: "RECLAME_AQUI" | "SOCIAL";
     cliente: string;
     titulo: string;
+    /** O link guardado na captura — a menção do Slack é o perfil de quem foi mencionado. */
+    link?: string;
     status: string;
     aberto: boolean;
     dono: string | null;
@@ -121,7 +123,14 @@ export function achadosDaBase(e: EntradaDaSaude): AchadoDaBase[] {
   }
 
   /* ---------- menção do Slack no lugar do cliente ---------- */
-  const mencao = e.casos.filter((c) => c.canal === "SOCIAL" && (/^@\S+$/.test(c.cliente.trim()) && /^ol[áa]\s+@/i.test(c.titulo.trim())));
+  /*
+    Pelo título ("Olá @Fulano…") ou pelo link do perfil do Slack de quem foi
+    mencionado (out/2026): consertado o título, o "@Carlos" seguia no quadro
+    pela empresa, e a regra já não via.
+  */
+  const mencao = e.casos.filter(
+    (c) => c.canal === "SOCIAL" && ((/^@\S+$/.test(c.cliente.trim()) && /^ol[áa]\s+@/i.test(c.titulo.trim())) || /slack\.com\/team\//i.test(c.link ?? ""))
+  );
   if (mencao.length) {
     achados.push({
       chave: "mencao",
