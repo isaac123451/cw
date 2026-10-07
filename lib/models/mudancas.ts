@@ -750,6 +750,15 @@ export const MUDANCAS: Mudanca[] = [
     href: "/reclame-aqui/configuracoes?tab=status",
   },
   {
+    id: "celular-e-leitor-de-tela-34-telas",
+    dia: "2026-10-07",
+    tipo: "melhoria",
+    frente: "plataforma",
+    titulo: "34 telas conferidas no celular e no leitor de tela",
+    texto:
+      "Cada tela foi aberta com 375 px de largura (um celular comum) e vasculhada atrás de rolagem lateral e de qualquer elemento passando da borda: nenhuma das 34 vazou. Na mesma varredura, a procura por botão sem nome e campo sem rótulo achou 13 telas com campos que o leitor de tela anunciava só como \"caixa de texto\": as buscas do quadro do RA, do NPS, de Clientes, Estabelecimentos, Respostas prontas e Times; os filtros de etapa, categoria e tipo; o limite WIP do fluxo; o mês e os números manuais das Métricas diárias; os campos dos tipos de Impacto; os tópicos da Jornada; a pergunta ao Assistente; e o texto editável do Meu dia e do Relatório. Todos ganharam nome.",
+  },
+  {
     id: "novidades-com-data",
     dia: "2026-10-07",
     tipo: "melhoria",

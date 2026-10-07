@@ -352,6 +352,7 @@ export default function EstabelecimentosPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Buscar por nome, cidade, segmento ou CNPJ..."
+                aria-label="Buscar estabelecimentos"
                 className="h-11 w-full rounded-xl border border-zinc-200 pl-10 pr-3 text-sm outline-none transition-colors focus:border-violet-400"
               />
 

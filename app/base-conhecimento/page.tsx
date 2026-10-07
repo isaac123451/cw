@@ -222,6 +222,7 @@ export default function BaseConhecimentoPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Buscar por título, texto ou etiqueta..."
+                aria-label="Buscar respostas prontas"
                 className="h-11 w-full rounded-xl border border-zinc-200 pl-10 pr-3 text-sm outline-none transition-colors focus:border-violet-400"
               />
 
@@ -230,6 +231,7 @@ export default function BaseConhecimentoPage() {
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
+              aria-label="Filtrar por categoria"
               className="h-11 rounded-xl border border-zinc-200 px-3 text-sm text-zinc-700 outline-none transition-colors focus:border-violet-400"
             >
               <option value="">

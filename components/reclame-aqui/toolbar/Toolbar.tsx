@@ -197,6 +197,7 @@ export default function Toolbar({
                 setFilter("search", e.target.value)
               }
               placeholder="Buscar protocolo, cliente ou título..."
+              aria-label="Buscar no quadro"
               className="h-9 w-64 rounded-lg border border-zinc-200 pl-10 pr-4 text-sm outline-none transition-colors placeholder:text-zinc-400 focus:border-violet-400"
             />
 
@@ -233,6 +234,7 @@ export default function Toolbar({
 
           <select
             value={filters.status}
+            aria-label="Filtrar por etapa"
             onChange={(e) =>
               setFilter("status", e.target.value)
             }
@@ -431,6 +433,7 @@ export default function Toolbar({
 
           <select
             value={filters.category}
+            aria-label="Filtrar por categoria"
             onChange={(e) =>
               setFilter("category", e.target.value)
             }

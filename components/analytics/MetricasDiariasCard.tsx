@@ -43,12 +43,16 @@ import { pluralDe } from "@/lib/plural";
 function CampoManual({
   valor,
   onChange,
+  rotulo,
 }: {
   valor: number | null;
   onChange: (v: number | null) => void;
+  /** O que o leitor de tela anuncia: o campo é só um número na célula. */
+  rotulo: string;
 }) {
   return (
     <input
+      aria-label={rotulo}
       type="number"
       min={0}
       value={valor ?? ""}
@@ -260,6 +264,7 @@ export default function MetricasDiariasCard() {
 
           <input
             type="month"
+            aria-label="Mês das métricas"
             value={mes}
             onChange={(e) =>
               setMes(e.target.value || mesAtual())
@@ -405,6 +410,7 @@ export default function MetricasDiariasCard() {
                         className="border-b border-zinc-100 bg-zinc-50/50 px-2 py-1"
                       >
                         <CampoManual
+                          rotulo={`${campo === "visualizacoes" ? "Visualizações" : "Desativadas"} em ${l.dia}`}
                           valor={valorDe(l, campo)}
                           onChange={(v) =>
                             editar(l.dia, campo, v)

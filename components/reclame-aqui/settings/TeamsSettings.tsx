@@ -101,6 +101,7 @@ export default function TeamsSettings() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar time..."
+              aria-label="Buscar time"
               className="h-10 w-full rounded-xl border border-zinc-200 pl-10 pr-3 text-sm outline-none transition-colors focus:border-violet-400"
             />
 
@@ -145,6 +146,7 @@ export default function TeamsSettings() {
                   <td className="px-5 py-3">
 
                     <input
+                      aria-label="Nome do time"
                       value={item.name}
                       onChange={(e) =>
                         rascunho.alterar(item.id, {
@@ -159,6 +161,7 @@ export default function TeamsSettings() {
                   <td className="px-5 py-3">
 
                     <input
+                      aria-label="Valor legado: o nome do time nas planilhas antigas"
                       value={item.legacyValue}
                       onChange={(e) =>
                         rascunho.alterar(item.id, {

@@ -841,6 +841,7 @@ function NpsPagina({ abrirInicial = null }: { abrirInicial?: "etapas" | "causas"
 
               <select
                 value={kindFiltro}
+                aria-label="Filtrar por tipo"
                 onChange={(e) =>
                   setKindFiltro(e.target.value)
                 }
@@ -882,6 +883,7 @@ function NpsPagina({ abrirInicial = null }: { abrirInicial?: "etapas" | "causas"
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
                 placeholder="Buscar por nome, e-mail ou telefone"
+                aria-label="Buscar no NPS"
                 className="h-10 w-full rounded-xl border border-zinc-200 pl-9 pr-9 text-sm outline-none transition-colors focus:border-violet-400"
               />
 

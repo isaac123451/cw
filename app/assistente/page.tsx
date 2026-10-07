@@ -389,6 +389,7 @@ export default function AssistentePage() {
                 rows={2}
                 disabled={busy}
                 placeholder="Ex.: o que devo priorizar para subir a nota?"
+                aria-label="Pergunta ao assistente"
                 className="flex-1 resize-none rounded-xl border border-zinc-200 p-3 text-sm outline-none transition-colors placeholder:text-zinc-400 focus:border-violet-400 disabled:bg-zinc-50"
               />
 

@@ -219,6 +219,7 @@ export default function ClientesPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Buscar por nome, cidade, e-mail ou telefone..."
+                aria-label="Buscar clientes"
                 className="h-11 w-full rounded-xl border border-zinc-200 pl-10 pr-3 text-sm outline-none transition-colors focus:border-violet-400"
               />
 

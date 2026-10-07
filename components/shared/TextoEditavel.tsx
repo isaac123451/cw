@@ -52,6 +52,7 @@ export default function TextoEditavel({
         onChange={(e) => setEditado(e.target.value)}
         rows={linhasMinimas}
         spellCheck
+        aria-label="Texto pronto — dá para editar antes de copiar"
         className="w-full resize-y rounded-xl border border-zinc-200 bg-zinc-50/60 p-3 text-[13px] leading-relaxed text-zinc-800 outline-none transition-colors [field-sizing:content] focus:border-violet-400 focus:bg-white"
       />
       <div className="mt-2 flex flex-wrap items-center gap-2">

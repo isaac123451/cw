@@ -352,6 +352,7 @@ export default function JourneyTopics({
                     }
                     rows={2}
                     placeholder={`Adicionar em "${topic.name}"...`}
+                    aria-label={`Adicionar em ${topic.name}`}
                     className="flex-1 resize-none rounded-xl border border-zinc-200 p-2.5 text-sm outline-none transition-colors placeholder:text-zinc-400 focus:border-violet-400"
                   />
 

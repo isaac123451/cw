@@ -134,6 +134,7 @@ export default function ImpactTypesCard() {
 
                   <td className="px-5 py-3">
                     <input
+                      aria-label="Nome do tipo de impacto"
                       value={item.name}
                       onChange={(e) =>
                         rascunho.alterar(item.id, {
@@ -146,6 +147,7 @@ export default function ImpactTypesCard() {
 
                   <td className="px-5 py-3">
                     <select
+                      aria-label="Direção do impacto"
                       value={item.direction}
                       onChange={(e) =>
                         rascunho.alterar(item.id, {
@@ -180,6 +182,7 @@ export default function ImpactTypesCard() {
                         })
                       }
                       placeholder="Ex.: cliente desistiu do cancelamento."
+                      aria-label="Quando usar este tipo"
                       className={`${campo} min-w-[260px]`}
                     />
                   </td>

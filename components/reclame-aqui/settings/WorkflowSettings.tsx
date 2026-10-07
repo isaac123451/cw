@@ -418,6 +418,7 @@ export default function WorkflowSettings() {
                               limit: Number(e.target.value),
                             })
                           }
+                          aria-label={`Limite WIP de ${item.name}`}
                           className="h-9 w-24 rounded-lg border border-zinc-200 px-2.5 text-sm tabular-nums outline-none transition-colors focus:border-violet-400"
                         />
 
