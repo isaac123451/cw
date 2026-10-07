@@ -7,9 +7,16 @@ import { isEncerrado, STATUS_SEM_TRATATIVA, type NpsResponseView } from "@/lib/m
  * sem ninguém atender) fica de fora (out/2026) — a mesma regra do NPS por
  * ciclo. Contado, ele fazia o placar do Meu dia dizer "88 encerrados, −519
  * que a semana passada": 520 tinham sido fechados de uma vez em 30/09.
+ *
+ * E o "Sem Retorno" sem contato nenhum também fica de fora (07/10/2026):
+ * no ciclo de 1 a 7/10 o placar dizia "137 ciclos de NPS encerrados", e 119
+ * eram respostas antigas fechadas pela rotina da madrugada sem ninguém ter
+ * tentado falar com o cliente. Conquista é o que teve trabalho — ao menos
+ * um contato ou uma tentativa.
  */
 const encerradoComTratativa = (r: NpsResponseView) =>
-  r.status ? isEncerrado(r.status) && r.status !== STATUS_SEM_TRATATIVA : Boolean(r.closedAt);
+  (r.status ? isEncerrado(r.status) && r.status !== STATUS_SEM_TRATATIVA : Boolean(r.closedAt)) &&
+  Boolean(r.firstContactAt || r.postContactAt || r.attempts?.length);
 
 import {
   diaNaOperacao,

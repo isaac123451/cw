@@ -183,6 +183,10 @@ console.log("\n— Conquistas da semana —\n");
   conferir("NPS no prazo pelo prazo do próprio ciclo", por["nps-no-prazo"], "1 primeiro contato do NPS no prazo · de 2 feitos no ciclo");
   conferir("detrator revertido na semana", por.revertidos, "1 detrator revertido · resolvidos ou satisfeitos depois do contato");
   conferir("ciclo encerrado na semana", por.encerrados, "1 ciclo de NPS encerrado · com a tratativa registrada");
+  /* Fechado como "Sem Retorno" pela rotina, sem contato nem tentativa: não é conquista (out/2026 — eram 119 de 137). */
+  const semContato = ciclo({ id: "d", status: "[Encerrado] Sem Retorno", closedAt: "2026-09-16T05:00:00Z" });
+  const comSemContato = conquistasDaSemana({ casos, nps: [...ciclos, semContato], agora: AGORA });
+  conferir("encerrado sem contato nenhum não conta como conquista", comSemContato.conquistas.find((c) => c.chave === "encerrados")?.titulo, "1 ciclo de NPS encerrado");
 
   /* O placar conta pela mesma régua, e a comparação é até o mesmo dia da semana passada. */
   const placar = placarDaSemana({ casos, nps: ciclos, agora: AGORA });

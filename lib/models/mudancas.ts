@@ -63,6 +63,16 @@ export const MUDANCAS: Mudanca[] = [
     href: "/meu-dia",
   },
   {
+    id: "placar-encerrados-com-trabalho",
+    dia: "2026-10-07",
+    tipo: "correcao",
+    frente: "nps",
+    titulo: "O placar só conta como encerrado o ciclo do NPS que teve contato",
+    texto:
+      "Neste ciclo o placar dizia \"137 ciclos de NPS encerrados\" — e 119 eram respostas antigas que a rotina da madrugada fechou como Sem Retorno sem ninguém ter tentado falar com o cliente. Agora o placar, as conquistas e o resumo para a gestão só contam o encerramento com pelo menos um contato ou uma tentativa: 18 neste ciclo, contra 3 no mesmo ponto do anterior.",
+    href: "/meu-dia",
+  },
+  {
     id: "meu-dia-cadencia-esgotada",
     dia: "2026-10-07",
     tipo: "correcao",
