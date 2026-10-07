@@ -11,7 +11,7 @@ import { GoogleEvent } from "@/lib/models/google";
 import { hojeNaOperacao } from "@/lib/services/reputation.service";
 import { lateMovements } from "@/lib/services/movement.service";
 import type { Expediente } from "@/lib/services/horasUteis";
-import { isOpen, isSocial, semRespostaPublica } from "@/lib/services/case.service";
+import { isOpen, isReclameAqui, isSocial, semRespostaPublica } from "@/lib/services/case.service";
 import type { FrenteDaJanela } from "@/lib/models/janelas";
 import type { NpsResponseView } from "@/lib/models/nps";
 import type { SlaRule } from "@/lib/models/sla";
@@ -356,8 +356,9 @@ export function buildNotifications(
    */
   if (prefs.cadastroIncompleto) {
 
+    /* Só o Reclame Aqui (07/10/2026): o aviso fala de reclamações e leva ao quadro do RA — com as Redes ele dizia 5 e o quadro, 4. */
     const incompletas = cases.filter(
-      (item) => isOpen(item) && faltaNoCadastro(item).length > 0
+      (item) => isOpen(item) && isReclameAqui(item) && faltaNoCadastro(item).length > 0
     );
 
     if (incompletas.length > 0) {

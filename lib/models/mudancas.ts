@@ -63,6 +63,26 @@ export const MUDANCAS: Mudanca[] = [
     href: "/meu-dia",
   },
   {
+    id: "quadro-sem-resposta-so-abertas",
+    dia: "2026-10-07",
+    tipo: "correcao",
+    frente: "reclame-aqui",
+    titulo: "O quadro conta \"sem resposta\" igual ao menu, ao placar e à extensão",
+    texto:
+      "O cartão Reclamações e o filtro \"sem resposta pública\" do quadro contavam também reclamação já fechada: diziam 12 enquanto o menu, o placar e a extensão diziam 11. Agora todos seguem a mesma regra — aberta, do Reclame Aqui e sem resposta pública.",
+    href: "/reclame-aqui",
+  },
+  {
+    id: "aviso-incompletas-so-ra",
+    dia: "2026-10-07",
+    tipo: "correcao",
+    frente: "reclame-aqui",
+    titulo: "O aviso de dados incompletos fala só das reclamações",
+    texto:
+      "O sino e a extensão diziam \"5 reclamações com dados do consumidor incompletos\" e o quadro mostrava 4: o quinto era um atendimento das Redes Sociais, que não se completa pelo quadro do Reclame Aqui. Agora o aviso conta só o Reclame Aqui, igual ao quadro.",
+    href: "/reclame-aqui",
+  },
+  {
     id: "rotina-tempo-de-hoje",
     dia: "2026-10-07",
     tipo: "correcao",

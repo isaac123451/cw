@@ -563,7 +563,12 @@ export function naSituacao(
     e o assistente respondeu 356 onde o painel dizia 17. Achado em
     22/09/2026.
   */
-  const semResposta = isReclameAqui(item) && !respondida(item);
+  /*
+    E só a aberta (07/10/2026): a regra única é `semRespostaPublica`. Sem o
+    isOpen, o cartão do quadro dizia "12 sem resposta pública" com o menu,
+    o placar e a extensão dizendo 11 — a diferença era caso já fechado.
+  */
+  const semResposta = semRespostaPublica(item);
 
   switch (situacao) {
 

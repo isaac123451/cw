@@ -19,7 +19,7 @@ import { resolve } from "node:path";
 
 import { getPrisma } from "../lib/prisma";
 import { fetchCases } from "../lib/services/case.repository";
-import { isOpen, isReclameAqui, semRespostaPublica } from "../lib/services/case.service";
+import { isOpen, isReclameAqui, naSituacao, semRespostaPublica } from "../lib/services/case.service";
 import { respondida } from "../lib/models/case";
 import { metasDoCiclo } from "../lib/models/metasDoCiclo";
 
@@ -72,6 +72,8 @@ async function main() {
   const meta = metas.metas.find((m) => m.chave === "respostas");
   const dita = Number(meta?.porque.match(/(\d+) ainda sem resposta/)?.[1] ?? 0);
   conferir("a meta do ciclo diz o número das abertas", dita, abertasSemResposta);
+  /* O cartão e o filtro do quadro (naSituacao) contavam também as fechadas: 12 contra 11 em 07/10. */
+  conferir("o filtro e o cartão do quadro contam igual", casos.filter((c) => naSituacao(c, "sem-resposta", "0000-00-00")).length, abertasSemResposta);
 
   console.log(`  --    ${fechadasSemResposta} fechada(s) sem resposta ficam fora da fila (e dentro da conta da nota)`);
 
