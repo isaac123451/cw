@@ -164,6 +164,7 @@ const raizes = todos.filter((f) => {
     // O seed é ponto de entrada de verdade: npm run db:seed.
     rel === "prisma/seed.ts" ||
     rel.startsWith("scripts/") ||
+    rel === "proxy.ts" ||
     rel === "middleware.ts" ||
     rel.startsWith("core/") ||
     /^(next|tailwind|postcss|prisma|eslint)\.config\./.test(

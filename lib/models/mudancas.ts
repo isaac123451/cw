@@ -750,6 +750,15 @@ export const MUDANCAS: Mudanca[] = [
     href: "/reclame-aqui/configuracoes?tab=status",
   },
   {
+    id: "middleware-vira-proxy",
+    dia: "2026-10-07",
+    tipo: "melhoria",
+    frente: "bastidores",
+    titulo: "A porta de entrada segue a convenção nova do Next 16",
+    texto:
+      "O arquivo que confere a sessão antes de cada tela se chamava \"middleware\", nome que o Next 16 descontinuou — a cada subida do servidor vinha o aviso. Virou \"proxy\", com a mesma regra: sem sessão, as telas mandam para o login e a API responde 401; com sessão, a tela de login manda para o Meu dia. Conferido por fora logo depois da troca.",
+  },
+  {
     id: "lint-de-volta",
     dia: "2026-10-07",
     tipo: "correcao",

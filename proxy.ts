@@ -1,3 +1,10 @@
+/**
+ * A porta da aplicação: sessão válida ou volta para o login.
+ *
+ * Era `middleware.ts`. O Next 16 renomeou a convenção para `proxy` e
+ * avisava a cada subida do servidor (out/2026); a função é a mesma, e o
+ * proxy roda em Node — o `jose` funciona igual.
+ */
 import { NextResponse, type NextRequest } from "next/server";
 
 import { jwtVerify } from "jose";
@@ -34,7 +41,7 @@ async function isValid(token: string) {
   }
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 

@@ -42,7 +42,7 @@ export interface Acesso {
 
   /**
    * Sem banco a aplicação inteira roda aberta, com o dataset de
-   * demonstração — é o que `middleware.ts` já faz. As rotas da extensão
+   * demonstração — é o que `proxy.ts` (o antigo middleware) já faz. As rotas da extensão
    * seguem a mesma regra para o `npm run dev` continuar útil sem
    * infraestrutura. O dataset versionado tem telefone e e-mail
    * mascarados, então não há contato real exposto nesse modo.
