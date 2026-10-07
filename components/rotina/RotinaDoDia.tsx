@@ -60,7 +60,7 @@ export default function RotinaDoDia({ dia, compacto = false, onConfigurar, onUmP
   const { notify } = useToast();
   const [aberta, setAberta] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
-  const { rules } = useSla();
+  const { rules, expediente } = useSla();
 
   const { doDia, contagens, feitasHoje, sequencia, hoje } = dia;
 
@@ -162,13 +162,19 @@ export default function RotinaDoDia({ dia, compacto = false, onConfigurar, onUmP
           const c = a.chave ? contagens[a.chave] : undefined;
           const marcada = rascunho.has(a.id);
           const expandida = aberta === a.id;
-          const minutos = minutosDaAtividade(a, c);
+          const minutosDoTotal = minutosDaAtividade(a, c);
           const temLista = Boolean(c && (c.itens.length || c.tirados.length));
           /* Todos os itens saíram por marca: a atividade está feita, falta só marcar. */
           const esvaziada = Boolean(c && c.total === 0 && c.tirados.length > 0 && !marcada);
           const alternarLista = () => setAberta(expandida ? null : a.id);
           const doDiaDeHoje = a.chave ? porAtividade.get(a.chave) : undefined;
           const ficamParaDepois = doDiaDeHoje ? doDiaDeHoje.total - doDiaDeHoje.hoje : 0;
+          /*
+            O tempo é o da parte de hoje (out/2026). Com o acumulado inteiro,
+            "Verificar novos casos" dizia ~31h26 num dia de 8 horas — um
+            número que só desanima. O que fica para os próximos dias não pesa.
+          */
+          const minutos = doDiaDeHoje && ficamParaDepois > 0 && doDiaDeHoje.total > 0 ? Math.round((minutosDoTotal * doDiaDeHoje.hoje) / doDiaDeHoje.total) : minutosDoTotal;
 
           return (
             <li key={a.id} className={`rounded-xl border transition-colors ${marcada ? "border-emerald-200 bg-emerald-50/40" : "border-zinc-200"}`}>
@@ -238,7 +244,15 @@ export default function RotinaDoDia({ dia, compacto = false, onConfigurar, onUmP
                 </div>
 
                 <div className="flex shrink-0 items-center gap-1">
-                  {minutos > 0 && !compacto && <span className="hidden text-[11px] tabular-nums text-zinc-400 sm:inline">~{descreverMinutos(minutos)}</span>}
+                  {minutos > 0 && !compacto && (
+                    <span
+                      title={minutos > expediente.fimMin - expediente.inicioMin ? "Mais que o expediente inteiro: o plano do dia encaixa o que cabe hoje, na ordem do documento." : undefined}
+                      className={`hidden text-[11px] tabular-nums sm:inline ${minutos > expediente.fimMin - expediente.inicioMin ? "text-amber-700" : "text-zinc-400"}`}
+                    >
+                      ~{descreverMinutos(minutos)}
+                      {minutos > expediente.fimMin - expediente.inicioMin && " · além do expediente"}
+                    </span>
+                  )}
                   {a.link && (
                     <Link href={a.link} title="Abrir a lista" className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-violet-50 hover:text-violet-700">
                       <ArrowUpRight size={15} />

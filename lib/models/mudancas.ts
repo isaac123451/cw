@@ -63,6 +63,16 @@ export const MUDANCAS: Mudanca[] = [
     href: "/meu-dia",
   },
   {
+    id: "rotina-tempo-de-hoje",
+    dia: "2026-10-07",
+    tipo: "correcao",
+    frente: "plataforma",
+    titulo: "O tempo de cada atividade da rotina é o da parte de hoje",
+    texto:
+      "\"Verificar novos casos\" mostrava ~31h26 — o tempo do acumulado inteiro, inclusive o que o plano de recuperação já deixou para os próximos dias. Agora o tempo é só o de hoje (~19h37 com a fila atual) e, quando passa do expediente, aparece em âmbar com \"além do expediente\": o plano do dia encaixa o que cabe, na ordem do documento. E o placar diz \"1 dia seguido\", não \"1 dias seguidos\".",
+    href: "/meu-dia",
+  },
+  {
     id: "distribuicao-dia-de-brasilia",
     dia: "2026-10-07",
     tipo: "correcao",

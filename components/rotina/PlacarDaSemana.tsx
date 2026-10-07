@@ -10,6 +10,7 @@ import { useCases } from "@/lib/context/CaseContext";
 import { useNps } from "@/lib/context/NpsContext";
 import { useToast } from "@/lib/context/ToastContext";
 import { useAgora } from "@/lib/hooks/useAgora";
+import { pluralDe } from "@/lib/plural";
 import { oQueMoveANota, placarDaSemana, textoDoResumoDaSemana, type NumerosDaJanela } from "@/lib/models/motivacaoDoDia";
 
 import type { useMeuDia } from "@/components/rotina/useMeuDia";
@@ -157,7 +158,7 @@ export default function PlacarDaSemana({ dia }: { dia: MeuDia }) {
             <Flame size={16} className={`self-center ${dia.sequencia > 0 ? "text-amber-500" : "text-zinc-300"}`} />
             <span className="text-[22px] font-semibold leading-none tabular-nums text-zinc-900">{dia.sequencia}</span>
           </span>
-          <span className="mt-1 block text-[11px] leading-tight text-zinc-600">dias seguidos com a rotina em dia</span>
+          <span className="mt-1 block text-[11px] leading-tight text-zinc-600">{pluralDe(dia.sequencia, "dia seguido", "dias seguidos")} com a rotina em dia</span>
           <span className="mt-0.5 block text-[11px] text-zinc-400">{dia.sequencia > 0 ? "2/3 da rotina de hoje somam mais um" : "2/3 da rotina de hoje já começam"}</span>
         </li>
       </ul>
