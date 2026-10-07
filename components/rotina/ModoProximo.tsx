@@ -113,11 +113,14 @@ export default function ModoProximo({ dia, marcadas, onFechar, atividade = null,
   */
   const [bloco, setBloco] = useState<{ fim: number; minutos: number; inicio: number } | null>(null);
   const [agoraDoBloco, setAgoraDoBloco] = useState(() => Date.now());
+  /* O bloco que já avisou que acabou: o aviso sai uma vez, e o relógio para de bater. */
+  const blocoAvisado = useRef<number | null>(null);
+  const blocoAcabou = bloco !== null && agoraDoBloco >= bloco.fim;
   useEffect(() => {
-    if (!bloco) return;
+    if (!bloco || blocoAcabou) return;
     const t = window.setInterval(() => setAgoraDoBloco(Date.now()), 1000);
     return () => window.clearInterval(t);
-  }, [bloco]);
+  }, [bloco, blocoAcabou]);
 
   /* O lugar de cada item, na ordem em que apareceu desde que o modo abriu. */
   const [ordem, setOrdem] = useState<string[]>([]);
@@ -331,6 +334,28 @@ export default function ModoProximo({ dia, marcadas, onFechar, atividade = null,
   const total = fila.length + fechados.length;
   const pct = total ? Math.round((fechados.length / total) * 100) : 0;
 
+  /*
+    O fim do bloco avisa (out/2026). O relógio chegava a 00:00 e ficava
+    parado no cabeçalho, sem ninguém notar — e o bloco serve justamente
+    para quem perde a noção do tempo. Um aviso na tela e, se o navegador já
+    tem permissão (a extensão ou o sino pediram), uma notificação do
+    sistema, para quando a aba não está à frente.
+  */
+  useEffect(() => {
+    if (!bloco || !blocoAcabou || blocoAvisado.current === bloco.fim) return;
+    blocoAvisado.current = bloco.fim;
+    const noBloco = fechados.length - bloco.inicio;
+    const detalhe = `${noBloco} ${pluralDe(noBloco, "item fechado", "itens fechados")}. Uma pausa de 5 minutos e outro bloco?`;
+    notify({ tone: "success", title: `Bloco de ${bloco.minutos} min encerrado`, detail: detalhe });
+    try {
+      if (typeof Notification !== "undefined" && Notification.permission === "granted" && document.visibilityState !== "visible") {
+        new Notification(`Bloco de ${bloco.minutos} min encerrado`, { body: detalhe, tag: "cw-bloco-de-foco" });
+      }
+    } catch {
+      /* Sem notificação do sistema: o aviso da tela basta. */
+    }
+  }, [bloco, blocoAcabou, fechados.length, notify]);
+
   const passos = ficha ? passosDe(ficha.frente, ficha.ref) : null;
   const resumo = passos ? resumoDosPassos(passos) : null;
 
@@ -542,7 +567,12 @@ export default function ModoProximo({ dia, marcadas, onFechar, atividade = null,
         </div>
       ) : !item ? (
         <div className="px-5 py-8 text-center">
-          <p className="text-sm font-medium text-zinc-800">Nada na fila das atividades abertas.</p>
+          {/* Zerou com trabalho feito agora: é conquista, e diz quanto. */}
+          <p className="text-sm font-medium text-zinc-800">
+            {fechados.length > 0
+              ? `Fila zerada: ${fechados.length} ${pluralDe(fechados.length, "item fechado", "itens fechados")} agora.`
+              : "Nada na fila das atividades abertas."}
+          </p>
           <p className="mt-1 text-xs text-zinc-500">
             {dia.doDia.some((a) => !marcadas.has(a.id)) ? "O que resta é marcar as atividades feitas e salvar." : "A rotina de hoje está marcada."}
           </p>

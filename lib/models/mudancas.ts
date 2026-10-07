@@ -63,6 +63,16 @@ export const MUDANCAS: Mudanca[] = [
     href: "/meu-dia",
   },
   {
+    id: "um-por-vez-fim-do-bloco",
+    dia: "2026-10-07",
+    tipo: "melhoria",
+    frente: "plataforma",
+    titulo: "O bloco de foco avisa quando acaba, e a fila zerada conta o que você fechou",
+    texto:
+      "No Um por vez, o bloco de 25 ou 45 minutos chegava a 00:00 e ficava parado no cabeçalho, sem aviso. Agora aparece \"Bloco de 25 min encerrado: 6 itens fechados\" com a sugestão de pausa — e, se o navegador já permite notificações, ela chega mesmo com a aba atrás. Quando a fila zera depois de trabalho feito, a tela diz \"Fila zerada: N itens fechados agora\" em vez de \"Nada na fila\".",
+    href: "/meu-dia?um-por-vez",
+  },
+  {
     id: "meu-dia-pular-da-a-volta",
     dia: "2026-10-07",
     tipo: "correcao",
