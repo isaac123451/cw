@@ -1,12 +1,11 @@
 import type { AgendaTask } from "@/lib/models/agenda";
 import type { Case } from "@/lib/models/case";
-import { respondida } from "@/lib/models/case";
 import type { NpsResponseView } from "@/lib/models/nps";
 import { etapaDasRedes } from "@/lib/models/redes";
 import type { SlaRule } from "@/lib/models/sla";
 
 import { prazosDeHoje } from "@/lib/models/aberturaDoAgente";
-import { isOpen, isReclameAqui, isSocial } from "@/lib/services/case.service";
+import { isOpen, isSocial, semRespostaPublica } from "@/lib/services/case.service";
 import type { Expediente } from "@/lib/services/horasUteis";
 import { summarize } from "@/lib/services/nps.service";
 import { diaNaOperacao } from "@/lib/services/reputation.service";
@@ -51,7 +50,7 @@ export function contadoresDoMenu(entrada: {
   const hoje = diaNaOperacao(agora);
 
   const prazos = prazosDeHoje(abertos, entrada.regras, nps, entrada.expediente, agora);
-  const semResposta = abertos.filter((c) => isReclameAqui(c) && !respondida(c)).length;
+  const semResposta = casos.filter(semRespostaPublica).length;
   const redesAbertas = casos.filter((c) => isSocial(c) && !etapaDasRedes(c.status)?.final).length;
   const npsForaDoPrazo = summarize(nps, agora).estourados;
   const tarefasDoDia = tarefas.filter((t) => !t.done && t.dueDate <= hoje);

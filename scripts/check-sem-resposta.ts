@@ -44,6 +44,7 @@ const QUE_PEDEM_ACAO = [
   "app/api/extensao/resumo/route.ts",
   "app/api/extensao/contexto/route.ts",
   "app/api/extensao/fila/route.ts",
+  "lib/models/contadoresDoMenu.ts",
 ];
 
 async function main() {
