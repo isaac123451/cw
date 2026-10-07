@@ -118,9 +118,22 @@ export function applyMacro(
     estabelecimento: string;
     planos?: string;
     modulos?: string;
+    /**
+     * Primeiro nome do consumidor, para `[NOME]`; e de quem escreve, para
+     * `[SEU NOME]`. Os textos de WhatsApp foram escritos com colchete
+     * ("Oi, [NOME]!") e o caso sabe os dois — a pessoa apagava e digitava
+     * à mão o que estava na tela (out/2026). Vazio, o colchete fica: é
+     * pedido de escrita e o atalho avisa.
+     */
+    nome?: string;
+    seuNome?: string;
   }
 ) {
-  return body
+  const comColchetes = body
+    .replace(/\[NOME\]/g, values.nome?.trim() || "[NOME]")
+    .replace(/\[SEU NOME\]/g, values.seuNome?.trim() || "[SEU NOME]");
+
+  return comColchetes
     .replace(/\{\{cliente\}\}/g, values.cliente)
     .replace(/\{\{protocolo\}\}/g, values.protocolo)
     .replace(/\{\{responsavel\}\}/g, values.responsavel)

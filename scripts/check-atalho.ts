@@ -39,6 +39,7 @@ import { Macro } from "../lib/models/macro";
 
 import {
   pedidosDeEscrita,
+  prepararResposta,
   prepararRespostas,
 } from "../lib/services/respostas.service";
 
@@ -399,6 +400,41 @@ function conferirColchetes() {
             `"${texto}" → esperava ${esperado}, achei ${pedidosDeEscrita(texto).length}`
         )
         .join("\n         ")
+    );
+  }
+
+  /*
+    [NOME] e [SEU NOME] o caso sabe responder (out/2026): saem com o
+    primeiro nome de cada um. Sem o nome, o colchete fica — e continua
+    contado como pedido de escrita.
+  */
+  const macro = {
+    id: "prova",
+    title: "Prova",
+    body: "Oi, [NOME]! Aqui é o [SEU NOME]. Você deu nota [NOTA].",
+    channel: "WhatsApp",
+    category: "Atendimento",
+    owner: "",
+    tags: [],
+    uses: 0,
+    updatedAt: "",
+  } as unknown as Macro;
+
+  const cheio = prepararResposta(macro, { cliente: "mayara candido do Nascimento", responsavel: "Carlos Isaac" });
+  const vazio = prepararResposta(macro, {});
+
+  const nomesOk =
+    cheio.texto === "Oi, Mayara! Aqui é o Carlos. Você deu nota [NOTA]." &&
+    cheio.preencher.length === 1 &&
+    vazio.texto === macro.body &&
+    vazio.preencher.length === 3;
+
+  if (nomesOk) {
+    ok("[NOME] e [SEU NOME] saem preenchidos quando o caso sabe", "sem o nome, o colchete fica e é cobrado");
+  } else {
+    falhar(
+      "[NOME] e [SEU NOME] saem preenchidos quando o caso sabe",
+      `com nome: "${cheio.texto}" (${cheio.preencher.length} pedido(s)); sem: "${vazio.texto}" (${vazio.preencher.length})`
     );
   }
 }

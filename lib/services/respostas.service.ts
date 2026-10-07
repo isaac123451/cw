@@ -21,6 +21,7 @@ import {
   MACRO_VARS,
   Macro,
 } from "@/lib/models/macro";
+import { primeiroNome } from "@/lib/models/mensagens";
 
 /** O que se sabe do atendimento no momento da inserção. */
 export interface ContextoDaResposta {
@@ -162,6 +163,8 @@ function preencher(
     ),
     planos: ou(contexto.planos, "{{planos}}"),
     modulos: ou(contexto.modulos, "{{modulos}}"),
+    nome: primeiroNome(contexto.cliente),
+    seuNome: primeiroNome(contexto.responsavel),
   });
 }
 

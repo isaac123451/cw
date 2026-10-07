@@ -15,6 +15,7 @@ import { useSession } from "@/lib/context/SessionContext";
 import { useEstablishments } from "@/lib/context/EstablishmentsContext";
 
 import { applyMacro } from "@/lib/models/macro";
+import { primeiroNome } from "@/lib/models/mensagens";
 import { tabelaDePlanos } from "@/lib/models/plan";
 import { usePlans } from "@/lib/hooks/usePlans";
 import { Case } from "@/lib/models/case";
@@ -98,6 +99,8 @@ export default function MacroPicker({
          */
         planos: tabelaDePlanos(planos, "plano"),
         modulos: tabelaDePlanos(planos, "modulo"),
+        nome: primeiroNome(data.customer),
+        seuNome: primeiroNome(data.owner ?? session?.name),
       })
     );
 

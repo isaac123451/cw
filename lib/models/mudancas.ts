@@ -680,6 +680,16 @@ export const MUDANCAS: Mudanca[] = [
     href: "/clientes",
   },
   {
+    id: "respostas-nome-e-seu-nome",
+    dia: "2026-10-07",
+    tipo: "melhoria",
+    frente: "plataforma",
+    titulo: "Respostas prontas: [NOME] e [SEU NOME] já saem preenchidos",
+    texto:
+      "Os textos de WhatsApp foram escritos com colchete — \"Oi, [NOME]! Aqui é o [SEU NOME]\" — e só {{cliente}} era trocado sozinho. Com o caso aberto, a pessoa apagava o colchete e digitava um nome que estava na tela. Agora [NOME] sai com o primeiro nome do consumidor e [SEU NOME] com o primeiro nome de quem está escrevendo, no atalho de respostas da extensão e na resposta pública do caso. Sem o nome, o colchete fica e o aviso de \"faltam trechos\" continua cobrando; [NOTA] e os pedidos longos seguem para você escrever.",
+    href: "/base-conhecimento",
+  },
+  {
     id: "escuro-texto-forte",
     dia: "2026-10-07",
     tipo: "correcao",
