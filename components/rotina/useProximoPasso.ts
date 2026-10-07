@@ -53,7 +53,13 @@ export function useProximoPasso(dia: MeuDia, marcadas: Set<string>) {
     resumo,
     /** A posição do item na fila inteira, a partir de 1. */
     posicao: item ? fila.findIndex((i) => i.chave === item.chave) + 1 : 0,
-    pular: () => item && setPulados((p) => [...p, item.chave]),
+    /* Depois de pular todos, a volta recomeça a contagem: sem isso o "Pular" ficava parado no primeiro. */
+    pular: () =>
+      item &&
+      setPulados((p) => {
+        const deuAVolta = fila.every((i) => p.includes(i.chave));
+        return [...(deuAVolta ? [] : p), item.chave];
+      }),
     carregando: dia.carregando || !dia.contagens,
   };
 }

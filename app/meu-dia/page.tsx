@@ -21,6 +21,7 @@ import MetasDoCiclo from "@/components/rotina/MetasDoCiclo";
 import RadarDeIncidente from "@/components/rotina/RadarDeIncidente";
 import PlanoDeRecuperacao from "@/components/rotina/PlanoDeRecuperacao";
 import ProximoPasso from "@/components/rotina/ProximoPasso";
+import { Focus, LayoutList } from "lucide-react";
 
 /**
  * Meu dia — a primeira tela do dia.
@@ -34,6 +35,44 @@ import ProximoPasso from "@/components/rotina/ProximoPasso";
  * salva.
  */
 const nadaParaOuvir = () => () => {};
+
+/*
+  Modo foco (out/2026): "tenho problemas de concentração, organização e
+  finalizar atividades". A tela tinha doze blocos antes da lista; no foco
+  ficam o próximo passo, o placar (é ele que avisa as conquistas), as
+  metas do dia e a rotina — o que leva a terminar o dia. Metas do ciclo, o
+  que move a nota, recuperação, plano, checkpoint e fim do dia ficam a um
+  clique. É uma escolha de
+  visualização, então mora no navegador; sem armazenamento, abre no foco.
+*/
+const CHAVE_DO_FOCO = "cw:meu-dia-foco";
+const EVENTO_DO_FOCO = "cw:meu-dia-foco";
+
+function ouvirFoco(avisar: () => void) {
+  window.addEventListener("storage", avisar);
+  window.addEventListener(EVENTO_DO_FOCO, avisar);
+  return () => {
+    window.removeEventListener("storage", avisar);
+    window.removeEventListener(EVENTO_DO_FOCO, avisar);
+  };
+}
+
+function lerFoco() {
+  try {
+    return localStorage.getItem(CHAVE_DO_FOCO) !== "tudo";
+  } catch {
+    return true;
+  }
+}
+
+function guardarFoco(foco: boolean) {
+  try {
+    localStorage.setItem(CHAVE_DO_FOCO, foco ? "foco" : "tudo");
+  } catch {
+    /* Sem armazenamento: vale só até recarregar. */
+  }
+  window.dispatchEvent(new Event(EVENTO_DO_FOCO));
+}
 
 /*
   ?configurar=rotina (1.115): o atalho da central de Configurações abre a
@@ -67,6 +106,7 @@ function MeuDiaPagina({ configurarInicial = false, ajustarRecuperacao = false }:
   );
   const [escolha, setUmPorVez] = useState<boolean | null>(null);
   const umPorVez = escolha ?? pedidoPeloEndereco;
+  const foco = useSyncExternalStore(ouvirFoco, lerFoco, () => true);
   /* O "Começar" de uma atividade da rotina abre o Um por vez só com ela (1.124). */
   const [atividadeDoFoco, setAtividadeDoFoco] = useState<{ chave: string; titulo: string } | null>(null);
 
@@ -95,8 +135,27 @@ function MeuDiaPagina({ configurarInicial = false, ajustarRecuperacao = false }:
         <PageHeading
           eyebrow="Hoje"
           title="Meu dia"
-          description={`${dataPorExtenso ? `${dataPorExtenso[0].toUpperCase()}${dataPorExtenso.slice(1)}. ` : ""}A rotina do documento com os números de hoje nas quatro frentes, o plano que cabe no expediente e o checkpoint com a gestão.`}
-        />
+          description={`${dataPorExtenso ? `${dataPorExtenso[0].toUpperCase()}${dataPorExtenso.slice(1)}. ` : ""}${foco ? "Só o que leva a terminar o dia: o próximo passo, o placar, as metas de hoje e a rotina." : "A rotina do documento com os números de hoje nas quatro frentes, o plano que cabe no expediente e o checkpoint com a gestão."}`}
+        >
+          <div role="group" aria-label="Como ver o Meu dia" className="flex rounded-lg bg-zinc-100 p-0.5 text-xs font-medium">
+            <button
+              type="button"
+              aria-pressed={foco}
+              onClick={() => guardarFoco(true)}
+              className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 transition-colors ${foco ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-800"}`}
+            >
+              <Focus size={13} /> Foco
+            </button>
+            <button
+              type="button"
+              aria-pressed={!foco}
+              onClick={() => guardarFoco(false)}
+              className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 transition-colors ${!foco ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-800"}`}
+            >
+              <LayoutList size={13} /> Tudo
+            </button>
+          </div>
+        </PageHeading>
 
         {/* O radar de incidente (1.102): só aparece quando há um, e vem antes de tudo. */}
         <RadarDeIncidente />
@@ -119,7 +178,7 @@ function MeuDiaPagina({ configurarInicial = false, ajustarRecuperacao = false }:
         {/* As mini conquistas (1.96): metas do tamanho do dia, com aviso quando fecham. */}
         <MetasDoDia rotina={rotinaDoDia} />
 
-        <MetasDoCiclo />
+        {!foco && <MetasDoCiclo />}
 
         {umPorVez && (
           <ModoProximo
@@ -137,15 +196,24 @@ function MeuDiaPagina({ configurarInicial = false, ajustarRecuperacao = false }:
         <CartaoDoPrimeiroAcesso />
 
         {/* O que pede ação, o que move a nota e o que já deu certo — antes da lista de tarefas. */}
-        <AgoraNoMeuDia />
+        {!foco && <AgoraNoMeuDia />}
 
         {/* Só aparece com acumulado (o mínimo de cada frente, 1.122) — ou aberto pelo ?configurar=recuperacao. */}
-        <PlanoDeRecuperacao dia={dia} ajustarInicial={ajustarRecuperacao} />
+        {(!foco || ajustarRecuperacao) && <PlanoDeRecuperacao dia={dia} ajustarInicial={ajustarRecuperacao} />}
 
-        <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
+        <div className={`grid grid-cols-1 items-start gap-6 ${foco ? "" : "xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]"}`}>
 
           <RotinaDoDia dia={dia} rascunho={efetivas} setRascunho={setMarcas} onConfigurar={() => setConfigurando(true)} onUmPorVez={() => { setUmPorVez(true); window.scrollTo({ top: 0, behavior: "smooth" }); }} onComecar={(a) => { setAtividadeDoFoco(a); setUmPorVez(true); window.scrollTo({ top: 0, behavior: "smooth" }); }} />
 
+          {foco ? (
+            <button
+              type="button"
+              onClick={() => guardarFoco(false)}
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-zinc-300 px-4 py-3 text-sm text-zinc-500 transition-colors hover:border-zinc-400 hover:bg-white hover:text-zinc-800"
+            >
+              <LayoutList size={14} /> Ver o que move a nota, as metas do ciclo, o plano do expediente e o fim do dia
+            </button>
+          ) : (
           <div className="space-y-6">
             <PlanoDoDia plano={plano} atividades={dia.doDia} contagens={dia.contagens} hoje={dia.hoje} />
             {dia.hoje && (
@@ -171,6 +239,7 @@ function MeuDiaPagina({ configurarInicial = false, ajustarRecuperacao = false }:
               />
             )}
           </div>
+          )}
 
         </div>
 

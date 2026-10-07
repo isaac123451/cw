@@ -41,7 +41,7 @@ const CHAVE_VISTA = "cw:placar-visto";
  *
  * O Isaac: "parte de conquistas nunca vi". O cartão existia — texto
  * corrido no canto de uma fileira de três. Aqui os números ficam no
- * topo, cada um contra a semana passada até o mesmo dia; a sequência de
+ * topo, cada um contra o ciclo anterior até o mesmo ponto; a sequência de
  * dias com a rotina inteira; o próximo passo que mexe na nota; e o
  * resumo da semana pronto para colar no Slack, editável.
  *
@@ -146,7 +146,7 @@ export default function PlacarDaSemana({ dia }: { dia: MeuDia }) {
                 <span
                   className={`mt-0.5 block text-[11px] tabular-nums ${diferenca > 0 ? "text-emerald-700" : diferenca < 0 ? "text-rose-700" : "text-zinc-400"}`}
                 >
-                  {diferenca === 0 ? "igual à semana passada" : `${diferenca > 0 ? "+" : "−"}${Math.abs(diferenca)} que a semana passada`}
+                  {diferenca === 0 ? "igual ao ciclo anterior" : `${diferenca > 0 ? "+" : "−"}${Math.abs(diferenca)} que o ciclo anterior`}
                 </span>
               </Link>
             </li>

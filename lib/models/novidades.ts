@@ -860,7 +860,7 @@ export const NOVIDADES: Novidade[] = [
       id: "placar-da-semana",
       rota: "/meu-dia",
       passos: [
-        { alvo: '[data-tour="placar"]', titulo: "A semana em números", texto: "Cada número contra a semana passada até o mesmo dia. Clique para ver a lista. O resumo para a gestão fica no botão do canto." },
+        { alvo: '[data-tour="placar"]', titulo: "O ciclo em números", texto: "Cada número contra o ciclo anterior até o mesmo ponto. Clique para ver a lista. O resumo para a gestão fica no botão do canto." },
       ],
     },
   },

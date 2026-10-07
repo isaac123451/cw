@@ -51,6 +51,37 @@ export const REVISAO = {
 };
 
 export const MUDANCAS: Mudanca[] = [
+  /* ---------------- plataforma: meu dia ---------------- */
+  {
+    id: "meu-dia-modo-foco",
+    dia: "2026-10-07",
+    tipo: "novo",
+    frente: "plataforma",
+    titulo: "Meu dia em modo foco",
+    texto:
+      "O Meu dia abria com doze blocos antes da lista de tarefas. Agora abre no Foco: o próximo passo, o placar, as metas de hoje e a rotina — o que leva a terminar o dia. O que move a nota, as metas do ciclo, o plano do expediente, o checkpoint e o fim do dia ficam no \"Tudo\", no canto do título, ou no botão ao fim da rotina. A escolha fica guardada no navegador.",
+    href: "/meu-dia",
+  },
+  {
+    id: "meu-dia-pular-da-a-volta",
+    dia: "2026-10-07",
+    tipo: "correcao",
+    frente: "plataforma",
+    titulo: "\"Pular\" no próximo passo não trava mais depois de dar a volta na fila",
+    texto:
+      "Depois de pular todos os itens da fila, o próximo passo voltava para o primeiro e o botão Pular parava de andar. Agora a volta recomeça a contagem e o Pular segue para o seguinte, no Meu dia e no próximo passo flutuante.",
+    href: "/meu-dia",
+  },
+  {
+    id: "placar-compara-com-o-ciclo",
+    dia: "2026-10-07",
+    tipo: "correcao",
+    frente: "plataforma",
+    titulo: "O placar diz \"ciclo anterior\", que é com o que ele compara",
+    texto:
+      "Desde que o placar passou a contar por ciclo, cada número ainda dizia \"+3 que a semana passada\". A conta sempre foi contra o ciclo anterior até o mesmo ponto; o texto e o tour agora dizem isso.",
+    href: "/meu-dia",
+  },
   /* ---------------- redes: captura ---------------- */
   {
     id: "redes-email-nao-e-perfil",
