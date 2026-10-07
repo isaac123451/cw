@@ -51,6 +51,17 @@ export const REVISAO = {
 };
 
 export const MUDANCAS: Mudanca[] = [
+  /* ---------------- plataforma: cadastros ---------------- */
+  {
+    id: "carga-nao-cria-usuario",
+    dia: "2026-10-07",
+    tipo: "correcao",
+    frente: "plataforma",
+    titulo: "A carga do Reclame Aqui não cria mais conta para quem saiu da operação",
+    texto:
+      "Quem atendeu reclamações e não tem login (ex-operacional, por exemplo) virava um usuário sem senha na lista de responsáveis e de times a cada carga. Agora a carga só avisa quem ficou sem conta: a reclamação entra sem responsável e quem for cuidar dela atribui na ficha. Cadastrar responsável à mão, em Times, continua como antes.",
+    onde: "Configurações → Times; carga da planilha do Reclame Aqui",
+  },
   /* ---------------- extensão: o painel ---------------- */
   {
     id: "ext-nota-da-resposta-acha-a-reclamacao",

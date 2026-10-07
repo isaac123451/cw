@@ -976,7 +976,7 @@ async function main() {
     const conhecido = usuarios.has(chave(nome));
 
     console.log(
-      `    ${nome.padEnd(16)} ${String(n).padStart(3)}${conhecido ? "" : "   sem cadastro — será criado"}`
+      `    ${nome.padEnd(16)} ${String(n).padStart(3)}${conhecido ? "" : "   sem conta — o caso entra sem responsável"}`
     );
   }
 
@@ -1181,34 +1181,17 @@ async function main() {
   });
 
   /**
-   * Quem atendeu continua atendendo, mesmo sem conta nesta base.
+   * A carga **não cria usuário**.
    *
-   * Sem usuário, `persistCase` deixaria o caso sem dono — e a informação
-   * de quem cuidou de cada reclamação se perderia na carga, em silêncio.
-   *
-   * A pessoa é criada **do mesmo jeito que a tela de Times cria**: nome,
-   * sem e-mail, endereço interno `@sem-acesso.local` gerado pelo
-   * servidor. Não é um caminho especial da carga — é o mesmo cadastro,
-   * e quem for criado aqui aparece lá para ser editado.
-   *
-   * `passwordHash` vazio não é senha em branco: o login exige um hash
-   * bcrypt válido e recusa qualquer outra coisa.
+   * Quem atendeu e não tem conta nesta base (ex-operacional, por exemplo)
+   * não vira linha em `User`: uma conta sem senha e sem dono só enche a
+   * lista de responsáveis e de times. A reclamação entra sem responsável
+   * — quem for cuidar dela atribui na ficha — e o nome fica no relatório
+   * acima para quem quiser conferir.
    */
-  for (const nome of semUsuario) {
-
-    const criado = await prisma.user.create({
-      data: {
-        name: nome,
-        email: `${slugify(nome)}@sem-acesso.local`,
-        passwordHash: "",
-        role: "LEITURA",
-        jobTitle: "Analista de Reputação",
-      },
-      select: { id: true, name: true },
-    });
-
+  if (semUsuario.length) {
     console.log(
-      `  responsável criado: ${criado.name}`
+      `  sem conta, ficam sem responsável (nenhum usuário é criado): ${semUsuario.join(", ")}`
     );
   }
 
