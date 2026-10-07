@@ -10,6 +10,7 @@ import {
   type PessoaDoTime,
 } from "@/lib/models/distribuicao";
 import { CLOSED_STATUS } from "@/lib/services/case.service";
+import { paredeDe } from "@/lib/services/horasUteis";
 
 /**
  * A leitura da distribuição do time (1.106) — ver `lib/models/distribuicao.ts`.
@@ -27,7 +28,10 @@ const MODULO_DA_FRENTE: Record<FrenteDaFila, Modulo> = {
   nps: "nps",
 };
 
-const dia = (d: Date) => d.toISOString().slice(0, 10);
+/* Instante → o dia em Brasília: depois das 21h o dia em UTC já é o seguinte (out/2026). */
+const dia = (d: Date) => paredeDe(d).dia;
+/* Coluna só de data (@db.Date), gravada à meia-noite UTC: o dia é o que está escrito. */
+const diaDaData = (d: Date) => d.toISOString().slice(0, 10);
 
 function frenteDoCaso(channel: string): FrenteDaFila {
   return channel === "RECLAME_AQUI" ? "reclame-aqui" : "redes";
@@ -55,7 +59,8 @@ export async function lerItensAbertos(prisma: PrismaClient): Promise<ItemDaFila[
         frente,
         rotulo: `${c.protocol} · ${c.customer}`,
         cliente: chaveDoCliente({ email: c.email, documento: c.document, nome: c.customer }),
-        desde: dia(c.recebidaEm ?? c.publishedAt),
+        /* `publishedAt` é só a data; `recebidaEm`, o instante. */
+        desde: c.recebidaEm ? dia(c.recebidaEm) : diaDaData(c.publishedAt),
         donoId: c.ownerId,
         href: frente === "reclame-aqui" ? `/reclame-aqui/${c.id}` : `/redes-sociais/${c.id}`,
       };
@@ -96,7 +101,7 @@ export async function lerPessoasDoTime(prisma: PrismaClient, itens: ItemDaFila[]
     const papel = (modulo: Modulo) => u.moduleRoles.find((m) => m.module === modulo)?.role ?? u.role;
     const carga = { "reclame-aqui": 0, redes: 0, nps: 0 } as Record<FrenteDaFila, number>;
     for (const i of itens) if (i.donoId === u.id) carga[i.frente] += 1;
-    const ausenteAte = u.ausenteAte ? dia(u.ausenteAte) : null;
+    const ausenteAte = u.ausenteAte ? diaDaData(u.ausenteAte) : null;
     return {
       id: u.id,
       nome: u.name,

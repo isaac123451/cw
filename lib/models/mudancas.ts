@@ -63,6 +63,16 @@ export const MUDANCAS: Mudanca[] = [
     href: "/meu-dia",
   },
   {
+    id: "distribuicao-dia-de-brasilia",
+    dia: "2026-10-07",
+    tipo: "correcao",
+    frente: "plataforma",
+    titulo: "Distribuição do time conta a espera pelo dia de Brasília",
+    texto:
+      "Na Distribuição do time, o \"desde quando\" de cada item usava o dia em UTC: o que chegava depois das 21h aparecia como do dia seguinte, e a fila parecia mais nova do que é. Agora é o dia em Brasília, como no resto da plataforma.",
+    href: "/distribuicao",
+  },
+  {
     id: "placar-encerrados-com-trabalho",
     dia: "2026-10-07",
     tipo: "correcao",
