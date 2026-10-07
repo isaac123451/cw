@@ -464,7 +464,7 @@ export function textoDoResumoDaSemana(p: PlacarDaSemana, extra: { sequencia?: nu
     p.agora.npsContatados ? `• NPS: ${p.agora.npsNoPrazo} de ${p2(p.agora.npsContatados, "primeiro contato", "primeiros contatos")} no prazo` : null,
     p.agora.revertidos ? `• ${p2(p.agora.revertidos, "detrator revertido", "detratores revertidos")}` : null,
     p.agora.encerrados || p.antes.encerrados ? `• ${p2(p.agora.encerrados, "ciclo de NPS encerrado", "ciclos de NPS encerrados")} (${comparar(p.agora.encerrados, p.antes.encerrados)})` : null,
-    extra.sequencia ? `• ${p2(extra.sequencia, "dia útil", "dias úteis")} seguidos com a rotina inteira` : null,
+    extra.sequencia ? `• ${p2(extra.sequencia, "dia útil", "dias úteis")} seguidos com a rotina em dia` : null,
     extra.nota ? `• Nota do Reclame Aqui: ${extra.nota}` : null,
   ].filter((l): l is string => Boolean(l));
   return linhas.length > 1 ? linhas.join("\n") : `${linhas[0]}\n• Nada fechado ainda neste ciclo.`;

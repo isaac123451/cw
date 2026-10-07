@@ -13,7 +13,7 @@ import { salvarMarcas } from "@/lib/actions/rotina";
 import { useToast } from "@/lib/context/ToastContext";
 
 import { FRENTES_DA_OPERACAO } from "@/lib/models/frentes";
-import { DIAS_DA_SEMANA, type AtividadeDaRotina } from "@/lib/models/rotina";
+import { DIAS_DA_SEMANA, minimoDaSequencia, type AtividadeDaRotina } from "@/lib/models/rotina";
 import { minutosDaAtividade } from "@/lib/models/meuDia";
 import { descreverMinutos } from "@/components/rotina/formato";
 
@@ -133,12 +133,18 @@ export default function RotinaDoDia({ dia, compacto = false, onConfigurar, onUmP
       dia.aplicarMarcas(r.feitas, r.atividades);
       setRascunho(null);
       const completo = r.feitas.length === doDia.length && doDia.length > 0;
+      /* Hoje entra na sequência com dois terços (out/2026); antes do salvar, podia já estar contando. */
+      const minimo = minimoDaSequencia(doDia.length);
+      const contavaAntes = doDia.filter((a) => feitasHoje.has(a.id)).length >= minimo;
+      const contaAgora = doDia.length > 0 && r.feitas.length >= minimo;
+      const dias = sequencia - (contavaAntes ? 1 : 0) + (contaAgora ? 1 : 0);
+      const alteracoes = [r.marcadas ? `${r.marcadas} ${pluralDe(r.marcadas, "marcada", "marcadas")}` : null, r.desmarcadas ? `${r.desmarcadas} ${pluralDe(r.desmarcadas, "desmarcada", "desmarcadas")}` : null].filter(Boolean).join(" · ");
       notify({
         tone: "success",
         title: completo ? "Rotina de hoje completa." : `${r.feitas.length} de ${doDia.length} atividades feitas.`,
-        detail: completo
-          ? `Sequência de ${sequencia + (feitasHoje.size === doDia.length ? 0 : 1)} ${pluralDe(sequencia + (feitasHoje.size === doDia.length ? 0 : 1), "dia útil", "dias úteis")} com a rotina inteira.`
-          : [r.marcadas ? `${r.marcadas} ${pluralDe(r.marcadas, "marcada", "marcadas")}` : null, r.desmarcadas ? `${r.desmarcadas} ${pluralDe(r.desmarcadas, "desmarcada", "desmarcadas")}` : null].filter(Boolean).join(" · ") || "Nada mudou.",
+        detail: contaAgora
+          ? `Sequência de ${dias} ${pluralDe(dias, "dia útil", "dias úteis")} com a rotina em dia.`
+          : `${alteracoes || "Nada mudou."} · faltam ${minimo - r.feitas.length} para hoje contar na sequência.`,
       });
     } catch {
       notify({ tone: "error", title: "As marcas não foram salvas.", detail: "Tente de novo em instantes." });
@@ -289,7 +295,7 @@ export default function RotinaDoDia({ dia, compacto = false, onConfigurar, onUmP
         <div className="flex shrink-0 items-center gap-2">
           {sequencia > 0 && (
             <span
-              title="Dias úteis seguidos com a rotina inteira marcada."
+              title="Dias úteis seguidos com a rotina em dia: dois terços ou mais das atividades marcados."
               className="flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 ring-1 ring-inset ring-amber-100"
             >
               <Flame size={13} /> {sequencia} {pluralDe(sequencia, "dia", "dias")}

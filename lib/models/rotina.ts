@@ -141,11 +141,27 @@ export function atividadesDoDia(
 }
 
 /**
- * Dias úteis seguidos com a rotina inteira marcada.
+ * Quanto da rotina do dia faz o dia contar na sequência: dois terços.
+ *
+ * Era a rotina inteira. Medido na base em 07/10/2026: em 13 dias com
+ * marcas, um só fechou as 12 atividades — a chama ficava em zero quase
+ * sempre, e uma meta de tudo-ou-nada desanima justamente quem luta para
+ * terminar o dia. Com dois terços, 9 de 12 já conta.
+ */
+export const PARTE_QUE_CONTA_NA_SEQUENCIA = 2 / 3;
+
+/** Quantas atividades fazem um dia de `total` contar na sequência. */
+export function minimoDaSequencia(total: number) {
+  return Math.ceil(total * PARTE_QUE_CONTA_NA_SEQUENCIA);
+}
+
+/**
+ * Dias úteis seguidos com a rotina em dia (dois terços ou mais marcados).
  *
  * Conta de ontem para trás — hoje ainda está acontecendo — e soma hoje
- * se hoje já fechou. Um dia útil sem marca nenhuma interrompe; fim de
- * semana e feriado não contam nem interrompem.
+ * se hoje já chegou lá. Um dia útil abaixo do mínimo interrompe; fim de
+ * semana, feriado e dia sem atividade marcada para ele não contam nem
+ * interrompem.
  */
 export function sequenciaDeDias(
   atividades: AtividadeDaRotina[],
@@ -160,16 +176,16 @@ export function sequenciaDeDias(
     porDia.set(m.dia, s);
   }
 
-  const completo = (dia: string) => {
+  const emDia = (dia: string) => {
     const doDia = atividadesDoDia(atividades, dia, expediente);
     if (doDia.length === 0) return null;
     const feitas = porDia.get(dia) ?? new Set();
-    return doDia.every((a) => feitas.has(a.id));
+    return doDia.filter((a) => feitas.has(a.id)).length >= minimoDaSequencia(doDia.length);
   };
 
   const antes = (dia: string) => new Date(Date.parse(`${dia}T00:00:00Z`) - 86_400_000).toISOString().slice(0, 10);
 
-  let dias = completo(hoje) ? 1 : 0;
+  let dias = emDia(hoje) ? 1 : 0;
   let cursor = antes(hoje);
 
   for (let guarda = 0; guarda < 400; guarda++) {
@@ -177,7 +193,12 @@ export function sequenciaDeDias(
       cursor = antes(cursor);
       continue;
     }
-    const c = completo(cursor);
+    const c = emDia(cursor);
+    /* Dia útil sem atividade para ele: não conta nem interrompe. */
+    if (c === null) {
+      cursor = antes(cursor);
+      continue;
+    }
     if (!c) break;
     dias += 1;
     cursor = antes(cursor);

@@ -63,6 +63,16 @@ export const MUDANCAS: Mudanca[] = [
     href: "/meu-dia",
   },
   {
+    id: "sequencia-dois-tercos",
+    dia: "2026-10-07",
+    tipo: "melhoria",
+    frente: "plataforma",
+    titulo: "A sequência de dias conta com dois terços da rotina, não só com ela inteira",
+    texto:
+      "A chama do placar só somava o dia com as 12 atividades marcadas — e, olhando a base, de 13 dias com marcas só um fechou tudo, então ela ficava quase sempre em zero. Agora o dia entra na sequência com dois terços da rotina (8 de 12). Ao salvar, o aviso diz a sequência ou quantas faltam para hoje contar. Dia útil sem atividade nenhuma prevista não interrompe mais.",
+    href: "/meu-dia",
+  },
+  {
     id: "um-por-vez-fim-do-bloco",
     dia: "2026-10-07",
     tipo: "melhoria",

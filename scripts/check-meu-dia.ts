@@ -146,9 +146,9 @@ console.log("\n— A fiação —\n");
   const bloco = ler("components/rotina/AgoraNoMeuDia.tsx");
   conferir("todo aviso tem saída (Resolver, ou o plano abaixo)", /Resolver/.test(bloco) && /no plano abaixo/.test(bloco), true);
   conferir("todo bloco diz algo quando está vazio", (bloco.match(/length === 0 \?/g) ?? []).length, 3);
-  /* 1.37: a semana saiu do cartão para o placar do topo, que mostra sempre os números (zero incluso) contra a semana passada. */
+  /* 1.37: o placar do topo mostra sempre os números (zero incluso). Desde 1.90 a conta é por ciclo, e o texto diz isso (out/2026). */
   const placar = ler("components/rotina/PlacarDaSemana.tsx");
-  conferir("o placar da semana compara com a semana passada, até zero", /igual à semana passada/.test(placar) && /que a semana passada/.test(placar), true);
+  conferir("o placar compara com o ciclo anterior, até zero", /igual ao ciclo anterior/.test(placar) && /que o ciclo anterior/.test(placar) && !/semana passada"/.test(placar), true);
   conferir("e está no Meu dia", ler("app/meu-dia/page.tsx").includes("<PlacarDaSemana dia={dia} />"), true);
 }
 

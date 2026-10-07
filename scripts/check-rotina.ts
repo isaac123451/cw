@@ -11,7 +11,7 @@
  */
 import type { Case } from "../lib/models/case";
 import type { NpsResponseView } from "../lib/models/nps";
-import { ROTINA_PADRAO, atividadesDoDia, diaDaSemana, sequenciaDeDias, type AtividadeDaRotina } from "../lib/models/rotina";
+import { ROTINA_PADRAO, atividadesDoDia, diaDaSemana, minimoDaSequencia, sequenciaDeDias, type AtividadeDaRotina } from "../lib/models/rotina";
 import { contarRotina, minutosDaAtividade, planoDoDia } from "../lib/models/meuDia";
 import { textoDoCheckpoint } from "../components/rotina/CheckpointDoDia";
 import { instanteDe } from "../lib/services/horasUteis";
@@ -49,7 +49,14 @@ const marcas = [...todas("2026-09-10"), ...todas("2026-09-11"), ...todas("2026-0
 confere("qui, sex e seg completas: 3 (o fim de semana não interrompe)", sequenciaDeDias(rotina, marcas, "2026-09-15"), 3);
 confere("hoje completo também conta", sequenciaDeDias(rotina, [...marcas, ...todas("2026-09-15")], "2026-09-15"), 4);
 const faltouUma = marcas.filter((m) => !(m.dia === "2026-09-11" && m.atividadeId === diarias[10].id));
-confere("sexta sem o checkpoint interrompe: só segunda conta", sequenciaDeDias(rotina, faltouUma, "2026-09-15"), 1);
+confere("sexta sem o checkpoint ainda conta: dois terços bastam", sequenciaDeDias(rotina, faltouUma, "2026-09-15"), 3);
+const sextaPelaMetade = marcas.filter((m) => !(m.dia === "2026-09-11" && diarias.slice(0, 6).some((a) => a.id === m.atividadeId)));
+confere("sexta pela metade interrompe: só segunda conta", sequenciaDeDias(rotina, sextaPelaMetade, "2026-09-15"), 1);
+const doDiaQuinze = atividadesDoDia(rotina, "2026-09-15");
+const doisTercos = doDiaQuinze.slice(0, minimoDaSequencia(doDiaQuinze.length)).map((a) => ({ atividadeId: a.id, dia: "2026-09-15" }));
+confere("hoje com dois terços já soma", sequenciaDeDias(rotina, [...marcas, ...doisTercos], "2026-09-15"), 4);
+confere("hoje com um a menos que dois terços não soma", sequenciaDeDias(rotina, [...marcas, ...doisTercos.slice(1)], "2026-09-15"), 3);
+confere("12 atividades: 8 contam", minimoDaSequencia(12), 8);
 confere("sem marca nenhuma: zero", sequenciaDeDias(rotina, [], "2026-09-15"), 0);
 
 console.log("\n— As contagens, por frente —");

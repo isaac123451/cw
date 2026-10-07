@@ -42,7 +42,7 @@ const CHAVE_VISTA = "cw:placar-visto";
  * O Isaac: "parte de conquistas nunca vi". O cartão existia — texto
  * corrido no canto de uma fileira de três. Aqui os números ficam no
  * topo, cada um contra o ciclo anterior até o mesmo ponto; a sequência de
- * dias com a rotina inteira; o próximo passo que mexe na nota; e o
+ * dias com a rotina em dia (2/3 ou mais); o próximo passo que mexe na nota; e o
  * resumo da semana pronto para colar no Slack, editável.
  *
  * Quando um número sobe enquanto a tela está aberta (ou desde a última
@@ -157,8 +157,8 @@ export default function PlacarDaSemana({ dia }: { dia: MeuDia }) {
             <Flame size={16} className={`self-center ${dia.sequencia > 0 ? "text-amber-500" : "text-zinc-300"}`} />
             <span className="text-[22px] font-semibold leading-none tabular-nums text-zinc-900">{dia.sequencia}</span>
           </span>
-          <span className="mt-1 block text-[11px] leading-tight text-zinc-600">dias seguidos com a rotina inteira</span>
-          <span className="mt-0.5 block text-[11px] text-zinc-400">{dia.sequencia > 0 ? "marque e salve hoje para somar" : "comece hoje: marque e salve a rotina"}</span>
+          <span className="mt-1 block text-[11px] leading-tight text-zinc-600">dias seguidos com a rotina em dia</span>
+          <span className="mt-0.5 block text-[11px] text-zinc-400">{dia.sequencia > 0 ? "2/3 da rotina de hoje somam mais um" : "2/3 da rotina de hoje já começam"}</span>
         </li>
       </ul>
 
