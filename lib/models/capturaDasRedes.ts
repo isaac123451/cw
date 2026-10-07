@@ -332,7 +332,7 @@ export function itemDoSlack(entrada: { canal: string; ts: string; texto: string;
       ? `mensagem de ${new Date(entrada.quando!).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}`
       : "mensagem",
     rede: redeDoTexto(texto, link),
-    perfil: perfilDoTexto(texto.match(/@[A-Za-z0-9._]{2,40}/)?.[0] ?? "", link),
+    perfil: perfilDoTexto(texto.match(/(?<![\w.])@[A-Za-z0-9._]{2,40}/)?.[0] ?? "", link),
     /* "Cliente Outras" é o que a automação escreve quando não sabe o nome. */
     nome: nome && !/^(outr[oa]s?|n[ãa]o informado|desconhecido)$/i.test(nome[1].trim()) ? nome[1].trim() : "",
     seguidores: seguidores ? seguidoresDoTexto(seguidores[1]) : null,

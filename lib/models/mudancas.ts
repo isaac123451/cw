@@ -51,6 +51,17 @@ export const REVISAO = {
 };
 
 export const MUDANCAS: Mudanca[] = [
+  /* ---------------- redes: captura ---------------- */
+  {
+    id: "redes-email-nao-e-perfil",
+    dia: "2026-10-07",
+    tipo: "correcao",
+    frente: "redes",
+    titulo: "O e-mail do cliente deixa de virar perfil do Instagram na captura do Slack",
+    texto:
+      "Quando a mensagem do Slack trazia o e-mail do cliente, a captura tomava o \"@gmail.com\" por perfil do Instagram e gravava \"gmail.com\" como perfil do atendimento. Agora a arroba só vale como perfil quando está solta no texto, e perfil de verdade (\"@maria.doces\") continua saindo.",
+    onde: "Redes Sociais → Capturar do Slack",
+  },
   /* ---------------- plataforma: cadastros ---------------- */
   {
     id: "carga-nao-cria-usuario",

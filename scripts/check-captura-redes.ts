@@ -139,6 +139,18 @@ conferir(
   "maria.doces"
 );
 
+/* O e-mail da automação ("x@gmail.com") não é perfil: a arroba precisa estar solta. */
+conferir(
+  "Slack: o domínio do e-mail não é o perfil",
+  itemDoSlack({ canal: "C1", ts: "4.1", texto: ["Cliente Janaina entrou em contato no Instagram", "Email : 2143jana@gmail.com"].join(String.fromCharCode(10)), mencoes: [] }).perfil,
+  ""
+);
+conferir(
+  "Slack: perfil de verdade continua saindo",
+  itemDoSlack({ canal: "C1", ts: "5.1", texto: ["Reclamou @maria.doces no Instagram", "Email : a@gmail.com"].join(String.fromCharCode(10)) }).perfil,
+  "maria.doces"
+);
+
 conferir("Slack: referência em Brasília", itemDoSlack({ canal: "C1", ts: "1.000001", texto: "oi", quando: "2026-09-17T13:05:00.000Z" }).referencia, "mensagem de 17/09, 10:05");
 
 /* ---- 6. fiação ---- */

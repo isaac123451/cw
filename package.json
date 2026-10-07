@@ -48,6 +48,7 @@
     "check:checklist": "tsx scripts/check-checklist.ts",
     "check:historico": "tsx --conditions=react-server scripts/check-historico.ts",
     "conferir": "node scripts/conferir-tudo.cjs",
+    "corrigir:dados-out": "tsx --env-file=.env scripts/corrigir-dados-de-out.ts",
     "check:busca-texto": "tsx scripts/check-busca-texto.ts",
     "check:busca-nps": "tsx scripts/check-busca-nps.ts",
     "check:incremental": "tsx scripts/check-incremental.ts",
