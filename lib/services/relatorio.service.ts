@@ -345,7 +345,7 @@ function pontosDeAtencao(d: DadosDoRelatorio, seis: AbaDoRelatorio, proxima: Aba
     });
   }
   if (r.evaluated < RA1000_MINIMO_DE_AVALIACOES) {
-    p.push({ texto: `Só ${r.evaluated} avaliações na aba de 6 meses — o selo pede ${RA1000_MINIMO_DE_AVALIACOES}.`, href: "/reclame-aqui/avaliacoes" });
+    p.push({ texto: `Só ${r.evaluated} ${pluralDe(r.evaluated, "avaliação", "avaliações")} na aba de 6 meses — o selo pede ${RA1000_MINIMO_DE_AVALIACOES}.`, href: "/reclame-aqui/avaliacoes" });
   }
   if (r.evaluated > 0 && r.solutionIndex < RA1000_TARGETS.solucao) p.push({ texto: `Índice de solução em ${ptBR(r.solutionIndex)}% — a meta do selo é ${RA1000_TARGETS.solucao}%.`, href: "/reclame-aqui/avaliacoes" });
   if (r.evaluated > 0 && r.wouldReturnIndex < RA1000_TARGETS["novos-negocios"]) p.push({ texto: `Voltariam a fazer negócio: ${ptBR(r.wouldReturnIndex)}% — a meta é ${RA1000_TARGETS["novos-negocios"]}%.`, href: "/reclame-aqui/avaliacoes" });

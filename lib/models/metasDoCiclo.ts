@@ -100,7 +100,7 @@ export function metasDoCiclo(entrada: { casos: Case[]; nps: NpsResponseView[]; a
       titulo: "Detratores contatados",
       feito: contatados,
       gerado: detratoresDoCiclo.length,
-      porque: `todos os ${detratoresDoCiclo.length} detratores que chegaram no ciclo`,
+      porque: detratoresDoCiclo.length === 1 ? "o detrator que chegou no ciclo" : `todos os ${detratoresDoCiclo.length} detratores que chegaram no ciclo`,
       href: "/nps",
     }),
     meta({

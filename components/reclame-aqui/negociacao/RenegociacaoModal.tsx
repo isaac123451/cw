@@ -142,9 +142,9 @@ export default function RenegociacaoModal({ item, onClose, onSalvo }: Props) {
   const linhas: [string, string][] = valido
     ? [
         ["Valor total pago", reais(valido.pagoCents)],
-        ["Total de dias do plano", `${valido.diasDoPlano} dias (${br(valido.inicio)} a ${br(valido.fim)})`],
+        ["Total de dias do plano", `${valido.diasDoPlano} ${pluralDe(valido.diasDoPlano, "dia", "dias")} (${br(valido.inicio)} a ${br(valido.fim)})`],
         ["Valor proporcional por dia", reais(valido.valorPorDiaCents)],
-        ["Dias não utilizados", `${valido.diasNaoUtilizados} dias (desde ${br(valido.solicitacao)})`],
+        ["Dias não utilizados", `${valido.diasNaoUtilizados} ${pluralDe(valido.diasNaoUtilizados, "dia", "dias")} (desde ${br(valido.solicitacao)})`],
         ["Proporcional dos dias não utilizados", reais(valido.proporcionalCents)],
         [`Impostos e encargos (${Math.round(DESCONTO_DE_ENCARGOS * 100)}%)`, `− ${reais(valido.descontoCents)}`],
       ]

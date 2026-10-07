@@ -137,8 +137,8 @@ export default function ImportarConversa({ onClose, onGuardada }: { onClose: () 
           <p className="text-xs text-zinc-500">
             {leitura
               ? destinoEscolhido
-                ? `${destinoEscolhido.novas} de ${mensagens.length} mensagens são novas nesta conversa`
-                : `${mensagens.length} mensagens numa conversa nova`
+                ? `${destinoEscolhido.novas} de ${mensagens.length} ${pluralDe(mensagens.length, "mensagem", "mensagens")} ${pluralDe(destinoEscolhido.novas, "é nova", "são novas")} nesta conversa`
+                : `${mensagens.length} ${pluralDe(mensagens.length, "mensagem", "mensagens")} numa conversa nova`
               : "Escolha o arquivo exportado."}
           </p>
           <div className="flex gap-2">

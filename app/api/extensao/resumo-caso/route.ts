@@ -754,7 +754,7 @@ export async function POST(request: Request) {
       origem: "WhatsApp (guardada na plataforma)",
       quando: ultima?.em?.toISOString(),
       autor: c.guardadaPor,
-      trecho: c.resumo?.slice(0, 400) || `${c._count.mensagens} mensagens${primeira?.em && ultima?.em ? `, de ${hora(primeira.em)} a ${hora(ultima.em)}` : ""}. Abrir em /conversas?id=${c.id}`,
+      trecho: c.resumo?.slice(0, 400) || `${c._count.mensagens} ${c._count.mensagens === 1 ? "mensagem" : "mensagens"}${primeira?.em && ultima?.em ? `, de ${hora(primeira.em)} a ${hora(ultima.em)}` : ""}. Abrir em /conversas?id=${c.id}`,
     });
   }
 

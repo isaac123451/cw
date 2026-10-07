@@ -49,7 +49,7 @@ export default function PrevisaoDeReclamacoesCard({ previsao }: { previsao: Prev
           const total = b.real + b.previsto;
           const rotulo =
             b.tipo === "real"
-              ? `${curto(b.mes)}: ${b.real} reclamações`
+              ? `${curto(b.mes)}: ${b.real} ${pluralDe(b.real, "reclamação", "reclamações")}`
               : b.tipo === "atual"
                 ? `${curto(b.mes)}: ${b.real} até hoje, ${b.real + b.previsto} previstas no mês${b.min !== null ? ` (entre ${b.min} e ${b.max})` : ""}`
                 : `${curto(b.mes)}: ${b.previsto} previstas${b.min !== null ? ` (entre ${b.min} e ${b.max})` : " (número digitado)"}`;

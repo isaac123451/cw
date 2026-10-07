@@ -359,8 +359,8 @@ const skills: Skill[] = [
       return {
         intent: "sem-resposta",
         paragraphs: [
-          `Existem ${semResposta.length} reclamações sem resposta pública.`,
-          `A mais antiga é "${antigo.title}" (${antigo.protocol}), de ${antigo.customer}, publicada em ${brDate(antigo.createdAt)} — ${dias} dias parada.`,
+          `${pluralDe(semResposta.length, "Existe", "Existem")} ${semResposta.length} ${pluralDe(semResposta.length, "reclamação", "reclamações")} sem resposta pública.`,
+          `A mais antiga é "${antigo.title}" (${antigo.protocol}), de ${antigo.customer}, publicada em ${brDate(antigo.createdAt)} — ${dias <= 0 ? "de hoje" : `${dias} ${pluralDe(dias, "dia", "dias")} parada`}.`,
           `As próximas na fila: ${semResposta
             .slice(1, 4)
             .map((item) => item.protocol)
@@ -427,7 +427,7 @@ const skills: Skill[] = [
       return {
         intent: "sla",
         paragraphs: [
-          `${atrasados.length} dos ${abertos.length} casos em aberto estão fora do prazo da regra aplicável.`,
+          `${atrasados.length} dos ${abertos.length} casos em aberto ${pluralDe(atrasados.length, "está", "estão")} fora do prazo da regra aplicável.`,
           `O mais crítico é "${pior.item.title}" (${pior.item.protocol}), categoria ${pior.item.category}, com ${Math.abs(
             Math.round(pior.status.remainingHours / 24)
           )} dias de atraso.`,
@@ -480,7 +480,7 @@ const skills: Skill[] = [
       return {
         intent: "churn",
         paragraphs: [
-          `${risco.length} reclamações estão sinalizadas como risco de cancelamento, sendo ${abertos.length} ainda em aberto.`,
+          `${risco.length} ${pluralDe(risco.length, "reclamação está sinalizada", "reclamações estão sinalizadas")} como risco de cancelamento, ${abertos.length === risco.length ? (risco.length === 1 ? "ainda em aberto" : "todas ainda em aberto") : `sendo ${abertos.length} ainda em aberto`}.`,
           top
             ? `${top[0]} é quem mais aparece, com ${top[1]} ${pluralDe(top[1], "ocorrência", "ocorrências")} de risco — vale um contato direto.`
             : "Nenhum cliente concentra ocorrências de risco.",

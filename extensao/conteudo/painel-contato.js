@@ -2578,7 +2578,7 @@
     }
 
     botao.disabled = true;
-    botao.textContent = `lendo ${mensagens.length} mensagens\u2026`;
+    botao.textContent = `lendo ${mensagens.length} ${CW.plural(mensagens.length, "mensagem", "mensagens")}\u2026`;
 
     /**
      * O retrato do cliente vai junto para o rascunho não inventar
@@ -2881,6 +2881,8 @@
       ].join("");
     }
 
+    const mensagensLidas = Number(P.resumo.mensagensLidas ?? 0);
+
     return [
       '<div class="bloco">',
       '  <div class="linha">',
@@ -2902,7 +2904,7 @@
       P.resumo.resolvido
         ? '      <span class="tag ok">parece resolvido</span>'
         : '      <span class="tag atencao">ainda não resolvido</span>',
-      `      <span style="margin-left:6px">${P.resumo.mensagensLidas ?? 0} mensagens lidas</span>`,
+      `      <span style="margin-left:6px">${mensagensLidas} ${CW.plural(mensagensLidas, "mensagem lida", "mensagens lidas")}</span>`,
       '    </p>',
       '  </div>',
       blocoTons(P.resumo.tons),

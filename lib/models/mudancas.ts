@@ -750,6 +750,15 @@ export const MUDANCAS: Mudanca[] = [
     href: "/reclame-aqui/configuracoes?tab=status",
   },
   {
+    id: "plural-quando-e-um",
+    dia: "2026-10-07",
+    tipo: "correcao",
+    frente: "plataforma",
+    titulo: "Quando é um, a frase fica no singular",
+    texto:
+      "Uma varredura nos textos montados com número achou onze que saíam como \"Existem 1 reclamações sem resposta pública\", \"1 dos 5 casos em aberto estão fora do prazo\", \"Só 1 avaliações na aba de 6 meses\", \"todos os 1 detratores do ciclo\", \"1 mensagens numa conversa nova\", \"setembro: 1 reclamações\", \"1 dias não utilizados\" ou, na extensão, \"lendo 1 mensagens…\". Agora concordam: no Assistente (sem resposta, fora do prazo, risco de cancelamento e há quantos dias a mais antiga está parada — \"de hoje\" quando é do dia), no relatório do ciclo, nas metas do ciclo, na importação de conversa, na previsão de reclamações, na renegociação, no plano do mês e no resumo da conversa da extensão.",
+  },
+  {
     id: "saude-dos-dados",
     dia: "2026-10-07",
     tipo: "novo",

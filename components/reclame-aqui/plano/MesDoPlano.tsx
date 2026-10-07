@@ -114,7 +114,7 @@ export default function MesDoPlano({ plano, erroDaProjecao, hoje }: { plano: Pla
         {plano.consumidor && (
           <Acao titulo={plano.consumidor.alcancavel ? `Nota média das novas avaliações: pelo menos ${plano.consumidor.notaMinimaDasNovas !== null ? nota(plano.consumidor.notaMinimaDasNovas) : "—"}` : "Nota do consumidor fora de alcance neste mês"} ok={plano.consumidor.noCaminho}>
             Para a nota do consumidor chegar a {nota(plano.consumidor.meta)} (hoje vai a {nota(plano.consumidor.projetado)}).
-            {plano.consumidor.avaliacoesNota10AMais > 0 ? ` Mesmo com todas nota 10, faltam ${plano.consumidor.avaliacoesNota10AMais} avaliações a mais.` : ""}
+            {plano.consumidor.avaliacoesNota10AMais > 0 ? ` Mesmo com todas nota 10, ${pluralDe(plano.consumidor.avaliacoesNota10AMais, "falta", "faltam")} ${plano.consumidor.avaliacoesNota10AMais} ${pluralDe(plano.consumidor.avaliacoesNota10AMais, "avaliação", "avaliações")} a mais.` : ""}
           </Acao>
         )}
 
