@@ -162,7 +162,8 @@ async function comBanco(prisma: PrismaClient) {
   /* A Ana, que carregou antes, grava a categoria. */
   const daAna = await persistCaseParcial(
     prisma,
-    { ...queAnaCarregou, category: "Cobrança" },
+    /* Uma categoria oficial: "Cobrança" desde 1.132 é unificada em Financeiro ao gravar (out/2026). */
+    { ...queAnaCarregou, category: "Comercial" },
     queAnaCarregou
   );
 
@@ -170,7 +171,7 @@ async function comBanco(prisma: PrismaClient) {
 
   const depois = await carregado();
 
-  conferir("a mudança da Ana está gravada", depois.category, "Cobrança");
+  conferir("a mudança da Ana está gravada", depois.category, "Comercial");
   conferir("e a do Bruno continua de pé", depois.priority, "Urgente");
 
   /* ---------- 2. mesmo campo: ninguém apaga ninguém ---------- */
