@@ -720,6 +720,16 @@ export const MUDANCAS: Mudanca[] = [
     href: "/jornada",
   },
   {
+    id: "fluxo-diz-o-que-conta-como-aberto",
+    dia: "2026-10-07",
+    tipo: "melhoria",
+    frente: "reclame-aqui",
+    titulo: "Configurar fluxo diz se cada etapa conta como aberta ou sai da fila",
+    texto:
+      "A fila do Reclame Aqui dizia \"22 em aberto\" e, entre os chips, \"Finalizado 4\". Não é erro de conta: só Aguardando avaliação, Resolvido e Não resolvido tiram o caso da fila, e toda etapa criada no fluxo conta como aberta — de propósito, para nenhuma etapa nova sumir dos indicadores. Mas isso não aparecia em lugar nenhum. Agora cada etapa mostra \"conta como aberta\" ou \"sai da fila\", e uma etapa cujo nome soa como fim (Finalizado, Encerrado, Concluído…) mas conta como aberta ganha um aviso: os casos nela seguem na fila, nos prazos e no \"sem resposta\".",
+    href: "/reclame-aqui/configuracoes?tab=status",
+  },
+  {
     id: "lint-de-volta",
     dia: "2026-10-07",
     tipo: "correcao",

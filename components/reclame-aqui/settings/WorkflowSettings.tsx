@@ -16,6 +16,15 @@ import { useWorkflow } from "@/lib/context/WorkflowContext";
 import { useScopedCases } from "@/lib/context/useScopedCases";
 
 import { WorkflowStatus } from "@/lib/models/workflow";
+import { CLOSED_STATUS } from "@/lib/services/case.service";
+
+/**
+ * Nome de etapa que soa como fim. A conta de "aberto" é por exclusão —
+ * só os estados de CLOSED_STATUS saem da fila —, então uma etapa nova
+ * chamada "Finalizado" continua contando como aberta. Havia quatro
+ * reclamações nela em out/2026, todas ainda na fila e nos prazos.
+ */
+const PARECE_FIM = /finaliz|encerr|conclu|fechad|cancelad|arquivad/i;
 
 import SurfaceCard from "@/components/shared/SurfaceCard";
 import BarraDeSalvar from "@/components/shared/BarraDeSalvar";
@@ -368,8 +377,14 @@ export default function WorkflowSettings() {
                         </p>
 
                         <p className="text-[11px] text-zinc-400">
-                          Etapa {item.order}
+                          Etapa {item.order} · {CLOSED_STATUS.includes(item.name) ? "sai da fila" : "conta como aberta"}
                         </p>
+
+                        {!CLOSED_STATUS.includes(item.name) && PARECE_FIM.test(item.name) && (
+                          <p className="mt-1 max-w-72 text-[11px] leading-4 text-amber-700">
+                            O nome soa como fim, mas a etapa conta como aberta: os casos nela seguem na fila, nos prazos e no &ldquo;sem resposta&rdquo;.
+                          </p>
+                        )}
 
                       </td>
 
