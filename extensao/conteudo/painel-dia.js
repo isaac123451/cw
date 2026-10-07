@@ -463,7 +463,7 @@
     } else {
 
       partes.push(
-        ...ordenados.map((t) => cartaoDeAtividade(t))
+        ...ordenados.map((t) => cartaoDeAtividade(t, dados.hoje))
       );
     }
 
@@ -747,13 +747,17 @@
   };
 
   /** Uma tarefa, com o caso vinculado e a baixa. */
-  function cartaoDeAtividade(t) {
+  function cartaoDeAtividade(t, hoje) {
+
+    /* "hoje" e "amanhã" no lugar da data cheia: é o que se lê de relance (out/2026). */
+    const amanha = hoje ? new Date(Date.parse(`${hoje}T12:00:00Z`) + 86400000).toISOString().slice(0, 10) : "";
+    const quando = hoje && t.quando === hoje ? "hoje" : amanha && t.quando === amanha ? "amanhã" : CW.data(t.quando);
 
     const etiqueta = t.concluida
       ? '<span class="tag ok">concluída</span>'
       : t.atrasada
         ? `<span class="tag perigo">${CW.data(t.quando)}</span>`
-        : `<span class="tag neutro">${CW.data(t.quando)}</span>`;
+        : `<span class="tag neutro">${CW.escapar(quando)}</span>`;
 
     /* O título já traz o protocolo ("Cobrar retorno — RA-…"): a linha do caso não repete (out/2026). */
     const protocoloNoTitulo = Boolean(t.protocolo) && String(t.titulo ?? "").includes(t.protocolo);

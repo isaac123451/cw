@@ -63,6 +63,16 @@ export const MUDANCAS: Mudanca[] = [
     onde: "Extensão → WhatsApp → Cliente → Cadastrar aqui",
   },
   {
+    id: "ext-agenda-hoje-amanha",
+    dia: "2026-10-07",
+    tipo: "melhoria",
+    frente: "extensao",
+    titulo: "Agenda da extensão diz \"hoje\" e \"amanhã\"",
+    texto:
+      "Cada atividade levava a data cheia no canto (\"07/10/2026\"), e era preciso conferir o calendário para saber se era para agora. A etiqueta passou a dizer \"hoje\" ou \"amanhã\" quando é o caso; atrasada continua vermelha, com a data em que venceu.",
+    onde: "Extensão → Agenda",
+  },
+  {
     id: "ext-navegacao-explica-a-ponta",
     dia: "2026-10-06",
     tipo: "melhoria",
