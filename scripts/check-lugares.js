@@ -244,6 +244,11 @@ console.log("\n  LUGARES NOVOS DA EXTENSÃO\n");
   conferir("'3 anos atrás'", google.dataDoTexto("3 anos atrás"), emSP(Date.now() - 3 * 365 * dia));
   conferir("'há 5 horas' é hoje", google.dataDoTexto("há 5 horas"), emSP(Date.now()));
   conferir("sem pista nenhuma: hoje", google.dataDoTexto("Maria Silva\nótimo atendimento"), emSP(Date.now()));
+  /* A data vem antes do texto: "cliente há 5 anos" no relato não é a data (out/2026). */
+  conferir("'há 2 semanas' e 'cliente há 5 anos' no texto", google.dataDoTexto("Maria Silva\nhá 2 semanas\nSou cliente há 5 anos e nunca tive problema"), emSP(Date.now() - 14 * dia));
+  conferir("'3 dias' sem 'há' não vence a data marcada", google.dataDoTexto("João\nhá um mês\nEsperei 3 dias pela entrega"), emSP(Date.now() - 30 * dia));
+  conferir("'a week ago'", google.dataDoTexto("John Doe\na week ago\nGreat"), emSP(Date.now() - 7 * dia));
+  conferir("'mesmo' não é mês", google.dataDoTexto("Ana\nhá 2 dias\nO mesmo problema de sempre"), emSP(Date.now() - 2 * dia));
 }
 
 console.log(

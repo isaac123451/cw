@@ -104,13 +104,26 @@
   }
 
   /** Quanto tempo cada unidade vale, para virar data. */
-  const UNIDADES = [
-    [/\b(ano|anos|year|years)\b/i, 365],
-    [/\b(m[êe]s|meses|month|months)\b/i, 30],
-    [/\b(semana|semanas|week|weeks)\b/i, 7],
-    [/\b(dia|dias|day|days)\b/i, 1],
-    [/\b(hora|horas|hour|hours|minuto|minutos|agora|now)\b/i, 0],
-  ];
+  function diasDaUnidade(unidade) {
+    const u = unidade.toLowerCase();
+    if (/^(ano|year)/.test(u)) return 365;
+    if (/^(m[êe]s|meses|month)/.test(u)) return 30;
+    if (/^(semana|week)/.test(u)) return 7;
+    if (/^(dia|day)/.test(u)) return 1;
+    return 0;
+  }
+
+  /**
+   * "há 2 semanas", "3 anos atrás", "a week ago".
+   *
+   * Todas as ocorrências, na ordem do texto. A primeira versão procurava
+   * por unidade — ano, depois mês, semana, dia — no cartão inteiro, e
+   * uma avaliação que dizia "sou cliente há 5 anos" ia para a ficha com
+   * a data de cinco anos atrás, mesmo publicada há duas semanas
+   * (out/2026). A data do Google vem logo abaixo do nome, antes do
+   * texto: é a primeira que aparece.
+   */
+  const RELATIVA = /(?:(h[áa]|faz)\s+)?([\wêéá]+)\s+(anos?|years?|m[êe]s|meses|months?|semanas?|weeks?|dias?|days?|horas?|hours?|minutos?|minutes?)(?![\wêéá])(\s+(?:atr[áa]s|ago))?/gi;
 
   /** Por extenso, porque o Google escreve "há um mês" e não "há 1 mês". */
   const NUMEROS = {
@@ -138,19 +151,19 @@
       return `${escrita[3]}-${escrita[2].padStart(2, "0")}-${escrita[1].padStart(2, "0")}`;
     }
 
-    for (const [padrao, dias] of UNIDADES) {
+    const achadas = Array.from(texto.matchAll(RELATIVA));
 
-      const linha = texto.match(
-        new RegExp(`(h[áa]|faz)?\\s*([\\wêéá]+)\\s*${padrao.source}`, "i")
-      );
+    /* Com "há", "faz", "atrás" ou "ago" é data; sem, só se não houver outra. */
+    const linha =
+      achadas.find((m) => m[1] || m[4]) ?? achadas[0];
 
-      if (!linha) continue;
+    if (linha) {
 
       const bruto = (linha[2] ?? "").toLowerCase();
 
       const quantidade = Number(bruto) || NUMEROS[bruto] || 1;
 
-      const quando = new Date(Date.now() - quantidade * dias * 86400000);
+      const quando = new Date(Date.now() - quantidade * diasDaUnidade(linha[3]) * 86400000);
 
       return quando.toLocaleDateString("sv-SE", { timeZone: "America/Sao_Paulo" });
     }
@@ -247,12 +260,30 @@
     const recado = document.createElement("span");
     recado.style.cssText = "opacity:.85";
 
-    caixa.append(botao, recado);
+    /* Leitura errada (data, nome) se desfaz aqui; antes o botão ficava em "Confirmar". */
+    const desistir = document.createElement("button");
+    desistir.type = "button";
+    desistir.textContent = "cancelar";
+    desistir.hidden = true;
+    desistir.style.cssText = "padding:0;border:0;background:none;color:inherit;font:inherit;text-decoration:underline;cursor:pointer;opacity:.75";
+
+    caixa.append(botao, recado, desistir);
     cartao.append(caixa);
 
     /* Dois tempos: o primeiro clique mostra o que vai ser gravado. */
     let confirmado = false;
     let leitura = null;
+
+    desistir.addEventListener("click", (evento) => {
+      evento.preventDefault();
+      evento.stopPropagation();
+      confirmado = false;
+      leitura = null;
+      botao.textContent = "Registrar no CW";
+      estilo(botao, "acao");
+      recado.textContent = "";
+      desistir.hidden = true;
+    });
 
     botao.addEventListener("click", async (evento) => {
 
@@ -289,11 +320,13 @@
         botao.textContent = "Confirmar";
         estilo(botao, "espera");
         confirmado = true;
+        desistir.hidden = false;
         return;
       }
 
       botao.disabled = true;
       botao.textContent = "Registrando…";
+      desistir.hidden = true;
 
       const resposta = await CW.enviar({
         tipo: "registrarAvaliacaoGoogle",
@@ -307,6 +340,7 @@
         recado.textContent =
           resposta?.dados?.erro ?? resposta?.erro ?? "não deu para registrar";
         estilo(botao, "erro");
+        desistir.hidden = false;
         return;
       }
 

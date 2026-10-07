@@ -63,6 +63,16 @@ export const MUDANCAS: Mudanca[] = [
     onde: "Extensão → WhatsApp → Cliente → Cadastrar aqui",
   },
   {
+    id: "ext-google-data-da-avaliacao",
+    dia: "2026-10-07",
+    tipo: "correcao",
+    frente: "extensao",
+    titulo: "Avaliação do Google registrada com a data certa, mesmo quando o texto fala de anos",
+    texto:
+      "O \"Registrar no CW\" do Google Perfil da Empresa deduz a data do \"há 2 semanas\" do cartão — mas procurava por unidade, a maior primeiro, no cartão inteiro. Uma avaliação que dizia \"sou cliente há 5 anos\" ia para a ficha com a data de cinco anos atrás, fora de qualquer janela e dos indicadores do mês. Agora vale a primeira expressão de tempo do cartão, que é a data logo abaixo do nome; \"esperei 3 dias\" no relato também não passa na frente. E a confirmação em dois tempos ganhou um \"cancelar\": se a leitura saiu errada, desfaz ali mesmo — antes o botão ficava parado em \"Confirmar\".",
+    onde: "Extensão → Google Perfil da Empresa → Registrar no CW",
+  },
+  {
     id: "ext-agenda-hoje-amanha",
     dia: "2026-10-07",
     tipo: "melhoria",
