@@ -57,7 +57,7 @@ export function hasAssistant() {
 /**
  * Esta rota gasta dinheiro a cada chamada.
  *
- * O middleware deixa `/api` passar (a API pública tem token próprio), e
+ * O proxy deixa `/api` passar (a API pública tem token próprio), e
  * esta aqui não tinha checagem nenhuma: qualquer pessoa na internet
  * podia apontar para `/api/assistente` e consumir a cota da Anthropic
  * da empresa, sem login e sem limite.

@@ -148,7 +148,7 @@ function importsDe(arquivo: string): string[] {
  * As raízes.
  *
  * Tudo em `app/` (o Next carrega por convenção de arquivo, não por
- * import), o middleware, a configuração e os scripts — que são pontos
+ * import), o proxy, a configuração e os scripts — que são pontos
  * de entrada de verdade, ainda que fora do navegador.
  */
 const todos = listar(RAIZ).map((f) =>

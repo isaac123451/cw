@@ -213,7 +213,7 @@ export async function clearPendingLogin() {
 /**
  * A sessão, confirmada contra o banco.
  *
- * `getSession` só verifica a **assinatura** do token, e o middleware faz
+ * `getSession` só verifica a **assinatura** do token, e o proxy faz
  * o mesmo — ele roda no Edge e não alcança o Postgres. A consequência é
  * um estado que confunde quem está usando: uma conta apagada ou
  * desativada continua navegando até o token vencer, e como toda leitura

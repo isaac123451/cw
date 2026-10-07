@@ -5,7 +5,7 @@
  *
  * Três perguntas, e todas já tiveram resposta errada neste projeto:
  *
- * 1. **Toda rota de `/api` confere quem está chamando?** O middleware
+ * 1. **Toda rota de `/api` confere quem está chamando?** O proxy
  *    deixa `/api` passar de propósito — a API pública tem token próprio
  *    e a extensão manda sessão no cabeçalho. Isso significa que uma
  *    rota nova nasce **aberta para a internet** se ninguém puser a
@@ -125,7 +125,7 @@ const SEM_DONO: Record<string, RegExp> = {
 };
 
 console.log("\n  SEGURANÇA\n");
-console.log("  Rotas de API — o middleware deixa /api passar\n");
+console.log("  Rotas de API — o proxy deixa /api passar\n");
 
 const rotas = arquivos(
   resolve(RAIZ, "app/api"),

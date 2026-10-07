@@ -83,7 +83,7 @@ export default async function RootLayout({
   /**
    * Confirmada contra o banco, e não só pela assinatura.
    *
-   * O middleware roda no Edge e só sabe verificar o token; uma conta
+   * O proxy (o antigo middleware) só sabe verificar o token; uma conta
    * apagada ou desativada continuava navegando até ele vencer, com a
    * aplicação inteira aberta e todos os números em zero — porque as
    * leituras passam por `tryRole`, que confere no banco e recusa.

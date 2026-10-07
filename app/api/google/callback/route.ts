@@ -16,7 +16,7 @@ export const runtime = "nodejs";
  * Retorno do consentimento do Google.
  *
  * Vive em `/api` porque o Google exige uma URL fixa de redirecionamento,
- * e o middleware deixa `/api` passar. A autorização aqui **não** vem do
+ * e o proxy deixa `/api` passar. A autorização aqui **não** vem do
  * cookie: vem do `state` assinado que saiu daqui minutos antes e diz de
  * quem é o código. Sem essa verificação, um link montado por terceiro
  * conectaria a conta Google do atacante à sessão da vítima.

@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
  * São 4 mil respostas (2,3 MB), e as server actions de uma aba correm uma de
  * cada vez: dentro da carga inicial, o NPS segurava todas as outras leituras
  * da tela atrás dele. Por rota, corre em paralelo com elas. A checagem é a
- * mesma da action (`tryRole`, leitura no módulo do NPS) — o middleware
+ * mesma da action (`tryRole`, leitura no módulo do NPS) — o proxy
  * deixa `/api` passar, e é esta linha que fecha a porta.
  *
  * `?desde=` traz só o que mudou (a recarga de 3 em 3 minutos).

@@ -13,7 +13,7 @@ const PUBLICAS = ["/login", "/cadastro"];
 /**
  * Sessão órfã não abre a casa vazia — encerra e volta para o login.
  *
- * O middleware roda no Edge e só sabe conferir a **assinatura** do
+ * O proxy (o antigo middleware) só sabe conferir a **assinatura** do
  * token; ele não alcança o Postgres. Uma conta apagada ou desativada
  * continuava navegando até o token vencer — e como toda leitura de
  * dados passa por `tryRole`, que confere no banco e recusa, a aplicação
@@ -28,7 +28,7 @@ const PUBLICAS = ["/login", "/cadastro"];
  * está.
  *
  * **Encerrar, e não só redirecionar.** Foi a primeira tentativa e ela
- * entra em laço: o middleware vê a assinatura válida, manda `/login` de
+ * entra em laço: o proxy vê a assinatura válida, manda `/login` de
  * volta para `/dashboard`, e a guarda manda de novo para `/login`. O
  * cookie é que precisa sair — sem ele os dois lados passam a concordar.
  *

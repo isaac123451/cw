@@ -45,7 +45,7 @@ const MODULO: Modulo = "reclame-aqui";
 /**
  * Gravação das reclamações, chamada direto pelas telas.
  *
- * São server actions e não rotas em `/api`: o middleware deixa `/api`
+ * São server actions e não rotas em `/api`: o proxy deixa `/api`
  * passar (a API pública tem autenticação por token), então um endpoint
  * de dados ali dentro nasceria sem proteção. Server action roda no
  * servidor com acesso ao cookie de sessão, que é o que vale aqui.

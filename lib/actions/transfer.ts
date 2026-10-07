@@ -28,7 +28,7 @@ const MODULO: Modulo = "reclame-aqui";
 /**
  * Importação e exportação da base de reclamações.
  *
- * Server actions, e não rotas em `/api`: o middleware libera `/api` (a
+ * Server actions, e não rotas em `/api`: o proxy libera `/api` (a
  * API pública tem token próprio), então um endpoint que despeja a base
  * inteira ali dentro nasceria sem proteção de sessão.
  */
