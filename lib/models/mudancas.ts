@@ -720,6 +720,15 @@ export const MUDANCAS: Mudanca[] = [
     href: "/jornada",
   },
   {
+    id: "lint-de-volta",
+    dia: "2026-10-07",
+    tipo: "correcao",
+    frente: "bastidores",
+    titulo: "A revisão de código automática voltou a rodar inteira",
+    texto:
+      "O \"npm run lint\" parava logo no começo com \"could not find plugin react-hooks\": a regra do React valia também para os scripts .cjs de conferência, que o Next não cobre. A regra passou a valer só onde o plugin existe, e os scripts .cjs ganharam a mesma exceção dos .js de linha de comando. Resultado: o projeto inteiro em 1 minuto, 0 erros e os 2 avisos conhecidos. E uma conferência nova, \"check:tema-escuro\", impede que um tom de texto forte entre sem a versão escura.",
+  },
+  {
     id: "texto-crase-e-busca-do-popup",
     dia: "2026-10-07",
     tipo: "correcao",

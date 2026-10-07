@@ -20,6 +20,12 @@ const eslintConfig = defineConfig([
     "dist/**",
   ]),
   {
+    /*
+      Só onde o plugin do React existe. Sem `files`, a regra valia também
+      para os `.cjs` de `scripts/`, que o Next não cobre — e o
+      `npm run lint` inteiro parava em "could not find plugin" (out/2026).
+    */
+    files: ["**/*.{js,jsx,mjs,ts,tsx,mts,cts}"],
     rules: {
       /**
        * De volta a erro (22/08/2026).
@@ -55,7 +61,7 @@ const eslintConfig = defineConfig([
      * ele produz, e não em `scripts/`, para a pasta `extensao/`
      * continuar sendo carregável no navegador por si só.
      */
-    files: ["scripts/**/*.js", "extensao/icones/*.js"],
+    files: ["scripts/**/*.js", "scripts/**/*.cjs", "extensao/icones/*.js"],
     rules: {
       "@typescript-eslint/no-require-imports": "off",
     },
