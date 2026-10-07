@@ -4,15 +4,16 @@
  *   npm run corrigir:dados-out            simula (não grava)
  *   npm run corrigir:dados-out -- --gravar  grava
  *
- * Grava antes `backup-correcao-dados-2026-10-07.json` com as linhas que
+ * Grava antes `backup-correcao-dados-<data e hora>.json` com as linhas que
  * vai mexer. Faz: mensalidade do Kantinho Burger (×100 → R$ 209,99); três
  * reclamações do dono de teste "Conferência" para o Carlos; três
  * atendimentos de Redes com cliente "@Carlos"; causa raiz "a"; duas
  * anotações de teste; título de atividade com texto do WhatsApp; conta sem
  * acesso (Carla Campos) sem nenhuma referência.
  *
- * **Não faz** o que não tem como saber: o preço do plano "Essencial" (238
- * contas) e a data da resposta de RA-I5w9VRnF0693mv9g.
+ * Plano "Essencial" (238 contas, fora da tabela de planos): fica sem plano,
+ * por decisão dele em 07/10. **Não faz** a data da resposta de
+ * RA-I5w9VRnF0693mv9g — fica para depois.
  */
 import { writeFileSync } from "node:fs";
 import { getPrisma } from "../lib/prisma";
@@ -66,16 +67,20 @@ async function main() {
   const refs = carla ? Object.values(carla._count).reduce((a, b) => a + b, 0) : -1;
   plano.push(`Carla Campos (sem acesso): referências ${refs} -> ${refs === 0 ? "apagar" : "MANTER"}`);
 
+  const essencial = await p.establishment.count({ where: { plan: "Essencial" } });
+  plano.push(`plano Essencial -> sem plano: ${essencial} estabelecimentos`);
+
   console.log(plano.join("\n"));
   if (!GRAVAR) { console.log("\n(simulação — nada gravado; use --gravar)"); return; }
 
-  writeFileSync("backup-correcao-dados-2026-10-07.json", JSON.stringify(backup, null, 2));
+  writeFileSync(`backup-correcao-dados-${new Date().toISOString().replace(/[:.]/g, "-")}.json`, JSON.stringify(backup, null, 2));
   if (kant?.mrrCents === 2099900) await p.establishment.update({ where: { id: kant.id }, data: { mrrCents: 20999 } });
   if (carlos && conf.length) await p.case.updateMany({ where: { id: { in: conf.map((c) => c.id) } }, data: { ownerId: carlos.id } });
   for (const n of novosRedes) await p.case.update({ where: { id: n.id }, data: { customer: n.customer, title: n.title, description: n.description, socialHandle: n.socialHandle } });
   if (causa) await p.npsRootCause.delete({ where: { id: causa.id } });
   if (notas.length) await p.caseComment.deleteMany({ where: { id: { in: notas.map((n) => n.id) } } });
   if (tarefa && novoTitulo) await p.agendaTask.update({ where: { id: tarefa.id }, data: { title: novoTitulo } });
+  if (essencial) await p.establishment.updateMany({ where: { plan: "Essencial" }, data: { plan: "" } });
   if (carla && refs === 0) await p.user.delete({ where: { id: carla.id } });
   console.log("\ngravado.");
 }
