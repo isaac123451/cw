@@ -146,6 +146,11 @@ conferir(
   ""
 );
 conferir(
+  "Slack: o perfil do Slack de quem foi mencionado não vira o link do atendimento",
+  itemDoSlack({ canal: "C1", ts: "6.1", texto: "Olá @Carlos Isaac Cliente Janaina entrou em contato no Instagram", links: ["https://cardpioweb.slack.com/team/U07KTLG1EKB"], mencoes: ["@Carlos Isaac"] }).link,
+  ""
+);
+conferir(
   "Slack: perfil de verdade continua saindo",
   itemDoSlack({ canal: "C1", ts: "5.1", texto: ["Reclamou @maria.doces no Instagram", "Email : a@gmail.com"].join(String.fromCharCode(10)) }).perfil,
   "maria.doces"

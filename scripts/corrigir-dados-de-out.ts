@@ -21,6 +21,9 @@ import { itemDoSlack, tituloDaCaptura } from "../lib/models/capturaDasRedes";
 
 const GRAVAR = process.argv.includes("--gravar");
 
+/* O perfil do Slack de quem foi mencionado — a captura antiga o guardava como link do atendimento. */
+const MENCAO_DO_SLACK = /slack\.com\/team\//i;
+
 async function main() {
   const p = getPrisma()!;
   const backup: Record<string, unknown> = {};
@@ -45,9 +48,9 @@ async function main() {
     const rodape = (c.description ?? "").slice(corpo.length).trim();
     const it = itemDoSlack({ canal: "x", ts: "0", texto: corpo, mencoes: ["@Carlos Isaac"] });
     const cliente = it.nome || (c.email ? c.email.split("@")[0] : "Não identificado");
-    return { id: c.id, protocol: c.protocol, customer: cliente, title: tituloDaCaptura(it), description: [it.texto, "", rodape].join("\n").trim(), socialHandle: it.perfil || null };
+    return { id: c.id, protocol: c.protocol, externalUrl: c.externalUrl, customer: cliente, title: tituloDaCaptura(it), description: [it.texto, "", rodape].join("\n").trim(), socialHandle: it.perfil || null };
   });
-  plano.push(...novosRedes.map((n) => `${n.protocol}: cliente "${n.customer}" · título "${n.title}" · handle ${n.socialHandle}`));
+  plano.push(...novosRedes.map((n) => `${n.protocol}: cliente "${n.customer}" · título "${n.title}" · handle ${n.socialHandle} · empresa "${n.customer}" · link ${MENCAO_DO_SLACK.test(n.externalUrl ?? "") ? "(menção do Slack, sai)" : n.externalUrl}`));
 
   /* D. causa "a" e anotações de teste */
   const causa = await p.npsRootCause.findFirst({ where: { name: "a" } });
@@ -76,7 +79,7 @@ async function main() {
   writeFileSync(`backup-correcao-dados-${new Date().toISOString().replace(/[:.]/g, "-")}.json`, JSON.stringify(backup, null, 2));
   if (kant?.mrrCents === 2099900) await p.establishment.update({ where: { id: kant.id }, data: { mrrCents: 20999 } });
   if (carlos && conf.length) await p.case.updateMany({ where: { id: { in: conf.map((c) => c.id) } }, data: { ownerId: carlos.id } });
-  for (const n of novosRedes) await p.case.update({ where: { id: n.id }, data: { customer: n.customer, title: n.title, description: n.description, socialHandle: n.socialHandle } });
+  for (const n of novosRedes) await p.case.update({ where: { id: n.id }, data: { customer: n.customer, companyName: n.customer, title: n.title, description: n.description, socialHandle: n.socialHandle, ...(MENCAO_DO_SLACK.test(n.externalUrl ?? "") ? { externalUrl: null } : {}) } });
   if (causa) await p.npsRootCause.delete({ where: { id: causa.id } });
   if (notas.length) await p.caseComment.deleteMany({ where: { id: { in: notas.map((n) => n.id) } } });
   if (tarefa && novoTitulo) await p.agendaTask.update({ where: { id: tarefa.id }, data: { title: novoTitulo } });

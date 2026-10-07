@@ -204,6 +204,16 @@ export const MUDANCAS: Mudanca[] = [
   },
   /* ---------------- redes: captura ---------------- */
   {
+    id: "redes-mencao-nao-e-link",
+    dia: "2026-10-07",
+    tipo: "correcao",
+    frente: "redes",
+    titulo: "A menção do Slack deixa de virar o link do atendimento",
+    texto:
+      "Quando a mensagem do Slack mencionava alguém do time (\"Olá @Carlos Isaac…\"), a captura guardava o link do perfil do Slack dessa pessoa como o endereço do atendimento, e o quadro das Redes mostrava \"@Carlos\" no lugar do cliente. A captura agora ignora esse link; os três atendimentos antigos são corrigidos pelo script de dados.",
+    onde: "Redes Sociais → Capturar do Slack",
+  },
+  {
     id: "redes-email-nao-e-perfil",
     dia: "2026-10-07",
     tipo: "correcao",

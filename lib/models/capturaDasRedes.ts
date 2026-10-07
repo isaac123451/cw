@@ -317,7 +317,10 @@ export function consertarAcentos(texto: string) {
 export function itemDoSlack(entrada: { canal: string; ts: string; texto: string; autor?: string; quando?: string; links?: string[]; mencoes?: string[] }): ItemCapturado {
   const bruto = consertarAcentos(entrada.texto.trim());
   const texto = semMencoesDoSlack(bruto, entrada.mencoes) || bruto;
-  const links = [...(entrada.links ?? []), ...(texto.match(/https?:\/\/\S+/g) ?? [])].map((l) => l.replace(/[>)\]]+$/, ""));
+  const links = [...(entrada.links ?? []), ...(texto.match(/https?:\/\/\S+/g) ?? [])]
+    .map((l) => l.replace(/[>)\]]+$/, ""))
+    /* O perfil do Slack de quem foi mencionado não é o do cliente (out/2026): virava o endereço do atendimento. */
+    .filter((l) => !/slack\.com\/team\//i.test(l));
   const link = links.find((l) => /instagram\.com|facebook\.com|fb\.com|wa\.me|manychat/i.test(l)) ?? links[0] ?? "";
   const seguidores = texto.match(/(\d+(?:[.,]\d+)*\s*(?:mil|k|mi|m)?)\s*seguidores/i);
   /* "Cliente: Joana Souza" ou, como a automação escreve, "Cliente Janaina entrou em contato". */
