@@ -123,6 +123,20 @@ confere("agenda: só o que vence hoje ou antes, e sem frente", [contagens.penden
 confere("ligações: a do servidor mais a 2ª tentativa do NPS que nunca atendeu (o conversado não)", [contagens.ligacoes.itens.map((i) => i.id).sort(), contagens.ligacoes.porFrente], [["nps-tentado", "ra-lig"], { "reclame-aqui": 1, nps: 1 }]);
 confere("métrica ainda não medida hoje: pede para conferir depois", contagens.metricas.total, 1);
 
+/*
+  Cadência esgotada (out/2026): o caso saía das ligações e não voltava a
+  lugar nenhum — RA-rceRWFM8hJR8oNTy ficou duas semanas fora do Meu dia.
+*/
+{
+  const esgotado = caso("ra-esgotado", { status: "Aguardando retorno", primeiroContatoEm: br("2026-09-01 10:00"), ultimoContatoEm: br("2026-09-02 10:00"), tentativasSemResposta: 2 });
+  const base = { casos: [esgotado], nps: [], google: [], movimentos: [], tarefas: [], regrasSla: [] };
+  const sem = contarRotina(base, agora);
+  const com = contarRotina({ ...base, cadenciaEsgotada: ["ra-esgotado"] }, agora);
+  confere("na cadência ainda aberta, o caso não está em aberto nem nos FUPs", [sem["em-aberto"].total, sem.fups.total], [0, 0]);
+  confere("cadência esgotada: volta a em aberto, pedindo a mensagem transparente", com["em-aberto"].itens.find((i) => i.id === "ra-esgotado")?.detalhe?.includes("publique a mensagem transparente"), true);
+  confere("e aos FUPs, sem notícia há dias", com.fups.itens.some((i) => i.id === "ra-esgotado"), true);
+}
+
 console.log("\n— Itens tirados à mão —");
 {
   const base = { casos: [caso("ra-novo", {}), caso("ra-2", {})], nps: [], google: [], movimentos: [], tarefas: [], regrasSla: [] };

@@ -17,7 +17,7 @@ import { ADIAR_NO_MAXIMO_DIAS, ateDoAdiamento } from "@/lib/models/meuDia";
 import type { LinhaDeMetrica } from "@/lib/actions/metricas";
 
 import { lerExpediente } from "@/lib/services/operacao.service";
-import { SOCIAL_SOURCES } from "@/lib/services/case.service";
+import { CLOSED_STATUS, SOCIAL_SOURCES } from "@/lib/services/case.service";
 import { CANAL_PARA_ORIGEM } from "@/lib/services/case.mapper";
 import { descreverRegistro, paredeDe, ehDiaUtil } from "@/lib/services/horasUteis";
 import { ESPERA_DO_RETORNO_MIN } from "@/lib/models/tratativa";
@@ -222,11 +222,27 @@ export interface CargaDoMeuDia {
   aguardandoRetorno: ItemDaRotina[];
   metricaHoje: LinhaDeMetrica | null;
   ligacoes: ItemDaRotina[];
+  /**
+   * Casos cuja cadência de tentativas se esgotou (out/2026). Saem das
+   * ligações, e o Meu dia os devolve a "em aberto" e aos FUPs — antes não
+   * voltavam a lugar nenhum.
+   */
+  cadenciaEsgotada: string[];
   ontem: ResumoDeOntem | null;
   /** O mesmo resumo, de hoje até agora — o fim do dia (Fase 24). */
   hojeAteAgora: ResumoDeOntem | null;
   /** O relatório do ciclo de hoje: se já foi salvo. */
   relatorio: { ciclo: string; rotulo: string; salvo: boolean } | null;
+}
+
+/*
+  O id que a tela usa para o caso é o do mapeador (`externalId ?? id`,
+  case.mapper.ts). Os itens que saem daqui usavam o id do banco, e o Meu dia
+  compara com o da tela: "aguardando retorno" não tirava o caso de "em
+  aberto" (aparecia duas vezes) e a cadência esgotada nunca casava (out/2026).
+*/
+function idDoCaso(c: { id: string; externalId: string | null }) {
+  return c.externalId ?? c.id;
 }
 
 function diaUtilAnterior(dia: string, expediente: Parameters<typeof ehDiaUtil>[1]) {
@@ -251,7 +267,7 @@ function diaUtilAnterior(dia: string, expediente: Parameters<typeof ehDiaUtil>[1
 export async function lerMeuDia(): Promise<CargaDoMeuDia> {
 
   const ctx = await tryRole("LEITURA");
-  if (!ctx) return { marcas: [], marcasDeItens: [], aguardandoRetorno: [], metricaHoje: null, ligacoes: [], ontem: null, hojeAteAgora: null, relatorio: null };
+  if (!ctx) return { marcas: [], marcasDeItens: [], aguardandoRetorno: [], metricaHoje: null, ligacoes: [], cadenciaEsgotada: [], ontem: null, hojeAteAgora: null, relatorio: null };
 
   const prisma = ctx.prisma;
   const agora = new Date();
@@ -276,14 +292,15 @@ export async function lerMeuDia(): Promise<CargaDoMeuDia> {
     }),
     /* A tentativa que passou de 2 horas sem resposta: marcar sem retorno ou registrar a resposta. */
     prisma.caseContato.findMany({
-      where: { tipo: "tentativa", resultado: "aguardando", em: { lte: new Date(agora.getTime() - ESPERA_DO_RETORNO_MIN * 60_000) }, case: { resolved: false } },
+      /* Caso fechado ("Aguardando avaliação", "Não resolvido"…) não pede FUP: a tentativa pendente ficou para trás (out/2026). */
+      where: { tipo: "tentativa", resultado: "aguardando", em: { lte: new Date(agora.getTime() - ESPERA_DO_RETORNO_MIN * 60_000) }, case: { resolved: false, status: { notIn: CLOSED_STATUS } } },
       select: { em: true, canal: true, case: { select: { id: true, protocol: true, externalId: true, title: true, customer: true, channel: true } } },
       orderBy: { em: "asc" },
       take: 200,
     }),
     prisma.metricaDiaria.findUnique({ where: { dia: hoje } }),
     prisma.case.findMany({
-      where: { tentativasSemResposta: { gt: 0 }, resolved: false },
+      where: { tentativasSemResposta: { gt: 0 }, resolved: false, status: { notIn: CLOSED_STATUS } },
       select: { id: true, protocol: true, externalId: true, title: true, customer: true, channel: true, status: true, contatos: { select: { tipo: true, resultado: true, em: true } } },
       take: 200,
     }),
@@ -299,16 +316,27 @@ export async function lerMeuDia(): Promise<CargaDoMeuDia> {
   ]);
 
   const ligacoes: ItemDaRotina[] = [];
+  const cadenciaEsgotada: string[] = [];
   for (const c of emCadencia) {
     const p = persistencia(
       c.contatos.map((k) => ({ tipo: k.tipo as never, resultado: (k.resultado ?? undefined) as never, em: k.em.toISOString() })),
       agora,
       expediente
     );
-    if (p.esgotada || !p.proximoDia || p.proximoDia > hoje) continue;
+    /*
+      Esgotada não é "nada a fazer": o guia manda publicar a mensagem
+      transparente e seguir com follow-up. Medido em 07/10/2026: uma
+      reclamação ficou duas semanas fora de toda fila, 37 dias sem
+      resposta pública, por cair aqui.
+    */
+    if (p.esgotada) {
+      cadenciaEsgotada.push(idDoCaso(c));
+      continue;
+    }
+    if (!p.proximoDia || p.proximoDia > hoje) continue;
     const social = SOCIAL_SOURCES.includes(CANAL_PARA_ORIGEM[c.channel] ?? "");
     ligacoes.push({
-      id: c.id,
+      id: idDoCaso(c),
       frente: social ? "redes" : "reclame-aqui",
       titulo: c.title,
       detalhe: `tentativa ${p.tentativas + 1} · ${p.periodo ? `${ROTULO_DO_PERIODO[p.periodo]} (${faixaDoPeriodo(p.periodo, expediente)})` : "hoje"} · ${c.customer}`,
@@ -324,7 +352,7 @@ export async function lerMeuDia(): Promise<CargaDoMeuDia> {
     vistos.add(p.case.id);
     const social = SOCIAL_SOURCES.includes(CANAL_PARA_ORIGEM[p.case.channel] ?? "");
     aguardandoRetorno.push({
-      id: p.case.id,
+      id: idDoCaso(p.case),
       frente: social ? "redes" : "reclame-aqui",
       titulo: p.case.title,
       detalhe: `tentativa por ${p.canal} de ${descreverRegistro(p.em.toISOString())} sem resposta há 2h — marcar sem retorno · ${p.case.customer}`,
@@ -359,6 +387,7 @@ export async function lerMeuDia(): Promise<CargaDoMeuDia> {
         }
       : null,
     ligacoes,
+    cadenciaEsgotada,
     relatorio: { ciclo: ciclo.id, rotulo: ciclo.rotulo, salvo: relatorioSalvo > 0 },
     ontem: {
       dia: ontem,

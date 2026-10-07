@@ -20,6 +20,8 @@ import { isOpen, isReclameAqui, isSocial } from "../lib/services/case.service";
 import { primeiroContatoFeito } from "../lib/services/sla.service";
 import { respondida } from "../lib/models/case";
 import { paredeDe } from "../lib/services/horasUteis";
+import { persistencia } from "../lib/models/cadencia";
+import { lerExpediente } from "../lib/services/operacao.service";
 
 const iso = (d?: Date | null) => (d ? d.toISOString() : undefined);
 
@@ -65,6 +67,16 @@ async function main() {
     attempts: r.attempts.map((a) => ({ id: a.id, channel: a.channel, note: a.note, actor: a.actor, createdAt: a.createdAt.toISOString(), resultado: a.resultado === "aguardando" ? ("aguardando" as const) : ("sem-resposta" as const) })),
   }));
 
+  /* As cadências esgotadas, como o servidor do Meu dia calcula (lib/actions/rotina.ts). */
+  const expediente = await lerExpediente(prisma);
+  const emCadencia = await prisma.case.findMany({
+    where: { tentativasSemResposta: { gt: 0 }, resolved: false },
+    select: { id: true, contatos: { select: { tipo: true, resultado: true, em: true } } },
+  });
+  const cadenciaEsgotada = emCadencia
+    .filter((c) => persistencia(c.contatos.map((k) => ({ tipo: k.tipo as never, resultado: (k.resultado ?? undefined) as never, em: k.em.toISOString() })), agora, expediente).esgotada)
+    .map((c) => c.id);
+
   const contagens = contarRotina(
     {
       casos,
@@ -73,6 +85,7 @@ async function main() {
       movimentos: [],
       tarefas: tarefas.map((t) => ({ id: t.id, title: t.title, dueDate: t.dueDate, time: t.time ?? undefined, done: t.done })) as never,
       regrasSla: [],
+      cadenciaEsgotada,
     },
     agora
   );
@@ -101,6 +114,9 @@ async function main() {
 
   console.log(`\n  FORA DE TODAS AS ATIVIDADES`);
   console.log(`  RA aberto e sem resposta pública: ${raForaDeTudo.length} (sem 1º contato registrado: ${raLegado.length})`);
+  for (const c of raForaDeTudo) {
+    console.log(`    ${c.protocol} · ${c.status} · 1º contato ${c.primeiroContatoEm ?? "-"} · tentativas sem resposta ${c.tentativasSemResposta ?? 0} · recebida ${c.recebidaEm ?? c.createdAt}`);
+  }
   console.log(`  Redes abertas: ${redesForaDeTudo.length}`);
   console.log(`  NPS aberto: ${npsForaDeTudo.length} de ${npsAbertos.length}`);
   console.log(`\n  NPS só com tentativa (sem conversa): ${npsSoTentativa.length}`);

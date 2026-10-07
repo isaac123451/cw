@@ -118,6 +118,7 @@ export function useMeuDia() {
               regrasSla: rules,
               metricaHoje: carga?.metricaHoje ?? null,
               ligacoes: carga?.ligacoes ?? [],
+              cadenciaEsgotada: carga?.cadenciaEsgotada ?? [],
               relatorio: carga?.relatorio ?? null,
               marcasDeItens: carga?.marcasDeItens ?? [],
               aguardandoRetorno: carga?.aguardandoRetorno ?? [],

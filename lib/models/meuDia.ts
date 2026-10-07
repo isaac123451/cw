@@ -186,6 +186,8 @@ export interface DadosDoDia {
   metricaHoje?: LinhaDeMetrica | null;
   /** As ligações do dia, contadas no servidor pela cadência de cada caso. */
   ligacoes?: ItemDaRotina[];
+  /** Os casos cuja cadência de tentativas se esgotou: voltam a "em aberto" e aos FUPs. */
+  cadenciaEsgotada?: string[];
   /** O relatório do ciclo de hoje, e se já foi salvo. */
   relatorio?: { ciclo: string; rotulo: string; salvo: boolean } | null;
   /** Os itens que quem trabalha tirou das atividades (feito hoje, dispensado). */
@@ -387,6 +389,15 @@ export function contarRotina(
   const aguardandoRetorno = dados.aguardandoRetorno ?? [];
   const aguardandoIds = new Set(aguardandoRetorno.map((i) => i.id));
 
+  /*
+    Na cadência de tentativas (o cliente não atende), o caso é das
+    ligações — até ela se esgotar. Esgotada, ele volta a "em aberto" (falta
+    a mensagem transparente) e aos FUPs (follow-up a cada 2 dias), como o
+    guia manda. Antes ficava fora de toda atividade (out/2026).
+  */
+  const esgotadaIds = new Set(dados.cadenciaEsgotada ?? []);
+  const naCadencia = (c: Case) => Boolean(c.tentativasSemResposta && c.tentativasSemResposta > 0) && !esgotadaIds.has(c.id);
+
   const npsAbertos = dados.nps.filter((r) => !isEncerrado(r.status));
   const etapaNps = new Map(npsAbertos.map((r) => [r.id, etapaDoNps(r, dados.tiposNps, agora)]));
   const naEtapa = (e: EtapaDoNps["etapa"]) => npsAbertos.filter((r) => etapaNps.get(r.id)!.etapa === e);
@@ -494,14 +505,14 @@ export function contarRotina(
     ...(dados.esperaNoWhatsapp ?? []),
     ...abertos
       .filter((c) => (primeiroContatoFeito(c) || legado(c)) && (isSocial(c) ? !eFinalDasRedes(c.status) : !respondida(c)))
-      .filter((c) => !(c.tentativasSemResposta && c.tentativasSemResposta > 0) && !mexidoHoje(c) && !aguardandoIds.has(c.id))
+      .filter((c) => !naCadencia(c) && !mexidoHoje(c) && !aguardandoIds.has(c.id))
       .map((c) => {
         const atrasado = atrasadoCaso(c);
         return {
           id: c.id,
           frente: frenteDoCaso(c),
           titulo: c.title,
-          detalhe: `${c.status} · ${c.customer}${legado(c) ? " · 1º contato não registrado" : ""}`,
+          detalhe: `${c.status} · ${c.customer}${legado(c) ? " · 1º contato não registrado" : ""}${esgotadaIds.has(c.id) ? " · tentativas esgotadas: publique a mensagem transparente" : ""}`,
           href: caseHref(c),
           ...(frenteDoCaso(c) === "reclame-aqui" ? { ra: { protocol: c.protocol, raUrl: c.raUrl } } : {}),
           atrasado,
@@ -540,7 +551,7 @@ export function contarRotina(
   const fups: ItemDaRotina[] = [
     ...aguardandoRetorno,
     ...abertos
-      .filter((c) => !(c.tentativasSemResposta && c.tentativasSemResposta > 0) && !aguardandoIds.has(c.id))
+      .filter((c) => !naCadencia(c) && !aguardandoIds.has(c.id))
       .map((c) => ({ c, s: semNoticia(c, agora, expediente) }))
       .filter((x) => x.s?.atrasado)
       .map(({ c, s }) => ({

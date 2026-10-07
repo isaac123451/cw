@@ -63,6 +63,26 @@ export const MUDANCAS: Mudanca[] = [
     href: "/meu-dia",
   },
   {
+    id: "meu-dia-cadencia-esgotada",
+    dia: "2026-10-07",
+    tipo: "correcao",
+    frente: "reclame-aqui",
+    titulo: "Reclamação com as tentativas esgotadas volta para o Meu dia",
+    texto:
+      "Quando o cliente não atende, o caso fica nas ligações até a cadência acabar (5 tentativas ou 7 dias). Depois disso ele saía das ligações e não voltava para lugar nenhum — uma reclamação ficou duas semanas fora de toda fila, 37 dias sem resposta pública. Agora, esgotada a cadência, ela volta para \"em aberto\" com o aviso \"tentativas esgotadas: publique a mensagem transparente\" e para os FUPs, como o guia manda.",
+    href: "/meu-dia",
+  },
+  {
+    id: "meu-dia-sem-duplicados",
+    dia: "2026-10-07",
+    tipo: "correcao",
+    frente: "plataforma",
+    titulo: "A fila do dia não repete mais o caso com tentativa aguardando retorno",
+    texto:
+      "Os itens que o servidor manda para o Meu dia (tentativa aguardando retorno, ligações da cadência) usavam um código do caso diferente do da tela, então a tela não reconhecia o caso: quem tinha uma tentativa pendente aparecia nos FUPs e de novo em \"em aberto\". Hoje eram 8 casos assim. E caso já fechado (aguardando avaliação, não resolvido) deixa de pedir FUP por uma tentativa antiga.",
+    href: "/meu-dia",
+  },
+  {
     id: "sequencia-dois-tercos",
     dia: "2026-10-07",
     tipo: "melhoria",
