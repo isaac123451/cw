@@ -789,6 +789,15 @@ export const MUDANCAS: Mudanca[] = [
     href: "/novidades",
   },
   {
+    id: "conferido-em-producao",
+    dia: "2026-10-07",
+    tipo: "melhoria",
+    frente: "bastidores",
+    titulo: "Conferido no modo produção: build limpo, 66 tentativas de invasão barradas, telas em menos de 0,3 s",
+    texto:
+      "O build de produção (o mesmo que a Vercel roda) passou limpo: TypeScript sem erro e 61 páginas geradas. Com ele no ar localmente, o teste que tenta entrar indevidamente por cada porta — sem sessão, com sessão falsificada ou vencida, conta desativada, token de API errado, cadastro, conexão do Google — teve as 66 tentativas recusadas, já com a porta nova (proxy). Todas as telas abriram com conteúdo, de 85 a 280 ms; as leituras do Meu dia levam 425 ms e o NPS inteiro, 1,2 s. A lentidão que aparece no computador de desenvolvimento é a compilação do modo dev, não a aplicação.",
+  },
+  {
     id: "middleware-vira-proxy",
     dia: "2026-10-07",
     tipo: "melhoria",
