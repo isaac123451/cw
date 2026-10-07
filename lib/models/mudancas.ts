@@ -63,6 +63,16 @@ export const MUDANCAS: Mudanca[] = [
     onde: "Extensão → WhatsApp → Cliente → Cadastrar aqui",
   },
   {
+    id: "ext-leia-me-o-que-sai",
+    dia: "2026-10-07",
+    tipo: "correcao",
+    frente: "extensao",
+    titulo: "O manual da extensão diz, sem arredondar, o que sai do navegador",
+    texto:
+      "O LEIA-ME prometia que \"só três coisas\" saíam da máquina e que a consulta \"nunca\" levava uma conversa. Deixou de ser verdade quando a conversa passou a ser guardada, resumida e lida para os sinais. A seção foi reescrita em três grupos — o que sai sozinho ao abrir uma conversa, o que sai a cada 30 minutos (o vigia) e o que só sai com um clique (prévia do portal, guardar, IA, áudio, NPS, Google, Slack, planilha) —, dizendo o que é gravado e o que é só lido. Tudo continua indo só para o endereço do CW configurado nas opções.",
+    onde: "Extensão → LEIA-ME → O que a extensão lê",
+  },
+  {
     id: "ext-google-data-da-avaliacao",
     dia: "2026-10-07",
     tipo: "correcao",

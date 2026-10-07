@@ -330,10 +330,24 @@ rótulo vira "confirmado" sem mudar uma linha de código.
   Slack; os seletores (`data-item-key`, `data-qa="message-text"`) são os
   do cliente web e podem mudar com ele.
 
-Nada sai da máquina a não ser para o seu próprio CW Reputação, e só três
-coisas saem: a **consulta** (um telefone, um nome ou um protocolo — nunca
-uma conversa), a **reclamação do portal** que você confirma na prévia,
-e o que o **vigia** leu da página pública do Reclame Aqui.
+Nada sai da máquina a não ser para o seu próprio CW Reputação — o
+endereço das opções. O que vai para lá (revisto em out/2026; a versão
+anterior deste parágrafo dizia "só três coisas" e "nunca uma conversa",
+e deixou de ser verdade quando a conversa passou a ser guardada):
+
+- **Sozinho, ao abrir uma conversa:** a consulta (telefone, nome ou
+  protocolo); as mensagens visíveis, para os sinais da conversa (humor,
+  reclamação colada, o que completar) — lidas no servidor sem IA e sem
+  gravar; e, com o contato **conhecido**, as mensagens novas, que aí se
+  guardam no caso. Dado bancário e de cartão sai omitido, e dá para
+  pausar por conversa.
+- **Sozinho, a cada 30 min:** o que o vigia leu da página pública do
+  Reclame Aqui.
+- **Só com um clique:** a reclamação que você confirma na prévia;
+  "Guardar a conversa" de quem não é conhecido; o resumo e a leitura com
+  IA; a transcrição de um áudio (o arquivo vai ao servidor, e dele à IA
+  configurada na plataforma); tentativa e contato do NPS; a avaliação do
+  Google; a mensagem do Slack; a aba da planilha das Redes.
 
 A única coisa que a extensão **escreve** numa página alheia é o texto
 de uma resposta pronta, dentro da caixa de mensagem do WhatsApp, e só

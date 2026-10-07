@@ -584,8 +584,9 @@ const ORIGENS = [
     /**
      * O site informa **como** ler a conversa aberta.
      *
-     * Recebe uma função, não o texto: enquanto ninguém clicar em
-     * "Resumir", nenhuma mensagem é lida.
+     * Recebe uma função, não o texto: a conversa só é lida quando o
+     * painel pede — sinais da conversa, guardar, resumir —, nunca por
+     * a página carregar. O que sai daqui está listado no LEIA-ME.
      */
     definirLeitorDeConversa(fn) {
       P.lerConversa = typeof fn === "function" ? fn : null;
