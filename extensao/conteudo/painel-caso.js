@@ -1231,6 +1231,8 @@
       return;
     }
 
+    CW.notificar?.("Anotação gravada no caso.");
+
     // Recarrega para a anotação aparecer na linha do tempo acima.
     P.abrirDetalhe(botao.dataset.protocolo);
   };

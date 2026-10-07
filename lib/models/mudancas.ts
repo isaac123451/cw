@@ -53,6 +53,16 @@ export const REVISAO = {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- extensão: o painel ---------------- */
   {
+    id: "ext-confirma-o-que-gravou",
+    dia: "2026-10-07",
+    tipo: "melhoria",
+    frente: "extensao",
+    titulo: "Extensão confirma o que gravou: tentativa do NPS, anotação no caso, vínculo do contato",
+    texto:
+      "Quatro gravações terminavam caladas — o painel só se redesenhava, e quem clicou ficava sem saber se foi. Agora, depois da resposta do servidor, aparece a pílula no canto: \"Tentativa registrada no NPS.\", \"Contato registrado no NPS.\", \"Anotação gravada no caso.\" e \"Contato vinculado: esta conversa passa a ser reconhecida.\". E o \"desfazer vínculo\" ignorava o resultado: uma falha voltava ao painel como se tivesse desfeito; agora diz que não deu, e o vínculo continua à vista.",
+    onde: "Extensão → Cliente e caso aberto",
+  },
+  {
     id: "ext-novo-caso-da-conversa",
     dia: "2026-10-07",
     tipo: "correcao",

@@ -1943,6 +1943,7 @@
       if (erro) erro.textContent = r?.dados?.erro ?? r?.erro ?? "Não deu para vincular agora.";
       return;
     }
+    CW.notificar?.("Contato vinculado: esta conversa passa a ser reconhecida.");
     candidatosPorContato.clear();
     /* Volta para a conversa, já reconhecida, sem o cache de antes. */
     if (String(P.chaveConsulta ?? "").startsWith("manual:") && P.telefoneDaConversa) {
@@ -1955,7 +1956,13 @@
   P.desvincularContato = async function desvincularContato() {
     const tel = telefoneParaLembrar();
     if (!tel) return;
-    await CW.enviar({ tipo: "vincularContato", corpo: { telefone: tel, desfazer: true } });
+    const r = await CW.enviar({ tipo: "vincularContato", corpo: { telefone: tel, desfazer: true } });
+    /* Antes o resultado era ignorado: uma falha voltava ao painel como se tivesse desfeito (out/2026). */
+    if (!r?.ok || r.dados?.erro) {
+      CW.notificar?.(r?.dados?.erro ?? r?.erro ?? "Não deu para desfazer o vínculo agora.", "erro");
+      return;
+    }
+    CW.notificar?.("Vínculo desfeito.");
     candidatosPorContato.clear();
     P.consultar(true);
   };

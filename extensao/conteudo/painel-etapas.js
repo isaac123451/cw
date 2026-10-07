@@ -390,6 +390,13 @@
 
       P.render(P.ultimoDado);
     }
+
+    /* Gravou: diz, depois do servidor e não antes (out/2026). Antes o bloco só se redesenhava. */
+    CW.notificar?.(
+      acao === "tentativa"
+        ? "Tentativa registrada no NPS."
+        : "Contato registrado no NPS."
+    );
   };
 
   /**
