@@ -7,6 +7,7 @@ import { useMemo, useState } from "react";
 import { ArrowUp, FolderPlus, Loader2 } from "lucide-react";
 
 import SurfaceCard from "@/components/shared/SurfaceCard";
+import LinhasCarregando from "@/components/shared/LinhasCarregando";
 
 import { abrirProjetoDeReincidencia } from "@/lib/actions/causaRaiz";
 import { useAvaliacoesGoogle } from "@/lib/context/useAvaliacoesGoogle";
@@ -33,9 +34,15 @@ type Aberto = { ok: true; projeto: { id: string; title: string }; jaExistia: boo
  * A tendência que vira ação (Fase 27), com os dados das telas.
  */
 export default function SemanaDasCausas() {
-  const { cases } = useCases();
-  const { responses, rootCauses } = useNps();
-  const { avaliacoes } = useAvaliacoesGoogle();
+  const { cases, loading: carregandoCasos } = useCases();
+  const { responses, rootCauses, loading: carregandoNps } = useNps();
+  const { avaliacoes, carregando: carregandoGoogle } = useAvaliacoesGoogle();
+
+  /* Sem isto, as quatro frentes diziam "Nada classificado nesta semana" até os dados chegarem (out/2026). */
+  const carregando =
+    (carregandoCasos && cases.length === 0) ||
+    (carregandoNps && responses.length === 0) ||
+    carregandoGoogle;
   const { projects, recarregar } = useProjects();
   const agora = useAgora();
 
@@ -51,6 +58,17 @@ export default function SemanaDasCausas() {
   }, [cases, responses, avaliacoes]);
 
   if (!agora) return null;
+
+  if (carregando) {
+    return (
+      <SurfaceCard
+        title="A semana: o que subiu e o que vira ação"
+        description="Os últimos 7 dias contra os 7 anteriores, por frente. A causa que passa do limite vira item em Projetos, com a área dona como responsável."
+      >
+        <LinhasCarregando linhas={3} />
+      </SurfaceCard>
+    );
+  }
 
   return (
     <VistaDaSemana

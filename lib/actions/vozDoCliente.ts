@@ -2,6 +2,7 @@
 
 import { tryRole } from "@/lib/auth/guard";
 import { vozDoMes, type RegistroDaVoz, type VozDoMes } from "@/lib/models/vozDoCliente";
+import { semMencoesDoSlack } from "@/lib/models/capturaDasRedes";
 
 /** A voz do cliente de um mês (1.104) — ver `lib/models/vozDoCliente.ts`. */
 export async function lerVozDoCliente(mes: string): Promise<{ ok: true; voz: VozDoMes } | { ok: false; erro: string }> {
@@ -26,16 +27,21 @@ export async function lerVozDoCliente(mes: string): Promise<{ ok: true; voz: Voz
       }),
     ]);
     const registros: RegistroDaVoz[] = [
-      ...casos.map((c) => ({
-        frente: c.channel === "RECLAME_AQUI" ? ("reclame-aqui" as const) : ("redes" as const),
-        causa: c.causaRaiz ?? undefined,
-        em: c.publishedAt.toISOString(),
-        texto: `${c.title}. ${c.description ?? ""}`,
-        citacao: c.title.replace(/^Card[aá]pio Web:\s*/i, "").slice(0, 160),
-        nota: c.score ?? undefined,
-        avaliada: c.evaluated,
-        resolvida: c.resolved ?? undefined,
-      })),
+      ...casos.map((c) => {
+        const doRa = c.channel === "RECLAME_AQUI";
+        /* Atendimento das Redes vindo do Slack guardou "Olá @Carlos Isaac Cliente…" no título até out/2026: a citação é a do cliente, não a menção. */
+        const titulo = doRa ? c.title : semMencoesDoSlack(c.title) || c.title;
+        return {
+          frente: doRa ? ("reclame-aqui" as const) : ("redes" as const),
+          causa: c.causaRaiz ?? undefined,
+          em: c.publishedAt.toISOString(),
+          texto: `${titulo}. ${c.description ?? ""}`,
+          citacao: titulo.replace(/^Card[aá]pio Web:\s*/i, "").slice(0, 160),
+          nota: c.score ?? undefined,
+          avaliada: c.evaluated,
+          resolvida: c.resolved ?? undefined,
+        };
+      }),
       ...nps.map((r) => ({ frente: "nps" as const, causa: r.rootCause ?? undefined, em: new Date(r.respondedAt.getTime() - 3 * 3_600_000).toISOString(), texto: r.comment ?? "", citacao: (r.comment ?? "").replace(/\s+/g, " ").trim().slice(0, 160), nota: r.score })),
     ];
     return { ok: true, voz: vozDoMes(registros, mes) };

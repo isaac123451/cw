@@ -710,6 +710,16 @@ export const MUDANCAS: Mudanca[] = [
     href: "/jornada",
   },
   {
+    id: "causas-semana-e-voz",
+    dia: "2026-10-07",
+    tipo: "correcao",
+    frente: "plataforma",
+    titulo: "Causas raiz: \"A semana\" espera os dados, e a Voz do cliente cita o cliente",
+    texto:
+      "Ao abrir a tela, as quatro frentes de \"A semana: o que subiu\" diziam \"Nada classificado nesta semana\" por alguns segundos — e então aparecia a causa da semana. Agora o quadro mostra que está carregando até as reclamações, o NPS e o Google chegarem. Na \"Voz do cliente para o Produto\", a frase das Redes era a mensagem da automação do Slack (\"Olá @Carlos Isaac Cliente Janaina entrou em contato…\"), que é como os atendimentos antigos ficaram gravados; a citação passa a sair sem a menção e sem o \"Olá\", do mesmo jeito que a captura nova já grava.",
+    href: "/causas-raiz",
+  },
+  {
     id: "clientes-estabelecimentos-em-lotes",
     dia: "2026-10-07",
     tipo: "melhoria",
