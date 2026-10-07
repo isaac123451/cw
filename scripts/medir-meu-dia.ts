@@ -12,7 +12,7 @@ import "dotenv/config";
 
 import { getPrisma } from "../lib/prisma";
 import { fetchCases } from "../lib/services/case.repository";
-import { contarRotina } from "../lib/models/meuDia";
+import { contarRotina, etapaDoNps } from "../lib/models/meuDia";
 import { filaDoDia } from "../lib/models/guiaParaFechar";
 import { ROTINA_PADRAO, atividadesDoDia } from "../lib/models/rotina";
 import { isEncerrado, type NpsResponseView } from "../lib/models/nps";
@@ -119,6 +119,13 @@ async function main() {
   }
   console.log(`  Redes abertas: ${redesForaDeTudo.length}`);
   console.log(`  NPS aberto: ${npsForaDeTudo.length} de ${npsAbertos.length}`);
+  const porEtapa = new Map<string, number>();
+  for (const r of npsForaDeTudo) {
+    const e = etapaDoNps(r, undefined, agora);
+    const k = `${e.etapa} (${e.motivo})`;
+    porEtapa.set(k, (porEtapa.get(k) ?? 0) + 1);
+  }
+  for (const [k, n] of porEtapa) console.log(`    ${String(n).padStart(3)}  ${k}`);
   console.log(`\n  NPS só com tentativa (sem conversa): ${npsSoTentativa.length}`);
   console.log(`  NPS aberto sem comentário e sem tipo: ${npsSemComentario.length} de ${npsAbertos.length}`);
   const emAbertoNpsSoTentativa = contagens["em-aberto"].itens.filter((i) => npsSoTentativa.some((r) => r.id === i.id)).length;
