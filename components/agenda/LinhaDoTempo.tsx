@@ -143,7 +143,7 @@ export default function LinhaDoTempo({ ligacoes }: { ligacoes?: { dia: string; i
       </div>
 
       {/* O que ficou para trás: só olhando hoje, para não misturar com o passado navegado. */}
-      {modo === "dia" && foco === hoje && atrasados && (atrasados.atividades.length > 0 || atrasados.prazosEstourados > 0) && (
+      {modo === "dia" && foco === hoje && atrasados && (atrasados.atividades.length > 0 || atrasados.prazosEstourados > 0 || atrasados.areasEstouradas > 0) && (
         <div className="border-b border-rose-100 bg-rose-50/40 px-4 py-2.5 sm:px-6">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-rose-700">Ficou para trás</p>
           <ul className="mt-1 space-y-1">
@@ -160,9 +160,15 @@ export default function LinhaDoTempo({ ligacoes }: { ligacoes?: { dia: string; i
               </li>
             ))}
           </ul>
-          {atrasados.prazosEstourados > 0 && (
+          {(atrasados.prazosEstourados > 0 || atrasados.areasEstouradas > 0) && (
             <Link href="/meu-dia" className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-rose-700 hover:underline">
-              {atrasados.prazosEstourados} {pluralDe(atrasados.prazosEstourados, "prazo", "prazos")} de caso, NPS ou área já estourados — estão no Meu dia <ArrowUpRight size={12} />
+              {[
+                atrasados.prazosEstourados > 0 ? `${atrasados.prazosEstourados} ${pluralDe(atrasados.prazosEstourados, "prazo", "prazos")} de caso ou NPS ${pluralDe(atrasados.prazosEstourados, "estourado", "estourados")}` : null,
+                atrasados.areasEstouradas > 0 ? `${atrasados.areasEstouradas} com as áreas` : null,
+              ]
+                .filter(Boolean)
+                .join(" e ")}{" "}
+              — estão no Meu dia <ArrowUpRight size={12} />
             </Link>
           )}
         </div>

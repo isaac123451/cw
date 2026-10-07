@@ -92,10 +92,16 @@ const atras = atrasadosDaAgenda({
   regras: REGRAS,
   tarefas: [tarefa({ id: "v", dueDate: "2026-09-14" }), tarefa({ id: "w", dueDate: "2026-09-15", done: true }), tarefa({ id: "x" })],
   casos: [caso({ id: "c2", protocol: "RA-2", recebidaEm: br("2026-09-15", "08:00").toISOString(), createdAt: "2026-09-15" })],
-  nps: [{ id: "n2", score: 3, customer: "y", firstContactDueAt: br("2026-09-15", "16:00").toISOString() } as NpsResponseView],
+  nps: [{ id: "n2", score: 3, customer: "y", status: "Novo", respondedAt: br("2026-09-15", "09:00").toISOString(), attempts: [], firstContactDueAt: br("2026-09-15", "16:00").toISOString() } as unknown as NpsResponseView],
 });
 conferir("atividade vencida e aberta, uma a uma", atras.atividades.map((t) => t.id), ["v"]);
 conferir("prazos estourados viram número (caso + NPS)", atras.prazosEstourados, 2);
+{
+  /* A mesma conta do menu (07/10): o NPS que a regra dos 30 dias encerra não tem mais prazo. */
+  const velho = { id: "n3", score: 3, customer: "z", status: "Novo", respondedAt: br("2026-08-01", "10:00").toISOString(), firstContactDueAt: br("2026-08-02", "10:00").toISOString(), attempts: [] } as unknown as NpsResponseView;
+  const comVelho = atrasadosDaAgenda({ hoje: "2026-09-16", agora: AGORA, regras: REGRAS, tarefas: [], casos: [], nps: [velho] });
+  conferir("NPS na regra dos 30 dias não conta como prazo estourado", comVelho.prazosEstourados, 0);
+}
 
 console.log("\n  O lembrete que avisa\n");
 {

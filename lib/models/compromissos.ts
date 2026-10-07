@@ -11,6 +11,7 @@ import { caseHref, isOpen, isSocial } from "@/lib/services/case.service";
 import { EXPEDIENTE_PADRAO, paredeDe, type Expediente } from "@/lib/services/horasUteis";
 import { movementStatus } from "@/lib/services/movement.service";
 import { slaStatus } from "@/lib/services/sla.service";
+import { prazosDeHoje } from "@/lib/models/aberturaDoAgente";
 
 /**
  * Tudo o que tem dia e hora, no mesmo lugar (Fase 25).
@@ -197,9 +198,13 @@ export function atrasadosDaAgenda(e: Omit<EntradaDosCompromissos, "de" | "ate"> 
   const agora = e.agora ?? new Date();
   const expediente = e.expediente ?? EXPEDIENTE_PADRAO;
   const atividades = e.tarefas.filter((t) => !t.done && t.dueDate < e.hoje).sort((a, b) => a.dueDate.localeCompare(b.dueDate));
-  const regras = e.regras ?? [];
-  const casos = (e.casos ?? []).filter(isOpen).filter((c) => slaStatus(c, regras, { expediente, agora }).situation === "estourado").length;
-  const nps = (e.nps ?? []).filter((r) => !r.firstContactAt && !r.closedAt && r.firstContactDueAt && new Date(r.firstContactDueAt).getTime() < agora.getTime()).length;
+  /*
+    Casos e NPS pela mesma conta do número do Meu dia no menu
+    (`prazosDeHoje`, 07/10/2026). A cópia daqui não tirava o NPS que a regra
+    dos 30 dias encerra de madrugada, e a Agenda dizia 162 com o menu
+    dizendo 121. As áreas ficam à parte: o menu não as conta.
+  */
+  const prazos = prazosDeHoje((e.casos ?? []).filter(isOpen), e.regras ?? [], e.nps ?? [], expediente, agora);
   const areas = (e.movimentos ?? []).filter((m) => !m.returnedAt && movementStatus(m, { agora, expediente }).situation === "estourado").length;
-  return { atividades, prazosEstourados: casos + nps + areas };
+  return { atividades, prazosEstourados: prazos.estourados, areasEstouradas: areas };
 }

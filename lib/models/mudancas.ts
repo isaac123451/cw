@@ -63,6 +63,16 @@ export const MUDANCAS: Mudanca[] = [
     href: "/meu-dia",
   },
   {
+    id: "agenda-prazos-iguais-ao-menu",
+    dia: "2026-10-07",
+    tipo: "correcao",
+    frente: "plataforma",
+    titulo: "A Agenda conta os prazos estourados igual ao Meu dia",
+    texto:
+      "O \"ficou para trás\" da Agenda dizia 162 prazos estourados enquanto o Meu dia, no menu, dizia 121: a Agenda contava também o NPS que a regra dos 30 dias encerra de madrugada, que não tem mais prazo a cumprir. Agora usa a mesma conta, e o que está com as áreas aparece separado — \"121 prazos de caso ou NPS estourados e 1 com as áreas\".",
+    href: "/agenda",
+  },
+  {
     id: "dashboard-cartoes-do-ra",
     dia: "2026-10-07",
     tipo: "correcao",
