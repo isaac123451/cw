@@ -47,7 +47,7 @@ export const REVISAO = {
   titulo: "Revisão geral rumo ao 1.0",
   inicio: "2026-10-05",
   texto:
-    "Bugs, contas, desempenho, segurança e o que estava pela metade — com a extensão em primeiro lugar. Cada item abaixo é uma mudança: o que era, o que ficou e onde está.",
+    "Bugs, contas, desempenho, segurança e o que estava pela metade — na plataforma e na extensão, com a mesma prioridade. Cada item abaixo é uma mudança: o que era, o que ficou, onde está e o dia em que entrou.",
 };
 
 export const MUDANCAS: Mudanca[] = [
@@ -748,6 +748,16 @@ export const MUDANCAS: Mudanca[] = [
     texto:
       "A fila do Reclame Aqui dizia \"22 em aberto\" e, entre os chips, \"Finalizado 4\". Não é erro de conta: só Aguardando avaliação, Resolvido e Não resolvido tiram o caso da fila, e toda etapa criada no fluxo conta como aberta — de propósito, para nenhuma etapa nova sumir dos indicadores. Mas isso não aparecia em lugar nenhum. Agora cada etapa mostra \"conta como aberta\" ou \"sai da fila\", e uma etapa cujo nome soa como fim (Finalizado, Encerrado, Concluído…) mas conta como aberta ganha um aviso: os casos nela seguem na fila, nos prazos e no \"sem resposta\".",
     href: "/reclame-aqui/configuracoes?tab=status",
+  },
+  {
+    id: "novidades-com-data",
+    dia: "2026-10-07",
+    tipo: "melhoria",
+    frente: "plataforma",
+    titulo: "Novidades mostram o dia de cada mudança, a mais nova primeiro",
+    texto:
+      "Com mais de cem itens, não dava para saber o que tinha entrado hoje: cada mudança já guardava o dia, mas a tela não mostrava, e a ordem dentro de cada frente dependia de onde o item foi escrito. Agora o dia aparece ao lado do selo (Corrigido, Melhorou, Novo) e cada frente começa pelo mais recente.",
+    href: "/novidades",
   },
   {
     id: "middleware-vira-proxy",

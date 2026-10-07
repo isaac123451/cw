@@ -88,7 +88,11 @@ export default function RevisaoGeral({ novas }: { novas: Set<string> }) {
     return FRENTES.map((f) => ({ ...f, total: base.filter((m) => m.frente === f.id).length })).filter((f) => f.total > 0);
   }, [termo, tipo]);
 
-  const grupos = FRENTES.map((f) => ({ ...f, itens: visiveis.filter((m) => m.frente === f.id) })).filter((g) => g.itens.length > 0);
+  /* O mais novo primeiro; no mesmo dia, a ordem do cadastro (o sort é estável). */
+  const grupos = FRENTES.map((f) => ({
+    ...f,
+    itens: visiveis.filter((m) => m.frente === f.id).sort((a, b) => b.dia.localeCompare(a.dia)),
+  })).filter((g) => g.itens.length > 0);
 
   const filtrando = Boolean(tipo || frente || termo.trim());
 
@@ -216,11 +220,15 @@ function ItemDaMudanca({ mudanca: m, nova }: { mudanca: Mudanca; nova: boolean }
 
   return (
     <li id={m.id} className="group grid scroll-mt-24 gap-x-4 gap-y-1.5 px-4 py-3.5 target:bg-violet-50/40 sm:grid-cols-[96px_minmax(0,1fr)] sm:px-5">
-      <div>
+      <div className="flex items-center gap-2 sm:flex-col sm:items-start sm:gap-1">
         <span className={cn("inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-semibold ring-1 ring-inset", estilo.selo)}>
           <Icone size={11} aria-hidden />
           {nomeDoTipo}
         </span>
+        {/* O dia da mudança: com mais de cem itens, é o que diz o que entrou hoje (out/2026). */}
+        <time dateTime={m.dia} className="text-[11px] tabular-nums text-zinc-400">
+          {dataLonga(m.dia)}
+        </time>
       </div>
 
       <div className="min-w-0">

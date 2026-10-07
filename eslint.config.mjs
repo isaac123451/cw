@@ -16,6 +16,8 @@ const eslintConfig = defineConfig([
     // painel e o pacote da extensão: código gerado. Varrer
     // `.next-conferencia` fazia o `npm run lint` passar de uma hora.
     ".next-conferencia/**",
+    /* Qualquer outra pasta de build lado a lado (o build de conferência usa .next-build). */
+    ".next-*/**",
     ".bancada/**",
     "dist/**",
   ]),
