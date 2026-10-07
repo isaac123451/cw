@@ -680,6 +680,16 @@ export const MUDANCAS: Mudanca[] = [
     href: "/clientes",
   },
   {
+    id: "escuro-texto-forte",
+    dia: "2026-10-07",
+    tipo: "correcao",
+    frente: "plataforma",
+    titulo: "No tema escuro, cinco tons de texto que sumiam voltaram a aparecer",
+    texto:
+      "O título \"Lembretes de segurança\" em Ferramentas e acessos era marrom-escuro sobre fundo escuro — o aviso estava lá e não se lia. A causa era geral: o tom mais forte de âmbar, verde, violeta e o azul dos quadros de destaque não tinham versão escura. Uma varredura em todas as telas achou os cinco e todos ganharam a inversão: os quadros de destaque da Documentação, o guia do encerramento do NPS, o roteiro do Primeiro acesso, a chance de cancelar na Retenção e o balão das nossas mensagens nas Conversas.",
+    href: "/ferramentas",
+  },
+  {
     id: "mensalidade-x100",
     dia: "2026-10-07",
     tipo: "correcao",

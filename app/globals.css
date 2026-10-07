@@ -679,6 +679,16 @@
   --color-rose-950: #FFE0E4;
   --color-emerald-900: #A8EBCB;
   --color-violet-900: #DCCBFF;
+  /*
+   * O 950 é o "texto mais forte" sobre a tintura: título de aviso, balão
+   * nosso na conversa, roteiro do primeiro acesso. Fora da inversão, saía
+   * quase preto sobre o fundo escuro (out/2026).
+   */
+  --color-amber-950: #FBE7C4;
+  --color-emerald-950: #C9F4DF;
+  --color-violet-950: #ECE3FF;
+  /* Os quadros de destaque da Documentação e o guia do encerramento do NPS. */
+  --color-sky-900: #BFE6FA;
   /* O trecho marcado da resposta: tintura de rosa, e não pastel aceso. */
   --color-rose-200: #6B2E3A;
 }
