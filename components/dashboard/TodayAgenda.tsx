@@ -189,9 +189,17 @@ export default function TodayAgenda() {
             className="text-emerald-500"
           />
 
+          {/*
+            Só a agenda: os casos, o NPS e os prazos do dia moram no Meu dia
+            (out/2026). "Nada pendente para hoje" com 176 itens na fila soava
+            como dia livre.
+          */}
           <p className="mt-2.5 text-sm font-medium text-zinc-700">
-            Nada pendente para hoje.
+            Nenhuma atividade marcada na agenda para hoje.
           </p>
+          <Link href="/meu-dia" className="mt-1 text-xs font-medium text-violet-700 hover:underline">
+            A fila de casos e NPS está no Meu dia
+          </Link>
 
           {/*
             "Nada pendente" só é verdade se o Google respondeu.

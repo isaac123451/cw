@@ -63,6 +63,16 @@ export const MUDANCAS: Mudanca[] = [
     href: "/meu-dia",
   },
   {
+    id: "dashboard-agenda-nao-diz-dia-livre",
+    dia: "2026-10-07",
+    tipo: "melhoria",
+    frente: "plataforma",
+    titulo: "O Dashboard não diz mais \"nada pendente\" com a fila cheia",
+    texto:
+      "O cartão Agenda do dia dizia \"Nada pendente para hoje\" sempre que não havia atividade marcada — mesmo com 176 itens na fila do Meu dia. Agora diz \"Nenhuma atividade marcada na agenda para hoje\" e leva ao Meu dia, onde estão os casos e o NPS.",
+    href: "/dashboard",
+  },
+  {
     id: "analytics-backlog-so-abertas",
     dia: "2026-10-07",
     tipo: "correcao",
