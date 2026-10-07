@@ -26,6 +26,9 @@ const GRAVA = /\bprisma\.\w+\.(create|createMany|update|updateMany|upsert|delete
 /** Medem tempo: em paralelo com as outras o tempo infla e elas falham sem motivo. Rodam sozinhas, no fim. */
 const SOZINHAS = new Set(["check:desempenho"]);
 
+/** Sem arquivo de script, mas só leem o código: o lint (out/2026). */
+const SEM_ARQUIVO = new Set(["check:lint"]);
+
 const lista = [];
 const sozinhas = [];
 const pulados = [];
@@ -34,7 +37,7 @@ for (const [nome, comando] of Object.entries(pkg.scripts)) {
   if (!nome.startsWith("check:")) continue;
   const arquivo = comando.match(/scripts\/[\w.-]+\.(ts|js|cjs|mjs)/);
   if (!arquivo) {
-    pulados.push(nome);
+    (SEM_ARQUIVO.has(nome) ? lista : pulados).push(nome);
     continue;
   }
   const fonte = fs.readFileSync(path.join(RAIZ, arquivo[0]), "utf8");
