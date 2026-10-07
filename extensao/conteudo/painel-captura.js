@@ -625,6 +625,17 @@ const ORIGENS = [
     },
 
     /**
+     * O tema escolhido no painel — "auto", "claro" ou "escuro".
+     *
+     * O atalho de respostas rápidas pintava sempre pelo sistema: com o
+     * painel no escuro e o sistema claro, a janela ao lado da caixa saía
+     * clara (out/2026).
+     */
+    tema() {
+      return P.raiz?.dataset.tema || P.config?.tema || "auto";
+    },
+
+    /**
      * Autoriza o painel a abrir sozinho neste site.
      *
      * Só o `whatsapp.js` chama. É o que impede a gaveta de pular na

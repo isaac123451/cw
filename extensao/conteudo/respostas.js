@@ -52,6 +52,17 @@
     'footer [contenteditable="true"]',
   ];
 
+  /** O tema que a pessoa escolheu no painel; sem painel, o do sistema. */
+  function temaDoPainel() {
+    return CW.painel?.tema?.() ?? "auto";
+  }
+
+  /* Trocar o tema no painel com a janela montada: ela acompanha na próxima abertura. */
+  function repintar(hospedeiro) {
+    const raiz = hospedeiro?.shadowRoot?.querySelector(".tema");
+    if (raiz && raiz.dataset.tema !== temaDoPainel()) raiz.dataset.tema = temaDoPainel();
+  }
+
   function caixa() {
     for (const seletor of ONDE_ESCREVE) {
       const achado = document.querySelector(seletor);
@@ -181,7 +192,7 @@
 
     const raiz = document.createElement("div");
     raiz.className = "tema";
-    raiz.dataset.tema = "auto";
+    raiz.dataset.tema = temaDoPainel();
 
     raiz.innerHTML = `
       <button type="button" class="gatilho-atalho"
@@ -276,7 +287,7 @@
 
     const raiz = document.createElement("div");
     raiz.className = "tema";
-    raiz.dataset.tema = "auto";
+    raiz.dataset.tema = temaDoPainel();
 
     raiz.innerHTML = `
       <div class="janela-atalho" role="dialog"
@@ -390,6 +401,9 @@
     if (!botaoMontado()) return;
 
     if (!janelaMontada()) montarJanela();
+
+    repintar(hospedeiroJanela);
+    repintar(hospedeiroBotao);
 
     aberto = true;
     botao.setAttribute("aria-expanded", "true");
@@ -911,11 +925,13 @@
 
       const raiz = document.createElement("div");
       raiz.className = "tema";
-      raiz.dataset.tema = "auto";
+      raiz.dataset.tema = temaDoPainel();
       raiz.innerHTML = `<div class="aviso-atalho"></div>`;
 
       sombra.appendChild(raiz);
     }
+
+    repintar(hospedeiroAviso);
 
     const caixaDoAviso =
       hospedeiroAviso.shadowRoot.querySelector(

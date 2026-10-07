@@ -41,6 +41,12 @@
   let relogio = null;
   let ultimoTexto = "";
 
+  /* A conferência mais recente: uma resposta mais lenta que a seguinte não pinta por cima. */
+  let rodada = 0;
+
+  /* Caixa que já ganhou os ouvintes: voltar a ela não os duplica. */
+  const ligadas = new WeakSet();
+
   function acharCaixa() {
     for (const seletor of CAIXAS) {
       for (const el of document.querySelectorAll(seletor)) {
@@ -56,13 +62,22 @@
     return (el.value ?? el.innerText ?? "").trim();
   }
 
-  /** O protocolo da reclamação aberta, pelos leitores que o `check:ra` prova. */
-  function protocoloDaPagina() {
+  /**
+   * Quem é a reclamação aberta, pelos leitores que o `check:ra` prova.
+   *
+   * O protocolo do CW é `RA-<COD>`, o código de 16 caracteres; o número do
+   * "ID:" é outra coisa. Mandar só `RA-<número>` (até out/2026) fazia o
+   * servidor quase nunca achar o caso: a nota não conferia o nome do
+   * cliente, o passo e o prazo não apareciam, e reescrever uma resposta já
+   * publicada acusava "100% igual" à da própria reclamação.
+   */
+  function identidadeDaPagina() {
     const bruto = document.body?.innerText ?? "";
     /* Só a reclamação aberta (1.110): com a lista por trás, o primeiro ID era de outra. */
     const conteudo = CW.ra?.recorteDaReclamacao ? CW.ra.recorteDaReclamacao(bruto) : bruto;
-    const id = CW.ra?.id?.(conteudo) ?? "";
-    return id ? `RA-${id}` : "";
+    const cod = CW.ra?.cod?.(conteudo) || CW.ra?.tipoDaPagina?.(location.href, conteudo)?.codigo || "";
+    const numero = CW.ra?.id?.(conteudo) ?? "";
+    return { cod, numero, protocolo: cod ? `RA-${cod}` : numero ? `RA-${numero}` : "" };
   }
 
   function montarAviso(el) {
@@ -109,16 +124,28 @@
     if (texto === ultimoTexto) return;
     ultimoTexto = texto;
 
+    const minha = ++rodada;
+
     const resposta = await CW.enviar({
       tipo: "conferirResposta",
-      corpo: { texto, protocolo: protocoloDaPagina() },
+      corpo: { texto, ...identidadeDaPagina() },
     });
 
-    if (!resposta?.ok || resposta.dados?.erro) return;
+    /* Chegou depois de uma conferência mais nova: é do texto de antes. */
+    if (minha !== rodada) return;
+
+    if (!resposta?.ok || resposta.dados?.erro) {
+      /* Falhou: o mesmo texto pode ser conferido de novo ao sair da caixa. */
+      ultimoTexto = "";
+      return;
+    }
 
     const d = resposta.dados;
     const caixa = montarAviso(el);
     const partes = [];
+
+    /* O que pede revisão; a nota e a linha do caso só informam. */
+    let problemas = 0;
 
     /*
       A nota do analista, sempre no topo (1.112) — a mesma de 0 a 100 da tela
@@ -141,12 +168,14 @@
     }
 
     if (d.achados?.length > 0) {
+      problemas += 1;
       partes.push(
         `<div><strong>Revise antes de publicar:</strong> ${CW.escapar(d.resumo)}. A resposta pública fica no ar e é indexada — dado pessoal e condição negociada ficam no canal privado.</div>`
       );
     }
 
     if (d.repetida) {
+      problemas += 1;
       partes.push(
         `<div><strong>${d.repetida.percentual}% igual à resposta de ${CW.escapar(d.repetida.protocolo)}</strong> (${CW.escapar(
           d.repetida.titulo
@@ -157,6 +186,7 @@
     /* O analista de respostas públicas (1.94): um ponto por linha, o erro antes. */
     const analise = Array.isArray(d.analise) ? d.analise : [];
     if (analise.length > 0) {
+      problemas += 1;
       partes.push(
         `<div style="margin-top:4px"><strong>Analista:</strong><ul style="margin:2px 0 0 16px;padding:0">${analise
           .slice(0, 6)
@@ -165,7 +195,8 @@
       );
     }
 
-    if (partes.length === (typeof d.nota === "number" ? 1 : 0)) {
+    /* Contava as partes: com a linha do caso na tela, o "Pode publicar" sumia (out/2026). */
+    if (problemas === 0) {
       partes.push('<div>Sem dado pessoal, sem texto repetido e segue o documento. Pode publicar.</div>');
     }
 
@@ -180,6 +211,9 @@
 
     caixaAtual = el;
     ultimoTexto = "";
+
+    if (ligadas.has(el)) return;
+    ligadas.add(el);
 
     const aoDigitar = () => {
       clearTimeout(relogio);

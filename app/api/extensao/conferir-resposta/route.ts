@@ -8,7 +8,7 @@ import {
 import { getPrisma } from "@/lib/prisma";
 import { loadWorkspace } from "@/lib/actions/workspace";
 
-import { fetchCaseByProtocol } from "@/lib/services/case.repository";
+import { fetchCaseByPortalCode, fetchCaseByProtocol } from "@/lib/services/case.repository";
 import { dadosSensiveis, resumoDosAchados, semelhanca } from "@/lib/services/lgpd";
 import { slaStatus } from "@/lib/services/sla.service";
 import { INICIO_DA_TRILHA, trilhaDoCaso } from "@/lib/models/trilha";
@@ -54,10 +54,15 @@ export async function POST(request: Request) {
   const entrada = (await request.json().catch(() => ({}))) as {
     texto?: string;
     protocolo?: string;
+    /** O código de 16 caracteres e o número do "ID:" — a extensão manda os dois desde out/2026. */
+    cod?: string;
+    numero?: string;
   };
 
   const texto = String(entrada.texto ?? "").slice(0, TETO);
   const protocolo = String(entrada.protocolo ?? "").trim();
+  const cod = String(entrada.cod ?? "").trim();
+  const numero = String(entrada.numero ?? "").trim();
 
   const achados = dadosSensiveis(texto).map((a) => ({
     tipo: a.tipo,
@@ -67,8 +72,8 @@ export async function POST(request: Request) {
 
   const prisma = getPrisma();
 
-  /* Sem protocolo (ou sem banco), a conferência é a do texto — com a nota do analista. */
-  if (!prisma || !protocolo) {
+  /* Sem nenhuma identidade (ou sem banco), a conferência é a do texto — com a nota do analista. */
+  if (!prisma || (!protocolo && !cod && !numero)) {
     return responder(request, {
       achados,
       resumo: achados.length > 0 ? resumoDosAchados(dadosSensiveis(texto)) : "",
@@ -78,14 +83,23 @@ export async function POST(request: Request) {
     });
   }
 
-  const caso = await fetchCaseByProtocol(prisma, protocolo);
+  /*
+    O protocolo do CW é `RA-<COD>`. Até out/2026 a extensão mandava só
+    `RA-<número do ID>`, que quase nunca casava: o caso vinha nulo, e a
+    resposta já publicada da própria reclamação contava como "repetida".
+  */
+  const caso =
+    (cod || numero ? await fetchCaseByPortalCode(prisma, cod, numero) : null) ??
+    (protocolo ? await fetchCaseByProtocol(prisma, protocolo) : null);
+
+  const proprio = caso?.protocol ?? protocolo;
 
   /* Texto curto não é parecido com nada: só ruído acima de 80 caracteres. */
   let repetida: { protocolo: string; titulo: string; percentual: number } | null = null;
 
   if (texto.trim().length >= 80) {
     const outras = await prisma.case.findMany({
-      where: { protocol: { not: protocolo }, publicResponse: { not: null } },
+      where: { ...(proprio ? { protocol: { not: proprio } } : {}), publicResponse: { not: null } },
       select: { protocol: true, title: true, publicResponse: true },
       orderBy: { publishedAt: "desc" },
       take: 400,

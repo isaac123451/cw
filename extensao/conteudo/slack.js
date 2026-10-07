@@ -192,10 +192,18 @@
         return;
       }
       partes.push({ corpoBase, linhas: dados.linhas ?? [] });
-      if (lotes(mensagens).length > 1) painel.corpo(`<p class="vazio">Conferindo com o CW… ${partes.length * POR_LOTE} de ${mensagens.length}</p>`);
+      if (lotes(mensagens).length > 1) painel.corpo(`<p class="vazio">Conferindo com o CW… ${Math.min(partes.length * POR_LOTE, mensagens.length)} de ${mensagens.length}</p>`);
     }
 
     const linhas = partes.flatMap((p) => p.linhas);
+
+    /* Prévia vazia (texto que o servidor não entendeu): sem isto, "linhas[0].estado" quebrava o painel. */
+    if (linhas.length === 0) {
+      painel.corpo(`<p class="vazio">Não entendi ${mensagens.length === 1 ? "esta mensagem" : "estas mensagens"} como atendimento das Redes.</p>`);
+      painel.rodape([{ rotulo: "Tentar de novo", aoClicar: () => mostrar(mensagens, titulo) }]);
+      return;
+    }
+
     const c = { nova: 0, existente: 0, duplicada: 0, "sem-rede": 0 };
     for (const l of linhas) c[l.estado] = (c[l.estado] ?? 0) + 1;
     const novas = linhas.filter((l) => l.estado === "nova");

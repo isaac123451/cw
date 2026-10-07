@@ -53,6 +53,26 @@ export const REVISAO = {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- extensão: o painel ---------------- */
   {
+    id: "ext-nota-da-resposta-acha-a-reclamacao",
+    dia: "2026-10-07",
+    tipo: "correcao",
+    frente: "extensao",
+    titulo: "A nota da resposta no Reclame Aqui volta a saber de qual reclamação é",
+    texto:
+      "Enquanto se escreve a resposta pública no HugMe ou no Reclame Aqui, a extensão dá a nota de 0 a 100 e os avisos. Ela identificava a reclamação pelo número do \"ID:\", mas no CW o protocolo é o código (COD) — o caso quase nunca era achado. Na prática, a nota não conferia se o nome do cliente estava certo, o passo e o prazo da reclamação nunca apareciam, e reescrever uma resposta já publicada acusava \"100% igual\" à da própria reclamação. Agora vão o COD e o número, e o servidor procura pelos dois — conferido contra as 40 reclamações mais recentes, todas achadas. De quebra: uma conferência que chega atrasada não pinta mais a nota de um texto antigo por cima da atual; o \"Pode publicar\" não some quando aparece a linha do caso; e voltar à mesma caixa não liga a conferência duas vezes.",
+    onde: "Extensão → HugMe / Reclame Aqui → caixa da resposta pública",
+  },
+  {
+    id: "ext-slack-e-atalho-no-tema",
+    dia: "2026-10-07",
+    tipo: "correcao",
+    frente: "extensao",
+    titulo: "Slack sem travar na prévia vazia, e respostas rápidas no tema do painel",
+    texto:
+      "No Slack, se o servidor não entendesse a mensagem como atendimento, o painel da prévia quebrava sem dizer nada; agora avisa e oferece tentar de novo. O contador \"Conferindo… 400 de 350\" também não passa mais do total no último lote. E o atalho de respostas rápidas ao lado da caixa do WhatsApp seguia sempre o tema do sistema: com o painel no escuro e o computador no claro, a janela saía clara. Passou a seguir o tema escolhido no painel.",
+    onde: "Extensão → Slack; WhatsApp → Respostas rápidas",
+  },
+  {
     id: "ext-confirma-o-que-gravou",
     dia: "2026-10-07",
     tipo: "melhoria",
