@@ -53,6 +53,16 @@ export const REVISAO = {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- extensão: o painel ---------------- */
   {
+    id: "ext-novo-caso-da-conversa",
+    dia: "2026-10-07",
+    tipo: "correcao",
+    frente: "extensao",
+    titulo: "\"Novo caso\" aberto da conversa: UF pelo DDD, data com calendário e rótulos que seguem a Origem",
+    texto:
+      "Três coisas no formulário que nasce do \"Cadastrar aqui\" do WhatsApp. A UF pelo DDD só funcionava no Reclame Aqui — a tabela morava no leitor do portal, que o WhatsApp não carrega —, então o caso saía sem estado mesmo com o telefone na tela; agora vem preenchida, com o aviso de onde veio. A data era um campo de texto \"Publicada em (AAAA-MM-DD)\" que quebrava a linha e desalinhava a Prioridade; virou um seletor de data, chamado \"Data do contato\" quando o caso vem de conversa (vazio, conta hoje). E trocar a Origem no seletor não mexia nos rótulos: com Reclame Aqui escolhido, o Id continuava dizendo \"deixe vazio para gerar\", e o portal exige o número. De quebra, calendário, listas e barras de rolagem nativas do painel passaram a seguir o tema escuro ou claro escolhido, e não o da página.",
+    onde: "Extensão → WhatsApp → Cliente → Cadastrar aqui",
+  },
+  {
     id: "ext-navegacao-explica-a-ponta",
     dia: "2026-10-06",
     tipo: "melhoria",

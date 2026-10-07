@@ -42,6 +42,7 @@
   --ok: #4ade80;
   --violeta: #a97bea;
   --sombra: 0 14px 40px rgba(0, 0, 0, .5);
+  color-scheme: dark;
 `;
 
   /**
@@ -62,6 +63,8 @@
   --laranja: #F9A11B;
 
   /* ---- claro (padrão) ---- */
+  /* Calendário, lista e barra de rolagem nativos seguem o tema do painel, não o da página. */
+  color-scheme: light;
   --fundo: #ffffff;
   --superficie: #fafafa;
   --elevado: #ffffff;

@@ -648,6 +648,16 @@
 
     P.raiz.addEventListener("change", (evento) => {
 
+      /* Os rótulos de Id e data seguem a Origem do "Novo caso". */
+      if (evento.target?.id === "cap-origem") {
+        const rotulos = P.rotulosDaOrigem?.(evento.target.value);
+        const doId = P.corpo.querySelector('label[for="cap-id"]');
+        const daData = P.corpo.querySelector('label[for="cap-criadoEm"]');
+        if (rotulos && doId) doId.textContent = rotulos.id;
+        if (rotulos && daData) daData.textContent = rotulos.data;
+        return;
+      }
+
       /* A subcategoria segue a categoria no formulário do caso (1.127). */
       if (evento.target?.dataset?.campoCaso === "categoria") {
         P.atualizarSubcategorias?.(evento.target);

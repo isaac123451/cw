@@ -165,9 +165,13 @@ const NUMA_LINHA = PAGINA.split("\n")
   `try` e devolvia lista vazia — a conferência reprovaria um leitor
   certo por uma diferença entre a caixa e a página de verdade.
 */
-const contexto = { window: { CWReputacao: {} }, URL };
+/* O núcleo vem antes, como no manifesto: a UF pelo DDD mora nele. */
+const contexto = { window: {}, URL };
 
 vm.createContext(contexto);
+
+const NUCLEO = path.join(__dirname, "..", "extensao", "conteudo", "nucleo.js");
+vm.runInContext(fs.readFileSync(NUCLEO, "utf8"), contexto, { filename: NUCLEO });
 
 vm.runInContext(
   fs.readFileSync(ARQUIVO, "utf8"),

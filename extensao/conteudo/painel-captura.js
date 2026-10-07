@@ -70,7 +70,7 @@ const ORIGENS = [
           tipo === "textarea"
             ? `<textarea class="campo" id="cap-${nome}" data-campo="${nome}" rows="7"
                  style="margin-top:0;resize:vertical">${CW.escapar(valor ?? "")}</textarea>`
-            : `<input class="campo" id="cap-${nome}" data-campo="${nome}" type="text"
+            : `<input class="campo" id="cap-${nome}" data-campo="${nome}" type="${tipo === "date" ? "date" : "text"}"
                  style="margin-top:0" value="${CW.escapar(valor ?? "")}" />`
         }
       </div>`;
@@ -124,13 +124,7 @@ const ORIGENS = [
           P.captura.origem ?? "Reclame Aqui"
         )}
 
-        ${campo(
-          "id",
-          doPortal
-            ? "Id no portal"
-            : "Id (deixe vazio para gerar)",
-          P.captura.id
-        )}
+        ${campo("id", P.rotulosDaOrigem(P.captura.origem).id, P.captura.id)}
         ${campo("cliente", "Cliente", P.captura.cliente)}
         ${
           !P.captura.cliente && doPortal
@@ -146,7 +140,7 @@ const ORIGENS = [
         ${campo("titulo", "Título", P.captura.titulo)}
 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          ${campo("criadoEm", "Publicada em (AAAA-MM-DD)", P.captura.criadoEm)}
+          ${campo("criadoEm", P.rotulosDaOrigem(P.captura.origem).data, P.captura.criadoEm, "date")}
           ${lista(
             "prioridade",
             "Prioridade",
@@ -163,7 +157,7 @@ const ORIGENS = [
         </div>
         ${
           uf.origem
-            ? `<p class="sub" style="margin:-4px 0 9px">A página não mostra a UF: esta veio ${CW.escapar(uf.origem)}. Confira antes de criar.</p>`
+            ? `<p class="sub" style="margin:-4px 0 9px">A UF veio ${CW.escapar(uf.origem)}. Confira antes de criar.</p>`
             : ""
         }
 
@@ -286,7 +280,7 @@ const ORIGENS = [
     }
 
     const doDdd =
-      CW.ra?.ufPeloTelefone?.(P.captura.telefone) ?? "";
+      CW.ufPeloTelefone?.(P.captura.telefone) ?? "";
 
     if (doDdd) {
       return {
@@ -297,6 +291,22 @@ const ORIGENS = [
 
     return { uf: "", origem: "" };
   }
+
+  /**
+   * O que muda no formulário quando a Origem muda.
+   *
+   * O Reclame Aqui dá o número e a data de publicação; uma conversa não
+   * tem nenhum dos dois, e o servidor gera o protocolo e data de hoje.
+   * Trocar a Origem no seletor não mexia nos rótulos — "deixe vazio para
+   * gerar" continuava escrito com o Reclame Aqui escolhido, que exige o
+   * número (out/2026).
+   */
+  P.rotulosDaOrigem = function rotulosDaOrigem(origem) {
+    const doPortal = !origem || origem === "Reclame Aqui";
+    return doPortal
+      ? { id: "Id no portal", data: "Publicada em" }
+      : { id: "Id (deixe vazio para gerar)", data: "Data do contato" };
+  };
 
   P.opcoesDeSubcategoria = function opcoesDeSubcategoria(categoria, atual) {
 
