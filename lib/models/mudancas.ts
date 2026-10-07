@@ -750,6 +750,16 @@ export const MUDANCAS: Mudanca[] = [
     href: "/reclame-aqui/configuracoes?tab=status",
   },
   {
+    id: "saude-dos-dados",
+    dia: "2026-10-07",
+    tipo: "novo",
+    frente: "plataforma",
+    titulo: "Saúde dos dados: o que na base está errado e mexe nos números, com o caminho para corrigir",
+    texto:
+      "Em Configurações → Cadastros, um painel novo confere a base a cada abertura e aponta o que distorce alguma conta: mensalidade fora de escala (a Kantinho Burger com R$ 20.999, sobra do bug do ×100), conta com plano que não existe na tabela (238 no \"Essencial\"), caso aberto com o responsável de teste, atendimento das Redes com a menção do Slack no lugar do cliente, resposta pública sem data, etapa com nome de fim que conta como aberta (\"Finalizado\", 4 casos), causa raiz sem nome de verdade e atividade com o texto do WhatsApp no título. Cada achado diz por que importa, o que fazer e leva direto ao registro. Nada é corrigido sozinho — quem administra decide, e o painel só aparece para administrador.",
+    href: "/configuracoes",
+  },
+  {
     id: "prazos-estourados-batem-com-o-plano",
     dia: "2026-10-07",
     tipo: "correcao",

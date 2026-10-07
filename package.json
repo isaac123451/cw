@@ -44,6 +44,7 @@
     "check:lint": "eslint --quiet",
     "check:conferir-resposta": "tsx scripts/check-conferir-resposta.ts",
     "check:sem-resposta": "tsx scripts/check-sem-resposta.ts",
+    "check:saude-dos-dados": "tsx scripts/check-saude-dos-dados.ts",
     "check:checklist": "tsx scripts/check-checklist.ts",
     "check:historico": "tsx --conditions=react-server scripts/check-historico.ts",
     "conferir": "node scripts/conferir-tudo.cjs",

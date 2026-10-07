@@ -23,6 +23,7 @@ import {
   ShieldCheck,
   Shuffle,
   Sparkles,
+  Stethoscope,
   Tags,
   Target,
   UserCog,
@@ -34,6 +35,7 @@ import {
 
 import BackupCard from "@/components/configuracoes/BackupCard";
 import IaCard from "@/components/configuracoes/IaCard";
+import SaudeDosDadosCard from "@/components/configuracoes/SaudeDosDadosCard";
 import SegurancaCard from "@/components/configuracoes/SegurancaCard";
 import WootricCard from "@/components/configuracoes/WootricCard";
 import EnvioAutomatico from "@/components/relatorio/EnvioAutomatico";
@@ -54,7 +56,7 @@ import { pluralDe } from "@/lib/plural";
  *   tela dele, já na aba certa.
  */
 
-type Painel = "ia" | "wootric" | "seguranca" | "backup" | "relatorio";
+type Painel = "ia" | "wootric" | "seguranca" | "backup" | "relatorio" | "saude";
 
 interface ItemDeConfiguracao {
   id: string;
@@ -80,6 +82,7 @@ const PAINEIS: Record<Painel, ComponentType> = {
   seguranca: SegurancaCard,
   backup: BackupCard,
   relatorio: EnvioAutomatico,
+  saude: SaudeDosDadosCard,
 };
 
 export const SECOES: Secao[] = [
@@ -118,6 +121,7 @@ export const SECOES: Secao[] = [
     titulo: "Cadastros",
     descricao: "As listas que as outras telas usam.",
     itens: [
+      { id: "saude", titulo: "Saúde dos dados", descricao: "O que na base parece errado e mexe nos números: mensalidade fora de escala, plano fora da tabela, responsável de teste, resposta sem data e outros — com o caminho para corrigir.", icone: Stethoscope, painel: "saude", palavras: "dados errados anomalia conferência mensalidade plano qualidade" },
       { id: "estabelecimentos", titulo: "Estabelecimentos", descricao: "Os restaurantes clientes, com plano e situação da conta.", icone: Building2, href: "/estabelecimentos", palavras: "contas lojas cnpj" },
       { id: "clientes", titulo: "Clientes", descricao: "As pessoas por trás das reclamações.", icone: Users, href: "/clientes" },
       { id: "planos", titulo: "Planos e módulos", descricao: "A tabela de preços que as respostas prontas usam.", icone: Wallet, href: "/configuracoes/planos", palavras: "preço valores" },
