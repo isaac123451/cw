@@ -750,6 +750,16 @@ export const MUDANCAS: Mudanca[] = [
     href: "/reclame-aqui/configuracoes?tab=status",
   },
   {
+    id: "prazos-estourados-batem-com-o-plano",
+    dia: "2026-10-07",
+    tipo: "correcao",
+    frente: "nps",
+    titulo: "\"Prazos estourados\" do NPS batem com o plano de recuperação: 108, e não 147",
+    texto:
+      "No Meu dia, o aviso dizia \"160 prazos estourados — 147 do NPS e 13 casos\" logo acima do plano de recuperação com \"110 NPS fora do prazo\"; o popup da extensão somava os mesmos 147. A diferença eram 38 ciclos com mais de 30 dias sem nenhuma resposta: a regra do guia já autoriza encerrá-los como Sem Retorno, e a rotina da madrugada faz isso (50 por noite, e tem fechado 50 — o acumulado está sendo escoado). Não há mais prazo de 1º contato a cumprir neles, e o plano já não os contava. Agora o aviso e o popup também não: 108 vencidos e 2 vencendo hoje. E a rotina passou a encerrar do mais antigo para o mais novo; antes pegava os elegíveis sem ordem.",
+    href: "/meu-dia",
+  },
+  {
     id: "sem-resposta-uma-regra",
     dia: "2026-10-07",
     tipo: "correcao",

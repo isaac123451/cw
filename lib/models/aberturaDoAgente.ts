@@ -9,6 +9,7 @@ import { sinaisDeCrise } from "@/lib/models/redes";
 import { caseHref, isOpen, isSocial } from "@/lib/services/case.service";
 import { diaNaOperacao } from "@/lib/services/reputation.service";
 import { slaStatus } from "@/lib/services/sla.service";
+import { deveEncerrarSemRetorno } from "@/lib/services/nps.service";
 
 import {
   EXPEDIENTE_PADRAO,
@@ -144,6 +145,14 @@ export function prazosDeHoje(
   for (const ciclo of nps) {
     if (ciclo.firstContactAt || ciclo.closedAt) continue;
     if (!ciclo.firstContactDueAt) continue;
+
+    /*
+      Já na regra do guia (30 dias sem resposta): a rotina da madrugada
+      encerra, não há mais prazo de 1º contato a cumprir. Contados aqui, o
+      aviso dizia "147 do NPS" logo acima do plano de recuperação com 110
+      (out/2026) — a diferença eram esses.
+    */
+    if (deveEncerrarSemRetorno({ ...ciclo, attempts: ciclo.attempts ?? [] }, agora).deve) continue;
 
     const vence = new Date(ciclo.firstContactDueAt);
 

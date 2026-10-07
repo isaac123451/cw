@@ -29,7 +29,7 @@ import { isOpen, semRespostaPublica } from "@/lib/services/case.service";
 import { getPrisma } from "@/lib/prisma";
 import { conquistasDoDia, oQueMoveANota } from "@/lib/models/motivacaoDoDia";
 import { proximoPassoValido } from "@/lib/models/proximoPasso";
-import { NpsResponseView } from "@/lib/models/nps";
+import { ABANDONO_DIAS, NpsResponseView } from "@/lib/models/nps";
 import { summarize } from "@/lib/services/nps.service";
 import { provedorDeIA } from "@/lib/services/ia.service";
 import { slaStatus } from "@/lib/services/sla.service";
@@ -192,8 +192,18 @@ async function meuDiaDeBolso(
   */
   if (prisma) {
     try {
+      /*
+        Sem os de 30 dias sem resposta: a regra do guia os encerra na rotina
+        da madrugada, não há mais prazo a cumprir — a mesma conta do Meu dia
+        (`prazosDeHoje`). Sem 1º contato não há tentativa nem conversa, então
+        a idade conta da pesquisa.
+      */
       const ciclos = await prisma.npsResponse.findMany({
-        where: { firstContactAt: null, closedAt: null },
+        where: {
+          firstContactAt: null,
+          closedAt: null,
+          respondedAt: { gt: new Date(Date.now() - ABANDONO_DIAS * 86_400_000) },
+        },
         select: { firstContactDueAt: true },
       });
       const agora = Date.now();

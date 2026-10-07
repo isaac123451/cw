@@ -387,6 +387,12 @@ async function encerrarNpsAbandonado(
 
   const abertos = await prisma.npsResponse.findMany({
     where: { closedAt: null },
+    /*
+      O mais antigo primeiro (out/2026). Sem ordem, com mais de 500 abertos
+      o lote podia nunca chegar aos velhos — e o teto de 50 por noite escolhia
+      ao acaso entre os elegíveis.
+    */
+    orderBy: { respondedAt: "asc" },
     include: {
       attempts: {
         /* O resultado junto: a tentativa aguardando retorno não conta para encerrar. */
