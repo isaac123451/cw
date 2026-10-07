@@ -63,6 +63,16 @@ export const MUDANCAS: Mudanca[] = [
     href: "/meu-dia",
   },
   {
+    id: "dashboard-cartoes-do-ra",
+    dia: "2026-10-07",
+    tipo: "correcao",
+    frente: "plataforma",
+    titulo: "Os cartões do Dashboard contam o que a lista do clique mostra",
+    texto:
+      "\"Na fila da operação\" dizia 20 e, clicado, abria o quadro do Reclame Aqui com 17: o cartão somava os atendimentos das Redes. Agora \"Na fila\" e \"Risco de cancelamento\" contam só o Reclame Aqui, como a lista que abrem. No Impacto no negócio, a comparação com o mês passado sai em reais quando a porcentagem não faz sentido — de −R$ 300 para R$ 0 dizia \"+100%\", agora diz \"+R$ 300\".",
+    href: "/dashboard",
+  },
+  {
     id: "quadro-sem-resposta-so-abertas",
     dia: "2026-10-07",
     tipo: "correcao",

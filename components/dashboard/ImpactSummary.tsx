@@ -111,12 +111,17 @@ export default function ImpactSummary() {
 
   }, [records]);
 
-  /** A variação do líquido contra o mês passado, em porcentagem. */
+  /**
+   * A variação do líquido contra o mês passado.
+   *
+   * Em porcentagem só quando o mês passado foi positivo: sobre base
+   * negativa ou zero a conta não diz nada — de −R$ 300 para R$ 0 aparecia
+   * "+100%" (out/2026). Nesses casos vai a diferença em reais.
+   */
+  const diferenca = dados.mes.liquido - dados.anterior.liquido;
   const variacao =
-    dados.anterior.liquido !== 0
-      ? ((dados.mes.liquido - dados.anterior.liquido) /
-          Math.abs(dados.anterior.liquido)) *
-        100
+    dados.anterior.liquido > 0
+      ? (diferenca / dados.anterior.liquido) * 100
       : null;
 
   return (
@@ -237,6 +242,14 @@ export default function ImpactSummary() {
             Ao lado do mês anterior, diz.
           */}
           <p className="mt-3 flex flex-wrap items-center gap-1.5 text-[11px] text-zinc-500">
+
+            {variacao === null && diferenca !== 0 && (
+              <span className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 font-semibold ${diferenca > 0 ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>
+                {diferenca > 0 ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
+                {diferenca > 0 ? "+" : "−"}
+                {money.format(Math.abs(diferenca))}
+              </span>
+            )}
 
             {variacao !== null && (
               <span

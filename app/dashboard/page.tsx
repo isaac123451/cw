@@ -35,6 +35,7 @@ import { STATUS_SEM_TRATATIVA } from "@/lib/models/nps";
 
 import {
   isOpen,
+  isReclameAqui,
   isSocial,
   semRespostaPublica,
   seteDiasAtras,
@@ -119,7 +120,12 @@ export default function DashboardPage() {
 
   const metrics = useMemo(() => {
 
-    const abertos = cases.filter(isOpen);
+    /*
+      Do Reclame Aqui, como a fila que o clique abre (07/10/2026): com as
+      Redes, o cartão dizia 20 na fila e a lista mostrava 17.
+    */
+    const doRa = cases.filter(isReclameAqui);
+    const abertos = doRa.filter(isOpen);
 
     const semResposta = cases.filter(semRespostaPublica);
 
@@ -139,7 +145,7 @@ export default function DashboardPage() {
       vencidos: semResposta.filter(
         (item) => item.createdAt < corte
       ).length,
-      churn: cases.filter((item) => item.churnRisk)
+      churn: doRa.filter((item) => item.churnRisk)
         .length,
     };
 
