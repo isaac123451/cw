@@ -8,6 +8,7 @@
  * nasceu, e a mensagem do Slack só quando é para a pessoa.
  */
 import { chaveDaAcao, ehParaMim, lembreteDoSlack, tarefaFeita, type MensagemDoSlack } from "../lib/models/iaDoDia";
+import { atividadeDoFeito, entenderComando } from "../lib/models/comandosDaIA";
 
 let falhas = 0;
 function conferir(nome: string, obtido: unknown, esperado: unknown) {
@@ -61,6 +62,31 @@ conferir("caso: contato registrado depois fecha o follow-up", tarefaFeita(tarefa
 conferir("caso: contato de antes da atividade não fecha", tarefaFeita(tarefa("t1", { caseId: "c1" }), { ultimoContatoEm: "2026-10-06T10:00:00.000Z" }), null);
 conferir("caso encerrado fecha", tarefaFeita(tarefa("t1", { caseId: "c1", type: "Pendência", title: "Conferir dossiê" }), { casoEncerrado: true }), "o caso foi encerrado");
 conferir("atividade sem vínculo nunca fecha sozinha", tarefaFeita(tarefa("t2"), { nossaMensagemEm: "2026-10-08T14:00:00.000Z", ultimoContatoEm: "2026-10-08T14:00:00.000Z" }), null);
+
+console.log("\n  COMANDOS EM PALAVRAS\n");
+{
+  const P = new Set(["RA-rceRWFM8hJR8oNTy"]);
+  const lembrete = entenderComando("me lembra de ligar pro João amanhã às 10h", HOJE, P);
+  conferir("“me lembra de … amanhã às 10h” vira lembrete com dia e hora", lembrete?.tipo === "lembrete" ? [lembrete.linha.dueDate, lembrete.linha.time] : null, ["2026-10-09", "10:00"]);
+  conferir("o título fica sem o “me lembra de”", lembrete?.tipo === "lembrete" ? /^me lembra/i.test(lembrete.linha.title) : null, false);
+  const anota = entenderComando("anota no RA-rceRWFM8hJR8oNTy que o cliente aceitou o desconto", HOJE, P);
+  conferir("“anota no RA-… que …” vira anotação no caso", anota?.tipo === "anotacao" ? [anota.protocolo, anota.texto] : null, ["RA-rceRWFM8hJR8oNTy", "o cliente aceitou o desconto"]);
+  conferir("anotação em caso que não existe não é comando", entenderComando("anota no RA-naoExiste123 que tal", HOJE, P), null);
+  const feito = entenderComando("concluí o retorno da Ana", HOJE, P);
+  conferir("“concluí …” vira marcar como feito", feito?.tipo === "feito" ? feito.busca : null, "retorno da Ana");
+  conferir("pergunta continua sendo pergunta", entenderComando("quantas reclamações estão sem resposta?", HOJE, P), null);
+  conferir("“me lembra quantas faltam?” é pergunta (termina em ?)", entenderComando("me lembra quantas avaliações faltam?", HOJE, P), null);
+
+  const abertas = [
+    { id: "a", title: "Retorno combinado com Ana: “te ligo amanhã”" },
+    { id: "b", title: "Retorno combinado com Bruno" },
+    { id: "c", title: "Enviar relatório do ciclo" },
+  ];
+  conferir("“o retorno da Ana” acha a da Ana", atividadeDoFeito("o retorno da Ana", abertas).escolhida?.id, "a");
+  conferir("“o relatório” acha o relatório", atividadeDoFeito("o relatório", abertas).escolhida?.id, "c");
+  conferir("“o retorno combinado” empata: não fecha nenhuma, mostra as duas", [atividadeDoFeito("o retorno combinado", abertas).escolhida, atividadeDoFeito("o retorno combinado", abertas).candidatas.length], [null, 2]);
+  conferir("nada parecido: não fecha", atividadeDoFeito("pagar o boleto", abertas).escolhida, null);
+}
 
 console.log("\n  CHAVES — a mesma origem é uma ação só\n");
 conferir("mensagem do Slack", chaveDaAcao.slack("C1", "1.2"), "slack:C1:1.2");

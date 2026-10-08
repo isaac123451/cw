@@ -48,7 +48,7 @@ async function chavesJaUsadas(prisma: PrismaClient, userId: string, chaves: stri
 }
 
 /** Registra a ação. Devolve `false` quando a chave já existia — quem chama não repete. */
-async function registrar(prisma: PrismaClient, userId: string, a: NovaAcao): Promise<boolean> {
+export async function registrar(prisma: PrismaClient, userId: string, a: NovaAcao): Promise<boolean> {
   try {
     await prisma.acaoDaIA.create({
       data: {
@@ -506,8 +506,9 @@ export async function desfazer(prisma: PrismaClient, userId: string, id: string)
   const d = (acao.desfazer ?? {}) as Record<string, string>;
   if (d.tarefa) await prisma.agendaTask.updateMany({ where: { id: d.tarefa }, data: { done: true } });
   if (d.reabrir) await prisma.agendaTask.updateMany({ where: { id: d.reabrir }, data: { done: false } });
-  if (d.comentario) await prisma.caseComment.deleteMany({ where: { id: d.comentario, authorName: AUTOR } });
-  if (d.notaNps) await prisma.npsNote.deleteMany({ where: { id: d.notaNps, actor: AUTOR } });
+  /* Só o comentário e a nota que esta ação criou — o id vem da própria linha da ação. */
+  if (d.comentario) await prisma.caseComment.deleteMany({ where: { id: d.comentario } });
+  if (d.notaNps) await prisma.npsNote.deleteMany({ where: { id: d.notaNps } });
   await prisma.acaoDaIA.update({ where: { id }, data: { desfeitaEm: new Date(), vistaEm: acao.vistaEm ?? new Date() } });
   return { ok: true };
 }

@@ -1,6 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { entenderComando } from "@/lib/models/comandosDaIA";
+import { executarComandoDaIA } from "@/lib/actions/iaDoDia";
+import { paredeDe } from "@/lib/services/horasUteis";
+import { EVENTO_DA_IA_DO_DIA } from "@/components/iaDoDia/VigiaDaIaDoDia";
 
 import { useAgenda } from "@/lib/context/AgendaContext";
 import { useCases } from "@/lib/context/CaseContext";
@@ -138,6 +142,29 @@ export function useConversaDoAssistente() {
     if (pergunta === "" || busy) return;
 
     const id = crypto.randomUUID();
+
+    /*
+      Pedido de ação (08/10/2026): "me lembra de…", "anota no RA-… que…",
+      "concluí…". Vira ação de verdade, registrada na IA do dia (lista do
+      Meu dia, com desfazer) — e não uma resposta dizendo como fazer.
+    */
+    const protocolos = new Set(cases.flatMap((c) => [c.protocol, c.id]));
+    if (entenderComando(pergunta, paredeDe(new Date()).dia, protocolos)) {
+      setTurns((prev) => [...prev, { id, question: pergunta, answer: "", streaming: true }]);
+      setBusy(true);
+      try {
+        const r = await executarComandoDaIA(pergunta);
+        setTurns((prev) => prev.map((t) => (t.id === id ? { ...t, answer: r.ok ? `${r.texto}
+
+Fica em "O que a IA fez hoje", no Meu dia, com desfazer.` : "", streaming: false, ...(r.ok ? {} : { error: r.erro }) } : t)));
+        if (r.ok) window.dispatchEvent(new Event(EVENTO_DA_IA_DO_DIA));
+      } catch {
+        setTurns((prev) => prev.map((t) => (t.id === id ? { ...t, answer: "", streaming: false, error: "Não deu para fazer agora — tente de novo." } : t)));
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
 
     // Sem chave configurada, responde pelas rotinas determinísticas.
     if (!aiEnabled) {

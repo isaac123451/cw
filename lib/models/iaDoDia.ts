@@ -15,7 +15,7 @@ import { pedidoNaMensagem, reuniaoNaMensagem } from "@/lib/models/lembretesAutom
  */
 
 export type TipoDeAcao = "lembrete" | "anotacao" | "feito" | "aviso";
-export type OrigemDaAcao = "slack" | "whatsapp" | "caso" | "nps" | "agenda" | "area";
+export type OrigemDaAcao = "slack" | "whatsapp" | "caso" | "nps" | "agenda" | "area" | "pedido";
 
 export interface AcaoDaIAView {
   id: string;
@@ -45,6 +45,7 @@ export const ROTULO_DA_ORIGEM: Record<OrigemDaAcao, string> = {
   nps: "NPS",
   agenda: "Google Agenda",
   area: "área interna",
+  pedido: "seu pedido",
 };
 
 const sem = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();

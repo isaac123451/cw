@@ -63,6 +63,16 @@ export const MUDANCAS: Mudanca[] = [
     href: "/meu-dia",
   },
   {
+    id: "ia-do-dia-comandos",
+    dia: "2026-10-08",
+    tipo: "novo",
+    frente: "plataforma",
+    titulo: "Peça à IA em palavras: lembrete, anotação e “concluí”",
+    texto:
+      "No assistente (na tela dele ou no balão de qualquer tela), escreva o que precisa e ele faz, em vez de explicar como: \"me lembra de ligar pro João amanhã às 10h\" cria a atividade com dia e hora; \"anota no RA-… que o cliente aceitou o desconto\" grava a anotação na ficha; \"concluí o retorno da Ana\" fecha a atividade aberta que bate com o texto — e, se houver mais de uma parecida, pergunta qual. Tudo entra em \"O que a IA fez hoje\", com desfazer. O que termina em interrogação continua sendo pergunta.",
+    href: "/assistente",
+  },
+  {
     id: "ia-do-dia",
     dia: "2026-10-08",
     tipo: "novo",
