@@ -70,7 +70,7 @@ export const MUDANCAS: Mudanca[] = [
     titulo: "A IA do dia: lembra, anota e fecha o que você já fez — com desfazer",
     texto:
       "A IA passa a trabalhar sozinha enquanto a plataforma está aberta, a cada poucos minutos. Ela cria lembretes do que pedem a você no Slack (conversa direta ou menção, lida pela extensão com o Slack aberto), dos combinados e pedidos no WhatsApp e, depois de cada reunião do Google Agenda, um para anotar o que ficou combinado. Fecha sozinha a atividade que um fato mostra que foi feita: o retorno combinado quando você responde na conversa, a cobrança à área quando a área retorna, o follow-up quando você registra contato no caso. E anota na ficha do caso ou do NPS o resumo da conversa do dia no WhatsApp. Cada coisa aparece num aviso discreto com \"Desfazer\", e o Meu dia lista tudo o que ela fez hoje. O que você desfaz não volta, e nada é enviado para cliente ou para o Slack.",
-    href: "/meu-dia#ia-do-dia",
+    href: "/meu-dia",
   },
   {
     id: "expediente-com-intervalo",
