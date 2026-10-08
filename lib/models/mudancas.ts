@@ -63,6 +63,15 @@ export const MUDANCAS: Mudanca[] = [
     href: "/meu-dia",
   },
   {
+    id: "verbo-no-numero-certo",
+    dia: "2026-10-07",
+    tipo: "correcao",
+    frente: "plataforma",
+    titulo: "O verbo acompanha o número",
+    texto:
+      "O plural já estava certo no substantivo, mas o verbo ficava no plural: \"1 categoria aparecem\", \"1 conta estão marcadas\", \"1 nota foram recusadas\". Corrigido em Processos, no assistente, no Wootric e na importação de conversa.",
+  },
+  {
     id: "recebe-atendimentos",
     dia: "2026-10-07",
     tipo: "novo",

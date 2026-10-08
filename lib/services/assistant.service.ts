@@ -212,7 +212,7 @@ const skills: Skill[] = [
           paragraphs: [
             `A nota já está em ${ptBR(atual.raScore)}, acima de ${ptBR(meta)} — não falta nenhuma avaliação para essa meta.`,
             base.received - base.answered > 0
-              ? `Para segurar: ${base.received - base.answered} ${pluralDe(base.received - base.answered, "reclamação", "reclamações")} da janela ainda estão sem resposta, e resposta é o único indicador que depende só de nós.`
+              ? `Para segurar: ${base.received - base.answered} ${pluralDe(base.received - base.answered, "reclamação", "reclamações")} da janela ainda ${pluralDe(base.received - base.answered, "está", "estão")} sem resposta, e resposta é o único indicador que depende só de nós.`
               : "Todas as reclamações da janela foram respondidas.",
           ],
           links: [
@@ -626,7 +626,7 @@ const skills: Skill[] = [
         intent: "impacto",
         paragraphs: [
           `Há ${impacts.length} registros de impacto: ${money.format(entradas)} de entrada e ${money.format(Math.abs(custos))} em ofertas concedidas, resultado líquido de ${money.format(entradas + custos)}.`,
-          `${vinculados} de ${impacts.length} registros estão amarrados a uma reclamação específica — quanto maior essa proporção, mais defensável é o número.`,
+          `${vinculados} de ${impacts.length} ${pluralDe(impacts.length, "registro", "registros")} ${pluralDe(vinculados, "está amarrado", "estão amarrados")} a uma reclamação específica — quanto maior essa proporção, mais defensável é o número.`,
         ],
         links: [
           {
@@ -858,10 +858,10 @@ const skills: Skill[] = [
         paragraphs: [
           `O NPS da base é ${indicador}, sobre ${nps.length} ${pluralDe(nps.length, "resposta", "respostas")}: ${promotores} ${pluralDe(promotores, "promotor", "promotores")}, ${neutros} ${pluralDe(neutros, "neutro", "neutros")} e ${detratores} ${pluralDe(detratores, "detrator", "detratores")}.`,
           semTratativa > 0
-            ? `${semTratativa} ${pluralDe(semTratativa, "resposta", "respostas")} ainda estão sem tratativa — é a fila que fecha o ciclo, e detrator sem retorno vira reclamação pública.`
+            ? `${semTratativa} ${pluralDe(semTratativa, "resposta", "respostas")} ainda ${pluralDe(semTratativa, "está", "estão")} sem tratativa — é a fila que fecha o ciclo, e detrator sem retorno vira reclamação pública.`
             : "Todas as respostas já entraram em tratativa.",
           emRisco > 0
-            ? `${emRisco} ${pluralDe(emRisco, "conta", "contas")} estão marcadas como caso de retenção a partir da pesquisa.`
+            ? `${emRisco} ${pluralDe(emRisco, "conta", "contas")} ${pluralDe(emRisco, "está marcada", "estão marcadas")} como caso de retenção a partir da pesquisa.`
             : "Nenhuma conta foi marcada como retenção a partir da pesquisa.",
         ],
         links: [
@@ -939,9 +939,9 @@ const skills: Skill[] = [
       return {
         intent: "retencao",
         paragraphs: [
-          `${total} ${pluralDe(total, "conta", "contas")} estão marcadas como retenção: ${doRa.length} ${pluralDe(doRa.length, "vinda", "vindas")} de reclamação e ${doNps.length} do NPS. É o mesmo número do cartão "Risco de cancelamento" no painel.`,
+          `${total} ${pluralDe(total, "conta", "contas")} ${pluralDe(total, "está marcada", "estão marcadas")} como retenção: ${doRa.length} ${pluralDe(doRa.length, "vinda", "vindas")} de reclamação e ${doNps.length} do NPS. É o mesmo número do cartão "Risco de cancelamento" no painel.`,
           abertas.length > 0
-            ? `Dessas, ${abertas.length} ${pluralDe(abertas.length, "reclamação", "reclamações")} ainda estão em aberto — a mais antiga é de ${brDate([...abertas].sort((a, b) => a.createdAt.localeCompare(b.createdAt))[0].createdAt)}.`
+            ? `Dessas, ${abertas.length} ${pluralDe(abertas.length, "reclamação", "reclamações")} ainda ${pluralDe(abertas.length, "está", "estão")} em aberto — a mais antiga é de ${brDate([...abertas].sort((a, b) => a.createdAt.localeCompare(b.createdAt))[0].createdAt)}.`
             : `Nenhuma das ${doRa.length} reclamações marcadas segue em aberto: foram encerradas, a maioria como "não resolvido". A conta continua precisando de retenção mesmo assim — o caso fechou, a relação não.`,
           nps === undefined
             ? "Não recebi as respostas de NPS nesta tela, então a contagem acima cobre só as reclamações."

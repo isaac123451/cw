@@ -118,7 +118,7 @@ export default function WootricCard() {
             detalhe={
               retrato.nota.loginConfigurado
                 ? retrato.nota.recusadas > 0
-                  ? `Login configurado, mas ${retrato.nota.recusadas} ${pluralDe(retrato.nota.recusadas, "nota", "notas")} foram recusadas. Última resposta: "${retrato.nota.ultimoErro}". Conferir usuário e senha.`
+                  ? `Login configurado, mas ${retrato.nota.recusadas} ${pluralDe(retrato.nota.recusadas, "nota", "notas")} ${pluralDe(retrato.nota.recusadas, "foi recusada", "foram recusadas")}. Última resposta: "${retrato.nota.ultimoErro}". Conferir usuário e senha.`
                   : `Funcionando. ${retrato.nota.enviadas} ${pluralDe(retrato.nota.enviadas, "nota", "notas")} enviadas.`
                 : `Parada por configuração: ${retrato.nota.recusadas} ${pluralDe(retrato.nota.recusadas, "nota", "notas")} esperando. O Wootric só aceita criar nota com login de usuário — a chave de integração só lê. Cadastre WOOTRIC_USUARIO e WOOTRIC_SENHA (de um usuário da conta Wootric) nas variáveis de ambiente da Vercel e faça um novo deploy; o reenvio automático manda as que ficaram para trás.`
             }

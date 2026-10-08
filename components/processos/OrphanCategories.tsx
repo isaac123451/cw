@@ -87,7 +87,7 @@ export default function OrphanCategories() {
   return (
     <SurfaceCard
       title="Categorias fora da configuração"
-      description={`${orfas.length} ${pluralDe(orfas.length, "categoria", "categorias")} aparecem nas reclamações mas não existem em Configurar fluxo.`}
+      description={`${orfas.length} ${pluralDe(orfas.length, "categoria aparece", "categorias aparecem")} nas reclamações mas não ${pluralDe(orfas.length, "existe", "existem")} em Configurar fluxo.`}
       hint="Enquanto não estiverem configuradas, elas não podem receber regra de SLA própria e caem sempre na regra padrão."
       action={
         <button
@@ -109,11 +109,11 @@ export default function OrphanCategories() {
 
         <p className="flex-1 text-sm leading-relaxed text-amber-900">
           <strong className="font-semibold">
-            {casosAfetados} reclamações
+            {casosAfetados} {pluralDe(casosAfetados, "reclamação", "reclamações")}
           </strong>{" "}
-          estão classificadas com categorias que a
-          configuração não conhece. Elas vieram da
-          classificação automática da planilha.
+          {casosAfetados === 1
+            ? "está classificada com uma categoria que a configuração não conhece. Ela veio da classificação automática da planilha."
+            : "estão classificadas com categorias que a configuração não conhece. Elas vieram da classificação automática da planilha."}
         </p>
 
         <Link

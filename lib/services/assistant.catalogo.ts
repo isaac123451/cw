@@ -396,7 +396,7 @@ export const CATALOGO: Medicao[] = [
 
       return [
         `últimos ${dias} dias (desde ${desde})`,
-        `${recentes.length} ${pluralDe(recentes.length, "reclamação", "reclamações")} entraram`,
+        `${recentes.length} ${pluralDe(recentes.length, "reclamação", "reclamações")} ${pluralDe(recentes.length, "entrou", "entraram")}`,
         `${respondidas} já respondidas`,
         `${recentes.filter((i) => i.evaluated).length} avaliadas`,
         `${recentes.filter(isSocial).length} vieram das redes sociais`,

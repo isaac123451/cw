@@ -203,7 +203,7 @@ export default function ImportarConversa({ onClose, onGuardada }: { onClose: () 
             <p className="text-xs text-zinc-500">
               {leitura.mensagens.length} mensagens
               {primeira && ultima ? `, de ${new Date(primeira).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })} a ${new Date(ultima).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}` : ""}
-              {leitura.ignoradas ? ` · ${leitura.ignoradas} ${pluralDe(leitura.ignoradas, "linha", "linhas")} sem data no começo foram ignoradas` : ""}
+              {leitura.ignoradas ? ` · ${leitura.ignoradas} ${pluralDe(leitura.ignoradas, "linha", "linhas")} sem data no começo ${pluralDe(leitura.ignoradas, "foi ignorada", "foram ignoradas")}` : ""}
             </p>
 
             {omitidos > 0 && (
