@@ -63,6 +63,25 @@ export const MUDANCAS: Mudanca[] = [
     href: "/meu-dia",
   },
   {
+    id: "recebe-atendimentos",
+    dia: "2026-10-07",
+    tipo: "novo",
+    frente: "plataforma",
+    titulo: "Só recebe atendimento quem está marcado para receber",
+    texto:
+      "Em Configurações → Permissões, cada pessoa tem a chave \"Recebe atendimentos\", desligada por padrão. Só quem está marcado aparece como responsável nas fichas, no quadro, na agenda e na nova reclamação, e como destino na distribuição. Antes a distribuição oferecia qualquer conta ativa — inclusive a de teste, que acabou com três reclamações reais. Desmarcar não tira nada de ninguém: o que já está com a pessoa continua.",
+    href: "/configuracoes/permissoes",
+  },
+  {
+    id: "distribuicao-fora-do-menu",
+    dia: "2026-10-07",
+    tipo: "melhoria",
+    frente: "plataforma",
+    titulo: "Distribuição do time saiu do menu lateral",
+    texto: "A tela continua em Configurações → Distribuição e ausências, para quando for preciso redistribuir uma fila ou marcar férias.",
+    href: "/configuracoes",
+  },
+  {
     id: "next-16-3-8",
     dia: "2026-10-07",
     tipo: "correcao",

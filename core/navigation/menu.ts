@@ -19,7 +19,6 @@ import {
   MessagesSquare,
   Route,
   Settings,
-  Shuffle,
   Sparkles,
   Star,
   UserRound,
@@ -63,7 +62,7 @@ export const menuItems: MenuItem[] = [
   { title: "Meu dia", href: "/meu-dia", icon: CalendarCheck2, group: "Hoje" },
   { title: "Agenda", href: "/agenda", icon: CalendarClock, group: "Hoje" },
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard, group: "Hoje" },
-  { title: "Distribuição do time", href: "/distribuicao", icon: Shuffle, group: "Hoje" },
+  /* Distribuição do time saiu do menu em 07/10/2026, a pedido: a tela continua em /distribuicao. */
   {
     title: "Reclame Aqui",
     href: "/reclame-aqui",

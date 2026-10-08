@@ -1,6 +1,7 @@
 "use server";
 
 import { unstable_cache } from "next/cache";
+import { MARCA_DE_ATENDIMENTO } from "@/lib/auth/modules";
 
 import type { CaseTag } from "@/lib/models/tag";
 import type {
@@ -102,6 +103,11 @@ export interface Workspace {
   impact: ImpactRecord[];
   playbooks: Playbook[];
   teams: Team[];
+  /**
+   * Quem recebe atendimentos (07/10/2026): as pessoas marcadas em
+   * Permissões. É a lista dos seletores de responsável.
+   */
+  quemRecebe: { id: string; name: string; email: string; role: string }[];
   impactTypes: ImpactTypeOption[];
 
   /**
@@ -204,6 +210,7 @@ const VAZIO: Workspace = {
   impact: [],
   playbooks: [],
   teams: [],
+  quemRecebe: [],
   impactTypes: [],
   npsStages: ETAPAS_PADRAO,
   npsKinds: TIPOS_PADRAO,
@@ -419,6 +426,12 @@ async function carregarDoBanco(): Promise<Workspace | null> {
     }),
     prisma.operacaoConfig.findUnique({ where: { id: "unico" } }),
   ]);
+
+  const quemRecebe = await prisma.user.findMany({
+    where: { active: true, moduleRoles: { some: { module: MARCA_DE_ATENDIMENTO } } },
+    select: { id: true, name: true, email: true, jobTitle: true },
+    orderBy: { name: "asc" },
+  });
 
   return {
     workflow: workflow.map((r) => ({
@@ -680,6 +693,8 @@ async function carregarDoBanco(): Promise<Workspace | null> {
       origem: r.origem ?? undefined,
       updatedAt: dia(r.updatedAt) as string,
     })),
+
+    quemRecebe: quemRecebe.map((u) => ({ id: u.id, name: u.name, email: u.email, role: u.jobTitle ?? "" })),
 
     teams: teams.map((r) => ({
       id: r.id,

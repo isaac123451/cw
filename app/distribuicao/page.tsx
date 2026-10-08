@@ -169,7 +169,7 @@ export default function DistribuicaoPage() {
         )}
 
         {dados && (
-          <SurfaceCard title="Carga de agora" description="Itens abertos com cada pessoa. No Reclame Aqui, entre parênteses, os que ainda não têm resposta pública.">
+          <SurfaceCard title="Carga de agora" description="Itens abertos com quem recebe atendimentos (e com quem ainda carrega algo). No Reclame Aqui, entre parênteses, os que ainda não têm resposta pública. Quem recebe se marca em Configurações → Permissões.">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[640px] text-sm">
                 <thead>
@@ -288,8 +288,17 @@ export default function DistribuicaoPage() {
               </div>
               <div className="flex flex-wrap items-center gap-2 text-sm">
                 <span className="w-20 text-xs text-zinc-500">Para</span>
+                {/* Só quem está marcado para receber atendimentos é destino (07/10/2026). */}
+                {pessoas.filter((p) => p.id !== origem && FRENTES_DA_FILA.some((f) => p.podeReceber[f])).length === 0 && (
+                  <span className="text-xs text-zinc-500">
+                    Ninguém marcado para receber atendimentos.{" "}
+                    <Link href="/configuracoes/permissoes" className="font-medium text-violet-700 hover:underline">
+                      Marcar em Permissões
+                    </Link>
+                  </span>
+                )}
                 {pessoas
-                  .filter((p) => p.id !== origem)
+                  .filter((p) => p.id !== origem && FRENTES_DA_FILA.some((f) => p.podeReceber[f]))
                   .map((p) => (
                     <button
                       key={p.id}
@@ -370,7 +379,7 @@ export default function DistribuicaoPage() {
                   )}
                   {plano.semDestino.length > 0 && (
                     <p className="text-xs text-amber-800">
-                      {plano.semDestino.length} {plano.semDestino.length === 1 ? "item fica" : "itens ficam"} onde {plano.semDestino.length === 1 ? "está" : "estão"}: ninguém escolhido tem acesso de agente nessa frente.
+                      {plano.semDestino.length} {plano.semDestino.length === 1 ? "item fica" : "itens ficam"} onde {plano.semDestino.length === 1 ? "está" : "estão"}: ninguém escolhido recebe atendimentos nessa frente.
                     </p>
                   )}
                   {plano.atribuicoes.length > 0 && (

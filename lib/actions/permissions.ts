@@ -1,9 +1,13 @@
 "use server";
 
+import { updateTag } from "next/cache";
+
 import { requireRole, tryRole } from "@/lib/auth/guard";
+import { WORKSPACE_TAG } from "@/lib/actions/tags";
 
 import {
   ehModulo,
+  MARCA_DE_ATENDIMENTO,
   Modulo,
 } from "@/lib/auth/modules";
 
@@ -28,6 +32,8 @@ export interface PessoaComAcesso {
   active: boolean;
   /** Só as exceções: módulo → papel. */
   overrides: Record<string, Role>;
+  /** Marcada para receber atendimentos — ver `MARCA_DE_ATENDIMENTO`. */
+  recebeAtendimento: boolean;
 }
 
 export async function listAccess(): Promise<{
@@ -62,11 +68,14 @@ export async function listAccess(): Promise<{
       role: u.role as Role,
       active: u.active,
       overrides: Object.fromEntries(
-        u.moduleRoles.map((m) => [
-          m.module,
-          m.role as Role,
-        ])
+        u.moduleRoles
+          .filter((m) => m.module !== MARCA_DE_ATENDIMENTO)
+          .map((m) => [
+            m.module,
+            m.role as Role,
+          ])
       ),
+      recebeAtendimento: u.moduleRoles.some((m) => m.module === MARCA_DE_ATENDIMENTO),
     })),
   };
 }
@@ -152,4 +161,39 @@ export async function setModuleRole(input: {
   });
 
   return {};
+}
+
+/**
+ * Liga ou desliga a marca "recebe atendimentos" de uma pessoa.
+ *
+ * Só administrador: quem recebe fila é decisão de gestão. Conta inativa
+ * ou sem senha (`@sem-acesso.local`) não recebe — não há quem atenda.
+ */
+export async function setRecebeAtendimento(input: { userId: string; recebe: boolean }): Promise<{ ok: true } | { ok: false; erro: string }> {
+  const ctx = await requireRole("ADMIN", MODULO);
+  if (!ctx) return { ok: false, erro: "Sem banco configurado — não há onde gravar." };
+
+  const pessoa = await ctx.prisma.user.findUnique({
+    where: { id: input.userId },
+    select: { id: true, active: true, email: true },
+  });
+  if (!pessoa) return { ok: false, erro: "Essa conta não existe mais." };
+
+  const chave = { userId_module: { userId: input.userId, module: MARCA_DE_ATENDIMENTO } };
+
+  if (!input.recebe) {
+    await ctx.prisma.userModuleRole.delete({ where: chave }).catch(() => {});
+  } else {
+    if (!pessoa.active || pessoa.email.endsWith("@sem-acesso.local")) {
+      return { ok: false, erro: "Conta inativa ou sem acesso não recebe atendimentos." };
+    }
+    await ctx.prisma.userModuleRole.upsert({
+      where: chave,
+      update: { role: "AGENTE" },
+      create: { userId: input.userId, module: MARCA_DE_ATENDIMENTO, role: "AGENTE" },
+    });
+  }
+
+  updateTag(WORKSPACE_TAG);
+  return { ok: true };
 }

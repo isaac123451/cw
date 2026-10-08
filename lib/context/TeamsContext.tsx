@@ -28,7 +28,14 @@ interface TeamsContextType {
   /** Carga inicial ainda em andamento. */
   loading: boolean;
 
-  /** Todas as pessoas, de todos os times — alimenta os seletores de responsável. */
+  /**
+   * Quem recebe atendimentos — alimenta os seletores de responsável.
+   *
+   * Eram todas as pessoas de todos os times; desde 07/10/2026 é só quem
+   * está marcado em Permissões ("tem que ter algo marcado para deixar
+   * ativo receber coisas"). Os times são as áreas (Suporte, Financeiro…),
+   * não quem atende.
+   */
   people: TeamMember[];
 
   createTeam: (data: TeamDraft) => void;
@@ -63,22 +70,23 @@ export function TeamsProvider({
     [] as Team[]
   );
 
-  const people = useMemo(() => {
+  const [quemRecebe] = useWorkspaceSlice(
+    (dados) => dados.quemRecebe,
+    [] as { id: string; name: string; email: string; role: string }[]
+  );
 
-    const map = new Map<string, TeamMember>();
-
-    for (const team of teams) {
-      for (const member of team.members) {
-        // Mesma pessoa pode estar em mais de um time.
-        map.set(member.email, member);
-      }
-    }
-
-    return [...map.values()].sort((a, b) =>
-      a.name.localeCompare(b.name)
-    );
-
-  }, [teams]);
+  const people = useMemo<TeamMember[]>(
+    () =>
+      quemRecebe.map((p) => ({
+        id: p.id,
+        name: p.name,
+        role: p.role,
+        email: p.email,
+        online: false,
+        openCases: 0,
+      })),
+    [quemRecebe]
+  );
 
   const value = useMemo<TeamsContextType>(
     () => ({

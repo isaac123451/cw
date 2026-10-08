@@ -53,6 +53,17 @@ export const MODULES = [
 
 export type Modulo = (typeof MODULES)[number];
 
+/**
+ * A marca "recebe atendimentos" (07/10/2026).
+ *
+ * "Tem que ter algo marcado para deixar ativo receber coisas." Mora em
+ * `UserModuleRole` como um módulo à parte: a linha existe = a pessoa
+ * aparece como responsável nos seletores e como destino na distribuição.
+ * Não é permissão — não está em `MODULES`, o guard nunca a consulta — e
+ * por isso não precisou de coluna nova no banco.
+ */
+export const MARCA_DE_ATENDIMENTO = "atendimento";
+
 export const MODULE_LABELS: Record<Modulo, string> = {
   "reclame-aqui": "Reclame Aqui",
   nps: "NPS",

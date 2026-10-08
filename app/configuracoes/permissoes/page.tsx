@@ -15,6 +15,7 @@ import { useToast } from "@/lib/context/ToastContext";
 import {
   listAccess,
   setModuleRole,
+  setRecebeAtendimento,
   type PessoaComAcesso,
 } from "@/lib/actions/permissions";
 
@@ -141,6 +142,18 @@ export default function PermissoesPage() {
     });
   }
 
+  /* A marca "recebe atendimentos" (07/10/2026): também muda a tela antes do servidor, e a recarga devolve o real. */
+  function alternarAtendimento(pessoa: PessoaComAcesso) {
+    const recebe = !pessoa.recebeAtendimento;
+    setPessoas((atual) => atual.map((p) => (p.id === pessoa.id ? { ...p, recebeAtendimento: recebe } : p)));
+    startSalvar(async () => {
+      const saida = await setRecebeAtendimento({ userId: pessoa.id, recebe });
+      if (!saida.ok) notify({ tone: "error", title: "Não foi possível gravar.", detail: saida.erro });
+      else notify({ tone: "success", title: recebe ? `${pessoa.name} recebe atendimentos.` : `${pessoa.name} deixou de receber atendimentos.`, detail: recebe ? "Aparece como responsável e na distribuição." : "Sai dos seletores de responsável e da distribuição; o que já está com a pessoa continua." });
+      await carregar();
+    });
+  }
+
   return (
     <MainLayout>
 
@@ -157,7 +170,7 @@ export default function PermissoesPage() {
         <PageHeading
           eyebrow="Plataforma"
           title="Permissões"
-          description="O papel de cada pessoa dentro de cada módulo. Quem fica em Padrão segue o papel da conta."
+          description="Quem recebe atendimentos e o papel de cada pessoa dentro de cada módulo. Quem fica em Padrão segue o papel da conta."
         />
 
         {carregando ? (
@@ -200,6 +213,31 @@ export default function PermissoesPage() {
               >
 
                 <ul className="divide-y divide-zinc-100">
+
+                  {/*
+                    "Tem que ter algo marcado para deixar ativo receber coisas"
+                    (07/10/2026). Só quem está marcado aparece como responsável
+                    nos seletores e como destino na distribuição.
+                  */}
+                  <li className={`flex flex-wrap items-center gap-3 px-5 py-3 ${pessoa.recebeAtendimento ? "bg-emerald-50/50" : ""}`}>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-semibold text-zinc-900">Recebe atendimentos</span>
+                      <span className="mt-0.5 block text-[11px] leading-snug text-zinc-500">
+                        Marcada, a pessoa aparece como responsável nas fichas, no quadro e na agenda, e recebe fila na distribuição. Desmarcada, o que já está com ela continua.
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={pessoa.recebeAtendimento}
+                      aria-label={`${pessoa.name} recebe atendimentos`}
+                      disabled={salvando || (!pessoa.active && !pessoa.recebeAtendimento)}
+                      onClick={() => alternarAtendimento(pessoa)}
+                      className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-50 ${pessoa.recebeAtendimento ? "bg-emerald-600" : "bg-zinc-300"}`}
+                    >
+                      <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-[left] ${pessoa.recebeAtendimento ? "left-[22px]" : "left-0.5"}`} />
+                    </button>
+                  </li>
 
                   {MODULES.map((modulo) => {
 

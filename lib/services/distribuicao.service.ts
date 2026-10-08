@@ -1,6 +1,6 @@
 import type { PrismaClient } from "@prisma/client";
 
-import type { Modulo } from "@/lib/auth/modules";
+import { MARCA_DE_ATENDIMENTO, type Modulo } from "@/lib/auth/modules";
 import {
   chaveDoCliente,
   estaAusente,
@@ -97,8 +97,16 @@ export async function lerPessoasDoTime(prisma: PrismaClient, itens: ItemDaFila[]
     }),
   ]);
 
+  /*
+    Só recebe fila quem está marcado em Permissões → "Recebe atendimentos"
+    (07/10/2026). Antes toda conta ativa era destino — inclusive a das
+    conferências ("Conferência"), com quem três reclamações reais foram
+    parar. Quem não está marcado só aparece se ainda carregar algo, para a
+    fila dele poder ser passada adiante.
+  */
   return usuarios.map((u) => {
-    const papel = (modulo: Modulo) => u.moduleRoles.find((m) => m.module === modulo)?.role ?? u.role;
+    const recebe = u.moduleRoles.some((m) => m.module === MARCA_DE_ATENDIMENTO);
+    const papel = (modulo: Modulo) => (recebe ? u.moduleRoles.find((m) => m.module === modulo)?.role ?? u.role : "LEITURA");
     const carga = { "reclame-aqui": 0, redes: 0, nps: 0 } as Record<FrenteDaFila, number>;
     for (const i of itens) if (i.donoId === u.id) carga[i.frente] += 1;
     const ausenteAte = u.ausenteAte ? diaDaData(u.ausenteAte) : null;
@@ -110,8 +118,11 @@ export async function lerPessoasDoTime(prisma: PrismaClient, itens: ItemDaFila[]
       podeReceber: Object.fromEntries(FRENTES_DA_FILA.map((f) => [f, papel(MODULO_DA_FRENTE[f]) !== "LEITURA"])) as Record<FrenteDaFila, boolean>,
       carga,
       semResposta: semResposta.find((s) => s.ownerId === u.id)?._count ?? 0,
+      recebe,
     };
-  });
+  })
+    .filter((p) => p.recebe || Object.values(p.carga).some((n) => n > 0))
+    .map(({ recebe: _recebe, ...p }) => p);
 }
 
 /** O módulo que a gravação exige para mexer num item desta frente. */
