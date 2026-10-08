@@ -129,7 +129,7 @@ export default function MiniKanban({
                         event.dataTransfer.effectAllowed =
                           "move";
                       }}
-                      title={`${item.title} — ${item.company}`}
+                      title={[item.title, item.company || item.customer].filter(Boolean).join(" — ")}
                       className="block cursor-grab rounded-lg border border-zinc-200 bg-white p-2.5 transition-colors active:cursor-grabbing hover:border-violet-300 hover:bg-violet-50/40"
                     >
 
@@ -146,7 +146,8 @@ export default function MiniKanban({
                       </div>
 
                       <p className="mt-1 truncate text-[10px] text-zinc-500">
-                        {item.company} · {item.source}
+                        {/* Sem empresa, o cliente — e nada de "· Instagram" com o ponto solto (out/2026). */}
+                        {[item.company || item.customer, item.source].filter(Boolean).join(" · ")}
                       </p>
 
                     </Link>

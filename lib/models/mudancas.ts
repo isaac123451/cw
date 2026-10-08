@@ -63,6 +63,16 @@ export const MUDANCAS: Mudanca[] = [
     href: "/meu-dia",
   },
   {
+    id: "cartao-mostra-o-cliente",
+    dia: "2026-10-07",
+    tipo: "correcao",
+    frente: "redes",
+    titulo: "O cartão do quadro mostra o cliente quando não há empresa",
+    texto:
+      "Atendimento sem estabelecimento aparecia no quadro como \"· Instagram\", com o ponto solto e sem nome. Agora o cartão mostra o cliente no lugar da empresa — \"Janaina · Instagram\".",
+    href: "/redes-sociais",
+  },
+  {
     id: "verbo-no-numero-certo",
     dia: "2026-10-07",
     tipo: "correcao",
