@@ -292,6 +292,10 @@ export async function listUpcomingEvents(
       organizer?: { self?: boolean };
       start?: { dateTime?: string; date?: string };
       end?: { dateTime?: string; date?: string };
+      attendees?: { self?: boolean; resource?: boolean }[];
+      hangoutLink?: string;
+      conferenceData?: unknown;
+      extendedProperties?: { private?: Record<string, string> };
     }[];
   };
 
@@ -337,6 +341,16 @@ export async function listUpcomingEvents(
       ) && !item.guestsCanModify,
 
       recurring: Boolean(item.recurringEventId),
+
+      /*
+        Reunião de verdade (08/10/2026): outra pessoa convidada ou link de
+        videochamada. Os blocos do plano do dia que a plataforma manda para
+        a agenda (marca privada cwPlano/cwBloco) e o lembrete pessoal não
+        são — sem esta separação, a IA do dia pedia "anotar o que ficou
+        combinado" depois de "[FUPs] Reclame Aqui".
+      */
+      reuniao: Boolean(item.hangoutLink || item.conferenceData || (item.attendees ?? []).some((a) => !a.self && !a.resource)),
+      doPlano: Boolean(item.extendedProperties?.private?.cwPlano || item.extendedProperties?.private?.cwBloco),
     };
   });
 }

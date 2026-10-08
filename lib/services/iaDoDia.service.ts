@@ -387,7 +387,8 @@ export async function depoisDasReunioes(prisma: PrismaClient, userId: string, ag
   const hoje = paredeDe(agora).dia;
   const eventos = await listUpcomingEvents(token, { start: hoje, end: hoje }).catch(() => []);
   const terminaram = eventos.filter((e) => {
-    if (e.allDay || !e.end) return false;
+    /* Só reunião de verdade: bloco do plano e lembrete pessoal não têm o que anotar. */
+    if (e.allDay || !e.end || !e.reuniao || e.doPlano) return false;
     const fim = Date.parse(e.end);
     return fim <= agora.getTime() && agora.getTime() - fim <= 3 * 3_600_000;
   });

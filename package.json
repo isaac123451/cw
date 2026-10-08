@@ -189,7 +189,8 @@
     "check:tons": "tsx scripts/check-tons.ts",
     "check:impacto-conversa": "tsx scripts/check-impacto-conversa.ts",
     "check:nota-do-periodo": "tsx scripts/check-nota-do-periodo.ts",
-    "check:ia-do-dia": "tsx scripts/check-ia-do-dia.ts"
+    "check:ia-do-dia": "tsx scripts/check-ia-do-dia.ts",
+    "check:ia-do-dia-banco": "tsx --conditions=react-server --env-file=.env scripts/check-ia-do-dia-banco.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",

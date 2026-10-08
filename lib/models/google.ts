@@ -44,6 +44,11 @@ export interface GoogleEvent {
   /** Término `HH:MM`; ausente em evento de dia inteiro. */
   endTime?: string;
 
+  /** Outra pessoa convidada ou link de videochamada — é reunião (08/10/2026). */
+  reuniao?: boolean;
+  /** Bloco do plano do dia que a própria plataforma mandou para a agenda. */
+  doPlano?: boolean;
+
   /**
    * Evento criado por outra pessoa não pode ser editado aqui: o Google
    * recusaria a gravação, e mostrar o botão seria prometer o que não
