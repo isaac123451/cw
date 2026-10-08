@@ -33,6 +33,7 @@ import { TratativaProvider } from "@/components/reclame-aqui/tratativa/Tratativa
 import { JanelasProvider } from "@/lib/context/JanelasContext";
 import AvisosDeLembrete from "@/components/agenda/AvisosDeLembrete";
 import ProximoPassoFlutuante from "@/components/rotina/ProximoPassoFlutuante";
+import VigiaDaIaDoDia from "@/components/iaDoDia/VigiaDaIaDoDia";
 import AssistenteFlutuante from "@/components/assistente/AssistenteFlutuante";
 import JanelasHost from "@/components/janelas/JanelasHost";
 import ToastHost from "@/components/shared/ToastHost";
@@ -209,6 +210,8 @@ export default async function RootLayout({
                                     <AvisosDeLembrete />
                                     {/* O próximo passo em qualquer tela (1.123): no Meu dia ele já está no topo. */}
                                     <ProximoPassoFlutuante />
+                                    {/* A IA do dia (08/10/2026): lembretes, o que já foi feito e anotações, com desfazer. */}
+                                    <VigiaDaIaDoDia />
                                     {/* O assistente em qualquer tela, com o contexto dela (1.125). */}
                                     <AssistenteFlutuante />
                                   </JanelasProvider>

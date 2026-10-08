@@ -79,6 +79,7 @@ const CAMINHOS = {
   assistente: "/api/extensao/assistente",
   editarCaso: "/api/extensao/editar-caso",
   copiloto: "/api/extensao/copiloto",
+  slackAvisos: "/api/extensao/slack-avisos",
 };
 
 /**
@@ -1123,6 +1124,16 @@ async function tratar(mensagem) {
    */
   if (mensagem?.tipo === "capturaRedes") {
     const dados = await chamar(CAMINHOS.capturaRedes, {}, mensagem.corpo ?? {});
+    return { ok: true, dados };
+  }
+
+  /*
+    A IA do dia (08/10/2026): as mensagens do Slack para quem está logado
+    (conversa direta ou menção) viram lembrete na agenda — o servidor
+    decide o que pede ação. Nada é respondido no Slack.
+  */
+  if (mensagem?.tipo === "slackAvisos") {
+    const dados = await chamar(CAMINHOS.slackAvisos, {}, mensagem.corpo ?? {});
     return { ok: true, dados };
   }
 

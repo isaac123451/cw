@@ -2473,3 +2473,30 @@ model MetaDoReclameAqui {
   atualizadoEm  DateTime @updatedAt
   atualizadoPor String?
 }
+
+/// O que a IA fez sozinha no dia de alguém (08/10/2026) — "ela marca
+/// lembrete, faz anotações, finaliza atividades que consegue identificar
+/// que eu fiz, me lembra de coisas importantes". Cada linha é uma ação
+/// já feita, com o jeito de desfazer. `chave` é a identidade da origem
+/// (a mensagem do Slack, a conversa do dia, a atividade fechada): a mesma
+/// coisa nunca vira duas ações, e a ação desfeita não volta.
+model AcaoDaIA {
+  id      String @id @default(cuid())
+  userId  String
+  /// lembrete · anotacao · feito · aviso
+  tipo    String
+  /// slack · whatsapp · caso · nps · agenda · area
+  origem  String
+  chave   String
+  titulo  String
+  detalhe String?
+  href    String?
+  /// Como desfazer: `{ tarefa: id }`, `{ reabrir: id }`, `{ comentario: id }`, `{ notaNps: id }`.
+  desfazer   Json?
+  desfeitaEm DateTime?
+  vistaEm    DateTime?
+  criadaEm   DateTime  @default(now())
+
+  @@unique([userId, chave])
+  @@index([userId, criadaEm])
+}

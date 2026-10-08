@@ -402,4 +402,81 @@
 
   setInterval(varrer, 2000);
   varrer();
+
+  /* ============================================================
+     A IA DO DIA — o que é para você vira lembrete (08/10/2026)
+  ============================================================ */
+
+  /*
+    "Me lembra de coisas importantes, seja do Slack." Sem token do Slack: a
+    extensão olha o que passa na tela — conversa direta (canal D…) ou
+    mensagem com menção — e manda em lote para a aplicação, que decide o
+    que pede ação e cria o lembrete na agenda. Nada é respondido no Slack.
+    Cada mensagem vai uma vez só (o `ts` fica guardado na extensão).
+  */
+  const ENVIADAS = "cwSlackAvisosEnviados";
+  const DOIS_DIAS_MS = 2 * 86_400_000;
+  let enviadas = null;
+  const fila = new Map();
+
+  const canalDaConversa = () => location.pathname.match(/\/client\/[A-Z0-9]+\/([CGD][A-Z0-9]{6,})/)?.[1] ?? "";
+
+  async function carregarEnviadas() {
+    if (enviadas) return enviadas;
+    enviadas = new Set();
+    try {
+      const guardado = await chrome.storage.local.get(ENVIADAS);
+      for (const ts of guardado[ENVIADAS] ?? []) enviadas.add(ts);
+    } catch {
+      /* Sem a memória da extensão: o servidor não repete (a chave é única por mensagem). */
+    }
+    return enviadas;
+  }
+
+  /** Quem escreveu: o Slack só mostra o nome na primeira de uma sequência — as seguintes herdam. */
+  function autorDe(el) {
+    let atual = el;
+    for (let i = 0; atual && i < 15; i += 1) {
+      const nome = atual.querySelector?.('[data-qa="message_sender_name"], .c-message__sender_button');
+      if (nome) return (nome.innerText ?? "").trim().slice(0, 80);
+      atual = atual.previousElementSibling;
+    }
+    return "";
+  }
+
+  async function juntarAvisos() {
+    const canal = canalDaConversa();
+    if (!canal) return;
+    const ja = await carregarEnviadas();
+    const direta = canal.startsWith("D");
+    for (const el of document.querySelectorAll("[data-item-key]")) {
+      const ts = el.getAttribute("data-item-key") ?? "";
+      if (!TS.test(ts) || ja.has(ts) || fila.has(ts)) continue;
+      if (Date.now() - Number(ts.split(".")[0]) * 1000 > DOIS_DIAS_MS) continue;
+      const m = lerMensagem(el, canal);
+      if (!m || (!direta && !m.mencoes.length)) continue;
+      const link = el.querySelector("a.c-timestamp, a[data-qa='message_timestamp']")?.href ?? "";
+      fila.set(ts, { canal, ts, texto: m.texto, autor: autorDe(el), mencoes: m.mencoes, quando: m.quando, link });
+    }
+  }
+
+  async function enviarAvisos() {
+    if (!fila.size) return;
+    const lote = [...fila.values()].slice(0, 50);
+    try {
+      const r = await CW.enviar({ tipo: "slackAvisos", corpo: { mensagens: lote } });
+      if (r?.ok === false && r?.codigo !== "http") return;
+      const ja = await carregarEnviadas();
+      for (const m of lote) {
+        ja.add(m.ts);
+        fila.delete(m.ts);
+      }
+      await chrome.storage.local.set({ [ENVIADAS]: [...ja].sort().slice(-GUARDADAS) });
+    } catch {
+      /* Sem conexão agora: a fila tenta de novo na próxima volta. */
+    }
+  }
+
+  setInterval(() => void juntarAvisos(), 5000);
+  setInterval(() => void enviarAvisos(), 30_000);
 })();

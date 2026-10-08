@@ -20,6 +20,12 @@ export interface Toast {
   /** Link opcional — "abrir no Google", "ver na agenda". */
   href?: string;
   hrefLabel?: string;
+  /**
+   * Um botão no aviso — o "Desfazer" do que a IA do dia fez sozinha
+   * (08/10/2026). Com ele o aviso fica mais tempo na tela: ninguém desfaz
+   * em quatro segundos o que acabou de ler.
+   */
+  acao?: { rotulo: string; executar: () => void };
 }
 
 interface ToastContextType {
@@ -91,7 +97,7 @@ export function ToastProvider({
 
       setTimeout(
         () => dismiss(id),
-        DURACAO[toast.tone]
+        toast.acao ? 12_000 : DURACAO[toast.tone]
       );
 
       return id;

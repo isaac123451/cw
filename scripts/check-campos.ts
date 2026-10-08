@@ -287,6 +287,9 @@ const INTERNAS: Record<string, string[]> = {
   /** O retrato do painel do portal, gravado pela extensão: `lerPainelDoPortal`, por lote. */
   PainelDoPortal: ["*"],
 
+  /** O que a IA do dia fez (08/10/2026): carga própria (`lib/actions/iaDoDia.ts`), nos avisos e no Meu dia. */
+  AcaoDaIA: ["*"],
+
   /** As metas ajustadas (1.114): `lerAjustesDeMeta`, por lote, no Meu dia. */
   AjusteDeMeta: ["*"],
 

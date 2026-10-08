@@ -90,6 +90,19 @@ export default function ToastHost() {
                   </p>
                 )}
 
+                {toast.acao && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      toast.acao!.executar();
+                      dismiss(toast.id);
+                    }}
+                    className="mr-3 mt-1.5 inline-block text-xs font-semibold text-violet-700 hover:underline"
+                  >
+                    {toast.acao.rotulo}
+                  </button>
+                )}
+
                 {toast.href && (
                   <Link
                     href={toast.href}
