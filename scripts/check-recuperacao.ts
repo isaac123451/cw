@@ -65,11 +65,12 @@ const filaDoDia = [
   item("google", true, 6),
 ];
 const { hoje, paraDepois } = separarOQueValeHoje(filaDoDia, new Map<FrenteId, number>([["nps", 2]]));
-conferir("o fora do prazo da frente com plano entra só até a cota, na ordem", hoje.map((i) => i.n), [1, 2, 3, 4, 6]);
-conferir("e o resto fica para depois, contado", [...paraDepois.entries()], [["nps", 1]]);
-conferir("o que está no prazo entra inteiro", hoje.filter((i) => !i.atrasado).length, 1);
+/* A cota vale para tudo da frente (08/10/2026): no prazo e fora, na ordem da fila. */
+conferir("a frente com plano entra só até a cota, na ordem da fila", hoje.map((i) => i.n), [1, 2, 3, 6]);
+conferir("e o resto fica para depois, contado", [...paraDepois.entries()], [["nps", 2]]);
+conferir("o que está no prazo também conta na cota", hoje.filter((i) => i.frente === "nps").length, 2);
 conferir("frente sem plano entra inteira", hoje.filter((i) => i.frente === "google" || i.frente === "reclame-aqui").length, 2);
-conferir("cota batida: nada mais do acumulado hoje", separarOQueValeHoje(filaDoDia, new Map<FrenteId, number>([["nps", 0]])).paraDepois.get("nps"), 3);
+conferir("cota batida: nada mais da frente hoje", separarOQueValeHoje(filaDoDia, new Map<FrenteId, number>([["nps", 0]])).paraDepois.get("nps"), 4);
 conferir("o restante: a cota menos o que saiu, mais o adiantado", [restanteDeHoje(25, 10), restanteDeHoje(25, 30), restanteDeHoje(25, 30, 10)], [15, 0, 10]);
 
 console.log(falhas === 0 ? "\n  O plano segue o ajuste de cada um.\n" : `\n  ${falhas} falha(s).\n`);

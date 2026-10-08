@@ -249,7 +249,7 @@ function EditorDoPlano({ ajuste, onFechar, onSalvo }: { ajuste: AjusteDaRecupera
 function LinhaDaFrente({ plano, depois, hoje }: { plano: PlanoDaFrenteHoje; depois: number; hoje: string }) {
 
   const { expediente } = useSla();
-  const { frente, acumulado, cota, saiu, restante, adiantado, ajuste } = plano;
+  const { frente, acumulado, naFrente, cota, saiu, restante, adiantado, ajuste } = plano;
 
   /* A primeira abertura do dia fica guardada: é a régua do "saiu hoje". */
   useEffect(() => {
@@ -259,10 +259,11 @@ function LinhaDaFrente({ plano, depois, hoje }: { plano: PlanoDaFrenteHoje; depo
     } catch {
       guardado = null;
     }
-    if (guardado?.dia !== hoje) gravarGuardado(chaveDoInicio(frente), { dia: hoje, n: acumulado });
-  }, [frente, hoje, acumulado]);
+    if (guardado?.dia !== hoje) gravarGuardado(chaveDoInicio(frente), { dia: hoje, n: naFrente });
+  }, [frente, hoje, naFrente]);
 
-  const zera = planoDeRecuperacao(acumulado, cota, hoje, expediente);
+  /* Com a cota valendo para a frente inteira, zera quando a frente inteira cabe na cota. */
+  const zera = planoDeRecuperacao(naFrente, cota, hoje, expediente);
   const dandoConta = cota > 0 && saiu >= cota;
   const pct = cota > 0 ? Math.min(100, Math.round((saiu / cota) * 100)) : 0;
   const info = frenteInfo(frente);

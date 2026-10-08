@@ -18,6 +18,7 @@ import {
 } from "@/lib/models/recuperacao";
 
 import type { useMeuDia } from "@/components/rotina/useMeuDia";
+import type { Contagem } from "@/lib/models/meuDia";
 
 type MeuDia = ReturnType<typeof useMeuDia>;
 
@@ -75,7 +76,8 @@ export function definirAjusteDaRecuperacao(ajuste: AjusteDaRecuperacao) {
 */
 export const EVENTO_DA_RECUPERACAO = "cw:recuperacao";
 export const chaveDaCota = (f: FrenteId) => `cw:recuperacao:cota:${f}`;
-export const chaveDoInicio = (f: FrenteId) => `cw:recuperacao:inicio:${f}`;
+/* "inicio-frente" (08/10/2026): a régua passou a ser a frente inteira, e não só o fora do prazo — chave nova para não misturar com o número antigo. */
+export const chaveDoInicio = (f: FrenteId) => `cw:recuperacao:inicio-frente:${f}`;
 export const chaveDoAdiantado = (f: FrenteId) => `cw:recuperacao:adiantado:${f}`;
 
 export function lerTexto(chave: string) {
@@ -146,8 +148,10 @@ export interface PlanoDaFrenteHoje {
   frente: FrenteId;
   /** Fora do prazo na frente, de todas as atividades. */
   acumulado: number;
+  /** Todos os itens da frente na fila de hoje — o que a cota limita. */
+  naFrente: number;
   cota: number;
-  /** O acumulado na primeira abertura do dia — a régua do "saiu hoje". */
+  /** Os itens da frente na primeira abertura do dia — a régua do "saiu hoje". */
   inicio: number;
   saiu: number;
   /** Quanto do acumulado ainda cabe hoje. */
@@ -165,9 +169,29 @@ export interface OQueValeHoje {
   paraDepois: Map<FrenteId, number>;
   /** As frentes com plano hoje. */
   planos: PlanoDaFrenteHoje[];
+  /**
+   * As contagens de cada atividade só com o que vale hoje (08/10/2026): é
+   * com elas que o plano do expediente encaixa os blocos. Antes o plano
+   * usava as contagens inteiras e o corte da cota não chegava nele.
+   */
+  contagens: Record<string, Contagem> | null;
 }
 
-const VAZIO: OQueValeHoje = { fila: [], hoje: [], paraDepois: new Map(), planos: [] };
+const VAZIO: OQueValeHoje = { fila: [], hoje: [], paraDepois: new Map(), planos: [], contagens: null };
+
+/** Cada contagem só com os itens que estão na fila de hoje — total, frentes e atrasados refeitos. */
+export function contagensDeHoje(contagens: Record<string, Contagem>, hoje: { chave: string }[]): Record<string, Contagem> {
+  const ficam = new Set(hoje.map((i) => i.chave));
+  return Object.fromEntries(
+    Object.entries(contagens).map(([chave, c]) => {
+      const itens = c.itens.filter((i) => ficam.has(`${i.frente ?? chave}:${i.id}`));
+      if (itens.length === c.itens.length) return [chave, c];
+      const porFrente: Contagem["porFrente"] = {};
+      for (const i of itens) if (i.frente) porFrente[i.frente] = (porFrente[i.frente] ?? 0) + 1;
+      return [chave, { ...c, itens, total: itens.length, porFrente, atrasados: itens.filter((i) => i.atrasado).length }];
+    })
+  );
+}
 
 /**
  * O que vale hoje (1.124): a fila do Meu dia com o acumulado de cada frente
@@ -187,24 +211,29 @@ export function useOQueValeHoje(dia: MeuDia, marcadas: Set<string>): OQueValeHoj
 
     /* O acumulado conta todas as atividades: marcar uma como feita não "tira" o atraso. */
     const porFrente = new Map<FrenteId, number>();
+    const totalDaFrente = new Map<FrenteId, number>();
     for (const i of filaDoDia(dia.doDia, dia.contagens)) {
-      if (i.atrasado && i.frente) porFrente.set(i.frente, (porFrente.get(i.frente) ?? 0) + 1);
+      if (!i.frente) continue;
+      totalDaFrente.set(i.frente, (totalDaFrente.get(i.frente) ?? 0) + 1);
+      if (i.atrasado) porFrente.set(i.frente, (porFrente.get(i.frente) ?? 0) + 1);
     }
 
     const planos = frentesNoPlano(porFrente, efetivo).map(([f, acumulado]): PlanoDaFrenteHoje => {
       const escolhida = guardados.get(chaveDaCota(f));
       const cota = typeof escolhida === "number" && escolhida > 0 ? escolhida : cotaDaFrente(acumulado, efetivo[f]);
       const doInicio = guardados.get(chaveDoInicio(f)) as { dia?: string; n?: number } | undefined;
-      const inicio = doInicio?.dia === hojeDoDia && typeof doInicio.n === "number" ? doInicio.n : acumulado;
+      const naFrente = totalDaFrente.get(f) ?? 0;
+      const inicio = doInicio?.dia === hojeDoDia && typeof doInicio.n === "number" ? doInicio.n : naFrente;
       const doAdiantado = guardados.get(chaveDoAdiantado(f)) as { dia?: string; n?: number } | undefined;
       const adiantado = doAdiantado?.dia === hojeDoDia && typeof doAdiantado.n === "number" ? doAdiantado.n : 0;
-      const { saiu } = ritmoDeHoje(inicio, acumulado, cota);
-      return { frente: f, acumulado, cota, inicio, saiu, restante: restanteDeHoje(cota, saiu, adiantado), adiantado, ajuste: efetivo[f] };
+      /* Saiu hoje = itens da frente que deixaram a fila, no prazo ou fora: é o que a cota limita. */
+      const { saiu } = ritmoDeHoje(inicio, naFrente, cota);
+      return { frente: f, acumulado, naFrente, cota, inicio, saiu, restante: restanteDeHoje(cota, saiu, adiantado), adiantado, ajuste: efetivo[f] };
     });
 
     const fila = filaDoDia(dia.doDia, dia.contagens, marcadas);
     const { hoje, paraDepois } = separarOQueValeHoje(fila, new Map(planos.map((p) => [p.frente, p.restante])));
-    return { fila, hoje, paraDepois, planos };
+    return { fila, hoje, paraDepois, planos, contagens: contagensDeHoje(dia.contagens, hoje) };
   }, [dia.carregando, dia.contagens, dia.doDia, dia.hoje, marcadas, ajuste, guardados]);
 }
 

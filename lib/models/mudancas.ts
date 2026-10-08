@@ -63,6 +63,16 @@ export const MUDANCAS: Mudanca[] = [
     href: "/meu-dia",
   },
   {
+    id: "plano-de-recuperacao-corta-o-dia",
+    dia: "2026-10-08",
+    tipo: "correcao",
+    frente: "plataforma",
+    titulo: "O plano de recuperação passa a valer para o dia e para a fila",
+    texto:
+      "A cota do plano cortava só o que estava fora do prazo, e tudo o que estava no prazo entrava inteiro: com as respostas recentes do NPS, a fila seguia com mais de 300 itens e o plano não mudava o dia. Agora a cota vale para a frente inteira — no prazo e fora, na ordem da fila (atrasado e crítico primeiro). A fila do Um por vez, o próximo passo, a rotina e o plano do expediente usam o mesmo corte: hoje a fila foi de 334 para 34 itens. O que não cabe aparece como \"fica para os próximos dias\", contado; a cota de cada frente se ajusta no próprio plano.",
+    href: "/meu-dia?configurar=recuperacao",
+  },
+  {
     id: "assistente-nota-so-do-ra",
     dia: "2026-10-08",
     tipo: "correcao",

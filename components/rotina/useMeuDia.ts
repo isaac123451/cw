@@ -21,7 +21,7 @@ import {
 } from "@/lib/actions/rotina";
 
 import { atividadesDoDia, sequenciaDeDias, type AtividadeDaRotina } from "@/lib/models/rotina";
-import { contarRotina, planoDoDia, type MarcaDeItem, type TipoDeMarcaDeItem } from "@/lib/models/meuDia";
+import { contarRotina, planoDoDia, type Contagem, type MarcaDeItem, type TipoDeMarcaDeItem } from "@/lib/models/meuDia";
 import { paredeDe } from "@/lib/services/horasUteis";
 import { useToast } from "@/lib/context/ToastContext";
 import { leitura } from "@/lib/lote";
@@ -141,8 +141,10 @@ export function useMeuDia() {
     [atividades, hoje, carga, expediente]
   );
 
+  /* `deHoje`: as contagens cortadas pela cota do plano de recuperação (useOQueValeHoje), quando quem chama as tem. */
   const planejar = useCallback(
-    (feitas: Set<string>) => (contagens && agora ? planoDoDia(doDia, contagens, feitas, agora, expediente) : null),
+    (feitas: Set<string>, deHoje?: Record<string, Contagem> | null) =>
+      contagens && agora ? planoDoDia(doDia, (deHoje ?? contagens) as typeof contagens, feitas, agora, expediente) : null,
     [contagens, agora, doDia, expediente]
   );
 

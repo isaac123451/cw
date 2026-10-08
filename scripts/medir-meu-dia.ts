@@ -21,6 +21,8 @@ import { primeiroContatoFeito } from "../lib/services/sla.service";
 import { respondida } from "../lib/models/case";
 import { paredeDe } from "../lib/services/horasUteis";
 import { persistencia } from "../lib/models/cadencia";
+import { ajusteValido, cotaDaFrente, frentesNoPlano, separarOQueValeHoje } from "../lib/models/recuperacao";
+import type { FrenteId } from "../lib/models/frentes";
 import { lerExpediente } from "../lib/services/operacao.service";
 
 const iso = (d?: Date | null) => (d ? d.toISOString() : undefined);
@@ -99,6 +101,18 @@ async function main() {
 
   const fila = filaDoDia(atividadesDoDia(ROTINA_PADRAO, hoje), contagens);
   console.log(`\n  fila do "um por vez": ${fila.length} itens, ${fila.filter((i) => i.atrasado).length} fora do prazo`);
+
+  /* Com o plano de recuperação de quem trabalha (o ajuste gravado na conta), a cota valendo para a frente inteira. */
+  const pref = await prisma.userPreference.findFirst({
+    where: { user: { email: process.env.CW_EMAIL_DA_MEDICAO ?? "carlos.isaac@cardapioweb.com" } },
+    select: { recuperacao: true },
+  });
+  const ajuste = ajusteValido(pref?.recuperacao ?? null);
+  const atrasadosPorFrente = new Map<FrenteId, number>();
+  for (const i of fila) if (i.atrasado && i.frente) atrasadosPorFrente.set(i.frente, (atrasadosPorFrente.get(i.frente) ?? 0) + 1);
+  const cotas = new Map(frentesNoPlano(atrasadosPorFrente, ajuste).map(([f, n]) => [f, cotaDaFrente(n, ajuste[f])] as [FrenteId, number]));
+  const { hoje: deHoje, paraDepois } = separarOQueValeHoje(fila, cotas);
+  console.log(`  com o plano de recuperação: ${deHoje.length} itens hoje · cotas ${JSON.stringify([...cotas])} · para depois ${JSON.stringify([...paraDepois])}`);
   console.log(`  primeiros 8: ${fila.slice(0, 8).map((i) => `${i.frente ?? "-"}${i.atrasado ? "!" : ""}`).join(" ")}`);
 
   /* O que não está em atividade nenhuma. */

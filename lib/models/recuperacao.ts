@@ -96,13 +96,20 @@ export function frentesNoPlano(porFrente: Map<FrenteId, number>, ajuste: AjusteD
 /**
  * O que vale hoje (1.124, Fase 36: "Meu dia só com o que vale hoje").
  *
- * Com o plano de recuperação ligado numa frente, o fora do prazo dela não
- * entra inteiro no dia: entra o que cabe na cota de hoje (o que falta dela,
- * mais o que a pessoa escolheu adiantar), na ordem da fila. O resto fica
- * para os próximos dias — contado, não escondido. O que está no prazo, e
- * as frentes sem plano, entram inteiros.
+ * Com o plano de recuperação ligado numa frente, a frente não entra
+ * inteira no dia: entra o que cabe na cota de hoje (o que falta dela, mais
+ * o que a pessoa escolheu adiantar), na ordem da fila — o fora do prazo e
+ * o crítico primeiro, porque a fila já vem nessa ordem. O resto fica para
+ * os próximos dias — contado, não escondido. Frente sem plano entra
+ * inteira.
  *
- * `restante` é por frente: quantos fora do prazo ainda cabem hoje. Frente
+ * **A cota vale para tudo da frente (08/10/2026).** Até aqui ela cortava
+ * só o fora do prazo, e o que estava no prazo entrava inteiro: com 146
+ * respostas de NPS recentes, o dia seguia com 176 itens e ~19 h, e o plano
+ * "não afetava o dia nem a fila". Decisão do Isaac: a cota limita os itens
+ * da frente no dia, no prazo ou fora.
+ *
+ * `restante` é por frente: quantos itens dela ainda cabem hoje. Frente
  * que não está no mapa não tem plano — tudo entra.
  */
 export function separarOQueValeHoje<T extends { frente?: FrenteId; atrasado: boolean }>(
@@ -112,7 +119,7 @@ export function separarOQueValeHoje<T extends { frente?: FrenteId; atrasado: boo
   const usados = new Map<FrenteId, number>();
   const paraDepois = new Map<FrenteId, number>();
   const hoje = fila.filter((item) => {
-    if (!item.atrasado || !item.frente || !restante.has(item.frente)) return true;
+    if (!item.frente || !restante.has(item.frente)) return true;
     const ja = usados.get(item.frente) ?? 0;
     if (ja < (restante.get(item.frente) ?? 0)) {
       usados.set(item.frente, ja + 1);

@@ -12,6 +12,7 @@ import CheckpointDoDia from "@/components/rotina/CheckpointDoDia";
 import FimDoDia from "@/components/rotina/FimDoDia";
 import ConfigurarRotina from "@/components/rotina/ConfigurarRotina";
 import { useMeuDia } from "@/components/rotina/useMeuDia";
+import { useOQueValeHoje } from "@/components/rotina/recuperacaoDoDia";
 import CartaoDoPrimeiroAcesso from "@/components/primeiroAcesso/CartaoDoPrimeiroAcesso";
 import AgoraNoMeuDia from "@/components/rotina/AgoraNoMeuDia";
 import ModoProximo from "@/components/rotina/ModoProximo";
@@ -116,7 +117,9 @@ function MeuDiaPagina({ configurarInicial = false, ajustarRecuperacao = false }:
   const { planejar } = dia;
   /* Enquanto os casos e o NPS chegam, o plano é "montando" — e não um dia vazio. */
   const carregando = dia.carregando;
-  const plano = useMemo(() => (carregando ? null : planejar(efetivas)), [carregando, planejar, efetivas]);
+  /* O plano do expediente encaixa só o que vale hoje — a cota do plano de recuperação chega nele (08/10/2026). */
+  const { contagens: contagensDeHoje } = useOQueValeHoje(dia, efetivas);
+  const plano = useMemo(() => (carregando ? null : planejar(efetivas, contagensDeHoje)), [carregando, planejar, efetivas, contagensDeHoje]);
 
   const rotinaDoDia = useMemo(
     () => (dia.carregando ? undefined : { feitas: dia.doDia.filter((a) => efetivas.has(a.id)).length, total: dia.doDia.length }),
