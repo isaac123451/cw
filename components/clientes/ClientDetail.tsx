@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import { useMemo, useState } from "react";
 
@@ -98,6 +99,7 @@ export default function ClientDetail({
 
   const [formOpen, setFormOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const router = useRouter();
   const [establishmentOpen, setEstablishmentOpen] =
     useState(false);
 
@@ -868,7 +870,7 @@ export default function ClientDetail({
         onConfirm={() => {
           removeClient(client.slug);
           setDeleting(false);
-          window.location.href = "/clientes";
+          router.push("/clientes");
         }}
       />
 

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import { useMemo, useState } from "react";
 
@@ -119,6 +120,7 @@ export default function EstablishmentDetail({
 
   const [formOpen, setFormOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const router = useRouter();
   const [caseSearch, setCaseSearch] = useState("");
   const [impactOpen, setImpactOpen] = useState(false);
 
@@ -807,7 +809,7 @@ export default function EstablishmentDetail({
         onConfirm={() => {
           removeEstablishment(establishment.id);
           setDeleting(false);
-          window.location.href = "/estabelecimentos";
+          router.push("/estabelecimentos");
         }}
       />
 

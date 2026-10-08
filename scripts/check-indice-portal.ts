@@ -59,14 +59,27 @@ async function main() {
     vistos.add(chave);
     const d = p.dados as Record<string, number | null>;
     const lido = diaNaOperacao(p.lidoEm);
-    const janela = casos.filter((c) => inRange(c, p.inicio, p.fim)).map((c) => comoEstavaNoDia(c, lido));
-    const r = scoreFrom(getRawCounts(janela));
-    const desconsideradas = janela.filter((c) => c.evaluated && c.scoreDisregarded).length;
-    console.log(`  ${p.tipo === "SIX_MONTHS" ? "6 meses" : "12 meses"} · ${p.inicio} a ${p.fim} · painel lido em ${lido}`);
+    /*
+      O portal leva até um dia para pôr a avaliação no painel (07/10/2026: a
+      nota 10 de RA-JsltPJ6jl7vwNa8P, feita no dia, não estava no painel lido
+      às 21h52). Vale a conta do dia da leitura ou a do dia anterior.
+    */
+    const contaNoDia = (dia: string) => {
+      const janela = casos.filter((c) => inRange(c, p.inicio!, p.fim)).map((c) => comoEstavaNoDia(c, dia));
+      const r = scoreFrom(getRawCounts(janela));
+      const desconsideradas = janela.filter((c) => c.evaluated && c.scoreDisregarded).length;
+      return { r, numeros: [r.evaluated + desconsideradas, um(r.solutionIndex), um(r.wouldReturnIndex), dois(r.consumerScore), r.raScore] };
+    };
+    const esperado = [d.avaliadas, d.solucao, d.voltaria, d.notaConsumidor, d.nota];
+    const doDia = contaNoDia(lido);
+    const vespera = contaNoDia(new Date(Date.parse(`${lido}T12:00:00Z`) - 86_400_000).toISOString().slice(0, 10));
+    const bateNaVespera = JSON.stringify(doDia.numeros) !== JSON.stringify(esperado) && JSON.stringify(vespera.numeros) === JSON.stringify(esperado);
+    const r = bateNaVespera ? vespera.r : doDia.r;
+    console.log(`  ${p.tipo === "SIX_MONTHS" ? "6 meses" : "12 meses"} · ${p.inicio} a ${p.fim} · painel lido em ${lido}${bateNaVespera ? " (o portal ainda sem as avaliações do dia)" : ""}`);
     conferir(
       "   avaliadas, solução, voltaria, nota do consumidor e nota",
-      [r.evaluated + desconsideradas, um(r.solutionIndex), um(r.wouldReturnIndex), dois(r.consumerScore), r.raScore],
-      [d.avaliadas, d.solucao, d.voltaria, d.notaConsumidor, d.nota]
+      bateNaVespera ? vespera.numeros : doDia.numeros,
+      esperado
     );
     /*
       Recebidas com folga de 1: em 01/10/2026 o portal contava 129 e a base

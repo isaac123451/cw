@@ -63,6 +63,15 @@ export const MUDANCAS: Mudanca[] = [
     href: "/meu-dia",
   },
   {
+    id: "next-16-3-8",
+    dia: "2026-10-07",
+    tipo: "correcao",
+    frente: "bastidores",
+    titulo: "Next.js atualizado com seis correções de segurança",
+    texto:
+      "O Next.js foi de 16.3.6 para 16.3.8, que fecha seis falhas publicadas no fim de setembro (vazamento de conteúdo pelo cache, envenenamento de cache em páginas estáticas, SSRF na otimização de imagem, entre outras). A conferência de dependências voltou a ficar limpa. De carona, apagar um cliente ou um estabelecimento volta para a lista sem recarregar a página inteira.",
+  },
+  {
     id: "premio-sem-quem-reclama-agora",
     dia: "2026-10-07",
     tipo: "correcao",
