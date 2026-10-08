@@ -63,6 +63,16 @@ export const MUDANCAS: Mudanca[] = [
     href: "/meu-dia",
   },
   {
+    id: "premio-sem-quem-reclama-agora",
+    dia: "2026-10-07",
+    tipo: "correcao",
+    frente: "reclame-aqui",
+    titulo: "O Prêmio não indica para pedir voto quem está com reclamação aberta",
+    texto:
+      "A lista do Prêmio indicava \"Maicon Santos · avaliou 10\" (de 2025) enquanto havia uma reclamação dele em aberto, esperando a nossa réplica. Pedir voto a quem está insatisfeito agora costuma piorar a conversa. Quem tem reclamação ou atendimento em aberto — casado pelo telefone, pelo e-mail ou pelo nome completo — sai dos indicados até ser resolvido.",
+    href: "/reclame-aqui/premio",
+  },
+  {
     id: "dashboard-agenda-nao-diz-dia-livre",
     dia: "2026-10-07",
     tipo: "melhoria",

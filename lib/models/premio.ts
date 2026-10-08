@@ -2,6 +2,7 @@ import type { Case } from "@/lib/models/case";
 import { nomeDoCliente, type NpsResponseView } from "@/lib/models/nps";
 import { emptySimulation, getRawCounts, pendingEvaluations, scoreFrom, simulate } from "@/lib/services/reputation.service";
 import { pluralDe } from "@/lib/plural";
+import { isOpen } from "@/lib/services/case.service";
 
 /**
  * O Prêmio Reclame Aqui (Fase 23).
@@ -151,9 +152,27 @@ export function contatosDoPremio(entrada: {
     }
   }
 
+  /*
+    Quem está insatisfeito agora não recebe pedido de voto (07/10/2026).
+    A lista indicava "Maicon Santos · avaliou 10" de 2025 com uma
+    reclamação dele em aberto, esperando a nossa réplica. Casado pelo
+    telefone, pelo e-mail ou pelo nome completo — errar para o lado de não
+    pedir custa um voto; errar para o outro custa a reclamação.
+  */
+  const digitos = (t?: string) => telefoneInternacional(t) ?? "";
+  const nomeChave = (n?: string) => (n ?? "").normalize("NFD").replace(/\p{Diacritic}/gu, "").trim().toLowerCase().replace(/\s+/g, " ");
+  const abertos = entrada.casos.filter(isOpen);
+  const telefonesAbertos = new Set(abertos.map((c) => digitos(c.phone)).filter(Boolean));
+  const emailsAbertos = new Set(abertos.map((c) => (c.email ?? "").trim().toLowerCase()).filter(Boolean));
+  const nomesAbertos = new Set(abertos.map((c) => nomeChave(c.customer)).filter((n) => n.includes(" ")));
+  const comReclamacaoAberta = (c: ContatoDoPremio) =>
+    (c.telefoneInternacional && telefonesAbertos.has(c.telefoneInternacional)) ||
+    (c.email && emailsAbertos.has(c.email.trim().toLowerCase())) ||
+    nomesAbertos.has(nomeChave(c.nome));
+
   /* Um pedido por pessoa: pelo telefone, e sem telefone pelo e-mail. A avaliação mais recente fica. */
   const porPessoa = new Map<string, ContatoDoPremio>();
-  for (const c of lista.sort((a, b) => b.data.localeCompare(a.data))) {
+  for (const c of lista.filter((x) => !comReclamacaoAberta(x)).sort((a, b) => b.data.localeCompare(a.data))) {
     const chave = c.telefoneInternacional ?? (c.email ? c.email.toLowerCase() : `${c.origem}:${c.ref}`);
     if (!porPessoa.has(chave)) porPessoa.set(chave, c);
   }

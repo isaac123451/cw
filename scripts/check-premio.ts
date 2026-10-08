@@ -21,7 +21,7 @@ function conferir(titulo: string, obtido: unknown, esperado: unknown) {
 }
 
 const caso = (c: Partial<Case>) =>
-  ({ id: "c", source: "Reclame Aqui", customer: "Ana Souza", evaluated: true, resolved: true, wouldDoBusiness: true, score: 9, createdAt: "2026-08-01", evaluatedAt: "2026-08-10", phone: "(11) 98765-4321", ...c }) as Case;
+  ({ id: "c", source: "Reclame Aqui", status: "Resolvido", customer: "Ana Souza", evaluated: true, resolved: true, wouldDoBusiness: true, score: 9, createdAt: "2026-08-01", evaluatedAt: "2026-08-10", phone: "(11) 98765-4321", ...c }) as Case;
 const nps = (r: Partial<NpsResponseView>) => ({ id: "n", score: 10, customer: "loja", respondedAt: "2026-08-20T12:00:00Z", phone: "11912345678", ...r }) as NpsResponseView;
 
 console.log("\n  O telefone e a mensagem\n");
@@ -52,6 +52,14 @@ conferir("a Ana do RA e do NPS é uma pessoa só (a mais recente)", lista.filter
 conferir("o motivo diz por que está na lista", lista.find((c) => c.ref === "n3")?.motivo, "NPS 9, 5 estrelas no Google, aceitou ser case");
 conferir("só 5 estrelas no Google", contatosDoPremio({ casos, nps: respostas, filtros: { ...FILTROS_PADRAO, frentes: ["nps"], googleCinco: true } }).map((c) => c.ref), ["n3"]);
 conferir("quem já está na campanha fica de fora", contatosDoPremio({ casos, nps: respostas, filtros: FILTROS_PADRAO, jaNaCampanha: new Set(["nps:n1"]) }).map((c) => c.ref).sort(), ["c1", "n3"]);
+/* Reclamação aberta agora (07/10/2026): avaliou 10 em 2025, mas reclamou de novo e espera a réplica. */
+{
+  const aberta = caso({ id: "c9", status: "Aguardando nossa réplica", resolved: false, evaluated: false, customer: "Ana Souza", phone: "(11) 98765-4321" });
+  const comAberta = contatosDoPremio({ casos: [...casos, aberta], nps: respostas, filtros: FILTROS_PADRAO });
+  conferir("quem tem reclamação aberta não recebe pedido de voto", comAberta.map((c) => c.ref).sort(), ["n3"]);
+  const pelaMesmaPessoaSoPeloNome = caso({ id: "c10", status: "Novo", resolved: false, evaluated: false, customer: "Gil Araujo", phone: undefined });
+  conferir("nome de uma palavra só não basta para casar", contatosDoPremio({ casos: [...casos, pelaMesmaPessoaSoPeloNome], nps: respostas, filtros: FILTROS_PADRAO }).map((c) => c.ref).sort(), ["n1", "n3"]);
+}
 conferir("o período pela data da avaliação", contatosDoPremio({ casos, nps: respostas, filtros: { ...FILTROS_PADRAO, frentes: ["reclame-aqui"], de: "2026-08-11" } }).length, 0);
 
 console.log("\n  A campanha de votação\n");
