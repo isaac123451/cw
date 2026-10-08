@@ -56,6 +56,7 @@ import {
 } from "../lib/services/reputation.service";
 
 import {
+  isOpen,
   isReclameAqui,
   naSituacao,
   seteDiasAtras,
@@ -188,7 +189,8 @@ async function main() {
     ele. Os dois concordavam no erro (356 contra os 17 da tela).
   */
   const vencidasPeloPainel = dados.cases.filter(
-    (item) => isReclameAqui(item) && !respondida(item) && item.createdAt < corte
+    /* Aberta também (07/10/2026): é a regra única do cartão (`semRespostaPublica`). */
+    (item) => isOpen(item) && isReclameAqui(item) && !respondida(item) && item.createdAt < corte
   ).length;
 
   if (vencidasPeloPainel === vencidasNaTela) {
