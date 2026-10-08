@@ -1743,6 +1743,12 @@ model OperacaoConfig {
   /// Carnaval e Corpus Christi não contam como dia útil.
   pularFacultativos Boolean @default(true)
 
+  /// O intervalo (08/10/2026), em minutos desde a meia-noite: 720 é 12h00.
+  /// Dentro dele o relógio dos prazos para e o plano do dia não encaixa
+  /// trabalho. Vazio, sem intervalo.
+  intervaloInicio Int? @default(720)
+  intervaloFim    Int? @default(780)
+
   /// Prazo de retorno das áreas internas por criticidade, em horas
   /// úteis: "Urgente (4 horas), Alta (1 dia útil), Normal (2 dias
   /// úteis)" — Reclame Aqui, Recebimento e Tratativa de Outras Áreas.

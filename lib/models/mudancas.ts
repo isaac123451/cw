@@ -63,6 +63,16 @@ export const MUDANCAS: Mudanca[] = [
     href: "/meu-dia",
   },
   {
+    id: "expediente-com-intervalo",
+    dia: "2026-10-08",
+    tipo: "novo",
+    frente: "plataforma",
+    titulo: "O expediente desconta o intervalo",
+    texto:
+      "O expediente agora tem intervalo (12h às 13h por padrão, ajustável em Processos → Expediente, ou desligado). Dentro dele o relógio dos prazos para — 4h úteis a partir das 10h vencem às 15h, e não às 14h —, o plano do dia não encaixa trabalho no almoço e o tempo disponível do dia já vem sem ele. A extensão segue a mesma conta, porque recebe os prazos do servidor.",
+    href: "/processos",
+  },
+  {
     id: "plano-de-recuperacao-corta-o-dia",
     dia: "2026-10-08",
     tipo: "correcao",

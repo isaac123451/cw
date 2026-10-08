@@ -113,5 +113,23 @@ confere(
   { inicioMin: 540, fimMin: 780, dias: [1, 6], pularFacultativos: false }
 );
 
+/* O intervalo (08/10/2026): "o tempo de expediente não contabiliza intervalo". */
+console.log("\n— Intervalo —");
+{
+  const comAlmoco = expedienteValido({ ...EXPEDIENTE_PADRAO, intervaloInicioMin: 12 * 60, intervaloFimMin: 13 * 60 });
+  confere("o intervalo dentro do expediente fica", [comAlmoco.intervaloInicioMin, comAlmoco.intervaloFimMin], [720, 780]);
+  confere("intervalo fora do expediente é descartado", expedienteValido({ ...EXPEDIENTE_PADRAO, intervaloInicioMin: 19 * 60, intervaloFimMin: 20 * 60 }).intervaloInicioMin, undefined);
+  confere("intervalo ao contrário é descartado", expedienteValido({ ...EXPEDIENTE_PADRAO, intervaloInicioMin: 13 * 60, intervaloFimMin: 12 * 60 }).intervaloInicioMin, undefined);
+  confere("4h úteis a partir das 10h, com almoço, vencem às 15h (e não às 14h)", mostra(prazoUtil(br("2026-09-15 10:00"), 4, comAlmoco)), "2026-09-15 15:00");
+  confere("sem intervalo, o mesmo prazo vence às 14h", mostra(prazoUtil(br("2026-09-15 10:00"), 4)), "2026-09-15 14:00");
+  confere("chegou no almoço: o relógio começa às 13h", mostra(prazoUtil(br("2026-09-15 12:20"), 1, comAlmoco)), "2026-09-15 14:00");
+  confere("início útil dentro do intervalo é o fim dele", inicioUtil(br("2026-09-15 12:30"), comAlmoco), { dia: "2026-09-15", min: 780 });
+  confere("das 11h às 14h são 2h úteis com almoço", minutosUteisEntre(br("2026-09-15 11:00"), br("2026-09-15 14:00"), comAlmoco), 120);
+  confere("um dia útil inteiro com almoço tem 9h", minutosUteisEntre(br("2026-09-15 08:00"), br("2026-09-15 18:00"), comAlmoco), 540);
+  confere("9h úteis com almoço são 1 dia útil", descreverMinutosUteis(540, comAlmoco), "1 dia útil");
+  confere("prazo que fecha no almoço vence às 12h; com 1h a mais, às 14h", mostra(prazoUtil(br("2026-09-15 17:00"), 5, comAlmoco)), "2026-09-16 12:00");
+  confere("prazo que atravessa o fim do dia e o almoço do dia seguinte", mostra(prazoUtil(br("2026-09-15 17:00"), 6, comAlmoco)), "2026-09-16 14:00");
+}
+
 console.log(falhas === 0 ? "\nTudo certo." : `\n${falhas} falha(s).`);
 process.exit(falhas === 0 ? 0 : 1);

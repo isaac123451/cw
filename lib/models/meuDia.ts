@@ -20,7 +20,9 @@ import {
   ehDiaUtil,
   type Expediente,
   horaDoMinuto,
+  intervaloDe,
   minutoDaHora,
+  minutosUteisNoDia,
   paredeDe,
   prazoUtil,
   proximoDiaUtil,
@@ -864,9 +866,12 @@ export function planoDoDia(
   const { dia, min } = paredeDe(agora);
   const util = ehDiaUtil(dia, expediente);
 
-  const inicio = util ? Math.max(min, expediente.inicioMin) : expediente.inicioMin;
+  /* O intervalo (08/10/2026): não começa nele, não conta como tempo e nada se encaixa dentro dele. */
+  const pausa = intervaloDe(expediente);
+  const inicioBruto = util ? Math.max(min, expediente.inicioMin) : expediente.inicioMin;
+  const inicio = pausa && inicioBruto >= pausa[0] && inicioBruto < pausa[1] ? pausa[1] : inicioBruto;
   const fim = expediente.fimMin;
-  const disponiveis = util ? Math.max(0, fim - inicio) : 0;
+  const disponiveis = util ? minutosUteisNoDia(inicio, fim, expediente) : 0;
 
   const pendentes = atividades.filter((a) => !feitas.has(a.id));
 
@@ -908,7 +913,7 @@ export function planoDoDia(
         x.a.ordem - y.a.ordem
     );
 
-  const ocupado: { de: number; ate: number }[] = [];
+  const ocupado: { de: number; ate: number }[] = pausa && pausa[1] > inicio ? [{ de: pausa[0], ate: pausa[1] }] : [];
   const blocos: BlocoDoPlano[] = [];
   const naoCabe: BlocoDoPlano[] = [];
 

@@ -25,6 +25,8 @@ export function expedienteDoBanco(
     expedienteFim: number;
     diasUteis: number[];
     pularFacultativos: boolean;
+    intervaloInicio?: number | null;
+    intervaloFim?: number | null;
   } | null
 ): Expediente {
 
@@ -35,6 +37,8 @@ export function expedienteDoBanco(
     fimMin: r.expedienteFim,
     dias: r.diasUteis,
     pularFacultativos: r.pularFacultativos,
+    intervaloInicioMin: r.intervaloInicio ?? undefined,
+    intervaloFimMin: r.intervaloFim ?? undefined,
   });
 }
 

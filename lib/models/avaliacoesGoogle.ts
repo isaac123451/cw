@@ -5,6 +5,7 @@ import { ACAO_JUDICIAL, ORGAO_DO_CONSUMIDOR } from "@/lib/models/redes";
 import {
   EXPEDIENTE_PADRAO,
   type Expediente,
+  minutosDoExpediente,
   minutosUteisEntre,
   prazoUtil,
 } from "@/lib/services/horasUteis";
@@ -235,7 +236,7 @@ export function indicadoresGoogle(
       ? tempos[(tempos.length - 1) / 2]
       : Math.round((tempos[tempos.length / 2 - 1] + tempos[tempos.length / 2]) / 2);
 
-  const porDia = expediente.fimMin - expediente.inicioMin;
+  const porDia = minutosDoExpediente(expediente);
   const noPrazo = tempos.filter((m) => m <= 48 / 24 * porDia).length;
 
   const negativas = validas.filter((a) => a.classificacao === "negativa");

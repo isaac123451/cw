@@ -14,7 +14,7 @@ import type { NpsResponseView } from "../lib/models/nps";
 import { ROTINA_PADRAO, atividadesDoDia, diaDaSemana, minimoDaSequencia, sequenciaDeDias, type AtividadeDaRotina } from "../lib/models/rotina";
 import { contarRotina, minutosDaAtividade, planoDoDia } from "../lib/models/meuDia";
 import { textoDoCheckpoint } from "../components/rotina/CheckpointDoDia";
-import { instanteDe } from "../lib/services/horasUteis";
+import { EXPEDIENTE_PADRAO, instanteDe, minutoDaHora } from "../lib/services/horasUteis";
 
 let falhas = 0;
 
@@ -154,6 +154,15 @@ console.log("\n— Itens tirados à mão —");
 console.log("\n— O plano do dia —");
 const doDia = atividadesDoDia(rotina, "2026-09-15");
 const plano = planoDoDia(doDia, contagens, new Set(), agora);
+
+/* O intervalo (08/10/2026): o plano não encaixa nada no almoço e o tempo disponível desconta a pausa. */
+{
+  const comAlmoco = { ...EXPEDIENTE_PADRAO, intervaloInicioMin: 12 * 60, intervaloFimMin: 13 * 60 };
+  const p = planoDoDia(doDia, contagens, new Set(), agora, comAlmoco);
+  confere("com almoço, das 10h às 18h sobram 7h", p.minutosDisponiveis, 420);
+  const noAlmoco = p.blocos.filter((b) => minutoDaHora(b.inicio) < 13 * 60 && minutoDaHora(b.fim) > 12 * 60);
+  confere("nenhum bloco no almoço", noAlmoco.map((b) => `${b.titulo} ${b.inicio}–${b.fim}`), []);
+}
 confere("sem itens, a atividade não gasta tempo (e fica fora do plano)", plano.semTrabalho.includes(doDia.find((a) => a.chave === "avaliacoes")!.id), true);
 confere("o checkpoint fica no horário dele", plano.blocos.find((b) => b.titulo.startsWith("Checkpoint"))?.inicio, "17:30");
 confere("a planilha das 8h, vista às 10h, cai no início do que sobra", plano.blocos.find((b) => b.titulo.startsWith("Preencher"))?.inicio, "10:00");

@@ -35,6 +35,8 @@ function igual(a: Expediente, b: Expediente) {
     a.inicioMin === b.inicioMin &&
     a.fimMin === b.fimMin &&
     a.pularFacultativos === b.pularFacultativos &&
+    a.intervaloInicioMin === b.intervaloInicioMin &&
+    a.intervaloFimMin === b.intervaloFimMin &&
     [...a.dias].sort().join() === [...b.dias].sort().join()
   );
 }
@@ -103,7 +105,7 @@ export default function ExpedienteCard() {
       notify({
         tone: "success",
         title: "Expediente salvo.",
-        detail: `${horaDoMinuto(r.expediente.inicioMin)} às ${horaDoMinuto(r.expediente.fimMin)}, ${DIAS.filter((d) => r.expediente.dias.includes(d.id)).map((d) => d.curto.toLowerCase()).join(", ")}. Os relógios de todos os casos já contam assim.`,
+        detail: `${horaDoMinuto(r.expediente.inicioMin)} às ${horaDoMinuto(r.expediente.fimMin)}${typeof r.expediente.intervaloInicioMin === "number" && typeof r.expediente.intervaloFimMin === "number" ? ` (intervalo ${horaDoMinuto(r.expediente.intervaloInicioMin)}–${horaDoMinuto(r.expediente.intervaloFimMin)})` : ""}, ${DIAS.filter((d) => r.expediente.dias.includes(d.id)).map((d) => d.curto.toLowerCase()).join(", ")}. Os relógios de todos os casos já contam assim.`,
       });
     } catch {
       setErro("O expediente não foi gravado. Tente de novo.");
@@ -144,6 +146,55 @@ export default function ExpedienteCard() {
                 className={`mt-1.5 ${inputClass}`}
               />
             </label>
+          </div>
+
+          {/*
+            O intervalo (08/10/2026): "o tempo de expediente não contabiliza
+            intervalo". Dentro dele o relógio dos prazos para e o plano do dia
+            não encaixa trabalho.
+          */}
+          <div className="rounded-xl border border-zinc-200 p-3.5">
+            <label className="flex cursor-pointer items-center gap-3">
+              <input
+                type="checkbox"
+                checked={typeof rascunho.intervaloInicioMin === "number"}
+                disabled={!podeEditar}
+                onChange={(e) =>
+                  setRascunho((r) =>
+                    e.target.checked
+                      ? { ...r, intervaloInicioMin: 12 * 60, intervaloFimMin: 13 * 60 }
+                      : { ...r, intervaloInicioMin: undefined, intervaloFimMin: undefined }
+                  )
+                }
+                className="h-4 w-4 accent-violet-700"
+              />
+              <span className="text-sm font-medium text-zinc-800">Intervalo</span>
+              <span className="text-xs text-zinc-500">O relógio dos prazos para e o plano do dia não encaixa trabalho nele.</span>
+            </label>
+            {typeof rascunho.intervaloInicioMin === "number" && (
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <label className="block">
+                  <span className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">Começa às</span>
+                  <input
+                    type="time"
+                    value={horaDoMinuto(rascunho.intervaloInicioMin)}
+                    disabled={!podeEditar}
+                    onChange={(e) => setRascunho((r) => ({ ...r, intervaloInicioMin: minutoDaHora(e.target.value) }))}
+                    className={`mt-1.5 ${inputClass}`}
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">Termina às</span>
+                  <input
+                    type="time"
+                    value={horaDoMinuto(rascunho.intervaloFimMin ?? rascunho.intervaloInicioMin + 60)}
+                    disabled={!podeEditar}
+                    onChange={(e) => setRascunho((r) => ({ ...r, intervaloFimMin: minutoDaHora(e.target.value) }))}
+                    className={`mt-1.5 ${inputClass}`}
+                  />
+                </label>
+              </div>
+            )}
           </div>
 
           <div>

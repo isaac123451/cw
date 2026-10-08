@@ -24,6 +24,7 @@ import PorQue from "@/components/shared/PorQue";
 import ItensDaAtividade from "@/components/rotina/ItensDaAtividade";
 import { useSla } from "@/lib/context/SlaContext";
 import { pluralDe } from "@/lib/plural";
+import { minutosDoExpediente } from "@/lib/services/horasUteis";
 type MeuDia = ReturnType<typeof useMeuDia>;
 
 interface Props {
@@ -246,11 +247,11 @@ export default function RotinaDoDia({ dia, compacto = false, onConfigurar, onUmP
                 <div className="flex shrink-0 items-center gap-1">
                   {minutos > 0 && !compacto && (
                     <span
-                      title={minutos > expediente.fimMin - expediente.inicioMin ? "Mais que o expediente inteiro: o plano do dia encaixa o que cabe hoje, na ordem do documento." : undefined}
-                      className={`hidden text-[11px] tabular-nums sm:inline ${minutos > expediente.fimMin - expediente.inicioMin ? "text-amber-700" : "text-zinc-400"}`}
+                      title={minutos > minutosDoExpediente(expediente) ? "Mais que o expediente inteiro: o plano do dia encaixa o que cabe hoje, na ordem do documento." : undefined}
+                      className={`hidden text-[11px] tabular-nums sm:inline ${minutos > minutosDoExpediente(expediente) ? "text-amber-700" : "text-zinc-400"}`}
                     >
                       ~{descreverMinutos(minutos)}
-                      {minutos > expediente.fimMin - expediente.inicioMin && " · além do expediente"}
+                      {minutos > minutosDoExpediente(expediente) && " · além do expediente"}
                     </span>
                   )}
                   {a.link && (

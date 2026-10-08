@@ -59,6 +59,44 @@ export interface Expediente {
    * por padrão porque é o costume; a tela de Configurações troca.
    */
   pularFacultativos: boolean;
+
+  /**
+   * O intervalo (almoço), em minutos desde a meia-noite (08/10/2026).
+   *
+   * "O tempo de expediente não contabiliza intervalo." Dentro dele o
+   * relógio dos prazos para, e o plano do dia não encaixa trabalho. Sem os
+   * dois números (ou com valores que não cabem no expediente), não há
+   * intervalo — é o que vale para quem não configurou.
+   */
+  intervaloInicioMin?: number;
+  intervaloFimMin?: number;
+}
+
+/** O intervalo do expediente, se houver um que caiba dentro dele. */
+export function intervaloDe(expediente: Expediente): [number, number] | null {
+  const a = expediente.intervaloInicioMin;
+  const b = expediente.intervaloFimMin;
+  if (typeof a !== "number" || typeof b !== "number" || !(b > a)) return null;
+  if (a <= expediente.inicioMin || b >= expediente.fimMin) return null;
+  return [a, b];
+}
+
+/** Os trechos de trabalho de um dia útil: o expediente, partido pelo intervalo. */
+export function trechosDoDia(expediente: Expediente): [number, number][] {
+  const pausa = intervaloDe(expediente);
+  return pausa
+    ? [[expediente.inicioMin, pausa[0]], [pausa[1], expediente.fimMin]]
+    : [[expediente.inicioMin, expediente.fimMin]];
+}
+
+/** Minutos de trabalho num dia útil inteiro — o expediente menos o intervalo. */
+export function minutosDoExpediente(expediente: Expediente): number {
+  return trechosDoDia(expediente).reduce((s, [a, b]) => s + (b - a), 0);
+}
+
+/** Minutos de trabalho entre dois minutos do mesmo dia útil, sem o intervalo. */
+export function minutosUteisNoDia(de: number, ate: number, expediente: Expediente): number {
+  return trechosDoDia(expediente).reduce((s, [a, b]) => s + Math.max(0, Math.min(b, ate) - Math.max(a, de)), 0);
 }
 
 export const EXPEDIENTE_PADRAO: Expediente = {
@@ -101,12 +139,16 @@ export function expedienteValido(
     return EXPEDIENTE_PADRAO;
   }
 
-  return {
+  const base: Expediente = {
     inicioMin,
     fimMin,
     dias: dias.sort(),
     pularFacultativos: valor.pularFacultativos !== false,
   };
+
+  /* O intervalo só vale inteiro dentro do expediente; fora disso, sem intervalo. */
+  const pausa = intervaloDe({ ...base, intervaloInicioMin: Number(valor.intervaloInicioMin), intervaloFimMin: Number(valor.intervaloFimMin) });
+  return pausa ? { ...base, intervaloInicioMin: pausa[0], intervaloFimMin: pausa[1] } : base;
 }
 
 /* ============================================================
@@ -362,6 +404,10 @@ export function inicioUtil(
       return { dia, min: expediente.inicioMin };
     }
 
+    /* No intervalo, o relógio volta a andar quando ele acaba. */
+    const pausa = intervaloDe(expediente);
+    if (pausa && min >= pausa[0] && min < pausa[1]) return { dia, min: pausa[1] };
+
     if (min < expediente.fimMin) return { dia, min };
   }
 
@@ -403,13 +449,18 @@ export function prazoUtil(
 
   for (let guarda = 0; guarda < 5000; guarda++) {
 
-    const livre = expediente.fimMin - min;
-
-    if (restante <= livre) {
-      return instanteDe(dia, min + restante);
+    /* Trecho a trecho do dia: o intervalo não consome prazo. */
+    for (const [a, b] of trechosDoDia(expediente)) {
+      if (min >= b) continue;
+      const desde = Math.max(min, a);
+      const livre = b - desde;
+      if (restante <= livre) {
+        return instanteDe(dia, desde + restante);
+      }
+      restante -= livre;
+      min = b;
     }
 
-    restante -= livre;
     dia = proximoDiaUtil(dia, expediente);
     min = expediente.inicioMin;
   }
@@ -444,17 +495,12 @@ export function minutosUteisEntre(
 
     if (ehDiaUtil(dia, expediente)) {
 
-      const abre = Math.max(
-        expediente.inicioMin,
-        dia === a.dia ? a.min : 0
+      /* Sem o intervalo: o que cai nele não é hora útil. */
+      total += minutosUteisNoDia(
+        dia === a.dia ? a.min : 0,
+        dia === b.dia ? b.min : DIA_MIN,
+        expediente
       );
-
-      const fecha = Math.min(
-        expediente.fimMin,
-        dia === b.dia ? b.min : DIA_MIN
-      );
-
-      if (fecha > abre) total += fecha - abre;
     }
 
     if (dia >= b.dia) break;
@@ -477,7 +523,7 @@ export function descreverMinutosUteis(
 ) {
 
   const m = Math.abs(Math.round(minutos));
-  const porDia = expediente.fimMin - expediente.inicioMin;
+  const porDia = minutosDoExpediente(expediente);
 
   const dias = Math.floor(m / porDia);
   const resto = m - dias * porDia;

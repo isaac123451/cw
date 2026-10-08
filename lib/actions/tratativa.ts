@@ -343,6 +343,12 @@ export async function salvarExpediente(
     O que não faz sentido é recusado aqui, e não trocado em silêncio pelo
     padrão: quem salvou 18h–08h precisa saber que não foi isso que ficou.
   */
+  /* Intervalo pedido e recusado (fora do expediente, ao contrário): também é erro, e não sumiço calado. */
+  const pediuIntervalo = typeof entrada.intervaloInicioMin === "number" && typeof entrada.intervaloFimMin === "number";
+  if (pediuIntervalo && (valido.intervaloInicioMin !== entrada.intervaloInicioMin || valido.intervaloFimMin !== entrada.intervaloFimMin)) {
+    return { ok: false, erro: "O intervalo precisa começar antes de terminar e caber dentro do expediente." };
+  }
+
   if (
     valido.inicioMin !== entrada.inicioMin ||
     valido.fimMin !== entrada.fimMin ||
@@ -362,6 +368,8 @@ export async function salvarExpediente(
         expedienteFim: valido.fimMin,
         diasUteis: valido.dias,
         pularFacultativos: valido.pularFacultativos,
+        intervaloInicio: valido.intervaloInicioMin ?? null,
+        intervaloFim: valido.intervaloFimMin ?? null,
         updatedBy: quem.nome,
       },
       create: {
@@ -370,6 +378,8 @@ export async function salvarExpediente(
         expedienteFim: valido.fimMin,
         diasUteis: valido.dias,
         pularFacultativos: valido.pularFacultativos,
+        intervaloInicio: valido.intervaloInicioMin ?? null,
+        intervaloFim: valido.intervaloFimMin ?? null,
         updatedBy: quem.nome,
       },
     });
