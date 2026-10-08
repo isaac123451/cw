@@ -71,11 +71,11 @@ async function main() {
   const expediente = await lerExpediente(prisma);
   const emCadencia = await prisma.case.findMany({
     where: { tentativasSemResposta: { gt: 0 }, resolved: false },
-    select: { id: true, contatos: { select: { tipo: true, resultado: true, em: true } } },
+    select: { id: true, externalId: true, contatos: { select: { tipo: true, resultado: true, em: true } } },
   });
   const cadenciaEsgotada = emCadencia
     .filter((c) => persistencia(c.contatos.map((k) => ({ tipo: k.tipo as never, resultado: (k.resultado ?? undefined) as never, em: k.em.toISOString() })), agora, expediente).esgotada)
-    .map((c) => c.id);
+    .map((c) => c.externalId ?? c.id); // o id da tela (case.mapper), como o servidor manda
 
   const contagens = contarRotina(
     {
