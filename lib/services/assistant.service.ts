@@ -22,7 +22,7 @@ import {
 } from "@/lib/services/reputation.service";
 
 import { slaStatus } from "@/lib/services/sla.service";
-import { isOpen } from "@/lib/services/case.service";
+import { isOpen, isReclameAqui } from "@/lib/services/case.service";
 import { parseElapsedText } from "@/lib/services/case.mapper";
 import { slugify } from "@/lib/services/slug";
 
@@ -147,8 +147,9 @@ function brDate(iso: string) {
 /** Casos do período oficial de 6 meses, base da nota pública. */
 function currentWindow(cases: Case[]) {
   const range = getRange("6m", "vigente");
+  /* Só o Reclame Aqui entra na nota (08/10/2026): com os atendimentos das Redes, o assistente dizia 132 reclamações, 89,4% de resposta e sem selo — as telas, 129, 91,5% e RA1000. */
   return cases.filter((item) =>
-    inRange(item, range.start, range.end)
+    isReclameAqui(item) && inRange(item, range.start, range.end)
   );
 }
 

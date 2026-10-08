@@ -63,6 +63,16 @@ export const MUDANCAS: Mudanca[] = [
     href: "/meu-dia",
   },
   {
+    id: "assistente-nota-so-do-ra",
+    dia: "2026-10-08",
+    tipo: "correcao",
+    frente: "reclame-aqui",
+    titulo: "O assistente calcula a nota do Reclame Aqui só com o Reclame Aqui",
+    texto:
+      "O assistente montava a janela da nota com todos os atendimentos, inclusive os das Redes Sociais: dizia 132 reclamações, 89,4% de resposta e sem o selo, enquanto as telas e o portal dizem 129, 91,5% e RA1000 — e calculava 17 avaliações para chegar a 9, quando a Calculadora diz 13. Agora a conta é a mesma em toda parte.",
+    href: "/assistente",
+  },
+  {
     id: "cartao-mostra-o-cliente",
     dia: "2026-10-07",
     tipo: "correcao",

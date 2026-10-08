@@ -28,7 +28,7 @@ import {
 const peso = (chave: keyof typeof SCORE_WEIGHTS) => `${Math.round(SCORE_WEIGHTS[chave] * 100)}%`;
 
 import { slaStatus } from "@/lib/services/sla.service";
-import { isOpen } from "@/lib/services/case.service";
+import { isOpen, isReclameAqui } from "@/lib/services/case.service";
 import { pluralDe } from "@/lib/plural";
 
 export interface OperationInput {
@@ -57,12 +57,13 @@ export function buildOperationSnapshot(
   const seis = getRange("6m", "vigente");
   const doze = getRange("12m", "vigente");
 
+  /* Só o Reclame Aqui entra na nota (08/10/2026): com os atendimentos das Redes, o assistente dizia 132 reclamações, 89,4% de resposta e sem selo — as telas, 129, 91,5% e RA1000. */
   const janela6 = cases.filter((item) =>
-    inRange(item, seis.start, seis.end)
+    isReclameAqui(item) && inRange(item, seis.start, seis.end)
   );
 
   const janela12 = cases.filter((item) =>
-    inRange(item, doze.start, doze.end)
+    isReclameAqui(item) && inRange(item, doze.start, doze.end)
   );
 
   const r6 = getReputation(janela6);

@@ -158,7 +158,8 @@ async function main() {
     },
   });
 
-  const casos = linhas.map((r) => toCaseModel(r));
+  /* Só o Reclame Aqui (08/10/2026): com as Redes, o retrato dizia 132 reclamações e 89,4% de resposta na janela de 6 meses. */
+  const casos = linhas.map((r) => toCaseModel(r)).filter((c) => c.source === "Reclame Aqui");
 
   conferir(
     "2. toda reclamação tem data de publicação",

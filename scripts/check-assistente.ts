@@ -125,9 +125,10 @@ async function main() {
 
   const range = getRange("6m", "vigente");
 
+  /* A base da Calculadora: só o Reclame Aqui, como a tela (useScopedCases). Com as Redes, dava 17 onde a tela diz 13 (08/10/2026). */
   const base = getRawCounts(
     cases.filter((c) =>
-      inRange(c, range.start, range.end)
+      c.source === "Reclame Aqui" && inRange(c, range.start, range.end)
     )
   );
 

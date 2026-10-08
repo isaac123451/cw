@@ -104,8 +104,9 @@ interface Medicao {
 /** Janela oficial de 6 meses — a que define a nota pública. */
 function janela(cases: Case[]) {
   const r = getRange("6m", "vigente");
+  /* Só o Reclame Aqui entra na nota (08/10/2026): com os atendimentos das Redes, o assistente dizia 132 reclamações, 89,4% de resposta e sem selo — as telas, 129, 91,5% e RA1000. */
   return cases.filter((item) =>
-    inRange(item, r.start, r.end)
+    isReclameAqui(item) && inRange(item, r.start, r.end)
   );
 }
 
