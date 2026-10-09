@@ -10,6 +10,7 @@
 import { chaveDaAcao, ehParaMim, lembreteDoSlack, tarefaFeita, type MensagemDoSlack } from "../lib/models/iaDoDia";
 import { atividadeDoFeito, entenderComando } from "../lib/models/comandosDaIA";
 import { combinadosSemData, esperaDoCliente, promessaSemData } from "../lib/models/lembretesAutomaticos";
+import { leituraDaResposta } from "../lib/models/iaDoDia";
 
 let falhas = 0;
 function conferir(nome: string, obtido: unknown, esperado: unknown) {
@@ -112,6 +113,33 @@ console.log("\n  O COMBINADO SEM DATA — dos dois lados (09/10/2026)\n");
   conferir("promessa: mensagem de antes do lembrete não fecha", tarefaFeita(tarefa("auto-promessa-2", criada), { nossaMensagemEm: "2026-10-09T12:05:00.000Z" }), null);
   conferir("espera: o cliente mandou depois fecha", tarefaFeita(tarefa("auto-espera-3", criada), { clienteMensagemEm: "2026-10-09T16:00:00.000Z" }), "o cliente mandou mensagem");
   conferir("espera: mensagem nossa não fecha a espera", tarefaFeita(tarefa("auto-espera-3", criada), { nossaMensagemEm: "2026-10-09T16:00:00.000Z" }), null);
+}
+
+console.log("\n  A LEITURA DA IA, CONFERIDA (09/10/2026)\n");
+{
+  const D = "2026-10-09";
+  const boa = {
+    sobre_este_cliente: true,
+    segmento: "reclamacao",
+    vale_anotar: true,
+    motivo: "",
+    resumo: "Tratado o bloqueio.",
+    pendente: "nada",
+    importantes: ["Usa duas lojas"],
+    retorno: { precisa: true, quem: "cliente", oque: "Mandar o print do erro.", dia: "" },
+  };
+  const l = leituraDaResposta(boa, ["reclamacao"], D);
+  conferir("boa: anota, com pontos importantes e sem “Ficou pendente: nada”", [l.anotar, l.corpo.includes("Pontos importantes:"), l.corpo.includes("Ficou pendente")], [true, true, false]);
+  conferir("o retorno do cliente vira cobrança, sem o ponto final", l.retorno, { quem: "cliente", oque: "Mandar o print do erro" });
+  const mistura = leituraDaResposta({ ...boa, sobre_este_cliente: false }, ["reclamacao"], D);
+  conferir("mistura outro cliente: não anota nem lembra", [mistura.anotar, mistura.retorno], [false, null]);
+  const doNps = leituraDaResposta({ ...boa, segmento: "nps" }, ["reclamacao"], D);
+  conferir("segmento que a conversa não tem vira “outro” e não anota", [doNps.segmento, doNps.anotar], ["outro", false]);
+  conferir("só cumprimento: não anota, e diz por quê", leituraDaResposta({ ...boa, vale_anotar: false, motivo: "Só bom dia." }, ["reclamacao"], D).motivo, "Só bom dia.");
+  conferir("campo faltando: o lado conservador (não anota)", leituraDaResposta({ resumo: "x" }, ["reclamacao"], D).anotar, false);
+  const passado = leituraDaResposta({ ...boa, retorno: { ...boa.retorno, dia: "2026-10-01" } }, ["reclamacao"], D).retorno?.dia;
+  const futuro = leituraDaResposta({ ...boa, retorno: { ...boa.retorno, dia: "2026-10-13" } }, ["reclamacao"], D).retorno?.dia;
+  conferir("dia do retorno no passado é ignorado; no futuro, vale", [passado ?? null, futuro], [null, "2026-10-13"]);
 }
 
 console.log("\n  CHAVES — a mesma origem é uma ação só\n");

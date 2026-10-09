@@ -123,6 +123,27 @@ async function main() {
   await P.guardarSozinho();
   conferir("com dois casos, liga ao único aberto", enviados.find((m) => m.tipo === "guardarConversa")?.corpo?.protocolo, "RA-2");
 
+  /*
+    Troca de conversa (09/10/2026): o painel já está no contato novo e a
+    tela ainda mostra as mensagens do anterior. Foi assim que a conversa do
+    Fabiano entrou na do Eduardo.
+  */
+  enviados.length = 0;
+  mensagens.push({ id: "m6", de: "cliente", texto: "Amanda S.: Na Point Smart 2…", carimbo: "20:24, 08/10/2026", autor: "+55 66 9925-6119" });
+  await P.guardarSozinho();
+  conferir("mensagem do cliente com o número de outro contato: não grava", enviados.length, 0);
+  mensagens.pop();
+
+  const comContato = { mensagens: [...mensagens, { id: "m7", de: "nos", texto: "Pode me mandar o print?", carimbo: "20:28, 08/10/2026" }], contato: { telefone: "556699256119", nome: "" } };
+  P.lerConversa = () => comContato;
+  await P.guardarSozinho();
+  conferir("tela lida com o número de outro contato: não grava", enviados.length, 0);
+
+  comContato.contato = { telefone: "5511988887777", nome: "" };
+  comContato.mensagens.push({ id: "m8", de: "cliente", texto: "Oi", carimbo: "20:30, 08/10/2026", autor: "+55 11 98888-7777" });
+  await P.guardarSozinho();
+  conferir("tela e painel no mesmo contato: grava", enviados.find((m) => m.tipo === "guardarConversa")?.corpo?.mensagens?.map((m) => m.id), ["m7", "m8"]);
+
   console.log(falhas === 0 ? "\n  A conversa se guarda com o painel aberto ou fechado.\n" : `\n  ${falhas} ponto(s) a corrigir.\n`);
   process.exitCode = falhas === 0 ? 0 : 1;
 }

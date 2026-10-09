@@ -10,11 +10,15 @@ import {
   type MensagemDoSlack,
   type OrigemDaAcao,
   type TipoDeAcao,
+  leituraDaResposta,
+  type LeituraDoDia,
 } from "@/lib/models/iaDoDia";
-import { nomeDeContatoValido } from "@/lib/models/conversa";
+import { nomeDaConversa, nomeDePessoa, nomeDoCliente, semMensagensDeOutraConversa } from "@/lib/models/identidadeNaConversa";
+import { idDoLembrete } from "@/lib/models/lembretesAutomaticos";
 import { isEncerrado } from "@/lib/models/nps";
 import { CLOSED_STATUS } from "@/lib/services/case.service";
-import { descreverRegistro, paredeDe } from "@/lib/services/horasUteis";
+import { descreverRegistro, paredeDe, prazoUtil } from "@/lib/services/horasUteis";
+import { lerExpediente } from "@/lib/services/operacao.service";
 import { registrarTentativa } from "@/lib/services/nps.repository";
 import { completarContato } from "@/lib/services/raPortal.service";
 import { dadosDaConversa, oQueCompletar, type CampoDoCadastro } from "@/lib/services/sinaisDaConversa";
@@ -193,62 +197,128 @@ const ANOTACOES_POR_RODADA = 4;
 /**
  * A conversa de hoje no WhatsApp, ligada a um caso ou a um NPS, vira uma
  * anotação na ficha — uma por conversa por dia, depois de 30 minutos
- * parada. Com IA, um resumo do que foi tratado e do que ficou pendente;
- * sem, as últimas falas de cada lado.
+ * parada.
+ *
+ * **Desde 09/10/2026, com critério.** "A IA fez anotações para um cliente
+ * errado… sem misturar assuntos… sem anotar coisas sem sentido… e se é do
+ * NPS ela consiga reconhecer." Antes de anotar:
+ *
+ * - a conversa é lida **sem o que veio de outra** (o lote gravado com a
+ *   tela da conversa anterior — `semMensagensDeOutraConversa`);
+ * - o cliente é chamado pelo nome certo (`nomeDoCliente`), nunca pelo
+ *   número ou pelo texto da tela;
+ * - a IA recebe a reclamação e/ou o NPS a que a conversa está ligada e diz
+ *   se a conversa é mesmo com este cliente, de qual dos dois ela trata e se
+ *   há o que guardar. Conversa que mistura gente, que não trata de nenhum
+ *   dos vínculos ou que só tem "ok" e "bom dia" não vira anotação — e só é
+ *   lida de novo quando chegar mensagem nova;
+ * - se alguém ficou de dar retorno, vira lembrete (o nosso fecha quando
+ *   respondemos; o do cliente, quando ele manda mensagem);
+ * - sem IA, não anota: as falas soltas que iam no lugar eram o "sem
+ *   sentido".
  */
-export async function anotarConversasDoDia(prisma: PrismaClient, userId: string, agora = new Date()): Promise<number> {
+export async function anotarConversasDoDia(
+  prisma: PrismaClient,
+  userId: string,
+  agora = new Date(),
+  /** Só estas conversas — é o que deixa a conferência rodar sem tocar nas reais. */
+  soConversas?: string[],
+  /** A leitura da IA trocada por uma resposta pronta — só na conferência. */
+  ler: typeof lerConversaDoDia = lerConversaDoDia
+): Promise<number> {
+  if (!soConversas && !temIA()) return 0;
   const hoje = paredeDe(agora).dia;
   const inicioDoDia = new Date(Date.parse(`${hoje}T03:00:00Z`));
 
   const conversas = await prisma.conversa.findMany({
     where: {
+      ...(soConversas ? { id: { in: soConversas } } : {}),
       guardadaPor: { not: "" },
       OR: [{ caseId: { not: null } }, { npsResponseId: { not: null } }],
       mensagens: { some: { em: { gte: inicioDoDia } } },
     },
     select: {
       id: true,
+      telefone: true,
       contatoNome: true,
       caseId: true,
       npsResponseId: true,
-      case: { select: { externalId: true, protocol: true, channel: true } },
-      mensagens: { where: { em: { gte: inicioDoDia } }, orderBy: { em: "asc" }, select: { de: true, texto: true, em: true }, take: 80 },
+      case: { select: { externalId: true, protocol: true, channel: true, customer: true, title: true, description: true } },
+      npsResponse: { select: { score: true, comment: true, customerName: true } },
+      mensagens: {
+        where: { em: { gte: inicioDoDia } },
+        orderBy: { em: "asc" },
+        select: { id: true, de: true, texto: true, em: true, autor: true, chave: true, criadoEm: true },
+        take: 120,
+      },
     },
     take: 30,
   });
 
-  const prontas = conversas.filter((c) => {
-    const ultima = c.mensagens[c.mensagens.length - 1]?.em;
-    return c.mensagens.length >= 2 && ultima && agora.getTime() - ultima.getTime() >= CONVERSA_PARADA_MIN * 60_000;
+  const prontas = conversas.flatMap((c) => {
+    const mensagens = semMensagensDeOutraConversa({ telefone: c.telefone, nome: c.contatoNome }, c.mensagens).filter(
+      (m): m is typeof m & { em: Date } => Boolean(m.em)
+    );
+    const ultima = mensagens[mensagens.length - 1];
+    if (mensagens.length < 2 || !ultima || agora.getTime() - ultima.em.getTime() < CONVERSA_PARADA_MIN * 60_000) return [];
+    return [{ ...c, mensagens, ultima }];
   });
   if (!prontas.length) return 0;
 
-  const usadas = await chavesJaUsadas(prisma, userId, prontas.map((c) => chaveDaAcao.anotacao(c.id, hoje)));
+  /* A chave do dia (anotou) e a da leitura (leu até esta mensagem e não havia o que anotar). */
+  const lida = (c: (typeof prontas)[number]) => `anotacao-lida:conversa:${c.id}:${c.ultima.id}`;
+  const usadas = await chavesJaUsadas(prisma, userId, prontas.flatMap((c) => [chaveDaAcao.anotacao(c.id, hoje), lida(c)]));
   let feitas = 0;
 
-  for (const c of prontas.filter((x) => !usadas.has(chaveDaAcao.anotacao(x.id, hoje))).slice(0, ANOTACOES_POR_RODADA)) {
-    const nome = nomeDeContatoValido(c.contatoNome) || "o cliente";
-    const corpo = await resumoDaConversa(nome, c.mensagens.map((m) => ({ de: m.de, texto: m.texto })));
-    const texto = `Conversa de hoje no WhatsApp com ${nome}:\n${corpo}`;
+  for (const c of prontas.filter((x) => !usadas.has(chaveDaAcao.anotacao(x.id, hoje)) && !usadas.has(lida(x))).slice(0, ANOTACOES_POR_RODADA)) {
+    const nome = nomeDoCliente(c, c.case?.customer ?? c.npsResponse?.customerName, c.mensagens);
+    const leitura = await ler({
+      nome,
+      hoje,
+      caso: c.case ? { protocolo: c.case.protocol, canal: c.case.channel, titulo: c.case.title, relato: c.case.description } : null,
+      nps: c.npsResponse ? { nota: c.npsResponse.score, comentario: c.npsResponse.comment } : null,
+      mensagens: c.mensagens,
+    });
+    /* A IA não respondeu agora: a próxima volta tenta de novo. */
+    if (!leitura) continue;
 
-    /* Registra antes de anotar: duas abas rodando juntas não anotam duas vezes. */
+    const chamado = nome || "o cliente";
+    const paraNps = leitura.segmento === "nps" && Boolean(c.npsResponseId);
+    const paraCaso = leitura.segmento === "reclamacao" && Boolean(c.caseId);
+
+    if (!leitura.anotar || (!paraNps && !paraCaso)) {
+      /* Lida e sem o que guardar: invisível (tipo aviso, já vista), e só volta a ler com mensagem nova. */
+      await registrar(prisma, userId, {
+        tipo: "aviso",
+        origem: c.caseId ? "caso" : "nps",
+        chave: lida(c),
+        titulo: `Conversa com ${chamado} lida — nada anotado`,
+        detalhe: leitura.motivo || "Sem vínculo que combine com a conversa.",
+      });
+      await prisma.acaoDaIA.updateMany({ where: { userId, chave: lida(c) }, data: { vistaEm: agora } });
+      continue;
+    }
+
+    const texto = `Conversa de hoje no WhatsApp com ${chamado}:\n${leitura.corpo}`;
     const chave = chaveDaAcao.anotacao(c.id, hoje);
-    const href = c.caseId
+    const href = paraCaso
       ? `/${c.case?.channel === "RECLAME_AQUI" ? "reclame-aqui" : "redes-sociais"}/${c.case?.externalId ?? c.case?.protocol ?? c.caseId}`
       : `/nps/${c.npsResponseId}`;
+
+    /* Registra antes de anotar: duas abas rodando juntas não anotam duas vezes. */
     const novo = await registrar(prisma, userId, {
       tipo: "anotacao",
-      origem: c.caseId ? "caso" : "nps",
+      origem: paraCaso ? "caso" : "nps",
       chave,
-      titulo: `Anotação na ficha${c.case?.protocol ? ` de ${c.case.protocol}` : ""}: conversa com ${nome}`,
-      detalhe: corpo.slice(0, 280),
+      titulo: paraCaso ? `Anotei na ficha de ${c.case?.protocol}: conversa com ${chamado}` : `Anotei no NPS de ${chamado}: conversa de hoje`,
+      detalhe: leitura.corpo.slice(0, 280),
       href,
     });
     if (!novo) continue;
 
     let desfazer: Record<string, string>;
-    if (c.caseId) {
-      const comentario = await prisma.caseComment.create({ data: { caseId: c.caseId, authorName: AUTOR, body: texto } });
+    if (paraCaso) {
+      const comentario = await prisma.caseComment.create({ data: { caseId: c.caseId!, authorName: AUTOR, body: texto } });
       desfazer = { comentario: comentario.id };
     } else {
       const nota = await prisma.npsNote.create({ data: { responseId: c.npsResponseId!, actor: AUTOR, body: texto } });
@@ -256,65 +326,164 @@ export async function anotarConversasDoDia(prisma: PrismaClient, userId: string,
     }
     await prisma.acaoDaIA.update({ where: { userId_chave: { userId, chave } }, data: { desfazer } });
     feitas += 1;
+
+    if (leitura.retorno && (await lembrarRetorno(prisma, userId, { nome: chamado, caseId: paraCaso ? c.caseId : null, mensagens: c.mensagens, retorno: leitura.retorno, hoje }))) {
+      feitas += 1;
+    }
   }
   return feitas;
 }
 
+export type { LeituraDoDia };
+export { leituraDaResposta };
+
+export interface ConversaParaLer {
+  nome: string;
+  hoje: string;
+  caso: { protocolo: string; canal: string; titulo: string; relato: string | null } | null;
+  nps: { nota: number; comentario: string | null } | null;
+  mensagens: { de: string; texto: string; em: Date }[];
+}
+
+const hhmmDe = (d: Date) => {
+  const p = paredeDe(d);
+  return `${String(Math.floor(p.min / 60)).padStart(2, "0")}:${String(p.min % 60).padStart(2, "0")}`;
+};
+
 /**
- * O resumo do dia da conversa: pela IA quando há, pelas falas quando não.
+ * A leitura da conversa do dia pela IA — `null` quando ela não respondeu.
  *
- * Desde 09/10/2026 a IA também separa os **pontos importantes** — o que
- * vale guardar na ficha para a próxima conversa: quantas lojas, que sistema
- * usa, valor ou prazo combinado, decisão do cliente, risco de cancelar, o
- * melhor horário e canal. "Preciso que anote coisas importantes sempre."
+ * Também separa os **pontos importantes** — o que vale guardar na ficha
+ * para a próxima conversa. "Preciso que anote coisas importantes sempre."
  */
-async function resumoDaConversa(nome: string, mensagens: { de: string; texto: string }[]): Promise<string> {
-  const linhas = mensagens.map((m) => `${m.de === "nos" ? "Nós" : nome}: ${m.texto.replace(/\s+/g, " ").slice(0, 400)}`);
-  if (temIA()) {
-    try {
-      const r = await pedirEstruturado({
-        rapido: true,
-        sistema:
-          "Você resume conversas de atendimento de uma empresa de cardápio digital para a ficha do caso. Português do Brasil, frases curtas, sem inventar nada que não esteja na conversa. Não inclua telefone, e-mail nem documento.",
-        prompt: `Resuma a conversa de hoje em até 3 linhas, diga o que ficou pendente (ou "nada") e liste os pontos importantes que valem guardar na ficha do cliente para a próxima conversa — fatos duradouros como quantidade de lojas, sistema ou integração que usa, valor ou prazo combinado, decisão ou pedido do cliente, risco de cancelar, melhor horário ou canal de contato. Só o que está escrito na conversa; lista vazia se não houver.\n\n${linhas.join("\n").slice(0, 6000)}`,
-        esquema: {
-          type: "object",
-          properties: {
-            resumo: { type: "string" },
-            pendente: { type: "string" },
-            importantes: { type: "array", items: { type: "string" } },
+async function lerConversaDoDia(entrada: ConversaParaLer): Promise<LeituraDoDia | null> {
+  const quem = entrada.nome || "Cliente";
+  const linhas = entrada.mensagens.map((m) => `[${hhmmDe(m.em)}] ${m.de === "nos" ? "Nós" : quem}: ${m.texto.replace(/\s+/g, " ").slice(0, 400)}`);
+  const segmentos = [entrada.caso ? "reclamacao" : null, entrada.nps ? "nps" : null].filter((s): s is string => Boolean(s));
+  const vinculos = [
+    entrada.caso
+      ? `- "reclamacao": a reclamação ${entrada.caso.protocolo} no ${entrada.caso.canal === "RECLAME_AQUI" ? "Reclame Aqui" : "canal social"} — “${entrada.caso.titulo}”. ${(entrada.caso.relato ?? "").replace(/\s+/g, " ").slice(0, 400)}`
+      : null,
+    entrada.nps
+      ? `- "nps": a resposta à pesquisa de satisfação (NPS), nota ${entrada.nps.nota}${entrada.nps.comentario ? ` — “${entrada.nps.comentario.replace(/\s+/g, " ").slice(0, 300)}”` : ""}.`
+      : null,
+  ].filter(Boolean);
+
+  let r: Awaited<ReturnType<typeof pedirEstruturado>>;
+  try {
+    r = await pedirEstruturado({
+      sistema:
+        "Você é o assistente de um agente de reputação da Cardápio Web (cardápio digital e sistema para restaurantes). Lê a conversa de hoje no WhatsApp com UM cliente e decide o que guardar na ficha dele. Português do Brasil, frases curtas e objetivas. Nunca invente: só o que está escrito na conversa. Não inclua telefone, e-mail, documento nem dado bancário.",
+      prompt: [
+        `Cliente: ${entrada.nome || "(nome não identificado)"}. Hoje é ${entrada.hoje}.`,
+        "A conversa está ligada a:",
+        ...vinculos,
+        "",
+        "Responda:",
+        "1. sobre_este_cliente: false se a conversa, ou parte dela, parece ser com outra pessoa (chamada por outro nome, assunto de outro cliente) ou mistura duas conversas.",
+        `2. segmento: de qual vínculo a conversa trata — ${segmentos.map((s) => `"${s}"`).join(" ou ")} — ou "outro" se não trata de nenhum deles (ex.: venda, assunto pessoal).`,
+        '3. vale_anotar: false se hoje só houve cumprimento, agradecimento, "ok", tentativa sem resposta ou nada novo.',
+        "4. motivo: quando sobre_este_cliente ou vale_anotar for false, por quê, em uma frase; senão, vazio.",
+        "5. resumo: até 3 linhas do que foi tratado hoje.",
+        '6. pendente: o que ficou por fazer e de quem, ou "nada".',
+        "7. importantes: fatos duradouros para a próxima conversa — quantas lojas, sistema ou integração que usa, valor ou prazo combinado, decisão ou pedido do cliente, risco de cancelar, melhor horário ou canal. Lista vazia se não houver.",
+        '8. retorno: se alguém ficou de dar retorno — nós ao cliente (quem "nos") ou o cliente a nós (quem "cliente") — e ainda não deu na conversa: precisa true, oque em até 12 palavras começando por verbo, e dia (AAAA-MM-DD) só se a conversa disser o dia, senão vazio. Sem retorno pendente: precisa false.',
+        "",
+        "Conversa de hoje:",
+        linhas.join("\n").slice(0, 7000),
+      ].join("\n"),
+      esquema: {
+        type: "object",
+        properties: {
+          sobre_este_cliente: { type: "boolean" },
+          segmento: { type: "string", enum: [...segmentos, "outro"] },
+          vale_anotar: { type: "boolean" },
+          motivo: { type: "string" },
+          resumo: { type: "string" },
+          pendente: { type: "string" },
+          importantes: { type: "array", items: { type: "string" } },
+          retorno: {
+            type: "object",
+            properties: {
+              precisa: { type: "boolean" },
+              quem: { type: "string", enum: ["nos", "cliente"] },
+              oque: { type: "string" },
+              dia: { type: "string" },
+            },
+            required: ["precisa", "quem", "oque", "dia"],
           },
-          required: ["resumo", "pendente", "importantes"],
         },
-      });
-      const resumo = String(r.dados?.resumo ?? "").trim();
-      const pendente = String(r.dados?.pendente ?? "").trim();
-      const importantes = (Array.isArray(r.dados?.importantes) ? (r.dados.importantes as unknown[]) : [])
-        .map((x) => String(x ?? "").replace(/\s+/g, " ").trim())
-        .filter((x) => x.length > 3)
-        .slice(0, 6);
-      if (!r.erro && resumo) {
-        return [
-          resumo,
-          pendente && !/^nada\.?$/i.test(pendente) ? `Ficou pendente: ${pendente}` : null,
-          importantes.length ? `Pontos importantes:\n${importantes.map((x) => `• ${x}`).join("\n")}` : null,
-        ]
-          .filter(Boolean)
-          .join("\n");
-      }
-    } catch {
-      /* Sem IA agora: vão as falas. */
-    }
+        required: ["sobre_este_cliente", "segmento", "vale_anotar", "motivo", "resumo", "pendente", "importantes", "retorno"],
+      },
+    });
+  } catch {
+    return null;
   }
-  const ultimaDeles = [...mensagens].reverse().find((m) => m.de !== "nos");
-  const ultimaNossa = [...mensagens].reverse().find((m) => m.de === "nos");
-  return [
-    `${mensagens.length} mensagens hoje.`,
-    ultimaDeles ? `Última do cliente: “${ultimaDeles.texto.replace(/\s+/g, " ").slice(0, 160)}”` : null,
-    ultimaNossa ? `Nossa última: “${ultimaNossa.texto.replace(/\s+/g, " ").slice(0, 160)}”` : null,
-  ]
-    .filter(Boolean)
-    .join("\n");
+  if (r.erro || !r.dados) return null;
+  return leituraDaResposta(r.dados, segmentos, entrada.hoje);
+}
+
+/**
+ * O retorno que a IA viu na conversa vira lembrete (09/10/2026): "é preciso
+ * também realizar lembrete caso seja preciso um retorno".
+ *
+ * Usa os mesmos ids dos combinados (`auto-promessa-<mensagem>` para o
+ * nosso, `auto-espera-<mensagem>` para o do cliente): a regra que fecha
+ * sozinha é a mesma — o nosso quando respondemos, o do cliente quando ele
+ * escreve —, e se a regra dos combinados já criou um lembrete desta
+ * conversa, a IA não cria outro.
+ */
+async function lembrarRetorno(
+  prisma: PrismaClient,
+  userId: string,
+  entrada: {
+    nome: string;
+    caseId: string | null;
+    mensagens: { id: string; de: string; em: Date }[];
+    retorno: { quem: "nos" | "cliente"; oque: string; dia?: string };
+    hoje: string;
+  }
+): Promise<boolean> {
+  const { retorno, mensagens } = entrada;
+  const doLado = [...mensagens].reverse().find((m) => m.de === retorno.quem) ?? mensagens[mensagens.length - 1];
+  if (!doLado) return false;
+
+  const daConversa = mensagens.flatMap((m) => (["conversa", "pedido", "promessa", "espera", "reuniao"] as const).map((o) => idDoLembrete(o, m.id)));
+  const jaHa = await prisma.agendaTask.findFirst({ where: { id: { in: daConversa }, done: false }, select: { id: true } });
+  if (jaHa) return false;
+
+  const id = idDoLembrete(retorno.quem === "nos" ? "promessa" : "espera", doLado.id);
+  const expediente = await lerExpediente(prisma);
+  const prazo = retorno.dia ? { dia: retorno.dia, min: expediente.inicioMin } : paredeDe(prazoUtil(doLado.em, retorno.quem === "nos" ? 2 : 24, expediente));
+  const titulo = retorno.quem === "nos" ? `Retornar a ${entrada.nome}: ${retorno.oque}` : `Cobrar ${entrada.nome}: ${retorno.oque}`;
+
+  const criada = await prisma.agendaTask.createMany({
+    data: [
+      {
+        id,
+        title: titulo.slice(0, 300),
+        type: "Follow-up",
+        priority: "Média",
+        done: false,
+        dueDate: new Date(`${prazo.dia}T00:00:00.000Z`),
+        time: `${String(Math.floor(prazo.min / 60)).padStart(2, "0")}:${String(prazo.min % 60).padStart(2, "0")}`,
+        ownerId: userId,
+        caseId: entrada.caseId,
+      },
+    ],
+    skipDuplicates: true,
+  });
+  if (criada.count === 0) return false;
+
+  return registrar(prisma, userId, {
+    tipo: "lembrete",
+    origem: "whatsapp",
+    chave: chaveDaAcao.lembrete(id),
+    titulo,
+    detalhe: `Na agenda para ${prazo.dia.split("-").reverse().slice(0, 2).join("/")}${retorno.quem === "nos" ? " — fecha sozinho quando você responder" : " — fecha sozinho quando o cliente escrever"}.`,
+    href: "/agenda",
+    desfazer: { tarefa: id },
+  });
 }
 
 /* ============================================================
@@ -379,8 +548,8 @@ export async function seguirPelasConversas(
           publishedAt: true,
         },
       },
-      npsResponse: { select: { id: true, firstContactAt: true, respondedAt: true, status: true } },
-      mensagens: { orderBy: { em: "asc" }, select: { de: true, texto: true, em: true }, take: 300 },
+      npsResponse: { select: { id: true, firstContactAt: true, respondedAt: true, status: true, customerName: true } },
+      mensagens: { orderBy: { em: "asc" }, select: { de: true, texto: true, em: true, autor: true, chave: true, criadoEm: true }, take: 300 },
     },
     orderBy: { atualizadoEm: "desc" },
     take: 40,
@@ -391,9 +560,19 @@ export async function seguirPelasConversas(
 
   for (const c of conversas) {
     if (feitas >= SEGUIR_POR_RODADA) break;
-    const msgs = c.mensagens.filter((m): m is { de: "nos" | "cliente"; texto: string; em: Date } => Boolean(m.em) && (m.de === "nos" || m.de === "cliente"));
+    /* Sem o que veio de outra conversa (09/10/2026): nem o CNPJ nem o 1º contato saem da conversa de outro cliente. */
+    const msgs = semMensagensDeOutraConversa({ telefone: c.telefone, nome: c.contatoNome }, c.mensagens).filter(
+      (m): m is typeof m & { de: "nos" | "cliente"; em: Date } => Boolean(m.em) && (m.de === "nos" || m.de === "cliente")
+    );
     if (!msgs.length) continue;
-    const nome = nomeDeContatoValido(c.contatoNome);
+    /*
+      Para preencher a ficha, só nome de gente: o da agenda ou o que nós
+      usamos na conversa ("Boa tarde, Eduardo!"). O número e o "clique para
+      mostrar os dados do contato" viraram nome e empresa de quatro
+      reclamações em 09/10/2026.
+    */
+    const nomeParaFicha = nomeDePessoa(c.contatoNome) || nomeDaConversa(msgs);
+    const nome = nomeDoCliente(c, c.case?.customer ?? c.npsResponse?.customerName, msgs);
 
     /* ---------- o caso ---------- */
     if (c.case) {
@@ -402,7 +581,7 @@ export async function seguirPelasConversas(
 
       /* Completar: o que a conversa tem e a ficha não. */
       const achados = dadosDaConversa(msgs, c.telefone);
-      const falta = oQueCompletar({ email: caso.email, phone: caso.phone, document: caso.document, customer: caso.customer }, { ...achados, ...(nome ? { nome } : {}) });
+      const falta = oQueCompletar({ email: caso.email, phone: caso.phone, document: caso.document, customer: caso.customer }, { ...achados, ...(nomeParaFicha ? { nome: nomeParaFicha } : {}) });
       if (falta.length) {
         const chave = `completou:caso:${caso.id}:${falta.map((f) => f.campo).sort().join(",")}`;
         const usadas = await chavesJaUsadas(prisma, userId, [chave]);
@@ -418,7 +597,7 @@ export async function seguirPelasConversas(
           });
           if (novo) {
             const completou = await completarContato(prisma, caso, {
-              cliente: falta.some((f) => f.campo === "nome") ? nome : "",
+              cliente: falta.some((f) => f.campo === "nome") ? nomeParaFicha : "",
               email: achados.email ?? "",
               telefone: achados.telefone ?? "",
               documento: achados.documento,
@@ -722,7 +901,8 @@ export async function acoesDeHoje(prisma: PrismaClient, userId: string, agora = 
     orderBy: { criadaEm: "desc" },
     take: 50,
   });
-  return linhas.map(paraView);
+  /* O que nunca chegou a acontecer (a ficha que não tinha o que completar) não é "o que eu fiz". */
+  return linhas.filter((l) => !(l.desfeitaEm && !l.desfazer)).map(paraView);
 }
 
 export async function marcarVistas(prisma: PrismaClient, userId: string, ids: string[]) {

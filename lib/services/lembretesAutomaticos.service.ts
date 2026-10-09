@@ -2,7 +2,7 @@ import type { PrismaClient } from "@prisma/client";
 
 import type { AgendaTask } from "@/lib/models/agenda";
 import { combinadoNaMensagem, combinadosSemData, idDoLembrete, pedidoNaMensagem, reuniaoNaMensagem, type MensagemDoCombinado } from "@/lib/models/lembretesAutomaticos";
-import { nomeDeContatoValido } from "@/lib/models/conversa";
+import { nomeDoCliente, semMensagensDeOutraConversa } from "@/lib/models/identidadeNaConversa";
 import { lerExpediente } from "@/lib/services/operacao.service";
 import { movementStatus } from "@/lib/services/movement.service";
 import { paredeDe, prazoUtil } from "@/lib/services/horasUteis";
@@ -32,7 +32,17 @@ export async function criarLembretesAutomaticos(prisma: PrismaClient, userId: st
     prisma.mensagemDaConversa.findMany({
       /* As nossas (o combinado) e, desde a 1.98, as do cliente (o pedido e a reunião). */
       where: { em: { gte: new Date(agora.getTime() - JANELA_DAS_CONVERSAS_DIAS * 86_400_000) } },
-      select: { id: true, de: true, texto: true, em: true, conversaId: true, conversa: { select: { contatoNome: true, case: { select: { id: true, protocol: true } } } } },
+      select: {
+        id: true,
+        de: true,
+        texto: true,
+        em: true,
+        autor: true,
+        chave: true,
+        criadoEm: true,
+        conversaId: true,
+        conversa: { select: { telefone: true, contatoNome: true, case: { select: { id: true, protocol: true, customer: true } }, npsResponse: { select: { customerName: true } } } },
+      },
       take: 500,
     }),
     prisma.user.findUnique({ where: { id: userId }, select: { id: true, name: true } }),
@@ -60,11 +70,27 @@ export async function criarLembretesAutomaticos(prisma: PrismaClient, userId: st
     });
   }
 
+  /*
+    Sem o que veio de outra conversa (09/10/2026): o lote gravado com a tela
+    da conversa anterior não vira lembrete deste cliente. E o nome é o de
+    gente — o da agenda, o da ficha ou o que nós usamos na conversa —,
+    nunca o número nem o texto da tela.
+  */
+  const daConversa = new Map<string, typeof mensagens>();
+  for (const m of mensagens) daConversa.set(m.conversaId, [...(daConversa.get(m.conversaId) ?? []), m]);
+  const validas = new Set<string>();
+  const nomeDe = new Map<string, string>();
+  for (const [id, lista] of daConversa) {
+    const c = lista[0].conversa;
+    const limpas = semMensagensDeOutraConversa({ telefone: c.telefone, nome: c.contatoNome }, lista);
+    for (const m of limpas) validas.add(m.id);
+    nomeDe.set(id, nomeDoCliente(c, c.case?.customer ?? c.npsResponse?.customerName, limpas));
+  }
+
   for (const m of mensagens) {
-    if (!m.em) continue;
+    if (!m.em || !validas.has(m.id)) continue;
     const dia = paredeDe(m.em).dia;
-    /* O nome gravado errado (o subtítulo do WhatsApp) não entra no título da atividade. */
-    const nome = nomeDeContatoValido(m.conversa.contatoNome);
+    const nome = nomeDe.get(m.conversaId) ?? "";
     const quem = nome ? ` com ${nome}` : "";
 
     /* Reunião combinada, de qualquer lado: vira compromisso (e pode ir ao Google pelo aviso). */
@@ -120,9 +146,9 @@ export async function criarLembretesAutomaticos(prisma: PrismaClient, userId: st
   */
   const porConversa = new Map<string, { nome: string; caseId?: string; protocolo?: string; mensagens: MensagemDoCombinado[] }>();
   for (const m of mensagens) {
-    if (!m.em) continue;
+    if (!m.em || !validas.has(m.id)) continue;
     const g = porConversa.get(m.conversaId) ?? {
-      nome: nomeDeContatoValido(m.conversa.contatoNome),
+      nome: nomeDe.get(m.conversaId) ?? "",
       caseId: m.conversa.case?.id,
       protocolo: m.conversa.case?.protocol,
       mensagens: [],

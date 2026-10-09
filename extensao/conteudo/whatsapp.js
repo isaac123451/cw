@@ -577,6 +577,13 @@
     return {
       mensagens,
 
+      /*
+        De quem é a tela no instante da leitura (09/10/2026): a gravação
+        automática confere com o contato do painel antes de guardar — ao
+        trocar de conversa, os dois ficam um instante desencontrados.
+      */
+      contato,
+
       /**
        * Por qual camada a leitura passou.
        *

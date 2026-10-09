@@ -53,6 +53,36 @@ export const REVISAO = {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- plataforma: IA do dia (09/10) ---------------- */
   {
+    id: "conversa-nao-mistura-clientes",
+    dia: "2026-10-09",
+    tipo: "correcao",
+    frente: "extensao",
+    titulo: "A conversa de um cliente não entra mais na de outro",
+    texto:
+      "Ao trocar de conversa no WhatsApp, por um instante o painel já estava no contato novo e a tela ainda mostrava as mensagens do anterior — e a gravação automática guardava essas mensagens no cliente errado. Foi assim que a conversa do Fabiano (maquininha Point Smart) entrou na do Eduardo (bloqueio do WhatsApp), e a IA anotou o assunto de um na ficha do outro; na base, 5 das 32 conversas tinham mensagens de outra. Agora a extensão só grava quando a tela e o painel apontam o mesmo contato, e a plataforma confere o autor de cada mensagem do cliente: o lote com mensagem de outro número é recusado inteiro, sem aviso — a gravação seguinte, já com a tela certa, guarda.",
+    onde: "Extensão → WhatsApp → conversa guardada sozinha",
+  },
+  {
+    id: "ia-cliente-e-segmento-certos",
+    dia: "2026-10-09",
+    tipo: "melhoria",
+    frente: "plataforma",
+    titulo: "A IA confere o cliente e o assunto antes de anotar, e lembra do retorno",
+    texto:
+      "Antes de anotar a conversa do dia, a IA agora recebe quem é o cliente e a que a conversa está ligada — a reclamação (com o título e o relato) e/ou o NPS (com a nota e o comentário) — e diz se a conversa é mesmo com ele, de qual dos dois ela trata e se há o que guardar. A anotação vai para o lugar certo: conversa sobre a nota da pesquisa vai no NPS, sobre a reclamação vai na ficha dela. Conversa que mistura outra pessoa, que trata de outro assunto ou que só tem \"bom dia\" e \"ok\" não vira anotação, e só é lida de novo quando chega mensagem nova. Sem IA, nada é anotado. E quando alguém ficou de dar retorno, nasce o lembrete — \"Retornar a Eduardo: …\" para você, \"Cobrar Eduardo: …\" para o cliente —, que fecha sozinho quando a conversa anda.",
+    href: "/meu-dia",
+  },
+  {
+    id: "nome-nunca-e-o-telefone",
+    dia: "2026-10-09",
+    tipo: "correcao",
+    frente: "plataforma",
+    titulo: "O nome do cliente nunca é o número nem o texto da tela",
+    texto:
+      "Quando o contato não está salvo na agenda, o WhatsApp mostra o número no lugar do nome — e a IA preencheu nome e empresa de quatro reclamações com \"+55 83 9394-3375\" e afins. Agora o nome só vem de nome de gente: o da agenda, o da ficha ou o que você usa na conversa (\"Boa tarde, Eduardo!\"), e só quando a conversa chama um nome só. Lembretes e anotações também passam a chamar o cliente por esse nome. Nada da conversa de outro cliente entra na ficha — nem o CNPJ, nem o 1º contato.",
+    href: "/reclame-aqui",
+  },
+  {
     id: "ia-combinado-dos-dois-lados",
     dia: "2026-10-09",
     tipo: "novo",

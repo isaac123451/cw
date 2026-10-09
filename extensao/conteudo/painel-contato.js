@@ -1150,6 +1150,32 @@
     return d.length >= 8 ? d.slice(-8) : "";
   }
 
+  /**
+   * A tela e o painel falam do mesmo contato? (09/10/2026)
+   *
+   * Ao trocar de conversa no WhatsApp, por um instante o painel já está no
+   * contato novo e a tela ainda mostra as mensagens do anterior. A gravação
+   * automática guardou assim as mensagens do Fabiano na conversa do
+   * Eduardo, e a IA anotou o assunto de um na ficha do outro. Dois sinais:
+   * o contato lido na tela no mesmo instante das mensagens, e o autor do
+   * carimbo das mensagens do cliente (o número dele, quando não está na
+   * agenda). O servidor confere de novo e recusa o lote.
+   */
+  function telaDeOutraConversa(daTela, mensagens) {
+    const oito = (v) => String(v ?? "").replace(/\D/g, "").slice(-8);
+    const doPainel = oito(P.consulta?.telefone);
+    if (doPainel.length !== 8) return false;
+    const naTela = oito(daTela?.telefone);
+    if (naTela.length === 8 && naTela !== doPainel) return true;
+    return mensagens.some((m) => {
+      if (m.de !== "cliente" || !m.autor) return false;
+      const autor = String(m.autor).trim();
+      if (!/^[\s+\d().-]+$/.test(autor)) return false;
+      const d = oito(autor);
+      return d.length === 8 && d !== doPainel;
+    });
+  }
+
   P.podeGuardarSozinho = function podeGuardarSozinho(dados = P.ultimoDado) {
     if (!P.lerConversa || !telefoneDaConversa() || !dados) return false;
     return Boolean(dados.cliente || dados.nps || dados.estabelecimento);
@@ -1233,6 +1259,8 @@
     const mensagens = (Array.isArray(leitura) ? leitura : leitura?.mensagens ?? []).filter(
       (m) => m && m.id && typeof m.texto === "string" && m.texto.trim() !== ""
     );
+    /* A tela ainda é a de outra conversa: não grava agora; a próxima volta, já com a tela certa, grava. */
+    if (telaDeOutraConversa(leitura?.contato, mensagens)) return;
 
     const ja = guardadasPorConversa.get(tel) ?? new Set();
     const novas = mensagens.filter((m) => !ja.has(m.id));
@@ -1280,6 +1308,8 @@
         guardadasPorConversa.set(tel, ja);
         totalPorConversa.set(tel, (totalPorConversa.get(tel) ?? 0) + (resposta.dados.novas ?? 0));
         falhaPorConversa.delete(tel);
+      } else if (resposta?.dados?.outraConversa) {
+        /* O servidor viu mensagem de outra conversa no lote: nada gravado, sem aviso — a próxima volta grava. */
       } else {
         const erro = resposta?.dados?.erro ?? resposta?.erro ?? "sem resposta da plataforma.";
         falhaPorConversa.set(tel, erro);

@@ -8,6 +8,7 @@ import {
 import { getPrisma } from "@/lib/prisma";
 
 import { instanteDoCarimbo, type Lado, type MensagemRecebida } from "@/lib/models/conversa";
+import { autorDeOutraConversa } from "@/lib/models/identidadeNaConversa";
 import { candidatas, gravarMensagens, MAXIMO_DE_MENSAGENS, somenteDigitosDoTelefone } from "@/lib/services/conversas.service";
 
 export const runtime = "nodejs";
@@ -98,6 +99,23 @@ export async function POST(request: Request) {
       transcricao: m.transcricao === true,
     }));
   if (mensagens.length === 0) return responder(request, { erro: "Nenhuma mensagem para guardar." }, 400);
+
+  /*
+    A tela ainda é a da conversa anterior (09/10/2026). Ao trocar de
+    conversa no WhatsApp, o painel já está no contato novo e a tela ainda
+    mostra as mensagens do anterior por um instante: a gravação automática
+    guardou as mensagens do Fabiano na conversa do Eduardo, e a IA anotou o
+    assunto de um na ficha do outro. O carimbo diz de quem é cada mensagem
+    do cliente; uma de outro contato recusa o lote inteiro — as nossas
+    daquele lote também eram da outra conversa. Nada é gravado; a próxima
+    leitura, já com a tela certa, grava. Vai com 200 e o motivo no corpo:
+    a gravação automática da extensão lê `outraConversa` e espera calada a
+    próxima volta; no clique, a frase aparece.
+  */
+  const alheio = autorDeOutraConversa({ telefone, nome }, mensagens);
+  if (alheio) {
+    return responder(request, { erro: `As mensagens na tela são de outra conversa (${alheio}) — nada foi guardado. Tente de novo com a conversa aberta.`, outraConversa: true });
+  }
 
   /* A conversa do mesmo telefone recebe as mensagens; o nome só decide quando não há número. */
   const existentes = await candidatas(prisma, telefone, telefone ? "" : nome);

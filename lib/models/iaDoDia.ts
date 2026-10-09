@@ -198,3 +198,61 @@ export const chaveDaAcao = {
   anotacao: (conversaId: string, dia: string) => `anotacao:conversa:${conversaId}:${dia}`,
   reuniao: (eventoId: string) => `agenda:depois:${eventoId}`,
 };
+
+/* ============================================================
+   A LEITURA DA CONVERSA DO DIA, CONFERIDA (09/10/2026)
+============================================================ */
+
+export interface LeituraDoDia {
+  anotar: boolean;
+  /** Por que não anotou — fica na linha invisível, para quem investigar. */
+  motivo: string;
+  segmento: "reclamacao" | "nps" | "outro";
+  corpo: string;
+  retorno: { quem: "nos" | "cliente"; oque: string; dia?: string } | null;
+}
+
+/** A resposta da IA, conferida: campo torto vira o lado conservador (não anotar, não lembrar). */
+export function leituraDaResposta(d: Record<string, unknown>, segmentos: string[], hoje: string): LeituraDoDia {
+  const limpo = (v: unknown) => String(v ?? "").replace(/\s+/g, " ").trim();
+  const seg = limpo(d.segmento);
+  const segmento = (segmentos.includes(seg) ? seg : "outro") as LeituraDoDia["segmento"];
+  const resumo = limpo(d.resumo);
+  const pendente = limpo(d.pendente);
+  const importantes = (Array.isArray(d.importantes) ? d.importantes : []).map(limpo).filter((x) => x.length > 3).slice(0, 6);
+  const sobreEle = d.sobre_este_cliente === true;
+  const vale = d.vale_anotar === true && resumo.length > 0;
+
+  const ret = (d.retorno && typeof d.retorno === "object" ? d.retorno : {}) as Record<string, unknown>;
+  const dia = limpo(ret.dia);
+  const retorno =
+    ret.precisa === true && limpo(ret.oque)
+      ? {
+          quem: (limpo(ret.quem) === "cliente" ? "cliente" : "nos") as "nos" | "cliente",
+          oque: limpo(ret.oque).replace(/[.!]+$/, "").slice(0, 140),
+          dia: /^\d{4}-\d{2}-\d{2}$/.test(dia) && dia >= hoje ? dia : undefined,
+        }
+      : null;
+
+  const motivo = !sobreEle
+    ? `Parece misturar outro cliente: ${limpo(d.motivo) || "trecho de outra conversa"}`
+    : segmento === "outro"
+      ? `Não trata ${segmentos.length > 1 ? "da reclamação nem do NPS" : segmentos[0] === "nps" ? "do NPS" : "da reclamação"} ligado à conversa.`
+      : !vale
+        ? limpo(d.motivo) || "Nada novo para guardar."
+        : "";
+
+  return {
+    anotar: sobreEle && segmento !== "outro" && vale,
+    motivo,
+    segmento,
+    retorno: sobreEle && segmento !== "outro" ? retorno : null,
+    corpo: [
+      resumo,
+      pendente && !/^nada\.?$/i.test(pendente) ? `Ficou pendente: ${pendente}` : null,
+      importantes.length ? `Pontos importantes:\n${importantes.map((x) => `• ${x}`).join("\n")}` : null,
+    ]
+      .filter(Boolean)
+      .join("\n"),
+  };
+}
