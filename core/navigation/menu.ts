@@ -26,7 +26,7 @@ import {
   Workflow,
 } from "lucide-react";
 
-import { TELAS_DO_RA } from "@/core/navigation/moduloReclameAqui";
+import { ROTULO_DO_GRUPO, TELAS_DO_RA } from "@/core/navigation/moduloReclameAqui";
 
 export interface MenuItem {
   title: string;
@@ -47,7 +47,14 @@ export interface MenuItem {
    * antes. A cascata abre pela setinha, que é o que separa "quero ir
    * para o módulo" de "quero ver o que tem dentro dele".
    */
-  children?: { title: string; href: string }[];
+  children?: {
+    title: string;
+    href: string;
+    /** O título do grupo; a cascata o escreve quando ele muda (out/2026). */
+    grupo?: string;
+    /** O que a tela faz, ao passar o mouse. */
+    dica?: string;
+  }[];
 }
 
 /*
@@ -69,7 +76,7 @@ export const menuItems: MenuItem[] = [
     icon: MessageSquareWarning,
     group: "Frentes",
     /* As mesmas telas e na mesma ordem das abas do módulo (out/2026). */
-    children: TELAS_DO_RA.map((tela) => ({ title: tela.label, href: tela.href })),
+    children: TELAS_DO_RA.map((tela) => ({ title: tela.label, href: tela.href, grupo: ROTULO_DO_GRUPO[tela.grupo], dica: tela.hint })),
   },
   { title: "Redes Sociais", href: "/redes-sociais", icon: MessagesSquare, group: "Frentes" },
   {

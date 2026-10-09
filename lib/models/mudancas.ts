@@ -1050,6 +1050,16 @@ export const MUDANCAS: Mudanca[] = [
     href: "/reclame-aqui/configuracoes?tab=status",
   },
   {
+    id: "menu-do-ra-em-grupos",
+    dia: "2026-10-08",
+    tipo: "melhoria",
+    frente: "reclame-aqui",
+    titulo: "Menu do Reclame Aqui em quatro grupos, com o nome de cada um",
+    texto:
+      "A cascata do Reclame Aqui no menu lateral eram treze telas soltas, para ler inteiras até achar a certa. Agora vêm separadas por assunto, com o título do grupo: Dia a dia (Quadro, Triagem, Pedir avaliação, Respostas), Nota e metas (Índice, Plano de ação, Calculadora, Prêmio), Análise (Analytics, Gráficos, Tempo ideal) e Ajustes (Categorias, Configurar fluxo). A tela aberta fica destacada, e passar o mouse diz o que cada uma faz. A barra de telas no topo do módulo segue os mesmos quatro grupos, com um separador entre eles.",
+    href: "/reclame-aqui",
+  },
+  {
     id: "plural-quando-e-um",
     dia: "2026-10-07",
     tipo: "correcao",
