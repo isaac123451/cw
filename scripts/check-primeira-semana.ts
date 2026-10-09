@@ -12,6 +12,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 
+import { SECOES_DO_RA } from "../core/navigation/moduloReclameAqui";
 import { oferecerTourDaTela, tourDaTela, TOURS_DAS_TELAS } from "../lib/models/primeiraSemana";
 
 let falhas = 0;
@@ -49,9 +50,9 @@ const codigo = [...arquivos(join(RAIZ, "app")), ...arquivos(join(RAIZ, "componen
 const ancoras = Object.values(TOURS_DAS_TELAS).flatMap((t) => t.passos.map((p) => p.alvo.match(/data-tour="([^"]+)"/)?.[1] ?? p.alvo));
 const faltam = ancoras.filter((a) => {
   if (codigo.includes(`data-tour="${a}"`) || codigo.includes(`tour="${a}"`)) return false;
-  /* As abas do Reclame Aqui marcam `modulo-<fim do endereço>`. */
+  /* As seis entradas do Reclame Aqui marcam `modulo-<fim do endereço>` (ModuleNav). */
   const doModulo = a.match(/^modulo-(.+)$/)?.[1];
-  return !(doModulo && codigo.includes("data-tour={`modulo-${item.href.split(\"/\").pop()}`}") && codigo.includes(`/reclame-aqui/${doModulo}"`));
+  return !(doModulo && codigo.includes("data-tour={`modulo-${secao.href.split(\"/\").pop()}`}") && SECOES_DO_RA.some((s) => s.href.split("/").pop() === doModulo));
 });
 conferir(`as ${ancoras.length} âncoras dos tours existem no código`, faltam, []);
 

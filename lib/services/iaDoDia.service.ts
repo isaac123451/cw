@@ -12,8 +12,13 @@ import {
   type TipoDeAcao,
 } from "@/lib/models/iaDoDia";
 import { nomeDeContatoValido } from "@/lib/models/conversa";
+import { isEncerrado } from "@/lib/models/nps";
 import { CLOSED_STATUS } from "@/lib/services/case.service";
-import { paredeDe } from "@/lib/services/horasUteis";
+import { descreverRegistro, paredeDe } from "@/lib/services/horasUteis";
+import { registrarTentativa } from "@/lib/services/nps.repository";
+import { completarContato } from "@/lib/services/raPortal.service";
+import { dadosDaConversa, oQueCompletar, type CampoDoCadastro } from "@/lib/services/sinaisDaConversa";
+import { gravarContato, recalcularResumo } from "@/lib/services/tratativa.service";
 import { pedirEstruturado, temIA } from "@/lib/services/ia.service";
 import { criarLembretesAutomaticos } from "@/lib/services/lembretesAutomaticos.service";
 import { listUpcomingEvents, validAccessToken } from "@/lib/services/google.service";
@@ -49,20 +54,24 @@ async function chavesJaUsadas(prisma: PrismaClient, userId: string, chaves: stri
 
 /** Registra a ação. Devolve `false` quando a chave já existia — quem chama não repete. */
 export async function registrar(prisma: PrismaClient, userId: string, a: NovaAcao): Promise<boolean> {
+  /* "Criar se não existir": a chave repetida não é erro — é a regra de não repetir (e não suja o log a cada rodada). */
   try {
-    await prisma.acaoDaIA.create({
-      data: {
-        userId,
-        tipo: a.tipo,
-        origem: a.origem,
-        chave: a.chave,
-        titulo: a.titulo.slice(0, 300),
-        detalhe: a.detalhe?.slice(0, 600) ?? null,
-        href: a.href ?? null,
-        desfazer: (a.desfazer ?? null) as Prisma.InputJsonValue,
-      },
+    const r = await prisma.acaoDaIA.createMany({
+      data: [
+        {
+          userId,
+          tipo: a.tipo,
+          origem: a.origem,
+          chave: a.chave,
+          titulo: a.titulo.slice(0, 300),
+          detalhe: a.detalhe?.slice(0, 600) ?? null,
+          href: a.href ?? null,
+          desfazer: (a.desfazer ?? undefined) as Prisma.InputJsonValue | undefined,
+        },
+      ],
+      skipDuplicates: true,
     });
-    return true;
+    return r.count > 0;
   } catch {
     return false;
   }
@@ -112,9 +121,8 @@ export async function fecharOQueFoiFeito(prisma: PrismaClient, userId: string): 
 
   /* Os sinais, em poucas consultas. */
   const idsDeArea = candidatas.filter((t) => t.id.startsWith("auto-area-")).map((t) => t.id.slice("auto-area-".length));
-  const idsDeMensagem = candidatas
-    .filter((t) => t.id.startsWith("auto-conversa-") || t.id.startsWith("auto-pedido-"))
-    .map((t) => t.id.replace(/^auto-(conversa|pedido)-/, ""));
+  const COM_MENSAGEM = /^auto-(conversa|pedido|promessa|espera)-/;
+  const idsDeMensagem = candidatas.filter((t) => COM_MENSAGEM.test(t.id)).map((t) => t.id.replace(COM_MENSAGEM, ""));
   const idsDeCaso = [...new Set(candidatas.map((t) => t.caseId).filter((x): x is string => Boolean(x)))];
 
   const [areas, mensagens, casos, contatos] = await Promise.all([
@@ -127,25 +135,30 @@ export async function fecharOQueFoiFeito(prisma: PrismaClient, userId: string): 
   ]);
 
   const conversas = [...new Set(mensagens.map((m) => m.conversaId))];
-  const nossas = conversas.length
-    ? await prisma.mensagemDaConversa.groupBy({ by: ["conversaId"], where: { conversaId: { in: conversas }, de: "nos" }, _max: { em: true } })
-    : [];
+  const [nossas, doCliente] = conversas.length
+    ? await Promise.all([
+        prisma.mensagemDaConversa.groupBy({ by: ["conversaId"], where: { conversaId: { in: conversas }, de: "nos" }, _max: { em: true } }),
+        prisma.mensagemDaConversa.groupBy({ by: ["conversaId"], where: { conversaId: { in: conversas }, de: "cliente" }, _max: { em: true } }),
+      ])
+    : [[], []];
 
   const areaRespondeu = new Map(areas.map((a) => [a.id, Boolean(a.returnedAt)]));
   const conversaDaMensagem = new Map(mensagens.map((m) => [m.id, m.conversaId]));
   const nossaEm = new Map(nossas.map((n) => [n.conversaId, n._max.em?.toISOString() ?? null]));
+  const clienteEm = new Map(doCliente.map((n) => [n.conversaId, n._max.em?.toISOString() ?? null]));
   const caso = new Map(casos.map((c) => [c.id, c]));
   const contatoEm = new Map(contatos.map((c) => [c.caseId, c._max.em?.toISOString() ?? null]));
 
   let fechadas = 0;
   for (const t of candidatas) {
-    const msg = t.id.replace(/^auto-(conversa|pedido)-/, "");
+    const msg = t.id.replace(COM_MENSAGEM, "");
     const c = t.caseId ? caso.get(t.caseId) : undefined;
     const motivo = tarefaFeita(
       { id: t.id, title: t.title, type: t.type, dueDate: t.dueDate.toISOString().slice(0, 10), createdAt: t.createdAt.toISOString(), caseId: t.caseId },
       {
         areaRespondeu: t.id.startsWith("auto-area-") ? areaRespondeu.get(t.id.slice("auto-area-".length)) : undefined,
         nossaMensagemEm: conversaDaMensagem.has(msg) ? nossaEm.get(conversaDaMensagem.get(msg)!) ?? null : null,
+        clienteMensagemEm: conversaDaMensagem.has(msg) ? clienteEm.get(conversaDaMensagem.get(msg)!) ?? null : null,
         ultimoContatoEm: t.caseId ? contatoEm.get(t.caseId) ?? null : null,
         casoEncerrado: c ? c.resolved || CLOSED_STATUS.includes(c.status) : undefined,
       }
@@ -247,7 +260,14 @@ export async function anotarConversasDoDia(prisma: PrismaClient, userId: string,
   return feitas;
 }
 
-/** O resumo do dia da conversa: pela IA quando há, pelas falas quando não. */
+/**
+ * O resumo do dia da conversa: pela IA quando há, pelas falas quando não.
+ *
+ * Desde 09/10/2026 a IA também separa os **pontos importantes** — o que
+ * vale guardar na ficha para a próxima conversa: quantas lojas, que sistema
+ * usa, valor ou prazo combinado, decisão do cliente, risco de cancelar, o
+ * melhor horário e canal. "Preciso que anote coisas importantes sempre."
+ */
 async function resumoDaConversa(nome: string, mensagens: { de: string; texto: string }[]): Promise<string> {
   const linhas = mensagens.map((m) => `${m.de === "nos" ? "Nós" : nome}: ${m.texto.replace(/\s+/g, " ").slice(0, 400)}`);
   if (temIA()) {
@@ -256,16 +276,32 @@ async function resumoDaConversa(nome: string, mensagens: { de: string; texto: st
         rapido: true,
         sistema:
           "Você resume conversas de atendimento de uma empresa de cardápio digital para a ficha do caso. Português do Brasil, frases curtas, sem inventar nada que não esteja na conversa. Não inclua telefone, e-mail nem documento.",
-        prompt: `Resuma a conversa de hoje em até 3 linhas e diga o que ficou pendente (ou "nada").\n\n${linhas.join("\n").slice(0, 6000)}`,
+        prompt: `Resuma a conversa de hoje em até 3 linhas, diga o que ficou pendente (ou "nada") e liste os pontos importantes que valem guardar na ficha do cliente para a próxima conversa — fatos duradouros como quantidade de lojas, sistema ou integração que usa, valor ou prazo combinado, decisão ou pedido do cliente, risco de cancelar, melhor horário ou canal de contato. Só o que está escrito na conversa; lista vazia se não houver.\n\n${linhas.join("\n").slice(0, 6000)}`,
         esquema: {
           type: "object",
-          properties: { resumo: { type: "string" }, pendente: { type: "string" } },
-          required: ["resumo", "pendente"],
+          properties: {
+            resumo: { type: "string" },
+            pendente: { type: "string" },
+            importantes: { type: "array", items: { type: "string" } },
+          },
+          required: ["resumo", "pendente", "importantes"],
         },
       });
       const resumo = String(r.dados?.resumo ?? "").trim();
       const pendente = String(r.dados?.pendente ?? "").trim();
-      if (!r.erro && resumo) return `${resumo}${pendente && !/^nada\.?$/i.test(pendente) ? `\nFicou pendente: ${pendente}` : ""}`;
+      const importantes = (Array.isArray(r.dados?.importantes) ? (r.dados.importantes as unknown[]) : [])
+        .map((x) => String(x ?? "").replace(/\s+/g, " ").trim())
+        .filter((x) => x.length > 3)
+        .slice(0, 6);
+      if (!r.erro && resumo) {
+        return [
+          resumo,
+          pendente && !/^nada\.?$/i.test(pendente) ? `Ficou pendente: ${pendente}` : null,
+          importantes.length ? `Pontos importantes:\n${importantes.map((x) => `• ${x}`).join("\n")}` : null,
+        ]
+          .filter(Boolean)
+          .join("\n");
+      }
     } catch {
       /* Sem IA agora: vão as falas. */
     }
@@ -280,6 +316,205 @@ async function resumoDaConversa(nome: string, mensagens: { de: string; texto: st
     .filter(Boolean)
     .join("\n");
 }
+
+/* ============================================================
+   SEGUIR PELA CONVERSA — a ficha completa e a etapa andando (09/10/2026)
+============================================================ */
+
+/*
+  "Preciso que complete informações e vá seguindo etapas conforme a IA puxa
+  da conversa." Duas coisas, as duas só com fato escrito na conversa e com
+  desfazer:
+
+  - **completar a ficha**: e-mail, telefone e CPF/CNPJ que o cliente
+    escreveu, e o nome do contato onde a reclamação está "Não informado" —
+    só campo vazio, pela mesma regra do botão "Completar" e do vigia
+    (`completarContato`), que também liga o estabelecimento pelo documento;
+  - **o 1º contato**: a primeira mensagem nossa ao cliente, num caso ou NPS
+    sem 1º contato registrado, vira o registro — "falei com o cliente" se
+    ele respondeu depois, "tentei contato" se ainda não. É o que faz o
+    prazo do 1º contato e os passos do documento andarem.
+*/
+
+/** No máximo tantas conversas por rodada — cada uma são algumas leituras e escritas. */
+const SEGUIR_POR_RODADA = 12;
+
+export async function seguirPelasConversas(
+  prisma: PrismaClient,
+  userId: string,
+  agora = new Date(),
+  /** Só estas conversas — é o que deixa a conferência rodar sem tocar nas reais. */
+  soConversas?: string[]
+): Promise<number> {
+  const desde = new Date(agora.getTime() - 2 * 86_400_000);
+  const conversas = await prisma.conversa.findMany({
+    where: {
+      ...(soConversas ? { id: { in: soConversas } } : {}),
+      OR: [{ caseId: { not: null } }, { npsResponseId: { not: null } }],
+      mensagens: { some: { em: { gte: desde } } },
+    },
+    select: {
+      id: true,
+      telefone: true,
+      contatoNome: true,
+      case: {
+        select: {
+          id: true,
+          protocol: true,
+          externalId: true,
+          channel: true,
+          status: true,
+          customer: true,
+          companyName: true,
+          email: true,
+          phone: true,
+          document: true,
+          city: true,
+          state: true,
+          establishmentId: true,
+          establishmentManual: true,
+          primeiroContatoEm: true,
+          publicResponse: true,
+          recebidaEm: true,
+          publishedAt: true,
+        },
+      },
+      npsResponse: { select: { id: true, firstContactAt: true, respondedAt: true, status: true } },
+      mensagens: { orderBy: { em: "asc" }, select: { de: true, texto: true, em: true }, take: 300 },
+    },
+    orderBy: { atualizadoEm: "desc" },
+    take: 40,
+  });
+
+  const eu = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
+  let feitas = 0;
+
+  for (const c of conversas) {
+    if (feitas >= SEGUIR_POR_RODADA) break;
+    const msgs = c.mensagens.filter((m): m is { de: "nos" | "cliente"; texto: string; em: Date } => Boolean(m.em) && (m.de === "nos" || m.de === "cliente"));
+    if (!msgs.length) continue;
+    const nome = nomeDeContatoValido(c.contatoNome);
+
+    /* ---------- o caso ---------- */
+    if (c.case) {
+      const caso = c.case;
+      const href = `/${caso.channel === "RECLAME_AQUI" ? "reclame-aqui" : "redes-sociais"}/${caso.externalId ?? caso.protocol}`;
+
+      /* Completar: o que a conversa tem e a ficha não. */
+      const achados = dadosDaConversa(msgs, c.telefone);
+      const falta = oQueCompletar({ email: caso.email, phone: caso.phone, document: caso.document, customer: caso.customer }, { ...achados, ...(nome ? { nome } : {}) });
+      if (falta.length) {
+        const chave = `completou:caso:${caso.id}:${falta.map((f) => f.campo).sort().join(",")}`;
+        const usadas = await chavesJaUsadas(prisma, userId, [chave]);
+        if (!usadas.has(chave)) {
+          const antes = { customer: caso.customer, companyName: caso.companyName, email: caso.email, phone: caso.phone, document: caso.document, establishmentId: caso.establishmentId };
+          const novo = await registrar(prisma, userId, {
+            tipo: "completou",
+            origem: "whatsapp",
+            chave,
+            titulo: `Ficha de ${caso.protocol} completada pela conversa`,
+            detalhe: `Preenchido o que estava vazio: ${falta.map((f) => ROTULO_DO_CAMPO[f.campo]).join(", ")}.`,
+            href,
+          });
+          if (novo) {
+            const completou = await completarContato(prisma, caso, {
+              cliente: falta.some((f) => f.campo === "nome") ? nome : "",
+              email: achados.email ?? "",
+              telefone: achados.telefone ?? "",
+              documento: achados.documento,
+              cidade: "",
+              estado: "",
+            });
+            if (completou.length) {
+              /* Só as colunas que mudaram de fato voltam no desfazer — o resto da ficha fica como está. */
+              const depois = await prisma.case.findUnique({
+                where: { id: caso.id },
+                select: { customer: true, companyName: true, email: true, phone: true, document: true, establishmentId: true },
+              });
+              const mudou = (Object.keys(antes) as (keyof typeof antes)[]).filter((k) => depois && depois[k] !== antes[k]);
+              await prisma.acaoDaIA.update({
+                where: { userId_chave: { userId, chave } },
+                data: {
+                  detalhe: `Preenchido o que estava vazio: ${completou.join(", ")}.`,
+                  desfazer: { caso: caso.id, campos: mudou.join(","), antes: JSON.stringify(antes) },
+                },
+              });
+              feitas += 1;
+            } else {
+              /* Nada passou na conferência (telefone incompleto, e-mail torto): a ação não aparece e não se repete. */
+              await prisma.acaoDaIA.update({ where: { userId_chave: { userId, chave } }, data: { desfeitaEm: new Date(), vistaEm: new Date() } });
+            }
+          }
+        }
+      }
+
+      /* O 1º contato: a primeira mensagem nossa depois que a reclamação chegou (o dia dela — o registro pode ter entrado depois, pela planilha). */
+      const semPrimeiro = !caso.primeiroContatoEm && !(caso.publicResponse ?? "").trim() && !CLOSED_STATUS.includes(caso.status);
+      const chegou = caso.recebidaEm ?? caso.publishedAt;
+      const primeira = msgs.find((m) => m.de === "nos" && m.em >= chegou && m.em <= agora);
+      if (semPrimeiro && primeira) {
+        const chave = `etapa:caso:${caso.id}:primeiro-contato`;
+        const respondeu = msgs.some((m) => m.de === "cliente" && m.em > primeira.em);
+        const novo = await registrar(prisma, userId, {
+          tipo: "etapa",
+          origem: "whatsapp",
+          chave,
+          titulo: `1º contato de ${caso.protocol} registrado pela conversa`,
+          detalhe: `${respondeu ? "Falou com" : "Tentou contato com"} ${nome || "o cliente"} pelo WhatsApp em ${descreverRegistro(primeira.em.toISOString())}.`,
+          href,
+        });
+        if (novo) {
+          const { contato } = await gravarContato(prisma, {
+            caseId: caso.id,
+            entrada: {
+              tipo: respondeu ? "contato" : "tentativa",
+              canal: "WhatsApp",
+              resultado: respondeu ? "respondeu" : "aguardando",
+              nota: "Registrado pela IA a partir da conversa guardada.",
+              em: primeira.em.toISOString(),
+            },
+            autorId: null,
+            autorNome: AUTOR,
+          });
+          await prisma.acaoDaIA.update({ where: { userId_chave: { userId, chave } }, data: { desfazer: { contato: contato.id, caso: caso.id } } });
+          feitas += 1;
+        }
+      }
+    }
+
+    /* ---------- o NPS ---------- */
+    const nps = c.npsResponse;
+    if (nps && !nps.firstContactAt && !isEncerrado(nps.status)) {
+      const primeira = msgs.find((m) => m.de === "nos" && m.em >= nps.respondedAt && m.em <= agora);
+      if (primeira) {
+        const chave = `etapa:nps:${nps.id}:primeiro-contato`;
+        const novo = await registrar(prisma, userId, {
+          tipo: "etapa",
+          origem: "nps",
+          chave,
+          titulo: `1º contato do NPS de ${nome || "um cliente"} registrado pela conversa`,
+          detalhe: `A primeira mensagem pelo WhatsApp foi em ${descreverRegistro(primeira.em.toISOString())}.`,
+          href: `/nps/${nps.id}`,
+        });
+        if (novo) {
+          const tentativa = await registrarTentativa(prisma, {
+            responseId: nps.id,
+            channel: "whatsapp",
+            note: "Registrada pela IA a partir da conversa guardada.",
+            actor: eu?.name ?? AUTOR,
+            em: primeira.em,
+          });
+          await prisma.acaoDaIA.update({ where: { userId_chave: { userId, chave } }, data: { desfazer: { tentativaNps: tentativa.id, nps: nps.id } } });
+          feitas += 1;
+        }
+      }
+    }
+  }
+
+  return feitas;
+}
+
+const ROTULO_DO_CAMPO: Record<CampoDoCadastro, string> = { email: "e-mail", telefone: "telefone", documento: "CPF/CNPJ", nome: "nome" };
 
 /* ============================================================
    SLACK — o que pede ação de quem foi mencionado
@@ -439,6 +674,7 @@ export async function rodarIaDoDia(prisma: PrismaClient, userId: string, agora =
     criarLembretesAutomaticos(prisma, userId, agora).then((criados) => registrarLembretes(prisma, userId, criados)),
     fecharOQueFoiFeito(prisma, userId),
     anotarConversasDoDia(prisma, userId, agora),
+    seguirPelasConversas(prisma, userId, agora),
     depoisDasReunioes(prisma, userId, agora),
   ]);
   for (const p of partes) if (p.status === "rejected") console.error("[ia do dia]", p.reason);
@@ -509,6 +745,23 @@ export async function desfazer(prisma: PrismaClient, userId: string, id: string)
   /* Só o comentário e a nota que esta ação criou — o id vem da própria linha da ação. */
   if (d.comentario) await prisma.caseComment.deleteMany({ where: { id: d.comentario } });
   if (d.notaNps) await prisma.npsNote.deleteMany({ where: { id: d.notaNps } });
+  /* A ficha completada (09/10/2026): volta só o que a IA preencheu. */
+  if (d.caso && d.campos && d.antes) {
+    const antes = JSON.parse(d.antes) as Record<string, string | null>;
+    const volta = Object.fromEntries(d.campos.split(",").filter((k) => k in antes).map((k) => [k, antes[k]]));
+    if (Object.keys(volta).length) await prisma.case.update({ where: { id: d.caso }, data: volta });
+  }
+  /* O 1º contato registrado pela conversa: sai o registro e o resumo do caso é refeito. */
+  if (d.contato && d.caso) {
+    await prisma.caseContato.deleteMany({ where: { id: d.contato } });
+    await recalcularResumo(prisma, d.caso);
+  }
+  if (d.tentativaNps && d.nps) {
+    const tentativa = await prisma.npsAttempt.findUnique({ where: { id: d.tentativaNps }, select: { createdAt: true } });
+    await prisma.npsAttempt.deleteMany({ where: { id: d.tentativaNps } });
+    /* O 1º contato só volta a vazio se era esta tentativa que o marcava. */
+    if (tentativa) await prisma.npsResponse.updateMany({ where: { id: d.nps, firstContactAt: tentativa.createdAt }, data: { firstContactAt: null } });
+  }
   await prisma.acaoDaIA.update({ where: { id }, data: { desfeitaEm: new Date(), vistaEm: acao.vistaEm ?? new Date() } });
   return { ok: true };
 }

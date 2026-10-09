@@ -4,7 +4,7 @@ import Link from "next/link";
 
 import { useCallback, useEffect, useState } from "react";
 
-import { BellPlus, CheckCheck, NotebookPen, Sparkles, Undo2 } from "lucide-react";
+import { BellPlus, CheckCheck, ClipboardCheck, Footprints, NotebookPen, Sparkles, Undo2 } from "lucide-react";
 
 import { desfazerAcaoDaIA, lerAcoesDeHoje } from "@/lib/actions/iaDoDia";
 import { useToast } from "@/lib/context/ToastContext";
@@ -16,6 +16,8 @@ const ICONE: Record<TipoDeAcao, typeof BellPlus> = {
   lembrete: BellPlus,
   anotacao: NotebookPen,
   feito: CheckCheck,
+  completou: ClipboardCheck,
+  etapa: Footprints,
   aviso: Sparkles,
 };
 
@@ -23,6 +25,8 @@ const VERBO: Record<TipoDeAcao, string> = {
   lembrete: "Lembrete",
   anotacao: "Anotou",
   feito: "Fechou",
+  completou: "Completou",
+  etapa: "Registrou",
   aviso: "Aviso",
 };
 

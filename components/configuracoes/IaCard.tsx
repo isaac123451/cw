@@ -254,22 +254,44 @@ export default function IaCard() {
           explica por que escolher "Anthropic" não muda nada — e era a
           informação que mais faltava.
         */}
-        {!retrato.chaves.anthropic && (
-          <p className="flex items-start gap-2 rounded-xl bg-amber-50 px-3.5 py-2.5 text-xs leading-relaxed text-amber-800 ring-1 ring-inset ring-amber-100">
-            <CircleAlert
-              size={14}
-              className="mt-0.5 shrink-0"
-            />
-            <span>
-              A chave da Anthropic não está preenchida
-              neste ambiente, então escolher
-              &ldquo;Anthropic&rdquo; não muda nada. O
-              Gemini responde pela camada gratuita, que
-              entra em fila nos horários de pico — é o teto
-              de velocidade que nenhum perfil aqui vence.
-            </span>
-          </p>
-        )}
+        {/*
+          As quatro chaves, com onde criar cada uma (09/10/2026): "quais são
+          as IA que preciso criar a chave?". Mais de uma chave é o que deixa
+          a reserva responder quando a primeira cai ou entra em fila.
+        */}
+        <div className="rounded-xl border border-zinc-200 p-3.5">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">Chaves neste ambiente</p>
+          <ul className="mt-2 grid gap-1.5 sm:grid-cols-2">
+            {CHAVES_DE_IA.map((c) => {
+              const tem = retrato.chaves[c.id];
+              return (
+                <li key={c.id} className="flex items-start gap-2 text-xs leading-relaxed">
+                  <span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${tem ? "bg-emerald-500" : "bg-zinc-300"}`} aria-hidden />
+                  <span className="text-zinc-700">
+                    <strong className="font-semibold">{c.nome}</strong>{" "}
+                    <span className={tem ? "text-emerald-700" : "text-zinc-500"}>{tem ? "configurada" : "sem chave"}</span>
+                    <span className="text-zinc-400"> · {c.custo}</span>
+                    {!tem && (
+                      <>
+                        {" — crie em "}
+                        <a href={c.onde} target="_blank" rel="noreferrer" className="font-medium text-violet-700 underline underline-offset-2">
+                          {c.onde.replace(/^https:\/\//, "")}
+                        </a>{" "}
+                        e ponha <code className="rounded bg-zinc-100 px-1 py-0.5 text-[11px]">{c.variavel}</code> na Vercel
+                      </>
+                    )}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+          {!retrato.chaves.groq && !retrato.chaves.openrouter && (
+            <p className="mt-2 flex items-start gap-1.5 text-[11px] leading-relaxed text-amber-700">
+              <CircleAlert size={12} className="mt-0.5 shrink-0" />
+              Sem Groq nem OpenRouter, quando o Gemini entra em fila nos horários de pico não há reserva gratuita para responder.
+            </p>
+          )}
+        </div>
 
         {/* Velocidade */}
         <div>
@@ -628,6 +650,14 @@ export default function IaCard() {
 }
 
 const AMBIENTE: Record<string, string> = { production: "produção", preview: "prévia", local: "máquina local" };
+
+/** Onde criar cada chave e o nome da variável na Vercel. */
+const CHAVES_DE_IA: { id: "gemini" | "groq" | "openrouter" | "anthropic"; nome: string; custo: string; onde: string; variavel: string }[] = [
+  { id: "gemini", nome: "Gemini", custo: "gratuita", onde: "https://aistudio.google.com/apikey", variavel: "GEMINI_API_KEY" },
+  { id: "groq", nome: "Groq", custo: "gratuita, a mais rápida", onde: "https://console.groq.com/keys", variavel: "GROQ_API_KEY" },
+  { id: "openrouter", nome: "OpenRouter", custo: "gratuita nos modelos :free", onde: "https://openrouter.ai/keys", variavel: "OPENROUTER_API_KEY" },
+  { id: "anthropic", nome: "Anthropic", custo: "paga, opcional", onde: "https://console.anthropic.com/settings/keys", variavel: "ANTHROPIC_API_KEY" },
+];
 
 /**
  * A última resposta boa e o último erro da IA, de qualquer tela.

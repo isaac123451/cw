@@ -14,7 +14,7 @@ import { pedidoNaMensagem, reuniaoNaMensagem } from "@/lib/models/lembretesAutom
  * (`check:ia-do-dia`). Quem grava é `lib/services/iaDoDia.service.ts`.
  */
 
-export type TipoDeAcao = "lembrete" | "anotacao" | "feito" | "aviso";
+export type TipoDeAcao = "lembrete" | "anotacao" | "feito" | "completou" | "etapa" | "aviso";
 export type OrigemDaAcao = "slack" | "whatsapp" | "caso" | "nps" | "agenda" | "area" | "pedido";
 
 export interface AcaoDaIAView {
@@ -35,6 +35,8 @@ export const ROTULO_DA_ACAO: Record<TipoDeAcao, string> = {
   lembrete: "Lembrete criado",
   anotacao: "Anotação feita",
   feito: "Marcado como feito",
+  completou: "Ficha completada",
+  etapa: "Etapa registrada",
   aviso: "Aviso",
 };
 
@@ -145,6 +147,8 @@ export interface TarefaAberta {
 export interface SinaisDeFeito {
   /** A conversa ligada ao lembrete "auto-conversa/auto-pedido": quando foi a nossa última mensagem (ISO). */
   nossaMensagemEm?: string | null;
+  /** A conversa do lembrete "auto-espera": quando foi a última mensagem do cliente (ISO). */
+  clienteMensagemEm?: string | null;
   /** O lembrete "auto-area": a área já respondeu. */
   areaRespondeu?: boolean;
   /** O caso ligado: o último contato registrado (ISO) e se está encerrado. */
@@ -168,6 +172,10 @@ export function tarefaFeita(t: TarefaAberta, s: SinaisDeFeito): string | null {
   if ((t.id.startsWith("auto-conversa-") || t.id.startsWith("auto-pedido-")) && s.nossaMensagemEm) {
     if (s.nossaMensagemEm >= t.createdAt && dia(s.nossaMensagemEm) >= t.dueDate) return "você respondeu na conversa";
   }
+
+  /* O combinado sem data (09/10/2026): a nossa mensagem depois do lembrete cumpre a promessa; a do cliente, a espera. */
+  if (t.id.startsWith("auto-promessa-") && s.nossaMensagemEm && s.nossaMensagemEm >= t.createdAt) return "você respondeu na conversa";
+  if (t.id.startsWith("auto-espera-") && s.clienteMensagemEm && s.clienteMensagemEm >= t.createdAt) return "o cliente mandou mensagem";
 
   if (t.caseId) {
     if (s.casoEncerrado) return "o caso foi encerrado";

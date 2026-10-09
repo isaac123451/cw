@@ -1,11 +1,11 @@
 import type { PrismaClient } from "@prisma/client";
 
 import type { AgendaTask } from "@/lib/models/agenda";
-import { combinadoNaMensagem, idDoLembrete, pedidoNaMensagem, reuniaoNaMensagem } from "@/lib/models/lembretesAutomaticos";
+import { combinadoNaMensagem, combinadosSemData, idDoLembrete, pedidoNaMensagem, reuniaoNaMensagem, type MensagemDoCombinado } from "@/lib/models/lembretesAutomaticos";
 import { nomeDeContatoValido } from "@/lib/models/conversa";
 import { lerExpediente } from "@/lib/services/operacao.service";
 import { movementStatus } from "@/lib/services/movement.service";
-import { paredeDe } from "@/lib/services/horasUteis";
+import { paredeDe, prazoUtil } from "@/lib/services/horasUteis";
 
 /** Até onde olhar as conversas: o combinado de três dias atrás ainda pode estar de pé. */
 const JANELA_DAS_CONVERSAS_DIAS = 3;
@@ -32,7 +32,7 @@ export async function criarLembretesAutomaticos(prisma: PrismaClient, userId: st
     prisma.mensagemDaConversa.findMany({
       /* As nossas (o combinado) e, desde a 1.98, as do cliente (o pedido e a reunião). */
       where: { em: { gte: new Date(agora.getTime() - JANELA_DAS_CONVERSAS_DIAS * 86_400_000) } },
-      select: { id: true, de: true, texto: true, em: true, conversa: { select: { contatoNome: true, case: { select: { id: true, protocol: true } } } } },
+      select: { id: true, de: true, texto: true, em: true, conversaId: true, conversa: { select: { contatoNome: true, case: { select: { id: true, protocol: true } } } } },
       take: 500,
     }),
     prisma.user.findUnique({ where: { id: userId }, select: { id: true, name: true } }),
@@ -110,6 +110,42 @@ export async function criarLembretesAutomaticos(prisma: PrismaClient, userId: st
       caseId: m.conversa.case?.id,
       protocolo: m.conversa.case?.protocol,
     });
+  }
+
+  /*
+    O combinado sem data (09/10/2026): "vou verificar e te retorno" vira
+    lembrete nosso para dali a 2 horas úteis; "te mando o CNPJ", do cliente,
+    vira cobrança no dia útil seguinte. Um de cada lado por conversa — o mais
+    recente —, e só o que ainda não foi cumprido na própria conversa.
+  */
+  const porConversa = new Map<string, { nome: string; caseId?: string; protocolo?: string; mensagens: MensagemDoCombinado[] }>();
+  for (const m of mensagens) {
+    if (!m.em) continue;
+    const g = porConversa.get(m.conversaId) ?? {
+      nome: nomeDeContatoValido(m.conversa.contatoNome),
+      caseId: m.conversa.case?.id,
+      protocolo: m.conversa.case?.protocol,
+      mensagens: [],
+    };
+    g.mensagens.push({ id: m.id, de: m.de, texto: m.texto, em: m.em.toISOString(), dia: paredeDe(m.em).dia });
+    porConversa.set(m.conversaId, g);
+  }
+  for (const g of porConversa.values()) {
+    for (const c of combinadosSemData(g.mensagens)) {
+      const prazo = paredeDe(prazoUtil(new Date(c.em), c.tipo === "promessa" ? 2 : 24, expediente));
+      candidatos.push({
+        id: idDoLembrete(c.tipo, c.mensagemId),
+        title:
+          c.tipo === "promessa"
+            ? `Retornar${g.nome ? ` a ${g.nome}` : " ao cliente"}: você disse “${c.trecho}”`
+            : `Cobrar ${g.nome || "o cliente"}: ficou de “${c.trecho}”`,
+        type: "Follow-up",
+        dueDate: prazo.dia,
+        time: hhmm(prazo.min),
+        caseId: g.caseId,
+        protocolo: g.protocolo,
+      });
+    }
   }
 
   if (candidatos.length === 0) return [];

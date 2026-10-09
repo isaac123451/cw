@@ -51,6 +51,47 @@ export const REVISAO = {
 };
 
 export const MUDANCAS: Mudanca[] = [
+  /* ---------------- plataforma: IA do dia (09/10) ---------------- */
+  {
+    id: "ia-combinado-dos-dois-lados",
+    dia: "2026-10-09",
+    tipo: "novo",
+    frente: "plataforma",
+    titulo: "Lembrete do que você promete e do que o cliente fica de mandar",
+    texto:
+      "A IA só lembrava do combinado com dia (\"te ligo amanhã às 10h\"). Agora lembra também do que fica no ar, dos dois lados da conversa do WhatsApp. Quando você escreve \"vou verificar e te retorno\" ou \"deixa eu ver aqui\", nasce \"Retornar a Ana: você disse ‘vou verificar…’\" com prazo de 2 horas úteis. Quando o cliente escreve \"te mando o CNPJ\" ou \"vou testar e te falo\", nasce \"Cobrar Ana: ficou de ‘te mando o CNPJ’\" para o dia útil seguinte. Os dois se fecham sozinhos: o seu quando você responde na conversa, o do cliente quando ele manda mensagem. Se a resposta já veio antes da IA ler, o lembrete nem nasce.",
+    href: "/meu-dia",
+  },
+  {
+    id: "ia-pontos-importantes",
+    dia: "2026-10-09",
+    tipo: "melhoria",
+    frente: "plataforma",
+    titulo: "A anotação do dia traz os pontos importantes da conversa",
+    texto:
+      "O resumo que a IA grava na ficha do caso ou do NPS era um parágrafo. Agora vem com \"Pontos importantes\" em tópicos — valor, prazo, documento, decisão, o que o cliente pediu ou aceitou —, para achar o que importa sem reler a conversa.",
+    href: "/meu-dia",
+  },
+  {
+    id: "ia-completa-a-ficha",
+    dia: "2026-10-09",
+    tipo: "novo",
+    frente: "plataforma",
+    titulo: "A IA completa a ficha e registra o 1º contato pela conversa",
+    texto:
+      "Com a conversa do WhatsApp vinculada a um caso, a IA preenche o que está vazio na ficha — nome do contato, telefone, e-mail, CPF ou CNPJ escrito pelo cliente — sem trocar o que já estava preenchido. E, quando o caso ou o NPS ainda não tem 1º contato, registra a etapa pela primeira mensagem sua: \"falei com o cliente\" se ele respondeu depois, \"tentativa\" se ainda não. Cada coisa aparece em \"O que a IA fez hoje\" com desfazer, e desfazer devolve a ficha e a etapa como estavam.",
+    href: "/meu-dia",
+  },
+  {
+    id: "ia-chaves-na-tela",
+    dia: "2026-10-09",
+    tipo: "melhoria",
+    frente: "plataforma",
+    titulo: "Configurações mostra quais chaves de IA faltam e onde criar",
+    texto:
+      "O cartão da IA só avisava da chave da Anthropic. Agora lista as quatro — Gemini, Groq e OpenRouter (gratuitas) e Anthropic (paga, opcional) — com o que já está configurado, o link para criar cada uma e o nome da variável que vai na Vercel. Sem Groq nem OpenRouter, avisa que não há reserva gratuita quando o Gemini entra em fila.",
+    href: "/configuracoes",
+  },
   /* ---------------- plataforma: meu dia ---------------- */
   {
     id: "meu-dia-modo-foco",

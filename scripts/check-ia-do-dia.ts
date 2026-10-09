@@ -9,6 +9,7 @@
  */
 import { chaveDaAcao, ehParaMim, lembreteDoSlack, tarefaFeita, type MensagemDoSlack } from "../lib/models/iaDoDia";
 import { atividadeDoFeito, entenderComando } from "../lib/models/comandosDaIA";
+import { combinadosSemData, esperaDoCliente, promessaSemData } from "../lib/models/lembretesAutomaticos";
 
 let falhas = 0;
 function conferir(nome: string, obtido: unknown, esperado: unknown) {
@@ -86,6 +87,31 @@ console.log("\n  COMANDOS EM PALAVRAS\n");
   conferir("“o relatório” acha o relatório", atividadeDoFeito("o relatório", abertas).escolhida?.id, "c");
   conferir("“o retorno combinado” empata: não fecha nenhuma, mostra as duas", [atividadeDoFeito("o retorno combinado", abertas).escolhida, atividadeDoFeito("o retorno combinado", abertas).candidatas.length], [null, 2]);
   conferir("nada parecido: não fecha", atividadeDoFeito("pagar o boleto", abertas).escolhida, null);
+}
+
+console.log("\n  O COMBINADO SEM DATA — dos dois lados (09/10/2026)\n");
+{
+  const D = "2026-10-09";
+  conferir("nós: “vou verificar e te retorno” vira promessa", Boolean(promessaSemData("Vou verificar com o financeiro e te retorno", D)), true);
+  conferir("nós: “deixa eu ver aqui” vira promessa", Boolean(promessaSemData("Deixa eu ver aqui o que aconteceu", D)), true);
+  conferir("nós: com dia e hora fica com o combinado com data", promessaSemData("Te ligo amanhã às 10h", D), null);
+  conferir("nós: cumprimento não é promessa", promessaSemData("Bom dia! Tudo bem?", D), null);
+  conferir("cliente: “te mando o CNPJ” vira espera", Boolean(esperaDoCliente("Te mando o CNPJ", D)), true);
+  conferir("cliente: “vou testar aqui e te falo” vira espera", Boolean(esperaDoCliente("vou testar aqui e te falo", D)), true);
+  conferir("cliente: reclamação não é espera", esperaDoCliente("Não funciona de jeito nenhum", D), null);
+  const conversa = [
+    { id: "1", de: "cliente", texto: "o pedido não imprime", em: "2026-10-09T12:00:00Z", dia: D },
+    { id: "2", de: "nos", texto: "Vou verificar e te retorno", em: "2026-10-09T12:05:00Z", dia: D },
+    { id: "3", de: "cliente", texto: "ok, te mando o print", em: "2026-10-09T12:06:00Z", dia: D },
+  ];
+  conferir("a conversa dá uma promessa nossa e uma espera do cliente", combinadosSemData(conversa).map((c) => `${c.tipo}:${c.mensagemId}`), ["promessa:2", "espera:3"]);
+  conferir("respondemos depois: a promessa já foi cumprida", combinadosSemData([...conversa, { id: "4", de: "nos", texto: "Era a impressora, já está ok", em: "2026-10-09T13:00:00Z", dia: D }]).map((c) => c.tipo), ["espera"]);
+  conferir("o cliente mandou depois: a espera já foi cumprida", combinadosSemData([...conversa, { id: "5", de: "cliente", texto: "segue o print", em: "2026-10-09T13:00:00Z", dia: D }]).map((c) => c.tipo), ["promessa"]);
+  const criada = { dueDate: "2026-10-09", createdAt: "2026-10-09T13:00:00.000Z" };
+  conferir("promessa: nossa mensagem depois do lembrete fecha", tarefaFeita(tarefa("auto-promessa-2", criada), { nossaMensagemEm: "2026-10-09T15:00:00.000Z" }), "você respondeu na conversa");
+  conferir("promessa: mensagem de antes do lembrete não fecha", tarefaFeita(tarefa("auto-promessa-2", criada), { nossaMensagemEm: "2026-10-09T12:05:00.000Z" }), null);
+  conferir("espera: o cliente mandou depois fecha", tarefaFeita(tarefa("auto-espera-3", criada), { clienteMensagemEm: "2026-10-09T16:00:00.000Z" }), "o cliente mandou mensagem");
+  conferir("espera: mensagem nossa não fecha a espera", tarefaFeita(tarefa("auto-espera-3", criada), { nossaMensagemEm: "2026-10-09T16:00:00.000Z" }), null);
 }
 
 console.log("\n  CHAVES — a mesma origem é uma ação só\n");
