@@ -17,6 +17,7 @@ import {
 } from "@/lib/services/documentacao.service";
 
 import { getApiCases } from "@/lib/api/source";
+import { COMO_USAR_A_MEMORIA, memoriaDoAssistente } from "@/lib/services/memoriaDoAssistente.service";
 
 import { getSession } from "@/lib/auth/session";
 import { getPrisma, hasDatabase } from "@/lib/prisma";
@@ -203,6 +204,25 @@ export async function POST(request: Request) {
   }
 
   /*
+    A memória (09/10/2026): as conversas guardadas, os combinados em aberto,
+    o Slack e o que a IA já fez. "Verifique minhas últimas mensagens" era
+    respondido com "não possuo acesso ao histórico" — e a plataforma tinha
+    as mensagens. Falha em silêncio, como as medições.
+  */
+  let memoria = "";
+
+  try {
+    const prisma = getPrisma();
+    const sessao = await getSession();
+    if (prisma) {
+      const pergunta = [...messages].reverse().find((m) => m.role === "user")?.content ?? "";
+      memoria = await memoriaDoAssistente(prisma, { userId: sessao?.id ?? null, pergunta });
+    }
+  } catch (erro) {
+    console.error("[assistente] memória", erro);
+  }
+
+  /*
     O retrato da operação entra na instrução de sistema.
 
     Antes era o primeiro turno da conversa, para aproveitar o cache de
@@ -211,9 +231,14 @@ export async function POST(request: Request) {
     tratam do mesmo jeito.
   */
   const sistema = `${ASSISTANT_SYSTEM}
-
+${memoria ? `
+${COMO_USAR_A_MEMORIA}
+` : ""}
 --- RETRATO DA OPERAÇÃO ---
-${snapshot}${
+${snapshot}${memoria ? `
+
+--- SUAS CONVERSAS E COMBINADOS ---
+${memoria}` : ""}${
     medicoes
       ? `
 

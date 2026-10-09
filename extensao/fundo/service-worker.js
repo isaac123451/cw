@@ -755,6 +755,8 @@ async function tratar(mensagem) {
         protocolos: mensagem.protocolos,
         nome: mensagem.nome,
         telefone: mensagem.telefone,
+        npsId: mensagem.npsId,
+        mensagens: mensagem.mensagens,
         historico: mensagem.historico,
       }
     );

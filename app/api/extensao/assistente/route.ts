@@ -4,6 +4,7 @@ import { getPrisma } from "@/lib/prisma";
 import { ASSISTANT_SYSTEM } from "@/lib/services/assistant.context";
 import { fetchCaseByProtocol } from "@/lib/services/case.repository";
 import { conversar, type Turno } from "@/lib/services/ia.service";
+import { COMO_USAR_A_MEMORIA, memoriaDoAssistente, retratoNpsParaOAssistente } from "@/lib/services/memoriaDoAssistente.service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -51,12 +52,39 @@ export async function POST(request: Request) {
   const prisma = getPrisma();
   const casos = prisma ? (await Promise.all(protocolos.map((p) => fetchCaseByProtocol(prisma, p).catch(() => null)))).filter((c) => c !== null) : [];
 
+  /*
+    As mensagens (09/10/2026): "verifique minhas últimas mensagens" era
+    respondido com "não possuo acesso". Vão as da tela — mesmo as que ainda
+    não foram guardadas — e a memória da plataforma: a conversa guardada
+    deste número, os combinados em aberto, o Slack e o que a IA fez.
+  */
+  const daTela = (Array.isArray(corpo.mensagens) ? corpo.mensagens : [])
+    .slice(-40)
+    .map((m) => m as Record<string, unknown>)
+    .filter((m) => (m?.de === "nos" || m?.de === "cliente") && typeof m.texto === "string" && m.texto.trim())
+    .map((m) => `${m.de === "nos" ? "Nós" : nome || "Cliente"}: ${String(m.texto).replace(/\s+/g, " ").slice(0, 400)}`);
+  let memoria = "";
+  let doNps = "";
+  if (prisma) {
+    try {
+      memoria = await memoriaDoAssistente(prisma, { userId: usuario?.id ?? null, pergunta, telefone });
+      doNps = await retratoNpsParaOAssistente(prisma, String(corpo.npsId ?? ""));
+    } catch (falha) {
+      console.error("[extensao/assistente] memória", falha);
+    }
+  }
+
   const sobreOCliente = [
     "--- O CLIENTE ABERTO NA EXTENSÃO ---",
     `Quem atende está com a conversa deste contato aberta agora${nome ? `: ${nome}` : ""}${telefone ? ` (${telefone})` : ""}.`,
     "\"Este cliente\" e \"este caso\" são estes. Responda curto — cabe num painel lateral —, direto, e sem inventar o que não está aqui.",
     casos.length ? `Os casos dele, por inteiro:\n${casos.map(descreverCasoAberto).join("\n\n")}` : "Nenhum caso dele foi identificado na plataforma — diga isso se a pergunta depender de um caso.",
-  ].join("\n");
+    doNps,
+    daTela.length ? `\n--- A CONVERSA NA TELA AGORA (da mais antiga para a mais nova) ---\n${daTela.join("\n")}` : "",
+    memoria ? `\n${COMO_USAR_A_MEMORIA}\n\n--- SUAS CONVERSAS E COMBINADOS ---\n${memoria}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   let resposta = "";
   let erro = "";

@@ -53,6 +53,16 @@ export const REVISAO = {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- plataforma: IA do dia (09/10) ---------------- */
   {
+    id: "assistente-le-suas-conversas",
+    dia: "2026-10-09",
+    tipo: "novo",
+    frente: "plataforma",
+    titulo: "O assistente lê as suas conversas, combinados e o Slack",
+    texto:
+      "\"Verifique minhas últimas mensagens\" era respondido com \"não possuo acesso ao histórico\". Agora cada pergunta leva junto a memória do seu trabalho: as conversas do WhatsApp guardadas nos últimos 3 dias (já sem mensagens de outra conversa e com o nome certo de cada cliente), a que reclamação ou NPS cada uma está ligada, quem está esperando quem e há quanto tempo, o humor do cliente, os combinados e lembretes em aberto, o que pediram a você no Slack e o que a IA já fez hoje. Quando a pergunta é sobre mensagens ou cita um cliente, as falas vão inteiras. Na extensão, vão também as mensagens que estão na tela — mesmo as que ainda não foram guardadas — e, se for um NPS, a nota, o comentário, as tentativas e as anotações do ciclo.",
+    href: "/assistente",
+  },
+  {
     id: "e-este-funciona",
     dia: "2026-10-09",
     tipo: "correcao",

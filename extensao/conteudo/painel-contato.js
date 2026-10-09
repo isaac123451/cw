@@ -1113,8 +1113,18 @@
       tipo: "perguntarAoAssistente",
       pergunta,
       protocolos: (dados.casos ?? []).map((c) => c.protocolo).filter(Boolean).slice(0, 3),
-      nome: dados.cliente?.nome ?? "",
-      telefone: dados.cliente?.telefone ?? "",
+      nome: dados.cliente?.nome ?? P.consulta?.nome ?? "",
+      /* O número da conversa aberta, não o do cadastro: é por ele que a plataforma acha a conversa guardada (09/10/2026). */
+      telefone: P.telefoneDaConversa || P.consulta?.telefone || dados.cliente?.telefone || "",
+      npsId: dados.nps?.id ?? "",
+      /* O que está na tela agora — inclusive o que ainda não foi guardado. */
+      mensagens: (() => {
+        try {
+          return mensagensDaTela().slice(-40);
+        } catch {
+          return [];
+        }
+      })(),
       historico,
     });
 
