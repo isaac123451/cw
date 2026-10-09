@@ -218,7 +218,7 @@
         ? l0.estado === "existente"
           ? `<div class="recado ok">Já está no CW como ${CW.escapar(l0.protocolo ?? "atendimento")}.</div>`
           : l0.estado === "sem-rede"
-            ? `<div class="recado aviso">Não achei a rede nesta mensagem (Instagram, Facebook, WhatsApp ou ManyChat, pelo nome ou pelo link).</div>`
+            ? `<div class="recado aviso">Não achei a rede nesta mensagem (Instagram, Facebook ou ManyChat, pelo nome ou pelo link).</div>`
             : ""
         : contagem(c) + cobertura(mensagens)) +
         (umaSo

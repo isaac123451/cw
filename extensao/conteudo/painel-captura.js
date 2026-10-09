@@ -31,9 +31,9 @@
  * A lista é curta de propósito — cada canal aqui precisa existir do
  * outro lado, senão o caso nasce fora dos dois módulos e some.
  */
+/* Sem o WhatsApp (09/10/2026): ele é canal de atendimento, não rede social — "não existe isso". */
 const ORIGENS = [
   "Reclame Aqui",
-  "WhatsApp",
   "ManyChat",
   "Instagram",
   "Facebook",

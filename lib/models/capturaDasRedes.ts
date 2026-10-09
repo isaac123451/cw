@@ -37,7 +37,12 @@ export interface ItemCapturado {
   quando: string;
 }
 
-export const REDES_DA_CAPTURA = ["Instagram", "Facebook", "WhatsApp", "ManyChat"] as const;
+/*
+  Sem o WhatsApp (09/10/2026): "remova casos de redes sociais do WhatsApp,
+  não existe isso". O WhatsApp é o canal de atendimento (Conversas do
+  WhatsApp), não uma rede social monitorada.
+*/
+export const REDES_DA_CAPTURA = ["Instagram", "Facebook", "ManyChat"] as const;
 
 /* ============================================================
    CSV
@@ -147,7 +152,6 @@ export function redeDoTexto(...valores: string[]): string | null {
   const t = valores.join(" ").toLowerCase();
   if (/instagram|\binsta\b|\big\b/.test(t)) return "Instagram";
   if (/facebook|\bfb\b|fb\.com|messenger/.test(t)) return "Facebook";
-  if (/whats\s?app|wa\.me|\bzap\b/.test(t)) return "WhatsApp";
   if (/manychat/.test(t)) return "ManyChat";
   return null;
 }
@@ -368,7 +372,7 @@ export function classificarItens(itens: ItemCapturado[], jaNoCw: { chaves: Set<s
 
 /** O prefixo do protocolo pela rede, como o formulário já fazia com o IG-. */
 export function protocoloDaCaptura(item: Pick<ItemCapturado, "rede" | "chave">) {
-  const prefixo = item.rede === "Facebook" ? "FB" : item.rede === "WhatsApp" ? "WA" : item.rede === "ManyChat" ? "MC" : "IG";
+  const prefixo = item.rede === "Facebook" ? "FB" : item.rede === "ManyChat" ? "MC" : "IG";
   return `${prefixo}-${resumoEstavel(item.chave).toUpperCase()}`;
 }
 

@@ -185,7 +185,7 @@ function RedesSociaisConteudo() {
         <PageHeading
           eyebrow="Frentes"
           title="Redes Sociais"
-          description="Instagram, Facebook, WhatsApp e ManyChat, no fluxo do documento das Redes: 1º contato em 4 horas úteis (1 hora acima de 10 mil seguidores)."
+          description="Instagram, Facebook e ManyChat, no fluxo do documento das Redes: 1º contato em 4 horas úteis (1 hora acima de 10 mil seguidores)."
         >
           <button
             onClick={() => {
@@ -237,7 +237,7 @@ function RedesSociaisConteudo() {
           <StatTile
             carregando={loading}
             label="Total de casos"
-            description="Atendimentos registrados vindos do Instagram, Facebook, WhatsApp e ManyChat."
+            description="Atendimentos registrados vindos do Instagram, Facebook e ManyChat."
             value={social.length}
             hint="registrados"
             icon={MessagesSquare}
@@ -312,7 +312,7 @@ function RedesSociaisConteudo() {
               <p className="mt-1 max-w-sm text-sm text-zinc-500">
                 {recorte
                   ? "Nenhum atendimento passa por todos os filtros escolhidos. Tire um segmento acima, ou limpe os filtros."
-                  : "Registre aqui as conversas do Instagram, Facebook, WhatsApp e ManyChat: elas entram no fluxo do documento das Redes, com o relógio de 4 horas úteis."}
+                  : "Registre aqui as conversas do Instagram, Facebook e ManyChat: elas entram no fluxo do documento das Redes, com o relógio de 4 horas úteis."}
               </p>
 
               <button

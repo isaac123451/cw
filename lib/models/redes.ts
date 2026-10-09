@@ -280,5 +280,5 @@ export function textoDoEncaminhamento(area: string, chamado: string, nota: strin
   return [`Encaminhado para ${area.trim()}${chamado.trim() ? ` (chamado ${chamado.trim()})` : ""}.`, nota.trim()].filter(Boolean).join(" ");
 }
 
-/** As redes que entram na triagem — as mesmas do módulo. */
-export const SOCIAL_DAS_REDES = ["Instagram", "Facebook", "WhatsApp", "ManyChat"];
+/** As redes que entram na triagem — as mesmas do módulo. O WhatsApp é canal de atendimento, não rede social (09/10/2026). */
+export const SOCIAL_DAS_REDES = ["Instagram", "Facebook", "ManyChat"];

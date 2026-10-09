@@ -127,6 +127,14 @@
    * "este cliente já passou por aqui?" em vez de só "este cliente
    * existe?".
    */
+  /**
+   * As redes que viram caso em Redes Sociais (09/10/2026). O WhatsApp não
+   * está aqui: é o canal de atendimento — "remova casos de redes sociais do
+   * WhatsApp, não existe isso". Num chat do WhatsApp o painel não oferece
+   * mais "Cadastrar caso" nem "Cadastrar aqui".
+   */
+  const REDES_DE_CASO = ["ManyChat", "Instagram", "Facebook"];
+
   function canalDaPagina() {
     return P.consulta?.canalDaPagina ?? P.captura?.origem ?? "";
   }
@@ -143,7 +151,8 @@
 
     const daPagina = canalDaPagina();
 
-    if (!daPagina || !dados?.cliente) return "";
+    /* WhatsApp e Crisp são onde a gente atende, não canal de caso (09/10/2026). */
+    if (!daPagina || !dados?.cliente || !["Reclame Aqui", ...REDES_DE_CASO].includes(daPagina)) return "";
 
     const casos = dados.casos ?? [];
 
@@ -620,8 +629,7 @@
        */
       const daConversa =
         P.captura &&
-        P.captura.origem &&
-        P.captura.origem !== "Reclame Aqui" &&
+        REDES_DE_CASO.includes(P.captura.origem) &&
         (P.captura.cliente || P.captura.telefone);
 
       const podeCapturar = doPortal || daConversa;

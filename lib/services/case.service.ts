@@ -61,11 +61,14 @@ export const RECLAME_AQUI = "Reclame Aqui";
 /**
  * Canais que alimentam o módulo Redes Sociais. Hoje só o Instagram
  * recebe demanda; outros canais entram aqui quando forem ativados.
+ *
+ * Sem o WhatsApp (09/10/2026): ele é o canal de atendimento (Conversas do
+ * WhatsApp), não rede social — a extensão criava "caso de WhatsApp" em
+ * Redes Sociais a partir de uma conversa, e isso não existe na operação.
  */
 export const SOCIAL_SOURCES = [
   "Instagram",
   "Facebook",
-  "WhatsApp",
   "ManyChat",
 ];
 

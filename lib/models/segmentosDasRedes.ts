@@ -32,7 +32,7 @@ export const DIMENSOES_DAS_REDES: { id: DimensaoDasRedes; nome: string }[] = [
 /** A ordem de exibição dos valores que têm ordem natural. */
 const ORDEM: Partial<Record<DimensaoDasRedes, string[]>> = {
   origem: ["Planilha", "Slack", "Registro manual"],
-  rede: ["Instagram", "Facebook", "WhatsApp", "ManyChat"],
+  rede: ["Instagram", "Facebook", "ManyChat"],
   gravidade: ["Urgente", "Alta", "Normal"],
   alcance: ["10 mil ou mais", "1 a 10 mil", "Até 1 mil", "Sem o dado"],
 };

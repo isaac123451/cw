@@ -78,7 +78,7 @@ interface Entrada {
   url?: string;
   /**
    * Canal de origem. "Reclame Aqui" quando vem do portal; os demais
-   * quando o caso nasce numa conversa (WhatsApp, ManyChat, Instagram).
+   * quando o caso nasce numa conversa (ManyChat, Instagram, Facebook).
    */
   origem?: string;
   telefone?: string;
@@ -110,7 +110,6 @@ const ORIGENS = [RECLAME_AQUI, ...SOCIAL_SOURCES];
  */
 const SIGLA: Record<string, string> = {
   "Reclame Aqui": "RA",
-  WhatsApp: "WA",
   ManyChat: "MC",
   Instagram: "IG",
   Facebook: "FB",

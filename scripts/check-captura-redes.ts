@@ -80,7 +80,8 @@ conferir("Mensagem é o relato", mapa.texto, 5);
 /* ---- 3. valores ---- */
 
 conferir("rede pelo nome", redeDoTexto("insta"), "Instagram");
-conferir("rede pelo link", redeDoTexto("https://wa.me/5511999999999"), "WhatsApp");
+conferir("WhatsApp não é rede social (09/10/2026): link do wa.me não vira rede", redeDoTexto("https://wa.me/5511999999999"), null);
+conferir("rede pelo link", redeDoTexto("https://instagram.com/maria.silva"), "Instagram");
 conferir("TikTok não é rede do módulo", redeDoTexto("TikTok"), null);
 conferir("@ pelo link do perfil", perfilDoTexto("", "https://www.instagram.com/maria.silva/"), "maria.silva");
 conferir("link de post não vira perfil", perfilDoTexto("", "https://www.instagram.com/p/Cx123/"), "");

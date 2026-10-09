@@ -79,7 +79,7 @@ const atalhos: {
   {
     label: "Redes sociais",
     href: "/redes-sociais",
-    hint: "Instagram, WhatsApp e ManyChat",
+    hint: "Instagram, Facebook e ManyChat",
     contar: (d) => d.socialAbertos,
   },
   {
