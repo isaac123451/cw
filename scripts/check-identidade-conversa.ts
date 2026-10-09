@@ -43,6 +43,12 @@ const gravadas = [
 ];
 const limpas = semMensagensDeOutraConversa(eduardo, gravadas);
 conferir("o lote intruso sai inteiro, inclusive a nossa mensagem dele", limpas.map((m) => m.chave), ["wa:1", "wa:4"]);
+const mayara = [
+  { de: "nos", autor: "Cardápio Web (Reputação)", chave: "wa:1", texto: "Bom dia, Mayara!", criadoEm: lote },
+  { de: "cliente", autor: "+55 11 99408-2786", chave: "wa:2", texto: "O número cadastrado é outro", criadoEm: lote },
+  { de: "cliente", autor: "+55 11 99408-2786", chave: "wa:3", texto: "Vou te encaminhar", criadoEm: new Date("2026-10-06T14:40:00Z") },
+];
+conferir("todas de um mesmo outro número: o número da conversa é que estava errado — nada sai", semMensagensDeOutraConversa({ telefone: "5511960599984" }, mayara).length, 3);
 
 console.log("\n  O NOME QUE A CONVERSA DÁ\n");
 conferir("“Boa tarde, Eduardo!”", nomeDaConversa([{ de: "nos", texto: "Boa tarde, Eduardo!" }]), "Eduardo");

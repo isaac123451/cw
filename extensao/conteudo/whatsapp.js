@@ -94,6 +94,30 @@
     }
 
     /**
+     * 2b. O carimbo das mensagens recebidas (09/10/2026).
+     *
+     * Com o id novo do WhatsApp (sem o número), contato fora da agenda só
+     * mostrava o número no cabeçalho — e quando a camada 3 achava o id de
+     * outra conversa na página, a conversa da Mayara foi gravada com outro
+     * número. O carimbo "[14:36, 06/10/2026] +55 11 99408-2786: " é da
+     * própria conversa aberta: numa conversa 1:1, quem não somos nós é o
+     * contato. Só o número — nome no carimbo é da agenda, e o cabeçalho já
+     * cobre.
+     */
+    if (!principal.querySelector('[data-id*="@g.us"]')) {
+      for (const el of Array.from(
+        principal.querySelectorAll("[data-pre-plain-text]")
+      ).slice(-30)) {
+        const autor = (
+          (el.getAttribute("data-pre-plain-text") ?? "").match(/\]\s*([^:]+):/)?.[1] ?? ""
+        ).trim();
+        /* A regra do núcleo aceita qualquer tipografia de traço e recusa nome. */
+        const lido = CW.telefoneDoTexto(autor);
+        if (lido) return lido;
+      }
+    }
+
+    /**
      * 3. Qualquer id de conversa no documento inteiro.
      *
      * Menos preciso — pode pegar outra conversa —, então só entra

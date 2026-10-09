@@ -102,9 +102,21 @@ export function semMensagensDeOutraConversa<T extends MensagemComAutor & { criad
   contato: { telefone?: string | null; nome?: string | null },
   mensagens: T[]
 ): T[] {
+  /*
+    Quem estava errado era o número da conversa, não as mensagens: nenhuma
+    do cliente tem o número gravado e todas vêm de um mesmo outro número
+    (a Mayara, que escreve de um número diferente do cadastrado). Aí o dono
+    é esse número, e nada é descartado. Mistura de verdade tem os dois.
+  */
+  const doCliente = mensagens
+    .filter((m) => m.de === "cliente" && pareceTelefone(m.autor) && (!m.chave || m.chave.startsWith("wa:")))
+    .map((m) => digitos(m.autor).slice(-8));
+  const numeros = new Set(doCliente);
+  const dono = numeros.size === 1 && !doCliente.some((d) => mesmoTelefone(d, contato.telefone)) ? { ...contato, telefone: [...numeros][0] } : contato;
+
   const lotesAlheios = new Set<string>();
   for (const m of mensagens) {
-    if (autorDeOutraConversa(contato, [m])) lotesAlheios.add(m.criadoEm ? new Date(m.criadoEm).toISOString() : `sem-lote:${m.chave}`);
+    if (autorDeOutraConversa(dono, [m])) lotesAlheios.add(m.criadoEm ? new Date(m.criadoEm).toISOString() : `sem-lote:${m.chave}`);
   }
   if (lotesAlheios.size === 0) return mensagens;
   return mensagens.filter((m) => {

@@ -508,6 +508,19 @@ const i = ler(no("div", { id: "main" }, [], [
 
 conferir("10. só a mensagem de verdade", i.mensagens.map((m) => m.texto), ["segue a foto do cardápio"]);
 
+/* ---- 11. o número pelo carimbo (09/10/2026) ---- */
+
+console.log("\n  Id novo, sem número: o carimbo da mensagem recebida diz de quem é a conversa");
+
+/* Contato salvo com apelido, id novo sem número: só o carimbo tem o número. */
+raiz = no("div", { id: "main" }, [], [
+  no("header", {}, [], [no("span", { dir: "auto" }, [], "Mayara A FAVORITA")]),
+  no("div", { "data-id": "A5F70FC47693EE97E333D" }, ["message-in"], [
+    no("div", { "data-pre-plain-text": "[14:36, 06/10/2026] +55 11 99408-2786: " }, [], [no("span", {}, ["selectable-text"], "Vou te encaminhar")]),
+  ]),
+]);
+conferir("11. o número sai do carimbo da mensagem recebida", lerContato?.()?.telefone, "5511994082786");
+
 console.log(
   falhas === 0
     ? "\n  O leitor devolve a conversa em todas as marcações.\n"
