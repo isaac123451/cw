@@ -156,8 +156,8 @@ export function useConversaDoAssistente() {
         const r = await executarComandoDaIA(pergunta);
         setTurns((prev) => prev.map((t) => (t.id === id ? { ...t, answer: r.ok ? `${r.texto}
 
-Fica em "O que a IA fez hoje", no Meu dia, com desfazer.` : "", streaming: false, ...(r.ok ? {} : { error: r.erro }) } : t)));
-        if (r.ok) window.dispatchEvent(new Event(EVENTO_DA_IA_DO_DIA));
+Fica em "O que eu fiz hoje", no balão do assistente, com desfazer.` : "", streaming: false, ...(r.ok ? {} : { error: r.erro }) } : t)));
+        if (r.ok) window.dispatchEvent(new CustomEvent(EVENTO_DA_IA_DO_DIA, { detail: { novas: 0 } }));
       } catch {
         setTurns((prev) => prev.map((t) => (t.id === id ? { ...t, answer: "", streaming: false, error: "Não deu para fazer agora — tente de novo." } : t)));
       } finally {

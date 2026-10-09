@@ -893,7 +893,7 @@ export async function acoesNaoVistas(prisma: PrismaClient, userId: string): Prom
   return linhas.map(paraView);
 }
 
-/** O que a IA fez hoje — a lista do Meu dia. */
+/** O que a IA fez hoje — o "O que eu fiz hoje" do balão do assistente. */
 export async function acoesDeHoje(prisma: PrismaClient, userId: string, agora = new Date()): Promise<AcaoDaIAView[]> {
   const hoje = paredeDe(agora).dia;
   const linhas = await prisma.acaoDaIA.findMany({

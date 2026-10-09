@@ -22,7 +22,6 @@ import MetasDoCiclo from "@/components/rotina/MetasDoCiclo";
 import RadarDeIncidente from "@/components/rotina/RadarDeIncidente";
 import PlanoDeRecuperacao from "@/components/rotina/PlanoDeRecuperacao";
 import ProximoPasso from "@/components/rotina/ProximoPasso";
-import OQueAIaFez from "@/components/iaDoDia/OQueAIaFez";
 import { Focus, LayoutList } from "lucide-react";
 
 /**
@@ -181,9 +180,6 @@ function MeuDiaPagina({ configurarInicial = false, ajustarRecuperacao = false }:
 
         {/* As mini conquistas (1.96): metas do tamanho do dia, com aviso quando fecham. */}
         <MetasDoDia rotina={rotinaDoDia} />
-
-        {/* O que a IA fez hoje (08/10/2026): no foco também — é o que ela tirou das suas costas. */}
-        <OQueAIaFez />
 
         {!foco && <MetasDoCiclo />}
 

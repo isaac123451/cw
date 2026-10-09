@@ -35,6 +35,7 @@ import { suggestions } from "@/lib/services/assistant.service";
 import { useConversaDoAssistente } from "@/lib/hooks/useConversaDoAssistente";
 
 import AberturaDoAgente from "@/components/assistente/AberturaDoAgente";
+import OQueEuFizHoje from "@/components/iaDoDia/OQueEuFizHoje";
 
 /**
  * As perguntas que a operação faz de verdade, prontas para clicar.
@@ -413,6 +414,18 @@ export default function AssistentePage() {
 
           </SurfaceCard>
 
+          <div className="space-y-6">
+
+          {/* O balão não aparece nesta página: "O que eu fiz hoje" mora aqui ao lado (09/10/2026). */}
+          <SurfaceCard
+            title="O que eu fiz hoje"
+            description="Lembretes, anotações e o que vi que você já fez — com desfazer."
+          >
+            <div className="-mx-1 max-h-[360px] overflow-y-auto">
+              <OQueEuFizHoje />
+            </div>
+          </SurfaceCard>
+
           <SurfaceCard
             title="Perguntas frequentes"
             description="Clique para perguntar."
@@ -449,6 +462,8 @@ export default function AssistentePage() {
             </p>
 
           </SurfaceCard>
+
+          </div>
 
         </div>
 

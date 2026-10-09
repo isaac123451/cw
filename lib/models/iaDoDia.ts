@@ -40,6 +40,16 @@ export const ROTULO_DA_ACAO: Record<TipoDeAcao, string> = {
   aviso: "Aviso",
 };
 
+/** Na voz do assistente — "O que eu fiz hoje" (09/10/2026). */
+export const VERBO_DA_ACAO: Record<TipoDeAcao, string> = {
+  lembrete: "Lembrei",
+  anotacao: "Anotei",
+  feito: "Fechei",
+  completou: "Completei",
+  etapa: "Registrei",
+  aviso: "Avisei",
+};
+
 export const ROTULO_DA_ORIGEM: Record<OrigemDaAcao, string> = {
   slack: "Slack",
   whatsapp: "WhatsApp",

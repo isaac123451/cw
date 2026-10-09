@@ -53,6 +53,16 @@ export const REVISAO = {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- plataforma: IA do dia (09/10) ---------------- */
   {
+    id: "o-que-eu-fiz-hoje-no-assistente",
+    dia: "2026-10-09",
+    tipo: "melhoria",
+    frente: "plataforma",
+    titulo: "\"O que eu fiz hoje\" saiu do Meu dia e foi para o balão do assistente",
+    texto:
+      "A lista do que a IA fez ocupava um bloco do Meu dia. Agora mora no botão do assistente, no canto da tela: uma aba \"O que eu fiz hoje\", na voz dele — \"Lembrei\", \"Anotei\", \"Fechei\", \"Completei\", \"Registrei\" —, com desfazer em cada linha. Clicar numa linha abre o caso ou o NPS numa mini janela, sem sair da tela. Quando ela faz algo novo, o botão ganha um número e um aviso discreto por rodada (\"Fiz 3 coisas por você · Ver o que fiz\"), no lugar de um aviso por ação; com uma coisa só, o aviso ainda traz o \"Desfazer\". Na página do assistente, a mesma lista fica ao lado da conversa.",
+    onde: "Botão do assistente → O que eu fiz hoje",
+  },
+  {
     id: "conversa-nao-mistura-clientes",
     dia: "2026-10-09",
     tipo: "correcao",
@@ -109,7 +119,7 @@ export const MUDANCAS: Mudanca[] = [
     frente: "plataforma",
     titulo: "A IA completa a ficha e registra o 1º contato pela conversa",
     texto:
-      "Com a conversa do WhatsApp vinculada a um caso, a IA preenche o que está vazio na ficha — nome do contato, telefone, e-mail, CPF ou CNPJ escrito pelo cliente — sem trocar o que já estava preenchido. E, quando o caso ou o NPS ainda não tem 1º contato, registra a etapa pela primeira mensagem sua: \"falei com o cliente\" se ele respondeu depois, \"tentativa\" se ainda não. Cada coisa aparece em \"O que a IA fez hoje\" com desfazer, e desfazer devolve a ficha e a etapa como estavam.",
+      "Com a conversa do WhatsApp vinculada a um caso, a IA preenche o que está vazio na ficha — nome do contato, telefone, e-mail, CPF ou CNPJ escrito pelo cliente — sem trocar o que já estava preenchido. E, quando o caso ou o NPS ainda não tem 1º contato, registra a etapa pela primeira mensagem sua: \"falei com o cliente\" se ele respondeu depois, \"tentativa\" se ainda não. Cada coisa aparece em \"O que eu fiz hoje\", no balão do assistente, com desfazer, e desfazer devolve a ficha e a etapa como estavam.",
     href: "/meu-dia",
   },
   {

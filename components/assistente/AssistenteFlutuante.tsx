@@ -4,8 +4,10 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "reac
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { Bot, Eraser, Loader2, Maximize2, Send, X } from "lucide-react";
+import { Bot, Eraser, Loader2, Maximize2, MessageSquare, Send, Sparkles, X } from "lucide-react";
 
+import OQueEuFizHoje from "@/components/iaDoDia/OQueEuFizHoje";
+import { EVENTO_ABRIR_ASSISTENTE, EVENTO_DA_IA_DO_DIA } from "@/components/iaDoDia/VigiaDaIaDoDia";
 import { itemDeConfiguracoes, menuItems } from "@/core/navigation/menu";
 import { useCases } from "@/lib/context/CaseContext";
 import { useJanelas } from "@/lib/context/JanelasContext";
@@ -74,6 +76,43 @@ function Painel({ caminho }: { caminho: string }) {
   const [texto, setTexto] = useState("");
   const fimRef = useRef<HTMLDivElement>(null);
 
+  /*
+    "O que eu fiz hoje" (09/10/2026): o que a IA do dia fez mora aqui, numa
+    aba do balão, e não mais no Meu dia. O número no botão é o que ela fez
+    desde a última vez que a aba foi vista.
+  */
+  const [aba, setAba] = useState<"conversa" | "eu-fiz">("conversa");
+  const [novas, setNovas] = useState(0);
+  const vendoOQueFiz = aberto && aba === "eu-fiz";
+  const vendoRef = useRef(vendoOQueFiz);
+  useEffect(() => {
+    vendoRef.current = vendoOQueFiz;
+  }, [vendoOQueFiz]);
+
+  useEffect(() => {
+    const chegou = (e: Event) => {
+      const n = Number((e as CustomEvent<{ novas?: number }>).detail?.novas) || 0;
+      if (n > 0 && !vendoRef.current) setNovas((v) => v + n);
+    };
+    const abrirNa = (e: Event) => {
+      const qual = (e as CustomEvent<{ aba?: string }>).detail?.aba === "eu-fiz" ? "eu-fiz" : "conversa";
+      setAba(qual);
+      setAberto(true);
+      if (qual === "eu-fiz") setNovas(0);
+    };
+    window.addEventListener(EVENTO_DA_IA_DO_DIA, chegou);
+    window.addEventListener(EVENTO_ABRIR_ASSISTENTE, abrirNa);
+    return () => {
+      window.removeEventListener(EVENTO_DA_IA_DO_DIA, chegou);
+      window.removeEventListener(EVENTO_ABRIR_ASSISTENTE, abrirNa);
+    };
+  }, []);
+
+  const verAba = (qual: "conversa" | "eu-fiz") => {
+    setAba(qual);
+    if (qual === "eu-fiz") setNovas(0);
+  };
+
   const nomeDaTela = [...menuItems, itemDeConfiguracoes].find((i) => caminho === i.href || caminho.startsWith(`${i.href}/`))?.title;
   const contexto = useMemo(
     () => contextoDaTela({ caminho, nomeDaTela, casos: cases, nps: responses, janelas }),
@@ -141,6 +180,8 @@ function Painel({ caminho }: { caminho: string }) {
       acabouDeArrastar.current = false;
       return;
     }
+    /* Com novidade, abre direto no que foi feito. */
+    if (!aberto && novas > 0) verAba("eu-fiz");
     setAberto((a) => !a);
   };
 
@@ -163,15 +204,26 @@ function Painel({ caminho }: { caminho: string }) {
         onPointerMove={mover}
         onPointerUp={soltar}
         onClick={clicar}
-        aria-label={aberto ? "Fechar o assistente" : "Perguntar ao assistente sobre esta tela"}
+        aria-label={
+          aberto
+            ? "Fechar o assistente"
+            : novas > 0
+              ? `Assistente — fiz ${novas} ${novas === 1 ? "coisa nova" : "coisas novas"} por você`
+              : "Perguntar ao assistente sobre esta tela"
+        }
         aria-expanded={aberto}
-        title="Assistente — arraste para mudar de lugar"
+        title={novas > 0 && !aberto ? `Fiz ${novas} ${novas === 1 ? "coisa" : "coisas"} por você — clique para ver` : "Assistente — arraste para mudar de lugar"}
         style={{ right: atual.direita, bottom: atual.baixo }}
         className={`fixed z-[61] flex h-11 w-11 cursor-pointer touch-none items-center justify-center rounded-full shadow-lg ring-1 transition-colors ${
           aberto ? "bg-violet-800 text-white ring-violet-900" : "bg-white text-violet-700 ring-zinc-200 hover:bg-violet-50"
         }`}
       >
         {busy ? <Loader2 size={18} className="animate-spin" /> : <Bot size={19} />}
+        {novas > 0 && !aberto && (
+          <span aria-hidden className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-violet-700 px-1 text-[10px] font-semibold tabular-nums text-white ring-2 ring-white">
+            {novas > 9 ? "9+" : novas}
+          </span>
+        )}
       </button>
 
       {aberto && (
@@ -190,7 +242,7 @@ function Painel({ caminho }: { caminho: string }) {
               </p>
             </div>
             <span className="flex shrink-0 items-center gap-0.5">
-              {turns.length > 0 && (
+              {aba === "conversa" && turns.length > 0 && (
                 <button type="button" onClick={() => setTurns([])} aria-label="Limpar a conversa" className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700">
                   <Eraser size={14} />
                 </button>
@@ -204,6 +256,35 @@ function Painel({ caminho }: { caminho: string }) {
             </span>
           </header>
 
+          <div role="tablist" aria-label="O assistente" className="flex gap-1 border-b border-zinc-100 px-2.5 py-1.5">
+            {(
+              [
+                ["conversa", "Conversa", MessageSquare],
+                ["eu-fiz", "O que eu fiz hoje", Sparkles],
+              ] as const
+            ).map(([id, rotulo, Icone]) => (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={aba === id}
+                onClick={() => verAba(id)}
+                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[12.5px] transition-colors ${
+                  aba === id ? "bg-violet-50 font-medium text-violet-800 ring-1 ring-inset ring-violet-200" : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800"
+                }`}
+              >
+                <Icone size={13} /> {rotulo}
+                {id === "eu-fiz" && novas > 0 && <span className="rounded-full bg-violet-700 px-1.5 text-[10px] font-semibold tabular-nums text-white">{novas}</span>}
+              </button>
+            ))}
+          </div>
+
+          {aba === "eu-fiz" ? (
+            <div className="min-h-[120px] flex-1 overflow-y-auto">
+              <OQueEuFizHoje />
+            </div>
+          ) : (
+          <>
           <div className="min-h-[120px] flex-1 space-y-3 overflow-y-auto px-3.5 py-3 text-sm">
             {aiEnabled === false && (
               <p className="rounded-lg bg-zinc-50 px-2.5 py-1.5 text-[11px] text-zinc-500">Sem IA configurada: respostas prontas sobre nota, fila, prazos e retenção.</p>
@@ -277,6 +358,8 @@ function Painel({ caminho }: { caminho: string }) {
               {busy ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
             </button>
           </form>
+          </>
+          )}
         </section>
       )}
     </>
