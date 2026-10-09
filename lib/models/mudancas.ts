@@ -1054,9 +1054,9 @@ export const MUDANCAS: Mudanca[] = [
     dia: "2026-10-08",
     tipo: "melhoria",
     frente: "reclame-aqui",
-    titulo: "Menu do Reclame Aqui em quatro grupos, com o nome de cada um",
+    titulo: "Reclame Aqui com 6 entradas em vez de 13",
     texto:
-      "A cascata do Reclame Aqui no menu lateral eram treze telas soltas, para ler inteiras até achar a certa. Agora vêm separadas por assunto, com o título do grupo: Dia a dia (Quadro, Triagem, Pedir avaliação, Respostas), Nota e metas (Índice, Plano de ação, Calculadora, Prêmio), Análise (Analytics, Gráficos, Tempo ideal) e Ajustes (Categorias, Configurar fluxo). A tela aberta fica destacada, e passar o mouse diz o que cada uma faz. A barra de telas no topo do módulo segue os mesmos quatro grupos, com um separador entre eles.",
+      "O menu do Reclame Aqui listava treze telas soltas — opção demais para achar o que se quer. Agora são seis entradas, uma por assunto: Quadro, Avaliações, Respostas, Nota e metas, Análise e Configurar. As telas do mesmo assunto viraram abas dentro da entrada: em Nota e metas ficam Índice, Plano de ação, Calculadora e Prêmio; em Análise, Analytics, Gráficos e Tempo ideal; no Quadro, a Triagem; em Configurar, o Fluxo e as Categorias. Nenhuma tela sumiu e os endereços são os mesmos. A barra do topo do módulo cabe numa linha só, e o menu lateral marca a entrada certa em qualquer aba dela.",
     href: "/reclame-aqui",
   },
   {

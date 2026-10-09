@@ -26,7 +26,7 @@ import {
   Workflow,
 } from "lucide-react";
 
-import { ROTULO_DO_GRUPO, TELAS_DO_RA } from "@/core/navigation/moduloReclameAqui";
+import { SECOES_DO_RA } from "@/core/navigation/moduloReclameAqui";
 
 export interface MenuItem {
   title: string;
@@ -50,10 +50,10 @@ export interface MenuItem {
   children?: {
     title: string;
     href: string;
-    /** O título do grupo; a cascata o escreve quando ele muda (out/2026). */
-    grupo?: string;
-    /** O que a tela faz, ao passar o mouse. */
+    /** O que a entrada faz, ao passar o mouse. */
     dica?: string;
+    /** Os endereços que contam como esta entrada aberta (as abas dela). */
+    rotas?: string[];
   }[];
 }
 
@@ -76,7 +76,8 @@ export const menuItems: MenuItem[] = [
     icon: MessageSquareWarning,
     group: "Frentes",
     /* As mesmas telas e na mesma ordem das abas do módulo (out/2026). */
-    children: TELAS_DO_RA.map((tela) => ({ title: tela.label, href: tela.href, grupo: ROTULO_DO_GRUPO[tela.grupo], dica: tela.hint })),
+    /* Seis entradas, e as telas de cada uma viram abas dentro dela (08/10/2026) — eram treze soltas. */
+    children: SECOES_DO_RA.map((s) => ({ title: s.label, href: s.href, dica: s.hint, rotas: s.telas.map((t) => t.href) })),
   },
   { title: "Redes Sociais", href: "/redes-sociais", icon: MessagesSquare, group: "Frentes" },
   {

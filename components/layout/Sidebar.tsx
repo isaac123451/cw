@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { ChevronDown, PanelLeftClose, PanelLeftOpen, Pin, PinOff } from "lucide-react";
 
@@ -195,30 +195,23 @@ export default function Sidebar({ forcarAberto = false }: { forcarAberto?: boole
 
         {item.children && aberto && !emFixados && (
           <div className="mb-1 ml-[18px] mt-0.5 space-y-px border-l border-zinc-200 pl-2.5">
-            {item.children.map((filho, i) => {
+            {item.children.map((filho) => {
               /* O primeiro filho é o próprio módulo: comparar por prefixo o marcaria em todas as telas de dentro. */
-              const ativoFilho = filho.href === item.href ? pathname === filho.href : pathname.startsWith(filho.href);
-              /* Treze telas soltas eram uma lista para ler inteira; com o grupo escrito, acha-se pelo assunto (out/2026). */
-              const novoGrupo = filho.grupo && filho.grupo !== item.children?.[i - 1]?.grupo;
+              const abre = (href: string) => (href === item.href ? pathname === href : pathname === href || pathname.startsWith(`${href}/`));
+              const ativoFilho = (filho.rotas ?? [filho.href]).some(abre);
               return (
-                <Fragment key={filho.href}>
-                  {novoGrupo && (
-                    <p className={cn("px-2 pb-0.5 text-[10.5px] font-semibold uppercase tracking-wide text-zinc-400", i > 0 ? "pt-2" : "pt-1")}>
-                      {filho.grupo}
-                    </p>
+                <Link
+                  key={filho.href}
+                  href={filho.href}
+                  title={filho.dica}
+                  aria-current={ativoFilho ? "page" : undefined}
+                  className={cn(
+                    "block truncate rounded px-2 py-1 text-[12.5px] transition-colors",
+                    ativoFilho ? "bg-violet-50 font-medium text-violet-800" : "text-zinc-500 hover:bg-zinc-200/50 hover:text-zinc-900"
                   )}
-                  <Link
-                    href={filho.href}
-                    title={filho.dica}
-                    aria-current={ativoFilho ? "page" : undefined}
-                    className={cn(
-                      "block truncate rounded px-2 py-1 text-[12.5px] transition-colors",
-                      ativoFilho ? "bg-violet-50 font-medium text-violet-800" : "text-zinc-500 hover:bg-zinc-200/50 hover:text-zinc-900"
-                    )}
-                  >
-                    {filho.title}
-                  </Link>
-                </Fragment>
+                >
+                  {filho.title}
+                </Link>
               );
             })}
           </div>
