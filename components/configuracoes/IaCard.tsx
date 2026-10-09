@@ -4,8 +4,10 @@ import { useEffect, useState, useTransition } from "react";
 
 import {
   CircleAlert,
+  CircleCheck,
   Gauge,
   Loader2,
+  PlugZap,
   Save,
   Sparkles,
   Timer,
@@ -20,6 +22,7 @@ import {
   listIaPerfis,
   medirIa,
   saveIaConfig,
+  testarIa,
   type MedicaoDaIA,
   type RetratoDaIA,
 } from "@/lib/actions/ia";
@@ -69,6 +72,9 @@ export default function IaCard() {
   const [medicao, setMedicao] = useState<
     (MedicaoDaIA & { via: string }) | null
   >(null);
+
+  /** O resultado do "Testar" de cada chave. */
+  const [testes, setTestes] = useState<Partial<Record<IdDaChave, MedicaoDaIA | "testando">>>({});
 
   /** O rascunho: só vai ao banco quando clicar em Salvar. */
   const [draft, setDraft] = useState<{
@@ -180,6 +186,16 @@ export default function IaCard() {
     });
   }
 
+  async function testar(id: IdDaChave) {
+    setTestes((t) => ({ ...t, [id]: "testando" }));
+    const saida = await testarIa(id).catch(() => ({ erro: "Sem resposta do servidor. Confira a conexão e tente de novo." }));
+    setTestes((t) => ({ ...t, [id]: saida }));
+  }
+
+  function testarTodas() {
+    for (const c of CHAVES_DE_IA) if (retrato?.chaves[c.id]) void testar(c.id);
+  }
+
   async function medir(rapido: boolean) {
 
     setMedindo(rapido ? "rapido" : "normal");
@@ -248,39 +264,74 @@ export default function IaCard() {
         </div>
 
         {/*
-          As chaves, como sim/não.
-
-          Saber que a chave da Anthropic não está preenchida é o que
-          explica por que escolher "Anthropic" não muda nada — e era a
-          informação que mais faltava.
-        */}
-        {/*
-          As quatro chaves, com onde criar cada uma (09/10/2026): "quais são
-          as IA que preciso criar a chave?". Mais de uma chave é o que deixa
-          a reserva responder quando a primeira cai ou entra em fila.
+          As quatro chaves, com onde criar cada uma e um "Testar" por chave
+          (09/10/2026). A medição lá embaixo passa pela cadeia, que esconde a
+          chave quebrada atrás da que funciona; aqui cada uma responde por si.
         */}
         <div className="rounded-xl border border-zinc-200 p-3.5">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">Chaves neste ambiente</p>
-          <ul className="mt-2 grid gap-1.5 sm:grid-cols-2">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">Chaves neste ambiente</p>
+            {CHAVES_DE_IA.some((c) => retrato.chaves[c.id]) && (
+              <button
+                type="button"
+                onClick={testarTodas}
+                disabled={Object.values(testes).some((t) => t === "testando")}
+                className="rounded-lg px-2 py-1 text-[11px] font-medium text-violet-700 transition-colors hover:bg-violet-50 disabled:opacity-50"
+              >
+                Testar todas
+              </button>
+            )}
+          </div>
+          <ul className="mt-1.5 divide-y divide-zinc-100">
             {CHAVES_DE_IA.map((c) => {
               const tem = retrato.chaves[c.id];
+              const teste = testes[c.id];
               return (
-                <li key={c.id} className="flex items-start gap-2 text-xs leading-relaxed">
-                  <span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${tem ? "bg-emerald-500" : "bg-zinc-300"}`} aria-hidden />
-                  <span className="text-zinc-700">
-                    <strong className="font-semibold">{c.nome}</strong>{" "}
-                    <span className={tem ? "text-emerald-700" : "text-zinc-500"}>{tem ? "configurada" : "sem chave"}</span>
-                    <span className="text-zinc-400"> · {c.custo}</span>
-                    {!tem && (
-                      <>
-                        {" — crie em "}
-                        <a href={c.onde} target="_blank" rel="noreferrer" className="font-medium text-violet-700 underline underline-offset-2">
-                          {c.onde.replace(/^https:\/\//, "")}
-                        </a>{" "}
-                        e ponha <code className="rounded bg-zinc-100 px-1 py-0.5 text-[11px]">{c.variavel}</code> na Vercel
-                      </>
+                <li key={c.id} className="py-2 text-xs leading-relaxed">
+                  <div className="flex items-start gap-2">
+                    <span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${tem ? "bg-emerald-500" : "bg-zinc-300"}`} aria-hidden />
+                    <span className="min-w-0 flex-1 text-zinc-700">
+                      <strong className="font-semibold">{c.nome}</strong>{" "}
+                      <span className={tem ? "text-emerald-700" : "text-zinc-500"}>{tem ? "configurada" : "sem chave"}</span>
+                      <span className="text-zinc-400"> · {c.custo}</span>
+                      {!tem && (
+                        <>
+                          {" — crie em "}
+                          <a href={c.onde} target="_blank" rel="noreferrer" className="font-medium text-violet-700 underline underline-offset-2">
+                            {c.onde.replace(/^https:\/\//, "")}
+                          </a>{" "}
+                          e ponha <code className="rounded bg-zinc-100 px-1 py-0.5 text-[11px]">{c.variavel}</code> na Vercel
+                        </>
+                      )}
+                    </span>
+                    {tem && (
+                      <button
+                        type="button"
+                        onClick={() => testar(c.id)}
+                        disabled={teste === "testando"}
+                        aria-label={`Testar a chave do ${c.nome}`}
+                        className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-zinc-200 px-2 py-0.5 text-[11px] font-medium text-zinc-700 transition-colors hover:border-violet-300 hover:text-violet-700 disabled:opacity-60"
+                      >
+                        {teste === "testando" ? <Loader2 size={11} className="animate-spin" /> : <PlugZap size={11} />}
+                        {teste === "testando" ? "Testando" : "Testar"}
+                      </button>
                     )}
-                  </span>
+                  </div>
+                  {teste && teste !== "testando" && (
+                    <p
+                      role="status"
+                      className={`mt-1 flex items-start gap-1.5 pl-4 text-[11px] ${teste.erro ? "text-rose-700" : "text-emerald-700"}`}
+                    >
+                      {teste.erro ? <CircleAlert size={12} className="mt-0.5 shrink-0" /> : <CircleCheck size={12} className="mt-0.5 shrink-0" />}
+                      <span>
+                        {teste.erro
+                          ? teste.erro
+                          : `Respondeu em ${((teste.ms ?? 0) / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} s`}
+                        {teste.modelo && <span className="text-zinc-500"> · {teste.modelo}</span>}
+                        {!teste.erro && teste.amostra && <span className="text-zinc-500"> · “{teste.amostra}”</span>}
+                      </span>
+                    </p>
+                  )}
                 </li>
               );
             })}
@@ -291,6 +342,9 @@ export default function IaCard() {
               Sem Groq nem OpenRouter, quando o Gemini entra em fila nos horários de pico não há reserva gratuita para responder.
             </p>
           )}
+          <p className="mt-2 text-[11px] leading-relaxed text-zinc-400">
+            Chave colocada na Vercel só vale depois do próximo deploy. O teste manda uma frase curta de exemplo — nenhum dado de cliente.
+          </p>
         </div>
 
         {/* Velocidade */}
@@ -652,7 +706,8 @@ export default function IaCard() {
 const AMBIENTE: Record<string, string> = { production: "produção", preview: "prévia", local: "máquina local" };
 
 /** Onde criar cada chave e o nome da variável na Vercel. */
-const CHAVES_DE_IA: { id: "gemini" | "groq" | "openrouter" | "anthropic"; nome: string; custo: string; onde: string; variavel: string }[] = [
+type IdDaChave = "gemini" | "groq" | "openrouter" | "anthropic";
+const CHAVES_DE_IA: { id: IdDaChave; nome: string; custo: string; onde: string; variavel: string }[] = [
   { id: "gemini", nome: "Gemini", custo: "gratuita", onde: "https://aistudio.google.com/apikey", variavel: "GEMINI_API_KEY" },
   { id: "groq", nome: "Groq", custo: "gratuita, a mais rápida", onde: "https://console.groq.com/keys", variavel: "GROQ_API_KEY" },
   { id: "openrouter", nome: "OpenRouter", custo: "gratuita nos modelos :free", onde: "https://openrouter.ai/keys", variavel: "OPENROUTER_API_KEY" },

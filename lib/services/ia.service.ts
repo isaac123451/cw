@@ -235,6 +235,21 @@ export async function pedirEstruturado(
   return primeira!;
 }
 
+/**
+ * Um provedor só, fora da cadeia — o botão "Testar" de cada chave em
+ * Configurações → Integrações (09/10/2026).
+ *
+ * A cadeia esconde quem falhou: com Gemini e Groq ligados, uma chave do
+ * Groq errada nunca aparece, porque o Gemini responde antes. Aqui cada um
+ * responde por si, e a saúde da IA (a da tela inteira) não é tocada.
+ */
+export async function pedirSoA(provedor: ProvedorExterno, pedido: PedidoDeIA): Promise<RespostaDeIA> {
+  if (!cadeiaDeProvedores(provedor).includes(provedor)) {
+    return { provedor, status: 503, erro: "Sem chave deste provedor neste ambiente." };
+  }
+  return pedirA(provedor, pedido, await lerConfigDeIA());
+}
+
 const SEM_IA =
   "Nenhuma IA configurada. Defina GEMINI_API_KEY, GROQ_API_KEY ou OPENROUTER_API_KEY (as três têm camada gratuita).";
 

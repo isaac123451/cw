@@ -93,13 +93,23 @@ export const MUDANCAS: Mudanca[] = [
     href: "/configuracoes",
   },
   {
+    id: "testar-cada-chave-de-ia",
+    dia: "2026-10-09",
+    tipo: "novo",
+    frente: "plataforma",
+    titulo: "Testar cada chave de IA em Integrações",
+    texto:
+      "Em Configurações → Integrações, cada IA com chave ganha um botão Testar (e há o Testar todas). Ele chama aquela IA sozinha — fora da fila de reserva, que escondia a chave quebrada atrás da que funcionava — e mostra em quanto tempo respondeu, qual modelo respondeu e a resposta, ou o erro dela em português: chave recusada, cota do dia, modelo que saiu do ar. O teste manda só uma frase de exemplo, nenhum dado de cliente. Chave nova colocada na Vercel só vale depois do próximo deploy.",
+    href: "/configuracoes/integracoes",
+  },
+  {
     id: "openrouter-roteador-gratuito",
     dia: "2026-10-09",
     tipo: "correcao",
     frente: "bastidores",
-    titulo: "OpenRouter usa o roteador gratuito em vez de um modelo que saiu do ar",
+    titulo: "Groq e OpenRouter voltam a responder, e modelo que sai do ar é trocado sozinho",
     texto:
-      "O modelo gratuito que a plataforma pedia ao OpenRouter (Llama 3.3 70B) saiu da lista deles: com a chave configurada, toda chamada voltaria com \"o modelo não existe mais\". Agora o padrão é o roteador gratuito do próprio OpenRouter, que escolhe entre os modelos sem custo que estão no ar e aceitam a resposta estruturada — não gasta crédito e não quebra quando a lista muda. Para fixar um modelo, a variável OPENROUTER_MODELO continua valendo.",
+      "Os modelos que a plataforma pedia ao Groq (Llama 3.3 70B) e ao OpenRouter (Llama 3.3 70B gratuito) saíram do ar: com as chaves novas, toda chamada voltaria com \"o modelo não existe mais\". Testado com as chaves de verdade: o Groq passa a usar o GPT-OSS 120B (0,6 s) e o OpenRouter o Nemotron Super gratuito (cerca de 2 s), com o Gemma 4 de reserva na mesma chamada. E, para não parar de novo quando a lista girar, um modelo que sai do ar agora é trocado sozinho pelo primeiro que serve na lista do próprio provedor — só gratuitos no OpenRouter, nunca transcrição ou moderação.",
     href: "/configuracoes/integracoes",
   },
   /* ---------------- plataforma: meu dia ---------------- */

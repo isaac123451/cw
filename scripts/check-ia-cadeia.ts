@@ -12,7 +12,8 @@
  * assistente. Não sai nada para a internet e não gasta cota.
  *
  * O que ele não prova: que o modelo padrão de cada um ainda existe. Isso
- * só a primeira chamada com a chave de verdade mostra (npm run check:ia).
+ * só a chamada com a chave de verdade mostra — o "Testar" de cada chave em
+ * Configurações → Integrações, ou npm run check:ia.
  */
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
@@ -28,7 +29,7 @@ function conferir(titulo: string, obtido: unknown, esperado: unknown) {
   if (!ok) console.log(`        ${"esperado".padEnd(62)} ${JSON.stringify(esperado)?.slice(0, 50)}`);
 }
 
-type Roteiro = (corpo: Record<string, unknown>, res: ServerResponse) => void;
+type Roteiro = (corpo: Record<string, unknown>, res: ServerResponse, url: string) => void;
 const roteiro: Record<string, Roteiro> = {};
 const recebidos: Record<string, Record<string, unknown>[]> = { groq: [], openrouter: [] };
 
@@ -47,7 +48,7 @@ async function main() {
       const quem = req.url?.startsWith("/groq") ? "groq" : "openrouter";
       const corpo = JSON.parse(bruto || "{}");
       recebidos[quem].push({ ...corpo, _auth: req.headers.authorization });
-      roteiro[quem](corpo, res);
+      roteiro[quem](corpo, res, req.url ?? "");
     });
   });
   await new Promise<void>((ok) => servidor.listen(0, "127.0.0.1", ok));
@@ -59,7 +60,7 @@ async function main() {
   process.env.OPENROUTER_BASE_URL = `http://127.0.0.1:${porta}/openrouter`;
 
   const ia = await import("../lib/services/ia.service");
-  const { lerJsonDaResposta } = await import("../lib/services/iaCompativel");
+  const { escolherSubstituto, lerJsonDaResposta } = await import("../lib/services/iaCompativel");
 
   const pedido = {
     sistema: "Resuma.",
@@ -143,6 +144,25 @@ async function main() {
   }
   conferir("o assistente responde em fluxo pelo Groq", pedacos.join(""), "Olá, tudo certo.");
   conferir("e o uso chega no fim", fim, { entrada: 30, saida: 4 });
+
+  /* 9. Modelo que saiu do ar (09/10/2026): o 404 consulta /models e refaz com o substituto. */
+  process.env.GROQ_MODELO = "llama-velho";
+  const modelosPedidos: string[] = [];
+  roteiro.groq = (c, res, url) => {
+    if (url.endsWith("/models")) return responderJson(res, 200, { data: [{ id: "whisper-large-v3" }, { id: "openai/gpt-oss-20b" }, { id: "openai/gpt-oss-120b" }] });
+    modelosPedidos.push(String(c.model));
+    if (c.model === "llama-velho") return responderJson(res, 404, { error: { code: "model_not_found" } });
+    responderJson(res, 200, comConteudo('{"resumo":"ok","humor":3}'));
+  };
+  const trocado = await ia.pedirSoA("groq", pedido);
+  conferir("404 de modelo: acha o substituto na lista e responde", [trocado.erro ?? null, trocado.modelo], [null, "openai/gpt-oss-120b"]);
+  await ia.pedirSoA("groq", pedido);
+  conferir("e lembra a troca: a próxima vai direto no substituto", modelosPedidos, ["llama-velho", "openai/gpt-oss-120b", "openai/gpt-oss-120b"]);
+  delete process.env.GROQ_MODELO;
+  conferir("o substituto não é transcrição nem moderação", escolherSubstituto("openrouter", ["nvidia/nemotron-3.5-content-safety:free", "liquid/lfm-2.5-2.6b:free"], "x"), "liquid/lfm-2.5-2.6b:free");
+  conferir("no OpenRouter, só gratuito", escolherSubstituto("openrouter", ["openai/gpt-4o", "anthropic/claude-x"], "x"), null);
+  conferir("no Groq, o maior na ordem de preferência", escolherSubstituto("groq", ["openai/gpt-oss-20b", "qwen/qwen3.8-27b", "openai/gpt-oss-120b"], "x"), "openai/gpt-oss-120b");
+  conferir("o teste da chave não passa para outro provedor", (await ia.pedirSoA("anthropic", pedido)).erro, "Sem chave deste provedor neste ambiente.");
 
   conferir("JSON entre texto solto também é lido", lerJsonDaResposta('Aqui está: {"a":1} pronto'), { a: 1 });
   conferir("texto sem JSON não vira objeto", lerJsonDaResposta("não sei"), null);

@@ -8,8 +8,9 @@ import type { PedacoDaConversa, PedidoDeIA, RespostaDeIA, Turno } from "@/lib/se
  * modelo. Chamada por HTTP, sem SDK, como o Gemini.
  *
  * **Modelo.** Os nomes gratuitos mudam com o tempo. O padrão abaixo é o
- * que existia quando isto foi escrito; quando um sair do ar, o provedor
- * responde 404 e a mensagem diz qual variável definir (`GROQ_MODELO`,
+ * que existia quando isto foi escrito; quando um sai do ar (404), a lista
+ * do próprio provedor dá o substituto — ver `substitutoDe`. Sem
+ * substituto, a mensagem diz qual variável definir (`GROQ_MODELO`,
  * `OPENROUTER_MODELO`) — sem deploy.
  *
  * **Formato.** Pede JSON (`response_format`) e manda o JSON Schema na
@@ -34,8 +35,13 @@ const DESTINO: Record<
     base: "https://api.groq.com/openai/v1",
     variavelDaChave: "GROQ_API_KEY",
     variavelDoModelo: "GROQ_MODELO",
-    modelo: "llama-3.3-70b-versatile",
-    modeloRapido: "llama-3.1-8b-instant",
+    /*
+     * Os Llama 3.x saíram da conta (09/10/2026: 404 "model_not_found" no
+     * 3.3 70B, que a documentação ainda citava). O que /models lista hoje
+     * para conversa: gpt-oss-120b, gpt-oss-20b e qwen3.8-27b.
+     */
+    modelo: "openai/gpt-oss-120b",
+    modeloRapido: "openai/gpt-oss-20b",
   },
   openrouter: {
     nome: "OpenRouter",
@@ -43,14 +49,14 @@ const DESTINO: Record<
     variavelDaChave: "OPENROUTER_API_KEY",
     variavelDoModelo: "OPENROUTER_MODELO",
     /*
-     * O roteador gratuito, não um modelo fixo (09/10/2026): o padrão antigo,
-     * meta-llama/llama-3.3-70b-instruct:free, saiu da lista pública do
-     * OpenRouter e passaria a responder 404. `openrouter/free` escolhe entre
-     * os gratuitos que estão no ar e aceitam JSON — custo zero e sem 404
-     * quando a lista gira.
+     * 09/10/2026: o meta-llama/llama-3.3-70b-instruct:free saiu do
+     * OpenRouter. O roteador `openrouter/free` foi testado e descartado
+     * como padrão: em 6 chamadas, 2 caíram num modelo de moderação que
+     * responde "User Safety: safe". O Nemotron Super acertou 3 de 3 em ~3 s;
+     * o Gemma 4 vai de reserva na própria chamada (RESERVAS_DO_OPENROUTER).
      */
-    modelo: "openrouter/free",
-    modeloRapido: "openrouter/free",
+    modelo: "nvidia/nemotron-3-super-120b-a12b:free",
+    modeloRapido: "nvidia/nemotron-3-super-120b-a12b:free",
   },
 };
 
@@ -66,10 +72,65 @@ function base(provedor: ProvedorCompativel) {
 
 export function modeloCompativel(provedor: ProvedorCompativel, rapido: boolean) {
   const d = DESTINO[provedor];
-  return (
+  const escolhido =
     doAmbiente(rapido ? `${d.variavelDoModelo}_RAPIDO` : d.variavelDoModelo) ||
-    (rapido ? d.modeloRapido : d.modelo)
-  );
+    (rapido ? d.modeloRapido : d.modelo);
+  return TROCADO.get(`${provedor}:${escolhido}`) ?? escolhido;
+}
+
+/**
+ * Modelo que saiu do ar → o que a lista do próprio provedor oferece
+ * (09/10/2026).
+ *
+ * Os gratuitos giram rápido: em três semanas o padrão do Groq e o do
+ * OpenRouter deixaram de existir, e cada vez a IA parava até alguém trocar
+ * uma variável. Agora o 404 de modelo consulta `/models` do provedor, pega
+ * o primeiro que serve para conversa na ordem de preferência, refaz o
+ * pedido e lembra a troca enquanto a instância viver. A variável continua
+ * mandando: só é trocado o nome que o provedor disse que não existe.
+ */
+const TROCADO = new Map<string, string>();
+
+/**
+ * O OpenRouter aceita uma lista de modelos na mesma chamada e passa ao
+ * seguinte quando um está em limite (429) ou fora do ar — o gratuito vive
+ * em limite. Só gratuitos: modelo pago gastaria crédito da conta.
+ */
+const RESERVAS_DO_OPENROUTER = ["nvidia/nemotron-3-super-120b-a12b:free", "google/gemma-4-31b-it:free"];
+
+function comReservas(provedor: ProvedorCompativel, nome: string) {
+  if (provedor !== "openrouter" || !nome.endsWith(":free")) return {};
+  return { models: [nome, ...RESERVAS_DO_OPENROUTER.filter((m) => m !== nome)] };
+}
+
+const PREFERENCIA: Record<ProvedorCompativel, RegExp[]> = {
+  groq: [/gpt-oss-120b$/, /qwen/, /llama.*70b/, /gpt-oss-20b$/, /llama/],
+  openrouter: [/nemotron-3-super/, /gemma-4-31b/, /gpt-oss-120b:free$/, /:free$/],
+};
+
+/** Transcrição, voz e filtros de moderação também aparecem em /models — não conversam. */
+const NAO_CONVERSA = /whisper|guard|orpheus|tts|allam|embed|safety/i;
+
+export function escolherSubstituto(provedor: ProvedorCompativel, ids: string[], quebrado: string) {
+  const candidatos = ids.filter((id) => id !== quebrado && !NAO_CONVERSA.test(id));
+  for (const preferido of PREFERENCIA[provedor]) {
+    const achado = candidatos.find((id) => preferido.test(id));
+    if (achado) return achado;
+  }
+  return null;
+}
+
+async function substitutoDe(provedor: ProvedorCompativel, quebrado: string) {
+  try {
+    const r = await fetch(`${base(provedor)}/models`, { headers: cabecalhos(provedor), signal: AbortSignal.timeout(5_000) });
+    if (!r.ok) return null;
+    const lista = ((await r.json()) as { data?: { id: string; active?: boolean }[] }).data ?? [];
+    const novo = escolherSubstituto(provedor, lista.filter((m) => m.active !== false).map((m) => m.id), quebrado);
+    if (novo) TROCADO.set(`${provedor}:${quebrado}`, novo);
+    return novo;
+  } catch {
+    return null;
+  }
 }
 
 function cabecalhos(provedor: ProvedorCompativel) {
@@ -137,7 +198,7 @@ export async function pelaApiCompativel(
   prazoMs: number
 ): Promise<RespostaDeIA> {
 
-  const modelo = modeloCompativel(provedor, pedido.rapido === true);
+  let modelo = modeloCompativel(provedor, pedido.rapido === true);
 
   const sistema = [
     pedido.sistema,
@@ -146,13 +207,13 @@ export async function pelaApiCompativel(
     JSON.stringify(pedido.esquema),
   ].join("\n");
 
-  let resposta: Response;
-  try {
-    resposta = await fetch(`${base(provedor)}/chat/completions`, {
+  const pedir = (nome: string) =>
+    fetch(`${base(provedor)}/chat/completions`, {
       method: "POST",
       headers: cabecalhos(provedor),
       body: JSON.stringify({
-        model: modelo,
+        model: nome,
+        ...comReservas(provedor, nome),
         temperature: 0.2,
         response_format: { type: "json_object" },
         messages: [
@@ -162,6 +223,17 @@ export async function pelaApiCompativel(
       }),
       signal: AbortSignal.timeout(prazoMs),
     });
+
+  let resposta: Response;
+  try {
+    resposta = await pedir(modelo);
+    if (resposta.status === 404) {
+      const novo = await substitutoDe(provedor, modelo);
+      if (novo) {
+        modelo = novo;
+        resposta = await pedir(novo);
+      }
+    }
   } catch {
     return {
       provedor,
@@ -176,10 +248,13 @@ export async function pelaApiCompativel(
   }
 
   const corpo = (await resposta.json().catch(() => null)) as {
+    /** Quem respondeu de fato — no OpenRouter pode ser a reserva. */
+    model?: string;
     choices?: { message?: { content?: string } }[];
     usage?: { prompt_tokens?: number; completion_tokens?: number };
   } | null;
 
+  if (corpo?.model) modelo = corpo.model;
   const texto = corpo?.choices?.[0]?.message?.content ?? "";
   const dados = lerJsonDaResposta(texto);
 
@@ -215,15 +290,15 @@ export async function* conversarCompativel(
   prazoMs: number
 ): AsyncGenerator<PedacoDaConversa> {
 
-  const modelo = modeloCompativel(provedor, false);
+  let modelo = modeloCompativel(provedor, false);
 
-  let resposta: Response;
-  try {
-    resposta = await fetch(`${base(provedor)}/chat/completions`, {
+  const abrir = (nome: string) =>
+    fetch(`${base(provedor)}/chat/completions`, {
       method: "POST",
       headers: cabecalhos(provedor),
       body: JSON.stringify({
-        model: modelo,
+        model: nome,
+        ...comReservas(provedor, nome),
         stream: true,
         stream_options: { include_usage: true },
         messages: [
@@ -233,6 +308,17 @@ export async function* conversarCompativel(
       }),
       signal: AbortSignal.timeout(prazoMs * 4),
     });
+
+  let resposta: Response;
+  try {
+    resposta = await abrir(modelo);
+    if (resposta.status === 404) {
+      const novo = await substitutoDe(provedor, modelo);
+      if (novo) {
+        modelo = novo;
+        resposta = await abrir(novo);
+      }
+    }
   } catch {
     yield { tipo: "erro", mensagem: `O ${DESTINO[provedor].nome} não respondeu.` };
     return;

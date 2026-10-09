@@ -15,8 +15,10 @@ import {
 
 import {
   pedirEstruturado,
+  pedirSoA,
   provedorDeIA,
   type ProvedorExterno,
+  type RespostaDeIA,
 } from "@/lib/services/ia.service";
 import { lerSaudeDaIA, type SaudeDaIAView } from "@/lib/services/saudeDaIa";
 
@@ -198,6 +200,42 @@ export interface MedicaoDaIA {
   saida?: number;
 }
 
+/** O mesmo pedido do `npm run check:ia`, para os números serem comparáveis. */
+const PEDIDO_DE_MEDIDA = {
+  sistema:
+    "Você classifica mensagens curtas de clientes de um sistema para restaurantes. Responda em português do Brasil.",
+  prompt:
+    'Mensagem do cliente: "o pedido não chegou e ninguém me responde há dois dias".',
+  esquema: {
+    type: "object",
+    properties: {
+      assunto: {
+        type: "string",
+        description: "O tema em até cinco palavras.",
+      },
+      urgente: { type: "boolean" },
+    },
+    required: ["assunto", "urgente"],
+  },
+};
+
+function medicaoDe(resultado: RespostaDeIA, ms: number): MedicaoDaIA {
+  if (resultado.erro) {
+    return { erro: resultado.erro, ms, provedor: resultado.provedor, modelo: resultado.modelo };
+  }
+  return {
+    ms,
+    provedor: resultado.provedor,
+    modelo: resultado.modelo,
+    amostra: String(
+      (resultado.dados as { assunto?: string })
+        ?.assunto ?? ""
+    ),
+    entrada: resultado.uso?.entrada,
+    saida: resultado.uso?.saida,
+  };
+}
+
 /**
  * Mede de verdade, com a configuração que está valendo.
  *
@@ -205,9 +243,6 @@ export interface MedicaoDaIA {
  * rápido — ficou rápido?". Sem ele, a escolha é no escuro, e foi o
  * escuro que produziu uma instalação rodando 39 segundos por chamada
  * sem ninguém saber.
- *
- * Usa o mesmo pedido do `npm run check:ia`, para os dois números serem
- * comparáveis.
  */
 export async function medirIa(
   rapido = false
@@ -220,43 +255,35 @@ export async function medirIa(
   }
 
   const marca = Date.now();
+  const resultado = await pedirEstruturado({ ...PEDIDO_DE_MEDIDA, rapido });
+  return medicaoDe(resultado, Date.now() - marca);
+}
 
-  const resultado = await pedirEstruturado({
-    sistema:
-      "Você classifica mensagens curtas de clientes de um sistema para restaurantes. Responda em português do Brasil.",
-    prompt:
-      'Mensagem do cliente: "o pedido não chegou e ninguém me responde há dois dias".',
-    esquema: {
-      type: "object",
-      properties: {
-        assunto: {
-          type: "string",
-          description: "O tema em até cinco palavras.",
-        },
-        urgente: { type: "boolean" },
-      },
-      required: ["assunto", "urgente"],
-    },
-    rapido,
-  });
+const PROVEDORES: ProvedorExterno[] = ["anthropic", "gemini", "groq", "openrouter"];
 
-  const ms = Date.now() - marca;
+/**
+ * Testa **uma** chave, sozinha (09/10/2026): "preciso de uma forma de
+ * testar lá por Integrações".
+ *
+ * A medição acima passa pela cadeia, que esconde a chave quebrada atrás
+ * da que funciona. Aqui o provedor responde por si: o erro que volta é o
+ * dele — chave recusada, modelo que saiu do ar, cota — em português.
+ */
+export async function testarIa(provedor: ProvedorExterno): Promise<MedicaoDaIA> {
 
-  if (resultado.erro) {
-    return { erro: resultado.erro, ms };
+  const ctx = await requireRole("AGENTE", MODULO);
+
+  if (!ctx) {
+    return { erro: "Sem permissão para testar." };
   }
 
-  return {
-    ms,
-    provedor: resultado.provedor,
-    modelo: resultado.modelo,
-    amostra: String(
-      (resultado.dados as { assunto?: string })
-        ?.assunto ?? ""
-    ),
-    entrada: resultado.uso?.entrada,
-    saida: resultado.uso?.saida,
-  };
+  if (!PROVEDORES.includes(provedor)) {
+    return { erro: "Provedor desconhecido." };
+  }
+
+  const marca = Date.now();
+  const resultado = await pedirSoA(provedor, PEDIDO_DE_MEDIDA);
+  return medicaoDe(resultado, Date.now() - marca);
 }
 
 /**
