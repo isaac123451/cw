@@ -305,6 +305,12 @@ const INTERNAS: Record<string, string[]> = {
    * nunca sai do servidor.
    */
   DispositivoConfiavel: ["*"],
+
+  /** O Slack guardado (09/10/2026): lido pelo assistente (`memoriaDoAssistente.service.ts`), nunca pela carga. */
+  MensagemDoSlack: ["*"],
+
+  /** O termômetro do cliente (09/10/2026): carga própria (`lib/actions/termometro.ts`), no cartão da ficha e no cabeçalho da extensão. */
+  TermometroDoCliente: ["*"],
 };
 
 

@@ -65,6 +65,7 @@ const CAMINHOS = {
   completarPelaConversa: "/api/extensao/completar-pela-conversa",
   quemE: "/api/extensao/quem-e",
   vincularContato: "/api/extensao/vincular-contato",
+  termometro: "/api/extensao/termometro",
   aprenderResposta: "/api/extensao/aprender-resposta",
   impacto: "/api/extensao/impacto",
   raCartao: "/api/extensao/ra-cartao",
@@ -970,6 +971,7 @@ async function tratar(mensagem) {
       {
         mensagens: mensagem.mensagens ?? [],
         protocolo: mensagem.protocolo,
+        npsId: mensagem.npsId,
         telefone: mensagem.telefone,
         nome: mensagem.nome,
         /* Casos abertos e reclamações do contato: pesam no "o que fazer agora" (Fase 28). */
@@ -989,6 +991,12 @@ async function tratar(mensagem) {
       emails: (p.emails ?? []).join(","),
       slugs: (p.slugs ?? []).join(","),
     });
+    return { ok: true, dados };
+  }
+
+  /* Medir o termômetro do cliente agora (09/10/2026). Escrita, sem cache. */
+  if (mensagem?.tipo === "medirTermometro") {
+    const dados = await chamar(CAMINHOS.termometro, {}, { protocolo: mensagem.protocolo, npsId: mensagem.npsId });
     return { ok: true, dados };
   }
 

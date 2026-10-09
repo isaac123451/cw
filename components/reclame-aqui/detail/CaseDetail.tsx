@@ -51,6 +51,7 @@ import CaseSidebar from "./CaseSidebar";
 import CaseTimeline from "./CaseTimeline";
 import DossieCard from "./DossieCard";
 import LembretesCard from "./LembretesCard";
+import CartaoDoTermometro from "@/components/termometro/CartaoDoTermometro";
 import TrilhaDoCaso from "@/components/reclame-aqui/tratativa/TrilhaDoCaso";
 import TrilhaDasRedes from "@/components/redes-sociais/TrilhaDasRedes";
 import EncerrarRedesModal from "@/components/redes-sociais/EncerrarRedesModal";
@@ -653,6 +654,9 @@ export default function CaseDetail({
                 de dossiê, e um cartão vazio em 341 fichas seria ruído.
               */}
               <DossieCard data={emEdicao} />
+
+              {/* O termômetro (09/10/2026): satisfação de 0 a 10 e a avaliação que o cliente daria hoje. */}
+              <CartaoDoTermometro key={`termo-${emEdicao.protocol}`} protocolo={emEdicao.protocol} />
 
               <OverviewTab
                 data={emEdicao}

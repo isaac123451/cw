@@ -20,6 +20,7 @@ import { condicoesNaConversa } from "@/lib/models/impactoNaConversa";
 import { humorDaConversa } from "@/lib/services/motorProprio";
 import { descreverRegistro, prazoUtil } from "@/lib/services/horasUteis";
 import { lerExpediente } from "@/lib/services/operacao.service";
+import { termometroAtual } from "@/lib/services/termometro.service";
 
 /**
  * POST /api/extensao/sinais
@@ -40,6 +41,8 @@ interface Corpo {
   historico?: { casosAbertos?: number; reclamacoes?: number };
   /** O caso aberto mais recente do contato, se houver. */
   protocolo?: string;
+  /** O ciclo do NPS do contato: o termômetro dele, quando não há caso. */
+  npsId?: string;
   /** O número do contato na página (WhatsApp). */
   telefone?: string;
   /** O nome do contato como o WhatsApp mostra — completa a reclamação que chegou sem nome. */
@@ -146,7 +149,19 @@ export async function POST(request: Request) {
     }
   }
 
+  /*
+    O termômetro gravado (09/10/2026): a satisfação de 0 a 10 e a avaliação
+    prevista, no lugar do humor solto, quando o caso ou o NPS já foi medido.
+  */
+  let termometro = null;
+  if (prisma && !demonstracao) {
+    const doCaso = protocolo ? await prisma.case.findUnique({ where: { protocol: protocolo }, select: { id: true } }).catch(() => null) : null;
+    const npsId = typeof corpo.npsId === "string" ? corpo.npsId.trim().slice(0, 60) : "";
+    termometro = await termometroAtual(prisma, doCaso ? { caseId: doCaso.id } : { npsResponseId: npsId || null }).catch(() => null);
+  }
+
   return responder(request, {
+    termometro,
     avisos: avisosDaConversa(mensagens, indice),
     completar,
     impacto,

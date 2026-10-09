@@ -33,6 +33,7 @@ import { descreverMinutosUteis, descreverRegistro, minutosUteisEntre } from "@/l
 import { slaState } from "@/lib/services/nps.service";
 
 import TrilhaDoNps from "./TrilhaDoNps";
+import CartaoDoTermometro from "@/components/termometro/CartaoDoTermometro";
 import ContatosDoNps from "./ContatosDoNps";
 import LateralDoNps from "./LateralDoNps";
 import ClassificarNpsModal from "./ClassificarNpsModal";
@@ -289,6 +290,9 @@ export default function FichaDoNps({ id, naJanela = false }: { id: string; naJan
               <p className="text-sm text-zinc-500">Só a nota — o cliente não escreveu comentário.</p>
             )}
           </SurfaceCard>
+
+          {/* A satisfação de agora, depois do contato — a nota da pesquisa é de antes (09/10/2026). */}
+          <CartaoDoTermometro key={`termo-${ciclo.id}`} npsId={ciclo.id} />
 
           <ContatosDoNps item={ciclo} registrar={(modo) => setDialogo({ tipo: "contato", modo })} />
 

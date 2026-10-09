@@ -25,6 +25,7 @@ import { dadosDaConversa, oQueCompletar, type CampoDoCadastro } from "@/lib/serv
 import { gravarContato, recalcularResumo } from "@/lib/services/tratativa.service";
 import { pedirEstruturado, temIA } from "@/lib/services/ia.service";
 import { criarLembretesAutomaticos } from "@/lib/services/lembretesAutomaticos.service";
+import { termometrosDoDia } from "@/lib/services/termometro.service";
 import { listUpcomingEvents, validAccessToken } from "@/lib/services/google.service";
 
 /**
@@ -758,9 +759,14 @@ export async function lembretesDoSlack(
     }
   }
 
+  /* O caso citado (protocolo ou nome do cliente): o lembrete nasce nele (09/10/2026). */
+  const citados = await casosCitadosNoSlack(prisma, novas.map((m) => m.texto)).catch(() => new Map<string, { id: string; protocol: string }>());
+
   let criados = 0;
   for (const m of novas) {
-    const l = decididas.get(m.ts);
+    const decidido = decididas.get(m.ts);
+    const caso = citados.get(m.texto);
+    const l = decidido && caso && !decidido.titulo.includes(caso.protocol) ? { ...decidido, titulo: `${decidido.titulo} [${caso.protocol}]` } : decidido;
     const chave = chaveDaAcao.slack(m.canal, m.ts);
     if (!l) {
       /* Lido e sem ação: registra como aviso visto, para não reler — e não aparece como novidade. */
@@ -782,7 +788,17 @@ export async function lembretesDoSlack(
     if (!novo) continue;
     await prisma.agendaTask
       .create({
-        data: { id, title: l.titulo.slice(0, 300), type: "Follow-up", priority: "Média", done: false, dueDate: new Date(`${l.dia}T00:00:00.000Z`), time: l.hora ?? null, ownerId: usuario.id },
+        data: {
+          id,
+          title: l.titulo.slice(0, 300),
+          type: "Follow-up",
+          priority: "Média",
+          done: false,
+          dueDate: new Date(`${l.dia}T00:00:00.000Z`),
+          time: l.hora ?? null,
+          ownerId: usuario.id,
+          caseId: caso?.id ?? null,
+        },
       })
       .catch(() => {});
     criados += 1;
@@ -855,6 +871,8 @@ export async function rodarIaDoDia(prisma: PrismaClient, userId: string, agora =
     anotarConversasDoDia(prisma, userId, agora),
     seguirPelasConversas(prisma, userId, agora),
     depoisDasReunioes(prisma, userId, agora),
+    /* O termômetro de quem teve mensagem nova (09/10/2026): satisfação e avaliação prevista, gravadas. */
+    termometrosDoDia(prisma, agora),
   ]);
   for (const p of partes) if (p.status === "rejected") console.error("[ia do dia]", p.reason);
 }
@@ -944,4 +962,70 @@ export async function desfazer(prisma: PrismaClient, userId: string, id: string)
   }
   await prisma.acaoDaIA.update({ where: { id }, data: { desfeitaEm: new Date(), vistaEm: acao.vistaEm ?? new Date() } });
   return { ok: true };
+}
+
+/* ============================================================
+   O SLACK GUARDADO E LIGADO AO CASO (09/10/2026)
+============================================================ */
+
+const semAcentoSlack = (s: string) => s.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+
+/**
+ * O caso que a mensagem do Slack cita: pelo protocolo (RA-…, IG-…) ou pelo
+ * nome completo de um cliente com caso aberto. "Lembre de promessas em cada
+ * caso conforme o que é visto no Slack": o pedido "vê o RA-x8 até amanhã"
+ * vira lembrete **no caso**, e aparece na ficha dele.
+ */
+export async function casosCitadosNoSlack(prisma: PrismaClient, textos: string[]): Promise<Map<string, { id: string; protocol: string }>> {
+  const achados = new Map<string, { id: string; protocol: string }>();
+  const protocolos = [...new Set(textos.flatMap((t) => [...t.matchAll(/\b(?:RA|IG|FB|MC)-[A-Za-z0-9_-]{6,30}\b/g)].map((m) => m[0])))];
+  const porProtocolo = protocolos.length
+    ? await prisma.case.findMany({ where: { protocol: { in: protocolos } }, select: { id: true, protocol: true } })
+    : [];
+  const abertos = await prisma.case.findMany({
+    where: { encerradoEm: null, status: { notIn: [...CLOSED_STATUS] } },
+    select: { id: true, protocol: true, customer: true },
+    take: 600,
+  });
+  const nomes = abertos
+    .map((c) => ({ c, nome: semAcentoSlack(c.customer).replace(/\s+/g, " ").trim() }))
+    .filter((x) => x.nome.split(" ").length >= 2 && x.nome.length >= 8 && !/nao informado/.test(x.nome));
+  for (const texto of textos) {
+    const p = porProtocolo.find((c) => texto.includes(c.protocol));
+    if (p) {
+      achados.set(texto, p);
+      continue;
+    }
+    const t = semAcentoSlack(texto);
+    const porNome = nomes.filter((x) => t.includes(x.nome));
+    if (porNome.length === 1) achados.set(texto, { id: porNome[0].c.id, protocol: porNome[0].c.protocol });
+  }
+  return achados;
+}
+
+/** Guarda o que chegou do Slack (14 dias), com o caso citado. Sem a tabela ainda (falta o db:push), não faz nada. */
+export async function guardarMensagensDoSlack(prisma: PrismaClient, userId: string, mensagens: MensagemDoSlack[]): Promise<number> {
+  if (!mensagens.length) return 0;
+  try {
+    const casos = await casosCitadosNoSlack(prisma, mensagens.map((m) => m.texto));
+    const r = await prisma.mensagemDoSlack.createMany({
+      data: mensagens.map((m) => ({
+        userId,
+        canal: m.canal,
+        ts: m.ts,
+        autor: (m.autor ?? "").slice(0, 120),
+        texto: m.texto.slice(0, 4000),
+        link: m.link ?? null,
+        quando: new Date(m.quando),
+        caseId: casos.get(m.texto)?.id ?? null,
+      })),
+      skipDuplicates: true,
+    });
+    await prisma.mensagemDoSlack.deleteMany({ where: { userId, quando: { lt: new Date(Date.now() - 14 * 86_400_000) } } });
+    return r.count;
+  } catch (erro) {
+    const codigo = (erro as { code?: string })?.code;
+    if (codigo === "P2021") return 0;
+    throw erro;
+  }
 }

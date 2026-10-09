@@ -77,8 +77,8 @@ export async function memoriaDoAssistente(prisma: PrismaClient, pedido: PedidoDe
         id: true,
         telefone: true,
         contatoNome: true,
-        case: { select: { protocol: true, title: true, status: true, customer: true, channel: true } },
-        npsResponse: { select: { score: true, customerName: true, status: true, comment: true } },
+        case: { select: { id: true, protocol: true, title: true, status: true, customer: true, channel: true } },
+        npsResponse: { select: { id: true, score: true, customerName: true, status: true, comment: true } },
         mensagens: {
           orderBy: { em: "desc" },
           take: 60,
@@ -129,6 +129,29 @@ export async function memoriaDoAssistente(prisma: PrismaClient, pedido: PedidoDe
     })
     .filter((x) => x.mensagens.length > 0);
 
+  /* O termômetro gravado de cada um (09/10/2026): a satisfação de 0 a 10 e a avaliação prevista. */
+  const termometros = new Map<string, string>();
+  try {
+    const ids = lidas.flatMap((x) => [x.c.case?.id, x.c.npsResponse?.id]).filter((v): v is string => Boolean(v));
+    if (ids.length) {
+      const linhas = await prisma.termometroDoCliente.findMany({
+        where: { OR: [{ caseId: { in: ids } }, { npsResponseId: { in: ids } }] },
+        orderBy: { criadoEm: "desc" },
+        select: { caseId: true, npsResponseId: true, satisfacao: true, notaPrevista: true, chanceResolvido: true, tendencia: true, motivo: true },
+      });
+      for (const l of linhas) {
+        const chave = l.caseId ?? l.npsResponseId!;
+        if (termometros.has(chave)) continue;
+        termometros.set(
+          chave,
+          ` Termômetro: satisfação ${l.satisfacao}/10${l.tendencia ? ` (${l.tendencia})` : ""}${l.notaPrevista !== null ? `, avaliaria ${l.notaPrevista}, chance de resolvido ${l.chanceResolvido}%` : ""} — ${l.motivo.slice(0, 140)}.`
+        );
+      }
+    }
+  } catch {
+    /* Sem a tabela ainda (falta o db:push): segue sem o termômetro. */
+  }
+
   const pergunta = semAcento(pedido.pergunta);
   const citada = (x: (typeof lidas)[number]) => {
     const primeiro = semAcento(x.nome.split(/\s+/)[0] ?? "").replace(/[^a-z0-9]/g, "");
@@ -154,7 +177,8 @@ export async function memoriaDoAssistente(prisma: PrismaClient, pedido: PedidoDe
     linhas.push(
       `• ${x.nome}${x.c.telefone ? ` (${telefoneLegivel(x.c.telefone)})` : ""} — ${vinculo} — ${espera}; humor: ${humor}.` +
         (ultimaCliente ? ` Última do cliente: “${ultimaCliente.texto.replace(/\s+/g, " ").slice(0, 140)}”.` : "") +
-        (ultimaNossa ? ` Nossa última: “${ultimaNossa.texto.replace(/\s+/g, " ").slice(0, 120)}”.` : "")
+        (ultimaNossa ? ` Nossa última: “${ultimaNossa.texto.replace(/\s+/g, " ").slice(0, 120)}”.` : "") +
+        (termometros.get(x.c.case?.id ?? "") ?? termometros.get(x.c.npsResponse?.id ?? "") ?? "")
     );
 
     /* As falas: do contato aberto sempre; das citadas na pergunta; e das mais recentes quando a pergunta é sobre conversas. */
@@ -175,7 +199,36 @@ export async function memoriaDoAssistente(prisma: PrismaClient, pedido: PedidoDe
     linhas.push(`• ${dia.slice(8, 10)}/${dia.slice(5, 7)}${t.time ? ` ${t.time}` : ""}${atrasado}: ${t.title}${t.case?.protocol ? ` [${t.case.protocol}]` : ""}`);
   }
 
-  if (slack.length) {
+  /* As mensagens do Slack guardadas (09/10/2026): o texto inteiro, com o caso citado. */
+  let slackGuardado: { autor: string; texto: string; quando: Date; caseId: string | null }[] = [];
+  if (pedido.userId) {
+    try {
+      slackGuardado = await prisma.mensagemDoSlack.findMany({
+        where: { userId: pedido.userId, quando: { gte: desde } },
+        orderBy: { quando: "desc" },
+        take: querFalas ? 30 : 12,
+        select: { autor: true, texto: true, quando: true, caseId: true },
+      });
+    } catch {
+      /* Sem a tabela ainda (falta o db:push): fica o que virou lembrete. */
+    }
+  }
+  if (slackGuardado.length) {
+    const protocolos = new Map(
+      (
+        await prisma.case.findMany({
+          where: { id: { in: slackGuardado.map((m) => m.caseId).filter((v): v is string => Boolean(v)) } },
+          select: { id: true, protocol: true },
+        })
+      ).map((c) => [c.id, c.protocol])
+    );
+    linhas.push("");
+    linhas.push(`Mensagens do Slack para você (últimos ${DIAS} dias, da mais nova para a mais antiga):`);
+    for (const m of slackGuardado) {
+      const caso = m.caseId ? protocolos.get(m.caseId) : undefined;
+      linhas.push(`• [${quando(m.quando)}] ${m.autor || "alguém"}${caso ? ` (sobre ${caso})` : ""}: ${m.texto.replace(/\s+/g, " ").slice(0, querFalas ? 400 : 160)}`);
+    }
+  } else if (slack.length) {
     linhas.push("");
     linhas.push(`O que pediram a você no Slack (últimos ${DIAS} dias):`);
     for (const s of slack) linhas.push(`• ${quando(s.criadaEm)}${s.desfeitaEm ? " (descartado)" : ""}: ${s.titulo}${s.detalhe ? ` — ${s.detalhe.slice(0, 160)}` : ""}`);

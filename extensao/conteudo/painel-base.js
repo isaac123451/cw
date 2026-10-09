@@ -418,6 +418,7 @@
       if (acao === "pausar-guardar") P.alternarPausaDeGuardar();
       if (acao === "vincular") P.vincularContato(alvo);
       if (acao === "desvincular") P.desvincularContato();
+      if (acao === "medir-termometro") P.medirTermometro?.(alvo);
       if (acao === "cadastrar-canal") P.cadastrarNesteCanal();
       if (acao === "anotar-caso") P.anotarCaso(alvo);
       if (acao === "acao-rapida") P.alternarAcaoRapida?.(alvo);

@@ -530,6 +530,7 @@ model Case {
   imagensDoDossie ImagemDoDossie[]
   reclassificacoes ReclassificacaoDeCaso[]
   propostaDeCategoria PropostaDeCategoria?
+  termometros TermometroDoCliente[]
 
   @@index([channel, publishedAt])
   @@index([status])
@@ -1480,6 +1481,7 @@ model NpsResponse {
   attempts  NpsAttempt[]
   notes     NpsNote[]
   conversas Conversa[]
+  termometros TermometroDoCliente[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2499,4 +2501,56 @@ model AcaoDaIA {
 
   @@unique([userId, chave])
   @@index([userId, criadaEm])
+}
+
+/// O que chegou do Slack para a pessoa — conversa direta ou menção —, lido
+/// pela extensão (09/10/2026). Antes só virava lembrete e se perdia: o
+/// assistente não sabia o que tinham pedido, e a promessa feita no Slack
+/// sobre um cliente não chegava ao caso dele. Guardado por 14 dias.
+model MensagemDoSlack {
+  id     String @id @default(cuid())
+  userId String
+  canal  String
+  ts     String
+  autor  String @default("")
+  texto  String
+  link   String?
+  quando DateTime
+  /// O caso que a mensagem cita (protocolo ou nome do cliente), quando a leitura achou.
+  caseId   String?
+  criadaEm DateTime @default(now())
+
+  @@unique([userId, canal, ts])
+  @@index([userId, quando])
+}
+
+/// O termômetro do cliente (09/10/2026): a satisfação de 0 a 10 — a mesma
+/// régua do NPS — e a avaliação que ele daria hoje. Cada leitura fica: a
+/// última é o agora, as anteriores são a evolução. Calibrado pelo histórico
+/// do próprio cliente e da operação (as avaliações reais do Reclame Aqui).
+model TermometroDoCliente {
+  id            String       @id @default(cuid())
+  caseId        String?
+  case          Case?        @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  npsResponseId String?
+  npsResponse   NpsResponse? @relation(fields: [npsResponseId], references: [id], onDelete: Cascade)
+  conversaId    String?
+  /// 0 a 10, como a pergunta do NPS: o quanto o cliente está satisfeito agora.
+  satisfacao   Int
+  /// 0 a 10: a nota que ele daria hoje (no Reclame Aqui, a nota do consumidor).
+  notaPrevista Int?
+  /// 0 a 100: a chance de marcar "resolvido" e de "voltaria a fazer negócio".
+  chanceResolvido Int?
+  chanceVoltaria  Int?
+  /// "melhorando", "piorando" ou "estavel" em relação à leitura anterior.
+  tendencia String?
+  motivo    String
+  sinais    Json?
+  /// "ia" quando a IA leu; "regra" quando foi só pelos sinais (sem IA no ar).
+  fonte    String
+  modelo   String?
+  criadoEm DateTime @default(now())
+
+  @@index([caseId, criadoEm])
+  @@index([npsResponseId, criadoEm])
 }

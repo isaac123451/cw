@@ -1695,6 +1695,7 @@
           tipo: "sinaisDaConversa",
           mensagens,
           protocolo,
+          npsId: P.ultimoDado?.nps?.id,
           telefone: P.consulta?.telefone,
           nome: P.consulta?.nome,
           /* O que o painel já sabe: pesa no "o que fazer agora" (Fase 28). */
@@ -1707,6 +1708,9 @@
           avisos: resposta?.dados?.avisos ?? [],
           completar: resposta?.dados?.completar ?? null,
           humor: resposta?.dados?.humor ?? null,
+          termometro: resposta?.dados?.termometro ?? null,
+          protocolo,
+          npsId: P.ultimoDado?.nps?.id,
           agora: resposta?.dados?.agora ?? null,
           impacto: resposta?.dados?.impacto ?? [],
         });
@@ -1719,7 +1723,7 @@
     const sinais = sinaisPorContato.get(chave);
     if (!sinais) return;
 
-    desenharTermometro(sinais.humor);
+    desenharTermometro(sinais.humor, sinais);
     desenharAgora(sinais.agora);
     desenharImpacto(sinais.impacto);
     desenharCompletar(sinais.completar, chave);
@@ -1868,7 +1872,7 @@
           .map(
             (c) => `<li>
               <span class="tag neutro">${ROTULO_DO_CANDIDATO[c.tipo] ?? ""}</span>
-              <span class="candidato" title="${CW.escapar(`${c.titulo} — ${c.detalhe}`)}"><b>${CW.escapar(c.titulo)}</b><span class="sub">${CW.escapar(c.detalhe)}${c.motivo ? ` · ${CW.escapar(c.motivo)}` : ""}</span></span>
+              <span class="candidato" title="${CW.escapar(c.titulo)} — ${CW.escapar(c.detalhe)}"><b>${CW.escapar(c.titulo)}</b><span class="sub">${CW.escapar(c.detalhe)}${c.motivo ? ` · ${CW.escapar(c.motivo)}` : ""}</span></span>
               <button type="button" class="copiar" data-acao="vincular" data-tipo="${CW.escapar(c.tipo)}" data-ref="${CW.escapar(c.ref)}">É este</button>
             </li>`
           )
@@ -2022,15 +2026,67 @@
 
   const ROTULO_DO_HUMOR = { 1: "muito irritado", 2: "insatisfeito", 3: "neutro", 4: "satisfeito", 5: "muito satisfeito" };
 
-  function desenharTermometro(humor) {
+  /**
+   * O termômetro do cliente no cabeçalho (09/10/2026): a satisfação de 0 a
+   * 10 — a régua do NPS — e, no título, a nota que ele daria hoje e as
+   * chances de "resolvido" e "voltaria". Clicar mede de novo, na hora.
+   * Sem medição ainda, fica o humor das últimas falas, com o convite a medir.
+   */
+  function desenharTermometro(humor, sinais) {
     const el = P.corpo?.querySelector(".cabecalho-cliente .termometro");
-    if (!el || !humor || !ROTULO_DO_HUMOR[humor.agora]) return;
+    if (!el) return;
+    const t = sinais?.termometro;
+    const podeMedir = Boolean(sinais?.protocolo || sinais?.npsId);
+    if (podeMedir) {
+      el.dataset.acao = "medir-termometro";
+      el.style.cursor = "pointer";
+    }
+    if (t && typeof t.satisfacao === "number") {
+      const seta = t.tendencia === "piorando" ? " ↓" : t.tendencia === "melhorando" ? " ↑" : "";
+      el.className = `termometro ${t.faixa === "promotor" ? "h5" : t.faixa === "neutro" ? "h3" : "h1"}`;
+      el.textContent = `satisfação ${t.satisfacao}/10${seta}`;
+      el.title = [
+        `Satisfação ${t.satisfacao} de 10 (${t.faixa}) — ${t.motivo}`,
+        t.notaPrevista !== null ? `Se avaliasse hoje: nota ${t.notaPrevista} · resolvido ${t.chanceResolvido}% · voltaria ${t.chanceVoltaria}%` : "",
+        `Medido ${String(t.em).slice(8, 10)}/${String(t.em).slice(5, 7)} ${new Date(t.em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}${t.fonte === "ia" ? " pela IA" : " pelos sinais"}${podeMedir ? " · clique para medir de novo" : ""}`,
+      ].filter(Boolean).join("\n");
+      el.hidden = false;
+      return;
+    }
+    if (!humor || !ROTULO_DO_HUMOR[humor.agora]) {
+      if (podeMedir) {
+        el.className = "termometro h3";
+        el.textContent = "medir satisfação";
+        el.title = "Mede a satisfação de 0 a 10 e a avaliação prevista, pela conversa e pelo histórico";
+        el.hidden = false;
+      }
+      return;
+    }
     const seta = humor.tendencia === "piorando" ? " ↓" : humor.tendencia === "melhorando" ? " ↑" : "";
     el.className = `termometro h${humor.agora}`;
     el.textContent = `${ROTULO_DO_HUMOR[humor.agora]}${seta}`;
-    el.title = `Humor da conversa: ${humor.agora} de 5${humor.tendencia ? `, ${humor.tendencia}` : ""} — pelas últimas mensagens do cliente`;
+    el.title = `Humor da conversa: ${humor.agora} de 5${humor.tendencia ? `, ${humor.tendencia}` : ""} — pelas últimas mensagens do cliente${podeMedir ? ". Clique para medir a satisfação de 0 a 10." : ""}`;
     el.hidden = false;
   }
+
+  P.medirTermometro = async function medirTermometro(el) {
+    const chave = [P.consulta?.telefone, P.consulta?.nome, P.consulta?.rotulo].join("|");
+    const sinais = sinaisPorContato.get(chave);
+    if (!sinais || el.dataset.medindo) return;
+    el.dataset.medindo = "1";
+    const antes = el.textContent;
+    el.textContent = "medindo…";
+    const r = await CW.enviar({ tipo: "medirTermometro", protocolo: sinais.protocolo, npsId: sinais.npsId });
+    delete el.dataset.medindo;
+    if (!r?.ok || r.dados?.erro || !r.dados?.termometro) {
+      el.textContent = antes;
+      CW.notificar?.(r?.dados?.erro ?? r?.erro ?? "Não deu para medir agora.", "erro");
+      return;
+    }
+    sinais.termometro = r.dados.termometro;
+    desenharTermometro(sinais.humor, sinais);
+    CW.notificar?.(`Satisfação ${r.dados.termometro.satisfacao}/10 — guardada na ficha.`);
+  };
 
   /**
    * O que fazer agora (Fase 28): escutar, assumir o erro, áudio, Meet,

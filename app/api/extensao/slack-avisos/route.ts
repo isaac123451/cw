@@ -4,7 +4,7 @@ import { autenticar, responder, responderPreVoo, semSessao } from "@/lib/api/ext
 import { WORKSPACE_TAG } from "@/lib/actions/tags";
 import type { MensagemDoSlack } from "@/lib/models/iaDoDia";
 import { getPrisma } from "@/lib/prisma";
-import { lembretesDoSlack } from "@/lib/services/iaDoDia.service";
+import { guardarMensagensDoSlack, lembretesDoSlack } from "@/lib/services/iaDoDia.service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -46,6 +46,9 @@ export async function POST(request: Request) {
     .filter((m) => m.canal && /^\d{9,11}\.\d{6}$/.test(m.ts) && m.texto && !Number.isNaN(Date.parse(m.quando)));
 
   if (!mensagens.length) return responder(request, { ok: true, criados: 0 });
+
+  /* Guardadas (14 dias) para o assistente ler e para ligar ao caso citado (09/10/2026). Falha aqui não impede o lembrete. */
+  await guardarMensagensDoSlack(prisma, usuario.id, mensagens).catch((erro) => console.error("[slack-avisos] guardar", erro));
 
   try {
     const criados = await lembretesDoSlack(prisma, { id: usuario.id, nome: usuario.nome }, mensagens);

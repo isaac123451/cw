@@ -53,6 +53,26 @@ export const REVISAO = {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- plataforma: IA do dia (09/10) ---------------- */
   {
+    id: "termometro-do-cliente",
+    dia: "2026-10-09",
+    tipo: "novo",
+    frente: "plataforma",
+    titulo: "Termômetro do cliente: satisfação de 0 a 10 e a avaliação que ele daria hoje",
+    texto:
+      "Cada reclamação e cada NPS ganham um termômetro: a satisfação de agora na régua do NPS (0 a 10, promotor, neutro ou detrator), a nota que o cliente daria se avaliasse hoje e as chances de marcar \"resolvido\" e \"voltaria a fazer negócio\" — com o porquê e os fatos da conversa que pesaram. Sai de duas leituras: os sinais (o humor das últimas falas, quanto tempo ele espera resposta, retorno prometido atrasado, resposta pública) e a IA, que lê o relato, a conversa e o histórico de avaliações do próprio cliente e da operação. A previsão parte do que é real: conferida contra as avaliações que já existem com conversa guardada, errou em média 0,4 ponto na nota (antes da calibragem, 2,4) e acertou o \"resolvido\" nas 5 — amostra pequena, ainda sem nenhum detrator; a conta segue sendo conferida a cada avaliação nova. Cada medição fica guardada: o cartão mostra a evolução. A IA do dia mede sozinha quando a conversa anda; dá para medir na hora no cartão da ficha ou clicando na satisfação no cabeçalho da extensão. O assistente também passa a saber a satisfação de cada cliente.",
+    href: "/reclame-aqui",
+  },
+  {
+    id: "slack-guardado-no-caso",
+    dia: "2026-10-09",
+    tipo: "melhoria",
+    frente: "plataforma",
+    titulo: "O que pedem no Slack fica guardado e vai para o caso certo",
+    texto:
+      "As mensagens do Slack para você (conversa direta e menção) viravam só um lembrete solto. Agora ficam guardadas por 14 dias — o assistente lê o texto inteiro quando você pergunta — e, quando citam um protocolo (RA-…) ou o nome completo de um cliente com caso aberto, o lembrete nasce ligado ao caso, com o protocolo no título, e aparece na ficha dele.",
+    href: "/agenda",
+  },
+  {
     id: "assistente-le-suas-conversas",
     dia: "2026-10-09",
     tipo: "novo",
