@@ -1175,10 +1175,15 @@
     if (doPainel.length !== 8) return false;
     const naTela = oito(daTela?.telefone);
     if (naTela.length === 8 && naTela !== doPainel) return true;
+    /* O cabeçalho mostra o número: contato fora da agenda, o carimbo dele também é o número. */
+    const cabecalhoENumero = /^[\s+\d().-]+$/.test(String(P.consulta?.nome ?? "").trim()) && oito(P.consulta?.nome).length === 8;
     return mensagens.some((m) => {
       if (m.de !== "cliente" || !m.autor) return false;
       const autor = String(m.autor).trim();
-      if (!/^[\s+\d().-]+$/.test(autor)) return false;
+      if (!/^[\s+\d().-]+$/.test(autor)) {
+        /* Assinada por um nome da agenda numa conversa de quem só aparece pelo número: é de outra pessoa (o Márcio na conversa do Thales). */
+        return cabecalhoENumero && /\p{L}{2,}/u.test(autor);
+      }
       const d = oito(autor);
       return d.length === 8 && d !== doPainel;
     });

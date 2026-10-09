@@ -144,6 +144,15 @@ async function main() {
   await P.guardarSozinho();
   conferir("tela e painel no mesmo contato: grava", enviados.find((m) => m.tipo === "guardarConversa")?.corpo?.mensagens?.map((m) => m.id), ["m7", "m8"]);
 
+  /* O Márcio (salvo na agenda) na conversa do Thales (só o número no cabeçalho). */
+  enviados.length = 0;
+  const consultaAntes = P.consulta;
+  P.consulta = { telefone: "+55 83 9394-3375", nome: "+55 83 9394-3375" };
+  P.lerConversa = () => ({ mensagens: [{ id: "m9", de: "cliente", texto: "Precisa ser programado", carimbo: "18:37, 01/10/2026", autor: "Márcio - Kantinho Burger" }], contato: { telefone: "", nome: "" } });
+  await P.guardarSozinho();
+  conferir("contato pelo número e mensagem assinada por nome da agenda: não grava", enviados.length, 0);
+  P.consulta = consultaAntes;
+
   console.log(falhas === 0 ? "\n  A conversa se guarda com o painel aberto ou fechado.\n" : `\n  ${falhas} ponto(s) a corrigir.\n`);
   process.exitCode = falhas === 0 ? 0 : 1;
 }

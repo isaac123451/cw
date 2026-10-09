@@ -87,6 +87,13 @@ export function autorDeOutraConversa(
     }
     const nomeDoAutor = nomeDePessoa(autor);
     if (nomeDoAutor && nomeDoContato && !mesmoNome(nomeDoAutor, nomeDoContato)) return autor;
+    /*
+      O contato aparece pelo número (fora da agenda) e a mensagem vem
+      assinada por um nome da agenda: é outra pessoa (09/10/2026 — as
+      mensagens do "Márcio - Kantinho Burger" gravadas na conversa do
+      Thales, que só aparece como "+55 83 9394-3375").
+    */
+    if (nomeDoAutor && !nomeDoContato && pareceTelefone(contato.nome)) return autor;
   }
   return null;
 }
@@ -112,7 +119,15 @@ export function semMensagensDeOutraConversa<T extends MensagemComAutor & { criad
     .filter((m) => m.de === "cliente" && pareceTelefone(m.autor) && (!m.chave || m.chave.startsWith("wa:")))
     .map((m) => digitos(m.autor).slice(-8));
   const numeros = new Set(doCliente);
-  const dono = numeros.size === 1 && !doCliente.some((d) => mesmoTelefone(d, contato.telefone)) ? { ...contato, telefone: [...numeros][0] } : contato;
+  const outroNumero = numeros.size === 1 && !doCliente.some((d) => mesmoTelefone(d, contato.telefone));
+  const telefoneDoDono = outroNumero ? [...numeros][0] : contato.telefone;
+  /*
+    Quando o cliente escreve pelo número (fora da agenda), o carimbo dele é
+    o número — então mensagem do cliente assinada por nome é de outra
+    pessoa, mesmo que o nome gravado na conversa seja antigo ou vazio.
+  */
+  const escrevePeloNumero = doCliente.some((d) => mesmoTelefone(d, telefoneDoDono));
+  const dono = { telefone: telefoneDoDono, nome: escrevePeloNumero ? `+${digitos(telefoneDoDono)}` : contato.nome };
 
   const lotesAlheios = new Set<string>();
   for (const m of mensagens) {

@@ -50,6 +50,18 @@ const mayara = [
 ];
 conferir("todas de um mesmo outro número: o número da conversa é que estava errado — nada sai", semMensagensDeOutraConversa({ telefone: "5511960599984" }, mayara).length, 3);
 
+const loteMarcio = new Date("2026-10-09T18:19:40Z");
+const thales = [
+  { de: "nos", autor: "Cardápio Web (Reputação)", chave: "wa:1", texto: "Boa tarde, Márcio! Podemos seguir com a maquininha?", criadoEm: loteMarcio },
+  { de: "cliente", autor: "Márcio - Kantinho Burger", chave: "wa:2", texto: "Precisa ser programado", criadoEm: loteMarcio },
+  { de: "nos", autor: "Cardápio Web (Reputação)", chave: "wa:3", texto: "Bom dia, Thales!", criadoEm: new Date("2026-10-09T13:28:47Z") },
+  { de: "cliente", autor: "+55 83 9394-3375", chave: "wa:4", texto: "Sim", criadoEm: new Date("2026-10-09T13:35:30Z") },
+];
+conferir("cliente fora da agenda (número) e mensagem assinada por nome: é de outra pessoa", autorDeOutraConversa({ telefone: "558393943375", nome: "+55 83 9394-3375" }, [thales[1]]), "Márcio - Kantinho Burger");
+const thalesLimpo = semMensagensDeOutraConversa({ telefone: "558393943375", nome: "+55 83 9394-3375" }, thales);
+conferir("o lote do Márcio sai da conversa do Thales, e o nome volta", [thalesLimpo.map((m) => m.chave), nomeDaConversa(thalesLimpo)], [["wa:3", "wa:4"], "Thales"]);
+conferir("mesmo com o nome gravado na conversa vazio", semMensagensDeOutraConversa({ telefone: "558393943375", nome: "" }, thales).length, 2);
+
 console.log("\n  O NOME QUE A CONVERSA DÁ\n");
 conferir("“Boa tarde, Eduardo!”", nomeDaConversa([{ de: "nos", texto: "Boa tarde, Eduardo!" }]), "Eduardo");
 conferir("“Oii, Ana”", nomeDaConversa([{ de: "nos", texto: "Oii, Ana" }]), "Ana");
