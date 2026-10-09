@@ -92,6 +92,16 @@ export const MUDANCAS: Mudanca[] = [
       "O cartão da IA só avisava da chave da Anthropic. Agora lista as quatro — Gemini, Groq e OpenRouter (gratuitas) e Anthropic (paga, opcional) — com o que já está configurado, o link para criar cada uma e o nome da variável que vai na Vercel. Sem Groq nem OpenRouter, avisa que não há reserva gratuita quando o Gemini entra em fila.",
     href: "/configuracoes",
   },
+  {
+    id: "openrouter-roteador-gratuito",
+    dia: "2026-10-09",
+    tipo: "correcao",
+    frente: "bastidores",
+    titulo: "OpenRouter usa o roteador gratuito em vez de um modelo que saiu do ar",
+    texto:
+      "O modelo gratuito que a plataforma pedia ao OpenRouter (Llama 3.3 70B) saiu da lista deles: com a chave configurada, toda chamada voltaria com \"o modelo não existe mais\". Agora o padrão é o roteador gratuito do próprio OpenRouter, que escolhe entre os modelos sem custo que estão no ar e aceitam a resposta estruturada — não gasta crédito e não quebra quando a lista muda. Para fixar um modelo, a variável OPENROUTER_MODELO continua valendo.",
+    href: "/configuracoes/integracoes",
+  },
   /* ---------------- plataforma: meu dia ---------------- */
   {
     id: "meu-dia-modo-foco",

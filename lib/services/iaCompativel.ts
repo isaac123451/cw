@@ -42,8 +42,15 @@ const DESTINO: Record<
     base: "https://openrouter.ai/api/v1",
     variavelDaChave: "OPENROUTER_API_KEY",
     variavelDoModelo: "OPENROUTER_MODELO",
-    modelo: "meta-llama/llama-3.3-70b-instruct:free",
-    modeloRapido: "meta-llama/llama-3.3-70b-instruct:free",
+    /*
+     * O roteador gratuito, não um modelo fixo (09/10/2026): o padrão antigo,
+     * meta-llama/llama-3.3-70b-instruct:free, saiu da lista pública do
+     * OpenRouter e passaria a responder 404. `openrouter/free` escolhe entre
+     * os gratuitos que estão no ar e aceitam JSON — custo zero e sem 404
+     * quando a lista gira.
+     */
+    modelo: "openrouter/free",
+    modeloRapido: "openrouter/free",
   },
 };
 
