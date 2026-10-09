@@ -1853,7 +1853,7 @@
           .map(
             (c) => `<li>
               <span class="tag neutro">${ROTULO_DO_CANDIDATO[c.tipo] ?? ""}</span>
-              <span class="candidato"><b>${CW.escapar(c.titulo)}</b><span class="sub">${CW.escapar(c.detalhe)}${c.motivo ? ` · ${CW.escapar(c.motivo)}` : ""}</span></span>
+              <span class="candidato" title="${CW.escapar(`${c.titulo} — ${c.detalhe}`)}"><b>${CW.escapar(c.titulo)}</b><span class="sub">${CW.escapar(c.detalhe)}${c.motivo ? ` · ${CW.escapar(c.motivo)}` : ""}</span></span>
               <button type="button" class="copiar" data-acao="vincular" data-tipo="${CW.escapar(c.tipo)}" data-ref="${CW.escapar(c.ref)}">É este</button>
             </li>`
           )

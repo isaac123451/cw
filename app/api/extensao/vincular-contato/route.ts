@@ -1,6 +1,6 @@
 import { autenticar, responder, responderPreVoo, semSessao } from "@/lib/api/extensao";
 import { getPrisma } from "@/lib/prisma";
-import { chaveDoContato, vincularContato, type TipoDeCandidato } from "@/lib/services/contatoConhecido.service";
+import { chaveDoContato, formasDaChave, vincularContato, type TipoDeCandidato } from "@/lib/services/contatoConhecido.service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,11 +28,12 @@ export async function POST(request: Request) {
       O telefone que o vínculo completou no NPS sai junto: ficando, o
       mesmo número continuaria achando o cliente errado pelo telefone.
     */
-    const vinculo = await prisma.contatoConhecido.findUnique({ where: { telefone: chave }, select: { npsResponseId: true } });
-    if (vinculo?.npsResponseId) {
-      await prisma.npsResponse.updateMany({ where: { id: vinculo.npsResponseId, phone: chave }, data: { phone: null } });
+    const formas = formasDaChave(chave);
+    const vinculos = await prisma.contatoConhecido.findMany({ where: { telefone: { in: formas } }, select: { npsResponseId: true } });
+    for (const v of vinculos) {
+      if (v.npsResponseId) await prisma.npsResponse.updateMany({ where: { id: v.npsResponseId, phone: { in: formas } }, data: { phone: null } });
     }
-    const r = await prisma.contatoConhecido.deleteMany({ where: { telefone: chave } });
+    const r = await prisma.contatoConhecido.deleteMany({ where: { telefone: { in: formas } } });
     return responder(request, { ok: true, removidos: r.count });
   }
 

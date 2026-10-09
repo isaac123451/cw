@@ -13,7 +13,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import vm from "node:vm";
 
-import { palavrasQueDistinguem, semelhancaDeNome } from "../lib/services/contatoConhecido.service";
+import { chaveDoContato, formasDaChave, palavrasQueDistinguem, semelhancaDeNome } from "../lib/services/contatoConhecido.service";
 import { nomeDeContato } from "../lib/models/case";
 import { oQueCompletar } from "../lib/services/sinaisDaConversa";
 
@@ -143,6 +143,11 @@ async function painel() {
   render({ cliente: null, nps: { id: "n9", nota: 3, cliente: "treduartepizzaria", encerrado: false }, estabelecimento: null, casos: [] });
   conferir("busca manual: 'É o contato da conversa aberta — lembrar'", corpo.innerHTML.includes("É o contato da conversa aberta"), true);
 }
+
+console.log("\n  A CHAVE DO NÚMERO, COM E SEM O NONO DÍGITO (09/10/2026)\n");
+conferir("o WhatsApp sem o 9 e o cadastro com ele: a mesma chave", [chaveDoContato("+55 85 9901-1757"), chaveDoContato("85 99901-1757")], ["85999011757", "85999011757"]);
+conferir("fixo não ganha 9", chaveDoContato("(11) 3456-7890"), "1134567890");
+conferir("o vínculo antigo, sem o 9, ainda é achado", formasDaChave("85999011757"), ["85999011757", "8599011757"]);
 
 painel().then(() => {
   console.log(falhas === 0 ? "\n  O contato conhecido é reconhecido, e o desconhecido ganha candidatos.\n" : `\n  ${falhas} ponto(s) a corrigir.\n`);

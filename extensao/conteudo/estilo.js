@@ -204,7 +204,9 @@ ${CORES}
 .quem-e .candidatos { list-style: none; margin: 6px 0; padding: 0; display: grid; gap: 6px; }
 .quem-e .candidatos li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px; }
 .quem-e .candidato { display: grid; min-width: 0; }
-.quem-e .candidato b, .quem-e .candidato .sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Duas linhas, não uma cortada: "RA-NsdEChv5c5jf34…" e "marcio jesus go…" não deixavam escolher (09/10/2026). */
+.quem-e .candidato b, .quem-e .candidato .sub { overflow: hidden; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.quem-e .candidatos li + li { border-top: 1px solid var(--borda, rgba(127,127,127,.18)); padding-top: 6px; }
 .vinculo-contato { margin: 4px 0 8px; }
 .vinculo-contato a { cursor: pointer; text-decoration: underline; }
 /* Guardando esta conversa: um ponto verde discreto no canto do botão. */

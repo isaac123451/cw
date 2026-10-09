@@ -53,6 +53,26 @@ export const REVISAO = {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- plataforma: IA do dia (09/10) ---------------- */
   {
+    id: "e-este-funciona",
+    dia: "2026-10-09",
+    tipo: "correcao",
+    frente: "extensao",
+    titulo: "O \"É este\" do contato passa a valer de verdade",
+    texto:
+      "O botão gravava o vínculo e a tela, muitas vezes, não mudava. Três motivos: o WhatsApp mostra parte dos celulares sem o nono dígito (\"85 9901-1757\") e o cadastro com ele, e o vínculo era procurado só na forma exata; o ciclo de NPS escolhido só era achado pelo e-mail, e resposta sem e-mail ficava de fora; e os nomes da lista vinham cortados (\"RA-NsdEChv5c5jf34…\"), sem deixar ver qual era o certo. Agora o número vale com ou sem o 9 (os vínculos antigos continuam valendo), o NPS escolhido é achado pelo próprio ciclo, e cada candidato mostra o nome e o detalhe em até duas linhas, com o texto inteiro ao passar o mouse.",
+    onde: "Extensão → WhatsApp → Quem é este contato?",
+  },
+  {
+    id: "whatsapp-nao-e-rede-social",
+    dia: "2026-10-09",
+    tipo: "correcao",
+    frente: "redes",
+    titulo: "WhatsApp não é mais \"rede social\"",
+    texto:
+      "Num chat do WhatsApp, a extensão oferecia \"Cadastrar caso\" e \"Já está em Reclame Aqui, ainda não em WhatsApp · Cadastrar aqui\" — e o caso nascia em Redes Sociais com o canal WhatsApp, que não existe na operação. O WhatsApp é onde a gente atende. Agora o painel não oferece mais isso no WhatsApp, a plataforma recusa caso de rede social com origem WhatsApp, e a triagem, a captura do Slack (que tratava \"zap\" e links wa.me como rede) e os segmentos das Redes ficam com Instagram, Facebook e ManyChat. Não havia nenhum caso assim na base.",
+    href: "/redes-sociais",
+  },
+  {
     id: "o-que-eu-fiz-hoje-no-assistente",
     dia: "2026-10-09",
     tipo: "melhoria",

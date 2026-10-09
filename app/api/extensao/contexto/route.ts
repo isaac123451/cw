@@ -292,7 +292,7 @@ export async function GET(request: Request) {
       url: `${origem}/${f.canal === "social" ? "redes-sociais" : "reclame-aqui"}`,
     }));
 
-  const listaNps = await buscarNpsTodos(alvo);
+  const listaNps = await buscarNpsTodos(alvo, conhecido?.npsResponseId);
 
   const nps = listaNps[0] ?? null;
 
@@ -1144,7 +1144,7 @@ function acharEstabelecimento(
  * esconderia justamente o histórico que diz se ela já reclamou disso
  * antes.
  */
-async function buscarNpsTodos(alvo: Alvo) {
+async function buscarNpsTodos(alvo: Alvo, vinculado?: string | null) {
 
   const prisma = getPrisma();
 
@@ -1191,6 +1191,13 @@ async function buscarNpsTodos(alvo: Alvo) {
     ou.push(...condicoesPorNome(alvo.nome));
   }
 
+  /*
+    O ciclo que alguém confirmou com "É este" (09/10/2026). Antes o vínculo
+    só valia pelo e-mail da resposta — e a resposta sem e-mail, com outro
+    telefone, nunca era achada: o botão gravava e a tela não mudava.
+  */
+  if (vinculado) ou.push({ id: vinculado });
+
   if (ou.length === 0) return [];
 
   const linhas = await prisma.npsResponse.findMany({
@@ -1201,6 +1208,8 @@ async function buscarNpsTodos(alvo: Alvo) {
   });
 
   const achados = linhas.filter((linha) => {
+
+    if (vinculado && linha.id === vinculado) return true;
 
     if (
       alvo.telefone &&

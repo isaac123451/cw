@@ -151,15 +151,33 @@ export async function candidatosPorNome(prisma: PrismaClient, nome: string, limi
 }
 
 /** A chave do telefone na tabela: os dígitos sem o 55. */
+/**
+ * A chave do contato: DDD + número, **com** o nono dígito do celular.
+ *
+ * O WhatsApp mostra parte dos celulares sem o 9 ("+55 85 9901-1757") e o
+ * cadastro com ele ("85 99901-1757"). Eram duas chaves para o mesmo
+ * número: o "É este" gravava numa forma e a consulta procurava na outra —
+ * o botão "não funcionava" (09/10/2026). Celular de 10 dígitos (o número
+ * começa por 6 a 9) ganha o 9; fixo fica como está.
+ */
 export function chaveDoContato(telefone: string | TelefoneLido | null | undefined) {
   const lido = typeof telefone === "string" ? lerTelefone(telefone) : telefone ?? null;
-  return lido && lido.digitos.length >= 10 ? lido.digitos : null;
+  if (!lido || lido.digitos.length < 10) return null;
+  const d = lido.digitos;
+  return d.length === 10 && /[6-9]/.test(d[2]) ? `${d.slice(0, 2)}9${d.slice(2)}` : d;
+}
+
+/** As duas formas em que o vínculo pode ter sido gravado antes da chave com o nono dígito. */
+export function formasDaChave(chave: string) {
+  return chave.length === 11 && chave[2] === "9" ? [chave, `${chave.slice(0, 2)}${chave.slice(3)}`] : [chave];
 }
 
 export async function lerContatoConhecido(prisma: PrismaClient, telefone: TelefoneLido | null) {
   const chave = chaveDoContato(telefone);
   if (!chave) return null;
-  return prisma.contatoConhecido.findUnique({ where: { telefone: chave } }).catch(() => null);
+  return prisma.contatoConhecido
+    .findFirst({ where: { telefone: { in: formasDaChave(chave) } }, orderBy: { vinculadoEm: "desc" } })
+    .catch(() => null);
 }
 
 /**
@@ -206,6 +224,8 @@ export async function vincularContato(
   }
 
   const nome = String(entrada.nome ?? "").trim().slice(0, 120);
+  /* O vínculo antigo, na forma sem o nono dígito, sai: fica um só por número. */
+  await prisma.contatoConhecido.deleteMany({ where: { telefone: { in: formasDaChave(chave).filter((f) => f !== chave) } } });
   await prisma.contatoConhecido.upsert({
     where: { telefone: chave },
     create: { telefone: chave, nome, vinculadoPor: entrada.por, ...dados },
