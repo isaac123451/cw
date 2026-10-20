@@ -105,6 +105,8 @@ const tem = (t: string, tipo: string) => sinaisDoTexto(t).some((s) => s.tipo ===
 ok("\"estou seriamente considerando cancelar\" é pedido", tem("estou seriamente considerando cancelar essa parceria", "pedido"));
 ok("\"Estou cancelando\" (WhatsApp) é pedido", tem("Estou cancelando", "pedido"));
 ok("\"Entendo que você deseja cancelar\" é pedido", tem("Oii! Entendo que você deseja cancelar.", "pedido"));
+ok("a nossa pergunta \"Você deseja cancelar o módulo?\" não é pedido", !tem("Você deseja cancelar o módulo gestão de entregas?", "pedido"));
+ok("o pedido do cliente fica guardado (quem queria cancelar)", gina?.pedido?.trecho === "Quero cancelar o contrato" && gina.pedido.frente === "conversa");
 ok("\"nada do cancelamento e nada do estorno\" é pedido", tem("até agora nada do cancelamento e nada do estorno", "pedido"));
 ok("\"cancelei minha renovação automática\" é cancelado", tem("já deixo dito que cancelei minha renovação automática", "cancelado"));
 ok("\"fiz o cancelamento, me enviaram o pix\" é cancelado", tem("não gostei, fiz o cancelamento, me enviaram o pix de volta", "cancelado"));

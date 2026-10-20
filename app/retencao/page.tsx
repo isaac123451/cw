@@ -295,8 +295,8 @@ export default function RetencaoPage() {
             </SurfaceCard>
 
             <SurfaceCard
-              title={ver === "todos" ? "Todos os clientes" : ver === "outro-setor" ? "Cancelados por outro setor" : ver === "retido" ? "Retidos" : "Cancelamentos"}
-              description="Os pontos que colocaram cada cliente aqui e o que decidiu o desfecho. Se estiver errado, corrija — a correção fica gravada."
+              title={ver === "todos" ? `Quem queria cancelar · ${visiveis.length}` : ver === "outro-setor" ? "Cancelados por outro setor" : ver === "retido" ? "Retidos" : "Cancelamentos"}
+              description="Cada cliente que falou em cancelar: quando pediu, por onde e com que palavras, e como terminou. Se estiver errado, corrija — a correção fica gravada."
             >
               {visiveis.length === 0 ? (
                 <p className="text-sm text-zinc-500">Nenhum cliente nesta situação.</p>
@@ -361,17 +361,36 @@ export default function RetencaoPage() {
                           )}
                         </span>
                       </div>
+                      {/* Quem queria cancelar (20/10): o pedido em destaque — quando, por onde, a frase. */}
+                      <p className="mt-1 text-sm text-zinc-800">
+                        {c.pedido ? (
+                          <>
+                            <span className="font-semibold">Queria cancelar</span>
+                            <span className="text-zinc-500">
+                              {" "}
+                              · {c.pedido.quando.slice(8, 10)}/{c.pedido.quando.slice(5, 7)}/{c.pedido.quando.slice(2, 4)} pelo {FRENTE[c.pedido.frente]}:{" "}
+                            </span>
+                            {/^(categoria|causa raiz):/.test(c.pedido.trecho) ? c.pedido.trecho : `“${c.pedido.trecho}”`}
+                          </>
+                        ) : (
+                          <span className="text-zinc-500">Não pediu — já chegou cancelado.</span>
+                        )}
+                      </p>
                       <p className="mt-1 text-xs text-zinc-600">
-                        <span className="font-semibold text-zinc-700">Por quê: </span>
+                        <span className="font-semibold text-zinc-700">{c.desfecho === "retido" ? "Ficou" : "Saiu"}: </span>
                         {c.porque}
                       </p>
                       <ul className="mt-1 space-y-0.5">
-                        {c.sinais.slice(0, 4).map((s, i) => (
+                        {c.sinais.filter((s) => s !== c.pedido).slice(0, 4).map((s, i) => (
                           <li key={i} className="text-xs text-zinc-500">
                             <span className="font-medium text-zinc-600">{FRENTE[s.frente]} · {s.tipo}</span> — {s.trecho}
                           </li>
                         ))}
-                        {c.sinais.length > 4 && <li className="text-xs text-zinc-400">e mais {c.sinais.length - 4} {pluralDe(c.sinais.length - 4, "ponto", "pontos")}</li>}
+                        {c.sinais.length - (c.pedido ? 1 : 0) > 4 && (
+                          <li className="text-xs text-zinc-400">
+                            e mais {c.sinais.length - (c.pedido ? 1 : 0) - 4} {pluralDe(c.sinais.length - (c.pedido ? 1 : 0) - 4, "ponto", "pontos")}
+                          </li>
+                        )}
                       </ul>
                     </li>
                   ))}

@@ -57,7 +57,7 @@ const norma = (t: string) =>
 
 /** Pedido de cancelamento do plano — não do pedido do consumidor. */
 const PEDIDO =
-  /cancel(ar|amento|o|ei) (o |do |meu |minha |a |da |nosso |nossa )?(contrato|plano|assinatura|servico|sistema|conta|cardapio web|mensalidade)|(quero|vou|preciso|gostaria de|desejo|deseja|queremos|vamos|solicito|solicitei|pedi|estou|considerando|pensando em|vou ter que|temos de|temos que|teremos que|teremos de|vamos ter que)( o)? (cancelar|cancelamento|cancelando)(?! (d?[oa] |meu |minha |o |um )?(pedido|entrega|compra))|solicitacao de cancelamento|pedido de cancelamento (do|da|de) (plano|contrato|assinatura|servico|sistema)|rescis|encerrar (o |meu |nosso )?contrato|trocar de (sistema|plataforma|empresa)|nao (vou |quero )?(mais )?renovar|nao quero mais (usar|o sistema|a plataforma|os servicos|o cardapio)|cancel(ar|amento d)a renovacao|cancelamento e (o )?reembolso|nada do cancelamento|confirma(ndo|cao d)o cancelamento|nao (consegue|conseguem|consigo|conseguimos) cancelar|(poderia|posso|podia) cancelar(?! (o |um |do |da |a )?pedido)/;
+  /cancel(ar|amento|o|ei) (o |do |meu |minha |a |da |nosso |nossa )?(contrato|plano|assinatura|servico|sistema|conta|cardapio web|mensalidade)|(quero|vou|preciso|gostaria de|desejo|entendo que (voce )?deseja|queremos|vamos|solicito|solicitei|pedi|estou|considerando|pensando em|vou ter que|temos de|temos que|teremos que|teremos de|vamos ter que)( o)? (cancelar|cancelamento|cancelando)(?! (d?[oa] |meu |minha |o |um )?(pedido|entrega|compra))|solicitacao de cancelamento|pedido de cancelamento (do|da|de) (plano|contrato|assinatura|servico|sistema)|rescis|encerrar (o |meu |nosso )?contrato|trocar de (sistema|plataforma|empresa)|nao (vou |quero )?(mais )?renovar|nao quero mais (usar|o sistema|a plataforma|os servicos|o cardapio)|cancel(ar|amento d)a renovacao|cancelamento e (o )?reembolso|nada do cancelamento|confirma(ndo|cao d)o cancelamento|nao (consegue|conseguem|consigo|conseguimos) cancelar|(poderia|posso|podia) cancelar(?! (o |um |do |da |a )?pedido)/;
 
 /** Retido: ficou. */
 const RETIDO =
@@ -202,6 +202,8 @@ export interface ClienteEmCancelamento {
   protocolos: string[];
   /** Todas as chaves do cliente (conta, documento, e-mail…) — o painel de risco o acha por qualquer uma. */
   chaves: string[];
+  /** O primeiro pedido de cancelamento — quem queria cancelar, quando, por onde e com que frase. Sem ele, o cliente já chegou cancelado. */
+  pedido?: SinalDeCancelamento;
   /** Só nos cancelados: quem cancelou — e se conta na taxa. */
   canceladoPor?: CanceladoPor;
   /** Em "outro-setor", qual, quando se sabe. */
@@ -485,6 +487,7 @@ export function juntarCancelamento(entrada: {
       desde,
       protocolos,
       chaves: [...g.chaves],
+      pedido: pedidos.sort((a, b) => a.quando.localeCompare(b.quando))[0],
     });
   }
   return { clientes: saida.sort((a, b) => b.desde.localeCompare(a.desde)), foraDaConta };

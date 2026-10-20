@@ -63,6 +63,16 @@ export const MUDANCAS: Mudanca[] = [
     href: "/retencao",
   },
   {
+    id: "quem-queria-cancelar",
+    dia: "2026-10-20",
+    tipo: "melhoria",
+    frente: "plataforma",
+    titulo: "Quem queria cancelar, com a frase de cada um",
+    texto:
+      "A lista da Retenção virou \"Quem queria cancelar\": cada cliente mostra quando pediu, por onde (Reclame Aqui, Redes, NPS ou WhatsApp) e com que palavras, e embaixo por que ficou ou saiu. Quem não pediu e já chegou cancelado aparece dito assim. Uma pergunta nossa na conversa (\"Você deseja cancelar o módulo?\") deixou de contar como pedido do cliente.",
+    href: "/retencao",
+  },
+  {
     id: "retencao-corrigida",
     dia: "2026-10-20",
     tipo: "correcao",
