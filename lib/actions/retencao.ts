@@ -34,6 +34,16 @@ export async function lerRetencao(): Promise<{ ok: true; clientes: ClienteEmCanc
  * cliente da conta.
  */
 export async function marcarDesfecho(chave: string, desfecho: DesfechoManual | null, setor?: string, todasAsChaves?: string[]): Promise<{ ok: true } | Falha> {
+  return gravarDesfecho(chave, desfecho, setor, todasAsChaves);
+}
+
+/**
+ * A gravação de fato, fora das ações exportadas. Uma ação não pode chamar
+ * outra ação exportada do mesmo arquivo: na página que só registrou a
+ * primeira, a segunda é uma referência vazia — e o "Retido" da ficha caía
+ * em "Cannot read properties of undefined (reading 'apply')" (20/10).
+ */
+async function gravarDesfecho(chave: string, desfecho: DesfechoManual | null, setor?: string, todasAsChaves?: string[]): Promise<{ ok: true } | Falha> {
   let ctx;
   try {
     ctx = await requireRole("AGENTE");
@@ -137,7 +147,7 @@ export async function marcarReclamacao(ref: string, marca: MarcaDaReclamacao | n
   if (!ctx) return { ok: false, erro: "Sem banco configurado." };
   const caso = await acharReclamacao(ctx.prisma, ref).catch(() => null);
   if (!caso) return { ok: false, erro: "Não achei essa reclamação. Use o protocolo (RA-…) ou o link do Reclame Aqui." };
-  const r = await marcarDesfecho(chaveDaReclamacao(caso.protocol), marca, setor);
+  const r = await gravarDesfecho(chaveDaReclamacao(caso.protocol), marca, setor);
   if (!r.ok) return r;
   return { ok: true, protocolo: caso.protocol, cliente: caso.establishment?.name || caso.customer, marca, setor: marca === "cancelado-outro-setor" ? setor : undefined };
 }

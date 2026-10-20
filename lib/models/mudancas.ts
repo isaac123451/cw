@@ -63,6 +63,26 @@ export const MUDANCAS: Mudanca[] = [
     href: "/retencao",
   },
   {
+    id: "botao-cancelamento",
+    dia: "2026-10-20",
+    tipo: "novo",
+    frente: "reclame-aqui",
+    titulo: "Cancelamento marcado na própria reclamação",
+    texto:
+      "Na ficha e numa coluna da lista do Reclame Aqui: \"O cliente solicitou o cancelamento?\" → \"Foi cancelado ou retido?\" → \"Foi por outro setor e dentro da SLA de 24h úteis?\" (se sim, qual setor). Grava na hora, dá para mudar sempre, e a reclamação entra na Retenção. Na Retenção, \"Faltou alguém?\" adiciona pelo protocolo ou pelo link.",
+    href: "/reclame-aqui",
+  },
+  {
+    id: "analise-dos-cancelamentos",
+    dia: "2026-10-20",
+    tipo: "novo",
+    frente: "plataforma",
+    titulo: "Análise dos cancelamentos e dados corrigidos",
+    texto:
+      "A Retenção ganhou a análise: por que pedem para cancelar (lido do que o cliente escreveu) e em qual motivo mais se perde, a retenção mês a mês, por onde pediram, quem cancelou e quanto tempo leva do pedido ao cancelamento. A conta passou a ler a nossa resposta pública e os comentários do caso (\"lamentamos o cancelamento do seu plano\", \"realizou o cancelamento\") — achou 17 cancelamentos que contavam como retidos e corrigiu 9 marcações que diziam retido contra a nossa própria resposta. \"Voltaria a fazer negócio\" deixou de valer como retido sozinho.",
+    href: "/retencao",
+  },
+  {
     id: "quem-queria-cancelar",
     dia: "2026-10-20",
     tipo: "melhoria",

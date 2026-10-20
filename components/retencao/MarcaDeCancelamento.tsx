@@ -148,7 +148,8 @@ export default function MarcaDeCancelamento({
   className?: string;
 }) {
   const { notify } = useToast();
-  const [buscada, setBuscada] = useState<MarcaAtual | null>(null);
+  /* `undefined` enquanto a marca desta reclamação ainda não chegou. */
+  const [buscada, setBuscada] = useState<MarcaAtual | null | undefined>(undefined);
   const [local, setLocal] = useState<{ valor: MarcaAtual | null } | null>(null);
   const [passo, setPasso] = useState<Passo>("pediu");
   const [mudando, setMudando] = useState(false);
@@ -163,13 +164,15 @@ export default function MarcaDeCancelamento({
       .then((r) => {
         if (vivo) setBuscada(r?.marca ? { marca: r.marca, setor: r.setor } : null);
       })
-      .catch(() => undefined);
+      .catch(() => vivo && setBuscada(null));
     return () => {
       vivo = false;
     };
   }, [protocolo, inicial, rotuloDoBotao]);
 
-  const marca = rotuloDoBotao ? null : local ? local.valor : inicial !== undefined ? inicial : buscada;
+  const marca = rotuloDoBotao ? null : local ? local.valor : inicial !== undefined ? inicial : buscada ?? null;
+  /* Na ficha, enquanto a marca não chega, não mostra a pergunta — parecia que não tinha salvado. */
+  const carregando = !rotuloDoBotao && !local && inicial === undefined && buscada === undefined;
 
   async function gravar(nova: MarcaDaReclamacao | null, setor?: string) {
     if (!protocolo.trim()) {
@@ -205,7 +208,11 @@ export default function MarcaDeCancelamento({
           {marca && !mudando && <span className={`rounded-md px-2 py-0.5 text-xs font-medium ${cor}`}>{texto}</span>}
         </div>
         <div className="mt-3">
-          {marca && !mudando ? (
+          {carregando ? (
+            <p className="flex items-center gap-2 text-sm text-zinc-400">
+              <Loader2 size={14} className="animate-spin" /> Carregando…
+            </p>
+          ) : marca && !mudando ? (
             <div className="flex items-center gap-3">
               <button
                 type="button"

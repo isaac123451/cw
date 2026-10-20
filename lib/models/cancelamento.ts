@@ -1,3 +1,5 @@
+import { motivosDoCancelamento } from "@/lib/models/motivoDoCancelamento";
+
 /**
  * Cancelamento e retenção, identificados sozinhos (1.85).
  *
@@ -47,6 +49,13 @@ export interface SinalDeCancelamento {
   chegada?: boolean;
   /** O setor que o texto diz ter cancelado. */
   setor?: string;
+  /**
+   * Evidência fraca: a avaliação do portal. "Voltaria a fazer negócio" não
+   * quer dizer que ficou — o BR Mania avaliou assim depois da nossa
+   * resposta "lamentamos o cancelamento do seu plano" (20/10). Só decide
+   * quando não há fala nossa nem do cliente sobre o desfecho.
+   */
+  fraco?: boolean;
 }
 
 const norma = (t: string) =>
@@ -66,6 +75,32 @@ const RETIDO =
 /** Cancelado: saiu. */
 const CANCELADO =
   /ja cancelei|cancelei (o |meu |minha |a )?(contrato|plano|assinatura|servico|sistema|renovacao)|(portanto|entao|por isso|e) cancelei[,.;]|fiz o cancelamento(?! (do|da|o|a) pedido)|cancelamento (ser|foi|ja foi) feito|(havia sido|foi|fui) cancelad[oa] por (falta de pagamento|inadimplencia)|cancelou (nosso|meu|o) acesso|cancelamento (foi )?(efetuado|realizado|confirmado|concluido|processado)|contrato (encerrado|cancelado|rescindido)|ja migrei|(estou|estamos) usando outro sistema|cliente cancelou|(apos|depois d[oe]) (a |o )?(solicitacao d[oe] |pedido d[oe] )?cancelamento.{0,60}(cobra|debit|boleto|fatura)|(cobra|debit|boleto|fatura).{0,60}(apos|depois d[oe]) (a |o )?(solicitacao d[oe] |pedido d[oe] )?cancel/;
+
+/**
+ * O desfecho na nossa própria fala (20/10/2026): a resposta pública do
+ * Reclame Aqui e os comentários do caso (os resumos das conversas). É a
+ * evidência mais forte que existe — quem atendeu dizendo o que aconteceu.
+ * Na base: "lamentamos o cancelamento do seu plano", "infelizmente não
+ * continuamos neste momento, mas te esperamos de portas abertas", "o
+ * cancelamento foi realizado no momento solicitado", "agente confirmou e
+ * realizou o cancelamento"; e "você continuará como nossa cliente",
+ * "decidiu continuar como nosso cliente".
+ */
+const NOSSO_CANCELADO =
+  /lamentamos (o|pelo) cancelamento|nao (continuamos|seguiremos|seguimos|vamos continuar) (juntos|neste momento|nesse momento)|portas abertas para (quando|o seu retorno|seu retorno|voce voltar|receber voce)|(realizamos|efetuamos|concluimos|processamos|fizemos) o cancelamento|cancelamento (ja )?(foi|esta|ficou) (realizado|efetuado|concluido|processado|feito)|(realizou|efetuou|concluiu|fez|processou) o cancelamento|conta (foi )?(cancelada|encerrada)|plano (foi )?cancelado/;
+const NOSSO_RETIDO =
+  /continuara (como )?(nosso|nossa) cliente|(decidiu|decidiram|optou por|vai|resolveu) (continuar|permanecer|seguir) (como nosso cliente|como nossa cliente|conosco|com a gente|com a cardapio|com o cardapio)|seguira conosco|permanecer conosco|(revertemos|conseguimos reverter) o cancelamento|cancelamento (foi )?revertido|desistiu do cancelamento|(mantivemos|manteremos) (o )?seu plano/;
+
+/** O desfecho que a nossa fala registra — cancelado ou retido —, com o trecho. */
+export function desfechoNaNossaFala(texto: string): { tipo: "retido" | "cancelado"; trecho: string } | null {
+  const n = norma(texto);
+  const c = NOSSO_CANCELADO.exec(n);
+  const r = NOSSO_RETIDO.exec(n);
+  if (!c && !r) return null;
+  /* As duas na mesma fala: vale a que vem por último no texto. */
+  const tipo = c && (!r || c.index > r.index) ? "cancelado" : "retido";
+  return { tipo, trecho: trechoDe(texto, tipo === "cancelado" ? NOSSO_CANCELADO : NOSSO_RETIDO) };
+}
 
 /** O trecho em volta do que casou, para a pessoa ver por que foi contado. */
 function trechoDe(texto: string, padrao: RegExp) {
@@ -142,6 +177,11 @@ export interface CasoParaCancelamento {
   subcategoria?: string;
   causaRaiz?: string;
   solucao?: string;
+  /** A nossa resposta pública no portal, e quando foi dada (ISO). */
+  resposta?: string;
+  respondidoEm?: string;
+  /** Os comentários do caso — os resumos das conversas e as notas de quem atende. */
+  comentarios?: { texto: string; quando: string }[];
   avaliado?: boolean;
   resolvido?: boolean;
   voltaria?: boolean;
@@ -194,12 +234,19 @@ export interface ClienteEmCancelamento {
   /** Por que esse desfecho: o sinal que decidiu, ou a correção de alguém. */
   porque: string;
   manual?: boolean;
+  /**
+   * A marcação à mão diz uma coisa e a nossa própria fala diz outra — por
+   * exemplo, marcado retido e a resposta "lamentamos o cancelamento".
+   */
+  conflito?: string;
   /** Retido só porque não cancelou: nenhum sinal de que ficou — o pedido segue pedindo atenção (cliente em risco). */
   retidoSemSinal?: boolean;
   /** O primeiro pedido (ISO) — o mês da conta. */
   desde: string;
   /** Os protocolos envolvidos, para abrir. */
   protocolos: string[];
+  /** Por que queria cancelar — ids de `MOTIVOS_DE_CANCELAMENTO`, lidos do que o cliente escreveu. */
+  motivos: string[];
   /** Todas as chaves do cliente (conta, documento, e-mail…) — o painel de risco o acha por qualquer uma. */
   chaves: string[];
   /** O primeiro pedido de cancelamento — quem queria cancelar, quando, por onde e com que frase. Sem ele, o cliente já chegou cancelado. */
@@ -318,11 +365,11 @@ export function juntarCancelamento(entrada: {
     (m.npsId && npsPorId.has(m.npsId) ? chavesDoNps(npsPorId.get(m.npsId)!) : null) ||
     [m.telefone ? `tel:${digitos(m.telefone).slice(-8)}` : `conversa:${m.conversaId}`];
 
-  type Grupo = { nomes: { nome: string; peso: number }[]; contaId?: string; sinais: SinalDeCancelamento[]; protocolos: Set<string>; prazos: string[]; chaves: Set<string> };
+  type Grupo = { nomes: { nome: string; peso: number }[]; contaId?: string; sinais: SinalDeCancelamento[]; protocolos: Set<string>; prazos: string[]; chaves: Set<string>; textos: string[] };
   const grupos = new Map<string, Grupo>();
   const grupo = (chaves: string[]) => {
     const r = raiz(chaves[0]);
-    const g = grupos.get(r) ?? { nomes: [], sinais: [], protocolos: new Set<string>(), prazos: [], chaves: new Set<string>() };
+    const g = grupos.get(r) ?? { nomes: [], sinais: [], protocolos: new Set<string>(), prazos: [], chaves: new Set<string>(), textos: [] };
     for (const k of chaves) g.chaves.add(k);
     grupos.set(r, g);
     return g;
@@ -358,6 +405,21 @@ export function juntarCancelamento(entrada: {
     for (const s of sinaisDoTexto(c.solucao ?? "")) {
       if (s.tipo !== "pedido") sinais.push({ ...base, tipo: s.tipo, quando: c.avaliadoEm ?? c.criadoEm, trecho: `solução: ${s.trecho}`, setor: s.tipo === "cancelado" ? setorDoCancelamento(c.solucao ?? "") ?? undefined : undefined });
     }
+    /* A nossa fala: a resposta pública e os comentários do caso. */
+    const falas = [
+      ...(c.resposta ? [{ texto: c.resposta, quando: c.respondidoEm ?? c.avaliadoEm ?? c.criadoEm, onde: "nossa resposta" }] : []),
+      ...(c.comentarios ?? []).map((m) => ({ texto: m.texto, quando: m.quando, onde: "comentário do caso" })),
+    ];
+    for (const f of falas) {
+      const d = desfechoNaNossaFala(f.texto);
+      if (d) sinais.push({ ...base, tipo: d.tipo, quando: f.quando, trecho: `${f.onde}: ${d.trecho}`, setor: d.tipo === "cancelado" ? setorDoCancelamento(f.texto) ?? undefined : undefined });
+      /* O resumo da conversa também conta o pedido ("cliente quer cancelar"). */
+      if (f.onde === "comentário do caso") for (const s of sinaisDoTexto(f.texto)) if (s.tipo === "pedido") sinais.push({ ...base, tipo: "pedido", quando: f.quando, trecho: `${f.onde}: ${s.trecho}` });
+    }
+    /* Falamos do cancelamento sem o relato pedir: o cliente pediu por outro canal. */
+    if (!sinais.some((s) => s.tipo === "pedido") && sinais.some((s) => s.trecho.startsWith("nossa resposta") || s.trecho.startsWith("comentário do caso"))) {
+      sinais.push({ ...base, tipo: "pedido", quando: c.criadoEm, trecho: "a nossa resposta trata do cancelamento" });
+    }
     /* Reclamação adicionada à mão (botão Retido / Churn): entra na conta mesmo sem o texto falar em cancelar. */
     const marcada = entrada.manuais?.get(chaveDaReclamacao(c.protocolo));
     if (!sinais.some((s) => s.tipo === "pedido") && marcada && marcada.desfecho !== "nao-e-cancelamento") {
@@ -370,11 +432,13 @@ export function juntarCancelamento(entrada: {
         tipo: c.voltaria ? "retido" : "cancelado",
         quando: c.avaliadoEm ?? c.criadoEm,
         trecho: c.voltaria ? "avaliou: voltaria a fazer negócio" : `avaliou: não voltaria${c.resolvido ? " (resolvido)" : ""}`,
+        fraco: true,
       });
     }
     if (sinais.length) {
       const g = grupo(chavesPorProtocolo.get(c.protocolo)!);
       g.sinais.push(...sinais);
+      g.textos.push(`${c.titulo}\n${c.relato ?? ""}`);
       doCaso(g, c);
     }
   }
@@ -385,6 +449,7 @@ export function juntarCancelamento(entrada: {
     if (!sinais.length) continue;
     const g = grupo(chavesDoNps(r));
     g.sinais.push(...sinais);
+    g.textos.push(r.comentario);
     if (r.contaId && !g.contaId) g.contaId = r.contaId;
     nomear(g, r.cliente, 2);
   }
@@ -394,6 +459,7 @@ export function juntarCancelamento(entrada: {
     const sinais = sinaisDoTexto(m.texto);
     if (!sinais.length) continue;
     const g = grupo(chavesDaMensagem(m));
+    g.textos.push(m.texto);
     g.sinais.push(
       ...sinais.map((s) => ({
         tipo: s.tipo,
@@ -428,7 +494,8 @@ export function juntarCancelamento(entrada: {
      * sinal: o desfecho era do pedido anterior, e o cliente volta a ficar
      * em aberto (o Eduardo Lino retido em agosto pediu outra vez em 08/10).
      */
-    const ultimoPedido = pedidos.map((s) => s.quando).sort().at(-1);
+    /* O resumo da conversa no comentário conta o pedido, mas não reabre: ele é escrito depois, junto com o desfecho (o Fabiano). */
+    const ultimoPedido = pedidos.filter((s) => !s.trecho.startsWith("comentário do caso")).map((s) => s.quando).sort().at(-1);
     let reaberto: string | undefined;
     if (manual?.em && ultimoPedido && ultimoPedido > manual.em) {
       const marcado = manual.desfecho === "retido" ? "retido" : manual.desfecho === "nao-e-cancelamento" ? "como não cancelamento" : "cancelado";
@@ -443,7 +510,8 @@ export function juntarCancelamento(entrada: {
       continue;
     }
 
-    let ultimo: SinalDeCancelamento | undefined = desfechos[0];
+    /* O desfecho mais recente entre as evidências fortes; a avaliação do portal só decide sozinha. */
+    let ultimo: SinalDeCancelamento | undefined = desfechos.find((s) => !s.fraco) ?? desfechos[0];
     if (!manual && ultimo && ultimoPedido && ultimo.quando < ultimoPedido) {
       reaberto ??= `pediu de novo em ${dia(ultimoPedido)}, depois de ${ultimo.tipo === "retido" ? "ter ficado" : "ter cancelado"} em ${dia(ultimo.quando)}`;
       ultimo = undefined;
@@ -456,6 +524,10 @@ export function juntarCancelamento(entrada: {
         ? ultimo.trecho
         : `${reaberto ?? "pediu"} e não cancelou — conta como retido`;
     const desde = [...pedidos, ...desfechos].map((s) => s.quando).sort()[0];
+    /* A marcação contra a nossa própria fala: aparece para conferir. */
+    const nossa = desfechos.find((s) => /^(nossa resposta|comentário do caso)/.test(s.trecho));
+    const conflito =
+      manual && nossa && (manual.desfecho === "retido") !== (nossa.tipo === "retido") ? `marcado ${manual.desfecho === "retido" ? "retido" : "cancelado"}, mas a ${nossa.trecho}` : undefined;
     const prazo = [...g.prazos].sort()[0];
 
     /* Quem cancelou: à mão, o setor marcado; senão o texto, a chegada já cancelada, ou o prazo do contato. */
@@ -495,9 +567,11 @@ export function juntarCancelamento(entrada: {
       porque,
       manual: Boolean(manual),
       retidoSemSinal: !manual && !ultimo,
+      conflito,
       desde,
       protocolos,
       chaves: [...g.chaves],
+      motivos: motivosDoCancelamento(g.textos.join("\n")),
       pedido: pedidos.sort((a, b) => a.quando.localeCompare(b.quando))[0],
     });
   }

@@ -9,6 +9,7 @@ import MainLayout from "@/components/layout/MainLayout";
 import PageHeading from "@/components/shared/PageHeading";
 import StatTile from "@/components/shared/StatTile";
 import SurfaceCard from "@/components/shared/SurfaceCard";
+import AnaliseDosCancelamentos from "@/components/retencao/AnaliseDosCancelamentos";
 import DesfechoDoCliente from "@/components/retencao/DesfechoDoCliente";
 import MarcaDeCancelamento from "@/components/retencao/MarcaDeCancelamento";
 
@@ -18,12 +19,10 @@ import { resumoDeRetencao, type ClienteEmCancelamento, type ResumoDeRetencao, ty
 import { ROTULO_DO_RISCO, type ClienteEmRisco } from "@/lib/models/clienteEmRisco";
 
 const FRENTE: Record<SinalDeCancelamento["frente"], string> = { "reclame-aqui": "Reclame Aqui", redes: "Redes", nps: "NPS", conversa: "WhatsApp" };
-const MES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
-const mes = (aaaamm: string) => `${MES[Number(aaaamm.slice(5, 7)) - 1]}/${aaaamm.slice(2, 4)}`;
 const dia = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(2, 4)}`;
 const pct = (v: number | null) => (v === null ? "—" : `${Math.round(v * 100)}%`);
 /* O trecho que é dado do sistema (categoria, marcação) não vai entre aspas: não é fala do cliente. */
-const fala = (t: string) => (/^(categoria|causa raiz|reclamação adicionada|chegou cancelado|avaliou|solução)/.test(t) ? t : `“${t.replace(/^…|…$/g, "")}”`);
+const fala = (t: string) => (/^(categoria|causa raiz|reclamação adicionada|chegou cancelado|avaliou|solução|a nossa resposta|nossa resposta|comentário do caso)/.test(t) ? t : `“${t.replace(/^…|…$/g, "")}”`);
 const linkDoCaso = (protocolo: string) => `/reclame-aqui/${encodeURIComponent(protocolo)}`;
 
 type Filtro = "todos" | "retido" | "cancelado" | "outro-setor";
@@ -171,6 +170,9 @@ export default function RetencaoPage() {
             carregando={!dados}
           />
         </div>
+
+        {/* Por que pedem, mês a mês, por onde, quem cancelou e em quanto tempo. */}
+        {dados && <AnaliseDosCancelamentos clientes={doPeriodo} resumo={resumo} />}
 
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
           {/* Quem queria cancelar — uma linha por cliente, o desfecho num botão só. */}
@@ -354,36 +356,6 @@ export default function RetencaoPage() {
               </SurfaceCard>
             )}
 
-            {resumo.porMes.length > 0 && (
-              <SurfaceCard title="Mês a mês" bodyClassName="pt-1">
-                <table className="w-full text-left text-sm tabular-nums">
-                  <thead className="text-[11px] uppercase tracking-wide text-zinc-400">
-                    <tr>
-                      <th className="py-1 font-medium">Mês</th>
-                      <th className="py-1 text-right font-medium">Retidos</th>
-                      <th className="py-1 text-right font-medium" title="Total de cancelamentos; entre parênteses, os de outro setor">
-                        Cancel.
-                      </th>
-                      <th className="py-1 text-right font-medium">Taxa</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-zinc-100">
-                    {resumo.porMes.slice(0, 12).map((m) => (
-                      <tr key={m.mes}>
-                        <td className="py-1.5 text-zinc-700">{mes(m.mes)}</td>
-                        <td className="py-1.5 text-right text-zinc-700">{m.retidos}</td>
-                        <td className="py-1.5 text-right text-zinc-700">
-                          {m.cancelados}
-                          {m.canceladosOutroSetor > 0 && <span className="text-zinc-400"> ({m.canceladosOutroSetor})</span>}
-                        </td>
-                        <td className="py-1.5 text-right font-medium text-zinc-900">{pct(m.taxaDeRetencao)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                <p className="mt-2 text-[11px] text-zinc-400">Pelo mês em que o cliente pediu. Entre parênteses, os cancelados por outro setor.</p>
-              </SurfaceCard>
-            )}
           </div>
         </div>
       </div>
