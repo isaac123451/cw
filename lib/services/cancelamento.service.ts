@@ -60,6 +60,7 @@ export async function lerCancelamento(prisma: PrismaClient) {
         description: true,
         causaRaiz: true,
         solucaoAplicada: true,
+        status: true,
         publicResponse: true,
         publicResponseAt: true,
         comments: { select: { body: true, createdAt: true } },
@@ -114,6 +115,7 @@ export async function lerCancelamento(prisma: PrismaClient) {
     avaliadoEm: c.evaluatedAt?.toISOString(),
     criadoEm: chegouEm(c),
     prazoDoContato: prazoDoContato(c, expediente),
+    aberto: !CLOSED_STATUS.includes(c.status),
     contaId: c.establishmentId ?? undefined,
     contaNome: c.establishment?.name,
     documento: c.document ?? undefined,
@@ -198,7 +200,7 @@ export async function lerClientesEmRisco(prisma: PrismaClient, emCancelamento: C
       email: r.email ?? undefined,
     })),
     /* Retido só por não ter cancelado: o pedido segue vivo como sinal de risco. */
-    pedidosEmAberto: new Set(emCancelamento.filter((c) => c.retidoSemSinal).flatMap((c) => c.chaves)),
+    pedidosEmAberto: new Set(emCancelamento.filter((c) => c.desfecho === "em-aberto").flatMap((c) => c.chaves)),
   });
 }
 

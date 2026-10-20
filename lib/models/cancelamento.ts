@@ -31,8 +31,18 @@ import { motivosDoCancelamento } from "@/lib/models/motivoDoCancelamento";
  * Enquanto não cancelou, é retido (20/10/2026): "a parte de pediram,
  * enquanto ele não foi cancelado ele é retido". Não há mais "em aberto".
  */
-export type Desfecho = "retido" | "cancelado";
-export type DesfechoManual = "retido" | "cancelado" | "cancelado-outro-setor" | "nao-e-cancelamento";
+/**
+ * "Em aberto" voltou em 20/10/2026: "o caso não tem como marcar como
+ * retido e permanecer em aberto — isso acaba dando um dado enviesado".
+ * Quem pediu e ainda está em tratativa não é retido: fica em aberto até
+ * ter desfecho, e fora da taxa. Retido sem sinal só depois que a
+ * reclamação fecha sem cancelamento.
+ */
+export type Desfecho = "retido" | "cancelado" | "em-aberto";
+export type DesfechoManual = "retido" | "cancelado" | "cancelado-outro-setor" | "em-aberto" | "nao-e-cancelamento";
+
+/** Sem reclamação aberta para dizer se ainda se negocia, o pedido fica em aberto por estes dias. */
+export const DIAS_EM_ABERTO_SEM_RECLAMACAO = 30;
 export type FrenteDoSinal = "reclame-aqui" | "redes" | "nps" | "conversa";
 export type TipoDeSinal = "pedido" | "retido" | "cancelado";
 
@@ -189,6 +199,8 @@ export interface CasoParaCancelamento {
   criadoEm: string;
   /** O prazo do 1º contato (1 dia útil depois de chegar) — ISO (1.113). */
   prazoDoContato?: string;
+  /** A reclamação ainda está aberta (não finalizada) — a negociação pode seguir. */
+  aberto?: boolean;
   contaId?: string;
   contaNome?: string;
   documento?: string;
@@ -316,6 +328,8 @@ export function juntarCancelamento(entrada: {
   nps: NpsParaCancelamento[];
   mensagens: MensagemParaCancelamento[];
   manuais?: Map<string, MarcacaoManual>;
+  /** O agora (ISO), para o "pediu há poucos dias"; padrão, o relógio. */
+  agora?: string;
 }): CancelamentoJuntado {
   /* Quem é quem: as chaves do mesmo cliente, unidas. */
   const pai = new Map<string, string>();
@@ -365,11 +379,11 @@ export function juntarCancelamento(entrada: {
     (m.npsId && npsPorId.has(m.npsId) ? chavesDoNps(npsPorId.get(m.npsId)!) : null) ||
     [m.telefone ? `tel:${digitos(m.telefone).slice(-8)}` : `conversa:${m.conversaId}`];
 
-  type Grupo = { nomes: { nome: string; peso: number }[]; contaId?: string; sinais: SinalDeCancelamento[]; protocolos: Set<string>; prazos: string[]; chaves: Set<string>; textos: string[] };
+  type Grupo = { nomes: { nome: string; peso: number }[]; contaId?: string; sinais: SinalDeCancelamento[]; protocolos: Set<string>; prazos: string[]; chaves: Set<string>; textos: string[]; aberto: boolean; temCaso: boolean };
   const grupos = new Map<string, Grupo>();
   const grupo = (chaves: string[]) => {
     const r = raiz(chaves[0]);
-    const g = grupos.get(r) ?? { nomes: [], sinais: [], protocolos: new Set<string>(), prazos: [], chaves: new Set<string>(), textos: [] };
+    const g = grupos.get(r) ?? { nomes: [], sinais: [], protocolos: new Set<string>(), prazos: [], chaves: new Set<string>(), textos: [], aberto: false, temCaso: false };
     for (const k of chaves) g.chaves.add(k);
     grupos.set(r, g);
     return g;
@@ -384,6 +398,8 @@ export function juntarCancelamento(entrada: {
     nomear(g, c.contaNome, 0);
     nomear(g, c.cliente, 1);
     g.protocolos.add(c.protocolo);
+    g.temCaso = true;
+    if (c.aberto) g.aberto = true;
     if (c.prazoDoContato) g.prazos.push(c.prazoDoContato);
   };
 
@@ -517,17 +533,36 @@ export function juntarCancelamento(entrada: {
       ultimo = undefined;
     }
     if (reaberto && ultimo && ultimoPedido && ultimo.quando < ultimoPedido) ultimo = undefined;
-    const desfecho: Desfecho = manual ? (manual.desfecho === "retido" ? "retido" : "cancelado") : ultimo ? (ultimo.tipo as Desfecho) : "retido";
+    /*
+     * Sem desfecho: em aberto enquanto a reclamação segue aberta (ou, sem
+     * reclamação, até 30 dias do pedido); depois disso, não cancelou = retido.
+     */
+    const agora = entrada.agora ?? new Date().toISOString();
+    const pedidoRecente = Boolean(ultimoPedido && Date.parse(agora) - Date.parse(ultimoPedido) < DIAS_EM_ABERTO_SEM_RECLAMACAO * 86_400_000);
+    const negociando = g.temCaso ? g.aberto : pedidoRecente;
+    const desfecho: Desfecho = manual
+      ? manual.desfecho === "retido"
+        ? "retido"
+        : manual.desfecho === "em-aberto"
+          ? "em-aberto"
+          : "cancelado"
+      : ultimo
+        ? (ultimo.tipo as Desfecho)
+        : negociando
+          ? "em-aberto"
+          : "retido";
     const porque = manual
-      ? `marcado à mão${manual.por ? ` por ${manual.por}` : ""}${manual.desfecho === "cancelado-outro-setor" ? ` — cancelado por ${manual.setor || "outro setor"}` : ""}`
+      ? `marcado à mão${manual.por ? ` por ${manual.por}` : ""}${manual.desfecho === "cancelado-outro-setor" ? ` — cancelado por ${manual.setor || "outro setor"}` : manual.desfecho === "em-aberto" ? " — ainda em aberto" : ""}`
       : ultimo
         ? ultimo.trecho
-        : `${reaberto ?? "pediu"} e não cancelou — conta como retido`;
+        : negociando
+          ? `${reaberto ?? "pediu"} — ainda sem desfecho, ${g.temCaso ? "com a reclamação aberta" : "pedido recente"}`
+          : `${reaberto ?? "pediu"}, a reclamação fechou e não cancelou — conta como retido`;
     const desde = [...pedidos, ...desfechos].map((s) => s.quando).sort()[0];
     /* A marcação contra a nossa própria fala: aparece para conferir. */
     const nossa = desfechos.find((s) => /^(nossa resposta|comentário do caso)/.test(s.trecho));
     const conflito =
-      manual && nossa && (manual.desfecho === "retido") !== (nossa.tipo === "retido") ? `marcado ${manual.desfecho === "retido" ? "retido" : "cancelado"}, mas a ${nossa.trecho}` : undefined;
+      manual && nossa && manual.desfecho !== "em-aberto" && (manual.desfecho === "retido") !== (nossa.tipo === "retido") ? `marcado ${manual.desfecho === "retido" ? "retido" : "cancelado"}, mas a ${nossa.trecho}` : undefined;
     const prazo = [...g.prazos].sort()[0];
 
     /* Quem cancelou: à mão, o setor marcado; senão o texto, a chegada já cancelada, ou o prazo do contato. */
@@ -566,7 +601,7 @@ export function juntarCancelamento(entrada: {
       desfecho,
       porque,
       manual: Boolean(manual),
-      retidoSemSinal: !manual && !ultimo,
+      retidoSemSinal: !manual && !ultimo && desfecho === "retido",
       conflito,
       desde,
       protocolos,
@@ -589,6 +624,8 @@ export interface ContagemDeRetencao {
   canceladosNoPrazo: number;
   /** Cancelados por outro setor — não contam (20/10). */
   canceladosOutroSetor: number;
+  /** Pediram e ainda não têm desfecho — fora da taxa. */
+  emAberto: number;
   /** Retidos sobre retidos + cancelados que contam; `null` sem desfecho nenhum. */
   taxaDeRetencao: number | null;
 }
@@ -608,6 +645,7 @@ function contar(lista: ClienteEmCancelamento[]): ContagemDeRetencao {
     canceladosQueContam,
     canceladosNoPrazo: cancelados.filter((c) => c.canceladoPor === "prazo").length,
     canceladosOutroSetor: cancelados.filter((c) => c.canceladoPor === "outro-setor").length,
+    emAberto: lista.filter((c) => c.desfecho === "em-aberto").length,
     taxaDeRetencao: retidos + canceladosQueContam > 0 ? retidos / (retidos + canceladosQueContam) : null,
   };
 }

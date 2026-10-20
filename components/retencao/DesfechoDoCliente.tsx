@@ -13,6 +13,7 @@ import { CLASSE_DO_PAINEL, usePainelPreso } from "./usePainelPreso";
 /** O desfecho do cliente, em palavras e cor. */
 export function rotuloDoDesfecho(c: ClienteEmCancelamento) {
   if (c.desfecho === "retido") return { texto: "Retido", cor: "border-emerald-200 bg-emerald-50 text-emerald-800" };
+  if (c.desfecho === "em-aberto") return { texto: "Em aberto", cor: "border-amber-200 bg-amber-50 text-amber-900" };
   if (c.canceladoPor === "outro-setor") return { texto: c.setor ? `Cancelou · ${c.setor}` : "Cancelou · outro setor", cor: "border-zinc-200 bg-zinc-100 text-zinc-700" };
   if (c.canceladoPor === "prazo") return { texto: "Cancelou no prazo", cor: "border-zinc-200 bg-zinc-100 text-zinc-700" };
   return { texto: "Cancelou", cor: "border-rose-200 bg-rose-50 text-rose-800" };
@@ -46,7 +47,7 @@ export default function DesfechoDoCliente({ cliente, onMudou }: { cliente: Clien
           ? `${cliente.nome}: de volta à leitura automática.`
           : desfecho === "nao-e-cancelamento"
             ? `${cliente.nome} saiu da lista.`
-            : `${cliente.nome}: ${desfecho === "retido" ? "retido" : desfecho === "cancelado" ? "cancelou pelo atendimento" : `cancelou · ${setor}`}.`,
+            : `${cliente.nome}: ${desfecho === "retido" ? "retido" : desfecho === "em-aberto" ? "em aberto" : desfecho === "cancelado" ? "cancelou pelo atendimento" : `cancelou · ${setor}`}.`,
     });
     onMudou();
   }
@@ -74,6 +75,9 @@ export default function DesfechoDoCliente({ cliente, onMudou }: { cliente: Clien
           <p className="px-2.5 pb-1 pt-0.5 text-xs font-semibold text-zinc-800">Como terminou?</p>
           <button type="button" role="menuitem" disabled={gravando} onClick={() => void marcar("retido")} className={opcao}>
             Retido
+          </button>
+          <button type="button" role="menuitem" disabled={gravando} onClick={() => void marcar("em-aberto")} className={opcao}>
+            Ainda em aberto
           </button>
           <button type="button" role="menuitem" disabled={gravando} onClick={() => void marcar("cancelado")} className={opcao}>
             Cancelou · nosso (conta na taxa)

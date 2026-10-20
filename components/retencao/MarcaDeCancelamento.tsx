@@ -22,13 +22,14 @@ export function rotuloDaMarca(m: MarcaAtual | null) {
   if (!m) return { texto: "Marcar", cor: "border border-dashed border-zinc-300 text-zinc-500 hover:border-zinc-400 hover:text-zinc-800" };
   if (m.marca === "nao-e-cancelamento") return { texto: "Não pediu", cor: "border border-zinc-200 text-zinc-500 hover:border-zinc-300" };
   if (m.marca === "retido") return { texto: "Retido", cor: "border border-emerald-200 bg-emerald-50 text-emerald-800" };
+  if (m.marca === "em-aberto") return { texto: "Em aberto", cor: "border border-amber-200 bg-amber-50 text-amber-900" };
   if (m.marca === "cancelado") return { texto: "Cancelou", cor: "border border-rose-200 bg-rose-50 text-rose-800" };
   return { texto: `Cancelou · ${m.setor || "outro setor"}`, cor: "border border-zinc-200 bg-zinc-100 text-zinc-700" };
 }
 
 const PERGUNTA: Record<Passo, string> = {
   pediu: "O cliente solicitou o cancelamento?",
-  desfecho: "Foi cancelado ou retido?",
+  desfecho: "Como está?",
   quem: "Foi por outro setor e dentro da SLA de 24h úteis?",
   setor: "Qual setor cancelou?",
 };
@@ -71,12 +72,16 @@ function Passos({
       )}
 
       {passo === "desfecho" && (
-        <div className="grid grid-cols-2 gap-1.5">
+        <div className="grid grid-cols-3 gap-1.5">
           <button type="button" disabled={gravando} onClick={() => gravar("retido")} className={`${opcao} ring-emerald-200 hover:bg-emerald-50`}>
             Retido
           </button>
           <button type="button" disabled={gravando} onClick={() => setPasso("quem")} className={`${opcao} ring-rose-200 hover:bg-rose-50`}>
             Cancelado
+          </button>
+          {/* Ainda negociando: não conta como retido nem cancelado até ter desfecho. */}
+          <button type="button" disabled={gravando} onClick={() => gravar("em-aberto")} className={`${opcao} ring-amber-200 hover:bg-amber-50`} title="Ainda em tratativa — fica fora da taxa até ter desfecho">
+            Em aberto
           </button>
         </div>
       )}

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
-import { Building2, ChevronRight, Loader2, Search, ShieldCheck, UserRoundX } from "lucide-react";
+import { Building2, ChevronRight, Hourglass, Loader2, Search, ShieldCheck, UserRoundX } from "lucide-react";
 
 import MainLayout from "@/components/layout/MainLayout";
 import PageHeading from "@/components/shared/PageHeading";
@@ -25,7 +25,7 @@ const pct = (v: number | null) => (v === null ? "—" : `${Math.round(v * 100)}%
 const fala = (t: string) => (/^(categoria|causa raiz|reclamação adicionada|chegou cancelado|avaliou|solução|a nossa resposta|nossa resposta|comentário do caso)/.test(t) ? t : `“${t.replace(/^…|…$/g, "")}”`);
 const linkDoCaso = (protocolo: string) => `/reclame-aqui/${encodeURIComponent(protocolo)}`;
 
-type Filtro = "todos" | "retido" | "cancelado" | "outro-setor";
+type Filtro = "todos" | "retido" | "em-aberto" | "cancelado" | "outro-setor";
 const POR_PAGINA = 30;
 
 /**
@@ -83,6 +83,7 @@ export default function RetencaoPage() {
     const termo = busca.trim().toLowerCase();
     return doPeriodo.filter((c) => {
       if (ver === "retido" && c.desfecho !== "retido") return false;
+      if (ver === "em-aberto" && c.desfecho !== "em-aberto") return false;
       if (ver === "cancelado" && c.desfecho !== "cancelado") return false;
       if (ver === "outro-setor" && c.canceladoPor !== "outro-setor") return false;
       return !termo || c.nome.toLowerCase().includes(termo) || c.protocolos.some((p) => p.toLowerCase().includes(termo));
@@ -97,6 +98,7 @@ export default function RetencaoPage() {
   const FILTROS: { id: Filtro; nome: string; n: number }[] = [
     { id: "todos", nome: "Todos", n: resumo.clientes },
     { id: "retido", nome: "Retidos", n: resumo.retidos },
+    { id: "em-aberto", nome: "Em aberto", n: resumo.emAberto },
     { id: "cancelado", nome: "Cancelaram", n: resumo.cancelados },
     { id: "outro-setor", nome: "Outro setor", n: resumo.canceladosOutroSetor },
   ];
@@ -127,12 +129,12 @@ export default function RetencaoPage() {
 
         {erro && <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900 ring-1 ring-inset ring-amber-100">{erro}</p>}
 
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
           <StatTile
             label="Retenção"
             value={pct(resumo.taxaDeRetencao)}
             hint={dados ? `${resumo.retidos} de ${resumo.retidos + resumo.canceladosQueContam} ficaram` : undefined}
-            description="Retidos ÷ (retidos + cancelados por nós). Fica fora da taxa o cancelado por outro setor dentro da SLA de 24h úteis — e quem já chegou cancelado."
+            description="Retidos ÷ (retidos + cancelados por nós). Ficam fora da taxa: quem ainda está em aberto, o cancelado por outro setor dentro da SLA de 24h úteis e quem já chegou cancelado."
             icon={ShieldCheck}
             tone="success"
             carregando={!dados}
@@ -140,11 +142,22 @@ export default function RetencaoPage() {
           <StatTile
             label="Retidos"
             value={resumo.retidos}
-            hint="pediram e não cancelaram"
+            hint="pediram e ficaram"
             icon={ShieldCheck}
             tone="success"
             onClick={() => filtrar("retido")}
             ativo={ver === "retido"}
+            carregando={!dados}
+          />
+          <StatTile
+            label="Em aberto"
+            value={resumo.emAberto}
+            hint="ainda sem desfecho"
+            description="Pediram para cancelar e ainda estão em tratativa — reclamação aberta, pedido recente ou marcado à mão. Ficam fora da taxa até ficarem ou saírem."
+            icon={Hourglass}
+            tone="warning"
+            onClick={() => filtrar("em-aberto")}
+            ativo={ver === "em-aberto"}
             carregando={!dados}
           />
           <StatTile
@@ -267,7 +280,7 @@ export default function RetencaoPage() {
                       {expandido && (
                         <div className="ml-8 mt-2 space-y-1.5 rounded-lg bg-zinc-50 px-3 py-2.5 text-xs text-zinc-600">
                           <p>
-                            <span className="font-medium text-zinc-800">{c.desfecho === "retido" ? "Por que ficou: " : "Por que saiu: "}</span>
+                            <span className="font-medium text-zinc-800">{c.desfecho === "retido" ? "Por que ficou: " : c.desfecho === "em-aberto" ? "Situação: " : "Por que saiu: "}</span>
                             {c.porque}
                           </p>
                           {outros.length > 0 && (

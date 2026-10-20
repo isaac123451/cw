@@ -13,6 +13,7 @@ const FRENTE: Record<string, string> = { "reclame-aqui": "Reclame Aqui", redes: 
 /* As duas séries da tela inteira: quem ficou e quem saiu. Texto nunca na cor da série. */
 const COR_RETIDO = "bg-emerald-500";
 const COR_CANCELADO = "bg-rose-500";
+const COR_ABERTO = "bg-zinc-300";
 
 function Legenda() {
   return (
@@ -22,6 +23,9 @@ function Legenda() {
       </span>
       <span className="flex items-center gap-1.5">
         <span className={`h-2.5 w-2.5 rounded-sm ${COR_CANCELADO}`} /> Cancelaram
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span className={`h-2.5 w-2.5 rounded-sm ${COR_ABERTO}`} /> Em aberto
       </span>
     </span>
   );
@@ -47,7 +51,8 @@ export default function AnaliseDosCancelamentos({ clientes, resumo }: { clientes
     const linhas = MOTIVOS_DE_CANCELAMENTO.map((m) => {
       const deles = clientes.filter((c) => c.motivos.includes(m.id));
       const retidos = deles.filter((c) => c.desfecho === "retido").length;
-      return { id: m.id, nome: m.nome, total: deles.length, retidos, cancelados: deles.length - retidos };
+      const cancelados = deles.filter((c) => c.desfecho === "cancelado").length;
+      return { id: m.id, nome: m.nome, total: deles.length, retidos, cancelados, abertos: deles.length - retidos - cancelados };
     }).filter((l) => l.total > 0);
     return linhas.sort((a, b) => b.total - a.total);
   }, [clientes]);
@@ -97,7 +102,7 @@ export default function AnaliseDosCancelamentos({ clientes, resumo }: { clientes
         {/* Por que pedem para cancelar — e em qual motivo mais se perde. */}
         <div>
           <h3 className="text-sm font-medium text-zinc-800">Por que pedem para cancelar</h3>
-          <p className="mt-0.5 text-xs text-zinc-500">Lido do que o cliente escreveu. Um cliente pode ter mais de um motivo.</p>
+          <p className="mt-0.5 text-xs text-zinc-500">Lido do que o cliente escreveu. Um cliente pode ter mais de um motivo; o “ficaram” conta só quem já teve desfecho.</p>
           <ul className="mt-3 space-y-2.5">
             {motivos.map((m) => (
               <li key={m.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1">
@@ -105,16 +110,27 @@ export default function AnaliseDosCancelamentos({ clientes, resumo }: { clientes
                   {m.nome}
                 </span>
                 <span className="text-right text-xs tabular-nums text-zinc-500">
-                  <span className="font-medium text-zinc-800">{m.total}</span> · ficaram {Math.round((m.retidos / m.total) * 100)}%
+                  <span className="font-medium text-zinc-800">{m.total}</span>
+                  {m.retidos + m.cancelados > 0 && <> · ficaram {Math.round((m.retidos / (m.retidos + m.cancelados)) * 100)}%</>}
                 </span>
                 {/* A barra cresce com o total; dentro, quem ficou e quem saiu, com 2 px de folga entre os dois. */}
                 <span className="col-span-2 flex h-2.5 gap-0.5" style={{ width: `${(m.total / maior) * 100}%` }}>
-                  {m.retidos > 0 && (
-                    <span className={`h-full rounded-l ${m.cancelados ? "" : "rounded-r"} ${COR_RETIDO}`} style={{ flex: m.retidos }} title={`${m.nome}: ${m.retidos} ficaram`} />
-                  )}
-                  {m.cancelados > 0 && (
-                    <span className={`h-full rounded-r ${m.retidos ? "" : "rounded-l"} ${COR_CANCELADO}`} style={{ flex: m.cancelados }} title={`${m.nome}: ${m.cancelados} cancelaram`} />
-                  )}
+                  {(
+                    [
+                      [m.retidos, COR_RETIDO, "ficaram"],
+                      [m.cancelados, COR_CANCELADO, "cancelaram"],
+                      [m.abertos, COR_ABERTO, "em aberto"],
+                    ] as const
+                  )
+                    .filter(([n]) => n > 0)
+                    .map(([n, cor, rotulo], i, todos) => (
+                      <span
+                        key={rotulo}
+                        className={`h-full ${i === 0 ? "rounded-l" : ""} ${i === todos.length - 1 ? "rounded-r" : ""} ${cor}`}
+                        style={{ flex: n }}
+                        title={`${m.nome}: ${n} ${rotulo}`}
+                      />
+                    ))}
                 </span>
               </li>
             ))}
@@ -134,10 +150,11 @@ export default function AnaliseDosCancelamentos({ clientes, resumo }: { clientes
               <p className="mt-0.5 text-xs text-zinc-500">Pelo mês do pedido. Embaixo, a taxa de retenção do mês.</p>
               <div className="mt-3 flex h-32 items-end gap-1.5" role="img" aria-label="Retidos e cancelamentos por mês">
                 {meses.map((m) => (
-                  <div key={m.mes} className="flex min-w-0 flex-1 flex-col items-center gap-1" title={`${mes(m.mes)}: ${m.retidos} ficaram, ${m.cancelados} cancelaram (${m.canceladosOutroSetor} por outro setor) · retenção ${pct(m.taxaDeRetencao)}`}>
+                  <div key={m.mes} className="flex min-w-0 flex-1 flex-col items-center gap-1" title={`${mes(m.mes)}: ${m.retidos} ficaram, ${m.cancelados} cancelaram (${m.canceladosOutroSetor} por outro setor), ${m.emAberto} em aberto · retenção ${pct(m.taxaDeRetencao)}`}>
                     <div className="flex w-full max-w-7 flex-col justify-end gap-0.5" style={{ height: `${(m.clientes / maiorMes) * 100}%` }}>
                       {m.cancelados > 0 && <span className={`w-full rounded-t ${COR_CANCELADO}`} style={{ flex: m.cancelados }} />}
-                      {m.retidos > 0 && <span className={`w-full ${m.cancelados ? "" : "rounded-t"} ${COR_RETIDO}`} style={{ flex: m.retidos }} />}
+                      {m.emAberto > 0 && <span className={`w-full ${m.cancelados ? "" : "rounded-t"} ${COR_ABERTO}`} style={{ flex: m.emAberto }} />}
+                      {m.retidos > 0 && <span className={`w-full ${m.cancelados || m.emAberto ? "" : "rounded-t"} ${COR_RETIDO}`} style={{ flex: m.retidos }} />}
                     </div>
                   </div>
                 ))}

@@ -15,7 +15,7 @@ export async function lerRetencao(): Promise<{ ok: true; clientes: ClienteEmCanc
     const { clientes, foraDaConta } = await lerCancelamento(ctx.prisma);
     /* O que a conta já decidiu de cada protocolo — o cartão de chance não pode dizer o contrário. */
     const desfechos = new Map<string, "retido" | "cancelado" | "nao-e-cancelamento">();
-    for (const c of clientes) if (!c.retidoSemSinal) for (const p of c.protocolos) desfechos.set(p, c.desfecho);
+    for (const c of clientes) if (!c.retidoSemSinal && c.desfecho !== "em-aberto") for (const p of c.protocolos) desfechos.set(p, c.desfecho);
     for (const c of foraDaConta) for (const p of c.protocolos) desfechos.set(p, "nao-e-cancelamento");
     const [emRisco, reclamacoes] = await Promise.all([
       lerClientesEmRisco(ctx.prisma, clientes).catch(() => []),
@@ -53,7 +53,7 @@ async function gravarDesfecho(chave: string, desfecho: DesfechoManual | null, se
   if (!ctx) return { ok: false, erro: "Sem banco configurado." };
   const valida = (k: string) => /^(conta|doc|email|caso|tel|nps|conversa):.{1,200}$/.test(k);
   if (!valida(chave) || (todasAsChaves ?? []).some((k) => !valida(k))) return { ok: false, erro: "Cliente inválido." };
-  if (desfecho !== null && !["retido", "cancelado", "cancelado-outro-setor", "nao-e-cancelamento"].includes(desfecho)) return { ok: false, erro: "Desfecho inválido." };
+  if (desfecho !== null && !["retido", "cancelado", "cancelado-outro-setor", "em-aberto", "nao-e-cancelamento"].includes(desfecho)) return { ok: false, erro: "Desfecho inválido." };
   /* O setor que cancelou mora na nota; só os da lista. */
   const nota = desfecho === "cancelado-outro-setor" ? ((SETORES as readonly string[]).includes(setor ?? "") ? setor! : "Outro setor") : null;
 
@@ -90,7 +90,7 @@ export async function lerRiscoDoCaso(caseId: string): Promise<ReclamacaoComRisco
 }
 
 /** "nao-e-cancelamento" = o cliente não solicitou o cancelamento. */
-export type MarcaDaReclamacao = "retido" | "cancelado" | "cancelado-outro-setor" | "nao-e-cancelamento";
+export type MarcaDaReclamacao = "retido" | "cancelado" | "cancelado-outro-setor" | "em-aberto" | "nao-e-cancelamento";
 
 export interface ReclamacaoMarcada {
   protocolo: string;
