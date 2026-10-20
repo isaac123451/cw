@@ -1,8 +1,8 @@
 "use server";
 
 import { requireRole, SemPermissao, tryRole } from "@/lib/auth/guard";
-import { resumoDeRetencao, type ClienteEmCancelamento, type DesfechoManual, type ResumoDeRetencao } from "@/lib/models/cancelamento";
-import { lerClientesEmCancelamento, lerClientesEmRisco, lerReclamacoesComRisco, type ReclamacaoComRisco } from "@/lib/services/cancelamento.service";
+import { resumoDeRetencao, SETORES, type ClienteEmCancelamento, type DesfechoManual, type ResumoDeRetencao } from "@/lib/models/cancelamento";
+import { lerCancelamento, lerClientesEmRisco, lerReclamacoesComRisco, type ReclamacaoComRisco } from "@/lib/services/cancelamento.service";
 import type { ClienteEmRisco } from "@/lib/models/clienteEmRisco";
 
 type Falha = { ok: false; erro: string };
@@ -12,10 +12,14 @@ export async function lerRetencao(): Promise<{ ok: true; clientes: ClienteEmCanc
   const ctx = await tryRole("LEITURA").catch(() => null);
   if (!ctx) return { ok: false, erro: "Entre na aplicação para ver a retenção." };
   try {
-    const clientes = await lerClientesEmCancelamento(ctx.prisma);
+    const { clientes, foraDaConta } = await lerCancelamento(ctx.prisma);
+    /* O que a conta já decidiu de cada protocolo — o cartão de chance não pode dizer o contrário. */
+    const desfechos = new Map<string, "retido" | "cancelado" | "nao-e-cancelamento">();
+    for (const c of clientes) if (!c.retidoSemSinal) for (const p of c.protocolos) desfechos.set(p, c.desfecho);
+    for (const c of foraDaConta) for (const p of c.protocolos) desfechos.set(p, "nao-e-cancelamento");
     const [emRisco, reclamacoes] = await Promise.all([
       lerClientesEmRisco(ctx.prisma, clientes).catch(() => []),
-      lerReclamacoesComRisco(ctx.prisma).catch(() => []),
+      lerReclamacoesComRisco(ctx.prisma, { desfechos }).catch(() => []),
     ]);
     return { ok: true, clientes, resumo: resumoDeRetencao(clientes), emRisco, reclamacoes };
   } catch (erro) {
@@ -29,7 +33,7 @@ export async function lerRetencao(): Promise<{ ok: true; clientes: ClienteEmCanc
  * (`null`). A correção vale acima dos sinais; "não é cancelamento" tira o
  * cliente da conta.
  */
-export async function marcarDesfecho(chave: string, desfecho: DesfechoManual | null): Promise<{ ok: true } | Falha> {
+export async function marcarDesfecho(chave: string, desfecho: DesfechoManual | null, setor?: string): Promise<{ ok: true } | Falha> {
   let ctx;
   try {
     ctx = await requireRole("AGENTE");
@@ -38,7 +42,9 @@ export async function marcarDesfecho(chave: string, desfecho: DesfechoManual | n
   }
   if (!ctx) return { ok: false, erro: "Sem banco configurado." };
   if (!/^(conta|doc|email|caso|tel|nps|conversa):.{1,200}$/.test(chave)) return { ok: false, erro: "Cliente inválido." };
-  if (desfecho !== null && !["retido", "cancelado", "nao-e-cancelamento"].includes(desfecho)) return { ok: false, erro: "Desfecho inválido." };
+  if (desfecho !== null && !["retido", "cancelado", "cancelado-outro-setor", "nao-e-cancelamento"].includes(desfecho)) return { ok: false, erro: "Desfecho inválido." };
+  /* O setor que cancelou mora na nota; só os da lista. */
+  const nota = desfecho === "cancelado-outro-setor" ? ((SETORES as readonly string[]).includes(setor ?? "") ? setor! : "Outro setor") : null;
 
   try {
     if (desfecho === null) {
@@ -47,8 +53,8 @@ export async function marcarDesfecho(chave: string, desfecho: DesfechoManual | n
       const eu = await ctx.prisma.user.findUnique({ where: { id: ctx.userId }, select: { name: true } });
       await ctx.prisma.desfechoDeCancelamento.upsert({
         where: { chave },
-        create: { chave, desfecho, por: eu?.name ?? null },
-        update: { desfecho, por: eu?.name ?? null, em: new Date() },
+        create: { chave, desfecho, nota, por: eu?.name ?? null },
+        update: { desfecho, nota, por: eu?.name ?? null, em: new Date() },
       });
     }
     return { ok: true };

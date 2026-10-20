@@ -1,9 +1,10 @@
 import type { PrismaClient } from "@prisma/client";
 
 import {
-  clientesEmCancelamento,
+  juntarCancelamento,
   type CasoParaCancelamento,
   type DesfechoManual,
+  type MarcacaoManual,
   type MensagemParaCancelamento,
   type NpsParaCancelamento,
   type ClienteEmCancelamento,
@@ -44,6 +45,11 @@ function prazoDoContato(c: { recebidaEm: Date | null; publishedAt: Date }, exped
  * as do cliente e as nossas (o "cancelamento efetuado" costuma ser nosso).
  */
 export async function lerClientesEmCancelamento(prisma: PrismaClient) {
+  return (await lerCancelamento(prisma)).clientes;
+}
+
+/** A conta inteira: os clientes e quem foi marcado "não é cancelamento" (para o cartão de chance não dizer "pediu"). */
+export async function lerCancelamento(prisma: PrismaClient) {
   const [casos, nps, mensagens, manuais, expediente] = await Promise.all([
     prisma.case.findMany({
       select: {
@@ -129,16 +135,19 @@ export async function lerClientesEmCancelamento(prisma: PrismaClient) {
     contato: nomeDeContatoValido(m.conversa.contatoNome) || undefined,
   }));
 
-  return clientesEmCancelamento({ casos: paraCasos, nps: paraNps, mensagens: paraMensagens, manuais });
+  return juntarCancelamento({ casos: paraCasos, nps: paraNps, mensagens: paraMensagens, manuais });
 }
 
 /** As correções à mão, por cliente. Sem a tabela ainda, nenhuma. */
 async function lerManuais(prisma: PrismaClient) {
   /* Servidor que subiu antes do cliente novo do Prisma: sem a tabela no cliente, sem correções — a conta segue. */
-  if (!prisma.desfechoDeCancelamento) return new Map<string, { desfecho: DesfechoManual; por?: string }>();
+  if (!prisma.desfechoDeCancelamento) return new Map<string, MarcacaoManual>();
   try {
-    const linhas = await prisma.desfechoDeCancelamento.findMany({ select: { chave: true, desfecho: true, por: true } });
-    return new Map(linhas.map((l) => [l.chave, { desfecho: l.desfecho as DesfechoManual, por: l.por ?? undefined }]));
+    const linhas = await prisma.desfechoDeCancelamento.findMany({ select: { chave: true, desfecho: true, por: true, em: true, nota: true } });
+    /* Em "cancelado-outro-setor", o setor mora na nota. */
+    return new Map<string, MarcacaoManual>(
+      linhas.map((l) => [l.chave, { desfecho: l.desfecho as DesfechoManual, por: l.por ?? undefined, em: l.em.toISOString(), setor: l.desfecho === "cancelado-outro-setor" ? l.nota ?? undefined : undefined }])
+    );
   } catch (erro) {
     const codigo = (erro as { code?: string })?.code;
     if (codigo === "P2021" || codigo === "P2022") return new Map();
@@ -182,7 +191,8 @@ export async function lerClientesEmRisco(prisma: PrismaClient, emCancelamento: C
       contaId: r.establishmentId ?? undefined,
       email: r.email ?? undefined,
     })),
-    pedidosEmAberto: new Set(emCancelamento.filter((c) => c.desfecho === "em-aberto").map((c) => c.chave)),
+    /* Retido só por não ter cancelado: o pedido segue vivo como sinal de risco. */
+    pedidosEmAberto: new Set(emCancelamento.filter((c) => c.retidoSemSinal).flatMap((c) => c.chaves)),
   });
 }
 
@@ -204,7 +214,10 @@ export interface ReclamacaoComRisco {
  * NPS recente da conta. Só as de risco médio para cima, e as que já dizem
  * que o cliente cancelou (recuperação).
  */
-export async function lerReclamacoesComRisco(prisma: PrismaClient, opcoes: { caseId?: string; incluirBaixo?: boolean } = {}): Promise<ReclamacaoComRisco[]> {
+export async function lerReclamacoesComRisco(
+  prisma: PrismaClient,
+  opcoes: { caseId?: string; incluirBaixo?: boolean; desfechos?: Map<string, "retido" | "cancelado" | "nao-e-cancelamento"> } = {}
+): Promise<ReclamacaoComRisco[]> {
   const [abertos, todos, detratores] = await Promise.all([
     prisma.case.findMany({
       where: opcoes.caseId ? { OR: [{ id: opcoes.caseId }, { externalId: opcoes.caseId }] } : { status: { notIn: CLOSED_STATUS } },
@@ -247,7 +260,11 @@ export async function lerReclamacoesComRisco(prisma: PrismaClient, opcoes: { cas
       ? todos.filter((o) => o.protocol !== c.protocol && digitos(o.document) === doc && Date.parse(chegouEm(o)) <= chegou && chegou - Date.parse(chegouEm(o)) <= 90 * 86_400_000).length
       : 0;
     const detrator = detratores.find((r) => (c.establishmentId && r.establishmentId === c.establishmentId) || (c.email && r.email && r.email.toLowerCase() === c.email.toLowerCase()));
+    /* O que a Retenção já sabe do cliente: retido sai da lista; "não é cancelamento" tira o pedido; cancelado vira recuperação. */
+    const desfecho = opcoes.desfechos?.get(c.protocol);
+    if (desfecho === "retido" && !opcoes.caseId) continue;
     const risco = riscoDeCancelamento({
+      desfecho,
       titulo: c.title,
       relato: c.description ?? "",
       categoria: c.category?.name,

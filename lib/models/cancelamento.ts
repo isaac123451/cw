@@ -19,13 +19,18 @@
  *
  * **Os pontos se juntam por cliente** — a conta (estabelecimento), o
  * documento, o e-mail ou o telefone —, e o desfecho é o sinal mais recente
- * entre retido e cancelado. Sem desfecho, "em aberto". A pessoa pode
- * corrigir à mão (retido, cancelado, não é cancelamento), e a correção
- * vale acima de tudo.
+ * entre retido e cancelado. Sem desfecho, retido — enquanto não cancelou, ficou (20/10). A pessoa pode
+ * corrigir à mão (retido, cancelado, cancelado por outro setor, não é
+ * cancelamento), e a correção vale acima de tudo — até o cliente pedir
+ * de novo depois dela.
  */
 
-export type Desfecho = "retido" | "cancelado" | "em-aberto";
-export type DesfechoManual = "retido" | "cancelado" | "nao-e-cancelamento";
+/**
+ * Enquanto não cancelou, é retido (20/10/2026): "a parte de pediram,
+ * enquanto ele não foi cancelado ele é retido". Não há mais "em aberto".
+ */
+export type Desfecho = "retido" | "cancelado";
+export type DesfechoManual = "retido" | "cancelado" | "cancelado-outro-setor" | "nao-e-cancelamento";
 export type FrenteDoSinal = "reclame-aqui" | "redes" | "nps" | "conversa";
 export type TipoDeSinal = "pedido" | "retido" | "cancelado";
 
@@ -38,6 +43,10 @@ export interface SinalDeCancelamento {
   quando: string;
   /** Por que o sinal existe: o trecho lido ou o dado usado. */
   trecho: string;
+  /** Veio do relato, no dia em que a reclamação chegou — "já cancelei" aqui é cancelamento de antes de chegar ao time. */
+  chegada?: boolean;
+  /** O setor que o texto diz ter cancelado. */
+  setor?: string;
 }
 
 const norma = (t: string) =>
@@ -48,7 +57,7 @@ const norma = (t: string) =>
 
 /** Pedido de cancelamento do plano — não do pedido do consumidor. */
 const PEDIDO =
-  /cancel(ar|amento|o|ei) (o |do |meu |minha |a |da |nosso |nossa )?(contrato|plano|assinatura|servico|sistema|conta|cardapio web|mensalidade)|(quero|vou|preciso|gostaria de|desejo|queremos|vamos|solicito|solicitei|pedi)( o)? (cancelar|cancelamento)(?! (d?[oa] |meu |minha |o |um )?(pedido|entrega|compra))|solicitacao de cancelamento|pedido de cancelamento (do|da|de) (plano|contrato|assinatura|servico|sistema)|rescis|encerrar (o |meu |nosso )?contrato|trocar de (sistema|plataforma|empresa)|nao (vou |quero )?(mais )?renovar|nao quero mais (usar|o sistema|a plataforma|os servicos|o cardapio)/;
+  /cancel(ar|amento|o|ei) (o |do |meu |minha |a |da |nosso |nossa )?(contrato|plano|assinatura|servico|sistema|conta|cardapio web|mensalidade)|(quero|vou|preciso|gostaria de|desejo|deseja|queremos|vamos|solicito|solicitei|pedi|estou|considerando|pensando em|vou ter que|temos de|temos que|teremos que|teremos de|vamos ter que)( o)? (cancelar|cancelamento|cancelando)(?! (d?[oa] |meu |minha |o |um )?(pedido|entrega|compra))|solicitacao de cancelamento|pedido de cancelamento (do|da|de) (plano|contrato|assinatura|servico|sistema)|rescis|encerrar (o |meu |nosso )?contrato|trocar de (sistema|plataforma|empresa)|nao (vou |quero )?(mais )?renovar|nao quero mais (usar|o sistema|a plataforma|os servicos|o cardapio)|cancel(ar|amento d)a renovacao|cancelamento e (o )?reembolso|nada do cancelamento|confirma(ndo|cao d)o cancelamento|nao (consegue|conseguem|consigo|conseguimos) cancelar|(poderia|posso|podia) cancelar(?! (o |um |do |da |a )?pedido)/;
 
 /** Retido: ficou. */
 const RETIDO =
@@ -56,7 +65,7 @@ const RETIDO =
 
 /** Cancelado: saiu. */
 const CANCELADO =
-  /ja cancelei|cancelei (o |meu |minha |a )?(contrato|plano|assinatura|servico|sistema)|cancelamento (foi )?(efetuado|realizado|confirmado|concluido|processado)|contrato (encerrado|cancelado|rescindido)|ja migrei|(estou|estamos) usando outro sistema|cliente cancelou|(apos|depois d[oe]) (a |o )?(solicitacao d[oe] |pedido d[oe] )?cancelamento.{0,60}(cobra|debit|boleto|fatura)|(cobra|debit|boleto|fatura).{0,60}(apos|depois d[oe]) (a |o )?(solicitacao d[oe] |pedido d[oe] )?cancel/;
+  /ja cancelei|cancelei (o |meu |minha |a )?(contrato|plano|assinatura|servico|sistema|renovacao)|(portanto|entao|por isso|e) cancelei[,.;]|fiz o cancelamento(?! (do|da|o|a) pedido)|cancelamento (ser|foi|ja foi) feito|(havia sido|foi|fui) cancelad[oa] por (falta de pagamento|inadimplencia)|cancelou (nosso|meu|o) acesso|cancelamento (foi )?(efetuado|realizado|confirmado|concluido|processado)|contrato (encerrado|cancelado|rescindido)|ja migrei|(estou|estamos) usando outro sistema|cliente cancelou|(apos|depois d[oe]) (a |o )?(solicitacao d[oe] |pedido d[oe] )?cancelamento.{0,60}(cobra|debit|boleto|fatura)|(cobra|debit|boleto|fatura).{0,60}(apos|depois d[oe]) (a |o )?(solicitacao d[oe] |pedido d[oe] )?cancel/;
 
 /** O trecho em volta do que casou, para a pessoa ver por que foi contado. */
 function trechoDe(texto: string, padrao: RegExp) {
@@ -85,6 +94,43 @@ export function sinaisDoTexto(texto: string): { tipo: TipoDeSinal; trecho: strin
 /* ============================================================
    JUNTAR OS PONTOS
 ============================================================ */
+
+/**
+ * Quem cancelou, e se conta contra quem atende (20/10/2026).
+ *
+ * - **atendimento**: saiu depois do prazo do 1º contato, com o caso na mão
+ *   do time — é o que a taxa de retenção mede.
+ * - **prazo**: saiu antes de vencer o prazo do 1º contato (1 dia útil) —
+ *   não havia o que fazer ainda (regra de 30/09).
+ * - **outro-setor**: o cancelamento foi feito por outro setor (Financeiro,
+ *   Comercial, Suporte…) — o cliente já chegou cancelado ("cobrança após o
+ *   cancelamento"), o texto diz quem cancelou, ou alguém marcou à mão.
+ *
+ * Os três somam o total de cancelamentos, que a tela mostra inteiro; só o
+ * primeiro entra na taxa.
+ */
+export type CanceladoPor = "atendimento" | "prazo" | "outro-setor";
+
+export const SETORES = ["Financeiro", "Comercial", "Suporte", "Sucesso do cliente", "Implantação", "Outro setor"] as const;
+
+/** O setor citado junto do cancelamento: "o financeiro cancelou", "cancelado pelo comercial". */
+const SETOR_NO_TEXTO: { setor: (typeof SETORES)[number]; re: RegExp }[] = [
+  { setor: "Financeiro", re: /financeiro|cobranca|falta de pagamento|inadimplencia/ },
+  { setor: "Comercial", re: /comercial|vendas|vendedor|consultor/ },
+  { setor: "Suporte", re: /suporte/ },
+  { setor: "Sucesso do cliente", re: /sucesso do cliente|customer success|\bcs\b/ },
+  { setor: "Implantação", re: /implantacao|onboarding/ },
+];
+const CANCELADO_POR_SETOR =
+  /(cancel(ado|ada|amento|ou|aram|ei)|encerrad[oa]).{0,40}(pelo|pela|com o|com a|no|na|junto ao|junto a) (setor )?(financeiro|cobranca|comercial|vendas|vendedor|consultor|suporte|sucesso do cliente|customer success|cs|implantacao|onboarding)|cancelad[oa] por (falta de pagamento|inadimplencia)|(financeiro|comercial|suporte|sucesso do cliente|implantacao) (ja )?(cancelou|fez o cancelamento|efetuou o cancelamento|realizou o cancelamento)/;
+
+/** O setor que cancelou, pelo texto; `null` quando o texto não diz. */
+export function setorDoCancelamento(texto: string): string | null {
+  const n = norma(texto);
+  const m = CANCELADO_POR_SETOR.exec(n);
+  if (!m) return null;
+  return SETOR_NO_TEXTO.find((s) => s.re.test(m[0]))?.setor ?? "Outro setor";
+}
 
 export interface CasoParaCancelamento {
   protocolo: string;
@@ -130,6 +176,15 @@ export interface MensagemParaCancelamento {
   contato?: string;
 }
 
+export interface MarcacaoManual {
+  desfecho: DesfechoManual;
+  por?: string;
+  /** ISO — quando foi marcado. Um pedido novo depois disto reabre o cliente. */
+  em?: string;
+  /** O setor, em "cancelado-outro-setor". */
+  setor?: string;
+}
+
 export interface ClienteEmCancelamento {
   chave: string;
   nome: string;
@@ -139,70 +194,161 @@ export interface ClienteEmCancelamento {
   /** Por que esse desfecho: o sinal que decidiu, ou a correção de alguém. */
   porque: string;
   manual?: boolean;
+  /** Retido só porque não cancelou: nenhum sinal de que ficou — o pedido segue pedindo atenção (cliente em risco). */
+  retidoSemSinal?: boolean;
   /** O primeiro pedido (ISO) — o mês da conta. */
   desde: string;
   /** Os protocolos envolvidos, para abrir. */
   protocolos: string[];
-  /**
-   * Cancelou antes de vencer o prazo do 1º contato (1 dia útil) — não conta
-   * contra quem atende (1.113). Inclui quem já chegou dizendo que cancelou.
-   */
-  canceladoNoPrazo?: boolean;
+  /** Todas as chaves do cliente (conta, documento, e-mail…) — o painel de risco o acha por qualquer uma. */
+  chaves: string[];
+  /** Só nos cancelados: quem cancelou — e se conta na taxa. */
+  canceladoPor?: CanceladoPor;
+  /** Em "outro-setor", qual, quando se sabe. */
+  setor?: string;
   /** O prazo do 1º contato da primeira reclamação do cliente. */
   prazoDoContato?: string;
 }
 
 const digitos = (v?: string) => String(v ?? "").replace(/\D/g, "");
 
-function chaveDoCaso(c: CasoParaCancelamento) {
-  if (c.contaId) return `conta:${c.contaId}`;
+/** Nome que não diz quem é: vazio, "Não informado", um telefone. */
+const nomeVazio = (n?: string) => !n || /^\s*(nao informado|anonimo|cliente|contato do whatsapp)?\s*$/i.test(norma(n)) || /^[+\d\s().-]{8,}$/.test(n);
+
+/**
+ * As chaves de um caso — a conta, o documento e o e-mail. A primeira é a
+ * que o CW usava sozinha até 20/10 (as marcações à mão foram gravadas
+ * nela); as outras servem para juntar o mesmo cliente que reclamou duas
+ * vezes, uma com CPF e outra só com e-mail.
+ */
+function chavesDoCaso(c: CasoParaCancelamento) {
+  const chaves: string[] = [];
+  if (c.contaId) chaves.push(`conta:${c.contaId}`);
   const d = digitos(c.documento);
-  if (d.length === 11 || d.length === 14) return `doc:${d}`;
-  if (c.email && !c.email.includes("•")) return `email:${c.email.toLowerCase()}`;
-  return `caso:${c.protocolo}`;
+  if (d.length === 11 || d.length === 14) chaves.push(`doc:${d}`);
+  if (c.email && !c.email.includes("•")) chaves.push(`email:${c.email.toLowerCase()}`);
+  if (!chaves.length) chaves.push(`caso:${c.protocolo}`);
+  return chaves;
+}
+
+const ORDEM_DA_CHAVE = ["conta", "doc", "email", "tel", "nps", "conversa", "caso"];
+const pesoDaChave = (k: string) => ORDEM_DA_CHAVE.indexOf(k.slice(0, k.indexOf(":")));
+
+/** Cancelado antes de chegar: a subcategoria diz ("Cobrança após cancelamento"). */
+const CHEGOU_CANCELADO = /(apos|pos|depois do) (o )?cancelamento/;
+
+export interface CancelamentoJuntado {
+  clientes: ClienteEmCancelamento[];
+  /** Quem foi marcado "não é cancelamento", com os protocolos — para a tela não dizer "pediu para cancelar". */
+  foraDaConta: { chave: string; protocolos: string[] }[];
+}
+
+/** Os clientes em cancelamento — ver `juntarCancelamento`. */
+export function clientesEmCancelamento(entrada: Parameters<typeof juntarCancelamento>[0]): ClienteEmCancelamento[] {
+  return juntarCancelamento(entrada).clientes;
 }
 
 /**
  * Os clientes em cancelamento, com os sinais juntados e o desfecho.
  *
  * Entra quem tem pedido ou cancelado; retido sozinho só entra quando fala
- * de cancelamento ("desisti de cancelar"). A correção manual (`manuais`,
- * por chave) vence: "não é cancelamento" tira o cliente da conta.
+ * de cancelamento ("desisti de cancelar"). O mesmo cliente é um só, mesmo
+ * que tenha reclamado com CPF numa e só com e-mail na outra. A correção
+ * manual vence — até o cliente pedir de novo depois dela.
  */
-export function clientesEmCancelamento(entrada: {
+export function juntarCancelamento(entrada: {
   casos: CasoParaCancelamento[];
   nps: NpsParaCancelamento[];
   mensagens: MensagemParaCancelamento[];
-  manuais?: Map<string, { desfecho: DesfechoManual; por?: string }>;
-}): ClienteEmCancelamento[] {
-  const grupos = new Map<string, { nome: string; contaId?: string; sinais: SinalDeCancelamento[]; protocolos: Set<string>; prazos: string[] }>();
-  const porProtocolo = new Map<string, string>();
-  const porEmail = new Map<string, string>();
-  const porNps = new Map<string, string>();
+  manuais?: Map<string, MarcacaoManual>;
+}): CancelamentoJuntado {
+  /* Quem é quem: as chaves do mesmo cliente, unidas. */
+  const pai = new Map<string, string>();
+  const raiz = (k: string): string => {
+    let r = k;
+    while (pai.has(r) && pai.get(r) !== r) r = pai.get(r)!;
+    let x = k;
+    while (pai.has(x) && pai.get(x) !== r) {
+      const proximo = pai.get(x)!;
+      pai.set(x, r);
+      x = proximo;
+    }
+    if (!pai.has(r)) pai.set(r, r);
+    return r;
+  };
+  const unir = (chaves: string[]) => {
+    for (const k of chaves.slice(1)) {
+      const a = raiz(chaves[0]);
+      const b = raiz(k);
+      if (a !== b) pai.set(b, a);
+    }
+  };
 
-  const grupo = (chave: string, nome: string, contaId?: string) => {
-    const g = grupos.get(chave) ?? { nome, contaId, sinais: [], protocolos: new Set<string>(), prazos: [] as string[] };
-    if (!g.contaId && contaId) g.contaId = contaId;
-    grupos.set(chave, g);
+  const chavesPorProtocolo = new Map<string, string[]>();
+  const casoPorProtocolo = new Map<string, CasoParaCancelamento>();
+  for (const c of entrada.casos) {
+    const chaves = chavesDoCaso(c);
+    chavesPorProtocolo.set(c.protocolo, chaves);
+    casoPorProtocolo.set(c.protocolo, c);
+    unir(chaves);
+  }
+  const chavesDoNps = (r: NpsParaCancelamento) => {
+    const chaves: string[] = [];
+    if (r.contaId) chaves.push(`conta:${r.contaId}`);
+    if (r.email) chaves.push(`email:${r.email.toLowerCase()}`);
+    if (!chaves.length) chaves.push(`nps:${r.id}`);
+    return chaves;
+  };
+  const npsPorId = new Map<string, NpsParaCancelamento>();
+  for (const r of entrada.nps) {
+    npsPorId.set(r.id, r);
+    unir(chavesDoNps(r));
+  }
+  const chavesDaMensagem = (m: MensagemParaCancelamento) =>
+    (m.caseProtocolo && chavesPorProtocolo.get(m.caseProtocolo)) ||
+    (m.contaId ? [`conta:${m.contaId}`] : null) ||
+    (m.npsId && npsPorId.has(m.npsId) ? chavesDoNps(npsPorId.get(m.npsId)!) : null) ||
+    [m.telefone ? `tel:${digitos(m.telefone).slice(-8)}` : `conversa:${m.conversaId}`];
+
+  type Grupo = { nomes: { nome: string; peso: number }[]; contaId?: string; sinais: SinalDeCancelamento[]; protocolos: Set<string>; prazos: string[]; chaves: Set<string> };
+  const grupos = new Map<string, Grupo>();
+  const grupo = (chaves: string[]) => {
+    const r = raiz(chaves[0]);
+    const g = grupos.get(r) ?? { nomes: [], sinais: [], protocolos: new Set<string>(), prazos: [], chaves: new Set<string>() };
+    for (const k of chaves) g.chaves.add(k);
+    grupos.set(r, g);
     return g;
+  };
+  /* O nome: a conta, depois quem reclamou, o NPS, o contato da conversa — nunca um telefone se houver nome. */
+  const nomear = (g: Grupo, nome: string | undefined, peso: number) => {
+    /* Telefone ou "Não informado" só servem se não houver nome nenhum. */
+    if (nome?.trim()) g.nomes.push({ nome: nome.trim(), peso: nomeVazio(nome) ? 10 + peso : peso });
+  };
+  const doCaso = (g: Grupo, c: CasoParaCancelamento) => {
+    if (c.contaId && !g.contaId) g.contaId = c.contaId;
+    nomear(g, c.contaNome, 0);
+    nomear(g, c.cliente, 1);
+    g.protocolos.add(c.protocolo);
+    if (c.prazoDoContato) g.prazos.push(c.prazoDoContato);
   };
 
   /* Os casos: o texto, a categoria e a causa, e a avaliação do caso de cancelamento. */
   for (const c of entrada.casos) {
-    const chave = chaveDoCaso(c);
-    porProtocolo.set(c.protocolo, chave);
-    if (c.email) porEmail.set(c.email.toLowerCase(), chave);
     const sinais: SinalDeCancelamento[] = [];
     const base = { frente: c.frente, ref: c.protocolo } as const;
-    for (const s of sinaisDoTexto(`${c.titulo}\n${c.relato ?? ""}`)) sinais.push({ ...base, tipo: s.tipo, quando: c.criadoEm, trecho: s.trecho });
-    if (!sinais.some((s) => s.tipo === "pedido") && /cancel/i.test(`${c.categoria ?? ""} ${c.subcategoria ?? ""}`)) {
+    for (const s of sinaisDoTexto(`${c.titulo}\n${c.relato ?? ""}`)) sinais.push({ ...base, tipo: s.tipo, quando: c.criadoEm, trecho: s.trecho, chegada: true });
+    const classificacao = norma(`${c.categoria ?? ""} ${c.subcategoria ?? ""}`);
+    if (!sinais.some((s) => s.tipo === "pedido") && /cancel/.test(classificacao)) {
       sinais.push({ ...base, tipo: "pedido", quando: c.criadoEm, trecho: `categoria: ${[c.categoria, c.subcategoria].filter(Boolean).join(" › ")}` });
+    }
+    if (!sinais.some((s) => s.tipo === "cancelado") && CHEGOU_CANCELADO.test(classificacao)) {
+      sinais.push({ ...base, tipo: "cancelado", quando: c.criadoEm, trecho: `chegou cancelado — ${[c.categoria, c.subcategoria].filter(Boolean).join(" › ")}`, chegada: true });
     }
     if (!sinais.some((s) => s.tipo === "pedido") && /cancelamento do plano/i.test(c.causaRaiz ?? "")) {
       sinais.push({ ...base, tipo: "pedido", quando: c.criadoEm, trecho: `causa raiz: ${c.causaRaiz}` });
     }
     for (const s of sinaisDoTexto(c.solucao ?? "")) {
-      if (s.tipo !== "pedido") sinais.push({ ...base, tipo: s.tipo, quando: c.avaliadoEm ?? c.criadoEm, trecho: `solução: ${s.trecho}` });
+      if (s.tipo !== "pedido") sinais.push({ ...base, tipo: s.tipo, quando: c.avaliadoEm ?? c.criadoEm, trecho: `solução: ${s.trecho}`, setor: s.tipo === "cancelado" ? setorDoCancelamento(c.solucao ?? "") ?? undefined : undefined });
     }
     const pediu = sinais.some((s) => s.tipo === "pedido");
     if (pediu && c.avaliado) {
@@ -214,100 +360,174 @@ export function clientesEmCancelamento(entrada: {
       });
     }
     if (sinais.length) {
-      const g = grupo(chave, c.contaNome || c.cliente, c.contaId);
+      const g = grupo(chavesPorProtocolo.get(c.protocolo)!);
       g.sinais.push(...sinais);
-      g.protocolos.add(c.protocolo);
-      if (c.prazoDoContato) g.prazos.push(c.prazoDoContato);
+      doCaso(g, c);
     }
   }
 
   /* O NPS: o comentário. */
   for (const r of entrada.nps) {
-    const chave = r.contaId ? `conta:${r.contaId}` : r.email ? porEmail.get(r.email.toLowerCase()) ?? `email:${r.email.toLowerCase()}` : `nps:${r.id}`;
-    porNps.set(r.id, chave);
     const sinais = sinaisDoTexto(r.comentario).map((s) => ({ tipo: s.tipo, frente: "nps" as const, ref: r.id, quando: r.quando, trecho: s.trecho }));
-    if (sinais.length) grupo(chave, r.cliente, r.contaId).sinais.push(...sinais);
+    if (!sinais.length) continue;
+    const g = grupo(chavesDoNps(r));
+    g.sinais.push(...sinais);
+    if (r.contaId && !g.contaId) g.contaId = r.contaId;
+    nomear(g, r.cliente, 2);
   }
 
   /* As conversas guardadas: cada mensagem, ligada ao cliente pelo caso, pela conta, pelo NPS ou pelo telefone. */
   for (const m of entrada.mensagens) {
     const sinais = sinaisDoTexto(m.texto);
     if (!sinais.length) continue;
-    const chave =
-      (m.caseProtocolo && porProtocolo.get(m.caseProtocolo)) ||
-      (m.contaId ? `conta:${m.contaId}` : "") ||
-      (m.npsId && porNps.get(m.npsId)) ||
-      (m.telefone ? `tel:${digitos(m.telefone).slice(-8)}` : `conversa:${m.conversaId}`);
-    grupo(chave, m.contato || "Contato do WhatsApp", m.contaId).sinais.push(
-      ...sinais.map((s) => ({ tipo: s.tipo, frente: "conversa" as const, ref: m.conversaId, quando: m.quando, trecho: s.trecho }))
+    const g = grupo(chavesDaMensagem(m));
+    g.sinais.push(
+      ...sinais.map((s) => ({
+        tipo: s.tipo,
+        frente: "conversa" as const,
+        ref: m.conversaId,
+        quando: m.quando,
+        trecho: s.trecho,
+        setor: s.tipo === "cancelado" ? setorDoCancelamento(m.texto) ?? undefined : undefined,
+      }))
     );
+    if (m.contaId && !g.contaId) g.contaId = m.contaId;
+    /* A conversa de um caso traz o nome e o protocolo do caso, não o número do WhatsApp. */
+    const caso = m.caseProtocolo ? casoPorProtocolo.get(m.caseProtocolo) : undefined;
+    if (caso) doCaso(g, caso);
+    nomear(g, m.contato, 3);
   }
 
   const saida: ClienteEmCancelamento[] = [];
-  for (const [chave, g] of grupos) {
+  const foraDaConta: CancelamentoJuntado["foraDaConta"] = [];
+  for (const g of grupos.values()) {
     const pedidos = g.sinais.filter((s) => s.tipo === "pedido");
     const desfechos = g.sinais.filter((s) => s.tipo !== "pedido").sort((a, b) => b.quando.localeCompare(a.quando));
     if (!pedidos.length && !desfechos.some((s) => s.tipo === "cancelado")) continue;
 
-    const manual = entrada.manuais?.get(chave);
-    if (manual?.desfecho === "nao-e-cancelamento") continue;
+    /* A marcação à mão de qualquer chave do cliente; a mais recente vale. */
+    const marcadas = [...g.chaves].flatMap((k) => (entrada.manuais?.get(k) ? [{ chave: k, ...entrada.manuais.get(k)! }] : []));
+    marcadas.sort((a, b) => (b.em ?? "").localeCompare(a.em ?? ""));
+    let manual: (typeof marcadas)[number] | undefined = marcadas[0];
+    const dia = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
+    /*
+     * Pediu de novo depois do desfecho — da marcação à mão ou do último
+     * sinal: o desfecho era do pedido anterior, e o cliente volta a ficar
+     * em aberto (o Eduardo Lino retido em agosto pediu outra vez em 08/10).
+     */
+    const ultimoPedido = pedidos.map((s) => s.quando).sort().at(-1);
+    let reaberto: string | undefined;
+    if (manual?.em && ultimoPedido && ultimoPedido > manual.em) {
+      const marcado = manual.desfecho === "retido" ? "retido" : manual.desfecho === "nao-e-cancelamento" ? "como não cancelamento" : "cancelado";
+      reaberto = `pediu de novo em ${dia(ultimoPedido)}, depois de marcado ${marcado} à mão em ${dia(manual.em)}`;
+      manual = undefined;
+    }
 
-    const ultimo = desfechos[0];
-    const desfecho: Desfecho = manual ? (manual.desfecho as Desfecho) : ultimo ? (ultimo.tipo as Desfecho) : "em-aberto";
+    const chave = marcadas[0]?.chave ?? [...g.chaves].sort((a, b) => pesoDaChave(a) - pesoDaChave(b))[0];
+    const protocolos = [...g.protocolos];
+    if (manual?.desfecho === "nao-e-cancelamento") {
+      foraDaConta.push({ chave, protocolos });
+      continue;
+    }
+
+    let ultimo: SinalDeCancelamento | undefined = desfechos[0];
+    if (!manual && ultimo && ultimoPedido && ultimo.quando < ultimoPedido) {
+      reaberto ??= `pediu de novo em ${dia(ultimoPedido)}, depois de ${ultimo.tipo === "retido" ? "ter ficado" : "ter cancelado"} em ${dia(ultimo.quando)}`;
+      ultimo = undefined;
+    }
+    if (reaberto && ultimo && ultimoPedido && ultimo.quando < ultimoPedido) ultimo = undefined;
+    const desfecho: Desfecho = manual ? (manual.desfecho === "retido" ? "retido" : "cancelado") : ultimo ? (ultimo.tipo as Desfecho) : "retido";
     const porque = manual
-      ? `marcado à mão${manual.por ? ` por ${manual.por}` : ""}`
+      ? `marcado à mão${manual.por ? ` por ${manual.por}` : ""}${manual.desfecho === "cancelado-outro-setor" ? ` — cancelado por ${manual.setor || "outro setor"}` : ""}`
       : ultimo
         ? ultimo.trecho
-        : "pediu, e ainda não há sinal de que ficou ou saiu";
+        : `${reaberto ?? "pediu"} e não cancelou — conta como retido`;
     const desde = [...pedidos, ...desfechos].map((s) => s.quando).sort()[0];
-    /* O prazo do 1º contato da primeira reclamação; cancelou até ele, não conta. */
     const prazo = [...g.prazos].sort()[0];
-    const primeiroCancelado = desfechos.filter((s) => s.tipo === "cancelado").map((s) => s.quando).sort()[0];
-    const canceladoNoPrazo = desfecho === "cancelado" && Boolean(prazo && primeiroCancelado && primeiroCancelado <= prazo);
+
+    /* Quem cancelou: à mão, o setor marcado; senão o texto, a chegada já cancelada, ou o prazo do contato. */
+    let canceladoPor: CanceladoPor | undefined;
+    let setor: string | undefined;
+    if (desfecho === "cancelado") {
+      const cancelados = desfechos.filter((s) => s.tipo === "cancelado").sort((a, b) => a.quando.localeCompare(b.quando));
+      const comSetor = cancelados.find((s) => s.setor);
+      if (manual?.desfecho === "cancelado-outro-setor") {
+        canceladoPor = "outro-setor";
+        setor = manual.setor || undefined;
+      } else if (comSetor) {
+        canceladoPor = "outro-setor";
+        setor = comSetor.setor;
+      } else if (cancelados[0]?.chegada) {
+        canceladoPor = "outro-setor";
+      } else if (prazo && cancelados[0] && cancelados[0].quando <= prazo) {
+        canceladoPor = "prazo";
+      } else {
+        canceladoPor = "atendimento";
+      }
+    }
+    /* O melhor nome; sem nenhum, o e-mail; sem e-mail, o telefone da conversa. "Não informado" nunca. */
+    const nomes = [...g.nomes].sort((a, b) => a.peso - b.peso);
+    const email = [...g.chaves].find((k) => k.startsWith("email:"))?.slice(6);
+    const nome =
+      nomes.find((n) => n.peso < 10)?.nome ?? email ?? nomes.find((n) => /^[+\d\s().-]{8,}$/.test(n.nome))?.nome ?? "Contato sem nome";
     saida.push({
-      canceladoNoPrazo,
+      canceladoPor,
+      setor,
       prazoDoContato: prazo,
       chave,
-      nome: g.nome,
+      nome,
       contaId: g.contaId,
       sinais: g.sinais.sort((a, b) => a.quando.localeCompare(b.quando)),
       desfecho,
       porque,
       manual: Boolean(manual),
+      retidoSemSinal: !manual && !ultimo,
       desde,
-      protocolos: [...g.protocolos],
+      protocolos,
+      chaves: [...g.chaves],
     });
   }
-  return saida.sort((a, b) => b.desde.localeCompare(a.desde));
+  return { clientes: saida.sort((a, b) => b.desde.localeCompare(a.desde)), foraDaConta };
 }
 
-export interface ResumoDeRetencao {
+export interface ContagemDeRetencao {
   clientes: number;
   retidos: number;
+  /** Todos os cancelamentos — pelo atendimento, no prazo e por outro setor. */
   cancelados: number;
-  /** Dos cancelados, os que saíram antes do prazo do 1º contato — não contam (1.113). */
+  /** Os que contam na taxa: saíram com o caso na mão do time. */
+  canceladosQueContam: number;
+  /** Saíram antes do prazo do 1º contato — não contam (1.113). */
   canceladosNoPrazo: number;
-  emAberto: number;
-  /** Retidos sobre os que têm desfecho e contam; `null` sem desfecho nenhum. */
+  /** Cancelados por outro setor — não contam (20/10). */
+  canceladosOutroSetor: number;
+  /** Retidos sobre retidos + cancelados que contam; `null` sem desfecho nenhum. */
   taxaDeRetencao: number | null;
-  porMes: { mes: string; clientes: number; retidos: number; cancelados: number; canceladosNoPrazo: number; emAberto: number }[];
+}
+
+export interface ResumoDeRetencao extends ContagemDeRetencao {
+  porMes: ({ mes: string } & ContagemDeRetencao)[];
+}
+
+function contar(lista: ClienteEmCancelamento[]): ContagemDeRetencao {
+  const cancelados = lista.filter((c) => c.desfecho === "cancelado");
+  const retidos = lista.filter((c) => c.desfecho === "retido").length;
+  const canceladosQueContam = cancelados.filter((c) => (c.canceladoPor ?? "atendimento") === "atendimento").length;
+  return {
+    clientes: lista.length,
+    retidos,
+    cancelados: cancelados.length,
+    canceladosQueContam,
+    canceladosNoPrazo: cancelados.filter((c) => c.canceladoPor === "prazo").length,
+    canceladosOutroSetor: cancelados.filter((c) => c.canceladoPor === "outro-setor").length,
+    taxaDeRetencao: retidos + canceladosQueContam > 0 ? retidos / (retidos + canceladosQueContam) : null,
+  };
 }
 
 export function resumoDeRetencao(clientes: ClienteEmCancelamento[]): ResumoDeRetencao {
-  const contar = (lista: ClienteEmCancelamento[]) => ({
-    clientes: lista.length,
-    retidos: lista.filter((c) => c.desfecho === "retido").length,
-    cancelados: lista.filter((c) => c.desfecho === "cancelado").length,
-    canceladosNoPrazo: lista.filter((c) => c.desfecho === "cancelado" && c.canceladoNoPrazo).length,
-    emAberto: lista.filter((c) => c.desfecho === "em-aberto").length,
-  });
-  const total = contar(clientes);
   const meses = [...new Set(clientes.map((c) => c.desde.slice(0, 7)))].sort().reverse();
-  /* Quem cancelou antes do prazo do 1º contato sai da taxa: não havia o que fazer ainda. */
-  const contam = total.cancelados - total.canceladosNoPrazo;
   return {
-    ...total,
-    taxaDeRetencao: total.retidos + contam > 0 ? total.retidos / (total.retidos + contam) : null,
+    ...contar(clientes),
     porMes: meses.map((mes) => ({ mes, ...contar(clientes.filter((c) => c.desde.startsWith(mes))) })),
   };
 }

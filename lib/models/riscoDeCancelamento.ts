@@ -43,6 +43,8 @@ export interface EntradaDoRisco {
   avaliado?: boolean;
   voltaria?: boolean;
   resolvido?: boolean;
+  /** O desfecho do cliente na Retenção (marcado à mão ou lido dos sinais). */
+  desfecho?: "retido" | "cancelado" | "nao-e-cancelamento";
 }
 
 export interface MotivoDoRisco {
@@ -153,7 +155,15 @@ export function riscoDeCancelamento(e: EntradaDoRisco): RiscoDeCancelamento {
   const criterios = new Set([...(e.criterios ?? []), ...criteriosDoTexto.map((c) => c.criterio)]);
   const trechoDo = (id: string) => criteriosDoTexto.find((c) => c.criterio === id)?.trecho;
 
-  if (pedido || /cancel/i.test(`${e.categoria ?? ""} ${e.subcategoria ?? ""}`) || criterios.has("cancelamento")) {
+  /*
+   * "Pediu para cancelar" só com pedido de verdade: no relato, na
+   * classificação ou na triagem. O critério que o texto sugere também
+   * acende com "o concorrente já tem isso" — e dizia "pediu para
+   * cancelar" de quem só comparou (20/10). Esse fica na ameaça, abaixo.
+   * Marcado à mão "não é cancelamento", o pedido sai.
+   */
+  const pedidoPeloTexto = criteriosDoTexto.some((c) => c.criterio === "cancelamento") && /cancel|rescis|nao (vou )?renovar|quero sair/.test(normal);
+  if (e.desfecho !== "nao-e-cancelamento" && (pedido || /cancel/i.test(`${e.categoria ?? ""} ${e.subcategoria ?? ""}`) || (e.criterios ?? []).includes("cancelamento") || pedidoPeloTexto)) {
     add("pedido", "pediu para cancelar", pedido?.trecho || trechoDo("cancelamento"));
   }
   const ameaca = AMEACA.exec(normal);
@@ -178,7 +188,10 @@ export function riscoDeCancelamento(e: EntradaDoRisco): RiscoDeCancelamento {
   if (e.avaliado && e.voltaria) pontos = Math.max(0, pontos - 30);
   pontos = Math.min(100, pontos);
 
-  const nivel: NivelDeRisco = cancelou ? "cancelou" : pontos >= 50 ? "alto" : pontos >= 25 ? "medio" : "baixo";
+  /* Retido à mão: o pedido foi tratado — pesa como quem avaliou dizendo que voltaria. */
+  if (e.desfecho === "retido") pontos = Math.max(0, pontos - 30);
+
+  const nivel: NivelDeRisco = cancelou || e.desfecho === "cancelado" ? "cancelou" : pontos >= 50 ? "alto" : pontos >= 25 ? "medio" : "baixo";
 
   const atitudes: Atitude[] = [];
   const juntar = (lista?: Atitude[]) => {

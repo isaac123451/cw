@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
-import { Loader2, ShieldCheck, UserMinus, UserRoundX, Users } from "lucide-react";
+import { Building2, Loader2, ShieldCheck, UserRoundX } from "lucide-react";
 
 import MainLayout from "@/components/layout/MainLayout";
 import PageHeading from "@/components/shared/PageHeading";
@@ -14,15 +14,14 @@ import { lerRetencao, marcarDesfecho } from "@/lib/actions/retencao";
 import type { ReclamacaoComRisco } from "@/lib/services/cancelamento.service";
 import { ROTULO_DO_NIVEL } from "@/lib/models/riscoDeCancelamento";
 import { useToast } from "@/lib/context/ToastContext";
-import { resumoDeRetencao, type ClienteEmCancelamento, type Desfecho, type DesfechoManual, type ResumoDeRetencao } from "@/lib/models/cancelamento";
+import { resumoDeRetencao, SETORES, type CanceladoPor, type ClienteEmCancelamento, type Desfecho, type DesfechoManual, type ResumoDeRetencao } from "@/lib/models/cancelamento";
 import { ROTULO_DO_RISCO, type ClienteEmRisco } from "@/lib/models/clienteEmRisco";
 import { pluralDe } from "@/lib/plural";
 
-const ROTULO: Record<Desfecho, string> = { retido: "Retido", cancelado: "Cancelado", "em-aberto": "Em aberto" };
+const ROTULO: Record<Desfecho, string> = { retido: "Retido", cancelado: "Cancelado" };
 const COR: Record<Desfecho, string> = {
   retido: "bg-emerald-50 text-emerald-800 ring-emerald-200",
   cancelado: "bg-rose-50 text-rose-800 ring-rose-200",
-  "em-aberto": "bg-amber-50 text-amber-900 ring-amber-200",
 };
 const FRENTE: Record<string, string> = { "reclame-aqui": "RA", redes: "Redes", nps: "NPS", conversa: "WhatsApp" };
 const MES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
@@ -34,6 +33,13 @@ const COR_DO_RISCO: Record<ReclamacaoComRisco["risco"]["nivel"], string> = {
   cancelou: "bg-zinc-800 text-white ring-zinc-800",
 };
 const pct = (v: number | null) => (v === null ? "—" : `${Math.round(v * 100)}%`);
+/* Quem cancelou: só "atendimento" entra na taxa; os três somam o total de cancelamentos. */
+const ROTULO_DO_CANCELAMENTO: Record<CanceladoPor, { texto: string; titulo: string }> = {
+  atendimento: { texto: "conta na retenção", titulo: "Saiu depois do prazo do 1º contato, com o caso na mão do time" },
+  prazo: { texto: "no prazo do contato · não conta", titulo: "Cancelou antes do prazo do 1º contato (1 dia útil) — não conta na retenção" },
+  "outro-setor": { texto: "outro setor · não conta", titulo: "Cancelado por outro setor (ou já chegou cancelado) — entra no total, não na retenção" },
+};
+type Filtro = Desfecho | "todos" | "outro-setor";
 
 /**
  * Cancelamento e retenção (1.85).
@@ -53,7 +59,9 @@ export default function RetencaoPage() {
   /* O instante de quando a tela abriu: o recorte não muda enquanto ela está aberta. */
   const [abertaEm] = useState(() => Date.now());
   const [erro, setErro] = useState<string | null>(null);
-  const [ver, setVer] = useState<Desfecho | "todos">("em-aberto");
+  const [ver, setVer] = useState<Filtro>("todos");
+  /* O indicador filtra a lista; clicar de novo no mesmo volta a mostrar todos. */
+  const filtrar = (f: Filtro) => setVer((atual) => (atual === f ? "todos" : f));
   const [gravando, setGravando] = useState<string | null>(null);
 
   async function carregar() {
@@ -77,9 +85,9 @@ export default function RetencaoPage() {
     };
   }, []);
 
-  async function marcar(c: ClienteEmCancelamento, desfecho: DesfechoManual | null) {
+  async function marcar(c: ClienteEmCancelamento, desfecho: DesfechoManual | null, setor?: string) {
     setGravando(c.chave);
-    const r = await marcarDesfecho(c.chave, desfecho);
+    const r = await marcarDesfecho(c.chave, desfecho, setor);
     setGravando(null);
     if (!r.ok) {
       notify({ tone: "error", title: "Não foi gravado.", detail: r.erro });
@@ -87,7 +95,14 @@ export default function RetencaoPage() {
     }
     notify({
       tone: "success",
-      title: desfecho === null ? `${c.nome}: de volta à leitura automática.` : desfecho === "nao-e-cancelamento" ? `${c.nome} saiu da conta.` : `${c.nome}: ${desfecho}.`,
+      title:
+        desfecho === null
+          ? `${c.nome}: de volta à leitura automática.`
+          : desfecho === "nao-e-cancelamento"
+            ? `${c.nome} saiu da conta.`
+            : desfecho === "cancelado-outro-setor"
+              ? `${c.nome}: cancelado por ${setor ?? "outro setor"} — entra no total, fora da retenção.`
+              : `${c.nome}: ${desfecho}.`,
     });
     await carregar();
   }
@@ -99,7 +114,10 @@ export default function RetencaoPage() {
     return dados.clientes.filter((c) => c.desde >= limite);
   }, [dados, periodo, abertaEm]);
   const resumo = useMemo(() => resumoDeRetencao(doPeriodo), [doPeriodo]);
-  const visiveis = useMemo(() => (ver === "todos" ? doPeriodo : doPeriodo.filter((c) => c.desfecho === ver)), [doPeriodo, ver]);
+  const visiveis = useMemo(
+    () => (ver === "todos" ? doPeriodo : ver === "outro-setor" ? doPeriodo.filter((c) => c.canceladoPor === "outro-setor") : doPeriodo.filter((c) => c.desfecho === ver)),
+    [doPeriodo, ver]
+  );
 
   return (
     <MainLayout>
@@ -107,7 +125,7 @@ export default function RetencaoPage() {
         <PageHeading
           eyebrow="Inteligência"
           title="Cancelamento e retenção"
-          description="Quem pediu para cancelar, quem ficou e quem saiu — juntando o Reclame Aqui, as Redes, o NPS e as conversas guardadas do WhatsApp."
+          description="Quem ficou e quem saiu — juntando o Reclame Aqui, as Redes, o NPS e as conversas guardadas do WhatsApp. Enquanto não cancelou, o cliente conta como retido."
         />
 
         {erro && <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900 ring-1 ring-inset ring-amber-100">{erro}</p>}
@@ -142,7 +160,7 @@ export default function RetencaoPage() {
             {dados.reclamacoes.length > 0 && (
               <SurfaceCard
                 title={`Reclamações abertas com chance de cancelar · ${dados.reclamacoes.length}`}
-                description="Os motivos saem do relato, da triagem, da repetição pelo CPF/CNPJ e do NPS da conta. Embaixo, o que fazer — retenção enquanto o cliente está, recuperação quando já saiu."
+                description={`Os motivos saem do relato, da triagem, da repetição pelo CPF/CNPJ e do NPS da conta; quem já foi marcado retido sai daqui. Embaixo, o que fazer — retenção enquanto o cliente está, recuperação quando já saiu.${dados.reclamacoes.length > 25 ? " Aqui, as 25 de maior chance." : ""}`}
               >
                 <ul className="divide-y divide-zinc-100">
                   {dados.reclamacoes.slice(0, 25).map((r) => (
@@ -174,24 +192,42 @@ export default function RetencaoPage() {
               </SurfaceCard>
             )}
 
-            <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-              <StatTile label="Pediram para cancelar" value={resumo.clientes} hint="clientes" icon={Users} onClick={() => setVer("todos")} ativo={ver === "todos"} />
-              <StatTile label="Retidos" value={resumo.retidos} hint="ficaram" icon={ShieldCheck} tone="success" onClick={() => setVer("retido")} ativo={ver === "retido"} />
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
               <StatTile
-                label="Cancelados"
+                label="Retidos"
+                value={resumo.retidos}
+                hint="não cancelaram"
+                description="Quem falou em cancelar e não cancelou — por sinal de que ficou, por marcação à mão ou simplesmente porque não saiu."
+                icon={ShieldCheck}
+                tone="success"
+                onClick={() => filtrar("retido")}
+                ativo={ver === "retido"}
+              />
+              <StatTile
+                label="Cancelamentos"
                 value={resumo.cancelados}
-                hint={resumo.canceladosNoPrazo ? `${resumo.canceladosNoPrazo} no prazo do contato — não contam` : "saíram"}
+                hint={`total · ${resumo.canceladosQueContam} ${pluralDe(resumo.canceladosQueContam, "conta", "contam")} na retenção`}
+                description={`Todos os que saíram: ${resumo.canceladosQueContam} pelo atendimento, ${resumo.canceladosOutroSetor} por outro setor e ${resumo.canceladosNoPrazo} no prazo do 1º contato. Só os do atendimento entram na taxa de retenção.`}
                 icon={UserRoundX}
                 tone="danger"
-                onClick={() => setVer("cancelado")}
+                onClick={() => filtrar("cancelado")}
                 ativo={ver === "cancelado"}
               />
-              <StatTile label="Em aberto" value={resumo.emAberto} hint="sem desfecho ainda" icon={UserMinus} tone="warning" onClick={() => setVer("em-aberto")} ativo={ver === "em-aberto"} />
+              <StatTile
+                label="Por outro setor"
+                value={resumo.canceladosOutroSetor}
+                hint="dos cancelamentos · não contam"
+                description="Cancelados pelo Financeiro, Comercial, Suporte… — ou que já chegaram cancelados. Estão no total de cancelamentos, fora da taxa de retenção."
+                icon={Building2}
+                tone="info"
+                onClick={() => filtrar("outro-setor")}
+                ativo={ver === "outro-setor"}
+              />
               <StatTile
                 label="Retenção"
                 value={pct(resumo.taxaDeRetencao)}
-                hint="retidos sobre quem teve desfecho"
-                description="Retidos ÷ (retidos + cancelados que contam). Quem cancelou antes do prazo do 1º contato (1 dia útil) — ou já chegou cancelado — não conta. Os em aberto ficam fora até terem desfecho."
+                hint={`${resumo.retidos} de ${resumo.retidos + resumo.canceladosQueContam}`}
+                description="Retidos ÷ (retidos + cancelados pelo atendimento). Fora da conta: quem cancelou antes do prazo do 1º contato (1 dia útil) e quem foi cancelado por outro setor ou já chegou cancelado."
                 icon={ShieldCheck}
                 tone="success"
               />
@@ -201,7 +237,7 @@ export default function RetencaoPage() {
             {dados.emRisco.length > 0 && (
               <SurfaceCard
                 title={`Em risco agora · ${dados.emRisco.length}`}
-                description="Dois ou mais sinais juntos no mesmo cliente — reclamação aberta, detrator no NPS, pedido de cancelamento, marca de churn, reincidência. É a hora de agir, antes do pedido."
+                description="Dois ou mais sinais juntos no mesmo cliente — reclamação aberta, detrator no NPS, fala em cancelar, marca de churn, reincidência. É a hora de agir, antes de ele sair."
               >
                 <ul className="divide-y divide-zinc-100">
                   {dados.emRisco.slice(0, 20).map((c) => (
@@ -229,17 +265,16 @@ export default function RetencaoPage() {
               </SurfaceCard>
             )}
 
-            <SurfaceCard title="Por mês do pedido" description="O mês do primeiro sinal de cancelamento de cada cliente.">
+            <SurfaceCard title="Por mês" description="O mês do primeiro sinal de cancelamento de cada cliente.">
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[480px] text-left text-sm">
+                <table className="w-full min-w-[420px] text-left text-sm">
                   <thead className="text-[11px] uppercase tracking-wide text-zinc-400">
                     <tr>
                       <th className="py-1.5 pr-3 font-semibold">Mês</th>
-                      <th className="py-1.5 pr-3 font-semibold">Pediram</th>
                       <th className="py-1.5 pr-3 font-semibold">Retidos</th>
-                      <th className="py-1.5 pr-3 font-semibold">Cancelados</th>
+                      <th className="py-1.5 pr-3 font-semibold" title="Total de cancelamentos do mês">Cancelamentos</th>
+                      <th className="py-1.5 pr-3 font-semibold" title="Cancelados por outro setor ou que já chegaram cancelados — não contam">Outro setor</th>
                       <th className="py-1.5 pr-3 font-semibold" title="Cancelaram antes do prazo do 1º contato — não contam">No prazo</th>
-                      <th className="py-1.5 pr-3 font-semibold">Em aberto</th>
                       <th className="py-1.5 font-semibold">Retenção</th>
                     </tr>
                   </thead>
@@ -247,12 +282,11 @@ export default function RetencaoPage() {
                     {resumo.porMes.slice(0, 12).map((m) => (
                       <tr key={m.mes}>
                         <td className="py-1.5 pr-3 font-medium text-zinc-800">{mes(m.mes)}</td>
-                        <td className="py-1.5 pr-3">{m.clientes}</td>
                         <td className="py-1.5 pr-3 text-emerald-700">{m.retidos}</td>
                         <td className="py-1.5 pr-3 text-rose-700">{m.cancelados}</td>
+                        <td className="py-1.5 pr-3 text-zinc-500">{m.canceladosOutroSetor || "—"}</td>
                         <td className="py-1.5 pr-3 text-zinc-500">{m.canceladosNoPrazo || "—"}</td>
-                        <td className="py-1.5 pr-3 text-amber-800">{m.emAberto}</td>
-                        <td className="py-1.5">{pct(m.retidos + m.cancelados - m.canceladosNoPrazo ? m.retidos / (m.retidos + m.cancelados - m.canceladosNoPrazo) : null)}</td>
+                        <td className="py-1.5">{pct(m.taxaDeRetencao)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -261,7 +295,7 @@ export default function RetencaoPage() {
             </SurfaceCard>
 
             <SurfaceCard
-              title={ver === "todos" ? "Todos os clientes" : ROTULO[ver]}
+              title={ver === "todos" ? "Todos os clientes" : ver === "outro-setor" ? "Cancelados por outro setor" : ver === "retido" ? "Retidos" : "Cancelamentos"}
               description="Os pontos que colocaram cada cliente aqui e o que decidiu o desfecho. Se estiver errado, corrija — a correção fica gravada."
             >
               {visiveis.length === 0 ? (
@@ -274,9 +308,9 @@ export default function RetencaoPage() {
                         <span className="font-medium text-zinc-900">{c.nome}</span>
                         <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ring-inset ${COR[c.desfecho]}`}>{ROTULO[c.desfecho]}</span>
                         <span className="text-xs text-zinc-400">desde {mes(c.desde.slice(0, 7))}</span>
-                        {c.canceladoNoPrazo && (
-                          <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] font-medium text-zinc-600" title="Cancelou antes do prazo do 1º contato (1 dia útil) — não conta na retenção">
-                            no prazo do contato · não conta
+                        {c.canceladoPor && c.canceladoPor !== "atendimento" && (
+                          <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] font-medium text-zinc-600" title={ROTULO_DO_CANCELAMENTO[c.canceladoPor].titulo}>
+                            {c.canceladoPor === "outro-setor" && c.setor ? `${c.setor} · não conta` : ROTULO_DO_CANCELAMENTO[c.canceladoPor].texto}
                           </span>
                         )}
                         {c.protocolos.slice(0, 3).map((p) => (
@@ -286,7 +320,7 @@ export default function RetencaoPage() {
                         ))}
                         <span className="ml-auto flex flex-wrap gap-1">
                           {(["retido", "cancelado"] as const)
-                            .filter((d) => d !== c.desfecho || !c.manual)
+                            .filter((d) => d !== c.desfecho || !c.manual || (d === "cancelado" && c.canceladoPor === "outro-setor"))
                             .map((d) => (
                               <button
                                 key={d}
@@ -298,6 +332,20 @@ export default function RetencaoPage() {
                                 {d === "retido" ? "Retido" : "Cancelado"}
                               </button>
                             ))}
+                          <select
+                            aria-label="Cancelado por outro setor"
+                            disabled={gravando === c.chave}
+                            value=""
+                            onChange={(e) => e.target.value && void marcar(c, "cancelado-outro-setor", e.target.value)}
+                            className="rounded-md bg-white px-1.5 py-0.5 text-xs font-medium text-zinc-600 ring-1 ring-inset ring-zinc-200 hover:bg-zinc-50 disabled:opacity-40"
+                          >
+                            <option value="">Outro setor…</option>
+                            {SETORES.map((setor) => (
+                              <option key={setor} value={setor}>
+                                {setor}
+                              </option>
+                            ))}
+                          </select>
                           <button
                             type="button"
                             disabled={gravando === c.chave}

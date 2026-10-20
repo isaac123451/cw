@@ -5,7 +5,7 @@
  *
  *   npm run check:retencao
  */
-import { clientesEmCancelamento, resumoDeRetencao, type CasoParaCancelamento } from "../lib/models/cancelamento";
+import { clientesEmCancelamento, juntarCancelamento, resumoDeRetencao, setorDoCancelamento, sinaisDoTexto, type CasoParaCancelamento } from "../lib/models/cancelamento";
 import { riscoDeCancelamento } from "../lib/models/riscoDeCancelamento";
 import { acharCaso } from "../lib/models/case";
 
@@ -52,23 +52,73 @@ const caso = (protocolo: string, extra: Partial<CasoParaCancelamento>): CasoPara
 });
 const clientes = clientesEmCancelamento({
   casos: [
-    /* Chegou dizendo que já cancelou: cancelado antes do prazo. */
+    /* Chegou dizendo que já cancelou: cancelado antes de chegar ao time — outro setor. */
     caso("A", { titulo: "Cobrança após cancelamento", relato: "Já cancelei o plano e continuam cobrando.", documento: "11111111111" }),
     /* Pediu, e avaliou depois do prazo dizendo que não voltaria: conta. */
     caso("B", { titulo: "Quero cancelar o plano", avaliado: true, voltaria: false, avaliadoEm: "2026-09-10T12:00:00.000Z", documento: "22222222222" }),
+    /* Cancelou dentro do prazo do contato, numa conversa: no prazo. */
+    caso("D", { titulo: "Quero cancelar o plano", documento: "44444444444" }),
     /* Pediu e ficou. */
     caso("C", { titulo: "Quero cancelar o plano", avaliado: true, voltaria: true, avaliadoEm: "2026-09-10T12:00:00.000Z", documento: "33333333333" }),
   ],
   nps: [],
-  mensagens: [],
+  mensagens: [{ conversaId: "v-d", texto: "Pronto, cancelamento efetuado.", quando: "2026-09-01T18:00:00.000Z", caseProtocolo: "D" }],
 });
 const porNome = (n: string) => clientes.find((c) => c.protocolos.includes(n))!;
-ok("A cancelou no prazo do contato", porNome("A").desfecho === "cancelado" && porNome("A").canceladoNoPrazo === true);
-ok("B cancelou depois do prazo: conta", porNome("B").desfecho === "cancelado" && !porNome("B").canceladoNoPrazo);
+ok("A chegou cancelado: outro setor", porNome("A").desfecho === "cancelado" && porNome("A").canceladoPor === "outro-setor");
+ok("B cancelou depois do prazo: conta", porNome("B").desfecho === "cancelado" && porNome("B").canceladoPor === "atendimento");
+ok("D cancelou no prazo do contato", porNome("D").desfecho === "cancelado" && porNome("D").canceladoPor === "prazo");
 ok("C ficou", porNome("C").desfecho === "retido");
 const r = resumoDeRetencao(clientes);
-ok("a taxa deixa A de fora: 1 retido ÷ (1 + 1)", r.canceladosNoPrazo === 1 && r.taxaDeRetencao === 0.5, `${r.taxaDeRetencao}`);
-ok("e o mês conta o no prazo à parte", r.porMes[0]?.canceladosNoPrazo === 1);
+ok("o total de cancelamentos tem os três", r.cancelados === 3 && r.canceladosOutroSetor === 1 && r.canceladosNoPrazo === 1 && r.canceladosQueContam === 1, JSON.stringify(r).slice(0, 120));
+ok("a taxa deixa A e D de fora: 1 retido ÷ (1 + 1)", r.taxaDeRetencao === 0.5, `${r.taxaDeRetencao}`);
+ok("e o mês conta outro setor e no prazo à parte", r.porMes[0]?.canceladosNoPrazo === 1 && r.porMes[0]?.canceladosOutroSetor === 1);
+
+/* ---- 20/10: pediu e não cancelou é retido; o mesmo cliente é um só; outro setor à mão ---- */
+const juntado = juntarCancelamento({
+  casos: [
+    caso("E1", { titulo: "Exijo o cancelamento do contrato", documento: "55555555555", email: "eduardo@x.com", cliente: "Eduardo", criadoEm: "2026-08-19T00:00:00.000Z" }),
+    caso("E2", { titulo: "WhatsApp bloqueia", relato: "Vou ter que solicitar o cancelamento do contrato.", email: "eduardo@x.com", cliente: "Eduardo", criadoEm: "2026-10-08T00:00:00.000Z" }),
+    caso("F", { titulo: "Quero cancelar o plano", documento: "66666666666", cliente: "Fábio" }),
+    caso("G", { titulo: "Sistema lento", cliente: "Gina", documento: "77777777777" }),
+  ],
+  nps: [],
+  mensagens: [{ conversaId: "v-g", texto: "Quero cancelar o contrato", quando: "2026-09-03T12:00:00.000Z", caseProtocolo: "G", contato: "+55 11 99999-0000" }],
+  manuais: new Map([
+    ["doc:55555555555", { desfecho: "retido" as const, em: "2026-09-25T20:00:00.000Z" }],
+    ["doc:66666666666", { desfecho: "cancelado-outro-setor" as const, em: "2026-09-25T20:00:00.000Z", setor: "Financeiro" }],
+  ]),
+});
+const eduardo = juntado.clientes.filter((c) => c.protocolos.includes("E1") || c.protocolos.includes("E2"));
+ok("CPF numa e só e-mail na outra: um cliente só", eduardo.length === 1 && eduardo[0].protocolos.length === 2, String(eduardo.length));
+ok("pediu de novo depois do retido à mão: segue retido, sem marca", eduardo[0]?.desfecho === "retido" && !eduardo[0]?.manual && /pediu de novo em 08\/10/.test(eduardo[0]?.porque ?? ""), eduardo[0]?.porque);
+const fabio = juntado.clientes.find((c) => c.protocolos.includes("F"))!;
+ok("outro setor à mão: cancelado, Financeiro", fabio.desfecho === "cancelado" && fabio.canceladoPor === "outro-setor" && fabio.setor === "Financeiro");
+const gina = juntado.clientes.find((c) => c.protocolos.includes("G"))!;
+ok("conversa de um caso: nome do caso, não o telefone", gina?.nome === "Gina" && gina.protocolos.includes("G"), gina?.nome);
+ok("pediu e não cancelou: retido sem sinal", gina?.desfecho === "retido" && gina.retidoSemSinal === true);
+const rj = resumoDeRetencao(juntado.clientes);
+ok("sem \"em aberto\": todo cliente é retido ou cancelado", rj.retidos + rj.cancelados === rj.clientes);
+
+/* ---- a leitura de reclamações e conversas que escapavam ---- */
+const tem = (t: string, tipo: string) => sinaisDoTexto(t).some((s) => s.tipo === tipo);
+ok("\"estou seriamente considerando cancelar\" é pedido", tem("estou seriamente considerando cancelar essa parceria", "pedido"));
+ok("\"Estou cancelando\" (WhatsApp) é pedido", tem("Estou cancelando", "pedido"));
+ok("\"Entendo que você deseja cancelar\" é pedido", tem("Oii! Entendo que você deseja cancelar.", "pedido"));
+ok("\"nada do cancelamento e nada do estorno\" é pedido", tem("até agora nada do cancelamento e nada do estorno", "pedido"));
+ok("\"cancelei minha renovação automática\" é cancelado", tem("já deixo dito que cancelei minha renovação automática", "cancelado"));
+ok("\"fiz o cancelamento, me enviaram o pix\" é cancelado", tem("não gostei, fiz o cancelamento, me enviaram o pix de volta", "cancelado"));
+ok("\"cancelado por falta de pagamento\" é cancelado pelo Financeiro", tem("fui avisado que havia sido cancelado por falta de pagamento", "cancelado") && setorDoCancelamento("havia sido cancelado por falta de pagamento") === "Financeiro");
+ok("\"pedidos cancelados\" do restaurante não é", !tem("tivemos 9 pedidos cancelados pelo sistema", "pedido") && !tem("tivemos 9 pedidos cancelados pelo sistema", "cancelado"));
+ok("\"estou cancelando pedidos\" não é", !tem("estou cancelando pedidos toda hora", "pedido"));
+
+/* ---- "pediu para cancelar" só com pedido de verdade ---- */
+const concorrente = riscoDeCancelamento({ titulo: "Sugestões paradas", relato: "O concorrente Repediu já tem isso há anos." });
+ok("citar o concorrente não é \"pediu para cancelar\"", !concorrente.motivos.some((m) => m.id === "pedido"));
+const naoE = riscoDeCancelamento({ titulo: "Quero cancelar o plano", relato: "", desfecho: "nao-e-cancelamento" });
+ok("marcado \"não é cancelamento\": sem pedido", !naoE.motivos.some((m) => m.id === "pedido"));
+const marcadoCancelado = riscoDeCancelamento({ titulo: "Quero cancelar o plano", relato: "", desfecho: "cancelado" });
+ok("marcado cancelado: recuperação", marcadoCancelado.nivel === "cancelou");
 
 /* ---- o link de qualquer tela abre a ficha (1.113) ---- */
 const casos = [

@@ -51,6 +51,27 @@ export const REVISAO = {
 };
 
 export const MUDANCAS: Mudanca[] = [
+  /* ---------------- plataforma: cancelamento e retenção (20/10) ---------------- */
+  {
+    id: "cancelado-por-outro-setor",
+    dia: "2026-10-20",
+    tipo: "novo",
+    frente: "plataforma",
+    titulo: "Cancelado por outro setor: entra no total, fora da retenção",
+    texto:
+      "O indicador Cancelamentos mostra agora o total de quem saiu, e diz quantos foram pelo atendimento, por outro setor e no prazo do 1º contato. Novo indicador Por outro setor: cancelados pelo Financeiro, Comercial, Suporte… — lidos no texto (\"cancelado por falta de pagamento\", \"o financeiro cancelou\") ou de quem já chegou cancelado. Em cada cliente, \"Outro setor…\" marca à mão, com o setor. Só os cancelados pelo atendimento entram na taxa de retenção.",
+    href: "/retencao",
+  },
+  {
+    id: "retencao-corrigida",
+    dia: "2026-10-20",
+    tipo: "correcao",
+    frente: "plataforma",
+    titulo: "Retenção com os números certos",
+    texto:
+      "Enquanto não cancelou, o cliente conta como retido — saíram o \"em aberto\" e a coluna \"Pediram\". O mesmo cliente que reclamou com CPF numa e só com e-mail na outra aparecia duas vezes (o Eduardo Lino); agora é um só, e quem pede de novo depois de marcado retido volta a pedir atenção em Em risco. Quem chegava pela conversa do WhatsApp aparecia com o telefone no lugar do nome e sem o protocolo; agora vem com o nome e o caso. O cartão de chance dizia \"pediu para cancelar\" de quem só citou o concorrente e de quem foi marcado \"não é cancelamento\", e mostrava clientes já marcados retidos — corrigido. A leitura da reclamação e da conversa passou a achar cancelamentos que escapavam (\"considerando cancelar\", \"estou cancelando\", \"cancelei minha renovação\", \"fiz o cancelamento\", \"cancelado por falta de pagamento\"), sem confundir pedidos cancelados do restaurante.",
+    href: "/retencao",
+  },
   /* ---------------- plataforma: IA do dia (09/10) ---------------- */
   {
     id: "termometro-do-cliente",
