@@ -29,10 +29,13 @@ import {
   hojeNaOperacao,
 } from "@/lib/services/reputation.service";
 import BotaoAbrirEmJanela from "@/components/janelas/BotaoAbrirEmJanela";
+import MarcaDeCancelamento, { type MarcaAtual } from "@/components/retencao/MarcaDeCancelamento";
 
 interface Props {
   data: Case;
   onClick: () => void;
+  /** A marca de cancelamento já lida pela tabela; `undefined` enquanto carrega. */
+  marca?: MarcaAtual | null;
 }
 
 /**
@@ -77,6 +80,7 @@ function idadeEmDias(iso: string) {
 export default function CaseRow({
   data,
   onClick,
+  marca,
 }: Props) {
 
   const { moveCase } = useCases();
@@ -236,6 +240,9 @@ export default function CaseRow({
           )}
           <LinksDoRa caso={data} />
         </div>
+
+        {/* O cliente pediu para cancelar? Ficou ou saiu? — três cliques, direto da lista. */}
+        {marca !== undefined && <MarcaDeCancelamento protocolo={data.protocol} inicial={marca} className="mt-1" />}
       </td>
 
     </tr>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   ArrowDown,
@@ -9,6 +9,9 @@ import {
 } from "lucide-react";
 
 import { Case } from "@/lib/models/case";
+
+import { lerMarcasDasReclamacoes } from "@/lib/actions/retencao";
+import type { MarcaAtual } from "@/components/retencao/MarcaDeCancelamento";
 
 import CaseRow from "./CaseRow";
 
@@ -94,6 +97,17 @@ export default function CasesTable({
     coluna: string;
     desc: boolean;
   } | null>(null);
+
+  /* As marcas de cancelamento de todas as linhas, numa consulta só (20/10). */
+  const [marcas, setMarcas] = useState<Record<string, MarcaAtual> | null>(null);
+  const protocolos = useMemo(() => cases.map((c) => c.protocol).join("|"), [cases]);
+  useEffect(() => {
+    let vivo = true;
+    lerMarcasDasReclamacoes(protocolos ? protocolos.split("|") : []).then((m) => vivo && setMarcas(m));
+    return () => {
+      vivo = false;
+    };
+  }, [protocolos]);
 
   const ordenados = useMemo(() => {
 
@@ -202,6 +216,7 @@ export default function CasesTable({
               key={item.id}
               data={item}
               onClick={() => onSelect(item)}
+              marca={marcas ? marcas[item.protocol] ?? null : undefined}
             />
 
           ))}

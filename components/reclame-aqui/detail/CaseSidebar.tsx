@@ -28,6 +28,7 @@ import { descreverRegistro } from "@/lib/services/horasUteis";
 import { eFinalDasRedes, etapaDasRedes } from "@/lib/models/redes";
 import ConversasGuardadas from "@/components/conversas/ConversasGuardadas";
 import ChanceDeCancelar from "@/components/retencao/ChanceDeCancelar";
+import MarcaDeCancelamento from "@/components/retencao/MarcaDeCancelamento";
 
 interface Props {
   data: Case;
@@ -149,6 +150,15 @@ export default function CaseSidebar({
 
       {/* A chance de cancelar (1.113) — só aparece de média para cima, ou quando o cliente já cancelou. */}
       <ChanceDeCancelar caseId={data.id} />
+
+      {/* O cliente solicitou o cancelamento? Retido ou cancelado — e por quem (20/10). */}
+      <section className="flex items-center justify-between gap-3 rounded-2xl border border-zinc-200/80 bg-white px-5 py-3.5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+        <span>
+          <span className="block text-sm font-semibold text-zinc-900">Cancelamento</span>
+          <span className="block text-xs text-zinc-500">O cliente pediu? Ficou ou saiu?</span>
+        </span>
+        <MarcaDeCancelamento protocolo={data.protocol} className="px-2 py-1 text-xs" />
+      </section>
 
       {/* As conversas do WhatsApp guardadas deste caso — some quando não há. */}
       <ConversasGuardadas protocolo={data.protocol} />

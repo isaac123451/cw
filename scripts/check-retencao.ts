@@ -100,6 +100,26 @@ ok("pediu e não cancelou: retido sem sinal", gina?.desfecho === "retido" && gin
 const rj = resumoDeRetencao(juntado.clientes);
 ok("sem \"em aberto\": todo cliente é retido ou cancelado", rj.retidos + rj.cancelados === rj.clientes);
 
+/* ---- o botão "Cancelamento?" da ficha e da lista: reclamação marcada à mão entra na conta ---- */
+const marcadas = juntarCancelamento({
+  casos: [
+    caso("H", { titulo: "Sistema não imprime", cliente: "Hugo", documento: "88888888888" }),
+    caso("I", { titulo: "Sistema lento", cliente: "Iara", documento: "99999999999" }),
+    caso("J", { titulo: "Quero cancelar o plano", cliente: "João", documento: "10101010101" }),
+  ],
+  nps: [],
+  mensagens: [],
+  manuais: new Map([
+    ["caso:H", { desfecho: "cancelado-outro-setor" as const, em: "2026-10-20T12:00:00.000Z", setor: "Comercial" }],
+    ["caso:I", { desfecho: "retido" as const, em: "2026-10-20T12:00:00.000Z" }],
+    ["caso:J", { desfecho: "nao-e-cancelamento" as const, em: "2026-10-20T12:00:00.000Z" }],
+  ]),
+});
+const hugo = marcadas.clientes.find((c) => c.protocolos.includes("H"));
+ok("sem falar em cancelar, marcada 'cancelou · Comercial': entra como outro setor", hugo?.desfecho === "cancelado" && hugo.canceladoPor === "outro-setor" && hugo.setor === "Comercial");
+ok("marcada 'retido': entra como retido, marcado à mão", marcadas.clientes.find((c) => c.protocolos.includes("I"))?.desfecho === "retido");
+ok("marcada 'não pediu': sai da conta", !marcadas.clientes.some((c) => c.protocolos.includes("J")) && marcadas.foraDaConta.some((c) => c.protocolos.includes("J")));
+
 /* ---- a leitura de reclamações e conversas que escapavam ---- */
 const tem = (t: string, tipo: string) => sinaisDoTexto(t).some((s) => s.tipo === tipo);
 ok("\"estou seriamente considerando cancelar\" é pedido", tem("estou seriamente considerando cancelar essa parceria", "pedido"));

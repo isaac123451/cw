@@ -229,8 +229,14 @@ function chavesDoCaso(c: CasoParaCancelamento) {
   const d = digitos(c.documento);
   if (d.length === 11 || d.length === 14) chaves.push(`doc:${d}`);
   if (c.email && !c.email.includes("•")) chaves.push(`email:${c.email.toLowerCase()}`);
-  if (!chaves.length) chaves.push(`caso:${c.protocolo}`);
+  /* A própria reclamação também é chave: é nela que o botão da ficha grava ("esta reclamação é retido/churn"). */
+  chaves.push(chaveDaReclamacao(c.protocolo));
   return chaves;
+}
+
+/** A chave de uma reclamação só — o que o botão "Retido / Churn" da ficha e da Retenção grava. */
+export function chaveDaReclamacao(protocolo: string) {
+  return `caso:${protocolo}`;
 }
 
 const ORDEM_DA_CHAVE = ["conta", "doc", "email", "tel", "nps", "conversa", "caso"];
@@ -351,6 +357,11 @@ export function juntarCancelamento(entrada: {
     }
     for (const s of sinaisDoTexto(c.solucao ?? "")) {
       if (s.tipo !== "pedido") sinais.push({ ...base, tipo: s.tipo, quando: c.avaliadoEm ?? c.criadoEm, trecho: `solução: ${s.trecho}`, setor: s.tipo === "cancelado" ? setorDoCancelamento(c.solucao ?? "") ?? undefined : undefined });
+    }
+    /* Reclamação adicionada à mão (botão Retido / Churn): entra na conta mesmo sem o texto falar em cancelar. */
+    const marcada = entrada.manuais?.get(chaveDaReclamacao(c.protocolo));
+    if (!sinais.some((s) => s.tipo === "pedido") && marcada && marcada.desfecho !== "nao-e-cancelamento") {
+      sinais.push({ ...base, tipo: "pedido", quando: c.criadoEm, trecho: `reclamação adicionada à mão${marcada.por ? ` por ${marcada.por}` : ""}` });
     }
     const pediu = sinais.some((s) => s.tipo === "pedido");
     if (pediu && c.avaliado) {
