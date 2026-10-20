@@ -34,7 +34,7 @@ import MarcaDeCancelamento, { type MarcaAtual } from "@/components/retencao/Marc
 interface Props {
   data: Case;
   onClick: () => void;
-  /** A marca de cancelamento já lida pela tabela; `undefined` enquanto carrega. */
+  /** A marca de cancelamento já lida pela tabela (`null` sem marca, ou enquanto carrega). */
   marca?: MarcaAtual | null;
 }
 
@@ -206,6 +206,11 @@ export default function CaseRow({
         )}
       </td>
 
+      {/* O cliente pediu para cancelar? Ficou ou saiu? Sempre clicável, para marcar ou mudar. */}
+      <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
+        <MarcaDeCancelamento protocolo={data.protocol} inicial={marca ?? null} />
+      </td>
+
       {/* Onde está no quadro, o relógio que corre e o que fazer agora. */}
       <td className="px-3 py-2.5">
         <span className="flex max-w-[208px] flex-wrap items-center gap-1">
@@ -241,8 +246,6 @@ export default function CaseRow({
           <LinksDoRa caso={data} />
         </div>
 
-        {/* O cliente pediu para cancelar? Ficou ou saiu? — três cliques, direto da lista. */}
-        {marca !== undefined && <MarcaDeCancelamento protocolo={data.protocol} inicial={marca} className="mt-1" />}
       </td>
 
     </tr>

@@ -59,6 +59,7 @@ const COLUNAS = [
   "Cliente",
   "Categoria",
   "Avaliação",
+  "Cancelamento",
   "Situação",
   "Responsável",
 ];
@@ -70,6 +71,8 @@ const LARGURA: Record<string, string> = {
   Cliente: "w-[176px]",
   Categoria: "w-[100px]",
   Avaliação: "w-[72px]",
+  /* O cliente pediu para cancelar? Ficou ou saiu? — marcado na própria lista (20/10). */
+  Cancelamento: "w-[124px]",
   Situação: "w-[232px]",
   Responsável: "w-[124px]",
 };
@@ -103,7 +106,9 @@ export default function CasesTable({
   const protocolos = useMemo(() => cases.map((c) => c.protocol).join("|"), [cases]);
   useEffect(() => {
     let vivo = true;
-    lerMarcasDasReclamacoes(protocolos ? protocolos.split("|") : []).then((m) => vivo && setMarcas(m));
+    lerMarcasDasReclamacoes(protocolos ? protocolos.split("|") : [])
+      .then((m) => vivo && setMarcas(m))
+      .catch(() => vivo && setMarcas({}));
     return () => {
       vivo = false;
     };
@@ -147,7 +152,7 @@ export default function CasesTable({
   return (
     <div className="flex-1 overflow-auto">
 
-      <table className="w-full min-w-[980px] table-fixed">
+      <table className="w-full min-w-[1100px] table-fixed">
 
         <thead className="sticky top-0 z-10 bg-zinc-50/95 backdrop-blur">
 
@@ -216,7 +221,7 @@ export default function CasesTable({
               key={item.id}
               data={item}
               onClick={() => onSelect(item)}
-              marca={marcas ? marcas[item.protocol] ?? null : undefined}
+              marca={marcas?.[item.protocol] ?? null}
             />
 
           ))}

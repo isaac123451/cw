@@ -3,73 +3,60 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
-import { Building2, Loader2, ShieldCheck, UserRoundX } from "lucide-react";
+import { Building2, ChevronRight, Loader2, Search, ShieldCheck, UserRoundX } from "lucide-react";
 
 import MainLayout from "@/components/layout/MainLayout";
 import PageHeading from "@/components/shared/PageHeading";
 import StatTile from "@/components/shared/StatTile";
 import SurfaceCard from "@/components/shared/SurfaceCard";
+import DesfechoDoCliente from "@/components/retencao/DesfechoDoCliente";
+import MarcaDeCancelamento from "@/components/retencao/MarcaDeCancelamento";
 
-import { lerRetencao, marcarDesfecho } from "@/lib/actions/retencao";
+import { lerRetencao } from "@/lib/actions/retencao";
 import type { ReclamacaoComRisco } from "@/lib/services/cancelamento.service";
-import { ROTULO_DO_NIVEL } from "@/lib/models/riscoDeCancelamento";
-import { useToast } from "@/lib/context/ToastContext";
-import { resumoDeRetencao, SETORES, type CanceladoPor, type ClienteEmCancelamento, type Desfecho, type DesfechoManual, type ResumoDeRetencao } from "@/lib/models/cancelamento";
+import { resumoDeRetencao, type ClienteEmCancelamento, type ResumoDeRetencao, type SinalDeCancelamento } from "@/lib/models/cancelamento";
 import { ROTULO_DO_RISCO, type ClienteEmRisco } from "@/lib/models/clienteEmRisco";
-import { pluralDe } from "@/lib/plural";
 
-const ROTULO: Record<Desfecho, string> = { retido: "Retido", cancelado: "Cancelado" };
-const COR: Record<Desfecho, string> = {
-  retido: "bg-emerald-50 text-emerald-800 ring-emerald-200",
-  cancelado: "bg-rose-50 text-rose-800 ring-rose-200",
-};
-const FRENTE: Record<string, string> = { "reclame-aqui": "RA", redes: "Redes", nps: "NPS", conversa: "WhatsApp" };
+const FRENTE: Record<SinalDeCancelamento["frente"], string> = { "reclame-aqui": "Reclame Aqui", redes: "Redes", nps: "NPS", conversa: "WhatsApp" };
 const MES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 const mes = (aaaamm: string) => `${MES[Number(aaaamm.slice(5, 7)) - 1]}/${aaaamm.slice(2, 4)}`;
-const COR_DO_RISCO: Record<ReclamacaoComRisco["risco"]["nivel"], string> = {
-  alto: "bg-rose-50 text-rose-800 ring-rose-200",
-  medio: "bg-amber-50 text-amber-900 ring-amber-200",
-  baixo: "bg-zinc-50 text-zinc-600 ring-zinc-200",
-  cancelou: "bg-zinc-800 text-white ring-zinc-800",
-};
+const dia = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(2, 4)}`;
 const pct = (v: number | null) => (v === null ? "—" : `${Math.round(v * 100)}%`);
-/* Quem cancelou: só "atendimento" entra na taxa; os três somam o total de cancelamentos. */
-const ROTULO_DO_CANCELAMENTO: Record<CanceladoPor, { texto: string; titulo: string }> = {
-  atendimento: { texto: "conta na retenção", titulo: "Saiu depois do prazo do 1º contato, com o caso na mão do time" },
-  prazo: { texto: "no prazo do contato · não conta", titulo: "Cancelou antes do prazo do 1º contato (1 dia útil) — não conta na retenção" },
-  "outro-setor": { texto: "outro setor · não conta", titulo: "Cancelado por outro setor (ou já chegou cancelado) — entra no total, não na retenção" },
-};
-type Filtro = Desfecho | "todos" | "outro-setor";
+/* O trecho que é dado do sistema (categoria, marcação) não vai entre aspas: não é fala do cliente. */
+const fala = (t: string) => (/^(categoria|causa raiz|reclamação adicionada|chegou cancelado|avaliou|solução)/.test(t) ? t : `“${t.replace(/^…|…$/g, "")}”`);
+const linkDoCaso = (protocolo: string) => `/reclame-aqui/${encodeURIComponent(protocolo)}`;
+
+type Filtro = "todos" | "retido" | "cancelado" | "outro-setor";
+const POR_PAGINA = 30;
 
 /**
- * Cancelamento e retenção (1.85).
+ * Cancelamento e retenção (1.85; refeita em 20/10/2026).
  *
- * "Identifique automaticamente, juntando pontos até da conversa de
- * WhatsApp, os casos de cancelamento e retenção, para termos um número."
- * A conta é montada agora, a cada abertura, a partir dos casos, do NPS e
- * das conversas guardadas (`lib/models/cancelamento.ts`); cada cliente
- * mostra os pontos que o colocaram ali e por que o desfecho é o que é. Se
- * a leitura errar, um clique corrige — e a correção fica gravada.
+ * "Gente que coisa feia, tá muito bagunçado e cheio de informação sem
+ * sentido." A tela agora responde três perguntas, nesta ordem: quanto
+ * retemos (os quatro números), quem queria cancelar e como terminou (a
+ * lista, uma linha por cliente, o desfecho num botão só) e o que pede
+ * atenção agora (a coluna da direita). Os sinais e o porquê ficam ao abrir
+ * a linha; as atitudes sugeridas continuam na ficha do caso.
  */
 export default function RetencaoPage() {
-  const { notify } = useToast();
-  const [dados, setDados] = useState<{ clientes: ClienteEmCancelamento[]; resumo: ResumoDeRetencao; emRisco: ClienteEmRisco[]; reclamacoes: ReclamacaoComRisco[] } | null>(null);
+  const [dados, setDados] = useState<{ clientes: ClienteEmCancelamento[]; emRisco: ClienteEmRisco[]; reclamacoes: ReclamacaoComRisco[] } | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
   /* O período (1.113): as reclamações antigas distorciam a conta — o padrão é o semestre. */
   const [periodo, setPeriodo] = useState<6 | 12 | 0>(6);
-  /* O instante de quando a tela abriu: o recorte não muda enquanto ela está aberta. */
   const [abertaEm] = useState(() => Date.now());
-  const [erro, setErro] = useState<string | null>(null);
   const [ver, setVer] = useState<Filtro>("todos");
-  /* O indicador filtra a lista; clicar de novo no mesmo volta a mostrar todos. */
-  const filtrar = (f: Filtro) => setVer((atual) => (atual === f ? "todos" : f));
-  const [gravando, setGravando] = useState<string | null>(null);
+  const [busca, setBusca] = useState("");
+  const [aberto, setAberto] = useState<string | null>(null);
+  const [limite, setLimite] = useState(POR_PAGINA);
+  const [nova, setNova] = useState("");
 
   async function carregar() {
     const r = await lerRetencao();
     if (!r.ok) setErro(r.erro);
     else {
       setErro(null);
-      setDados({ clientes: r.clientes, resumo: r.resumo, emRisco: r.emRisco, reclamacoes: r.reclamacoes });
+      setDados({ clientes: r.clientes, emRisco: r.emRisco, reclamacoes: r.reclamacoes });
     }
   }
 
@@ -78,327 +65,327 @@ export default function RetencaoPage() {
     lerRetencao().then((r) => {
       if (!vivo) return;
       if (!r.ok) setErro(r.erro);
-      else setDados({ clientes: r.clientes, resumo: r.resumo, emRisco: r.emRisco, reclamacoes: r.reclamacoes });
+      else setDados({ clientes: r.clientes, emRisco: r.emRisco, reclamacoes: r.reclamacoes });
     });
     return () => {
       vivo = false;
     };
   }, []);
 
-  async function marcar(c: ClienteEmCancelamento, desfecho: DesfechoManual | null, setor?: string) {
-    setGravando(c.chave);
-    const r = await marcarDesfecho(c.chave, desfecho, setor);
-    setGravando(null);
-    if (!r.ok) {
-      notify({ tone: "error", title: "Não foi gravado.", detail: r.erro });
-      return;
-    }
-    notify({
-      tone: "success",
-      title:
-        desfecho === null
-          ? `${c.nome}: de volta à leitura automática.`
-          : desfecho === "nao-e-cancelamento"
-            ? `${c.nome} saiu da conta.`
-            : desfecho === "cancelado-outro-setor"
-              ? `${c.nome}: cancelado por ${setor ?? "outro setor"} — entra no total, fora da retenção.`
-              : `${c.nome}: ${desfecho}.`,
-    });
-    await carregar();
-  }
-
   const doPeriodo = useMemo(() => {
     if (!dados) return [];
     if (periodo === 0) return dados.clientes;
-    const limite = new Date(abertaEm - periodo * 30.5 * 86_400_000).toISOString();
-    return dados.clientes.filter((c) => c.desde >= limite);
+    const de = new Date(abertaEm - periodo * 30.5 * 86_400_000).toISOString();
+    return dados.clientes.filter((c) => c.desde >= de);
   }, [dados, periodo, abertaEm]);
-  const resumo = useMemo(() => resumoDeRetencao(doPeriodo), [doPeriodo]);
-  const visiveis = useMemo(
-    () => (ver === "todos" ? doPeriodo : ver === "outro-setor" ? doPeriodo.filter((c) => c.canceladoPor === "outro-setor") : doPeriodo.filter((c) => c.desfecho === ver)),
-    [doPeriodo, ver]
-  );
+  const resumo: ResumoDeRetencao = useMemo(() => resumoDeRetencao(doPeriodo), [doPeriodo]);
+
+  const filtrados = useMemo(() => {
+    const termo = busca.trim().toLowerCase();
+    return doPeriodo.filter((c) => {
+      if (ver === "retido" && c.desfecho !== "retido") return false;
+      if (ver === "cancelado" && c.desfecho !== "cancelado") return false;
+      if (ver === "outro-setor" && c.canceladoPor !== "outro-setor") return false;
+      return !termo || c.nome.toLowerCase().includes(termo) || c.protocolos.some((p) => p.toLowerCase().includes(termo));
+    });
+  }, [doPeriodo, ver, busca]);
+
+  const filtrar = (f: Filtro) => {
+    setVer((atual) => (atual === f ? "todos" : f));
+    setLimite(POR_PAGINA);
+  };
+
+  const FILTROS: { id: Filtro; nome: string; n: number }[] = [
+    { id: "todos", nome: "Todos", n: resumo.clientes },
+    { id: "retido", nome: "Retidos", n: resumo.retidos },
+    { id: "cancelado", nome: "Cancelaram", n: resumo.cancelados },
+    { id: "outro-setor", nome: "Outro setor", n: resumo.canceladosOutroSetor },
+  ];
 
   return (
     <MainLayout>
       <div className="space-y-5">
-        <PageHeading
-          eyebrow="Inteligência"
-          title="Cancelamento e retenção"
-          description="Quem ficou e quem saiu — juntando o Reclame Aqui, as Redes, o NPS e as conversas guardadas do WhatsApp. Enquanto não cancelou, o cliente conta como retido."
-        />
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <PageHeading eyebrow="Inteligência" title="Cancelamento e retenção" description="Quem pediu para cancelar, quem ficou e quem saiu." />
+          <div className="inline-flex rounded-xl bg-zinc-100 p-1" role="tablist" aria-label="Período">
+            {([6, 12, 0] as const).map((p) => (
+              <button
+                key={p}
+                type="button"
+                role="tab"
+                aria-selected={periodo === p}
+                onClick={() => {
+                  setPeriodo(p);
+                  setLimite(POR_PAGINA);
+                }}
+                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${periodo === p ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-800"}`}
+              >
+                {p === 0 ? "Tudo" : `${p} meses`}
+              </button>
+            ))}
+          </div>
+        </div>
 
         {erro && <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900 ring-1 ring-inset ring-amber-100">{erro}</p>}
 
-        {!dados && !erro && (
-          <p className="flex items-center gap-2 py-10 text-sm text-zinc-500">
-            <Loader2 size={15} className="animate-spin" /> Juntando os pontos…
-          </p>
-        )}
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <StatTile
+            label="Retenção"
+            value={pct(resumo.taxaDeRetencao)}
+            hint={dados ? `${resumo.retidos} de ${resumo.retidos + resumo.canceladosQueContam} ficaram` : undefined}
+            description="Retidos ÷ (retidos + cancelados por nós). Fica fora da taxa o cancelado por outro setor dentro da SLA de 24h úteis — e quem já chegou cancelado."
+            icon={ShieldCheck}
+            tone="success"
+            carregando={!dados}
+          />
+          <StatTile
+            label="Retidos"
+            value={resumo.retidos}
+            hint="pediram e não cancelaram"
+            icon={ShieldCheck}
+            tone="success"
+            onClick={() => filtrar("retido")}
+            ativo={ver === "retido"}
+            carregando={!dados}
+          />
+          <StatTile
+            label="Cancelamentos"
+            value={resumo.cancelados}
+            hint={`${resumo.canceladosQueContam} pelo atendimento`}
+            description={`Todos os que saíram: ${resumo.canceladosQueContam} pelo nosso atendimento, ${resumo.canceladosOutroSetor} por outro setor${resumo.canceladosNoPrazo ? ` e ${resumo.canceladosNoPrazo} antes do prazo do 1º contato` : ""}.`}
+            icon={UserRoundX}
+            tone="danger"
+            onClick={() => filtrar("cancelado")}
+            ativo={ver === "cancelado"}
+            carregando={!dados}
+          />
+          <StatTile
+            label="Por outro setor"
+            value={resumo.canceladosOutroSetor}
+            hint="no total, fora da taxa"
+            description="Cancelados por outro setor (Financeiro, Comercial, Suporte…) dentro da SLA de 24h úteis, ou que já chegaram cancelados. Entram no total de cancelamentos, fora da taxa."
+            icon={Building2}
+            tone="info"
+            onClick={() => filtrar("outro-setor")}
+            ativo={ver === "outro-setor"}
+            carregando={!dados}
+          />
+        </div>
 
-        {dados && (
-          <>
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="inline-flex rounded-xl bg-zinc-100 p-1" role="tablist" aria-label="Período">
-                {([6, 12, 0] as const).map((p) => (
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+          {/* Quem queria cancelar — uma linha por cliente, o desfecho num botão só. */}
+          <SurfaceCard bodyClassName="p-0">
+            <div className="flex flex-wrap items-center gap-2 border-b border-zinc-100 px-5 py-3">
+              <div className="flex flex-wrap gap-1" role="tablist" aria-label="Filtro">
+                {FILTROS.map((f) => (
                   <button
-                    key={p}
+                    key={f.id}
                     type="button"
                     role="tab"
-                    aria-selected={periodo === p}
-                    onClick={() => setPeriodo(p)}
-                    className={`rounded-lg px-3.5 py-1.5 text-sm font-medium transition-colors ${periodo === p ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-800"}`}
+                    aria-selected={ver === f.id}
+                    onClick={() => (f.id === "todos" ? setVer("todos") : filtrar(f.id))}
+                    className={`rounded-lg px-2.5 py-1 text-sm transition-colors ${ver === f.id ? "bg-zinc-900 font-medium text-white" : "text-zinc-600 hover:bg-zinc-100"}`}
                   >
-                    {p === 0 ? "Tudo" : `Últimos ${p} meses`}
+                    {f.nome} <span className="tabular-nums opacity-60">{dados ? f.n : ""}</span>
                   </button>
                 ))}
               </div>
-              <p className="text-xs text-zinc-500">Pelo dia em que a reclamação chegou — não pelo dia em que entrou no CW.</p>
+              <label className="ml-auto flex min-w-[180px] flex-1 items-center gap-2 rounded-lg border border-zinc-200 px-2.5 py-1.5 sm:max-w-[240px]">
+                <Search size={14} className="text-zinc-400" />
+                <input
+                  value={busca}
+                  onChange={(e) => {
+                    setBusca(e.target.value);
+                    setLimite(POR_PAGINA);
+                  }}
+                  placeholder="Cliente ou protocolo"
+                  className="w-full bg-transparent text-sm text-zinc-800 outline-none placeholder:text-zinc-400"
+                />
+              </label>
             </div>
 
-            {/* A chance de cancelar, reclamação por reclamação (1.113): o que está aberto e pede ação agora. */}
-            {dados.reclamacoes.length > 0 && (
-              <SurfaceCard
-                title={`Reclamações abertas com chance de cancelar · ${dados.reclamacoes.length}`}
-                description={`Os motivos saem do relato, da triagem, da repetição pelo CPF/CNPJ e do NPS da conta; quem já foi marcado retido sai daqui. Embaixo, o que fazer — retenção enquanto o cliente está, recuperação quando já saiu.${dados.reclamacoes.length > 25 ? " Aqui, as 25 de maior chance." : ""}`}
-              >
-                <ul className="divide-y divide-zinc-100">
-                  {dados.reclamacoes.slice(0, 25).map((r) => (
-                    <li key={r.id} className="py-2.5">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ring-inset ${COR_DO_RISCO[r.risco.nivel]}`}>{ROTULO_DO_NIVEL[r.risco.nivel]}</span>
-                        <Link href={r.frente === "reclame-aqui" ? `/reclame-aqui/${r.id}` : `/redes-sociais/${r.id}`} className="min-w-0 truncate text-sm font-medium text-zinc-900 hover:text-violet-700">
-                          {r.protocolo} · {r.cliente}
-                        </Link>
-                        <span className="text-xs text-zinc-400">
-                          {r.status}
-                          {r.responsavel ? ` · ${r.responsavel}` : " · sem responsável"}
-                        </span>
+            {/* Uma reclamação que a leitura não pegou: protocolo ou link, e as três perguntas. */}
+            <div className="flex flex-wrap items-center gap-2 border-b border-zinc-100 bg-zinc-50/60 px-5 py-2.5">
+              <span className="text-xs font-medium text-zinc-500">Faltou alguém?</span>
+              <input
+                value={nova}
+                onChange={(e) => setNova(e.target.value)}
+                placeholder="Protocolo (RA-…) ou link do Reclame Aqui"
+                className="min-w-[200px] flex-1 rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-sm text-zinc-800 outline-none placeholder:text-zinc-400 focus:border-zinc-400"
+              />
+              <MarcaDeCancelamento
+                protocolo={nova}
+                rotuloDoBotao="Adicionar"
+                onMudou={() => {
+                  setNova("");
+                  void carregar();
+                }}
+              />
+            </div>
+
+            {!dados && !erro ? (
+              <p className="flex items-center gap-2 px-5 py-10 text-sm text-zinc-500">
+                <Loader2 size={15} className="animate-spin" /> Juntando reclamações, NPS e conversas…
+              </p>
+            ) : filtrados.length === 0 ? (
+              <p className="px-5 py-10 text-sm text-zinc-500">{busca ? "Ninguém com esse nome ou protocolo." : "Ninguém nesta situação no período."}</p>
+            ) : (
+              <ul className="divide-y divide-zinc-100">
+                {filtrados.slice(0, limite).map((c) => {
+                  const expandido = aberto === c.chave;
+                  const outros = c.sinais.filter((s) => s !== c.pedido);
+                  return (
+                    <li key={c.chave} className="px-5 py-3">
+                      <div className="flex items-start gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setAberto(expandido ? null : c.chave)}
+                          aria-expanded={expandido}
+                          className="mt-0.5 rounded p-0.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700"
+                          aria-label={expandido ? "Esconder detalhes" : "Ver detalhes"}
+                        >
+                          <ChevronRight size={15} className={`transition-transform ${expandido ? "rotate-90" : ""}`} />
+                        </button>
+                        <div className="min-w-0 flex-1">
+                          <p className="flex flex-wrap items-baseline gap-x-2">
+                            <span className="font-medium text-zinc-900">{c.nome}</span>
+                            <span className="text-xs text-zinc-400">
+                              {c.pedido ? `pediu em ${dia(c.pedido.quando)} · ${FRENTE[c.pedido.frente]}` : `chegou cancelado · ${dia(c.desde)}`}
+                            </span>
+                          </p>
+                          {c.pedido && (
+                            <p className="mt-0.5 truncate text-sm text-zinc-600" title={c.pedido.trecho}>
+                              {fala(c.pedido.trecho)}
+                            </p>
+                          )}
+                        </div>
+                        <DesfechoDoCliente cliente={c} onMudou={() => void carregar()} />
                       </div>
-                      <p className="mt-1 text-xs text-zinc-600">{r.risco.motivos.map((m) => m.texto).join(" · ")}</p>
-                      {r.risco.atitudes.length > 0 && (
-                        <ul className="mt-1 space-y-0.5">
-                          {r.risco.atitudes.slice(0, 2).map((a) => (
-                            <li key={a.id} className="text-xs text-zinc-700">
-                              <span className="mr-1 font-semibold text-violet-700">{a.tipo === "recuperacao" ? "Recuperar:" : "Fazer:"}</span>
-                              {a.texto}
-                            </li>
-                          ))}
-                        </ul>
+
+                      {expandido && (
+                        <div className="ml-8 mt-2 space-y-1.5 rounded-lg bg-zinc-50 px-3 py-2.5 text-xs text-zinc-600">
+                          <p>
+                            <span className="font-medium text-zinc-800">{c.desfecho === "retido" ? "Por que ficou: " : "Por que saiu: "}</span>
+                            {c.porque}
+                          </p>
+                          {outros.length > 0 && (
+                            <ul className="space-y-0.5">
+                              {outros.slice(0, 5).map((s, i) => (
+                                <li key={i}>
+                                  <span className="text-zinc-400">
+                                    {dia(s.quando)} · {FRENTE[s.frente]} ·{" "}
+                                  </span>
+                                  {fala(s.trecho)}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                          {c.protocolos.length > 0 && (
+                            <p className="flex flex-wrap gap-2 pt-0.5">
+                              {c.protocolos.map((p) => (
+                                <Link key={p} href={linkDoCaso(p)} className="font-mono text-violet-700 hover:underline">
+                                  {p}
+                                </Link>
+                              ))}
+                            </p>
+                          )}
+                        </div>
                       )}
                     </li>
-                  ))}
-                </ul>
-              </SurfaceCard>
+                  );
+                })}
+              </ul>
             )}
-
-            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-              <StatTile
-                label="Retidos"
-                value={resumo.retidos}
-                hint="não cancelaram"
-                description="Quem falou em cancelar e não cancelou — por sinal de que ficou, por marcação à mão ou simplesmente porque não saiu."
-                icon={ShieldCheck}
-                tone="success"
-                onClick={() => filtrar("retido")}
-                ativo={ver === "retido"}
-              />
-              <StatTile
-                label="Cancelamentos"
-                value={resumo.cancelados}
-                hint={`total · ${resumo.canceladosQueContam} ${pluralDe(resumo.canceladosQueContam, "conta", "contam")} na retenção`}
-                description={`Todos os que saíram: ${resumo.canceladosQueContam} pelo atendimento, ${resumo.canceladosOutroSetor} por outro setor e ${resumo.canceladosNoPrazo} no prazo do 1º contato. Só os do atendimento entram na taxa de retenção.`}
-                icon={UserRoundX}
-                tone="danger"
-                onClick={() => filtrar("cancelado")}
-                ativo={ver === "cancelado"}
-              />
-              <StatTile
-                label="Por outro setor"
-                value={resumo.canceladosOutroSetor}
-                hint="dos cancelamentos · não contam"
-                description="Cancelados pelo Financeiro, Comercial, Suporte… — ou que já chegaram cancelados. Estão no total de cancelamentos, fora da taxa de retenção."
-                icon={Building2}
-                tone="info"
-                onClick={() => filtrar("outro-setor")}
-                ativo={ver === "outro-setor"}
-              />
-              <StatTile
-                label="Retenção"
-                value={pct(resumo.taxaDeRetencao)}
-                hint={`${resumo.retidos} de ${resumo.retidos + resumo.canceladosQueContam}`}
-                description="Retidos ÷ (retidos + cancelados pelo atendimento). Fora da conta: quem cancelou antes do prazo do 1º contato (1 dia útil) e quem foi cancelado por outro setor ou já chegou cancelado."
-                icon={ShieldCheck}
-                tone="success"
-              />
-            </div>
-
-            {/* Cliente em risco (1.101): dois ou mais sinais, antes do pedido de cancelamento. */}
-            {dados.emRisco.length > 0 && (
-              <SurfaceCard
-                title={`Em risco agora · ${dados.emRisco.length}`}
-                description="Dois ou mais sinais juntos no mesmo cliente — reclamação aberta, detrator no NPS, fala em cancelar, marca de churn, reincidência. É a hora de agir, antes de ele sair."
+            {filtrados.length > limite && (
+              <button
+                type="button"
+                onClick={() => setLimite((l) => l + POR_PAGINA)}
+                className="w-full border-t border-zinc-100 px-5 py-2.5 text-sm font-medium text-zinc-600 hover:bg-zinc-50"
               >
-                <ul className="divide-y divide-zinc-100">
-                  {dados.emRisco.slice(0, 20).map((c) => (
-                    <li key={c.chave} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
-                      <span className="w-6 shrink-0 text-center text-sm font-semibold tabular-nums text-rose-700" title="Quantos sinais">{c.sinais.length}</span>
-                      <span className="min-w-0 flex-1 basis-48">
-                        <span className="block truncate text-sm font-medium text-zinc-800">{c.nome}</span>
-                        <span className="block text-xs text-zinc-500">{c.sinais.map((s) => ROTULO_DO_RISCO[s]).join(" · ")}</span>
-                      </span>
-                      <span className="flex flex-wrap gap-1">
-                        {c.protocolos.slice(0, 3).map((p) => (
-                          <Link key={p} href={`/reclame-aqui/${encodeURIComponent(p)}`} className="rounded-md bg-zinc-100 px-1.5 py-0.5 font-mono text-[11px] text-zinc-700 hover:bg-violet-100">
-                            {p}
-                          </Link>
-                        ))}
-                        {c.nps.slice(0, 2).map((id) => (
-                          <Link key={id} href={`/nps/${id}`} className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[11px] text-amber-800 hover:bg-amber-100">
-                            NPS
-                          </Link>
-                        ))}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
+                Mostrar mais {Math.min(POR_PAGINA, filtrados.length - limite)} de {filtrados.length - limite}
+              </button>
+            )}
+          </SurfaceCard>
+
+          <div className="space-y-5">
+            {/* O que pede atenção agora — nomes e o motivo principal; o que fazer está na ficha do caso. */}
+            {dados && (dados.reclamacoes.length > 0 || dados.emRisco.length > 0) && (
+              <SurfaceCard title="Atenção agora" bodyClassName="pt-1">
+                {dados.reclamacoes.length > 0 && (
+                  <>
+                    <p className="pb-1 text-[11px] font-medium uppercase tracking-wide text-zinc-400">Chance de cancelar</p>
+                    <ul className="mb-3 space-y-2">
+                      {dados.reclamacoes.slice(0, 6).map((r) => (
+                        <li key={r.id} className="flex items-start gap-2">
+                          <span
+                            className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${r.risco.nivel === "alto" ? "bg-rose-500" : r.risco.nivel === "cancelou" ? "bg-zinc-700" : "bg-amber-400"}`}
+                            title={r.risco.nivel === "alto" ? "Chance alta" : r.risco.nivel === "cancelou" ? "Já cancelou" : "Chance média"}
+                          />
+                          <span className="min-w-0">
+                            <Link href={r.frente === "reclame-aqui" ? `/reclame-aqui/${r.id}` : `/redes-sociais/${r.id}`} className="block truncate text-sm font-medium text-zinc-800 hover:text-violet-700">
+                              {r.cliente}
+                            </Link>
+                            <span className="block truncate text-xs text-zinc-500">{r.risco.motivos[0]?.texto}</span>
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+                {dados.emRisco.length > 0 && (
+                  <>
+                    <p className="pb-1 text-[11px] font-medium uppercase tracking-wide text-zinc-400">Cliente em risco</p>
+                    <ul className="space-y-2">
+                      {dados.emRisco.slice(0, 6).map((c) => (
+                        <li key={c.chave} className="min-w-0">
+                          {c.protocolos[0] ? (
+                            <Link href={linkDoCaso(c.protocolos[0])} className="block truncate text-sm font-medium text-zinc-800 hover:text-violet-700">
+                              {c.nome}
+                            </Link>
+                          ) : (
+                            <span className="block truncate text-sm font-medium text-zinc-800">{c.nome}</span>
+                          )}
+                          <span className="block truncate text-xs text-zinc-500">{c.sinais.map((s) => ROTULO_DO_RISCO[s]).join(" · ")}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                )}
               </SurfaceCard>
             )}
 
-            <SurfaceCard title="Por mês" description="O mês do primeiro sinal de cancelamento de cada cliente.">
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[420px] text-left text-sm">
+            {resumo.porMes.length > 0 && (
+              <SurfaceCard title="Mês a mês" bodyClassName="pt-1">
+                <table className="w-full text-left text-sm tabular-nums">
                   <thead className="text-[11px] uppercase tracking-wide text-zinc-400">
                     <tr>
-                      <th className="py-1.5 pr-3 font-semibold">Mês</th>
-                      <th className="py-1.5 pr-3 font-semibold">Retidos</th>
-                      <th className="py-1.5 pr-3 font-semibold" title="Total de cancelamentos do mês">Cancelamentos</th>
-                      <th className="py-1.5 pr-3 font-semibold" title="Cancelados por outro setor ou que já chegaram cancelados — não contam">Outro setor</th>
-                      <th className="py-1.5 pr-3 font-semibold" title="Cancelaram antes do prazo do 1º contato — não contam">No prazo</th>
-                      <th className="py-1.5 font-semibold">Retenção</th>
+                      <th className="py-1 font-medium">Mês</th>
+                      <th className="py-1 text-right font-medium">Retidos</th>
+                      <th className="py-1 text-right font-medium" title="Total de cancelamentos; entre parênteses, os de outro setor">
+                        Cancel.
+                      </th>
+                      <th className="py-1 text-right font-medium">Taxa</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-zinc-100 tabular-nums">
+                  <tbody className="divide-y divide-zinc-100">
                     {resumo.porMes.slice(0, 12).map((m) => (
                       <tr key={m.mes}>
-                        <td className="py-1.5 pr-3 font-medium text-zinc-800">{mes(m.mes)}</td>
-                        <td className="py-1.5 pr-3 text-emerald-700">{m.retidos}</td>
-                        <td className="py-1.5 pr-3 text-rose-700">{m.cancelados}</td>
-                        <td className="py-1.5 pr-3 text-zinc-500">{m.canceladosOutroSetor || "—"}</td>
-                        <td className="py-1.5 pr-3 text-zinc-500">{m.canceladosNoPrazo || "—"}</td>
-                        <td className="py-1.5">{pct(m.taxaDeRetencao)}</td>
+                        <td className="py-1.5 text-zinc-700">{mes(m.mes)}</td>
+                        <td className="py-1.5 text-right text-zinc-700">{m.retidos}</td>
+                        <td className="py-1.5 text-right text-zinc-700">
+                          {m.cancelados}
+                          {m.canceladosOutroSetor > 0 && <span className="text-zinc-400"> ({m.canceladosOutroSetor})</span>}
+                        </td>
+                        <td className="py-1.5 text-right font-medium text-zinc-900">{pct(m.taxaDeRetencao)}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-              </div>
-            </SurfaceCard>
-
-            <SurfaceCard
-              title={ver === "todos" ? `Quem queria cancelar · ${visiveis.length}` : ver === "outro-setor" ? "Cancelados por outro setor" : ver === "retido" ? "Retidos" : "Cancelamentos"}
-              description="Cada cliente que falou em cancelar: quando pediu, por onde e com que palavras, e como terminou. Se estiver errado, corrija — a correção fica gravada."
-            >
-              {visiveis.length === 0 ? (
-                <p className="text-sm text-zinc-500">Nenhum cliente nesta situação.</p>
-              ) : (
-                <ul className="divide-y divide-zinc-100">
-                  {visiveis.map((c) => (
-                    <li key={c.chave} className="py-3">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-medium text-zinc-900">{c.nome}</span>
-                        <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ring-inset ${COR[c.desfecho]}`}>{ROTULO[c.desfecho]}</span>
-                        <span className="text-xs text-zinc-400">desde {mes(c.desde.slice(0, 7))}</span>
-                        {c.canceladoPor && c.canceladoPor !== "atendimento" && (
-                          <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] font-medium text-zinc-600" title={ROTULO_DO_CANCELAMENTO[c.canceladoPor].titulo}>
-                            {c.canceladoPor === "outro-setor" && c.setor ? `${c.setor} · não conta` : ROTULO_DO_CANCELAMENTO[c.canceladoPor].texto}
-                          </span>
-                        )}
-                        {c.protocolos.slice(0, 3).map((p) => (
-                          <Link key={p} href={`/reclame-aqui/${encodeURIComponent(p)}`} className="font-mono text-xs text-violet-700 hover:underline">
-                            {p}
-                          </Link>
-                        ))}
-                        <span className="ml-auto flex flex-wrap gap-1">
-                          {(["retido", "cancelado"] as const)
-                            .filter((d) => d !== c.desfecho || !c.manual || (d === "cancelado" && c.canceladoPor === "outro-setor"))
-                            .map((d) => (
-                              <button
-                                key={d}
-                                type="button"
-                                disabled={gravando === c.chave}
-                                onClick={() => void marcar(c, d)}
-                                className="rounded-md px-2 py-0.5 text-xs font-medium text-zinc-600 ring-1 ring-inset ring-zinc-200 hover:bg-zinc-50 disabled:opacity-40"
-                              >
-                                {d === "retido" ? "Retido" : "Cancelado"}
-                              </button>
-                            ))}
-                          <select
-                            aria-label="Cancelado por outro setor"
-                            disabled={gravando === c.chave}
-                            value=""
-                            onChange={(e) => e.target.value && void marcar(c, "cancelado-outro-setor", e.target.value)}
-                            className="rounded-md bg-white px-1.5 py-0.5 text-xs font-medium text-zinc-600 ring-1 ring-inset ring-zinc-200 hover:bg-zinc-50 disabled:opacity-40"
-                          >
-                            <option value="">Outro setor…</option>
-                            {SETORES.map((setor) => (
-                              <option key={setor} value={setor}>
-                                {setor}
-                              </option>
-                            ))}
-                          </select>
-                          <button
-                            type="button"
-                            disabled={gravando === c.chave}
-                            onClick={() => void marcar(c, "nao-e-cancelamento")}
-                            className="rounded-md px-2 py-0.5 text-xs font-medium text-zinc-500 hover:bg-zinc-50 disabled:opacity-40"
-                          >
-                            Não é cancelamento
-                          </button>
-                          {c.manual && (
-                            <button type="button" disabled={gravando === c.chave} onClick={() => void marcar(c, null)} className="rounded-md px-2 py-0.5 text-xs text-violet-700 hover:underline disabled:opacity-40">
-                              voltar ao automático
-                            </button>
-                          )}
-                        </span>
-                      </div>
-                      {/* Quem queria cancelar (20/10): o pedido em destaque — quando, por onde, a frase. */}
-                      <p className="mt-1 text-sm text-zinc-800">
-                        {c.pedido ? (
-                          <>
-                            <span className="font-semibold">Queria cancelar</span>
-                            <span className="text-zinc-500">
-                              {" "}
-                              · {c.pedido.quando.slice(8, 10)}/{c.pedido.quando.slice(5, 7)}/{c.pedido.quando.slice(2, 4)} pelo {FRENTE[c.pedido.frente]}:{" "}
-                            </span>
-                            {/^(categoria|causa raiz):/.test(c.pedido.trecho) ? c.pedido.trecho : `“${c.pedido.trecho}”`}
-                          </>
-                        ) : (
-                          <span className="text-zinc-500">Não pediu — já chegou cancelado.</span>
-                        )}
-                      </p>
-                      <p className="mt-1 text-xs text-zinc-600">
-                        <span className="font-semibold text-zinc-700">{c.desfecho === "retido" ? "Ficou" : "Saiu"}: </span>
-                        {c.porque}
-                      </p>
-                      <ul className="mt-1 space-y-0.5">
-                        {c.sinais.filter((s) => s !== c.pedido).slice(0, 4).map((s, i) => (
-                          <li key={i} className="text-xs text-zinc-500">
-                            <span className="font-medium text-zinc-600">{FRENTE[s.frente]} · {s.tipo}</span> — {s.trecho}
-                          </li>
-                        ))}
-                        {c.sinais.length - (c.pedido ? 1 : 0) > 4 && (
-                          <li className="text-xs text-zinc-400">
-                            e mais {c.sinais.length - (c.pedido ? 1 : 0) - 4} {pluralDe(c.sinais.length - (c.pedido ? 1 : 0) - 4, "ponto", "pontos")}
-                          </li>
-                        )}
-                      </ul>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </SurfaceCard>
-          </>
-        )}
+                <p className="mt-2 text-[11px] text-zinc-400">Pelo mês em que o cliente pediu. Entre parênteses, os cancelados por outro setor.</p>
+              </SurfaceCard>
+            )}
+          </div>
+        </div>
       </div>
     </MainLayout>
   );
