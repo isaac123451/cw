@@ -434,7 +434,8 @@ export function getTimeSeries(
 
     const no = (dia: string) => dia >= inicio && dia <= fim && dia >= start;
     const items = cases.filter((item) => no(item.createdAt));
-    const avaliadas = cases.filter((item) => item.evaluated && no(diaDaAvaliacao(item)));
+    /* As avaliações das reclamações abertas no período, mesmo feitas depois (21/10/2026). */
+    const avaliadas = items.filter((item) => item.evaluated);
 
     const [ano, mes, dia] = inicio.split("-");
 
@@ -447,11 +448,8 @@ export function getTimeSeries(
       date: inicio,
       label,
       received: items.length,
-      /* Pela data da resposta e da avaliação, não da reclamação (1.118). */
-      answered: cases.filter(
-        (item) =>
-          respondida(item) && no(diaDaResposta(item))
-      ).length,
+      /* Das reclamações abertas no período, mesmo respondidas depois (21/10/2026). */
+      answered: items.filter((item) => respondida(item)).length,
       evaluated: avaliadas.length,
       resolved: avaliadas.filter((item) => item.resolved)
         .length,
@@ -607,6 +605,8 @@ export interface SerieDeCausa {
 
 export interface CausasNoTempo {
   labels: string[];
+  /** "AAAA-MM" de cada rótulo — para abrir os casos do mês. */
+  keys: string[];
   series: SerieDeCausa[];
   /** Quantas categorias ficaram fora do recorte. */
   outras: number;
@@ -678,6 +678,7 @@ export function getCausasNoTempo(
 
   return {
     labels: meses.map((m) => m.label),
+    keys: meses.map((m) => m.key),
     outras: Math.max(totais.size - principais.length, 0),
     series: principais.map(([categoria, total]) => ({
       categoria,

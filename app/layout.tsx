@@ -37,6 +37,7 @@ import VigiaDaIaDoDia from "@/components/iaDoDia/VigiaDaIaDoDia";
 import AssistenteFlutuante from "@/components/assistente/AssistenteFlutuante";
 import JanelasHost from "@/components/janelas/JanelasHost";
 import ToastHost from "@/components/shared/ToastHost";
+import JanelaDeCasos from "@/components/shared/JanelaDeCasos";
 
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
@@ -240,6 +241,7 @@ export default async function RootLayout({
           </PreferencesProvider>
 
           <ToastHost />
+          <JanelaDeCasos />
           </ToastProvider>
         </SessionProvider>
         </ThemeProvider>

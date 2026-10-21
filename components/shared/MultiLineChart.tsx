@@ -24,6 +24,12 @@ interface Props {
   showValues?: boolean;
   /** Linha extra no topo do tooltip, ex.: a janela que o ponto cobre. */
   captions?: string[];
+  /**
+   * Clique na coluna (21/10/2026): "quando eu clicar em uma coluna de um
+   * gráfico ... abrir uma mini janela com os casos". Recebe o índice do
+   * ponto; quem desenha decide o que mostrar (`abrirJanelaDeCasos`).
+   */
+  onPonto?: (index: number) => void;
 }
 
 /** Largura de partida; o desenho segue a largura medida (1.86, `useLargura`). */
@@ -49,6 +55,7 @@ export default function MultiLineChart({
   suffix = "",
   showValues = false,
   captions,
+  onPonto,
 }: Props) {
 
   const ref = useRef<HTMLDivElement>(null);
@@ -174,10 +181,18 @@ export default function MultiLineChart({
 
         <div
           ref={ref}
-          className="relative min-w-[640px]"
+          className={`relative min-w-[640px] ${onPonto ? "cursor-pointer" : ""}`}
           onPointerMove={(event) =>
             track(event.clientX)
           }
+          onClick={(event) => {
+            if (!onPonto) return;
+            track(event.clientX);
+            const box = ref.current?.getBoundingClientRect();
+            if (!box) return;
+            const index = Math.round(((((event.clientX - box.left) / box.width) * WIDTH) - PAD_L) / (step || 1));
+            onPonto(Math.min(Math.max(index, 0), labels.length - 1));
+          }}
           onPointerLeave={() => setHover(null)}
         >
 
@@ -373,6 +388,12 @@ export default function MultiLineChart({
                 ))}
 
               </ul>
+
+              {onPonto && (
+                <p className="mt-1.5 border-t border-zinc-100 pt-1 text-[10px] text-violet-700">
+                  Clique para ver os casos
+                </p>
+              )}
 
             </div>
 

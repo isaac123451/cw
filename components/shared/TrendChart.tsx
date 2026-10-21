@@ -17,6 +17,8 @@ interface Props {
   totalLabel?: string;
   /** Rótulo da série tracejada. */
   resolvedLabel?: string;
+  /** Clique na coluna: abre os casos do período (21/10/2026). Recebe o índice do ponto. */
+  onPonto?: (index: number) => void;
 }
 
 /** Largura de partida; o desenho segue a largura medida (1.86, `useLargura`). */
@@ -62,6 +64,7 @@ export default function TrendChart({
   height = 220,
   totalLabel = "Recebidas",
   resolvedLabel = "Resolvidas",
+  onPonto,
 }: Props) {
 
   /**
@@ -324,6 +327,8 @@ export default function TrendChart({
               height={plotHeight}
               fill="transparent"
               onMouseEnter={() => setAtivo(index)}
+              onClick={onPonto ? () => onPonto(index) : undefined}
+              className={onPonto ? "cursor-pointer" : undefined}
             />
           ))}
 
@@ -331,7 +336,7 @@ export default function TrendChart({
 
         {ponto && (
           <div
-            className="pointer-events-none absolute top-2 z-10 rounded-xl border border-zinc-200 bg-white/95 px-3 py-2 text-xs shadow-lg backdrop-blur"
+            className="pointer-events-none absolute top-2 z-10 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs shadow-lg"
             style={
               cartaoAEsquerda
                 ? { left: "1rem" }
@@ -370,6 +375,12 @@ export default function TrendChart({
                   (ponto.resolved / ponto.total) * 100
                 )}
                 % do período
+              </div>
+            )}
+
+            {onPonto && (
+              <div className="mt-1.5 border-t border-zinc-100 pt-1 text-[10px] text-violet-700">
+                Clique para ver os casos
               </div>
             )}
 

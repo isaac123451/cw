@@ -77,9 +77,10 @@ conferir(
 );
 
 /*
-  O pedido de 01/10: "as avaliações ... precisam entrar quando foram
-  avaliadas". Reclamação de agosto avaliada em 15/09: a avaliação é de
-  setembro — no ponto de setembro, não no de agosto.
+  21/10/2026 (troca a regra de 01/10): "recebi uma reclamação não
+  resolvida, está contabilizando para o mês da avaliação e não pro mês que
+  a reclamação foi criada". Reclamação de agosto avaliada em 15/09: a
+  avaliação conta em agosto. Só o efeito na nota do dia acontece em 15/09.
 */
 const antiga = {
   ...base,
@@ -95,10 +96,10 @@ const antiga = {
 const meses = evolucaoDoIndice([antiga], "6m", "mes", "2026-09-20", "2026-09-20");
 const mes = (m: string) => meses.find((p) => p.chave === m)!;
 conferir("mês: 12 meses até a âncora", [meses.length, meses[0].rotulo, meses[11].rotulo], [12, "out/25", "set/26"]);
-conferir("a avaliação feita em setembro conta em setembro", [mes("2026-08").avaliadas, mes("2026-09").avaliadas], [0, 1]);
+conferir("movimento: a avaliação feita em setembro aparece em setembro (informativo)", [mes("2026-08").avaliadas, mes("2026-09").avaliadas], [0, 1]);
 conferir("e a reclamação, no mês em que entrou", [mes("2026-08").recebidas, mes("2026-09").recebidas], [1, 0]);
-/* A nota do mês (1.121): agosto só com a resposta (a reclamação chegou nele); setembro com a avaliação nota 2 feita nele. */
-conferir("a nota do mês: agosto pela resposta, setembro pela avaliação", [mes("2026-08").doMes?.nota !== null, (mes("2026-09").doMes?.nota ?? 99) < (mes("2026-08").doMes?.nota ?? 0)], [true, true]);
+/* A nota do mês: agosto com a reclamação, a resposta e a avaliação nota 2; setembro, sem reclamação, sem nota. */
+conferir("a nota do mês: agosto com a avaliação dela, setembro vazio", [(mes("2026-08").doMes?.nota ?? 99) < 5, mes("2026-09").doMes?.nota ?? null], [true, null]);
 const setembro = evolucaoDoIndice([antiga], "6m", "dia", "2026-09-20", "2026-09-20");
 const dia15 = setembro.find((p) => p.chave === "2026-09-15")!;
 conferir("no dia da avaliação, a nota atual muda (mês fechado, avaliação nova)", [dia15.avaliadas, dia15.variacaoAtual < 0], [1, true]);
@@ -109,16 +110,16 @@ conferir("ciclo anterior: a tela de antes termina onde esta começa", periodosDa
 conferir("dia anterior: 31 dias antes", ancoraVizinha("dia", "2026-09-12", -1), "2026-08-12");
 conferir("mês anterior: a tela termina no mês antes da primeira", ancoraVizinha("mes", "2026-09-20", -1), "2025-09-30");
 
-console.log("\n  GRÁFICOS — a avaliação no mês em que foi feita (1.118)\n");
+console.log("\n  GRÁFICOS — tudo no mês da reclamação (21/10/2026)\n");
 
 const janela = { start: "2026-08-01", end: "2026-09-30" };
 const porMes = getMonthlyIndices([antiga], "custom", janela);
-conferir("índices por mês: avaliada em setembro, conta em setembro", porMes.map((m) => [m.key, m.received, m.evaluated]), [["2026-08", 1, 0], ["2026-09", 0, 1]]);
+conferir("índices por mês: avaliada em setembro, conta em agosto", porMes.map((m) => [m.key, m.received, m.evaluated]), [["2026-08", 1, 1], ["2026-09", 0, 0]]);
 const movimento = getTimeSeries([antiga], { start: "2026-09-01", end: "2026-09-30" });
-conferir("movimento: a avaliação no dia em que foi feita", movimento.points.filter((p) => p.evaluated).map((p) => p.date), ["2026-09-15"]);
+conferir("movimento de setembro: nada — a reclamação é de agosto", movimento.points.filter((p) => p.evaluated || p.received || p.answered).map((p) => p.date), []);
 const movimentoAgosto = getTimeSeries([antiga], { start: "2026-08-01", end: "2026-08-31" });
-conferir("e a resposta no dia em que saiu", movimentoAgosto.points.filter((p) => p.answered).map((p) => p.date), ["2026-08-21"]);
-conferir("tendência do Analytics: setembro aparece, pela avaliação", getReputationTrend([antiga]).map((m) => [m.label, m.received]), [["ago/26", 1], ["set/26", 0]]);
+conferir("movimento de agosto: chegou, respondida e avaliada no dia em que chegou", movimentoAgosto.points.filter((p) => p.answered && p.evaluated && p.received).map((p) => p.date), ["2026-08-20"]);
+conferir("tendência do Analytics: só agosto, o mês da reclamação", getReputationTrend([antiga]).map((m) => [m.label, m.received]), [["ago/26", 1]]);
 
 console.log(`\n  ${falhas === 0 ? "Tudo certo." : `${falhas} falha(s).`}\n`);
 process.exit(falhas === 0 ? 0 : 1);

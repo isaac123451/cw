@@ -1,24 +1,22 @@
 /**
- * A nota de um período conta só as avaliações feitas nele?
+ * A nota de um período conta as reclamações abertas nele?
  *
  *   npm run check:nota-do-periodo
  *
- * O pedido (06/10/2026): "existem meses que está contando outros para a
- * nota daquele mês em específico, precisa somente ter as avaliações
- * daquele mês". A Análise, fora da janela oficial, contava as reclamações
- * abertas no período com as avaliações que vieram depois — abril/2026
- * levava 12 avaliações de outros meses e saía 8,4 onde as de abril davam
- * 6,9.
+ * O pedido (21/10/2026, troca a regra de 06/10): "recebi uma reclamação não
+ * resolvida, está contabilizando para o mês da avaliação e não pro mês que
+ * a reclamação foi criada". Cada período conta as reclamações abertas nele,
+ * com a avaliação de cada uma, mesmo feita depois — a mesma regra do
+ * portal. As avaliações feitas no período aparecem à parte, só para saber.
  *
  * Contra a base real, só leitura:
  *
  *  1. cada um dos 12 meses fechados, como período escolhido na Análise,
- *     conta exatamente as avaliações feitas nele — nem uma de outro mês;
+ *     conta as avaliações das reclamações abertas nele;
  *  2. e dá a mesma nota que o mês tem nos Gráficos, no Índice e na
  *     extensão (`contasDoMes`);
- *  3. 30 dias: só as avaliações dos 30 dias;
- *  4. a janela oficial de 6 e 12 meses não mudou: continua a conta do
- *     portal (reclamações abertas nela, com a avaliação de cada uma).
+ *  3. 30 dias: as avaliações das reclamações abertas nos 30 dias;
+ *  4. a janela oficial de 6 e 12 meses não mudou: a conta do portal.
  */
 import "dotenv/config";
 
@@ -67,20 +65,22 @@ async function main() {
       const fim = new Date(Date.UTC(ano, mes - k, 0)).toISOString().slice(0, 10);
       const chave = inicio.slice(0, 7);
 
-      const doMes = ra.filter((c) => c.evaluated && !c.scoreDisregarded && diaDaAvaliacao(c) >= inicio && diaDaAvaliacao(c) <= fim).length;
+      /* A regra de 06/10 (pela data da avaliação) — só para mostrar quanto mudou. */
+      const feitasNoMes = ra.filter((c) => c.evaluated && !c.scoreDisregarded && diaDaAvaliacao(c) >= inicio && diaDaAvaliacao(c) <= fim).length;
       const periodo = reputacaoDoPeriodo(ra, "custom", inicio, fim);
       const coorte = getReputation(ra.filter((c) => inRange(c, inicio, fim)));
-      if (coorte.evaluated !== periodo.evaluated || coorte.raScore !== periodo.raScore) misturavam += 1;
+      if (feitasNoMes !== periodo.evaluated) misturavam += 1;
 
-      conferir(`${chave}: avaliações contadas = as feitas no mês`, periodo.evaluated, doMes);
+      /* 21/10/2026: "está contabilizando para o mês da avaliação e não pro mês que a reclamação foi criada". */
+      conferir(`${chave}: avaliações = as das reclamações abertas no mês`, [periodo.evaluated, periodo.raScoreExato], [coorte.evaluated, coorte.raScoreExato]);
       conferir(`${chave}: a mesma nota dos Gráficos e do Índice`, periodo.raScoreExato, scoreFrom(contasDoMes(ra, chave)).raScoreExato);
     }
 
-    console.log(`\n        a conta antiga dava outra nota ou outro total em ${misturavam} dos 12 meses\n`);
+    console.log(`\n        pela data da avaliação (regra de 06/10), o total de avaliações mudava em ${misturavam} dos 12 meses\n`);
 
     const trinta = getRange("30d");
-    const nos30 = ra.filter((c) => c.evaluated && !c.scoreDisregarded && diaDaAvaliacao(c) >= trinta.start && diaDaAvaliacao(c) <= trinta.end).length;
-    conferir("30 dias: só as avaliações dos 30 dias", reputacaoDoPeriodo(ra, "30d", trinta.start, trinta.end).evaluated, nos30);
+    const nos30 = getReputation(ra.filter((c) => inRange(c, trinta.start, trinta.end))).evaluated;
+    conferir("30 dias: as avaliações das reclamações abertas nos 30 dias", reputacaoDoPeriodo(ra, "30d", trinta.start, trinta.end).evaluated, nos30);
 
     for (const janela of ["6m", "12m"] as const) {
       const r = getRange(janela, "vigente");
@@ -91,7 +91,7 @@ async function main() {
     await prisma.$disconnect();
   }
 
-  console.log(falhas === 0 ? "\n  Cada período conta só as próprias avaliações; a janela oficial segue a do portal.\n" : `\n  ${falhas} ponto(s) a corrigir.\n`);
+  console.log(falhas === 0 ? "\n  Cada período conta as próprias reclamações, com a avaliação de cada uma; a janela oficial segue a do portal.\n" : `\n  ${falhas} ponto(s) a corrigir.\n`);
   process.exit(falhas === 0 ? 0 : 1);
 }
 

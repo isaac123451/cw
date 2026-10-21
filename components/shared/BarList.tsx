@@ -29,6 +29,12 @@ interface Props {
    * cujo recorte não existe como filtro.
    */
   hrefDe?: (rotulo: string) => string;
+
+  /**
+   * Clique na barra que abre a mini janela com os casos (21/10/2026) — no
+   * lugar de sair da tela. Com ele, `hrefDe` não é usado.
+   */
+  aoClicar?: (rotulo: string) => void;
 }
 
 /**
@@ -41,6 +47,7 @@ export default function BarList({
   color = "#7C3AED",
   emptyLabel = "Sem dados para exibir.",
   hrefDe,
+  aoClicar,
 }: Props) {
 
   const items = data.slice(0, limit);
@@ -63,7 +70,8 @@ export default function BarList({
 
       {items.map((item) => {
 
-        const href = hrefDe?.(item.label);
+        const href = aoClicar ? undefined : hrefDe?.(item.label);
+        const clicavel = Boolean(href || (aoClicar && item.value > 0));
 
         /*
           O conteúdo é o mesmo com ou sem link.
@@ -78,7 +86,7 @@ export default function BarList({
 
             <span
               className={`truncate text-sm font-medium ${
-                href
+                clicavel
                   ? "text-zinc-700 group-hover/barra:text-violet-700"
                   : "text-zinc-700"
               }`}
@@ -122,7 +130,16 @@ export default function BarList({
         return (
           <li key={item.label}>
 
-            {href ? (
+            {aoClicar && item.value > 0 ? (
+              <button
+                type="button"
+                onClick={() => aoClicar(item.label)}
+                title={`Ver os casos de ${item.label}`}
+                className="group/barra block w-full rounded-lg text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-violet-300"
+              >
+                {conteudo}
+              </button>
+            ) : href ? (
               <Link
                 href={href}
                 title={`Ver as reclamações de ${item.label}`}

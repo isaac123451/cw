@@ -3,10 +3,14 @@
 import { useMemo } from "react";
 
 import SurfaceCard from "@/components/shared/SurfaceCard";
+import { abrirJanelaDeCasos } from "@/components/shared/JanelaDeCasos";
 
-import type { NpsResponseView } from "@/lib/models/nps";
+import { segmentOf, type NpsResponseView } from "@/lib/models/nps";
 import { npsPorCiclo } from "@/lib/models/npsPorCiclo";
-import { hojeNaOperacao } from "@/lib/services/reputation.service";
+import { diaNaOperacao, hojeNaOperacao } from "@/lib/services/reputation.service";
+import type { Ciclo } from "@/lib/models/ciclo";
+
+const PLURAL: Record<string, string> = { Promotor: "Promotores", Passivo: "Passivos", Detrator: "Detratores" };
 
 /**
  * O NPS por ciclo (1.90): respostas, a nota e o que a operação fez em cada
@@ -23,6 +27,34 @@ export default function NpsPorCiclo({
 }) {
   const hoje = hojeNaOperacao();
   const linhas = useMemo(() => npsPorCiclo(respostas, hoje, 8), [respostas, hoje]);
+
+  /* O número abre as respostas na mini janela (21/10/2026); a linha continua recortando a tela. */
+  const abrir = (e: React.MouseEvent, ciclo: Ciclo, segmento?: string) => {
+    e.stopPropagation();
+    const lista = respostas
+      .filter((r) => {
+        const d = diaNaOperacao(r.respondedAt);
+        return d >= ciclo.inicio && d <= ciclo.fim && (!segmento || segmentOf(r.score).label === segmento);
+      })
+      .sort((a, b) => b.respondedAt.localeCompare(a.respondedAt));
+    abrirJanelaDeCasos({
+      titulo: `${segmento ? PLURAL[segmento] : "Respostas"} · ${ciclo.rotulo}`,
+      descricao: "Respostas do NPS que chegaram no ciclo — clique para abrir a ficha.",
+      linhas: lista.map((r) => ({
+        titulo: `Nota ${r.score} · ${r.customerName || r.customer}`,
+        detalhe: [diaNaOperacao(r.respondedAt).split("-").reverse().join("/"), r.rootCause, r.status, r.comment.trim()].filter(Boolean).join(" · "),
+        href: `/nps/${r.id}`,
+      })),
+    });
+  };
+  const Numero = ({ n, onClick }: { n: number; onClick: (e: React.MouseEvent) => void }) =>
+    n > 0 ? (
+      <button type="button" onClick={onClick} className="rounded px-0.5 hover:bg-violet-50 hover:text-violet-700" title="Ver as respostas">
+        {n}
+      </button>
+    ) : (
+      <span>{n}</span>
+    );
 
   return (
     <SurfaceCard
@@ -55,7 +87,7 @@ export default function NpsPorCiclo({
                     {l.ciclo.rotulo}
                     {i === 0 && <span className="ml-1.5 text-[11px] text-violet-700">em curso</span>}
                   </td>
-                  <td className="px-3 py-2 text-right">{l.respostas}</td>
+                  <td className="px-3 py-2 text-right"><Numero n={l.respostas} onClick={(e) => abrir(e, l.ciclo)} /></td>
                   <td className={`px-3 py-2 text-right font-semibold ${l.nps === null ? "text-zinc-300" : l.nps >= 50 ? "text-emerald-700" : l.nps >= 0 ? "text-amber-700" : "text-rose-700"}`}>
                     {l.nps ?? "—"}
                   </td>
@@ -68,7 +100,7 @@ export default function NpsPorCiclo({
                           <span className="bg-rose-500" style={{ width: `${(100 * l.detratores) / l.respostas}%` }} />
                         </span>
                         <span className="text-xs text-zinc-500">
-                          {l.promotores} · {l.passivos} · {l.detratores}
+                          <Numero n={l.promotores} onClick={(e) => abrir(e, l.ciclo, "Promotor")} /> · <Numero n={l.passivos} onClick={(e) => abrir(e, l.ciclo, "Passivo")} /> · <Numero n={l.detratores} onClick={(e) => abrir(e, l.ciclo, "Detrator")} />
                         </span>
                       </span>
                     ) : (

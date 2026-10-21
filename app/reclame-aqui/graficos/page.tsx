@@ -8,6 +8,7 @@ import PageHeading from "@/components/shared/PageHeading";
 import SurfaceCard from "@/components/shared/SurfaceCard";
 import MultiLineChart from "@/components/shared/MultiLineChart";
 import PeriodPicker from "@/components/shared/PeriodPicker";
+import { abrirJanelaDeCasos } from "@/components/shared/JanelaDeCasos";
 
 import ModuleNav from "@/components/reclame-aqui/ModuleNav";
 import EsperaAsReclamacoes from "@/components/reclame-aqui/EsperaAsReclamacoes";
@@ -138,6 +139,40 @@ export default function GraficosPage() {
 
   const labels = monthly.map((item) => item.label);
 
+  /*
+    A coluna abre os casos (21/10/2026): "quando eu clicar em uma coluna de
+    um gráfico ... abrir uma mini janela com os casos". Mês: as reclamações
+    abertas nele (a conta do mês); janela de 12 meses: as da janela.
+  */
+  const doMes = (key: string) => cases.filter((item) => item.createdAt.slice(0, 7) === key);
+  const abrirMes = (key: string | undefined, rotulo: string, titulo: string) => {
+    if (!key) return;
+    abrirJanelaDeCasos({ titulo: `${titulo} · ${rotulo}`, descricao: "Reclamações abertas no mês, com a resposta e a avaliação de cada uma.", casos: doMes(key) });
+  };
+  const abrirMensal = (titulo: string) => (i: number) => abrirMes(monthly[i]?.key, monthly[i]?.label ?? "", titulo);
+  const abrirJanela12 = (titulo: string) => (i: number) => {
+    const p = rolling[i];
+    if (!p) return;
+    const [ano, mes] = p.key.split("-").map(Number);
+    const primeiro = new Date(Date.UTC(ano, mes - 12, 1)).toISOString().slice(0, 7);
+    abrirJanelaDeCasos({
+      titulo: `${titulo} · janela até ${p.label}`,
+      descricao: "Reclamações abertas nos 12 meses que terminam neste mês — a janela que o ponto mede.",
+      casos: cases.filter((item) => item.createdAt.slice(0, 7) >= primeiro && item.createdAt.slice(0, 7) <= p.key),
+    });
+  };
+  const abrirMovimento = (i: number) => {
+    const p = daily.points[i];
+    if (!p) return;
+    const fim = daily.points[i + 1]?.date ?? rangeDoMovimento.end;
+    const ate = daily.points[i + 1] ? (d: string) => d < fim : (d: string) => d <= fim;
+    abrirJanelaDeCasos({
+      titulo: `Movimento · ${p.label}`,
+      descricao: "Reclamações que chegaram neste ponto, com a resposta e a avaliação de cada uma.",
+      casos: cases.filter((item) => item.createdAt >= p.date && ate(item.createdAt)),
+    });
+  };
+
   /** Uma cor por causa, estável enquanto a ordem não muda. */
   const CORES_DE_CAUSA = [
     "#8B5CF6",
@@ -232,12 +267,15 @@ export default function GraficosPage() {
 
               {monthly.map((item) => (
 
-                <div
+                <button
+                  type="button"
                   key={item.key}
-                  className="flex flex-1 flex-col items-center"
+                  onClick={() => abrirMes(item.key, item.label, "Índice do mês")}
+                  disabled={item.received === 0}
+                  className="flex flex-1 flex-col items-center rounded-lg pt-1 transition-colors enabled:hover:bg-zinc-50 disabled:cursor-default"
                   title={`${item.label}: ${item.band} (${ptBR(
                     item.raScore
-                  )})`}
+                  )})${item.received ? " — clique para ver os casos" : ""}`}
                 >
 
                   <span className="mb-1.5 text-[11px] font-semibold tabular-nums text-zinc-600">
@@ -264,7 +302,7 @@ export default function GraficosPage() {
                     {item.label}
                   </span>
 
-                </div>
+                </button>
 
               ))}
 
@@ -284,6 +322,7 @@ export default function GraficosPage() {
 
           <MultiLineChart
             labels={labels}
+            onPonto={abrirMensal("Reclamações do mês")}
             max={10}
             showValues
             series={[
@@ -310,6 +349,7 @@ export default function GraficosPage() {
 
           <MultiLineChart
             labels={labels}
+            onPonto={abrirMensal("Reclamações do mês")}
             max={100}
             suffix="%"
             series={[
@@ -360,6 +400,7 @@ export default function GraficosPage() {
 
           <MultiLineChart
             labels={labels}
+            onPonto={abrirMensal("Reclamações do mês")}
             series={[
               {
                 key: "reclamacoes",
@@ -432,6 +473,7 @@ export default function GraficosPage() {
 
           <MultiLineChart
             labels={labels}
+            onPonto={abrirMensal("Reclamações do mês")}
             suffix=" d"
             showValues
             series={[
@@ -458,6 +500,7 @@ export default function GraficosPage() {
 
           <MultiLineChart
             labels={rolling.map((item) => item.label)}
+            onPonto={abrirJanela12("Evolução em 12 meses")}
             max={100}
             suffix="%"
             series={[
@@ -506,6 +549,7 @@ export default function GraficosPage() {
 
           <MultiLineChart
             labels={rolling.map((item) => item.label)}
+            onPonto={abrirJanela12("Evolução em 12 meses")}
             series={[
               {
                 key: "q-reclamacoes",
@@ -560,6 +604,7 @@ export default function GraficosPage() {
 
           <MultiLineChart
             labels={rolling.map((item) => item.label)}
+            onPonto={abrirJanela12("Evolução em 12 meses")}
             suffix=" d"
             showValues
             series={[
@@ -674,6 +719,7 @@ export default function GraficosPage() {
 
             <MultiLineChart
               labels={causas.labels}
+              onPonto={(i) => abrirMes(causas.keys[i], causas.labels[i], "Causas do mês")}
               height={240}
               series={causas.series.map(
                 (serie, i) => ({
@@ -751,6 +797,7 @@ export default function GraficosPage() {
 
           <MultiLineChart
             labels={daily.points.map((item) => item.label)}
+            onPonto={abrirMovimento}
             height={240}
             series={[
               {

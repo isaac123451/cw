@@ -5,7 +5,7 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { fetchCases, carimboDaAvaliacao } from "@/lib/services/case.repository";
-import { numerosPorCiclo } from "@/lib/models/porCiclo";
+import { casosDoNumero, numerosPorCiclo, porCicloNoMes } from "@/lib/models/porCiclo";
 import { ciclosAte } from "@/lib/models/ciclo";
 import { diaNaOperacao, hojeNaOperacao } from "@/lib/services/reputation.service";
 
@@ -27,12 +27,25 @@ ok(diaNaOperacao(new Date("2026-09-29T00:00:00Z")) === "2026-09-29", "carimbo li
   const linhas = numerosPorCiclo(casos, hoje, n);
   const ciclos = ciclosAte(hoje, n);
   const inicio = ciclos.at(-1)!.inicio;
-  const esperadas = casos.filter((c) => c.evaluated && c.evaluatedAt && diaNaOperacao(c.evaluatedAt) >= inicio && diaNaOperacao(c.evaluatedAt) <= hoje).length;
-  const somadas = linhas.reduce((s, l) => s + l.avaliadas, 0);
-  ok(somadas === esperadas, `avaliações nos ${n} ciclos: ${somadas} = ${esperadas} datadas no período`);
-  const novas = casos.filter((c) => diaNaOperacao(c.createdAt) >= inicio && diaNaOperacao(c.createdAt) <= hoje).length;
-  ok(linhas.reduce((s, l) => s + l.novas, 0) === novas, `novas nos ${n} ciclos: ${novas}`);
-  for (const l of linhas) console.log(`   ${l.ciclo.rotulo.padEnd(11)} novas ${l.novas}  respondidas ${l.respondidas}  avaliações ${l.avaliadas}  nota ${l.notaMedia?.toFixed(2) ?? "—"}`);
+  const noPeriodo = (d?: string | null) => Boolean(d) && diaNaOperacao(d!) >= inicio && diaNaOperacao(d!) <= hoje;
+  /* Movimento (só informativo): a avaliação no ciclo do dia em que veio. */
+  const datadas = casos.filter((c) => c.evaluated && noPeriodo(c.evaluatedAt)).length;
+  ok(linhas.reduce((s, l) => s + l.movimento.avaliacoes, 0) === datadas, `movimento: avaliações nos ${n} ciclos = ${datadas} feitas no período`);
+  /* Coorte (entra na nota): a avaliação no ciclo em que a reclamação chegou (21/10/2026). */
+  const novas = casos.filter((c) => noPeriodo(c.createdAt));
+  ok(linhas.reduce((s, l) => s + l.reclamacoes.novas, 0) === novas.length, `novas nos ${n} ciclos: ${novas.length}`);
+  const daCoorte = novas.filter((c) => c.evaluated).length;
+  ok(linhas.reduce((s, l) => s + l.reclamacoes.avaliadas, 0) === daCoorte, `avaliadas pela reclamação: ${daCoorte} (das que chegaram no período, mesmo avaliadas depois)`);
+  ok(linhas.every((l) => l.reclamacoes.respondidas + l.reclamacoes.semResposta === l.reclamacoes.novas), "respondidas + sem resposta = novas, em cada ciclo");
+  /* O mês soma os ciclos dele. */
+  for (const m of porCicloNoMes(casos, hoje, 3)) {
+    const soma = (k: "novas" | "avaliadas") => m.ciclos.reduce((s, l) => s + l.reclamacoes[k], 0);
+    ok(soma("novas") === m.reclamacoes.novas && soma("avaliadas") === m.reclamacoes.avaliadas, `${m.mes}: o total do mês é a soma dos ${m.ciclos.length} ciclos (${m.reclamacoes.novas} novas, ${m.reclamacoes.avaliadas} avaliadas)`);
+    ok(m.ciclos.reduce((s, l) => s + l.movimento.avaliacoes, 0) === m.movimento.avaliacoes, `${m.mes}: avaliações feitas no mês = soma dos ciclos (${m.movimento.avaliacoes})`);
+    const de = casosDoNumero(casos, `${m.mes}-01`, hoje, "avaliadas").filter((c) => diaNaOperacao(c.createdAt).startsWith(m.mes)).length;
+    ok(de === m.reclamacoes.avaliadas, `${m.mes}: a mini janela mostra os mesmos ${de} casos do número`);
+  }
+  for (const l of linhas) console.log(`   ${l.ciclo.rotulo.padEnd(11)} novas ${l.reclamacoes.novas}  avaliadas ${l.reclamacoes.avaliadas}  nota ${l.reclamacoes.notaMedia?.toFixed(2) ?? "—"}  |  feitas no ciclo ${l.movimento.avaliacoes}`);
   await prisma.$disconnect();
   if (falhas) process.exit(1);
 })();

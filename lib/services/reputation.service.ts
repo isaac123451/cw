@@ -1405,9 +1405,11 @@ export function diaDaAvaliacao(item: Case) {
  *
  * - **recebidas, respondidas e o tempo de resposta**: das reclamações
  *   abertas no mês ("das que chegaram, quantas respondi");
- * - **nota do consumidor, solução e voltaria**: das avaliações **feitas** no
- *   mês, de qualquer reclamação — "elas precisam entrar quando foram
- *   avaliadas".
+ * - **nota do consumidor, solução e voltaria**: das avaliações das
+ *   reclamações **abertas no mês**, mesmo avaliadas depois (21/10/2026: "recebi
+ *   uma reclamação não resolvida, está contabilizando para o mês da avaliação e
+ *   não pro mês que a reclamação foi criada"). É a regra do portal; a de
+ *   06/10, pela data da avaliação, caiu.
  *
  * `limites` recorta o mês quando o período começa ou termina no meio dele
  * ("30 dias", personalizado).
@@ -1418,15 +1420,7 @@ export function contasDoMes(
   limites?: { inicio: string; fim: string }
 ): ReputationRaw {
   const dentro = (dia: string) => dia.slice(0, 7) === mes && (!limites || (dia >= limites.inicio && dia <= limites.fim));
-  const daCoorte = getRawCounts(casos.filter((item) => dentro(item.createdAt)));
-  const dasAvaliacoes = getRawCounts(casos.filter((item) => item.evaluated && dentro(diaDaAvaliacao(item))));
-  return {
-    ...daCoorte,
-    evaluated: dasAvaliacoes.evaluated,
-    scoreSum: dasAvaliacoes.scoreSum,
-    resolved: dasAvaliacoes.resolved,
-    wouldReturn: dasAvaliacoes.wouldReturn,
-  };
+  return getRawCounts(casos.filter((item) => dentro(item.createdAt)));
 }
 
 /**
@@ -1439,9 +1433,9 @@ export function contasDoMes(
  * vieram depois** — em abril/2026 eram 20 avaliações, 12 delas feitas em
  * outros meses, e a nota saía 8,4 onde as avaliações de abril davam 6,9.
  *
- * Aqui é a mesma regra de `contasDoMes`, para qualquer intervalo:
- * recebidas e respondidas são das reclamações abertas no período;
- * nota do consumidor, solução e voltaria, das avaliações **feitas** nele.
+ * Aqui é a mesma regra de `contasDoMes`, para qualquer intervalo: tudo
+ * das reclamações abertas no período, com a avaliação de cada uma, mesmo
+ * feita depois (21/10/2026 — a regra de 06/10, pela data da avaliação, caiu).
  *
  * A janela oficial de 6 e 12 meses continua pela outra conta (as
  * reclamações abertas nela, com a avaliação de cada uma) — é a do portal,
@@ -1453,15 +1447,7 @@ export function contasDoPeriodo(
   fim: string
 ): ReputationRaw {
   const dentro = (dia: string) => dia >= inicio && dia <= fim;
-  const daCoorte = getRawCounts(casos.filter((item) => dentro(item.createdAt)));
-  const dasAvaliacoes = getRawCounts(casos.filter((item) => item.evaluated && dentro(diaDaAvaliacao(item))));
-  return {
-    ...daCoorte,
-    evaluated: dasAvaliacoes.evaluated,
-    scoreSum: dasAvaliacoes.scoreSum,
-    resolved: dasAvaliacoes.resolved,
-    wouldReturn: dasAvaliacoes.wouldReturn,
-  };
+  return getRawCounts(casos.filter((item) => dentro(item.createdAt)));
 }
 
 /** 6 e 12 meses são as janelas que o portal publica; o resto é acompanhamento. */
@@ -1470,8 +1456,8 @@ export function ehJanelaOficial(period: PeriodKey) {
 }
 
 /**
- * A nota de um período, pela regra certa para ele: janela oficial, a do
- * portal; qualquer outro período, as avaliações feitas dentro dele.
+ * A nota de um período: as reclamações abertas nele, com a avaliação de
+ * cada uma — a janela oficial e qualquer outro período, pela mesma regra.
  */
 export function reputacaoDoPeriodo(
   casos: Case[],
@@ -1516,7 +1502,7 @@ export function getReputationTrend(
 
   const meses = limites
     ? mesesEntre(limites.inicio, limites.fim)
-    : [...new Set(cases.flatMap((item) => [item.createdAt.slice(0, 7), ...(item.evaluated ? [diaDaAvaliacao(item).slice(0, 7)] : [])]))].sort();
+    : [...new Set(cases.map((item) => item.createdAt.slice(0, 7)))].sort();
 
   const names = [
     "jan",

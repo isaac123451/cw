@@ -204,6 +204,15 @@ export function getMetrics(cases: Case[]): CaseMetrics {
  * Agrupa os casos por um campo e devolve a distribuição ordenada
  * do maior para o menor, já com o percentual calculado.
  */
+/** Os casos atrás de uma barra de `groupBy` — a mesma regra do rótulo, para a mini janela (21/10/2026). */
+export function casosDoRotulo(cases: Case[], field: keyof Case, rotulo: string): Case[] {
+  return cases.filter((item) => {
+    const raw = item[field];
+    const label = typeof raw === "string" && raw.trim() !== "" ? raw : "Não informado";
+    return label === rotulo;
+  });
+}
+
 export function groupBy(
   cases: Case[],
   field: keyof Case

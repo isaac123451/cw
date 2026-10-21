@@ -127,9 +127,10 @@ async function main() {
   const range = getRange("12m", "vigente");
   const porMes = getMonthlyIndices(casos, "12m");
   conferir(
-    "Analytics, índices por mês: somam as avaliações feitas no período",
+    /* 21/10/2026: a conta do mês é pela reclamação — as avaliações das reclamações abertas no período. */
+    "Analytics, índices por mês: somam as avaliações das reclamações abertas no período",
     porMes.reduce((s, m) => s + m.evaluated, 0),
-    casos.filter((c) => c.evaluated && !c.scoreDisregarded && (c.evaluatedAt ? diaNaOperacao(c.evaluatedAt) : c.createdAt) >= range.start && (c.evaluatedAt ? diaNaOperacao(c.evaluatedAt) : c.createdAt) <= range.end).length
+    casos.filter((c) => c.evaluated && !c.scoreDisregarded && c.createdAt >= range.start && c.createdAt <= range.end).length
   );
 
   /*

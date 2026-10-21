@@ -505,6 +505,8 @@ export interface CicloDoPlano {
   quando: "passado" | "atual" | "futuro";
   meta: { recebidas: number; respostas: number; avaliacoes: number; naoResolvidas: number | null };
   feito: { recebidas: number; respostas: number; avaliacoes: number; naoResolvidas: number };
+  /** Os casos atrás de cada número feito — o que a mini janela mostra (21/10/2026). */
+  casos: { recebidas: Case[]; respostas: Case[]; avaliacoes: Case[]; naoResolvidas: Case[] };
 }
 
 export function ciclosDe(mes: MesISO): Ciclo[] {
@@ -537,18 +539,28 @@ export function ciclosDoMes(casos: Case[], hoje: string, mes: MesISO, base: Plan
   const naoResolvidas = base.noMes.naoResolvidas !== null ? repartir(base.noMes.naoResolvidas, pesos) : null;
   const dia = (iso?: string | null) => (iso ? diaNaOperacao(iso) : null);
   const no = (c: Ciclo, d: string | null) => Boolean(d) && d! >= c.inicio && d! <= c.fim;
-  return lista.map((c, i) => ({
-    ciclo: c,
-    dias: pesos[i],
-    quando: c.fim < hoje ? "passado" : c.inicio > hoje ? "futuro" : "atual",
-    meta: { recebidas: recebidas[i], respostas: respostas[i], avaliacoes: avaliacoes[i], naoResolvidas: naoResolvidas ? naoResolvidas[i] : null },
-    feito: {
-      recebidas: casos.filter((x) => no(c, x.createdAt)).length,
-      respostas: casos.filter((x) => respondida(x) && no(c, dia(x.publicResponseAt))).length,
-      avaliacoes: casos.filter((x) => x.evaluated && !x.scoreDisregarded && no(c, dia(x.evaluatedAt))).length,
-      naoResolvidas: casos.filter((x) => x.evaluated && !x.scoreDisregarded && !x.resolved && no(c, dia(x.evaluatedAt))).length,
-    },
-  }));
+  return lista.map((c, i) => {
+    /*
+      O feito do plano é o que se conseguiu no ciclo: a resposta publicada e
+      a avaliação que chegou nele, de qualquer reclamação da janela — é isso
+      que a meta pede para a nota chegar lá. Não é a conta do mês (essa é
+      pela reclamação; ver `contasDoMes`).
+    */
+    const feitos = {
+      recebidas: casos.filter((x) => no(c, x.createdAt)),
+      respostas: casos.filter((x) => respondida(x) && no(c, dia(x.publicResponseAt))),
+      avaliacoes: casos.filter((x) => x.evaluated && !x.scoreDisregarded && no(c, dia(x.evaluatedAt))),
+      naoResolvidas: casos.filter((x) => x.evaluated && !x.scoreDisregarded && !x.resolved && no(c, dia(x.evaluatedAt))),
+    };
+    return {
+      ciclo: c,
+      dias: pesos[i],
+      quando: c.fim < hoje ? "passado" : c.inicio > hoje ? "futuro" : "atual",
+      meta: { recebidas: recebidas[i], respostas: respostas[i], avaliacoes: avaliacoes[i], naoResolvidas: naoResolvidas ? naoResolvidas[i] : null },
+      feito: { recebidas: feitos.recebidas.length, respostas: feitos.respostas.length, avaliacoes: feitos.avaliacoes.length, naoResolvidas: feitos.naoResolvidas.length },
+      casos: feitos,
+    };
+  });
 }
 
 /* ============================================================

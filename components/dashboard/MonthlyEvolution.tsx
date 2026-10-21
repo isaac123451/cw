@@ -11,6 +11,7 @@ import {
 
 import SurfaceCard from "@/components/shared/SurfaceCard";
 import TrendChart from "@/components/shared/TrendChart";
+import { abrirJanelaDeCasos } from "@/components/shared/JanelaDeCasos";
 
 /** As janelas que a tela oferece, em meses. Zero é tudo. */
 const JANELAS = [
@@ -101,7 +102,16 @@ export default function MonthlyEvolution() {
         </div>
       }
     >
-      <TrendChart data={data} />
+      <TrendChart
+        data={data}
+        onPonto={(i) =>
+          abrirJanelaDeCasos({
+            titulo: `Recebidas · ${data[i]?.label ?? ""}`,
+            descricao: "Ocorrências abertas no mês.",
+            casos: cases.filter((item) => item.createdAt.slice(0, 7) === data[i]?.month),
+          })
+        }
+      />
     </SurfaceCard>
   );
 }

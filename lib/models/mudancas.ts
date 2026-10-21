@@ -53,6 +53,36 @@ export const REVISAO = {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- passe a limpo (21/10) ---------------- */
   {
+    id: "conta-do-mes-pela-reclamacao",
+    dia: "2026-10-21",
+    tipo: "correcao",
+    frente: "plataforma",
+    titulo: "A conta do mês é pelo mês da reclamação",
+    texto:
+      "Uma reclamação de setembro avaliada em outubro entrava na nota de outubro. Agora cada mês (e cada período escolhido) conta as reclamações abertas nele, com a avaliação de cada uma, mesmo vinda depois — a mesma regra do portal. Em outubro foram feitas 13 avaliações, mas só 5 são de reclamações de outubro; as outras 8 voltaram para os meses delas. As avaliações feitas em cada período continuam à vista, só para saber: no Por ciclo (coluna \"Movimento no ciclo\") e na evolução do Índice (grupo \"Movimento · só informativo\"), sem entrar em nenhuma nota.",
+    href: "/reclame-aqui/analytics",
+  },
+  {
+    id: "por-ciclo-organizado",
+    dia: "2026-10-21",
+    tipo: "melhoria",
+    frente: "plataforma",
+    titulo: "Por ciclo organizado por mês",
+    texto:
+      "No Analytics, os ciclos agora ficam agrupados no mês, com a linha do total do mês em cima. À esquerda, o que entra na nota (novas, respondidas, sem resposta, avaliadas, nota média, resolvidas, voltaria — das reclamações do ciclo); à direita, separado e mais apagado, o movimento dos dias (respostas e avaliações feitas no ciclo). No Plano, o \"Por ciclo — feito / meta\" ganhou a regra escrita em cima e o total do mês embaixo.",
+    href: "/reclame-aqui/analytics",
+  },
+  {
+    id: "graficos-abrem-mini-janela",
+    dia: "2026-10-21",
+    tipo: "novo",
+    frente: "plataforma",
+    titulo: "Clicar no gráfico abre os casos numa mini janela",
+    texto:
+      "Em Gráficos do RA (as nove séries e as barras do índice do mês), Analytics (evolução, causas, subcategorias, etapas, Por ciclo), Dashboard, Plano, Análise do NPS (evolução, causa raiz, tipo, NPS por ciclo), Causa raiz cruzada e Impacto, clicar numa coluna, ponto ou barra abre uma janela pequena com os casos daquele pedaço — nota, resolvida, data da avaliação e o link de cada um. A janela pode ser arrastada pelo topo e fecha no X ou com Esc. Coluna vazia não abre nada.",
+    href: "/reclame-aqui/graficos",
+  },
+  {
     id: "graficos-de-cancelamento-clicaveis",
     dia: "2026-10-21",
     tipo: "melhoria",

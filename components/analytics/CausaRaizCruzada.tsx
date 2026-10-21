@@ -7,6 +7,7 @@ import { useMemo, useState } from "react";
 import { FolderPlus, Loader2, Repeat } from "lucide-react";
 
 import SurfaceCard from "@/components/shared/SurfaceCard";
+import { abrirJanelaDeCasos } from "@/components/shared/JanelaDeCasos";
 
 import { frente as frenteDaOperacao } from "@/lib/models/frentes";
 import {
@@ -17,7 +18,7 @@ import {
   type Frente,
   type RegistroDeCausa,
 } from "@/lib/models/causaRaiz";
-import { isSocial } from "@/lib/services/case.service";
+import { caseHref, isSocial } from "@/lib/services/case.service";
 import { nomeDoCliente } from "@/lib/models/nps";
 
 import { abrirProjetoDeReincidencia } from "@/lib/actions/causaRaiz";
@@ -56,19 +57,19 @@ export default function CausaRaizCruzada() {
 
   /* Todo registro das quatro frentes, com ou sem causa — a cobertura precisa dos dois. */
   const todos = useMemo(() => {
-    const lista: (Omit<RegistroDeCausa, "causa"> & { causa?: string })[] = [];
+    const lista: (Omit<RegistroDeCausa, "causa"> & { causa?: string; href?: string })[] = [];
     for (const c of cases) {
       const frente: Frente = isSocial(c) ? "redes" : "reclame-aqui";
-      lista.push({ frente, causa: c.causaRaiz, em: c.recebidaEm ?? `${c.createdAt}T12:00:00Z`, rotulo: `${c.id} — ${c.title}` });
+      lista.push({ frente, causa: c.causaRaiz, em: c.recebidaEm ?? `${c.createdAt}T12:00:00Z`, rotulo: `${c.id} — ${c.title}`, href: caseHref(c) });
     }
     for (const r of responses) {
       /* O promotor calado não tem o que classificar; contá-lo esconderia a cobertura real. */
       if (!r.rootCause && !r.comment.trim()) continue;
-      lista.push({ frente: "nps", causa: r.rootCause, em: r.respondedAt, rotulo: `NPS — ${nomeDoCliente(r)}, nota ${r.score}` });
+      lista.push({ frente: "nps", causa: r.rootCause, em: r.respondedAt, rotulo: `NPS — ${nomeDoCliente(r)}, nota ${r.score}`, href: `/nps/${r.id}` });
     }
     for (const g of google) {
       if (g.status === "denunciada") continue;
-      lista.push({ frente: "google", causa: g.causaRaiz, em: g.publicadaEm, rotulo: `Google — ${g.autor}, ${g.estrelas} ${pluralDe(g.estrelas, "estrela", "estrelas")}` });
+      lista.push({ frente: "google", causa: g.causaRaiz, em: g.publicadaEm, rotulo: `Google — ${g.autor}, ${g.estrelas} ${pluralDe(g.estrelas, "estrela", "estrelas")}`, href: "/google" });
     }
     return lista;
   }, [cases, responses, google]);
@@ -87,6 +88,19 @@ export default function CausaRaizCruzada() {
   }, [todos, agora, dias]);
 
   const maior = Math.max(1, ...linhas.map((l) => l.total));
+
+  /* A causa abre os registros dela, das quatro frentes, na mini janela (21/10/2026). */
+  function verRegistros(causa: string) {
+    const desde = (agora?.getTime() ?? 0) - dias * 86_400_000;
+    const lista = todos
+      .filter((r) => (r.causa ?? "").trim().toLowerCase() === causa.toLowerCase() && Date.parse(r.em) >= desde)
+      .sort((a, b) => b.em.localeCompare(a.em));
+    abrirJanelaDeCasos({
+      titulo: causa,
+      descricao: `Registros com esta causa nos últimos ${dias} dias, das quatro frentes.`,
+      linhas: lista.map((r) => ({ titulo: r.rotulo, detalhe: `${frenteDaOperacao(r.frente).nome} · ${r.em.slice(8, 10)}/${r.em.slice(5, 7)}/${r.em.slice(2, 4)}`, href: r.href })),
+    });
+  }
 
   async function abrir(causa: string) {
     setConfirmando(null);
@@ -152,13 +166,16 @@ export default function CausaRaizCruzada() {
           {linhas.slice(0, 10).map((l) => (
             <li key={l.causa}>
               <div className="mb-1 flex items-baseline justify-between gap-3 text-xs">
-                <span className="font-medium text-zinc-800">{l.causa}</span>
+                <button type="button" onClick={() => verRegistros(l.causa)} className="font-medium text-zinc-800 hover:text-violet-700 hover:underline" title="Ver os registros desta causa">
+                  {l.causa}
+                </button>
                 <span className="tabular-nums text-zinc-500">
                   {l.total} · {l.ultimos30} nos últimos 30 dias
                 </span>
               </div>
               <div
-                className="flex h-2.5 overflow-hidden rounded-full bg-zinc-100"
+                onClick={() => verRegistros(l.causa)}
+                className="flex h-2.5 cursor-pointer overflow-hidden rounded-full bg-zinc-100 hover:opacity-80"
                 role="img"
                 aria-label={FRENTES.filter((f) => l.porFrente[f]).map((f) => `${frenteDaOperacao(f).nome}: ${l.porFrente[f]}`).join(", ")}
               >

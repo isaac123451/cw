@@ -22,6 +22,7 @@ import {
   groupBy,
   isReclameAqui,
   isSocial,
+  casosDoRotulo,
 } from "@/lib/services/case.service";
 
 import {
@@ -47,6 +48,7 @@ import SurfaceCard from "@/components/shared/SurfaceCard";
 import BarList from "@/components/shared/BarList";
 import PeriodPicker from "@/components/shared/PeriodPicker";
 import TrendChart from "@/components/shared/TrendChart";
+import { abrirJanelaDeCasos } from "@/components/shared/JanelaDeCasos";
 import { pluralDe } from "@/lib/plural";
 import EsperaAsReclamacoes from "@/components/reclame-aqui/EsperaAsReclamacoes";
 
@@ -375,7 +377,17 @@ export default function AnalyticsOverview({
         title="Evolução histórica"
         description="Volume recebido e resolvido mês a mês, somando os canais."
       >
-        <TrendChart data={trend} height={240} />
+        <TrendChart
+          data={trend}
+          height={240}
+          onPonto={(i) =>
+            abrirJanelaDeCasos({
+              titulo: `Recebidas · ${trend[i]?.label ?? ""}`,
+              descricao: "Ocorrências abertas no mês, de todos os canais do filtro.",
+              casos: noPeriodo.filter((item) => item.createdAt.slice(0, 7) === trend[i]?.month),
+            })
+          }
+        />
       </SurfaceCard>
 
       {/* Produtividade */}
@@ -630,9 +642,7 @@ export default function AnalyticsOverview({
           <BarList
             data={byCategory}
             limit={8}
-            hrefDe={(categoria) =>
-              `/reclame-aqui?categoria=${encodeURIComponent(categoria)}`
-            }
+            aoClicar={(categoria) => abrirJanelaDeCasos({ titulo: categoria, descricao: "Ocorrências desta categoria no período.", casos: casosDoRotulo(noPeriodo, "category", categoria) })}
           />
         </SurfaceCard>
 
@@ -644,9 +654,7 @@ export default function AnalyticsOverview({
             data={bySubcategory}
             limit={8}
             color="#0EA5E9"
-            hrefDe={(sub) =>
-              `/reclame-aqui?busca=${encodeURIComponent(sub)}`
-            }
+            aoClicar={(sub) => abrirJanelaDeCasos({ titulo: sub, descricao: "Ocorrências desta subcategoria no período.", casos: casosDoRotulo(noPeriodo, "subcategory", sub) })}
           />
         </SurfaceCard>
 
@@ -658,9 +666,7 @@ export default function AnalyticsOverview({
             data={byStatus}
             limit={8}
             color="#F59E0B"
-            hrefDe={(status) =>
-              `/reclame-aqui?status=${encodeURIComponent(status)}`
-            }
+            aoClicar={(status) => abrirJanelaDeCasos({ titulo: status, descricao: "Ocorrências nesta etapa, do período.", casos: casosDoRotulo(noPeriodo, "status", status) })}
           />
         </SurfaceCard>
 

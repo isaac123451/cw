@@ -277,16 +277,28 @@ function TabelaDaEvolucao({ pontos, escala }: { pontos: PontoDaEvolucao[]; escal
     <div className="max-h-[380px] overflow-auto rounded-xl ring-1 ring-inset ring-zinc-200">
       <table className={`w-full text-sm ${doMes ? "min-w-[880px]" : "min-w-[720px]"}`}>
         <thead className="sticky top-0 z-[1] bg-zinc-50">
+          {/* Os grupos (21/10/2026): o que aconteceu nos dias é informativo; a conta do mês é pela reclamação. */}
+          <tr className="border-b border-zinc-200/70 text-left text-[11px]">
+            <th colSpan={3} className="pb-1 pl-3 pr-2 pt-2 font-semibold uppercase tracking-wide text-zinc-500">Nota</th>
+            <th colSpan={3} className="pb-1 pt-2 pl-2 pr-2 text-right font-normal text-zinc-400">
+              <span className="font-semibold uppercase tracking-wide">Movimento</span> · só informativo
+            </th>
+            {doMes && (
+              <th colSpan={2} className="pb-1 pt-2 pl-2 pr-3 text-right font-normal text-zinc-500">
+                <span className="font-semibold uppercase tracking-wide">Conta do mês</span> · pela reclamação
+              </th>
+            )}
+          </tr>
           <tr className="text-left text-[11px] uppercase tracking-wide text-zinc-400">
             <th className="py-2 pl-3 pr-2 font-semibold">{NOME_DO_PERIODO[escala]}</th>
             <th className="px-2 py-2 text-right font-semibold" title="A janela que termina no fim do período — a nota que vem na virada do mês">Prévia</th>
             <th className="px-2 py-2 text-right font-semibold" title="Os meses fechados, como estavam no fim do período — a nota do portal">Atual</th>
-            <th className="px-2 py-2 text-right font-semibold" title="Respostas publicadas no período e quanto somaram à prévia">Respostas</th>
-            <th className="px-2 py-2 text-right font-semibold" title="Avaliações feitas no período (pela data da avaliação), a média das notas e quanto somaram à prévia">Avaliações</th>
+            <th className="px-2 py-2 text-right font-semibold" title="Movimento, só informativo: respostas publicadas no período (de qualquer reclamação) e quanto somaram à prévia">Respostas</th>
+            <th className="px-2 py-2 text-right font-semibold" title="Movimento, só informativo: avaliações feitas no período (de qualquer reclamação), a média delas e quanto mexeram na prévia — a nota muda no dia em que a avaliação chega">Avaliações</th>
             <th className="px-2 py-2 text-right font-semibold">Novas</th>
             {doMes && (
               <>
-                <th className="px-2 py-2 text-right font-semibold" title="A mesma conta dos Gráficos e do Analytics: resposta das reclamações que chegaram no mês; nota do consumidor, solução e voltaria das avaliações feitas no mês">Nota do mês</th>
+                <th className="px-2 py-2 text-right font-semibold" title="A conta do mês, a mesma dos Gráficos e do Analytics: as reclamações que chegaram no mês, com a resposta e a avaliação de cada uma, mesmo vindas depois">Nota do mês</th>
                 <th className="py-2 pl-2 pr-3 text-right font-semibold" title="Das reclamações abertas no mês, as que ainda estão sem resposta">Sem resposta</th>
               </>
             )}

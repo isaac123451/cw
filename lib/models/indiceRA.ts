@@ -304,6 +304,11 @@ export function evolucaoDoIndice(
   return periodos.map((p) => {
     const agora = notasNoDia(casos, meses, p.fim);
     const vespera = mais(p.inicio, -1);
+    /*
+      O movimento do período: as avaliações feitas nele, ao lado do quanto
+      mexeram na prévia — o efeito acontece no dia em que a avaliação chega.
+      É informativo; a conta do mês (`doMes`) é pela reclamação (21/10/2026).
+    */
     const avaliadasNoPeriodo = casos.filter((c) => c.evaluated && noPeriodo(c.evaluatedAt, p.inicio, p.fim));
     const valem = avaliadasNoPeriodo.filter((c) => !c.scoreDisregarded);
 

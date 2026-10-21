@@ -24,6 +24,7 @@ import StatTile from "@/components/shared/StatTile";
 import SurfaceCard from "@/components/shared/SurfaceCard";
 import VazioComSaida from "@/components/shared/VazioComSaida";
 import BarList from "@/components/shared/BarList";
+import { abrirJanelaDeCasos } from "@/components/shared/JanelaDeCasos";
 
 import NpsTrendChart from "@/components/nps/NpsTrendChart";
 import NpsPorCiclo from "@/components/nps/NpsPorCiclo";
@@ -158,6 +159,20 @@ export default function NpsAnalisePage() {
     () => bySegment(noPeriodo),
     [noPeriodo]
   );
+
+  /* Cada gráfico abre as respostas dele na mini janela (21/10/2026). */
+  const abrirRespostas = (titulo: string, lista: typeof noPeriodo) =>
+    abrirJanelaDeCasos({
+      titulo,
+      descricao: "Respostas do NPS no recorte da tela — clique para abrir a ficha.",
+      linhas: [...lista]
+        .sort((a, b) => b.respondedAt.localeCompare(a.respondedAt))
+        .map((r) => ({
+          titulo: `Nota ${r.score} · ${r.customerName || r.customer}`,
+          detalhe: [diaNaOperacao(r.respondedAt).split("-").reverse().join("/"), r.rootCause, r.status, r.comment.trim()].filter(Boolean).join(" · "),
+          href: `/nps/${r.id}`,
+        })),
+    });
 
   const causas = useMemo(
     () => byRootCause(noPeriodo),
@@ -435,7 +450,10 @@ export default function NpsAnalisePage() {
               }
             >
 
-              <NpsTrendChart dados={tendencia} />
+              <NpsTrendChart
+                dados={tendencia}
+                onPonto={(i) => abrirRespostas(`Respostas de ${tendencia[i]?.rotulo ?? ""}`, noPeriodo.filter((r) => diaNaOperacao(r.respondedAt).slice(0, 7) === tendencia[i]?.chave))}
+              />
 
               {/*
                 O volume ao lado da nota.
@@ -523,7 +541,7 @@ export default function NpsAnalisePage() {
                 hint="Só conta quem foi classificado. Comentário sem causa marcada não entra em lugar nenhum — é por isso que o aviso abaixo existe."
               >
 
-                <BarList data={causas} limit={8} />
+                <BarList data={causas} limit={8} aoClicar={(causa) => abrirRespostas(causa, noPeriodo.filter((r) => r.rootCause === causa))} />
 
                 {semCausa > 0 && (
                   <p className="mt-4 flex items-start gap-2 rounded-xl bg-amber-50 px-3.5 py-2.5 text-xs text-amber-800 ring-1 ring-inset ring-amber-100">
@@ -560,6 +578,7 @@ export default function NpsAnalisePage() {
                   data={tipos}
                   limit={8}
                   color="#0EA5E9"
+                  aoClicar={(tipo) => abrirRespostas(tipo, noPeriodo.filter((r) => (r.kind ?? "Não classificado") === tipo))}
                 />
               </SurfaceCard>
 

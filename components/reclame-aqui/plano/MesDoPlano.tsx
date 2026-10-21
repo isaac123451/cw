@@ -5,7 +5,9 @@ import Link from "next/link";
 import { CheckCircle2, CircleAlert, OctagonAlert } from "lucide-react";
 
 import SurfaceCard from "@/components/shared/SurfaceCard";
+import { abrirJanelaDeCasos } from "@/components/shared/JanelaDeCasos";
 
+import type { Case } from "@/lib/models/case";
 import type { CicloDoPlano, PlanoDoMes, ResultadoDoMes } from "@/lib/models/planoDeAcao";
 import { ROTULO_DA_META } from "@/lib/models/planoDeAcao";
 import { nomeDoMes, somarMeses, ultimoDia } from "@/lib/models/previsaoDeReclamacoes";
@@ -171,55 +173,167 @@ function situacao(c: CicloDoPlano) {
   return atras ? { rotulo: "abaixo da meta", classe: "text-rose-700" } : { rotulo: "meta cumprida", classe: "text-emerald-700" };
 }
 
-function Par({ feito, meta, inverso = false, futuro }: { feito: number; meta: number | null; inverso?: boolean; futuro: boolean }) {
+function Par({
+  feito,
+  meta,
+  inverso = false,
+  futuro,
+  casos,
+  titulo,
+  descricao,
+}: {
+  feito: number;
+  meta: number | null;
+  inverso?: boolean;
+  futuro: boolean;
+  casos: Case[];
+  titulo: string;
+  descricao: string;
+}) {
   if (meta === null) return <td className="px-3 py-2 text-right text-zinc-400">—</td>;
   const ok = inverso ? feito <= meta : feito >= meta;
   return (
     <td className="px-3 py-2 text-right tabular-nums">
-      {futuro ? <span className="text-zinc-400">meta {meta}</span> : (
+      {futuro ? (
+        <span className="text-zinc-400">meta {meta}</span>
+      ) : (
         <span className={ok ? "text-zinc-800" : "text-amber-700"}>
-          {feito} <span className="text-zinc-400">/ {inverso ? `máx. ${meta}` : meta}</span>
+          {feito > 0 ? (
+            <button
+              type="button"
+              onClick={() => abrirJanelaDeCasos({ titulo, descricao, casos })}
+              className="rounded px-1 font-medium hover:bg-violet-50 hover:text-violet-700"
+              title="Ver os casos"
+            >
+              {feito}
+            </button>
+          ) : (
+            <span className="px-1">{feito}</span>
+          )}
+          <span className="text-zinc-400">/ {inverso ? `máx. ${meta}` : meta}</span>
         </span>
       )}
     </td>
   );
 }
 
-/** As metas de cada ciclo do mês contra o que aconteceu (para o mês corrente, as do plano do 1º dia). */
+const ROTULO_DO_FEITO = {
+  recebidas: ["Reclamações que chegaram", "Reclamações abertas no ciclo."],
+  respostas: ["Respostas publicadas", "Respostas publicadas no ciclo, de qualquer reclamação da janela."],
+  avaliacoes: ["Avaliações conseguidas", "Avaliações que chegaram no ciclo, de qualquer reclamação da janela — é o que a meta do plano pede."],
+  naoResolvidas: ["Avaliadas como não resolvidas", "Avaliações do ciclo em que o consumidor marcou \"não resolvida\"."],
+} as const;
+
+/**
+ * As metas de cada ciclo do mês contra o que aconteceu (para o mês corrente,
+ * as do plano do 1º dia). Reorganizado em 21/10/2026: a regra do "feito"
+ * escrita em cima, o total do mês embaixo e cada número abre os casos.
+ */
 export function CiclosDoMes({ ciclos, temSolucao, hoje }: { ciclos: CicloDoPlano[]; temSolucao: boolean; hoje: string }) {
   if (ciclos.length === 0) return null;
   void hoje;
+  const iniciados = ciclos.filter((c) => c.quando !== "futuro");
+  const soma = (k: "recebidas" | "respostas" | "avaliacoes" | "naoResolvidas", lado: "feito" | "meta") =>
+    (lado === "feito" ? iniciados : ciclos).reduce((s, c) => s + (lado === "feito" ? c.feito[k] : (c.meta[k] ?? 0)), 0);
+  const todos = (k: "recebidas" | "respostas" | "avaliacoes" | "naoResolvidas") => iniciados.flatMap((c) => c.casos[k]);
+  const mes = ciclos[0].ciclo.inicio.slice(0, 7);
+  const nomeDoMesCurto = nomeDoMes(mes as `${number}-${number}`, true);
+
   return (
     <div className="mt-5">
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">Por ciclo — feito / meta</p>
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[620px] text-sm">
-          <thead>
+      <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Por ciclo — feito / meta</p>
+        <p className="text-xs text-zinc-500">
+          Feito = o que se conseguiu no ciclo: respostas publicadas e avaliações que chegaram nele. A nota do mês é outra conta, pela reclamação. Clique num número para ver os casos.
+        </p>
+      </div>
+      <div className="overflow-x-auto rounded-xl ring-1 ring-inset ring-zinc-200">
+        <table className="w-full min-w-[640px] text-sm">
+          <thead className="bg-zinc-50">
             <tr className="text-left text-[11px] uppercase tracking-wide text-zinc-400">
-              <th className="py-2 pr-3 font-semibold">Ciclo</th>
-              <th className="px-3 py-2 text-right font-semibold">Chegaram</th>
-              <th className="px-3 py-2 text-right font-semibold">Respostas</th>
-              <th className="px-3 py-2 text-right font-semibold">Avaliações</th>
-              {temSolucao && <th className="px-3 py-2 text-right font-semibold">Não resolvidas</th>}
-              <th className="py-2 pl-3 font-semibold">Situação</th>
+              <th className="py-2 pl-3 pr-3 font-semibold">Ciclo</th>
+              <th className="px-3 py-2 text-right font-semibold" title="Reclamações abertas no ciclo, contra a previsão">Chegaram</th>
+              <th className="px-3 py-2 text-right font-semibold" title="Respostas publicadas no ciclo, contra a meta">Respostas</th>
+              <th className="px-3 py-2 text-right font-semibold" title="Avaliações que chegaram no ciclo, contra a meta do plano">Avaliações</th>
+              {temSolucao && <th className="px-3 py-2 text-right font-semibold" title="Avaliações do ciclo marcadas como não resolvidas — quanto menos, melhor">Não resolvidas</th>}
+              <th className="py-2 pl-3 pr-3 font-semibold">Situação</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-100">
             {ciclos.map((c) => {
               const s = situacao(c);
               const futuro = c.quando === "futuro";
+              const par = (k: "respostas" | "avaliacoes" | "naoResolvidas", inverso = false) => (
+                <Par
+                  feito={c.feito[k]}
+                  meta={c.meta[k]}
+                  inverso={inverso}
+                  futuro={futuro}
+                  casos={c.casos[k]}
+                  titulo={`${ROTULO_DO_FEITO[k][0]} · ${c.ciclo.rotulo}`}
+                  descricao={ROTULO_DO_FEITO[k][1]}
+                />
+              );
               return (
                 <tr key={c.ciclo.id} className={c.quando === "atual" ? "bg-violet-50/40" : ""}>
-                  <td className="py-2 pr-3 text-zinc-800">{c.ciclo.rotulo}</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{futuro ? <span className="text-zinc-400">previstas {c.meta.recebidas}</span> : <span>{c.feito.recebidas} <span className="text-zinc-400">/ prev. {c.meta.recebidas}</span></span>}</td>
-                  <Par feito={c.feito.respostas} meta={c.meta.respostas} futuro={futuro} />
-                  <Par feito={c.feito.avaliacoes} meta={c.meta.avaliacoes} futuro={futuro} />
-                  {temSolucao && <Par feito={c.feito.naoResolvidas} meta={c.meta.naoResolvidas} inverso futuro={futuro} />}
-                  <td className={`py-2 pl-3 text-xs font-medium ${s.classe}`}>{s.rotulo}</td>
+                  <td className="py-2 pl-3 pr-3 text-zinc-800">
+                    {c.ciclo.rotulo}
+                    {c.quando === "atual" && <span className="ml-1.5 text-[11px] text-violet-700">em curso</span>}
+                  </td>
+                  <td className="px-3 py-2 text-right tabular-nums">
+                    {futuro ? (
+                      <span className="text-zinc-400">previstas {c.meta.recebidas}</span>
+                    ) : (
+                      <span>
+                        {c.feito.recebidas > 0 ? (
+                          <button
+                            type="button"
+                            onClick={() => abrirJanelaDeCasos({ titulo: `${ROTULO_DO_FEITO.recebidas[0]} · ${c.ciclo.rotulo}`, descricao: ROTULO_DO_FEITO.recebidas[1], casos: c.casos.recebidas })}
+                            className="rounded px-1 font-medium hover:bg-violet-50 hover:text-violet-700"
+                            title="Ver os casos"
+                          >
+                            {c.feito.recebidas}
+                          </button>
+                        ) : (
+                          <span className="px-1">0</span>
+                        )}
+                        <span className="text-zinc-400">/ prev. {c.meta.recebidas}</span>
+                      </span>
+                    )}
+                  </td>
+                  {par("respostas")}
+                  {par("avaliacoes")}
+                  {temSolucao && par("naoResolvidas", true)}
+                  <td className={`py-2 pl-3 pr-3 text-xs font-medium ${s.classe}`}>{s.rotulo}</td>
                 </tr>
               );
             })}
           </tbody>
+          <tfoot className="border-t border-zinc-200 bg-zinc-50/70 font-medium">
+            <tr>
+              <td className="py-2 pl-3 pr-3 text-zinc-700">Total de {nomeDoMesCurto}</td>
+              {(
+                [
+                  ["recebidas", false],
+                  ["respostas", false],
+                  ["avaliacoes", false],
+                  ...(temSolucao ? ([["naoResolvidas", true]] as const) : []),
+                ] as const
+              ).map(([k, inverso]) => (
+                <Par
+                  key={k}
+                  feito={soma(k, "feito")}
+                  meta={k === "naoResolvidas" && ciclos.every((c) => c.meta.naoResolvidas === null) ? null : soma(k, "meta")}
+                  inverso={inverso}
+                  futuro={iniciados.length === 0}
+                  casos={todos(k)}
+                  titulo={`${ROTULO_DO_FEITO[k][0]} · ${nomeDoMesCurto}`}
+                  descricao={ROTULO_DO_FEITO[k][1]}
+                />
+              ))}
+              <td className="py-2 pl-3 pr-3 text-xs text-zinc-500">{iniciados.length < ciclos.length ? "até o ciclo em curso" : ""}</td>
+            </tr>
+          </tfoot>
         </table>
       </div>
     </div>

@@ -10,6 +10,8 @@ import { pluralDe } from "@/lib/plural";
 interface Props {
   dados: PontoDeTendencia[];
   height?: number;
+  /** Clique no mês: abre as respostas dele na mini janela (21/10/2026). */
+  onPonto?: (index: number) => void;
 }
 
 /** Largura de partida; o desenho segue a largura medida (1.86, `useLargura`). */
@@ -50,6 +52,7 @@ const LARGURA_POR_MES = 68;
 export default function NpsTrendChart({
   dados,
   height = 240,
+  onPonto,
 }: Props) {
 
   const [ativo, setAtivo] = useState<number | null>(null);
@@ -264,6 +267,8 @@ export default function NpsTrendChart({
             height={plotHeight}
             fill="transparent"
             onMouseEnter={() => setAtivo(i)}
+            onClick={onPonto ? () => onPonto(i) : undefined}
+            className={onPonto ? "cursor-pointer" : undefined}
           />
         ))}
 
@@ -271,7 +276,7 @@ export default function NpsTrendChart({
 
       {ponto && (
         <div
-          className="pointer-events-none absolute top-1 z-10 rounded-xl border border-zinc-200 bg-white/95 px-3 py-2 text-xs shadow-lg backdrop-blur"
+          className="pointer-events-none absolute top-1 z-10 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs shadow-lg"
           style={
             /* Junto do ponto, virando para o outro lado perto da borda — o gráfico pode ser mais largo que a tela. */
             ativo !== null && toX(ativo) > WIDTH - 200

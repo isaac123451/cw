@@ -23,6 +23,7 @@ import StatTile from "@/components/shared/StatTile";
 import SurfaceCard from "@/components/shared/SurfaceCard";
 import LinhasCarregando from "@/components/shared/LinhasCarregando";
 import BarList from "@/components/shared/BarList";
+import { abrirJanelaDeCasos } from "@/components/shared/JanelaDeCasos";
 import { ConfirmDelete } from "@/components/shared/Modal";
 
 import ImpactForm from "@/components/impacto/ImpactForm";
@@ -130,6 +131,20 @@ export default function ImpactoPage() {
     };
 
   }, [records]);
+
+  /* A barra abre os lançamentos dela na mini janela (21/10/2026). */
+  const abrirLancamentos = (titulo: string, lista: ImpactRecord[]) =>
+    abrirJanelaDeCasos({
+      titulo,
+      descricao: "Lançamentos de impacto desta barra, do mais recente ao mais antigo.",
+      linhas: [...lista]
+        .sort((a, b) => b.date.localeCompare(a.date))
+        .map((r) => ({
+          titulo: `${money.format(r.amount)} · ${r.company}`,
+          detalhe: [`${r.date.slice(8, 10)}/${r.date.slice(5, 7)}/${r.date.slice(2, 4)}`, r.type, r.description, r.owner].filter(Boolean).join(" · "),
+          href: r.relatedCase ? `/reclame-aqui/${encodeURIComponent(r.relatedCase)}` : undefined,
+        })),
+    });
 
   const byType = useMemo(() => {
 
@@ -321,14 +336,14 @@ export default function ImpactoPage() {
             title="Impacto por tipo"
             description="Distribuição do valor movimentado."
           >
-            <BarList data={byType} />
+            <BarList data={byType} aoClicar={(tipo) => abrirLancamentos(tipo, records.filter((r) => r.type === tipo))} />
           </SurfaceCard>
 
           <SurfaceCard
             title="Impacto por conta"
             description="Onde a operação gerou mais retorno — por cliente ou estabelecimento."
           >
-            <BarList data={byCompany} color="#22C55E" />
+            <BarList data={byCompany} color="#22C55E" aoClicar={(conta) => abrirLancamentos(conta, records.filter((r) => r.company === conta && r.amount > 0))} />
           </SurfaceCard>
 
         </div>
