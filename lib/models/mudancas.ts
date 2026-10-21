@@ -53,6 +53,16 @@ export const REVISAO = {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- passe a limpo (21/10) ---------------- */
   {
+    id: "graficos-e-carga-21-10",
+    dia: "2026-10-21",
+    tipo: "melhoria",
+    frente: "plataforma",
+    titulo: "Gráficos mais limpos e o NPS chegando 9 vezes menor",
+    texto:
+      "Nos gráficos de linha, a régua do eixo agora cai em números redondos (0, 10, 20, 30, 40 — antes 9, 19, 28, 37), e o valor do primeiro ponto não fica mais em cima do número do eixo (\"5,8 d\" sobre \"9 d\" no Tempo de resposta). A mini janela dos gráficos abre no meio da tela, longe dos lembretes da Agenda. As respostas do NPS, que a tela pede ao abrir o Meu dia e o NPS, vinham com 2,6 MB sem compressão; agora vêm com 288 kB. E a cobrança que esperava a avaliação fecha quando o cliente avalia no mesmo dia.",
+    href: "/reclame-aqui/graficos",
+  },
+  {
     id: "comparar-ias-no-assistente",
     dia: "2026-10-21",
     tipo: "novo",

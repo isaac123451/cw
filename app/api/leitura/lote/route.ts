@@ -1,3 +1,4 @@
+import { jsonComprimido } from "@/lib/api/jsonComprimido";
 import { getSession } from "@/lib/auth/session";
 import { LEITURAS, type NomeDaLeitura } from "@/lib/leituras/registro";
 
@@ -37,5 +38,5 @@ export async function POST(request: Request) {
     })
   );
 
-  return Response.json({ respostas }, { headers: { "Cache-Control": "no-store" } });
+  return jsonComprimido(request, { respostas }, { headers: { "Cache-Control": "no-store" } });
 }

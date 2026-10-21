@@ -73,12 +73,19 @@ export default function MultiLineChart({
 
   const plot = height - AXIS - PAD_T;
 
-  const ceiling =
-    max ??
-    Math.max(
-      ...series.flatMap((item) => item.values),
-      1
-    );
+  /*
+    O topo do eixo arredondado (21/10/2026): era o maior valor exato, e a
+    régua saía 37 d, 28 d, 19 d, 9 d. Agora o passo é 1, 2, 2,5 ou 5 vezes
+    uma potência de dez, e as quatro marcas caem em número redondo.
+  */
+  const maiorValor = Math.max(...series.flatMap((item) => item.values), 1);
+  const passoRedondo = (() => {
+    const bruto = maiorValor / 4;
+    const potencia = 10 ** Math.floor(Math.log10(bruto));
+    const fator = [1, 2, 2.5, 5, 10].find((f) => f * potencia >= bruto) ?? 10;
+    return fator * potencia;
+  })();
+  const ceiling = max ?? passoRedondo * 4;
 
   const inner = WIDTH - PAD_L - PAD_R;
 
@@ -209,9 +216,7 @@ export default function MultiLineChart({
 
               const y = PAD_T + plot * ratio;
 
-              const value = Math.round(
-                ceiling * (1 - ratio)
-              );
+              const value = Math.round(ceiling * (1 - ratio) * 10) / 10;
 
               return (
                 <g key={ratio}>
@@ -232,7 +237,7 @@ export default function MultiLineChart({
                     fontSize={10}
                     fill="#C7C7CC"
                   >
-                    {value}
+                    {br(value)}
                     {suffix}
                   </text>
 
@@ -295,11 +300,16 @@ export default function MultiLineChart({
               series.length === 1 &&
               series[0].values.map((value, index) => (
 
+                /*
+                  O valor das pontas não fica centrado (21/10/2026): o primeiro
+                  ponto encosta no eixo, e "5,8 d" caía em cima do "9 d" da
+                  régua. Nas pontas, o valor abre para dentro do gráfico.
+                */
                 <text
                   key={`v-${index}`}
-                  x={toX(index)}
+                  x={toX(index) + (labels.length > 1 && index === 0 ? 4 : labels.length > 1 && index === labels.length - 1 ? -4 : 0)}
                   y={toY(value) - 9}
-                  textAnchor="middle"
+                  textAnchor={labels.length > 1 && index === 0 ? "start" : labels.length > 1 && index === labels.length - 1 ? "end" : "middle"}
                   fontSize={10}
                   fontWeight={600}
                   fill={series[0].color}

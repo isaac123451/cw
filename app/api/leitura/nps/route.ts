@@ -1,3 +1,4 @@
+import { jsonComprimido } from "@/lib/api/jsonComprimido";
 import { tryRole } from "@/lib/auth/guard";
 import { lerRespostasDoNps } from "@/lib/services/npsLista.service";
 
@@ -25,5 +26,5 @@ export async function GET(request: Request) {
   /* Um minuto de folga: o que gravou no meio da leitura anterior não escapa. */
   const respostas = await lerRespostasDoNps(ctx.prisma, quando && Number.isFinite(quando.getTime()) ? { desde: new Date(quando.getTime() - 60_000) } : {});
 
-  return Response.json({ respostas, agora: agora.toISOString() }, { headers: { "Cache-Control": "no-store" } });
+  return jsonComprimido(request, { respostas, agora: agora.toISOString() }, { headers: { "Cache-Control": "no-store" } });
 }

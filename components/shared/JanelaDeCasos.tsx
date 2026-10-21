@@ -62,8 +62,8 @@ export default function JanelaDeCasos() {
       setConteudo((e as CustomEvent<ConteudoDaJanela>).detail);
       setAjustes({});
       setErro(null);
-      /* Abre sempre no mesmo canto, à direita, longe do menu. */
-      setPos((p) => p ?? { x: Math.max(16, window.innerWidth - 440), y: 88 });
+      /* Abre no meio da tela: o canto direito é dos lembretes da Agenda, que cobririam a janela (21/10/2026). */
+      setPos((p) => p ?? { x: Math.max(16, Math.round((window.innerWidth - 420) / 2)), y: 88 });
     };
     const esc = (e: KeyboardEvent) => e.key === "Escape" && setConteudo(null);
     window.addEventListener(EVENTO, abrir);
