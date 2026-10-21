@@ -2577,3 +2577,24 @@ model AprendizadoDaIA {
 
   @@index([ativo, atualizadoEm])
 }
+
+/// Erro não tratado da extensão (21/10/2026): "veja erros, bugs, problemas
+/// de desempenho". Antes, quando algo quebrava no Chrome — o painel, a
+/// leitura do WhatsApp, o vigia —, ninguém ficava sabendo. O mesmo erro
+/// soma (`vezes`), não duplica. Sem dado de cliente: só onde, a mensagem
+/// e a pilha, com documento e contato tirados.
+model ErroDaExtensao {
+  id        String   @id @default(cuid())
+  /// onde + mensagem + versão, resumidos — o mesmo erro de novo soma.
+  chave     String   @unique
+  onde      String
+  mensagem  String
+  pilha     String?
+  versao    String
+  vezes     Int      @default(1)
+  quem      String?
+  primeiraEm DateTime @default(now())
+  ultimaEm   DateTime @default(now())
+
+  @@index([ultimaEm])
+}

@@ -11,6 +11,30 @@
 
   const CW = {};
 
+  /*
+    O erro não tratado de um script da extensão vai para a plataforma
+    (21/10/2026). Só o que nasce nos nossos arquivos — o erro da página do
+    WhatsApp ou do portal não é nosso. Uma vez por erro por aba.
+  */
+  const relatados = new Set();
+  function relatar(mensagem, pilha) {
+    const texto = String(mensagem ?? "").slice(0, 500);
+    if (!texto || relatados.has(texto) || relatados.size > 20) return;
+    relatados.add(texto);
+    try {
+      chrome.runtime.sendMessage({ tipo: "erroDaExtensao", onde: location.hostname, mensagem: texto, pilha: String(pilha ?? "").slice(0, 2000) }, () => void chrome.runtime.lastError);
+    } catch {
+      /* A extensão foi recarregada: não há a quem relatar. */
+    }
+  }
+  window.addEventListener("error", (evento) => {
+    if (String(evento?.filename ?? "").startsWith("chrome-extension://")) relatar(evento.message, evento.error?.stack);
+  });
+  window.addEventListener("unhandledrejection", (evento) => {
+    const pilha = String(evento?.reason?.stack ?? "");
+    if (pilha.includes("chrome-extension://")) relatar(evento.reason?.message ?? String(evento.reason), pilha);
+  });
+
   /* ---------- conversa com o service worker ---------- */
 
   CW.enviar = (mensagem) =>

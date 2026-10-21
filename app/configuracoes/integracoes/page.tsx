@@ -16,6 +16,7 @@ import MainLayout from "@/components/layout/MainLayout";
 import PageHeading from "@/components/shared/PageHeading";
 import SurfaceCard from "@/components/shared/SurfaceCard";
 import IaCard from "@/components/configuracoes/IaCard";
+import ErrosDaExtensaoCard from "@/components/configuracoes/ErrosDaExtensaoCard";
 import WootricCard from "@/components/configuracoes/WootricCard";
 import { notifyGlobal } from "@/lib/context/ToastContext";
 
@@ -285,6 +286,9 @@ export default function IntegracoesPage() {
 
         {/* O Wootric logo depois: é o outro serviço que a operação sente no dia. */}
         <WootricCard />
+
+        {/* O que quebrou na extensão (21/10/2026). */}
+        <ErrosDaExtensaoCard />
 
         {loading ? (
 

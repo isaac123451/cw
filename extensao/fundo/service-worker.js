@@ -75,6 +75,7 @@ const CAMINHOS = {
   transcrever: "/api/extensao/transcrever",
   etiquetasLista: "/api/extensao/etiquetas-lista",
   raPainel: "/api/extensao/ra-painel",
+  erro: "/api/extensao/erro",
   raSegmento: "/api/extensao/ra-segmento",
   esperaWhatsapp: "/api/extensao/espera-whatsapp",
   assistente: "/api/extensao/assistente",
@@ -377,7 +378,39 @@ async function chamar(caminho, parametros = {}, corpo) {
    MENSAGENS
 ============================================================ */
 
+/**
+ * Relata à plataforma o erro não tratado (21/10/2026): "veja erros, bugs".
+ * O mesmo erro só uma vez por vida do service worker — o servidor soma as
+ * repetições de outras sessões. Relatar nunca derruba nada.
+ */
+const errosRelatados = new Set();
+function relatarErro({ onde, mensagem, pilha }) {
+  const texto = String(mensagem ?? "").slice(0, 500);
+  if (!texto) return;
+  const chave = `${onde}|${texto}`;
+  if (errosRelatados.has(chave) || errosRelatados.size > 50) return;
+  errosRelatados.add(chave);
+  chamar(CAMINHOS.erro, {}, { onde, mensagem: texto, pilha: String(pilha ?? "").slice(0, 2000), versao: chrome.runtime.getManifest().version }).catch(() => {});
+}
+
+/* No Chrome, `self` é o service worker; na conferência (Node), não existe. */
+const escopo = typeof self !== "undefined" && typeof self.addEventListener === "function" ? self : null;
+escopo?.addEventListener("error", (evento) => {
+  relatarErro({ onde: "service-worker", mensagem: evento?.message, pilha: evento?.error?.stack });
+});
+escopo?.addEventListener("unhandledrejection", (evento) => {
+  const motivo = evento?.reason;
+  /* Falha de rede ou de sessão não é defeito da extensão: só o que é erro de código. */
+  if (motivo?.codigo) return;
+  relatarErro({ onde: "service-worker", mensagem: motivo?.message ?? String(motivo), pilha: motivo?.stack });
+});
+
 async function tratar(mensagem) {
+
+  if (mensagem?.tipo === "erroDaExtensao") {
+    relatarErro({ onde: String(mensagem.onde ?? "conteudo").slice(0, 80), mensagem: mensagem.mensagem, pilha: mensagem.pilha });
+    return { ok: true };
+  }
 
   if (mensagem?.tipo === "config") {
     const config = await lerConfig();

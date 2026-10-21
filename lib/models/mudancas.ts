@@ -63,6 +63,25 @@ export const MUDANCAS: Mudanca[] = [
     href: "/retencao",
   },
   {
+    id: "erros-da-extensao",
+    dia: "2026-10-21",
+    tipo: "novo",
+    frente: "extensao",
+    titulo: "Erros da extensão aparecem na plataforma",
+    texto:
+      "Quando algo quebra na extensão — no WhatsApp, no Reclame Aqui, no Slack ou no fundo —, o erro vai para Configurações → Integrações → Erros da extensão, com quantas vezes aconteceu, a última vez e a pilha. Sem dado de cliente. Antes ninguém ficava sabendo. Recarregue a extensão para valer.",
+    href: "/configuracoes/integracoes",
+  },
+  {
+    id: "conversas-com-nome",
+    dia: "2026-10-21",
+    tipo: "correcao",
+    frente: "extensao",
+    titulo: "Conversas guardadas com o nome do cliente",
+    texto:
+      "35 de 50 conversas guardavam o telefone ou um texto da tela do WhatsApp (\"clique para mostrar os dados do contato\", \"Conta comercial\") no lugar do nome — por isso a IA anotava \"conversa com +55 85…\". 37 ganharam o nome da ficha ligada ou do cumprimento; daqui em diante, a IA grava o nome quando o acha. O reparo de 09/10 também foi aplicado: 39 mensagens tiradas da conversa errada (todas com cópia na certa) e duas ações da IA desfeitas.",
+  },
+  {
     id: "ia-aprende-com-as-conversas",
     dia: "2026-10-21",
     tipo: "novo",
