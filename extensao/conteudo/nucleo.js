@@ -27,10 +27,12 @@
       /* A extensão foi recarregada: não há a quem relatar. */
     }
   }
-  window.addEventListener("error", (evento) => {
+  /* Nas conferências a janela é de mentira, sem addEventListener: lá não há o que relatar. */
+  const ouvir = typeof window.addEventListener === "function" ? window.addEventListener.bind(window) : () => {};
+  ouvir("error", (evento) => {
     if (String(evento?.filename ?? "").startsWith("chrome-extension://")) relatar(evento.message, evento.error?.stack);
   });
-  window.addEventListener("unhandledrejection", (evento) => {
+  ouvir("unhandledrejection", (evento) => {
     const pilha = String(evento?.reason?.stack ?? "");
     if (pilha.includes("chrome-extension://")) relatar(evento.reason?.message ?? String(evento.reason), pilha);
   });

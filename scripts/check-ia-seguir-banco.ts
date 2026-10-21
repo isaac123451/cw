@@ -260,6 +260,8 @@ async function identidade(prisma: NonNullable<ReturnType<typeof getPrisma>>, euI
     await prisma.acaoDaIA.deleteMany({
       where: { userId: euId, OR: [...casos, ...npss, ...conversas, ...tarefas].map((id) => ({ chave: { contains: id } })) },
     });
+    /* Rede de segurança (21/10/2026): uma anotação descartável sobrou na lista do Isaac. */
+    await prisma.acaoDaIA.deleteMany({ where: { OR: [{ titulo: { contains: "RA-ZZ-" } }, { titulo: { contains: "Descartável" } }] } });
     if (tarefas.length) await prisma.agendaTask.deleteMany({ where: { id: { in: tarefas } } });
     await prisma.agendaTask.deleteMany({ where: { caseId: { in: casos } } });
     if (conversas.length) await prisma.conversa.deleteMany({ where: { id: { in: conversas } } });

@@ -74,12 +74,27 @@ const NOS_VAMOS =
 const CLIENTE_VAI =
   /\b(?:vou|vamos|ja vou|irei|depois eu|mais tarde eu|amanha eu|assim que (?:eu )?(?:puder|der))\s+(?:te\s+|lhe\s+)?(?:mandar|enviar|passar|verificar|ver|olhar|conferir|testar|tentar|falar com|retornar|responder|separar|pegar|tirar (?:o |um )?print)\b|\bte\s+(?:mando|envio|passo|retorno|respondo|aviso|falo)\b|\bja\s+(?:te\s+)?(?:mando|envio|passo)\b/;
 
+/**
+ * O link sai da frase antes de ler data (21/10/2026): o "27/10" do lembrete
+ * "Retorno combinado com Gabriel" saiu dos números do link da reclamação.
+ */
+const semLinks = (t: string) => t.replace(/https?:\/\/\S+/g, " ");
+
+/**
+ * "Vou te enviar o link por aqui > https://…": a promessa de mandar algo
+ * já vem cumprida na mesma mensagem — o link está ali (21/10/2026).
+ */
+export function entregueNaMesmaMensagem(texto: string, frase: string) {
+  return /https?:\/\//.test(texto) && /\b(mand|envi|pass|segue|seguem)/.test(sem(frase));
+}
+
 function frasesQueCasam(texto: string, padrao: RegExp, diaDaMensagem: string) {
   const frases = texto.split(/(?<=[.!?\n])\s+/).map((f) => f.trim()).filter(Boolean);
   for (const frase of frases) {
     if (!padrao.test(sem(frase))) continue;
+    if (entregueNaMesmaMensagem(texto, frase)) continue;
     /* Com dia ou hora, quem cuida é o combinado/pedido com data — não duplica. */
-    const l = entenderLinha(frase, diaDaMensagem);
+    const l = entenderLinha(semLinks(frase), diaDaMensagem);
     if (l && (l.dueDate !== diaDaMensagem || l.time)) continue;
     return frase.length > 90 ? `${frase.slice(0, 89).trimEnd()}…` : frase;
   }
@@ -154,7 +169,8 @@ export function combinadoNaMensagem(texto: string, diaDaMensagem: string): { due
   const frases = texto.split(/(?<=[.!?\n])\s+/).map((f) => f.trim()).filter(Boolean);
   for (const frase of frases) {
     if (!PROMESSA.test(sem(frase))) continue;
-    const l = entenderLinha(frase, diaDaMensagem);
+    if (entregueNaMesmaMensagem(texto, frase)) continue;
+    const l = entenderLinha(semLinks(frase), diaDaMensagem);
     if (!l) continue;
     /* Sem dia nem hora ("vou verificar e te retorno") não é agendamento. */
     if (l.dueDate === diaDaMensagem && !l.time) continue;

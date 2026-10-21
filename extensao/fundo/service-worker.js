@@ -393,8 +393,8 @@ function relatarErro({ onde, mensagem, pilha }) {
   chamar(CAMINHOS.erro, {}, { onde, mensagem: texto, pilha: String(pilha ?? "").slice(0, 2000), versao: chrome.runtime.getManifest().version }).catch(() => {});
 }
 
-/* No Chrome, `self` é o service worker; na conferência (Node), não existe. */
-const escopo = typeof self !== "undefined" && typeof self.addEventListener === "function" ? self : null;
+/* No Chrome, `globalThis` é o service worker; na conferência (Node), não ouve evento nenhum. */
+const escopo = typeof globalThis.addEventListener === "function" ? globalThis : null;
 escopo?.addEventListener("error", (evento) => {
   relatarErro({ onde: "service-worker", mensagem: evento?.message, pilha: evento?.error?.stack });
 });

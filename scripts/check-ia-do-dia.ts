@@ -7,9 +7,9 @@
  * que pede ação, fechar só com um fato registrado depois que a atividade
  * nasceu, e a mensagem do Slack só quando é para a pessoa.
  */
-import { chaveDaAcao, ehParaMim, lembreteDoSlack, tarefaFeita, type MensagemDoSlack } from "../lib/models/iaDoDia";
+import { chaveDaAcao, ehMinha, ehParaMim, lembreteDoSlack, tarefaFeita, type MensagemDoSlack } from "../lib/models/iaDoDia";
 import { atividadeDoFeito, entenderComando } from "../lib/models/comandosDaIA";
-import { combinadosSemData, esperaDoCliente, promessaSemData } from "../lib/models/lembretesAutomaticos";
+import { combinadoNaMensagem, combinadosSemData, esperaDoCliente, promessaSemData } from "../lib/models/lembretesAutomaticos";
 import { leituraDaResposta } from "../lib/models/iaDoDia";
 
 let falhas = 0;
@@ -36,6 +36,10 @@ conferir("menção com o nome inteiro", ehParaMim(msg("oi"), "Carlos Isaac"), tr
 conferir("menção só com o primeiro nome", ehParaMim(msg("oi", { mencoes: ["@Carlos"] }), "Carlos Isaac"), true);
 conferir("conversa direta (canal D…) é sempre para mim", ehParaMim(msg("oi", { canal: "D0ABCDEF1", mencoes: [] }), "Carlos Isaac"), true);
 conferir("menção a outra pessoa não é", ehParaMim(msg("oi", { mencoes: ["@Thais Portela"] }), "Carlos Isaac"), false);
+/* 21/10/2026: "Responder no Slack — Carlos Isaac: como tá o programa de influenciadores?" para o próprio Carlos Isaac. */
+conferir("a minha mensagem na conversa direta não é para mim", ehParaMim(msg("como que ta o programa de influenciadores?", { canal: "D0ABCDEF1", autor: "Carlos Isaac" }), "Carlos Isaac"), false);
+conferir("autor com o mesmo nome e sobrenome é meu", ehMinha(msg("x", { autor: "carlos isaac santos" }), "Carlos Isaac"), true);
+conferir("outro Carlos não é meu", ehMinha(msg("x", { autor: "Carlos Petrutche" }), "Carlos Isaac"), false);
 conferir("canal sem menção não é", ehParaMim(msg("oi pessoal", { mencoes: [] }), "Carlos Isaac"), false);
 
 console.log("\n  SLACK — pede ação?\n");
@@ -55,6 +59,8 @@ const tarefa = (id: string, extra: Partial<Parameters<typeof tarefaFeita>[0]> = 
   createdAt: "2026-10-07T15:00:00.000Z",
   ...extra,
 });
+/* 21/10/2026: o caso já fechado não fecha o lembrete que nasceu depois — o serviço só passa casoEncerrado quando o fim veio depois. */
+conferir("caso que fechou depois do lembrete nascer fecha", tarefaFeita(tarefa("t1", { caseId: "c1" }), { casoEncerrado: true }), "o caso foi encerrado");
 conferir("retorno combinado: nossa mensagem no dia combinado fecha", tarefaFeita(tarefa("auto-conversa-m1"), { nossaMensagemEm: "2026-10-08T14:00:00.000Z" }), "você respondeu na conversa");
 conferir("retorno combinado: mensagem nossa antes do dia combinado não fecha", tarefaFeita(tarefa("auto-conversa-m1"), { nossaMensagemEm: "2026-10-07T16:00:00.000Z" }), null);
 conferir("retorno combinado: mensagem de antes do lembrete nascer não fecha", tarefaFeita(tarefa("auto-conversa-m1", { dueDate: "2026-10-07" }), { nossaMensagemEm: "2026-10-07T14:00:00.000Z" }), null);
@@ -94,6 +100,11 @@ console.log("\n  O COMBINADO SEM DATA — dos dois lados (09/10/2026)\n");
 {
   const D = "2026-10-09";
   conferir("nós: “vou verificar e te retorno” vira promessa", Boolean(promessaSemData("Vou verificar com o financeiro e te retorno", D)), true);
+  /* 21/10/2026: a promessa de mandar o link vinha com o link — e o "27/10" saiu dos números dele. */
+  const comLink = "Show, vou te enviar por aqui o link da reclamação para você ter um fácil acesso > https://www.reclameaqui.com.br/cardapio-web/x_27102026abc/";
+  conferir("promessa de mandar com o link na mesma mensagem já está cumprida", promessaSemData(comLink, D), null);
+  conferir("e o número do link não vira data de retorno", combinadoNaMensagem(comLink, D), null);
+  conferir("promessa de mandar sem o link continua promessa", Boolean(promessaSemData("Vou te enviar o link por aqui", D)), true);
   conferir("nós: “deixa eu ver aqui” vira promessa", Boolean(promessaSemData("Deixa eu ver aqui o que aconteceu", D)), true);
   conferir("nós: com dia e hora fica com o combinado com data", promessaSemData("Te ligo amanhã às 10h", D), null);
   conferir("nós: cumprimento não é promessa", promessaSemData("Bom dia! Tudo bem?", D), null);
@@ -144,6 +155,9 @@ console.log("\n  A LEITURA DA IA, CONFERIDA (09/10/2026)\n");
   conferir("pedido de cancelamento anota mesmo sem outra novidade", leituraDaResposta({ ...boa, vale_anotar: false, cancelamento: "pediu" }, ["reclamacao"], D).anotar, true);
   conferir("de outra pessoa: o cancelamento não vale", leituraDaResposta({ ...boa, sobre_este_cliente: false, cancelamento: "pediu" }, ["reclamacao"], D).cancelamento, "nao");
   conferir("valor torto: sem cancelamento", leituraDaResposta({ ...boa, cancelamento: "talvez" }, ["reclamacao"], D).cancelamento, "nao");
+  /* 21/10/2026: a IA pôs "CNPJ 11.222.333/0001-81" e o e-mail nos pontos importantes. */
+  const comDado = leituraDaResposta({ ...boa, importantes: ["CNPJ 11.222.333/0001-81", "e-mail outro@exemplo.com", "Usa a integração com o iFood em 3 lojas"] }, ["reclamacao"], D);
+  conferir("documento e e-mail nunca vão para a ficha", [/11.222|@exemplo/.test(comDado.corpo), comDado.corpo.includes("iFood em 3 lojas")], [false, true]);
   conferir("anotação: uma por caso por dia", chaveDaAcao.anotacaoDoAlvo("caso:c1", "2026-10-21"), "anotacao:caso:c1:2026-10-21");
   const passado = leituraDaResposta({ ...boa, retorno: { ...boa.retorno, dia: "2026-10-01" } }, ["reclamacao"], D).retorno?.dia;
   const futuro = leituraDaResposta({ ...boa, retorno: { ...boa.retorno, dia: "2026-10-13" } }, ["reclamacao"], D).retorno?.dia;

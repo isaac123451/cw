@@ -28,6 +28,7 @@ import {
   seteDiasAtras,
 } from "@/lib/services/case.service";
 import { pluralDe } from "@/lib/plural";
+import { notaExata } from "@/lib/models/indiceRA";
 
 /**
  * O agente do assistente: o modelo escolhe o que medir, nós medimos.
@@ -122,7 +123,7 @@ export const CATALOGO: Medicao[] = [
       const s = scoreFrom(base);
 
       return [
-        `nota ${ptBR(s.raScore)} de 10`,
+        `nota ${ptBR(s.raScore)} de 10 (exata ${notaExata(s.raScoreExato)})`,
         `índice de resposta ${ptBR(s.responseIndex)}%`,
         `nota do consumidor ${ptBR(s.consumerScore)}`,
         `índice de solução ${ptBR(s.solutionIndex)}%`,

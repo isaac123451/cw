@@ -3,6 +3,7 @@ import type { Prisma, PrismaClient } from "@prisma/client";
 import type { AgendaTask } from "@/lib/models/agenda";
 import {
   chaveDaAcao,
+  ehMinha,
   ehParaMim,
   lembreteDoSlack,
   tarefaFeita,
@@ -114,6 +115,9 @@ export async function registrarLembretes(prisma: PrismaClient, userId: string, c
  * As atividades abertas da pessoa que um fato registrado mostra que já
  * foram feitas — fechadas, com o motivo no aviso.
  */
+/** Onde o caso termina de verdade — "Aguardando avaliação" ainda pede trabalho. */
+const FINAIS_DO_CASO = new Set(["Resolvido", "Não resolvido", "Finalizado"]);
+
 export async function fecharOQueFoiFeito(prisma: PrismaClient, userId: string): Promise<number> {
   const abertas = await prisma.agendaTask.findMany({
     where: { done: false, ownerId: userId },
@@ -135,7 +139,7 @@ export async function fecharOQueFoiFeito(prisma: PrismaClient, userId: string): 
   const [areas, mensagens, casos, contatos] = await Promise.all([
     idsDeArea.length ? prisma.caseMovement.findMany({ where: { id: { in: idsDeArea } }, select: { id: true, returnedAt: true } }) : [],
     idsDeMensagem.length ? prisma.mensagemDaConversa.findMany({ where: { id: { in: idsDeMensagem } }, select: { id: true, conversaId: true } }) : [],
-    idsDeCaso.length ? prisma.case.findMany({ where: { id: { in: idsDeCaso } }, select: { id: true, status: true, resolved: true } }) : [],
+    idsDeCaso.length ? prisma.case.findMany({ where: { id: { in: idsDeCaso } }, select: { id: true, status: true, resolved: true, encerradoEm: true, evaluatedAt: true, updatedAt: true } }) : [],
     idsDeCaso.length
       ? prisma.caseContato.groupBy({ by: ["caseId"], where: { caseId: { in: idsDeCaso } }, _max: { em: true } })
       : [],
@@ -167,7 +171,16 @@ export async function fecharOQueFoiFeito(prisma: PrismaClient, userId: string): 
         nossaMensagemEm: conversaDaMensagem.has(msg) ? nossaEm.get(conversaDaMensagem.get(msg)!) ?? null : null,
         clienteMensagemEm: conversaDaMensagem.has(msg) ? clienteEm.get(conversaDaMensagem.get(msg)!) ?? null : null,
         ultimoContatoEm: t.caseId ? contatoEm.get(t.caseId) ?? null : null,
-        casoEncerrado: c ? c.resolved || CLOSED_STATUS.includes(c.status) : undefined,
+        /*
+          Só o caso finalizado depois que a atividade nasceu (21/10/2026).
+          "Aguardando avaliação" contava como encerrado — e é justamente
+          quando se cobra a avaliação —, e o lembrete criado com o caso já
+          fechado morria no mesmo minuto ("Cobrar Gabriel: sinalizar
+          avaliação", "Cobrar Fernanda: enviar CSC e ID").
+        */
+        casoEncerrado: c
+          ? FINAIS_DO_CASO.has(c.status) && (c.encerradoEm ?? c.evaluatedAt ?? c.updatedAt).getTime() >= t.createdAt.getTime()
+          : undefined,
       }
     );
     if (!motivo) continue;
@@ -788,7 +801,20 @@ export async function lembretesDoSlack(
 ): Promise<number> {
   const hoje = paredeDe(agora).dia;
   const doisDias = agora.getTime() - 2 * 86_400_000;
-  const paraMim = mensagens.filter((m) => ehParaMim(m, usuario.nome) && Date.parse(m.quando) >= doisDias);
+  /*
+    A minha resposta na mesma conversa, depois da pergunta, quer dizer que
+    ela já foi respondida (21/10/2026): não vira lembrete, e o lembrete
+    aberto daquela conversa, de antes da resposta, fecha.
+  */
+  const minhaUltima = new Map<string, number>();
+  for (const m of mensagens) if (ehMinha(m, usuario.nome)) minhaUltima.set(m.canal, Math.max(minhaUltima.get(m.canal) ?? 0, Number(m.ts)));
+  for (const [canal, ts] of minhaUltima) {
+    const abertas = await prisma.agendaTask.findMany({ where: { id: { startsWith: `auto-slack-${canal}-` }, done: false, ownerId: usuario.id }, select: { id: true } });
+    const respondidas = abertas.filter((t) => Number(t.id.slice(`auto-slack-${canal}-`.length)) < ts).map((t) => t.id);
+    if (respondidas.length) await prisma.agendaTask.updateMany({ where: { id: { in: respondidas } }, data: { done: true } });
+  }
+  const jaRespondida = (m: MensagemDoSlack) => (minhaUltima.get(m.canal) ?? 0) > Number(m.ts);
+  const paraMim = mensagens.filter((m) => ehParaMim(m, usuario.nome) && !jaRespondida(m) && Date.parse(m.quando) >= doisDias);
   if (!paraMim.length) return 0;
 
   const usadas = await chavesJaUsadas(prisma, usuario.id, paraMim.map((m) => chaveDaAcao.slack(m.canal, m.ts)));

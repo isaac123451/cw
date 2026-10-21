@@ -63,6 +63,16 @@ export const MUDANCAS: Mudanca[] = [
     href: "/retencao",
   },
   {
+    id: "ia-erros-21-10",
+    dia: "2026-10-21",
+    tipo: "correcao",
+    frente: "plataforma",
+    titulo: "IA: lembretes que não faziam sentido",
+    texto:
+      "Quatro erros da IA, achados no que ela fez nas últimas 30 horas: lembrete do Slack para responder a você mesmo (agora as suas mensagens não contam, a pergunta que você já respondeu na conversa também não, e o lembrete aberto fecha quando você responde); promessa de mandar o link com o link na mesma mensagem virando retorno para 27/10 (o número saiu do próprio link); cobrança criada e fechada no mesmo minuto porque o caso estava em \"Aguardando avaliação\" (agora só fecha o caso finalizado depois do lembrete); e CNPJ e e-mail nos pontos importantes da anotação (agora o código tira). Os estragos foram desfeitos e as duas cobranças reabertas.",
+    href: "/agenda",
+  },
+  {
     id: "erros-da-extensao",
     dia: "2026-10-21",
     tipo: "novo",

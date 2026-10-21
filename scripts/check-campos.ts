@@ -311,6 +311,12 @@ const INTERNAS: Record<string, string[]> = {
 
   /** O termômetro do cliente (09/10/2026): carga própria (`lib/actions/termometro.ts`), no cartão da ficha e no cabeçalho da extensão. */
   TermometroDoCliente: ["*"],
+
+  /** O que a IA aprendeu (21/10/2026): carga própria (`lib/actions/aprendizados.ts`), na tela "O que a IA aprendeu". */
+  AprendizadoDaIA: ["*"],
+
+  /** Os erros da extensão (21/10/2026): carga própria (`lib/actions/errosDaExtensao.ts`), em Configurações → Integrações. */
+  ErroDaExtensao: ["*"],
 };
 
 

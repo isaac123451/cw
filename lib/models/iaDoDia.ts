@@ -1,3 +1,4 @@
+import { semDadoSensivel } from "@/lib/models/aprendizados";
 import { pedidoNaMensagem, reuniaoNaMensagem } from "@/lib/models/lembretesAutomaticos";
 
 /**
@@ -94,7 +95,24 @@ export interface MensagemDoSlack {
 }
 
 /** A mensagem é para a pessoa: conversa direta (canal D…) ou menção ao nome dela. */
+/**
+ * A mensagem é minha — escrita por quem recebe os lembretes (21/10/2026).
+ * Na conversa direta toda mensagem passava como "para mim", inclusive as
+ * minhas: nasceu "Responder no Slack — Carlos Isaac: como tá o programa de
+ * influenciadores?" para o próprio Carlos Isaac.
+ */
+export function ehMinha(m: MensagemDoSlack, meuNome: string): boolean {
+  const autor = sem(m.autor ?? "").trim();
+  const eu = sem(meuNome).trim();
+  if (!autor || !eu) return false;
+  if (autor === eu) return true;
+  const [a1, a2] = autor.split(/\s+/);
+  const [e1, e2] = eu.split(/\s+/);
+  return Boolean(a1 && a2 && a1 === e1 && a2 === e2);
+}
+
 export function ehParaMim(m: MensagemDoSlack, meuNome: string): boolean {
+  if (ehMinha(m, meuNome)) return false;
   if (/^D[A-Z0-9]{6,}$/.test(m.canal)) return true;
   const primeiro = sem(meuNome).split(/\s+/)[0] ?? "";
   if (primeiro.length < 3) return false;
@@ -241,9 +259,23 @@ export function leituraDaResposta(d: Record<string, unknown>, segmentos: string[
   const limpo = (v: unknown) => String(v ?? "").replace(/\s+/g, " ").trim();
   const seg = limpo(d.segmento);
   const segmento = (segmentos.includes(seg) ? seg : "outro") as LeituraDoDia["segmento"];
-  const resumo = limpo(d.resumo);
-  const pendente = limpo(d.pendente);
-  const importantes = (Array.isArray(d.importantes) ? d.importantes : []).map(limpo).filter((x) => x.length > 3).slice(0, 6);
+  /*
+    Documento, e-mail, telefone e cartão nunca vão para a ficha (21/10/2026):
+    a IA é instruída, mas pôs "CNPJ 11.222.333/0001-81" e o e-mail nos pontos
+    importantes. O código garante; o ponto que era só o dado sai inteiro.
+  */
+  const seguro = (v: unknown) => semDadoSensivel(limpo(v));
+  const resumo = seguro(d.resumo);
+  const pendente = seguro(d.pendente);
+  const importantes = (Array.isArray(d.importantes) ? d.importantes : [])
+    .map(seguro)
+    .filter((x) => {
+      if (x.length <= 3) return false;
+      const marcado = /\[(documento|e-mail|telefone|número|código|link)\]/.test(x);
+      /* O ponto que era só o dado ("CNPJ [documento]") sai; o que tem conteúdo além dele fica. */
+      return !marcado || x.replace(/\[(documento|e-mail|telefone|número|código|link)\]/g, "").replace(/[^\p{L}]/gu, "").length > 12;
+    })
+    .slice(0, 6);
   const sobreEle = d.sobre_este_cliente === true;
   const vale = d.vale_anotar === true && resumo.length > 0;
 

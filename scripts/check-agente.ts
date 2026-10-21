@@ -149,8 +149,9 @@ async function main() {
 
   const janela = getRange("6m", "vigente");
 
+  /* Só o Reclame Aqui entra na nota — a regra das telas e do assistente desde 08/10/2026. */
   const naJanela = dados.cases.filter((item) =>
-    inRange(item, janela.start, janela.end)
+    isReclameAqui(item) && inRange(item, janela.start, janela.end)
   );
 
   const daTela = scoreFrom(getRawCounts(naJanela));
