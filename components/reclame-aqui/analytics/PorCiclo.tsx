@@ -10,7 +10,7 @@ import { casosDoNumero, porCicloNoMes, type NumeroDoCiclo, type NumerosDoPeriodo
 import { hojeNaOperacao, ptBR } from "@/lib/services/reputation.service";
 
 const MES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
-const nomeDoMes = (aaaamm: string) => `${MES[Number(aaaamm.slice(5, 7)) - 1]} de ${aaaamm.slice(0, 4)}`;
+const nomeDoMes = (aaaamm: string) => { const m = MES[Number(aaaamm.slice(5, 7)) - 1]; return `${m.charAt(0).toUpperCase()}${m.slice(1)} de ${aaaamm.slice(0, 4)}`; };
 
 const O_QUE_E: Record<NumeroDoCiclo, string> = {
   novas: "Reclamações que chegaram",
@@ -108,7 +108,7 @@ export default function PorCiclo({ cases }: { cases: Case[] }) {
               return (
                 <Fragment key={m.mes}>
                   <tr className={`border-t border-zinc-200 bg-violet-50/40 text-zinc-900 ${im === 0 ? "border-t-0" : ""}`}>
-                    <td className="py-2 pr-3 font-semibold capitalize">
+                    <td className="py-2 pr-3 font-semibold">
                       {nomeDoMes(m.mes)}
                       {im === 0 && <span className="ml-1.5 text-[11px] font-normal normal-case text-violet-700">até hoje</span>}
                     </td>
