@@ -12,6 +12,7 @@
  */
 import "dotenv/config";
 
+import { Prisma } from "@prisma/client";
 import { getPrisma } from "../lib/prisma";
 import { anotarConversasDoDia, desfazer, leituraDaResposta, seguirPelasConversas, type ConversaParaLer } from "../lib/services/iaDoDia.service";
 import { paredeDe } from "../lib/services/horasUteis";
@@ -200,7 +201,7 @@ async function identidade(prisma: NonNullable<ReturnType<typeof getPrisma>>, euI
     const responder = (resposta: Record<string, unknown>) => async (entrada: ConversaParaLer) => {
       recebido = entrada;
       leituras += 1;
-      return leituraDaResposta(resposta, [entrada.caso ? "reclamacao" : null, entrada.nps ? "nps" : null].filter((s): s is string => Boolean(s)), hoje);
+      return leituraDaResposta(resposta, [entrada.caso ? "reclamacao" : null, entrada.nps ? "nps" : null].filter((s): s is string => Boolean(s)), hoje, entrada.causas ?? []);
     };
     const boa = {
       sobre_este_cliente: true,
@@ -233,6 +234,51 @@ async function identidade(prisma: NonNullable<ReturnType<typeof getPrisma>>, euI
     ]);
     await anotarConversasDoDia(prisma, euId, agora, [ana.id], responder({ ...boa, segmento: "nps", resumo: "A Ana deu nota 4 pela demora do suporte.", retorno: { precisa: false, quem: "nos", oque: "", dia: "" } }));
     conferir("do NPS: a anotação vai no NPS, não na reclamação", [await prisma.npsNote.count({ where: { responseId: nps.id } }), await prisma.caseComment.count({ where: { caseId: casoAna } })], [1, 0]);
+
+    /* 21/10/2026: a ficha anda com a conversa — contato, pedido de avaliação, validação, risco e causa, com desfazer. */
+    const casoAv = await novoCaso("AV");
+    const av = await novaConversa({ telefone: "5511955554444", contatoNome: "Diego", caseId: casoAv }, [
+      { de: "nos", autor: "Cardápio Web (Reputação)", texto: "Oi, Diego! Conseguiu testar a impressora?", min: 60, lote: 59 },
+      { de: "cliente", autor: "Diego", texto: "Deu certo sim, resolvido! Mas estou pensando em cancelar pelo preço", min: 55, lote: 54 },
+      { de: "nos", autor: "Cardápio Web (Reputação)", texto: "Que bom! Posso contar com a sua avaliação no Reclame Aqui?", min: 50, lote: 49 },
+    ]);
+    let causasRecebidas: string[] = [];
+    const umaCausa = async (entrada: ConversaParaLer) => {
+      causasRecebidas = entrada.causas ?? [];
+      return responder({ ...boa, pedimos_avaliacao: true, solucao: "confirmou", cancelamento: "pediu", causa: causasRecebidas[0] ?? "" })(entrada);
+    };
+    await anotarConversasDoDia(prisma, euId, agora, [av.id], umaCausa);
+    const contatosAv = await prisma.caseContato.findMany({ where: { caseId: casoAv }, select: { tipo: true, resultado: true }, orderBy: { em: "asc" } });
+    conferir("a IA recebe o catálogo de causas quando a ficha não tem causa", causasRecebidas.length > 0, true);
+    conferir(
+      "contato do dia, validação e pedido de avaliação viram registros do caso",
+      contatosAv.map((c) => `${c.tipo}:${c.resultado}`).sort(),
+      ["contato:respondeu", "pedido-avaliacao:enviado", "validacao:respondeu"]
+    );
+    const fichaAv = await prisma.case.findUnique({ where: { id: casoAv }, select: { churnRisk: true, causaRaiz: true, pedidosDeAvaliacao: true, validadoEm: true, ultimoContatoEm: true } });
+    conferir(
+      "a ficha anda: risco, causa, pedidos, validado e último contato",
+      [fichaAv?.churnRisk, fichaAv?.causaRaiz, fichaAv?.pedidosDeAvaliacao, Boolean(fichaAv?.validadoEm), Boolean(fichaAv?.ultimoContatoEm)],
+      [true, causasRecebidas[0], 1, true, true]
+    );
+    for (const a of await prisma.acaoDaIA.findMany({ where: { userId: euId, chave: { contains: casoAv }, desfazer: { not: Prisma.DbNull } }, select: { id: true } })) await desfazer(prisma, euId, a.id);
+    const desfeito = await prisma.case.findUnique({ where: { id: casoAv }, select: { churnRisk: true, causaRaiz: true, pedidosDeAvaliacao: true } });
+    conferir("desfazer devolve a ficha como estava", [desfeito?.churnRisk, desfeito?.causaRaiz, desfeito?.pedidosDeAvaliacao, await prisma.caseContato.count({ where: { caseId: casoAv } })], [false, null, 0, 0]);
+
+    /* O NPS: sai de "Novo" quando o cliente responde, e o "resolveu" entra. */
+    const npsAv = await prisma.npsResponse.create({ data: { score: 5, comment: "Impressora", respondedAt: ha(600), customer: `${marca}-av`, status: "Novo", firstContactDueAt: ha(300) }, select: { id: true } });
+    npss.push(npsAv.id);
+    const avNps = await novaConversa({ telefone: "5511944443333", contatoNome: "Elisa", npsResponseId: npsAv.id }, [
+      { de: "nos", autor: "Cardápio Web (Reputação)", texto: "Oi, Elisa! Vi a sua nota.", min: 60, lote: 59 },
+      { de: "cliente", autor: "Elisa", texto: "Já resolveram, obrigada", min: 55, lote: 54 },
+    ]);
+    await anotarConversasDoDia(prisma, euId, agora, [avNps.id], responder({ ...boa, segmento: "nps", solucao: "confirmou", retorno: { precisa: false, quem: "nos", oque: "", dia: "" } }));
+    const fichaNps = await prisma.npsResponse.findUnique({ where: { id: npsAv.id }, select: { status: true, resolvedAfter: true, confirmedAt: true } });
+    conferir("NPS: etapa em tratativa e resolveu depois do contato", [fichaNps?.status, fichaNps?.resolvedAfter, Boolean(fichaNps?.confirmedAt)], ["Em tratativa", true, true]);
+    const acaoNps = await prisma.acaoDaIA.findFirst({ where: { userId: euId, chave: { startsWith: `ficha:nps:${npsAv.id}` } }, select: { id: true } });
+    if (acaoNps) await desfazer(prisma, euId, acaoNps.id);
+    const npsDesfeito = await prisma.npsResponse.findUnique({ where: { id: npsAv.id }, select: { status: true, resolvedAfter: true, confirmedAt: true } });
+    conferir("desfazer devolve o NPS", [npsDesfeito?.status, npsDesfeito?.resolvedAfter, npsDesfeito?.confirmedAt], ["Novo", null, null]);
 
     /* Sem sentido e assunto de outro: nada anotado, e não lê de novo sem mensagem nova. */
     const casoSem = await novoCaso("SEM");

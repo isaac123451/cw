@@ -158,6 +158,17 @@ console.log("\n  A LEITURA DA IA, CONFERIDA (09/10/2026)\n");
   /* 21/10/2026: a IA pôs "CNPJ 11.222.333/0001-81" e o e-mail nos pontos importantes. */
   const comDado = leituraDaResposta({ ...boa, importantes: ["CNPJ 11.222.333/0001-81", "e-mail outro@exemplo.com", "Usa a integração com o iFood em 3 lojas"] }, ["reclamacao"], D);
   conferir("documento e e-mail nunca vão para a ficha", [/11.222|@exemplo/.test(comDado.corpo), comDado.corpo.includes("iFood em 3 lojas")], [false, true]);
+
+  /* 21/10/2026: a ficha anda com a conversa — avaliação pedida, solução, causa do catálogo. */
+  const CAUSAS = ["Suporte", "Financeiro"];
+  const ficha = leituraDaResposta({ ...boa, pedimos_avaliacao: true, solucao: "confirmou", causa: "financeiro" }, ["reclamacao"], D, CAUSAS);
+  conferir("ficha: avaliação pedida, solução confirmada, causa com o nome do catálogo", [ficha.pedimosAvaliacao, ficha.solucao, ficha.causa], [true, "confirmou", "Financeiro"]);
+  conferir("causa fora do catálogo não entra", leituraDaResposta({ ...boa, causa: "Bug no app" }, ["reclamacao"], D, CAUSAS).causa, "");
+  conferir("solução com valor torto: nada muda", leituraDaResposta({ ...boa, solucao: "acho que sim" }, ["reclamacao"], D, CAUSAS).solucao, "nao");
+  const deOutro = leituraDaResposta({ ...boa, sobre_este_cliente: false, pedimos_avaliacao: true, solucao: "confirmou", causa: "Suporte" }, ["reclamacao"], D, CAUSAS);
+  conferir("conversa de outra pessoa não mexe na ficha", [deOutro.pedimosAvaliacao, deOutro.solucao, deOutro.causa], [false, "nao", ""]);
+  const semVinculo = leituraDaResposta({ ...boa, segmento: "outro", pedimos_avaliacao: true, causa: "Suporte" }, ["reclamacao"], D, CAUSAS);
+  conferir("assunto fora do vínculo não mexe na ficha", [semVinculo.pedimosAvaliacao, semVinculo.causa], [false, ""]);
   conferir("anotação: uma por caso por dia", chaveDaAcao.anotacaoDoAlvo("caso:c1", "2026-10-21"), "anotacao:caso:c1:2026-10-21");
   const passado = leituraDaResposta({ ...boa, retorno: { ...boa.retorno, dia: "2026-10-01" } }, ["reclamacao"], D).retorno?.dia;
   const futuro = leituraDaResposta({ ...boa, retorno: { ...boa.retorno, dia: "2026-10-13" } }, ["reclamacao"], D).retorno?.dia;

@@ -16,7 +16,7 @@ import {
 } from "@/lib/models/iaDoDia";
 import { nomeDaConversa, nomeDePessoa, nomeDoCliente, semMensagensDeOutraConversa } from "@/lib/models/identidadeNaConversa";
 import { idDoLembrete } from "@/lib/models/lembretesAutomaticos";
-import { isEncerrado } from "@/lib/models/nps";
+import { isEncerrado, ROOT_CAUSES } from "@/lib/models/nps";
 import { CLOSED_STATUS } from "@/lib/services/case.service";
 import { descreverRegistro, paredeDe, prazoUtil } from "@/lib/services/horasUteis";
 import { lerExpediente } from "@/lib/services/operacao.service";
@@ -262,8 +262,8 @@ export async function anotarConversasDoDia(
       contatoNome: true,
       caseId: true,
       npsResponseId: true,
-      case: { select: { externalId: true, protocol: true, channel: true, customer: true, title: true, description: true } },
-      npsResponse: { select: { score: true, comment: true, customerName: true } },
+      case: { select: { externalId: true, protocol: true, channel: true, customer: true, title: true, description: true, causaRaiz: true, churnRisk: true, evaluated: true, status: true } },
+      npsResponse: { select: { score: true, comment: true, customerName: true, rootCause: true, churnRisk: true, status: true, resolvedAfter: true, confirmedAt: true, reviewAsked: true } },
       mensagens: {
         where: { em: { gte: inicioDoDia } },
         orderBy: { em: "asc" },
@@ -296,6 +296,7 @@ export async function anotarConversasDoDia(
   let feitas = 0;
   /* O que o time já aprendeu com outras conversas — cada leitura recebe só o que tem a ver com ela. */
   const saber = await aprendizadosAtivos(prisma);
+  const catalogo = await causasDoCatalogo(prisma);
 
   for (const c of prontas.filter((x) => !usadas.has(lida(x))).slice(0, ANOTACOES_POR_RODADA)) {
     const nome = nomeDoCliente(c, c.case?.customer ?? c.npsResponse?.customerName, c.mensagens);
@@ -330,6 +331,7 @@ export async function anotarConversasDoDia(
       nps: c.npsResponse ? { nota: c.npsResponse.score, comentario: c.npsResponse.comment } : null,
       mensagens: c.mensagens,
       antes,
+      causas: (paraCasoSemCausa(c) || paraNpsSemCausa(c)) ? catalogo : [],
       saber: relevantes(saber, [c.case?.title, c.case?.description, c.npsResponse?.comment, ...c.mensagens.map((m) => m.texto)].filter(Boolean).join(" ")).map((a) => `${a.assunto}: ${a.texto}`),
     });
     /* A IA não respondeu agora: a próxima volta tenta de novo. */
@@ -340,6 +342,11 @@ export async function anotarConversasDoDia(
     const doCliente = nome ? `de ${nome}` : "do cliente";
     const paraNps = leitura.segmento === "nps" && Boolean(c.npsResponseId);
     const paraCaso = leitura.segmento === "reclamacao" && Boolean(c.caseId);
+
+    /* A ficha anda com a conversa, mesmo no dia em que não há o que anotar ("ok, recebi" também é contato). */
+    if (leitura.sobreEle && (paraCaso || paraNps)) {
+      feitas += await atualizarFicha(prisma, userId, { conversa: c, leitura, paraCaso, hoje, agora, chamado: nome || "o cliente" });
+    }
 
     if (!leitura.anotar || (!paraNps && !paraCaso)) {
       /* Lida e sem o que guardar: invisível (tipo aviso, já vista), e só volta a ler com mensagem nova. */
@@ -412,6 +419,195 @@ export async function anotarConversasDoDia(
   return feitas;
 }
 
+/* ============================================================
+   A FICHA ANDANDO COM A CONVERSA (21/10/2026)
+============================================================ */
+
+/*
+  "A IA PRECISA atualizar as informações dos casos, notas, etc." Ela lia a
+  conversa, anotava e criava atividade — e a ficha ficava parada: o último
+  contato de setembro com conversa de hoje, o pedido de avaliação feito no
+  WhatsApp sem contar, a causa raiz vazia, o NPS em "Novo" com o cliente
+  respondendo. Agora cada conversa lida atualiza o que ela prova, uma vez
+  por dia e com desfazer:
+
+  - **caso**: o contato do dia (falou ou tentou), o pedido de avaliação, a
+    validação da solução (resolveu ou não), o risco de cancelamento e a
+    causa raiz vazia;
+  - **NPS**: a etapa sai de "Novo" quando o cliente responde, risco de
+    cancelamento, causa raiz vazia, "resolveu depois do contato" e o pedido
+    de avaliação.
+
+  A nota do portal e a do NPS não mudam por conversa: são do consumidor,
+  ditas no portal e na pesquisa.
+*/
+
+async function causasDoCatalogo(prisma: PrismaClient): Promise<string[]> {
+  const causas = await prisma.npsRootCause.findMany({ where: { active: true }, select: { name: true }, orderBy: { order: "asc" } }).catch(() => []);
+  return causas.length ? causas.map((c) => c.name) : [...ROOT_CAUSES];
+}
+
+const paraCasoSemCausa = (c: { case: { causaRaiz: string | null } | null }) => Boolean(c.case && !(c.case.causaRaiz ?? "").trim());
+const paraNpsSemCausa = (c: { npsResponse: { rootCause: string | null } | null }) => Boolean(c.npsResponse && !(c.npsResponse.rootCause ?? "").trim());
+
+/** O pedido de avaliação escrito por nós, mesmo quando a IA não marcou: "avaliação" junto de "Reclame Aqui" ou do link dele. */
+const PEDIDO_DE_AVALIACAO = /avalia[cç][aã]o|avalie\b|avaliar/i;
+const DO_RECLAME_AQUI = /reclame\s*aqui|reclameaqui\.com\.br/i;
+
+interface ConversaDaFicha {
+  caseId: string | null;
+  npsResponseId: string | null;
+  case: { protocol: string; externalId: string | null; channel: string; causaRaiz: string | null; churnRisk: boolean; evaluated: boolean } | null;
+  npsResponse: { rootCause: string | null; churnRisk: boolean; status: string; resolvedAfter: boolean | null; confirmedAt: Date | null; reviewAsked: boolean } | null;
+  mensagens: { de: string; texto: string; em: Date }[];
+}
+
+async function atualizarFicha(
+  prisma: PrismaClient,
+  userId: string,
+  { conversa: c, leitura, paraCaso, hoje, agora, chamado }: { conversa: ConversaDaFicha; leitura: LeituraDoDia; paraCaso: boolean; hoje: string; agora: Date; chamado: string }
+): Promise<number> {
+  const inicioDoDia = new Date(Date.parse(`${hoje}T03:00:00Z`));
+  const nossas = c.mensagens.filter((m) => m.de === "nos");
+  const dele = c.mensagens.filter((m) => m.de === "cliente");
+  const falou = nossas.length > 0 && dele.length > 0;
+  const pediuAvaliacao = leitura.pedimosAvaliacao || nossas.some((m) => PEDIDO_DE_AVALIACAO.test(m.texto) && DO_RECLAME_AQUI.test(m.texto));
+  let feitas = 0;
+
+  if (paraCaso && c.caseId && c.case) {
+    const caso = c.case;
+    const caseId = c.caseId;
+    const href = `/${caso.channel === "RECLAME_AQUI" ? "reclame-aqui" : "redes-sociais"}/${caso.externalId ?? caso.protocol}`;
+    const deHoje = await prisma.caseContato.findMany({ where: { caseId, em: { gte: inicioDoDia } }, select: { tipo: true, resultado: true } });
+
+    const contato = async (chave: string, titulo: string, detalhe: string, entrada: { tipo: string; resultado: string; em: Date }) => {
+      const novo = await registrar(prisma, userId, { tipo: "etapa", origem: "whatsapp", chave, titulo, detalhe, href });
+      if (!novo) return;
+      const { contato: criado } = await gravarContato(prisma, {
+        caseId,
+        entrada: { tipo: entrada.tipo, canal: "WhatsApp", resultado: entrada.resultado, nota: "Registrado pela IA a partir da conversa guardada.", em: entrada.em.toISOString() },
+        autorId: null,
+        autorNome: AUTOR,
+      });
+      await prisma.acaoDaIA.update({ where: { userId_chave: { userId, chave } }, data: { desfazer: { contato: criado.id, caso: caseId } } });
+      feitas += 1;
+    };
+
+    /* O contato do dia: falou (o cliente escreveu) ou tentou (só nós). O cliente sozinho é pendência nossa, não contato. */
+    const contatoHoje = deHoje.some((d) => d.tipo === "contato" || d.tipo === "atualizacao" || d.tipo === "validacao");
+    const tentativaHoje = deHoje.some((d) => d.tipo === "tentativa");
+    if (nossas.length && !contatoHoje && (falou || !tentativaHoje)) {
+      await contato(
+        `contato:caso:${caseId}:${hoje}:${falou ? "falou" : "tentou"}`,
+        `${falou ? "Contato" : "Tentativa de contato"} de hoje registrado em ${caso.protocol}`,
+        `${falou ? "Falou com" : "Tentou contato com"} ${chamado} pelo WhatsApp — o último contato do caso fica em dia.`,
+        { tipo: falou ? "contato" : "tentativa", resultado: falou ? "respondeu" : "aguardando", em: nossas[0].em }
+      );
+    }
+
+    /* O pedido de avaliação feito na conversa conta como pedido — o mesmo do botão "Pedi a avaliação". */
+    if (pediuAvaliacao && !caso.evaluated && !deHoje.some((d) => d.tipo === "pedido-avaliacao")) {
+      const msg = [...nossas].reverse().find((m) => PEDIDO_DE_AVALIACAO.test(m.texto) || DO_RECLAME_AQUI.test(m.texto)) ?? nossas[nossas.length - 1];
+      if (msg) {
+        await contato(`pedido-avaliacao:caso:${caseId}:${hoje}`, `Pedido de avaliação registrado em ${caso.protocol}`, `Pedimos a avaliação a ${chamado} pelo WhatsApp.`, {
+          tipo: "pedido-avaliacao",
+          resultado: "enviado",
+          em: msg.em,
+        });
+      }
+    }
+
+    /* A validação: o cliente disse que resolveu (valida o caso) ou que continua (pendência). */
+    if (leitura.solucao !== "nao" && dele.length && !deHoje.some((d) => d.tipo === "validacao")) {
+      const confirmou = leitura.solucao === "confirmou";
+      await contato(
+        `validacao:caso:${caseId}:${hoje}`,
+        confirmou ? `${caso.protocol}: o cliente confirmou que resolveu` : `${caso.protocol}: o cliente diz que ainda não resolveu`,
+        confirmou ? `${chamado} confirmou a solução na conversa — o caso fica validado.` : `${chamado} disse na conversa que o problema continua — ficou como pendência na validação.`,
+        { tipo: "validacao", resultado: confirmou ? "respondeu" : "pendencia", em: dele[dele.length - 1].em }
+      );
+    }
+
+    /* Os campos: risco de cancelamento e causa raiz vazia. */
+    const dados: { churnRisk?: boolean; causaRaiz?: string } = {};
+    if (leitura.cancelamento === "pediu" && !caso.churnRisk) dados.churnRisk = true;
+    if (leitura.causa && !(caso.causaRaiz ?? "").trim()) dados.causaRaiz = leitura.causa;
+    const campos = Object.keys(dados) as (keyof typeof dados)[];
+    if (campos.length) {
+      const chave = `ficha:caso:${caseId}:${hoje}:${campos.sort().join(",")}`;
+      const novo = await registrar(prisma, userId, {
+        tipo: "completou",
+        origem: "whatsapp",
+        chave,
+        titulo: `Ficha de ${caso.protocol} atualizada pela conversa`,
+        detalhe: [dados.causaRaiz ? `Causa raiz: ${dados.causaRaiz}.` : null, dados.churnRisk ? "Risco de cancelamento marcado — o cliente pediu para cancelar." : null].filter(Boolean).join(" "),
+        href,
+      });
+      if (novo) {
+        await prisma.case.update({ where: { id: caseId }, data: dados });
+        const antes = { churnRisk: caso.churnRisk, causaRaiz: caso.causaRaiz };
+        await prisma.acaoDaIA.update({ where: { userId_chave: { userId, chave } }, data: { desfazer: { caso: caseId, campos: campos.join(","), antes: JSON.stringify(antes) } } });
+        feitas += 1;
+      }
+    }
+  }
+
+  if (!paraCaso && c.npsResponseId && c.npsResponse) {
+    const nps = c.npsResponse;
+    const npsId = c.npsResponseId;
+    const dados: { status?: string; churnRisk?: boolean; rootCause?: string; resolvedAfter?: boolean; confirmedAt?: Date | null; reviewAsked?: boolean } = {};
+    const motivos: string[] = [];
+    if (!isEncerrado(nps.status)) {
+      if (nps.status === "Novo" && falou) {
+        dados.status = "Em tratativa";
+        motivos.push("etapa: Em tratativa — o cliente respondeu");
+      }
+      if (leitura.solucao === "confirmou" && nps.resolvedAfter !== true) {
+        dados.resolvedAfter = true;
+        dados.confirmedAt = nps.confirmedAt ?? agora;
+        motivos.push("resolveu depois do contato");
+      }
+      if (leitura.solucao === "nao-resolveu" && nps.resolvedAfter !== false) {
+        dados.resolvedAfter = false;
+        dados.confirmedAt = null;
+        motivos.push("não resolveu depois do contato");
+      }
+    }
+    if (leitura.cancelamento === "pediu" && !nps.churnRisk) {
+      dados.churnRisk = true;
+      motivos.push("risco de cancelamento");
+    }
+    if (leitura.causa && !(nps.rootCause ?? "").trim()) {
+      dados.rootCause = leitura.causa;
+      motivos.push(`causa raiz: ${leitura.causa}`);
+    }
+    if (pediuAvaliacao && !nps.reviewAsked) {
+      dados.reviewAsked = true;
+      motivos.push("avaliação pedida");
+    }
+    const campos = Object.keys(dados) as (keyof typeof dados)[];
+    if (campos.length) {
+      const chave = `ficha:nps:${npsId}:${hoje}:${campos.sort().join(",")}`;
+      const novo = await registrar(prisma, userId, {
+        tipo: "completou",
+        origem: "nps",
+        chave,
+        titulo: `NPS de ${chamado} atualizado pela conversa`,
+        detalhe: `${motivos.join("; ")}.`.replace(/^./, (l) => l.toUpperCase()),
+        href: `/nps/${npsId}`,
+      });
+      if (novo) {
+        const antes = Object.fromEntries(campos.map((k) => [k, (nps as unknown as Record<string, unknown>)[k] ?? null]));
+        await prisma.npsResponse.update({ where: { id: npsId }, data: dados });
+        await prisma.acaoDaIA.update({ where: { userId_chave: { userId, chave } }, data: { desfazer: { nps: npsId, camposNps: campos.join(","), antesNps: JSON.stringify(antes) } } });
+        feitas += 1;
+      }
+    }
+  }
+
+  return feitas;
+}
+
 export type { LeituraDoDia };
 export { leituraDaResposta };
 
@@ -425,6 +621,8 @@ export interface ConversaParaLer {
   antes?: { de: string; texto: string; em: Date }[];
   /** O que o time já sabe sobre o assunto (aprendido de outras conversas). */
   saber?: string[];
+  /** O catálogo de causas — só quando a ficha ainda não tem causa. */
+  causas?: string[];
 }
 
 const hhmmDe = (d: Date) => {
@@ -477,6 +675,11 @@ export async function lerConversaDoDia(entrada: ConversaParaLer): Promise<Leitur
         "7. importantes: fatos duradouros para a próxima conversa — quantas lojas, sistema ou integração que usa, valor ou prazo combinado, decisão ou pedido do cliente, risco de cancelar, melhor horário ou canal. Lista vazia se não houver.",
         '8. retorno: se alguém ficou de dar retorno — nós ao cliente (quem "nos") ou o cliente a nós (quem "cliente") — e ainda não deu na conversa: precisa true, oque em até 12 palavras começando por verbo, e dia (AAAA-MM-DD) só se a conversa disser o dia, senão vazio. Sem retorno pendente: precisa false.',
         '9. cancelamento: "pediu" se o cliente pede ou anuncia que vai cancelar o plano/sistema da Cardápio Web (não o pedido de comida de um consumidor); "cancelou" se a conversa diz que o cancelamento foi feito; "ficou" se ele desistiu de cancelar; "nao" se não se falou disso.',
+        "10. pedimos_avaliacao: true se hoje NÓS pedimos ao cliente que avalie (a reclamação no Reclame Aqui, a pesquisa ou o Google), inclusive mandando o link para avaliar.",
+        '11. solucao: "confirmou" se hoje o cliente disse que o problema foi resolvido ou que deu certo; "nao-resolveu" se disse que continua com o problema; "nao" se não se falou disso.',
+        ...(entrada.causas?.length
+          ? [`12. causa: a causa raiz do problema do cliente, escolhida EXATAMENTE desta lista — ${entrada.causas.map((c) => `"${c}"`).join(", ")} — ou vazio se a conversa não deixa claro.`]
+          : ['12. causa: vazio.']),
         "",
         ...(contexto.length ? ["Antes de hoje (só para entender — não resuma nem anote isto):", contexto.join("\n").slice(-2500), ""] : []),
         "Conversa de hoje:",
@@ -493,6 +696,9 @@ export async function lerConversaDoDia(entrada: ConversaParaLer): Promise<Leitur
           pendente: { type: "string" },
           importantes: { type: "array", items: { type: "string" } },
           cancelamento: { type: "string", enum: ["nao", "pediu", "cancelou", "ficou"] },
+          pedimos_avaliacao: { type: "boolean" },
+          solucao: { type: "string", enum: ["nao", "confirmou", "nao-resolveu"] },
+          causa: { type: "string" },
           retorno: {
             type: "object",
             properties: {
@@ -504,14 +710,14 @@ export async function lerConversaDoDia(entrada: ConversaParaLer): Promise<Leitur
             required: ["precisa", "quem", "oque", "dia"],
           },
         },
-        required: ["sobre_este_cliente", "segmento", "vale_anotar", "motivo", "resumo", "pendente", "importantes", "retorno", "cancelamento"],
+        required: ["sobre_este_cliente", "segmento", "vale_anotar", "motivo", "resumo", "pendente", "importantes", "retorno", "cancelamento", "pedimos_avaliacao", "solucao", "causa"],
       },
     });
   } catch {
     return null;
   }
   if (r.erro || !r.dados) return null;
-  return leituraDaResposta(r.dados, segmentos, entrada.hoje);
+  return leituraDaResposta(r.dados, segmentos, entrada.hoje, entrada.causas ?? []);
 }
 
 /**
@@ -1082,7 +1288,13 @@ export async function desfazer(prisma: PrismaClient, userId: string, id: string)
     const volta = Object.fromEntries(d.campos.split(",").filter((k) => k in antes).map((k) => [k, antes[k]]));
     if (Object.keys(volta).length) await prisma.case.update({ where: { id: d.caso }, data: volta });
   }
-  /* O 1º contato registrado pela conversa: sai o registro e o resumo do caso é refeito. */
+  /* O NPS atualizado pela conversa (21/10/2026): volta cada campo ao que era. */
+  if (d.nps && d.camposNps && d.antesNps) {
+    const antes = JSON.parse(d.antesNps) as Record<string, unknown>;
+    const volta = Object.fromEntries(d.camposNps.split(",").filter((k) => k in antes).map((k) => [k, k === "confirmedAt" && antes[k] ? new Date(String(antes[k])) : antes[k]]));
+    if (Object.keys(volta).length) await prisma.npsResponse.update({ where: { id: d.nps }, data: volta });
+  }
+  /* O contato registrado pela conversa: sai o registro e o resumo do caso é refeito. */
   if (d.contato && d.caso) {
     await prisma.caseContato.deleteMany({ where: { id: d.contato } });
     await recalcularResumo(prisma, d.caso);

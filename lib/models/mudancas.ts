@@ -53,6 +53,16 @@ export const REVISAO = {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- passe a limpo (21/10) ---------------- */
   {
+    id: "ia-atualiza-a-ficha",
+    dia: "2026-10-21",
+    tipo: "novo",
+    frente: "plataforma",
+    titulo: "IA atualiza a ficha do caso e do NPS pela conversa",
+    texto:
+      "A IA lia a conversa, anotava e criava atividade, mas a ficha ficava parada. Agora, a cada conversa lida, ela registra no caso o contato do dia (falou ou tentou), o pedido de avaliação feito no WhatsApp, a validação quando o cliente diz que resolveu (ou que não), o risco de cancelamento quando ele pede para cancelar e a causa raiz que estiver vazia (só do catálogo). No NPS, a etapa sai de \"Novo\" quando o cliente responde, e entram \"resolveu depois do contato\", risco, causa e avaliação pedida. Uma vez por dia, cada item com desfazer. A nota do portal e a da pesquisa não mudam: são do cliente.",
+    href: "/agenda",
+  },
+  {
     id: "ia-le-com-contexto",
     dia: "2026-10-21",
     tipo: "melhoria",

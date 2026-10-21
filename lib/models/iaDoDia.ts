@@ -252,10 +252,20 @@ export interface LeituraDoDia {
    * anotação, onde a Retenção lê.
    */
   cancelamento: "nao" | "pediu" | "cancelou" | "ficou";
+  /** A conversa é mesmo com este cliente — sem isso, nada na ficha muda. */
+  sobreEle: boolean;
+  /**
+   * O que a conversa de hoje muda na ficha (21/10/2026): "a IA precisa
+   * atualizar as informações dos casos". Pedimos a avaliação hoje; o
+   * cliente disse que resolveu (ou que não); a causa raiz, só do catálogo.
+   */
+  pedimosAvaliacao: boolean;
+  solucao: "confirmou" | "nao-resolveu" | "nao";
+  causa: string;
 }
 
 /** A resposta da IA, conferida: campo torto vira o lado conservador (não anotar, não lembrar). */
-export function leituraDaResposta(d: Record<string, unknown>, segmentos: string[], hoje: string): LeituraDoDia {
+export function leituraDaResposta(d: Record<string, unknown>, segmentos: string[], hoje: string, causas: string[] = []): LeituraDoDia {
   const limpo = (v: unknown) => String(v ?? "").replace(/\s+/g, " ").trim();
   const seg = limpo(d.segmento);
   const segmento = (segmentos.includes(seg) ? seg : "outro") as LeituraDoDia["segmento"];
@@ -309,8 +319,17 @@ export function leituraDaResposta(d: Record<string, unknown>, segmentos: string[
           ? "Cancelamento: o cliente desistiu de cancelar e vai continuar."
           : null;
 
+  const sol = limpo(d.solucao);
+  /* Causa fora do catálogo não entra: a IA escolhe da lista, e o nome tem que bater (sem diferença de caixa). */
+  const causa = causas.find((c) => c.toLowerCase() === limpo(d.causa).toLowerCase()) ?? "";
+  const vinculado = sobreEle && segmento !== "outro";
+
   return {
     cancelamento,
+    sobreEle,
+    pedimosAvaliacao: vinculado && d.pedimos_avaliacao === true,
+    solucao: (vinculado && ["confirmou", "nao-resolveu"].includes(sol) ? sol : "nao") as LeituraDoDia["solucao"],
+    causa: vinculado ? causa : "",
     anotar: sobreEle && segmento !== "outro" && (vale || cancelamento !== "nao"),
     motivo,
     segmento,
