@@ -24,6 +24,8 @@ import { completarContato } from "@/lib/services/raPortal.service";
 import { dadosDaConversa, oQueCompletar, type CampoDoCadastro } from "@/lib/services/sinaisDaConversa";
 import { gravarContato, recalcularResumo } from "@/lib/services/tratativa.service";
 import { pedirEstruturado, temIA } from "@/lib/services/ia.service";
+import { aprenderDasConversas, aprendizadosAtivos } from "@/lib/services/aprendizados.service";
+import { relevantes } from "@/lib/models/aprendizados";
 import { criarLembretesAutomaticos } from "@/lib/services/lembretesAutomaticos.service";
 import { termometrosDoDia } from "@/lib/services/termometro.service";
 import { listUpcomingEvents, validAccessToken } from "@/lib/services/google.service";
@@ -276,6 +278,8 @@ export async function anotarConversasDoDia(
   */
   const usadas = await chavesJaUsadas(prisma, userId, prontas.map(lida));
   let feitas = 0;
+  /* O que o time já aprendeu com outras conversas — cada leitura recebe só o que tem a ver com ela. */
+  const saber = await aprendizadosAtivos(prisma);
 
   for (const c of prontas.filter((x) => !usadas.has(lida(x))).slice(0, ANOTACOES_POR_RODADA)) {
     const nome = nomeDoCliente(c, c.case?.customer ?? c.npsResponse?.customerName, c.mensagens);
@@ -285,6 +289,7 @@ export async function anotarConversasDoDia(
       caso: c.case ? { protocolo: c.case.protocol, canal: c.case.channel, titulo: c.case.title, relato: c.case.description } : null,
       nps: c.npsResponse ? { nota: c.npsResponse.score, comentario: c.npsResponse.comment } : null,
       mensagens: c.mensagens,
+      saber: relevantes(saber, [c.case?.title, c.case?.description, c.npsResponse?.comment, ...c.mensagens.map((m) => m.texto)].filter(Boolean).join(" ")).map((a) => `${a.assunto}: ${a.texto}`),
     });
     /* A IA não respondeu agora: a próxima volta tenta de novo. */
     if (!leitura) continue;
@@ -375,6 +380,8 @@ export interface ConversaParaLer {
   caso: { protocolo: string; canal: string; titulo: string; relato: string | null } | null;
   nps: { nota: number; comentario: string | null } | null;
   mensagens: { de: string; texto: string; em: Date }[];
+  /** O que o time já sabe sobre o assunto (aprendido de outras conversas). */
+  saber?: string[];
 }
 
 const hhmmDe = (d: Date) => {
@@ -410,6 +417,9 @@ async function lerConversaDoDia(entrada: ConversaParaLer): Promise<LeituraDoDia 
         `Cliente: ${entrada.nome || "(nome não identificado)"}. Hoje é ${entrada.hoje}.`,
         "A conversa está ligada a:",
         ...vinculos,
+        ...(entrada.saber?.length
+          ? ["", "O que o time já sabe sobre isso (aprendido de outras conversas — use para entender o contexto; não copie para a anotação):", ...entrada.saber.map((x) => `- ${x}`)]
+          : []),
         "",
         "Responda:",
         "1. sobre_este_cliente: false se a conversa, ou parte dela, parece ser com outra pessoa (chamada por outro nome, assunto de outro cliente) ou mistura duas conversas.",
@@ -934,6 +944,8 @@ export async function rodarIaDoDia(prisma: PrismaClient, userId: string, agora =
     depoisDasReunioes(prisma, userId, agora),
     /* O termômetro de quem teve mensagem nova (09/10/2026): satisfação e avaliação prevista, gravadas. */
     termometrosDoDia(prisma, agora),
+    /* O que o time sabe, tirado das conversas do WhatsApp e do Slack — a cada duas horas (21/10/2026). */
+    aprenderDasConversas(prisma, userId, agora),
   ]);
   for (const p of partes) if (p.status === "rejected") console.error("[ia do dia]", p.reason);
 }

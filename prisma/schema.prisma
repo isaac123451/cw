@@ -2554,3 +2554,26 @@ model TermometroDoCliente {
   @@index([caseId, criadoEm])
   @@index([npsResponseId, criadoEm])
 }
+
+/// O que a IA aprendeu com as conversas do time (21/10/2026): "ela precisa
+/// sempre aprender mais e mais verificando as minhas conversas no WhatsApp
+/// com os clientes como também no Slack ... desde que não tenha informação
+/// sensível". Conhecimento geral — produto, processo, solução, prazo, o
+/// jeito de responder —, nunca dado de cliente. Revisável e apagável na
+/// tela "O que a IA aprendeu".
+model AprendizadoDaIA {
+  id        String   @id @default(cuid())
+  /// O assunto normalizado — o mesmo aprendizado de novo soma, não duplica.
+  chave     String   @unique
+  assunto   String
+  texto     String
+  /// whatsapp · slack
+  fonte     String
+  /// Quantas vezes apareceu nas conversas.
+  vezes     Int      @default(1)
+  ativo     Boolean  @default(true)
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@index([ativo, atualizadoEm])
+}

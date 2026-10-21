@@ -233,6 +233,7 @@ async function main() {
     "/reclame-aqui/premio",
     "/distribuicao",
     "/retencao",
+    "/aprendizados",
     "/causas-raiz",
     "/novidades",
     "/redes-sociais",

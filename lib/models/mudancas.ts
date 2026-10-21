@@ -63,6 +63,26 @@ export const MUDANCAS: Mudanca[] = [
     href: "/retencao",
   },
   {
+    id: "ia-aprende-com-as-conversas",
+    dia: "2026-10-21",
+    tipo: "novo",
+    frente: "plataforma",
+    titulo: "A IA aprende com as suas conversas",
+    texto:
+      "A cada duas horas a IA lê as suas respostas aos clientes no WhatsApp e as conversas do Slack e guarda o que vale como conhecimento geral — como resolver um problema que se repete, um recurso que o sistema tem ou não tem, uma integração instável, o jeito de explicar que funcionou. Documento, contato, senha, cartão e assunto privado (salário, saúde) nunca saem daqui. Ao ler a próxima conversa, ela recebe o que tem a ver com o assunto. Em Conhecimento → O que a IA aprendeu você vê tudo e esquece o que não quiser.",
+    href: "/aprendizados",
+  },
+  {
+    id: "ia-tags-e-anotacoes",
+    dia: "2026-10-21",
+    tipo: "melhoria",
+    frente: "plataforma",
+    titulo: "IA: tags certas, uma anotação por dia e o pedido de cancelamento virando atividade",
+    texto:
+      "A IA passou a pôr e tirar tags sozinha, com o motivo no histórico do caso: Cancelamento de plano, Reincidente (mesmo cliente em 90 dias), Risco de nota baixa e Possível avaliação positiva (só enquanto não há avaliação). Na primeira passada saíram 108 \"Possível avaliação positiva\" e 28 \"Risco de nota baixa\" de reclamações já avaliadas. A anotação da conversa virou uma por caso por dia, reescrita quando chega mensagem nova (antes eram duas ou três, e o que o cliente dizia à tarde não era lido). Quando a conversa traz pedido de cancelamento, nasce uma atividade de retenção para hoje.",
+    href: "/reclame-aqui",
+  },
+  {
     id: "quadro-filtros-e-explicacoes",
     dia: "2026-10-21",
     tipo: "melhoria",

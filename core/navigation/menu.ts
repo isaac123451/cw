@@ -1,4 +1,5 @@
 import {
+  BrainCircuit,
   ShieldCheck,
   BarChart3,
   Bot,
@@ -103,6 +104,7 @@ export const menuItems: MenuItem[] = [
   { title: "Assistente", href: "/assistente", icon: Bot, group: "Inteligência" },
   { title: "Documentação", href: "/documentacao", icon: BookOpenCheck, group: "Conhecimento" },
   { title: "Respostas prontas", href: "/base-conhecimento", icon: LibraryBig, group: "Conhecimento" },
+  { title: "O que a IA aprendeu", href: "/aprendizados", icon: BrainCircuit, group: "Conhecimento" },
   { title: "Processos e SLA", href: "/processos", icon: Workflow, group: "Conhecimento" },
   { title: "Projetos e Melhorias", href: "/projetos", icon: FolderKanban, group: "Conhecimento" },
   { title: "Ferramentas e acessos", href: "/ferramentas", icon: KeyRound, group: "Conhecimento" },

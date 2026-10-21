@@ -72,6 +72,7 @@
     "check:identificacao": "tsx scripts/check-identificacao.ts",
     "check:cancelamento": "tsx scripts/check-cancelamento.ts",
     "check:tags-automaticas": "tsx scripts/check-tags-automaticas.ts",
+    "check:aprendizados": "tsx scripts/check-aprendizados.ts",
     "check:por-ciclo": "tsx --env-file=.env scripts/check-por-ciclo.ts",
     "check:relatorio": "tsx --env-file=.env scripts/check-relatorio.ts",
     "check:analista": "tsx --env-file=.env scripts/check-analista.ts",
