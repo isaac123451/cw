@@ -165,9 +165,20 @@ export function mudancasDoPortal(
 
   for (const campo of DO_PORTAL) {
 
-    const novo = (
+    let novo = (
       doArquivo as unknown as Record<string, unknown>
     )[campo];
+
+    /*
+      Avaliada é coluna final, mesmo quando o texto do status não veio
+      certo (21/10/2026). Status desconhecido cai em "Novo" no
+      `mapStatus`, e a reclamação ficava avaliada e parada na coluna —
+      quatro casos assim no quadro. O resolvido decide qual das duas — e
+      sem ele não se chuta.
+    */
+    if (campo === "status" && doArquivo.evaluated === true && typeof doArquivo.resolved === "boolean" && !COLUNAS_FINAIS.has(String(novo ?? ""))) {
+      novo = doArquivo.resolved ? "Resolvido" : "Não resolvido";
+    }
 
     /*
       Campo ausente no arquivo não apaga o que está no banco.

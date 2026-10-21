@@ -70,7 +70,15 @@ export async function lerPropostaDoCatalogo(): Promise<{ ok: true; proposta: Pro
     ];
 
     const catalogo = causas.length ? causas.map((c) => c.name) : [...ROOT_CAUSES];
-    return { ok: true, proposta: propostaDoCatalogo(registros, catalogo), catalogo };
+    const proposta = propostaDoCatalogo(registros, catalogo);
+    /*
+      A regra de texto (RegExp) não atravessa do servidor para a tela — o
+      Next recusava a resposta inteira ("Only plain objects… RegExp"), e a
+      tela de causas raiz ficava sem a proposta (achado na varredura de
+      21/10/2026). A tela não usa a regra; vai o resto da família.
+    */
+    const semRegra = { ...proposta, linhas: proposta.linhas.map((l) => ({ ...l, familia: { ...l.familia, padrao: undefined as unknown as RegExp } })) };
+    return { ok: true, proposta: semRegra, catalogo };
   } catch (erro) {
     console.error("[catálogo de causas] proposta", erro);
     return { ok: false, erro: "O banco não respondeu agora. Tente de novo em instantes." };

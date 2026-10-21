@@ -51,6 +51,27 @@ export const REVISAO = {
 };
 
 export const MUDANCAS: Mudanca[] = [
+  /* ---------------- passe a limpo (21/10) ---------------- */
+  {
+    id: "avaliada-vai-para-final",
+    dia: "2026-10-21",
+    tipo: "correcao",
+    frente: "plataforma",
+    titulo: "Reclamação avaliada não fica mais parada no meio do quadro",
+    texto:
+      "Quatro reclamações estavam avaliadas no Reclame Aqui e ainda em \"Aguardando avaliação\" ou numa coluna da operação: quando o status lido do portal vinha num texto que a ferramenta não reconhecia, a coluna não andava. Agora a avaliação leva a reclamação para Resolvido ou Não resolvido, conforme o consumidor marcou. As quatro foram corrigidas e nenhuma outra sobrou assim.",
+    href: "/reclame-aqui",
+  },
+  {
+    id: "proposta-de-causas-volta",
+    dia: "2026-10-21",
+    tipo: "correcao",
+    frente: "plataforma",
+    titulo: "Proposta do catálogo de causas voltou a carregar",
+    texto:
+      "A tela de causas raiz pedia a proposta tirada da base e recebia erro: o servidor tentava mandar junto a regra de texto de cada causa, que não atravessa para a tela. A regra fica no servidor e a proposta chega inteira.",
+    href: "/causas-raiz",
+  },
   /* ---------------- plataforma: cancelamento e retenção (20/10) ---------------- */
   {
     id: "cancelado-por-outro-setor",

@@ -115,6 +115,24 @@ function regra() {
   );
 
   conferir(
+    "avaliada com status desconhecido vai para a coluna final",
+    mudancasDoPortal(
+      daPlanilha({ status: "Novo", evaluated: true, resolved: true, score: 9 }),
+      { ...BANCO, status: "Aguardando avaliação" }
+    ).dados.status,
+    "Resolvido"
+  );
+
+  conferir(
+    "avaliada não resolvida, mesmo em coluna da operação",
+    mudancasDoPortal(
+      daPlanilha({ status: "Novo", evaluated: true, resolved: false, score: 3 }),
+      { ...BANCO, status: "Em tratativa" }
+    ).dados.status,
+    "Não resolvido"
+  );
+
+  conferir(
     "coluna do portal anda para frente",
     mudancasDoPortal(
       daPlanilha({ status: "Aguardando avaliação" }),
@@ -251,6 +269,7 @@ async function funcao(prisma: PrismaClient) {
         category: `${modelo.category} (outra)`,
         publicResponse: RESPOSTA_SINTETICA,
         evaluated: true,
+        resolved: true,
         score: 8,
       },
     ]);
@@ -280,7 +299,7 @@ async function funcao(prisma: PrismaClient) {
     conferir("categoria da operação continua", depois?.categoryId, trabalhada.categoryId);
     conferir("etiqueta da operação continua", depois?._count.tags, 1);
     conferir("a resposta real não vira marcador", depois?.publicResponse, RESPOSTA_REAL);
-    conferir("a etapa anda, porque o portal diz", depois?.status, "Aguardando avaliação");
+    conferir("avaliada, a etapa vai para a final", depois?.status, "Resolvido");
     conferir("e a avaliação do portal entra", [depois?.evaluated, depois?.score], [true, 8]);
   } finally {
     await prisma.caseTag.deleteMany({ where: { case: { protocol: PROTOCOLO } } });
