@@ -14,7 +14,8 @@ import DesfechoDoCliente from "@/components/retencao/DesfechoDoCliente";
 import MarcaDeCancelamento from "@/components/retencao/MarcaDeCancelamento";
 
 import { lerRetencao } from "@/lib/actions/retencao";
-import type { ReclamacaoComRisco } from "@/lib/services/cancelamento.service";
+import OutrasReclamacoes from "@/components/retencao/OutrasReclamacoes";
+import type { ReclamacaoComRisco, ReclamacaoForaDaConta } from "@/lib/services/cancelamento.service";
 import { resumoDeRetencao, type ClienteEmCancelamento, type ResumoDeRetencao, type SinalDeCancelamento } from "@/lib/models/cancelamento";
 import { ROTULO_DO_RISCO, type ClienteEmRisco } from "@/lib/models/clienteEmRisco";
 
@@ -39,7 +40,7 @@ const POR_PAGINA = 30;
  * a linha; as atitudes sugeridas continuam na ficha do caso.
  */
 export default function RetencaoPage() {
-  const [dados, setDados] = useState<{ clientes: ClienteEmCancelamento[]; emRisco: ClienteEmRisco[]; reclamacoes: ReclamacaoComRisco[] } | null>(null);
+  const [dados, setDados] = useState<{ clientes: ClienteEmCancelamento[]; emRisco: ClienteEmRisco[]; reclamacoes: ReclamacaoComRisco[]; foraDaConta: ReclamacaoForaDaConta[] } | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   /* O período (1.113): as reclamações antigas distorciam a conta — o padrão é o semestre. */
   const [periodo, setPeriodo] = useState<6 | 12 | 0>(6);
@@ -55,7 +56,7 @@ export default function RetencaoPage() {
     if (!r.ok) setErro(r.erro);
     else {
       setErro(null);
-      setDados({ clientes: r.clientes, emRisco: r.emRisco, reclamacoes: r.reclamacoes });
+      setDados({ clientes: r.clientes, emRisco: r.emRisco, reclamacoes: r.reclamacoes, foraDaConta: r.foraDaConta });
     }
   }
 
@@ -64,7 +65,7 @@ export default function RetencaoPage() {
     lerRetencao().then((r) => {
       if (!vivo) return;
       if (!r.ok) setErro(r.erro);
-      else setDados({ clientes: r.clientes, emRisco: r.emRisco, reclamacoes: r.reclamacoes });
+      else setDados({ clientes: r.clientes, emRisco: r.emRisco, reclamacoes: r.reclamacoes, foraDaConta: r.foraDaConta });
     });
     return () => {
       vivo = false;
@@ -264,6 +265,12 @@ export default function RetencaoPage() {
                         <div className="min-w-0 flex-1">
                           <p className="flex flex-wrap items-baseline gap-x-2">
                             <span className="font-medium text-zinc-900">{c.nome}</span>
+                            {/* A marcação à mão contra a nossa própria resposta: para conferir. */}
+                            {c.conflito && (
+                              <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[11px] font-medium text-amber-900" title={c.conflito}>
+                                conferir
+                              </span>
+                            )}
                             <span className="text-xs text-zinc-400">
                               {c.pedido ? `pediu em ${dia(c.pedido.quando)} · ${FRENTE[c.pedido.frente]}` : `chegou cancelado · ${dia(c.desde)}`}
                             </span>
@@ -371,6 +378,9 @@ export default function RetencaoPage() {
 
           </div>
         </div>
+
+        {/* Qualquer reclamação, para adicionar à conta quando o cliente pediu para cancelar. */}
+        {dados && <OutrasReclamacoes reclamacoes={dados.foraDaConta} onMudou={() => void carregar()} />}
       </div>
     </MainLayout>
   );

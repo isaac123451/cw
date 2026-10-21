@@ -2,13 +2,13 @@
 
 import { requireRole, SemPermissao, tryRole } from "@/lib/auth/guard";
 import { chaveDaReclamacao, resumoDeRetencao, SETORES, type ClienteEmCancelamento, type DesfechoManual, type ResumoDeRetencao } from "@/lib/models/cancelamento";
-import { lerCancelamento, lerClientesEmRisco, lerReclamacoesComRisco, type ReclamacaoComRisco } from "@/lib/services/cancelamento.service";
+import { lerCancelamento, lerClientesEmRisco, lerReclamacoesComRisco, lerReclamacoesForaDaConta, type ReclamacaoComRisco, type ReclamacaoForaDaConta } from "@/lib/services/cancelamento.service";
 import type { ClienteEmRisco } from "@/lib/models/clienteEmRisco";
 
 type Falha = { ok: false; erro: string };
 
 /** A conta de cancelamento e retenção, montada agora a partir da base (1.85). */
-export async function lerRetencao(): Promise<{ ok: true; clientes: ClienteEmCancelamento[]; resumo: ResumoDeRetencao; emRisco: ClienteEmRisco[]; reclamacoes: ReclamacaoComRisco[] } | Falha> {
+export async function lerRetencao(): Promise<{ ok: true; clientes: ClienteEmCancelamento[]; resumo: ResumoDeRetencao; emRisco: ClienteEmRisco[]; reclamacoes: ReclamacaoComRisco[]; foraDaConta: ReclamacaoForaDaConta[] } | Falha> {
   const ctx = await tryRole("LEITURA").catch(() => null);
   if (!ctx) return { ok: false, erro: "Entre na aplicação para ver a retenção." };
   try {
@@ -17,11 +17,14 @@ export async function lerRetencao(): Promise<{ ok: true; clientes: ClienteEmCanc
     const desfechos = new Map<string, "retido" | "cancelado" | "nao-e-cancelamento">();
     for (const c of clientes) if (!c.retidoSemSinal && c.desfecho !== "em-aberto") for (const p of c.protocolos) desfechos.set(p, c.desfecho);
     for (const c of foraDaConta) for (const p of c.protocolos) desfechos.set(p, "nao-e-cancelamento");
-    const [emRisco, reclamacoes] = await Promise.all([
+    const naConta = new Set(clientes.flatMap((c) => c.protocolos));
+    const marcadasFora = new Set(foraDaConta.flatMap((c) => c.protocolos));
+    const [emRisco, reclamacoes, fora] = await Promise.all([
       lerClientesEmRisco(ctx.prisma, clientes).catch(() => []),
       lerReclamacoesComRisco(ctx.prisma, { desfechos }).catch(() => []),
+      lerReclamacoesForaDaConta(ctx.prisma, naConta, marcadasFora).catch(() => []),
     ]);
-    return { ok: true, clientes, resumo: resumoDeRetencao(clientes), emRisco, reclamacoes };
+    return { ok: true, clientes, resumo: resumoDeRetencao(clientes), emRisco, reclamacoes, foraDaConta: fora };
   } catch (erro) {
     console.error("[retencao]", erro);
     return { ok: false, erro: "O banco não respondeu agora. Tente de novo em instantes." };

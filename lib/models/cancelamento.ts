@@ -257,6 +257,8 @@ export interface ClienteEmCancelamento {
   desde: string;
   /** Os protocolos envolvidos, para abrir. */
   protocolos: string[];
+  /** O assunto de cada reclamação do cliente no portal ("Sistema › Falha na impressão"), sem repetir. */
+  assuntos: string[];
   /** Por que queria cancelar — ids de `MOTIVOS_DE_CANCELAMENTO`, lidos do que o cliente escreveu. */
   motivos: string[];
   /** Todas as chaves do cliente (conta, documento, e-mail…) — o painel de risco o acha por qualquer uma. */
@@ -379,11 +381,11 @@ export function juntarCancelamento(entrada: {
     (m.npsId && npsPorId.has(m.npsId) ? chavesDoNps(npsPorId.get(m.npsId)!) : null) ||
     [m.telefone ? `tel:${digitos(m.telefone).slice(-8)}` : `conversa:${m.conversaId}`];
 
-  type Grupo = { nomes: { nome: string; peso: number }[]; contaId?: string; sinais: SinalDeCancelamento[]; protocolos: Set<string>; prazos: string[]; chaves: Set<string>; textos: string[]; aberto: boolean; temCaso: boolean };
+  type Grupo = { nomes: { nome: string; peso: number }[]; contaId?: string; sinais: SinalDeCancelamento[]; protocolos: Set<string>; prazos: string[]; chaves: Set<string>; textos: string[]; aberto: boolean; temCaso: boolean; assuntos: Set<string> };
   const grupos = new Map<string, Grupo>();
   const grupo = (chaves: string[]) => {
     const r = raiz(chaves[0]);
-    const g = grupos.get(r) ?? { nomes: [], sinais: [], protocolos: new Set<string>(), prazos: [], chaves: new Set<string>(), textos: [], aberto: false, temCaso: false };
+    const g = grupos.get(r) ?? { nomes: [], sinais: [], protocolos: new Set<string>(), prazos: [], chaves: new Set<string>(), textos: [], aberto: false, temCaso: false, assuntos: new Set<string>() };
     for (const k of chaves) g.chaves.add(k);
     grupos.set(r, g);
     return g;
@@ -399,6 +401,7 @@ export function juntarCancelamento(entrada: {
     nomear(g, c.cliente, 1);
     g.protocolos.add(c.protocolo);
     g.temCaso = true;
+    if (c.categoria) g.assuntos.add([c.categoria, c.subcategoria].filter(Boolean).join(" › "));
     if (c.aberto) g.aberto = true;
     if (c.prazoDoContato) g.prazos.push(c.prazoDoContato);
   };
@@ -607,6 +610,7 @@ export function juntarCancelamento(entrada: {
       protocolos,
       chaves: [...g.chaves],
       motivos: motivosDoCancelamento(g.textos.join("\n")),
+      assuntos: [...g.assuntos],
       pedido: pedidos.sort((a, b) => a.quando.localeCompare(b.quando))[0],
     });
   }

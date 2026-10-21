@@ -10,6 +10,7 @@ import {
   type ClienteEmCancelamento,
 } from "@/lib/models/cancelamento";
 import { clientesEmRisco } from "@/lib/models/clienteEmRisco";
+import { familiaDoTexto } from "@/lib/models/catalogoDeCausas";
 import { riscoDeCancelamento, type RiscoDeCancelamento } from "@/lib/models/riscoDeCancelamento";
 import { CLOSED_STATUS } from "@/lib/services/case.service";
 import { nomeDeContatoValido } from "@/lib/models/conversa";
@@ -300,4 +301,83 @@ export async function lerReclamacoesComRisco(
   }
   const ordem = { cancelou: 1, alto: 0, medio: 2, baixo: 3 } as const;
   return saida.sort((a, b) => ordem[a.risco.nivel] - ordem[b.risco.nivel] || b.risco.pontos - a.risco.pontos);
+}
+
+export interface ReclamacaoForaDaConta {
+  id: string;
+  protocolo: string;
+  frente: "reclame-aqui" | "redes";
+  cliente: string;
+  titulo: string;
+  status: string;
+  chegouEm: string;
+  assunto: string;
+  /** Por que parece cancelamento — vazio quando não parece (aparece só na busca). */
+  sugestao?: string;
+  pontos: number;
+}
+
+/**
+ * Toda reclamação que ainda não está na conta de cancelamento (20/10/2026):
+ * "qualquer reclamação ser vista e adicionada aos casos caso faça sentido".
+ * As que parecem cancelamento — a mesma régua da chance de cancelar, sobre
+ * abertas e fechadas — vêm primeiro, com o porquê; as outras, para a busca.
+ * As marcadas "não pediu" ficam de fora.
+ */
+export async function lerReclamacoesForaDaConta(prisma: PrismaClient, naConta: Set<string>, foraMarcadas: Set<string>): Promise<ReclamacaoForaDaConta[]> {
+  const casos = await prisma.case.findMany({
+    select: {
+      id: true,
+      protocol: true,
+      channel: true,
+      customer: true,
+      title: true,
+      description: true,
+      status: true,
+      criterios: true,
+      churnRisk: true,
+      evaluated: true,
+      wouldDoBusiness: true,
+      resolved: true,
+      recebidaEm: true,
+      publishedAt: true,
+      category: { select: { name: true } },
+      subcategory: { select: { name: true } },
+      establishment: { select: { name: true } },
+    },
+  });
+  const saida: ReclamacaoForaDaConta[] = [];
+  for (const c of casos) {
+    if (naConta.has(c.protocol) || foraMarcadas.has(c.protocol)) continue;
+    const risco = riscoDeCancelamento({
+      titulo: c.title,
+      relato: c.description ?? "",
+      categoria: c.category?.name,
+      subcategoria: c.subcategory?.name,
+      criterios: c.criterios,
+      churn: c.churnRisk,
+      avaliado: c.evaluated,
+      voltaria: c.wouldDoBusiness,
+      resolvido: c.resolved,
+    });
+    /* Reclamação de consumidor final (o pedido de comida que não chegou) não é cliente da Cardápio Web pedindo para sair. */
+    const tituloNormal = c.title.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+    const consumidor =
+      familiaDoTexto(`${c.title}\n${c.description ?? ""}`)?.id === "consumidor-final" ||
+      /pedido (pago|nao (foi )?entregue|nao chegou)|(restaurante|estabelecimento|loja) fechad/.test(tituloNormal);
+    const parece = risco.nivel !== "baixo" && !consumidor;
+    saida.push({
+      id: c.id,
+      protocolo: c.protocol,
+      frente: c.channel === "RECLAME_AQUI" ? "reclame-aqui" : "redes",
+      cliente: c.establishment?.name || c.customer,
+      titulo: c.title,
+      status: c.status,
+      chegouEm: chegouEm(c),
+      assunto: [c.category?.name, c.subcategory?.name].filter(Boolean).join(" › "),
+      sugestao: parece ? risco.motivos.slice(0, 2).map((m) => m.texto).join(" · ") : undefined,
+      pontos: parece ? risco.pontos : 0,
+    });
+  }
+  return saida.sort((a, b) => b.pontos - a.pontos || b.chegouEm.localeCompare(a.chegouEm));
 }
