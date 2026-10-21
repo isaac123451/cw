@@ -283,6 +283,10 @@ export async function anotarConversasDoDia(
 
   for (const c of prontas.filter((x) => !usadas.has(lida(x))).slice(0, ANOTACOES_POR_RODADA)) {
     const nome = nomeDoCliente(c, c.case?.customer ?? c.npsResponse?.customerName, c.mensagens);
+    /* A conversa guardada sem nome (só o telefone, ou texto da tela) ganha o nome achado (21/10/2026). */
+    if (nome && !nomeDePessoa(c.contatoNome)) {
+      await prisma.conversa.update({ where: { id: c.id }, data: { contatoNome: nome.slice(0, 120) } }).catch(() => undefined);
+    }
     const leitura = await ler({
       nome,
       hoje,
