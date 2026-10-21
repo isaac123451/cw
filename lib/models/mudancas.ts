@@ -53,6 +53,16 @@ export const REVISAO = {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- passe a limpo (21/10) ---------------- */
   {
+    id: "graficos-de-cancelamento-clicaveis",
+    dia: "2026-10-21",
+    tipo: "melhoria",
+    frente: "plataforma",
+    titulo: "Gráficos de cancelamento abrem os casos",
+    texto:
+      "Na Análise dos cancelamentos, tudo é clicável: cada cor da barra (ficaram, cancelaram, em aberto) e o nome do motivo ou do assunto, cada cor e cada mês do mês a mês, os canais por onde pediram e quem cancelou. Abre embaixo a lista dos clientes daquele pedaço, com o desfecho, o que disseram e o link de cada reclamação. E o cliente com e-mail no campo do nome passa a aparecer pelo nome de verdade, quando há.",
+    href: "/retencao",
+  },
+  {
     id: "ia-atualiza-a-ficha",
     dia: "2026-10-21",
     tipo: "novo",

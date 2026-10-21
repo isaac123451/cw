@@ -276,7 +276,8 @@ export interface ClienteEmCancelamento {
 const digitos = (v?: string) => String(v ?? "").replace(/\D/g, "");
 
 /** Nome que não diz quem é: vazio, "Não informado", um telefone. */
-const nomeVazio = (n?: string) => !n || /^\s*(nao informado|anonimo|cliente|contato do whatsapp)?\s*$/i.test(norma(n)) || /^[+\d\s().-]{8,}$/.test(n);
+/* O e-mail no campo do nome também é "sem nome" (21/10/2026): passava na frente do nome de verdade do mesmo cliente. */
+const nomeVazio = (n?: string) => !n || /^\s*(nao informado|anonimo|cliente|contato do whatsapp)?\s*$/i.test(norma(n)) || /^[+\d\s().-]{8,}$/.test(n) || /^\S+@\S+$/.test(n.trim());
 
 /**
  * As chaves de um caso — a conta, o documento e o e-mail. A primeira é a

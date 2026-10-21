@@ -1,6 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
+import Link from "next/link";
+import { useMemo, useState } from "react";
+import { X } from "lucide-react";
 
 import type { ClienteEmCancelamento, ResumoDeRetencao } from "@/lib/models/cancelamento";
 import { MOTIVOS_DE_CANCELAMENTO } from "@/lib/models/motivoDoCancelamento";
@@ -14,6 +16,20 @@ const FRENTE: Record<string, string> = { "reclame-aqui": "Reclame Aqui", redes: 
 const COR_RETIDO = "bg-emerald-500";
 const COR_CANCELADO = "bg-rose-500";
 const COR_ABERTO = "bg-zinc-300";
+
+type Fatia = "retidos" | "cancelados" | "abertos";
+const DA_FATIA: Record<Fatia, (c: ClienteEmCancelamento) => boolean> = {
+  retidos: (c) => c.desfecho === "retido",
+  cancelados: (c) => c.desfecho === "cancelado",
+  abertos: (c) => c.desfecho !== "retido" && c.desfecho !== "cancelado",
+};
+const NOME_DA_FATIA: Record<Fatia, string> = { retidos: "ficaram", cancelados: "cancelaram", abertos: "em aberto" };
+
+/** O que foi clicado no gráfico: o título e quem está nele. */
+interface Recorte {
+  titulo: string;
+  lista: ClienteEmCancelamento[];
+}
 
 interface Contagem {
   retidos: number;
@@ -50,25 +66,94 @@ function Legenda() {
  * aberto: o comprimento é o total (proporcional ao maior da lista), os
  * pedaços têm 2 px de folga entre si e só as pontas são arredondadas.
  */
-function BarraDividida({ c, total, maior, nome }: { c: Contagem; total: number; maior: number; nome: string }) {
+function BarraDividida({ c, total, maior, nome, onFatia }: { c: Contagem; total: number; maior: number; nome: string; onFatia: (f: Fatia) => void }) {
   const pedacos = (
     [
-      [c.retidos, COR_RETIDO, "ficaram"],
-      [c.cancelados, COR_CANCELADO, "cancelaram"],
-      [c.abertos, COR_ABERTO, "em aberto"],
+      [c.retidos, COR_RETIDO, "retidos"],
+      [c.cancelados, COR_CANCELADO, "cancelados"],
+      [c.abertos, COR_ABERTO, "abertos"],
     ] as const
   ).filter(([n]) => n > 0);
   return (
-    <span className="flex h-2.5 gap-0.5" style={{ width: `${Math.max(4, (total / maior) * 100)}%` }}>
-      {pedacos.map(([n, cor, rotulo], i) => (
-        <span
-          key={rotulo}
-          className={`h-full min-w-[3px] ${i === 0 ? "rounded-l" : ""} ${i === pedacos.length - 1 ? "rounded-r" : ""} ${cor}`}
+    <span className="flex h-3 gap-0.5" style={{ width: `${Math.max(4, (total / maior) * 100)}%` }}>
+      {pedacos.map(([n, cor, fatia], i) => (
+        <button
+          type="button"
+          key={fatia}
+          onClick={() => onFatia(fatia)}
+          className={`h-full min-w-[4px] cursor-pointer transition-opacity hover:opacity-75 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-violet-500 ${i === 0 ? "rounded-l" : ""} ${i === pedacos.length - 1 ? "rounded-r" : ""} ${cor}`}
           style={{ flex: n }}
-          title={`${nome}: ${n} ${rotulo}`}
+          title={`${nome}: ${n} ${NOME_DA_FATIA[fatia]} — clique para ver os casos`}
+          aria-label={`${nome}: ver ${VER_FATIA[fatia]} (${n})`}
         />
       ))}
     </span>
+  );
+}
+
+const linkDoCaso = (protocolo: string) => `/reclame-aqui/${encodeURIComponent(protocolo)}`;
+const diaCurto = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
+/* Aspas só no que o cliente disse; a nota nossa ("reclamação adicionada à mão…") vai sem — a mesma regra da lista da página. */
+const fala = (t: string) => (/^(categoria|causa raiz|reclamação adicionada|chegou cancelado|avaliou|solução|a nossa resposta|nossa resposta|comentário do caso)/.test(t) ? t : `“${t.replace(/^…|…$/g, "")}”`);
+const VER_FATIA: Record<Fatia, string> = { retidos: "quem ficou", cancelados: "quem cancelou", abertos: "quem está em aberto" };
+const DESFECHO: Record<string, [string, string]> = {
+  retido: ["Ficou", "bg-emerald-50 text-emerald-800"],
+  cancelado: ["Cancelou", "bg-rose-50 text-rose-800"],
+};
+
+/** Os casos do pedaço clicado: quem, o desfecho, o que disse e as reclamações. */
+function CasosDoRecorte({ recorte, onFechar }: { recorte: Recorte; onFechar: () => void }) {
+  return (
+    <div className="border-t border-zinc-100 bg-zinc-50/60 px-5 py-4" aria-live="polite">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-sm font-medium text-zinc-900">
+          {recorte.titulo}{" "}
+          <span className="font-normal text-zinc-500">
+            · {recorte.lista.length} {recorte.lista.length === 1 ? "cliente" : "clientes"}
+          </span>
+        </h3>
+        <button type="button" onClick={onFechar} className="rounded p-1 text-zinc-400 hover:bg-zinc-200/60 hover:text-zinc-700" aria-label="Fechar a lista">
+          <X size={15} />
+        </button>
+      </div>
+      {recorte.lista.length === 0 ? (
+        <p className="mt-2 text-sm text-zinc-500">Ninguém neste pedaço.</p>
+      ) : (
+        <ul className="mt-2 max-h-80 divide-y divide-zinc-200/70 overflow-y-auto rounded-lg border border-zinc-200/80 bg-white">
+          {recorte.lista.map((c) => {
+            const [rotulo, cor] = DESFECHO[c.desfecho] ?? ["Em aberto", "bg-zinc-100 text-zinc-700"];
+            return (
+              <li key={c.chave} className="px-3 py-2">
+                <p className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                  <span className="text-sm font-medium text-zinc-900">{c.nome}</span>
+                  <span className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${cor}`}>
+                    {rotulo}
+                    {c.canceladoPor === "outro-setor" ? ` · ${c.setor ?? "outro setor"}` : ""}
+                  </span>
+                  <span className="text-xs text-zinc-400">
+                    {c.pedido ? `pediu em ${diaCurto(c.pedido.quando)} · ${FRENTE[c.pedido.frente] ?? c.pedido.frente}` : `chegou cancelado · ${diaCurto(c.desde)}`}
+                  </span>
+                </p>
+                {c.pedido && (
+                  <p className="mt-0.5 truncate text-xs text-zinc-600" title={c.pedido.trecho}>
+                    {fala(c.pedido.trecho)}
+                  </p>
+                )}
+                {c.protocolos.length > 0 && (
+                  <p className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs">
+                    {c.protocolos.map((p) => (
+                      <Link key={p} href={linkDoCaso(p)} className="font-mono text-violet-700 hover:underline">
+                        {p}
+                      </Link>
+                    ))}
+                  </p>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
   );
 }
 
@@ -93,6 +178,17 @@ function mediana(v: number[]) {
  * barra cresce de baixo.
  */
 export default function AnaliseDosCancelamentos({ clientes, resumo }: { clientes: ClienteEmCancelamento[]; resumo: ResumoDeRetencao }) {
+  /*
+    Todo gráfico abre os casos (21/10/2026): "tem que ser possível clicar
+    nos gráficos na parte de cancelamento para verificar cada caso". O
+    pedaço da barra abre só aquele desfecho; o nome, o grupo inteiro.
+  */
+  const [recorte, setRecorte] = useState<Recorte | null>(null);
+  const abrir = (titulo: string, lista: ClienteEmCancelamento[], fatia?: Fatia) =>
+    setRecorte({ titulo: fatia ? `${titulo} — ${NOME_DA_FATIA[fatia]}` : titulo, lista: fatia ? lista.filter(DA_FATIA[fatia]) : lista });
+  const doMotivo = (id: string) => clientes.filter((c) => c.motivos.includes(id));
+  const doAssunto = (nome: string) => clientes.filter((c) => c.assuntos.includes(nome));
+  const doMes = (aaaamm: string) => clientes.filter((c) => c.desde.startsWith(aaaamm));
   const motivos = useMemo(
     () =>
       MOTIVOS_DE_CANCELAMENTO.map((m) => ({ id: m.id, nome: m.nome, ...contar(clientes.filter((c) => c.motivos.includes(m.id))) }))
@@ -162,24 +258,24 @@ export default function AnaliseDosCancelamentos({ clientes, resumo }: { clientes
             {motivos.map((m) => (
               <li key={m.id}>
                 <div className="flex items-baseline justify-between gap-3">
-                  <span className="truncate text-sm text-zinc-700" title={m.nome}>
+                  <button type="button" onClick={() => abrir(m.nome, doMotivo(m.id))} className="truncate text-left text-sm text-zinc-700 hover:text-violet-700 hover:underline" title={`${m.nome} — ver os casos`}>
                     {m.nome}
-                  </span>
+                  </button>
                   <span className="shrink-0 text-xs tabular-nums text-zinc-500">
                     <span className="font-medium text-zinc-800">{m.total}</span>
                     {m.retidos + m.cancelados > 0 && ` · ficaram ${Math.round((m.retidos / (m.retidos + m.cancelados)) * 100)}%`}
                   </span>
                 </div>
                 <div className="mt-1">
-                  <BarraDividida c={m} total={m.total} maior={maiorMotivo} nome={m.nome} />
+                  <BarraDividida c={m} total={m.total} maior={maiorMotivo} nome={m.nome} onFatia={(f) => abrir(m.nome, doMotivo(m.id), f)} />
                 </div>
               </li>
             ))}
           </ul>
           {semMotivo > 0 && (
-            <p className="mt-3 text-xs text-zinc-400">
+            <button type="button" onClick={() => abrir("Sem motivo dito", clientes.filter((c) => !c.motivos.length))} className="mt-3 text-left text-xs text-zinc-400 hover:text-violet-700 hover:underline">
               {semMotivo} {semMotivo === 1 ? "cliente não disse o motivo" : "clientes não disseram o motivo"}.
-            </p>
+            </button>
           )}
         </div>
 
@@ -194,15 +290,15 @@ export default function AnaliseDosCancelamentos({ clientes, resumo }: { clientes
               {assuntos.map((a) => (
                 <li key={a.nome}>
                   <div className="flex items-baseline justify-between gap-3">
-                    <span className="truncate text-sm text-zinc-700" title={a.nome}>
+                    <button type="button" onClick={() => abrir(a.nome, doAssunto(a.nome))} className="truncate text-left text-sm text-zinc-700 hover:text-violet-700 hover:underline" title={`${a.nome} — ver os casos`}>
                       {a.nome}
-                    </span>
+                    </button>
                     <span className="shrink-0 text-xs tabular-nums text-zinc-500">
                       <span className="font-medium text-zinc-800">{a.cancelados}</span> de {a.total} cancelaram
                     </span>
                   </div>
                   <div className="mt-1">
-                    <BarraDividida c={a} total={a.total} maior={maiorAssunto} nome={a.nome} />
+                    <BarraDividida c={a} total={a.total} maior={maiorAssunto} nome={a.nome} onFatia={(f) => abrir(a.nome, doAssunto(a.nome), f)} />
                   </div>
                 </li>
               ))}
@@ -214,8 +310,8 @@ export default function AnaliseDosCancelamentos({ clientes, resumo }: { clientes
         {meses.length > 0 && (
           <div>
             <h3 className="text-sm font-medium text-zinc-800">Mês a mês</h3>
-            <p className="mt-0.5 text-xs text-zinc-500">Pelo mês do pedido. Embaixo, a taxa de retenção do mês.</p>
-            <div className="mt-3 flex h-36 items-stretch gap-1.5 border-b border-zinc-200" role="img" aria-label="Retidos, em aberto e cancelamentos por mês">
+            <p className="mt-0.5 text-xs text-zinc-500">Pelo mês do pedido. Embaixo, a taxa de retenção do mês. Clique numa cor ou no mês para ver os casos.</p>
+            <div className="mt-3 flex h-36 items-stretch gap-1.5 border-b border-zinc-200" aria-label="Retidos, em aberto e cancelamentos por mês">
               {meses.map((m) => (
                 <div
                   key={m.mes}
@@ -226,14 +322,21 @@ export default function AnaliseDosCancelamentos({ clientes, resumo }: { clientes
                   <div className="flex w-full max-w-8 flex-col gap-0.5" style={{ height: `${(m.clientes / maiorMes) * 82}%` }}>
                     {(
                       [
-                        [m.cancelados, COR_CANCELADO],
-                        [m.emAberto, COR_ABERTO],
-                        [m.retidos, COR_RETIDO],
+                        [m.cancelados, COR_CANCELADO, "cancelados"],
+                        [m.emAberto, COR_ABERTO, "abertos"],
+                        [m.retidos, COR_RETIDO, "retidos"],
                       ] as const
                     )
                       .filter(([n]) => n > 0)
-                      .map(([n, cor], i) => (
-                        <span key={cor} className={`w-full min-h-[3px] ${i === 0 ? "rounded-t" : ""} ${cor}`} style={{ flex: n }} />
+                      .map(([n, cor, fatia], i) => (
+                        <button
+                          type="button"
+                          key={cor}
+                          onClick={() => abrir(`Pedidos de ${mes(m.mes)}`, doMes(m.mes), fatia)}
+                          className={`w-full min-h-[4px] cursor-pointer transition-opacity hover:opacity-75 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-500 ${i === 0 ? "rounded-t" : ""} ${cor}`}
+                          style={{ flex: n }}
+                          aria-label={`${mes(m.mes)}: ver ${VER_FATIA[fatia]} (${n})`}
+                        />
                       ))}
                   </div>
                 </div>
@@ -242,7 +345,9 @@ export default function AnaliseDosCancelamentos({ clientes, resumo }: { clientes
             <div className="mt-1.5 flex gap-1.5">
               {meses.map((m) => (
                 <div key={m.mes} className="min-w-0 flex-1 text-center">
-                  <span className="block truncate text-[10px] text-zinc-400">{mes(m.mes)}</span>
+                  <button type="button" onClick={() => abrir(`Pedidos de ${mes(m.mes)}`, doMes(m.mes))} className="block w-full truncate text-[10px] text-zinc-400 hover:text-violet-700 hover:underline">
+                    {mes(m.mes)}
+                  </button>
                   <span className="block text-[11px] font-medium tabular-nums text-zinc-700">{pct(m.taxaDeRetencao)}</span>
                 </div>
               ))}
@@ -256,31 +361,49 @@ export default function AnaliseDosCancelamentos({ clientes, resumo }: { clientes
             <dt className="text-xs text-zinc-500">Por onde pediram</dt>
             <dd className="mt-1.5 space-y-1 text-sm text-zinc-800">
               {canais.map(([frente, n]) => (
-                <span key={frente} className="flex justify-between gap-2 tabular-nums">
+                <button
+                  type="button"
+                  key={frente}
+                  onClick={() => abrir(`Pediram pelo ${FRENTE[frente] ?? frente}`, clientes.filter((c) => c.pedido?.frente === frente))}
+                  className="flex w-full justify-between gap-2 text-left tabular-nums hover:text-violet-700"
+                >
                   <span>{FRENTE[frente] ?? frente}</span>
                   <span className="text-zinc-500">{n}</span>
-                </span>
+                </button>
               ))}
             </dd>
           </div>
           <div>
             <dt className="text-xs text-zinc-500">Quem cancelou</dt>
             <dd className="mt-1.5 space-y-1 text-sm text-zinc-800">
-              <span className="flex justify-between gap-2 tabular-nums">
+              <button
+                type="button"
+                onClick={() => abrir("Cancelaram pelo nosso atendimento", clientes.filter((c) => c.desfecho === "cancelado" && (c.canceladoPor ?? "atendimento") === "atendimento"))}
+                className="flex w-full justify-between gap-2 text-left tabular-nums hover:text-violet-700"
+              >
                 <span>Nosso atendimento</span>
                 <span className="text-zinc-500">{resumo.canceladosQueContam}</span>
-              </span>
+              </button>
               {setores.map(([setor, n]) => (
-                <span key={setor} className="flex justify-between gap-2 tabular-nums">
+                <button
+                  type="button"
+                  key={setor}
+                  onClick={() => abrir(`Cancelados por ${setor}`, clientes.filter((c) => c.canceladoPor === "outro-setor" && (c.setor ?? "Chegou cancelado") === setor))}
+                  className="flex w-full justify-between gap-2 text-left tabular-nums hover:text-violet-700"
+                >
                   <span className="truncate">{setor}</span>
                   <span className="text-zinc-500">{n}</span>
-                </span>
+                </button>
               ))}
               {resumo.canceladosNoPrazo > 0 && (
-                <span className="flex justify-between gap-2 tabular-nums">
+                <button
+                  type="button"
+                  onClick={() => abrir("Cancelaram no prazo do contato", clientes.filter((c) => c.desfecho === "cancelado" && c.canceladoPor === "prazo"))}
+                  className="flex w-full justify-between gap-2 text-left tabular-nums hover:text-violet-700"
+                >
                   <span>No prazo do contato</span>
                   <span className="text-zinc-500">{resumo.canceladosNoPrazo}</span>
-                </span>
+                </button>
               )}
             </dd>
           </div>
@@ -299,6 +422,7 @@ export default function AnaliseDosCancelamentos({ clientes, resumo }: { clientes
           </div>
         </dl>
       </div>
+      {recorte && <CasosDoRecorte recorte={recorte} onFechar={() => setRecorte(null)} />}
     </section>
   );
 }
