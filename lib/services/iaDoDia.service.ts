@@ -179,8 +179,19 @@ export async function fecharOQueFoiFeito(prisma: PrismaClient, userId: string): 
           fechado morria no mesmo minuto ("Cobrar Gabriel: sinalizar
           avaliação", "Cobrar Fernanda: enviar CSC e ID").
         */
+        /*
+          A avaliação só tem o dia, sem hora (21/10/2026): avaliado no mesmo
+          dia da cobrança, a meia-noite parecia "antes" do lembrete das 15h e
+          ele ficava aberto com o caso já avaliado. Com a data da avaliação,
+          compara o dia.
+        */
         casoEncerrado: c
-          ? FINAIS_DO_CASO.has(c.status) && (c.encerradoEm ?? c.evaluatedAt ?? c.updatedAt).getTime() >= t.createdAt.getTime()
+          ? FINAIS_DO_CASO.has(c.status) &&
+            (c.encerradoEm
+              ? c.encerradoEm.getTime() >= t.createdAt.getTime()
+              : c.evaluatedAt
+                ? c.evaluatedAt.toISOString().slice(0, 10) >= paredeDe(t.createdAt).dia
+                : c.updatedAt.getTime() >= t.createdAt.getTime())
           : undefined,
       }
     );
