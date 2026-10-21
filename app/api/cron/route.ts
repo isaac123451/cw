@@ -34,6 +34,7 @@ import { limparTentativasVelhas } from "@/lib/auth/throttle";
 import { importarDoWootric } from "@/lib/services/wootric.import";
 import { temWootric } from "@/lib/services/wootric.service";
 import { abrirReincidenciasComDono } from "@/lib/services/reincidencia.service";
+import { sincronizarTagsAutomaticas } from "@/lib/services/tagsAutomaticas.service";
 import { guardarBackupDoDia } from "@/lib/services/backup.service";
 import { enviarRelatorioDoCiclo } from "@/lib/services/relatorioAutomatico.service";
 
@@ -152,6 +153,7 @@ export async function GET(request: Request) {
     wootric,
     metricasDeHoje,
     reincidencias,
+    tagsAutomaticas,
     backup,
     relatorio,
   ] = await Promise.all([
@@ -226,6 +228,12 @@ export async function GET(request: Request) {
      */
     protegida("reincidencias", () => abrirReincidenciasComDono(prisma, new Date())),
 
+    /* As tags que a IA põe e tira, com o motivo no histórico (21/10/2026). */
+    protegida("tags", async () => {
+      const r = await sincronizarTagsAutomaticas(prisma, { aplicar: true });
+      return { aplicadas: r.aplicadas };
+    }),
+
     /* A cópia do dia fora do banco (1.99) — liga com SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY. */
     protegida("backup", () => guardarBackupDoDia(prisma)),
 
@@ -280,6 +288,7 @@ export async function GET(request: Request) {
       wootric,
       metricasDeHoje,
       reincidencias,
+      tags: tagsAutomaticas,
       backup,
       relatorio,
     },

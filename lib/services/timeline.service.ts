@@ -41,7 +41,8 @@ export interface TimelineEntry {
  */
 export interface EventoDoCaso {
   id: string;
-  tipo: "responsavel" | "etapa";
+  /** "etiqueta": tag posta ou tirada pela IA, com o motivo (21/10/2026). */
+  tipo: "responsavel" | "etapa" | "etiqueta";
   detalhe: string;
   por: string | null;
   em: string;
@@ -287,7 +288,7 @@ export function buildTimeline(
   for (const e of eventos) {
     entries.push({
       id: `evento-${e.id}`,
-      title: e.tipo === "responsavel" ? "Responsável trocado" : "Etapa trocada",
+      title: e.tipo === "responsavel" ? "Responsável trocado" : e.tipo === "etiqueta" ? "Tag pela IA" : "Etapa trocada",
       detail: e.por ? `${e.detalhe} · por ${e.por}` : e.detalhe,
       at: e.em,
       tone: "andamento",

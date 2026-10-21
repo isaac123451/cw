@@ -51,13 +51,13 @@ export async function eventosDoCaso(prisma: PrismaClient, protocolo: string): Pr
   const caso = await prisma.case.findUnique({ where: { protocol: protocolo }, select: { id: true } });
   if (!caso) return [];
   const eventos = await prisma.caseEvent.findMany({
-    where: { caseId: caso.id, kind: { in: ["responsavel", "etapa"] } },
+    where: { caseId: caso.id, kind: { in: ["responsavel", "etapa", "etiqueta"] } },
     orderBy: { createdAt: "asc" },
     take: 200,
   });
   return eventos.map((e) => ({
     id: e.id,
-    tipo: e.kind === "responsavel" ? ("responsavel" as const) : ("etapa" as const),
+    tipo: e.kind === "responsavel" ? ("responsavel" as const) : e.kind === "etiqueta" ? ("etiqueta" as const) : ("etapa" as const),
     detalhe: e.detail ?? "",
     por: e.actor,
     em: e.createdAt.toISOString(),
