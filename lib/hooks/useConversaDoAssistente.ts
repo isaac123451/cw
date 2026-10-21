@@ -30,6 +30,8 @@ import { pluralDe } from "@/lib/plural";
  * tela abertos), por `perguntar(texto, contexto)`.
  */
 
+import type { Comparacao } from "@/lib/services/comparacaoDeModelos.service";
+
 export interface TurnoDoAssistente {
   id: string;
   question: string;
@@ -39,6 +41,8 @@ export interface TurnoDoAssistente {
   local?: AssistantAnswer;
   streaming: boolean;
   error?: string;
+  /** "Comparar modelos" (09/10/2026): as respostas de cada IA e a melhor ideia; `answer` é a síntese. */
+  comparacao?: Comparacao;
 }
 
 /**
@@ -135,7 +139,7 @@ export function useConversaDoAssistente() {
   );
 
   /** Pergunta ao assistente; `contexto` é o que a tela aberta acrescenta ao retrato. */
-  async function perguntar(texto: string, contexto = "") {
+  async function perguntar(texto: string, contexto = "", opcoes: { comparar?: boolean } = {}) {
 
     const pergunta = texto.trim();
 
@@ -199,10 +203,7 @@ Fica em "O que eu fiz hoje", no balão do assistente, com desfazer.` : "", strea
         `- NPS (ciclos sem 1º contato): ${doNps.estourados} ${pluralDe(doNps.estourados, "estourado", "estourados")}, ${doNps.vencemHoje} ${pluralDe(doNps.vencemHoje, "vence", "vencem")} hoje.`,
       ].join("\n");
 
-      const response = await fetch("/api/assistente", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const corpo = JSON.stringify({
           snapshot: `${buildOperationSnapshot({
             cases,
             tasks,
@@ -216,7 +217,25 @@ ${aberturaParaOPrompt(abertura)}
 
 ${prazosPorFrente}${casosCitados(pergunta, cases)}${contexto ? `\n\n${contexto}` : ""}`,
           messages: [...historico, { role: "user", content: pergunta }],
-        }),
+        });
+
+      /* Comparar modelos: cada IA responde, um juiz escolhe a melhor e escreve a síntese. */
+      if (opcoes.comparar) {
+        const r = await fetch("/api/assistente/comparar", { method: "POST", headers: { "Content-Type": "application/json" }, body: corpo });
+        const dados = (await r.json().catch(() => ({}))) as Comparacao & { error?: string };
+        if (!r.ok || !dados.respostas) throw new Error(dados.error ?? "Não deu para comparar agora.");
+        setTurns((prev) =>
+          prev.map((item) =>
+            item.id === id ? { ...item, answer: dados.melhor.sintese, comparacao: dados, streaming: false, ...(dados.melhor.sintese ? {} : { error: dados.melhor.porque }) } : item
+          )
+        );
+        return;
+      }
+
+      const response = await fetch("/api/assistente", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: corpo,
       });
 
       if (!response.ok || !response.body) {

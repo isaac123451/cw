@@ -191,6 +191,33 @@ export async function memoriaDoAssistente(prisma: PrismaClient, pedido: PedidoDe
     }
   }
 
+  /*
+    A fila de quem responder (09/10/2026): na comparação entre modelos, um
+    escolheu "quem espera há menos tempo" e o juiz concordou. A ordem não
+    pode ficar ao gosto de cada IA: sai daqui, calculada — humor pior e
+    espera maior primeiro, reclamação aberta pesa mais.
+  */
+  const esperando = lidas
+    .map((x) => {
+      const ultima = x.mensagens[x.mensagens.length - 1];
+      if (ultima.de !== "cliente") return null;
+      const horas = (agora.getTime() - ultima.em.getTime()) / 3_600_000;
+      const humor = humorDaConversa(x.mensagens.slice(-12).map((m) => ({ de: m.de === "nos" ? ("nos" as const) : ("cliente" as const), texto: m.texto })));
+      const peso = Math.min(horas, 48) + (5 - humor) * 3 + (x.c.case && !/resolvido|finalizado|encerrado/i.test(x.c.case.status) ? 2 : 0);
+      return { x, horas, humor, peso };
+    })
+    .filter((v): v is NonNullable<typeof v> => v !== null)
+    .sort((a, b) => b.peso - a.peso);
+  if (esperando.length) {
+    linhas.push("");
+    linhas.push("PRIORIDADE DE RESPOSTA AGORA (calculada: humor pior e espera maior primeiro; siga esta ordem ao dizer quem responder):");
+    for (const [i, e] of esperando.entries()) {
+      linhas.push(
+        `${i + 1}. ${e.x.nome}${e.x.c.case ? ` [${e.x.c.case.protocol}]` : e.x.c.npsResponse ? " [NPS]" : ""} — esperando há ${e.horas < 1 ? `${Math.round(e.horas * 60)} min` : `${Math.round(e.horas)} h`}, humor ${ROTULO_DO_HUMOR[e.humor]}`
+      );
+    }
+  }
+
   linhas.push("");
   linhas.push(`Combinados e lembretes em aberto (até 7 dias): ${lembretes.length}.`);
   for (const t of lembretes) {

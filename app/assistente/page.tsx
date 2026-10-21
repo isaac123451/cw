@@ -14,6 +14,7 @@ import {
   Bot,
   Database,
   Eraser,
+  Scale,
   Loader2,
   Send,
   Sparkles,
@@ -36,6 +37,7 @@ import { useConversaDoAssistente } from "@/lib/hooks/useConversaDoAssistente";
 
 import AberturaDoAgente from "@/components/assistente/AberturaDoAgente";
 import OQueEuFizHoje from "@/components/iaDoDia/OQueEuFizHoje";
+import ComparacaoDasIAs from "@/components/assistente/ComparacaoDasIAs";
 
 /**
  * As perguntas que a operação faz de verdade, prontas para clicar.
@@ -111,9 +113,9 @@ export default function AssistentePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [perguntaInicial, aiEnabled, cases.length, rules.length, esperouAsRegras]);
 
-  function perguntar(texto: string) {
+  function perguntar(texto: string, opcoes: { comparar?: boolean } = {}) {
     setMessage("");
-    return perguntarAoAssistente(texto);
+    return perguntarAoAssistente(texto, "", opcoes);
   }
 
   return (
@@ -355,6 +357,8 @@ export default function AssistentePage() {
                                   Analisando a operação...
                                 </p>
                               )}
+
+                            {turn.comparacao && <ComparacaoDasIAs comparacao={turn.comparacao} />}
                           </>
 
                         )}
@@ -393,6 +397,18 @@ export default function AssistentePage() {
                 aria-label="Pergunta ao assistente"
                 className="flex-1 resize-none rounded-xl border border-zinc-200 p-3 text-sm outline-none transition-colors placeholder:text-zinc-400 focus:border-violet-400 disabled:bg-zinc-50"
               />
+
+              {/* Comparar as IAs (09/10/2026): cada uma responde, um juiz escolhe a melhor e escreve a síntese. */}
+              <button
+                type="button"
+                onClick={() => perguntar(message, { comparar: true })}
+                disabled={message.trim() === "" || busy || !aiEnabled}
+                title="Pergunta a cada IA configurada, compara as respostas e mostra a melhor — leva mais tempo"
+                className="flex h-11 items-center gap-2 rounded-xl px-3 text-sm font-medium text-violet-700 ring-1 ring-inset ring-violet-200 transition-colors hover:bg-violet-50 disabled:cursor-not-allowed disabled:text-zinc-400 disabled:ring-zinc-200"
+              >
+                <Scale size={15} />
+                Comparar IAs
+              </button>
 
               <button
                 onClick={() => perguntar(message)}

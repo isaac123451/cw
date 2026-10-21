@@ -53,6 +53,16 @@ export const REVISAO = {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- passe a limpo (21/10) ---------------- */
   {
+    id: "comparar-ias-no-assistente",
+    dia: "2026-10-21",
+    tipo: "novo",
+    frente: "plataforma",
+    titulo: "Assistente: comparar as IAs",
+    texto:
+      "No Assistente, o botão \"Comparar IAs\" manda a mesma pergunta, com o mesmo contexto, para cada IA configurada (Gemini, Groq, OpenRouter). Um juiz lê as respostas, diz qual é a melhor e por quê, e escreve a síntese — que aparece como a resposta. Embaixo, cada resposta para conferir, com o tempo de cada uma. Groq e OpenRouter recebem o contexto enxuto, para caber no plano gratuito; o erro de cada IA vem em uma frase, sem o código da conta. A ordem de quem responder primeiro agora é calculada (humor pior e espera maior primeiro) e entra no contexto de todas.",
+    href: "/assistente",
+  },
+  {
     id: "avaliacao-positiva-negativa",
     dia: "2026-10-21",
     tipo: "novo",
