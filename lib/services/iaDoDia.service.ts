@@ -268,10 +268,16 @@ export async function anotarConversasDoDia(
 
   /* A chave do dia (anotou) e a da leitura (leu até esta mensagem e não havia o que anotar). */
   const lida = (c: (typeof prontas)[number]) => `anotacao-lida:conversa:${c.id}:${c.ultima.id}`;
-  const usadas = await chavesJaUsadas(prisma, userId, prontas.flatMap((c) => [chaveDaAcao.anotacao(c.id, hoje), lida(c)]));
+  /*
+    Só a leitura até a última mensagem barra (21/10/2026): antes, anotada a
+    conversa, o resto do dia era ignorado — o que o cliente dizia à tarde
+    não chegava à ficha. Mensagem nova, leitura nova, e a anotação do dia
+    é reescrita com o dia inteiro.
+  */
+  const usadas = await chavesJaUsadas(prisma, userId, prontas.map(lida));
   let feitas = 0;
 
-  for (const c of prontas.filter((x) => !usadas.has(chaveDaAcao.anotacao(x.id, hoje)) && !usadas.has(lida(x))).slice(0, ANOTACOES_POR_RODADA)) {
+  for (const c of prontas.filter((x) => !usadas.has(lida(x))).slice(0, ANOTACOES_POR_RODADA)) {
     const nome = nomeDoCliente(c, c.case?.customer ?? c.npsResponse?.customerName, c.mensagens);
     const leitura = await ler({
       nome,
@@ -283,7 +289,9 @@ export async function anotarConversasDoDia(
     /* A IA não respondeu agora: a próxima volta tenta de novo. */
     if (!leitura) continue;
 
+    /* Sem nome: "o cliente" no texto, e o título não sai "no NPS de o cliente". */
     const chamado = nome || "o cliente";
+    const doCliente = nome ? `de ${nome}` : "do cliente";
     const paraNps = leitura.segmento === "nps" && Boolean(c.npsResponseId);
     const paraCaso = leitura.segmento === "reclamacao" && Boolean(c.caseId);
 
@@ -301,7 +309,30 @@ export async function anotarConversasDoDia(
     }
 
     const texto = `Conversa de hoje no WhatsApp com ${chamado}:\n${leitura.corpo}`;
-    const chave = chaveDaAcao.anotacao(c.id, hoje);
+    const alvo = paraCaso ? `caso:${c.caseId}` : `nps:${c.npsResponseId}`;
+    const chave = chaveDaAcao.anotacaoDoAlvo(alvo, hoje);
+
+    /* A leitura desta mensagem fica marcada (invisível): só volta a ler com mensagem nova. */
+    await registrar(prisma, userId, { tipo: "aviso", origem: paraCaso ? "caso" : "nps", chave: lida(c), titulo: `Conversa com ${chamado} lida`, detalhe: "Anotada na ficha." });
+    await prisma.acaoDaIA.updateMany({ where: { userId, chave: lida(c) }, data: { vistaEm: agora } });
+
+    /* O pedido de cancelamento vira atividade de retenção no mesmo dia (21/10/2026). */
+    if (leitura.cancelamento === "pediu" && (await lembrarRetencao(prisma, userId, { nome: chamado, alvo, caseId: paraCaso ? c.caseId : null, hoje }))) {
+      feitas += 1;
+    }
+
+    /* Já há anotação do dia neste caso/NPS: reescreve com o dia inteiro, em vez de outra. */
+    const doDia = await prisma.acaoDaIA.findUnique({ where: { userId_chave: { userId, chave } }, select: { desfazer: true, desfeitaEm: true } });
+    if (doDia) {
+      const d = (doDia.desfazer ?? {}) as Record<string, string>;
+      if (!doDia.desfeitaEm && d.comentario) await prisma.caseComment.update({ where: { id: d.comentario }, data: { body: texto } }).catch(() => undefined);
+      if (!doDia.desfeitaEm && d.notaNps) await prisma.npsNote.update({ where: { id: d.notaNps }, data: { body: texto } }).catch(() => undefined);
+      if (!doDia.desfeitaEm) await prisma.acaoDaIA.update({ where: { userId_chave: { userId, chave } }, data: { detalhe: leitura.corpo.slice(0, 280) } });
+      if (leitura.retorno && (await lembrarRetorno(prisma, userId, { nome: chamado, caseId: paraCaso ? c.caseId : null, mensagens: c.mensagens, retorno: leitura.retorno, hoje }))) {
+        feitas += 1;
+      }
+      continue;
+    }
     const href = paraCaso
       ? `/${c.case?.channel === "RECLAME_AQUI" ? "reclame-aqui" : "redes-sociais"}/${c.case?.externalId ?? c.case?.protocol ?? c.caseId}`
       : `/nps/${c.npsResponseId}`;
@@ -311,7 +342,7 @@ export async function anotarConversasDoDia(
       tipo: "anotacao",
       origem: paraCaso ? "caso" : "nps",
       chave,
-      titulo: paraCaso ? `Anotei na ficha de ${c.case?.protocol}: conversa com ${chamado}` : `Anotei no NPS de ${chamado}: conversa de hoje`,
+      titulo: paraCaso ? `Anotei na ficha de ${c.case?.protocol}: conversa com ${chamado}` : `Anotei no NPS ${doCliente}: conversa de hoje`,
       detalhe: leitura.corpo.slice(0, 280),
       href,
     });
@@ -389,6 +420,7 @@ async function lerConversaDoDia(entrada: ConversaParaLer): Promise<LeituraDoDia 
         '6. pendente: o que ficou por fazer e de quem, ou "nada".',
         "7. importantes: fatos duradouros para a próxima conversa — quantas lojas, sistema ou integração que usa, valor ou prazo combinado, decisão ou pedido do cliente, risco de cancelar, melhor horário ou canal. Lista vazia se não houver.",
         '8. retorno: se alguém ficou de dar retorno — nós ao cliente (quem "nos") ou o cliente a nós (quem "cliente") — e ainda não deu na conversa: precisa true, oque em até 12 palavras começando por verbo, e dia (AAAA-MM-DD) só se a conversa disser o dia, senão vazio. Sem retorno pendente: precisa false.',
+        '9. cancelamento: "pediu" se o cliente pede ou anuncia que vai cancelar o plano/sistema da Cardápio Web (não o pedido de comida de um consumidor); "cancelou" se a conversa diz que o cancelamento foi feito; "ficou" se ele desistiu de cancelar; "nao" se não se falou disso.',
         "",
         "Conversa de hoje:",
         linhas.join("\n").slice(0, 7000),
@@ -403,6 +435,7 @@ async function lerConversaDoDia(entrada: ConversaParaLer): Promise<LeituraDoDia 
           resumo: { type: "string" },
           pendente: { type: "string" },
           importantes: { type: "array", items: { type: "string" } },
+          cancelamento: { type: "string", enum: ["nao", "pediu", "cancelou", "ficou"] },
           retorno: {
             type: "object",
             properties: {
@@ -414,7 +447,7 @@ async function lerConversaDoDia(entrada: ConversaParaLer): Promise<LeituraDoDia 
             required: ["precisa", "quem", "oque", "dia"],
           },
         },
-        required: ["sobre_este_cliente", "segmento", "vale_anotar", "motivo", "resumo", "pendente", "importantes", "retorno"],
+        required: ["sobre_este_cliente", "segmento", "vale_anotar", "motivo", "resumo", "pendente", "importantes", "retorno", "cancelamento"],
       },
     });
   } catch {
@@ -434,6 +467,34 @@ async function lerConversaDoDia(entrada: ConversaParaLer): Promise<LeituraDoDia 
  * escreve —, e se a regra dos combinados já criou um lembrete desta
  * conversa, a IA não cria outro.
  */
+/**
+ * O pedido de cancelamento lido na conversa vira atividade de retenção,
+ * para hoje, prioridade alta (21/10/2026): "a IA tem que criar atividades
+ * ... ela precisa ler corretamente na conversa". Uma por caso/NPS por dia.
+ */
+async function lembrarRetencao(
+  prisma: PrismaClient,
+  userId: string,
+  entrada: { nome: string; alvo: string; caseId: string | null; hoje: string }
+): Promise<boolean> {
+  const id = `auto-retencao-${entrada.alvo.replace(/[^\w-]/g, "-")}-${entrada.hoje}`.slice(0, 120);
+  const titulo = `Retenção: ${entrada.nome} pediu para cancelar — ligar hoje e entender o motivo`;
+  const criada = await prisma.agendaTask.createMany({
+    data: [{ id, title: titulo.slice(0, 300), type: "Follow-up", priority: "Alta", done: false, dueDate: new Date(`${entrada.hoje}T00:00:00.000Z`), ownerId: userId, caseId: entrada.caseId }],
+    skipDuplicates: true,
+  });
+  if (criada.count === 0) return false;
+  return registrar(prisma, userId, {
+    tipo: "lembrete",
+    origem: "whatsapp",
+    chave: chaveDaAcao.retencao(entrada.alvo, entrada.hoje),
+    titulo,
+    detalhe: "Na agenda para hoje, prioridade alta. O pedido também entra na Retenção.",
+    href: "/agenda",
+    desfazer: { tarefa: id },
+  });
+}
+
 async function lembrarRetorno(
   prisma: PrismaClient,
   userId: string,

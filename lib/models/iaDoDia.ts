@@ -206,6 +206,14 @@ export const chaveDaAcao = {
   feito: (tarefaId: string) => `feito:${tarefaId}`,
   lembrete: (tarefaId: string) => `lembrete:${tarefaId}`,
   anotacao: (conversaId: string, dia: string) => `anotacao:conversa:${conversaId}:${dia}`,
+  /**
+   * Uma anotação por caso (ou NPS) por dia (21/10/2026): duas conversas do
+   * mesmo caso viravam duas anotações — Gabriel, Fernanda e Matheus tinham
+   * duas e três no mesmo dia. A do dia é reescrita com o dia inteiro.
+   */
+  anotacaoDoAlvo: (alvo: string, dia: string) => `anotacao:${alvo}:${dia}`,
+  /** A atividade de retenção que nasce do pedido de cancelamento lido na conversa. */
+  retencao: (alvo: string, dia: string) => `retencao:${alvo}:${dia}`,
   reuniao: (eventoId: string) => `agenda:depois:${eventoId}`,
 };
 
@@ -220,6 +228,12 @@ export interface LeituraDoDia {
   segmento: "reclamacao" | "nps" | "outro";
   corpo: string;
   retorno: { quem: "nos" | "cliente"; oque: string; dia?: string } | null;
+  /**
+   * O que a conversa diz de cancelamento (21/10/2026): "pediu" vira
+   * atividade de retenção no mesmo dia; "cancelou" e "ficou" vão para a
+   * anotação, onde a Retenção lê.
+   */
+  cancelamento: "nao" | "pediu" | "cancelou" | "ficou";
 }
 
 /** A resposta da IA, conferida: campo torto vira o lado conservador (não anotar, não lembrar). */
@@ -252,13 +266,26 @@ export function leituraDaResposta(d: Record<string, unknown>, segmentos: string[
         ? limpo(d.motivo) || "Nada novo para guardar."
         : "";
 
+  const canc = limpo(d.cancelamento);
+  const cancelamento = (["pediu", "cancelou", "ficou"].includes(canc) && sobreEle ? canc : "nao") as LeituraDoDia["cancelamento"];
+  const linhaDoCancelamento =
+    cancelamento === "pediu"
+      ? "Cancelamento: o cliente pediu para cancelar."
+      : cancelamento === "cancelou"
+        ? "Cancelamento: o cancelamento foi feito."
+        : cancelamento === "ficou"
+          ? "Cancelamento: o cliente desistiu de cancelar e vai continuar."
+          : null;
+
   return {
-    anotar: sobreEle && segmento !== "outro" && vale,
+    cancelamento,
+    anotar: sobreEle && segmento !== "outro" && (vale || cancelamento !== "nao"),
     motivo,
     segmento,
     retorno: sobreEle && segmento !== "outro" ? retorno : null,
     corpo: [
       resumo,
+      linhaDoCancelamento,
       pendente && !/^nada\.?$/i.test(pendente) ? `Ficou pendente: ${pendente}` : null,
       importantes.length ? `Pontos importantes:\n${importantes.map((x) => `• ${x}`).join("\n")}` : null,
     ]

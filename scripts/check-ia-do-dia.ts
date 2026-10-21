@@ -137,6 +137,14 @@ console.log("\n  A LEITURA DA IA, CONFERIDA (09/10/2026)\n");
   conferir("segmento que a conversa não tem vira “outro” e não anota", [doNps.segmento, doNps.anotar], ["outro", false]);
   conferir("só cumprimento: não anota, e diz por quê", leituraDaResposta({ ...boa, vale_anotar: false, motivo: "Só bom dia." }, ["reclamacao"], D).motivo, "Só bom dia.");
   conferir("campo faltando: o lado conservador (não anota)", leituraDaResposta({ resumo: "x" }, ["reclamacao"], D).anotar, false);
+
+  /* 21/10/2026: cancelamento lido na conversa, uma anotação por caso por dia. */
+  const pediu = leituraDaResposta({ ...boa, cancelamento: "pediu" }, ["reclamacao"], D);
+  conferir("pediu para cancelar: a leitura diz, e a anotação leva a linha que a Retenção lê", [pediu.cancelamento, pediu.corpo.includes("Cancelamento: o cliente pediu para cancelar.")], ["pediu", true]);
+  conferir("pedido de cancelamento anota mesmo sem outra novidade", leituraDaResposta({ ...boa, vale_anotar: false, cancelamento: "pediu" }, ["reclamacao"], D).anotar, true);
+  conferir("de outra pessoa: o cancelamento não vale", leituraDaResposta({ ...boa, sobre_este_cliente: false, cancelamento: "pediu" }, ["reclamacao"], D).cancelamento, "nao");
+  conferir("valor torto: sem cancelamento", leituraDaResposta({ ...boa, cancelamento: "talvez" }, ["reclamacao"], D).cancelamento, "nao");
+  conferir("anotação: uma por caso por dia", chaveDaAcao.anotacaoDoAlvo("caso:c1", "2026-10-21"), "anotacao:caso:c1:2026-10-21");
   const passado = leituraDaResposta({ ...boa, retorno: { ...boa.retorno, dia: "2026-10-01" } }, ["reclamacao"], D).retorno?.dia;
   const futuro = leituraDaResposta({ ...boa, retorno: { ...boa.retorno, dia: "2026-10-13" } }, ["reclamacao"], D).retorno?.dia;
   conferir("dia do retorno no passado é ignorado; no futuro, vale", [passado ?? null, futuro], [null, "2026-10-13"]);
