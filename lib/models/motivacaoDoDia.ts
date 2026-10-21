@@ -36,6 +36,7 @@ import { cicloAnterior, cicloDe } from "@/lib/models/ciclo";
 
 import { filaDeAvaliacao } from "@/lib/models/cadencia";
 import { pluralDe } from "@/lib/plural";
+import { ehNegativa, ehPositiva } from "@/lib/models/classeDaAvaliacao";
 
 /**
  * O que faz a tela pagar o tempo gasto nela (roadmap, "Para dar vontade
@@ -201,7 +202,7 @@ export function conquistasDoDia(entrada: {
       c.evaluated &&
       c.evaluatedAt &&
       diaNaOperacao(c.evaluatedAt) === hoje &&
-      (c.resolved || (c.score ?? 0) >= 9)
+      ehPositiva(c)
   );
 
   if (positivas.length > 0) {
@@ -308,7 +309,7 @@ export function conquistasDaSemana(entrada: {
   const conquistas: ConquistaDaSemana[] = [];
 
   const avaliadas = entrada.casos.filter((c) => c.evaluated && naSemana(c.evaluatedAt));
-  const positivas = avaliadas.filter((c) => c.resolved || (c.score ?? 0) >= 9);
+  const positivas = avaliadas.filter(ehPositiva);
   if (positivas.length > 0) {
     conquistas.push({
       chave: "avaliacoes",
@@ -378,10 +379,13 @@ export function conquistasDaSemana(entrada: {
    O PLACAR DA SEMANA (1.37)
 ============================================================ */
 
-export type ChaveDoPlacar = "avaliacoes" | "respondidas" | "nps-no-prazo" | "revertidos" | "encerrados";
+export type ChaveDoPlacar = "avaliacoes" | "negativas" | "respondidas" | "nps-no-prazo" | "revertidos" | "encerrados";
 
 export interface NumerosDaJanela {
+  /** As positivas — pela marca à mão, pela IA ou pela nota (ver `classeDaAvaliacao`). */
   avaliacoes: number;
+  /** As negativas, pela mesma ordem de quem decide (21/10/2026). */
+  negativas: number;
   avaliadas: number;
   respondidas: number;
   npsNoPrazo: number;
@@ -400,7 +404,8 @@ export function numerosDaJanela(entrada: { casos: Case[]; nps: NpsResponseView[]
   const avaliadas = entrada.casos.filter((c) => c.evaluated && dentro(c.evaluatedAt));
   const contatados = entrada.nps.filter((r) => dentro(r.firstContactAt));
   return {
-    avaliacoes: avaliadas.filter((c) => c.resolved || (c.score ?? 0) >= 9).length,
+    avaliacoes: avaliadas.filter(ehPositiva).length,
+    negativas: avaliadas.filter(ehNegativa).length,
     avaliadas: avaliadas.length,
     respondidas: entrada.casos.filter((c) => c.source === "Reclame Aqui" && dentro(c.publicResponseAt)).length,
     npsNoPrazo: contatados.filter((r) => r.firstContactDueAt && new Date(r.firstContactAt!).getTime() <= new Date(r.firstContactDueAt).getTime()).length,
@@ -467,6 +472,7 @@ export function textoDoResumoDaSemana(p: PlacarDaSemana, extra: { sequencia?: nu
   const linhas = [
     `*Reputação — ciclo de ${p.ciclo}, até ${dia}*`,
     p.agora.avaliacoes || p.antes.avaliacoes ? `• ${p2(p.agora.avaliacoes, "avaliação positiva", "avaliações positivas")} no Reclame Aqui, de ${p2(p.agora.avaliadas, "avaliada", "avaliadas")} (${comparar(p.agora.avaliacoes, p.antes.avaliacoes)})` : null,
+    p.agora.negativas || p.antes.negativas ? `• ${p2(p.agora.negativas, "avaliação negativa", "avaliações negativas")} (${comparar(p.agora.negativas, p.antes.negativas)})` : null,
     p.agora.respondidas || p.antes.respondidas ? `• ${p2(p.agora.respondidas, "reclamação respondida", "reclamações respondidas")} (${comparar(p.agora.respondidas, p.antes.respondidas)})` : null,
     p.agora.npsContatados ? `• NPS: ${p.agora.npsNoPrazo} de ${p2(p.agora.npsContatados, "primeiro contato", "primeiros contatos")} no prazo` : null,
     p.agora.revertidos ? `• ${p2(p.agora.revertidos, "detrator revertido", "detratores revertidos")}` : null,

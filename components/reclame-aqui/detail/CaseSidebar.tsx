@@ -29,6 +29,7 @@ import { eFinalDasRedes, etapaDasRedes } from "@/lib/models/redes";
 import ConversasGuardadas from "@/components/conversas/ConversasGuardadas";
 import ChanceDeCancelar from "@/components/retencao/ChanceDeCancelar";
 import MarcaDeCancelamento from "@/components/retencao/MarcaDeCancelamento";
+import MarcaDaAvaliacao from "@/components/reclame-aqui/detail/MarcaDaAvaliacao";
 
 interface Props {
   data: Case;
@@ -419,6 +420,8 @@ export default function CaseSidebar({
               .join("/")}
           </p>
         )}
+
+        {!isSocial(data) && data.evaluated && <MarcaDaAvaliacao caso={data} />}
 
         <input
           value={data.raUrl ?? ""}

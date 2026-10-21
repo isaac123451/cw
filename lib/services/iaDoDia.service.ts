@@ -26,6 +26,7 @@ import { dadosDaConversa, oQueCompletar, type CampoDoCadastro } from "@/lib/serv
 import { gravarContato, recalcularResumo } from "@/lib/services/tratativa.service";
 import { pedirEstruturado, temIA } from "@/lib/services/ia.service";
 import { aprenderDasConversas, aprendizadosAtivos } from "@/lib/services/aprendizados.service";
+import { classificarAvaliacoes } from "@/lib/services/classeDaAvaliacao.service";
 import { relevantes } from "@/lib/models/aprendizados";
 import { criarLembretesAutomaticos } from "@/lib/services/lembretesAutomaticos.service";
 import { termometrosDoDia } from "@/lib/services/termometro.service";
@@ -1212,6 +1213,8 @@ export async function rodarIaDoDia(prisma: PrismaClient, userId: string, agora =
     termometrosDoDia(prisma, agora),
     /* O que o time sabe, tirado das conversas do WhatsApp e do Slack — a cada duas horas (21/10/2026). */
     aprenderDasConversas(prisma, userId, agora),
+    /* A avaliação que chegou ganha a marca positiva/negativa da IA onde a nota não basta (21/10/2026). */
+    classificarAvaliacoes(prisma, { agora }),
   ]);
   for (const p of partes) if (p.status === "rejected") console.error("[ia do dia]", p.reason);
 }

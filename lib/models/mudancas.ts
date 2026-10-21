@@ -53,6 +53,16 @@ export const REVISAO = {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- passe a limpo (21/10) ---------------- */
   {
+    id: "avaliacao-positiva-negativa",
+    dia: "2026-10-21",
+    tipo: "novo",
+    frente: "plataforma",
+    titulo: "Avaliação positiva ou negativa: você marca, a IA identifica",
+    texto:
+      "No Meu dia, o placar ganhou \"avaliações negativas\" ao lado das positivas, e clicar em qualquer uma das duas mostra quais foram as avaliações do ciclo. Em cada avaliação (no Meu dia, em qualquer gráfico e na ficha da reclamação) há os botões Positiva e Negativa. A sua marca vale sempre; onde ninguém marcou, vale a da IA, que lê o comentário final do consumidor (agora guardado quando o vigia lê o portal); sem comentário, vale a nota (resolvida ou 9–10 é positiva, não resolvida até 6 é negativa). Clicar de novo na sua marca tira a marca. A IA nunca escreve por cima de quem marcou à mão, e decide pelo que o consumidor disse ao avaliar — não pelo assunto da reclamação.",
+    href: "/meu-dia",
+  },
+  {
     id: "conta-do-mes-pela-reclamacao",
     dia: "2026-10-21",
     tipo: "correcao",

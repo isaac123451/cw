@@ -214,6 +214,15 @@ export interface Case {
   avaliacaoDispensadaEm?: string;
   avaliacaoDispensadaPor?: string;
 
+  /** A marca da avaliação: à mão ou pela IA (21/10/2026). Ver `classeDaAvaliacao`. */
+  avaliacaoMarca?: "positiva" | "negativa";
+  /** "IA" ou o nome de quem marcou. */
+  avaliacaoMarcaPor?: string;
+  avaliacaoMarcaEm?: string;
+  avaliacaoMarcaMotivo?: string;
+  /** O comentário do consumidor ao avaliar ("Considerações finais"). */
+  consideracaoFinal?: string;
+
   /** Passo 2: a imersão no histórico antes do 1º contato. */
   imersaoEm?: string;
   imersaoPor?: string;

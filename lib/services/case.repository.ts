@@ -137,6 +137,11 @@ interface CaseRowCru {
   pedidosDeAvaliacao: number | null;
   avaliacaoDispensadaEm: Date | null;
   avaliacaoDispensadaPor: string | null;
+  avaliacaoMarca: string | null;
+  avaliacaoMarcaPor: string | null;
+  avaliacaoMarcaEm: Date | null;
+  avaliacaoMarcaMotivo: string | null;
+  consideracaoFinal: string | null;
   imersaoEm: Date | null;
   imersaoPor: string | null;
   moderacaoPedidaEm: Date | null;
@@ -229,6 +234,7 @@ export async function fetchCases(
            c."ultimaRespostaEm", c."tentativasSemResposta",
            c."validadoEm", c."ultimoPedidoAvaliacaoEm",
            c."pedidosDeAvaliacao", c."avaliacaoDispensadaEm", c."avaliacaoDispensadaPor",
+           c."avaliacaoMarca", c."avaliacaoMarcaPor", c."avaliacaoMarcaEm", c."avaliacaoMarcaMotivo", c."consideracaoFinal",
            c."imersaoEm", c."imersaoPor",
            c."moderacaoPedidaEm", c."moderacaoMotivo",
            c."moderacaoResultado", c."moderacaoRespondidaEm",

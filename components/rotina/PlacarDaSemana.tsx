@@ -12,6 +12,10 @@ import { useToast } from "@/lib/context/ToastContext";
 import { useAgora } from "@/lib/hooks/useAgora";
 import { pluralDe } from "@/lib/plural";
 import { oQueMoveANota, placarDaSemana, textoDoResumoDaSemana, type NumerosDaJanela } from "@/lib/models/motivacaoDoDia";
+import { ehNegativa, ehPositiva } from "@/lib/models/classeDaAvaliacao";
+import { diaNaOperacao } from "@/lib/services/reputation.service";
+import { abrirJanelaDeCasos } from "@/components/shared/JanelaDeCasos";
+import type { Case } from "@/lib/models/case";
 
 import type { useMeuDia } from "@/components/rotina/useMeuDia";
 
@@ -25,10 +29,15 @@ interface Casa {
   href: string;
   /** O "de quantos", quando existe. */
   de?: keyof NumerosDaJanela;
+  /** Subir é ruim: a comparação pinta ao contrário e não vira "conquista". */
+  inverso?: boolean;
+  /** Abre as avaliações do ciclo na mini janela, em vez de sair da tela (21/10/2026). */
+  avaliacoes?: (c: Case) => boolean;
 }
 
 const CASAS: Casa[] = [
-  { chave: "avaliacoes", rotulo: "avaliações positivas", href: "/reclame-aqui/avaliacoes", de: "avaliadas" },
+  { chave: "avaliacoes", rotulo: "avaliações positivas", href: "/reclame-aqui/avaliacoes", de: "avaliadas", avaliacoes: ehPositiva },
+  { chave: "negativas", rotulo: "avaliações negativas", href: "/reclame-aqui/avaliacoes", de: "avaliadas", inverso: true, avaliacoes: ehNegativa },
   { chave: "respondidas", rotulo: "respondidas no RA", href: "/reclame-aqui" },
   { chave: "npsNoPrazo", rotulo: "1º contato NPS no prazo", href: "/nps", de: "npsContatados" },
   { chave: "revertidos", rotulo: "detratores revertidos", href: "/nps" },
@@ -77,7 +86,7 @@ export default function PlacarDaSemana({ dia }: { dia: MeuDia }) {
       visto = null;
     }
     if (visto && visto.desde === placar.desde) {
-      const subiu = CASAS.filter((c) => placar.agora[c.chave] > (visto!.numeros[c.chave] ?? 0));
+      const subiu = CASAS.filter((c) => !c.inverso && placar.agora[c.chave] > (visto!.numeros[c.chave] ?? 0));
       if (subiu.length) {
         notify({
           tone: "success",
@@ -98,6 +107,23 @@ export default function PlacarDaSemana({ dia }: { dia: MeuDia }) {
   }
 
   const { placar, acao } = calculado;
+
+  /*
+    "Quando eu clico em meu dia para verificar as avaliações não consigo ver
+    quais foram" (21/10/2026): o número abre as avaliações do ciclo na mini
+    janela, com o botão de marcar positiva ou negativa em cada uma.
+  */
+  function verAvaliacoes(casa: Casa) {
+    const doCiclo = cases
+      .filter((c) => c.evaluated && c.evaluatedAt && diaNaOperacao(c.evaluatedAt) >= placar.desde && diaNaOperacao(c.evaluatedAt) <= placar.hoje)
+      .sort((a, b) => (b.evaluatedAt ?? "").localeCompare(a.evaluatedAt ?? ""));
+    const deste = doCiclo.filter(casa.avaliacoes!);
+    abrirJanelaDeCasos({
+      titulo: `${casa.rotulo.charAt(0).toUpperCase()}${casa.rotulo.slice(1)} · ${placar.ciclo}`,
+      descricao: `Avaliações feitas no ciclo. Marque positiva ou negativa — a sua marca vale sobre a da IA e a da nota.${deste.length < doCiclo.length ? " As outras avaliações do ciclo vêm embaixo." : ""}`,
+      casos: [...deste, ...doCiclo.filter((c) => !deste.includes(c))],
+    });
+  }
 
   function abrirResumo() {
     setTexto(textoDoResumoDaSemana(placar, { sequencia: dia.sequencia, nota: acao ? um(acao.notaAntes) : undefined }));
@@ -131,25 +157,37 @@ export default function PlacarDaSemana({ dia }: { dia: MeuDia }) {
         </button>
       </header>
 
-      <ul className="grid grid-cols-2 gap-px bg-zinc-100 sm:grid-cols-3 lg:grid-cols-6">
+      <ul className="grid grid-cols-2 gap-px bg-zinc-100 sm:grid-cols-4 lg:grid-cols-7">
         {CASAS.map((c) => {
           const agoraN = placar.agora[c.chave];
           const antesN = placar.antes[c.chave];
           const diferenca = agoraN - antesN;
-          return (
-            <li key={c.chave} className="bg-white">
-              <Link href={c.href} className="block px-4 py-2.5 transition-colors hover:bg-zinc-50">
+          const melhorou = c.inverso ? diferenca < 0 : diferenca > 0;
+          const conteudo = (
+            <>
                 <span className="flex items-baseline gap-1.5">
                   <span className="text-[22px] font-semibold leading-none tabular-nums text-zinc-900">{agoraN}</span>
                   {c.de && placar.agora[c.de] > 0 && <span className="text-xs tabular-nums text-zinc-400">de {placar.agora[c.de]}</span>}
                 </span>
                 <span className="mt-1 block text-[11px] leading-tight text-zinc-600">{c.rotulo}</span>
                 <span
-                  className={`mt-0.5 block text-[11px] tabular-nums ${diferenca > 0 ? "text-emerald-700" : diferenca < 0 ? "text-rose-700" : "text-zinc-400"}`}
+                  className={`mt-0.5 block text-[11px] tabular-nums ${diferenca === 0 ? "text-zinc-400" : melhorou ? "text-emerald-700" : "text-rose-700"}`}
                 >
                   {diferenca === 0 ? "igual ao ciclo anterior" : `${diferenca > 0 ? "+" : "−"}${Math.abs(diferenca)} que o ciclo anterior`}
                 </span>
-              </Link>
+            </>
+          );
+          return (
+            <li key={c.chave} className="bg-white">
+              {c.avaliacoes && placar.agora.avaliadas > 0 ? (
+                <button type="button" onClick={() => verAvaliacoes(c)} className="block w-full px-4 py-2.5 text-left transition-colors hover:bg-zinc-50" title="Ver quais foram e marcar positiva ou negativa">
+                  {conteudo}
+                </button>
+              ) : (
+                <Link href={c.href} className="block px-4 py-2.5 transition-colors hover:bg-zinc-50">
+                  {conteudo}
+                </Link>
+              )}
             </li>
           );
         })}

@@ -185,6 +185,11 @@ export function toCaseModel(row: {
   pedidosDeAvaliacao?: number | null;
   avaliacaoDispensadaEm?: Date | null;
   avaliacaoDispensadaPor?: string | null;
+  avaliacaoMarca?: string | null;
+  avaliacaoMarcaPor?: string | null;
+  avaliacaoMarcaEm?: Date | null;
+  avaliacaoMarcaMotivo?: string | null;
+  consideracaoFinal?: string | null;
   imersaoEm?: Date | null;
   imersaoPor?: string | null;
   moderacaoPedidaEm?: Date | null;
@@ -265,6 +270,11 @@ export function toCaseModel(row: {
     pedidosDeAvaliacao: row.pedidosDeAvaliacao ?? undefined,
     avaliacaoDispensadaEm: row.avaliacaoDispensadaEm?.toISOString() ?? undefined,
     avaliacaoDispensadaPor: row.avaliacaoDispensadaPor ?? undefined,
+    avaliacaoMarca: row.avaliacaoMarca === "positiva" || row.avaliacaoMarca === "negativa" ? row.avaliacaoMarca : undefined,
+    avaliacaoMarcaPor: row.avaliacaoMarcaPor ?? undefined,
+    avaliacaoMarcaEm: row.avaliacaoMarcaEm?.toISOString() ?? undefined,
+    avaliacaoMarcaMotivo: row.avaliacaoMarcaMotivo ?? undefined,
+    consideracaoFinal: row.consideracaoFinal ?? undefined,
     imersaoEm: row.imersaoEm?.toISOString() ?? undefined,
     imersaoPor: row.imersaoPor ?? undefined,
     moderacaoPedidaEm: row.moderacaoPedidaEm?.toISOString() ?? undefined,
@@ -439,6 +449,8 @@ export function toCaseColumns(item: Case) {
     resolved: item.resolved,
     wouldDoBusiness: item.wouldDoBusiness,
     evaluatedAt: fromIsoDay(item.evaluatedAt) ?? null,
+    /* Só quando vem (21/10/2026): a tela não carrega o comentário para reenviar, e ausente não pode virar null. */
+    ...(item.consideracaoFinal ? { consideracaoFinal: item.consideracaoFinal } : {}),
     churnRisk: Boolean(item.churnRisk),
     request: item.request ?? null,
     responseMinutes: parseElapsedText(item.responseTime),

@@ -1,6 +1,7 @@
 "use client";
 
 import { daCargaInicial } from "@/lib/context/cargaInicial";
+import { EVENTO_AJUSTE_DO_CASO } from "@/lib/context/ajusteDoCaso";
 import {
   createContext,
   useContext,
@@ -449,6 +450,20 @@ export function CaseProvider({
 
   /* As reclamações se atualizam sozinhas: ao voltar para a aba e a cada 3 min com ela à vista. */
   useAtualizarSozinho(recarregar, hasDatabase);
+
+  /*
+    O ajuste que vem de fora do contexto (21/10/2026): a mini janela dos
+    gráficos marca a avaliação e avisa por evento — a marca aparece na hora
+    em todas as telas, sem esperar a próxima leitura.
+  */
+  useEffect(() => {
+    const ajustar = (e: Event) => {
+      const { protocol, campos } = (e as CustomEvent<{ protocol: string; campos: Partial<Case> }>).detail;
+      setCases((prev) => prev.map((c) => (c.protocol === protocol ? { ...c, ...campos } : c)));
+    };
+    window.addEventListener(EVENTO_AJUSTE_DO_CASO, ajustar);
+    return () => window.removeEventListener(EVENTO_AJUSTE_DO_CASO, ajustar);
+  }, []);
 
   /**
    * Dispara a gravação sem travar a interface, e registra a falha.

@@ -87,7 +87,8 @@ const MASCARA = /•/;
 export type CampoDoPortal =
   | (typeof DO_PORTAL)[number]
   | (typeof CONTATO)[number]
-  | "recebidaEm";
+  | "recebidaEm"
+  | "consideracaoFinal";
 
 /**
  * As colunas que o portal conhece.
@@ -133,6 +134,7 @@ export interface NoBancoDoPortal {
   city: string | null;
   state: string | null;
   recebidaEm?: Date | null;
+  consideracaoFinal?: string | null;
 }
 
 function comparavel(valor: unknown) {
@@ -286,6 +288,13 @@ export function mudancasDoPortal(
     diferencas.push("evaluatedAt: (vazio) → hoje");
   }
 
+  /* O comentário final do consumidor: o portal é o dono, e só chega com a avaliação (21/10/2026). */
+  const final = (doArquivo.consideracaoFinal ?? "").trim();
+  if (final && final !== (atual.consideracaoFinal ?? "").trim()) {
+    dados.consideracaoFinal = final;
+    diferencas.push(`consideracaoFinal: ${(atual.consideracaoFinal ?? "").slice(0, 30) || "(vazio)"} → ${final.slice(0, 30)}`);
+  }
+
   if (doArquivo.recebidaEm && !atual.recebidaEm) {
     dados.recebidaEm = new Date(doArquivo.recebidaEm);
     diferencas.push(`recebidaEm: (vazio) → ${doArquivo.recebidaEm.slice(0, 16)}`);
@@ -312,4 +321,5 @@ export const SELECAO_DO_PORTAL = {
   city: true,
   state: true,
   recebidaEm: true,
+  consideracaoFinal: true,
 } as const;

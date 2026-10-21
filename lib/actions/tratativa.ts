@@ -447,6 +447,37 @@ export async function marcarPasso(entrada: {
  * contatos e na contagem. O que muda é a cadência parar de chamar este
  * caso. Desfazer devolve à fila no mesmo ponto em que estava.
  */
+export async function marcarAvaliacao(entrada: {
+  protocol: string;
+  /** `null` tira a marca: volta a valer a da IA, ou a regra pela nota. */
+  marca: "positiva" | "negativa" | null;
+}): Promise<{ ok: true; em?: string; por?: string } | Falha> {
+  /*
+    A marca da avaliação à mão (21/10/2026): "ter uma opção de marcar
+    avaliação positiva … e avaliação negativa contabilizada conforme eu
+    marque". A marca de quem atende vale sempre — a IA não escreve por
+    cima dela (ver `classeDaAvaliacao`).
+  */
+  const quem = await quemGrava("AGENTE", MODULO);
+  if ("erro" in quem) return { ok: false, erro: quem.erro! };
+  if (entrada.marca !== null && entrada.marca !== "positiva" && entrada.marca !== "negativa") return { ok: false, erro: "Marca desconhecida." };
+
+  try {
+    const agora = new Date();
+    await quem.ctx.prisma.case.update({
+      where: { protocol: entrada.protocol },
+      data: entrada.marca
+        ? { avaliacaoMarca: entrada.marca, avaliacaoMarcaPor: quem.nome, avaliacaoMarcaEm: agora, avaliacaoMarcaMotivo: null }
+        : { avaliacaoMarca: null, avaliacaoMarcaPor: null, avaliacaoMarcaEm: null, avaliacaoMarcaMotivo: null },
+      select: { id: true },
+    });
+    updateTag(CASES_TAG);
+    return entrada.marca ? { ok: true, em: agora.toISOString(), por: quem.nome } : { ok: true };
+  } catch (erro) {
+    return falha(erro, "marcar a avaliação");
+  }
+}
+
 export async function dispensarPedidoDeAvaliacao(entrada: {
   protocol: string;
   desfazer?: boolean;

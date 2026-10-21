@@ -486,6 +486,19 @@ model Case {
   avaliacaoDispensadaEm DateTime?
   avaliacaoDispensadaPor String?
 
+  /// A marca da avaliação (21/10/2026): "positiva" ou "negativa". "Ter uma
+  /// opção de marcar avaliação positiva … avaliação negativa contabilizada
+  /// conforme eu marque como negativa ou a IA identifique." A marca à mão
+  /// vale sempre; a da IA só onde ninguém marcou.
+  avaliacaoMarca       String?
+  /// "IA" quando foi a IA; senão o nome de quem marcou.
+  avaliacaoMarcaPor    String?
+  avaliacaoMarcaEm     DateTime?
+  /// Por que a IA marcou assim — uma frase.
+  avaliacaoMarcaMotivo String?
+  /// O comentário do consumidor ao avaliar ("Considerações finais" do portal).
+  consideracaoFinal    String?
+
   /// Passo 2: a imersão no histórico, antes do 1º contato.
   imersaoEm  DateTime?
   imersaoPor String?

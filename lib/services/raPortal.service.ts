@@ -344,6 +344,7 @@ export function casoDoPortal(r: ReclamacaoDoPortal): Case {
     wouldDoBusiness: r.voltaria,
     evaluatedAt:
       r.avaliada && final ? diaDoPortal(final.em) : undefined,
+    consideracaoFinal: r.avaliada && final ? textoDoPortal(final.texto) || undefined : undefined,
 
     responseTime: primeira
       ? decorrido(instante(r.criadaEm), instante(primeira.em))
