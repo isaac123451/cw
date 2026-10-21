@@ -293,7 +293,7 @@ export function leituraDaResposta(d: Record<string, unknown>, segmentos: string[
   const motivo = !sobreEle
     ? `Parece misturar outro cliente: ${limpo(d.motivo) || "trecho de outra conversa"}`
     : segmento === "outro"
-      ? `Não trata ${segmentos.length > 1 ? "da reclamação nem do NPS" : segmentos[0] === "nps" ? "do NPS" : "da reclamação"} ligado à conversa.`
+      ? `Não trata ${segmentos.length > 1 ? "da reclamação nem do NPS ligados" : segmentos[0] === "nps" ? "do NPS ligado" : "da reclamação ligada"} à conversa.`
       : !vale
         ? limpo(d.motivo) || "Nada novo para guardar."
         : "";

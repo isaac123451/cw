@@ -209,6 +209,9 @@ export async function fecharOQueFoiFeito(prisma: PrismaClient, userId: string): 
 const CONVERSA_PARADA_MIN = 30;
 /** No máximo tantas por rodada: cada uma pode custar uma chamada de IA. */
 const ANOTACOES_POR_RODADA = 4;
+/** O contexto de antes de hoje: as últimas mensagens, dos últimos dias. */
+const MENSAGENS_DE_CONTEXTO = 12;
+const DIAS_DE_CONTEXTO = 7;
 
 /**
  * A conversa de hoje no WhatsApp, ligada a um caso ou a um NPS, vira uma
@@ -300,12 +303,33 @@ export async function anotarConversasDoDia(
     if (nome && !nomeDePessoa(c.contatoNome)) {
       await prisma.conversa.update({ where: { id: c.id }, data: { contatoNome: nome.slice(0, 120) } }).catch(() => undefined);
     }
+    /*
+      As mensagens de antes de hoje vão como contexto (21/10/2026): a
+      Fernanda mandou "CSC V DONADIO FILIAL" — o dado que pedimos ontem
+      para resolver a reclamação dela — e, lida sozinha, a mensagem "não
+      tratava da reclamação". Sem o que veio antes, resposta curta vira
+      assunto solto.
+    */
+    const antes = semMensagensDeOutraConversa(
+      { telefone: c.telefone, nome: c.contatoNome },
+      await prisma.mensagemDaConversa
+        .findMany({
+          where: { conversaId: c.id, em: { lt: inicioDoDia, gte: new Date(inicioDoDia.getTime() - DIAS_DE_CONTEXTO * 86_400_000) } },
+          orderBy: { em: "desc" },
+          select: { id: true, de: true, texto: true, em: true, autor: true, chave: true, criadoEm: true },
+          take: MENSAGENS_DE_CONTEXTO,
+        })
+        .catch(() => [])
+    )
+      .filter((m): m is typeof m & { em: Date } => Boolean(m.em))
+      .reverse();
     const leitura = await ler({
       nome,
       hoje,
       caso: c.case ? { protocolo: c.case.protocol, canal: c.case.channel, titulo: c.case.title, relato: c.case.description } : null,
       nps: c.npsResponse ? { nota: c.npsResponse.score, comentario: c.npsResponse.comment } : null,
       mensagens: c.mensagens,
+      antes,
       saber: relevantes(saber, [c.case?.title, c.case?.description, c.npsResponse?.comment, ...c.mensagens.map((m) => m.texto)].filter(Boolean).join(" ")).map((a) => `${a.assunto}: ${a.texto}`),
     });
     /* A IA não respondeu agora: a próxima volta tenta de novo. */
@@ -397,6 +421,8 @@ export interface ConversaParaLer {
   caso: { protocolo: string; canal: string; titulo: string; relato: string | null } | null;
   nps: { nota: number; comentario: string | null } | null;
   mensagens: { de: string; texto: string; em: Date }[];
+  /** As últimas mensagens de antes de hoje — só contexto, não vão para a anotação. */
+  antes?: { de: string; texto: string; em: Date }[];
   /** O que o time já sabe sobre o assunto (aprendido de outras conversas). */
   saber?: string[];
 }
@@ -412,9 +438,12 @@ const hhmmDe = (d: Date) => {
  * Também separa os **pontos importantes** — o que vale guardar na ficha
  * para a próxima conversa. "Preciso que anote coisas importantes sempre."
  */
-async function lerConversaDoDia(entrada: ConversaParaLer): Promise<LeituraDoDia | null> {
+export async function lerConversaDoDia(entrada: ConversaParaLer): Promise<LeituraDoDia | null> {
   const quem = entrada.nome || "Cliente";
   const linhas = entrada.mensagens.map((m) => `[${hhmmDe(m.em)}] ${m.de === "nos" ? "Nós" : quem}: ${m.texto.replace(/\s+/g, " ").slice(0, 400)}`);
+  const contexto = (entrada.antes ?? []).map(
+    (m) => `[${new Date(m.em.getTime() - 3 * 3_600_000).toISOString().slice(8, 10)}/${new Date(m.em.getTime() - 3 * 3_600_000).toISOString().slice(5, 7)} ${hhmmDe(m.em)}] ${m.de === "nos" ? "Nós" : quem}: ${m.texto.replace(/\s+/g, " ").slice(0, 300)}`
+  );
   const segmentos = [entrada.caso ? "reclamacao" : null, entrada.nps ? "nps" : null].filter((s): s is string => Boolean(s));
   const vinculos = [
     entrada.caso
@@ -440,7 +469,7 @@ async function lerConversaDoDia(entrada: ConversaParaLer): Promise<LeituraDoDia 
         "",
         "Responda:",
         "1. sobre_este_cliente: false se a conversa, ou parte dela, parece ser com outra pessoa (chamada por outro nome, assunto de outro cliente) ou mistura duas conversas.",
-        `2. segmento: de qual vínculo a conversa trata — ${segmentos.map((s) => `"${s}"`).join(" ou ")} — ou "outro" se não trata de nenhum deles (ex.: venda, assunto pessoal).`,
+        `2. segmento: de qual vínculo a conversa trata — ${segmentos.map((s) => `"${s}"`).join(" ou ")} — ou "outro" se não trata de nenhum deles (ex.: venda, assunto pessoal, dúvida nova sem relação). Resposta que continua o que se tratava antes (o dado que pedimos, o teste combinado, a configuração para resolver o problema) trata do mesmo vínculo.`,
         '3. vale_anotar: false se hoje só houve cumprimento, agradecimento, "ok", tentativa sem resposta ou nada novo.',
         "4. motivo: quando sobre_este_cliente ou vale_anotar for false, por quê, em uma frase; senão, vazio.",
         "5. resumo: até 3 linhas do que foi tratado hoje.",
@@ -449,6 +478,7 @@ async function lerConversaDoDia(entrada: ConversaParaLer): Promise<LeituraDoDia 
         '8. retorno: se alguém ficou de dar retorno — nós ao cliente (quem "nos") ou o cliente a nós (quem "cliente") — e ainda não deu na conversa: precisa true, oque em até 12 palavras começando por verbo, e dia (AAAA-MM-DD) só se a conversa disser o dia, senão vazio. Sem retorno pendente: precisa false.',
         '9. cancelamento: "pediu" se o cliente pede ou anuncia que vai cancelar o plano/sistema da Cardápio Web (não o pedido de comida de um consumidor); "cancelou" se a conversa diz que o cancelamento foi feito; "ficou" se ele desistiu de cancelar; "nao" se não se falou disso.',
         "",
+        ...(contexto.length ? ["Antes de hoje (só para entender — não resuma nem anote isto):", contexto.join("\n").slice(-2500), ""] : []),
         "Conversa de hoje:",
         linhas.join("\n").slice(0, 7000),
       ].join("\n"),

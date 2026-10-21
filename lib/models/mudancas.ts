@@ -53,6 +53,16 @@ export const REVISAO = {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- passe a limpo (21/10) ---------------- */
   {
+    id: "ia-le-com-contexto",
+    dia: "2026-10-21",
+    tipo: "melhoria",
+    frente: "plataforma",
+    titulo: "IA lê a conversa de hoje sabendo o que veio antes",
+    texto:
+      "A IA lia só as mensagens do dia. A Fernanda mandou \"CSC V DONADIO FILIAL\" — o dado que pedimos na véspera para resolver a reclamação dela — e a IA respondeu que a conversa \"não tratava da reclamação\". Agora ela recebe as últimas mensagens dos 7 dias anteriores como contexto (sem anotar delas): a mesma conversa passa a ser lida como da reclamação, com o retorno \"confirmar recebimento e pedir o ID\". Também corrigida a frase \"da reclamação ligado\".",
+    href: "/agenda",
+  },
+  {
     id: "avaliada-vai-para-final",
     dia: "2026-10-21",
     tipo: "correcao",
