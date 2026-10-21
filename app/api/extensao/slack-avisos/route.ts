@@ -58,6 +58,21 @@ export async function POST(request: Request) {
   */
   after(() => aprenderDoSlack(prisma, usuario.id, mensagens).catch((erro) => console.error("[slack-avisos] aprender", erro)));
 
+  /*
+    O recibo do lote, sem conteúdo (21/10/2026): só quantas chegaram e
+    quantas serviam para aprender. Sem guardar o texto, era impossível
+    saber se o Slack não mandava nada ou se mandava e não havia o que ler.
+  */
+  const longas = mensagens.filter((m) => m.texto.length >= 30).length;
+  const agora = new Date();
+  await prisma.acaoDaIA
+    .upsert({
+      where: { userId_chave: { userId: usuario.id, chave: `slack-recebido:${usuario.id}` } },
+      create: { userId: usuario.id, chave: `slack-recebido:${usuario.id}`, tipo: "aviso", origem: "slack", titulo: `Lote do Slack: ${mensagens.length} mensagens, ${longas} longas`, vistaEm: agora },
+      update: { titulo: `Lote do Slack: ${mensagens.length} mensagens, ${longas} longas`, criadaEm: agora, vistaEm: agora },
+    })
+    .catch(() => undefined);
+
   try {
     const criados = await lembretesDoSlack(prisma, { id: usuario.id, nome: usuario.nome }, mensagens);
     if (criados) revalidateTag(WORKSPACE_TAG, "max");
