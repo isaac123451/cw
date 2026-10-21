@@ -50,6 +50,7 @@ import {
   totalRatings,
 } from "@/lib/services/reputation.service";
 import CaminhoParaNota from "@/components/reclame-aqui/calculadora/CaminhoParaNota";
+import { notaExata } from "@/lib/models/indiceRA";
 
 const periodLabels: Record<string, string> = {
   "6m": "6 meses",
@@ -316,7 +317,7 @@ export default function CalculadoraPage() {
                 digitada e separa o caminho em duas alavancas — o que
                 dá para fazer hoje e o que depende do consumidor.
               */}
-              <CaminhoParaNota base={base} />
+              <CaminhoParaNota base={base} casos={doPeriodo} todos={cases} />
 
               <SurfaceCard
                 title="Ou escolha uma faixa"
@@ -932,11 +933,13 @@ export default function CalculadoraPage() {
                     {
                       label: "Nota atual",
                       value: ptBR(current.raScore),
+                      exata: notaExata(current.raScoreExato),
                       tone: "text-zinc-900",
                     },
                     {
                       label: "Nota simulada",
                       value: ptBR(simulated.raScore),
+                      exata: notaExata(simulated.raScoreExato),
                       tone: "text-violet-700",
                     },
                     {
@@ -944,6 +947,7 @@ export default function CalculadoraPage() {
                       value: `${delta >= 0 ? "+" : "-"}${ptBR(
                         Math.abs(delta)
                       )}`,
+                      exata: `${simulated.raScoreExato >= current.raScoreExato ? "+" : "−"}${notaExata(Math.abs(simulated.raScoreExato - current.raScoreExato))}`,
                       tone:
                         delta >= 0
                           ? "text-emerald-600"
@@ -964,6 +968,11 @@ export default function CalculadoraPage() {
                         className={`mt-1 text-2xl font-semibold tabular-nums ${item.tone}`}
                       >
                         {item.value}
+                      </p>
+
+                      {/* A nota que o índice dá de fato, sem o arredondamento do portal. */}
+                      <p className="mt-0.5 text-xs tabular-nums text-zinc-500" title="A nota exata, sem arredondar">
+                        {item.exata}
                       </p>
 
                     </div>

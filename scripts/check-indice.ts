@@ -23,7 +23,7 @@ console.log("\n  ÍNDICE — nota exata, dia a dia e o que falta\n");
 
 /* (95×2 + 80×3 + 90×3 + 75×2) / 100 = 8,5 exato. */
 const redondo = scoreFrom({ received: 100, answered: 95, evaluated: 60, scoreSum: 480, resolved: 54, wouldReturn: 45, responseMinutesSum: 0, responseSamples: 0 });
-conferir("fórmula oficial com contas redondas", notaExata(redondo.raScoreExato), "8,5000");
+conferir("fórmula oficial com contas redondas", notaExata(redondo.raScoreExato), "8,500000");
 
 /* 2/3 de resposta: o índice arredondado (66,7%) desloca a quarta casa; a exata não. (Quatro casas desde a 1.110, pedido de 30/09.) */
 const quebrado = scoreFrom({ received: 3, answered: 2, evaluated: 3, scoreSum: 25, resolved: 2, wouldReturn: 2, responseMinutesSum: 0, responseSamples: 0 });
@@ -66,7 +66,7 @@ const dias = evolucaoDoIndice([ruim], "6m", "dia", "2026-09-12", "2026-09-12");
 const dia = (d: string) => dias.find((p) => p.chave === d)!;
 conferir("dia: os 31 dias corridos até a âncora", [dias.length, dias[0].chave, dias[30].chave], [31, "2026-08-13", "2026-09-12"]);
 conferir("o último dia é o em curso", dias[30].emCurso, true);
-conferir("a prévia cai no dia da avaliação ruim", [notaExata(dia("2026-09-09").previa), dia("2026-09-10").previa < dia("2026-09-09").previa], ["10,0000", true]);
+conferir("a prévia cai no dia da avaliação ruim", [notaExata(dia("2026-09-09").previa), dia("2026-09-10").previa < dia("2026-09-09").previa], ["10,000000", true]);
 conferir("e é a avaliação que derruba (efeito negativo no dia)", [dia("2026-09-10").avaliadas, dia("2026-09-10").efeitoDasAvaliacoes < 0], [1, true]);
 conferir("a resposta sobe a nota no dia em que saiu", [dia("2026-09-05").respondidas, dia("2026-09-05").efeitoDasRespostas > 0], [1, true]);
 conferir("reclamação nova conta no dia em que entrou", dia("2026-09-02").recebidas, 1);

@@ -132,9 +132,12 @@ function inicioDoMes(dia: string, deslocamento: number) {
   return new Date(Date.UTC(a, m - 1 + deslocamento, 1)).toISOString().slice(0, 10);
 }
 
-/** "8,5290" — a nota detalhada, com quatro casas (1.110: "pode ser somente 4 dígitos após a vírgula"). */
+/**
+ * "8,831231" — a nota detalhada, com seis casas. Eram quatro (1.110); em
+ * 20/10/2026 o Isaac pediu "um número mais completo, 8,831231, tipo esse".
+ */
 export function notaExata(valor: number) {
-  return valor.toFixed(4).replace(".", ",");
+  return valor.toFixed(6).replace(".", ",");
 }
 
 /* ============================================================

@@ -13,6 +13,7 @@ import MesDoPlano, { ResultadoDoMesFechado, STATUS } from "@/components/reclame-
 import MetasDoPlano from "@/components/reclame-aqui/plano/MetasDoPlano";
 import PrevisaoDeReclamacoesCard from "@/components/reclame-aqui/plano/PrevisaoDeReclamacoes";
 import { nota, num, pct } from "@/components/reclame-aqui/plano/formato";
+import { notaExata } from "@/lib/models/indiceRA";
 
 import type { MetasGravadas } from "@/lib/actions/metasDoReclameAqui";
 import { useScopedCases } from "@/lib/context/useScopedCases";
@@ -101,7 +102,7 @@ export default function PlanoPage() {
                     className={`rounded-xl px-3 py-2 text-left ring-1 ring-inset transition-colors ${selecionado === r.mes ? "bg-violet-50 ring-violet-300" : "bg-white ring-zinc-200 hover:bg-zinc-50"}`}
                   >
                     <p className="text-xs font-medium capitalize text-zinc-500">{nomeDoMes(r.mes)} · fechado</p>
-                    <p className="text-lg font-semibold tabular-nums text-zinc-900">{nota(r.resumo.raScoreExato)}</p>
+                    <p className="text-lg font-semibold tabular-nums text-zinc-900">{notaExata(r.resumo.raScoreExato)}</p>
                     <p className="text-[11px] text-zinc-500">{r.cumpridas.length ? `${cumpridas} de ${r.cumpridas.length} metas` : "sem meta"}</p>
                   </button>
                 );
@@ -122,7 +123,7 @@ export default function PlanoPage() {
                       {p.mes === mesAtual ? " · agora" : ""}
                     </p>
                     <p className="text-lg font-semibold tabular-nums text-zinc-900">
-                      {nota(p.projecao.resumo.raScoreExato)}
+                      {notaExata(p.projecao.resumo.raScoreExato)}
                       {p.meta?.nota != null && <span className="ml-1 text-xs font-normal text-zinc-400">/ {nota(p.meta.nota)}</span>}
                     </p>
                     <p className={`inline-flex items-center gap-1 rounded-full px-1.5 text-[11px] ring-1 ring-inset ${s.classe}`}>

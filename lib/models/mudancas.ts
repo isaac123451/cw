@@ -63,6 +63,16 @@ export const MUDANCAS: Mudanca[] = [
     href: "/retencao",
   },
   {
+    id: "meta-com-plano-e-nota-exata",
+    dia: "2026-10-20",
+    tipo: "melhoria",
+    frente: "reclame-aqui",
+    titulo: "Meta com plano e prazo, e a nota exata",
+    texto:
+      "Na Calculadora, \"O que falta para uma nota\" ganhou o plano até uma data (fim do mês, 15 ou 30 dias, fim do próximo mês ou o dia que você escolher): quantas respostas por dia útil, quantas avaliações nota 10 por semana, quantas reclamações respondidas já dá para pedir avaliação e se o ritmo das últimas 8 semanas chega lá. A nota passou a vir exata, com seis casas (8,770465) — antes a calculadora partia da nota já arredondada e mostrava 8,80. O mesmo vale no Índice, no Analytics e no Plano de ação.",
+    href: "/reclame-aqui/calculadora",
+  },
+  {
     id: "botao-cancelamento",
     dia: "2026-10-20",
     tipo: "novo",

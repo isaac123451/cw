@@ -11,6 +11,9 @@ import {
 } from "lucide-react";
 
 import SurfaceCard from "@/components/shared/SurfaceCard";
+import PlanoDaMeta from "@/components/reclame-aqui/calculadora/PlanoDaMeta";
+import type { Case } from "@/lib/models/case";
+import { notaExata } from "@/lib/models/indiceRA";
 
 import {
   caminhoParaNota,
@@ -46,8 +49,14 @@ const ATALHOS = [8, 8.5, 9, 9.5];
 
 export default function CaminhoParaNota({
   base,
+  casos = [],
+  todos = [],
 }: {
   base: ReputationRaw;
+  /** As reclamações da janela — as candidatas a pedir avaliação. */
+  casos?: Case[];
+  /** Todas — o ritmo de avaliações das últimas semanas. */
+  todos?: Case[];
 }) {
 
   const [alvo, setAlvo] = useState(9);
@@ -111,7 +120,7 @@ export default function CaminhoParaNota({
         <span className="ml-auto text-sm text-zinc-500">
           Hoje:{" "}
           <strong className="font-semibold tabular-nums text-zinc-900">
-            {ptBR(caminho.atual, 2)}
+            {notaExata(caminho.atualExato)}
           </strong>
         </span>
 
@@ -122,7 +131,7 @@ export default function CaminhoParaNota({
         <p className="mt-4 flex items-start gap-2 rounded-xl bg-emerald-50 px-3.5 py-3 text-sm text-emerald-800 ring-1 ring-inset ring-emerald-100">
           <Target size={15} className="mt-0.5 shrink-0" />
           <span>
-            A nota já está em {ptBR(caminho.atual, 2)} —
+            A nota já está em {notaExata(caminho.atualExato)} —
             acima de {ptBR(alvo)}. O trabalho aqui é
             manter, não alcançar.
           </span>
@@ -161,7 +170,7 @@ export default function CaminhoParaNota({
                   <>
                     Leva a nota para{" "}
                     <strong className="font-semibold tabular-nums text-zinc-900">
-                      {ptBR(caminho.soRespondendo, 2)}
+                      {notaExata(caminho.soRespondendoExato)}
                     </strong>
                     . É o que dá para fazer hoje, sem
                     depender de o consumidor voltar.
@@ -216,7 +225,7 @@ export default function CaminhoParaNota({
                       Resolvidas e com &ldquo;voltaria a
                       fazer negócio&rdquo;. Chega a{" "}
                       <strong className="font-semibold tabular-nums text-zinc-900">
-                        {ptBR(depois.projected, 2)}
+                        {notaExata(depois.projectedExato)}
                       </strong>
                       .
                     </p>
@@ -240,7 +249,7 @@ export default function CaminhoParaNota({
                           Mesmo todas nota 10, a nota para
                           em{" "}
                           <strong className="font-semibold tabular-nums">
-                            {ptBR(depois.projected, 2)}
+                            {notaExata(depois.projectedExato)}
                           </strong>
                           . O resto vem com o tempo — ou
                           com moderação do que puxa para
@@ -292,6 +301,9 @@ export default function CaminhoParaNota({
         </div>
 
       )}
+
+      {/* O plano com prazo: o que fazer por dia e por semana até a data, e se o ritmo de hoje chega lá. */}
+      {!caminho.jaAlcancada && <PlanoDaMeta caminho={caminho} casos={casos} todos={todos} />}
 
     </SurfaceCard>
   );

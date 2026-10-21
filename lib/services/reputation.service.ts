@@ -1190,6 +1190,8 @@ export interface SimulationTarget {
   needed: number;
   reachable: boolean;
   projected: number;
+  /** A mesma nota projetada, sem o arredondamento de uma casa do portal. */
+  projectedExato: number;
   /**
    * Por que não dá, quando não dá.
    *
@@ -1232,6 +1234,7 @@ export function evaluationsToReach(
       needed: 0,
       reachable: true,
       projected: scoreFrom(base).raScore,
+      projectedExato: scoreFrom(base).raScoreExato,
     };
   }
 
@@ -1267,6 +1270,7 @@ export function evaluationsToReach(
         needed: n,
         reachable: true,
         projected: scoreFrom(raw).raScore,
+        projectedExato: scoreFrom(raw).raScoreExato,
         ceiling: teto,
       };
     }
@@ -1277,6 +1281,7 @@ export function evaluationsToReach(
     needed: maximo,
     reachable: false,
     projected: scoreFrom(raw).raScore,
+    projectedExato: scoreFrom(raw).raScoreExato,
     reason:
       teto <= limit ? "sem-avaliacoes" : "teto-da-nota",
     ceiling: teto,
@@ -1661,12 +1666,15 @@ export function textoSobre(cor: string) {
 export interface CaminhoParaNota {
   alvo: number;
   atual: number;
+  /** A nota de hoje sem arredondar — a que o índice dá de fato. */
+  atualExato: number;
 
   /** Já está lá — nada a fazer. */
   jaAlcancada: boolean;
 
   pendentes: number;
   soRespondendo: number;
+  soRespondendoExato: number;
 
   /** Responder tudo já basta? */
   respondendoBasta: boolean;
@@ -1681,6 +1689,7 @@ export function caminhoParaNota(
 ): CaminhoParaNota {
 
   const atual = scoreFrom(base).raScore;
+  const atualExato = scoreFrom(base).raScoreExato;
 
   const pendentes = pendingAnswers(base);
 
@@ -1698,10 +1707,13 @@ export function caminhoParaNota(
   });
 
   const soRespondendo = scoreFrom(respondendoTudo).raScore;
+  const soRespondendoExato = scoreFrom(respondendoTudo).raScoreExato;
 
   return {
     alvo,
     atual,
+    atualExato,
+    soRespondendoExato,
     jaAlcancada: atual >= alvo,
     pendentes,
     soRespondendo,

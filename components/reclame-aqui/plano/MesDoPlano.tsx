@@ -9,6 +9,7 @@ import SurfaceCard from "@/components/shared/SurfaceCard";
 import type { CicloDoPlano, PlanoDoMes, ResultadoDoMes } from "@/lib/models/planoDeAcao";
 import { ROTULO_DA_META } from "@/lib/models/planoDeAcao";
 import { nomeDoMes, somarMeses, ultimoDia } from "@/lib/models/previsaoDeReclamacoes";
+import { notaExata } from "@/lib/models/indiceRA";
 import { RA1000_TARGETS } from "@/lib/services/reputation.service";
 
 import { br, efeito, inteiro, nota, pct, plural } from "./formato";
@@ -70,7 +71,7 @@ export default function MesDoPlano({ plano, erroDaProjecao, hoje }: { plano: Pla
         Se continuar como está{erroDaProjecao !== null ? ` · a projeção errou ${nota(erroDaProjecao)} em média nos últimos 6 meses` : ""}
       </p>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-        <Indicador rotulo="Nota" valor={nota(p.raScoreExato)} meta={m?.nota != null ? nota(m.nota) : undefined} ok={m?.nota != null ? p.raScoreExato >= m.nota : undefined} />
+        <Indicador rotulo="Nota" valor={notaExata(p.raScoreExato)} meta={m?.nota != null ? nota(m.nota) : undefined} ok={m?.nota != null ? p.raScoreExato >= m.nota : undefined} />
         <Indicador rotulo="Respondidas" valor={pct(p.responseIndex)} meta={m?.resposta != null ? pct(m.resposta) : undefined} ok={m?.resposta != null ? p.responseIndex >= m.resposta : undefined} />
         <Indicador rotulo="Consumidor" valor={nota(p.consumerScore)} meta={m?.consumidor != null ? nota(m.consumidor) : undefined} ok={m?.consumidor != null ? p.consumerScore >= m.consumidor : undefined} />
         <Indicador rotulo="Solução" valor={pct(p.solutionIndex)} meta={m?.solucao != null ? pct(m.solucao) : undefined} ok={m?.solucao != null ? p.solutionIndex >= m.solucao : undefined} />
@@ -230,7 +231,7 @@ export function ResultadoDoMesFechado({ r, ciclos }: { r: ResultadoDoMes; ciclos
   return (
     <SurfaceCard title={`${nomeDoMes(r.mes, true).replace(/^./, (c) => c.toUpperCase())} — fechado`} description={`Como a janela ficou no último dia do mês${r.meta ? ", contra a meta" : ""}.`}>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-        <Indicador rotulo="Nota" valor={nota(r.resumo.raScoreExato)} meta={r.meta?.nota != null ? nota(r.meta.nota) : undefined} ok={r.meta?.nota != null ? r.resumo.raScoreExato >= r.meta.nota : undefined} />
+        <Indicador rotulo="Nota" valor={notaExata(r.resumo.raScoreExato)} meta={r.meta?.nota != null ? nota(r.meta.nota) : undefined} ok={r.meta?.nota != null ? r.resumo.raScoreExato >= r.meta.nota : undefined} />
         <Indicador rotulo="Respondidas" valor={pct(r.resumo.responseIndex)} meta={r.meta?.resposta != null ? pct(r.meta.resposta) : undefined} ok={r.meta?.resposta != null ? r.resumo.responseIndex >= r.meta.resposta : undefined} />
         <Indicador rotulo="Consumidor" valor={nota(r.resumo.consumerScore)} meta={r.meta?.consumidor != null ? nota(r.meta.consumidor) : undefined} ok={r.meta?.consumidor != null ? r.resumo.consumerScore >= r.meta.consumidor : undefined} />
         <Indicador rotulo="Solução" valor={pct(r.resumo.solutionIndex)} meta={r.meta?.solucao != null ? pct(r.meta.solucao) : undefined} ok={r.meta?.solucao != null ? r.resumo.solutionIndex >= r.meta.solucao : undefined} />
