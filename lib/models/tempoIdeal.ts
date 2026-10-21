@@ -254,6 +254,22 @@ function diaDaAvaliacao(c: Case) {
   return c.evaluated && c.evaluatedAt ? diaNaOperacao(c.evaluatedAt) : null;
 }
 
+/**
+ * As avaliações que chegaram até `ateDias` depois da resposta pública — o
+ * que a barra do "Pedir a avaliação" conta, para a mini janela (21/10/2026).
+ */
+export function avaliadasAteDias(casos: Case[], hoje: string, periodo: PeriodoDoEstudo, ateDias: number): Case[] {
+  const desde = inicioDoEstudo(hoje, periodo);
+  return (desde ? casos.filter((c) => c.createdAt >= desde) : casos).filter((c) => {
+    if (!c.evaluated) return false;
+    const r = diaDaResposta(c);
+    const a = diaDaAvaliacao(c);
+    if (!r || !a) return false;
+    const d = diasEntre(r, a);
+    return d >= 0 && d <= ateDias;
+  });
+}
+
 /* ============================================================
    O ESTUDO
 ============================================================ */

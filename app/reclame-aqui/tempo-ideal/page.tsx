@@ -9,11 +9,13 @@ import { CheckCircle2, CircleAlert, OctagonAlert, Timer } from "lucide-react";
 import MainLayout from "@/components/layout/MainLayout";
 import PageHeading from "@/components/shared/PageHeading";
 import SurfaceCard from "@/components/shared/SurfaceCard";
+import { abrirJanelaDeCasos } from "@/components/shared/JanelaDeCasos";
 import ModuleNav from "@/components/reclame-aqui/ModuleNav";
 
 import { useScopedCases } from "@/lib/context/useScopedCases";
 import {
   CORTES_DO_TETO,
+  avaliadasAteDias,
   estudoDoTempo,
   folgaDaJanela,
   MATURIDADE_DA_RESPOSTA,
@@ -213,7 +215,18 @@ export default function TempoIdealPage() {
             <>
               <ul className="space-y-1.5">
                 {avaliacao.acumulado.map((a) => (
-                  <li key={a.dias} className="grid grid-cols-[110px_1fr_56px] items-center gap-3 text-sm">
+                  <li
+                    key={a.dias}
+                    onClick={() =>
+                      abrirJanelaDeCasos({
+                        titulo: `Avaliadas ${a.dias === 0 ? "no mesmo dia" : `até ${dias(a.dias)}`} da resposta`,
+                        descricao: "Avaliações que chegaram até este prazo depois da resposta pública, no período do estudo.",
+                        casos: avaliadasAteDias(cases, hoje, periodo, a.dias),
+                      })
+                    }
+                    className="grid cursor-pointer grid-cols-[110px_1fr_56px] items-center gap-3 rounded-lg text-sm hover:bg-zinc-50"
+                    title="Ver as avaliações"
+                  >
                     <span className="text-zinc-600">{a.dias === 0 ? "no mesmo dia" : `até ${dias(a.dias)}`}</span>
                     <span className="h-2 rounded-full bg-zinc-100" aria-hidden>
                       <span className="block h-2 rounded-full bg-violet-600" style={{ width: `${a.parte}%` }} />
