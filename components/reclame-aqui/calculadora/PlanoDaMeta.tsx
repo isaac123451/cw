@@ -168,7 +168,7 @@ export default function PlanoDaMeta({ caminho, casos, todos }: { caminho: Caminh
                 No ritmo das últimas 8 semanas ({ritmo.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} avaliações por semana, de qualquer nota) chegam cerca de {noRitmo} até {br(prazo)}.{" "}
                 {noRitmo >= avaliacoes
                   ? "O volume dá — o que decide é elas virem nota 10, resolvidas e com “voltaria”."
-                  : `É preciso ${porSemana} por semana — ${Math.max(1, Math.round(porSemana / Math.max(ritmo, 0.1)))}× o ritmo de hoje. Pedir avaliação a cada reclamação resolvida, no mesmo dia, é o que mais encurta.`}
+                  : `É preciso ${porSemana} por semana, acima das ${ritmo.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} de hoje (${(porSemana / Math.max(ritmo, 0.1)).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}× o ritmo). Pedir avaliação a cada reclamação resolvida, no mesmo dia, é o que mais encurta.`}
               </span>
             </li>
           )}

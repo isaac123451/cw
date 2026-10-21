@@ -159,7 +159,7 @@ export default function MarcaDeCancelamento({
   const [passo, setPasso] = useState<Passo>("pediu");
   const [mudando, setMudando] = useState(false);
   const [gravando, setGravando] = useState(false);
-  const { aberto, alternar, fechar, botao, painel, estilo } = usePainelPreso(280, 320);
+  const { aberto, alternar, fechar, botao, painel, estilo } = usePainelPreso(310, 320);
 
   /* Sem a marca vinda de fora (a ficha do caso), busca a desta reclamação; se falhar, segue sem marca. */
   useEffect(() => {
