@@ -8,8 +8,6 @@ import { comoEstavaNoDia } from "@/lib/models/indiceRA";
 import {
   bandOf,
   contasDoMes,
-  diaDaAvaliacao,
-  diaNaOperacao,
   getRange,
   getRawCounts,
   inRange,
@@ -35,17 +33,6 @@ function addDays(date: string, days: number) {
 
 function monthKey(date: string) {
   return date.slice(0, 7);
-}
-
-/*
-  O dia em que cada coisa aconteceu (1.118). Pedido de 01/10/2026: "as
-  avaliações que estão contabilizando ... são somente referente as suas
-  datas de criadas. elas precisam entrar quando foram avaliadas". A
-  resposta conta no dia em que foi publicada e a avaliação no dia em que
-  foi feita; sem data (a carga antiga), no dia da reclamação.
-*/
-function diaDaResposta(item: Case) {
-  return item.publicResponseAt ? diaNaOperacao(item.publicResponseAt) : item.createdAt;
 }
 
 const MONTHS = [
