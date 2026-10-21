@@ -15,8 +15,8 @@ const TETO_DE_TEXTO = 9000;
  * - **WhatsApp:** as nossas respostas aos clientes, cada uma com a
  *   pergunta do cliente que veio antes — é ali que estão a solução que
  *   funcionou, o prazo que o time dá, o jeito de explicar.
- * - **Slack:** as mensagens guardadas (com o desenvolvimento e no
- *   privado) — o que mudou no produto, o que está fora, o que foi
+ * - **Slack:** à parte, em `aprenderDoSlack` — o lote é lido na hora e
+ *   não fica guardado (com o desenvolvimento e no privado) — o que mudou no produto, o que está fora, o que foi
  *   combinado entre as áreas.
  *
  * O que é sensível não sai daqui (`ehSensivel` barra a mensagem inteira,
@@ -33,17 +33,12 @@ export async function aprenderDasConversas(prisma: PrismaClient, userId: string,
   if (ultima && agora.getTime() - ultima.criadaEm.getTime() < INTERVALO_MS) return 0;
   const desde = ultima?.criadaEm ?? new Date(agora.getTime() - 24 * 60 * 60_000);
 
-  const [nossas, slack] = await Promise.all([
-    prisma.mensagemDaConversa.findMany({
-      where: { de: "nos", criadoEm: { gt: desde } },
-      orderBy: { criadoEm: "asc" },
-      select: { texto: true, em: true, conversaId: true },
-      take: 120,
-    }),
-    prisma.mensagemDoSlack
-      .findMany({ where: { userId, criadaEm: { gt: desde } }, orderBy: { quando: "asc" }, select: { texto: true, autor: true, canal: true }, take: 80 })
-      .catch(() => []),
-  ]);
+  const nossas = await prisma.mensagemDaConversa.findMany({
+    where: { de: "nos", criadoEm: { gt: desde } },
+    orderBy: { criadoEm: "asc" },
+    select: { texto: true, em: true, conversaId: true },
+    take: 120,
+  });
 
   /* A pergunta do cliente que veio antes de cada resposta nossa. */
   const perguntas = await prisma.mensagemDaConversa.findMany({
@@ -59,17 +54,45 @@ export async function aprenderDasConversas(prisma: PrismaClient, userId: string,
     const pergunta = antes && !ehSensivel(antes.texto) ? `Cliente: ${semDadoSensivel(antes.texto).slice(0, 300)}\n` : "";
     blocos.push(`[WhatsApp] ${pergunta}Nós: ${semDadoSensivel(m.texto).slice(0, 500)}`);
   }
-  for (const s of slack) {
-    if (s.texto.length < 30 || ehSensivel(s.texto)) continue;
-    blocos.push(`[Slack ${s.canal.startsWith("D") ? "privado" : "canal"}] ${semDadoSensivel(s.texto).slice(0, 500)}`);
-  }
-
   /* Marca a leitura antes de chamar a IA: duas abas não leem a mesma janela duas vezes. */
   await prisma.acaoDaIA.upsert({
     where: { userId_chave: { userId, chave: marca } },
     create: { userId, chave: marca, tipo: "aviso", origem: "whatsapp", titulo: "Leitura de aprendizados", vistaEm: agora },
     update: { criadaEm: agora, vistaEm: agora },
   });
+  return extrairEGuardar(prisma, blocos);
+}
+
+/** De quanto em quanto tempo um lote do Slack vira leitura de aprendizado. */
+const INTERVALO_DO_SLACK_MS = 10 * 60_000;
+
+/**
+ * O Slack ensina sem ser guardado (21/10/2026): "as mensagens do Slack são
+ * somente para entender mais, não salvar". O lote que a extensão manda é
+ * lido na hora — o que vale como conhecimento geral vira aprendizado, o
+ * texto da mensagem é descartado. No máximo uma leitura a cada dez minutos
+ * por pessoa; o que chegar no meio só serve para os lembretes.
+ */
+export async function aprenderDoSlack(prisma: PrismaClient, userId: string, mensagens: { canal: string; texto: string }[], agora = new Date()): Promise<number> {
+  if (!temIA()) return 0;
+  const blocos = mensagens
+    .filter((m) => m.texto.length >= 30 && !ehSensivel(m.texto))
+    .map((m) => `[Slack ${m.canal.startsWith("D") ? "privado" : "canal"}] ${semDadoSensivel(m.texto).slice(0, 500)}`);
+  if (blocos.length < 2) return 0;
+
+  const marca = `aprendizado-slack:${userId}`;
+  const ultima = await prisma.acaoDaIA.findUnique({ where: { userId_chave: { userId, chave: marca } }, select: { criadaEm: true } });
+  if (ultima && agora.getTime() - ultima.criadaEm.getTime() < INTERVALO_DO_SLACK_MS) return 0;
+  await prisma.acaoDaIA.upsert({
+    where: { userId_chave: { userId, chave: marca } },
+    create: { userId, chave: marca, tipo: "aviso", origem: "slack", titulo: "Leitura de aprendizados do Slack", vistaEm: agora },
+    update: { criadaEm: agora, vistaEm: agora },
+  });
+  return extrairEGuardar(prisma, blocos);
+}
+
+/** A IA lê os trechos, já sem dado sensível, e guarda o que for conhecimento geral. */
+async function extrairEGuardar(prisma: PrismaClient, blocos: string[]): Promise<number> {
   if (blocos.length < 2) return 0;
 
   let r: Awaited<ReturnType<typeof pedirEstruturado>>;

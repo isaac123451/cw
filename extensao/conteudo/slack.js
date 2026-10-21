@@ -416,10 +416,10 @@
   */
   /*
     Nome novo da memória (21/10/2026): até 20/10 a tabela das mensagens do
-    Slack não existia no banco — a aplicação recebia, não guardava e
-    respondia "ok", e a extensão marcava como enviadas. Com o nome novo, as
-    dos últimos dois dias vão de novo, uma vez; o servidor não repete nada
-    (a chave é única por mensagem, e o lembrete também).
+    Slack não existia no banco e a extensão marcava como enviadas o que não
+    tinha chegado a lugar nenhum. Com o nome novo, as dos últimos dois dias
+    vão de novo, uma vez — para a IA aprender (o texto não é guardado) e
+    para os lembretes, que não se repetem.
   */
   const ENVIADAS = "cwSlackAvisosEnviados2";
   const DOIS_DIAS_MS = 2 * 86_400_000;

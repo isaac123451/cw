@@ -1,10 +1,12 @@
 import { revalidateTag } from "next/cache";
+import { after } from "next/server";
 
 import { autenticar, responder, responderPreVoo, semSessao } from "@/lib/api/extensao";
 import { WORKSPACE_TAG } from "@/lib/actions/tags";
 import type { MensagemDoSlack } from "@/lib/models/iaDoDia";
 import { getPrisma } from "@/lib/prisma";
-import { guardarMensagensDoSlack, lembretesDoSlack } from "@/lib/services/iaDoDia.service";
+import { lembretesDoSlack } from "@/lib/services/iaDoDia.service";
+import { aprenderDoSlack } from "@/lib/services/aprendizados.service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -47,8 +49,14 @@ export async function POST(request: Request) {
 
   if (!mensagens.length) return responder(request, { ok: true, criados: 0 });
 
-  /* Guardadas (14 dias) para o assistente ler e para ligar ao caso citado (09/10/2026). Falha aqui não impede o lembrete. */
-  await guardarMensagensDoSlack(prisma, usuario.id, mensagens).catch((erro) => console.error("[slack-avisos] guardar", erro));
+  /*
+    O Slack ensina, não fica guardado (21/10/2026): "as mensagens do Slack
+    são somente para entender mais, não salvar; as únicas coisas que devem
+    ser salvas do Slack são os casos de redes sociais". O lote vira
+    aprendizado depois da resposta, e o texto é descartado. (De 09 a 20/10
+    elas iam para MensagemDoSlack — a tabela nem existia no banco.)
+  */
+  after(() => aprenderDoSlack(prisma, usuario.id, mensagens).catch((erro) => console.error("[slack-avisos] aprender", erro)));
 
   try {
     const criados = await lembretesDoSlack(prisma, { id: usuario.id, nome: usuario.nome }, mensagens);
