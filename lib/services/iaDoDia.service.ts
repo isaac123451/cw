@@ -1102,7 +1102,11 @@ export async function guardarMensagensDoSlack(prisma: PrismaClient, userId: stri
     return r.count;
   } catch (erro) {
     const codigo = (erro as { code?: string })?.code;
-    if (codigo === "P2021") return 0;
+    /* Sem a tabela, não guarda — mas diz (21/10/2026): de 09 a 20/10 o Slack não guardou nada e ninguém soube. */
+    if (codigo === "P2021") {
+      console.error("[slack] a tabela MensagemDoSlack não existe no banco — rode npm run db:push");
+      return 0;
+    }
     throw erro;
   }
 }

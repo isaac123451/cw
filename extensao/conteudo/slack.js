@@ -414,7 +414,14 @@
     que pede ação e cria o lembrete na agenda. Nada é respondido no Slack.
     Cada mensagem vai uma vez só (o `ts` fica guardado na extensão).
   */
-  const ENVIADAS = "cwSlackAvisosEnviados";
+  /*
+    Nome novo da memória (21/10/2026): até 20/10 a tabela das mensagens do
+    Slack não existia no banco — a aplicação recebia, não guardava e
+    respondia "ok", e a extensão marcava como enviadas. Com o nome novo, as
+    dos últimos dois dias vão de novo, uma vez; o servidor não repete nada
+    (a chave é única por mensagem, e o lembrete também).
+  */
+  const ENVIADAS = "cwSlackAvisosEnviados2";
   const DOIS_DIAS_MS = 2 * 86_400_000;
   let enviadas = null;
   const fila = new Map();
