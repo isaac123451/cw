@@ -8,7 +8,7 @@ import {
 import { getPrisma } from "@/lib/prisma";
 
 import {
-  atrasadasNaLista,
+  situacaoNaLista,
   type ItemDaLista,
 } from "@/lib/services/raPortal.service";
 
@@ -93,6 +93,7 @@ export async function POST(request: Request) {
     return responder(request, {
       novos: [],
       atrasadas: [],
+      emAndamento: [],
       conhecidos: 0,
       total: 0,
     });
@@ -163,12 +164,14 @@ export async function POST(request: Request) {
 
   const novos = codigos.filter((c) => !conhecidos.has(c));
 
-  const atrasadas =
-    itens.length > 0 ? await atrasadasNaLista(prisma, itens) : [];
+  /* As em andamento vão junto: o vigia as reabre de tempos em tempos atrás da réplica. */
+  const { atrasadas, emAndamento } =
+    itens.length > 0 ? await situacaoNaLista(prisma, itens) : { atrasadas: [], emAndamento: [] };
 
   return responder(request, {
     novos,
     atrasadas,
+    emAndamento,
     conhecidos: codigos.length - novos.length,
     total: codigos.length,
   });

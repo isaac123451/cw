@@ -63,6 +63,16 @@ export const MUDANCAS: Mudanca[] = [
     href: "/retencao",
   },
   {
+    id: "vigia-atualiza-de-verdade",
+    dia: "2026-10-20",
+    tipo: "correcao",
+    frente: "extensao",
+    titulo: "Reclamação que não atualizava",
+    texto:
+      "Quatro motivos, todos corrigidos: a réplica do consumidor numa reclamação já respondida nunca era buscada (a lista do portal não diz que houve réplica) — agora as respondidas e sem avaliação são reabertas a cada 6 horas; a volta comum lia só a primeira página — agora lê as quatro primeiras; a réplica não movia a reclamação que estava numa coluna da operação (\"Em tratativa\") — agora move, se for mais nova que a última mexida no caso; e a reclamação que entrou pela planilha com outro número não era vista como atrasada. Quando o vigia grava, a plataforma aberta recarrega o quadro na hora. Recarregue a extensão para valer.",
+    onde: "Extensão → vigia do Reclame Aqui",
+  },
+  {
     id: "meta-com-plano-e-nota-exata",
     dia: "2026-10-20",
     tipo: "melhoria",

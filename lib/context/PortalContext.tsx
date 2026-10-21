@@ -57,6 +57,11 @@ export function PortalProvider({ children }: { children: ReactNode }) {
 
   const sessao = useSession();
   const { recarregar } = useCases();
+  /* A última versão do recarregar, para o aviso do vigia sem religar o ouvinte a cada render. */
+  const recarregarRef = useRef(recarregar);
+  useEffect(() => {
+    recarregarRef.current = recarregar;
+  });
   const { notify } = useToast();
 
   const [extensao, setExtensao] = useState<Extensao>("procurando");
@@ -204,6 +209,11 @@ export function PortalProvider({ children }: { children: ReactNode }) {
       if (mensagem?.de === "cw-extensao" && mensagem.tipo === "pronta") {
         setVersao(mensagem.versao ?? null);
         setExtensao("presente");
+      }
+
+      /* O vigia gravou reclamação nova ou atualizada: o quadro recarrega na hora (20/10/2026). */
+      if (mensagem?.de === "cw-extensao" && mensagem.tipo === "vigiaGravou") {
+        void recarregarRef.current();
       }
     }
 

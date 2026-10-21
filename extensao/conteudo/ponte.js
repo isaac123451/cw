@@ -82,6 +82,13 @@
     }
   });
 
+  /* O vigia gravou: a página recarrega o quadro (20/10/2026). */
+  chrome.runtime.onMessage.addListener((mensagem) => {
+    if (mensagem?.tipo === "vigiaGravou") {
+      window.postMessage({ de: "cw-extensao", tipo: "vigiaGravou" }, location.origin);
+    }
+  });
+
   /* Para a página que já estava aberta quando a ponte foi injetada. */
   window.postMessage(
     { de: "cw-extensao", tipo: "pronta", versao: VERSAO },

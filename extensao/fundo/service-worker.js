@@ -1557,6 +1557,14 @@ const PAGINAS_NA_FUNDA = 30;
 const ABERTAS_POR_VOLTA = 12;
 
 /**
+ * Reclamação respondida e sem avaliação é reaberta a cada seis horas
+ * (20/10/2026). A lista não diz se o consumidor fez réplica: sem reabrir,
+ * a réplica numa reclamação já respondida nunca chegava ao quadro — "tem
+ * vez que a reclamação não atualiza na ferramenta".
+ */
+const RECONFERIR_A_CADA_MS = 6 * 60 * 60_000;
+
+/**
  * Pendente que o portal não completou espera um dia para ser tentada
  * de novo — senão uma reclamação que saiu do ar ocuparia um lugar da
  * volta para sempre.
@@ -1614,6 +1622,7 @@ async function lerEstadoDoVigia() {
     "vigiaFila",
     "vigiaTentadas",
     "vigiaFunda",
+    "vigiaConferidas",
   ]);
 
   return {
@@ -1621,6 +1630,7 @@ async function lerEstadoDoVigia() {
     fila: Array.isArray(guardado.vigiaFila) ? guardado.vigiaFila : [],
     tentadas: guardado.vigiaTentadas ?? {},
     funda: guardado.vigiaFunda ?? "",
+    conferidas: guardado.vigiaConferidas ?? {},
   };
 }
 
@@ -1673,6 +1683,7 @@ async function umaVolta(motivo) {
     fila: guardada,
     tentadas,
     funda,
+    conferidas,
   } = await lerEstadoDoVigia();
 
   /* Desligado nas opções: o alarme segue vivo, a volta não sai. */
@@ -1709,6 +1720,7 @@ async function umaVolta(motivo) {
 
   const novas = [];
   const atrasadas = [];
+  const emAndamento = [];
   let total = null;
   let htmlDaCasa = null;
 
@@ -1759,18 +1771,14 @@ async function umaVolta(motivo) {
 
       novas.push(...(resposta?.novos ?? []));
       atrasadas.push(...(resposta?.atrasadas ?? []));
+      emAndamento.push(...(resposta?.emAndamento ?? []));
 
       /*
-        Na volta comum, a primeira conhecida encerra a leitura: a lista
-        vem da mais nova para a mais velha, e o resto já passou por
-        aqui. A funda segue, atrás de avaliação nova em reclamação velha.
+        A volta comum lê as primeiras páginas inteiras (20/10/2026). Antes
+        parava na primeira reclamação conhecida — e a réplica ou a
+        avaliação de uma reclamação da segunda página só chegava na volta
+        funda, uma vez por dia.
       */
-      if (
-        !fundaHoje &&
-        (resposta?.novos ?? []).length < lista.itens.length
-      ) {
-        break;
-      }
 
       await esperar(300);
     }
@@ -1782,9 +1790,14 @@ async function umaVolta(motivo) {
     (codigo) => agora - (tentadas[codigo] ?? 0) > ESPERA_DA_PENDENTE_MS
   );
 
+  /* As em andamento que não são reabertas há seis horas — atrás da réplica do consumidor. */
+  const aReconferir = emAndamento.filter(
+    (codigo) => agora - (conferidas[codigo] ?? 0) > RECONFERIR_A_CADA_MS
+  );
+
   /* Novas primeiro: é a que tem prazo correndo. */
   const fila = [
-    ...new Set([...novas, ...atrasadas, ...guardada, ...pedidas]),
+    ...new Set([...novas, ...atrasadas, ...guardada, ...pedidas, ...aReconferir]),
   ];
 
   const agoraAbrir = fila.slice(0, ABERTAS_POR_VOLTA);
@@ -1839,13 +1852,19 @@ async function umaVolta(motivo) {
     if (pedidas.includes(codigo)) tentadasAgora[codigo] = agora;
   }
 
+  /* As reabertas guardam a hora; as que não aparecem há uma semana são esquecidas. */
+  const conferidasAgora = Object.fromEntries(
+    Object.entries(conferidas).filter(([, quando]) => agora - quando < 7 * 24 * 60 * 60_000)
+  );
+  for (const codigo of abertas) conferidasAgora[codigo] = agora;
+
   /*
     O que ficou para depois. As pendentes não entram: o servidor as
     devolve na próxima volta, e guardá-las aqui as faria furar a espera
     de um dia.
   */
   const restante = fila
-    .filter((c) => !abertas.has(c) && !pedidas.includes(c))
+    .filter((c) => !abertas.has(c) && !pedidas.includes(c) && !aReconferir.includes(c))
     .slice(0, 200);
 
   const estado = {
@@ -1861,11 +1880,15 @@ async function umaVolta(motivo) {
   await salvarVigia(estado, {
     vigiaFila: restante,
     vigiaTentadas: tentadasAgora,
+    vigiaConferidas: conferidasAgora,
     ...(fundaHoje ? { vigiaFunda: hoje } : {}),
   });
 
   if (estado.criadas.length > 0) avisarNovas(estado.criadas);
   avisarEventos(resultado.completadas ?? []);
+
+  /* Gravou algo: a plataforma aberta recarrega o quadro na hora, sem esperar a releitura de 3 min. */
+  if (estado.criadas.length > 0 || estado.completadas > 0) avisarPlataforma().catch(() => {});
 
   await lerSegmento(plano, htmlDaCasa).catch(() => {});
 
@@ -2035,6 +2058,22 @@ const PONTE = "cw-ponte";
  * conhece o `localhost`. Sem permissão para o endereço, não registra:
  * a ponte segue a mesma permissão que todo o resto.
  */
+/**
+ * Avisa as abas da plataforma que o vigia gravou (20/10/2026). Antes a
+ * reclamação atualizada só aparecia na releitura de três minutos — ou no
+ * F5 —, e parecia que "a reclamação não atualiza na ferramenta".
+ */
+async function avisarPlataforma() {
+  const config = await lerConfig();
+  const base = normalizarBase(config.base);
+  if (!base) return;
+  const abas = await chrome.tabs.query({ url: padraoDeOrigem(base) });
+  for (const aba of abas) {
+    if (aba.id === undefined) continue;
+    chrome.tabs.sendMessage(aba.id, { tipo: "vigiaGravou" }).catch(() => {});
+  }
+}
+
 async function registrarPonte() {
 
   try {

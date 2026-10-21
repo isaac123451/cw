@@ -361,9 +361,10 @@ async function main() {
       0
     );
     conferir(
-      "e para na primeira página, porque achou conhecida",
+      /* Desde 20/10 a volta comum lê as primeiras páginas inteiras (atrás da réplica); aqui a 2ª já vem vazia e encerra. */
+      "lê as primeiras páginas até a lista acabar",
       pedidosAoPortal.filter((u) => u.includes("/empresa/")).length,
-      1
+      2
     );
 
     /* --- abrir a plataforma de novo não relê à toa --- */

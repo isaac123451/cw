@@ -7,6 +7,7 @@ import { STATUS_TERMINADO } from "@/lib/services/case.service";
 
 import {
   COLUNAS_DO_PORTAL,
+  COLUNAS_FINAIS,
   mudancasDoPortal,
   SELECAO_DO_PORTAL,
 } from "@/lib/services/atualizacaoDoPortal";
@@ -387,6 +388,7 @@ function carregar(
       externalUrl: true,
       title: true,
       publishedAt: true,
+      updatedAt: true,
     },
   });
 }
@@ -570,6 +572,28 @@ export async function gravarDoPortal(
 
     if (semRelato && doPortal.description) {
       mudancas.description = doPortal.description;
+    }
+
+    /*
+      A réplica do consumidor chega ao quadro mesmo de uma coluna da
+      operação (20/10/2026). A regra das colunas não deixava o portal mexer
+      em "Em tratativa" ou "Aguardando retorno" — e a réplica feita depois
+      ficava invisível: "tem vez que a reclamação não atualiza". Só quando
+      a réplica é mais nova que a última mexida no caso: se alguém mexeu
+      depois de ler a réplica, a coluna escolhida fica.
+    */
+    const ultima = r.interacoes[r.interacoes.length - 1];
+    const replicaEm = ultima?.tipo === "REPLY" ? instante(ultima.em) : null;
+    if (
+      !("status" in mudancas) &&
+      !r.avaliada &&
+      doPortal.status === "Aguardando nossa réplica" &&
+      atual.status !== "Aguardando nossa réplica" &&
+      !COLUNAS_FINAIS.has(atual.status) &&
+      replicaEm &&
+      replicaEm.getTime() > atual.updatedAt.getTime()
+    ) {
+      mudancas.status = "Aguardando nossa réplica";
     }
 
     if (!atual.externalUrl && doPortal.raUrl) {
@@ -853,28 +877,66 @@ export async function atrasadasNaLista(
   prisma: PrismaClient,
   itens: ItemDaLista[]
 ) {
+  return (await situacaoNaLista(prisma, itens)).atrasadas;
+}
+
+/**
+ * O que a lista diz das reclamações conhecidas (20/10/2026: "tem vez que
+ * a reclamação não atualiza na ferramenta").
+ *
+ * - **atrasadas**: o portal já passou à frente (respondida lá, avaliada lá).
+ * - **emAndamento**: respondidas e ainda sem avaliação — a lista não diz
+ *   se o consumidor fez réplica, então o vigia as reabre de tempos em
+ *   tempos. Era por aqui que a réplica numa reclamação já respondida
+ *   nunca chegava ao quadro.
+ *
+ * A reclamação é achada pelo protocolo, pelo id externo ou pelo endereço —
+ * antes só pelo protocolo, e a que entrou pela planilha com outro número
+ * nunca era vista como atrasada.
+ */
+export async function situacaoNaLista(
+  prisma: PrismaClient,
+  itens: ItemDaLista[]
+): Promise<{ atrasadas: string[]; emAndamento: string[] }> {
 
   const validos = itens.filter((i) => CODIGO_DO_PORTAL.test(i.codigo));
 
-  if (validos.length === 0) return [];
+  if (validos.length === 0) return { atrasadas: [], emAndamento: [] };
+
+  const codigos = validos.map((i) => i.codigo);
 
   const noBanco = await prisma.case.findMany({
     where: {
-      protocol: { in: validos.map((i) => `RA-${i.codigo}`) },
+      OR: [
+        { protocol: { in: codigos.map((c) => `RA-${c}`) } },
+        { externalId: { in: [...codigos, ...codigos.map((c) => `RA-${c}`)] } },
+        ...codigos.map((c) => ({ externalUrl: { contains: c } })),
+      ],
     },
     select: {
       protocol: true,
+      externalId: true,
+      externalUrl: true,
       status: true,
       evaluated: true,
       publicResponse: true,
     },
   });
 
-  const porCodigo = new Map(
-    noBanco.map((c) => [c.protocol.slice(3), c])
-  );
+  const porCodigo = new Map<string, (typeof noBanco)[number]>();
+  for (const c of codigos) {
+    const achado = noBanco.find((l) => l.protocol === `RA-${c}` || l.externalId === c || l.externalId === `RA-${c}` || (l.externalUrl ?? "").includes(c));
+    if (achado) porCodigo.set(c, achado);
+  }
 
-  return validos
+  const emAndamento = validos
+    .filter((item) => {
+      const caso = porCodigo.get(item.codigo);
+      return Boolean(caso && !caso.evaluated && !item.avaliada && item.status !== "PENDING" && !STATUS_TERMINADO.includes(caso.status));
+    })
+    .map((item) => item.codigo);
+
+  const atrasadas = validos
     .filter((item) => {
       const caso = porCodigo.get(item.codigo);
 
@@ -898,4 +960,6 @@ export async function atrasadasNaLista(
       );
     })
     .map((item) => item.codigo);
+
+  return { atrasadas, emAndamento: emAndamento.filter((c) => !atrasadas.includes(c)) };
 }
