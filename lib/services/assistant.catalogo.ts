@@ -243,7 +243,7 @@ export const CATALOGO: Medicao[] = [
       const corte = seteDiasAtras();
 
       const conta = (
-        s: "sem-resposta" | "vencidas" | "na-fila" | "risco"
+        s: "sem-resposta" | "vencidas" | "na-fila" | "risco" | "pedir-avaliacao"
       ) =>
         cases.filter((item) =>
           naSituacao(item, s, corte)
@@ -254,6 +254,7 @@ export const CATALOGO: Medicao[] = [
         `vencidas há +7 dias: ${conta("vencidas")}`,
         `em aberto: ${conta("na-fila")}`,
         `marcadas para retenção: ${conta("risco")}`,
+        `respondidas para pedir avaliação: ${conta("pedir-avaliacao")}`,
         `total na base: ${cases.length}`,
       ].join(" · ");
     },

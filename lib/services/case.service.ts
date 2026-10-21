@@ -511,7 +511,13 @@ export type SituacaoDoCaso =
   | "sem-resposta"
   | "vencidas"
   | "na-fila"
-  | "risco";
+  | "risco"
+  | "pedir-avaliacao"
+  | "nota-baixa"
+  | "nao-resolvida"
+  | "nao-voltaria"
+  | "desconsiderada"
+  | "sem-estabelecimento";
 
 export const ROTULO_DA_SITUACAO: Record<
   SituacaoDoCaso,
@@ -521,7 +527,38 @@ export const ROTULO_DA_SITUACAO: Record<
   vencidas: "Vencidas há +7 dias",
   "na-fila": "Na fila da operação",
   risco: "Risco de cancelamento",
+  "pedir-avaliacao": "Pedir avaliação",
+  "nota-baixa": "Avaliadas com nota até 6",
+  "nao-resolvida": "Avaliadas como não resolvidas",
+  "nao-voltaria": "Não voltariam a fazer negócio",
+  desconsiderada: "Avaliação desconsiderada",
+  "sem-estabelecimento": "Sem estabelecimento vinculado",
 };
+
+/**
+ * O que cada situação quer dizer (21/10/2026: "tem coisas que faltam para
+ * ter como filtro ou que ajudariam a entender como funciona x coisa"). Vai
+ * no seletor e na linha embaixo dele quando o filtro está ligado.
+ */
+export const DESCRICAO_DA_SITUACAO: Record<SituacaoDoCaso, string> = {
+  "sem-resposta": "Abertas e ainda sem resposta pública no portal. Cada uma derruba o índice de resposta (peso 2 na nota).",
+  vencidas: "Sem resposta há mais de 7 dias — o portal já as mostra como vencidas no perfil público.",
+  "na-fila": "Tudo o que ainda não terminou: não avaliado e não finalizado.",
+  risco: "Marcadas como risco de churn (avaliou sem resolver e sem voltaria, ou marcadas à mão).",
+  "pedir-avaliacao": "Respondidas nos últimos 12 meses, ainda sem avaliação e não finalizadas — é delas que vem a nota nova. Peça quando o problema estiver resolvido.",
+  "nota-baixa": "Avaliadas com nota de 0 a 6: puxam a nota do consumidor (peso 3) para baixo. Candidatas a moderação quando cabe.",
+  "nao-resolvida": "O consumidor avaliou dizendo que não resolveu — pesa no índice de solução (peso 3).",
+  "nao-voltaria": "O consumidor avaliou dizendo que não voltaria a fazer negócio — pesa no índice de novos negócios (peso 2).",
+  desconsiderada: "O Reclame Aqui desconsiderou a avaliação: ela não entra na nota.",
+  "sem-estabelecimento": "Reclamações ainda sem o restaurante vinculado — sem ele não cruzam com NPS, WhatsApp e retenção.",
+};
+
+/** Os grupos do seletor: o que pede ação, a avaliação, o cadastro. */
+export const GRUPOS_DE_SITUACAO: { nome: string; situacoes: SituacaoDoCaso[] }[] = [
+  { nome: "Pede ação", situacoes: ["sem-resposta", "vencidas", "pedir-avaliacao", "na-fila", "risco"] },
+  { nome: "Avaliação", situacoes: ["nota-baixa", "nao-resolvida", "nao-voltaria", "desconsiderada"] },
+  { nome: "Cadastro", situacoes: ["sem-estabelecimento"] },
+];
 
 /**
  * O corte de "vencida": sete dias atrás, no fuso da operação.
@@ -538,6 +575,18 @@ export function seteDiasAtras() {
   limite.setUTCDate(limite.getUTCDate() - 7);
 
   return limite.toISOString().slice(0, 10);
+}
+
+/** Um ano atrás, no fuso da operação — guardado por dia, porque roda uma vez por caso. */
+let umAno = { dia: "", corte: "" };
+function umAnoAtras() {
+  const hoje = hojeNaOperacao();
+  if (umAno.dia !== hoje) {
+    const d = new Date(`${hoje}T00:00:00Z`);
+    d.setUTCFullYear(d.getUTCFullYear() - 1);
+    umAno = { dia: hoje, corte: d.toISOString().slice(0, 10) };
+  }
+  return umAno.corte;
 }
 
 /**
@@ -586,5 +635,24 @@ export function naSituacao(
 
     case "risco":
       return Boolean(item.churnRisk);
+
+    case "pedir-avaliacao":
+      /* Só as dos últimos 12 meses — a maior janela do portal; avaliação mais velha não mexe em nota nenhuma. */
+      return respondida(item) && !item.evaluated && item.status !== "Resolvido" && item.status !== "Não resolvido" && item.createdAt >= umAnoAtras();
+
+    case "nota-baixa":
+      return Boolean(item.evaluated) && !item.scoreDisregarded && typeof item.score === "number" && item.score <= 6;
+
+    case "nao-resolvida":
+      return Boolean(item.evaluated) && !item.resolved;
+
+    case "nao-voltaria":
+      return Boolean(item.evaluated) && !item.wouldDoBusiness;
+
+    case "desconsiderada":
+      return Boolean(item.scoreDisregarded);
+
+    case "sem-estabelecimento":
+      return !item.establishmentId;
   }
 }

@@ -27,7 +27,7 @@ import LerPortalButton from "@/components/reclame-aqui/toolbar/LerPortalButton";
 import SavedFilters from "@/components/reclame-aqui/toolbar/SavedFilters";
 import SearchSelect from "@/components/shared/SearchSelect";
 import { hojeNaOperacao } from "@/lib/services/reputation.service";
-import { naSituacao, ROTULO_DA_SITUACAO, seteDiasAtras, type SituacaoDoCaso } from "@/lib/services/case.service";
+import { DESCRICAO_DA_SITUACAO, GRUPOS_DE_SITUACAO, naSituacao, ROTULO_DA_SITUACAO, seteDiasAtras, type SituacaoDoCaso } from "@/lib/services/case.service";
 
 interface Props {
   view: "kanban" | "list";
@@ -211,14 +211,18 @@ export default function Toolbar({
           <select
             value={filters.situacao}
             onChange={(e) => setFilter("situacao", e.target.value)}
-            title="Recortar a fila pelo que pede ação"
+            title={filters.situacao ? DESCRICAO_DA_SITUACAO[filters.situacao] : "Recortar a fila pelo que pede ação, pela avaliação ou pelo cadastro"}
             className={`${selectClass} ${filters.situacao ? "border-violet-300 bg-violet-50 font-medium text-violet-800" : ""}`}
           >
             <option value="">Toda situação</option>
-            {(Object.keys(ROTULO_DA_SITUACAO) as SituacaoDoCaso[]).map((s) => (
-              <option key={s} value={s}>
-                {ROTULO_DA_SITUACAO[s]} ({porSituacao[s]})
-              </option>
+            {GRUPOS_DE_SITUACAO.map((g) => (
+              <optgroup key={g.nome} label={g.nome}>
+                {g.situacoes.map((s) => (
+                  <option key={s} value={s} title={DESCRICAO_DA_SITUACAO[s]}>
+                    {ROTULO_DA_SITUACAO[s]} ({porSituacao[s]})
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </select>
           {filters.situacao && (

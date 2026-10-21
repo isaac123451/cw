@@ -63,6 +63,16 @@ export const MUDANCAS: Mudanca[] = [
     href: "/retencao",
   },
   {
+    id: "quadro-filtros-e-explicacoes",
+    dia: "2026-10-21",
+    tipo: "melhoria",
+    frente: "reclame-aqui",
+    titulo: "Quadro e lista: filtros de avaliação e o que cada coisa quer dizer",
+    texto:
+      "O seletor de situação ganhou grupos e seis recortes novos: pedir avaliação (respondidas dos últimos 12 meses sem avaliação), avaliadas com nota até 6, não resolvidas, não voltariam, avaliação desconsiderada e sem estabelecimento vinculado — cada um com quantas há e, ao passar o mouse, o que quer dizer e quanto pesa na nota. No quadro, o nome de cada coluna explica o que ela significa e quando o vigia mexe (ou não) nela.",
+    href: "/reclame-aqui",
+  },
+  {
     id: "vigia-atualiza-de-verdade",
     dia: "2026-10-20",
     tipo: "correcao",
