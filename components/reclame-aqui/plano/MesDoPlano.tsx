@@ -137,7 +137,7 @@ export default function MesDoPlano({ plano, erroDaProjecao, hoje }: { plano: Pla
               !plano.reputacao.exigencia.alcancavel
                 ? `Nota ${nota(plano.reputacao.exigencia.meta)} fora de alcance neste mês`
                 : plano.reputacao.exigencia.avaliacoesPerfeitasAMais + plano.reputacao.exigencia.respostasAMais === 0
-                  ? `Cumprindo o plano, a nota fecha em ${nota(plano.reputacao.exigencia.comAsMetricas)}`
+                  ? `Cumprindo o plano, a nota fecha em ${notaExata(plano.reputacao.exigencia.comAsMetricas)}`
                   : `Para a nota ${nota(plano.reputacao.exigencia.meta)}: ${[
                       plano.reputacao.exigencia.respostasAMais ? plural(plano.reputacao.exigencia.respostasAMais, "resposta a mais", "respostas a mais") : "",
                       plano.reputacao.exigencia.avaliacoesPerfeitasAMais ? plural(plano.reputacao.exigencia.avaliacoesPerfeitasAMais, "avaliação perfeita a mais", "avaliações perfeitas a mais") : "",
@@ -147,7 +147,7 @@ export default function MesDoPlano({ plano, erroDaProjecao, hoje }: { plano: Pla
             }
             ok={plano.reputacao.exigencia.noCaminho}
           >
-            A meta é {nota(plano.reputacao.exigencia.meta)}; se nada mudar, fecha em {nota(plano.reputacao.exigencia.projetado)}. Com as metas das métricas cumpridas, {nota(plano.reputacao.exigencia.comAsMetricas)}
+            A meta é {nota(plano.reputacao.exigencia.meta)}; se nada mudar, fecha em {notaExata(plano.reputacao.exigencia.projetado)}. Com as metas das métricas cumpridas, {notaExata(plano.reputacao.exigencia.comAsMetricas)}
             {plano.reputacao.exigencia.avaliacoesPerfeitasAMais ? "; o resto vem de avaliações nota 10, resolvidas e com \"voltaria\"" : ""}.
           </Acao>
         )}

@@ -162,7 +162,7 @@ export default function PlanoPage() {
                 {teste && (
                   <p>
                     <b className="text-zinc-800">A projeção contra o que aconteceu:</b> o plano como estaria na véspera de cada mês, contra a nota do último dia dele —{" "}
-                    {teste.meses.map((m) => `${nomeDoMes(m.mes).slice(0, 3)} ${nota(m.projetada)} × ${nota(m.real)}`).join(" · ")}. Erro médio: {teste.erroMedio !== null ? nota(teste.erroMedio) : "—"}.
+                    {teste.meses.map((m) => `${nomeDoMes(m.mes).slice(0, 3)} ${notaExata(m.projetada)} × ${notaExata(m.real)}`).join(" · ")}. Erro médio: {teste.erroMedio !== null ? nota(teste.erroMedio) : "—"}.
                   </p>
                 )}
               </div>
