@@ -306,6 +306,18 @@ async function identidade(prisma: NonNullable<ReturnType<typeof getPrisma>>, euI
     await prisma.acaoDaIA.deleteMany({
       where: { userId: euId, OR: [...casos, ...npss, ...conversas, ...tarefas].map((id) => ({ chave: { contains: id } })) },
     });
+    /*
+      O lembrete que nasce de uma mensagem do teste tem na chave o id da
+      mensagem, não o da conversa (21/10/2026): "Retornar a Diego" sobrou
+      no histórico da IA depois da conferência.
+    */
+    const mensagensDoTeste = conversas.length
+      ? (await prisma.mensagemDaConversa.findMany({ where: { conversaId: { in: conversas } }, select: { id: true } })).map((m) => m.id)
+      : [];
+    if (mensagensDoTeste.length) {
+      await prisma.acaoDaIA.deleteMany({ where: { userId: euId, OR: mensagensDoTeste.map((id) => ({ chave: { contains: id } })) } });
+      await prisma.agendaTask.deleteMany({ where: { OR: mensagensDoTeste.map((id) => ({ id: { endsWith: id } })) } });
+    }
     /* Rede de segurança (21/10/2026): uma anotação descartável sobrou na lista do Isaac. */
     await prisma.acaoDaIA.deleteMany({ where: { OR: [{ titulo: { contains: "RA-ZZ-" } }, { titulo: { contains: "Descartável" } }] } });
     if (tarefas.length) await prisma.agendaTask.deleteMany({ where: { id: { in: tarefas } } });
