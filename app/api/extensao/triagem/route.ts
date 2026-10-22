@@ -15,6 +15,7 @@ import {
 import { loadWorkspace } from "@/lib/actions/workspace";
 import { fetchCaseByProtocol } from "@/lib/services/case.repository";
 import { pedirEstruturado } from "@/lib/services/ia.service";
+import { saberParaOPrompt } from "@/lib/services/aprendizados.service";
 import { triarSemIA } from "@/lib/services/motorProprio";
 
 export const runtime = "nodejs";
@@ -222,6 +223,9 @@ export async function POST(request: Request) {
     aprovados
       ? `Textos aprovados que a operação já usa:\n${aprovados}`
       : "Não há textos aprovados cadastrados.",
+    "",
+    /* O que o time aprendeu — inclusive com o resultado das respostas públicas (22/10/2026). */
+    await saberParaOPrompt(prisma, `${caso.title} ${caso.category ?? ""} ${caso.description ?? ""}`).catch(() => ""),
   ]
     .filter(Boolean)
     .join("\n");
