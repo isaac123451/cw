@@ -238,11 +238,19 @@
         antigo?.remove();
         continue;
       }
+      /*
+        Só escreve o que mudou (22/10/2026): a volta de 3 s reescrevia o
+        mesmo texto em cada linha da lista, e a página do WhatsApp mexia sem
+        parar — junto com a dificuldade de selecionar e copiar.
+      */
       const selo = antigo || document.createElement("span");
-      selo.className = `cw-espera ${espera.nivel}`;
-      selo.textContent = espera.rotulo;
-      selo.title = "O cliente falou por último e ainda espera a nossa resposta (CW Reputação)";
-      if (!antigo) hora.after(selo);
+      const classe = `cw-espera ${espera.nivel}`;
+      if (selo.className !== classe) selo.className = classe;
+      if (selo.textContent !== espera.rotulo) selo.textContent = espera.rotulo;
+      if (!antigo) {
+        selo.title = "O cliente falou por último e ainda espera a nossa resposta (CW Reputação)";
+        hora.after(selo);
+      }
     }
     esperando = vistos;
   }

@@ -53,6 +53,16 @@ export const REVISAO = {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- passe a limpo (21/10) ---------------- */
   {
+    id: "extensao-nao-atrapalha-copiar",
+    dia: "2026-10-22",
+    tipo: "correcao",
+    frente: "extensao",
+    titulo: "Extensão não atrapalha mais selecionar e copiar",
+    texto:
+      "Selecionar um texto para copiar às vezes falhava e pedia vários cliques. A sugestão de resposta do copiloto, no painel, era redesenhada a cada 15 segundos mesmo igual — a seleção sumia no meio; agora só redesenha quando muda. No WhatsApp, os selos de espera da lista de conversas eram reescritos a cada 3 segundos mesmo iguais; agora só quando mudam. E no Slack, quem copiava uma mensagem levava junto o texto \"CW · Redes\" do botão; agora o rótulo não entra na seleção nem na cópia.",
+    onde: "Extensão → painel, WhatsApp e Slack",
+  },
+  {
     id: "indices-pelo-painel-do-portal",
     dia: "2026-10-22",
     tipo: "correcao",

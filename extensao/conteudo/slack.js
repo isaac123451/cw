@@ -275,7 +275,12 @@
     if (document.getElementById("cw-slack-regra")) return;
     const estilo = document.createElement("style");
     estilo.id = "cw-slack-regra";
-    estilo.textContent = `[data-item-key]:hover [${MARCA}="botao"], [${MARCA}="botao"]:focus-visible { opacity: 1 !important; } [${MARCA}="botao"][data-feito] { opacity: .6; }`;
+    /*
+      O rótulo vem do CSS, não do texto do botão (22/10/2026): "CW · Redes"
+      ia junto quando se copiava uma mensagem do Slack. Conteúdo de
+      `::before` e `user-select: none` ficam fora da seleção e da cópia.
+    */
+    estilo.textContent = `[data-item-key]:hover [${MARCA}="botao"], [${MARCA}="botao"]:focus-visible { opacity: 1 !important; } [${MARCA}="botao"][data-feito] { opacity: .6; } [${MARCA}="botao"] { user-select: none; -webkit-user-select: none; } [${MARCA}="botao"]::before { content: "CW · Redes"; }`;
     document.head.appendChild(estilo);
   }
 
@@ -291,7 +296,7 @@
     botao.type = "button";
     botao.setAttribute(MARCA, "botao");
     botao.setAttribute("data-cw-ts", ts);
-    botao.textContent = "CW · Redes";
+    botao.setAttribute("aria-label", "CW · Redes");
     botao.title = "Registrar esta mensagem nas Redes Sociais do CW";
     botao.style.cssText =
       "margin:4px 0 0;padding:2px 8px;border-radius:6px;border:1px solid rgba(29,28,29,.13);background:transparent;color:inherit;font:500 11.5px/1.5 inherit;cursor:pointer;opacity:0;transition:opacity .12s";

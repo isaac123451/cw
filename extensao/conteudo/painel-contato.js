@@ -2171,6 +2171,13 @@
       depoisDe.insertAdjacentHTML("afterend", `<div class="copiloto-conversa"></div>`);
       caixa = P.corpo.querySelector(".copiloto-conversa");
     }
+    /*
+      Só reescreve quando mudou (22/10/2026): a volta de 15 s redesenhava a
+      sugestão igual, e quem estava selecionando o texto para copiar perdia
+      a seleção no meio — "tem que clicar várias vezes".
+    */
+    if (caixa.dataset.html === html) return;
+    caixa.dataset.html = html;
     caixa.innerHTML = html;
   }
 
