@@ -53,6 +53,16 @@ export const REVISAO = {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- passe a limpo (21/10) ---------------- */
   {
+    id: "indices-pelo-painel-do-portal",
+    dia: "2026-10-22",
+    tipo: "correcao",
+    frente: "plataforma",
+    titulo: "Análise e Dashboard mostram os índices do portal",
+    texto:
+      "O voltaria aparecia 80% e o portal mostrava 79,7%. Os dois estavam certos, cada um no seu momento: o vigia já tinha lido a avaliação de 20/10 da RA-50JTSmmAOFueKwQ9 (nota 10, voltaria), e o painel do Reclame Aqui, lido em 22/10, ainda não a tinha contado — o portal atualiza com até 3 dias de atraso. Tirando ela, a conta daqui bate número por número com o painel, nas janelas de 6 e de 12 meses. Agora, na janela oficial, a Análise e o Dashboard mostram o que o portal publica (avaliadas, resposta, solução, voltaria, nota do consumidor), e um aviso diz quantas avaliações o portal ainda não contou, quais são, e como os índices ficam com elas.",
+    href: "/reclame-aqui/analytics",
+  },
+  {
     id: "graficos-e-carga-21-10",
     dia: "2026-10-21",
     tipo: "melhoria",

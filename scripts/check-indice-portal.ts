@@ -62,8 +62,10 @@ async function main() {
     /*
       O portal leva até dois dias para pôr a avaliação no painel (07/10/2026:
       a nota 10 de RA-JsltPJ6jl7vwNa8P, feita no dia 7, faltava no painel lido
-      às 21h52 do dia 7 e às 00h20 do dia 8). Vale a conta do dia da leitura
-      ou a de um dos dois dias antes — e o dia que bateu aparece na linha.
+      às 21h52 do dia 7 e às 00h20 do dia 8). Em 22/10/2026 foram três: a nota
+      10 de RA-50JTSmmAOFueKwQ9, feita no dia 20, faltava no painel lido no dia
+      22 às 9h42. Vale a conta do dia da leitura ou a de um dos três dias antes
+      — e o dia que bateu aparece na linha.
     */
     const contaNoDia = (dia: string) => {
       const janela = casos.filter((c) => inRange(c, p.inicio!, p.fim)).map((c) => comoEstavaNoDia(c, dia));
@@ -73,7 +75,7 @@ async function main() {
     };
     const esperado = [d.avaliadas, d.solucao, d.voltaria, d.notaConsumidor, d.nota];
     const menos = (n: number) => new Date(Date.parse(`${lido}T12:00:00Z`) - n * 86_400_000).toISOString().slice(0, 10);
-    const contas = [0, 1, 2].map((n) => contaNoDia(menos(n)));
+    const contas = [0, 1, 2, 3].map((n) => contaNoDia(menos(n)));
     const bateu = contas.find((c) => JSON.stringify(c.numeros) === JSON.stringify(esperado)) ?? contas[0];
     const r = bateu.r;
     console.log(`  ${p.tipo === "SIX_MONTHS" ? "6 meses" : "12 meses"} · ${p.inicio} a ${p.fim} · painel lido em ${lido}${bateu.dia !== lido ? ` (bate com a base de ${bateu.dia} — o portal ainda sem as avaliações seguintes)` : ""}`);

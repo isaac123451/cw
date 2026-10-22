@@ -13,6 +13,8 @@ import {
 
 import { useScopedCases } from "@/lib/context/useScopedCases";
 import { useGoals } from "@/lib/context/GoalsContext";
+import { usePainelDoPortal } from "@/lib/hooks/usePainelDoPortal";
+import { resumoComPainel } from "@/lib/models/painelOficial";
 
 import {
   displayBand,
@@ -47,14 +49,21 @@ export default function ReputationHero() {
     [range]
   );
 
+  /* Os indicadores do painel do Reclame Aqui, quando ele cobre a mesma janela (22/10/2026) — ver `resumoComPainel`. */
+  const painel = usePainelDoPortal().SIX_MONTHS;
+  const painelDaJanela = painel && painel.inicio === range.start && painel.fim === range.end ? painel : undefined;
+
   const atual = useMemo(
     () =>
-      getReputation(
-        cases.filter((item) =>
-          inRange(item, range.start, range.end)
-        )
+      resumoComPainel(
+        getReputation(
+          cases.filter((item) =>
+            inRange(item, range.start, range.end)
+          )
+        ),
+        painelDaJanela
       ),
-    [cases, range]
+    [cases, range, painelDaJanela]
   );
 
   const anterior = useMemo(

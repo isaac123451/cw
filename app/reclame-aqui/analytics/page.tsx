@@ -34,6 +34,9 @@ import ModuleNav from "@/components/reclame-aqui/ModuleNav";
 import EsperaAsReclamacoes from "@/components/reclame-aqui/EsperaAsReclamacoes";
 import { notaExata } from "@/lib/models/indiceRA";
 import PorCiclo from "@/components/reclame-aqui/analytics/PorCiclo";
+import { abrirJanelaDeCasos } from "@/components/shared/JanelaDeCasos";
+import { usePainelDoPortal } from "@/lib/hooks/usePainelDoPortal";
+import { avaliacoesAindaNaoContadas, resumoComPainel } from "@/lib/models/painelOficial";
 
 import { useScopedCases } from "@/lib/context/useScopedCases";
 import { isOpen } from "@/lib/services/case.service";
@@ -183,6 +186,23 @@ export default function ReclameAquiAnalyticsPage() {
     () => reputacaoDoPeriodo(comDrill, period, range.start, range.end),
     [comDrill, period, range]
   );
+
+  /*
+    Na janela oficial, os indicadores são os do painel do Reclame Aqui
+    (22/10/2026): o voltaria aparecia 80% onde o portal mostrava 79,7%, por
+    uma avaliação de 20/10 que o painel ainda não tinha contado. A diferença
+    vira aviso, com a avaliação que falta.
+  */
+  const paineis = usePainelDoPortal();
+  const painelDaJanela = oficial && !drill ? paineis[period === "6m" ? "SIX_MONTHS" : "TWELVE_MONTHS"] : undefined;
+  const painel = painelDaJanela && painelDaJanela.inicio === range.start && painelDaJanela.fim === range.end ? painelDaJanela : undefined;
+  const resumoExibido = useMemo(() => resumoComPainel(summary, painel), [summary, painel]);
+  /* O painel conta a avaliação que o próprio Reclame Aqui desconsiderou; a conta daqui, não — para comparar, ela volta. */
+  const desconsideradasNaJanela = useMemo(
+    () => cases.filter((c) => c.evaluated && c.scoreDisregarded && c.createdAt >= range.start && c.createdAt <= range.end).length,
+    [cases, range]
+  );
+  const naoContadas = painel?.avaliadas != null ? summary.evaluated + desconsideradasNaJanela - painel.avaliadas : 0;
 
   const previousSummary = useMemo(
     () => reputacaoDoPeriodo(comDrill, period, range.previousStart, range.previousEnd),
@@ -502,6 +522,43 @@ export default function ReclameAquiAnalyticsPage() {
 
         </div>
 
+        {painel && (
+          <p className="rounded-xl border border-zinc-200/80 bg-white px-4 py-2.5 text-xs leading-relaxed text-zinc-600">
+            Indicadores pelo painel do Reclame Aqui{painel.lidoEm ? `, lido em ${new Date(painel.lidoEm).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" })}` : ""}.{" "}
+            {naoContadas > 0 ? (
+              <>
+                A conta daqui já tem {naoContadas} {naoContadas === 1 ? "avaliação que o portal ainda não contou" : "avaliações que o portal ainda não contou"} — com {naoContadas === 1 ? "ela" : "elas"}: voltaria{" "}
+                <b className="font-semibold text-zinc-800">{ptBR(summary.wouldReturnIndex)}%</b>, solução <b className="font-semibold text-zinc-800">{ptBR(summary.solutionIndex)}%</b>, nota do consumidor{" "}
+                <b className="font-semibold text-zinc-800">{ptBR(summary.consumerScore, 2)}</b>.{" "}
+                <button
+                  type="button"
+                  onClick={() =>
+                    abrirJanelaDeCasos({
+                      titulo: naoContadas === 1 ? "A avaliação que o portal ainda não contou" : "As avaliações que o portal ainda não contou",
+                      descricao: "As mais recentes da janela — o painel do Reclame Aqui atualiza com atraso.",
+                      casos: avaliacoesAindaNaoContadas(cases, range.start, range.end, naoContadas),
+                    })
+                  }
+                  className="font-medium text-violet-700 hover:underline"
+                >
+                  Ver {naoContadas === 1 ? "qual" : "quais"}
+                </button>
+              </>
+            ) : naoContadas < 0 ? (
+              "O portal conta mais avaliações do que a plataforma tem — o vigia ainda vai trazer as que faltam."
+            ) : Math.abs(summary.wouldReturnIndex - resumoExibido.wouldReturnIndex) >= 0.05 ||
+              Math.abs(summary.solutionIndex - resumoExibido.solutionIndex) >= 0.05 ||
+              Math.abs(summary.consumerScore - resumoExibido.consumerScore) >= 0.005 ? (
+              /* Mesmo número de avaliações e índice diferente: o portal conta a base do jeito dele — mostra os dois, sem inventar o motivo. */
+              <>
+                Pela conta daqui: voltaria {ptBR(summary.wouldReturnIndex)}%, solução {ptBR(summary.solutionIndex)}%, nota do consumidor {ptBR(summary.consumerScore, 2)} — com o mesmo número de avaliações.
+              </>
+            ) : (
+              "A conta daqui bate com ele."
+            )}
+          </p>
+        )}
+
         <GoalEditor />
 
         {/* Lado a lado só a partir de 1536 px: abaixo disso o gráfico de evolução
@@ -517,7 +574,7 @@ export default function ReclameAquiAnalyticsPage() {
         <div className="grid gap-6 xl:grid-cols-3">
 
           <div className="xl:col-span-2">
-            <ReputationFunnel summary={summary} />
+            <ReputationFunnel summary={resumoExibido} />
           </div>
 
           <SurfaceCard
@@ -562,11 +619,11 @@ export default function ReclameAquiAnalyticsPage() {
 
         <div className="grid gap-6 xl:grid-cols-2">
 
-          <ReputationRuler summary={summary} />
+          <ReputationRuler summary={resumoExibido} />
 
           <RatingHistogram
             buckets={buckets}
-            summary={summary}
+            summary={resumoExibido}
             onSelect={(value) =>
               toggleDrill("score", value)
             }
