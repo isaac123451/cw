@@ -58,7 +58,7 @@ export const MUDANCAS: Mudanca[] = [
     tipo: "melhoria",
     frente: "plataforma",
     titulo: "O número do NPS no menu diz de quem são os atrasos",
-    texto: "Passar o mouse no número do NPS mostrava só "307 ciclos com o 1º contato fora do prazo". Agora diz também quantos são detratores, passivos e promotores — hoje, a maior parte é de promotores respondidos há 8 a 30 dias, e os detratores, que mais pedem a ligação, são poucos. A triagem com IA da extensão também passou a usar o que o time aprendeu.",
+    texto: "Passar o mouse no número do NPS mostrava só \"307 ciclos com o 1º contato fora do prazo\". Agora diz também quantos são detratores, passivos e promotores — hoje, a maior parte é de promotores respondidos há 8 a 30 dias, e os detratores, que mais pedem a ligação, são poucos. A triagem com IA da extensão também passou a usar o que o time aprendeu.",
     href: "/nps",
   },
   {
