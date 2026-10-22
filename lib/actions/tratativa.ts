@@ -567,7 +567,7 @@ export async function sugestaoDeModeracao(protocol: string): Promise<{ motivo: s
         })
       : [];
     const outros = (await fetchCasesByProtocols(ctx.prisma, vizinhos.map((v) => v.protocol))).map((o) => ({ ...o, description: vizinhos.find((v) => v.protocol === o.protocol)?.description ?? "" }));
-    const hoje = new Date(Date.now() - 3 * 3_600_000).toISOString().slice(0, 10);
+    const hoje = diaNaOperacao(new Date());
     const c = candidataAModeracao({ ...caso, description: relato?.description ?? "" }, outros, hoje);
     return c ? { motivo: c.motivo, explicacao: c.explicacao, outra: c.outra } : null;
   } catch (erro) {

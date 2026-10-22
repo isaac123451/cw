@@ -7,7 +7,8 @@ import type { SlaRule } from "@/lib/models/sla";
 import { prazosDeHoje } from "@/lib/models/aberturaDoAgente";
 import { isOpen, isSocial, semRespostaPublica } from "@/lib/services/case.service";
 import type { Expediente } from "@/lib/services/horasUteis";
-import { summarize } from "@/lib/services/nps.service";
+import { slaState, summarize } from "@/lib/services/nps.service";
+import { segmentOf } from "@/lib/models/nps";
 import { diaNaOperacao } from "@/lib/services/reputation.service";
 import { pluralDe } from "@/lib/plural";
 
@@ -53,6 +54,12 @@ export function contadoresDoMenu(entrada: {
   const semResposta = casos.filter(semRespostaPublica).length;
   const redesAbertas = casos.filter((c) => isSocial(c) && !etapaDasRedes(c.status)?.final).length;
   const npsForaDoPrazo = summarize(nps, agora).estourados;
+  /* De quem são os atrasos (22/10/2026): o "307" escondia que só 32 eram detratores — os que mais pedem a ligação. */
+  const atrasadosDoNps = nps.filter((i) => slaState(i, agora) === "estourado");
+  const porSegmento = (rotulo: string) => atrasadosDoNps.filter((i) => segmentOf(i.score).label === rotulo).length;
+  const quebraDoNps = atrasadosDoNps.length
+    ? ` — ${porSegmento("Detrator")} ${pluralDe(porSegmento("Detrator"), "detrator", "detratores")}, ${porSegmento("Passivo")} ${pluralDe(porSegmento("Passivo"), "passivo", "passivos")}, ${porSegmento("Promotor")} ${pluralDe(porSegmento("Promotor"), "promotor", "promotores")}`
+    : "";
   const tarefasDoDia = tarefas.filter((t) => !t.done && t.dueDate <= hoje);
   const tarefasAtrasadas = tarefasDoDia.filter((t) => t.dueDate < hoje).length;
 
@@ -62,7 +69,7 @@ export function contadoresDoMenu(entrada: {
     "/meu-dia": c(prazos.estourados, prazos.estourados > 0, `${prazos.estourados} ${pluralDe(prazos.estourados, "prazo", "prazos")} ${pluralDe(prazos.estourados, "estourado", "estourados")}`),
     "/reclame-aqui": c(semResposta, false, `${semResposta} ${pluralDe(semResposta, "reclamação", "reclamações")} ${pluralDe(semResposta, "aberta", "abertas")} sem resposta pública`),
     "/redes-sociais": c(redesAbertas, false, `${redesAbertas} ${pluralDe(redesAbertas, "atendimento", "atendimentos")} em aberto`),
-    "/nps": c(npsForaDoPrazo, npsForaDoPrazo > 0, `${npsForaDoPrazo} ${pluralDe(npsForaDoPrazo, "ciclo", "ciclos")} com o 1º contato fora do prazo`),
+    "/nps": c(npsForaDoPrazo, npsForaDoPrazo > 0, `${npsForaDoPrazo} ${pluralDe(npsForaDoPrazo, "ciclo", "ciclos")} com o 1º contato fora do prazo${quebraDoNps}`),
     "/google": c(entrada.googleAbertas, false, `${entrada.googleAbertas} ${pluralDe(entrada.googleAbertas, "avaliação", "avaliações")} ${pluralDe(entrada.googleAbertas, "aberta", "abertas")}`),
     "/agenda": c(tarefasDoDia.length, tarefasAtrasadas > 0, `${tarefasDoDia.length} ${pluralDe(tarefasDoDia.length, "atividade", "atividades")} para hoje${tarefasAtrasadas ? `, ${tarefasAtrasadas} ${pluralDe(tarefasAtrasadas, "atrasada", "atrasadas")}` : ""}`),
     "/conversas": c(entrada.esperandoNoWhatsapp ?? 0, false, `${entrada.esperandoNoWhatsapp ?? 0} ${pluralDe(entrada.esperandoNoWhatsapp ?? 0, "conversa", "conversas")} esperando resposta no WhatsApp`),
