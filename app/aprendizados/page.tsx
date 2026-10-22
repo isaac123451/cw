@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import { Hash, Loader2, MessageCircle, Search, X } from "lucide-react";
+import { Hash, Loader2, MessageCircle, Search, Star, X } from "lucide-react";
 
 import MainLayout from "@/components/layout/MainLayout";
 import PageHeading from "@/components/shared/PageHeading";
@@ -27,7 +27,7 @@ export default function AprendizadosPage() {
   const [lista, setLista] = useState<AprendizadoView[] | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [busca, setBusca] = useState("");
-  const [fonte, setFonte] = useState<"todas" | "whatsapp" | "slack">("todas");
+  const [fonte, setFonte] = useState<"todas" | "whatsapp" | "slack" | "avaliacoes">("todas");
 
   useEffect(() => {
     let vivo = true;
@@ -62,7 +62,7 @@ export default function AprendizadosPage() {
         <PageHeading
           eyebrow="Conhecimento"
           title="O que a IA aprendeu"
-          description="Tirado das suas respostas aos clientes no WhatsApp e das conversas do Slack, a cada duas horas — só conhecimento geral, sem dado de cliente nem nada sensível. A IA usa isso para ler as próximas conversas."
+          description="Tirado das suas respostas no WhatsApp e das conversas do Slack (a cada duas horas) e do resultado das respostas públicas no Reclame Aqui (uma vez por dia: o que leva à avaliação boa e à ruim). Só conhecimento geral, sem dado de cliente. A IA usa isso para ler as conversas e escrever as sugestões de resposta."
         />
 
         {erro && <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900 ring-1 ring-inset ring-amber-100">{erro}</p>}
@@ -75,6 +75,7 @@ export default function AprendizadosPage() {
                   ["todas", "Todas"],
                   ["whatsapp", "WhatsApp"],
                   ["slack", "Slack"],
+                  ["avaliacoes", "Avaliações"],
                 ] as const
               ).map(([id, nome]) => (
                 <button
@@ -107,8 +108,8 @@ export default function AprendizadosPage() {
             <ul className="divide-y divide-zinc-100">
               {visiveis.map((a) => (
                 <li key={a.id} className="flex items-start gap-3 px-5 py-3">
-                  <span className="mt-0.5 text-zinc-400" title={a.fonte === "slack" ? "Do Slack" : "Do WhatsApp"}>
-                    {a.fonte === "slack" ? <Hash size={15} /> : <MessageCircle size={15} />}
+                  <span className="mt-0.5 text-zinc-400" title={a.fonte === "slack" ? "Do Slack" : a.fonte === "avaliacoes" ? "Do resultado das respostas no Reclame Aqui" : "Do WhatsApp"}>
+                    {a.fonte === "slack" ? <Hash size={15} /> : a.fonte === "avaliacoes" ? <Star size={15} /> : <MessageCircle size={15} />}
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-zinc-900">{a.assunto}</p>

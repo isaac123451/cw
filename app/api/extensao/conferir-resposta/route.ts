@@ -13,6 +13,8 @@ import { dadosSensiveis, resumoDosAchados, semelhanca } from "@/lib/services/lgp
 import { slaStatus } from "@/lib/services/sla.service";
 import { INICIO_DA_TRILHA, trilhaDoCaso } from "@/lib/models/trilha";
 import { analisarResposta } from "@/lib/models/analistaDeRespostas";
+import { relevantes } from "@/lib/models/aprendizados";
+import { aprendizadosAtivos } from "@/lib/services/aprendizados.service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -122,8 +124,18 @@ export async function POST(request: Request) {
   const sla = caso && workspace ? slaStatus(caso, workspace.slaRules, { expediente: workspace.expediente }) : null;
   const passo = caso ? trilhaDoCaso(caso, {}).find((p) => p.estado === "atual") ?? null : null;
 
+  /*
+    O que costuma funcionar neste assunto (22/10/2026): os aprendizados da IA
+    — inclusive os tirados do resultado das respostas — que dividem palavras
+    com a reclamação. Até três, como dica; não contam como problema.
+  */
+  const dicas = caso
+    ? relevantes(await aprendizadosAtivos(prisma), `${caso.title} ${caso.category ?? ""} ${caso.description ?? ""}`, 3).map((a) => ({ assunto: a.assunto, texto: a.texto }))
+    : [];
+
   return responder(request, {
     achados,
+    dicas,
     resumo: achados.length > 0 ? resumoDosAchados(dadosSensiveis(texto)) : "",
     repetida,
 

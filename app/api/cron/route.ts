@@ -36,6 +36,7 @@ import { temWootric } from "@/lib/services/wootric.service";
 import { abrirReincidenciasComDono } from "@/lib/services/reincidencia.service";
 import { sincronizarTagsAutomaticas } from "@/lib/services/tagsAutomaticas.service";
 import { classificarAvaliacoes } from "@/lib/services/classeDaAvaliacao.service";
+import { aprenderComAsAvaliacoes } from "@/lib/services/aprendizados.service";
 import { guardarBackupDoDia } from "@/lib/services/backup.service";
 import { enviarRelatorioDoCiclo } from "@/lib/services/relatorioAutomatico.service";
 
@@ -237,6 +238,9 @@ export async function GET(request: Request) {
 
     /* A IA marca a avaliação positiva ou negativa onde a nota não basta (21/10/2026). */
     protegida("avaliacoes", () => classificarAvaliacoes(prisma)),
+
+    /* O que separa a avaliação boa da ruim vira aprendizado — uma vez por dia (22/10/2026). */
+    protegida("aprender-avaliacoes", () => aprenderComAsAvaliacoes(prisma)),
 
     /* A cópia do dia fora do banco (1.99) — liga com SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY. */
     protegida("backup", () => guardarBackupDoDia(prisma)),

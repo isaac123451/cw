@@ -1,6 +1,6 @@
 import type { PrismaClient } from "@prisma/client";
 
-import { chaveDoAprendizado, ehSensivel, semDadoSensivel, type Aprendizado } from "@/lib/models/aprendizados";
+import { chaveDoAprendizado, ehSensivel, relevantes, semDadoSensivel, type Aprendizado } from "@/lib/models/aprendizados";
 import { pedirEstruturado, temIA } from "@/lib/services/ia.service";
 
 /** De quanto em quanto tempo a IA lê as conversas atrás de aprendizado. */
@@ -135,6 +135,127 @@ async function extrairEGuardar(prisma: PrismaClient, blocos: string[]): Promise<
     await prisma.aprendizadoDaIA.upsert({
       where: { chave },
       create: { chave, assunto, texto, fonte: a.fonte === "slack" ? "slack" : "whatsapp" },
+      update: { texto, vezes: { increment: 1 } },
+    });
+    guardados += 1;
+  }
+  return guardados;
+}
+
+/**
+ * O que o time já sabe sobre um texto, pronto para ir no pedido à IA
+ * (22/10/2026). Os aprendizados existiam, mas só a leitura do dia os
+ * usava — a sugestão de resposta, o copiloto e a conferência da resposta
+ * do Reclame Aqui escreviam sem eles. Vazio quando nada tem a ver.
+ */
+export async function saberParaOPrompt(prisma: PrismaClient | null, texto: string, maximo = 6): Promise<string> {
+  if (!prisma || !texto.trim()) return "";
+  const lista = relevantes(await aprendizadosAtivos(prisma), texto, maximo);
+  if (!lista.length) return "";
+  return [
+    "O que o time já aprendeu sobre isso (de outras conversas e dos resultados das respostas — use para acertar o conteúdo; não cite que é um aprendizado):",
+    ...lista.map((a) => `- ${a.assunto}: ${a.texto}`),
+  ].join("\n");
+}
+
+/* ============================================================
+   APRENDER COM O RESULTADO DAS RESPOSTAS (22/10/2026)
+============================================================ */
+
+/** Uma leitura por dia: as avaliações chegam devagar, e cada leitura é uma chamada de IA. */
+const INTERVALO_DAS_AVALIACOES_MS = 24 * 60 * 60_000;
+const DIAS_DAS_AVALIACOES = 180;
+
+/**
+ * A IA lê as reclamações avaliadas — a resposta pública que demos, a nota,
+ * se resolveu, se voltaria e o que o consumidor escreveu ao avaliar — e
+ * guarda o que separa a avaliação boa da ruim em cada assunto. É o que
+ * transforma o histórico em orientação: "em repasse, dizer o prazo do
+ * estorno e o comprovante leva a nota 10; prometer sem prazo leva a 3".
+ *
+ * Só conhecimento geral: nome, documento e contato saem antes (o
+ * `semDadoSensivel` de sempre), e a IA é instruída a não citar caso.
+ */
+export async function aprenderComAsAvaliacoes(
+  prisma: PrismaClient,
+  opcoes: { agora?: Date; forcar?: boolean; extrair?: (blocos: string[]) => Promise<number> } = {}
+): Promise<number> {
+  if (!opcoes.extrair && !temIA()) return 0;
+  const agora = opcoes.agora ?? new Date();
+  const marca = "aprendizado-avaliacoes";
+  const dono = await prisma.user.findFirst({ where: { role: "ADMIN" }, select: { id: true }, orderBy: { createdAt: "asc" } }).catch(() => null);
+  if (!dono) return 0;
+  const ultima = await prisma.acaoDaIA.findUnique({ where: { userId_chave: { userId: dono.id, chave: marca } }, select: { criadaEm: true } });
+  if (!opcoes.forcar && ultima && agora.getTime() - ultima.criadaEm.getTime() < INTERVALO_DAS_AVALIACOES_MS) return 0;
+
+  const casos = await prisma.case.findMany({
+    where: {
+      channel: "RECLAME_AQUI",
+      evaluated: true,
+      scoreDisregarded: false,
+      evaluatedAt: { gte: new Date(agora.getTime() - DIAS_DAS_AVALIACOES * 86_400_000) },
+      publicResponse: { not: null },
+    },
+    select: { score: true, resolved: true, wouldDoBusiness: true, title: true, publicResponse: true, consideracaoFinal: true, category: { select: { name: true } } },
+    orderBy: { evaluatedAt: "desc" },
+    take: 80,
+  });
+  /* As duas pontas ensinam mais: as melhores e as piores, de cada lado. */
+  const boas = casos.filter((c) => (c.score ?? 0) >= 9 && c.resolved);
+  const ruins = casos.filter((c) => (c.score ?? 10) <= 6 || !c.resolved);
+  const bloco = (c: (typeof casos)[number], lado: string) =>
+    [
+      `[${lado}] Assunto: ${c.category?.name ?? "sem categoria"} — "${semDadoSensivel(c.title).slice(0, 120)}"`,
+      `Nota ${c.score ?? "—"}, ${c.resolved ? "resolvida" : "não resolvida"}, ${c.wouldDoBusiness ? "voltaria" : "não voltaria"}.`,
+      `Nossa resposta pública: ${semDadoSensivel(String(c.publicResponse ?? "")).replace(/\s+/g, " ").slice(0, 600)}`,
+      c.consideracaoFinal ? `O consumidor ao avaliar: ${semDadoSensivel(c.consideracaoFinal).slice(0, 300)}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
+  const blocos = [...boas.slice(0, 14).map((c) => bloco(c, "BOA")), ...ruins.slice(0, 14).map((c) => bloco(c, "RUIM"))].filter((b) => !ehSensivel(b));
+  if (blocos.length < 4) return 0;
+
+  await prisma.acaoDaIA.upsert({
+    where: { userId_chave: { userId: dono.id, chave: marca } },
+    create: { userId: dono.id, chave: marca, tipo: "aviso", origem: "caso", titulo: "Leitura de aprendizados das avaliações", vistaEm: agora },
+    update: { criadaEm: agora, vistaEm: agora },
+  });
+  return opcoes.extrair ? opcoes.extrair(blocos) : extrairDasAvaliacoes(prisma, blocos);
+}
+
+async function extrairDasAvaliacoes(prisma: PrismaClient, blocos: string[]): Promise<number> {
+  let r: Awaited<ReturnType<typeof pedirEstruturado>>;
+  try {
+    r = await pedirEstruturado({
+      sistema:
+        "Você é analista de reputação da Cardápio Web (sistema e cardápio digital para restaurantes). Compara respostas públicas do Reclame Aqui que terminaram em avaliação BOA com as que terminaram em avaliação RUIM e tira o que funciona. Português do Brasil. Nunca cite nome, empresa, protocolo ou valor de um caso; nunca invente.",
+      prompt: [
+        "Tire até 8 aprendizados sobre o CONTEÚDO, por tema: o que as respostas BOAS ofereceram, explicaram, resolveram ou prometeram (prazo, estorno, configuração, contato da área, comprovante) que as RUINS do mesmo tema não fizeram; e o que o consumidor elogia ou cobra ao avaliar.",
+        "NÃO repita regra de forma que o time já confere em toda resposta: saudação com o nome, nome de quem assina, empatia/desculpas genéricas, convite para avaliar, canais de contato, central de ajuda, tom positivo, tamanho do texto. Aprendizado que serviria para qualquer tema não vale.",
+        "Para cada um: assunto começando pelo tema (até 6 palavras — ex.: \"Repasse: prazo do estorno\", \"Integração iFood: teste antes de responder\") e texto (1 ou 2 frases, acionável). Lista vazia se os exemplos não mostrarem padrão por tema.",
+        "",
+        blocos.join("\n\n").slice(0, 12_000),
+      ].join("\n"),
+      esquema: {
+        type: "object",
+        properties: { aprendizados: { type: "array", items: { type: "object", properties: { assunto: { type: "string" }, texto: { type: "string" } }, required: ["assunto", "texto"] } } },
+        required: ["aprendizados"],
+      },
+    });
+  } catch {
+    return 0;
+  }
+  if (r.erro || !r.dados) return 0;
+  const lista = (Array.isArray(r.dados.aprendizados) ? r.dados.aprendizados : []) as { assunto?: unknown; texto?: unknown }[];
+  let guardados = 0;
+  for (const a of lista.slice(0, 8)) {
+    const assunto = semDadoSensivel(String(a.assunto ?? "")).replace(/\s+/g, " ").trim().slice(0, 80);
+    const texto = semDadoSensivel(String(a.texto ?? "")).replace(/\s+/g, " ").trim().slice(0, 400);
+    const chave = chaveDoAprendizado(assunto);
+    if (!assunto || texto.length < 15 || !chave || ehSensivel(`${assunto} ${texto}`) || /\[(documento|e-mail|telefone|número|código)\]/.test(texto)) continue;
+    await prisma.aprendizadoDaIA.upsert({
+      where: { chave },
+      create: { chave, assunto, texto, fonte: "avaliacoes" },
       update: { texto, vezes: { increment: 1 } },
     });
     guardados += 1;

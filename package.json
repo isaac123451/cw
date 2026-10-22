@@ -1,6 +1,6 @@
 {
   "name": "cw-reputacao",
-  "version": "1.1.11",
+  "version": "1.1.12",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -196,7 +196,8 @@
     "check:identidade-conversa": "tsx scripts/check-identidade-conversa.ts",
     "check:termometro": "tsx scripts/check-termometro.ts",
     "check:ia-do-dia-banco": "tsx --conditions=react-server --env-file=.env scripts/check-ia-do-dia-banco.ts",
-    "check:classe-avaliacao": "tsx --conditions=react-server scripts/check-classe-avaliacao.ts"
+    "check:classe-avaliacao": "tsx --conditions=react-server scripts/check-classe-avaliacao.ts",
+    "check:aprender-avaliacoes": "tsx --conditions=react-server scripts/check-aprender-avaliacoes.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",

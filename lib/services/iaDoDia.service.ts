@@ -25,7 +25,8 @@ import { completarContato } from "@/lib/services/raPortal.service";
 import { dadosDaConversa, oQueCompletar, type CampoDoCadastro } from "@/lib/services/sinaisDaConversa";
 import { gravarContato, recalcularResumo } from "@/lib/services/tratativa.service";
 import { pedirEstruturado, temIA } from "@/lib/services/ia.service";
-import { aprenderDasConversas, aprendizadosAtivos } from "@/lib/services/aprendizados.service";
+import { aprenderComAsAvaliacoes, aprenderDasConversas, aprendizadosAtivos } from "@/lib/services/aprendizados.service";
+import { classeDaAvaliacao } from "@/lib/models/classeDaAvaliacao";
 import { classificarAvaliacoes } from "@/lib/services/classeDaAvaliacao.service";
 import { relevantes } from "@/lib/models/aprendizados";
 import { criarLembretesAutomaticos } from "@/lib/services/lembretesAutomaticos.service";
@@ -1228,6 +1229,61 @@ export async function depoisDasReunioes(prisma: PrismaClient, userId: string, ag
 ============================================================ */
 
 /** Tudo o que a IA do dia faz sozinha, numa rodada. Cada parte falha sozinha, sem derrubar as outras. */
+/* ============================================================
+   AVALIAÇÃO NEGATIVA VIRA ATIVIDADE (22/10/2026)
+============================================================ */
+
+/** Até quantos dias depois da avaliação ainda vale abrir a atividade. */
+const DIAS_DA_NEGATIVA = 7;
+
+/**
+ * A avaliação negativa que chega vira atividade de prioridade alta, para
+ * hoje: entender o que pesou, falar com o cliente e ver se cabe moderação.
+ * Negativa pela ordem de sempre (`classeDaAvaliacao`): a marca de quem
+ * atende, a da IA, ou a nota.
+ *
+ * De quem: do responsável da reclamação; sem responsável, de quem fez o 1º
+ * contato — nunca de quem só estava com o app aberto (a lição da Thais).
+ * Uma por reclamação (id fixo); desfeita, não volta.
+ */
+export async function tratarAvaliacoesNegativas(prisma: PrismaClient, userId: string, agora = new Date()): Promise<number> {
+  const eu = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } }).catch(() => null);
+  if (!eu?.name) return 0;
+  const casos = await prisma.case.findMany({
+    where: {
+      channel: "RECLAME_AQUI",
+      evaluated: true,
+      scoreDisregarded: false,
+      evaluatedAt: { gte: new Date(agora.getTime() - DIAS_DA_NEGATIVA * 86_400_000) },
+      OR: [{ ownerId: userId }, { ownerId: null, primeiroContatoPor: eu.name }],
+    },
+    select: { id: true, protocol: true, externalId: true, customer: true, score: true, resolved: true, avaliacaoMarca: true, avaliacaoMarcaPor: true, consideracaoFinal: true },
+  });
+  const hoje = paredeDe(agora).dia;
+  let feitas = 0;
+  for (const c of casos) {
+    if (classeDaAvaliacao({ ...c, evaluated: true, score: c.score ?? undefined, avaliacaoMarca: c.avaliacaoMarca === "positiva" || c.avaliacaoMarca === "negativa" ? c.avaliacaoMarca : undefined, avaliacaoMarcaPor: c.avaliacaoMarcaPor ?? undefined })?.classe !== "negativa") continue;
+    const id = `auto-negativa-${c.id}`;
+    const chave = chaveDaAcao.lembrete(id);
+    const titulo = `Avaliação negativa de ${c.customer || "cliente"} (nota ${c.score ?? "—"}${c.resolved ? "" : ", não resolvida"}) — entender, falar com o cliente e ver se cabe moderação`;
+    const novo = await registrar(prisma, userId, {
+      tipo: "lembrete",
+      origem: "caso",
+      chave,
+      titulo: `Avaliação negativa em ${c.protocol}: atividade para hoje`,
+      detalhe: c.consideracaoFinal ? `O consumidor escreveu: “${c.consideracaoFinal.slice(0, 160)}”` : `Nota ${c.score ?? "—"}${c.resolved ? ", resolvida" : ", não resolvida"}.`,
+      href: `/reclame-aqui/${c.externalId ?? c.protocol}`,
+      desfazer: { tarefa: id },
+    });
+    if (!novo) continue;
+    await prisma.agendaTask
+      .create({ data: { id, title: titulo.slice(0, 300), type: "Follow-up", priority: "Alta", done: false, dueDate: new Date(`${hoje}T00:00:00.000Z`), ownerId: userId, caseId: c.id, frente: "reclame-aqui" } })
+      .catch(() => undefined);
+    feitas += 1;
+  }
+  return feitas;
+}
+
 export async function rodarIaDoDia(prisma: PrismaClient, userId: string, agora = new Date()) {
   const partes = await Promise.allSettled([
     criarLembretesAutomaticos(prisma, userId, agora).then((criados) => registrarLembretes(prisma, userId, criados)),
@@ -1241,6 +1297,10 @@ export async function rodarIaDoDia(prisma: PrismaClient, userId: string, agora =
     aprenderDasConversas(prisma, userId, agora),
     /* A avaliação que chegou ganha a marca positiva/negativa da IA onde a nota não basta (21/10/2026). */
     classificarAvaliacoes(prisma, { agora }),
+    /* A avaliação negativa vira atividade de hoje, para o responsável (22/10/2026). */
+    tratarAvaliacoesNegativas(prisma, userId, agora),
+    /* O que separa a avaliação boa da ruim — uma leitura por dia (22/10/2026). */
+    aprenderComAsAvaliacoes(prisma, { agora }),
   ]);
   for (const p of partes) if (p.status === "rejected") console.error("[ia do dia]", p.reason);
 }

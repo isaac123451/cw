@@ -6,7 +6,8 @@ export interface AprendizadoView {
   id: string;
   assunto: string;
   texto: string;
-  fonte: "whatsapp" | "slack";
+  /** "avaliacoes": tirado do resultado das respostas públicas (22/10/2026). */
+  fonte: "whatsapp" | "slack" | "avaliacoes";
   vezes: number;
   atualizadoEm: string;
 }
@@ -19,7 +20,7 @@ export async function lerAprendizados(): Promise<{ ok: true; lista: AprendizadoV
     const linhas = await ctx.prisma.aprendizadoDaIA.findMany({ where: { ativo: true }, orderBy: [{ vezes: "desc" }, { atualizadoEm: "desc" }], take: 500 });
     return {
       ok: true,
-      lista: linhas.map((l) => ({ id: l.id, assunto: l.assunto, texto: l.texto, fonte: l.fonte === "slack" ? "slack" : "whatsapp", vezes: l.vezes, atualizadoEm: l.atualizadoEm.toISOString() })),
+      lista: linhas.map((l) => ({ id: l.id, assunto: l.assunto, texto: l.texto, fonte: l.fonte === "slack" ? "slack" : l.fonte === "avaliacoes" ? "avaliacoes" : "whatsapp", vezes: l.vezes, atualizadoEm: l.atualizadoEm.toISOString() })),
     };
   } catch (erro) {
     console.error("[aprendizados] ler", erro);

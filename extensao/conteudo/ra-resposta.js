@@ -200,6 +200,20 @@
       partes.push('<div>Sem dado pessoal, sem texto repetido e segue o documento. Pode publicar.</div>');
     }
 
+    /*
+      O que costuma funcionar neste assunto (22/10/2026): o que a IA aprendeu,
+      inclusive com o resultado das respostas públicas. Só dica — não conta
+      como problema nem tira o "Pode publicar".
+    */
+    const dicas = Array.isArray(d.dicas) ? d.dicas.slice(0, 3) : [];
+    if (dicas.length > 0) {
+      partes.push(
+        `<div style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(0,0,0,.08)"><strong>O que costuma funcionar aqui:</strong><ul style="margin:2px 0 0 16px;padding:0">${dicas
+          .map((x) => `<li><strong>${CW.escapar(x.assunto)}</strong> — ${CW.escapar(x.texto)}</li>`)
+          .join("")}</ul></div>`
+      );
+    }
+
     caixa.innerHTML = partes.join("");
     caixa.style.display = "block";
     const erroDoAnalista = analise.some((a) => a.tom === "perigo");

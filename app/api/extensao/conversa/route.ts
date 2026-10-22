@@ -54,6 +54,7 @@ import { conferirSituacao } from "@/lib/models/resumoQueSitua";
 import { estiloAprendido, exemplosParaIA, prometeSemRegistro, TONS, tonsSemIA, type EdicaoFeita, type Tom } from "@/lib/models/tonsDaResposta";
 import { getPrisma } from "@/lib/prisma";
 import { familiaDoTexto } from "@/lib/models/catalogoDeCausas";
+import { saberParaOPrompt } from "@/lib/services/aprendizados.service";
 import {
   conferirRascunho,
   REGRAS_DO_RASCUNHO,
@@ -294,10 +295,13 @@ export async function POST(request: Request) {
       .catch(() => []);
   }
   const estilo = estiloAprendido(edicoes);
+  /* O que o time já aprendeu sobre o assunto da conversa (22/10/2026). */
+  const saber = await saberParaOPrompt(prisma, transcricao).catch(() => "");
 
   const cabecalho = [
     corpo.contato?.nome && `Contato: ${corpo.contato.nome}`,
     exemplosParaIA(estilo),
+    saber,
     corpo.contexto &&
       `O que já sabemos deste cliente no CW Reputação:\n${corpo.contexto}`,
   ]

@@ -53,6 +53,36 @@ export const REVISAO = {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- passe a limpo (21/10) ---------------- */
   {
+    id: "ia-aprende-com-avaliacoes",
+    dia: "2026-10-22",
+    tipo: "novo",
+    frente: "plataforma",
+    titulo: "A IA aprende com o resultado das respostas — e usa o que aprende",
+    texto:
+      "Uma vez por dia, a IA compara as respostas públicas que terminaram em avaliação boa com as que terminaram em ruim, por tema, e guarda o que separa uma da outra — \"Financeiro: as boas dão o prazo exato do estorno e mandam a confirmação\", \"Integração iFood: dizer o que foi testado e ajustado\". Só conteúdo, sem dado de cliente; as regras de forma que o analista já confere ficam de fora. Esses aprendizados — e os das conversas — agora entram nas sugestões de resposta do WhatsApp, no copiloto e, quando você escreve a resposta no Reclame Aqui, aparecem como \"O que costuma funcionar aqui\". Na tela O que a IA aprendeu, a nova fonte Avaliações.",
+    href: "/aprendizados",
+  },
+  {
+    id: "negativa-vira-atividade",
+    dia: "2026-10-22",
+    tipo: "novo",
+    frente: "plataforma",
+    titulo: "Avaliação negativa vira atividade para hoje",
+    texto:
+      "Quando uma avaliação chega negativa (pela sua marca, pela IA ou pela nota), nasce uma atividade de prioridade alta para o responsável da reclamação: entender o que pesou, falar com o cliente e ver se cabe moderação — com o que o consumidor escreveu, quando escreveu. Uma por reclamação; desfeita, não volta.",
+    href: "/agenda",
+  },
+  {
+    id: "ia-de-cada-pessoa",
+    dia: "2026-10-22",
+    tipo: "correcao",
+    frente: "plataforma",
+    titulo: "A IA de cada pessoa trata só as conversas dela",
+    texto:
+      "A IA do dia roda para quem está com o app aberto e lia as conversas guardadas por todo mundo: desde 13/10, a da Thais anotava nas fichas e recebia lembretes das conversas do WhatsApp do Carlos, e 15 fichas ficaram com duas anotações no mesmo dia. Agora cada pessoa trata só as conversas que guardou, as cobranças das áreas que ela encaminhou e a memória do assistente dela. As anotações duplicadas foram juntadas (ficou a mais completa). E o lembrete de \"vou te retornar\" de uma conversa guardada tarde não nasce mais no passado: vem para agora, dizendo desde quando está devendo.",
+    href: "/agenda",
+  },
+  {
     id: "extensao-nao-atrapalha-copiar",
     dia: "2026-10-22",
     tipo: "correcao",

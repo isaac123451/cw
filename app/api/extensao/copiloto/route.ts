@@ -3,6 +3,7 @@ import { descreverCasoAberto } from "@/lib/models/contextoDaTela";
 import { getPrisma } from "@/lib/prisma";
 import { fetchCaseByProtocol } from "@/lib/services/case.repository";
 import { pedirEstruturado } from "@/lib/services/ia.service";
+import { saberParaOPrompt } from "@/lib/services/aprendizados.service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -67,8 +68,12 @@ export async function POST(request: Request) {
   const prisma = getPrisma();
   const casos = prisma ? (await Promise.all(protocolos.map((p) => fetchCaseByProtocol(prisma, p).catch(() => null)))).filter((c) => c !== null) : [];
 
+  /* O que o time já aprendeu sobre o assunto (22/10/2026). */
+  const saber = await saberParaOPrompt(prisma, mensagens.map((m) => m.texto).join("\n")).catch(() => "");
+
   const prompt = [
     nome ? `Cliente: ${nome}.` : "",
+    saber,
     casos.length ? `Casos dele na plataforma:\n${casos.map(descreverCasoAberto).join("\n\n")}` : "Nenhum caso dele na plataforma.",
     "",
     "A conversa, da mais antiga para a mais recente (CLIENTE / NÓS):",
