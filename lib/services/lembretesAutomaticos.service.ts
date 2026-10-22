@@ -23,15 +23,22 @@ export async function criarLembretesAutomaticos(prisma: PrismaClient, userId: st
   const hoje = paredeDe(agora).dia;
   const expediente = await lerExpediente(prisma);
 
+  /*
+    Cada pessoa cobra o que ela encaminhou e o que ela combinou nas conversas
+    que guardou (22/10/2026): a IA rodando para a Thais recebia os lembretes
+    das conversas do Carlos.
+  */
+  const dono = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } }).catch(() => null);
+  const nomeDoDono = dono?.name?.trim() || "\u0000";
   const [areas, mensagens, eu] = await Promise.all([
     prisma.caseMovement.findMany({
-      where: { returnedAt: null },
+      where: { returnedAt: null, actor: nomeDoDono },
       select: { id: true, destination: true, reason: true, actor: true, startedAt: true, dueHours: true, case: { select: { id: true, protocol: true } } },
       take: 300,
     }),
     prisma.mensagemDaConversa.findMany({
       /* As nossas (o combinado) e, desde a 1.98, as do cliente (o pedido e a reunião). */
-      where: { em: { gte: new Date(agora.getTime() - JANELA_DAS_CONVERSAS_DIAS * 86_400_000) } },
+      where: { em: { gte: new Date(agora.getTime() - JANELA_DAS_CONVERSAS_DIAS * 86_400_000) }, conversa: { guardadaPor: nomeDoDono } },
       select: {
         id: true,
         de: true,
@@ -158,13 +165,22 @@ export async function criarLembretesAutomaticos(prisma: PrismaClient, userId: st
   }
   for (const g of porConversa.values()) {
     for (const c of combinadosSemData(g.mensagens)) {
-      const prazo = paredeDe(prazoUtil(new Date(c.em), c.tipo === "promessa" ? 2 : 24, expediente));
+      /*
+        Nunca no passado (22/10/2026): a conversa guardada no dia seguinte
+        fazia o "Retornar a Filipe" nascer para ontem às 15h07 — e ficar
+        enterrado. O prazo passado vira 1 hora útil a partir de agora, e o
+        título diz desde quando está devendo.
+      */
+      const original = prazoUtil(new Date(c.em), c.tipo === "promessa" ? 2 : 24, expediente);
+      const atrasado = original.getTime() < agora.getTime();
+      const prazo = paredeDe(atrasado ? prazoUtil(agora, 1, expediente) : original);
+      const desde = atrasado ? ` (devendo desde ${paredeDe(original).dia.split("-").reverse().slice(0, 2).join("/")} ${hhmm(paredeDe(original).min)})` : "";
       candidatos.push({
         id: idDoLembrete(c.tipo, c.mensagemId),
         title:
           c.tipo === "promessa"
-            ? `Retornar${g.nome ? ` a ${g.nome}` : " ao cliente"}: você disse “${c.trecho}”`
-            : `Cobrar ${g.nome || "o cliente"}: ficou de “${c.trecho}”`,
+            ? `Retornar${g.nome ? ` a ${g.nome}` : " ao cliente"}: você disse “${c.trecho}”${desde}`
+            : `Cobrar ${g.nome || "o cliente"}: ficou de “${c.trecho}”${desde}`,
         type: "Follow-up",
         dueDate: prazo.dia,
         time: hhmm(prazo.min),

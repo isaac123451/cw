@@ -54,6 +54,19 @@ interface NovaAcao {
   desfazer?: Record<string, string>;
 }
 
+/**
+ * O nome com que a extensão guarda as conversas desta pessoa (22/10/2026).
+ *
+ * A IA do dia roda para quem estiver com o app aberto. Ela lia todas as
+ * conversas guardadas — e desde 13/10 a da Thais anotava nas fichas, e
+ * recebia lembretes, das conversas do WhatsApp do Carlos, duplicando as
+ * anotações dele no mesmo dia. Cada pessoa trata só o que ela guardou.
+ */
+export async function quemGuardou(prisma: PrismaClient, userId: string): Promise<string | null> {
+  const eu = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } }).catch(() => null);
+  return eu?.name?.trim() || null;
+}
+
 /** As chaves que já viraram ação para a pessoa (desfeitas incluídas). */
 async function chavesJaUsadas(prisma: PrismaClient, userId: string, chaves: string[]) {
   if (!chaves.length) return new Set<string>();
@@ -260,11 +273,13 @@ export async function anotarConversasDoDia(
   if (!soConversas && !temIA()) return 0;
   const hoje = paredeDe(agora).dia;
   const inicioDoDia = new Date(Date.parse(`${hoje}T03:00:00Z`));
+  const dono = soConversas ? null : await quemGuardou(prisma, userId);
+  if (!soConversas && !dono) return 0;
 
   const conversas = await prisma.conversa.findMany({
     where: {
-      ...(soConversas ? { id: { in: soConversas } } : {}),
-      guardadaPor: { not: "" },
+      /* Só as conversas que esta pessoa guardou (22/10/2026) — ver `quemGuardou`. */
+      ...(soConversas ? { id: { in: soConversas } } : { guardadaPor: dono! }),
       OR: [{ caseId: { not: null } }, { npsResponseId: { not: null } }],
       mensagens: { some: { em: { gte: inicioDoDia } } },
     },
@@ -511,7 +526,7 @@ async function atualizarFicha(
     if (nossas.length && !contatoHoje && (falou || !tentativaHoje)) {
       await contato(
         `contato:caso:${caseId}:${hoje}:${falou ? "falou" : "tentou"}`,
-        `${falou ? "Contato" : "Tentativa de contato"} de hoje registrado em ${caso.protocol}`,
+        falou ? `Contato de hoje registrado em ${caso.protocol}` : `Tentativa de contato de hoje registrada em ${caso.protocol}`,
         `${falou ? "Falou com" : "Tentou contato com"} ${chamado} pelo WhatsApp — o último contato do caso fica em dia.`,
         { tipo: falou ? "contato" : "tentativa", resultado: falou ? "respondeu" : "aguardando", em: nossas[0].em }
       );
@@ -855,7 +870,7 @@ export async function seguirPelasConversas(
   const desde = new Date(agora.getTime() - 2 * 86_400_000);
   const conversas = await prisma.conversa.findMany({
     where: {
-      ...(soConversas ? { id: { in: soConversas } } : {}),
+      ...(soConversas ? { id: { in: soConversas } } : { guardadaPor: (await quemGuardou(prisma, userId)) ?? "\u0000" }),
       OR: [{ caseId: { not: null } }, { npsResponseId: { not: null } }],
       mensagens: { some: { em: { gte: desde } } },
     },

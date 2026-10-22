@@ -65,9 +65,13 @@ export async function memoriaDoAssistente(prisma: PrismaClient, pedido: PedidoDe
   const daqui7 = new Date(Date.parse(`${hoje}T00:00:00Z`) + 7 * 86_400_000);
   const oitoDoContato = String(pedido.telefone ?? "").replace(/\D/g, "").slice(-8);
 
+  /* "Suas conversas" são as que a pessoa guardou (22/10/2026) — a da Thais lia as do Carlos. */
+  const dono = pedido.userId ? (await prisma.user.findUnique({ where: { id: pedido.userId }, select: { name: true } }).catch(() => null))?.name?.trim() : null;
+
   const [conversas, lembretes, slack, feitas] = await Promise.all([
     prisma.conversa.findMany({
       where: {
+        ...(dono ? { guardadaPor: dono } : {}),
         OR: [
           { mensagens: { some: { em: { gte: desde } } } },
           ...(oitoDoContato.length === 8 ? [{ telefone: { endsWith: oitoDoContato } }] : []),
