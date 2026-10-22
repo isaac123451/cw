@@ -142,7 +142,29 @@ export async function fecharOQueFoiFeito(prisma: PrismaClient, userId: string): 
   if (!abertas.length) return 0;
 
   const usadas = await chavesJaUsadas(prisma, userId, abertas.map((t) => chaveDaAcao.feito(t.id)));
-  const candidatas = abertas.filter((t) => !usadas.has(chaveDaAcao.feito(t.id)));
+  /*
+    O que foi desfeito não volta — a não ser por fato novo (22/10/2026): a
+    cobrança "sinalizar avaliação" do Gabriel foi fechada errado em 21/10
+    (caso ainda aguardando avaliação), reaberta, e depois ele avaliou nota
+    10 — e ela ficava aberta para sempre. A reclamação avaliada e numa
+    coluna final é motivo novo: fecha, com uma chave própria.
+  */
+  const jaUsadas = abertas.filter((t) => usadas.has(chaveDaAcao.feito(t.id)) && t.caseId);
+  const avaliadasDepois = jaUsadas.length
+    ? new Set(
+        (
+          await prisma.case.findMany({
+            where: { id: { in: jaUsadas.map((t) => t.caseId!) }, evaluated: true, status: { in: [...FINAIS_DO_CASO] } },
+            select: { id: true },
+          })
+        ).map((c) => c.id)
+      )
+    : new Set<string>();
+  const chaveDoFeito = (t: { id: string; caseId: string | null }) =>
+    usadas.has(chaveDaAcao.feito(t.id)) && t.caseId && avaliadasDepois.has(t.caseId) ? `${chaveDaAcao.feito(t.id)}:avaliado` : chaveDaAcao.feito(t.id);
+  const usadasAvaliado = await chavesJaUsadas(prisma, userId, abertas.map(chaveDoFeito));
+  /* Candidata: nunca fechada, ou desfeita e agora com a reclamação avaliada (e essa chave nova ainda livre). */
+  const candidatas = abertas.filter((t) => !usadasAvaliado.has(chaveDoFeito(t)));
   if (!candidatas.length) return 0;
 
   /* Os sinais, em poucas consultas. */
@@ -214,7 +236,7 @@ export async function fecharOQueFoiFeito(prisma: PrismaClient, userId: string): 
     const novo = await registrar(prisma, userId, {
       tipo: "feito",
       origem: origemDaTarefa(t.id),
-      chave: chaveDaAcao.feito(t.id),
+      chave: chaveDoFeito(t),
       titulo: t.title,
       detalhe: `Fechada porque ${motivo}.`,
       href: "/agenda",
