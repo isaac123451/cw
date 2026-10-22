@@ -24,6 +24,7 @@ conferir("corrige erro comum, com maiúscula preservada", revisar("Seje bem-vind
 conferir("texto certo não muda", revisar("Oi, Maria! Já estou verificando com o time.").corrigido, "Oi, Maria! Já estou verificando com o time.");
 conferir("\"conforme já informado\" é perigo", tons("Conforme já informado, o prazo é esse."), ["perigo"]);
 conferir("culpar o cliente é perigo", tons("Você deveria ter configurado antes."), ["perigo"]);
+conferir("culpar o cliente abreviado também (\"vc deveria\")", tons("vc deveria ter configurado antes"), ["perigo", "atencao"]);
 conferir("\"não é nossa responsabilidade\" é perigo", tons("Isso não é nossa responsabilidade."), ["perigo"]);
 conferir("abreviação é atenção", tons("vc pode me mandar o print?"), ["atencao"]);
 conferir("maiúsculas gritando", tons("ISSO NUNCA ACONTECEU ANTES"), ["atencao"]);

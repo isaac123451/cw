@@ -57,9 +57,9 @@ export const MUDANCAS: Mudanca[] = [
     dia: "2026-10-22",
     tipo: "novo",
     frente: "extensao",
-    titulo: "A extensão revisa a mensagem enquanto você escreve no WhatsApp",
+    titulo: "A extensão revisa a mensagem enquanto você escreve no WhatsApp — numa pílula pequena",
     texto:
-      "Ao parar de digitar, aparece acima da caixa de escrita: os erros comuns de português com a troca pronta (\"seje\", \"concerteza\", \"agente vai\" — um clique aplica), o que costuma piorar a relação com o cliente (\"conforme já informado\", \"não é nossa responsabilidade\", \"você deveria\", \"não há o que fazer\", maiúsculas, abreviação), prazo prometido, e — quando o cliente falou em cancelar — a dica para reter, avisando se a mensagem facilita a saída. \"Melhorar com IA\" reescreve com a mesma intenção, lendo a conversa e o que o time aprendeu, e diz o risco da mensagem; nunca afirma que você fez algo que a mensagem não diz, e mensagem boa volta igual. \"Usar este texto\" troca o que está na caixa; nada é enviado sozinho. Liga e desliga nas opções da extensão.",
+      "Ao parar de digitar, aparece acima da caixa de escrita: os erros comuns de português com a troca pronta (\"seje\", \"concerteza\", \"agente vai\" — um clique aplica), o que costuma piorar a relação com o cliente (\"conforme já informado\", \"não é nossa responsabilidade\", \"você deveria\", \"não há o que fazer\", maiúsculas, abreviação), prazo prometido, e — quando o cliente falou em cancelar — a dica para reter, avisando se a mensagem facilita a saída. \"Melhorar com IA\" reescreve com a mesma intenção, lendo a conversa e o que o time aprendeu, e diz o risco da mensagem; nunca afirma que você fez algo que a mensagem não diz, e mensagem boa volta igual. \"Usar este texto\" troca o que está na caixa; nada é enviado sozinho. Refeita no mesmo dia para ficar mínima: uma pílula de 24 px no canto, logo acima da caixa (\"● 2 ajustes\", \"● Reter cliente\" ou só \"✦\"); o balão só abre no clique, com as ações sempre visíveis, e a revisão já vale na primeira tecla. Liga e desliga nas opções da extensão.",
     onde: "Extensão → WhatsApp Web, acima da caixa de escrita",
   },
   {

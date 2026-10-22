@@ -38,7 +38,7 @@
   const RELACAO = [
     { re: /\b(conforme|como) (ja |eu )?(informado|informei|dito|disse|falei|expliquei|mencionado)\b/, tom: "perigo", texto: "\"Conforme já informado\" soa como impaciência. Repita a informação sem cobrar o cliente por não ter lido." },
     { re: /\bnao (e|eh) (nossa|minha|de nossa) (culpa|responsabilidade)\b|\bnao temos (culpa|responsabilidade)\b/, tom: "perigo", texto: "Tirar a responsabilidade soa como desculpa. Diga o que nós vamos fazer, mesmo que a causa seja de outro." },
-    { re: /\bvoce (deveria|devia|tinha que|teria que|nao leu|nao fez|errou|configurou errado)\b/, tom: "perigo", texto: "Isso culpa o cliente. Troque por \"vamos ajustar juntos\" e explique o passo." },
+    { re: /\b(voce|vc) (deveria|devia|tinha que|teria que|nao leu|nao fez|errou|configurou errado)\b/, tom: "perigo", texto: "Isso culpa o cliente. Troque por \"vamos ajustar juntos\" e explique o passo." },
     { re: /\b(nao (tem|ha) (o que|nada que) (fazer|ser feito)|nao podemos fazer nada|nao tem como)\b/, tom: "perigo", texto: "Fecha a porta. Diga o que dá para fazer, nem que seja o próximo passo." },
     { re: /\b(se acalme|fique calmo|fica calmo|calma)\b/, tom: "atencao", texto: "\"Calma\" costuma irritar quem está irritado. Reconheça o problema no lugar." },
     { re: /\binfelizmente\b/, tom: "atencao", texto: "Comece pelo que dá para fazer; o \"infelizmente\" na abertura já prepara para o não." },
