@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
 import {
   ArrowUpRight,
@@ -21,7 +22,7 @@ import LinksDoRa from "@/components/shared/LinksDoRa";
 import PrazoECriticidade from "@/components/reclame-aqui/tratativa/PrazoECriticidade";
 import NegociacoesDoCaso from "@/components/reclame-aqui/negociacao/NegociacoesDoCaso";
 import { useTratativa } from "@/components/reclame-aqui/tratativa/TratativaProvider";
-import { criarEstabelecimentoDoCaso } from "@/lib/actions/tratativa";
+import { criarEstabelecimentoDoCaso, sugestaoDeModeracao } from "@/lib/actions/tratativa";
 import { useToast } from "@/lib/context/ToastContext";
 import { idExterno, idLabel, isSocial } from "@/lib/services/case.service";
 import { descreverRegistro } from "@/lib/services/horasUteis";
@@ -89,6 +90,20 @@ export default function CaseSidebar({
   const { people } = useTeams();
   const { establishments, aplicarDoServidor, renomearEstabelecimento } = useEstablishments();
   const { notify } = useToast();
+
+  /* Pode caber moderação? Pergunta ao servidor, que tem o relato (22/10/2026). */
+  const [sugestaoDeModeracaoDoCaso, setSugestaoDeModeracao] = useState<{ motivo: string; explicacao: string } | null>(null);
+  const perguntarModeracao = !isSocial(data) && !data.moderacaoPedidaEm;
+  useEffect(() => {
+    let vivo = true;
+    if (!perguntarModeracao) return;
+    sugestaoDeModeracao(data.protocol)
+      .then((r) => vivo && setSugestaoDeModeracao(r))
+      .catch(() => undefined);
+    return () => {
+      vivo = false;
+    };
+  }, [data.protocol, perguntarModeracao]);
 
   /*
     Criar o restaurante ali mesmo, sem ir ao cadastro: o servidor cria,
@@ -514,6 +529,19 @@ export default function CaseSidebar({
                   </p>
                 )}
               </>
+            ) : sugestaoDeModeracaoDoCaso ? (
+              /* A plataforma acha que cabe (22/10/2026) — ver `candidatasAModeracao`. Sugestão: quem decide é você. */
+              <div className="mt-1.5 rounded-lg bg-amber-50 px-2.5 py-2 text-xs leading-relaxed text-amber-900 ring-1 ring-inset ring-amber-100">
+                <p className="font-semibold">Pode caber moderação</p>
+                <p className="mt-0.5">{sugestaoDeModeracaoDoCaso.explicacao}</p>
+                <button
+                  type="button"
+                  onClick={() => abrirModeracao({ ...data, moderacaoMotivo: sugestaoDeModeracaoDoCaso.motivo }, { aoSalvar: aoMudarNoServidor })}
+                  className="mt-1.5 font-medium text-violet-700 hover:underline"
+                >
+                  Registrar o pedido com este motivo
+                </button>
+              </div>
             ) : (
               <p className="mt-1.5 text-xs leading-relaxed text-zinc-500">
                 Duplicada, de quem não é cliente ou resolvida por outro canal antes da publicação? Pode

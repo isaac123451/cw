@@ -53,6 +53,16 @@ export const REVISAO = {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- passe a limpo (21/10) ---------------- */
   {
+    id: "sugestao-de-moderacao",
+    dia: "2026-10-22",
+    tipo: "novo",
+    frente: "plataforma",
+    titulo: "A ficha avisa quando a reclamação pode caber em moderação",
+    texto:
+      "Moderada, a reclamação sai da conta da nota — mas achar a candidata dependia de notar caso a caso. Agora, na ficha, o bloco Moderação avisa \"Pode caber moderação\" quando a plataforma consegue sustentar com fato: quem reclama é o consumidor final do restaurante (o pedido não chegou, a loja cancelou), ou o mesmo cliente já abriu outra reclamação do mesmo tema nos 30 dias antes. Um clique abre o registro do pedido com o motivo preenchido. Nunca sugere onde a moderação tiraria nota boa (avaliação positiva). Hoje, nos últimos 12 meses, nenhuma reclamação se encaixa — o aviso vale para as próximas.",
+    href: "/reclame-aqui",
+  },
+  {
     id: "ia-aprende-com-avaliacoes",
     dia: "2026-10-22",
     tipo: "novo",

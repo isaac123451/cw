@@ -28,6 +28,8 @@ import type { CaseMovement, PrazosDeArea } from "@/lib/models/movement";
 import { AREAS_INTERNAS } from "@/lib/models/mensagens";
 import { prazoComCausa, type DonoDaCausa } from "@/lib/models/catalogoDeCausas";
 import { LIMITE_DE_REPETICAO, semelhanca } from "@/lib/services/lgpd";
+import { fetchCaseByProtocol, fetchCasesByProtocols } from "@/lib/services/case.repository";
+import { candidataAModeracao } from "@/lib/models/candidatasAModeracao";
 import { RESPOSTA_SINTETICA } from "@/lib/services/raMarcadores";
 import { diaNaOperacao } from "@/lib/services/reputation.service";
 import { esquecerExpediente, prazosDeAreaDoBanco } from "@/lib/services/operacao.service";
@@ -542,6 +544,37 @@ export async function dispensarPedidosDeAvaliacao(entrada: {
 /* ============================================================
    MODERAÇÃO
 ============================================================ */
+
+/**
+ * Se esta reclamação pode caber em moderação (22/10/2026) — ver
+ * `candidatasAModeracao`. No servidor porque precisa do relato, que a
+ * lista da tela não carrega; compara com as outras do mesmo cliente.
+ */
+export async function sugestaoDeModeracao(protocol: string): Promise<{ motivo: string; explicacao: string; outra?: string } | null> {
+  const ctx = await tryRole("LEITURA").catch(() => null);
+  if (!ctx || !/^[\w-]{3,80}$/.test(protocol)) return null;
+  try {
+    const caso = await fetchCaseByProtocol(ctx.prisma, protocol);
+    if (!caso) return null;
+    const relato = await ctx.prisma.case.findUnique({ where: { protocol }, select: { description: true } });
+    const doc = (caso.document ?? "").replace(/\D/g, "");
+    const email = caso.email && !caso.email.includes("•") ? caso.email : "";
+    const vizinhos = doc.length >= 11 || email
+      ? await ctx.prisma.case.findMany({
+          where: { channel: "RECLAME_AQUI", protocol: { not: protocol }, OR: [...(doc.length >= 11 ? [{ document: { contains: doc } }] : []), ...(email ? [{ email: { equals: email, mode: "insensitive" as const } }] : [])] },
+          select: { protocol: true, description: true },
+          take: 20,
+        })
+      : [];
+    const outros = (await fetchCasesByProtocols(ctx.prisma, vizinhos.map((v) => v.protocol))).map((o) => ({ ...o, description: vizinhos.find((v) => v.protocol === o.protocol)?.description ?? "" }));
+    const hoje = new Date(Date.now() - 3 * 3_600_000).toISOString().slice(0, 10);
+    const c = candidataAModeracao({ ...caso, description: relato?.description ?? "" }, outros, hoje);
+    return c ? { motivo: c.motivo, explicacao: c.explicacao, outra: c.outra } : null;
+  } catch (erro) {
+    console.error("[moderação] sugestão", erro);
+    return null;
+  }
+}
 
 export async function registrarModeracao(entrada: {
   protocol: string;

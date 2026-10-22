@@ -9,6 +9,7 @@ import Modal, { GhostButton, textareaClass } from "@/components/shared/Modal";
 import type { Case } from "@/lib/models/case";
 
 import { registrarModeracao } from "@/lib/actions/tratativa";
+import { MOTIVOS_DE_MODERACAO } from "@/lib/models/candidatasAModeracao";
 import { useToast } from "@/lib/context/ToastContext";
 
 interface Props {
@@ -17,14 +18,8 @@ interface Props {
   onSalvo: (patch: Partial<Case>) => void;
 }
 
-/** Motivos que costumam sustentar um pedido — só atalhos para o texto. */
-const MOTIVOS = [
-  "Reclamação duplicada de outra já registrada.",
-  "Quem reclama não é cliente da Cardápio Web — o problema é de outra empresa.",
-  "O problema foi resolvido por outro canal antes da publicação.",
-  "Conteúdo ofensivo ou com informação falsa sobre a empresa.",
-  "Reclamação trata de terceiro (cliente final do restaurante), não da plataforma.",
-];
+/** Motivos que costumam sustentar um pedido — só atalhos para o texto. Os mesmos do detector de candidatas. */
+const MOTIVOS = MOTIVOS_DE_MODERACAO;
 
 const RESULTADOS: { id: "pendente" | "aceita" | "negada"; rotulo: string }[] = [
   { id: "pendente", rotulo: "Aguardando o Reclame Aqui" },
