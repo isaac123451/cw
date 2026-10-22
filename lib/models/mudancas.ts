@@ -53,6 +53,26 @@ export const REVISAO = {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- passe a limpo (21/10) ---------------- */
   {
+    id: "cartao-do-caso-whatsapp",
+    dia: "2026-10-22",
+    tipo: "novo",
+    frente: "extensao",
+    titulo: "No WhatsApp, um cartão pequeno com o caso do cliente da conversa",
+    texto:
+      "Quando a conversa aberta é de um cliente com reclamação em aberto ou NPS em andamento, aparece no canto um cartão de 244 px: a prioridade e o título de cada reclamação (até duas), o prazo e se ainda falta a resposta pública, o NPS com o que falta (1º contato até tal dia ou tentativas feitas) e o aviso de risco de cancelar. Cada linha abre o caso no CW; \"Painel\" abre o painel completo. Usa a mesma consulta que o painel já fazia — não pesa a página. Some com o painel aberto, quando a conversa não tem nada em aberto e quando você fecha (vale para aquela conversa). Arrasta pelo topo, segue o tema do WhatsApp e liga e desliga nas opções.",
+    onde: "Extensão → WhatsApp Web, canto da conversa",
+  },
+  {
+    id: "cartao-ra-compacto",
+    dia: "2026-10-22",
+    tipo: "melhoria",
+    frente: "extensao",
+    titulo: "O cartão da reclamação no Reclame Aqui ficou bem menor",
+    texto:
+      "Ele abria com 340 px e tudo de uma vez: resumo do relato, sinais, risco, passo, conta, oito botões. Agora abre compacto, com 272 px: o prazo e a situação, a frase do que fazer, a réplica e a chance de cancelar numa linha cada, e só os botões do momento (Abrir no CW, Falei/Tentei ou Pedir avaliação, Copiar rascunho). O resto está em \"Detalhes\", que lembra a escolha; ao alargar, o cartão se ajusta para não passar da borda da tela. O protocolo não quebra mais em duas linhas.",
+    onde: "Extensão → área da empresa do Reclame Aqui, reclamação aberta",
+  },
+  {
     id: "revisao-da-mensagem-whatsapp",
     dia: "2026-10-22",
     tipo: "novo",

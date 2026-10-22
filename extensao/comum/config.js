@@ -106,6 +106,12 @@ export const PADROES = {
   revisaoDaMensagem: true,
 
   /**
+   * O cartão pequeno do caso no WhatsApp (22/10/2026): reclamação ou NPS
+   * em aberto da conversa, com prazo, num canto — o painel a um clique.
+   */
+  cartaoNoWhatsapp: true,
+
+  /**
    * Conversas sem resposta no Meu dia (1.108): a lista do WhatsApp manda
    * ao CW quem espera resposta e há quantos minutos — só nome ou número,
    * nunca mensagem.

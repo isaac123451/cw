@@ -45,7 +45,7 @@ const caixa = { window: { CWReputacao: CW }, String, Number, Boolean, Array, Obj
 vm.createContext(caixa);
 vm.runInContext(codigo, caixa);
 const area = CW.raArea as {
-  htmlDoCartao: (lida: unknown, dados: unknown, recolhido?: boolean) => string;
+  htmlDoCartao: (lida: unknown, dados: unknown, vista?: boolean | string) => string;
   htmlDoSelo: (codigo: string, info: unknown) => string;
   enderecoDaReclamacao: (c: string) => string;
 };
@@ -72,14 +72,14 @@ const caso = {
   rascunho: "Olá, Marina! Agradecemos o diálogo.",
 };
 const resumo = { ...r, aconteceu: '<img src=x onerror="alert(1)">' };
-const html = area.htmlDoCartao(lida, { resumo, caso }, false);
+const html = area.htmlDoCartao(lida, { resumo, caso }, "detalhes");
 conferir("abrir no CW, página pública e dossiê em nova guia", ["Abrir no CW ↗", "Página pública ↗", "Dossiê ↗"].map((t) => html.includes(t)), [true, true, true]);
 conferir("os quatro links abrem em nova guia (1.110: e a reclamação)", (html.match(/target="_blank"/g) ?? []).length, 4);
 /* 1.110: os botões que ajudam na área da empresa. */
 conferir(
   "outra janela, reclamação em nova aba, dados do consumidor e registrar",
   ["Abrir em outra janela", "Reclamação em nova aba ↗", "Copiar dados do consumidor", 'data-tipo="contato"', 'data-tipo="tentativa"'].map((t) =>
-    area.htmlDoCartao({ ...lida, cliente: "Marina", telefone: "51 90000-0000" }, { resumo, caso }, false).includes(t)
+    area.htmlDoCartao({ ...lida, cliente: "Marina", telefone: "51 90000-0000" }, { resumo, caso }, "detalhes").includes(t)
   ),
   [true, true, true, true, true]
 );
@@ -87,21 +87,36 @@ conferir("sem resposta nem validação: avisa o Passo 6 antes de responder", htm
 conferir("prazo, passo da vez, conta e reincidência", ["1º contato atrasado", "passo 6 — Validação com o cliente", "Conta: Pizzaria Bella (Pro)", "2ª reclamação do mesmo CPF/CNPJ"].map((t) => html.includes(t)), [true, true, true, true]);
 conferir("copiar protocolo e o rascunho do CW", [html.includes('data-texto="RA-uPDvBFKmssmEmxVa"'), html.includes("Copiar o rascunho do CW")], [true, true]);
 conferir("texto do consumidor não vira HTML", [html.includes("<img"), html.includes("&lt;img")], [false, true]);
-conferir("com réplica pendente, o alerta aparece", area.htmlDoCartao(lida, { resumo, caso: { ...caso, replica: true } }, false).includes("a vez é nossa"), true);
-conferir("respondida, o aviso do Passo 6 some", area.htmlDoCartao(lida, { resumo, caso: { ...caso, respondida: true } }, false).includes("Passo 6"), false);
-const novo = area.htmlDoCartao(lida, { resumo, caso: null }, false);
+conferir("com réplica pendente, o alerta aparece", area.htmlDoCartao(lida, { resumo, caso: { ...caso, replica: true } }, "detalhes").includes("a vez é nossa"), true);
+conferir("respondida, o aviso do Passo 6 some", area.htmlDoCartao(lida, { resumo, caso: { ...caso, respondida: true } }, "detalhes").includes("Passo 6"), false);
+const novo = area.htmlDoCartao(lida, { resumo, caso: null }, "detalhes");
 conferir("fora do CW: 'Criar no quadro' e o protocolo lido da página", [novo.includes('data-acao="criar"'), novo.includes("RA-uPDvBFKmssmEmxVa")], [true, true]);
 /* 1.79: o estado em destaque e o pedido de avaliação daqui. */
-const comConselho = area.htmlDoCartao(lida, { resumo, caso: { ...caso, conselho: { frase: "O objetivo foi cumprido: responda a reclamação", urgente: true } } }, false);
+const comConselho = area.htmlDoCartao(lida, { resumo, caso: { ...caso, conselho: { frase: "O objetivo foi cumprido: responda a reclamação", urgente: true } } }, "detalhes");
 conferir("estado no topo: prioridade, prazo e a frase do que fazer", [comConselho.indexOf('class="estado') < comConselho.indexOf("Resumo"), comConselho.includes("responda a reclamação"), comConselho.includes("urgente-agora")], [true, true, true]);
 const pedir = { numero: 2, vencido: true, resumo: "Lembrete vencido.", mensagem: "Oi, Ana! <script>", telefone: "5548996640777" };
-const comPedido = area.htmlDoCartao(lida, { resumo, caso: { ...caso, pedirAvaliacao: pedir } }, false);
+const comPedido = area.htmlDoCartao(lida, { resumo, caso: { ...caso, pedirAvaliacao: pedir } }, "detalhes");
 conferir("pedir avaliação: WhatsApp com a mensagem e o lembrete da vez", [comPedido.includes("https://wa.me/5548996640777?text=Oi%2C%20Ana"), comPedido.includes("2º lembrete")], [true, true]);
 conferir("a mensagem no botão de copiar vem escapada", comPedido.includes("<script>"), false);
-const semTelefone = area.htmlDoCartao(lida, { resumo, caso: { ...caso, pedirAvaliacao: { ...pedir, telefone: null } } }, false);
+const semTelefone = area.htmlDoCartao(lida, { resumo, caso: { ...caso, pedirAvaliacao: { ...pedir, telefone: null } } }, "detalhes");
 conferir("sem telefone: copiar e registrar, sem link", [semTelefone.includes("wa.me"), semTelefone.includes("Registrar pedido feito")], [false, true]);
 conferir("recolhido: só o topo", area.htmlDoCartao(lida, { resumo, caso }, true).includes("Resumo"), false);
-conferir("carregando: diz que está lendo", area.htmlDoCartao(lida, null, false).includes("Lendo a reclamação"), true);
+/* 22/10: o normal é o compacto — "tá muito grande, precisa ser bem menor". */
+const compacto = area.htmlDoCartao(lida, { resumo, caso: { ...caso, conselho: { frase: "Ligue para o cliente", urgente: false } }, risco: { nivel: "alto", motivos: [{ texto: "Falou em trocar de sistema" }] } });
+const botoesDo = (h: string) => (h.match(/<(a|button) /g) ?? []).length;
+conferir(
+  "compacto: prazo, a frase, a chance de cancelar e o abrir no CW",
+  ["1º contato atrasado", "Ligue para o cliente", "Chance alta de cancelar</b> — Falou em trocar de sistema", "Abrir no CW ↗"].map((t) => compacto.includes(t)),
+  [true, true, true, true]
+);
+conferir("compacto: sem o resumo do relato, sem conta e sem links extras", ["Resumo", "Conta:", "Dossiê", "Página pública"].map((t) => compacto.includes(t)), [false, false, false, false]);
+conferir("compacto: Falei, Tentei, rascunho e Detalhes", ['data-tipo="contato"', 'data-tipo="tentativa"', "Copiar rascunho", 'data-vista="detalhes"'].map((t) => compacto.includes(t)), [true, true, true, true]);
+conferir("compacto: no máximo 2 do topo + 5 botões", botoesDo(compacto) <= 7, true);
+conferir("compacto com pedido de avaliação: o pedido no lugar de Falei/Tentei", [area.htmlDoCartao(lida, { resumo, caso: { ...caso, pedirAvaliacao: pedir } }).includes("Pedir avaliação"), area.htmlDoCartao(lida, { resumo, caso: { ...caso, pedirAvaliacao: pedir } }).includes('data-tipo="contato"')], [true, false]);
+conferir("compacto fora do CW: Criar no quadro", area.htmlDoCartao(lida, { resumo, caso: null }).includes('data-acao="criar"'), true);
+conferir("compacto com réplica: a linha da réplica", area.htmlDoCartao(lida, { resumo, caso: { ...caso, replica: true } }).includes("a vez é nossa"), true);
+conferir("detalhes: tem o Menos para voltar", area.htmlDoCartao(lida, { resumo, caso }, "detalhes").includes('data-vista="compacto"'), true);
+conferir("carregando: diz que está lendo", area.htmlDoCartao(lida, null).includes("Lendo a reclamação"), true);
 
 conferir("endereço da reclamação na área da empresa", area.enderecoDaReclamacao("uPDvBFKmssmEmxVa"), "https://www.reclameaqui.com.br/area-da-empresa/reclamacoes/uPDvBFKmssmEmxVa/");
 conferir("código torto não vira link", area.enderecoDaReclamacao("abc"), "");

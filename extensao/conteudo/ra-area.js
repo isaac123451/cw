@@ -54,6 +54,58 @@
     return n > 0 ? `${n + 1}ª reclamação do mesmo CPF/CNPJ em 90 dias` : "";
   }
 
+  /**
+   * O cartão compacto (22/10/2026) — "tá muito grande, precisa ser bem
+   * menor". Só o que decide o próximo passo: prazo e situação, a frase do
+   * que fazer, réplica e chance de cancelar numa linha cada, e no máximo
+   * quatro botões. O resto (resumo do relato, passo, conta, links) fica em
+   * "Detalhes".
+   */
+  function htmlCompacto(codigo, dados) {
+    const caso = dados?.caso ?? null;
+    const linhas = [];
+
+    if (caso) {
+      const cor = COR_DO_NIVEL[caso.prioridade] || "normal";
+      linhas.push(`
+        <div class="estado ${e(cor)}${caso.conselho?.urgente ? " urgente-agora" : ""}">
+          <p class="linha-estado">${caso.sla?.rotulo ? `<span class="prazo ${e(COR_DO_PRAZO[caso.sla.situacao] || "neutro")}">${e(caso.sla.rotulo)}</span> · ` : ""}${e(caso.status)}</p>
+          ${caso.conselho ? `<p class="frase">${e(caso.conselho.frase)}</p>` : ""}
+        </div>`);
+      if (caso.replica) linhas.push('<p class="linha alerta">Réplica do consumidor — a vez é nossa.</p>');
+    } else if (dados?.erro) {
+      linhas.push(`<p class="sub">${e(dados.erro)}</p>`);
+    } else {
+      linhas.push('<p class="sub">Ainda não está no quadro do CW.</p>');
+    }
+
+    const risco = dados?.risco ?? null;
+    if (risco && risco.nivel !== "baixo") {
+      const motivo = risco.motivos?.[0]?.texto;
+      linhas.push(`<p class="linha risco-linha ${e(COR_DO_RISCO[risco.nivel] || "normal")}"><b>${e(ROTULO_DO_RISCO[risco.nivel] || "")}</b>${motivo ? ` — ${e(motivo)}` : ""}</p>`);
+    }
+
+    const botoes = [];
+    if (caso?.url) botoes.push(`<a href="${e(caso.url)}" target="_blank" rel="noopener" class="principal">Abrir no CW ↗</a>`);
+    if (!caso && !dados?.erro) botoes.push('<button type="button" class="principal" data-acao="criar">Criar no quadro</button>');
+    if (caso?.pedirAvaliacao) {
+      const p = caso.pedirAvaliacao;
+      botoes.push(
+        p.telefone
+          ? `<a href="https://wa.me/${e(p.telefone)}?text=${encodeURIComponent(p.mensagem)}" target="_blank" rel="noopener" data-acao="pedir-avaliacao" title="${e(p.resumo)}">Pedir avaliação</a>`
+          : `<button type="button" data-acao="copiar" data-texto="${e(p.mensagem)}" title="${e(p.resumo)}">Copiar pedido de avaliação</button>`
+      );
+    } else if (caso && !caso.avaliado) {
+      botoes.push('<button type="button" data-acao="registrar" data-tipo="contato" title="Registra o contato de hoje no caso">Falei</button>');
+      botoes.push('<button type="button" data-acao="registrar" data-tipo="tentativa" title="Registra uma tentativa sem retorno">Tentei</button>');
+    }
+    if (caso?.rascunho) botoes.push(`<button type="button" data-acao="copiar" data-texto="${e(caso.rascunho)}" title="O rascunho da resposta guardado no CW">Copiar rascunho</button>`);
+    else if (codigo || caso?.protocolo) botoes.push(`<button type="button" data-acao="copiar" data-texto="${e(caso?.protocolo || `RA-${codigo}`)}">Copiar protocolo</button>`);
+    botoes.push('<button type="button" class="mais" data-acao="detalhes" data-vista="detalhes">Detalhes ▾</button>');
+
+    return `${linhas.join("")}<div class="acoes">${botoes.join("")}</div>`;
+  }
+
   /* ============================================================
      O CARTÃO — HTML puro
   ============================================================ */
@@ -65,7 +117,10 @@
    * resposta de `/api/extensao/ra-cartao` — `null` enquanto carrega, e
    * `{ erro }` se o CW não respondeu.
    */
-  area.htmlDoCartao = function htmlDoCartao(lida, dados, recolhido) {
+  area.htmlDoCartao = function htmlDoCartao(lida, dados, vista) {
+    /* `true` = recolhido (o formato antigo); sem nada, o compacto (22/10). */
+    const modo = vista === true || vista === "recolhido" ? "recolhido" : vista === "detalhes" ? "detalhes" : "compacto";
+    const recolhido = modo === "recolhido";
     const codigo = lida?.cod || "";
     const caso = dados?.caso ?? null;
     const resumo = dados?.resumo ?? null;
@@ -86,6 +141,8 @@
     if (!dados) {
       return `${topo}<div class="corpo"><p class="sub">Lendo a reclamação e o CW…</p></div>`;
     }
+
+    if (modo === "compacto") return `${topo}<div class="corpo">${htmlCompacto(codigo, dados)}</div>`;
 
     const partes = [];
 
@@ -205,7 +262,8 @@
       caso?.rascunho ? `<button type="button" data-acao="copiar" data-texto="${e(caso.rascunho)}">Copiar o rascunho do CW</button>` : "",
       consumidor ? `<button type="button" data-acao="copiar" data-texto="${e(consumidor)}">Copiar dados do consumidor</button>` : "",
     ].filter(Boolean);
-    if (atalhos.length) partes.push(`<div class="acoes">${atalhos.join("")}</div>`);
+    atalhos.push('<button type="button" class="mais" data-acao="detalhes" data-vista="compacto">Menos ▴</button>');
+    partes.push(`<div class="acoes">${atalhos.join("")}</div>`);
 
     return `${topo}<div class="corpo">${partes.join("")}</div>`;
   };
@@ -241,6 +299,7 @@
 
   const CHAVE_POSICAO = "cw-ra-cartao-posicao";
   const CHAVE_RECOLHIDO = "cw-ra-cartao-recolhido";
+  const CHAVE_DETALHES = "cw-ra-cartao-detalhes";
 
   let hospedeiro = null;
   let sombra = null;
@@ -268,19 +327,25 @@
   const ESTILO = `
     :host { all: initial; }
     .cartao {
-      position: fixed; z-index: 2147483645; width: 340px; max-width: calc(100vw - 24px);
+      position: fixed; z-index: 2147483645; width: 272px; max-width: calc(100vw - 24px);
       max-height: calc(100vh - 110px); display: flex; flex-direction: column;
-      font: 12.5px/1.45 "CW Geist", system-ui, sans-serif; color: #1f1f24; background: #fff;
-      border: 1px solid #e4dcf3; border-radius: 14px; box-shadow: 0 16px 40px -18px rgba(40, 10, 70, .45);
+      font: 12px/1.4 "CW Geist", system-ui, sans-serif; color: #1f1f24; background: #fff;
+      border: 1px solid #e4dcf3; border-radius: 12px; box-shadow: 0 12px 32px -16px rgba(40, 10, 70, .4);
     }
-    .topo { display: flex; align-items: center; gap: 6px; padding: 8px 10px; cursor: grab; border-bottom: 1px solid #f0ecf7; user-select: none; }
+    .cartao.largo { width: 340px; }
+    .topo { display: flex; align-items: center; gap: 6px; padding: 6px 8px; cursor: grab; border-bottom: 1px solid #f0ecf7; user-select: none; }
     .topo:active { cursor: grabbing; }
     .marca { font-weight: 700; font-size: 10.5px; color: #fff; background: #5B2A86; border-radius: 6px; padding: 2px 5px; }
-    .protocolo { font-family: ui-monospace, monospace; font-size: 11.5px; }
+    .protocolo { font-family: ui-monospace, monospace; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
     .espaco { flex: 1; }
     .topo button { font: inherit; width: 22px; height: 22px; border: 0; border-radius: 6px; background: transparent; color: #6b6b76; cursor: pointer; }
     .topo button:hover { background: #f4f1fa; color: #1f1f24; }
-    .corpo { overflow-y: auto; padding: 8px 12px 12px; }
+    .corpo { overflow-y: auto; padding: 7px 10px 9px; }
+    .linha { margin: 0 0 5px; font-size: 11.5px; }
+    .risco-linha { border-radius: 8px; padding: 4px 7px; background: #fff7ed; color: #9a3412; }
+    .risco-linha.urgente { background: #fff1f2; color: #9f1239; }
+    .risco-linha.cancelou { background: #f4f4f5; color: #27272a; }
+    .acoes .mais { border-color: transparent; background: transparent; color: #6b6b76; padding: 4px 4px; margin-left: auto; }
     section { margin-top: 6px; }
     h4 { margin: 8px 0 4px; font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: #8a8494; }
     p { margin: 0 0 5px; }
@@ -300,18 +365,18 @@
     .atitudes { margin: 2px 0 0 16px; padding: 0; display: grid; gap: 3px; }
     .prazo { font-weight: 600; }
     .prazo.perigo { color: #be123c; } .prazo.atencao { color: #b45309; } .prazo.ok { color: #15803d; } .prazo.neutro { color: #6b6b76; }
-    .estado { border-radius: 10px; padding: 7px 9px; margin: 2px 0 6px; border-left: 4px solid #16a34a; background: #f0fdf4; }
+    .estado { border-radius: 8px; padding: 5px 8px; margin: 0 0 6px; border-left: 4px solid #16a34a; background: #f0fdf4; }
     .estado.alta { border-color: #ea580c; background: #fff7ed; }
     .estado.urgente { border-color: #e11d48; background: #fff1f2; }
     .estado .linha-estado { margin: 0; }
-    .estado .frase { margin: 3px 0 0; font-weight: 600; font-size: 13px; }
+    .estado .frase { margin: 2px 0 0; font-weight: 600; font-size: 12px; }
     .estado.urgente-agora .frase { color: #9f1239; }
     .alerta { background: #fff1f2; color: #9f1239; border-radius: 8px; padding: 6px 8px; font-weight: 600; }
     .aviso { background: #fffbeb; color: #92400e; border-radius: 8px; padding: 6px 8px; }
-    .acoes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .acoes { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin-top: 6px; }
     .acoes a, .acoes button, section > button {
-      font: inherit; font-size: 12px; font-weight: 600; text-decoration: none; cursor: pointer;
-      border: 1px solid #e4e4e7; background: #fff; color: #3f3f46; border-radius: 9px; padding: 5px 9px;
+      font: inherit; font-size: 11.5px; font-weight: 600; text-decoration: none; cursor: pointer;
+      border: 1px solid #e4e4e7; background: #fff; color: #3f3f46; border-radius: 7px; padding: 3px 8px;
     }
     .acoes a:hover, .acoes button:hover, section > button:hover { border-color: #c4b5fd; color: #5B2A86; }
     .principal { background: #5B2A86 !important; color: #fff !important; border-color: #5B2A86 !important; }
@@ -326,6 +391,8 @@
       .estado { background: #13261a; } .estado.alta { background: #2e1c0d; } .estado.urgente { background: #3b1119; }
       .estado.urgente-agora .frase { color: #fda4af; }
       .risco { background: #2e1c0d; border-color: #5a3a17; } .risco.urgente { background: #3b1119; border-color: #5c1a26; } .risco.cancelou { background: #26272e; border-color: #3a3b44; }
+      .risco-linha { background: #2e1c0d; color: #fdba74; } .risco-linha.urgente { background: #3b1119; color: #fda4af; } .risco-linha.cancelou { background: #26272e; color: #e4e4e7; }
+      .acoes .mais { background: transparent; border-color: transparent; color: #9a9ba5; }
       .prazo.perigo { color: #fda4af; } .prazo.atencao { color: #fbbf24; } .prazo.ok { color: #4ade80; } .prazo.neutro { color: #9a9ba5; }
     }
   `;
@@ -343,7 +410,7 @@
     sombra.append(estilo, cartao);
 
     const pos = lerLocal(CHAVE_POSICAO, null);
-    posicionar(pos?.x ?? window.innerWidth - 360, pos?.y ?? 84);
+    posicionar(pos?.x ?? window.innerWidth - 292, pos?.y ?? 84);
 
     cartao.addEventListener("click", aoClicar);
     arrastavel(cartao);
@@ -356,7 +423,8 @@
   function posicionar(x, y) {
     const c = cartaoEl();
     if (!c) return;
-    const maxX = Math.max(8, window.innerWidth - 60);
+    /* Inteiro na tela: ao abrir "Detalhes" o cartão alarga e não pode passar da borda. */
+    const maxX = Math.max(8, window.innerWidth - (c.offsetWidth || 60) - 8);
     const maxY = Math.max(8, window.innerHeight - 40);
     c.style.left = `${Math.min(Math.max(8, x), maxX)}px`;
     c.style.top = `${Math.min(Math.max(8, y), maxY)}px`;
@@ -390,7 +458,11 @@
     }
     montar();
     const c = cartaoEl();
-    if (c) c.innerHTML = area.htmlDoCartao(lidaAtual, dadosAtuais, lerLocal(CHAVE_RECOLHIDO, false));
+    if (!c) return;
+    const vista = lerLocal(CHAVE_RECOLHIDO, false) ? "recolhido" : lerLocal(CHAVE_DETALHES, false) ? "detalhes" : "compacto";
+    c.classList.toggle("largo", vista === "detalhes");
+    c.innerHTML = area.htmlDoCartao(lidaAtual, dadosAtuais, vista);
+    posicionar(parseFloat(c.style.left) || 8, parseFloat(c.style.top) || 84);
   }
 
   async function aoClicar(ev) {
@@ -400,6 +472,9 @@
 
     if (acao === "recolher") {
       gravarLocal(CHAVE_RECOLHIDO, !lerLocal(CHAVE_RECOLHIDO, false));
+      desenhar();
+    } else if (acao === "detalhes") {
+      gravarLocal(CHAVE_DETALHES, alvo.dataset.vista === "detalhes");
       desenhar();
     } else if (acao === "fechar") {
       fechados.add(lidaAtual?.cod || lidaAtual?.id);
