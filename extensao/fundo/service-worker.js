@@ -81,6 +81,7 @@ const CAMINHOS = {
   assistente: "/api/extensao/assistente",
   editarCaso: "/api/extensao/editar-caso",
   copiloto: "/api/extensao/copiloto",
+  melhorarMensagem: "/api/extensao/melhorar-mensagem",
   slackAvisos: "/api/extensao/slack-avisos",
 };
 
@@ -764,6 +765,12 @@ async function tratar(mensagem) {
     para o próprio painel. Sem cache — cada pergunta é uma pergunta.
   */
   /* O copiloto da tratativa (1.128): o próximo passo e o texto, lidos da conversa. */
+  /* A revisão da mensagem que a pessoa escreve no WhatsApp (22/10/2026). */
+  if (mensagem?.tipo === "melhorarMensagem") {
+    const dados = await chamar(CAMINHOS.melhorarMensagem, {}, { texto: mensagem.texto, mensagens: mensagem.mensagens, nome: mensagem.nome, avisos: mensagem.avisos });
+    return { ok: true, dados };
+  }
+
   if (mensagem?.tipo === "copiloto") {
     const dados = await chamar(CAMINHOS.copiloto, {}, { mensagens: mensagem.mensagens, protocolos: mensagem.protocolos, nome: mensagem.nome });
     return { ok: true, dados };

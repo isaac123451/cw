@@ -100,6 +100,12 @@ export const PADROES = {
   etiquetasLista: true,
 
   /**
+   * A revisão da mensagem enquanto se escreve no WhatsApp (22/10/2026):
+   * correção, o que piora a relação, dica de retenção e "Melhorar com IA".
+   */
+  revisaoDaMensagem: true,
+
+  /**
    * Conversas sem resposta no Meu dia (1.108): a lista do WhatsApp manda
    * ao CW quem espera resposta e há quantos minutos — só nome ou número,
    * nunca mensagem.

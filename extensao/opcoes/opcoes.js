@@ -26,6 +26,7 @@ const caixas = {
   lembretes: document.getElementById("lembretes"),
   prazos: document.getElementById("prazos"),
   etiquetasLista: document.getElementById("etiquetasLista"),
+  revisaoDaMensagem: document.getElementById("revisaoDaMensagem"),
   esperaNoMeuDia: document.getElementById("esperaNoMeuDia"),
   completarSozinho: document.getElementById("completarSozinho"),
   vigia: document.getElementById("vigia"),
@@ -86,6 +87,7 @@ async function carregar() {
   caixas.lembretes.checked = Boolean(config.lembretes);
   caixas.prazos.checked = config.prazos !== false;
   caixas.etiquetasLista.checked = config.etiquetasLista !== false;
+  caixas.revisaoDaMensagem.checked = config.revisaoDaMensagem !== false;
   caixas.esperaNoMeuDia.checked = config.esperaNoMeuDia !== false;
   caixas.completarSozinho.checked = config.completarSozinho !== false;
   caixas.vigia.checked = config.vigia !== false;
