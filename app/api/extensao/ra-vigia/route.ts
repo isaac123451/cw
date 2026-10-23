@@ -11,6 +11,7 @@ import { CASES_TAG } from "@/lib/actions/tags";
 import { getPrisma } from "@/lib/prisma";
 
 import {
+  aguardandoAvaliacao,
   EMPRESA_NO_PORTAL,
   gravarDoPortal,
   pendentesDoPortal,
@@ -54,6 +55,9 @@ export async function GET(request: Request) {
   return responder(request, {
     empresa: EMPRESA_NO_PORTAL,
     pendentes: await pendentesDoPortal(prisma),
+
+    /* As que esperam avaliação, em rodízio — a lista do portal atrasa o "avaliada" (22/10). */
+    aguardando: await aguardandoAvaliacao(prisma).catch(() => ({ quentes: [], frias: [] })),
 
     /*
       Leitura não grava — e sabe disso antes de gastar a volta.

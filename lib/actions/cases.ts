@@ -314,7 +314,7 @@ async function gravarCaso(
     if (r.alterados.length === 0) return { ok: true };
 
     if (r.alterados.includes("ownerId") || r.alterados.includes("status")) {
-      await registrarTrocas(prisma, { userId: ctx?.userId ?? null }, item.protocol, options.anterior, item);
+      await registrarTrocas(prisma, { userId: ctx?.userId ?? null }, item.protocol, options.anterior, r.colunaPelaAvaliacao ? { ...item, status: r.colunaPelaAvaliacao } : item);
     }
 
     updateTag(CASES_TAG);

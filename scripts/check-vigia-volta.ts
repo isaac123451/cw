@@ -31,6 +31,8 @@ import { pathToFileURL } from "node:url";
 
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
+
+import { aguardandoAvaliacao } from "../lib/services/raPortal.service";
 import { SignJWT } from "jose";
 
 const BASE = (process.env.CW_BASE ?? "http://localhost:3000").replace(/\/$/, "");
@@ -349,6 +351,12 @@ async function main() {
 
     /* --- a segunda volta: nada novo, nada repetido --- */
 
+    /* O rodízio das que esperam avaliação (22/10): códigos reais, que este portal responde com 404. */
+    const aguardando = await aguardandoAvaliacao(prisma);
+    const doRodizio = new Set([...aguardando.quentes, ...aguardando.frias]);
+    const codigoDe = (u: string) => u.replace(/\/$/, "").slice(-16);
+    const rodizioDaPrimeira = pedidosAoPortal.filter((u) => !u.includes("/empresa/") && doRodizio.has(codigoDe(u))).map(codigoDe);
+
     pedidosAoPortal.length = 0;
 
     const segunda = await enviar({ tipo: "vigiaAgora", motivo: "manual" });
@@ -357,8 +365,23 @@ async function main() {
     conferir("nem notifica de novo", doVigia().length, 1);
     conferir(
       "a pendente que falhou espera um dia, não volta a cada 15 min",
-      pedidosAoPortal.filter((u) => !u.includes("/empresa/")).length,
+      pedidosAoPortal.filter((u) => !u.includes("/empresa/") && !doRodizio.has(codigoDe(u))).length,
       0
+    );
+    const rodizioDaSegunda = pedidosAoPortal.filter((u) => !u.includes("/empresa/") && doRodizio.has(codigoDe(u))).map(codigoDe);
+    conferir(
+      `as que esperam avaliação entram em rodízio: até 8 por volta, sem repetir (${doRodizio.size} na base)`,
+      [
+        rodizioDaPrimeira.length === Math.min(8, doRodizio.size),
+        rodizioDaSegunda.length === Math.min(8, Math.max(0, doRodizio.size - rodizioDaPrimeira.length)),
+        rodizioDaSegunda.some((c) => rodizioDaPrimeira.includes(c)),
+      ],
+      [true, true, false]
+    );
+    conferir(
+      "as quentes (contato ou pedido de avaliação recente) vão primeiro",
+      aguardando.quentes.slice(0, 8).every((c) => rodizioDaPrimeira.includes(c)),
+      true
     );
     conferir(
       /* Desde 20/10 a volta comum lê as primeiras páginas inteiras (atrás da réplica); aqui a 2ª já vem vazia e encerra. */

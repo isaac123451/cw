@@ -53,6 +53,16 @@ export const REVISAO = {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- passe a limpo (21/10) ---------------- */
   {
+    id: "vigia-confere-avaliacoes",
+    dia: "2026-10-22",
+    tipo: "correcao",
+    frente: "extensao",
+    titulo: "A avaliação do consumidor chega sozinha — e sempre fecha a coluna",
+    texto:
+      "\"Teve cliente que avaliou e não contabilizou.\" Eram três coisas. (1) A lista do Reclame Aqui atrasa o \"avaliada\": a Fernanda avaliou às 18:48 e a lista ainda dizia que não; o Vanderson ficou dois dias assim. A extensão confiava na lista e só reabria as reclamações das quatro primeiras páginas de seis em seis horas. Agora ela reabre a página de todas as que esperam avaliação, em rodízio: as quentes (contato ou pedido de avaliação nos últimos 7 dias, ou respondidas há menos de 30) de hora em hora, as outras a cada seis. (2) A avaliação lançada à mão na tela gravava a nota e deixava a reclamação em \"Aguardando avaliação\" — agora vai para Resolvido ou Não resolvido, pela mesma regra do portal, e fica no histórico. (3) O status \"REPLY\" do portal (reclamação com réplica e tréplica) não era reconhecido, e uma réplica nova nessas não chegava ao quadro. A da Fernanda foi corrigida (Resolvido, nota 10); conferidas uma a uma no portal as 133 reclamações abertas daqui, nenhuma outra estava avaliada lá.",
+    href: "/reclame-aqui",
+  },
+  {
     id: "cartao-do-caso-whatsapp",
     dia: "2026-10-22",
     tipo: "novo",

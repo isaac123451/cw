@@ -95,7 +95,7 @@ export interface ReclamacaoDoPortal {
   titulo: string;
   relato: string;
   criadaEm: string;
-  /** `PENDING`, `ANSWERED`, `SOLVED`, `NOT_SOLVED`. */
+  /** `PENDING`, `ANSWERED`, `REPLY`, `SOLVED`, `NOT_SOLVED`. */
   status: string;
   cidade?: string;
   estado?: string;
@@ -259,7 +259,13 @@ export function statusPeloPortal(r: ReclamacaoDoPortal) {
 
   if (r.status === "PENDING") return "Novo";
 
-  if (r.status === "ANSWERED") {
+  /*
+    "REPLY" é a reclamação que já teve réplica e tréplica (medido em
+    22/10/2026: 16 das abertas). Não estava aqui — caía em "Novo", o vigia
+    mantinha a coluna, e a réplica nova do consumidor não chegava ao quadro.
+    A última fala decide, como na respondida.
+  */
+  if (r.status === "ANSWERED" || r.status === "REPLY") {
     const ultima = r.interacoes[r.interacoes.length - 1];
     return ultima?.tipo === "REPLY"
       ? "Aguardando nossa réplica"
@@ -856,6 +862,53 @@ export async function pendentesDoPortal(
   return linhas
     .map((l) => l.protocol.slice(3))
     .filter((c) => CODIGO_DO_PORTAL.test(c));
+}
+
+/**
+ * As reclamações respondidas que esperam a avaliação, para o vigia reabrir
+ * em rodízio (22/10/2026).
+ *
+ * A lista do portal **atrasa** o "avaliada": medido em 22/10, a RA-5spZ
+ * avaliada às 18:48 e a RA-50JT avaliada no dia 20 apareciam na lista como
+ * não avaliadas, enquanto a página de cada uma já trazia a nota. O vigia
+ * confiava na lista e só reabria as das quatro primeiras páginas, de seis
+ * em seis horas — "teve cliente que avaliou e não contabilizou". Agora o
+ * servidor manda todas; as **quentes** (contato ou pedido de avaliação nos
+ * últimos 7 dias, ou resposta nos últimos 30) vêm primeiro e são reabertas
+ * de hora em hora; as outras, a cada seis.
+ */
+export async function aguardandoAvaliacao(
+  prisma: PrismaClient,
+  agora = new Date(),
+  teto = 200
+): Promise<{ quentes: string[]; frias: string[] }> {
+  const linhas = await prisma.case.findMany({
+    where: {
+      protocol: { startsWith: "RA-" },
+      evaluated: false,
+      publicResponseAt: { not: null },
+      status: { notIn: STATUS_TERMINADO },
+    },
+    select: { protocol: true, externalId: true, publicResponseAt: true, ultimoContatoEm: true, ultimoPedidoAvaliacaoEm: true },
+    orderBy: { publicResponseAt: "desc" },
+    take: teto,
+  });
+
+  const dias = (d: Date | null, n: number) => Boolean(d && agora.getTime() - d.getTime() < n * 86_400_000);
+  const codigo = (l: (typeof linhas)[number]) => {
+    const c = l.protocol.slice(3);
+    if (CODIGO_DO_PORTAL.test(c)) return c;
+    return l.externalId && CODIGO_DO_PORTAL.test(l.externalId) ? l.externalId : "";
+  };
+
+  const quentes: string[] = [];
+  const frias: string[] = [];
+  for (const l of linhas) {
+    const c = codigo(l);
+    if (!c) continue;
+    (dias(l.ultimoContatoEm, 7) || dias(l.ultimoPedidoAvaliacaoEm, 7) || dias(l.publicResponseAt, 30) ? quentes : frias).push(c);
+  }
+  return { quentes, frias };
 }
 
 /** O que a lista mostra de cada reclamação, sem abrir a página dela. */

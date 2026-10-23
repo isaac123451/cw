@@ -1597,6 +1597,16 @@ const PAGINAS_NA_FUNDA = 30;
 const ABERTAS_POR_VOLTA = 12;
 
 /**
+ * Lugares a mais por volta só para as que esperam avaliação (22/10/2026).
+ * A lista do portal atrasa o "avaliada" (a RA-50JT ficou dois dias como não
+ * avaliada na lista), então quem diz se o consumidor avaliou é a página da
+ * reclamação. As quentes — contato ou pedido de avaliação recente — são
+ * reabertas de hora em hora; as outras, a cada seis horas, em rodízio.
+ */
+const AGUARDANDO_POR_VOLTA = 8;
+const RECONFERIR_QUENTE_MS = 60 * 60_000;
+
+/**
  * Reclamação respondida e sem avaliação é reaberta a cada seis horas
  * (20/10/2026). A lista não diz se o consumidor fez réplica: sem reabrir,
  * a réplica numa reclamação já respondida nunca chegava ao quadro — "tem
@@ -1830,10 +1840,13 @@ async function umaVolta(motivo) {
     (codigo) => agora - (tentadas[codigo] ?? 0) > ESPERA_DA_PENDENTE_MS
   );
 
-  /* As em andamento que não são reabertas há seis horas — atrás da réplica do consumidor. */
-  const aReconferir = emAndamento.filter(
-    (codigo) => agora - (conferidas[codigo] ?? 0) > RECONFERIR_A_CADA_MS
-  );
+  /* As que esperam avaliação, quentes (1 h) e frias (6 h) — ver `AGUARDANDO_POR_VOLTA`. */
+  const quentes = new Set(plano.aguardando?.quentes ?? []);
+  const venceu = (codigo) =>
+    agora - (conferidas[codigo] ?? 0) > (quentes.has(codigo) ? RECONFERIR_QUENTE_MS : RECONFERIR_A_CADA_MS);
+
+  /* As em andamento que não são reabertas há um tempo — atrás da réplica e da avaliação. */
+  const aReconferir = emAndamento.filter(venceu);
 
   /* Novas primeiro: é a que tem prazo correndo. */
   const fila = [
@@ -1841,6 +1854,14 @@ async function umaVolta(motivo) {
   ];
 
   const agoraAbrir = fila.slice(0, ABERTAS_POR_VOLTA);
+
+  /* O rodízio: as quentes antes, e entre iguais a conferida há mais tempo. */
+  const jaNaVolta = new Set(agoraAbrir);
+  const rodizio = [...new Set([...(plano.aguardando?.quentes ?? []), ...(plano.aguardando?.frias ?? [])])]
+    .filter((codigo) => !jaNaVolta.has(codigo) && venceu(codigo))
+    .sort((a, b) => Number(quentes.has(b)) - Number(quentes.has(a)) || (conferidas[a] ?? 0) - (conferidas[b] ?? 0))
+    .slice(0, AGUARDANDO_POR_VOLTA);
+  agoraAbrir.push(...rodizio);
 
   const lidas = [];
   const abertas = new Set();

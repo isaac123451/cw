@@ -51,6 +51,7 @@ import {
   textoDoPortal,
   validarReclamacao,
 } from "../lib/services/raPortal.service";
+import { colunaDaAvaliacao } from "../lib/services/atualizacaoDoPortal";
 
 /* O leitor é JavaScript da extensão; aqui ele ganha o tipo do que devolve. */
 type Lista = {
@@ -296,6 +297,30 @@ function traducao(lida: Lida | null) {
     "Aguardando nossa réplica"
   );
   conferir("avaliada sem resolver", statusPeloPortal(base({ status: "NOT_SOLVED", avaliada: true })), "Não resolvido");
+  /* 22/10: "REPLY" é a que já teve réplica e tréplica — caía em "Novo". */
+  conferir(
+    "status REPLY com réplica nova do consumidor: nossa réplica",
+    statusPeloPortal(base({ status: "REPLY", interacoes: [{ tipo: "ANSWER", em: "", texto: "" }, { tipo: "REPLY", em: "", texto: "" }, { tipo: "COMPANY_REPLY", em: "", texto: "" }, { tipo: "REPLY", em: "", texto: "" }] })),
+    "Aguardando nossa réplica"
+  );
+  conferir(
+    "status REPLY com a tréplica nossa por último: aguardando avaliação",
+    statusPeloPortal(base({ status: "REPLY", interacoes: [{ tipo: "ANSWER", em: "", texto: "" }, { tipo: "REPLY", em: "", texto: "" }, { tipo: "COMPANY_REPLY", em: "", texto: "" }] })),
+    "Aguardando avaliação"
+  );
+  /* 22/10: a avaliação lançada na tela fecha a coluna (RA-5spZ ficou avaliada em "Aguardando avaliação"). */
+  conferir(
+    "avaliada à mão: Resolvido / Não resolvido / sem resolvido não chuta / final e Finalizado ficam",
+    [
+      colunaDaAvaliacao({ status: "Aguardando avaliação", evaluated: true, resolved: true }),
+      colunaDaAvaliacao({ status: "Em tratativa", evaluated: true, resolved: false }),
+      colunaDaAvaliacao({ status: "Aguardando avaliação", evaluated: true, resolved: null }),
+      colunaDaAvaliacao({ status: "Resolvido", evaluated: true, resolved: false }),
+      colunaDaAvaliacao({ status: "Finalizado", evaluated: true, resolved: true }),
+      colunaDaAvaliacao({ status: "Aguardando avaliação", evaluated: false, resolved: true }),
+    ],
+    ["Resolvido", "Não resolvido", null, null, null, null]
+  );
 
   const nova = casoDoPortal(base());
 

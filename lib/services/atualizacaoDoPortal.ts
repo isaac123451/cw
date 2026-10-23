@@ -119,6 +119,27 @@ export const COLUNAS_FINAIS = new Set([
   "Não resolvido",
 ]);
 
+/**
+ * A coluna em que a reclamação avaliada tem de estar, ou `null` quando a
+ * coluna já está certa (22/10/2026).
+ *
+ * A avaliação lançada à mão na tela do caso gravava nota, resolvido e
+ * voltaria e deixava a reclamação em "Aguardando avaliação" — a da
+ * Fernanda (RA-5spZ) ficou assim, e a do Vanderson (RA-50JT) no dia
+ * anterior: "teve cliente que avaliou e não contabilizou". É a mesma regra
+ * do vigia (1.93): a avaliação fecha o caso, de qualquer coluna. Sem o
+ * resolvido não se chuta, e coluna final ou "Finalizado" ficam.
+ */
+export function colunaDaAvaliacao(caso: {
+  status: string;
+  evaluated?: boolean | null;
+  resolved?: boolean | null;
+}): string | null {
+  if (caso.evaluated !== true || typeof caso.resolved !== "boolean") return null;
+  if (COLUNAS_FINAIS.has(caso.status) || caso.status === "Finalizado") return null;
+  return caso.resolved ? "Resolvido" : "Não resolvido";
+}
+
 /** O que o banco tem hoje, nos campos que a regra olha. */
 export interface NoBancoDoPortal {
   status: string;

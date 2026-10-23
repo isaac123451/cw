@@ -1,4 +1,5 @@
 import {
+  colunaDaAvaliacao,
   mudancasDoPortal,
   SELECAO_DO_PORTAL,
 } from "@/lib/services/atualizacaoDoPortal";
@@ -1028,6 +1029,10 @@ export async function persistCase(
     if (carimbo) dados.evaluatedAt = carimbo;
   }
 
+  /* Avaliada não fica em coluna aberta — ver `colunaDaAvaliacao`. */
+  const fechadaPelaAvaliacao = colunaDaAvaliacao({ status: String(dados.status ?? ""), evaluated: dados.evaluated as boolean, resolved: dados.resolved as boolean });
+  if (fechadaPelaAvaliacao) dados.status = fechadaPelaAvaliacao;
+
   /**
    * Aqui **não** passa por `semApagarVinculo`, e isso é o ponto.
    *
@@ -1071,7 +1076,7 @@ export async function persistCase(
     );
   }
 
-  if (STATUS_TERMINADO.includes(item.status)) await fecharTarefasDoCaso(prisma, item.protocol);
+  if (STATUS_TERMINADO.includes(item.status) || fechadaPelaAvaliacao) await fecharTarefasDoCaso(prisma, item.protocol);
 
   return salvo.id;
 }
@@ -1100,7 +1105,7 @@ export async function persistCaseParcial(
   anterior: Case,
   { syncTags = true } = {}
 ): Promise<
-  | { ok: true; alterados: string[] }
+  | { ok: true; alterados: string[]; colunaPelaAvaliacao?: string }
   | { ok: false; conflito: ConflitoDeEdicao }
 > {
 
@@ -1219,6 +1224,17 @@ export async function persistCaseParcial(
     if (carimbo) dados.evaluatedAt = carimbo;
   }
 
+  /* Avaliação lançada aqui fecha a coluna, como a que vem do portal — ver `colunaDaAvaliacao`. */
+  const fechadaPelaAvaliacao =
+    "evaluated" in dados || "resolved" in dados
+      ? colunaDaAvaliacao({
+          status: String(dados.status ?? linha.status),
+          evaluated: (dados.evaluated ?? linha.evaluated) as boolean,
+          resolved: (dados.resolved ?? linha.resolved) as boolean,
+        })
+      : null;
+  if (fechadaPelaAvaliacao) dados.status = fechadaPelaAvaliacao;
+
   if (Object.keys(dados).length > 0 || mexeuEmRelacao) {
     await prisma.case.update({
       where: { protocol: item.protocol },
@@ -1231,9 +1247,11 @@ export async function persistCaseParcial(
     await sincronizarTags(prisma, linha.id, item.tags ?? []);
   }
 
-  if (comparacao.meus.includes("status") && STATUS_TERMINADO.includes(item.status)) await fecharTarefasDoCaso(prisma, item.protocol);
+  if ((comparacao.meus.includes("status") && STATUS_TERMINADO.includes(item.status)) || fechadaPelaAvaliacao) await fecharTarefasDoCaso(prisma, item.protocol);
 
-  return { ok: true, alterados: comparacao.meus };
+  return fechadaPelaAvaliacao
+    ? { ok: true, alterados: [...new Set([...comparacao.meus, "status"])], colunaPelaAvaliacao: fechadaPelaAvaliacao }
+    : { ok: true, alterados: comparacao.meus };
 }
 
 /**
