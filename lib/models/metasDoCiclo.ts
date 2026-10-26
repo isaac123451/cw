@@ -17,7 +17,8 @@ import { semRespostaPublica } from "@/lib/services/case.service";
  *   que ainda esperam resposta.
  * - **Avaliações**: uma a mais que no ciclo anterior inteiro (no mínimo 3).
  * - **Pedidos de avaliação**: os feitos no ciclo mais a fila de hoje.
- * - **Detratores contatados**: todos os detratores que chegaram no ciclo.
+ * - **Detratores contatados**: todos os detratores que chegaram no ciclo; o
+ *   feito conta pela data do 1º contato, tenham respondido quando for.
  * - **Detratores revertidos**: um a mais que no ciclo anterior (no mínimo 1).
  *
  * A pessoa pode trocar qualquer alvo só para este ciclo ou para todos.
@@ -61,7 +62,8 @@ export function metasDoCiclo(entrada: { casos: Case[]; nps: NpsResponseView[]; a
   const pedidosNoCiclo = ra.filter((c) => no(ciclo, c.ultimoPedidoAvaliacaoEm)).length;
   const filaHoje = filaDeAvaliacao(ra, agora).hoje.length;
   const detratoresDoCiclo = entrada.nps.filter((r) => r.score <= 6 && no(ciclo, r.respondedAt));
-  const contatados = detratoresDoCiclo.filter((r) => r.firstContactAt).length;
+  /* Pela data do contato (26/10/2026): o detrator de setembro contatado em outubro conta em outubro. */
+  const contatados = entrada.nps.filter((r) => r.score <= 6 && no(ciclo, r.firstContactAt)).length;
   const revertido = (c: Ciclo) => entrada.nps.filter((r) => r.score <= 6 && no(c, r.postContactAt) && (r.resolvedAfter === true || (r.moodAfter ?? 0) >= 4)).length;
 
   /* No ciclo, o padrão da pessoa vale como veio — não há "o que existe para fazer" para limitar. */

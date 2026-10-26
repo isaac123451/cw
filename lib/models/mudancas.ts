@@ -53,6 +53,16 @@ export const REVISAO = {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- passe a limpo (21/10) ---------------- */
   {
+    id: "nps-contatados-pela-data-do-contato",
+    dia: "2026-10-26",
+    tipo: "correcao",
+    frente: "plataforma",
+    titulo: "NPS: detratores contatados contam pela data do contato",
+    texto:
+      "\"Os contatados são independentes do mês, o importante é a data que foi realizado o contato.\" Antes, \"Detratores contatados\" e \"Detratores que responderam\" olhavam só quem respondeu a pesquisa no período — o detrator de setembro contatado em outubro não aparecia em outubro. Agora contam pelo dia do 1º contato e pelo dia da resposta, tenham respondido a pesquisa quando for. Vale na Análise do NPS, no relatório do ciclo e no feito da meta. Embaixo do número continua o SLA: dos detratores que chegaram no período, quantos já têm contato. Em outubro: 42 detratores contatados, 8 responderam.",
+    href: "/nps/analise",
+  },
+  {
     id: "detratores-que-responderam",
     dia: "2026-10-26",
     tipo: "novo",

@@ -199,10 +199,17 @@ export default function NpsAnalisePage() {
     A tabela de indicadores do guia, sobre o mesmo recorte. Ela mede o
     ciclo (contatar, reverter, aproveitar o promotor), e não a nota.
   */
-  const guia = useMemo(
-    () => indicadoresDoGuia(noPeriodo),
-    [noPeriodo]
-  );
+  const guia = useMemo(() => {
+    /* Contatados e respostas pela data do contato, sobre a base inteira (26/10/2026). */
+    const limite = new Date();
+    limite.setMonth(limite.getMonth() - meses);
+    const dentro = (iso: string | undefined) =>
+      Boolean(iso) &&
+      (personalizado
+        ? diaNoIntervalo(diaNaOperacao(iso!), intervalo)
+        : meses === 0 || Date.parse(iso!) >= limite.getTime());
+    return indicadoresDoGuia(noPeriodo, { todos: responses, dentro });
+  }, [noPeriodo, responses, meses, personalizado, intervalo]);
 
   /**
    * Quantas trouxeram texto.
@@ -361,16 +368,16 @@ export default function NpsAnalisePage() {
 
                 <StatTile
                   label="Detratores contatados"
-                  description="Detratores com primeiro contato registrado — tentativa ou conversa. É o SLA de 24h úteis do segmento, visto pelo resultado."
-                  value={guia.percentualContatados === null ? "—" : `${guia.percentualContatados}%`}
-                  hint={`${guia.detratoresContatados} de ${guia.detratores} ${pluralDe(guia.detratores, "detrator", "detratores")}`}
+                  description="Detratores com o 1º contato feito dentro do período — tentativa ou conversa —, tenham respondido a pesquisa quando for. Embaixo, o SLA: dos detratores que chegaram no período, quantos já têm contato."
+                  value={String(guia.detratoresContatados)}
+                  hint={guia.percentualContatados === null ? "nenhum detrator chegou no período" : `${guia.percentualContatados}% dos que chegaram no período já têm contato`}
                   icon={PhoneCall}
                   tone="danger"
                 />
 
                 <StatTile
                   label="Detratores que responderam"
-                  description="Dos detratores contatados, quantos responderam ao nosso contato: tentativa marcada como respondida (à mão ou pela IA, lendo a conversa do WhatsApp), &quot;Falei com o cliente&quot; registrado ou encerramento com retorno."
+                  description="Dos detratores contatados no período, quantos responderam ao nosso contato — pela data da resposta: tentativa marcada como respondida (à mão ou pela IA, lendo a conversa do WhatsApp), &quot;Falei com o cliente&quot; registrado ou encerramento com retorno."
                   value={guia.percentualResponderam === null ? "—" : `${guia.percentualResponderam}%`}
                   hint={`${guia.detratoresResponderam} de ${guia.detratoresContatados} ${pluralDe(guia.detratoresContatados, "contatado", "contatados")}`}
                   icon={MessageCircleReply}

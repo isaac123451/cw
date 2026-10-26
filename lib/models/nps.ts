@@ -277,6 +277,29 @@ export function clienteRespondeu(item: {
 }
 
 /**
+ * Quando o cliente respondeu ao nosso contato: a primeira tentativa marcada
+ * "respondeu", senão o "Falei com o cliente", senão o encerramento com
+ * retorno. `undefined` quando não respondeu. É a data que põe a resposta
+ * num período — não a da pesquisa (26/10/2026: "o importante é a data que
+ * foi realizado o contato").
+ */
+export function quandoRespondeu(item: {
+  status: string;
+  postContactAt?: string | null;
+  closedAt?: string | null;
+  attempts?: { resultado?: string | null; createdAt: string }[];
+}): string | undefined {
+  const tentativa = (item.attempts ?? [])
+    .filter((a) => a.resultado === "respondeu")
+    .map((a) => a.createdAt)
+    .sort()[0];
+  if (tentativa) return tentativa;
+  if (item.postContactAt) return item.postContactAt;
+  if (isEncerrado(item.status) && !/sem retorno|sem tratativa/i.test(item.status)) return item.closedAt ?? undefined;
+  return undefined;
+}
+
+/**
  * As tentativas que a conversa mostra respondidas: as que estavam esperando
  * (ou já "sem retorno") e têm mensagem do cliente depois delas. Usado pela
  * IA do dia, que lê a conversa guardada do WhatsApp.

@@ -89,6 +89,9 @@ export interface DadosDoRelatorio {
     promotores: number;
     detratores: number;
     percentualContatados: number | null;
+    /** Detratores com o 1º contato feito no ciclo e os que responderam nele — pela data do contato. */
+    contatadosNoCiclo: number;
+    responderamNoCiclo: number;
     humorMedioDoDetrator: number | null;
     /** Encerrados com tratativa no ciclo — sem o lote "sem tratativa" e sem a regra dos 30 dias. */
     fechadosNoCiclo: number;
@@ -235,7 +238,8 @@ export function montarRelatorio(entrada: {
   /* ---- NPS: as respostas que chegaram no ciclo ---- */
   const npsDoCiclo = nps.filter((r) => noIntervalo(r.respondedAt, inicio, ateDia));
   const resumoNps = summarize(npsDoCiclo);
-  const guia = indicadoresDoGuia(npsDoCiclo);
+  /* Contatados pela data do contato, sobre a base inteira (26/10/2026). */
+  const guia = indicadoresDoGuia(npsDoCiclo, { todos: nps, dentro: (d) => noIntervalo(d, inicio, ateDia) });
   const abertosForaDoPrazo = nps.filter((r) => !isEncerrado(r.status) && !r.firstContactAt && Date.parse(r.firstContactDueAt) < Date.now()).length;
 
   /* ---- Redes: os atendimentos que entraram no ciclo ---- */
@@ -279,6 +283,8 @@ export function montarRelatorio(entrada: {
       promotores: resumoNps.promotores,
       detratores: resumoNps.detratores,
       percentualContatados: guia.percentualContatados,
+      contatadosNoCiclo: guia.detratoresContatados,
+      responderamNoCiclo: guia.detratoresResponderam,
       humorMedioDoDetrator: guia.humorMedioDoDetrator,
       /*
         Separados (1.93): a rotina da madrugada encerra como "Sem Retorno" a
@@ -427,7 +433,7 @@ export function textoDoRelatorio(d: DadosDoRelatorio, analise?: string) {
         ]
       : []),
     `*No ciclo:* ${d.ra.noCiclo.entrantes} ${pluralDe(d.ra.noCiclo.entrantes, "reclamação", "reclamações")} ${pluralDe(d.ra.noCiclo.entrantes, "nova", "novas")} · ${d.ra.noCiclo.respondidas} ${pluralDe(d.ra.noCiclo.respondidas, "respondida", "respondidas")} · ${d.ra.noCiclo.avaliadas} ${pluralDe(d.ra.noCiclo.avaliadas, "avaliada", "avaliadas")}, ${d.ra.noCiclo.resolvidas} ${pluralDe(d.ra.noCiclo.resolvidas, "resolvida", "resolvidas")}. Em aberto sem resposta: ${d.ra.abertas.semResposta}.`,
-    `*NPS do ciclo:* ${d.nps.respostas} ${pluralDe(d.nps.respostas, "resposta", "respostas")}${d.nps.nps !== null ? ` · NPS ${d.nps.nps}` : ""} · ${d.nps.detratores} ${pluralDe(d.nps.detratores, "detrator", "detratores")}${d.nps.percentualContatados !== null ? `, ${d.nps.percentualContatados}% contatados` : ""}${d.nps.humorMedioDoDetrator !== null ? ` · humor do detrator depois do contato ${ptBR(d.nps.humorMedioDoDetrator)}/5` : ""} · ${d.nps.fechadosNoCiclo} ${pluralDe(d.nps.fechadosNoCiclo, "encerrada", "encerradas")} com tratativa${d.nps.fechadosPelaRegra ? `, ${d.nps.fechadosPelaRegra} pela regra dos 30 dias` : ""}.`,
+    `*NPS do ciclo:* ${d.nps.respostas} ${pluralDe(d.nps.respostas, "resposta", "respostas")}${d.nps.nps !== null ? ` · NPS ${d.nps.nps}` : ""} · ${d.nps.detratores} ${pluralDe(d.nps.detratores, "detrator", "detratores")}${d.nps.percentualContatados !== null ? `, ${d.nps.percentualContatados}% contatados` : ""} · ${d.nps.contatadosNoCiclo} ${pluralDe(d.nps.contatadosNoCiclo, "detrator contatado", "detratores contatados")} no ciclo, ${d.nps.responderamNoCiclo} ${pluralDe(d.nps.responderamNoCiclo, "respondeu", "responderam")}${d.nps.humorMedioDoDetrator !== null ? ` · humor do detrator depois do contato ${ptBR(d.nps.humorMedioDoDetrator)}/5` : ""} · ${d.nps.fechadosNoCiclo} ${pluralDe(d.nps.fechadosNoCiclo, "encerrada", "encerradas")} com tratativa${d.nps.fechadosPelaRegra ? `, ${d.nps.fechadosPelaRegra} pela regra dos 30 dias` : ""}.`,
     `*1º contato no ciclo:* Reclame Aqui ${descreverIndicadorDoPrimeiroContato(d.primeiroContato.ra, (m) => descreverMinutosUteis(m))} · redes ${descreverIndicadorDoPrimeiroContato(d.primeiroContato.redes, (m) => descreverMinutosUteis(m))} · NPS ${descreverIndicadorDoPrimeiroContato(d.primeiroContato.nps, (m) => descreverMinutosUteis(m))}.`,
     `*Redes sociais:* ${d.redes.entrantes} ${pluralDe(d.redes.entrantes, "atendimento", "atendimentos")} · ${d.redes.resolvidos} ${pluralDe(d.redes.resolvidos, "resolvido", "resolvidos")} · ${d.redes.abertos} em aberto.`,
     `*Google:* ${d.google.total} ${pluralDe(d.google.total, "avaliação", "avaliações")}${d.google.notaMedia !== null ? ` · nota média ${ptBR(d.google.notaMedia)}` : ""}${d.google.percentualRespondidas !== null ? ` · ${d.google.percentualRespondidas}% respondidas` : ""}.`,

@@ -61,5 +61,19 @@ conferir(
   [4, 3, 2, 67]
 );
 
+/* 26/10: "os contatados são independentes do mês, o importante é a data que foi realizado o contato". */
+const setembroContatadoEmOutubro = nps(3, { respondedAt: "2026-09-25", firstContactAt: "2026-10-02T13:00:00Z", attempts: [{ id: "9", channel: "WhatsApp", note: "", actor: "", createdAt: "2026-10-03T13:00:00Z", resultado: "respondeu" }] });
+const outubroSemContato = nps(5, { respondedAt: "2026-10-05" });
+const outubroContatadoEmSetembro = nps(1, { respondedAt: "2026-09-29", firstContactAt: "2026-09-30T13:00:00Z" });
+const todos = [setembroContatadoEmOutubro, outubroSemContato, outubroContatadoEmSetembro];
+const emOutubro = (iso: string | undefined) => Boolean(iso) && iso! >= "2026-10-01" && iso! < "2026-11-01";
+const outubro = indicadoresDoGuia([outubroSemContato], { todos, dentro: emOutubro });
+conferir(
+  "outubro: o de setembro contatado em outubro conta; o contatado em setembro não",
+  [outubro.detratoresContatados, outubro.detratoresResponderam, outubro.percentualResponderam],
+  [1, 1, 100]
+);
+conferir("o SLA continua sobre quem chegou no mês: 0% dos de outubro com contato", outubro.percentualContatados, 0);
+
 console.log(falhas ? `\n  ${falhas} ponto(s) a corrigir.\n` : "\n  Respondeu é quem falou com a gente — marcado à mão, pela IA lendo o WhatsApp ou no encerramento.\n");
 if (falhas) process.exitCode = 1;

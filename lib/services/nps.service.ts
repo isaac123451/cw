@@ -1,6 +1,7 @@
 import {
   ABANDONO_DIAS,
   clienteRespondeu,
+  quandoRespondeu,
   isEncerrado,
   JANELA_TENTATIVAS_DIAS,
   MOODS,
@@ -685,19 +686,37 @@ export interface IndicadoresDoGuia {
  * motivo de `recuperacao`. Indicações e avaliações no Google são o que
  * **voltou** das ações do promotor, e não o que foi pedido.
  */
-export function indicadoresDoGuia(itens: NpsResponseView[]): IndicadoresDoGuia {
+export function indicadoresDoGuia(
+  itens: NpsResponseView[],
+  /**
+   * Contatos pela data em que foram feitos (26/10/2026: "os contatados são
+   * independentes do mês, o importante é a data que foi realizado o
+   * contato"). Com a base inteira e o período, "contatados" são os
+   * detratores com o 1º contato dentro do período — tenham respondido a
+   * pesquisa quando for — e "responderam", os que deram retorno nele.
+   * Sem isto, conta sobre `itens` (quem respondeu a pesquisa no período).
+   */
+  porDataDoContato?: { todos: NpsResponseView[]; dentro: (iso: string | undefined) => boolean }
+): IndicadoresDoGuia {
 
   const detratores = itens.filter((i) => segmentOf(i.score).label === "Detrator");
   const promotores = itens.filter((i) => segmentOf(i.score).label === "Promotor");
 
-  const contatados = detratores.filter((i) => i.firstContactAt).length;
-  const responderam = detratores.filter(clienteRespondeu).length;
+  const todosOsDetratores = porDataDoContato?.todos.filter((i) => segmentOf(i.score).label === "Detrator");
+  const contatados = todosOsDetratores
+    ? todosOsDetratores.filter((i) => porDataDoContato!.dentro(i.firstContactAt)).length
+    : detratores.filter((i) => i.firstContactAt).length;
+  const responderam = todosOsDetratores
+    ? todosOsDetratores.filter((i) => porDataDoContato!.dentro(quandoRespondeu(i))).length
+    : detratores.filter(clienteRespondeu).length;
+  /* O SLA continua sobre quem chegou no período: desses, quantos já têm contato. */
+  const chegaramComContato = detratores.filter((i) => i.firstContactAt).length;
   const comHumor = detratores.filter((i) => typeof i.moodAfter === "number");
 
   return {
     detratores: detratores.length,
     detratoresContatados: contatados,
-    percentualContatados: detratores.length ? Math.round((contatados / detratores.length) * 100) : null,
+    percentualContatados: detratores.length ? Math.round((chegaramComContato / detratores.length) * 100) : null,
     detratoresResponderam: responderam,
     percentualResponderam: contatados ? Math.round((responderam / contatados) * 100) : null,
     detratoresComHumor: comHumor.length,
