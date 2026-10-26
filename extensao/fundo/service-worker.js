@@ -58,6 +58,7 @@ const CAMINHOS = {
   whatsapp: "/api/extensao/whatsapp",
   respostas: "/api/extensao/respostas",
   raNovas: "/api/extensao/ra-novas",
+  npsTelefones: "/api/extensao/nps-telefones",
   raVigia: "/api/extensao/ra-vigia",
   completar: "/api/extensao/completar",
   capturaRedes: "/api/extensao/captura-redes",
@@ -620,6 +621,21 @@ async function tratar(mensagem) {
       { codigos: mensagem.codigos ?? [] }
     );
 
+    return { ok: true, dados };
+  }
+
+  /*
+    O telefone do NPS pelo portal da Cardápio Web (26/10/2026): o script da
+    aba do portal pergunta quais estabelecimentos buscar e manda o que leu.
+    O token do portal fica na aba — aqui só passa o resultado.
+  */
+  if (mensagem?.tipo === "npsTelefones") {
+    return { ok: true, dados: await chamar(CAMINHOS.npsTelefones) };
+  }
+
+  if (mensagem?.tipo === "npsTelefonesGravar") {
+    const dados = await chamar(CAMINHOS.npsTelefones, {}, { lidos: Array.isArray(mensagem.lidos) ? mensagem.lidos.slice(0, 60) : [] });
+    await chrome.storage.local.set({ telefonesNps: { em: Date.now(), ...dados } });
     return { ok: true, dados };
   }
 

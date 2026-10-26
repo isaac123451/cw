@@ -53,6 +53,16 @@ export const REVISAO = {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- passe a limpo (21/10) ---------------- */
   {
+    id: "telefone-do-nps-pelo-portal",
+    dia: "2026-10-26",
+    tipo: "novo",
+    frente: "extensao",
+    titulo: "O NPS ganha o telefone sozinho, pelo portal da Cardápio Web",
+    texto:
+      "O Wootric não manda telefone nem nome — só o id do estabelecimento. Com uma aba do portal da Cardápio Web aberta no Chrome (não precisa estar na frente), a extensão busca a cada 30 minutos os NPS sem telefone, detratores e neutros em aberto primeiro: acha o estabelecimento pelo id, chega ao dono e traz o telefone. Junto vêm o nome da loja e, quando o e-mail de quem respondeu é o do dono, o nome da pessoa no lugar do pedaço do e-mail. Quando quem respondeu tem outro e-mail, o telefone entra marcado como \"do dono\". O que foi digitado à mão não é trocado. A sessão do portal não sai do seu navegador. Com o telefone, o NPS também passa a ser achado pela conversa do WhatsApp. E o botão \"Próximo passo\" não sai mais pela borda da tela quando minimizado.",
+    href: "/nps",
+  },
+  {
     id: "vigia-confere-avaliacoes",
     dia: "2026-10-22",
     tipo: "correcao",

@@ -1460,6 +1460,16 @@ model NpsResponse {
   /// o cadastro carregar esse id.
   externalCompanyId String?
 
+  /// De onde veio o telefone, quando não foi digitado (26/10/2026): "portal"
+  /// (o dono do estabelecimento no portal da Cardápio Web, mesmo e-mail de
+  /// quem respondeu) ou "portal-dono" (o e-mail é de outra pessoa — o
+  /// telefone é do dono). O Wootric não manda telefone.
+  phoneOrigem String?
+
+  /// Quando a extensão conferiu este estabelecimento no portal. Evita
+  /// perguntar de novo, toda volta, pelo que o portal não tem.
+  portalConferidoEm DateTime?
+
   /// ============================================================
   /// PÓS-CONTATO
   ///

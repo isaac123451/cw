@@ -107,7 +107,7 @@ function Cartao() {
   /* Arrastar: a posição acompanha o ponteiro e fica guardada ao soltar. */
   const [arrasto, setArrasto] = useState<{ direita: number; baixo: number } | null>(null);
   const inicio = useRef<{ x: number; y: number; direita: number; baixo: number } | null>(null);
-  const atual = arrasto ?? posicao;
+  const guardada = arrasto ?? posicao;
 
   /* O lembrete de foco. */
   const [lembrando, setLembrando] = useState(false);
@@ -137,6 +137,17 @@ function Cartao() {
   if (carregando || !item) return null;
 
   const visivel = aberto || lembrando;
+
+  /*
+    Sempre inteiro na tela (26/10/2026): a posição guardada com o cartão aberto
+    (300 px) jogava a pílula minimizada para fora da borda — "Próximo passo · 61"
+    cortado no canto. O limite é a largura de quem está à vista agora.
+  */
+  const largura = visivel ? 300 : 150;
+  const atual = {
+    direita: Math.min(Math.max(guardada.direita, 4), Math.max(4, (typeof window === "undefined" ? 1280 : window.innerWidth) - largura - 4)),
+    baixo: Math.min(Math.max(guardada.baixo, 4), Math.max(4, (typeof window === "undefined" ? 800 : window.innerHeight) - 48)),
+  };
   const urgente = item.atrasado || item.critico;
 
   const segurar = (e: React.PointerEvent<HTMLElement>) => {
@@ -148,8 +159,8 @@ function Cartao() {
     const i = inicio.current;
     if (!i) return;
     setArrasto({
-      direita: Math.min(Math.max(i.direita - (e.clientX - i.x), 4), window.innerWidth - 120),
-      baixo: Math.min(Math.max(i.baixo - (e.clientY - i.y), 4), window.innerHeight - 60),
+      direita: Math.min(Math.max(i.direita - (e.clientX - i.x), 4), window.innerWidth - largura - 4),
+      baixo: Math.min(Math.max(i.baixo - (e.clientY - i.y), 4), window.innerHeight - 48),
     });
   };
   const soltar = () => {
