@@ -1,6 +1,6 @@
 {
   "name": "cw-reputacao",
-  "version": "1.1.21",
+  "version": "1.1.22",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -203,7 +203,8 @@
     "check:cartao-whatsapp": "tsx scripts/check-cartao-whatsapp.ts",
     "check:avaliacao-fecha-coluna": "tsx --conditions=react-server scripts/check-avaliacao-fecha-coluna.ts",
     "check:telefones-portal": "tsx --conditions=react-server scripts/check-telefones-portal.ts",
-    "check:nps-respondeu": "tsx --conditions=react-server scripts/check-nps-respondeu.ts"
+    "check:nps-respondeu": "tsx --conditions=react-server scripts/check-nps-respondeu.ts",
+    "check:conversas-frentes": "tsx --conditions=react-server scripts/check-conversas-frentes.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",

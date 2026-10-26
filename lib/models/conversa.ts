@@ -110,6 +110,8 @@ export interface ConversaResumo {
   id: string;
   contatoNome: string;
   telefone?: string;
+  /** O nosso WhatsApp em que a conversa aconteceu — só dígitos (26/10/2026). */
+  numeroNosso?: string;
   mensagens: number;
   ultimaEm?: string;
   ultimoTexto?: string;
@@ -122,6 +124,41 @@ export interface ConversaResumo {
   guardadaPor: string;
   atualizadoEm: string;
 }
+
+/* ============================================================
+   AS FRENTES (26/10/2026)
+============================================================ */
+
+/**
+ * "Faça uma divisão do WhatsApp do NPS/Redes Sociais e Reclame Aqui na aba de
+ * conversas." O vínculo decide primeiro (ligada ao NPS é NPS; ao caso, a
+ * frente do caso); sem vínculo, a do número do Reclame Aqui é Reclame Aqui.
+ * A do número do NPS/Redes sem vínculo fica em "Sem vínculo": pode ser de um
+ * ou de outro, e é ali que falta ligar.
+ */
+export type FrenteDaConversa = "reclame-aqui" | "nps" | "redes" | "sem-vinculo";
+
+export interface NumerosDasFrentes {
+  reclameAqui?: string;
+  npsRedes?: string;
+}
+
+export function frenteDaConversa(
+  c: Pick<ConversaResumo, "nps" | "caso" | "numeroNosso">,
+  numeros: NumerosDasFrentes
+): FrenteDaConversa {
+  if (c.nps) return "nps";
+  if (c.caso) return c.caso.frente === "Reclame Aqui" ? "reclame-aqui" : "redes";
+  if (c.numeroNosso && numeros.reclameAqui && c.numeroNosso === numeros.reclameAqui) return "reclame-aqui";
+  return "sem-vinculo";
+}
+
+export const ROTULO_DA_FRENTE: Record<FrenteDaConversa, string> = {
+  "reclame-aqui": "Reclame Aqui",
+  nps: "NPS",
+  redes: "Redes Sociais",
+  "sem-vinculo": "Sem vínculo",
+};
 
 export interface ConversaView extends ConversaResumo {
   nosNome?: string;

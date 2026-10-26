@@ -1304,6 +1304,8 @@
         tipo: "guardarConversa",
         corpo: {
           contato: { nome: P.consulta?.nome, telefone: P.consulta?.telefone },
+          /* O número em que estamos logados (26/10/2026): separa a conversa do WhatsApp do Reclame Aqui da do NPS/Redes. */
+          numeroNosso: CW.numeroDaConta?.() || undefined,
           mensagens: [
             ...novas.map((m) => ({ id: m.id, de: m.de, texto: m.texto, carimbo: m.carimbo, autor: m.autor })),
             ...transcritas,
@@ -2855,6 +2857,8 @@
       tipo: "guardarConversa",
       corpo: {
         contato: { nome: P.consulta?.nome, telefone: P.consulta?.telefone },
+          /* O número em que estamos logados (26/10/2026): separa a conversa do WhatsApp do Reclame Aqui da do NPS/Redes. */
+          numeroNosso: CW.numeroDaConta?.() || undefined,
         mensagens: mensagens.map((m) => ({ id: m.id, de: m.de, texto: m.texto, carimbo: m.carimbo, autor: m.autor })),
         protocolo: casos.length === 1 ? casos[0].protocolo : undefined,
       },

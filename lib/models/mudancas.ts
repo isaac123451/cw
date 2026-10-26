@@ -53,6 +53,15 @@ export const REVISAO = {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- passe a limpo (21/10) ---------------- */
   {
+    id: "conversas-por-frente",
+    dia: "2026-10-26",
+    tipo: "novo",
+    frente: "plataforma",
+    titulo: "Conversas divididas por frente: Reclame Aqui, NPS e Redes Sociais",
+    texto: "A tela de conversas ganhou as abas RA, NPS, Redes e Sem vínculo, com a contagem de cada uma. A extensão agora sabe em qual WhatsApp você está logado e guarda o número em cada conversa: o mesmo cliente no WhatsApp do Reclame Aqui e no do NPS e Redes vira duas conversas, em vez de misturar as mensagens numa só. A conversa ligada ao NPS fica no NPS; ligada a caso, na frente do caso; sem vínculo, a do número do Reclame Aqui vai para RA e a do NPS e Redes fica em \"Sem vínculo\", para ligar. Em cima da lista, uma linha diz qual número é de qual frente (\"definir\" na primeira vez). Com o telefone do NPS vindo do portal, a conversa do detrator se liga ao NPS sozinha — e a IA marca quando ele responde.",
+    href: "/conversas"
+  },
+  {
     id: "nps-contatados-pela-data-do-contato",
     dia: "2026-10-26",
     tipo: "correcao",

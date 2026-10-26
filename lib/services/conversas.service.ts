@@ -40,13 +40,19 @@ export function somenteDigitosDoTelefone(valor?: string | null) {
 }
 
 /** As conversas que podem ser a mesma: pelo telefone (8 últimos dígitos) ou pelo nome do contato. */
-export async function candidatas(prisma: Db, telefone: string | null, contatoNome: string) {
+export async function candidatas(prisma: Db, telefone: string | null, contatoNome: string, numeroNosso?: string | null) {
   const ou: object[] = [];
   if (telefone) ou.push({ telefone: { endsWith: telefone.slice(-8) } });
   if (contatoNome.trim()) ou.push({ contatoNome: { equals: contatoNome.trim(), mode: "insensitive" } });
   if (ou.length === 0) return [];
+  /*
+    O mesmo cliente nos dois WhatsApps (26/10/2026) são duas conversas: a do
+    número do Reclame Aqui e a do NPS/Redes. A conversa antiga, sem número,
+    ainda serve — ganha o número na primeira gravação.
+  */
+  const doNumero = numeroNosso ? { OR: [{ numeroNosso }, { numeroNosso: null }] } : {};
   return prisma.conversa.findMany({
-    where: { OR: ou },
+    where: { AND: [{ OR: ou }, doNumero] },
     orderBy: { atualizadoEm: "desc" },
     take: 5,
     select: { id: true, contatoNome: true, telefone: true, _count: { select: { mensagens: true } } },
@@ -67,6 +73,7 @@ export async function gravarMensagens(
     telefone?: string | null;
     contatoNome: string;
     nosNome?: string | null;
+    numeroNosso?: string | null;
     origem: "extensao" | "arquivo";
     mensagens: MensagemRecebida[];
     vinculo?: { caseId?: string | null; npsResponseId?: string | null; establishmentId?: string | null };
@@ -99,6 +106,7 @@ export async function gravarMensagens(
           telefone,
           contatoNome: nomeDeContatoValido(entrada.contatoNome).slice(0, 120),
           nosNome: entrada.nosNome?.slice(0, 120) ?? null,
+          numeroNosso: entrada.numeroNosso || null,
           guardadaPor: entrada.autor,
           caseId: entrada.vinculo?.caseId ?? null,
           npsResponseId: entrada.vinculo?.npsResponseId ?? null,
@@ -108,7 +116,7 @@ export async function gravarMensagens(
       });
       id = criada.id;
     } else {
-      const existe = await tx.conversa.findUnique({ where: { id }, select: { id: true, telefone: true, contatoNome: true, caseId: true, npsResponseId: true, establishmentId: true } });
+      const existe = await tx.conversa.findUnique({ where: { id }, select: { id: true, telefone: true, contatoNome: true, caseId: true, npsResponseId: true, establishmentId: true, numeroNosso: true } });
       if (!existe) throw new Error("CONVERSA_SUMIU");
       /* O que a conversa ainda não tinha, a gravação completa; o que já tinha, fica. */
       await tx.conversa.update({
@@ -120,6 +128,7 @@ export async function gravarMensagens(
             ? { contatoNome: nomeDeContatoValido(entrada.contatoNome).slice(0, 120) }
             : {}),
           ...(entrada.nosNome ? { nosNome: entrada.nosNome.slice(0, 120) } : {}),
+          ...(!existe.numeroNosso && entrada.numeroNosso ? { numeroNosso: entrada.numeroNosso } : {}),
           ...(existe.caseId || !entrada.vinculo?.caseId ? {} : { caseId: entrada.vinculo.caseId }),
           ...(existe.npsResponseId || !entrada.vinculo?.npsResponseId ? {} : { npsResponseId: entrada.vinculo.npsResponseId }),
           ...(existe.establishmentId || !entrada.vinculo?.establishmentId ? {} : { establishmentId: entrada.vinculo.establishmentId }),
@@ -257,6 +266,7 @@ type LinhaDaConversa = {
   contatoNome: string;
   telefone: string | null;
   nosNome: string | null;
+  numeroNosso?: string | null;
   resumo: string | null;
   resumoEm: Date | null;
   resumoPor: string | null;
@@ -276,6 +286,7 @@ function resumoDe(c: LinhaDaConversa, total: number, ultima?: { em: Date | null;
       (c.npsResponse ? c.npsResponse.customerName || c.npsResponse.customer : "") ||
       (c.telefone ? telefoneLegivel(c.telefone) : "Contato sem nome"),
     telefone: c.telefone ?? undefined,
+    numeroNosso: c.numeroNosso ?? undefined,
     mensagens: total,
     ultimaEm: ultima?.em?.toISOString(),
     ultimoTexto: ultima?.texto.slice(0, 140),

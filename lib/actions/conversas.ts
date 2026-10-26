@@ -34,6 +34,7 @@ import {
   type ConversaResumo,
   type ConversaView,
   type MensagemRecebida,
+  type NumerosDasFrentes,
 } from "@/lib/models/conversa";
 import { hojeNaOperacao } from "@/lib/services/reputation.service";
 
@@ -60,15 +61,50 @@ async function nomeDe(ctx: { prisma: NonNullable<Awaited<ReturnType<typeof tryRo
   return u?.name ?? "Operação";
 }
 
-export async function listarConversas(termo = ""): Promise<{ ok: true; conversas: ConversaResumo[] } | Falha> {
+export async function listarConversas(termo = ""): Promise<{ ok: true; conversas: ConversaResumo[]; numeros: NumerosDasFrentes; numerosVistos: string[] } | Falha> {
   const ctx = await tryRole("LEITURA", "conversas");
   if (!ctx) return { ok: false, erro: "Sem sessão ou sem acesso às conversas." };
   try {
-    return { ok: true, conversas: await listar(ctx.prisma, termo.slice(0, 120)) };
+    const [conversas, config, vistos] = await Promise.all([
+      listar(ctx.prisma, termo.slice(0, 120)),
+      ctx.prisma.operacaoConfig.findUnique({ where: { id: "unico" }, select: { whatsappReclameAqui: true, whatsappNpsRedes: true } }),
+      ctx.prisma.conversa.groupBy({ by: ["numeroNosso"], where: { numeroNosso: { not: null } }, _count: true }),
+    ]);
+    return {
+      ok: true,
+      conversas,
+      numeros: { reclameAqui: config?.whatsappReclameAqui ?? undefined, npsRedes: config?.whatsappNpsRedes ?? undefined },
+      numerosVistos: vistos.sort((a, b) => b._count - a._count).map((v) => v.numeroNosso!).filter(Boolean),
+    };
   } catch (erro) {
     console.error("[conversas] listar", erro);
     return { ok: false, erro: "O banco não respondeu agora. Se o servidor acabou de ser atualizado, reinicie o npm run dev." };
   }
+}
+
+/**
+ * Qual dos nossos WhatsApps é de qual frente (26/10/2026). Só dígitos; vazio
+ * desfaz. O mesmo número não pode ser das duas.
+ */
+export async function salvarNumerosDasFrentes(entrada: NumerosDasFrentes): Promise<{ ok: true } | Falha> {
+  const quem = await agente();
+  if ("erro" in quem) return { ok: false, erro: quem.erro! };
+  const limpo = (v?: string) => (v ?? "").replace(/\D/g, "");
+  const reclameAqui = limpo(entrada.reclameAqui);
+  const npsRedes = limpo(entrada.npsRedes);
+  for (const n of [reclameAqui, npsRedes]) if (n && !/^\d{10,15}$/.test(n)) return { ok: false, erro: "O número precisa ter DDD e de 10 a 15 dígitos." };
+  if (reclameAqui && reclameAqui === npsRedes) return { ok: false, erro: "O mesmo número não pode ser das duas frentes." };
+  try {
+    await quem.ctx.prisma.operacaoConfig.upsert({
+      where: { id: "unico" },
+      create: { id: "unico", whatsappReclameAqui: reclameAqui || null, whatsappNpsRedes: npsRedes || null, updatedBy: quem.ctx.userId },
+      update: { whatsappReclameAqui: reclameAqui || null, whatsappNpsRedes: npsRedes || null, updatedBy: quem.ctx.userId },
+    });
+  } catch (erro) {
+    console.error("[conversas] numeros", erro);
+    return { ok: false, erro: "O banco não aceitou a gravação agora. Tente de novo em instantes." };
+  }
+  return { ok: true };
 }
 
 export async function lerConversa(id: string): Promise<{ ok: true; conversa: ConversaView } | Falha> {

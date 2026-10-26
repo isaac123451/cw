@@ -28,10 +28,20 @@ import {
   listarConversas,
   resumirConversa,
   salvarResumo,
+  salvarNumerosDasFrentes,
   sugestoesDeVinculo,
   vincularConversa,
 } from "@/lib/actions/conversas";
-import { ladosDaConversa, retratoDaConversa, type ConversaResumo, type ConversaView } from "@/lib/models/conversa";
+import {
+  frenteDaConversa,
+  ladosDaConversa,
+  retratoDaConversa,
+  ROTULO_DA_FRENTE,
+  type ConversaResumo,
+  type ConversaView,
+  type FrenteDaConversa,
+  type NumerosDasFrentes,
+} from "@/lib/models/conversa";
 import { descreverMinutosUteis, descreverRegistro } from "@/lib/services/horasUteis";
 import { pluralDe } from "@/lib/plural";
 import { telefoneLegivel } from "@/lib/models/telefone";
@@ -44,7 +54,6 @@ import { telefoneLegivel } from "@/lib/models/telefone";
 const FILTROS = [
   { chave: "todas", rotulo: "Todas", passa: () => true },
   { chave: "esperando", rotulo: "Esperando a gente", passa: (c: ConversaResumo) => c.ultimaDe === "cliente" },
-  { chave: "sem-vinculo", rotulo: "Sem vínculo", passa: (c: ConversaResumo) => !c.caso && !c.nps && !c.estabelecimento },
   { chave: "sem-resumo", rotulo: "Sem resumo", passa: (c: ConversaResumo) => !c.temResumo },
 ] as const;
 
@@ -74,6 +83,10 @@ export default function Conversas() {
   const [importando, setImportando] = useState(false);
   const [excluindo, setExcluindo] = useState(false);
   const [filtro, setFiltro] = useState<ChaveDoFiltro>("todas");
+  /* As frentes (26/10/2026): o WhatsApp do Reclame Aqui é um número; o do NPS e Redes, outro. */
+  const [frente, setFrente] = useState<FrenteDaConversa | "todas">("todas");
+  const [numeros, setNumeros] = useState<NumerosDasFrentes>({});
+  const [numerosVistos, setNumerosVistos] = useState<string[]>([]);
   const versao = useRef(0);
 
   const id = params.get("id");
@@ -87,6 +100,8 @@ export default function Conversas() {
           if (minha !== versao.current) return;
           if (r.ok) {
             setLista(r.conversas);
+            setNumeros(r.numeros);
+            setNumerosVistos(r.numerosVistos);
             setErroDaLista(null);
           } else setErroDaLista(r.erro);
         })
@@ -116,7 +131,8 @@ export default function Conversas() {
   const atual = aberta && aberta.id === id ? aberta : null;
 
   const passa: (c: ConversaResumo) => boolean = FILTROS.find((x) => x.chave === filtro)!.passa;
-  const visiveis = lista?.filter(passa) ?? null;
+  const daFrente = (c: ConversaResumo) => frente === "todas" || frenteDaConversa(c, numeros) === frente;
+  const visiveis = lista?.filter((c) => passa(c) && daFrente(c)) ?? null;
 
   function abrir(novo: string) {
     router.replace(`/conversas?id=${encodeURIComponent(novo)}`, { scroll: false });
@@ -182,9 +198,13 @@ export default function Conversas() {
               )}
             </div>
             {lista && lista.length > 0 && (
+              <FrentesDaLista lista={lista} numeros={numeros} frente={frente} onFrente={setFrente} />
+            )}
+            <NumerosDosWhatsapps numeros={numeros} vistos={numerosVistos} onSalvo={setNumeros} />
+            {lista && lista.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-1" role="group" aria-label="Recorte da lista">
                 {FILTROS.map((x) => {
-                  const n = lista.filter(x.passa).length;
+                  const n = lista.filter((c) => x.passa(c) && daFrente(c)).length;
                   const ativo = filtro === x.chave;
                   return (
                     <button
@@ -842,5 +862,128 @@ function Resumo({ conversa: c, onMudou }: { conversa: ConversaView; onMudou: (c:
         </div>
       )}
     </section>
+  );
+}
+
+/* ============================================================
+   AS FRENTES (26/10/2026)
+============================================================ */
+
+const ORDEM_DAS_FRENTES: (FrenteDaConversa | "todas")[] = ["todas", "reclame-aqui", "nps", "redes", "sem-vinculo"];
+
+function FrentesDaLista({
+  lista,
+  numeros,
+  frente,
+  onFrente,
+}: {
+  lista: ConversaResumo[];
+  numeros: NumerosDasFrentes;
+  frente: FrenteDaConversa | "todas";
+  onFrente: (f: FrenteDaConversa | "todas") => void;
+}) {
+  const conta = (f: FrenteDaConversa | "todas") => (f === "todas" ? lista.length : lista.filter((c) => frenteDaConversa(c, numeros) === f).length);
+  return (
+    <div className="mt-2 grid grid-cols-5 gap-0.5 rounded-xl bg-zinc-100 p-0.5" role="tablist" aria-label="Frente">
+      {ORDEM_DAS_FRENTES.map((f) => {
+        const ativo = frente === f;
+        return (
+          <button
+            key={f}
+            type="button"
+            role="tab"
+            aria-selected={ativo}
+            onClick={() => onFrente(f)}
+            title={f === "sem-vinculo" ? "Sem caso nem NPS ligado — do WhatsApp do NPS e Redes, ou de antes de a extensão saber o número" : undefined}
+            className={`rounded-lg px-1 py-1 text-[11px] font-medium leading-tight transition-colors ${ativo ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-800"}`}
+          >
+            {f === "todas" ? "Todas" : f === "reclame-aqui" ? "RA" : f === "redes" ? "Redes" : ROTULO_DA_FRENTE[f]}
+            <span className="block text-[10px] font-normal tabular-nums opacity-70">{conta(f)}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Qual número é de qual frente — uma linha; abre a escolha só no clique. */
+function NumerosDosWhatsapps({ numeros, vistos, onSalvo }: { numeros: NumerosDasFrentes; vistos: string[]; onSalvo: (n: NumerosDasFrentes) => void }) {
+  const { notify } = useToast();
+  const [editando, setEditando] = useState(false);
+  const [rascunho, setRascunho] = useState<NumerosDasFrentes>(numeros);
+  const [salvando, setSalvando] = useState(false);
+  const opcoes = [...new Set([...vistos, numeros.reclameAqui, numeros.npsRedes].filter(Boolean) as string[])];
+  const legivel = (n?: string) => (n ? telefoneLegivel(n) : "—");
+
+  async function salvar() {
+    setSalvando(true);
+    try {
+      const r = await salvarNumerosDasFrentes(rascunho);
+      if (!r.ok) return notify({ tone: "error", title: "Não foi salvo", detail: r.erro });
+      onSalvo(rascunho);
+      setEditando(false);
+      notify({ tone: "success", title: "Números das frentes salvos" });
+    } catch {
+      notify({ tone: "error", title: "Não foi salvo", detail: "Sem resposta do servidor." });
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  if (!editando) {
+    if (!opcoes.length) return null;
+    const falta = !numeros.reclameAqui || !numeros.npsRedes;
+    return (
+      <p className="mt-1.5 flex flex-wrap items-center gap-x-2 px-1 text-[11px] text-zinc-500">
+        <span>
+          WhatsApp RA <b className="font-medium text-zinc-700">{legivel(numeros.reclameAqui)}</b> · NPS e Redes{" "}
+          <b className="font-medium text-zinc-700">{legivel(numeros.npsRedes)}</b>
+        </span>
+        <button
+          type="button"
+          onClick={() => {
+            setRascunho(numeros);
+            setEditando(true);
+          }}
+          className={`font-medium hover:underline ${falta ? "text-amber-700" : "text-violet-700"}`}
+        >
+          {falta ? "definir" : "trocar"}
+        </button>
+      </p>
+    );
+  }
+
+  const campo = (rotulo: string, chave: keyof NumerosDasFrentes) => (
+    <label className="flex items-center justify-between gap-2 text-[11px] text-zinc-600">
+      {rotulo}
+      <select
+        value={rascunho[chave] ?? ""}
+        onChange={(e) => setRascunho((r) => ({ ...r, [chave]: e.target.value || undefined }))}
+        className="h-7 min-w-0 flex-1 rounded-md border border-zinc-200 bg-white px-1 text-[11px] outline-none focus:border-violet-400"
+      >
+        <option value="">—</option>
+        {opcoes.map((n) => (
+          <option key={n} value={n}>
+            {telefoneLegivel(n)}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+
+  return (
+    <div className="mt-1.5 space-y-1.5 rounded-xl border border-zinc-200 p-2">
+      {campo("Reclame Aqui", "reclameAqui")}
+      {campo("NPS e Redes", "npsRedes")}
+      <p className="text-[10px] leading-snug text-zinc-400">Os números aparecem aqui quando a extensão guarda uma conversa de cada WhatsApp.</p>
+      <div className="flex justify-end gap-1.5">
+        <button type="button" onClick={() => setEditando(false)} className="rounded-md px-2 py-1 text-[11px] text-zinc-600 hover:bg-zinc-100">
+          Cancelar
+        </button>
+        <button type="button" disabled={salvando} onClick={salvar} className="flex items-center gap-1 rounded-md bg-violet-700 px-2 py-1 text-[11px] font-medium text-white hover:bg-violet-800 disabled:opacity-50">
+          {salvando && <Loader2 size={11} className="animate-spin" />} Salvar
+        </button>
+      </div>
+    </div>
   );
 }

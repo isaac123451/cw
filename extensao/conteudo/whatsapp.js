@@ -33,6 +33,29 @@
    */
   CW.painel.permitirAutoAbrir();
 
+  /**
+   * O número em que estamos logados neste WhatsApp Web (26/10/2026).
+   *
+   * O Reclame Aqui tem um número e o NPS e as Redes Sociais, outro. Sem
+   * saber de qual número veio, a conversa do mesmo cliente nos dois
+   * WhatsApps virava uma só, e a tela de conversas não sabia separar as
+   * frentes. O WhatsApp Web guarda a própria conta no `localStorage`
+   * ("last-wid-md": `"5548999999999:12@c.us"`); só os dígitos antes do ":"
+   * importam. `""` quando não acha — aí a conversa segue sem número.
+   */
+  CW.numeroDaConta = function numeroDaConta() {
+    for (const chave of ["last-wid-md", "last-wid"]) {
+      try {
+        const bruto = String(localStorage.getItem(chave) ?? "").replace(/"/g, "");
+        const achado = bruto.match(/^(\d{10,15})[:@]/);
+        if (achado) return achado[1];
+      } catch {
+        /* armazenamento bloqueado: sem número */
+      }
+    }
+    return "";
+  };
+
   const INTERVALO = 1200;
 
   /**

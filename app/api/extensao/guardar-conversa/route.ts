@@ -80,6 +80,7 @@ export async function POST(request: Request) {
     protocolo?: string;
     npsId?: string;
     estabelecimentoId?: string;
+    numeroNosso?: string;
   };
 
   const telefone = somenteDigitosDoTelefone(entrada.contato?.telefone);
@@ -118,7 +119,9 @@ export async function POST(request: Request) {
   }
 
   /* A conversa do mesmo telefone recebe as mensagens; o nome só decide quando não há número. */
-  const existentes = await candidatas(prisma, telefone, telefone ? "" : nome);
+  /* O número do nosso WhatsApp (26/10/2026): cada número tem a sua conversa com o cliente. */
+  const numeroNosso = /^\d{10,15}$/.test(String(entrada.numeroNosso ?? "")) ? String(entrada.numeroNosso) : null;
+  const existentes = await candidatas(prisma, telefone, telefone ? "" : nome, numeroNosso);
   const destino = existentes[0]?.id ?? "nova";
 
   const protocolo = String(entrada.protocolo ?? "").trim();
@@ -136,6 +139,7 @@ export async function POST(request: Request) {
       destino,
       telefone,
       contatoNome: nome,
+      numeroNosso,
       origem: "extensao",
       mensagens,
       vinculo: { caseId: caso?.id ?? null, npsResponseId: nps?.id ?? null, establishmentId: estabelecimento?.id ?? null },

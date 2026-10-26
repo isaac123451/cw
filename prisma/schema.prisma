@@ -1221,6 +1221,10 @@ model Conversa {
   contatoNome     String    @default("")
   /// O nosso lado no arquivo exportado (o nome da conta de Reputação).
   nosNome         String?
+  /// O número do nosso WhatsApp em que a conversa aconteceu (26/10/2026): o
+  /// Reclame Aqui tem um, o NPS e as Redes Sociais outro. Separa as frentes na
+  /// tela de conversas e impede juntar as duas conversas do mesmo cliente.
+  numeroNosso     String?
   caseId          String?
   case            Case?          @relation(fields: [caseId], references: [id], onDelete: SetNull)
   npsResponseId   String?
@@ -1237,6 +1241,7 @@ model Conversa {
   mensagens       MensagemDaConversa[]
 
   @@index([telefone])
+  @@index([numeroNosso])
   @@index([caseId])
   @@index([npsResponseId])
   @@index([establishmentId])
@@ -1792,6 +1797,12 @@ model OperacaoConfig {
   /// curto de cada uma (`/empresa/<este>/`). Começa com as quatro
   /// conferidas em 30/09/2026; edita-se na tela Índice.
   concorrentesRA String[] @default(["anota-ai", "goomer", "saipos", "delivery-much"])
+
+  /// Os números dos nossos WhatsApps (26/10/2026), só dígitos: o do Reclame
+  /// Aqui e o do NPS e Redes Sociais (o mesmo para as duas). A tela de
+  /// conversas divide as frentes por eles.
+  whatsappReclameAqui String?
+  whatsappNpsRedes    String?
 
   updatedAt DateTime @updatedAt
   updatedBy String?
