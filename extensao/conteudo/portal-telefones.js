@@ -82,32 +82,67 @@
 
   const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
 
+  /*
+    O que a volta está fazendo, à vista (26/10/2026): no atributo
+    `data-cw-telefones` da página e no console. A primeira versão engolia
+    os erros — e "não preencheu nenhum telefone" não tinha como ser
+    investigado sem adivinhar.
+  */
+  function estado(texto) {
+    try {
+      document.documentElement.dataset.cwTelefones = `${new Date().toLocaleTimeString("pt-BR")} · ${texto}`;
+    } catch {
+      /* sem documento: só o console */
+    }
+    console.info("[CW Reputação · telefones do NPS]", texto);
+  }
+
   async function volta() {
-    if (rodando || !token()) return;
+    if (rodando) return;
+    if (!token()) return estado("sem sessão do portal válida — entre no portal e recarregue a página");
     rodando = true;
     try {
       /* Várias abas do portal abertas: uma volta só, para todas. */
       const guardado = await chrome.storage.local.get(CHAVE);
-      if (Date.now() - (guardado[CHAVE] ?? 0) < A_CADA_MS) return;
-      await chrome.storage.local.set({ [CHAVE]: Date.now() });
+      const falta = A_CADA_MS - (Date.now() - (guardado[CHAVE] ?? 0));
+      if (falta > 0) return estado(`próxima volta em ${Math.ceil(falta / 60_000)} min`);
 
       const plano = await CW.enviar({ tipo: "npsTelefones" });
-      const pedidos = plano?.ok && plano.dados?.podeGravar ? plano.dados.pedidos ?? [] : [];
+      if (!plano?.ok) return estado(`o CW Reputação não respondeu: ${plano?.erro ?? "sem resposta"}`);
+      if (!plano.dados?.podeGravar) return estado("seu acesso é somente leitura — nada a buscar");
+      /* A volta só conta como feita quando o CW respondeu: falha volta a tentar em 5 minutos. */
+      await chrome.storage.local.set({ [CHAVE]: Date.now() });
+
+      const pedidos = plano.dados.pedidos ?? [];
+      estado(`buscando ${pedidos.length} estabelecimentos no portal…`);
       const lidos = [];
+      let falhas = 0;
+      let primeiraFalha = "";
       for (const companyId of pedidos) {
         try {
           lidos.push(await lerUm(companyId));
         } catch (erro) {
+          falhas += 1;
+          primeiraFalha ||= String(erro?.message ?? erro);
           if (erro?.sessao) break;
         }
         await esperar(350);
       }
-      if (lidos.length) await CW.enviar({ tipo: "npsTelefonesGravar", lidos });
+      if (!lidos.length) return estado(`nenhum estabelecimento lido${falhas ? ` (${falhas} falhas: ${primeiraFalha})` : ""}`);
+      const r = await CW.enviar({ tipo: "npsTelefonesGravar", lidos });
+      estado(
+        r?.ok
+          ? `${lidos.length} estabelecimentos lidos · ${r.dados?.comTelefone ?? 0} com telefone · ${r.dados?.nps ?? 0} NPS preenchidos${falhas ? ` · ${falhas} falhas (${primeiraFalha})` : ""}`
+          : `leu ${lidos.length}, mas o CW Reputação não gravou: ${r?.erro ?? "sem resposta"}`
+      );
+    } catch (erro) {
+      estado(`erro: ${erro?.message ?? erro}`);
     } finally {
       rodando = false;
     }
   }
 
+  estado("aguardando o portal carregar");
   /* Dá tempo de o portal renovar a sessão ao abrir; depois confere de 5 em 5 minutos se já é hora. */
   setTimeout(() => volta().catch(() => undefined), 10_000);
   setInterval(() => volta().catch(() => undefined), 5 * 60_000);
