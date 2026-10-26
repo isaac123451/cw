@@ -53,6 +53,15 @@ export const REVISAO = {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- passe a limpo (21/10) ---------------- */
   {
+    id: "planilha-das-redes-mkt",
+    dia: "2026-10-26",
+    tipo: "correcao",
+    frente: "extensao",
+    titulo: "\"Ler para as Redes\" lê a planilha do marketing direito",
+    texto:
+      "Na planilha \"[MKT] Fluxo de Atendimento Suporte\" nenhuma das 138 linhas entrava. O Google entrega a aba com o cabeçalho de Data e de Telefone apagado — agora essas colunas são reconhecidas pelo conteúdo. \"Solicitação\" passou a ser o relato (antes a \"Observações\", vazia, tomava o lugar dela). \"DM\", \"Ambos\" e \"Comentário\" no Canal de Contato contam como Instagram — antes cada linha ficava \"sem rede\". O e-mail entra no atendimento, e o STATUS da planilha também: RESOLVIDO entra como Resolvido (não vira atendimento novo na fila), AGUARDANDO RESPOSTA e PENDÊNCIA entram em tratativa.",
+  },
+  {
     id: "conversas-por-frente",
     dia: "2026-10-26",
     tipo: "novo",

@@ -72,7 +72,7 @@ export async function POST(request: Request) {
 
     const lido = itensDaPlanilha(lerCsv(csv), { id, gid: texto(planilha.gid, 20) || "0" });
     cabecalho = lido.cabecalho.map((h) => h.trim()).filter(Boolean).slice(0, 40);
-    colunas = Object.fromEntries(Object.entries(lido.mapa).map(([campo, i]) => [campo, lido.cabecalho[i!]?.trim() ?? ""]));
+    colunas = Object.fromEntries(Object.entries(lido.mapa).map(([campo, i]) => [campo, lido.cabecalho[i!]?.trim() || "(sem nome — pelo conteúdo)"]));
     if (!colunasSuficientes(lido.mapa)) {
       return responder(request, {
         ok: true,

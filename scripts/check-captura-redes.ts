@@ -166,6 +166,43 @@ conferir("acento quebrado volta: \"nÃ£o estÃ¡\"", consertarAcentos("Minha im
 conferir("texto certo não é mexido", consertarAcentos("Ação já está ótima — NÃO É POSSÍVEL"), "Ação já está ótima — NÃO É POSSÍVEL");
 conferir("o item do Slack já sai consertado", itemDoSlack({ canal: "C1", ts: "1.1", texto: ["Olá @Carlos Isaac", "Cliente Janaina entrou em contato no Instagram", "Motivo : preÃ§o do cartÃ£o"].join(String.fromCharCode(10)), mencoes: ["@Carlos Isaac"] }).texto.endsWith("preço do cartão"), true);
 
+/*
+  26/10/2026 — "[MKT] Fluxo de Atendimento Suporte", como o Google entrega em
+  CSV: o cabeçalho de Data e de Telefone vem APAGADO (tipo adivinhado pelo
+  Google), o relato chama "Solicitação", o canal diz DM/Ambos/Comentário e o
+  STATUS diz se já foi resolvido. Linhas reais da planilha (dados trocados).
+*/
+const mkt = itensDaPlanilha(
+  lerCsv(
+    [
+      `"","Canal de Contato","Solicitação","Nome\n(Cliente ou Estabelecimento)","","E-mail","Nível de urgência ","Responsável pelo Atendimento","STATUS","Observações"`,
+      `"09/03","DM","Perdeu contato com quem estava falando","Bar Teste","5531900000001","bar@teste.com","ALTA","Suporte","RESOLVIDO",""`,
+      `"26/03","Ambos","Conta Excluida / Recuperar","Victor Teste","31900000002","victor@teste.com","ALTA","Suporte","RESOLVIDO",""`,
+      `"22/10","DM","Disseram que a implementação ia ligar e não ligou","","","","ALTA","Implementação","AGUARDANDO RESPOSTA",""`,
+      `"26/10","Comentário","Cancelamento e reembolso","Loja Teste","","","MÉDIA","Suporte","PENDÊNCIA",""`,
+    ].join("\n")
+  ),
+  { id: "planilhaDeTeste12345678901", gid: "0" },
+  2026
+);
+conferir(
+  "cabeçalho apagado: Data e Telefone achados pelo conteúdo; Solicitação é o relato",
+  [mkt.mapa.quando, mkt.mapa.telefone, mkt.mapa.texto, mkt.mapa.email, mkt.mapa.status],
+  [0, 4, 2, 5, 8]
+);
+conferir("as 4 linhas viram itens, todas do Instagram (DM, Ambos, Comentário)", [mkt.itens.length, mkt.itens.every((i) => i.rede === "Instagram")], [4, true]);
+conferir(
+  "data, telefone, e-mail e o STATUS de cada linha",
+  mkt.itens.map((i) => [i.quando.slice(0, 10), i.telefone, i.email, i.status]),
+  [
+    ["2026-03-09", "5531900000001", "bar@teste.com", "Resolvido"],
+    ["2026-03-26", "31900000002", "victor@teste.com", "Resolvido"],
+    ["2026-10-22", "", "", "Em tratativa"],
+    ["2026-10-26", "", "", "Em tratativa"],
+  ]
+);
+conferir("Observações vazia não toma o lugar do relato", mkt.itens[0].texto, "Perdeu contato com quem estava falando");
+
 const rota = ler("app/api/extensao/captura-redes/route.ts");
 conferir("a prévia não grava", rota.indexOf("previaDaCaptura") < rota.indexOf("gravarCaptura(prisma"), true);
 conferir("somente leitura não grava", rota.includes('acao === "gravar" && usuario.papel === "LEITURA"'), true);

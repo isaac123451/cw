@@ -17,7 +17,7 @@
 
 export type OrigemDaCaptura = "planilha" | "slack";
 
-export type CampoDaCaptura = "quando" | "rede" | "perfil" | "nome" | "seguidores" | "telefone" | "link" | "texto" | "assunto";
+export type CampoDaCaptura = "quando" | "rede" | "perfil" | "nome" | "seguidores" | "telefone" | "email" | "link" | "texto" | "assunto" | "status";
 
 export interface ItemCapturado {
   origem: OrigemDaCaptura;
@@ -30,9 +30,13 @@ export interface ItemCapturado {
   nome: string;
   seguidores: number | null;
   telefone: string;
+  /** O e-mail, quando a planilha tem a coluna (26/10/2026). */
+  email: string;
   link: string;
   texto: string;
   assunto: string;
+  /** A etapa das Redes que o STATUS da planilha diz ("Resolvido"…), ou vazio — aí entra como Recebido. */
+  status: string;
   /** ISO, ou vazio quando a data não veio ou não foi entendida. */
   quando: string;
 }
@@ -112,21 +116,35 @@ const normalizar = (s: string) =>
 const SINONIMOS: Record<CampoDaCaptura, RegExp> = {
   seguidores: /\bseguidores?\b|\bfollowers?\b|\balcance\b/,
   telefone: /\btelefone\b|\bcelular\b|\bwhats ?app do cliente\b|\bfone\b|\bphone\b/,
+  email: /\be ?mail\b/,
+  status: /\bstatus\b|\bsituacao\b|\betapa\b/,
   link: /\blink\b|\burl\b|\bpost\b|\bpublicacao\b|\bcomentario link\b/,
   perfil: /\bperfil\b|@|\busuario\b|\buser(name)?\b|\bhandle\b|\barroba\b|\binstagram do cliente\b/,
   nome: /\bnome\b|\bcliente\b|\bquem\b|\bautor\b/,
   rede: /\brede\b|\bcanal\b|\borigem\b|\bplataforma\b|\bfonte\b/,
   quando: /\bdata\b|\bquando\b|\bhora\b|\bcarimbo\b|\btimestamp\b|\bdia\b|\brecebid/,
   assunto: /\bassunto\b|\bcategoria\b|\bmotivo\b|\btema\b|\btipo\b/,
-  texto: /\brelato\b|\bmensagem\b|\btexto\b|\bcomentario\b|\bdescricao\b|\bconteudo\b|\breclamacao\b|\bobs/,
+  /*
+    "Solicitação" (26/10/2026): a planilha "[MKT] Fluxo de Atendimento Suporte"
+    chama o relato assim. As observações só valem quando não há outra coluna
+    de relato — antes, a "Observações" vazia ficava no lugar da "Solicitação".
+  */
+  texto: /\brelato\b|\bmensagem\b|\btexto\b|\bcomentario\b|\bdescricao\b|\bconteudo\b|\breclamacao\b|\bsolicitac|\bpedido\b|\bdemanda\b|\bproblema\b|\bduvida\b/,
 };
 
 /** A ordem em que as colunas disputam um cabeçalho ambíguo ("Link do perfil" é link). */
-const ORDEM: CampoDaCaptura[] = ["seguidores", "telefone", "link", "perfil", "rede", "quando", "assunto", "texto", "nome"];
+const ORDEM: CampoDaCaptura[] = ["seguidores", "telefone", "email", "link", "perfil", "rede", "quando", "assunto", "status", "texto", "nome"];
 
 export type MapaDeColunas = Partial<Record<CampoDaCaptura, number>>;
 
-export function mapearColunas(cabecalho: string[]): MapaDeColunas {
+/** O que cada coluna sem nome guarda, pelo conteúdo — ver `mapearColunas`. */
+const PELO_CONTEUDO: Partial<Record<CampoDaCaptura, RegExp>> = {
+  quando: /^(\d{1,2}\/\d{1,2}(\/\d{2,4})?|\d{4}-\d{2}-\d{2})/,
+  telefone: /^\+?[\d\s().-]{10,20}$/,
+  email: /^[^\s@]+@[^\s@]+\.[a-z]{2,}/i,
+};
+
+export function mapearColunas(cabecalho: string[], corpo: string[][] = []): MapaDeColunas {
   const mapa: MapaDeColunas = {};
   const usadas = new Set<number>();
   for (const campo of ORDEM) {
@@ -136,7 +154,60 @@ export function mapearColunas(cabecalho: string[]): MapaDeColunas {
       usadas.add(i);
     }
   }
+  /* As observações só quando não há coluna de relato. */
+  if (mapa.texto === undefined) {
+    const i = cabecalho.findIndex((h, idx) => !usadas.has(idx) && /\bobs/.test(normalizar(h)));
+    if (i >= 0) {
+      mapa.texto = i;
+      usadas.add(i);
+    }
+  }
+  /*
+    O cabeçalho apagado (26/10/2026). O Google, ao entregar a aba em CSV,
+    "adivinha" o tipo de cada coluna e apaga o texto do cabeçalho das colunas
+    de data e de número: "Data" e "Telefone" chegavam vazios, e a data e o
+    telefone de cada linha se perdiam. A coluna sem nome reconhecido é
+    identificada pelo conteúdo — a maior parte das células com cara de data,
+    de telefone ou de e-mail.
+  */
+  const amostra = corpo.slice(0, 80);
+  for (const campo of ["quando", "telefone", "email"] as const) {
+    if (mapa[campo] !== undefined) continue;
+    const largura = Math.max(cabecalho.length, ...amostra.map((l) => l.length));
+    for (let idx = 0; idx < largura; idx += 1) {
+      if (usadas.has(idx)) continue;
+      const valores = amostra.map((l) => (l[idx] ?? "").trim()).filter(Boolean);
+      if (valores.length < 2) continue;
+      const casam = valores.filter((v) => PELO_CONTEUDO[campo]!.test(v) && (campo !== "telefone" || v.replace(/\D/g, "").length >= 10)).length;
+      if (casam / valores.length >= 0.6) {
+        mapa[campo] = idx;
+        usadas.add(idx);
+        break;
+      }
+    }
+  }
   return mapa;
+}
+
+/**
+ * A rede pelo tipo de contato (26/10/2026): "DM", "Comentário", "Ambos",
+ * "Direct", "Stories" — a planilha do marketing diz como o cliente chegou,
+ * não a rede. São termos do Instagram, que é a rede monitorada.
+ */
+export function redePeloTipoDeContato(valor: string): string | null {
+  return /^(dm|direct|directs|coment[aá]rios?|ambos|stories|story|reels?|men[cç][aã]o|men[cç][oõ]es)$/i.test(valor.trim()) ? "Instagram" : null;
+}
+
+/** O STATUS da planilha como etapa das Redes; vazio quando não diz nada conhecido. */
+export function etapaPeloStatus(valor: string): string {
+  const v = normalizar(valor);
+  if (!v) return "";
+  if (/\bresolvid|\bconcluid|\bfinalizad|\bfechad/.test(v)) return "Resolvido";
+  if (/\bencaminhad/.test(v)) return "Encaminhado";
+  if (/\bsem (contato|retorno|resposta)\b/.test(v)) return "Sem contato";
+  if (/\bvalidac/.test(v)) return "Validação";
+  if (/\bandamento\b|\batendimento\b|\btratativa\b|\baguardando\b|\bpendente\b|\bpendencia/.test(v)) return "Em tratativa";
+  return "";
 }
 
 /** A planilha dá para ler se houver o que registrar: o relato ou o link. */
@@ -224,7 +295,7 @@ export function itensDaPlanilha(
   anoPadrao?: number
 ): { mapa: MapaDeColunas; cabecalho: string[]; itens: ItemCapturado[] } {
   const [cabecalho = [], ...corpo] = linhas;
-  const mapa = mapearColunas(cabecalho);
+  const mapa = mapearColunas(cabecalho, corpo);
   const celula = (l: string[], campo: CampoDaCaptura) => (mapa[campo] !== undefined ? (l[mapa[campo]!] ?? "").trim() : "");
 
   const itens = corpo
@@ -234,7 +305,7 @@ export function itensDaPlanilha(
       if (!texto && !link) return null;
       const perfilBruto = celula(l, "perfil");
       const quando = dataDaCelula(celula(l, "quando"), anoPadrao);
-      const rede = redeDoTexto(celula(l, "rede")) ?? redeDoTexto(link, perfilBruto);
+      const rede = redeDoTexto(celula(l, "rede")) ?? redePeloTipoDeContato(celula(l, "rede")) ?? redeDoTexto(link, perfilBruto);
       const perfil = perfilDoTexto(perfilBruto, link);
       /*
         A chave é o conteúdo, e não o número da linha: ordenar a planilha
@@ -250,6 +321,8 @@ export function itensDaPlanilha(
         nome: celula(l, "nome"),
         seguidores: seguidoresDoTexto(celula(l, "seguidores")),
         telefone: celula(l, "telefone").replace(/\D/g, ""),
+        email: celula(l, "email").toLowerCase(),
+        status: etapaPeloStatus(celula(l, "status")),
         link,
         texto,
         assunto: celula(l, "assunto"),
@@ -344,9 +417,11 @@ export function itemDoSlack(entrada: { canal: string; ts: string; texto: string;
     nome: nome && !/^(outr[oa]s?|n[ãa]o informado|desconhecido)$/i.test(nome[1].trim()) ? nome[1].trim() : "",
     seguidores: seguidores ? seguidoresDoTexto(seguidores[1]) : null,
     telefone: telefone ? telefone[0].replace(/\D/g, "") : "",
+    email: "",
     link,
     texto,
     assunto: "",
+    status: "",
     quando: entrada.quando && /^\d{4}-\d{2}-\d{2}T/.test(entrada.quando) ? entrada.quando : "",
   };
 }

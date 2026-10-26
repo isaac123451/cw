@@ -44,7 +44,7 @@
   }
 
   function colunas(dados) {
-    const nomes = { quando: "Data", rede: "Rede", perfil: "Perfil", nome: "Nome", seguidores: "Seguidores", telefone: "Telefone", link: "Link", texto: "Relato", assunto: "Assunto" };
+    const nomes = { quando: "Data", rede: "Rede", perfil: "Perfil", nome: "Nome", seguidores: "Seguidores", telefone: "Telefone", email: "E-mail", link: "Link", texto: "Relato", assunto: "Assunto", status: "Status" };
     const achadas = dados.colunas ?? {};
     const chips = Object.entries(nomes)
       .map(([campo, rotulo]) =>
