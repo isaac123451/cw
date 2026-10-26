@@ -260,6 +260,40 @@ export function isEncerrado(status: string) {
 }
 
 /**
+ * O cliente respondeu ao nosso contato (26/10/2026) — "[NPS] N° Detratores
+ * respondentes". Qualquer um destes: uma tentativa marcada "respondeu" (à
+ * mão ou pela IA, lendo a conversa do WhatsApp), o "Falei com o cliente"
+ * (pós-contato) ou o encerramento com retorno. Encerrar "Sem retorno" ou
+ * "Sem tratativa" não conta.
+ */
+export function clienteRespondeu(item: {
+  status: string;
+  postContactAt?: string | Date | null;
+  attempts?: { resultado?: string | null }[];
+}) {
+  if ((item.attempts ?? []).some((a) => a.resultado === "respondeu")) return true;
+  if (item.postContactAt) return true;
+  return isEncerrado(item.status) && !/sem retorno|sem tratativa/i.test(item.status);
+}
+
+/**
+ * As tentativas que a conversa mostra respondidas: as que estavam esperando
+ * (ou já "sem retorno") e têm mensagem do cliente depois delas. Usado pela
+ * IA do dia, que lê a conversa guardada do WhatsApp.
+ */
+export function tentativasRespondidas(
+  tentativas: { id: string; resultado: string; createdAt: Date }[],
+  mensagens: { de: string; em: Date | null }[]
+): string[] {
+  const doCliente = mensagens.filter((m) => m.de !== "nos" && m.em).map((m) => m.em!.getTime());
+  if (!doCliente.length) return [];
+  const ultima = Math.max(...doCliente);
+  return tentativas
+    .filter((t) => t.resultado !== "respondeu" && t.createdAt.getTime() <= ultima)
+    .map((t) => t.id);
+}
+
+/**
  * Os degraus que dá para subir e descer sem checklist.
  *
  * O ciclo do NPS tem duas metades. Esta é a de andamento — trocar entre
@@ -684,7 +718,7 @@ export interface NpsAttemptView {
    * "sem-resposta" depois de marcada. Ausente é "sem-resposta": as de
    * antes da regra já eram "tentei, sem sucesso".
    */
-  resultado?: "aguardando" | "sem-resposta";
+  resultado?: "aguardando" | "sem-resposta" | "respondeu";
 }
 
 export const CHANNELS = [

@@ -16,7 +16,7 @@ import {
 } from "@/lib/models/iaDoDia";
 import { nomeDaConversa, nomeDePessoa, nomeDoCliente, semMensagensDeOutraConversa } from "@/lib/models/identidadeNaConversa";
 import { idDoLembrete } from "@/lib/models/lembretesAutomaticos";
-import { isEncerrado, ROOT_CAUSES } from "@/lib/models/nps";
+import { isEncerrado, ROOT_CAUSES, tentativasRespondidas } from "@/lib/models/nps";
 import { CLOSED_STATUS } from "@/lib/services/case.service";
 import { descreverRegistro, paredeDe, prazoUtil } from "@/lib/services/horasUteis";
 import { lerExpediente } from "@/lib/services/operacao.service";
@@ -1063,6 +1063,35 @@ export async function seguirPelasConversas(
         }
       }
     }
+
+    /*
+      O cliente respondeu pelo WhatsApp (26/10/2026): "a IA precisa
+      identificar a resposta de um cliente através do WhatsApp como faz no
+      Reclame Aqui". A tentativa que esperava (ou já tinha virado "sem
+      retorno") e tem mensagem do cliente depois dela fica "respondeu" — é o
+      que conta em "Detratores que responderam".
+    */
+    if (nps && !isEncerrado(nps.status)) {
+      const tentativas = await prisma.npsAttempt.findMany({ where: { responseId: nps.id }, select: { id: true, resultado: true, createdAt: true } });
+      const ids = tentativasRespondidas(tentativas, msgs.filter((m) => m.em >= nps.respondedAt)).sort();
+      if (ids.length) {
+        const chave = `respondeu:nps:${nps.id}:${ids.join(",")}`;
+        const novo = await registrar(prisma, userId, {
+          tipo: "etapa",
+          origem: "nps",
+          chave,
+          titulo: `${nome || "O cliente"} respondeu ao contato do NPS`,
+          detalhe: ids.length === 1 ? "A resposta chegou pelo WhatsApp: a tentativa ficou marcada como respondida." : `A resposta chegou pelo WhatsApp: ${ids.length} tentativas ficaram marcadas como respondidas.`,
+          href: `/nps/${nps.id}`,
+        });
+        if (novo) {
+          const antes = tentativas.filter((t) => ids.includes(t.id)).map((t) => `${t.id}=${t.resultado}`).join(",");
+          await prisma.npsAttempt.updateMany({ where: { id: { in: ids } }, data: { resultado: "respondeu" } });
+          await prisma.acaoDaIA.update({ where: { userId_chave: { userId, chave } }, data: { desfazer: { respondeuNps: antes } } });
+          feitas += 1;
+        }
+      }
+    }
   }
 
   return feitas;
@@ -1415,6 +1444,13 @@ export async function desfazer(prisma: PrismaClient, userId: string, id: string)
     await prisma.npsAttempt.deleteMany({ where: { id: d.tentativaNps } });
     /* O 1º contato só volta a vazio se era esta tentativa que o marcava. */
     if (tentativa) await prisma.npsResponse.updateMany({ where: { id: d.nps, firstContactAt: tentativa.createdAt }, data: { firstContactAt: null } });
+  }
+  /* A resposta do NPS lida na conversa: cada tentativa volta ao que era. */
+  if (d.respondeuNps) {
+    for (const par of d.respondeuNps.split(",")) {
+      const [tentativa, resultado] = par.split("=");
+      if (tentativa && resultado) await prisma.npsAttempt.updateMany({ where: { id: tentativa, resultado: "respondeu" }, data: { resultado } });
+    }
   }
   await prisma.acaoDaIA.update({ where: { id }, data: { desfeitaEm: new Date(), vistaEm: acao.vistaEm ?? new Date() } });
   return { ok: true };

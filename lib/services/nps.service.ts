@@ -1,5 +1,6 @@
 import {
   ABANDONO_DIAS,
+  clienteRespondeu,
   isEncerrado,
   JANELA_TENTATIVAS_DIAS,
   MOODS,
@@ -656,6 +657,10 @@ export interface IndicadoresDoGuia {
   /** Detratores com primeiro contato (tentativa ou conversa registrada). */
   detratoresContatados: number;
   percentualContatados: number | null;
+  /** Detratores que responderam ao nosso contato — ver `clienteRespondeu`. */
+  detratoresResponderam: number;
+  /** Sobre os contatados: de quem tentamos, quantos responderam. */
+  percentualResponderam: number | null;
   /** Detratores com a régua de humor registrada depois do contato. */
   detratoresComHumor: number;
   /** Média da régua (1 a 5) entre esses. */
@@ -686,12 +691,15 @@ export function indicadoresDoGuia(itens: NpsResponseView[]): IndicadoresDoGuia {
   const promotores = itens.filter((i) => segmentOf(i.score).label === "Promotor");
 
   const contatados = detratores.filter((i) => i.firstContactAt).length;
+  const responderam = detratores.filter(clienteRespondeu).length;
   const comHumor = detratores.filter((i) => typeof i.moodAfter === "number");
 
   return {
     detratores: detratores.length,
     detratoresContatados: contatados,
     percentualContatados: detratores.length ? Math.round((contatados / detratores.length) * 100) : null,
+    detratoresResponderam: responderam,
+    percentualResponderam: contatados ? Math.round((responderam / contatados) * 100) : null,
     detratoresComHumor: comHumor.length,
     humorMedioDoDetrator: comHumor.length
       ? Math.round((comHumor.reduce((s, i) => s + (i.moodAfter ?? 0), 0) / comHumor.length) * 10) / 10

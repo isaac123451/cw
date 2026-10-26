@@ -10,6 +10,7 @@ import {
   Gauge,
   HeartHandshake,
   MessageSquareText,
+  MessageCircleReply,
   PhoneCall,
   Smile,
   Star,
@@ -356,7 +357,7 @@ export default function NpsAnalisePage() {
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 2xl:grid-cols-5">
 
                 <StatTile
                   label="Detratores contatados"
@@ -365,6 +366,15 @@ export default function NpsAnalisePage() {
                   hint={`${guia.detratoresContatados} de ${guia.detratores} ${pluralDe(guia.detratores, "detrator", "detratores")}`}
                   icon={PhoneCall}
                   tone="danger"
+                />
+
+                <StatTile
+                  label="Detratores que responderam"
+                  description="Dos detratores contatados, quantos responderam ao nosso contato: tentativa marcada como respondida (à mão ou pela IA, lendo a conversa do WhatsApp), &quot;Falei com o cliente&quot; registrado ou encerramento com retorno."
+                  value={guia.percentualResponderam === null ? "—" : `${guia.percentualResponderam}%`}
+                  hint={`${guia.detratoresResponderam} de ${guia.detratoresContatados} ${pluralDe(guia.detratoresContatados, "contatado", "contatados")}`}
+                  icon={MessageCircleReply}
+                  tone="warning"
                 />
 
                 <StatTile

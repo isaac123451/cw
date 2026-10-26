@@ -622,6 +622,35 @@ export async function marcarTentativaNpsSemRetorno(attemptId: string): Promise<{
 }
 
 /**
+ * O cliente respondeu à tentativa (26/10/2026). Vale a qualquer hora —
+ * inclusive depois de virar "sem retorno", que é quando a resposta costuma
+ * chegar. É o que conta em "Detratores que responderam".
+ */
+export async function marcarTentativaNpsRespondida(attemptId: string): Promise<{ ok: true } | Falha> {
+
+  const quem = await agente();
+  if ("erro" in quem) return { ok: false, erro: quem.erro! };
+
+  try {
+    const t = await quem.ctx.prisma.npsAttempt.findUnique({
+      where: { id: attemptId },
+      select: { resultado: true, responseId: true, response: { select: { status: true } } },
+    });
+    if (!t) return { ok: false, erro: "Esta tentativa não existe mais." };
+    if (isEncerrado(t.response.status)) return { ok: false, erro: "O ciclo já está encerrado." };
+    if (t.resultado === "respondeu") return { ok: true };
+    await quem.ctx.prisma.npsAttempt.update({ where: { id: attemptId }, data: { resultado: "respondeu" } });
+    await quem.ctx.prisma.npsResponse.update({ where: { id: t.responseId }, data: { updatedAt: new Date() } });
+  } catch (erro) {
+    console.error("[nps] respondeu", erro);
+    return { ok: false, erro: "O banco não aceitou a gravação agora. Tente de novo em instantes." };
+  }
+
+  updateTag(WORKSPACE_TAG);
+  return { ok: true };
+}
+
+/**
  * Os tipos e as etapas cadastrados — ou os do guia, com o banco vazio.
  * O servidor confere o encerramento com a mesma lista que a tela mostra.
  */

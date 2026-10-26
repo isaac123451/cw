@@ -320,7 +320,7 @@ export interface Tentativa {
   /** Quando foi — ausente é agora. */
   em?: Date;
   /** "aguardando" (o padrão) ou, passadas 2 horas, "sem-resposta". */
-  resultado?: "aguardando" | "sem-resposta";
+  resultado?: "aguardando" | "sem-resposta" | "respondeu";
 }
 
 /**

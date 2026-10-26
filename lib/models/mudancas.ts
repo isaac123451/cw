@@ -53,6 +53,16 @@ export const REVISAO = {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- passe a limpo (21/10) ---------------- */
   {
+    id: "detratores-que-responderam",
+    dia: "2026-10-26",
+    tipo: "novo",
+    frente: "plataforma",
+    titulo: "Detratores que responderam ao contato — e a IA lendo a resposta no WhatsApp",
+    texto:
+      "A Análise do NPS ganhou \"Detratores que responderam\": dos detratores contatados, quantos de fato responderam. Conta a tentativa marcada como respondida, o \"Falei com o cliente\" e o encerramento com retorno (\"Sem retorno\" e \"Sem tratativa\" não contam). Cada tentativa na ficha tem agora o botão \"O cliente respondeu\", que vale a qualquer hora — inclusive depois de virar sem retorno, que é quando a resposta costuma chegar. E a IA do dia faz isso sozinha, como já fazia no Reclame Aqui: numa conversa do WhatsApp ligada ao NPS, se o cliente escreveu depois da tentativa, ela fica \"respondeu\" (com desfazer). Com o telefone vindo do portal, mais conversas se ligam ao NPS sozinhas.",
+    href: "/nps/analise",
+  },
+  {
     id: "telefone-do-nps-pelo-portal",
     dia: "2026-10-26",
     tipo: "novo",

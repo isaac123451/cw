@@ -20,7 +20,7 @@ import { tentativasNaJanela } from "@/lib/services/nps.service";
 import { descreverRegistro } from "@/lib/services/horasUteis";
 import { podeMarcarSemRetorno, quandoLiberaSemRetorno } from "@/lib/models/tratativa";
 import { useAgora } from "@/lib/hooks/useAgora";
-import { marcarTentativaNpsSemRetorno } from "@/lib/actions/nps";
+import { marcarTentativaNpsRespondida, marcarTentativaNpsSemRetorno } from "@/lib/actions/nps";
 import { useNps } from "@/lib/context/NpsContext";
 import { useToast } from "@/lib/context/ToastContext";
 
@@ -36,6 +36,8 @@ interface Evento {
   quem?: string;
   /** A tentativa ainda aguardando retorno — o id, para marcar depois das 2 horas. */
   aguardando?: string;
+  /** A tentativa que ainda pode ser marcada como respondida. */
+  respondivel?: string;
 }
 
 /**
@@ -63,12 +65,14 @@ export default function ContatosDoNps({ item, registrar }: { item: NpsResponseVi
       id: a.id,
       em: a.createdAt,
       icone: Phone,
-      cor: a.resultado === "aguardando" ? "text-amber-500" : "text-zinc-400",
-      titulo: `Tentativa por ${a.channel} · ${a.resultado === "aguardando" ? "aguardando retorno" : "sem retorno"}`,
+      cor: a.resultado === "respondeu" ? "text-emerald-500" : a.resultado === "aguardando" ? "text-amber-500" : "text-zinc-400",
+      titulo: `Tentativa por ${a.channel} · ${a.resultado === "respondeu" ? "o cliente respondeu" : a.resultado === "aguardando" ? "aguardando retorno" : "sem retorno"}`,
       /* "." era o que se digitava para passar do campo obrigatório: não é anotação. */
       texto: temConteudo(a.note) ? a.note : undefined,
       quem: a.actor,
       aguardando: a.resultado === "aguardando" && !encerrado ? a.id : undefined,
+      /* A resposta costuma chegar depois do "sem retorno": dá para marcar a qualquer hora. */
+      respondivel: a.resultado !== "respondeu" && !encerrado ? a.id : undefined,
     })),
     ...(item.postContactAt
       ? [
@@ -105,6 +109,23 @@ export default function ContatosDoNps({ item, registrar }: { item: NpsResponseVi
         ]
       : []),
   ].sort((a, b) => Date.parse(a.em) - Date.parse(b.em));
+
+  async function respondeu(id: string) {
+    setMarcando(id);
+    try {
+      const r = await marcarTentativaNpsRespondida(id);
+      if (!r.ok) {
+        notify({ tone: "error", title: "Não foi marcado.", detail: r.erro });
+        return;
+      }
+      await recarregar();
+      notify({ tone: "success", title: "Marcado: o cliente respondeu." });
+    } catch {
+      notify({ tone: "error", title: "Não foi marcado.", detail: "Tente de novo em instantes." });
+    } finally {
+      setMarcando(null);
+    }
+  }
 
   /* Passadas as 2 horas sem resposta, a tentativa vira "sem retorno" e conta para o guia. */
   async function semRetorno(id: string) {
@@ -183,6 +204,17 @@ export default function ContatosDoNps({ item, registrar }: { item: NpsResponseVi
                     </span>
                   </p>
                   {e.texto && <p className="mt-0.5 text-[13px] leading-relaxed text-zinc-600">{e.texto}</p>}
+                  {e.respondivel && (
+                    <button
+                      type="button"
+                      onClick={() => respondeu(e.respondivel!)}
+                      disabled={marcando !== null}
+                      className="mt-1.5 mr-2 inline-flex items-center gap-1 rounded-md bg-white px-2 py-0.5 text-xs font-medium text-emerald-800 ring-1 ring-inset ring-emerald-200 hover:ring-emerald-300 disabled:opacity-50"
+                    >
+                      {marcando === e.respondivel && <Loader2 size={11} className="animate-spin" />}
+                      O cliente respondeu
+                    </button>
+                  )}
                   {e.aguardando && agora && (
                     podeMarcarSemRetorno(e.em, agora) ? (
                       <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs">

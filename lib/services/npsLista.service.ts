@@ -104,7 +104,7 @@ export async function lerRespostasDoNps(prisma: PrismaClient, opcoes: { desde?: 
       actor: a.actor,
       createdAt: a.createdAt.toISOString(),
       /* Passadas as 2 horas sem conversa, a tentativa já é sem retorno (1.110). */
-      resultado: a.resultado === "aguardando" && !podeMarcarSemRetorno(a.createdAt) ? ("aguardando" as const) : ("sem-resposta" as const),
+      resultado: a.resultado === "respondeu" ? ("respondeu" as const) : a.resultado === "aguardando" && !podeMarcarSemRetorno(a.createdAt) ? ("aguardando" as const) : ("sem-resposta" as const),
     })),
   }));
 }
