@@ -4,7 +4,7 @@
  * "Eu queria sempre verificar o número de telefone." O Wootric não manda
  * telefone; manda o `company_id`, que é o id do estabelecimento no portal.
  * Enquanto houver uma aba do portal aberta (não precisa estar na frente),
- * este script, a cada 30 minutos:
+ * este script, a cada 30 minutos (até 120 estabelecimentos por volta):
  *
  * 1. pergunta ao CW Reputação quais estabelecimentos de NPS estão sem
  *    telefone (detratores e neutros em aberto primeiro);

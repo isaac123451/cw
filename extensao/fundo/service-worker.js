@@ -634,7 +634,7 @@ async function tratar(mensagem) {
   }
 
   if (mensagem?.tipo === "npsTelefonesGravar") {
-    const dados = await chamar(CAMINHOS.npsTelefones, {}, { lidos: Array.isArray(mensagem.lidos) ? mensagem.lidos.slice(0, 60) : [] });
+    const dados = await chamar(CAMINHOS.npsTelefones, {}, { lidos: Array.isArray(mensagem.lidos) ? mensagem.lidos.slice(0, 150) : [] });
     await chrome.storage.local.set({ telefonesNps: { em: Date.now(), ...dados } });
     return { ok: true, dados };
   }

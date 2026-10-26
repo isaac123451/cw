@@ -25,7 +25,7 @@ export const dynamic = "force-dynamic";
  * `telefoneDoPortal.service.ts`.
  */
 
-const TETO = 60;
+const TETO = 150;
 
 export async function GET(request: Request) {
   const { usuario, demonstracao } = await autenticar(request);
@@ -35,7 +35,7 @@ export async function GET(request: Request) {
   const podeGravar = Boolean(usuario && usuario.papel !== "LEITURA");
   if (!prisma || !podeGravar) return responder(request, { pedidos: [], podeGravar });
 
-  return responder(request, { pedidos: await pendentesDeTelefone(prisma, new Date(), 40), podeGravar });
+  return responder(request, { pedidos: await pendentesDeTelefone(prisma, new Date(), 120), podeGravar });
 }
 
 export async function POST(request: Request) {
