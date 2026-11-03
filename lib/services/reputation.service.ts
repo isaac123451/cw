@@ -1,6 +1,7 @@
 import {
   Case,
   respondida,
+  saiuDaNota,
 } from "@/lib/models/case";
 
 /**
@@ -604,8 +605,11 @@ function contaParaNota(item: Case) {
 }
 
 export function getRawCounts(
-  cases: Case[]
+  todos: Case[]
 ): ReputationRaw {
+
+  /* Moderação aceita ou desativada no portal: o portal não conta (03/11/2026). */
+  const cases = todos.filter((item) => !saiuDaNota(item));
 
   const evaluatedCases = cases.filter(contaParaNota);
 

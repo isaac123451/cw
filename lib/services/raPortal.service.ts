@@ -4,7 +4,7 @@ import type { Prisma, PrismaClient } from "@prisma/client";
 import { Case } from "@/lib/models/case";
 import { TAG_DA_EXTENSAO } from "@/lib/models/tag";
 import { instanteDeParede } from "@/lib/services/horasUteis";
-import { STATUS_TERMINADO } from "@/lib/services/case.service";
+import { colunaNoFluxo, STATUS_TERMINADO } from "@/lib/services/case.service";
 
 import {
   COLUNAS_DO_PORTAL,
@@ -605,7 +605,29 @@ export async function gravarDoPortal(
       mudancas.status = "Aguardando nossa réplica";
     }
 
-    if (!atual.externalUrl && doPortal.raUrl) {
+    /*
+      Avaliada aqui e sem avaliação no portal (03/11/2026): a página manda.
+      RA-50JTSmmAOFueKwQ9 ficou com uma nota 10 que o consumidor nunca deu,
+      vinda de uma correção de dados — e a regra "campo vazio não apaga"
+      só zerava o "avaliada", deixando nota, resolvido e a coluna final.
+      Agora a avaliação sai inteira e a coluna volta para a do portal.
+    */
+    const avaliacaoDesfeita = !r.avaliada && atual.evaluated;
+    if (avaliacaoDesfeita) {
+      const voltaPara = doPortal.status === "Novo" ? "Aguardando avaliação" : doPortal.status;
+      Object.assign(mudancas, {
+        evaluated: false,
+        score: null,
+        resolved: false,
+        wouldDoBusiness: false,
+        evaluatedAt: null,
+        consideracaoFinal: null,
+        status: colunaNoFluxo(voltaPara, await etapasDoFluxo(prisma)),
+      });
+    }
+
+    /* Endereço vazio ou de outra reclamação (dois casos assim em 03/11/2026): o do portal. */
+    if (doPortal.raUrl && (!atual.externalUrl || !atual.externalUrl.includes(r.codigo))) {
       mudancas.externalUrl = doPortal.raUrl;
     }
 
@@ -619,6 +641,12 @@ export async function gravarDoPortal(
       data: mudancas,
       select: { id: true },
     });
+
+    if (avaliacaoDesfeita) {
+      await prisma.caseEvent
+        .create({ data: { caseId: atual.id, kind: "etapa", detail: `${atual.status} → ${String(mudancas.status)} (o portal não tem avaliação nesta reclamação)`, actor: "Vigia do Reclame Aqui" } })
+        .catch((erro) => console.error("[vigia] histórico da avaliação desfeita", erro));
+    }
 
     /* O portal fechou o caso: as tarefas da agenda dele fecham junto (1.91). */
     if (typeof mudancas.status === "string" && STATUS_TERMINADO.includes(mudancas.status)) {
@@ -890,6 +918,8 @@ export async function aguardandoAvaliacao(
       evaluated: false,
       publicResponseAt: { not: null },
       status: { notIn: STATUS_TERMINADO },
+      /* Desativada no portal ou moderação aceita: não espera mais avaliação (03/11/2026). */
+      OR: [{ moderacaoResultado: null }, { moderacaoResultado: { notIn: ["aceita", "desativada"] } }],
     },
     select: { protocol: true, externalId: true, publicResponseAt: true, ultimoContatoEm: true, ultimoPedidoAvaliacaoEm: true },
     orderBy: { publicResponseAt: "desc" },
@@ -1017,6 +1047,13 @@ export async function situacaoNaLista(
       */
       if (colunaDaAvaliacao(caso)) return true;
 
+      /*
+        Avaliada aqui e não na lista do portal (03/11/2026): reabrir, e a
+        página decide. Logo depois de uma avaliação a lista ainda pode
+        atrasar — reabrir nesse intervalo só confirma, sem mudar nada.
+      */
+      if (caso.evaluated && !item.avaliada && respondidaLa) return true;
+
       /* Coluna do portal parada em "Novo" com a reclamação já respondida. */
       return (
         respondidaLa &&
@@ -1027,4 +1064,33 @@ export async function situacaoNaLista(
     .map((item) => item.codigo);
 
   return { atrasadas, emAndamento: emAndamento.filter((c) => !atrasadas.includes(c)) };
+}
+
+/**
+ * As reclamações que o portal mostra como "Reclamação desativada" (03/11/2026).
+ *
+ * O portal deixa de contá-las em tudo — recebidas, respondidas, avaliadas.
+ * RA-JJ45LOgFDJoIp5fw estava assim e seguia contando aqui: 120 recebidas
+ * nos 6 meses contra 119 no painel. Marcadas, saem da nota (`saiuDaNota`) e
+ * das filas (`isOpen`). Devolve os protocolos que mudaram.
+ */
+export async function marcarDesativadas(prisma: PrismaClient, codigos: string[]): Promise<string[]> {
+  const validos = [...new Set(codigos.filter((c) => CODIGO_DO_PORTAL.test(c)))].slice(0, 50);
+  if (validos.length === 0) return [];
+  const casos = await prisma.case.findMany({
+    where: {
+      channel: "RECLAME_AQUI",
+      OR: [{ protocol: { in: validos.map((c) => `RA-${c}`) } }, { externalId: { in: [...validos, ...validos.map((c) => `RA-${c}`)] } }],
+    },
+    select: { id: true, protocol: true, moderacaoResultado: true },
+  });
+  const marcar = casos.filter((c) => c.moderacaoResultado !== "desativada");
+  const agora = new Date();
+  for (const c of marcar) {
+    await prisma.case.update({ where: { id: c.id }, data: { moderacaoResultado: "desativada", moderacaoRespondidaEm: agora, moderacaoMotivo: "Reclamação desativada no portal" } });
+    await prisma.caseEvent
+      .create({ data: { caseId: c.id, kind: "etapa", detail: "Desativada no portal: sai da nota e das filas", actor: "Vigia do Reclame Aqui" } })
+      .catch((erro) => console.error("[vigia] histórico da desativada", erro));
+  }
+  return marcar.map((c) => c.protocol);
 }

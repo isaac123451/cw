@@ -503,6 +503,11 @@ export default function CaseSidebar({
               </button>
             </div>
 
+            {data.moderacaoResultado === "desativada" && (
+              <p className="mt-1.5 rounded-md bg-zinc-100 px-2 py-1 text-xs text-zinc-700">
+                Desativada no portal: o Reclame Aqui não conta mais esta reclamação. Ela saiu da nota e das filas.
+              </p>
+            )}
             {data.moderacaoPedidaEm ? (
               <>
                 <p className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs text-zinc-600">

@@ -248,10 +248,10 @@ export function buildTimeline(
     if (item.moderacaoRespondidaEm && item.moderacaoResultado && item.moderacaoResultado !== "pendente") {
       entries.push({
         id: "moderacao-resposta",
-        title: item.moderacaoResultado === "aceita" ? "Moderação aceita" : "Moderação negada",
-        detail: item.moderacaoResultado === "aceita" ? "A reclamação sai da nota." : "A reclamação segue contando na nota.",
+        title: item.moderacaoResultado === "desativada" ? "Desativada no portal" : item.moderacaoResultado === "aceita" ? "Moderação aceita" : "Moderação negada",
+        detail: item.moderacaoResultado === "desativada" ? "O portal não conta mais esta reclamação: sai da nota e das filas." : item.moderacaoResultado === "aceita" ? "A reclamação sai da nota." : "A reclamação segue contando na nota.",
         at: item.moderacaoRespondidaEm,
-        tone: item.moderacaoResultado === "aceita" ? "encerramento" : "alerta",
+        tone: item.moderacaoResultado === "negada" ? "alerta" : "encerramento",
       });
     }
   }

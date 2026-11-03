@@ -230,7 +230,8 @@ export interface Case {
   /** Rotina diária, item 6: o pedido de moderação ao Reclame Aqui. */
   moderacaoPedidaEm?: string;
   moderacaoMotivo?: string;
-  moderacaoResultado?: "pendente" | "aceita" | "negada";
+  /** "desativada": a reclamação está desativada no portal (03/11/2026) — sai da nota como a moderação aceita. */
+  moderacaoResultado?: "pendente" | "aceita" | "negada" | "desativada";
   moderacaoRespondidaEm?: string;
 
   /** A causa raiz, da lista única do NPS — ver `NpsRootCause`. */
@@ -380,6 +381,16 @@ export function voltariaDoCaso(item: { evaluated?: boolean; wouldDoBusiness?: bo
 }
 
 export const ROTULO_DO_VOLTARIA: Record<Voltaria, string> = { sim: "Sim", nao: "Não", indefinido: "não definido" };
+
+/**
+ * A reclamação saiu da nota do portal (03/11/2026): moderação aceita ou
+ * reclamação desativada. O portal não conta nenhuma das duas — nem em
+ * recebidas. RA-JJ45LOgFDJoIp5fw estava desativada lá e contada aqui: a
+ * base tinha 120 recebidas nos 6 meses, o painel 119.
+ */
+export function saiuDaNota(item: { moderacaoResultado?: string | null }) {
+  return item.moderacaoResultado === "aceita" || item.moderacaoResultado === "desativada";
+}
 
 export function respondida(item: {
   respondida?: boolean;

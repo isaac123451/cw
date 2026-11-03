@@ -62,10 +62,10 @@ async function main() {
     /*
       O portal leva até dois dias para pôr a avaliação no painel (07/10/2026:
       a nota 10 de RA-JsltPJ6jl7vwNa8P, feita no dia 7, faltava no painel lido
-      às 21h52 do dia 7 e às 00h20 do dia 8). Em 22/10/2026 foram três: a nota
-      10 de RA-50JTSmmAOFueKwQ9, feita no dia 20, faltava no painel lido no dia
-      22 às 9h42. Vale a conta do dia da leitura ou a de um dos três dias antes
-      — e o dia que bateu aparece na linha.
+      às 21h52 do dia 7 e às 00h20 do dia 8). Vale a conta do dia da leitura ou
+      a de um dos três dias antes — e o dia que bateu aparece na linha.
+      (A "nota 10 de RA-50JT que faltava no painel" de 22/10 não era atraso: o
+      consumidor nunca avaliou. Conferido página a página em 03/11/2026.)
     */
     const contaNoDia = (dia: string) => {
       const janela = casos.filter((c) => inRange(c, p.inicio!, p.fim)).map((c) => comoEstavaNoDia(c, dia));
@@ -85,11 +85,11 @@ async function main() {
       esperado
     );
     /*
-      Recebidas com folga de 1: em 01/10/2026 o portal contava 129 e a base
-      130 nos 6 meses (e 221 × 222 nos 12) — uma reclamação que existe aqui
-      e não lá, sem avaliação, que não muda nenhum índice acima.
+      Recebidas e respondidas exatas desde 03/11/2026. A "folga de 1" de
+      outubro escondia RA-JJ45LOgFDJoIp5fw, desativada no portal e contada
+      aqui; desativada e moderação aceita agora saem da conta (`saiuDaNota`).
     */
-    conferir("   recebidas (folga de 1)", Math.abs(r.received - Number(d.recebidas)) <= 1, true);
+    conferir("   recebidas e respondidas", [r.received, r.answered], [Number(d.recebidas), Number(d.respondidas)]);
     if (vistos.size >= 2) break;
   }
   if (vistos.size === 0) console.log("  (nenhum painel do portal lido ainda — a extensão grava na próxima leitura)");

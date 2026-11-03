@@ -53,6 +53,16 @@ export const REVISAO = {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "base-bate-com-o-painel",
+    dia: "2026-11-03",
+    tipo: "correcao",
+    frente: "reclame-aqui",
+    titulo: "Os números do Reclame Aqui batem com o painel do portal",
+    texto:
+      "A ferramenta contava 120 reclamações e 72 avaliadas nos 6 meses, e o portal 119 e 71. Conferido página a página, eram duas coisas. RA-JJ45LOgFDJoIp5fw está \"Reclamação desativada\" no portal, que não a conta mais, e aqui seguia contando e aparecendo como trabalho. RA-50JTSmmAOFueKwQ9 tinha uma nota 10 que o consumidor nunca deu. Agora reclamação desativada ou com moderação aceita sai da nota e das filas, como a ficha já dizia. E o vigia reabre a reclamação que está avaliada aqui e não lá, desfaz a avaliação inteira, e reconhece a página de reclamação desativada sozinho. Com isso, recebidas, respondidas, avaliadas, solução, voltaria, nota do consumidor e nota batem nas janelas de 6 meses, 12 meses e 3 anos.",
+    href: "/reclame-aqui/indice",
+  },
+  {
     id: "responder-as-que-da",
     dia: "2026-11-03",
     tipo: "correcao",

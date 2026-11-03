@@ -42,7 +42,7 @@ export default function ModeracaoModal({ item, onClose, onSalvo }: Props) {
   const pedida = Boolean(item.moderacaoPedidaEm);
 
   const [motivo, setMotivo] = useState(item.moderacaoMotivo ?? "");
-  const [resultado, setResultado] = useState<"pendente" | "aceita" | "negada">(item.moderacaoResultado ?? "pendente");
+  const [resultado, setResultado] = useState<"pendente" | "aceita" | "negada">(item.moderacaoResultado === "desativada" ? "aceita" : (item.moderacaoResultado ?? "pendente"));
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 

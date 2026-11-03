@@ -1881,17 +1881,19 @@ async function umaVolta(motivo) {
 
   const lidas = [];
   const abertas = new Set();
+  /* "Reclamação desativada" no portal (03/11/2026): não conta na nota, e o servidor tira das filas. */
+  const desativadas = [];
 
   for (const codigo of agoraAbrir) {
 
     try {
-      const lida = lerReclamacao(
-        await doPortal(enderecoDaReclamacao(codigo))
-      );
+      const html = await doPortal(enderecoDaReclamacao(codigo));
+      const lida = lerReclamacao(html);
 
       abertas.add(codigo);
 
       if (lida) lidas.push(lida);
+      else if (/<title>[^<]*Reclama(?:ç|c|&ccedil;|&#231;)(?:ã|a|&atilde;|&#227;)o desativada/i.test(String(html ?? "").slice(0, 30000))) desativadas.push(codigo);
     } catch (erro) {
       /* A verificação vale para a volta inteira: para aqui. */
       if (erro?.codigo === "portal-desafio") break;
@@ -1903,12 +1905,12 @@ async function umaVolta(motivo) {
 
   let resultado = { criadas: [], completadas: [], inalteradas: 0 };
 
-  if (lidas.length > 0) {
+  if (lidas.length > 0 || desativadas.length > 0) {
     try {
       resultado = await chamar(
         CAMINHOS.raVigia,
         {},
-        { reclamacoes: lidas }
+        { reclamacoes: lidas, desativadas }
       );
     } catch (erro) {
       /* Não gravou: a fila fica inteira para a próxima volta. */

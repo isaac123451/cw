@@ -14,6 +14,7 @@ import {
   aguardandoAvaliacao,
   EMPRESA_NO_PORTAL,
   gravarDoPortal,
+  marcarDesativadas,
   pendentesDoPortal,
   TETO_POR_VOLTA,
   validarReclamacao,
@@ -97,10 +98,10 @@ export async function POST(request: Request) {
     );
   }
 
-  let corpo: { reclamacoes?: unknown } = {};
+  let corpo: { reclamacoes?: unknown; desativadas?: unknown } = {};
 
   try {
-    corpo = (await request.json()) as { reclamacoes?: unknown };
+    corpo = (await request.json()) as { reclamacoes?: unknown; desativadas?: unknown };
   } catch {
     return responder(request, { erro: "Corpo inválido." }, 400);
   }
@@ -120,9 +121,16 @@ export async function POST(request: Request) {
 
   const resultado = await gravarDoPortal(prisma, unicas);
 
+  /* As que o portal mostra como "Reclamação desativada" (03/11/2026). */
+  const desativadas = await marcarDesativadas(
+    prisma,
+    Array.isArray(corpo.desativadas) ? corpo.desativadas.filter((c): c is string => typeof c === "string") : []
+  );
+
   if (
     resultado.criadas.length > 0 ||
-    resultado.completadas.length > 0
+    resultado.completadas.length > 0 ||
+    desativadas.length > 0
   ) {
     /*
       `expire: 0` e não "max": quem recebe a notificação "2 reclamações
@@ -134,6 +142,7 @@ export async function POST(request: Request) {
 
   return responder(request, {
     ...resultado,
+    desativadas,
     ignoradas: brutas.length - validas.length,
   });
 }

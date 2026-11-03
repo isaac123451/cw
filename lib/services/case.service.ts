@@ -1,4 +1,4 @@
-import { Case, respondida } from "@/lib/models/case";
+import { Case, respondida, saiuDaNota } from "@/lib/models/case";
 import { hojeNaOperacao } from "@/lib/services/reputation.service";
 
 export interface Distribution {
@@ -159,6 +159,8 @@ export function colunaNoFluxo(papel: string, etapas: readonly string[] | null | 
 }
 
 export function isOpen(item: Case) {
+  /* Desativada no portal ou com moderação aceita não é mais trabalho (03/11/2026). */
+  if (saiuDaNota(item)) return false;
   return !CLOSED_STATUS.includes(item.status) && !CLOSED_STATUS.includes(papelDaEtapa(item.status));
 }
 

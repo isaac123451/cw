@@ -1116,7 +1116,7 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
-### Revisão de novembro: bugs, contas e organização (03/11/2026, 1.1.25–1.1.29)
+### Revisão de novembro: bugs, contas e organização (03/11/2026, 1.1.25–1.1.31)
 
 Pedido do Isaac: "existem muitos bugs… informações muito jogadas… corrija
 os problemas de desempenho… existem cálculos incorretos". E: "preciso que
@@ -1144,8 +1144,14 @@ aqui… atualize na ferramenta no caso."
 - [ ] Depois do deploy, conferir que as 4 foram para "Avaliado como resolvido".
 - [ ] `check:indice-portal`: a base tem 1 avaliação nota 10 a mais que o painel
       (72 × 71 em 6 meses). Reconferir depois da próxima leitura do painel.
-- [ ] Passada visual logada (o login automático foi barrado): Meu dia, NPS,
-      Reclame Aqui e Redes no navegador embutido, com o Isaac entrando.
+- [x] Passada visual logada (o Isaac entrou no navegador embutido): Meu dia, NPS,
+      Reclame Aqui, Redes, Dashboard e Agenda; varredura de 40 telas sem valor quebrado.
+- [x] "Os dados do RA estão diferentes do portal" (1.1.31): RA-JJ45 desativada no
+      portal e contada aqui; RA-50JT com nota 10 inexistente. Desativada e moderação
+      aceita saem da nota; o vigia desfaz avaliação que o portal não tem e marca
+      desativada. Simulado: as 5 janelas do painel batem nos 8 números.
+- [ ] **Isaac roda** `npx tsx scripts/_portal-0311.ts --gravar` e recarrega a extensão;
+      depois `check:indice-portal` fica limpo (recebidas agora sem folga).
 
 ### Caso a caso na fila, números nas abas e o popup que abria rolado (05/10/2026)
 

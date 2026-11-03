@@ -42,7 +42,9 @@ import {
 } from "../extensao/comum/portal-ra.js";
 
 import {
+  aguardandoAvaliacao,
   atrasadasNaLista,
+  marcarDesativadas,
   casoDoPortal,
   completarContato,
   gravarDoPortal,
@@ -348,6 +350,8 @@ const ADIANTADA = "ZzVigiaAdiantada";
 const PELO_NUMERO = "ZzVigiaPeloNumer";
 const NUMERO = 987654321;
 const PELO_TITULO = "ZzVigiaPeloTitul";
+const SEM_AVALIACAO = "ZzVigiaSemAvalia";
+const DESATIVADA = "ZzVigiaDesativad";
 
 /*
   Toda descartável entra aqui — inclusive as que só nascem quando uma
@@ -364,6 +368,8 @@ const PROTOCOLOS = [
   ADIANTADA,
   PELO_NUMERO,
   PELO_TITULO,
+  SEM_AVALIACAO,
+  DESATIVADA,
 ].map((c) => `RA-${c}`).concat([`RA-${NUMERO}`, "RA-ZzVigiaTituloAntig"]);
 
 async function limpar(prisma: PrismaClient) {
@@ -557,6 +563,33 @@ async function travas(prisma: PrismaClient) {
     papelDaEtapa((await prisma.case.findUnique({ where: { protocol: `RA-${JURIDICO}` }, select: { status: true } }))?.status),
     "Resolvido"
   );
+
+  /* --- 03/11/2026: avaliada aqui e não no portal (RA-50JT tinha uma nota 10 que não existe) --- */
+
+  await nascer(prisma, SEM_AVALIACAO, {
+    status: "Avaliado como resolvido", evaluated: true, score: 10, resolved: true, wouldDoBusiness: true,
+    evaluatedAt: new Date("2026-10-20T00:00:00Z"), publicResponse: "Resposta.", publicResponseAt: new Date("2026-08-21T00:00:00Z"),
+  });
+  conferir(
+    "avaliada aqui e não na lista do portal: a página é reaberta",
+    await atrasadasNaLista(prisma, [{ codigo: SEM_AVALIACAO, status: "ANSWERED", avaliada: false }]),
+    [SEM_AVALIACAO]
+  );
+  await gravarDoPortal(prisma, [respondida(SEM_AVALIACAO, { status: "ANSWERED", avaliada: false, resolvida: false, nota: undefined, voltaria: false, interacoes: [{ tipo: "ANSWER", em: "2026-08-21T10:00:00", texto: "Resposta do portal." }] })]);
+  const desfeita = await prisma.case.findUnique({ where: { protocol: `RA-${SEM_AVALIACAO}` }, select: { evaluated: true, score: true, resolved: true, wouldDoBusiness: true, evaluatedAt: true, status: true } });
+  conferir(
+    "sem avaliação no portal: a avaliação sai inteira e a coluna volta",
+    [desfeita?.evaluated, desfeita?.score, desfeita?.resolved, desfeita?.wouldDoBusiness, desfeita?.evaluatedAt, papelDaEtapa(desfeita?.status)],
+    [false, null, false, false, null, "Aguardando avaliação"]
+  );
+
+  /* --- 03/11/2026: "Reclamação desativada" no portal (RA-JJ45) --- */
+
+  await nascer(prisma, DESATIVADA, { publicResponse: "Resposta.", publicResponseAt: new Date("2026-10-01T00:00:00Z") });
+  conferir("desativada no portal: marcada (código inválido ignorado)", await marcarDesativadas(prisma, [DESATIVADA, "invalido"]), [`RA-${DESATIVADA}`]);
+  conferir("e marcada uma vez só", await marcarDesativadas(prisma, [DESATIVADA]), []);
+  const rodizio = await aguardandoAvaliacao(prisma);
+  conferir("sai da rotação de quem espera avaliação", [...rodizio.quentes, ...rodizio.frias].includes(DESATIVADA), false);
 
   /* --- ninguém volta para Novo --- */
 
