@@ -53,6 +53,26 @@ export const REVISAO = {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "sino-categorias-propostas",
+    dia: "2026-11-03",
+    tipo: "melhoria",
+    frente: "reclame-aqui",
+    titulo: "O sino lembra das categorias que a IA propôs",
+    texto:
+      "As propostas de categoria da IA ficavam esperando sem ninguém lembrar delas: eram 137 em novembro. Agora o sino mostra quantas faltam decidir, com o atalho para a tela de Categorias. Aparece só para administrador, que é quem aceita ou recusa, e não abre pop-up.",
+    href: "/reclame-aqui/categorias",
+  },
+  {
+    id: "novidades-por-frente-enxuta",
+    dia: "2026-11-03",
+    tipo: "melhoria",
+    frente: "plataforma",
+    titulo: "Novidades: seis por frente, o resto num clique",
+    texto:
+      "A tela abria as mais de 220 mudanças de uma vez, e o que entrou hoje se perdia no meio. Agora cada frente mostra as seis mais recentes e as que são novas para você; \"Ver as outras\" abre o resto. Com busca ou filtro, aparece tudo o que bate.",
+    href: "/novidades",
+  },
+  {
     id: "redes-resolvido-de-volta",
     dia: "2026-11-03",
     tipo: "correcao",

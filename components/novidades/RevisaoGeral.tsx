@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 
 import {
   ArrowUpRight,
+  ChevronDown,
   Cog,
   LayoutGrid,
   MapPin,
@@ -95,6 +96,9 @@ export default function RevisaoGeral({ novas }: { novas: Set<string> }) {
   })).filter((g) => g.itens.length > 0);
 
   const filtrando = Boolean(tipo || frente || termo.trim());
+
+  /* As frentes que a pessoa abriu por inteiro. Com filtro ou busca, tudo aparece. */
+  const [abertas, setAbertas] = useState<Set<string>>(() => new Set());
 
   return (
     <section aria-labelledby="revisao" className="space-y-5">
@@ -201,16 +205,36 @@ export default function RevisaoGeral({ novas }: { novas: Set<string> }) {
                 <span className="text-xs font-normal tabular-nums text-zinc-400">{g.itens.length}</span>
               </h3>
               <ol className="divide-y divide-zinc-100 overflow-hidden rounded-xl border border-zinc-200/80 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
-                {g.itens.map((m) => (
+                {(filtrando || abertas.has(g.id) ? g.itens : recorteDoGrupo(g.itens, novas)).map((m) => (
                   <ItemDaMudanca key={m.id} mudanca={m} nova={novas.has(m.id)} />
                 ))}
               </ol>
+              {!filtrando && !abertas.has(g.id) && g.itens.length > recorteDoGrupo(g.itens, novas).length && (
+                <button
+                  type="button"
+                  onClick={() => setAbertas((s) => new Set(s).add(g.id))}
+                  className="mt-1.5 flex items-center gap-1 px-1 text-xs font-medium text-zinc-600 hover:text-violet-700"
+                >
+                  <ChevronDown size={13} aria-hidden />
+                  Ver as outras {g.itens.length - recorteDoGrupo(g.itens, novas).length}
+                </button>
+              )}
             </div>
           );
         })
       )}
     </section>
   );
+}
+
+/**
+ * O que cada frente mostra fechada (03/11/2026): as seis mais recentes e,
+ * além delas, as que são novas desde a última visita. Com mais de duzentas
+ * mudanças abertas de uma vez, o que entrou hoje se perdia no meio.
+ */
+const POR_FRENTE = 6;
+function recorteDoGrupo(itens: Mudanca[], novas: Set<string>) {
+  return itens.filter((m, i) => i < POR_FRENTE || novas.has(m.id));
 }
 
 function ItemDaMudanca({ mudanca: m, nova }: { mudanca: Mudanca; nova: boolean }) {

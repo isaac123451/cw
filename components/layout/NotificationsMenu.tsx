@@ -19,6 +19,7 @@ import { useSla } from "@/lib/context/SlaContext";
 import { useToast } from "@/lib/context/ToastContext";
 import { useAvaliacoesGoogle } from "@/lib/context/useAvaliacoesGoogle";
 import { useAgora } from "@/lib/hooks/useAgora";
+import { contarPropostasPendentes } from "@/lib/actions/revisaoDeCategorias";
 
 import {
   assinaturaDoAviso,
@@ -111,6 +112,19 @@ export default function NotificationsMenu() {
   const [open, setOpen] = useState(false);
   const [filtro, setFiltro] = useState<"novas" | "todas">("novas");
 
+  /* Propostas de categoria esperando decisão: lidas ao abrir e a cada 10 min. */
+  const [propostas, setPropostas] = useState(0);
+  useEffect(() => {
+    let vivo = true;
+    const ler = () => contarPropostasPendentes().then((n) => { if (vivo) setPropostas(n); }).catch(() => {});
+    ler();
+    const relogio = window.setInterval(ler, 10 * 60_000);
+    return () => {
+      vivo = false;
+      window.clearInterval(relogio);
+    };
+  }, []);
+
   const items = useMemo(
     () =>
       agora
@@ -122,10 +136,10 @@ export default function NotificationsMenu() {
             movements,
             googleEvents,
             expediente,
-            { nps: responses, avaliacoesGoogle: avaliacoes, regras: rules, agora }
+            { nps: responses, avaliacoesGoogle: avaliacoes, regras: rules, agora, propostasDeCategoria: propostas }
           )
         : [],
-    [cases, tasks, prefs, session, movements, googleEvents, expediente, responses, avaliacoes, rules, agora]
+    [cases, tasks, prefs, session, movements, googleEvents, expediente, responses, avaliacoes, rules, agora, propostas]
   );
 
   const vistosBrutos = useVistosBrutos();

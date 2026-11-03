@@ -66,6 +66,8 @@ export interface FontesDoSino {
   avaliacoesGoogle?: { id: string; status: string; classificacao: string; respondidaEm?: string | null; autor?: string }[];
   regras?: SlaRule[];
   agora?: Date;
+  /** Propostas de categoria da IA esperando decisão (só chega para administrador). */
+  propostasDeCategoria?: number;
 }
 
 export interface NotificationPrefs {
@@ -437,6 +439,24 @@ export function buildNotifications(
         janela: negativas.length === 1 ? { frente: "google", ref: negativas[0].id, titulo: `Google · ${negativas[0].autor ?? "avaliação"}` } : undefined,
       });
     }
+  }
+
+  /*
+    As propostas da IA para a categoria (03/11/2026): ficavam esperando
+    sem ninguém lembrar delas — 137 em novembro. Informativo: não vira
+    pop-up, só fica no sino até serem decididas.
+  */
+  if (fontes.propostasDeCategoria && fontes.propostasDeCategoria > 0) {
+    const n = fontes.propostasDeCategoria;
+    list.push({
+      id: "categorias-propostas",
+      tone: "info",
+      title: `${n} ${pluralDe(n, "categoria proposta", "categorias propostas")} pela IA`,
+      detail: "Esperando você aceitar ou recusar. A categoria certa é o que separa as causas no plano de ação.",
+      href: "/reclame-aqui/categorias",
+      count: n,
+      frente: "reclame-aqui",
+    });
   }
 
   if (fontes.regras) {

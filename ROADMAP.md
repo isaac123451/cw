@@ -1116,6 +1116,27 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Revisão de novembro: bugs, contas e organização (03/11/2026, 1.1.25–1.1.27)
+
+Pedido do Isaac: "existem muitos bugs… informações muito jogadas… corrija
+os problemas de desempenho… existem cálculos incorretos". E: "preciso que
+a extensão atualize os dados conforme ele verifique os dados do reclame
+aqui… atualize na ferramenta no caso."
+
+- [x] Colunas finais renomeadas ("Avaliado como resolvido" etc.) reconhecidas
+      pelo papel em toda a plataforma (`papelDaEtapa`, `colunaNoFluxo`).
+- [x] O que a extensão lê no portal corrige a coluna que contradiz a avaliação.
+- [x] Telefone não vira nome de empresa.
+- [x] Next 16.4.4 e bibliotecas com correção de segurança.
+- [x] Redes: renomear coluna do RA não leva mais os atendimentos das Redes.
+- [x] Novidades: seis por frente, o resto num clique.
+- [x] Sino: propostas de categoria da IA esperando decisão.
+- [ ] **Isaac roda** `npx tsx scripts/_alinhar.ts --gravar` (6 colunas do RA,
+      3 empresas que eram telefone, 112 atendimentos das Redes). Depois disso
+      `check:vinculo` e `check:papel-da-coluna` ficam limpos.
+- [ ] Passada visual logada (o login automático foi barrado): Meu dia, NPS,
+      Reclame Aqui e Redes no navegador embutido, com o Isaac entrando.
+
 ### Caso a caso na fila, números nas abas e o popup que abria rolado (05/10/2026)
 
 Continuação do pedido de 05/10 ("tudo que a extensão promete faça com

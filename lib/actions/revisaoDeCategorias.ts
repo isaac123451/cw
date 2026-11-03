@@ -122,3 +122,15 @@ export async function desfazerReclassificacao(lote: string): Promise<({ ok: true
     return { ok: false, erro: erro instanceof Error ? `Nada foi desfeito: ${erro.message}` : "Nada foi desfeito." };
   }
 }
+
+/**
+ * Quantas propostas da IA esperam decisão (03/11/2026), para o sino.
+ *
+ * Só para administrador, que é quem decide: para os outros o aviso seria
+ * uma tarefa que não podem fazer. Zero quando não há sessão ou acesso.
+ */
+export async function contarPropostasPendentes(): Promise<number> {
+  const ctx = await tryRole("ADMIN", "reclame-aqui").catch(() => null);
+  if (!ctx) return 0;
+  return ctx.prisma.propostaDeCategoria.count({ where: { status: "pendente" } });
+}
