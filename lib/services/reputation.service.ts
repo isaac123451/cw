@@ -436,6 +436,12 @@ export interface ReputationSummary {
 
   /** Nenhum indicador tinha base suficiente para calcular a nota. */
   scoreUnavailable: boolean;
+
+  /**
+   * As avaliadas como o painel do portal mostra: com a desconsiderada
+   * (03/11/2026 — o relatório dizia 143 e o portal 144 nos 12 meses).
+   */
+  avaliadasNoPortal: number;
 }
 
 export interface ScoreComponent {
@@ -527,6 +533,8 @@ export interface ReputationRaw {
   scoreSum: number;
   resolved: number;
   wouldReturn: number;
+  /** Avaliadas com a nota desconsiderada: o portal mostra entre as avaliadas, mas fora dos índices. */
+  desconsideradas?: number;
 }
 
 /**
@@ -645,6 +653,8 @@ export function getRawCounts(
     wouldReturn: evaluatedCases.filter(
       (item) => item.wouldDoBusiness
     ).length,
+
+    desconsideradas: cases.filter((item) => item.evaluated && item.scoreDisregarded).length,
   };
 }
 
@@ -812,6 +822,7 @@ export function scoreFrom(
     raScoreExato,
     breakdown,
     scoreUnavailable: withBase.length === 0,
+    avaliadasNoPortal: evaluated + (raw.desconsideradas ?? 0),
   };
 }
 

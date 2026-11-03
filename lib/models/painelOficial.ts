@@ -30,6 +30,7 @@ export function resumoComPainel(resumo: ReputationSummary, painel: PainelDoPorta
     answered: respondidas,
     unanswered: Math.max(0, recebidas - respondidas),
     evaluated: avaliadas,
+    avaliadasNoPortal: avaliadas,
     resolved: Math.round((solucao * avaliadas) / 100),
     wouldReturn: Math.round((voltaria * avaliadas) / 100),
     responseIndex: n(painel.resposta, resumo.responseIndex),

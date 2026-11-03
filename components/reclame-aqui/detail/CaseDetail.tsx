@@ -457,10 +457,6 @@ export default function CaseDetail({
               </div>
             )}
 
-            {/* Atalhos para impacto, agenda, cliente e estabelecimento. */}
-            <div className="mt-4">
-              <CaseActions data={data} />
-            </div>
 
           </div>
 
@@ -537,6 +533,9 @@ export default function CaseDetail({
               sumir, com id e título, porque "esta reclamação" numa aba
               aberta há dez minutos não é confirmação de nada.
             */}
+            {/* Impacto, atividade, cliente e estabelecimento: no "Mais". */}
+            <CaseActions data={data} />
+
             <button
               type="button"
               onClick={() => setConfirmandoExclusao(true)}

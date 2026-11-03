@@ -237,8 +237,14 @@ export default function AnalyticsOverview({
 
         <StatTile
           carregando={loading}
-          label="Índice de solução"
-          description="Percentual de casos encerrados com solução confirmada."
+          /*
+            "Taxa de resolução", e não "Índice de solução" (03/11/2026): aqui são
+            os resolvidos sobre todos os casos, canais somados — 65% ao lado dos
+            89,5% do portal parecia erro. O índice do portal (só as avaliadas)
+            está em Reclame Aqui → Nota e metas.
+          */
+          label="Taxa de resolução"
+          description="Casos resolvidos sobre todos os casos do período, somando os canais. O índice de solução do Reclame Aqui conta só as avaliadas: está em Reclame Aqui → Nota e metas."
           value={`${metrics.solutionRate}%`}
           hint={`${metrics.resolved} resolvidos`}
           icon={CheckCircle2}
@@ -288,7 +294,7 @@ export default function AnalyticsOverview({
                   "Casos",
                   "Na fila",
                   "Resolvidos",
-                  "Taxa",
+                  "Resolvidos / casos",
                   "Nota média",
                   "Tempo de resposta",
                 ].map((head) => (
@@ -354,7 +360,8 @@ export default function AnalyticsOverview({
                     </td>
 
                     <td className="px-3 py-3 xl:px-5 tabular-nums text-zinc-700">
-                      {ptBR(item.averageScore)}
+                      {/* As Redes não têm nota: "—", e não 0. */}
+                      {item.averageScore > 0 ? ptBR(item.averageScore) : "—"}
                     </td>
 
                     <td className="whitespace-nowrap px-3 py-3 xl:px-5 text-zinc-600">

@@ -313,7 +313,7 @@ export default function RelatorioDoCiclo() {
               <tr>
                 <td className="py-2 pr-3 text-zinc-600">Avaliações</td>
                 {abaisTabela.map(({ aba, nome }) => (
-                  <td key={nome} className={`py-2 pr-3 ${abaixo(aba.resumo.evaluated, RA1000_MINIMO_DE_AVALIACOES)}`}>{aba.resumo.evaluated}</td>
+                  <td key={nome} className={`py-2 pr-3 ${abaixo(aba.resumo.evaluated, RA1000_MINIMO_DE_AVALIACOES)}`}>{aba.resumo.avaliadasNoPortal ?? aba.resumo.evaluated}</td>
                 ))}
                 <td className="py-2 text-zinc-500">{RA1000_MINIMO_DE_AVALIACOES}</td>
               </tr>

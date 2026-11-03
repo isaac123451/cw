@@ -53,6 +53,26 @@ export const REVISAO = {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "ficha-uma-fileira",
+    dia: "2026-11-03",
+    tipo: "melhoria",
+    frente: "reclame-aqui",
+    titulo: "A ficha da reclamação com uma fileira de ações",
+    texto:
+      "A ficha abria com duas fileiras de botões, dez ao todo, e o que se usa em toda reclamação (WhatsApp, área da empresa, página pública, dossiê) se perdia entre eles. Agora fica uma fileira só. Registrar impacto, criar atividade, ver cliente e o estabelecimento foram para o \"Mais\", com o total do impacto e quantas atividades já existem no próprio item.",
+    href: "/reclame-aqui",
+  },
+  {
+    id: "analytics-nomes-que-batem",
+    dia: "2026-11-03",
+    tipo: "correcao",
+    frente: "plataforma",
+    titulo: "Analytics e relatório com os nomes e números do portal",
+    texto:
+      "O Analytics chamava de \"Índice de solução\" (65%) os resolvidos sobre todos os casos, com os canais somados. Ao lado dos 89,5% do portal, parecia erro. Agora o nome é \"Taxa de resolução\", a coluna da tabela é \"Resolvidos / casos\", e as Redes, que não têm nota, mostram \"—\" em vez de 0. No relatório do ciclo, as avaliações dos 12 meses passam a contar a desconsiderada, como o portal: 144, e não 143.",
+    href: "/analytics",
+  },
+  {
     id: "rotina-sem-numero-repetido",
     dia: "2026-11-03",
     tipo: "melhoria",

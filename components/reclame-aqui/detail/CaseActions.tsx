@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { useState } from "react";
@@ -14,6 +13,7 @@ import {
 
 import ImpactForm from "@/components/impacto/ImpactForm";
 import TaskForm from "@/components/agenda/TaskForm";
+import MenuMais from "@/components/shared/MenuMais";
 
 import { useImpact } from "@/lib/context/ImpactContext";
 import { useAgenda } from "@/lib/context/AgendaContext";
@@ -73,66 +73,33 @@ export default function CaseActions({
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-2">
-
-        <button
-          onClick={() => setImpactOpen(true)}
-          title="Registrar o resultado financeiro gerado por esta tratativa"
-          className="flex h-9 items-center gap-2 rounded-xl border border-zinc-200 px-3.5 text-sm font-medium text-zinc-700 transition-colors hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700"
-        >
-          <Wallet size={15} />
-          Registrar impacto
-
-          {impactosDoCaso.length > 0 && (
-            <span
-              className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
-                impactoTotal < 0
-                  ? "bg-rose-50 text-rose-700"
-                  : "bg-emerald-50 text-emerald-700"
-              }`}
-            >
-              {money.format(impactoTotal)}
-            </span>
-          )}
-        </button>
-
-        <button
-          onClick={() => setTaskOpen(true)}
-          title="Criar uma atividade na agenda já vinculada a esta reclamação"
-          className="flex h-9 items-center gap-2 rounded-xl border border-zinc-200 px-3.5 text-sm font-medium text-zinc-700 transition-colors hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700"
-        >
-          <CalendarPlus size={15} />
-          Criar atividade
-
-          {tarefasDoCaso.length > 0 && (
-            <span className="rounded-full bg-zinc-100 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-600">
-              {tarefasDoCaso.length}
-            </span>
-          )}
-        </button>
-
-        {/* Sem o nome do consumidor não há ficha de cliente para abrir. */}
-        {!semNome(data.customer) && <Link
-          href={`/clientes/${slugify(data.customer)}`}
-          title={`Ver o histórico completo de ${data.customer}`}
-          className="flex h-9 items-center gap-2 rounded-xl border border-zinc-200 px-3.5 text-sm font-medium text-zinc-700 transition-colors hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700"
-        >
-          <UserRound size={15} />
-          Ver cliente
-        </Link>}
-
-        {estabelecimento && (
-          <Link
-            href={`/estabelecimentos/${estabelecimento.slug}`}
-            title={`Abrir ${estabelecimento.name}`}
-            className="flex h-9 items-center gap-2 rounded-xl border border-zinc-200 px-3.5 text-sm font-medium text-zinc-700 transition-colors hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700"
-          >
-            <Building2 size={15} />
-            {estabelecimento.name}
-          </Link>
-        )}
-
-      </div>
+      {/*
+        Num menu "Mais" ao lado das ações do dia a dia (03/11/2026): a ficha
+        abria com duas fileiras de botões, dez ao todo, e as que se usam em
+        toda reclamação (WhatsApp, área da empresa, dossiê) se perdiam.
+      */}
+      <MenuMais
+        itens={[
+          {
+            rotulo: impactosDoCaso.length > 0 ? `Registrar impacto · ${money.format(impactoTotal)}` : "Registrar impacto",
+            icone: Wallet,
+            dica: "Registrar o resultado financeiro gerado por esta tratativa",
+            onClick: () => setImpactOpen(true),
+          },
+          {
+            rotulo: tarefasDoCaso.length > 0 ? `Criar atividade · ${tarefasDoCaso.length} já criada${tarefasDoCaso.length > 1 ? "s" : ""}` : "Criar atividade",
+            icone: CalendarPlus,
+            dica: "Criar uma atividade na agenda já vinculada a esta reclamação",
+            onClick: () => setTaskOpen(true),
+          },
+          ...(!semNome(data.customer)
+            ? [{ rotulo: "Ver cliente", icone: UserRound, dica: `Ver o histórico completo de ${data.customer}`, onClick: () => router.push(`/clientes/${slugify(data.customer)}`) }]
+            : []),
+          ...(estabelecimento
+            ? [{ rotulo: estabelecimento.name, icone: Building2, dica: `Abrir ${estabelecimento.name}`, onClick: () => router.push(`/estabelecimentos/${estabelecimento.slug}`) }]
+            : []),
+        ]}
+      />
 
       {impactOpen && (
         <ImpactForm
