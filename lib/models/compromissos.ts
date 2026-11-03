@@ -72,6 +72,12 @@ const minutoDoTexto = (hora?: string) => {
 
 const dentro = (dia: string, de: string, ate: string) => dia >= de && dia <= ate;
 
+/** A partir de quantos promotores no mesmo dia o prazo vira uma linha só. */
+const AGRUPAR_A_PARTIR_DE = 3;
+/** Até quantas ligações por frente aparecem uma a uma. */
+const LIGACOES_UMA_A_UMA = 5;
+const NOME_DA_FRENTE: Record<string, string> = { nps: "NPS", "reclame-aqui": "Reclame Aqui", redes: "Redes", google: "Google" };
+
 export function compromissosEntre(e: EntradaDosCompromissos): Compromisso[] {
 
   const agora = e.agora ?? new Date();
@@ -128,12 +134,41 @@ export function compromissosEntre(e: EntradaDosCompromissos): Compromisso[] {
     });
   }
 
+  /*
+    Promotores com o mesmo dia de prazo viram uma linha (03/11/2026): eram
+    25 linhas "NPS 10 · fulano · 1º contato vence" numa tarde, escondendo as
+    atividades e os compromissos. Detrator e neutro continuam um a um.
+  */
+  const promotoresPorDia = new Map<string, { n: number; minuto: number }>();
+  const npsDoIntervalo: { r: NpsResponseView; p: ReturnType<typeof paredeDe> }[] = [];
   for (const r of e.nps ?? []) {
     if (r.firstContactAt || r.closedAt || !r.firstContactDueAt) continue;
     const vence = new Date(r.firstContactDueAt);
     if (vence.getTime() < agora.getTime()) continue;
     const p = paredeDe(vence);
     if (!dentro(p.dia, e.de, e.ate)) continue;
+    npsDoIntervalo.push({ r, p });
+    if (r.score >= 9) {
+      const atual = promotoresPorDia.get(p.dia);
+      promotoresPorDia.set(p.dia, { n: (atual?.n ?? 0) + 1, minuto: Math.min(atual?.minuto ?? p.min, p.min) });
+    }
+  }
+  for (const [dia, { n, minuto }] of promotoresPorDia) {
+    if (n < AGRUPAR_A_PARTIR_DE) continue;
+    lista.push({
+      id: `nps-promotores:${dia}`,
+      origem: "prazo-nps",
+      titulo: `${n} promotores · 1º contato vence`,
+      detalhe: `o primeiro às ${String(Math.floor(minuto / 60)).padStart(2, "0")}:${String(minuto % 60).padStart(2, "0")} · um a um no NPS`,
+      dia,
+      minuto,
+      href: "/nps",
+      frente: "nps",
+      feito: false,
+    });
+  }
+  for (const { r, p } of npsDoIntervalo) {
+    if (r.score >= 9 && (promotoresPorDia.get(p.dia)?.n ?? 0) >= AGRUPAR_A_PARTIR_DE) continue;
     lista.push({
       id: `nps:${r.id}`,
       origem: "prazo-nps",
@@ -171,7 +206,24 @@ export function compromissosEntre(e: EntradaDosCompromissos): Compromisso[] {
 
   /* A cadência de ligações: o período do dia vem no detalhe, sem hora cravada. */
   if (e.ligacoes && dentro(e.ligacoes.dia, e.de, e.ate)) {
+    /* Mais de 5 numa frente vira uma linha que abre o Um por vez (03/11/2026): eram 69 linhas sem hora no fim do dia. */
+    const porFrente = new Map<string, number>();
+    for (const i of e.ligacoes.itens) porFrente.set(i.frente ?? "geral", (porFrente.get(i.frente ?? "geral") ?? 0) + 1);
+    for (const [frente, n] of porFrente) {
+      if (n <= LIGACOES_UMA_A_UMA) continue;
+      lista.push({
+        id: `ligacao:${frente}:todas`,
+        origem: "ligacao",
+        titulo: `${n} ligações da cadência`,
+        detalhe: `${NOME_DA_FRENTE[frente] ?? "Operação"} · uma a uma no Meu dia`,
+        dia: e.ligacoes.dia,
+        href: "/meu-dia?um-por-vez",
+        frente: frente === "geral" ? undefined : (frente as FrenteId),
+        feito: false,
+      });
+    }
     for (const i of e.ligacoes.itens) {
+      if ((porFrente.get(i.frente ?? "geral") ?? 0) > LIGACOES_UMA_A_UMA) continue;
       lista.push({
         id: `ligacao:${i.frente ?? "geral"}:${i.id}`,
         origem: "ligacao",

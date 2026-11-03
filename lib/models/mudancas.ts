@@ -53,6 +53,46 @@ export const REVISAO = {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "responder-as-que-da",
+    dia: "2026-11-03",
+    tipo: "correcao",
+    frente: "plataforma",
+    titulo: "\"Responder às 11\" virou \"responder às 9\": só as que ainda dá para responder",
+    texto:
+      "O próximo passo para a nota contava as reclamações fechadas sem resposta, que já não podem ser respondidas, e prometia 9,1. Agora conta só as abertas da janela de 6 meses: 9, levando a 9,0. Quando o quadro mostra mais, porque alguma é mais antiga que a janela, a frase diz \"que contam nos 6 meses\".",
+    href: "/meu-dia",
+  },
+  {
+    id: "agenda-promotores-agrupados",
+    dia: "2026-11-03",
+    tipo: "melhoria",
+    frente: "plataforma",
+    titulo: "Agenda: os prazos dos promotores e as ligações viram uma linha",
+    texto:
+      "O dia na Agenda listava 25 linhas \"NPS 10 · fulano · 1º contato vence\" e, no fim, 69 ligações da cadência uma a uma, escondendo as atividades e os compromissos. Agora, com 3 ou mais promotores no mesmo dia, vira \"N promotores · 1º contato vence\", na hora do primeiro. Com mais de 5 ligações numa frente, vira \"N ligações da cadência\", que abre o Um por vez do Meu dia. Detratores e neutros continuam um a um.",
+    href: "/agenda",
+  },
+  {
+    id: "dashboard-causas-e-atalho",
+    dia: "2026-11-03",
+    tipo: "correcao",
+    frente: "plataforma",
+    titulo: "Dashboard: causas só do Reclame Aqui, atalho do NPS com o que é trabalho, mesmos números do quadro",
+    texto:
+      "\"Principais causas\" punha os 146 atendimentos das Redes, sem categoria, no topo como \"Não classificado\", com 27%. Agora conta só as reclamações. O atalho \"NPS sem tratativa 3442\" contava as encerradas em lote, que não estão em fila; virou \"NPS sem 1º contato\", com as abertas que ninguém atendeu. E o quadro do Reclame Aqui passou a mostrar recebidas e índice de resposta pelo painel do portal, como o Dashboard: eram 120 numa tela e 119 na outra.",
+    href: "/dashboard",
+  },
+  {
+    id: "redes-marcadores-e-segmentos",
+    dia: "2026-11-03",
+    tipo: "correcao",
+    frente: "redes",
+    titulo: "Redes: sem \"{{first_name}}\" no título, e segmentos que filtram de verdade",
+    texto:
+      "A automação do Slack às vezes manda a variável sem preencher (\"Cliente {{first_name}} entrou em contato\") ou \"Cliente Outras\". Os dois saem do título e do relato na leitura. Nos segmentos, as linhas com um valor só para todos (Rede: Instagram, Alcance: sem o dado, Estabelecimento: sem vínculo) viraram uma frase no rodapé: clicar nelas não filtrava nada.",
+    href: "/redes-sociais",
+  },
+  {
     id: "vigia-reabre-coluna-contraria",
     dia: "2026-11-03",
     tipo: "correcao",

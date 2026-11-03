@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 
 import { useCases } from "@/lib/context/CaseContext";
-import { casosDoRotulo, groupBy } from "@/lib/services/case.service";
+import { casosDoRotulo, groupBy, isReclameAqui } from "@/lib/services/case.service";
 
 import SurfaceCard from "@/components/shared/SurfaceCard";
 import BarList from "@/components/shared/BarList";
@@ -11,7 +11,13 @@ import { abrirJanelaDeCasos } from "@/components/shared/JanelaDeCasos";
 
 export default function CategoryDistribution() {
 
-  const { cases } = useCases();
+  const { cases: todos } = useCases();
+
+  /*
+    Só o Reclame Aqui (03/11/2026): os 146 atendimentos das Redes não têm
+    categoria e apareciam no topo como "Não classificado", 27% das "causas".
+  */
+  const cases = useMemo(() => todos.filter(isReclameAqui), [todos]);
 
   const data = useMemo(
     () => groupBy(cases, "category"),

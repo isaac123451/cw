@@ -86,7 +86,13 @@ export function oQueMoveANota(casos: Case[], agora = new Date()): AcaoQueMoveANo
 
   /* ---------- responder o que está sem resposta ---------- */
 
-  const semResposta = pendingAnswers(base);
+  /*
+    Só as que ainda dá para responder (03/11/2026): abertas e sem resposta
+    pública. A conta do índice inclui a fechada sem resposta (o portal conta),
+    mas pedir "responder às 11" com uma delas já encerrada era o mesmo erro do
+    "0/13" de outubro — o quadro dizia 10.
+  */
+  const semResposta = Math.min(pendingAnswers(base), doPeriodo.filter(semRespostaPublica).length);
 
   if (semResposta > 0) {
     const depois = scoreFrom(simulate(base, { ...emptySimulation, answerPending: semResposta }));
@@ -94,7 +100,8 @@ export function oQueMoveANota(casos: Case[], agora = new Date()): AcaoQueMoveANo
     acoes.push({
       chave: "responder",
       quantidade: semResposta,
-      titulo: `Responder às ${semResposta} sem resposta pública`,
+      /* O quadro conta todas as abertas; as mais antigas que 6 meses não mexem na nota — dito, para os números não brigarem. */
+      titulo: `Responder às ${semResposta} sem resposta pública${casos.filter(semRespostaPublica).length > semResposta ? " que contam nos 6 meses" : ""}`,
       efeito: `índice de resposta ${um(atual.responseIndex)}% → ${um(depois.responseIndex)}%`,
       notaAntes: atual.raScore,
       notaDepois: depois.raScore,

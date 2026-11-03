@@ -31,7 +31,7 @@ import { useSession } from "@/lib/context/SessionContext";
 import { useNps } from "@/lib/context/NpsContext";
 import { useAgenda } from "@/lib/context/AgendaContext";
 
-import { STATUS_SEM_TRATATIVA } from "@/lib/models/nps";
+import { isEncerrado } from "@/lib/models/nps";
 
 import {
   isOpen,
@@ -71,9 +71,13 @@ const atalhos: {
     hint: "Quadro e lista das reclamações",
   },
   {
-    label: "NPS sem tratativa",
+    /*
+      Era "NPS sem tratativa" com as 3.442 encerradas em lote — que não estão
+      em fila nenhuma. O trabalho são as abertas sem 1º contato (03/11/2026).
+    */
+    label: "NPS sem 1º contato",
     href: "/nps",
-    hint: "Respostas da pesquisa que ninguém pegou",
+    hint: "Respostas em aberto que ninguém atendeu ainda",
     contar: (d) => d.semTratativaNps,
   },
   {
@@ -161,7 +165,7 @@ export default function DashboardPage() {
   const contagens = useMemo(
     () => ({
       semTratativaNps: responses.filter(
-        (item) => item.status === STATUS_SEM_TRATATIVA
+        (item) => !isEncerrado(item.status) && !item.firstContactAt
       ).length,
 
       socialAbertos: cases.filter(

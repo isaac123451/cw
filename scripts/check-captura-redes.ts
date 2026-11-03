@@ -133,6 +133,10 @@ const automacao = itemDoSlack({
 conferir("Slack: a menção ao agente não é o perfil", automacao.perfil, "");
 conferir("Slack: 'Cliente Janaina entrou' dá o nome", automacao.nome, "Janaina");
 conferir("Slack: 'Cliente Outras' não é nome", itemDoSlack({ canal: "C0A7", ts: "3.1", texto: "Olá @Carlos Isaac Cliente Outras entrou em contato no Instagram solicitando atendimento." }).nome, "");
+/* 03/11/2026: a variável sem preencher e o "Outras" viravam título no quadro. */
+conferir("Slack: '{{first_name}}' sai do texto e do título", [itemDoSlack({ canal: "C0A7", ts: "3.2", texto: "Cliente {{first_name}} entrou em contato no Instagram solicitando atendimento." }).texto, itemDoSlack({ canal: "C0A7", ts: "3.2", texto: "Cliente {{first_name}} entrou em contato no Instagram solicitando atendimento." }).nome], ["Cliente entrou em contato no Instagram solicitando atendimento.", ""]);
+conferir("Slack: 'Cliente Outras' sai do texto", itemDoSlack({ canal: "C0A7", ts: "3.3", texto: "Olá @Carlos Isaac Cliente Outras entrou em contato no Instagram solicitando atendimento." }).texto, "Cliente entrou em contato no Instagram solicitando atendimento.");
+conferir("Slack: nome de verdade continua", itemDoSlack({ canal: "C0A7", ts: "3.4", texto: "Cliente Janaina entrou em contato no Instagram solicitando atendimento." }).nome, "Janaina");
 conferir("Slack: o título começa no que importa", tituloDaCaptura(automacao), "Cliente Janaina entrou em contato no Instagram solicitando atendimento.");
 conferir(
   "Slack: com a lista da extensão, menção de uma palavra também sai",

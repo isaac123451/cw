@@ -391,9 +391,22 @@ export function consertarAcentos(texto: string) {
  * Uma mensagem do Slack vira item: o texto inteiro é o relato, e rede,
  * perfil, link e seguidores saem de dentro dele.
  */
+/**
+ * Tira o que a automação escreve quando não sabe o nome (03/11/2026): a
+ * variável sem preencher ("Cliente {{first_name}} entrou…") e o "Outras".
+ * Os dois viravam título de atendimento no quadro das Redes.
+ */
+export function semMarcadorDaAutomacao(texto: string) {
+  return texto
+    .replace(/\{\{\s*[\w.]+\s*\}\}/g, " ")
+    .replace(/\b([Cc]liente)\s+(?:[Oo]utr[oa]s?)(?=\s|$)/g, "$1")
+    .replace(/[ \t]+/g, " ")
+    .trim();
+}
+
 export function itemDoSlack(entrada: { canal: string; ts: string; texto: string; autor?: string; quando?: string; links?: string[]; mencoes?: string[] }): ItemCapturado {
   const bruto = consertarAcentos(entrada.texto.trim());
-  const texto = semMencoesDoSlack(bruto, entrada.mencoes) || bruto;
+  const texto = semMarcadorDaAutomacao(semMencoesDoSlack(bruto, entrada.mencoes) || bruto);
   const links = [...(entrada.links ?? []), ...(texto.match(/https?:\/\/\S+/g) ?? [])]
     .map((l) => l.replace(/[>)\]]+$/, ""))
     /* O perfil do Slack de quem foi mencionado não é o do cliente (out/2026): virava o endereço do atendimento. */

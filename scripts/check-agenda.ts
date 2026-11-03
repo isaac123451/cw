@@ -85,6 +85,18 @@ conferir("a atividade de amanhã não entra no dia", lista.some((c) => c.tarefaI
   conferir("e só no dia dela", amanhaSem.length, 0);
 }
 
+{
+  /* 03/11/2026: promotores do mesmo dia viram uma linha; detrator continua sozinho. */
+  const nps = (id: string, score: number, hora: string) => ({ id, score, customer: id, customerName: id, firstContactDueAt: br("2026-09-16", hora).toISOString() }) as NpsResponseView;
+  const dia = compromissosEntre({ de: "2026-09-16", ate: "2026-09-16", agora: AGORA, tarefas: [], nps: [nps("p1", 10, "15:00"), nps("p2", 9, "13:20"), nps("p3", 10, "17:00"), nps("d1", 4, "16:00")] });
+  conferir("3 promotores no dia: uma linha, na hora do primeiro", dia.map((c) => [c.titulo, c.minuto]), [["3 promotores · 1º contato vence", 800], ["NPS 4 · d1", 960]]);
+  const dois = compromissosEntre({ de: "2026-09-16", ate: "2026-09-16", agora: AGORA, tarefas: [], nps: [nps("p1", 10, "15:00"), nps("p2", 9, "13:20")] });
+  conferir("2 promotores: continuam um a um", dois.map((c) => c.titulo), ["NPS 9 · p2", "NPS 10 · p1"]);
+  const itens = Array.from({ length: 7 }, (_, i) => ({ id: `n${i}`, frente: "nps" as const, titulo: `Tentativa 1 de 3 · nota ${i}`, detalhe: "x", href: `/nps/n${i}` }));
+  const ligacoes = compromissosEntre({ de: "2026-09-16", ate: "2026-09-16", agora: AGORA, tarefas: [], ligacoes: { dia: "2026-09-16", itens } });
+  conferir("7 ligações do NPS: uma linha que abre o Um por vez", ligacoes.map((c) => [c.titulo, c.href]), [["7 ligações da cadência", "/meu-dia?um-por-vez"]]);
+}
+
 console.log("\n  O que ficou para trás\n");
 const atras = atrasadosDaAgenda({
   hoje: "2026-09-16",

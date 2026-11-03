@@ -19,6 +19,7 @@ import { isOpen, naSituacao, seteDiasAtras } from "@/lib/services/case.service";
 import { useGoals } from "@/lib/context/GoalsContext";
 import { parseElapsedText } from "@/lib/services/case.mapper";
 import { usePainelDoPortal } from "@/lib/hooks/usePainelDoPortal";
+import { resumoComPainel } from "@/lib/models/painelOficial";
 
 import StatTile from "@/components/shared/StatTile";
 
@@ -65,6 +66,13 @@ export default function MetricsBar() {
     embaixo, como "com o que já foi feito".
   */
   const painel = usePainelDoPortal().SIX_MONTHS;
+  /*
+    Recebidas e índice de resposta pelo painel quando ele cobre a janela
+    (03/11/2026): o Dashboard já mostrava os do portal (119) e esta tela a
+    conta da base (120) — uma reclamação que existe aqui e não lá.
+  */
+  const painelDaJanela = painel && painel.inicio === range.start && painel.fim === range.end ? painel : undefined;
+  const exibida = useMemo(() => resumoComPainel(reputacao, painelDaJanela), [reputacao, painelDaJanela]);
   const oficial = painel && painel.fim === range.end && painel.nota != null ? painel : undefined;
 
   const band = oficial
@@ -177,7 +185,7 @@ export default function MetricsBar() {
         carregando={loading}
         label="Reclamações"
         description="Total recebido na janela de 6 meses que define a nota pública. Clique para ver as abertas sem resposta pública."
-        value={reputacao.received}
+        value={exibida.received}
         hint={semRespostaAbertas > 0 ? `${semRespostaAbertas} sem resposta pública · ver quais` : "todas respondidas"}
         icon={CircleAlert}
         tone="danger"
@@ -201,7 +209,7 @@ export default function MetricsBar() {
         carregando={loading}
         label="Índice de resposta"
         description="Percentual respondido publicamente: 20% da nota, e o único item que depende só de nós."
-        value={`${ptBR(reputacao.responseIndex)}%`}
+        value={`${ptBR(exibida.responseIndex)}%`}
         hint={
           goals.resposta === RA1000_TARGETS.resposta
             ? `meta de ${ptBR(goals.resposta)}%`
@@ -209,7 +217,7 @@ export default function MetricsBar() {
         }
         icon={CheckCircle2}
         tone={
-          reputacao.responseIndex >= goals.resposta
+          exibida.responseIndex >= goals.resposta
             ? "success"
             : "warning"
         }

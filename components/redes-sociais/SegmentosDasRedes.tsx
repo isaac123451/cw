@@ -23,6 +23,16 @@ interface Props {
  * valor é quantos casos ficariam com ele escolhido — ver `segmentar`.
  */
 export default function SegmentosDasRedes({ facetas, total, filtrados, ativos, onAlternar, onLimpar }: Props) {
+  /*
+    Linha com um valor só não filtra nada (03/11/2026): "Alcance: Sem o dado
+    146" e "Estabelecimento: Sem vínculo 146" ocupavam a tela inteira dizendo
+    a mesma coisa. Viram uma frase no rodapé — a não ser que estejam ligadas.
+  */
+  const unico = (id: DimensaoDasRedes) => {
+    const v = facetas[id] ?? [];
+    return v.length === 1 && !v[0].ativo;
+  };
+  const iguais = DIMENSOES_DAS_REDES.filter(({ id }) => unico(id)).map(({ id, nome }) => `${nome}: ${facetas[id][0].valor.toLowerCase()}`);
   return (
     <SurfaceCard
       tour="segmentos"
@@ -39,7 +49,7 @@ export default function SegmentosDasRedes({ facetas, total, filtrados, ativos, o
       <dl className="grid gap-x-10 gap-y-1 lg:grid-cols-2">
         {DIMENSOES_DAS_REDES.map(({ id, nome }) => {
           const valores = facetas[id] ?? [];
-          if (valores.length === 0) return null;
+          if (valores.length === 0 || unico(id)) return null;
           return (
             <div key={id} className="flex min-w-0 flex-col gap-1.5 py-1.5 sm:flex-row sm:items-start sm:gap-4">
               <dt className="w-24 shrink-0 pt-1.5 text-xs text-zinc-500">{nome}</dt>
@@ -65,6 +75,11 @@ export default function SegmentosDasRedes({ facetas, total, filtrados, ativos, o
           );
         })}
       </dl>
+      {iguais.length > 0 && (
+        <p className="mt-2 border-t border-zinc-100 pt-2 text-xs text-zinc-400">
+          Iguais em todos: {iguais.join(" · ")}.
+        </p>
+      )}
     </SurfaceCard>
   );
 }
