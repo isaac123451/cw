@@ -37,6 +37,15 @@ export const CLOSED_STATUS = [
   "Resolvido",
   "Não resolvido",
   /*
+    Os mesmos papéis com os nomes que a operação deu às colunas em
+    out/2026 — ver `papelDaEtapa`. A lista é de exclusão e vai para
+    consultas do banco (`notIn`), então os nomes reais precisam estar
+    aqui: sem eles, 240 reclamações avaliadas contavam como abertas.
+  */
+  "Avaliado como resolvido",
+  "Avaliado como não resolvido",
+  "Sem retorno (Resolvido)",
+  /*
     Etapa criada no fluxo do Reclame Aqui (28/09/2026) para o caso que a
     operação dá por encerrado sem avaliação do consumidor. Contava como
     aberta, porque a lista é de exclusão; o Isaac decidiu em 07/10 que ela
@@ -98,8 +107,59 @@ export function byChannel(
   return cases;
 }
 
+/* ============================================================
+   O PAPEL DA COLUNA (03/11/2026)
+============================================================ */
+
+/**
+ * O que a coluna **é**, qualquer que seja o nome que a operação deu a ela.
+ *
+ * O fluxo é configurável, e em out/2026 "Resolvido" virou "Avaliado como
+ * resolvido" e "Não resolvido" virou "Avaliado como não resolvido". O
+ * código perguntava pelos nomes antigos em dezenas de lugares: 203
+ * reclamações avaliadas contavam como abertas, a avaliação lida no portal
+ * ia para uma coluna "Resolvido" que não existia mais, e arrastar para a
+ * coluna nova não marcava a avaliação.
+ *
+ * Toda regra pergunta pelo papel — "Resolvido", "Não resolvido",
+ * "Finalizado" (encerrada sem avaliação) — e quem grava traduz o papel
+ * para o nome que existe no fluxo (`colunaNoFluxo`).
+ */
+export type PapelFinal = "Resolvido" | "Não resolvido" | "Finalizado";
+
+const semAcento = (s: string) =>
+  s.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().replace(/\s+/g, " ").trim();
+
+export function papelDaEtapa(status: string | null | undefined): string {
+  const s = semAcento(String(status ?? ""));
+  if (!s) return "";
+  if (/^(avaliad[oa] (como )?)?nao resolvid[oa]$/.test(s)) return "Não resolvido";
+  if (/^(avaliad[oa] (como )?)?resolvid[oa]$/.test(s)) return "Resolvido";
+  /* Encerrada pela operação sem avaliação do consumidor. */
+  if (s === "finalizado" || /^sem retorno( \(resolvid[oa]\))?$/.test(s)) return "Finalizado";
+  return String(status);
+}
+
+/** A coluna é uma das duas que **são** a avaliação do consumidor. */
+export function ehColunaAvaliada(status: string | null | undefined) {
+  const p = papelDaEtapa(status);
+  return p === "Resolvido" || p === "Não resolvido";
+}
+
+/**
+ * O nome que um papel tem no fluxo de hoje: "Resolvido" vira "Avaliado
+ * como resolvido" quando é assim que a coluna se chama. Sem coluna com
+ * esse papel no fluxo, fica o próprio papel.
+ */
+export function colunaNoFluxo(papel: string, etapas: readonly string[] | null | undefined): string {
+  if (!etapas?.length) return papel;
+  if (etapas.includes(papel)) return papel;
+  const alvo = papelDaEtapa(papel);
+  return etapas.find((e) => papelDaEtapa(e) === alvo && e !== alvo) ?? papel;
+}
+
 export function isOpen(item: Case) {
-  return !CLOSED_STATUS.includes(item.status);
+  return !CLOSED_STATUS.includes(item.status) && !CLOSED_STATUS.includes(papelDaEtapa(item.status));
 }
 
 /**
@@ -353,13 +413,12 @@ export function moverPara(
   quando: string
 ): Case {
 
-  const avaliado =
-    status === "Resolvido" || status === "Não resolvido";
+  const avaliado = ehColunaAvaliada(status);
 
   return {
     ...item,
     status,
-    resolved: status === "Resolvido",
+    resolved: papelDaEtapa(status) === "Resolvido",
     evaluated: avaliado,
     score: avaliado ? item.score : undefined,
     evaluatedAt: avaliado ? item.evaluatedAt : undefined,
@@ -647,7 +706,7 @@ export function naSituacao(
 
     case "pedir-avaliacao":
       /* Só as dos últimos 12 meses — a maior janela do portal; avaliação mais velha não mexe em nota nenhuma. */
-      return respondida(item) && !item.evaluated && item.status !== "Resolvido" && item.status !== "Não resolvido" && item.createdAt >= umAnoAtras();
+      return respondida(item) && !item.evaluated && !ehColunaAvaliada(item.status) && item.createdAt >= umAnoAtras();
 
     case "nota-baixa":
       return Boolean(item.evaluated) && !item.scoreDisregarded && typeof item.score === "number" && item.score <= 6;

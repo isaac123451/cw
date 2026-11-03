@@ -24,7 +24,7 @@ const indice = unstable_cache(
     const desde = new Date(Date.now() - DIAS_DO_NPS * 86_400_000);
     const [casos, nps, conhecidos] = await Promise.all([
       prisma.case.findMany({
-        where: { evaluated: false, encerradoEm: null, status: { notIn: ["Resolvido", "Não resolvido"] } },
+        where: { evaluated: false, encerradoEm: null, status: { notIn: ["Resolvido", "Não resolvido", "Avaliado como resolvido", "Avaliado como não resolvido"] } },
         select: { protocol: true, phone: true, customer: true, channel: true, priority: true, status: true, createdAt: true },
       }),
       prisma.npsResponse.findMany({

@@ -1,3 +1,4 @@
+import { etapasDoFluxo } from "@/lib/services/case.repository";
 import type { Prisma, PrismaClient } from "@prisma/client";
 
 import { Case } from "@/lib/models/case";
@@ -568,7 +569,7 @@ export async function gravarDoPortal(
       if (atual.publicResponseAt) delete portal.publicResponseAt;
     }
 
-    const { dados } = mudancasDoPortal(portal, atual);
+    const { dados } = mudancasDoPortal(portal, atual, await etapasDoFluxo(prisma));
 
     const semRelato = vazioOuMarcador(
       atual.description,

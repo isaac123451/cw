@@ -5,7 +5,7 @@ import {
 } from "@/lib/services/atualizacaoDoPortal";
 import { semApagarVazios } from "@/lib/services/semApagar";
 import { RESPOSTA_SINTETICA } from "@/lib/services/raMarcadores";
-import { STATUS_TERMINADO } from "@/lib/services/case.service";
+import { colunaNoFluxo, STATUS_TERMINADO } from "@/lib/services/case.service";
 
 /**
  * As tarefas da agenda de um caso que terminou fecham sozinhas (1.91).
@@ -1006,6 +1006,26 @@ export function carimboDaAvaliacao(
   return new Date(`${hoje}T00:00:00Z`);
 }
 
+/**
+ * As colunas do fluxo de hoje, para gravar o status com o nome que existe
+ * ("Avaliado como resolvido", e não "Resolvido" — ver `papelDaEtapa`).
+ * Um minuto de cache: renomear coluna é raro, e cada gravação pagaria uma
+ * ida ao banco.
+ */
+const fluxoEmCache = { em: 0, nomes: [] as string[] };
+
+export async function etapasDoFluxo(prisma: PrismaClient): Promise<string[]> {
+  if (Date.now() - fluxoEmCache.em < 60_000 && fluxoEmCache.nomes.length) return fluxoEmCache.nomes;
+  try {
+    const linhas = await prisma.workflowStatus.findMany({ where: { active: true }, select: { name: true } });
+    fluxoEmCache.nomes = linhas.map((l) => l.name);
+    fluxoEmCache.em = Date.now();
+  } catch {
+    /* Sem a tabela, fica o papel — o mesmo de antes. */
+  }
+  return fluxoEmCache.nomes;
+}
+
 export async function persistCase(
   prisma: PrismaClient,
   item: Case,
@@ -1030,8 +1050,10 @@ export async function persistCase(
   }
 
   /* Avaliada não fica em coluna aberta — ver `colunaDaAvaliacao`. */
-  const fechadaPelaAvaliacao = colunaDaAvaliacao({ status: String(dados.status ?? ""), evaluated: dados.evaluated as boolean, resolved: dados.resolved as boolean });
+  const etapas = await etapasDoFluxo(prisma);
+  const fechadaPelaAvaliacao = colunaDaAvaliacao({ status: String(dados.status ?? ""), evaluated: dados.evaluated as boolean, resolved: dados.resolved as boolean }, etapas);
   if (fechadaPelaAvaliacao) dados.status = fechadaPelaAvaliacao;
+  if (typeof dados.status === "string") dados.status = colunaNoFluxo(dados.status, etapas);
 
   /**
    * Aqui **não** passa por `semApagarVinculo`, e isso é o ponto.
@@ -1231,9 +1253,10 @@ export async function persistCaseParcial(
           status: String(dados.status ?? linha.status),
           evaluated: (dados.evaluated ?? linha.evaluated) as boolean,
           resolved: (dados.resolved ?? linha.resolved) as boolean,
-        })
+        }, await etapasDoFluxo(prisma))
       : null;
   if (fechadaPelaAvaliacao) dados.status = fechadaPelaAvaliacao;
+  if (typeof dados.status === "string") dados.status = colunaNoFluxo(dados.status, await etapasDoFluxo(prisma));
 
   if (Object.keys(dados).length > 0 || mexeuEmRelacao) {
     await prisma.case.update({
@@ -1404,13 +1427,15 @@ export async function importCasesBulk(
 
   let inalteradas = 0;
 
+  const etapas = await etapasDoFluxo(prisma);
+
   for (const item of cases) {
 
     const atual = porChave.get(item.protocol);
 
     if (!atual) continue;
 
-    const { dados } = mudancasDoPortal(item, atual);
+    const { dados } = mudancasDoPortal(item, atual, etapas);
 
     if (Object.keys(dados).length === 0) {
       inalteradas += 1;
@@ -1457,7 +1482,9 @@ async function gravarLote(
   for (const s of [...subsExistentes].sort((a, b) => Number(a.active) - Number(b.active))) {
     grafiaDaSub.set(`${s.category.name}::${chaveDaSubcategoria(s.name)}`, s.name);
   }
+  const etapas = await etapasDoFluxo(prisma);
   const cases = recebidos.map((item) => {
+    item = item.status ? { ...item, status: colunaNoFluxo(item.status, etapas) } : item;
     const category = categoriaOficial(item.category) ?? item.category;
     const subcategory = item.subcategory ? (grafiaDaSub.get(`${category}::${chaveDaSubcategoria(item.subcategory)}`) ?? item.subcategory) : item.subcategory;
     return category === item.category && subcategory === item.subcategory ? item : { ...item, category, subcategory };

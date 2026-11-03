@@ -1,3 +1,4 @@
+import { papelDaEtapa } from "@/lib/services/case.service";
 import { respondida, type Case } from "@/lib/models/case";
 
 /**
@@ -46,8 +47,8 @@ export function provaDoItem(chave: string, caso: Case, areasAcionadas: number): 
     case "final_result_logged":
       return caso.evaluated
         ? "avaliado no portal"
-        : caso.status === "Resolvido" || caso.status === "Não resolvido"
-          ? `encerrado como ${caso.status.toLowerCase()}`
+        : papelDaEtapa(caso.status) === "Resolvido" || papelDaEtapa(caso.status) === "Não resolvido"
+          ? `encerrado como ${papelDaEtapa(caso.status).toLowerCase()}`
           : null;
     default:
       return null;

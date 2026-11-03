@@ -18,6 +18,7 @@
  *    é nomeado;
  * 3. mesmo campo, mesmo valor → não é conflito, é concordância.
  */
+import { papelDaEtapa } from "../lib/services/case.service";
 import "dotenv/config";
 
 import { PrismaPg } from "@prisma/adapter-pg";
@@ -136,6 +137,12 @@ async function comBanco(prisma: PrismaClient) {
     title: "ZZ descartável — edição simultânea",
     description: "Reclamação descartável criada pelo check:edicao. Apagada no fim.",
     status: "Novo",
+    /* Sem avaliação: o modelo é uma reclamação real, e avaliada ela nasceria numa coluna final (nov/2026). */
+    evaluated: false,
+    evaluatedAt: undefined,
+    score: undefined,
+    resolved: false,
+    wouldDoBusiness: false,
     priority: "Normal",
     category: "Entrega",
     owner: "",
@@ -209,7 +216,8 @@ async function comBanco(prisma: PrismaClient) {
 
   conferir(
     "o que o primeiro gravou continua lá — nada foi apagado",
-    depois2.status,
+    /* Pelo papel: grava com o nome que a coluna tem no fluxo ("Avaliado como resolvido"). */
+    papelDaEtapa(depois2.status),
     "Resolvido"
   );
 

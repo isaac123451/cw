@@ -92,7 +92,7 @@
       const p = caso.pedirAvaliacao;
       botoes.push(
         p.telefone
-          ? `<a href="https://wa.me/${e(p.telefone)}?text=${encodeURIComponent(p.mensagem)}" target="_blank" rel="noopener" data-acao="pedir-avaliacao" title="${e(p.resumo)}">Pedir avaliação</a>`
+          ? `<a href="https://wa.me/${e(p.telefone)}?text=${e(encodeURIComponent(p.mensagem))}" target="_blank" rel="noopener" data-acao="pedir-avaliacao" title="${e(p.resumo)}">Pedir avaliação</a>`
           : `<button type="button" data-acao="copiar" data-texto="${e(p.mensagem)}" title="${e(p.resumo)}">Copiar pedido de avaliação</button>`
       );
     } else if (caso && !caso.avaliado) {

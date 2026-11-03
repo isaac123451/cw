@@ -1,5 +1,6 @@
 "use client";
 
+import { papelDaEtapa } from "@/lib/services/case.service";
 import { useState } from "react";
 
 import { DICA_DA_ETAPA, WorkflowStatus } from "@/lib/models/workflow";
@@ -77,14 +78,14 @@ export default function KanbanColumn({
       <div className="flex items-center justify-between gap-2 px-3 pb-2 pt-2.5">
 
         {/* O que a coluna quer dizer, ao passar o mouse (21/10). */}
-        <div className="flex min-w-0 items-center gap-2.5" title={DICA_DA_ETAPA[workflow.name]}>
+        <div className="flex min-w-0 items-center gap-2.5" title={DICA_DA_ETAPA[workflow.name] ?? DICA_DA_ETAPA[papelDaEtapa(workflow.name)]}>
 
           <span
             className="h-2 w-2 shrink-0 rounded-full"
             style={{ background: workflow.color }}
           />
 
-          <h3 className={`truncate text-[13px] font-semibold text-zinc-700 ${DICA_DA_ETAPA[workflow.name] ? "cursor-help underline decoration-zinc-300 decoration-dotted underline-offset-4" : ""}`}>
+          <h3 className={`truncate text-[13px] font-semibold text-zinc-700 ${DICA_DA_ETAPA[workflow.name] ?? DICA_DA_ETAPA[papelDaEtapa(workflow.name)] ? "cursor-help underline decoration-zinc-300 decoration-dotted underline-offset-4" : ""}`}>
             {workflow.name}
           </h3>
 

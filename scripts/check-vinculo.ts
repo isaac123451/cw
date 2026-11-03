@@ -270,9 +270,21 @@ async function main() {
       `        (${Number(vazios)} com o campo limpo — eram o nome do próprio consumidor)\n`
   );
 
+  /*
+    Até out/2026 isto era "nenhum nome de empresa na base" — um retrato, não
+    uma regra: em nov/2026 apareceu um nome digitado à mão ("vanderlei
+    madeira", consumidor "vanderson madeira"), que é legítimo e não liga a
+    nada. O que é defeito é o **telefone** no lugar do nome — o nome do
+    contato do WhatsApp quando ele não está na agenda (três em 03/11). A
+    gravação barra desde então (`pareceTelefone`, em `case.mapper`).
+  */
+  const [{ telefones }] = await prisma.$queryRaw<
+    { telefones: bigint }[]
+  >`SELECT COUNT(*)::bigint AS telefones FROM "Case" WHERE "companyName" <> "customer" AND "companyName" ~ '^[+0-9 ().-]{10,}$'`;
+
   conferir(
-    "0. nenhum nome de empresa aproveitável na base",
-    Number(diferentes),
+    "0. nenhum telefone no lugar do nome da empresa",
+    Number(telefones),
     0
   );
 

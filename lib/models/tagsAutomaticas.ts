@@ -106,7 +106,7 @@ export function mudancasDeTags(casos: CasoParaTags[], ctx: ContextoDasTags): Mud
         tem.delete(tag);
       }
     };
-    const fechado = c.avaliado || FINAIS.has(c.status);
+    const fechado = c.avaliado || FINAIS.has(papelDaEtapa(c.status));
 
     /* Fatos: entram e ficam. */
     if (ctx.naRetencao.has(c.protocolo)) por(TAG_CANCELAMENTO, "o cliente pediu para cancelar (está na Retenção)");
@@ -133,7 +133,8 @@ export function mudancasDeTags(casos: CasoParaTags[], ctx: ContextoDasTags): Mud
       }
     }
 
-    if (c.respondido || FINAIS.has(c.status)) tirar(TAG_RESPOSTA_ATE_30, c.respondido ? "a reclamação foi respondida" : "o caso fechou");
+    if (c.respondido || FINAIS.has(papelDaEtapa(c.status))) tirar(TAG_RESPOSTA_ATE_30, c.respondido ? "a reclamação foi respondida" : "o caso fechou");
   }
   return saida;
-}
+}import { papelDaEtapa } from "@/lib/services/case.service";
+

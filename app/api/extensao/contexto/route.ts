@@ -1,3 +1,4 @@
+import { papelDaEtapa } from "@/lib/services/case.service";
 import {
   autenticar,
   responder,
@@ -1331,7 +1332,7 @@ function sugerir(
 
   const negativas = casos.filter(
     (item) =>
-      item.status === "Não resolvido" &&
+      papelDaEtapa(item.status) === "Não resolvido" &&
       diasEntre(item.createdAt, hojeNaOperacao()) <= 30
   );
 

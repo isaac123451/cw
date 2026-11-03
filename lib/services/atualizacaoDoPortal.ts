@@ -27,6 +27,7 @@
  * Esta regra toca **apenas o primeiro grupo**, e a lista está escrita
  * como código, não como intenção.
  */
+import { colunaNoFluxo, papelDaEtapa } from "@/lib/services/case.service";
 import { hojeNaOperacao } from "@/lib/services/reputation.service";
 import { Case } from "@/lib/models/case";
 
@@ -134,10 +135,28 @@ export function colunaDaAvaliacao(caso: {
   status: string;
   evaluated?: boolean | null;
   resolved?: boolean | null;
-}): string | null {
+}, etapas?: readonly string[] | null): string | null {
   if (caso.evaluated !== true || typeof caso.resolved !== "boolean") return null;
-  if (COLUNAS_FINAIS.has(caso.status) || caso.status === "Finalizado") return null;
-  return caso.resolved ? "Resolvido" : "Não resolvido";
+  const papel = papelDaEtapa(caso.status);
+  const certo = caso.resolved ? "Resolvido" : "Não resolvido";
+  /* Já na coluna certa, ou encerrada pela operação: fica. */
+  if (papel === certo || papel === "Finalizado") return null;
+  /*
+    Coluna final que contradiz a avaliação (03/11/2026): "Não resolvido"
+    com o consumidor tendo marcado resolvido — RA-OUempiT0deTJVsUS e
+    RA-mPDZcGFw-tnkwAzI estavam assim. A avaliação manda.
+  */
+  return colunaNoFluxo(certo, etapas);
+}
+
+/** A coluna é uma das finais (pelo papel, não pelo nome). */
+export function ehColunaFinal(status: string) {
+  return COLUNAS_FINAIS.has(papelDaEtapa(status));
+}
+
+/** A coluna é uma das que o portal comanda (pelo papel). */
+export function ehColunaDoPortal(status: string) {
+  return COLUNAS_DO_PORTAL.has(papelDaEtapa(status));
 }
 
 /** O que o banco tem hoje, nos campos que a regra olha. */
@@ -177,7 +196,9 @@ const EH_DATA = new Set<CampoDoPortal>([
  */
 export function mudancasDoPortal(
   doArquivo: Case,
-  atual: NoBancoDoPortal
+  atual: NoBancoDoPortal,
+  /** As colunas do fluxo de hoje — para gravar "Avaliado como resolvido" e não "Resolvido". */
+  etapas?: readonly string[] | null
 ): {
   dados: Partial<Record<CampoDoPortal, unknown>>;
   diferencas: string[];
@@ -199,9 +220,13 @@ export function mudancasDoPortal(
       quatro casos assim no quadro. O resolvido decide qual das duas — e
       sem ele não se chuta.
     */
-    if (campo === "status" && doArquivo.evaluated === true && typeof doArquivo.resolved === "boolean" && !COLUNAS_FINAIS.has(String(novo ?? ""))) {
+    if (campo === "status" && doArquivo.evaluated === true && typeof doArquivo.resolved === "boolean") {
+      /* A avaliação decide a coluna, mesmo que o texto do status tenha vindo outro. */
       novo = doArquivo.resolved ? "Resolvido" : "Não resolvido";
     }
+
+    /* Grava com o nome que a coluna tem no fluxo de hoje. */
+    if (campo === "status" && typeof novo === "string") novo = colunaNoFluxo(novo, etapas);
 
     /*
       Campo ausente no arquivo não apaga o que está no banco.
@@ -240,16 +265,19 @@ export function mudancasDoPortal(
         RA-LFXcv7e9 estava avaliada, nota 4, e "Em tratativa" no quadro. A
         avaliação é o fim do ciclo no portal: Resolvido ou Não resolvido.
       */
-      const fechouNoPortal = doArquivo.evaluated === true && COLUNAS_FINAIS.has(String(novo));
+      const fechouNoPortal = doArquivo.evaluated === true && ehColunaFinal(String(novo));
 
-      if (!COLUNAS_DO_PORTAL.has(atualStatus) && !fechouNoPortal) continue;
+      if (!ehColunaDoPortal(atualStatus) && !fechouNoPortal) continue;
 
       if (
-        COLUNAS_FINAIS.has(atualStatus) &&
-        !COLUNAS_FINAIS.has(String(novo))
+        ehColunaFinal(atualStatus) &&
+        !ehColunaFinal(String(novo))
       ) {
         continue;
       }
+
+      /* "Resolvido" e "Avaliado como resolvido" são a mesma coluna: não é mudança. */
+      if (papelDaEtapa(atualStatus) === papelDaEtapa(String(novo)) && ehColunaFinal(atualStatus)) continue;
     }
 
     const a = comparavel(velho);

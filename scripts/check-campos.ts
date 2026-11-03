@@ -217,9 +217,11 @@ const INTERNAS: Record<string, string[]> = {
    * destinatários do relatório automático (1.105) e o ciclo já enviado têm
    * leitura própria (`lib/actions/relatorio.ts`, na Central de
    * Configurações); os concorrentes do segmento (1.107), também
-   * (`lib/actions/segmento.ts`, no Índice).
+   * (`lib/actions/segmento.ts`, no Índice). Os números de WhatsApp das
+   * frentes (1.1.22) são lidos e gravados pela tela de Conversas
+   * (`listarConversas`/`salvarNumerosDasFrentes`, em `lib/actions/conversas.ts`).
    */
-  OperacaoConfig: ["updatedBy", "relatorioPara", "relatorioEnviadoCiclo", "concorrentesRA"],
+  OperacaoConfig: ["updatedBy", "relatorioPara", "relatorioEnviadoCiclo", "concorrentesRA", "whatsappReclameAqui", "whatsappNpsRedes"],
 
   /**
    * Os itens tirados de uma atividade no Meu dia (1.31): carga própria

@@ -1,3 +1,4 @@
+import { papelDaEtapa } from "@/lib/services/case.service";
 import { respondida, type Case } from "@/lib/models/case";
 import { pedidoDeAvaliacao } from "@/lib/models/cadencia";
 import type { EstadoDaValidacao } from "@/lib/models/tratativa";
@@ -98,7 +99,7 @@ export function trilhaDoCaso(
   const foraDaJanela =
     resposta && !item.evaluated && !pedidoDeAvaliacao(item, contexto.agora).ativo;
 
-  const encerrado = FINAIS.includes(item.status) || Boolean(item.evaluated) || foraDaJanela;
+  const encerrado = FINAIS.includes(papelDaEtapa(item.status)) || Boolean(item.evaluated) || foraDaJanela;
 
   /* O que o fim do caso prova sobre o começo dele. */
   const houveConversa = resposta || encerrado;

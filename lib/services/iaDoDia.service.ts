@@ -131,7 +131,8 @@ export async function registrarLembretes(prisma: PrismaClient, userId: string, c
  * foram feitas — fechadas, com o motivo no aviso.
  */
 /** Onde o caso termina de verdade — "Aguardando avaliação" ainda pede trabalho. */
-const FINAIS_DO_CASO = new Set(["Resolvido", "Não resolvido", "Finalizado"]);
+/* Os nomes reais entram também: a consulta ao banco compara texto (ver `papelDaEtapa`). */
+const FINAIS_DO_CASO = new Set(["Resolvido", "Não resolvido", "Finalizado", "Avaliado como resolvido", "Avaliado como não resolvido", "Sem retorno (Resolvido)"]);
 
 export async function fecharOQueFoiFeito(prisma: PrismaClient, userId: string): Promise<number> {
   const abertas = await prisma.agendaTask.findMany({

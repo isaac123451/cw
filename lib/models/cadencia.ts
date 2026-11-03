@@ -1,3 +1,4 @@
+import { papelDaEtapa } from "@/lib/services/case.service";
 import { respondida, type Case } from "@/lib/models/case";
 import type { ContatoView } from "@/lib/models/tratativa";
 
@@ -290,7 +291,7 @@ export function semNoticia(
 ): { dias: number; atrasado: boolean } | null {
 
   if (!item.primeiroContatoEm || !item.ultimoContatoEm) return null;
-  if (item.resolved || respondida(item) ||["Aguardando avaliação", "Resolvido", "Não resolvido"].includes(item.status)) return null;
+  if (item.resolved || respondida(item) ||["Aguardando avaliação", "Resolvido", "Não resolvido", "Finalizado"].includes(papelDaEtapa(item.status))) return null;
 
   let dia = paredeDe(new Date(item.ultimoContatoEm)).dia;
   const hoje = paredeDe(agora).dia;

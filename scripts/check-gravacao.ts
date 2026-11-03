@@ -87,6 +87,12 @@ async function main() {
       id: PROTOCOLO,
       protocol: PROTOCOLO,
       status: "Novo",
+      /* Sem avaliação: o modelo é uma reclamação real, e avaliada ela nasceria numa coluna final (nov/2026). */
+      evaluated: false,
+      evaluatedAt: undefined,
+      score: undefined,
+      resolved: false,
+      wouldDoBusiness: false,
       description: RELATO,
       publicResponse: RESPOSTA,
       tags: [],

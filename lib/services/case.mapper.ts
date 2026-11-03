@@ -371,11 +371,24 @@ export function parseElapsedText(value?: string) {
  * etiquetas): elas são resolvidas por nome na hora de gravar, porque a
  * tela trabalha com texto e o banco com id.
  */
+/**
+ * Um número de telefone não é nome de empresa (03/11/2026).
+ *
+ * O nome do contato no WhatsApp, quando a pessoa não está na agenda, é o
+ * próprio número — e foi parar em `companyName` em três reclamações
+ * ("+55 66 9925-6119"). Aqui ele vira "sem empresa" (o nome do consumidor,
+ * que a leitura já trata como vazio).
+ */
+export function pareceTelefone(texto: string | null | undefined) {
+  const t = String(texto ?? "").trim();
+  return /^[+\d\s().-]+$/.test(t) && t.replace(/\D/g, "").length >= 10;
+}
+
 export function toCaseColumns(item: Case) {
   return {
     channel: (ORIGEM_PARA_CANAL[item.source] ??
       "OUTRO") as never,
-    companyName: item.company,
+    companyName: pareceTelefone(item.company) ? item.customer : item.company,
 
     // Só os dígitos: as duas grafias do mesmo número nunca casariam.
     document: digitosDoDocumento(item.document) ?? null,

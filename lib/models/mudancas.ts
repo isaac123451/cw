@@ -51,6 +51,43 @@ export const REVISAO = {
 };
 
 export const MUDANCAS: Mudanca[] = [
+  /* ---------------- revisão de novembro (03/11) ---------------- */
+  {
+    id: "colunas-avaliadas-renomeadas",
+    dia: "2026-11-03",
+    tipo: "correcao",
+    frente: "reclame-aqui",
+    titulo: "As colunas \"Avaliado como resolvido\" e \"Avaliado como não resolvido\" valem em todas as contas",
+    texto:
+      "Quando as colunas finais foram renomeadas, parte da plataforma continuou procurando \"Resolvido\" e \"Não resolvido\". Resultado: as 240 reclamações avaliadas (e as 6 em \"Sem retorno (Resolvido)\") contavam como abertas na fila, no Meu dia e nas cadências; a avaliação lida no portal ia para uma coluna \"Resolvido\" que não existe mais; e arrastar para a coluna nova não marcava a avaliação. Agora cada coluna é reconhecida pelo papel dela, com o nome que você der.",
+    href: "/reclame-aqui",
+  },
+  {
+    id: "vigia-corrige-a-coluna",
+    dia: "2026-11-03",
+    tipo: "melhoria",
+    frente: "extensao",
+    titulo: "O que a extensão lê no Reclame Aqui corrige o caso na ferramenta",
+    texto:
+      "A coluna final ficava travada: se o caso estava em \"Não resolvido\" e o portal mostrava avaliado como resolvido (nota 10), o quadro continuava contradizendo o Reclame Aqui — eram 4 assim. Agora, quando a extensão lê a reclamação, a avaliação do portal manda: a coluna vai para a certa, com o nome do seu fluxo.",
+    onde: "Extensão → vigia e reclamação aberta no portal",
+  },
+  {
+    id: "telefone-nao-e-empresa",
+    dia: "2026-11-03",
+    tipo: "correcao",
+    frente: "reclame-aqui",
+    titulo: "Telefone não vira nome de empresa",
+    texto: "O nome do contato do WhatsApp, quando a pessoa não está na agenda, é o número — e foi gravado como empresa em 3 reclamações (\"+55 66 9925-6119\"). A gravação agora barra isso.",
+  },
+  {
+    id: "next-seguranca-1103",
+    dia: "2026-11-03",
+    tipo: "correcao",
+    frente: "bastidores",
+    titulo: "Atualização de segurança do Next.js e de três bibliotecas",
+    texto: "O Next.js da plataforma estava numa faixa com falha crítica divulgada (execução de código sem login). Subiu para 16.4.4; nodemailer, zod e fast-uri também foram para as versões corrigidas.",
+  },
   /* ---------------- passe a limpo (21/10) ---------------- */
   {
     id: "planilha-das-redes-mkt",

@@ -33,6 +33,7 @@ export const STATUS_TONE: Record<string, string> = {
 export function toneOf(status: string) {
   return (
     STATUS_TONE[status] ??
+    STATUS_TONE[papelDaEtapa(status)] ??
     "bg-zinc-100 text-zinc-600 ring-zinc-200"
   );
 }
@@ -55,5 +56,6 @@ export const STATUS_HINT: Record<string, string> = {
 };
 
 export function hintOf(status: string) {
-  return STATUS_HINT[status] ?? status;
-}
+  return STATUS_HINT[status] ?? STATUS_HINT[papelDaEtapa(status)] ?? status;
+}import { papelDaEtapa } from "@/lib/services/case.service";
+

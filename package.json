@@ -1,6 +1,6 @@
 {
   "name": "cw-reputacao",
-  "version": "1.1.24",
+  "version": "1.1.25",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -91,6 +91,7 @@
     "check:seguranca": "tsx scripts/check-seguranca.ts",
     "check:telas": "tsx scripts/check-telas.ts",
     "check:categorias": "tsx scripts/check-categorias.ts",
+    "check:papel-da-coluna": "tsx scripts/check-papel-da-coluna.ts",
     "check:plano": "tsx scripts/check-plano.ts",
     "check:tempo-ideal": "tsx scripts/check-tempo-ideal.ts",
     "check:tempo-das-telas": "tsx scripts/check-tempo-das-telas.ts",
@@ -221,8 +222,8 @@
     "geist": "^1.7.2",
     "jose": "^6.2.8",
     "lucide-react": "^1.25.0",
-    "next": "^16.3.8",
-    "nodemailer": "^10.0.13",
+    "next": "^16.4.4",
+    "nodemailer": "^10.3.1",
     "pg": "^8.22.0",
     "prisma": "^7.9.0",
     "react": "19.2.4",
@@ -231,7 +232,7 @@
     "tailwind-merge": "^3.6.0",
     "tw-animate-css": "^1.4.0",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
-    "zod": "^4.4.3"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -243,7 +244,7 @@
     "babel-plugin-react-compiler": "1.0.0",
     "dotenv": "^17.4.2",
     "eslint": "^9",
-    "eslint-config-next": "^16.3.8",
+    "eslint-config-next": "^16.4.4",
     "server-only": "^0.0.1",
     "shadcn": "^4.13.1",
     "tailwindcss": "^4",

@@ -1,3 +1,4 @@
+import { papelDaEtapa } from "@/lib/services/case.service";
 import {
   Case,
   descreverFaltas,
@@ -215,7 +216,7 @@ export function buildNotifications(
 
     const naoResolvidas = cases.filter(
       (item) =>
-        item.status === "Não resolvido" &&
+        papelDaEtapa(item.status) === "Não resolvido" &&
         daysBetween(item.createdAt, hoje) <= 30
     );
 

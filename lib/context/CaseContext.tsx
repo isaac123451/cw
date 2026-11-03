@@ -1,5 +1,6 @@
 "use client";
 
+import { papelDaEtapa } from "@/lib/services/case.service";
 import { daCargaInicial } from "@/lib/context/cargaInicial";
 import { EVENTO_AJUSTE_DO_CASO } from "@/lib/context/ajusteDoCaso";
 import {
@@ -776,7 +777,8 @@ export function CaseProvider({
 
       if (
         filters.status &&
-        item.status !== filters.status
+        item.status !== filters.status &&
+        papelDaEtapa(item.status) !== papelDaEtapa(filters.status)
       ) {
         return false;
       }
