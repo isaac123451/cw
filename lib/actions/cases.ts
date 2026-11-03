@@ -32,7 +32,9 @@ import {
   persistCase,
   persistCaseParcial,
   removeCaseByProtocol,
+  etapasDoFluxo,
 } from "@/lib/services/case.repository";
+import { colunaNoFluxo, isSocial } from "@/lib/services/case.service";
 
 import { toPublicCase } from "@/lib/api/source";
 import type { EventoDoCaso } from "@/lib/services/timeline.service";
@@ -288,12 +290,31 @@ async function gravarCaso(
      */
     anterior?: Case;
   }
-): Promise<{ ok: true } | { ok: false; conflito: ConflitoDeEdicao }> {
+): Promise<{ ok: true } | { ok: false; conflito: ConflitoDeEdicao } | { ok: false; erro: string }> {
 
   const ctx = await requireRole("AGENTE", MODULO);
   const prisma = ctx?.prisma ?? null;
 
   if (!prisma) return { ok: true };
+
+  /*
+    A coluna de destino tem de existir no quadro (03/11/2026). Uma aba
+    aberta antes de renomear a coluna ainda mostra o nome velho, e arrastar
+    para ela gravava um status que o quadro não exibe: o caso sumia da
+    vista. Foi assim que 4 reclamações ficaram em "Não resolvido" depois
+    da troca para "Avaliado como não resolvido". As colunas finais são
+    traduzidas pelo papel; o resto é recusado com o pedido de recarregar.
+  */
+  const statusAntes = options?.anterior
+    ? options.anterior.status
+    : (await prisma.case.findUnique({ where: { protocol: item.protocol }, select: { status: true } }))?.status;
+  if (statusAntes && item.status && item.status !== statusAntes && !isSocial(item)) {
+    /* O cache é de um minuto: antes de recusar, relê — a coluna pode ter acabado de ser criada ou renomeada. */
+    const existe = (etapas: string[]) => etapas.length === 0 || etapas.includes(colunaNoFluxo(item.status, etapas));
+    if (!existe(await etapasDoFluxo(prisma)) && !existe(await etapasDoFluxo(prisma, true))) {
+      return { ok: false, erro: `A coluna "${item.status}" não existe mais no quadro: esta tela ficou com o fluxo antigo. Recarregue a página e mova de novo.` };
+    }
+  }
 
   if (options?.anterior) {
 

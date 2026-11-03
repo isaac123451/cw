@@ -729,7 +729,12 @@ export function CaseProvider({
        outra pessoa mudou no mesmo caso (Fase 10.1). */
     sincronizar(() =>
       saveCase(movido, { syncTags: false, anterior: atual })
-    );
+    ).then((r) => {
+      /* Recusado pelo servidor: o cartão volta para onde estava, em vez de fingir que mudou. */
+      if (!r.ok) {
+        setCases((prev) => prev.map((item) => (item.id === id && item.status === movido.status ? atual : item)));
+      }
+    });
   }
 
   /** Aplica ou remove uma etiqueta do caso. */

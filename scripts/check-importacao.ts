@@ -21,6 +21,7 @@
  *     tem de sobreviver; só o que o portal decide pode mudar.
  */
 import "dotenv/config";
+import { papelDaEtapa } from "../lib/services/case.service";
 
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
@@ -299,7 +300,7 @@ async function funcao(prisma: PrismaClient) {
     conferir("categoria da operação continua", depois?.categoryId, trabalhada.categoryId);
     conferir("etiqueta da operação continua", depois?._count.tags, 1);
     conferir("a resposta real não vira marcador", depois?.publicResponse, RESPOSTA_REAL);
-    conferir("avaliada, a etapa vai para a final", depois?.status, "Resolvido");
+    conferir("avaliada, a etapa vai para a final", papelDaEtapa(depois?.status), "Resolvido");
     conferir("e a avaliação do portal entra", [depois?.evaluated, depois?.score], [true, 8]);
   } finally {
     await prisma.caseTag.deleteMany({ where: { case: { protocol: PROTOCOLO } } });

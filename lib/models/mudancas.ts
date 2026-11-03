@@ -53,6 +53,16 @@ export const REVISAO = {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "coluna-que-nao-existe",
+    dia: "2026-11-03",
+    tipo: "correcao",
+    frente: "reclame-aqui",
+    titulo: "Arrastar para uma coluna que não existe mais é recusado",
+    texto:
+      "Uma aba aberta antes de renomear as colunas ainda mostrava \"Não resolvido\", e arrastar para ela gravava uma coluna que o quadro não exibe: a reclamação sumia da vista. Foi assim que 4 reclamações ficaram fora do quadro. Agora os nomes antigos das colunas finais viram o nome de hoje; qualquer outra coluna inexistente é recusada com o pedido de recarregar a página, e o cartão volta para onde estava.",
+    href: "/reclame-aqui",
+  },
+  {
     id: "sino-categorias-propostas",
     dia: "2026-11-03",
     tipo: "melhoria",

@@ -8,6 +8,7 @@
  * resolvido e voltaria pela tela e ficou em "Aguardando avaliação".
  */
 import "dotenv/config";
+import { papelDaEtapa } from "../lib/services/case.service";
 
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
@@ -44,17 +45,17 @@ function base(protocolo: string): Case {
     const anterior = (await fetchCaseByProtocol(prisma, PROTOCOLOS[0]))!;
     const r = await persistCaseParcial(prisma, { ...anterior, evaluated: true, score: 10, resolved: true, wouldDoBusiness: true }, anterior);
     const depois = await prisma.case.findUnique({ where: { protocol: PROTOCOLOS[0] }, select: { status: true, evaluated: true, evaluatedAt: true } });
-    conferir("nota 10 resolvida pela tela: vai para Resolvido", [depois?.status, depois?.evaluated, Boolean(depois?.evaluatedAt)], ["Resolvido", true, true]);
-    conferir("e a tela fica sabendo que a coluna mudou", r.ok && r.alterados.includes("status") && "colunaPelaAvaliacao" in r ? r.colunaPelaAvaliacao : null, "Resolvido");
+    conferir("nota 10 resolvida pela tela: vai para Resolvido", [papelDaEtapa(depois?.status), depois?.evaluated, Boolean(depois?.evaluatedAt)], ["Resolvido", true, true]);
+    conferir("e a tela fica sabendo que a coluna mudou", r.ok && r.alterados.includes("status") && "colunaPelaAvaliacao" in r ? papelDaEtapa(r.colunaPelaAvaliacao) : null, "Resolvido");
 
     /* Pelo caminho inteiro (quadro, extensão). */
     await persistCase(prisma, { ...base(PROTOCOLOS[1]), status: "Em tratativa", evaluated: true, score: 3, resolved: false } as Case);
-    conferir("avaliada não resolvida pelo caminho inteiro: Não resolvido", (await prisma.case.findUnique({ where: { protocol: PROTOCOLOS[1] }, select: { status: true } }))?.status, "Não resolvido");
+    conferir("avaliada não resolvida pelo caminho inteiro: Não resolvido", (await prisma.case.findUnique({ where: { protocol: PROTOCOLOS[1] }, select: { status: true } }))?.status === "Avaliado como não resolvido" ? "Não resolvido" : "outra coluna", "Não resolvido");
 
     /* Salvar outra coisa numa avaliada já fechada não mexe na coluna. */
     const fechada = (await fetchCaseByProtocol(prisma, PROTOCOLOS[0]))!;
     const r2 = await persistCaseParcial(prisma, { ...fechada, customer: "Teste descartável 2" }, fechada);
-    conferir("editar outro campo de uma avaliada não mexe na coluna", [r2.ok && r2.alterados, (await prisma.case.findUnique({ where: { protocol: PROTOCOLOS[0] }, select: { status: true } }))?.status], [["customer"], "Resolvido"]);
+    conferir("editar outro campo de uma avaliada não mexe na coluna", [r2.ok && r2.alterados, papelDaEtapa((await prisma.case.findUnique({ where: { protocol: PROTOCOLOS[0] }, select: { status: true } }))?.status)], [["customer"], "Resolvido"]);
   } finally {
     await prisma.case.deleteMany({ where: { protocol: { in: PROTOCOLOS } } });
     conferir("as descartáveis saíram do banco", await prisma.case.count({ where: { protocol: { in: PROTOCOLOS } } }), 0);

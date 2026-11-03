@@ -1014,8 +1014,8 @@ export function carimboDaAvaliacao(
  */
 const fluxoEmCache = { em: 0, nomes: [] as string[] };
 
-export async function etapasDoFluxo(prisma: PrismaClient): Promise<string[]> {
-  if (Date.now() - fluxoEmCache.em < 60_000 && fluxoEmCache.nomes.length) return fluxoEmCache.nomes;
+export async function etapasDoFluxo(prisma: PrismaClient, fresco = false): Promise<string[]> {
+  if (!fresco && Date.now() - fluxoEmCache.em < 60_000 && fluxoEmCache.nomes.length) return fluxoEmCache.nomes;
   try {
     const linhas = await prisma.workflowStatus.findMany({ where: { active: true }, select: { name: true } });
     fluxoEmCache.nomes = linhas.map((l) => l.name);

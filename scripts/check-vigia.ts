@@ -25,6 +25,7 @@
  * qualquer cliente que não seja navegador. Por isso as amostras.
  */
 import "dotenv/config";
+import { papelDaEtapa } from "../lib/services/case.service";
 
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -310,7 +311,7 @@ function traducao(lida: Lida | null) {
   );
   /* 22/10: a avaliação lançada na tela fecha a coluna (RA-5spZ ficou avaliada em "Aguardando avaliação"). */
   conferir(
-    "avaliada à mão: Resolvido / Não resolvido / sem resolvido não chuta / final e Finalizado ficam",
+    "avaliada à mão: Resolvido / Não resolvido / sem resolvido não chuta / final contrária vira a certa (03/11) / Finalizado fica",
     [
       colunaDaAvaliacao({ status: "Aguardando avaliação", evaluated: true, resolved: true }),
       colunaDaAvaliacao({ status: "Em tratativa", evaluated: true, resolved: false }),
@@ -319,7 +320,7 @@ function traducao(lida: Lida | null) {
       colunaDaAvaliacao({ status: "Finalizado", evaluated: true, resolved: true }),
       colunaDaAvaliacao({ status: "Aguardando avaliação", evaluated: false, resolved: true }),
     ],
-    ["Resolvido", "Não resolvido", null, null, null, null]
+    ["Resolvido", "Não resolvido", null, "Não resolvido", null, null]
   );
 
   const nova = casoDoPortal(base());
@@ -500,7 +501,7 @@ async function travas(prisma: PrismaClient) {
   conferir("etiqueta da operação continua", depois?._count.tags, 1);
   conferir("a resposta vazia recebe o texto do portal", depois?.publicResponse, "Resposta do portal.\nCom duas linhas.");
   conferir("o relato vazio recebe o do portal", depois?.description, "Relato do portal.\nSegunda linha.");
-  conferir("a avaliação do portal entra", [depois?.status, depois?.evaluated, depois?.score], ["Resolvido", true, 9]);
+  conferir("a avaliação do portal entra", [papelDaEtapa(depois?.status), depois?.evaluated, depois?.score], ["Resolvido", true, 9]);
   conferir(
     "completada deixa de ser pendente",
     (await pendentesDoPortal(prisma, 1000)).includes(TRABALHADA),
@@ -553,7 +554,7 @@ async function travas(prisma: PrismaClient) {
 
   conferir(
     "avaliada no portal: a coluna da operação fecha como o portal diz",
-    (await prisma.case.findUnique({ where: { protocol: `RA-${JURIDICO}` }, select: { status: true } }))?.status,
+    papelDaEtapa((await prisma.case.findUnique({ where: { protocol: `RA-${JURIDICO}` }, select: { status: true } }))?.status),
     "Resolvido"
   );
 

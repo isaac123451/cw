@@ -17,6 +17,7 @@
  * reclamação real é tocada.
  */
 import "dotenv/config";
+import { papelDaEtapa } from "../lib/services/case.service";
 
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
@@ -177,7 +178,7 @@ async function main() {
     marca
   );
 
-  conferir("status gravado", noBanco?.status, "Resolvido");
+  conferir("status gravado (pelo papel)", papelDaEtapa(noBanco?.status), "Resolvido");
   conferir("resolvido", noBanco?.resolved, true);
   conferir("avaliado", noBanco?.evaluated, true);
   conferir("nota mantida", noBanco?.score, 10);

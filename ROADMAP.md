@@ -1116,7 +1116,7 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
-### Revisão de novembro: bugs, contas e organização (03/11/2026, 1.1.25–1.1.27)
+### Revisão de novembro: bugs, contas e organização (03/11/2026, 1.1.25–1.1.28)
 
 Pedido do Isaac: "existem muitos bugs… informações muito jogadas… corrija
 os problemas de desempenho… existem cálculos incorretos". E: "preciso que
@@ -1131,9 +1131,18 @@ aqui… atualize na ferramenta no caso."
 - [x] Redes: renomear coluna do RA não leva mais os atendimentos das Redes.
 - [x] Novidades: seis por frente, o resto num clique.
 - [x] Sino: propostas de categoria da IA esperando decisão.
-- [ ] **Isaac roda** `npx tsx scripts/_alinhar.ts --gravar` (6 colunas do RA,
+- [x] Coluna inexistente (aba com o fluxo antigo) é recusada no servidor; o
+      cartão volta. Conferências passaram a comparar pelo papel da coluna.
+- [ ] **Isaac roda** `npx tsx scripts/_alinhar.ts --gravar` (2 colunas do RA,
       3 empresas que eram telefone, 112 atendimentos das Redes). Depois disso
-      `check:vinculo` e `check:papel-da-coluna` ficam limpos.
+      `check:vinculo` fica limpo.
+- [ ] **Isaac decide:** 4 reclamações de cancelamento de plano (RA-mPDZ, RA-OUem,
+      RA-YqiK, RA-vxt7) estão em "Não resolvido" por movimento dele, com nota
+      9–10 resolvida no portal. O script as preserva; `--incluir-movidas-a-mao`
+      as leva para "Avaliado como resolvido". Com a 1.1.25 no ar, a próxima
+      leitura do vigia faz isso sozinha.
+- [ ] `check:indice-portal`: a base tem 1 avaliação nota 10 a mais que o painel
+      (72 × 71 em 6 meses). Reconferir depois da próxima leitura do painel.
 - [ ] Passada visual logada (o login automático foi barrado): Meu dia, NPS,
       Reclame Aqui e Redes no navegador embutido, com o Isaac entrando.
 
