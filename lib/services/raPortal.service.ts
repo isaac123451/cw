@@ -9,6 +9,7 @@ import { STATUS_TERMINADO } from "@/lib/services/case.service";
 import {
   COLUNAS_DO_PORTAL,
   COLUNAS_FINAIS,
+  colunaDaAvaliacao,
   mudancasDoPortal,
   SELECAO_DO_PORTAL,
 } from "@/lib/services/atualizacaoDoPortal";
@@ -974,6 +975,7 @@ export async function situacaoNaLista(
       externalUrl: true,
       status: true,
       evaluated: true,
+      resolved: true,
       publicResponse: true,
     },
   });
@@ -1006,6 +1008,14 @@ export async function situacaoNaLista(
 
       if (respondidaLa && semResposta) return true;
       if (item.avaliada && !caso.evaluated) return true;
+
+      /*
+        Avaliada com a coluna contradizendo a avaliação (03/11/2026): a
+        página é reaberta e a leitura do portal põe a coluna certa. Sem
+        isso, nenhuma fila relia uma avaliada, e as 4 reclamações em "Não
+        resolvido" com nota 9–10 resolvida ficariam assim para sempre.
+      */
+      if (colunaDaAvaliacao(caso)) return true;
 
       /* Coluna do portal parada em "Novo" com a reclamação já respondida. */
       return (

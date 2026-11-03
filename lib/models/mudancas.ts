@@ -53,6 +53,16 @@ export const REVISAO = {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "vigia-reabre-coluna-contraria",
+    dia: "2026-11-03",
+    tipo: "correcao",
+    frente: "extensao",
+    titulo: "O vigia reabre a avaliada que está na coluna errada",
+    texto:
+      "O vigia nunca relia uma reclamação já avaliada, então uma coluna que contradizia a avaliação ficava assim para sempre. Agora, quando a coluna diz uma coisa e a avaliação outra, ele reabre a reclamação no portal e põe a coluna que o portal confirma. As 4 de cancelamento de plano em \"Não resolvido\", com nota 9 e 10 resolvida, vão para \"Avaliado como resolvido\" na próxima leitura.",
+    onde: "Extensão → vigia",
+  },
+  {
     id: "coluna-que-nao-existe",
     dia: "2026-11-03",
     tipo: "correcao",

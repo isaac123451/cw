@@ -1116,7 +1116,7 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
-### Revisão de novembro: bugs, contas e organização (03/11/2026, 1.1.25–1.1.28)
+### Revisão de novembro: bugs, contas e organização (03/11/2026, 1.1.25–1.1.29)
 
 Pedido do Isaac: "existem muitos bugs… informações muito jogadas… corrija
 os problemas de desempenho… existem cálculos incorretos". E: "preciso que
@@ -1136,11 +1136,12 @@ aqui… atualize na ferramenta no caso."
 - [ ] **Isaac roda** `npx tsx scripts/_alinhar.ts --gravar` (2 colunas do RA,
       3 empresas que eram telefone, 112 atendimentos das Redes). Depois disso
       `check:vinculo` fica limpo.
-- [ ] **Isaac decide:** 4 reclamações de cancelamento de plano (RA-mPDZ, RA-OUem,
-      RA-YqiK, RA-vxt7) estão em "Não resolvido" por movimento dele, com nota
-      9–10 resolvida no portal. O script as preserva; `--incluir-movidas-a-mao`
-      as leva para "Avaliado como resolvido". Com a 1.1.25 no ar, a próxima
-      leitura do vigia faz isso sozinha.
+- [x] 4 reclamações de cancelamento de plano (RA-mPDZ, RA-OUem, RA-YqiK,
+      RA-vxt7) em "Não resolvido" com nota 9–10 resolvida no portal. Isaac:
+      "pode deixar o vigia mover os quatro para resolvido". Desde 1.1.29 o
+      vigia reabre a avaliada com coluna contraditória (antes nenhuma fila
+      relia avaliada) e a leitura põe a coluna certa. O script não mexe nelas.
+- [ ] Depois do deploy, conferir que as 4 foram para "Avaliado como resolvido".
 - [ ] `check:indice-portal`: a base tem 1 avaliação nota 10 a mais que o painel
       (72 × 71 em 6 meses). Reconferir depois da próxima leitura do painel.
 - [ ] Passada visual logada (o login automático foi barrado): Meu dia, NPS,
