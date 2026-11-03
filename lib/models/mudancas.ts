@@ -53,6 +53,26 @@ export const REVISAO = {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "rotina-sem-numero-repetido",
+    dia: "2026-11-03",
+    tipo: "melhoria",
+    frente: "plataforma",
+    titulo: "Meu dia: cada atividade diz o que é de hoje, uma vez só",
+    texto:
+      "A linha de \"Verificar novos casos\" mostrava os números três vezes: ícones soltos com 5, 32 e 795, a frase \"832 sem 1º contato, 539 fora do prazo\", depois \"39 para hoje · 793 do acumulado ficam para os próximos dias, pelo plano de recuperação\" e, à direita, \"832 itens\". Agora as frentes aparecem com nome (RA 5 · Redes 32 · NPS 795), o atraso só na etiqueta vermelha, \"Hoje: 39 · 793 ficam para os próximos dias\" numa linha curta, e o botão diz \"39 de 832\".",
+    href: "/meu-dia",
+  },
+  {
+    id: "botoes-que-se-explicam",
+    dia: "2026-11-03",
+    tipo: "melhoria",
+    frente: "plataforma",
+    titulo: "Botões que dizem o que fazem",
+    texto:
+      "No Reclame Aqui, o botão de atualizar dizia \"536 · 17:57\": o 536 era a base inteira, Redes junto, num quadro de 390. Virou \"Atualizado 17:57\". \"Filtros 1\" parecia um filtro ligado e era quantos estavam salvos: virou \"Filtros salvos\". No NPS, havia dois \"Período\" um embaixo do outro: o botão de importar virou \"Reimportar do Wootric\", e os filtros de situação, segmento e comentário ganharam separação.",
+    href: "/reclame-aqui",
+  },
+  {
     id: "base-bate-com-o-painel",
     dia: "2026-11-03",
     tipo: "correcao",

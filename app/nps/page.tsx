@@ -774,6 +774,9 @@ function NpsPagina({ abrirInicial = null }: { abrirInicial?: "etapas" | "causas"
                 </button>
               ))}
 
+              {/* Situação | segmento | comentário e tipo: três grupos, separados (03/11/2026). */}
+              <span aria-hidden className="mx-0.5 hidden h-5 w-px bg-zinc-200 sm:block" />
+
               {/*
                 Os três segmentos, na barra de filtros.
 
@@ -817,6 +820,8 @@ function NpsPagina({ abrirInicial = null }: { abrirInicial?: "etapas" | "causas"
                   </button>
                 );
               })}
+
+              <span aria-hidden className="mx-0.5 hidden h-5 w-px bg-zinc-200 sm:block" />
 
               <select
                 value={comentario}

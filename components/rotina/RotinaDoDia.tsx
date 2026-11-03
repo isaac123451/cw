@@ -205,10 +205,11 @@ export default function RotinaDoDia({ dia, compacto = false, onConfigurar, onUmP
 
                   {c && (
                     <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                      {/* Com o nome da frente (03/11/2026): o ícone sozinho com "795" não dizia de onde era. */}
                       {FRENTES_DA_OPERACAO.filter((f) => (c.porFrente[f.id] ?? 0) > 0).map((f) => (
                         <span key={f.id} title={`${c.porFrente[f.id]} em ${f.nome}`} className="flex items-center gap-1 rounded-md bg-zinc-100 px-1.5 py-0.5 text-[11px] font-medium text-zinc-700">
                           <IconeDaFrente frente={f.id} size={11} />
-                          {c.porFrente[f.id]}
+                          {f.curto} <span className="tabular-nums">{c.porFrente[f.id]}</span>
                         </span>
                       ))}
                       {c.atrasados > 0 && (
@@ -216,14 +217,15 @@ export default function RotinaDoDia({ dia, compacto = false, onConfigurar, onUmP
                           {c.atrasados} fora do prazo
                         </span>
                       )}
-                      <span className="text-[11px] text-zinc-500">{c.resumo}</span>
+                      {/* O "N fora do prazo" já está na etiqueta vermelha ao lado: não repete no texto. */}
+                      <span className="text-[11px] text-zinc-500">{c.atrasados > 0 ? c.resumo.replace(/,\s*\d+ fora do prazo(?=\.)/, "") : c.resumo}</span>
                     </div>
                   )}
                   {/* O que vale hoje (1.124): o acumulado além da cota fica para os próximos dias. */}
                   {!marcada && ficamParaDepois > 0 && doDiaDeHoje && (
-                    <p className="mt-1 text-[11px] text-zinc-600">
-                      <strong className="font-semibold tabular-nums text-zinc-900">{doDiaDeHoje.hoje}</strong> para hoje ·{" "}
-                      <span className="tabular-nums">{ficamParaDepois}</span> do acumulado ficam para os próximos dias, pelo plano de recuperação
+                    <p className="mt-1 text-[11px] text-zinc-600" title="O plano de recuperação divide o acumulado pelos próximos dias úteis: hoje entra só a parte de hoje.">
+                      Hoje: <strong className="font-semibold tabular-nums text-zinc-900">{doDiaDeHoje.hoje}</strong>
+                      <span className="text-zinc-400"> · {ficamParaDepois} ficam para os próximos dias</span>
                     </p>
                   )}
                   {esvaziada && (
@@ -278,7 +280,8 @@ export default function RotinaDoDia({ dia, compacto = false, onConfigurar, onUmP
                       title={expandida ? "Fechar a lista" : "Ver os itens, marcar como feito ou tirar da atividade"}
                       className={`flex items-center gap-0.5 rounded-lg py-1 pl-2 pr-1 text-[11px] font-medium transition-colors ${expandida ? "bg-zinc-100 text-zinc-800" : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800"}`}
                     >
-                      {c!.total ? `${c!.total} ${c!.total === 1 ? "item" : "itens"}` : "Tirados"}
+                      {/* "39 de 832" quando o plano reparte o acumulado: o número da direita era o total, e não o de hoje. */}
+                      {c!.total ? (ficamParaDepois > 0 && doDiaDeHoje ? `${doDiaDeHoje.hoje} de ${c!.total}` : `${c!.total} ${c!.total === 1 ? "item" : "itens"}`) : "Tirados"}
                       {expandida ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                     </button>
                   )}

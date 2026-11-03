@@ -331,7 +331,7 @@ export default function WootricImport({
         className="flex items-center gap-2 rounded-xl border border-zinc-200 px-3.5 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:border-violet-300 hover:text-violet-700 disabled:opacity-50"
       >
         <CloudDownload size={15} />
-        Período
+        Reimportar do Wootric
       </button>
 
       {aberto && (

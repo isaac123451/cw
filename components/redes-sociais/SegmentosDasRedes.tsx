@@ -32,7 +32,7 @@ export default function SegmentosDasRedes({ facetas, total, filtrados, ativos, o
     const v = facetas[id] ?? [];
     return v.length === 1 && !v[0].ativo;
   };
-  const iguais = DIMENSOES_DAS_REDES.filter(({ id }) => unico(id)).map(({ id, nome }) => `${nome}: ${facetas[id][0].valor.toLowerCase()}`);
+  const iguais = DIMENSOES_DAS_REDES.filter(({ id }) => unico(id)).map(({ id, nome }) => `${nome}: ${facetas[id][0].valor}`);
   return (
     <SurfaceCard
       tour="segmentos"

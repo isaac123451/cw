@@ -93,7 +93,6 @@ export default function Toolbar({
    * Sociais, que leem do mesmo lugar.
    */
   const {
-    cases: todos,
     recarregar,
     loading,
     carregadoEm,
@@ -378,7 +377,8 @@ export default function Toolbar({
               );
             }}
             disabled={atualizando || loading}
-            title="Reler as reclamações do banco agora"
+            /* "536 · 17:57" contava a base inteira, Redes junto, num quadro de 390 (03/11/2026): só a hora, dita. */
+            title={quando ? `Reler as reclamações do banco agora. Última leitura às ${quando}.` : "Reler as reclamações do banco agora"}
             className="flex h-9 items-center gap-2 rounded-lg border border-zinc-200 px-3.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-50"
           >
             <RefreshCw
@@ -394,7 +394,7 @@ export default function Toolbar({
               {atualizando || loading
                 ? "Atualizando..."
                 : quando
-                  ? `${todos.length} · ${quando}`
+                  ? `Atualizado ${quando}`
                   : "Atualizar"}
             </span>
           </button>

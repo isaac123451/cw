@@ -162,13 +162,8 @@ export default function SavedFilters({
 
         <Bookmark size={15} />
 
-        <span className="hidden lg:inline">Filtros</span>
-
-        {meus.length > 0 && (
-          <span className="rounded-full bg-zinc-100 px-1.5 text-[11px] font-semibold text-zinc-600">
-            {meus.length}
-          </span>
-        )}
+        {/* "Filtros 1" parecia um filtro ligado; era quantos estão salvos (03/11/2026). */}
+        <span className="hidden lg:inline">Filtros salvos</span>
 
         <ChevronDown size={13} className="opacity-60" />
 
