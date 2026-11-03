@@ -1141,17 +1141,16 @@ aqui… atualize na ferramenta no caso."
       "pode deixar o vigia mover os quatro para resolvido". Desde 1.1.29 o
       vigia reabre a avaliada com coluna contraditória (antes nenhuma fila
       relia avaliada) e a leitura põe a coluna certa. O script não mexe nelas.
-- [ ] Depois do deploy, conferir que as 4 foram para "Avaliado como resolvido".
-- [ ] `check:indice-portal`: a base tem 1 avaliação nota 10 a mais que o painel
-      (72 × 71 em 6 meses). Reconferir depois da próxima leitura do painel.
+- [x] As 4 de cancelamento estão em "Avaliado como resolvido" (conferido 03/11).
+- [x] A avaliação a mais era a RA-50JT (nota inexistente), não atraso do painel.
 - [x] Passada visual logada (o Isaac entrou no navegador embutido): Meu dia, NPS,
       Reclame Aqui, Redes, Dashboard e Agenda; varredura de 40 telas sem valor quebrado.
 - [x] "Os dados do RA estão diferentes do portal" (1.1.31): RA-JJ45 desativada no
       portal e contada aqui; RA-50JT com nota 10 inexistente. Desativada e moderação
       aceita saem da nota; o vigia desfaz avaliação que o portal não tem e marca
       desativada. Simulado: as 5 janelas do painel batem nos 8 números.
-- [ ] **Isaac roda** `npx tsx scripts/_portal-0311.ts --gravar` e recarrega a extensão;
-      depois `check:indice-portal` fica limpo (recebidas agora sem folga).
+- [x] Script `_portal-0311.ts` gravado e 1.1.31 no ar (03/11, 17h50): `check:indice-portal`
+      limpo nas janelas de 6 e 12 meses, recebidas e respondidas sem folga.
 
 ### Caso a caso na fila, números nas abas e o popup que abria rolado (05/10/2026)
 
