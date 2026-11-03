@@ -53,6 +53,16 @@ export const REVISAO = {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "redes-resolvido-de-volta",
+    dia: "2026-11-03",
+    tipo: "correcao",
+    frente: "redes",
+    titulo: "Redes: os atendimentos resolvidos voltam para a coluna Resolvido",
+    texto:
+      "Renomear a coluna \"Resolvido\" do Reclame Aqui também renomeou 112 atendimentos das Redes, que sumiram do quadro e da conta de resolvidos. Agora eles aparecem de novo em Resolvido, e renomear uma coluna do Reclame Aqui só mexe nas reclamações.",
+    href: "/redes-sociais",
+  },
+  {
     id: "colunas-avaliadas-renomeadas",
     dia: "2026-11-03",
     tipo: "correcao",

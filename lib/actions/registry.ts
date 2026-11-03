@@ -124,7 +124,12 @@ export async function saveWorkflowStatus(
         update: dados,
         create: { id: item.id, ...dados },
       }),
-      ...(renomeada ? [prisma.case.updateMany({ where: { status: antes!.name }, data: { status: dados.name } })] : []),
+      /*
+        Só o Reclame Aqui: este é o fluxo dele. Sem o canal, renomear
+        "Resolvido" levou junto 112 atendimentos das Redes, que têm a etapa
+        "Resolvido" própria e sumiram do quadro delas (03/11/2026).
+      */
+      ...(renomeada ? [prisma.case.updateMany({ where: { status: antes!.name, channel: "RECLAME_AQUI" }, data: { status: dados.name } })] : []),
     ]);
 
     updateTag(WORKSPACE_TAG);

@@ -45,14 +45,32 @@ export const ETAPAS_DAS_REDES: EtapaDasRedes[] = [
 
 export const FINAIS_DAS_REDES = ETAPAS_DAS_REDES.filter((e) => e.final).map((e) => e.nome);
 
+/**
+ * O nome da etapa das Redes, mesmo quando o status veio com o nome de outra
+ * coluna (03/11/2026).
+ *
+ * Renomear "Resolvido" no fluxo do Reclame Aqui para "Avaliado como
+ * resolvido" levou junto 112 atendimentos das Redes, que ficaram numa etapa
+ * que o quadro das Redes não tem: sumiram do quadro e saíram da conta de
+ * resolvidos. A renomeação agora só mexe no Reclame Aqui; aqui, o que já
+ * mudou volta a ser lido como "Resolvido".
+ */
+export function nomeDaEtapaDasRedes(status: string): string {
+  if (status === "Novo") return ETAPAS_DAS_REDES[0].nome;
+  if (ETAPAS_DAS_REDES.some((e) => e.nome === status)) return status;
+  const s = status.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().trim();
+  if (/^avaliad[oa] (como )?resolvid[oa]$/.test(s)) return "Resolvido";
+  return status;
+}
+
 /** "Novo" (das etapas antigas) é lido como "Recebido". */
 export function etapaDasRedes(status: string) {
-  if (status === "Novo") return ETAPAS_DAS_REDES[0];
-  return ETAPAS_DAS_REDES.find((e) => e.nome === status);
+  const nome = nomeDaEtapaDasRedes(status);
+  return ETAPAS_DAS_REDES.find((e) => e.nome === nome);
 }
 
 export function eFinalDasRedes(status: string) {
-  return FINAIS_DAS_REDES.includes(status);
+  return FINAIS_DAS_REDES.includes(nomeDaEtapaDasRedes(status));
 }
 
 /* ============================================================
