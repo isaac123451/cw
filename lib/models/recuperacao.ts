@@ -112,7 +112,7 @@ export function frentesNoPlano(porFrente: Map<FrenteId, number>, ajuste: AjusteD
  * `restante` é por frente: quantos itens dela ainda cabem hoje. Frente
  * que não está no mapa não tem plano — tudo entra.
  */
-export function separarOQueValeHoje<T extends { frente?: FrenteId; atrasado: boolean }>(
+export function separarOQueValeHoje<T extends { frente?: FrenteId; atrasado: boolean; chaves?: readonly string[] }>(
   fila: T[],
   restante: Map<FrenteId, number>
 ): { hoje: T[]; paraDepois: Map<FrenteId, number> } {
@@ -120,6 +120,13 @@ export function separarOQueValeHoje<T extends { frente?: FrenteId; atrasado: boo
   const paraDepois = new Map<FrenteId, number>();
   const hoje = fila.filter((item) => {
     if (!item.frente || !restante.has(item.frente)) return true;
+    /*
+      Cobrar uma área é compromisso com outra equipe, não acumulado
+      (04/11/2026): a cobrança atrasada caía para "os próximos dias" porque
+      a cota do Reclame Aqui acabava antes dela. Fica sempre no dia e não
+      gasta a cota.
+    */
+    if (item.chaves?.includes("areas")) return true;
     const ja = usados.get(item.frente) ?? 0;
     if (ja < (restante.get(item.frente) ?? 0)) {
       usados.set(item.frente, ja + 1);

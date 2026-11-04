@@ -71,6 +71,16 @@ conferir("e o resto fica para depois, contado", [...paraDepois.entries()], [["np
 conferir("o que está no prazo também conta na cota", hoje.filter((i) => i.frente === "nps").length, 2);
 conferir("frente sem plano entra inteira", hoje.filter((i) => i.frente === "google" || i.frente === "reclame-aqui").length, 2);
 conferir("cota batida: nada mais da frente hoje", separarOQueValeHoje(filaDoDia, new Map<FrenteId, number>([["nps", 0]])).paraDepois.get("nps"), 4);
+{
+  /* 04/11/2026: cobrar área atrasada fica no dia, mesmo com a cota da frente batida, e não gasta a cota. */
+  const fila = [
+    { n: 1, frente: "reclame-aqui" as FrenteId, atrasado: true, chaves: ["novos"] },
+    { n: 2, frente: "reclame-aqui" as FrenteId, atrasado: true, chaves: ["areas"] },
+    { n: 3, frente: "reclame-aqui" as FrenteId, atrasado: true, chaves: ["fups"] },
+  ];
+  const r = separarOQueValeHoje(fila, new Map<FrenteId, number>([["reclame-aqui", 1]]));
+  conferir("cobrança à área atrasada fica hoje, fora da cota", [r.hoje.map((i) => i.n), r.paraDepois.get("reclame-aqui")], [[1, 2], 1]);
+}
 conferir("o restante: a cota menos o que saiu, mais o adiantado", [restanteDeHoje(25, 10), restanteDeHoje(25, 30), restanteDeHoje(25, 30, 10)], [15, 0, 10]);
 
 console.log(falhas === 0 ? "\n  O plano segue o ajuste de cada um.\n" : `\n  ${falhas} falha(s).\n`);

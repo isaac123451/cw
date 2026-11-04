@@ -53,6 +53,16 @@ export const REVISAO = {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "cobranca-de-area-no-dia",
+    dia: "2026-11-04",
+    tipo: "correcao",
+    frente: "plataforma",
+    titulo: "Cobrar a área atrasada fica no dia",
+    texto:
+      "No Meu dia, \"Verificar e cobrar as solicitações às áreas\" mostrava \"Hoje: 0 · 1 fica para os próximos dias\": a cota do plano de recuperação do Reclame Aqui acabava antes de chegar na cobrança, e ela ia para depois mesmo atrasada. Cobrar outra equipe é compromisso, não acumulado: agora fica sempre no dia e não gasta a cota.",
+    href: "/meu-dia",
+  },
+  {
     id: "impacto-em-reais",
     dia: "2026-11-04",
     tipo: "correcao",
