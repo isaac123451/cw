@@ -413,10 +413,11 @@ export interface KrCalculado {
 }
 
 /** Na meta, perto (até 10% da distância da linha de base) ou abaixo. */
-export function situacao(atual: number | null, meta: number | null): "na-meta" | "perto" | "abaixo" | null {
+export function situacao(atual: number | null, meta: number | null, unidade: Metrica["unidade"] = "%"): "na-meta" | "perto" | "abaixo" | null {
   if (atual == null || meta == null) return null;
   if (atual >= meta) return "na-meta";
-  return meta - atual <= Math.max(1, Math.abs(meta) * 0.05) ? "perto" : "abaixo";
+  /* "Perto" é um passo curto: 1 ponto percentual (ou de NPS), 0,1 de nota. Com 3 pontos de distância, não é perto. */
+  return meta - atual <= (unidade === "nota" ? 0.1 : 1) + 1e-9 ? "perto" : "abaixo";
 }
 
 /** Quantos sucessos faltam para a meta do mês no KR de confiança. */

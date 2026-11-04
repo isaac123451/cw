@@ -130,6 +130,7 @@ async function main() {
 
   await identidade(prisma, eu.id);
   await falaDoCliente(prisma, eu.id);
+  await confiancaPelaConversa(prisma, eu.id);
 
   console.log(falhas === 0 ? "\n  A IA completa e segue a conversa, e o desfazer devolve tudo.\n" : `\n  ${falhas} falha(s).\n`);
   process.exitCode = falhas === 0 ? 0 : 1;
@@ -407,5 +408,67 @@ async function falaDoCliente(prisma: NonNullable<ReturnType<typeof getPrisma>>, 
     if (conversas.length) await prisma.conversa.deleteMany({ where: { id: { in: conversas } } });
     if (casos.length) await prisma.case.deleteMany({ where: { id: { in: casos } } });
     conferir("nada descartável ficou na base (fala)", await prisma.case.count({ where: { protocol: { startsWith: "RA-ZZ-IA-FALA-" } } }), 0);
+  }
+}
+
+/**
+ * A pesquisa de confiança lida na conversa (04/11/2026) — o KR1 do OKR. A
+ * pergunta que saiu pelo WhatsApp e o "Sim" do cliente viram o registro;
+ * o que alguém marcou à mão não é tocado; desfazer apaga só o da IA.
+ */
+async function confiancaPelaConversa(prisma: NonNullable<ReturnType<typeof getPrisma>>, euId: string) {
+  console.log("\n  IA — PESQUISA DE CONFIANÇA PELA CONVERSA (contra o banco, descartável)\n");
+  const marca = `ZZ-IA-CONF-${Date.now()}`;
+  const agora = new Date();
+  const ha = (min: number) => new Date(agora.getTime() - min * 60_000);
+  const npss: string[] = [];
+  const conversas: string[] = [];
+  try {
+    const novo = async (sufixo: string, falas: { de: string; texto: string; min: number }[]) => {
+      const n = await prisma.npsResponse.create({
+        data: { score: 2, comment: "Descartável.", respondedAt: ha(3000), customer: `${marca}-${sufixo}`, status: "Em tratativa", firstContactDueAt: ha(2900), firstContactAt: ha(2800), confirmedAt: ha(200) },
+        select: { id: true },
+      });
+      npss.push(n.id);
+      const c = await prisma.conversa.create({
+        data: {
+          telefone: `55119${String(Date.now()).slice(-7)}${npss.length}`,
+          contatoNome: "Cliente Descartável",
+          npsResponseId: n.id,
+          guardadaPor: "check",
+          mensagens: { create: falas.map((f, i) => ({ chave: `${marca}-${sufixo}-${i}`, de: f.de, texto: f.texto, em: ha(f.min), origem: "check" })) },
+        },
+        select: { id: true },
+      });
+      conversas.push(c.id);
+      return n.id;
+    };
+    const comSim = await novo("SIM", [
+      { de: "nos", texto: "Olá! Após essa tratativa, você considera que sua confiança na Cardápio Web foi recuperada?", min: 100 },
+      { de: "cliente", texto: "Sim!", min: 90 },
+    ]);
+    const semResposta = await novo("ENV", [{ de: "nos", texto: "Sua confiança na Cardápio Web foi recuperada?", min: 100 }]);
+    const manual = await novo("MAN", [
+      { de: "nos", texto: "Sua confiança na Cardápio Web foi recuperada?", min: 100 },
+      { de: "cliente", texto: "Não", min: 90 },
+    ]);
+    await prisma.confiancaDoNps.create({ data: { responseId: manual, enviadaEm: ha(100), resposta: "parcialmente", respondidaEm: ha(80), origem: "manual", por: "check" } });
+
+    await seguirPelasConversas(prisma, euId, agora, conversas);
+    const linhas = await prisma.confiancaDoNps.findMany({ where: { responseId: { in: npss } } });
+    const de = (id: string) => linhas.find((l) => l.responseId === id);
+    conferir("pergunta + \"Sim!\" → enviada e respondida sim, pela IA", [Boolean(de(comSim)?.enviadaEm), de(comSim)?.resposta, de(comSim)?.origem], [true, "sim", "ia"]);
+    conferir("pergunta sem resposta → só enviada", [Boolean(de(semResposta)?.enviadaEm), de(semResposta)?.resposta ?? null], [true, null]);
+    conferir("o registro à mão não é trocado pela conversa", [de(manual)?.resposta, de(manual)?.origem], ["parcialmente", "manual"]);
+    conferir("rodar de novo não repete", await seguirPelasConversas(prisma, euId, agora, conversas), 0);
+
+    const acao = await prisma.acaoDaIA.findFirst({ where: { userId: euId, chave: `confianca:nps:${comSim}:sim` }, select: { id: true } });
+    if (acao) await desfazer(prisma, euId, acao.id);
+    conferir("desfazer apaga o que a IA gravou", await prisma.confiancaDoNps.count({ where: { responseId: comSim } }), 0);
+  } finally {
+    await prisma.acaoDaIA.deleteMany({ where: { userId: euId, OR: (npss.length ? npss : ["nada"]).map((id) => ({ chave: { contains: id } })) } });
+    if (conversas.length) await prisma.conversa.deleteMany({ where: { id: { in: conversas } } });
+    if (npss.length) await prisma.npsResponse.deleteMany({ where: { id: { in: npss } } });
+    conferir("nada descartável ficou na base (confiança)", await prisma.npsResponse.count({ where: { customer: { startsWith: "ZZ-IA-CONF-" } } }), 0);
   }
 }

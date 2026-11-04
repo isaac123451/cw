@@ -195,7 +195,7 @@ export interface PendenteDaConfianca {
   nome: string;
   nota: number;
   /** "confirmar" (contatado, sem a solução confirmada) · "perguntar" (confirmada, sem pesquisa) · "aguardando" (enviada, sem resposta) · "contatar". */
-  passo: "contatar" | "confirmar" | "perguntar" | "aguardando";
+  passo: "contatar" | "confirmar" | "perguntar" | "aguardando" | "encerrado";
   desde: string;
 }
 
@@ -209,7 +209,7 @@ export async function pendentesDaConfianca(prisma: PrismaClient, inicio: string,
   const ate = corte < hoje ? corte : hoje;
   const respostas = await prisma.npsResponse.findMany({
     where: { score: { lte: 6 }, respondedAt: { gte: new Date(`${inicio}T03:00:00Z`), lt: new Date(Date.parse(`${ate}T03:00:00Z`) + 86_400_000) } },
-    select: { id: true, score: true, customer: true, customerName: true, company: true, respondedAt: true, firstContactAt: true, confirmedAt: true, status: true },
+    select: { id: true, score: true, customer: true, customerName: true, company: true, respondedAt: true, firstContactAt: true, confirmedAt: true, status: true, establishment: { select: { name: true } } },
     orderBy: { respondedAt: "asc" },
   });
   let pesquisas: { responseId: string; enviadaEm: Date | null; resposta: string | null }[] = [];
@@ -219,15 +219,17 @@ export async function pendentesDaConfianca(prisma: PrismaClient, inicio: string,
     if (!tabelaQueFalta(erro)) throw erro;
   }
   const pesquisa = new Map(pesquisas.map((p) => [p.responseId, p]));
-  const ORDEM = { perguntar: 0, aguardando: 1, confirmar: 2, contatar: 3 } as const;
+  const ORDEM = { perguntar: 0, aguardando: 1, confirmar: 2, contatar: 3, encerrado: 4 } as const;
   const lista: PendenteDaConfianca[] = [];
   for (const r of respostas) {
     const p = pesquisa.get(r.id);
     if (p?.resposta) continue;
-    const passo: PendenteDaConfianca["passo"] = p?.enviadaEm ? "aguardando" : r.confirmedAt ? "perguntar" : r.firstContactAt ? "confirmar" : "contatar";
+    /* Encerrado sem a solução confirmada (Sem Retorno, Engano…): segue no denominador, mas não há passo — só se o cliente voltar. */
+    const passo: PendenteDaConfianca["passo"] = p?.enviadaEm ? "aguardando" : r.confirmedAt ? "perguntar" : r.status.startsWith("[Encerrado]") ? "encerrado" : r.firstContactAt ? "confirmar" : "contatar";
     lista.push({
       id: r.id,
-      nome: r.company || r.customerName || r.customer,
+      /* O nome do restaurante vinculado vem antes: "customer" do Wootric é só o começo do e-mail. */
+      nome: r.establishment?.name || r.company || r.customerName || r.customer,
       nota: r.score,
       passo,
       desde: dia(p?.enviadaEm ?? r.confirmedAt ?? r.firstContactAt ?? r.respondedAt)!,

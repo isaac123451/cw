@@ -20,6 +20,7 @@ const PASSOS: { id: PendenteDaConfianca["passo"]; titulo: string; dica: string }
   { id: "aguardando", titulo: "Aguardando a resposta", dica: "Pesquisa enviada. Cobre a resposta, porque sem ela não conta." },
   { id: "confirmar", titulo: "Confirmar a solução", dica: "Já houve contato. Falta o cliente confirmar que resolveu." },
   { id: "contatar", titulo: "Fazer o primeiro contato", dica: "Ainda sem contato, mas segue no denominador." },
+  { id: "encerrado", titulo: "Encerrados sem a solução confirmada", dica: "Sem retorno ou encerrados de outro jeito. Seguem no denominador; contam só se o cliente voltar e confirmar." },
 ];
 
 const diaCurto = (d: string) => d.slice(8, 10) + "/" + d.slice(5, 7);
@@ -37,7 +38,7 @@ export default function CartaoDoKr({ calc, indice, pendentes, mesAtual }: { calc
   const [passoAberto, setPassoAberto] = useState<PendenteDaConfianca["passo"] | null>(null);
   if (!metrica) return null;
 
-  const tom = situacao(calc.atual, calc.metaDeAgora);
+  const tom = situacao(calc.atual, calc.metaDeAgora, metrica.unidade);
   const base = kr.linhaDeBase ?? (metrica.unidade === "%" ? 0 : metrica.minimo);
   const posicao = (v: number | null) => (v == null || kr.meta === base ? 0 : Math.max(0, Math.min(100, ((v - base) / (kr.meta - base)) * 100)));
   const c = calc.confianca;
@@ -51,7 +52,7 @@ export default function CartaoDoKr({ calc, indice, pendentes, mesAtual }: { calc
             KR{indice + 1} · {metrica.frente}
           </p>
           <h3 className="mt-0.5 text-[15px] font-semibold text-zinc-900">{kr.titulo}</h3>
-          <p className="mt-0.5 text-xs text-zinc-500">{metrica.nome}</p>
+          {!metrica.nome.toLowerCase().startsWith(kr.titulo.trim().toLowerCase()) && <p className="mt-0.5 text-xs text-zinc-500">{metrica.nome}</p>}
         </div>
         <div className="text-right">
           <p className="text-2xl font-semibold tabular-nums text-zinc-900">{formatarValor(calc.atual, metrica.unidade)}</p>
@@ -80,7 +81,7 @@ export default function CartaoDoKr({ calc, indice, pendentes, mesAtual }: { calc
       <div className="mt-4 grid gap-2 text-center" style={{ gridTemplateColumns: `repeat(${Math.min(Math.max(calc.meses.length, 1), 4)}, minmax(0, 1fr))` }}>
         {calc.meses.map((m) => (
           <div key={m.mes} className={cn("rounded-lg px-2 py-2 ring-1 ring-inset", m.emCurso ? "bg-violet-50/60 ring-violet-100" : "bg-zinc-50 ring-zinc-100")}>
-            <p className="text-[11px] font-medium capitalize text-zinc-500">{nomeDoMes(m.mes)}{m.emCurso ? " (até hoje)" : ""}</p>
+            <p className="text-[11px] font-medium text-zinc-500"><span className="capitalize">{nomeDoMes(m.mes)}</span>{m.emCurso ? <span className="block text-[10px] font-normal text-zinc-400">até hoje</span> : null}</p>
             <p className={cn("text-sm font-semibold tabular-nums", m.futuro ? "text-zinc-300" : "text-zinc-900")}>{m.futuro ? "—" : formatarValor(m.realizado, metrica.unidade)}</p>
             <p className="text-[11px] text-zinc-400">meta {formatarValor(m.meta, metrica.unidade)}</p>
           </div>

@@ -9,7 +9,7 @@ import SurfaceCard from "@/components/shared/SurfaceCard";
 import { lerConfianca, registrarConfianca, type ConfiancaView } from "@/lib/actions/okr";
 import { useToast } from "@/lib/context/ToastContext";
 import { PERGUNTA_DE_CONFIANCA, RESPOSTAS_DE_CONFIANCA, type RespostaDeConfianca } from "@/lib/models/okr";
-import type { NpsResponseView } from "@/lib/models/nps";
+import { isEncerrado, type NpsResponseView } from "@/lib/models/nps";
 import { descreverRegistro } from "@/lib/services/horasUteis";
 import { cn } from "@/lib/utils";
 
@@ -123,6 +123,10 @@ export default function PesquisaDeConfianca({ item, confirmar }: { item: NpsResp
         <p className="text-sm text-zinc-400">Carregando…</p>
       ) : semTabela ? (
         <p className="text-sm text-amber-800">Falta rodar o npm run db:push para guardar a pesquisa de confiança.</p>
+      ) : isEncerrado(item.status) && !confirmado && !confianca ? (
+        <p className="text-sm text-zinc-600">
+          Ciclo encerrado sem a solução confirmada. Segue no denominador do OKR e só conta se o cliente voltar, confirmar que resolveu e responder &ldquo;Sim&rdquo;.
+        </p>
       ) : (
         <ol className="divide-y divide-zinc-100">
           {passo(

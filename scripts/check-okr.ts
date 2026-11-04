@@ -11,6 +11,7 @@
 import {
   confiancaRecuperada,
   faltamParaMeta,
+  situacao,
   leituraDoMes,
   mesesDoOkr,
   npsDasNotas,
@@ -70,6 +71,10 @@ conferir("em outubro: quem chegou em novembro ainda não entra", outubro.elegive
 conferir("e o \"Sim\" de novembro não conta em outubro", outubro.sucesso, 1);
 conferir("sem elegíveis, sem percentual (não é 0%)", confiancaRecuperada([], periodo).percentual, null);
 conferir("faltam para 44,3% de 20 elegíveis com 5 sucessos", faltamParaMeta({ ...confiancaRecuperada(vinte, periodo), sucesso: 5 }, 44.3), 4);
+
+conferir("80,3% contra meta 83,3%: abaixo, não perto", situacao(80.3, 83.3), "abaixo");
+conferir("82,5% contra 83,3%: perto", situacao(82.5, 83.3), "perto");
+conferir("nota 8,85 contra 8,9: perto", situacao(8.85, 8.9, "nota"), "perto");
 
 console.log("\n-- NPS e painel");
 conferir("NPS: 5 promotores, 3 neutros, 2 detratores = +30", npsDasNotas([10, 9, 9, 10, 9, 8, 7, 7, 3, 6]), 30);
