@@ -14,11 +14,12 @@ import { cn } from "@/lib/utils";
 import { useAgenda } from "@/lib/context/AgendaContext";
 import { useCases } from "@/lib/context/CaseContext";
 import { useNps } from "@/lib/context/NpsContext";
-import { useSla } from "@/lib/context/SlaContext";
 import { useAvaliacoesGoogle } from "@/lib/context/useAvaliacoesGoogle";
 import { useAgora } from "@/lib/hooks/useAgora";
 import { gravarLocal, usePreferenciaLocal } from "@/lib/hooks/usePreferenciaLocal";
 import { CHAVE_DA_NOVIDADE_VISTA, diaDaUltimaNovidade } from "@/lib/models/novidades";
+import { CHAVE_DA_FILA_DE_HOJE, filaDeHojeGuardada } from "@/lib/models/proximoPasso";
+import { diaNaOperacao } from "@/lib/services/reputation.service";
 import { contadoresDoMenu, numeroCurto, type ContadorDoMenu } from "@/lib/models/contadoresDoMenu";
 import { quantasEsperando } from "@/lib/models/esperaNoWhatsapp";
 import { useEsperaNoWhatsapp } from "@/lib/hooks/useEsperaNoWhatsapp";
@@ -47,10 +48,11 @@ function useContadores(): Record<string, ContadorDoMenu> {
   const { cases } = useCases();
   const { responses } = useNps();
   const { tasks } = useAgenda();
-  const { rules, expediente } = useSla();
   const { avaliacoes } = useAvaliacoesGoogle();
   const agora = useAgora();
   const espera = useEsperaNoWhatsapp();
+  /* A fila de hoje que o Meu dia (ou o cartão do próximo passo) deixou: o mesmo número nos dois lugares. */
+  const filaDeHoje = usePreferenciaLocal(CHAVE_DA_FILA_DE_HOJE);
 
   return useMemo(() => {
     if (!agora) return {};
@@ -60,11 +62,10 @@ function useContadores(): Record<string, ContadorDoMenu> {
       googleAbertas: avaliacoes.filter((a) => a.status === "aberta").length,
       esperandoNoWhatsapp: quantasEsperando(espera, agora),
       tarefas: tasks,
-      regras: rules,
-      expediente,
+      filaDeHoje: agora ? filaDeHojeGuardada(filaDeHoje, diaNaOperacao(agora)) : null,
       agora,
     });
-  }, [cases, responses, tasks, rules, expediente, avaliacoes, agora, espera]);
+  }, [cases, responses, tasks, avaliacoes, agora, espera, filaDeHoje]);
 }
 
 export default function Sidebar({ forcarAberto = false }: { forcarAberto?: boolean }) {

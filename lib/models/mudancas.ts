@@ -46,6 +46,16 @@ export interface Mudanca {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "menu-sem-numero-que-assusta",
+    dia: "2026-11-04",
+    tipo: "melhoria",
+    frente: "plataforma",
+    titulo: "Menu: o Meu dia diz o que é de hoje, e o NPS, os detratores atrasados",
+    texto:
+      "O Meu dia mostrava 559 em vermelho (todos os prazos estourados, de todas as frentes) e o NPS, 548 (ciclos de qualquer nota com o 1º contato atrasado). Números que não dizem por onde começar. Agora o Meu dia mostra a fila de hoje, o mesmo número do cartão Próximo passo, sem vermelho. O NPS mostra os detratores com o 1º contato atrasado (7 hoje), em vermelho só quando há algum. O total de ciclos atrasados continua na dica, ao parar o mouse sobre o número.",
+    href: "/meu-dia",
+  },
+  {
     id: "novidades-linha-do-tempo",
     dia: "2026-11-04",
     tipo: "melhoria",

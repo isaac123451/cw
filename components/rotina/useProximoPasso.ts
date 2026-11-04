@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { guardarProximoPasso } from "@/lib/actions/proximoPasso";
-import { resumoDaFila, retratoDoProximoPasso } from "@/lib/models/proximoPasso";
+import { CHAVE_DA_FILA_DE_HOJE, resumoDaFila, retratoDoProximoPasso } from "@/lib/models/proximoPasso";
+import { gravarLocal, lerLocal } from "@/lib/hooks/usePreferenciaLocal";
 
 import { useOQueValeHoje } from "@/components/rotina/recuperacaoDoDia";
 import type { useMeuDia } from "@/components/rotina/useMeuDia";
@@ -32,6 +33,17 @@ export function useProximoPasso(dia: MeuDia, marcadas: Set<string>) {
 
   const item = visivel[0] ?? null;
   const resumo = useMemo(() => resumoDaFila(fila), [fila]);
+
+  /*
+    O número do menu (04/11/2026): o "Meu dia" mostrava os prazos estourados
+    — 559, em vermelho — enquanto o próprio Meu dia dizia o que é de hoje.
+    O menu passa a mostrar a mesma fila de hoje deste cartão, sem vermelho.
+  */
+  useEffect(() => {
+    if (dia.carregando || !dia.contagens || !dia.hoje) return;
+    const valor = JSON.stringify({ dia: dia.hoje, n: fila.length });
+    if (lerLocal(CHAVE_DA_FILA_DE_HOJE) !== valor) gravarLocal(CHAVE_DA_FILA_DE_HOJE, valor);
+  }, [dia.carregando, dia.contagens, dia.hoje, fila.length]);
 
   /* Grava o primeiro da fila de verdade (sem os pulos desta tela) quando ele muda. */
   const primeiro = fila[0]?.chave ?? "";

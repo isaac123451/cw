@@ -7,7 +7,6 @@
 import { avisosDeAbertura } from "../lib/models/aberturaDoAgente";
 import { itensDaEspera, linkDaConversa, ordenarEspera, quantasEsperando, resumoDaEspera, retratoValido, rotuloDaEspera, validarConversas, type RetratoDaEspera } from "../lib/models/esperaNoWhatsapp";
 import { contadoresDoMenu } from "../lib/models/contadoresDoMenu";
-import { EXPEDIENTE_PADRAO } from "../lib/services/horasUteis";
 import { contarRotina } from "../lib/models/meuDia";
 
 let falhas = 0;
@@ -80,7 +79,7 @@ ok("só com o nome, abre o WhatsApp Web", linkDaConversa(soNome) === "https://we
 const retratoAgora: RetratoDaEspera = { conversas: [comTelefone, soNome], lidoEm: new Date(agora.getTime() - 60_000).toISOString() };
 ok("o menu conta quem espera agora", quantasEsperando(retratoAgora, agora) === 2);
 ok("e zera com o retrato vencido (WhatsApp fechado)", quantasEsperando({ ...retratoAgora, lidoEm: new Date(agora.getTime() - 60 * 60_000).toISOString() }, agora) === 0);
-ok("o menu de Conversas mostra o número", contadoresDoMenu({ casos: [], nps: [], googleAbertas: 0, esperandoNoWhatsapp: 2, tarefas: [], regras: [], expediente: EXPEDIENTE_PADRAO, agora })["/conversas"].valor === 2);
+ok("o menu de Conversas mostra o número", contadoresDoMenu({ casos: [], nps: [], googleAbertas: 0, esperandoNoWhatsapp: 2, tarefas: [], agora })["/conversas"].valor === 2);
 
 console.log(falhas ? `\n${falhas} falha(s)` : "\ntudo certo");
 process.exit(falhas ? 1 : 0);

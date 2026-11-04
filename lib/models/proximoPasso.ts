@@ -30,6 +30,19 @@ export function resumoDaFila(fila: Pick<ItemDaFila, "atrasado" | "critico">[]) {
   };
 }
 
+/** Onde a fila de hoje deixa o tamanho para o menu: `{"dia":"AAAA-MM-DD","n":12}` (04/11/2026). */
+export const CHAVE_DA_FILA_DE_HOJE = "cw:fila-de-hoje";
+
+/** O tamanho da fila de hoje guardado, se for de hoje. */
+export function filaDeHojeGuardada(bruto: string | null, hoje: string): number | null {
+  try {
+    const v = JSON.parse(bruto ?? "null") as { dia?: string; n?: number } | null;
+    return v && v.dia === hoje && typeof v.n === "number" && v.n >= 0 ? v.n : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Os intervalos do lembrete de foco, em minutos; 0 desliga. */
 export const INTERVALOS_DO_LEMBRETE = [15, 25, 45, 0] as const;
 export const INTERVALO_PADRAO_DO_LEMBRETE = 25;

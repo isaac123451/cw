@@ -11,7 +11,7 @@ import type { Case } from "../lib/models/case";
 import type { NpsResponseView } from "../lib/models/nps";
 import { contadoresDoMenu, numeroCurto } from "../lib/models/contadoresDoMenu";
 import { GRUPOS_DO_MENU, itemDeConfiguracoes, menuItems } from "../core/navigation/menu";
-import { EXPEDIENTE_PADRAO } from "../lib/services/horasUteis";
+import { filaDeHojeGuardada } from "../lib/models/proximoPasso";
 import { summarize } from "../lib/services/nps.service";
 
 let falhas = 0;
@@ -54,11 +54,15 @@ console.log("\n  MENU LATERAL\n");
     { id: "t4", dueDate: "2026-09-20", done: false },
   ] as unknown as AgendaTask[];
 
-  const c = contadoresDoMenu({ casos, nps, googleAbertas: 3, tarefas, regras: [], expediente: EXPEDIENTE_PADRAO, agora: AGORA });
+  const c = contadoresDoMenu({ casos, nps, googleAbertas: 3, tarefas, filaDeHoje: 7, agora: AGORA });
   conferir("Reclame Aqui conta as abertas sem resposta pública", c["/reclame-aqui"].valor, 1);
   conferir("Redes conta só as não encerradas", c["/redes-sociais"].valor, 1);
-  conferir("NPS usa a mesma conta da tela (summarize)", c["/nps"].valor, summarize(nps, AGORA).estourados);
-  conferir("NPS atrasado fica vermelho", c["/nps"].urgente, true);
+  /* 04/11/2026: o menu conta os detratores atrasados; o total de ciclos (o da tela) vai na explicação. */
+  conferir("NPS conta os detratores com o 1º contato atrasado (o outro ainda está no prazo)", c["/nps"].valor, 1);
+  conferir("e o total de ciclos atrasados vai na explicação", c["/nps"].explicacao.includes(`(${summarize(nps, AGORA).estourados} ciclo`), true);
+  conferir("detrator atrasado fica vermelho", c["/nps"].urgente, true);
+  conferir("Meu dia: a fila de hoje, sem vermelho", [c["/meu-dia"].valor, c["/meu-dia"].urgente], [7, false]);
+  conferir("fila guardada de outro dia não vale", [filaDeHojeGuardada(JSON.stringify({ dia: "2026-09-16", n: 9 }), "2026-09-17"), filaDeHojeGuardada(JSON.stringify({ dia: "2026-09-17", n: 9 }), "2026-09-17")], [null, 9]);
   conferir("Agenda: vencidas e de hoje, não feitas; atrasada fica vermelha", [c["/agenda"].valor, c["/agenda"].urgente], [2, true]);
   conferir("Google abertas", c["/google"].valor, 3);
   conferir("número longo encurta", [numeroCurto(999), numeroCurto(1572)], ["999", "1,6 mil"]);

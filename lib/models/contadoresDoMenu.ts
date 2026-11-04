@@ -2,11 +2,8 @@ import type { AgendaTask } from "@/lib/models/agenda";
 import type { Case } from "@/lib/models/case";
 import type { NpsResponseView } from "@/lib/models/nps";
 import { etapaDasRedes } from "@/lib/models/redes";
-import type { SlaRule } from "@/lib/models/sla";
 
-import { prazosDeHoje } from "@/lib/models/aberturaDoAgente";
-import { isOpen, isSocial, semRespostaPublica } from "@/lib/services/case.service";
-import type { Expediente } from "@/lib/services/horasUteis";
+import { isSocial, semRespostaPublica } from "@/lib/services/case.service";
 import { slaState, summarize } from "@/lib/services/nps.service";
 import { segmentOf } from "@/lib/models/nps";
 import { diaNaOperacao } from "@/lib/services/reputation.service";
@@ -18,11 +15,12 @@ import { pluralDe } from "@/lib/plural";
  * **Só o que pede ação**, e com a conta da própria tela — um "12" no menu
  * que vira "9" ao abrir a tela ensina a ignorar o menu:
  *
- * - Meu dia: prazos estourados (`prazosDeHoje`, o mesmo do Assistente e
- *   do popup da extensão);
+ * - Meu dia: a fila de hoje, o mesmo número do "Próximo passo" (desde
+ *   04/11/2026; antes eram os prazos estourados — 559, em vermelho);
  * - Reclame Aqui: reclamações abertas sem resposta pública;
  * - Redes: atendimentos ainda não encerrados;
- * - NPS: ciclos com o 1º contato fora do prazo (`summarize`, o da tela);
+ * - NPS: detratores com o 1º contato fora do prazo (desde 04/11/2026; o
+ *   total de ciclos atrasados — 548 — vai na explicação);
  * - Google: avaliações abertas;
  * - Agenda: atividades vencidas ou de hoje, não feitas.
  *
@@ -41,16 +39,14 @@ export function contadoresDoMenu(entrada: {
   googleAbertas: number;
   /** Conversas do WhatsApp esperando resposta, pela extensão (1.121). */
   esperandoNoWhatsapp?: number;
+  /** O tamanho da fila de hoje do Meu dia, quando já calculado (`filaDeHojeGuardada`). */
+  filaDeHoje?: number | null;
   tarefas: AgendaTask[];
-  regras: SlaRule[];
-  expediente: Expediente;
   agora: Date;
 }): Record<string, ContadorDoMenu> {
   const { casos, nps, tarefas, agora } = entrada;
-  const abertos = casos.filter(isOpen);
   const hoje = diaNaOperacao(agora);
 
-  const prazos = prazosDeHoje(abertos, entrada.regras, nps, entrada.expediente, agora);
   const semResposta = casos.filter(semRespostaPublica).length;
   const redesAbertas = casos.filter((c) => isSocial(c) && !etapaDasRedes(c.status)?.final).length;
   const npsForaDoPrazo = summarize(nps, agora).estourados;
@@ -60,16 +56,17 @@ export function contadoresDoMenu(entrada: {
   const quebraDoNps = atrasadosDoNps.length
     ? ` — ${porSegmento("Detrator")} ${pluralDe(porSegmento("Detrator"), "detrator", "detratores")}, ${porSegmento("Passivo")} ${pluralDe(porSegmento("Passivo"), "passivo", "passivos")}, ${porSegmento("Promotor")} ${pluralDe(porSegmento("Promotor"), "promotor", "promotores")}`
     : "";
+  const detratoresAtrasados = porSegmento("Detrator");
   const tarefasDoDia = tarefas.filter((t) => !t.done && t.dueDate <= hoje);
   const tarefasAtrasadas = tarefasDoDia.filter((t) => t.dueDate < hoje).length;
 
   const c = (valor: number, urgente: boolean, explicacao: string): ContadorDoMenu => ({ valor, urgente, explicacao });
 
   return {
-    "/meu-dia": c(prazos.estourados, prazos.estourados > 0, `${prazos.estourados} ${pluralDe(prazos.estourados, "prazo", "prazos")} ${pluralDe(prazos.estourados, "estourado", "estourados")}`),
+    "/meu-dia": c(entrada.filaDeHoje ?? 0, false, `${entrada.filaDeHoje ?? 0} para hoje no Meu dia`),
     "/reclame-aqui": c(semResposta, false, `${semResposta} ${pluralDe(semResposta, "reclamação", "reclamações")} ${pluralDe(semResposta, "aberta", "abertas")} sem resposta pública`),
     "/redes-sociais": c(redesAbertas, false, `${redesAbertas} ${pluralDe(redesAbertas, "atendimento", "atendimentos")} em aberto`),
-    "/nps": c(npsForaDoPrazo, npsForaDoPrazo > 0, `${npsForaDoPrazo} ${pluralDe(npsForaDoPrazo, "ciclo", "ciclos")} com o 1º contato fora do prazo${quebraDoNps}`),
+    "/nps": c(detratoresAtrasados, detratoresAtrasados > 0, `${detratoresAtrasados} ${pluralDe(detratoresAtrasados, "detrator", "detratores")} com o 1º contato fora do prazo (${npsForaDoPrazo} ${pluralDe(npsForaDoPrazo, "ciclo", "ciclos")} no total${quebraDoNps})`),
     "/google": c(entrada.googleAbertas, false, `${entrada.googleAbertas} ${pluralDe(entrada.googleAbertas, "avaliação", "avaliações")} ${pluralDe(entrada.googleAbertas, "aberta", "abertas")}`),
     "/agenda": c(tarefasDoDia.length, tarefasAtrasadas > 0, `${tarefasDoDia.length} ${pluralDe(tarefasDoDia.length, "atividade", "atividades")} para hoje${tarefasAtrasadas ? `, ${tarefasAtrasadas} ${pluralDe(tarefasAtrasadas, "atrasada", "atrasadas")}` : ""}`),
     "/conversas": c(entrada.esperandoNoWhatsapp ?? 0, false, `${entrada.esperandoNoWhatsapp ?? 0} ${pluralDe(entrada.esperandoNoWhatsapp ?? 0, "conversa", "conversas")} esperando resposta no WhatsApp`),
