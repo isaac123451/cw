@@ -1153,6 +1153,24 @@ por dia desde 31/10 contra 50–75 antes — ela só roda com a plataforma abert
       "540" vermelho; retorno visível ao concluir; avisos em lote; próximo passo
       sempre no mesmo lugar; retomar de onde parou; texto curto. Critério que
       vale para todas as fases.
+- [ ] **Fase H — Dois na operação:** pedido de 04/11: "outra pessoa irá
+      trabalhar comigo e preciso que cada um consiga usar perfeitamente… as
+      atividades do dia precisam ser separadas". Meu dia por pessoa;
+      distribuição automática do que chega; a IA age para quem cuida do caso;
+      "Fulana está neste caso"; passagem de turno; sino só com o que é seu.
+- [ ] **Novidades (o que não existe hoje):** ★ caso rápido pela extensão
+      (ideia dele: atalho em qualquer site, cartão curto para atualizar);
+      ★ atualizar em lote os casos sem novidade; atalhos de teclado; retomar de
+      onde parou; ★ pedir avaliação quando o cliente diz "funcionou"; ★ cliente
+      em alerta (Procon/advogado); resposta pública em um clique; respostas que
+      funcionam (placar por modelo); a IA aprende com suas edições; ★ quanto
+      falta para a meta, com nomes; reincidência; candidatas a moderação;
+      relatório do ciclo no Slack; ★ bloco de foco; placar da dupla;
+      fechamento do dia.
+- [ ] **Tela de Novidades e passada em todas as páginas:** pedido de 04/11:
+      "melhore também a tela de novidades… quero que você passe por tudo,
+      todas as páginas ou subpáginas". Cada rota e subrota percorrida logada,
+      com o critério de organização e de TDAH.
 - [ ] **Fase F — Desempenho:** NPS em duas partes (aberto + 13 meses primeiro);
       medir a primeira abertura das telas antes e depois.
 
