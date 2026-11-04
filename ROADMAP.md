@@ -1183,6 +1183,13 @@ por dia desde 31/10 contra 50–75 antes — ela só roda com a plataforma abert
       NPS 0–6, que o documento também marca como "confirmar").
 - [x] **Fase A, parte 1 (1.1.44):** IA do dia pelo relógio da extensão; "deu
       certo" → pedir avaliação; Procon/advogado → atividade alta.
+- [x] **Novidades refeita (1.1.46):** Para experimentar + linha do tempo por
+      período, uma linha por mudança; "por dentro" só pelo filtro.
+- [x] **Menu sem número que assusta (1.1.47, Fase G):** Meu dia = fila de hoje
+      (o mesmo do Próximo passo, sem vermelho); NPS = detratores atrasados.
+- [x] **Caso rápido pela extensão (1.1.48):** Alt+Shift+K em qualquer site ou
+      popup → Caso rápido; busca por protocolo/nome/telefone/CNPJ; mover,
+      anotar, lembrete para o próximo dia útil. Rota `/api/extensao/caso-rapido`.
 
 ### Revisão de novembro: bugs, contas e organização (03/11/2026, 1.1.25–1.1.31)
 
