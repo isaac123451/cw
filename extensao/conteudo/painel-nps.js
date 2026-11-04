@@ -692,6 +692,7 @@
      * contato nenhum. Tentar servir as duas com uma rota só faria uma
      * delas trabalhar contra a própria definição.
      */
+    const pedido = P.novoPedidoDeTela();
     const resposta = P.soDoCliente
       ? await CW.enviar({
           tipo: "contexto",
@@ -705,6 +706,9 @@
           segmento: P.segmentoFiltro,
           recorte: P.recorteFiltro,
         });
+
+    /* Outra aba foi pedida enquanto esta carregava: não desenha por cima. */
+    if (!P.pedidoVigente(pedido)) return;
 
     if (!resposta.ok) {
       P.renderFalha(resposta);

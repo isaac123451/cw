@@ -31,6 +31,9 @@
    */
   P.abrirDetalhe = async function abrirDetalhe(protocolo, emSilencio = false) {
 
+    /* A releitura silenciosa só vale se o caso ainda está na tela: quem saiu dele não é puxado de volta (04/11/2026). */
+    if (emSilencio && (P.vista !== "caso" || (P.detalhe?.protocolo && P.detalhe.protocolo !== protocolo))) return;
+
     /**
      * De onde viemos, para o voltar saber para onde volta.
      *
@@ -48,11 +51,14 @@
       P.corpo.innerHTML = `<div class="carregando">Abrindo ${CW.escapar(protocolo)}…</div>`;
     }
 
+    /* O caso aberto vence a fila que ainda estava carregando, e vice-versa (04/11/2026). */
+    const pedido = P.novoPedidoDeTela();
     const resposta = await CW.enviar({
       tipo: "detalhe",
       protocolo,
       forcar: emSilencio,
     });
+    if (!P.pedidoVigente(pedido)) return;
 
     if (!resposta.ok) {
       P.renderFalha(resposta);

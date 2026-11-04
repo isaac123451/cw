@@ -53,6 +53,16 @@ export const REVISAO = {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "extensao-aba-certa",
+    dia: "2026-11-04",
+    tipo: "correcao",
+    frente: "extensao",
+    titulo: "Extensão: a tela é sempre a da aba que você clicou",
+    texto:
+      "Clicando em duas abas seguidas, NPS e logo Redes, a resposta da primeira podia chegar depois e desenhar por cima: a aba marcada era Redes e a tela, NPS. Cada tela agora espera a resposta do próprio pedido, e resposta velha é descartada. A releitura silenciosa do caso aberto também não puxa mais de volta para o caso quem já saiu dele.",
+    onde: "Extensão → abas de baixo e caso aberto",
+  },
+  {
     id: "texto-certo-para-o-segmento",
     dia: "2026-11-04",
     tipo: "correcao",

@@ -73,7 +73,9 @@
 
     P.corpo.innerHTML = `<div class="carregando">Carregando o painel…</div>`;
 
+    const pedido = P.novoPedidoDeTela();
     const resposta = await CW.enviar({ tipo: "resumo" });
+    if (!P.pedidoVigente(pedido)) return;
 
     if (!resposta.ok) {
       P.renderFalha(resposta);
@@ -397,10 +399,12 @@
 
     P.corpo.innerHTML = `<div class="carregando">Carregando as atividades…</div>`;
 
+    const pedido = P.novoPedidoDeTela();
     const resposta = await CW.enviar({
       tipo: "agenda",
       escopo: P.escopoAtividades,
     });
+    if (!P.pedidoVigente(pedido)) return;
 
     if (!resposta.ok) {
       P.renderFalha(resposta);

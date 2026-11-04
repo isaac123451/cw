@@ -410,6 +410,18 @@
     else P.consultar(false);
   };
 
+  /**
+   * O pedido de tela mais recente (04/11/2026).
+   *
+   * Clicar em NPS e logo em Redes disparava duas leituras; se a do NPS
+   * chegasse por último, desenhava por cima — a aba marcada era Redes e a
+   * tela, NPS. Cada carga pega um número; a resposta só desenha se ainda
+   * for a do pedido mais novo.
+   */
+  P.pedidoDeTela = 0;
+  P.novoPedidoDeTela = () => ++P.pedidoDeTela;
+  P.pedidoVigente = (n) => n === P.pedidoDeTela;
+
   P.refletirCanal = function refletirCanal() {
 
     /*
@@ -488,11 +500,13 @@
 
     P.corpo.innerHTML = `<div class="carregando">Consultando o CW Reputação…</div>`;
 
+    const pedido = P.novoPedidoDeTela();
     const resposta = await CW.enviar({
       tipo: "contexto",
       consulta: P.parametros(),
       forcar: Boolean(forcar),
     });
+    if (!P.pedidoVigente(pedido)) return;
 
     if (!resposta.ok) {
       P.renderFalha(resposta);
