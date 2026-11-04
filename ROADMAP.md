@@ -1147,6 +1147,12 @@ por dia desde 31/10 contra 50–75 antes — ela só roda com a plataforma abert
 - [ ] **Fase E — Organização:** passada logada em Clientes, Estabelecimentos,
       Jornada, Retenção, Google, Processos e Configurações; reconferir na tela
       os itens "reconferir" do checklist.
+- [ ] **Fase G — Foco e vontade de usar (TDAH):** pedido de 04/11: "pense que
+      as pessoas estão trabalhando, elas possuem tdah". Meu dia em três coisas;
+      blocos de foco de 25 min no Um por vez; menu com o que é de hoje, sem
+      "540" vermelho; retorno visível ao concluir; avisos em lote; próximo passo
+      sempre no mesmo lugar; retomar de onde parou; texto curto. Critério que
+      vale para todas as fases.
 - [ ] **Fase F — Desempenho:** NPS em duas partes (aberto + 13 meses primeiro);
       medir a primeira abertura das telas antes e depois.
 
