@@ -10,7 +10,19 @@ export const POR_LOTE = 10;
 export const INTERVALO_S: [number, number] = [35, 50];
 export const TETO_DE_ITENS = 200;
 
-export type OrigemDoDisparo = "premio" | "avaliacao";
+/** "nps" (04/11/2026): o 1º contato com promotores do NPS, com os modelos de promotor. */
+export type OrigemDoDisparo = "premio" | "avaliacao" | "nps";
+
+/** O que o modelo pede ao promotor, pelo título — vira a marca do ciclo quando a mensagem sai. */
+export type PedidoAoPromotor = "depoimento" | "indicacao" | "avaliacao" | "contato";
+
+export function pedidoDoModelo(titulo: string): PedidoAoPromotor {
+  const t = titulo.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "");
+  if (t.includes("depoimento")) return "depoimento";
+  if (t.includes("indicac")) return "indicacao";
+  if (t.includes("avaliac") || t.includes("google")) return "avaliacao";
+  return "contato";
+}
 
 export interface ItemNovo {
   nome: string;

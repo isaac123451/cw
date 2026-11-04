@@ -1,6 +1,7 @@
 import type { PrismaClient } from "@prisma/client";
 
 import { gravarContato } from "@/lib/services/tratativa.service";
+import { registrarTentativa } from "@/lib/services/nps.repository";
 import { INTERVALO_S, POR_LOTE, itensValidos, type ItemNovo, type LoteView, type OrigemDoDisparo } from "@/lib/models/disparos";
 
 /**
@@ -100,8 +101,22 @@ async function efeitoDoEnvio(
   autor: { id: string; nome: string },
   agora: Date
 ) {
-  const [tipo, id] = (item.ref ?? "").split(":");
+  const [tipo, id, pedido] = (item.ref ?? "").split(":");
   if (!id) return;
+
+  /*
+    1º contato com promotor do NPS (04/11/2026): a mensagem que saiu é a
+    tentativa do ciclo, por WhatsApp — conta na hora, como as outras —, e o
+    que o modelo pediu (depoimento, indicação, avaliação) fica marcado.
+  */
+  if (lote.origem === "nps" && tipo === "nps") {
+    const resposta = await prisma.npsResponse.findUnique({ where: { id }, select: { id: true, closedAt: true } });
+    if (!resposta || resposta.closedAt) return;
+    await registrarTentativa(prisma, { responseId: id, channel: "WhatsApp", note: "Mensagem pelo disparo em lote.", actor: autor.nome, em: agora, resultado: "aguardando" });
+    const marca = pedido === "depoimento" ? { testimonialAsked: true } : pedido === "indicacao" ? { referralAsked: true } : pedido === "avaliacao" ? { reviewAsked: true } : null;
+    if (marca) await prisma.npsResponse.update({ where: { id }, data: marca });
+    return;
+  }
 
   if (lote.origem === "premio" && lote.campanhaId && (tipo === "reclame-aqui" || tipo === "nps")) {
     await prisma.pedidoDeVoto.upsert({

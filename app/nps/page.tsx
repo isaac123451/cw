@@ -36,6 +36,7 @@ import NpsKanban from "@/components/nps/NpsKanban";
 import RootCauseManager from "@/components/nps/RootCauseManager";
 import StageManager from "@/components/nps/StageManager";
 import TriagemNps from "@/components/nps/TriagemNps";
+import PromotoresEmLote from "@/components/nps/PromotoresEmLote";
 import NpsSheetImport from "@/components/nps/NpsSheetImport";
 import WootricImport from "@/components/nps/WootricImport";
 
@@ -722,6 +723,9 @@ function NpsPagina({ abrirInicial = null }: { abrirInicial?: "etapas" | "causas"
             if (abriuRevisao) await recarregarProjetos();
           }}
         />
+
+        {/* O 1º contato com os promotores em lote, pelo WhatsApp Web (04/11/2026). */}
+        <PromotoresEmLote respostas={responses} />
 
         <SurfaceCard
           tour="respostas-nps"

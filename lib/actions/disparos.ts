@@ -32,7 +32,7 @@ export async function criarLoteDeDisparo(entrada: {
     return { ok: false, erro: erro instanceof SemPermissao ? erro.message : "Não foi possível confirmar sua sessão. Entre de novo." };
   }
   if (!ctx) return { ok: false, erro: "Sem banco configurado — nada é gravado no modo demonstração." };
-  if (!["premio", "avaliacao"].includes(entrada.origem)) return { ok: false, erro: "Origem inválida." };
+  if (!["premio", "avaliacao", "nps"].includes(entrada.origem)) return { ok: false, erro: "Origem inválida." };
 
   try {
     const eu = await ctx.prisma.user.findUnique({ where: { id: ctx.userId }, select: { name: true } });

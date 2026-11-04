@@ -53,6 +53,16 @@ export const REVISAO = {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "promotores-em-lote",
+    dia: "2026-11-04",
+    tipo: "novo",
+    frente: "nps",
+    titulo: "1º contato com os promotores em lote, pelo WhatsApp",
+    texto:
+      "Eram 681 promotores abertos sem 1º contato, todos com telefone e nenhum com tentativa: no ritmo do plano, um mês de fila. No NPS, embaixo da triagem, escolha um dos modelos de promotor das Respostas prontas (depoimento, indicação…), e a lista sai com o nome e a nota de cada um, os mais antigos primeiro. É o mesmo disparo seguro do pedir avaliação: lotes de 10, uma conversa a cada ~40 s no WhatsApp Web, e quem aperta Enter é você. Cada mensagem que sai vira a tentativa do ciclo, conta como 1º contato e marca o que o modelo pediu. Pulado não registra nada.",
+    href: "/nps",
+  },
+  {
     id: "ficha-uma-fileira",
     dia: "2026-11-03",
     tipo: "melhoria",
