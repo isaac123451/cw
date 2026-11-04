@@ -35,6 +35,9 @@ interface Props {
    * lugar de sair da tela. Com ele, `hrefDe` não é usado.
    */
   aoClicar?: (rotulo: string) => void;
+
+  /** Como escrever o valor (04/11/2026): o Impacto mostrava "13498.32". Padrão: número em pt-BR. */
+  formatar?: (valor: number) => string;
 }
 
 /**
@@ -48,6 +51,7 @@ export default function BarList({
   emptyLabel = "Sem dados para exibir.",
   hrefDe,
   aoClicar,
+  formatar = (valor) => valor.toLocaleString("pt-BR", { maximumFractionDigits: 2 }),
 }: Props) {
 
   const items = data.slice(0, limit);
@@ -95,7 +99,7 @@ export default function BarList({
             </span>
 
             <span className="flex shrink-0 items-baseline gap-1.5 text-sm font-semibold tabular-nums text-zinc-900">
-              {item.value}
+              {formatar(item.value)}
               <span className="text-xs font-normal text-zinc-400">
                 {/*
                   Vírgula, não ponto.

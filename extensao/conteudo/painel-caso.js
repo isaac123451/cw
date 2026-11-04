@@ -590,7 +590,8 @@
         ? `  <div class="grade-acoes">
     <button class="acao-chip" data-acao="abrir-na-plataforma" data-caminho="/reclame-aqui/${CW.escapar(encodeURIComponent(protocolo))}/dossie" title="As 8 partes, montadas dos registros deste caso, com a conferência antes de pedir moderação">${CW.icone("documento", 14)}<span>Abrir o dossiê</span>${CW.icone("fora", 12)}</button>
     ${pronto ? "" : `<button class="acao-chip" data-acao="resumir-caso" data-rapido="1" data-protocolo="${CW.escapar(protocolo)}" title="Leva uns 2 segundos">${CW.icone("assistente", 14)}<span>Resumo rápido</span></button>`}
-  </div>`
+  </div>
+  ${pronto ? "" : '<p class="sub" style="margin-top:7px">O dossiê de 8 partes (linha do tempo, evidências, apuração e pedido) é montado e conferido na plataforma. Aqui, o resumo rápido do caso, para ler antes de responder.</p>'}`
         : '  <p class="sub" style="margin-top:0">O dossiê é feito na plataforma, a partir da reclamação — este contato não tem reclamação cadastrada.</p>',
 
       pronto ? blocoResumoDoCaso(resumoDoCaso) : "",

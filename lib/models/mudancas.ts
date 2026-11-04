@@ -53,6 +53,16 @@ export const REVISAO = {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "impacto-em-reais",
+    dia: "2026-11-04",
+    tipo: "correcao",
+    frente: "plataforma",
+    titulo: "Impacto por tipo e por conta em reais",
+    texto:
+      "As barras de Impacto mostravam o valor cru, como \"13498.32\" e \"398.22\". Agora aparecem em reais (R$ 13.498), e as outras listas de barras da plataforma escrevem os números no padrão brasileiro. Na extensão, a aba Dossiê ganhou uma linha dizendo o que cada botão faz, no lugar do vazio.",
+    href: "/impacto",
+  },
+  {
     id: "extensao-aba-certa",
     dia: "2026-11-04",
     tipo: "correcao",

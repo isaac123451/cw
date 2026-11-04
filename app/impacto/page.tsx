@@ -336,14 +336,14 @@ export default function ImpactoPage() {
             title="Impacto por tipo"
             description="Distribuição do valor movimentado."
           >
-            <BarList data={byType} aoClicar={(tipo) => abrirLancamentos(tipo, records.filter((r) => r.type === tipo))} />
+            <BarList data={byType} formatar={(v) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 })} aoClicar={(tipo) => abrirLancamentos(tipo, records.filter((r) => r.type === tipo))} />
           </SurfaceCard>
 
           <SurfaceCard
             title="Impacto por conta"
             description="Onde a operação gerou mais retorno — por cliente ou estabelecimento."
           >
-            <BarList data={byCompany} color="#22C55E" aoClicar={(conta) => abrirLancamentos(conta, records.filter((r) => r.company === conta && r.amount > 0))} />
+            <BarList data={byCompany} color="#22C55E" formatar={(v) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 })} aoClicar={(conta) => abrirLancamentos(conta, records.filter((r) => r.company === conta && r.amount > 0))} />
           </SurfaceCard>
 
         </div>
