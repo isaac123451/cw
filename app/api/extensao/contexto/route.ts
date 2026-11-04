@@ -1471,7 +1471,8 @@ function macrosDe(
 
   /* Nome, protocolo e quem atende já preenchidos; o que não se sabe fica marcado para escrever. */
   return prepararRespostas(
-    workspace.macros.filter((macro) => categorias.has(macro.category) && cabe(macro.channel, macro.title)),
+    /* O texto do NPS vale pelo segmento do ciclo, qualquer que seja a categoria da reclamação (04/11/2026). */
+    workspace.macros.filter((macro) => (macro.channel === "NPS" || categorias.has(macro.category)) && cabe(macro.channel, macro.title)),
     site === "Reclame Aqui" || site === "Instagram" || site === "NPS" ? site : "WhatsApp",
     {
       cliente: primeiroNome(caso?.customer),
