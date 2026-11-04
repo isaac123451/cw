@@ -364,7 +364,8 @@ function Etapas({
 
               <Campo rotulo="Nome da etapa">
                 <input
-                  value={rotuloDeEtapa(etapa.name)}
+                  /* No campo de editar, o nome como está no cadastro (só sem o "[Encerrado]"): os colchetes de "[Aguardando Resposta]" são de quem escreveu. */
+                  value={etapa.name.replace(/^\[Encerrado\]\s*/i, "")}
                   onChange={(e) =>
                     rascunho.alterar(etapa.id, {
                       name: nomeDeEtapa(

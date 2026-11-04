@@ -356,7 +356,8 @@ export default function ProjetosPage() {
                           <div className="mt-3 flex items-center justify-between border-t border-zinc-100 pt-2.5">
 
                             <p className="truncate text-[11px] text-zinc-400">
-                              {item.owner} · {item.updatedAt}
+                              {/* dd/mm/aaaa (04/11/2026): aparecia "2026-10-15". */}
+                              {item.owner} · atualizado em {String(item.updatedAt ?? "").slice(0, 10).split("-").reverse().join("/")}
                             </p>
 
                             <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">

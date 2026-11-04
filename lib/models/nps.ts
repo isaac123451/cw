@@ -393,7 +393,8 @@ export function nomeDeEtapa(
 
 /** O rótulo sem o prefixo — o que a tela mostra na coluna. */
 export function rotuloDeEtapa(nome: string) {
-  return nome.replace(/^\[Encerrado\]\s*/i, "").trim();
+  /* E os colchetes em volta do nome (04/11/2026): "[Aguardando Resposta]" é o cadastro; na tela, Aguardando Resposta. */
+  return nome.replace(/^\[Encerrado\]\s*/i, "").trim().replace(/^\[(.*)\]$/, "$1");
 }
 
 const CORES_PADRAO: Record<string, string> = {

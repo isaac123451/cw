@@ -53,6 +53,16 @@ export const REVISAO = {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "texto-certo-para-o-segmento",
+    dia: "2026-11-04",
+    tipo: "correcao",
+    frente: "extensao",
+    titulo: "Texto de promotor não aparece mais para detrator",
+    texto:
+      "Na aba Responder da extensão, para uma cliente com nota 0 e reclamação aberta, o texto sugerido era \"NPS — promotor, pedido de indicação\", que começa com \"Que bom saber que está indo bem por aí\". Agora o texto que diz no título para quem é (promotor, passivo, detrator) só aparece para quem é. Também em detalhes: as etapas do NPS aparecem sem os colchetes do cadastro (\"Aguardando Resposta\") em toda a plataforma, e os itens de Projetos mostram \"atualizado em 15/10/2026\", e não 2026-10-15.",
+    onde: "Extensão → Responder; NPS; Projetos",
+  },
+  {
     id: "enviar-ao-cw-pela-pagina",
     dia: "2026-11-04",
     tipo: "novo",

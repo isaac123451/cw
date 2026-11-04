@@ -444,6 +444,7 @@ export async function GET(request: Request) {
 
     macros: macrosDe(encontro.casos, workspace, origem, {
       npsAberto: listaNps.some((ciclo) => !ciclo.encerrado),
+      notaDoNps: listaNps.find((ciclo) => !ciclo.encerrado)?.nota ?? null,
       site: params.get("site") ?? "",
       atendente: usuario?.nome ?? "",
       estabelecimento: estabelecimento?.name ?? "",
@@ -1420,10 +1421,11 @@ function macrosDe(
   origem: string,
   {
     npsAberto,
+    notaDoNps,
     site,
     atendente,
     estabelecimento,
-  }: { npsAberto: boolean; site: string; atendente: string; estabelecimento: string }
+  }: { npsAberto: boolean; notaDoNps: number | null; site: string; atendente: string; estabelecimento: string }
 ) {
 
   if (casos.length === 0) return [];
@@ -1442,12 +1444,26 @@ function macrosDe(
     em que o painel está (`AFINIDADE`, a mesma do atalho de respostas).
   */
   const canaisDosCasos = new Set(casos.map((item) => item.source));
-  const cabe = (canal: string) =>
+  /*
+    E o segmento do ciclo (04/11/2026): para a Suzana, nota 0 e reclamação
+    aberta, a sugestão era "NPS — promotor, pedido de indicação" ("Que bom
+    saber que está indo bem por aí"). O texto que diz no título para quem é
+    — promotor, passivo, detrator — só vem para quem é.
+  */
+  const doSegmento = (titulo: string) => {
+    if (notaDoNps === null) return true;
+    const t = titulo.toLowerCase();
+    if (t.includes("promotor")) return notaDoNps >= 9;
+    if (t.includes("passivo") || t.includes("neutro")) return notaDoNps >= 7 && notaDoNps <= 8;
+    if (t.includes("detrator")) return notaDoNps <= 6;
+    return true;
+  };
+  const cabe = (canal: string, titulo = "") =>
     canal === "NPS"
-      ? npsAberto
+      ? npsAberto && doSegmento(titulo)
       : canal === "Instagram"
         ? !canaisDosCasos.has("Reclame Aqui") || canaisDosCasos.size > 1
-        : true;
+        : doSegmento(titulo);
 
   const caso = casos.find(isOpen) ?? casos[0];
   const primeiroNome = (nome: string | undefined) =>
@@ -1455,7 +1471,7 @@ function macrosDe(
 
   /* Nome, protocolo e quem atende já preenchidos; o que não se sabe fica marcado para escrever. */
   return prepararRespostas(
-    workspace.macros.filter((macro) => categorias.has(macro.category) && cabe(macro.channel)),
+    workspace.macros.filter((macro) => categorias.has(macro.category) && cabe(macro.channel, macro.title)),
     site === "Reclame Aqui" || site === "Instagram" || site === "NPS" ? site : "WhatsApp",
     {
       cliente: primeiroNome(caso?.customer),
