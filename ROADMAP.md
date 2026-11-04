@@ -1116,6 +1116,40 @@ Decisões dele: IA só gratuita (Gemini, Groq, OpenRouter + motor
 próprio); mídia no Google Drive; planilha das Redes no Google Sheets,
 lida pela extensão; Slack lido pelo navegador, sem token.
 
+### Plano da revisão de novembro — a IA que age sozinha (04/11/2026)
+
+Pedido do Isaac: "melhoria em tudo… verificar todas as etapas do sistema…
+novidades… a IA me ajude também atividades que consiga ler conversas, ou ver
+alterações no reclame aqui e já faça, isso já é pra ser feito no papel mas não
+ocorre… esse vigia ele precisa ser bem assertivo… os avisos no reclame aqui…
+como ele audita a resposta… no whatsapp sobre uma tratativa dessa forma… monte
+um checklist". Só dá o push quando tudo estiver pronto.
+
+Página do plano (checklist + diagrama): https://claude.ai/artifact/K2CqV41DA9wsR1m3DfLNxi
+
+Diagnóstico: 354 ações da IA do dia em 14 dias, nenhuma desfeita, mas 6–15
+por dia desde 31/10 contra 50–75 antes — ela só roda com a plataforma aberta
+(server action a cada 5 min no `VigiaDaIaDoDia`). A rotina do servidor roda
+1×/dia (6h); a extensão acorda a cada 30 min e não aciona a IA.
+
+- [ ] **Fase A — IA que age sozinha:** IA no relógio da extensão; eventos do
+      vigia (réplica, avaliação, resposta, nova, desativada) viram atividades
+      criadas/fechadas na hora; conversa lida vira compromisso; aprende com o
+      desfazer.
+- [ ] **Fase B — Vigia assertivo:** saúde à vista, alerta quando para,
+      conferência diária com o painel do portal, leitura funda semanal.
+- [ ] **Fase C — Auditor e avisos em todo lugar:** auditor da tratativa no
+      WhatsApp (passos da documentação), regras da resposta pública antes de
+      enviar, avisos no WhatsApp/Crisp/Slack, auditor no encerrar do NPS e Redes.
+- [ ] **Fase D — Analista de reputação:** radar da semana, pedir avaliação na
+      hora certa, candidatas a moderação, tema em alta → causa raiz/projeto,
+      cliente nas três frentes.
+- [ ] **Fase E — Organização:** passada logada em Clientes, Estabelecimentos,
+      Jornada, Retenção, Google, Processos e Configurações; reconferir na tela
+      os itens "reconferir" do checklist.
+- [ ] **Fase F — Desempenho:** NPS em duas partes (aberto + 13 meses primeiro);
+      medir a primeira abertura das telas antes e depois.
+
 ### Revisão de novembro: bugs, contas e organização (03/11/2026, 1.1.25–1.1.31)
 
 Pedido do Isaac: "existem muitos bugs… informações muito jogadas… corrija
