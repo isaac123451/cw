@@ -45,6 +45,7 @@ import {
   aguardandoAvaliacao,
   atrasadasNaLista,
   marcarDesativadas,
+  situacaoNaLista,
   casoDoPortal,
   completarContato,
   gravarDoPortal,
@@ -570,11 +571,11 @@ async function travas(prisma: PrismaClient) {
     status: "Avaliado como resolvido", evaluated: true, score: 10, resolved: true, wouldDoBusiness: true,
     evaluatedAt: new Date("2026-10-20T00:00:00Z"), publicResponse: "Resposta.", publicResponseAt: new Date("2026-08-21T00:00:00Z"),
   });
-  conferir(
-    "avaliada aqui e não na lista do portal: a página é reaberta",
-    await atrasadasNaLista(prisma, [{ codigo: SEM_AVALIACAO, status: "ANSWERED", avaliada: false }]),
-    [SEM_AVALIACAO]
-  );
+  {
+    /* Na fila de reconferência, com intervalo — e não nas atrasadas, que voltam em toda volta (04/11/2026). */
+    const s = await situacaoNaLista(prisma, [{ codigo: SEM_AVALIACAO, status: "ANSWERED", avaliada: false }]);
+    conferir("avaliada aqui e não na lista do portal: reconferida, com intervalo", [s.emAndamento, s.atrasadas], [[SEM_AVALIACAO], []]);
+  }
   await gravarDoPortal(prisma, [respondida(SEM_AVALIACAO, { status: "ANSWERED", avaliada: false, resolvida: false, nota: undefined, voltaria: false, interacoes: [{ tipo: "ANSWER", em: "2026-08-21T10:00:00", texto: "Resposta do portal." }] })]);
   const desfeita = await prisma.case.findUnique({ where: { protocol: `RA-${SEM_AVALIACAO}` }, select: { evaluated: true, score: true, resolved: true, wouldDoBusiness: true, evaluatedAt: true, status: true } });
   conferir(

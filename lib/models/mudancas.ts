@@ -53,6 +53,16 @@ export const REVISAO = {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "plano-e-vigia-1104",
+    dia: "2026-11-04",
+    tipo: "correcao",
+    frente: "reclame-aqui",
+    titulo: "Plano de ação sem a reclamação desativada, e o vigia sem reler à toa",
+    texto:
+      "O Plano de ação contava a reclamação desativada no portal, que o Índice já tirava: as duas telas davam notas diferentes para a mesma janela. Agora contam igual. E o vigia, que passou a reabrir a reclamação avaliada aqui e não na lista do portal, fazia isso a cada volta, porque a lista atrasa o \"avaliada\" por dias. Agora ela entra na reconferência, com intervalo.",
+    href: "/reclame-aqui/plano",
+  },
+  {
     id: "cobranca-de-area-no-dia",
     dia: "2026-11-04",
     tipo: "correcao",

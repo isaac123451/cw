@@ -1,4 +1,4 @@
-import { respondida, type Case } from "@/lib/models/case";
+import { respondida, saiuDaNota, type Case } from "@/lib/models/case";
 import { cicloPorId, type Ciclo } from "@/lib/models/ciclo";
 import { comoEstavaNoDia } from "@/lib/models/indiceRA";
 import { mesDe, preverReclamacoes, primeiroDia, somarMeses, ultimoDia, type MesISO, type PrevisaoDeReclamacoes } from "@/lib/models/previsaoDeReclamacoes";
@@ -163,6 +163,8 @@ const VAZIO: ReputationRaw = { received: 0, answered: 0, responseMinutesSum: 0, 
 function contar(casos: Case[]): ReputationRaw {
   const raw = { ...VAZIO };
   for (const c of casos) {
+    /* Desativada no portal ou moderação aceita: fora da conta, como no Índice (04/11/2026). */
+    if (saiuDaNota(c)) continue;
     raw.received += 1;
     if (respondida(c)) raw.answered += 1;
     if (c.evaluated && !c.scoreDisregarded) {
@@ -200,7 +202,7 @@ export function projetarJanela(casos: Case[], hoje: string, mes: MesISO, previsa
   const janela = janelaDoMes(mes);
   /* `ateDia`: a mesma janela num dia antes do fim — o fim do mês anterior, para medir o que acontece dentro do mês. */
   const fim = ateDia ?? janela.fim;
-  const conhecidos = casos.filter((c) => c.createdAt >= janela.inicio && c.createdAt <= fim && c.createdAt <= hoje);
+  const conhecidos = casos.filter((c) => c.createdAt >= janela.inicio && c.createdAt <= fim && c.createdAt <= hoje && !saiuDaNota(c));
   const conhecido = contar(conhecidos);
 
   /* O que já existe: a chance de cada uma em aberto ser respondida e avaliada até o fim do mês. */

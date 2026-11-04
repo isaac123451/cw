@@ -1019,7 +1019,15 @@ export async function situacaoNaLista(
   const emAndamento = validos
     .filter((item) => {
       const caso = porCodigo.get(item.codigo);
-      return Boolean(caso && !caso.evaluated && !item.avaliada && item.status !== "PENDING" && !STATUS_TERMINADO.includes(caso.status));
+      if (!caso || item.avaliada || item.status === "PENDING") return false;
+      /*
+        Avaliada aqui e não na lista do portal (03/11/2026): reconferir, e a
+        página decide. Aqui, e não nas atrasadas: a lista atrasa o
+        "avaliada" por dias, e nas atrasadas a mesma reclamação voltava em
+        toda volta. Nesta fila ela respeita o intervalo de reconferência.
+      */
+      if (caso.evaluated) return true;
+      return !STATUS_TERMINADO.includes(caso.status);
     })
     .map((item) => item.codigo);
 
@@ -1047,12 +1055,6 @@ export async function situacaoNaLista(
       */
       if (colunaDaAvaliacao(caso)) return true;
 
-      /*
-        Avaliada aqui e não na lista do portal (03/11/2026): reabrir, e a
-        página decide. Logo depois de uma avaliação a lista ainda pode
-        atrasar — reabrir nesse intervalo só confirma, sem mudar nada.
-      */
-      if (caso.evaluated && !item.avaliada && respondidaLa) return true;
 
       /* Coluna do portal parada em "Novo" com a reclamação já respondida. */
       return (
