@@ -4,326 +4,246 @@ import Link from "next/link";
 
 import { useMemo, useState } from "react";
 
-import {
-  ArrowUpRight,
-  ChevronDown,
-  Cog,
-  LayoutGrid,
-  MapPin,
-  Megaphone,
-  MessageCircle,
-  Puzzle,
-  Search,
-  Sparkles,
-  Star,
-  TrendingUp,
-  Wrench,
-  X,
-  type LucideIcon,
-} from "lucide-react";
+import { ArrowUpRight, ChevronDown, Search, Sparkles, TrendingUp, Wrench, X, type LucideIcon } from "lucide-react";
 
-import {
-  MUDANCAS,
-  REVISAO,
-  TIPOS_DE_MUDANCA,
-  buscarMudancas,
-  contarPorTipo,
-  type Mudanca,
-  type TipoDeMudanca,
-} from "@/lib/models/mudancas";
+import { MUDANCAS, TIPOS_DE_MUDANCA, buscarMudancas, periodoDaMudanca, type Mudanca, type TipoDeMudanca } from "@/lib/models/mudancas";
 import { FRENTES_DAS_NOVIDADES, type FrenteDaNovidade } from "@/lib/models/novidades";
-import { pluralDe } from "@/lib/plural";
 import { cn } from "@/lib/utils";
 
 /**
- * A revisão geral, item por item (out/2026).
+ * As mudanças da revisão (refeita em 04/11/2026).
  *
- * O alto responde "quanto mudou e de que tipo" em quatro números que são
- * também o filtro; a lista responde "o que, onde e por quê", agrupada pela
- * frente onde a pessoa vai encontrar a mudança. Cada item tem âncora
- * (#id) para ser citado num grupo de trabalho.
+ * A versão anterior abria com "247 para você conhecer", quatro números
+ * grandes e os itens agrupados por frente, cada um com o parágrafo inteiro
+ * aberto. Quem abre Novidades quer saber "o que mudou desde que eu olhei"
+ * e "o que eu posso usar agora" — e, com TDAH, uma parede de texto não é
+ * lida. Agora:
+ *
+ * - **Para experimentar:** as três novidades mais recentes, com o link.
+ * - **A linha do tempo:** por período (hoje, ontem, esta semana…), um item
+ *   por linha; o texto abre no clique.
+ * - O que é "por dentro" (conferências, build) fica fora até ser pedido.
  */
 
-const ESTILO_DO_TIPO: Record<TipoDeMudanca, { icone: LucideIcon; selo: string; numero: string }> = {
-  novo: { icone: Sparkles, selo: "bg-violet-50 text-violet-700 ring-violet-200/70", numero: "text-violet-700" },
-  melhoria: { icone: TrendingUp, selo: "bg-sky-50 text-sky-700 ring-sky-200/70", numero: "text-sky-700" },
-  correcao: { icone: Wrench, selo: "bg-amber-50 text-amber-800 ring-amber-200/70", numero: "text-amber-700" },
+const ESTILO_DO_TIPO: Record<TipoDeMudanca, { icone: LucideIcon; selo: string; ponto: string }> = {
+  novo: { icone: Sparkles, selo: "bg-violet-50 text-violet-700 ring-violet-200/70", ponto: "bg-violet-500" },
+  melhoria: { icone: TrendingUp, selo: "bg-sky-50 text-sky-700 ring-sky-200/70", ponto: "bg-sky-500" },
+  correcao: { icone: Wrench, selo: "bg-amber-50 text-amber-800 ring-amber-200/70", ponto: "bg-amber-500" },
 };
 
-const ICONE_DA_FRENTE: Record<FrenteDaNovidade, LucideIcon> = {
-  extensao: Puzzle,
-  "reclame-aqui": Megaphone,
-  nps: Star,
-  redes: MessageCircle,
-  google: MapPin,
-  plataforma: LayoutGrid,
-  bastidores: Cog,
-};
+const nomeDaFrente = (id: FrenteDaNovidade) => FRENTES_DAS_NOVIDADES.find((f) => f.id === id)?.nome ?? id;
 
-/* A extensão primeiro: é o centro da revisão. Depois as frentes, e por último o que é por dentro. */
-const ORDEM: FrenteDaNovidade[] = ["extensao", "reclame-aqui", "nps", "redes", "google", "plataforma", "bastidores"];
-const FRENTES = ORDEM.map((id) => FRENTES_DAS_NOVIDADES.find((f) => f.id === id)).filter((f): f is (typeof FRENTES_DAS_NOVIDADES)[number] => Boolean(f));
+const MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
 
-const dataLonga = (iso: string) =>
-  new Date(`${iso}T12:00:00Z`).toLocaleDateString("pt-BR", { day: "numeric", month: "long", timeZone: "UTC" });
+/** Hoje em Brasília, AAAA-MM-DD — o mesmo no servidor e no navegador. */
+function hojeEmBrasilia() {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
+}
+
+const dataCurta = (iso: string) => `${Number(iso.slice(8, 10))} de ${MESES[Number(iso.slice(5, 7)) - 1].slice(0, 3)}`;
+
+/* Quantos períodos aparecem antes do "mostrar mais". */
+const PERIODOS_DE_SAIDA = 4;
 
 export default function RevisaoGeral({ novas }: { novas: Set<string> }) {
-
   const [tipo, setTipo] = useState<TipoDeMudanca | null>(null);
-  const [frente, setFrente] = useState<FrenteDaNovidade | null>(null);
+  const [frente, setFrente] = useState<FrenteDaNovidade | "todas">("todas");
   const [termo, setTermo] = useState("");
+  const [periodos, setPeriodos] = useState(PERIODOS_DE_SAIDA);
+  const [hoje] = useState(hojeEmBrasilia);
 
-  const total = contarPorTipo(MUDANCAS);
-
-  const visiveis = useMemo(
+  /* "Por dentro" só quando escolhido: é a confiança na plataforma, não o que se usa. */
+  const doFiltro = useMemo(
     () =>
-      buscarMudancas(MUDANCAS, termo).filter(
-        (m) => (!tipo || m.tipo === tipo) && (!frente || m.frente === frente)
-      ),
-    [termo, tipo, frente]
+      buscarMudancas(MUDANCAS, termo)
+        .filter((m) => (frente === "todas" ? m.frente !== "bastidores" : m.frente === frente))
+        .filter((m) => !tipo || m.tipo === tipo)
+        .sort((a, b) => b.dia.localeCompare(a.dia)),
+    [termo, frente, tipo]
   );
 
-  /* As frentes na ordem do cadastro, só as que têm item — com a contagem do filtro de tipo e da busca. */
-  const porFrente = useMemo(() => {
-    const base = buscarMudancas(MUDANCAS, termo).filter((m) => !tipo || m.tipo === tipo);
-    return FRENTES.map((f) => ({ ...f, total: base.filter((m) => m.frente === f.id).length })).filter((f) => f.total > 0);
-  }, [termo, tipo]);
+  const grupos = useMemo(() => {
+    const mapa = new Map<string, Mudanca[]>();
+    for (const m of doFiltro) {
+      const p = periodoDaMudanca(m.dia, hoje);
+      mapa.set(p, [...(mapa.get(p) ?? []), m]);
+    }
+    return [...mapa.entries()];
+  }, [doFiltro, hoje]);
 
-  /* O mais novo primeiro; no mesmo dia, a ordem do cadastro (o sort é estável). */
-  const grupos = FRENTES.map((f) => ({
-    ...f,
-    itens: visiveis.filter((m) => m.frente === f.id).sort((a, b) => b.dia.localeCompare(a.dia)),
-  })).filter((g) => g.itens.length > 0);
+  /* As três para experimentar: novidades com lugar para abrir, as não vistas primeiro. */
+  const paraExperimentar = useMemo(() => {
+    const novos = MUDANCAS.filter((m) => m.tipo === "novo" && m.frente !== "bastidores" && (m.href || m.onde)).sort((a, b) => b.dia.localeCompare(a.dia));
+    return [...novos.filter((m) => novas.has(m.id)), ...novos.filter((m) => !novas.has(m.id))].slice(0, 3);
+  }, [novas]);
 
-  const filtrando = Boolean(tipo || frente || termo.trim());
-
-  /* As frentes que a pessoa abriu por inteiro. Com filtro ou busca, tudo aparece. */
-  const [abertas, setAbertas] = useState<Set<string>>(() => new Set());
+  const filtrando = Boolean(tipo || frente !== "todas" || termo.trim());
+  const frentes = FRENTES_DAS_NOVIDADES.filter((f) => MUDANCAS.some((m) => m.frente === f.id));
 
   return (
-    <section aria-labelledby="revisao" className="space-y-5">
+    <section aria-label="Mudanças" className="space-y-8">
+      {!filtrando && paraExperimentar.length > 0 && (
+        <div>
+          <h2 className="mb-3 text-sm font-semibold text-zinc-900">Para experimentar</h2>
+          <div className="grid gap-3 md:grid-cols-3">
+            {paraExperimentar.map((m) => (
+              <CartaoParaExperimentar key={m.id} mudanca={m} nova={novas.has(m.id)} />
+            ))}
+          </div>
+        </div>
+      )}
 
-      {/* ---- o alto: o que é a revisão e quanto mudou ---- */}
-      <div className="overflow-hidden rounded-2xl border border-zinc-200/80 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
-        <div className="border-b border-zinc-100 px-5 py-4 sm:px-6">
-          <p className="flex items-center gap-2 text-xs font-medium text-violet-700">
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet-400 opacity-60 motion-reduce:animate-none" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-violet-500" />
-            </span>
-            Em andamento · desde {dataLonga(REVISAO.inicio)}
-          </p>
-          <h2 id="revisao" className="mt-1 text-lg font-semibold tracking-tight text-zinc-900">{REVISAO.titulo}</h2>
-          <p className="mt-1 max-w-2xl text-[13px] leading-relaxed text-zinc-500">{REVISAO.texto}</p>
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <div role="group" aria-label="Filtrar por tipo" className="flex rounded-lg border border-zinc-200 bg-white p-0.5">
+            {[{ id: null, nome: "Tudo" }, ...TIPOS_DE_MUDANCA.map((t) => ({ id: t.id, nome: t.plural }))].map((t) => (
+              <button
+                key={t.id ?? "tudo"}
+                type="button"
+                aria-pressed={tipo === t.id}
+                onClick={() => setTipo(t.id)}
+                className={cn("flex h-7 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-colors", tipo === t.id ? "bg-zinc-900 text-white" : "text-zinc-600 hover:text-zinc-900")}
+              >
+                {t.id && <span className={cn("h-1.5 w-1.5 rounded-full", ESTILO_DO_TIPO[t.id].ponto)} aria-hidden />}
+                {t.nome}
+              </button>
+            ))}
+          </div>
+          <label className="sr-only" htmlFor="frente-das-mudancas">
+            Frente
+          </label>
+          <select
+            id="frente-das-mudancas"
+            value={frente}
+            onChange={(e) => setFrente(e.target.value as FrenteDaNovidade | "todas")}
+            className="h-8 rounded-lg border border-zinc-200 bg-white px-2 text-xs font-medium text-zinc-700 outline-none focus:border-violet-300"
+          >
+            <option value="todas">Todas as frentes</option>
+            {frentes.map((f) => (
+              <option key={f.id} value={f.id}>
+                {f.nome}
+              </option>
+            ))}
+          </select>
+          <label className="relative ml-auto w-full sm:w-60">
+            <span className="sr-only">Buscar nas mudanças</span>
+            <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-400" aria-hidden />
+            <input
+              value={termo}
+              onChange={(e) => setTermo(e.target.value)}
+              placeholder="Buscar: vigia, popup, NPS…"
+              className="h-8 w-full rounded-lg border border-zinc-200 bg-white pl-8 pr-7 text-[13px] text-zinc-800 placeholder:text-zinc-400 focus:border-violet-300 focus:outline-none focus:ring-2 focus:ring-violet-100"
+            />
+            {termo && (
+              <button type="button" onClick={() => setTermo("")} aria-label="Limpar a busca" className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-zinc-400 hover:text-zinc-700">
+                <X size={13} />
+              </button>
+            )}
+          </label>
         </div>
 
-        <div className="grid grid-cols-2 divide-zinc-100 sm:grid-cols-4 sm:divide-x">
-          <BotaoDoNumero
-            ativo={tipo === null}
-            onClick={() => setTipo(null)}
-            numero={MUDANCAS.length}
-            rotulo={pluralDe(MUDANCAS.length, "mudança", "mudanças")}
-            classeDoNumero="text-zinc-900"
-          />
-          {TIPOS_DE_MUDANCA.map((t) => {
-            const Icone = ESTILO_DO_TIPO[t.id].icone;
-            return (
-              <BotaoDoNumero
-                key={t.id}
-                ativo={tipo === t.id}
-                onClick={() => setTipo(tipo === t.id ? null : t.id)}
-                numero={total[t.id]}
-                rotulo={t.plural.toLowerCase()}
-                icone={<Icone size={13} aria-hidden />}
-                classeDoNumero={ESTILO_DO_TIPO[t.id].numero}
-              />
-            );
-          })}
-        </div>
-      </div>
-
-      {/* ---- filtro por frente e busca ---- */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <div role="group" aria-label="Filtrar por frente" className="flex flex-wrap gap-1.5">
-          <Chip ativo={frente === null} onClick={() => setFrente(null)} rotulo="Todas as frentes" />
-          {porFrente.map((f) => {
-            const Icone = ICONE_DA_FRENTE[f.id];
-            return (
-              <Chip
-                key={f.id}
-                ativo={frente === f.id}
-                onClick={() => setFrente(frente === f.id ? null : f.id)}
-                rotulo={f.nome}
-                numero={f.total}
-                icone={<Icone size={12} aria-hidden />}
-              />
-            );
-          })}
-        </div>
-        <label className="relative ml-auto w-full sm:w-64">
-          <span className="sr-only">Buscar nas mudanças</span>
-          <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-400" aria-hidden />
-          <input
-            value={termo}
-            onChange={(e) => setTermo(e.target.value)}
-            placeholder="Buscar: popup, plural, caso…"
-            className="h-8 w-full rounded-lg border border-zinc-200 bg-white pl-8 pr-7 text-[13px] text-zinc-800 placeholder:text-zinc-400 focus:border-violet-300 focus:outline-none focus:ring-2 focus:ring-violet-100"
-          />
-          {termo && (
-            <button type="button" onClick={() => setTermo("")} aria-label="Limpar a busca" className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-zinc-400 hover:text-zinc-700">
-              <X size={13} />
+        {filtrando && (
+          <p className="text-xs text-zinc-500">
+            {doFiltro.length === 1 ? "1 mudança" : `${doFiltro.length} mudanças`} ·{" "}
+            <button
+              type="button"
+              onClick={() => {
+                setTipo(null);
+                setFrente("todas");
+                setTermo("");
+              }}
+              className="font-medium text-zinc-700 underline-offset-2 hover:text-violet-700 hover:underline"
+            >
+              limpar
             </button>
-          )}
-        </label>
+          </p>
+        )}
+
+        {grupos.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-zinc-200 px-5 py-10 text-center">
+            <p className="text-sm font-medium text-zinc-800">Nada com esse filtro.</p>
+            <p className="mt-1 text-xs text-zinc-500">Tente outra palavra ou volte para todas as frentes.</p>
+          </div>
+        ) : (
+          <>
+            {(filtrando ? grupos : grupos.slice(0, periodos)).map(([periodo, itens]) => (
+              <div key={periodo}>
+                <h3 className="mb-1.5 flex items-baseline gap-2 text-sm font-semibold text-zinc-900">
+                  {periodo}
+                  <span className="text-xs font-normal tabular-nums text-zinc-400">{itens.length}</span>
+                </h3>
+                <ol className="divide-y divide-zinc-100 overflow-hidden rounded-xl border border-zinc-200/80 bg-white">
+                  {itens.map((m) => (
+                    <LinhaDaMudanca key={m.id} mudanca={m} nova={novas.has(m.id)} />
+                  ))}
+                </ol>
+              </div>
+            ))}
+            {!filtrando && grupos.length > periodos && (
+              <button type="button" onClick={() => setPeriodos((n) => n + 3)} className="flex items-center gap-1 text-xs font-medium text-zinc-600 hover:text-violet-700">
+                <ChevronDown size={13} aria-hidden />
+                Mais antigas
+              </button>
+            )}
+          </>
+        )}
       </div>
-
-      {filtrando && (
-        <p className="text-xs text-zinc-500">
-          {visiveis.length} de {MUDANCAS.length} · {" "}
-          <button type="button" onClick={() => { setTipo(null); setFrente(null); setTermo(""); }} className="font-medium text-zinc-700 underline-offset-2 hover:text-violet-700 hover:underline">
-            ver tudo
-          </button>
-        </p>
-      )}
-
-      {/* ---- os itens, por frente ---- */}
-      {grupos.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-zinc-200 px-5 py-10 text-center">
-          <p className="text-sm font-medium text-zinc-800">Nada com esse filtro.</p>
-          <p className="mt-1 text-xs text-zinc-500">Tente outra palavra ou volte para todas as frentes.</p>
-        </div>
-      ) : (
-        grupos.map((g) => {
-          const Icone = ICONE_DA_FRENTE[g.id];
-          return (
-            <div key={g.id}>
-              <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-zinc-900">
-                <span className="grid h-6 w-6 place-items-center rounded-md bg-zinc-100 text-zinc-600">
-                  <Icone size={13} aria-hidden />
-                </span>
-                {g.nome}
-                <span className="text-xs font-normal tabular-nums text-zinc-400">{g.itens.length}</span>
-              </h3>
-              <ol className="divide-y divide-zinc-100 overflow-hidden rounded-xl border border-zinc-200/80 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
-                {(filtrando || abertas.has(g.id) ? g.itens : recorteDoGrupo(g.itens, novas)).map((m) => (
-                  <ItemDaMudanca key={m.id} mudanca={m} nova={novas.has(m.id)} />
-                ))}
-              </ol>
-              {!filtrando && !abertas.has(g.id) && g.itens.length > recorteDoGrupo(g.itens, novas).length && (
-                <button
-                  type="button"
-                  onClick={() => setAbertas((s) => new Set(s).add(g.id))}
-                  className="mt-1.5 flex items-center gap-1 px-1 text-xs font-medium text-zinc-600 hover:text-violet-700"
-                >
-                  <ChevronDown size={13} aria-hidden />
-                  Ver as outras {g.itens.length - recorteDoGrupo(g.itens, novas).length}
-                </button>
-              )}
-            </div>
-          );
-        })
-      )}
     </section>
   );
 }
 
-/**
- * O que cada frente mostra fechada (03/11/2026): as seis mais recentes e,
- * além delas, as que são novas desde a última visita. Com mais de duzentas
- * mudanças abertas de uma vez, o que entrou hoje se perdia no meio.
- */
-const POR_FRENTE = 6;
-function recorteDoGrupo(itens: Mudanca[], novas: Set<string>) {
-  return itens.filter((m, i) => i < POR_FRENTE || novas.has(m.id));
+function CartaoParaExperimentar({ mudanca: m, nova }: { mudanca: Mudanca; nova: boolean }) {
+  return (
+    <article className="flex flex-col rounded-xl border border-zinc-200/80 bg-white p-4">
+      <p className="flex items-center gap-1.5 text-[11px] font-medium text-violet-700">
+        <Sparkles size={12} aria-hidden />
+        {nomeDaFrente(m.frente)} · {dataCurta(m.dia)}
+        {nova && <span className="h-1.5 w-1.5 rounded-full bg-violet-500" title="Novo desde a sua última visita" />}
+      </p>
+      <h3 className="mt-1.5 text-sm font-semibold leading-snug text-zinc-900">{m.titulo}</h3>
+      <p className="mt-1 line-clamp-3 text-[13px] leading-relaxed text-zinc-600">{m.texto}</p>
+      <div className="mt-auto pt-3 text-xs">
+        {m.href ? (
+          <Link href={m.href} className="inline-flex items-center gap-0.5 font-medium text-violet-700 hover:text-violet-900">
+            Abrir <ArrowUpRight size={12} />
+          </Link>
+        ) : (
+          <span className="text-zinc-500">{m.onde}</span>
+        )}
+      </div>
+    </article>
+  );
 }
 
-function ItemDaMudanca({ mudanca: m, nova }: { mudanca: Mudanca; nova: boolean }) {
+function LinhaDaMudanca({ mudanca: m, nova }: { mudanca: Mudanca; nova: boolean }) {
+  const [aberta, setAberta] = useState(false);
   const estilo = ESTILO_DO_TIPO[m.tipo];
-  const Icone = estilo.icone;
   const nomeDoTipo = TIPOS_DE_MUDANCA.find((t) => t.id === m.tipo)?.nome ?? m.tipo;
-
   return (
-    <li id={m.id} className="group grid scroll-mt-24 gap-x-4 gap-y-1.5 px-4 py-3.5 target:bg-violet-50/40 sm:grid-cols-[96px_minmax(0,1fr)] sm:px-5">
-      <div className="flex items-center gap-2 sm:flex-col sm:items-start sm:gap-1">
-        <span className={cn("inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-semibold ring-1 ring-inset", estilo.selo)}>
-          <Icone size={11} aria-hidden />
-          {nomeDoTipo}
-        </span>
-        {/* O dia da mudança: com mais de cem itens, é o que diz o que entrou hoje (out/2026). */}
-        <time dateTime={m.dia} className="text-[11px] tabular-nums text-zinc-400">
-          {dataLonga(m.dia)}
-        </time>
-      </div>
-
-      <div className="min-w-0">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <h4 className="text-[13.5px] font-semibold leading-snug text-zinc-900">{m.titulo}</h4>
-          {nova && <span className="h-1.5 w-1.5 rounded-full bg-violet-500" title="Novo desde a sua última visita" />}
-        </div>
-        <p className="mt-1 text-[13px] leading-relaxed text-zinc-600">{m.texto}</p>
-        {(m.href || m.onde) && (
-          <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+    <li id={m.id} className="scroll-mt-24 target:bg-violet-50/40">
+      <button type="button" onClick={() => setAberta((v) => !v)} aria-expanded={aberta} className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-zinc-50/70">
+        <span className={cn("h-2 w-2 shrink-0 rounded-full", estilo.ponto)} title={nomeDoTipo} aria-hidden />
+        <span className="sr-only">{nomeDoTipo}:</span>
+        <span className="min-w-0 flex-1 truncate text-[13.5px] text-zinc-900">{m.titulo}</span>
+        {nova && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-violet-500" title="Novo desde a sua última visita" />}
+        <span className="hidden shrink-0 text-xs text-zinc-400 sm:inline">{nomeDaFrente(m.frente)}</span>
+        <ChevronDown size={14} className={cn("shrink-0 text-zinc-400 transition-transform", aberta && "rotate-180")} aria-hidden />
+      </button>
+      {aberta && (
+        <div className="px-4 pb-3.5 pl-9">
+          <p className="text-[13px] leading-relaxed text-zinc-600">{m.texto}</p>
+          <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+            <span className={cn("inline-flex items-center rounded-md px-1.5 py-0.5 text-[11px] font-semibold ring-1 ring-inset", estilo.selo)}>{nomeDoTipo}</span>
+            <span className="text-zinc-400">{dataCurta(m.dia)} · {nomeDaFrente(m.frente)}</span>
             {m.onde && <span className="text-zinc-400">{m.onde}</span>}
             {m.href && (
               <Link href={m.href} className="flex items-center gap-0.5 font-medium text-zinc-700 hover:text-violet-700">
-                Onde fica <ArrowUpRight size={12} />
+                Abrir <ArrowUpRight size={12} />
               </Link>
             )}
           </p>
-        )}
-      </div>
+        </div>
+      )}
     </li>
-  );
-}
-
-function BotaoDoNumero({
-  ativo,
-  onClick,
-  numero,
-  rotulo,
-  icone,
-  classeDoNumero,
-}: {
-  ativo: boolean;
-  onClick: () => void;
-  numero: number;
-  rotulo: string;
-  icone?: React.ReactNode;
-  classeDoNumero: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={ativo}
-      className={cn(
-        "flex flex-col items-start gap-0.5 border-t border-zinc-100 px-5 py-3.5 text-left transition-colors first:border-t-0 sm:border-t-0 sm:px-6 [&:nth-child(2)]:border-t-0 sm:[&:nth-child(2)]:border-t-0",
-        ativo ? "bg-zinc-50" : "hover:bg-zinc-50/60"
-      )}
-    >
-      <span className={cn("text-2xl font-semibold tabular-nums tracking-tight", classeDoNumero)}>{numero}</span>
-      <span className={cn("flex items-center gap-1 text-xs", ativo ? "font-medium text-zinc-800" : "text-zinc-500")}>
-        {icone}
-        {rotulo}
-      </span>
-    </button>
-  );
-}
-
-function Chip({ ativo, onClick, rotulo, numero, icone }: { ativo: boolean; onClick: () => void; rotulo: string; numero?: number; icone?: React.ReactNode }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={ativo}
-      className={cn(
-        "flex h-7 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors",
-        ativo ? "border-zinc-900 bg-zinc-900 text-white" : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300 hover:text-zinc-900"
-      )}
-    >
-      {icone}
-      {rotulo}
-      {numero !== undefined && <span className={cn("tabular-nums", ativo ? "text-white/60" : "text-zinc-400")}>{numero}</span>}
-    </button>
   );
 }

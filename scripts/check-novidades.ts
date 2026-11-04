@@ -18,7 +18,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 
-import { MUDANCAS } from "../lib/models/mudancas";
+import { MUDANCAS, periodoDaMudanca } from "../lib/models/mudancas";
 import { NOVIDADES, compararVersoes, diaDaUltimaNovidade, eraDaVersao, filtrarNovidades, novasDesde, tourPorId } from "../lib/models/novidades";
 
 const RAIZ = resolve(__dirname, "..");
@@ -76,6 +76,10 @@ conferir("quem viu em 01/09 vê o que veio depois", [...novasDesde(NOVIDADES, "2
 conferir("quem viu a mais nova não tem novidade", novasDesde(NOVIDADES, diaDaUltimaNovidade()).size, 0);
 conferir("filtro por frente", filtrarNovidades(NOVIDADES, "google").every((n) => n.frentes.includes("google")), true);
 conferir("o menu marca a novidade não vista", readFileSync(resolve(RAIZ, "components/layout/Sidebar.tsx"), "utf8").includes("CHAVE_DA_NOVIDADE_VISTA"), true);
+
+/* ---- 3b. a linha do tempo (04/11/2026) ---- */
+
+conferir("períodos: hoje, ontem, esta semana, semana passada, mês, ano", ["2026-11-04", "2026-11-03", "2026-10-30", "2026-10-25", "2026-10-15", "2025-12-01"].map((d) => periodoDaMudanca(d, "2026-11-04")), ["Hoje", "Ontem", "Esta semana", "Semana passada", "Outubro", "Dezembro de 2025"]);
 
 /* ---- 4. a revisão item a item (out/2026) ---- */
 

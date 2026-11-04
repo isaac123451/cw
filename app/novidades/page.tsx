@@ -95,12 +95,13 @@ export default function NovidadesPage() {
         <PageHeading
           eyebrow="Conhecimento"
           title="Novidades"
-          description="Tudo o que mudou na plataforma e na extensão, item por item: o que era, o que ficou e onde está."
+          description="O que mudou na plataforma e na extensão, do mais novo para o mais antigo. Clique num item para ver o que era, o que ficou e onde está."
         >
-          {mudancasNovas.size > 0 && vista !== undefined && (
+          {/* Sem número grande: na primeira visita eram "247 para você conhecer" (04/11/2026). */}
+          {mudancasNovas.size > 0 && vista && (
             <p className="flex items-center gap-1.5 text-xs text-zinc-500">
               <span className="inline-block h-1.5 w-1.5 rounded-full bg-violet-500" />
-              {vista ? `${mudancasNovas.size} desde a sua última visita` : `${mudancasNovas.size} para você conhecer`}
+              {mudancasNovas.size <= 12 ? `${mudancasNovas.size === 1 ? "1 mudança" : `${mudancasNovas.size} mudanças`} desde a sua última visita, marcadas com o ponto` : "Bastante coisa desde a sua última visita: comece por Para experimentar"}
             </p>
           )}
         </PageHeading>

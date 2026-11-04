@@ -43,15 +43,18 @@ export interface Mudanca {
   onde?: string;
 }
 
-export const REVISAO = {
-  titulo: "Revisão geral rumo ao 1.0",
-  inicio: "2026-10-05",
-  texto:
-    "Bugs, contas, desempenho, segurança e o que estava pela metade — na plataforma e na extensão, com a mesma prioridade. Cada item abaixo é uma mudança: o que era, o que ficou, onde está e o dia em que entrou.",
-};
-
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
+  {
+    id: "novidades-linha-do-tempo",
+    dia: "2026-11-04",
+    tipo: "melhoria",
+    frente: "plataforma",
+    titulo: "Novidades: o que dá para usar primeiro, e uma linha por mudança",
+    texto:
+      "A tela abria com \"247 para você conhecer\", quatro números grandes e os itens separados por frente, cada um com o parágrafo inteiro aberto. Agora começa por Para experimentar (as três novidades mais recentes, com o link) e segue numa linha do tempo: hoje, ontem, esta semana, semana passada e os meses. Cada mudança é uma linha, e o texto abre no clique. O ponto colorido diz o tipo. O que é \"por dentro\" (conferências, build) só aparece quando escolhido no filtro de frentes.",
+    href: "/novidades",
+  },
   {
     id: "okr",
     dia: "2026-11-04",
@@ -2513,13 +2516,6 @@ export function diaDaUltimaMudanca() {
   return MUDANCAS.reduce((maior, m) => (m.dia > maior ? m.dia : maior), "");
 }
 
-/** Contagem por tipo, para o resumo do alto da página. */
-export function contarPorTipo(mudancas: Mudanca[]) {
-  const c: Record<TipoDeMudanca, number> = { novo: 0, melhoria: 0, correcao: 0 };
-  for (const m of mudancas) c[m.tipo] += 1;
-  return c;
-}
-
 /** Busca sem acento e sem caixa no título, no texto e no "onde". */
 export function buscarMudancas(mudancas: Mudanca[], termo: string) {
   const normalizar = (s: string) =>
@@ -2527,4 +2523,20 @@ export function buscarMudancas(mudancas: Mudanca[], termo: string) {
   const t = normalizar(termo.trim());
   if (!t) return mudancas;
   return mudancas.filter((m) => normalizar(`${m.titulo} ${m.texto} ${m.onde ?? ""}`).includes(t));
+}
+
+const MESES_DA_MUDANCA = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+
+const diasEntre = (a: string, b: string) => Math.round((Date.parse(`${b}T12:00:00Z`) - Date.parse(`${a}T12:00:00Z`)) / 86_400_000);
+
+/** "Hoje", "Ontem", "Esta semana", "Semana passada", "Outubro", "Setembro de 2025". */
+export function periodoDaMudanca(dia: string, hoje: string) {
+  const d = diasEntre(dia, hoje);
+  if (d <= 0) return "Hoje";
+  if (d === 1) return "Ontem";
+  if (d <= 6) return "Esta semana";
+  if (d <= 13) return "Semana passada";
+  const mes = MESES_DA_MUDANCA[Number(dia.slice(5, 7)) - 1];
+  const nome = mes.charAt(0).toUpperCase() + mes.slice(1);
+  return dia.slice(0, 4) === hoje.slice(0, 4) ? nome : `${nome} de ${dia.slice(0, 4)}`;
 }
