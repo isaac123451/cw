@@ -109,7 +109,7 @@ export const MUDANCAS: Mudanca[] = [
     frente: "extensao",
     titulo: "Extensão: agenda compacta com \"amanhã\", e detalhes que confundiam",
     texto:
-      "Na Agenda do painel, cada atividade era um cartão com o botão de concluir da largura toda. Agora são duas linhas com \"concluir · amanhã · abrir o caso\", e o \"amanhã\" passa a atividade para o próximo dia útil sem sair do WhatsApp. No NPS, o voltar etapa mostrava \"← N…\" cortado e a etapa aparecia com os colchetes do cadastro (\"[Aguardando Resposta]\"). O telefone saía cru e o prazo do 1º contato continuava aparecendo depois da tentativa. Em \"O que fazer\", a data vinha como 2026-10-29. No Painel, \"52 abertos\" ficava embaixo da nota do Reclame Aqui, que tinha 18, e virou \"abertos RA+Redes\".",
+      "Na Agenda do painel, cada atividade era um cartão com o botão de concluir da largura toda. Agora são duas linhas com \"concluir · amanhã · abrir o caso\", e o \"amanhã\" passa a atividade para o próximo dia útil sem sair do WhatsApp. No NPS, o voltar etapa mostrava \"← N…\" cortado e a etapa aparecia com os colchetes do cadastro (\"[Aguardando Resposta]\"). O telefone saía cru e o prazo do 1º contato continuava aparecendo depois da tentativa. Em \"O que fazer\", a data vinha como 2026-10-29. No Painel e no popup do ícone, \"52 abertos\" ficava embaixo da nota do Reclame Aqui, que tinha 18, e virou \"abertos RA+Redes\".",
     onde: "Extensão → Agenda, NPS, Cliente e Painel",
   },
   {

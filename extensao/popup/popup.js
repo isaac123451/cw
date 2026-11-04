@@ -342,10 +342,10 @@ async function carregar() {
 
     <div class="bloco">
       <div class="numeros">
-        <div class="numero"><b>${dados.contagens.abertos}</b><span>abertos</span></div>
+        <div class="numero" title="Em aberto no Reclame Aqui e nas Redes"><b>${dados.contagens.abertos}</b><span>abertos RA+Redes</span></div>
         <div class="numero"><b>${dados.contagens.semResposta}</b><span>s/ resposta</span></div>
         <div class="numero"><b>${dados.contagens.replicas}</b><span>réplicas</span></div>
-        <div class="numero"><b>${dados.contagens.risco}</b><span>risco</span></div>
+        <div class="numero" title="Casos abertos marcados com risco de churn"><b>${dados.contagens.risco}</b><span>risco churn</span></div>
       </div>
     </div>`);
 
