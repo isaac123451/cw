@@ -1,5 +1,5 @@
 /**
- * "Enviar ao CW" nas páginas públicas do Reclame Aqui (04/11/2026).
+ * "Enviar ao CW" nas páginas públicas do Reclame Aqui (04/11/2026), no canto de baixo à direita.
  *
  * O Isaac: "faça um botão para a leitura do vigia quando não é feita de
  * forma automática, para ele entender e enviar para a ferramenta".
@@ -39,7 +39,8 @@
     raiz.innerHTML = `
       <style>
         :host { all: initial; }
-        .caixa { position: fixed; left: 18px; bottom: 22px; z-index: 2147483000; display: flex; align-items: center; gap: 8px;
+        /* No canto direito, ao lado do botão do painel CW: o canto esquerdo é do ícone do próprio Reclame Aqui. */
+        .caixa { position: fixed; right: 80px; bottom: 30px; z-index: 2147483000; display: flex; flex-direction: row-reverse; align-items: center; gap: 8px;
           font: 500 13px/1.4 ui-sans-serif, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
         button { display: flex; align-items: center; gap: 6px; border: 0; border-radius: 999px; padding: 8px 14px; cursor: pointer;
           background: #5B2A86; color: #fff; font: inherit; box-shadow: 0 6px 18px -6px rgba(91, 42, 134, .6); }

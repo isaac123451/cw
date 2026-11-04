@@ -89,7 +89,7 @@ export const MUDANCAS: Mudanca[] = [
     frente: "extensao",
     titulo: "\"Enviar ao CW\": a página do Reclame Aqui aberta vai para a ferramenta",
     texto:
-      "Quando o vigia não consegue ler o portal sozinho (o Cloudflare às vezes barra a leitura em segundo plano), a aba que você abriu passa. Nas páginas da Cardápio Web no Reclame Aqui aparece, no canto de baixo à esquerda, o botão \"Enviar ao CW\". Na página de uma reclamação, ele grava ou completa a resposta, a réplica e a avaliação, e marca a reclamação desativada. Na lista de reclamações, diz quantas são novas ou estão atrás no CW e põe as que faltam na fila do vigia. Na página da empresa, manda o painel da nota. Nada é lido sem o clique.",
+      "Quando o vigia não consegue ler o portal sozinho (o Cloudflare às vezes barra a leitura em segundo plano), a aba que você abriu passa. Nas páginas da Cardápio Web no Reclame Aqui aparece, no canto de baixo à direita (ao lado do botão do painel CW), o botão \"Enviar ao CW\". Na página de uma reclamação, ele grava ou completa a resposta, a réplica e a avaliação, e marca a reclamação desativada. Na lista de reclamações, diz quantas são novas ou estão atrás no CW e põe as que faltam na fila do vigia. Na página da empresa, manda o painel da nota. Nada é lido sem o clique.",
     onde: "Extensão → páginas da Cardápio Web no Reclame Aqui",
   },
   {
