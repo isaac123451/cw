@@ -1133,7 +1133,7 @@ aqui… atualize na ferramenta no caso."
 - [x] Sino: propostas de categoria da IA esperando decisão.
 - [x] Coluna inexistente (aba com o fluxo antigo) é recusada no servidor; o
       cartão volta. Conferências passaram a comparar pelo papel da coluna.
-- [ ] **Isaac roda** `npx tsx scripts/_alinhar.ts --gravar` (2 colunas do RA,
+- [x] **Isaac rodou** `npx tsx scripts/_alinhar.ts --gravar` (2 colunas do RA,
       3 empresas que eram telefone, 112 atendimentos das Redes). Depois disso
       `check:vinculo` fica limpo.
 - [x] 4 reclamações de cancelamento de plano (RA-mPDZ, RA-OUem, RA-YqiK,
