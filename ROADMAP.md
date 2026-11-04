@@ -1173,6 +1173,16 @@ por dia desde 31/10 contra 50–75 antes — ela só roda com a plataforma abert
       com o critério de organização e de TDAH.
 - [ ] **Fase F — Desempenho:** NPS em duas partes (aberto + 13 meses primeiro);
       medir a primeira abertura das telas antes e depois.
+- [x] **OKR (pedido de 04/11, 1.1.45):** página `/okr` para montar o OKR com
+      métricas do catálogo; KR1 "confiança recuperada" (detratores do NPS com
+      solução confirmada + "Sim" na pesquisa de confiança ÷ elegíveis, por
+      conta, acumulado) e KR2 pelo painel de 6 meses no último dia útil.
+      Pesquisa de confiança na ficha do detrator e lida pela IA na conversa.
+      Precisa de `npm run db:push` (Okr, ConfiancaDoNps). Em aberto: incluir no
+      KR1 a "manifestação negativa documentada em qualquer canal" (hoje só
+      NPS 0–6, que o documento também marca como "confirmar").
+- [x] **Fase A, parte 1 (1.1.44):** IA do dia pelo relógio da extensão; "deu
+      certo" → pedir avaliação; Procon/advogado → atividade alta.
 
 ### Revisão de novembro: bugs, contas e organização (03/11/2026, 1.1.25–1.1.31)
 
