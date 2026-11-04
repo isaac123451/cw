@@ -29,6 +29,7 @@ import { aprenderComAsAvaliacoes, aprenderDasConversas, aprendizadosAtivos } fro
 import { classeDaAvaliacao } from "@/lib/models/classeDaAvaliacao";
 import { saiuDaNota } from "@/lib/models/case";
 import { sinaisDaConversa, type SinalAchado } from "@/lib/models/falaDoCliente";
+import { pesquisaNaConversa, RESPOSTAS_DE_CONFIANCA } from "@/lib/models/okr";
 import { classificarAvaliacoes } from "@/lib/services/classeDaAvaliacao.service";
 import { relevantes } from "@/lib/models/aprendizados";
 import { criarLembretesAutomaticos } from "@/lib/services/lembretesAutomaticos.service";
@@ -985,7 +986,7 @@ export async function seguirPelasConversas(
           ownerId: true,
         },
       },
-      npsResponse: { select: { id: true, firstContactAt: true, respondedAt: true, status: true, customerName: true, ownerId: true } },
+      npsResponse: { select: { id: true, firstContactAt: true, respondedAt: true, status: true, customerName: true, ownerId: true, score: true, confirmedAt: true } },
       mensagens: { orderBy: { em: "asc" }, select: { de: true, texto: true, em: true, autor: true, chave: true, criadoEm: true }, take: 300 },
     },
     orderBy: { atualizadoEm: "desc" },
@@ -1122,6 +1123,46 @@ export async function seguirPelasConversas(
 
     /* ---------- o NPS ---------- */
     const nps = c.npsResponse;
+    /*
+      A pesquisa de confiança na conversa (04/11/2026) — o KR1 do OKR. A
+      pergunta que saiu pelo WhatsApp e a resposta curta do cliente ("Sim",
+      "Parcialmente", "Não") são gravadas sem ninguém marcar. Não mexe no
+      que alguém já registrou à mão.
+    */
+    if (nps && nps.score <= 6 && feitas < SEGUIR_POR_RODADA) {
+      const lida = pesquisaNaConversa(msgs.filter((m) => m.em >= nps.respondedAt));
+      if (lida) {
+        const atual = await prisma.confiancaDoNps.findUnique({ where: { responseId: nps.id } }).catch(() => undefined);
+        /* undefined = tabela ainda não existe (antes do db:push): segue sem gravar. */
+        const novidade =
+          atual === undefined
+            ? false
+            : atual === null
+              ? true
+              : atual.origem === "ia" && !atual.resposta && Boolean(lida.resposta);
+        if (novidade) {
+          const chave = `confianca:nps:${nps.id}:${lida.resposta ?? "enviada"}`;
+          const rotulo = lida.resposta ? RESPOSTAS_DE_CONFIANCA.find((r) => r.id === lida.resposta)?.nome : null;
+          const novo = await registrar(prisma, userId, {
+            tipo: "etapa",
+            origem: "nps",
+            chave,
+            titulo: rotulo ? `${nome || "O cliente"} respondeu à pesquisa de confiança: ${rotulo}` : `Pesquisa de confiança enviada a ${nome || "um cliente"}`,
+            detalhe: rotulo
+              ? `Lido na conversa do WhatsApp em ${descreverRegistro(lida.respondidaEm!.toISOString())}.${lida.resposta === "sim" ? (nps.confirmedAt ? " Conta no OKR." : " Falta registrar a confirmação da solução para contar no OKR.") : ""}`
+              : `A pergunta saiu pelo WhatsApp em ${descreverRegistro(lida.enviadaEm.toISOString())}.`,
+            href: `/nps/${nps.id}`,
+            desfazer: { confianca: nps.id },
+          });
+          if (novo) {
+            const dados = { enviadaEm: lida.enviadaEm, resposta: lida.resposta, respondidaEm: lida.respondidaEm, origem: "ia", por: AUTOR };
+            await prisma.confiancaDoNps.upsert({ where: { responseId: nps.id }, create: { responseId: nps.id, ...dados }, update: dados });
+            feitas += 1;
+          }
+        }
+      }
+    }
+
     /* O detrator que fala em Procon ou advogado também vira prioridade do dia (04/11/2026). */
     if (nps && !isEncerrado(nps.status) && !c.case) {
       for (const s of sinaisDaConversa(msgs, nps.respondedAt > desde ? nps.respondedAt : desde)) {
@@ -1518,6 +1559,8 @@ export async function desfazer(prisma: PrismaClient, userId: string, id: string)
   if (acao.desfeitaEm) return { ok: true };
   const d = (acao.desfazer ?? {}) as Record<string, string>;
   if (d.tarefa) await prisma.agendaTask.updateMany({ where: { id: d.tarefa }, data: { done: true } });
+  /* A pesquisa de confiança lida na conversa (04/11/2026): só sai o que a IA gravou. */
+  if (d.confianca) await prisma.confiancaDoNps.deleteMany({ where: { responseId: d.confianca, origem: "ia" } });
   if (d.reabrir) await prisma.agendaTask.updateMany({ where: { id: d.reabrir }, data: { done: false } });
   /* Só o comentário e a nota que esta ação criou — o id vem da própria linha da ação. */
   if (d.comentario) await prisma.caseComment.deleteMany({ where: { id: d.comentario } });

@@ -24,6 +24,7 @@ import {
   Star,
   UserRound,
   Wallet,
+  Goal,
   Workflow,
 } from "lucide-react";
 
@@ -96,6 +97,7 @@ export const menuItems: MenuItem[] = [
   { title: "Clientes", href: "/clientes", icon: UserRound, group: "Pessoas e contas" },
   { title: "Estabelecimentos", href: "/estabelecimentos", icon: Building2, group: "Pessoas e contas" },
   { title: "Jornada do Cliente", href: "/jornada", icon: Route, group: "Pessoas e contas" },
+  { title: "OKR", href: "/okr", icon: Goal, group: "Inteligência" },
   { title: "Relatório do ciclo", href: "/relatorio", icon: FileBarChart, group: "Inteligência" },
   { title: "Analytics", href: "/analytics", icon: BarChart3, group: "Inteligência" },
   { title: "Causas raiz", href: "/causas-raiz", icon: Crosshair, group: "Inteligência" },

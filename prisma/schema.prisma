@@ -1452,6 +1452,9 @@ model NpsResponse {
   /// As avaliações do Google que este promotor deixou.
   avaliacoesGoogle AvaliacaoGoogle[]
 
+  /// A pesquisa de confiança do detrator (04/11/2026) — tabela à parte.
+  confianca ConfiancaDoNps?
+
   /// De onde a resposta veio: "Manual" ou "Wootric".
   source String @default("Manual")
 
@@ -2631,4 +2634,41 @@ model ErroDaExtensao {
   ultimaEm   DateTime @default(now())
 
   @@index([ultimaEm])
+}
+
+/// A pesquisa de confiança do detrator (04/11/2026) — o KR1 do OKR do
+/// 4º trimestre: "Após essa tratativa, você considera que sua confiança
+/// na Cardápio Web foi recuperada?" (Sim · Parcialmente · Não). Só é
+/// enviada depois da solução confirmada (`NpsResponse.confirmedAt`).
+/// Tabela à parte, e não colunas no NPS: a tela do NPS lê todas as
+/// colunas da resposta, e uma coluna que ainda não existe no banco (antes
+/// do db:push) derrubaria a tela inteira.
+model ConfiancaDoNps {
+  responseId   String      @id
+  response     NpsResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
+  enviadaEm    DateTime?
+  /// "sim" · "parcialmente" · "nao"
+  resposta     String?
+  respondidaEm DateTime?
+  /// manual · ia · extensao
+  origem       String      @default("manual")
+  por          String?
+  atualizadoEm DateTime    @updatedAt
+}
+
+/// Os OKRs do time (04/11/2026) — "uma página com possibilidade de montar
+/// o okr com x métrica". Cada resultado-chave aponta para uma métrica do
+/// catálogo (`lib/models/okr.ts`) e a plataforma calcula o realizado.
+model Okr {
+  id            String   @id @default(cuid())
+  objetivo      String
+  /// AAAA-MM-DD
+  inicio        String
+  fim           String
+  contexto      String   @default("")
+  /// ResultadoChave[] — ver `lib/models/okr.ts`.
+  krs           Json
+  criadoEm      DateTime @default(now())
+  atualizadoEm  DateTime @updatedAt
+  atualizadoPor String?
 }

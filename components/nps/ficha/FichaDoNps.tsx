@@ -39,6 +39,7 @@ import LateralDoNps from "./LateralDoNps";
 import ClassificarNpsModal from "./ClassificarNpsModal";
 import ContatoNpsModal, { type ModoDoContato } from "./ContatoNpsModal";
 import ConfirmacaoNpsModal from "./ConfirmacaoNpsModal";
+import PesquisaDeConfianca from "./PesquisaDeConfianca";
 import EncerrarNpsModal from "./EncerrarNpsModal";
 
 type Dialogo =
@@ -295,6 +296,11 @@ export default function FichaDoNps({ id, naJanela = false }: { id: string; naJan
           <CartaoDoTermometro key={`termo-${ciclo.id}`} npsId={ciclo.id} />
 
           <ContatosDoNps item={ciclo} registrar={(modo) => setDialogo({ tipo: "contato", modo })} />
+
+          {/* O KR1 do OKR (04/11/2026): confirmação, pergunta e resposta, num lugar só. */}
+          {segmento.label === "Detrator" && ciclo.kind !== "Engano" && (
+            <PesquisaDeConfianca key={`confianca-${ciclo.id}`} item={ciclo} confirmar={() => setDialogo({ tipo: "confirmacao" })} />
+          )}
 
           {segmento.label === "Promotor" && ciclo.kind !== "Engano" && (
             <div id="acoes-do-promotor" className="scroll-mt-24">

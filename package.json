@@ -1,6 +1,6 @@
 {
   "name": "cw-reputacao",
-  "version": "1.1.44",
+  "version": "1.1.45",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -80,6 +80,7 @@
     "check:radar": "tsx scripts/check-radar.ts",
     "check:recuperacao": "tsx scripts/check-recuperacao.ts",
     "check:fala-do-cliente": "tsx scripts/check-fala-do-cliente.ts",
+    "check:okr": "tsx scripts/check-okr.ts",
     "check:distribuicao": "tsx --env-file=.env scripts/check-distribuicao.ts",
     "check:segmento": "tsx scripts/check-segmento.ts",
     "check:conversas-sem-resposta": "tsx scripts/check-conversas-sem-resposta.ts",

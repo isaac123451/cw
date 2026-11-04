@@ -53,6 +53,36 @@ export const REVISAO = {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "okr",
+    dia: "2026-11-04",
+    tipo: "novo",
+    frente: "plataforma",
+    titulo: "OKR: monte o objetivo e acompanhe cada resultado-chave",
+    texto:
+      "Página nova no menu, em Inteligência. O objetivo, a vigência e os resultados-chave, cada um ligado a uma métrica que a plataforma calcula sozinha: confiança recuperada dos detratores, contatados em até 2 dias úteis, NPS do mês, e voltariam a fazer negócio, nota, solução e resposta do Reclame Aqui. Cada KR mostra o número de hoje contra a meta do mês, os três meses e quanto falta. O OKR do 4º trimestre já vem pronto para salvar. Hoje: 98 detratores elegíveis, 30,6% contatados em até 2 dias úteis, e voltariam em 80,3%.",
+    href: "/okr",
+  },
+  {
+    id: "pesquisa-de-confianca",
+    dia: "2026-11-04",
+    tipo: "novo",
+    frente: "nps",
+    titulo: "Pesquisa de confiança na ficha do detrator",
+    texto:
+      "O KR1 do OKR não tinha onde ser registrado. Na ficha de cada detrator há agora três passos: a solução confirmada pelo cliente, a pergunta enviada (com o texto pronto para copiar) e a resposta: Sim, Parcialmente ou Não. A pergunta só destrava depois da confirmação, como o OKR manda. No OKR, a lista diz o próximo passo de cada detrator que ainda não conta.",
+    href: "/nps",
+  },
+  {
+    id: "confianca-pela-conversa",
+    dia: "2026-11-04",
+    tipo: "novo",
+    frente: "nps",
+    titulo: "A IA registra a pesquisa de confiança pela conversa",
+    texto:
+      "Quando a pergunta de confiança sai pelo WhatsApp e o cliente responde \"Sim\", \"Parcialmente\" ou \"Não\", a IA do dia grava o envio e a resposta, com desfazer. Resposta longa ou ambígua (\"até que sim, mas…\") fica para quem atende ler. E o que alguém já registrou à mão não é tocado.",
+    href: "/meu-dia",
+  },
+  {
     id: "ia-pelo-relogio-da-extensao",
     dia: "2026-11-04",
     tipo: "novo",
