@@ -53,6 +53,26 @@ export const REVISAO = {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "enviar-ao-cw-pela-pagina",
+    dia: "2026-11-04",
+    tipo: "novo",
+    frente: "extensao",
+    titulo: "\"Enviar ao CW\": a página do Reclame Aqui aberta vai para a ferramenta",
+    texto:
+      "Quando o vigia não consegue ler o portal sozinho (o Cloudflare às vezes barra a leitura em segundo plano), a aba que você abriu passa. Nas páginas da Cardápio Web no Reclame Aqui aparece, no canto de baixo à esquerda, o botão \"Enviar ao CW\". Na página de uma reclamação, ele grava ou completa a resposta, a réplica e a avaliação, e marca a reclamação desativada. Na lista de reclamações, diz quantas são novas ou estão atrás no CW e põe as que faltam na fila do vigia. Na página da empresa, manda o painel da nota. Nada é lido sem o clique.",
+    onde: "Extensão → páginas da Cardápio Web no Reclame Aqui",
+  },
+  {
+    id: "extensao-detalhes-1104",
+    dia: "2026-11-04",
+    tipo: "melhoria",
+    frente: "extensao",
+    titulo: "Extensão: agenda compacta com \"amanhã\", e detalhes que confundiam",
+    texto:
+      "Na Agenda do painel, cada atividade era um cartão com o botão de concluir da largura toda. Agora são duas linhas com \"concluir · amanhã · abrir o caso\", e o \"amanhã\" passa a atividade para o próximo dia útil sem sair do WhatsApp. No NPS, o voltar etapa mostrava \"← N…\" cortado e a etapa aparecia com os colchetes do cadastro (\"[Aguardando Resposta]\"). O telefone saía cru e o prazo do 1º contato continuava aparecendo depois da tentativa. Em \"O que fazer\", a data vinha como 2026-10-29. No Painel, \"52 abertos\" ficava embaixo da nota do Reclame Aqui, que tinha 18, e virou \"abertos RA+Redes\".",
+    onde: "Extensão → Agenda, NPS, Cliente e Painel",
+  },
+  {
     id: "promotores-em-lote",
     dia: "2026-11-04",
     tipo: "novo",

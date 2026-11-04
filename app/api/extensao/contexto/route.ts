@@ -1381,9 +1381,18 @@ function sugerir(
         texto: `NPS aberto com ${nps.tentativas} tentativas registradas. Pela regra das três em 7 dias, já cabe encerrar como Sem Retorno.`,
       });
     } else {
+      /*
+        A data em dd/mm, e o prazo do 1º contato só enquanto ele falta
+        (04/11/2026): dizia "prazo de primeiro contato 2026-10-29. 1
+        tentativa até agora" — data de sistema e um prazo que já passou.
+      */
+      const prazo = String(nps.prazoPrimeiroContato ?? "").slice(0, 10).split("-").reverse().join("/");
+      const etapa = String(nps.status).replace(/^\[(.*)\]$/, "$1");
       lista.push({
         tom: nps.nota <= 6 ? "danger" : "info",
-        texto: `NPS ${nps.nota}/10 em aberto (${nps.status}), prazo de primeiro contato ${nps.prazoPrimeiroContato}. ${nps.tentativas} ${Number(nps.tentativas) === 1 ? "tentativa" : "tentativas"} até agora.`,
+        texto: nps.tentativas > 0
+          ? `NPS ${nps.nota}/10 em aberto (${etapa}): ${nps.tentativas} ${Number(nps.tentativas) === 1 ? "tentativa" : "tentativas"} até agora, ainda sem conversa.`
+          : `NPS ${nps.nota}/10 em aberto (${etapa}): 1º contato até ${prazo}.`,
       });
     }
   }

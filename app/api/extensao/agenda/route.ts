@@ -13,6 +13,8 @@ import {
   diaNaOperacao,
   hojeNaOperacao,
 } from "@/lib/services/reputation.service";
+import { proximoDiaUtil } from "@/lib/services/horasUteis";
+import { lerExpediente } from "@/lib/services/operacao.service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,6 +35,8 @@ export const dynamic = "force-dynamic";
 interface Entrada {
   id?: string;
   concluida?: boolean;
+  /** "proximo-dia-util": passa a atividade para o próximo dia útil (04/11/2026). */
+  adiar?: "proximo-dia-util";
 }
 
 export async function GET(request: Request) {
@@ -250,6 +254,25 @@ export async function POST(request: Request) {
       { erro: "Faltou o id da tarefa." },
       400
     );
+  }
+
+  /*
+    Adiar pela extensão (04/11/2026): eram 15 atividades vencidas na
+    Agenda do painel, e a única saída era concluir. O próximo dia útil é
+    contado a partir de hoje, pelo expediente da operação — o mesmo do
+    "adiar" da Agenda da plataforma.
+  */
+  if (entrada.adiar === "proximo-dia-util") {
+    const para = proximoDiaUtil(hojeNaOperacao(), await lerExpediente(prisma).catch(() => undefined));
+    const movidas = await prisma.agendaTask.updateMany({
+      where: { id, done: false },
+      data: { dueDate: new Date(`${para}T00:00:00Z`) },
+    });
+    if (movidas.count === 0) {
+      return responder(request, { erro: "Essa atividade não existe mais ou já foi concluída." }, 404);
+    }
+    revalidateTag(WORKSPACE_TAG, "max");
+    return responder(request, { adiadaPara: para, id });
   }
 
   const alteradas = await prisma.agendaTask.updateMany({

@@ -436,6 +436,7 @@
       if (acao === "anotar-dia") P.anotarODia(alvo);
       if (acao === "triar") P.triarCaso(alvo);
       if (acao === "concluir") P.concluirTarefa(alvo);
+      if (acao === "adiar-tarefa") P.adiarTarefa(alvo);
       if (acao === "nps-contato") P.gravarContatoDoNps(alvo);
       if (acao === "wpp-frente") P.gravarWhatsappDaFrente(alvo);
       if (acao === "anotar-nps") P.anotarNoNps(alvo);

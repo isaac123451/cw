@@ -110,10 +110,11 @@
       */
       '  <div class="numeros">',
       ...[
-        ["", "abertos", dados.contagens?.abertos ?? 0, "Tudo que está em aberto, em todos os canais"],
+        /* "RA + Redes" (04/11/2026): embaixo da nota do Reclame Aqui, "52 abertos" parecia do Reclame Aqui, que tinha 18. */
+        ["", "abertos RA+Redes", dados.contagens?.abertos ?? 0, "Tudo que está em aberto no Reclame Aqui e nas Redes"],
         ["sem-resposta", "s/ resposta", dados.contagens?.semResposta ?? 0, "Abertas e ainda sem resposta pública no portal"],
         ["replicas", "réplicas", dados.contagens?.replicas ?? 0, "Aguardando nossa réplica"],
-        ["risco", "risco", dados.contagens?.risco ?? 0, "Casos abertos com risco de churn"],
+        ["risco", "risco churn", dados.contagens?.risco ?? 0, "Casos abertos marcados com risco de churn"],
       ].map(
         ([recorte, rotulo, valor, dica]) =>
           `    <button class="numero" type="button" data-acao="fila-recorte" data-recorte="${recorte}" title="${CW.escapar(dica)}"><b>${valor}</b><span>${rotulo}</span></button>`
@@ -764,28 +765,31 @@
     const textoDoCaso = protocoloNoTitulo ? t.caso ?? "" : [t.protocolo, t.caso].filter(Boolean).join(" — ");
     const linhaDoCaso = textoDoCaso ? `<div class="sub" style="margin-top:3px">${CW.escapar(textoDoCaso)}</div>` : "";
 
+    /*
+      Compacto (04/11/2026): cada atividade era um cartão com o botão de
+      concluir da largura toda — 18 vencendo viravam uma rolagem sem fim.
+      Agora: título e data, a linha de detalhe, e três ações pequenas na
+      mesma linha, com "amanhã" para o que só precisa passar de dia.
+    */
+    const acoes = t.concluida
+      ? `<button class="link-mais" data-acao="reabrir" data-id="${CW.escapar(t.id)}">reabrir</button>`
+      : [
+          `<button class="link-mais" data-acao="concluir" data-id="${CW.escapar(t.id)}" title="Marcar como feita">concluir</button>`,
+          `<button class="link-mais" data-acao="adiar-tarefa" data-id="${CW.escapar(t.id)}" title="Passar para o próximo dia útil">amanhã</button>`,
+        ].join(" · ");
+    const doCaso = t.protocolo ? ` · <button class="link-mais" data-acao="ver" data-protocolo="${CW.escapar(t.protocolo)}">abrir o caso</button>` : "";
+
     return `
-      <div class="cartao" style="margin-bottom:7px">
+      <div class="cartao" style="margin-bottom:6px;padding-top:8px;padding-bottom:8px">
         <div class="linha">
           <span class="sub" style="color:var(--texto);font-weight:600">${CW.escapar(t.titulo)}</span>
           ${etiqueta}
         </div>
-        <div class="sub" style="margin-top:3px">
+        <div class="sub" style="margin-top:2px">
           ${CW.escapar(t.tipo ?? "")}${t.hora ? ` · ${CW.escapar(t.hora)}` : ""}${t.responsavel ? ` · ${CW.escapar(t.responsavel)}` : ""}
         </div>
         ${linhaDoCaso}
-        <div class="etapas">
-          ${
-            t.concluida
-              ? `<button class="passo" data-acao="reabrir" data-id="${CW.escapar(t.id)}">reabrir</button>`
-              : `<button class="passo" data-acao="concluir" data-id="${CW.escapar(t.id)}">concluir</button>`
-          }
-          ${
-            t.protocolo
-              ? `<button class="passo" data-acao="ver" data-protocolo="${CW.escapar(t.protocolo)}">abrir o caso</button>`
-              : ""
-          }
-        </div>
+        <div class="sub" style="margin-top:4px">${acoes}${doCaso}</div>
       </div>`;
   }
 
@@ -832,6 +836,22 @@
   /* ============================================================
      AGENDA
   ============================================================ */
+
+  /** Passa a atividade para o próximo dia útil (04/11/2026). */
+  P.adiarTarefa = async function adiarTarefa(botao) {
+    const rotulo = botao.textContent;
+    botao.disabled = true;
+    botao.textContent = "...";
+    const resposta = await CW.enviar({ tipo: "concluirTarefa", id: botao.dataset.id, adiar: "proximo-dia-util" });
+    botao.disabled = false;
+    botao.textContent = rotulo;
+    if (!resposta.ok || resposta.dados?.erro) {
+      P.avisar(resposta.dados?.erro ?? resposta.erro ?? "Falha ao adiar.", "perigo");
+      return;
+    }
+    P.avisar(`Adiada para ${CW.data(resposta.dados?.adiadaPara)}.`, "ok");
+    P.recarregarVista();
+  };
 
   P.concluirTarefa = async function concluirTarefa(botao) {
 

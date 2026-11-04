@@ -188,7 +188,7 @@
       '    <div class="etapas" style="border-top-style:solid">',
       `      <button class="passo" data-acao="wpp-frente" data-frente="nps" data-id="${CW.escapar(nps.id)}" data-numero="${CW.escapar(numero)}" style="flex:1">Este WhatsApp é do NPS</button>`,
       '    </div>',
-      `    <p class="sub" style="margin-top:5px">Grava ${CW.escapar(numero)} como contato deste ciclo${nps.temContato ? " — substitui o que já está lá" : ""}.</p>`,
+      `    <p class="sub" style="margin-top:5px">Grava ${CW.escapar(CW.telefoneLegivel(numero))} como contato deste ciclo${nps.temContato ? " — substitui o que já está lá" : ""}.</p>`,
     ].join("");
   }
 
@@ -256,10 +256,11 @@
       '    <div class="etapas">',
       /* Sem caixa tracejada nas pontas (out/2026): o vizinho ocupa o lugar. */
       antes
-        ? `      <button class="passo" data-acao="nps-mover" data-id="${CW.escapar(nps.id)}" data-direcao="voltar">&larr; ${CW.escapar(antes)}</button>`
+        /* Só a seta, com a etapa no title, como no Reclame Aqui (04/11/2026): o nome cortava em "← N…". */
+        ? `      <button class="passo" data-acao="nps-mover" data-id="${CW.escapar(nps.id)}" data-direcao="voltar" title="Voltar para ${CW.escapar(CW.semColchete(antes))}" aria-label="Voltar para ${CW.escapar(CW.semColchete(antes))}" style="flex:0 0 auto">&larr;</button>`
         : "",
       depois
-        ? `      <button class="passo avancar" data-acao="nps-mover" data-id="${CW.escapar(nps.id)}" data-direcao="avancar">${CW.escapar(depois)} &rarr;</button>`
+        ? `      <button class="passo avancar" data-acao="nps-mover" data-id="${CW.escapar(nps.id)}" data-direcao="avancar">${CW.escapar(CW.semColchete(depois))} &rarr;</button>`
         : '      <span class="sub" style="flex:1">Encerrar é pela tela do NPS, com o checklist.</span>',
       '    </div>',
     ].join("");
@@ -344,12 +345,14 @@
           : nps.nota <= 6
             ? "perigo"
             : "atencao"
-      }">${CW.escapar(nps.status)}</span>`,
+      }">${CW.escapar(CW.semColchete(nps.status))}</span>`,
       '    </div>',
       '    <div class="sub">',
       `      ${CW.escapar(nps.tipo ?? "sem classificação")} ·`,
-      `      ${nps.tentativas} ${CW.plural(nps.tentativas, "tentativa", "tentativas")} ·`,
-      `      prazo ${CW.data(nps.prazoPrimeiroContato)}`,
+      /* O prazo do 1º contato só enquanto ele falta (04/11/2026): com tentativa, o prazo já foi cumprido. */
+      nps.tentativas > 0 || nps.encerrado
+        ? `      ${nps.tentativas} ${CW.plural(nps.tentativas, "tentativa", "tentativas")}`
+        : `      sem contato · 1º contato até ${CW.data(nps.prazoPrimeiroContato)}`,
       '    </div>',
       registrado
         ? `    <div class="sub" style="margin-top:6px;color:var(--suave)">${CW.escapar(registrado)}</div>`

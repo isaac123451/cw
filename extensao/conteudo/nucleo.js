@@ -305,6 +305,12 @@
    * cliente mostrava "11960599984". Sem DDD ou com outro tamanho, volta
    * como veio — melhor cru do que formatado errado.
    */
+  /**
+   * O nome da etapa sem os colchetes de marcação (04/11/2026): "[Aguardando
+   * Resposta]" é o nome no cadastro; na tela, lê-se Aguardando Resposta.
+   */
+  CW.semColchete = (nome) => String(nome ?? "").replace(/^\[(.*)\]$/, "$1");
+
   CW.telefoneLegivel = (valor) => {
     let d = CW.digitos(String(valor ?? ""));
     if ((d.length === 12 || d.length === 13) && d.startsWith("55")) d = d.slice(2);

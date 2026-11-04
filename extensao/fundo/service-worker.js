@@ -625,6 +625,54 @@ async function tratar(mensagem) {
   }
 
   /*
+    "Enviar ao CW" pela página que está aberta (04/11/2026).
+
+    O Isaac: "um botão para a leitura do vigia quando não é feita de forma
+    automática, para ele entender e enviar para a ferramenta". O vigia lê
+    o portal em segundo plano, e o Cloudflare às vezes barra; a aba que a
+    pessoa abriu passa. Aqui chega o HTML dela, e o vigia faz com ele o
+    mesmo que faria com o que buscou: reclamação vai para a gravação,
+    desativada é marcada, lista diz o que é novo ou está atrás, e a página
+    da empresa traz o painel da nota.
+  */
+  if (mensagem?.tipo === "vigiaPelaPagina") {
+    const html = String(mensagem.html ?? "");
+    const caminho = String(mensagem.caminho ?? "");
+    const codigoDaUrl = (caminho.match(/_([A-Za-z0-9_-]{16})\/?$/) ?? [])[1];
+
+    const lida = lerReclamacao(html);
+    if (lida) {
+      const r = await chamar(CAMINHOS.raVigia, {}, { reclamacoes: [lida] });
+      return { ok: true, dados: { tipo: "reclamacao", criadas: (r?.criadas ?? []).length, completadas: (r?.completadas ?? []).length, codigo: lida.codigo } };
+    }
+
+    if (codigoDaUrl && /<title>[^<]*Reclama(?:ç|c|&ccedil;|&#231;)(?:ã|a|&atilde;|&#227;)o desativada/i.test(html.slice(0, 30000))) {
+      const r = await chamar(CAMINHOS.raVigia, {}, { reclamacoes: [], desativadas: [codigoDaUrl] });
+      return { ok: true, dados: { tipo: "desativada", marcadas: (r?.desativadas ?? []).length, codigo: codigoDaUrl } };
+    }
+
+    const lista = lerLista(html) ?? lerListaPelosLinks(html);
+    if (lista && lista.itens.length > 0) {
+      const r = await chamar(CAMINHOS.raNovas, {}, { itens: lista.itens });
+      const paraAbrir = [...new Set([...(r?.novos ?? []), ...(r?.atrasadas ?? [])])];
+      /* As que o vigia precisa abrir entram na fila dele: a próxima volta tenta, e a pessoa pode abrir uma a uma. */
+      if (paraAbrir.length) {
+        const { vigiaFila = [] } = await chrome.storage.local.get("vigiaFila");
+        await chrome.storage.local.set({ vigiaFila: [...new Set([...paraAbrir, ...vigiaFila])].slice(0, 200) });
+      }
+      return { ok: true, dados: { tipo: "lista", lidas: lista.itens.length, novas: (r?.novos ?? []).length, atrasadas: (r?.atrasadas ?? []).length, paraAbrir: paraAbrir.slice(0, 20) } };
+    }
+
+    const paineis = lerPainel(html);
+    if (paineis) {
+      await chamar(CAMINHOS.raPainel, {}, { paineis });
+      return { ok: true, dados: { tipo: "painel" } };
+    }
+
+    return { ok: true, dados: { tipo: "nada" } };
+  }
+
+  /*
     O telefone do NPS pelo portal da Cardápio Web (26/10/2026): o script da
     aba do portal pergunta quais estabelecimentos buscar e manda o que leu.
     O token do portal fica na aba — aqui só passa o resultado.
@@ -970,6 +1018,8 @@ async function tratar(mensagem) {
     const dados = await chamar(CAMINHOS.agenda, {}, {
       id: mensagem.id,
       concluida: mensagem.concluida,
+      /* Adiar para o próximo dia útil (04/11/2026). */
+      ...(mensagem.adiar ? { adiar: mensagem.adiar } : {}),
     });
 
     await limparCache();
