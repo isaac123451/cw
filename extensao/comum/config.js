@@ -135,6 +135,13 @@ export const PADROES = {
    * leitura baixa a lista do portal, perto de 230 KB).
    */
   vigia: true,
+
+  /**
+   * IA do dia pelo relógio da extensão (04/11/2026): a cada 30 min, junto
+   * com o vigia, pede a rodada da IA — que antes só rodava com a
+   * plataforma aberta.
+   */
+  iaDoDia: true,
 };
 
 export const CHAVE = "cw-reputacao-config";

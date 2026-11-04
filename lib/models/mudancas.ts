@@ -53,6 +53,26 @@ export const REVISAO = {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "ia-pelo-relogio-da-extensao",
+    dia: "2026-11-04",
+    tipo: "novo",
+    frente: "extensao",
+    titulo: "A IA do dia trabalha com a plataforma fechada",
+    texto:
+      "A IA do dia só rodava com a plataforma aberta: com ela fechada a maior parte do dia, caiu de 50–75 ações por dia para 6–15. Agora a extensão, que já acorda a cada meia hora para o vigia, pede a rodada logo depois dele, então o que o vigia acabou de gravar já entra. O que ela fez chega num aviso só, e o clique abre o Meu dia para conferir ou desfazer. Dá para desligar nas Opções.",
+    onde: "Extensão → Opções → IA do dia com a plataforma fechada",
+  },
+  {
+    id: "fala-do-cliente-vira-atividade",
+    dia: "2026-11-04",
+    tipo: "novo",
+    frente: "plataforma",
+    titulo: "\"Deu certo\" e \"vou no Procon\" viram atividade",
+    texto:
+      "Quando o cliente diz na conversa que funcionou, a IA cria para quem cuida do caso: pedir a avaliação no Reclame Aqui, ou publicar a resposta e pedir, se ainda não houver resposta. Fica de fora a reclamação que já está aguardando avaliação, porque a cadência já cobra. Quando ele cita Procon, advogado ou justiça, nasce uma atividade de alta prioridade. A regra foi testada nas 1.253 mensagens de cliente dos últimos 90 dias: acerta os 7 \"funcionou\" verdadeiros e deixa de fora o relato longo, o \"não deu certo\", o \"veja se deu certo\" e o \"resolveu, porém…\".",
+    href: "/meu-dia",
+  },
+  {
     id: "plano-e-vigia-1104",
     dia: "2026-11-04",
     tipo: "correcao",

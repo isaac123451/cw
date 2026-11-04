@@ -84,6 +84,7 @@ const CAMINHOS = {
   copiloto: "/api/extensao/copiloto",
   melhorarMensagem: "/api/extensao/melhorar-mensagem",
   slackAvisos: "/api/extensao/slack-avisos",
+  iaDoDia: "/api/extensao/ia-do-dia",
 };
 
 /**
@@ -1576,6 +1577,56 @@ async function avisarPrazos() {
 }
 
 /* ============================================================
+   IA DO DIA PELO RELÓGIO (04/11/2026)
+============================================================ */
+
+/**
+ * A IA do dia roda também com a plataforma fechada.
+ *
+ * Ela só rodava pelo `VigiaDaIaDoDia` da plataforma — e, com a plataforma
+ * fechada a maior parte do dia, caiu de 50–75 ações por dia para 6–15. A
+ * extensão já acorda a cada 30 minutos para o vigia; na mesma hora pede a
+ * rodada. O que ela fez aparece num aviso só (nunca um por ação), e só o
+ * que ainda não foi avisado; o desfazer continua na plataforma.
+ */
+async function rodarIaPeloRelogio() {
+  const config = await lerConfig();
+  if (config.iaDoDia === false) return;
+  let dados;
+  try {
+    dados = await chamar(CAMINHOS.iaDoDia, {}, {});
+  } catch {
+    return;
+  }
+  const novas = Array.isArray(dados?.novas) ? dados.novas : [];
+  if (!novas.length || !dentroDoHorario(horaDeBrasilia())) return;
+
+  const { iaAvisadas = [] } = await chrome.storage.local.get("iaAvisadas");
+  const ja = new Set(iaAvisadas);
+  const ineditas = novas.filter((a) => !ja.has(a.id));
+  if (!ineditas.length) return;
+
+  const criadas = ineditas.filter((a) => a.tipo === "lembrete").length;
+  const feitas = ineditas.filter((a) => a.tipo === "feito").length;
+  const outras = ineditas.length - criadas - feitas;
+  const partes = [
+    criadas ? `${criadas} ${criadas === 1 ? "atividade criada" : "atividades criadas"}` : "",
+    feitas ? `${feitas} ${feitas === 1 ? "concluída" : "concluídas"}` : "",
+    outras ? `${outras} ${outras === 1 ? "anotação" : "anotações"}` : "",
+  ].filter(Boolean);
+
+  chrome.notifications.create(`cw-ia-${Date.now()}`, {
+    type: "basic",
+    iconUrl: chrome.runtime.getURL("icones/icone-128.png"),
+    title: "A IA do dia adiantou o seu trabalho",
+    message: ineditas.length === 1 ? String(ineditas[0].titulo ?? "").slice(0, 180) : partes.join(" · "),
+    contextMessage: "Abra o Meu dia para conferir ou desfazer",
+    priority: 0,
+  });
+  await chrome.storage.local.set({ iaAvisadas: [...iaAvisadas, ...ineditas.map((a) => a.id)].slice(-200) });
+}
+
+/* ============================================================
    VIGIA DO RECLAME AQUI
 ============================================================ */
 
@@ -2298,7 +2349,10 @@ chrome.commands?.onCommand?.addListener(async (comando) => {
 
 chrome.alarms.onAlarm.addListener((alarme) => {
   if (alarme.name === ALARME) atualizarEmSilencio();
-  if (alarme.name === ALARME_VIGIA_RELOGIO) vigiarPeloRelogio();
+  if (alarme.name === ALARME_VIGIA_RELOGIO) {
+    /* O vigia primeiro: o que ele grava (réplica, avaliação) é o que a IA lê. */
+    vigiarPeloRelogio().catch(() => {}).finally(() => rodarIaPeloRelogio());
+  }
   if (alarme.name === ALARME_LEMBRETE) {
     cobrarEtapas();
     avisarPrazos();
@@ -2316,6 +2370,12 @@ chrome.notifications.onClicked.addListener(async (id) => {
   if (id.startsWith("cw-prazo-")) {
     const { avisosDePrazo = {} } = await chrome.storage.local.get("avisosDePrazo");
     chrome.tabs.create({ url: avisosDePrazo[id] || `${base}/reclame-aqui` });
+    return;
+  }
+
+  /* O que a IA do dia fez: o Meu dia, onde cada ação tem o desfazer. */
+  if (id.startsWith("cw-ia-")) {
+    chrome.tabs.create({ url: `${base}/meu-dia` });
     return;
   }
 

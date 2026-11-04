@@ -27,6 +27,8 @@ import { gravarContato, recalcularResumo } from "@/lib/services/tratativa.servic
 import { pedirEstruturado, temIA } from "@/lib/services/ia.service";
 import { aprenderComAsAvaliacoes, aprenderDasConversas, aprendizadosAtivos } from "@/lib/services/aprendizados.service";
 import { classeDaAvaliacao } from "@/lib/models/classeDaAvaliacao";
+import { saiuDaNota } from "@/lib/models/case";
+import { sinaisDaConversa, type SinalAchado } from "@/lib/models/falaDoCliente";
 import { classificarAvaliacoes } from "@/lib/services/classeDaAvaliacao.service";
 import { relevantes } from "@/lib/models/aprendizados";
 import { criarLembretesAutomaticos } from "@/lib/services/lembretesAutomaticos.service";
@@ -884,6 +886,62 @@ async function lembrarRetorno(
 /** No máximo tantas conversas por rodada — cada uma são algumas leituras e escritas. */
 const SEGUIR_POR_RODADA = 12;
 
+/**
+ * A atividade que a fala do cliente pede (04/11/2026). Uma por caso e
+ * sinal (a chave segura a repetição e o desfazer apaga a atividade); fica
+ * com quem cuida do caso — é dele o próximo passo.
+ */
+async function atividadeDoSinal(
+  prisma: PrismaClient,
+  userId: string,
+  e: {
+    sinal: SinalAchado;
+    alvo: { tipo: "caso" | "nps"; id: string; rotulo: string; href: string; frente: "reclame-aqui" | "redes" | "nps" };
+    nome: string;
+    dono: string;
+    hoje: string;
+    pedirAvaliacao: boolean;
+    respondida: boolean;
+  }
+): Promise<boolean> {
+  const { sinal, alvo } = e;
+  if (sinal.sinal === "funcionou" && !e.pedirAvaliacao) return false;
+  const id = `auto-${sinal.sinal}-${alvo.id}`;
+  const quem = e.nome || "O cliente";
+  const titulo =
+    sinal.sinal === "alerta"
+      ? `${quem} citou Procon/justiça em ${alvo.rotulo} — ligar hoje, registrar e alinhar com a liderança`
+      : e.respondida
+        ? `${quem} disse que funcionou (${alvo.rotulo}) — pedir a avaliação no Reclame Aqui`
+        : `${quem} disse que funcionou (${alvo.rotulo}) — publicar a resposta e pedir a avaliação`;
+  const novo = await registrar(prisma, userId, {
+    tipo: "lembrete",
+    origem: alvo.tipo === "nps" ? "nps" : "whatsapp",
+    chave: chaveDaAcao.lembrete(id),
+    titulo: sinal.sinal === "alerta" ? `Cliente em alerta em ${alvo.rotulo}: atividade para hoje` : `Hora de pedir a avaliação de ${alvo.rotulo}`,
+    detalhe: `Pela conversa: “${sinal.trecho.slice(0, 160)}”`,
+    href: alvo.href,
+    desfazer: { tarefa: id },
+  });
+  if (!novo) return false;
+  await prisma.agendaTask
+    .create({
+      data: {
+        id,
+        title: titulo.slice(0, 300),
+        type: "Follow-up",
+        priority: sinal.sinal === "alerta" ? "Alta" : "Média",
+        done: false,
+        dueDate: new Date(`${e.hoje}T00:00:00.000Z`),
+        ownerId: e.dono,
+        ...(alvo.tipo === "caso" ? { caseId: alvo.id } : {}),
+        frente: alvo.frente,
+      },
+    })
+    .catch(() => undefined);
+  return true;
+}
+
 export async function seguirPelasConversas(
   prisma: PrismaClient,
   userId: string,
@@ -922,9 +980,12 @@ export async function seguirPelasConversas(
           publicResponse: true,
           recebidaEm: true,
           publishedAt: true,
+          evaluated: true,
+          moderacaoResultado: true,
+          ownerId: true,
         },
       },
-      npsResponse: { select: { id: true, firstContactAt: true, respondedAt: true, status: true, customerName: true } },
+      npsResponse: { select: { id: true, firstContactAt: true, respondedAt: true, status: true, customerName: true, ownerId: true } },
       mensagens: { orderBy: { em: "asc" }, select: { de: true, texto: true, em: true, autor: true, chave: true, criadoEm: true }, take: 300 },
     },
     orderBy: { atualizadoEm: "desc" },
@@ -1035,10 +1096,48 @@ export async function seguirPelasConversas(
           feitas += 1;
         }
       }
+
+      /* O que a fala do cliente pede (04/11/2026): "funcionou" e Procon/advogado — ver `lib/models/falaDoCliente.ts`. */
+      if (!CLOSED_STATUS.includes(caso.status)) {
+        for (const s of sinaisDaConversa(msgs, chegou > desde ? chegou : desde)) {
+          if (feitas >= SEGUIR_POR_RODADA) break;
+          const aberta = await atividadeDoSinal(prisma, userId, {
+            sinal: s,
+            alvo: { tipo: "caso", id: caso.id, rotulo: caso.protocol, href, frente: caso.channel === "RECLAME_AQUI" ? "reclame-aqui" : "redes" },
+            nome,
+            dono: caso.ownerId ?? userId,
+            hoje: paredeDe(agora).dia,
+            /* Pedir avaliação só no Reclame Aqui, sem avaliação, e fora de "aguardando avaliação" (a cadência já cobra). */
+            pedirAvaliacao:
+              caso.channel === "RECLAME_AQUI" &&
+              !caso.evaluated &&
+              !saiuDaNota(caso) &&
+              !/aguardando avalia/i.test(caso.status),
+            respondida: Boolean((caso.publicResponse ?? "").trim()),
+          });
+          if (aberta) feitas += 1;
+        }
+      }
     }
 
     /* ---------- o NPS ---------- */
     const nps = c.npsResponse;
+    /* O detrator que fala em Procon ou advogado também vira prioridade do dia (04/11/2026). */
+    if (nps && !isEncerrado(nps.status) && !c.case) {
+      for (const s of sinaisDaConversa(msgs, nps.respondedAt > desde ? nps.respondedAt : desde)) {
+        if (s.sinal !== "alerta" || feitas >= SEGUIR_POR_RODADA) continue;
+        const aberta = await atividadeDoSinal(prisma, userId, {
+          sinal: s,
+          alvo: { tipo: "nps", id: nps.id, rotulo: `o NPS de ${nome || "um cliente"}`, href: `/nps/${nps.id}`, frente: "nps" },
+          nome,
+          dono: nps.ownerId ?? userId,
+          hoje: paredeDe(agora).dia,
+          pedirAvaliacao: false,
+          respondida: false,
+        });
+        if (aberta) feitas += 1;
+      }
+    }
     if (nps && !nps.firstContactAt && !isEncerrado(nps.status)) {
       const primeira = msgs.find((m) => m.de === "nos" && m.em >= nps.respondedAt && m.em <= agora);
       if (primeira) {

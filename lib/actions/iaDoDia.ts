@@ -5,7 +5,8 @@ import { updateTag } from "next/cache";
 import { requireRole, SemPermissao } from "@/lib/auth/guard";
 import { CASES_TAG, WORKSPACE_TAG } from "@/lib/actions/tags";
 import type { AcaoDaIAView } from "@/lib/models/iaDoDia";
-import { acoesDeHoje, acoesNaoVistas, desfazer, marcarVistas, registrar, rodarIaDoDia } from "@/lib/services/iaDoDia.service";
+import { acoesDeHoje, acoesNaoVistas, desfazer, marcarVistas, registrar } from "@/lib/services/iaDoDia.service";
+import { rodarSeJaPassou } from "@/lib/services/iaDoDiaRodada";
 import { atividadeDoFeito, entenderComando } from "@/lib/models/comandosDaIA";
 import { paredeDe } from "@/lib/services/horasUteis";
 
@@ -16,9 +17,6 @@ import { paredeDe } from "@/lib/services/horasUteis";
  * poucos minutos. A rodada é cara (conversas, agenda, IA), então cada
  * pessoa roda no máximo a cada 5 minutos por instância do servidor.
  */
-
-const INTERVALO_MS = 5 * 60_000;
-const ultimaRodada = new Map<string, number>();
 
 type Resultado<T> = { ok: true } & T | { ok: false; erro: string };
 
@@ -36,10 +34,7 @@ export async function rodarAIaDoDia(): Promise<Resultado<{ novas: AcaoDaIAView[]
   const ctx = await contexto();
   if (!ctx) return { ok: true, novas: [] };
   try {
-    const agora = Date.now();
-    if (agora - (ultimaRodada.get(ctx.userId) ?? 0) >= INTERVALO_MS) {
-      ultimaRodada.set(ctx.userId, agora);
-      await rodarIaDoDia(ctx.prisma, ctx.userId);
+    if (await rodarSeJaPassou(ctx.prisma, ctx.userId)) {
       /* Lembrete criado, atividade fechada e anotação mudam a agenda e as fichas. */
       updateTag(WORKSPACE_TAG);
       updateTag(CASES_TAG);

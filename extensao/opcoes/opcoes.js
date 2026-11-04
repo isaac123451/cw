@@ -31,6 +31,7 @@ const caixas = {
   esperaNoMeuDia: document.getElementById("esperaNoMeuDia"),
   completarSozinho: document.getElementById("completarSozinho"),
   vigia: document.getElementById("vigia"),
+  iaDoDia: document.getElementById("iaDoDia"),
 };
 
 function mostrar(texto, tipo = "ok") {
@@ -93,6 +94,7 @@ async function carregar() {
   caixas.esperaNoMeuDia.checked = config.esperaNoMeuDia !== false;
   caixas.completarSozinho.checked = config.completarSozinho !== false;
   caixas.vigia.checked = config.vigia !== false;
+  caixas.iaDoDia.checked = config.iaDoDia !== false;
 
   aplicarTema(config.tema);
 }

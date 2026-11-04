@@ -129,6 +129,7 @@ async function main() {
   }
 
   await identidade(prisma, eu.id);
+  await falaDoCliente(prisma, eu.id);
 
   console.log(falhas === 0 ? "\n  A IA completa e segue a conversa, e o desfazer devolve tudo.\n" : `\n  ${falhas} falha(s).\n`);
   process.exitCode = falhas === 0 ? 0 : 1;
@@ -334,3 +335,77 @@ main().catch((erro) => {
   console.error(erro);
   process.exitCode = 1;
 });
+
+/**
+ * "Funcionou" e Procon viram atividade de hoje (04/11/2026) — para quem
+ * cuida do caso, uma vez só, e só onde cabe: na reclamação que já está
+ * "aguardando avaliação" a cadência já cobra, e não nasce outra.
+ */
+async function falaDoCliente(prisma: NonNullable<ReturnType<typeof getPrisma>>, euId: string) {
+  console.log("\n  IA — A FALA DO CLIENTE VIRA ATIVIDADE (contra o banco, descartável)\n");
+  const marca = `ZZ-IA-FALA-${Date.now()}`;
+  const agora = new Date();
+  const ha = (min: number) => new Date(agora.getTime() - min * 60_000);
+  const casos: string[] = [];
+  const conversas: string[] = [];
+  try {
+    const cenario = async (sufixo: string, status: string, falas: { de: string; texto: string; min: number }[], extra: Record<string, unknown> = {}) => {
+      const c = await prisma.case.create({
+        data: { protocol: `RA-${marca}-${sufixo}`, companyName: "Loja Descartável", customer: "Paula Descartável", title: "Impressora não imprime", status, publishedAt: ha(900), recebidaEm: ha(900), ...extra },
+        select: { id: true },
+      });
+      casos.push(c.id);
+      const conversa = await prisma.conversa.create({
+        data: {
+          telefone: `55119${String(Date.now()).slice(-8)}${casos.length}`,
+          contatoNome: "Paula Descartável",
+          caseId: c.id,
+          guardadaPor: "check",
+          mensagens: { create: falas.map((f, i) => ({ chave: `${marca}-${sufixo}-${i}`, de: f.de, texto: f.texto, em: ha(f.min), origem: "check" })) },
+        },
+        select: { id: true },
+      });
+      conversas.push(conversa.id);
+      return c.id;
+    };
+
+    const funcionou = await cenario("OK", "Em tratativa", [
+      { de: "nos", texto: "Paula, testa de novo a impressão por favor. Conseguiu?", min: 90 },
+      { de: "cliente", texto: "Deu certo, obrigada!", min: 80 },
+    ], { publicResponse: "Olá, Paula! Já estamos em contato pelo WhatsApp." });
+    const alerta = await cenario("PROCON", "Em tratativa", [
+      { de: "nos", texto: "Paula, estamos verificando.", min: 90 },
+      { de: "cliente", texto: "Se não resolver hoje vou no Procon.", min: 70 },
+    ]);
+    const aguardando = await cenario("AGUARD", "Aguardando avaliação", [
+      { de: "nos", texto: "Conseguiu?", min: 90 },
+      { de: "cliente", texto: "Consegui", min: 85 },
+    ], { publicResponse: "Resolvido." });
+    const naoFuncionou = await cenario("NAO", "Em tratativa", [
+      { de: "nos", texto: "Conseguiu?", min: 90 },
+      { de: "cliente", texto: "Ainda não deu certo", min: 85 },
+    ]);
+
+    await seguirPelasConversas(prisma, euId, agora, conversas);
+    const tarefas = await prisma.agendaTask.findMany({ where: { caseId: { in: casos }, id: { startsWith: "auto-" } }, select: { id: true, caseId: true, priority: true, ownerId: true, title: true, done: true } });
+    const de = (id: string) => tarefas.find((t) => t.caseId === id);
+    conferir("“Deu certo, obrigada!” → pedir a avaliação, prioridade média", [de(funcionou)?.id.startsWith("auto-funcionou-"), de(funcionou)?.priority], [true, "Média"]);
+    conferir("e o título diz o que fazer", /pedir a avaliação/.test(de(funcionou)?.title ?? ""), true);
+    conferir("Procon → atividade de alta prioridade", [de(alerta)?.id.startsWith("auto-alerta-"), de(alerta)?.priority], [true, "Alta"]);
+    conferir("“aguardando avaliação” não ganha outra (a cadência cobra)", Boolean(de(aguardando)), false);
+    conferir("“ainda não deu certo” não vira nada", Boolean(de(naoFuncionou)), false);
+    conferir("a atividade é de quem roda (o caso não tem responsável)", de(funcionou)?.ownerId, euId);
+    conferir("rodar de novo não repete", await seguirPelasConversas(prisma, euId, agora, conversas), 0);
+
+    const acao = await prisma.acaoDaIA.findFirst({ where: { userId: euId, chave: `lembrete:auto-funcionou-${funcionou}` }, select: { id: true } });
+    if (acao) await desfazer(prisma, euId, acao.id);
+    const depois = await prisma.agendaTask.findUnique({ where: { id: `auto-funcionou-${funcionou}` }, select: { done: true } });
+    conferir("desfazer tira a atividade do dia", depois?.done, true);
+  } finally {
+    await prisma.agendaTask.deleteMany({ where: { caseId: { in: casos.length ? casos : ["nada"] } } });
+    await prisma.acaoDaIA.deleteMany({ where: { userId: euId, OR: casos.map((id) => ({ chave: { contains: id } })) } });
+    if (conversas.length) await prisma.conversa.deleteMany({ where: { id: { in: conversas } } });
+    if (casos.length) await prisma.case.deleteMany({ where: { id: { in: casos } } });
+    conferir("nada descartável ficou na base (fala)", await prisma.case.count({ where: { protocol: { startsWith: "RA-ZZ-IA-FALA-" } } }), 0);
+  }
+}
