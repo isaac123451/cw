@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <title>Caso rápido · CW Reputação</title>
+    <style>
+      @font-face {
+        font-family: "CW Geist";
+        src: url("../fontes/Geist-Variable.woff2") format("woff2");
+        font-weight: 100 900;
+        font-display: swap;
+      }
+      :root {
+        --roxo: #5b2a86;
+        --violeta: #7b3fbf;
+        --fundo: #ffffff;
+        --superficie: #fafafa;
+        --borda: #e4e4e7;
+        --texto: #18181b;
+        --fraco: #71717a;
+        --perigo: #dc2626;
+        --atencao: #b45309;
+        --ok: #15803d;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-tema="claro"]) {
+          --fundo: #16171b;
+          --superficie: #1e1f25;
+          --borda: #31333c;
+          --texto: #f1f1f4;
+          --fraco: #9a9ba5;
+          --perigo: #f87171;
+          --atencao: #fbbf24;
+          --ok: #4ade80;
+          --violeta: #b38ae8;
+        }
+      }
+      :root[data-tema="escuro"] {
+        --fundo: #16171b;
+        --superficie: #1e1f25;
+        --borda: #31333c;
+        --texto: #f1f1f4;
+        --fraco: #9a9ba5;
+        --perigo: #f87171;
+        --atencao: #fbbf24;
+        --ok: #4ade80;
+        --violeta: #b38ae8;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: 14px 16px 18px;
+        background: var(--fundo);
+        color: var(--texto);
+        font: 14px/1.45 "CW Geist", system-ui, sans-serif;
+      }
+      h1 { margin: 0 0 10px; font-size: 13px; font-weight: 600; color: var(--fraco); letter-spacing: 0.01em; }
+      input, textarea, select, button { font: inherit; color: inherit; }
+      .campo {
+        width: 100%;
+        border: 1px solid var(--borda);
+        background: var(--superficie);
+        border-radius: 10px;
+        padding: 9px 11px;
+        outline: none;
+      }
+      .campo:focus { border-color: var(--violeta); }
+      ul { list-style: none; margin: 10px 0 0; padding: 0; }
+      .resultado {
+        display: block;
+        width: 100%;
+        text-align: left;
+        border: 0;
+        background: none;
+        padding: 8px 10px;
+        border-radius: 8px;
+        cursor: pointer;
+      }
+      .resultado:hover, .resultado:focus-visible, .resultado[aria-selected="true"] { background: var(--superficie); outline: none; }
+      .linha1 { display: flex; justify-content: space-between; gap: 8px; }
+      .proto { font-weight: 600; }
+      .fraco { color: var(--fraco); font-size: 12px; }
+      .cartao { margin-top: 12px; border: 1px solid var(--borda); border-radius: 12px; padding: 12px; }
+      .cartao h2 { margin: 2px 0 4px; font-size: 15px; }
+      .etiqueta { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--borda); }
+      .vencido { color: var(--perigo); border-color: currentColor; }
+      .atencao { color: var(--atencao); border-color: currentColor; }
+      .bloco { margin-top: 12px; }
+      .rotulo { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--fraco); margin-bottom: 4px; }
+      .acoes { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+      .botao {
+        border: 1px solid var(--borda);
+        background: var(--fundo);
+        border-radius: 8px;
+        padding: 6px 11px;
+        cursor: pointer;
+        font-size: 13px;
+      }
+      .botao:hover { border-color: var(--violeta); }
+      .primario { background: var(--roxo); border-color: var(--roxo); color: #fff; }
+      .primario:hover { background: var(--violeta); }
+      .botao:disabled { opacity: 0.5; cursor: default; }
+      textarea.campo { resize: vertical; min-height: 64px; }
+      .aviso { margin-top: 10px; font-size: 13px; }
+      .aviso.ok { color: var(--ok); }
+      .aviso.erro { color: var(--perigo); }
+      .nota { white-space: pre-wrap; font-size: 13px; }
+      a { color: var(--violeta); }
+      kbd { font: 11px ui-monospace, monospace; border: 1px solid var(--borda); border-radius: 4px; padding: 0 4px; }
+    </style>
+  </head>
+  <body>
+    <h1>Caso rápido</h1>
+    <input id="busca" class="campo" type="search" autocomplete="off" placeholder="Protocolo, cliente, telefone ou CNPJ" aria-label="Buscar caso" autofocus />
+    <ul id="resultados" role="listbox" aria-label="Casos encontrados"></ul>
+    <div id="cartao"></div>
+    <p id="dica" class="fraco" style="margin-top: 12px">
+      <kbd>↑</kbd> <kbd>↓</kbd> escolhe · <kbd>Enter</kbd> abre · <kbd>Esc</kbd> fecha. O atalho <kbd>Alt+Shift+K</kbd> abre esta janela de qualquer site.
+    </p>
+    <script src="caso-rapido.js"></script>
+  </body>
+</html>

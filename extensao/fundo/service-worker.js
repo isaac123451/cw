@@ -85,6 +85,7 @@ const CAMINHOS = {
   melhorarMensagem: "/api/extensao/melhorar-mensagem",
   slackAvisos: "/api/extensao/slack-avisos",
   iaDoDia: "/api/extensao/ia-do-dia",
+  casoRapido: "/api/extensao/caso-rapido",
 };
 
 /**
@@ -511,6 +512,20 @@ async function tratar(mensagem) {
    * há três semanas teria uma cópia velha dela. Quem resolve é o
    * servidor.
    */
+  /* O caso rápido (04/11/2026): busca e cartão, sem cache — é para atualizar agora. */
+  if (mensagem?.tipo === "casoRapido") {
+    const dados = await chamar(
+      CAMINHOS.casoRapido,
+      mensagem.protocolo ? { protocolo: mensagem.protocolo } : { q: mensagem.q ?? "" }
+    );
+    return { ok: true, dados };
+  }
+
+  if (mensagem?.tipo === "abrirCasoRapido") {
+    await abrirCasoRapido();
+    return { ok: true };
+  }
+
   if (mensagem?.tipo === "moverCaso") {
 
     const dados = await chamar(CAMINHOS.mover, {}, {
@@ -2329,7 +2344,32 @@ chrome.permissions.onAdded.addListener(() => registrarPonte());
  * Numa aba sem o painel (uma página qualquer), a mensagem não chega a
  * ninguém e o erro é engolido: não há o que abrir ali.
  */
+/**
+ * O caso rápido numa janelinha (04/11/2026): de qualquer site — inclusive
+ * onde a extensão não entra —, sem pedir permissão de todos os sites. Uma
+ * janela só: o atalho de novo traz a mesma para a frente.
+ */
+async function abrirCasoRapido() {
+  const url = chrome.runtime.getURL("caso-rapido/caso-rapido.html");
+  const { casoRapidoJanela } = await chrome.storage.session.get("casoRapidoJanela").catch(() => ({}));
+  if (casoRapidoJanela) {
+    try {
+      await chrome.windows.update(casoRapidoJanela, { focused: true });
+      return;
+    } catch {
+      /* fechada: abre outra */
+    }
+  }
+  const janela = await chrome.windows.create({ url, type: "popup", width: 440, height: 620, focused: true });
+  await chrome.storage.session.set({ casoRapidoJanela: janela.id }).catch(() => {});
+}
+
 chrome.commands?.onCommand?.addListener(async (comando) => {
+
+  if (comando === "caso-rapido") {
+    await abrirCasoRapido();
+    return;
+  }
 
   if (comando !== "alternar-painel") return;
 

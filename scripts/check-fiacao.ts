@@ -56,7 +56,7 @@ const worker = readFileSync(
  * `google-perfil.js`) passaram a chamar o worker sem estar nela. Uma
  * conferência não pode depender de alguém lembrar de editá-la.
  */
-const quemChama = ["extensao/conteudo", "extensao/popup", "extensao/opcoes"]
+const quemChama = ["extensao/conteudo", "extensao/popup", "extensao/opcoes", "extensao/caso-rapido"]
   .map((pasta) => resolve(RAIZ, pasta))
   .filter((pasta) => existsSync(pasta))
   .flatMap((pasta) =>

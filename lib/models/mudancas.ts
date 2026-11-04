@@ -46,6 +46,16 @@ export interface Mudanca {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "caso-rapido",
+    dia: "2026-11-04",
+    tipo: "novo",
+    frente: "extensao",
+    titulo: "Caso rápido: Alt+Shift+K em qualquer site",
+    texto:
+      "Para atualizar um caso sem abrir a plataforma. Alt+Shift+K, de qualquer aba, abre uma janelinha. Digite o protocolo, o nome, o telefone ou o CNPJ, escolha com as setas e Enter. O cartão mostra a coluna, o prazo e a última anotação. Ali mesmo dá para mover de coluna, anotar ou deixar um lembrete para o próximo dia útil. Cada ação só confirma depois que o servidor gravou. Também abre pelo popup do ícone, em Caso rápido.",
+    onde: "Extensão → Alt+Shift+K, ou popup → Caso rápido",
+  },
+  {
     id: "menu-sem-numero-que-assusta",
     dia: "2026-11-04",
     tipo: "melhoria",

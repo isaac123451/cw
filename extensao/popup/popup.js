@@ -698,6 +698,14 @@ document
     chrome.runtime.openOptionsPage()
   );
 
+/* O caso rápido (04/11/2026): a mesma janela do Alt+Shift+K, para quem não lembra do atalho. */
+document
+  .getElementById("abrir-caso-rapido")
+  .addEventListener("click", async () => {
+    await enviar({ tipo: "abrirCasoRapido" });
+    window.close();
+  });
+
 /**
  * Tema antes da carga.
  *

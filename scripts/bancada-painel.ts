@@ -115,6 +115,9 @@ function chromeDeMentira(capturas: Record<string, unknown>) {
     if (t === "sessao") return { ok: true, dados: capturas.sessao };
     if (t === "contexto") return { ok: true, dados: capturas.contexto };
     if (t === "vigiaEstado") return { ok: true, dados: { ultima: Date.now() - 600000, novas: 0, situacao: "ok" } };
+    /* O caso rápido (04/11/2026): a busca e o cartão capturados; mover e anotar não gravam. */
+    if (t === "casoRapido") return { ok: true, dados: m.protocolo ? capturas.casoRapidoCartao : capturas.casoRapidoBusca };
+    if (t === "moverCaso" || t === "anotar") return { ok: true, dados: { erro: "A bancada não grava: esta é uma cópia para conferência." } };
     return { ok: true, dados: {} };
   };
   window.chrome = {
@@ -375,6 +378,10 @@ async function main() {
     ? await pegar("/api/extensao/detalhe", { protocolo: primeiro.protocolo })
     : {};
 
+  /* O caso rápido: a busca pelo começo do protocolo do primeiro da fila, e o cartão dele. */
+  capturas.casoRapidoBusca = primeiro?.protocolo ? await pegar("/api/extensao/caso-rapido", { q: primeiro.protocolo.slice(0, 5) }) : { casos: [] };
+  capturas.casoRapidoCartao = primeiro?.protocolo ? await pegar("/api/extensao/caso-rapido", { protocolo: primeiro.protocolo }) : {};
+
   const telefone = String((capturas.detalhe as { telefone?: string }).telefone ?? "");
   const nome = String((capturas.detalhe as { cliente?: string }).cliente ?? "");
 
@@ -448,14 +455,15 @@ async function main() {
       }
       return;
     }
-    if (caminho === "/popup" || caminho === "/opcoes") {
+    if (caminho === "/popup" || caminho === "/opcoes" || caminho === "/caso-rapido") {
       const pasta = caminho.slice(1);
       const html = readFileSync(resolve(RAIZ, "extensao", pasta, `${pasta}.html`), "utf8");
       resposta.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
       resposta.end(
         html
           .replace("<head>", `<head><base href="/ext/${pasta}/">`)
-          .replace('<script type="module"', `<script>${chromeDeMentira(capturas)}</script><script type="module"`)
+          /* Antes do primeiro script da página (o popup é módulo; o caso rápido, script comum). */
+          .replace("<script", `<script>${chromeDeMentira(capturas)}</script><script`)
       );
       return;
     }
