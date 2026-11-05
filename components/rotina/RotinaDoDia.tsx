@@ -15,6 +15,7 @@ import { useToast } from "@/lib/context/ToastContext";
 import { FRENTES_DA_OPERACAO } from "@/lib/models/frentes";
 import { DIAS_DA_SEMANA, minimoDaSequencia, type AtividadeDaRotina } from "@/lib/models/rotina";
 import { minutosDaAtividade } from "@/lib/models/meuDia";
+import AtualizacaoEmLote from "@/components/rotina/AtualizacaoEmLote";
 import { descreverMinutos } from "@/components/rotina/formato";
 
 import type { useMeuDia } from "@/components/rotina/useMeuDia";
@@ -315,6 +316,9 @@ export default function RotinaDoDia({ dia, compacto = false, onConfigurar, onUmP
                   desfazerMarcas={dia.desfazerMarcas}
                 />
               )}
+
+              {/* Sem notícia em lote pelo WhatsApp (05/11/2026). */}
+              {expandida && c && a.chave === "fups" && <AtualizacaoEmLote itens={c.itens} />}
             </li>
           );
   };

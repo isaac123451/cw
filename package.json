@@ -1,6 +1,6 @@
 {
   "name": "cw-reputacao",
-  "version": "1.1.53",
+  "version": "1.1.54",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -83,6 +83,7 @@
     "check:okr": "tsx scripts/check-okr.ts",
     "check:divisao-do-dia": "tsx scripts/check-divisao-do-dia.ts",
     "check:sessao-renovada": "tsx scripts/check-sessao-renovada.ts",
+    "check:disparo-atualizacao": "tsx --conditions=react-server scripts/check-disparo-atualizacao.ts",
     "check:distribuicao": "tsx --env-file=.env scripts/check-distribuicao.ts",
     "check:segmento": "tsx scripts/check-segmento.ts",
     "check:conversas-sem-resposta": "tsx scripts/check-conversas-sem-resposta.ts",

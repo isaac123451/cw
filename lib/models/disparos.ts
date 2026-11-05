@@ -11,7 +11,7 @@ export const INTERVALO_S: [number, number] = [35, 50];
 export const TETO_DE_ITENS = 200;
 
 /** "nps" (04/11/2026): o 1º contato com promotores do NPS, com os modelos de promotor. */
-export type OrigemDoDisparo = "premio" | "avaliacao" | "nps";
+export type OrigemDoDisparo = "premio" | "avaliacao" | "nps" | "atualizacao";
 
 /** O que o modelo pede ao promotor, pelo título — vira a marca do ciclo quando a mensagem sai. */
 export type PedidoAoPromotor = "depoimento" | "indicacao" | "avaliacao" | "contato";

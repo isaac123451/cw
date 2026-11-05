@@ -126,6 +126,18 @@ async function efeitoDoEnvio(
     });
   }
 
+  /*
+    Atualização para quem está sem notícia (05/11/2026): a mensagem que saiu
+    é o contato de atualização do caso — o mesmo registro do diálogo, que tira
+    o caso de "sem notícia" e conta como último contato.
+  */
+  if (lote.origem === "atualizacao" && tipo === "caso") {
+    const caso = await prisma.case.findFirst({ where: { OR: [{ protocol: id }, { externalId: id }, { id }] }, select: { id: true } });
+    if (!caso) return;
+    await gravarContato(prisma, { caseId: caso.id, entrada: { tipo: "atualizacao", canal: "WhatsApp", resultado: "aguardando", nota: "Atualização pelo disparo em lote.", em: agora.toISOString() }, autorId: autor.id, autorNome: autor.nome });
+    return;
+  }
+
   /* A referência é o protocolo: na tela, o id da reclamação é o do portal, não o do banco. */
   if (lote.origem === "avaliacao" && tipo === "caso") {
     const caso = await prisma.case.findFirst({ where: { OR: [{ protocol: id }, { externalId: id }, { id }] }, select: { id: true } });

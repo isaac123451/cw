@@ -46,6 +46,16 @@ export interface Mudanca {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "atualizacao-em-lote",
+    dia: "2026-11-05",
+    tipo: "novo",
+    frente: "plataforma",
+    titulo: "Atualização em lote para quem está sem notícia",
+    texto:
+      "No Meu dia, ao abrir \"Fazer os FUPs de quem está sem retorno\", os casos sem notícia que têm telefone viram uma lista de disparo pelo WhatsApp. A mensagem de atualização do guia já vem com o nome de cada um. Você aperta Enter em cada conversa. Cada envio registra o contato de atualização no caso, que sai de \"sem notícia\". Quando o dia está dividido entre duas pessoas, a lista é só a sua.",
+    href: "/meu-dia",
+  },
+  {
     id: "vigia-parado-no-sino",
     dia: "2026-11-05",
     tipo: "novo",
