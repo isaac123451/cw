@@ -50,9 +50,9 @@ export const MUDANCAS: Mudanca[] = [
     dia: "2026-11-05",
     tipo: "correcao",
     frente: "plataforma",
-    titulo: "\"6 dias úteis sem notícia\", e não \"6 dia(s) útil(eis)\"",
+    titulo: "Plural de verdade nos FUPs e no termômetro: \"6 dias úteis sem notícia\"",
     texto:
-      "O plural entre parênteses tinha voltado em dois lugares: nos FUPs do Meu dia (\"6 dia(s) útil(eis) sem notícia\") e no termômetro do cliente (\"2 avaliação(ões) anterior(es)\"). Os dois foram corrigidos, e uma conferência nova varre toda a plataforma e a extensão para isso não voltar.",
+      "O plural entre parênteses tinha voltado em dois lugares: nos FUPs do Meu dia e no termômetro do cliente. Agora é \"6 dias úteis sem notícia\" e \"2 avaliações anteriores\", e uma conferência nova varre toda a plataforma e a extensão para isso não voltar.",
     href: "/meu-dia",
   },
   {
