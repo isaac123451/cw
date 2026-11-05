@@ -29,12 +29,23 @@ function secret() {
   return new TextEncoder().encode(value);
 }
 
-export async function createSession(user: SessionUser) {
+/**
+ * "Manter conectado neste navegador" (05/11/2026): 30 dias em vez de 8
+ * horas. O Isaac entrava de novo todo dia — inclusive no navegador da
+ * conferência. Quem marca fica conectado; a sessão é renovada com o uso
+ * (`proxy.ts`), e a conta desativada continua caindo na hora, porque o
+ * layout confere a sessão contra o banco a cada carga (`getSessionViva`).
+ */
+export const MANTER_CONECTADO_SEGUNDOS = 60 * 60 * 24 * 30;
 
-  const token = await new SignJWT({ ...user })
+export async function createSession(user: SessionUser, opcoes: { manter?: boolean } = {}) {
+
+  const duracao = opcoes.manter ? MANTER_CONECTADO_SEGUNDOS : MAX_AGE_SECONDS;
+
+  const token = await new SignJWT({ ...user, ...(opcoes.manter ? { manter: true } : {}) })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime(`${MAX_AGE_SECONDS}s`)
+    .setExpirationTime(`${duracao}s`)
     .sign(secret());
 
   const store = await cookies();
@@ -44,7 +55,7 @@ export async function createSession(user: SessionUser) {
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
-    maxAge: MAX_AGE_SECONDS,
+    maxAge: duracao,
   });
 }
 
@@ -133,6 +144,8 @@ export interface PendingLogin {
   /** Quando o código foi enviado e até quando vale (ISO) — a tela diz (1.110). */
   enviadoEm?: string;
   validoAte?: string;
+  /** "Manter conectado" marcado na senha: vale para a sessão que sai depois do código. */
+  manter?: boolean;
 }
 
 /**
@@ -198,6 +211,7 @@ export async function getPendingLogin(): Promise<PendingLogin | null> {
       email: String(payload.email),
       enviadoEm: payload.enviadoEm ? String(payload.enviadoEm) : undefined,
       validoAte: payload.validoAte ? String(payload.validoAte) : undefined,
+      manter: payload.manter === true,
     };
 
   } catch {

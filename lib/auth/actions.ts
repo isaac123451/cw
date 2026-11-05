@@ -182,6 +182,8 @@ export async function signIn(
     String(formData.get("email") ?? "")
   );
   const password = String(formData.get("password") ?? "");
+  /* "Manter conectado neste navegador" (05/11/2026): 30 dias, renovados com o uso. */
+  const manter = formData.get("manter") === "on";
 
   if (!hasAllowedDomain(email)) {
     return {
@@ -298,6 +300,7 @@ export async function signIn(
         email: user.email,
         enviadoEm: pedido.enviadoEm?.toISOString(),
         validoAte: pedido.validoAte?.toISOString(),
+        manter,
       },
       pedido.validoAte ? (pedido.validoAte.getTime() - Date.now()) / 1000 : undefined
     );
@@ -305,12 +308,15 @@ export async function signIn(
     redirect("/login/codigo");
   }
 
-  await createSession({
-    id: user.id,
-    email: user.email,
-    name: user.name,
-    role: user.role,
-  });
+  await createSession(
+    {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+    },
+    { manter }
+  );
 
   redirect("/meu-dia");
 }
@@ -390,12 +396,15 @@ export async function verifyCode(
     await lembrarEsteDispositivo(user.id).catch((erro) => console.error("[dispositivo] não consegui lembrar", erro));
   }
 
-  await createSession({
-    id: user.id,
-    email: user.email,
-    name: user.name,
-    role: user.role,
-  });
+  await createSession(
+    {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+    },
+    { manter: pendente.manter }
+  );
 
   redirect("/meu-dia");
 }

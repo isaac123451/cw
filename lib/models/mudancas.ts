@@ -46,6 +46,26 @@ export interface Mudanca {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "manter-conectado",
+    dia: "2026-11-05",
+    tipo: "melhoria",
+    frente: "plataforma",
+    titulo: "Manter conectado: a sessão não cai mais todo dia",
+    texto:
+      "A sessão durava 8 horas fixas depois do login e caía no meio do trabalho, mesmo com a plataforma em uso. Agora ela se renova enquanto você usa. No login há a caixa \"Manter conectado neste navegador\", que vem marcada: com ela, a sessão dura 30 dias. Conta desativada continua caindo na hora, porque cada carga confere a sessão no banco. Num computador emprestado, desmarque a caixa.",
+    href: "/login",
+  },
+  {
+    id: "nps-guardado-no-navegador",
+    dia: "2026-11-05",
+    tipo: "melhoria",
+    frente: "plataforma",
+    titulo: "O Meu dia abre em 2 segundos, não em 45",
+    texto:
+      "A cada aba nova ou recarga, a plataforma baixava as 5.087 respostas do NPS inteiras, e o Meu dia esperava por elas: medido aqui, a rotina ficava pronta em 45 s. Agora a última lista fica guardada no seu navegador. A tela abre com ela e o servidor manda só o que mudou desde então. Medido de novo: rotina pronta em 2,1 s, com a atualização em 0,3 s. A lista inteira continua sendo relida a cada 30 minutos, e a cópia sai quando você sai da conta.",
+    href: "/meu-dia",
+  },
+  {
     id: "meu-dia-por-pessoa",
     dia: "2026-11-05",
     tipo: "novo",

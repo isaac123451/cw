@@ -7,7 +7,9 @@
  */
 import { NextResponse, type NextRequest } from "next/server";
 
-import { jwtVerify } from "jose";
+import { jwtVerify, type JWTPayload } from "jose";
+
+import { sessaoRenovada } from "@/lib/auth/renovacao";
 
 const SESSION_COOKIE = "cw_session";
 
@@ -22,24 +24,27 @@ function authRequired() {
   return Boolean(process.env.DATABASE_URL);
 }
 
-async function isValid(token: string) {
-
+function chave() {
   const value =
     process.env.AUTH_SECRET ??
     process.env.NEXTAUTH_SECRET;
+  return value ? new TextEncoder().encode(value) : null;
+}
 
-  if (!value) return false;
+async function lerSessao(token: string): Promise<JWTPayload | null> {
+
+  const segredo = chave();
+
+  if (!segredo) return null;
 
   try {
-    await jwtVerify(
-      token,
-      new TextEncoder().encode(value)
-    );
-    return true;
+    const { payload } = await jwtVerify(token, segredo);
+    return payload;
   } catch {
-    return false;
+    return null;
   }
 }
+
 
 export async function proxy(request: NextRequest) {
 
@@ -85,7 +90,8 @@ export async function proxy(request: NextRequest) {
 
   const token = request.cookies.get(SESSION_COOKIE)?.value;
 
-  const logged = token ? await isValid(token) : false;
+  const sessao = token ? await lerSessao(token) : null;
+  const logged = Boolean(sessao);
 
   if (logged && isPublic) {
     return NextResponse.redirect(
@@ -99,7 +105,24 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  return seguir();
+  const resposta = seguir();
+
+  /* Só nas páginas de verdade (GET): uma ação no meio de um formulário não precisa trocar o cookie. */
+  if (sessao && request.method === "GET") {
+    const segredo = chave();
+    const nova = segredo ? await sessaoRenovada(sessao, segredo).catch(() => null) : null;
+    if (nova) {
+      resposta.cookies.set(SESSION_COOKIE, nova.token, {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        path: "/",
+        maxAge: nova.duracao,
+      });
+    }
+  }
+
+  return resposta;
 }
 
 export const config = {

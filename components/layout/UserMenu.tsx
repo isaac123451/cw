@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 
 import { signOut } from "@/lib/auth/actions";
+import { esquecerNpsGuardado } from "@/lib/cacheLocal/npsGuardado";
 
 interface Props {
   name: string;
@@ -154,6 +155,8 @@ export default function UserMenu({
 
               <form
                 action={signOut}
+                /* A cópia do NPS guardada no navegador sai junto (05/11/2026). */
+                onSubmit={() => void esquecerNpsGuardado()}
                 className="border-t border-zinc-100"
               >
                 <button

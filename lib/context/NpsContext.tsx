@@ -1,6 +1,8 @@
 "use client";
 
 import { daCargaInicial } from "@/lib/context/cargaInicial";
+import { useSession } from "@/lib/context/SessionContext";
+import { guardarNps, lerNpsGuardado } from "@/lib/cacheLocal/npsGuardado";
 import {
   createContext,
   useCallback,
@@ -135,6 +137,8 @@ export function NpsProvider({
   /* Derivado de `enabled`: depois do login o layout não remonta, só liga o provider — e a tela não pode piscar vazia. */
   const [carregado, setCarregado] = useState(false);
   const loading = enabled && !carregado;
+  /* De quem é a cópia guardada no navegador (05/11/2026): outra pessoa no mesmo navegador não vê a lista da primeira. */
+  const usuario = useSession()?.id ?? null;
 
   /*
     A recarga traz só o que mudou (1.116). Eram as 4.110 respostas (2,3 MB) a
@@ -224,21 +228,38 @@ export function NpsProvider({
 
     if (!enabled) return;
 
-    Promise.all([
-      /* Por rota, fora da fila das server actions (1.116). */
-      buscarNps(),
-      daCargaInicial("causasDoNps", listNpsRootCauses),
-      carregarWorkspace(),
-    ])
-      .then(([lista, causas, workspace]) => {
-        if (!ativo) return;
+    (async () => {
+      /*
+        A cópia guardada primeiro (05/11/2026): a tela abre com ela na hora e
+        a leitura do servidor traz só o que mudou — ver `lib/cacheLocal/npsGuardado.ts`.
+      */
+      const guardado = usuario ? await lerNpsGuardado(usuario) : null;
+      if (!ativo) return;
+      if (guardado) {
+        setResponses(guardado.respostas);
+        ultimaLeitura.current = guardado.agora;
+        ultimaCompleta.current = guardado.completaEm;
+        setCarregado(true);
+      }
+
+      const [lista, causas, workspace] = await Promise.all([
+        /* Por rota, fora da fila das server actions (1.116). */
+        guardado ? null : buscarNps(),
+        daCargaInicial("causasDoNps", listNpsRootCauses),
+        carregarWorkspace(),
+      ]);
+      if (!ativo) return;
+      if (lista) {
         setResponses(lista.respostas);
         ultimaLeitura.current = lista.agora;
         ultimaCompleta.current = Date.now();
-        setRootCauses(causas);
-        setStages(workspace.npsStages);
-        setKinds(workspace.npsKinds);
-      })
+      }
+      setRootCauses(causas);
+      setStages(workspace.npsStages);
+      setKinds(workspace.npsKinds);
+      /* Com a cópia: o que mudou desde ela (ou a lista inteira, se passou de 30 minutos). */
+      if (guardado) await recarregar();
+    })()
       .catch((erro: unknown) => {
         console.error("[nps] carga falhou", erro);
       })
@@ -250,7 +271,16 @@ export function NpsProvider({
       ativo = false;
     };
 
-  }, [enabled]);
+  }, [enabled, usuario, recarregar]);
+
+  /* Guarda a lista no navegador depois de cada leitura — com um respiro, para uma recarga não virar várias gravações. */
+  useEffect(() => {
+    if (!enabled || !usuario || !carregado || !ultimaLeitura.current || responses.length === 0) return;
+    const t = window.setTimeout(() => {
+      if (ultimaLeitura.current) guardarNps({ usuario, respostas: responses, agora: ultimaLeitura.current, completaEm: ultimaCompleta.current });
+    }, 2000);
+    return () => window.clearTimeout(t);
+  }, [enabled, usuario, carregado, responses]);
 
   const aplicarLocal = useCallback(
     (id: string, mudanca: Partial<NpsResponseView>) => {

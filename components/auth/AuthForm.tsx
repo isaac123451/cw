@@ -23,6 +23,8 @@ interface Props {
   ) => Promise<FormState>;
   fields: Field[];
   submitLabel: string;
+  /** Uma caixa de marcar antes do botão (o "manter conectado" do login). */
+  marcar?: { name: string; label: string; dica?: string };
 }
 
 function Submit({ label }: { label: string }) {
@@ -47,6 +49,7 @@ export default function AuthForm({
   action,
   fields,
   submitLabel,
+  marcar,
 }: Props) {
 
   const [state, formAction] = useActionState(action, {});
@@ -84,6 +87,16 @@ export default function AuthForm({
         </div>
 
       ))}
+
+      {marcar && (
+        <label className="flex items-start gap-2.5 text-sm text-zinc-700">
+          <input type="checkbox" name={marcar.name} defaultChecked className="mt-0.5 h-4 w-4 rounded border-zinc-300 accent-violet-700" />
+          <span>
+            {marcar.label}
+            {marcar.dica && <span className="block text-xs text-zinc-400">{marcar.dica}</span>}
+          </span>
+        </label>
+      )}
 
       {state.error && (
         <p

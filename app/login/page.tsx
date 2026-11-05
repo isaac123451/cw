@@ -35,6 +35,7 @@ export default async function LoginPage() {
       <AuthForm
         action={signIn}
         submitLabel="Entrar"
+        marcar={{ name: "manter", label: "Manter conectado neste navegador", dica: "Por 30 dias, renovados enquanto você usa. Num computador emprestado, desmarque." }}
         fields={[
           {
             name: "email",

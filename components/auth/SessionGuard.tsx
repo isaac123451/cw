@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 
 import { useSession } from "@/lib/context/SessionContext";
 import { signOut } from "@/lib/auth/actions";
+import { esquecerNpsGuardado } from "@/lib/cacheLocal/npsGuardado";
 
 /** Onde não ter sessão é o estado normal. */
 const PUBLICAS = ["/login", "/cadastro"];
@@ -64,6 +65,7 @@ export default function SessionGuard() {
       exceção de controle: sem ele, o console acusaria um erro que não
       é erro.
     */
+    void esquecerNpsGuardado();
     signOut().catch(() => {});
 
   }, [sessao, pathname]);
