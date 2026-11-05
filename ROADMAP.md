@@ -1190,6 +1190,16 @@ por dia desde 31/10 contra 50–75 antes — ela só roda com a plataforma abert
 - [x] **Caso rápido pela extensão (1.1.48):** Alt+Shift+K em qualquer site ou
       popup → Caso rápido; busca por protocolo/nome/telefone/CNPJ; mover,
       anotar, lembrete para o próximo dia útil. Rota `/api/extensao/caso-rapido`.
+- [x] **Fase H, parte 1 (1.1.49):** Meu dia de cada um — responsável manda; o
+      sem dono se divide por hash fixo entre quem recebe atendimentos e cobre
+      a frente (papel no módulo); ausente passa a fila; "ver o da equipe".
+      Simulado: 214/70/426 × 176/75/443. Falta: marcar a Thais em Permissões.
+- [x] **Sessão (1.1.50):** "Manter conectado" (30 dias) e renovação com o uso.
+- [x] **Fase F, parte 1 (1.1.50):** NPS guardado no IndexedDB por pessoa; Meu
+      dia de 45 s para 2,1 s (a lentidão local é a rede até o Supabase,
+      ~60 KB/s; na Vercel ~2 s). Incremental por `?desde=`.
+- [x] **Desativada → excluir (1.1.51):** pedido de 05/11; tabela
+      `ReclamacaoExcluida` trava a recriação; precisa de `npm run db:push`.
 
 ### Revisão de novembro: bugs, contas e organização (03/11/2026, 1.1.25–1.1.31)
 

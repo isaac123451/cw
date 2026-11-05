@@ -24,7 +24,7 @@ import PorQue from "@/components/shared/PorQue";
 import ItensDaAtividade from "@/components/rotina/ItensDaAtividade";
 import { useSla } from "@/lib/context/SlaContext";
 import { pluralDe } from "@/lib/plural";
-import { minutosDoExpediente } from "@/lib/services/horasUteis";
+import { minutosDoExpediente, minutosUteisNoDia, paredeDe } from "@/lib/services/horasUteis";
 type MeuDia = ReturnType<typeof useMeuDia>;
 
 interface Props {
@@ -92,6 +92,24 @@ export default function RotinaDoDia({ dia, compacto = false, onConfigurar, onUmP
     somar(filaDeHoje, "hoje");
     return mapa;
   }, [filaInteira, filaDeHoje]);
+
+  /*
+    Mais do que cabe (05/11/2026): o que falta hoje somava ~17h num dia de 8 —
+    79 ligações da cadência, 44 primeiros contatos, cada um com o seu tempo.
+    Em vez de um total que assusta, uma frase: siga o próximo passo.
+  */
+  const naoCabeHoje = useMemo(() => {
+    if (!contagens || !dia.agora) return false;
+    const soma = doDia
+      .filter((a) => !rascunho.has(a.id))
+      .reduce((total, a) => {
+        const doTotal = minutosDaAtividade(a, a.chave ? contagens[a.chave] : undefined);
+        const parte = a.chave ? porAtividade.get(a.chave) : undefined;
+        return total + (parte && parte.total > parte.hoje && parte.total > 0 ? Math.round((doTotal * parte.hoje) / parte.total) : doTotal);
+      }, 0);
+    const restam = minutosUteisNoDia(paredeDe(dia.agora).min, expediente.fimMin, expediente);
+    return soma > restam + 30;
+  }, [contagens, dia.agora, doDia, rascunho, porAtividade, expediente]);
 
   /* As feitas descem para um grupo recolhido no fim (1.124): a lista mostra o que falta. */
   const [verFeitas, setVerFeitas] = useState(false);
@@ -307,7 +325,9 @@ export default function RotinaDoDia({ dia, compacto = false, onConfigurar, onUmP
       description={
         doDia.length === 0
           ? "Hoje não é dia útil: a rotina diária descansa."
-          : "A rotina do documento, na ordem dele — com o que cada atividade tem hoje em cada frente."
+          : naoCabeHoje
+            ? "Hoje tem mais do que cabe no expediente. Não precisa dar conta de tudo: siga o Próximo passo, a fila já vem na ordem de prioridade."
+            : "A rotina do documento, na ordem dele — com o que cada atividade tem hoje em cada frente."
       }
       action={
         <div className="flex shrink-0 items-center gap-2">

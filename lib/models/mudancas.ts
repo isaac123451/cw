@@ -46,6 +46,16 @@ export interface Mudanca {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "rotina-nao-cabe",
+    dia: "2026-11-05",
+    tipo: "melhoria",
+    frente: "plataforma",
+    titulo: "Rotina de hoje: quando não cabe, ela diz por onde ir",
+    texto:
+      "O que faltava na rotina de hoje somava perto de 17 horas num dia de 8: 79 ligações da cadência, 44 primeiros contatos, cada um com o seu tempo. Nenhuma tela dizia isso com todas as letras, e o cartão parecia impossível. Agora, quando o que falta passa do que resta do expediente, o cartão diz em uma frase que não precisa dar conta de tudo e que é para seguir o Próximo passo, porque a fila já vem na ordem. O plano do expediente, em Tudo, continua mostrando o que cabe e o que fica.",
+    href: "/meu-dia",
+  },
+  {
     id: "desativada-excluida",
     dia: "2026-11-05",
     tipo: "melhoria",
