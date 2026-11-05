@@ -1,3 +1,4 @@
+import { pluralDe } from "@/lib/plural";
 /**
  * O termômetro do cliente (09/10/2026) — a parte que não fala com banco.
  *
@@ -139,7 +140,7 @@ export function calibrar(
 
   const sinais = [...(Array.isArray(ia?.sinais) ? ia!.sinais.filter((x) => typeof x === "string" && x.trim()).slice(0, 4) : []), ...base.porque].slice(0, 6);
   if (historicoDoCliente.avaliacoes > 0) {
-    sinais.push(`${historicoDoCliente.avaliacoes} avaliação(ões) anterior(es) deste cliente: nota média ${historicoDoCliente.notaMedia?.toFixed(1) ?? "—"}`);
+    sinais.push(`${historicoDoCliente.avaliacoes} ${pluralDe(historicoDoCliente.avaliacoes, "avaliação anterior", "avaliações anteriores")} deste cliente: nota média ${historicoDoCliente.notaMedia?.toFixed(1).replace(".", ",") ?? "—"}`);
   }
 
   const motivo = String(ia?.motivo ?? "").trim() || base.porque.join("; ");

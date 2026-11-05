@@ -560,7 +560,7 @@ export function contarRotina(
         id: c.id,
         frente: frenteDoCaso(c),
         titulo: c.title,
-        detalhe: `${s!.dias} ${pluralDe(s!.dias, "dia", "dias")} útil(eis) sem notícia · ${c.customer}`,
+        detalhe: `${s!.dias} ${pluralDe(s!.dias, "dia útil", "dias úteis")} sem notícia · ${c.customer}`,
         href: caseHref(c),
         ...(frenteDoCaso(c) === "reclame-aqui" ? { ra: { protocol: c.protocol, raUrl: c.raUrl } } : {}),
         atrasado: true,

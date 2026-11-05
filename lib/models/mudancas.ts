@@ -46,6 +46,16 @@ export interface Mudanca {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "plural-sem-parenteses-1105",
+    dia: "2026-11-05",
+    tipo: "correcao",
+    frente: "plataforma",
+    titulo: "\"6 dias úteis sem notícia\", e não \"6 dia(s) útil(eis)\"",
+    texto:
+      "O plural entre parênteses tinha voltado em dois lugares: nos FUPs do Meu dia (\"6 dia(s) útil(eis) sem notícia\") e no termômetro do cliente (\"2 avaliação(ões) anterior(es)\"). Os dois foram corrigidos, e uma conferência nova varre toda a plataforma e a extensão para isso não voltar.",
+    href: "/meu-dia",
+  },
+  {
     id: "atualizacao-em-lote",
     dia: "2026-11-05",
     tipo: "novo",
