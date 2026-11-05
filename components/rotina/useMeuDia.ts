@@ -25,6 +25,12 @@ import { contarRotina, planoDoDia, type Contagem, type MarcaDeItem, type TipoDeM
 import { paredeDe } from "@/lib/services/horasUteis";
 import { useToast } from "@/lib/context/ToastContext";
 import { leitura } from "@/lib/lote";
+import { gravarLocal, usePreferenciaLocal } from "@/lib/hooks/usePreferenciaLocal";
+import { divisaoAtiva, ehMeu, primeiroNome } from "@/lib/models/divisaoDoDia";
+import { isSocial } from "@/lib/services/case.service";
+
+/** Ver o dia da equipe inteira em vez do seu (05/11/2026): escolha de quem olha, neste navegador. */
+const CHAVE_VER_EQUIPE = "cw:meu-dia-equipe";
 
 /**
  * As atividades de lista que fecham sozinhas quando não resta nada (1.91).
@@ -104,31 +110,53 @@ export function useMeuDia() {
     [atividades]
   );
 
+  /*
+    O dia de cada um (05/11/2026) — ver `lib/models/divisaoDoDia.ts`. Com
+    duas pessoas recebendo, cada uma conta só o que é dela: o que tem o
+    nome dela e a sua metade fixa do que está sem responsável.
+  */
+  const verEquipe = usePreferenciaLocal(CHAVE_VER_EQUIPE) === "1";
+  const divisao = carga?.divisao ?? null;
+  const separado = divisaoAtiva(divisao) && !verEquipe;
+  const meus = useMemo(() => {
+    if (!separado) return { casos: cases, nps: responses, google: avaliacoes, movimentos: movements, tarefas: tasks, ids: null as Set<string> | null };
+    const casos = cases.filter((c) => ehMeu({ chave: c.id, dono: c.owner, frente: isSocial(c) ? "redes" : "reclame-aqui" }, divisao));
+    return {
+      casos,
+      nps: responses.filter((r) => ehMeu({ chave: r.id, dono: r.owner, frente: "nps" }, divisao)),
+      google: avaliacoes.filter((a) => ehMeu({ chave: a.id, frente: "google" }, divisao)),
+      /* A cobrança da área é de quem encaminhou. */
+      movimentos: movements.filter((m) => ehMeu({ chave: m.caseId, dono: m.actor, frente: "reclame-aqui" }, divisao)),
+      tarefas: tasks.filter((t) => ehMeu({ chave: t.id, dono: t.owner, frente: t.frente ?? "reclame-aqui" }, divisao)),
+      ids: new Set(casos.map((c) => c.id)),
+    };
+  }, [separado, divisao, cases, responses, avaliacoes, movements, tasks]);
+
   const contagens = useMemo(
     () =>
       agora
         ? contarRotina(
             {
-              casos: cases,
-              nps: responses,
+              casos: meus.casos,
+              nps: meus.nps,
               tiposNps: kinds,
-              google: avaliacoes,
-              movimentos: movements,
-              tarefas: tasks,
+              google: meus.google,
+              movimentos: meus.movimentos,
+              tarefas: meus.tarefas,
               regrasSla: rules,
               metricaHoje: carga?.metricaHoje ?? null,
-              ligacoes: carga?.ligacoes ?? [],
-              cadenciaEsgotada: carga?.cadenciaEsgotada ?? [],
+              ligacoes: (carga?.ligacoes ?? []).filter((i) => !meus.ids || meus.ids.has(i.id)),
+              cadenciaEsgotada: (carga?.cadenciaEsgotada ?? []).filter((id) => !meus.ids || meus.ids.has(id)),
               relatorio: carga?.relatorio ?? null,
               marcasDeItens: carga?.marcasDeItens ?? [],
-              aguardandoRetorno: carga?.aguardandoRetorno ?? [],
+              aguardandoRetorno: (carga?.aguardandoRetorno ?? []).filter((i) => !meus.ids || meus.ids.has(i.id)),
               esperaNoWhatsapp: itensDaEspera(espera, agora),
             },
             agora,
             expediente
           )
         : null,
-    [agora, cases, responses, kinds, avaliacoes, movements, tasks, rules, carga, expediente, espera]
+    [agora, meus, kinds, rules, carga, expediente, espera]
   );
 
   const feitasHoje = useMemo(
@@ -255,5 +283,15 @@ export function useMeuDia() {
     marcarItens,
     desfazerMarcas,
     recarregar,
+    /** O dia separado por pessoa: de quem é, quem mais divide e o botão de ver a equipe. */
+    divisao: divisaoAtiva(divisao)
+      ? {
+          separado,
+          eu: primeiroNome(divisao.pessoas.find((p) => p.id === divisao.eu)?.nome ?? ""),
+          outros: divisao.pessoas.filter((p) => p.id !== divisao.eu && !p.ausente).map((p) => primeiroNome(p.nome)),
+          ausentes: divisao.pessoas.filter((p) => p.ausente).map((p) => primeiroNome(p.nome)),
+          alternar: () => gravarLocal(CHAVE_VER_EQUIPE, verEquipe ? "0" : "1"),
+        }
+      : null,
   };
 }

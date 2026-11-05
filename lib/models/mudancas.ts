@@ -46,6 +46,16 @@ export interface Mudanca {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "meu-dia-por-pessoa",
+    dia: "2026-11-05",
+    tipo: "novo",
+    frente: "plataforma",
+    titulo: "Meu dia de cada um: com duas pessoas, as atividades se dividem",
+    texto:
+      "O Meu dia contava tudo da operação para quem abrisse, e duas pessoas veriam os mesmos itens. Agora, com duas ou mais pessoas marcadas em Permissões → Recebe atendimentos, cada uma vê o seu dia. O que tem o nome dela é dela. O que está sem responsável (hoje, quase tudo: 365 do RA, 145 das Redes e 869 NPS) se divide ao meio, sempre igual, sem item repetido nem perdido. Quem só lê um módulo não recebe daquela frente. Quem está ausente (Distribuição) passa a fila para quem está. Um link no topo mostra o dia da equipe inteira. Com uma pessoa só recebendo, nada muda. Simulado nos dados reais: 214 do RA, 70 das Redes e 426 NPS para um, 176, 75 e 443 para o outro.",
+    href: "/meu-dia",
+  },
+  {
     id: "caso-rapido",
     dia: "2026-11-04",
     tipo: "novo",

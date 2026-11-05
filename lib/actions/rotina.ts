@@ -21,6 +21,9 @@ import { CLOSED_STATUS, SOCIAL_SOURCES } from "@/lib/services/case.service";
 import { CANAL_PARA_ORIGEM } from "@/lib/services/case.mapper";
 import { descreverRegistro, paredeDe, ehDiaUtil } from "@/lib/services/horasUteis";
 import { ESPERA_DO_RETORNO_MIN } from "@/lib/models/tratativa";
+import type { DivisaoDoDia } from "@/lib/models/divisaoDoDia";
+import type { FrenteId } from "@/lib/models/frentes";
+import { MARCA_DE_ATENDIMENTO } from "@/lib/auth/modules";
 
 /**
  * A rotina do agente: o cadastro das atividades e as marcas de feito.
@@ -233,6 +236,8 @@ export interface CargaDoMeuDia {
   hojeAteAgora: ResumoDeOntem | null;
   /** O relatório do ciclo de hoje: se já foi salvo. */
   relatorio: { ciclo: string; rotulo: string; salvo: boolean } | null;
+  /** Quem recebe atendimentos e em que frentes — o Meu dia de cada um (05/11/2026). */
+  divisao?: DivisaoDoDia | null;
 }
 
 /*
@@ -264,6 +269,27 @@ function diaUtilAnterior(dia: string, expediente: Parameters<typeof ehDiaUtil>[1
  *   mesmo cálculo da tela do caso, com o período ainda pouco tentado.
  * - O resumo do último dia útil, para o checkpoint com a gestão.
  */
+/**
+ * Quem recebe atendimentos, com as frentes de cada um (o papel no módulo,
+ * como na Distribuição) e quem está ausente hoje. Ver `lib/models/divisaoDoDia.ts`.
+ */
+async function lerDivisao(prisma: PrismaClient, eu: string, hoje: string): Promise<DivisaoDoDia> {
+  const usuarios = await prisma.user.findMany({
+    where: { active: true, moduleRoles: { some: { module: MARCA_DE_ATENDIMENTO } } },
+    select: { id: true, name: true, role: true, ausenteAte: true, moduleRoles: { select: { module: true, role: true } } },
+  });
+  return {
+    eu,
+    pessoas: usuarios.map((u) => {
+      const papel = (modulo: string) => u.moduleRoles.find((m) => m.module === modulo)?.role ?? u.role;
+      const ra = papel("reclame-aqui") !== "LEITURA";
+      const frentes: FrenteId[] = [...(ra ? (["reclame-aqui", "redes"] as const) : []), ...(papel("nps") !== "LEITURA" ? (["nps"] as const) : []), "google"];
+      const ate = u.ausenteAte ? u.ausenteAte.toISOString().slice(0, 10) : null;
+      return { id: u.id, nome: u.name, frentes, ausente: Boolean(ate && ate >= hoje) };
+    }),
+  };
+}
+
 export async function lerMeuDia(): Promise<CargaDoMeuDia> {
 
   const ctx = await tryRole("LEITURA");
@@ -389,6 +415,7 @@ export async function lerMeuDia(): Promise<CargaDoMeuDia> {
     ligacoes,
     cadenciaEsgotada,
     relatorio: { ciclo: ciclo.id, rotulo: ciclo.rotulo, salvo: relatorioSalvo > 0 },
+    divisao: await lerDivisao(prisma, ctx.userId, hoje).catch(() => null),
     ontem: {
       dia: ontem,
       contatos: contatosOntem.length,

@@ -22,7 +22,7 @@ import MetasDoCiclo from "@/components/rotina/MetasDoCiclo";
 import RadarDeIncidente from "@/components/rotina/RadarDeIncidente";
 import PlanoDeRecuperacao from "@/components/rotina/PlanoDeRecuperacao";
 import ProximoPasso from "@/components/rotina/ProximoPasso";
-import { Focus, LayoutList } from "lucide-react";
+import { Focus, LayoutList, Users } from "lucide-react";
 
 /**
  * Meu dia — a primeira tela do dia.
@@ -159,6 +159,25 @@ function MeuDiaPagina({ configurarInicial = false, ajustarRecuperacao = false }:
             </button>
           </div>
         </PageHeading>
+
+        {/* De quem é o dia (05/11/2026): com duas pessoas recebendo, cada uma vê a sua parte. */}
+        {dia.divisao && (
+          <p className="-mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-500">
+            <Users size={13} aria-hidden className="text-zinc-400" />
+            {dia.divisao.separado ? (
+              <span>
+                O dia de <strong className="font-medium text-zinc-700">{dia.divisao.eu}</strong>: o que está com você e a sua parte do que não tem responsável
+                {dia.divisao.outros.length ? `, dividido com ${dia.divisao.outros.join(" e ")}` : ""}.
+                {dia.divisao.ausentes.length ? ` Ausência hoje: ${dia.divisao.ausentes.join(" e ")}; essa fila entra aqui.` : ""}
+              </span>
+            ) : (
+              <span>O dia da equipe inteira.</span>
+            )}
+            <button type="button" onClick={dia.divisao.alternar} className="font-medium text-violet-700 hover:text-violet-900">
+              {dia.divisao.separado ? "Ver o da equipe" : "Voltar para o meu"}
+            </button>
+          </p>
+        )}
 
         {/* O radar de incidente (1.102): só aparece quando há um, e vem antes de tudo. */}
         <RadarDeIncidente />
