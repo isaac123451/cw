@@ -2672,3 +2672,18 @@ model Okr {
   atualizadoEm  DateTime @updatedAt
   atualizadoPor String?
 }
+
+/// Reclamações excluídas por estarem desativadas no portal (05/11/2026).
+/// "não tem mt oq fazer além de excluir a reclamação quando ela é
+/// desativada": o vigia exclui o caso e guarda aqui o código, para a
+/// próxima leitura do portal (ou uma planilha) não o criar de novo.
+model ReclamacaoExcluida {
+  /// O código do portal, sem o "RA-".
+  codigo     String   @id
+  protocolo  String
+  cliente    String?
+  titulo     String?
+  motivo     String
+  por        String?
+  excluidaEm DateTime @default(now())
+}

@@ -527,8 +527,15 @@ export async function gravarDoPortal(
   };
 
   const existentes = await jaNoBanco(prisma, reclamacoes);
+  /* A excluída por desativação não volta (05/11/2026). */
+  const excluidas = await codigosExcluidos(prisma, reclamacoes.map((r) => r.codigo));
 
   for (const r of reclamacoes) {
+
+    if (excluidas.has(r.codigo) && !existentes.get(r.codigo)) {
+      resultado.inalteradas += 1;
+      continue;
+    }
 
     const doPortal = casoDoPortal(r);
     const atual = existentes.get(r.codigo);
@@ -1095,4 +1102,82 @@ export async function marcarDesativadas(prisma: PrismaClient, codigos: string[])
       .catch((erro) => console.error("[vigia] histórico da desativada", erro));
   }
   return marcar.map((c) => c.protocol);
+}
+
+/** O código do portal de um caso: "RA-EWAB…" ou o `externalId`. */
+function codigoDoCaso(c: { protocol: string; externalId: string | null }) {
+  const doProtocolo = c.protocol.replace(/^RA-/, "");
+  if (CODIGO_DO_PORTAL.test(doProtocolo)) return doProtocolo;
+  const externo = (c.externalId ?? "").replace(/^RA-/, "");
+  return CODIGO_DO_PORTAL.test(externo) ? externo : doProtocolo;
+}
+
+/**
+ * Os códigos já excluídos por desativação, para não criar de novo. Sem a
+ * tabela (antes do db:push), nenhum — e nada é excluído, ver abaixo.
+ */
+export async function codigosExcluidos(prisma: PrismaClient, codigos: string[]): Promise<Set<string>> {
+  if (!codigos.length) return new Set();
+  try {
+    const linhas = await prisma.reclamacaoExcluida.findMany({ where: { codigo: { in: codigos } }, select: { codigo: true } });
+    return new Set(linhas.map((l) => l.codigo));
+  } catch {
+    return new Set();
+  }
+}
+
+/**
+ * A desativada sai da base (05/11/2026). O Isaac: "não tem mt oq fazer
+ * além de excluir a reclamação quando ela é desativada". Antes ela só era
+ * marcada (fora da nota e das filas), mas continuava no quadro e nas buscas.
+ *
+ * Exclui as que o portal mostrou desativadas agora **e** as que já estavam
+ * marcadas — as de antes desta versão saem na primeira volta do vigia. Para
+ * cada uma: guarda o código (a próxima leitura não a recria), conclui as
+ * atividades abertas dela e apaga o caso, tudo numa transação. Sem a tabela
+ * dos códigos, não exclui: só marca, como antes — excluir sem a trava faria
+ * a reclamação voltar na leitura seguinte.
+ */
+export async function excluirDesativadas(
+  prisma: PrismaClient,
+  codigos: string[],
+  /** Também as já marcadas (o vigia, sim; a conferência, que roda no banco real, não). */
+  opcoes: { varrerMarcadas?: boolean } = {}
+): Promise<string[]> {
+  const varrer = opcoes.varrerMarcadas !== false;
+  const validos = [...new Set(codigos.filter((c) => CODIGO_DO_PORTAL.test(c)))].slice(0, 50);
+  if (!varrer && validos.length === 0) return [];
+  const casos = await prisma.case.findMany({
+    where: {
+      channel: "RECLAME_AQUI",
+      OR: [
+        ...(varrer ? [{ moderacaoResultado: "desativada" }] : []),
+        ...(validos.length
+          ? [{ protocol: { in: validos.map((c) => `RA-${c}`) } }, { externalId: { in: [...validos, ...validos.map((c) => `RA-${c}`)] } }]
+          : []),
+      ],
+    },
+    select: { id: true, protocol: true, externalId: true, customer: true, title: true },
+    take: 50,
+  });
+  const saem: string[] = [];
+  for (const c of casos) {
+    const codigo = codigoDoCaso(c);
+    try {
+      await prisma.$transaction([
+        prisma.reclamacaoExcluida.upsert({
+          where: { codigo },
+          create: { codigo, protocolo: c.protocol, cliente: c.customer, titulo: c.title, motivo: "Desativada no portal", por: "Vigia do Reclame Aqui" },
+          update: {},
+        }),
+        prisma.agendaTask.updateMany({ where: { caseId: c.id, done: false }, data: { done: true } }),
+        prisma.case.delete({ where: { id: c.id } }),
+      ]);
+      saem.push(c.protocol);
+    } catch (erro) {
+      console.error("[vigia] não excluí a desativada; fica marcada", c.protocol, erro);
+      await marcarDesativadas(prisma, [codigo]).catch(() => []);
+    }
+  }
+  return saem;
 }

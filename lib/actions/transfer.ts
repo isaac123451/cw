@@ -21,6 +21,7 @@ import {
 } from "@/lib/services/raImport.service";
 import { hojeNaOperacao } from "@/lib/services/reputation.service";
 import { ROTULO_DO_VOLTARIA, voltariaDoCaso } from "@/lib/models/case";
+import { codigosExcluidos } from "@/lib/services/raPortal.service";
 
 /** O módulo destas ações — ver lib/auth/modules.ts. */
 const MODULO: Modulo = "reclame-aqui";
@@ -136,8 +137,12 @@ export async function importCases(
     };
   }
 
+  /* A reclamação excluída por estar desativada no portal não volta pela planilha (05/11/2026). */
+  const excluidas = await codigosExcluidos(prisma, lidas.cases.map((c) => c.protocol.replace(/^RA-/, "")));
+  const paraGravar = excluidas.size ? lidas.cases.filter((c) => !excluidas.has(c.protocol.replace(/^RA-/, ""))) : lidas.cases;
+
   const { gravadas, novas, inalteradas } =
-    await importCasesBulk(prisma, lidas.cases);
+    await importCasesBulk(prisma, paraGravar);
 
   // A importação cria categorias e etiquetas além dos casos, então as
   // duas cargas precisam ser relidas.

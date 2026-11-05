@@ -45,6 +45,7 @@ import {
   aguardandoAvaliacao,
   atrasadasNaLista,
   marcarDesativadas,
+  excluirDesativadas,
   situacaoNaLista,
   casoDoPortal,
   completarContato,
@@ -591,6 +592,23 @@ async function travas(prisma: PrismaClient) {
   conferir("e marcada uma vez só", await marcarDesativadas(prisma, [DESATIVADA]), []);
   const rodizio = await aguardandoAvaliacao(prisma);
   conferir("sai da rotação de quem espera avaliação", [...rodizio.quentes, ...rodizio.frias].includes(DESATIVADA), false);
+
+  /*
+    05/11/2026: a desativada sai da base ("não tem mt oq fazer além de
+    excluir"). Só com o código descartável — a varredura das já marcadas
+    apagaria as reais. Antes do db:push (sem a tabela dos códigos), ela
+    continua só marcada.
+  */
+  const temTabela = await prisma.reclamacaoExcluida.count().then(() => true, () => false);
+  const saiu = await excluirDesativadas(prisma, [DESATIVADA], { varrerMarcadas: false });
+  if (temTabela) {
+    conferir("desativada: excluída da base", [saiu, await prisma.case.count({ where: { protocol: `RA-${DESATIVADA}` } })], [[`RA-${DESATIVADA}`], 0]);
+    await gravarDoPortal(prisma, [base({ codigo: DESATIVADA, titulo: `Reclamação descartável ${DESATIVADA}`, relato: "Voltou na lista." })]);
+    conferir("e a próxima leitura não a cria de novo", await prisma.case.count({ where: { protocol: `RA-${DESATIVADA}` } }), 0);
+    await prisma.reclamacaoExcluida.deleteMany({ where: { codigo: DESATIVADA } });
+  } else {
+    conferir("sem a tabela dos códigos (antes do db:push): não exclui, fica marcada", [saiu, await prisma.case.count({ where: { protocol: `RA-${DESATIVADA}`, moderacaoResultado: "desativada" } })], [[], 1]);
+  }
 
   /* --- ninguém volta para Novo --- */
 

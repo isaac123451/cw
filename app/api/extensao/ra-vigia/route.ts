@@ -14,7 +14,7 @@ import {
   aguardandoAvaliacao,
   EMPRESA_NO_PORTAL,
   gravarDoPortal,
-  marcarDesativadas,
+  excluirDesativadas,
   pendentesDoPortal,
   TETO_POR_VOLTA,
   validarReclamacao,
@@ -122,7 +122,8 @@ export async function POST(request: Request) {
   const resultado = await gravarDoPortal(prisma, unicas);
 
   /* As que o portal mostra como "Reclamação desativada" (03/11/2026). */
-  const desativadas = await marcarDesativadas(
+  /* Desde 05/11/2026 a desativada sai da base — ver `excluirDesativadas`. */
+  const desativadas = await excluirDesativadas(
     prisma,
     Array.isArray(corpo.desativadas) ? corpo.desativadas.filter((c): c is string => typeof c === "string") : []
   );

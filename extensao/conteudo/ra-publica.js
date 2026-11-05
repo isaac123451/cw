@@ -10,7 +10,7 @@
  * faria com o que buscou sozinho:
  *
  * - página de uma reclamação: grava ou completa (resposta, réplica,
- *   avaliação), e marca a desativada;
+ *   avaliação), e exclui a desativada (05/11/2026);
  * - lista de reclamações da empresa: diz quais são novas ou estão atrás no
  *   CW e põe na fila do vigia;
  * - página da empresa: o painel da nota.
@@ -81,7 +81,7 @@
       if (d.tipo === "reclamacao") {
         return mostrar(d.criadas ? "Reclamação nova: entrou no quadro do CW." : d.completadas ? "Reclamação atualizada no CW." : "Esta reclamação já estava igual no CW.");
       }
-      if (d.tipo === "desativada") return mostrar(d.marcadas ? "Reclamação desativada: saiu da nota e das filas do CW." : "Já constava como desativada no CW.");
+      if (d.tipo === "desativada") return mostrar(d.marcadas ? "Reclamação desativada: excluída do CW." : "Essa reclamação já não está no CW.");
       if (d.tipo === "lista") {
         const atras = d.novas + d.atrasadas;
         return mostrar(

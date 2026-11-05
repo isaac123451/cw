@@ -46,6 +46,16 @@ export interface Mudanca {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "desativada-excluida",
+    dia: "2026-11-05",
+    tipo: "melhoria",
+    frente: "reclame-aqui",
+    titulo: "Reclamação desativada no portal é excluída do CW",
+    texto:
+      "A desativada ficava marcada: saía da nota e das filas, mas continuava no quadro e nas buscas. Agora o vigia (e o botão Enviar ao CW) a exclui. As atividades abertas dela são concluídas, e o código fica guardado para a próxima leitura do portal ou uma planilha não a trazer de volta. As que já estavam marcadas, como a RA-JJ45, saem na primeira volta do vigia.",
+    onde: "Extensão → vigia e Enviar ao CW",
+  },
+  {
     id: "manter-conectado",
     dia: "2026-11-05",
     tipo: "melhoria",
