@@ -53,6 +53,15 @@ conferir("nada repetido", new Set(ids).size, ids.length);
 
 conferir("'visto' vale para o texto: 3 visto não esconde 4", assinaturaDoAviso({ id: "a", count: 3, title: "3 x" }) === assinaturaDoAviso({ id: "a", count: 4, title: "4 x" }), false);
 
+/* O vigia parado (05/11/2026): mais de 2 horas úteis sem ler o portal. */
+const vigia = (leu: string | null, agora: string) =>
+  buildNotifications([], [], defaultPrefs, undefined, [], [], EXPEDIENTE_PADRAO, { agora: new Date(agora), vigiaLeuEm: leu }).find((n) => n.id === "vigia-parado");
+conferir("vigia: leu há 1 h, sem aviso", Boolean(vigia("2026-11-05T10:00:00-03:00", "2026-11-05T11:00:00-03:00")), false);
+conferir("vigia: 5 h sem ler no expediente, aviso de atenção", vigia("2026-11-05T09:00:00-03:00", "2026-11-05T14:00:00-03:00")?.tone, "warning");
+conferir("vigia: a noite não conta (17h30 → 8h30)", Boolean(vigia("2026-11-04T17:30:00-03:00", "2026-11-05T08:30:00-03:00")), false);
+conferir("vigia: o título não muda com as horas (não volta como novo)", vigia("2026-11-05T09:00:00-03:00", "2026-11-05T14:00:00-03:00")?.title === vigia("2026-11-05T09:00:00-03:00", "2026-11-05T15:00:00-03:00")?.title, true);
+conferir("vigia: sem leitura registrada, sem aviso", Boolean(vigia(null, "2026-11-05T14:00:00-03:00")), false);
+
 const sino = readFileSync(resolve(__dirname, "../components/layout/NotificationsMenu.tsx"), "utf8");
 conferir("o número do sino conta só o que não foi visto", /novos\.length/.test(sino) && /cw:avisos-vistos/.test(sino), true);
 conferir("abrir a plataforma não dispara pop-up (20 s só registram)", /Date\.now\(\) - montadoEm < 20_000/.test(sino), true);

@@ -11,7 +11,10 @@ import { GoogleEvent } from "@/lib/models/google";
 
 import { hojeNaOperacao } from "@/lib/services/reputation.service";
 import { lateMovements } from "@/lib/services/movement.service";
-import type { Expediente } from "@/lib/services/horasUteis";
+import { descreverMinutosUteis, minutosUteisEntre, type Expediente } from "@/lib/services/horasUteis";
+
+/** Quantos minutos úteis sem leitura fazem o vigia "parado". */
+export const VIGIA_PARADO_MIN = 120;
 import { isOpen, isReclameAqui, isSocial, semRespostaPublica } from "@/lib/services/case.service";
 import type { FrenteDaJanela } from "@/lib/models/janelas";
 import type { NpsResponseView } from "@/lib/models/nps";
@@ -68,6 +71,8 @@ export interface FontesDoSino {
   agora?: Date;
   /** Propostas de categoria da IA esperando decisão (só chega para administrador). */
   propostasDeCategoria?: number;
+  /** A última leitura do vigia (o painel do portal), em ISO (05/11/2026). */
+  vigiaLeuEm?: string | null;
 }
 
 export interface NotificationPrefs {
@@ -446,6 +451,25 @@ export function buildNotifications(
     sem ninguém lembrar delas — 137 em novembro. Informativo: não vira
     pop-up, só fica no sino até serem decididas.
   */
+  /*
+    O vigia parado (05/11/2026, Fase B): mais de 2 horas úteis sem ler o
+    portal. O título não muda com as horas — senão o aviso voltaria a cada
+    minuto como novo; as horas vão no detalhe.
+  */
+  if (fontes.vigiaLeuEm) {
+    const parado = minutosUteisEntre(new Date(fontes.vigiaLeuEm), agora, expediente);
+    if (parado > VIGIA_PARADO_MIN) {
+      list.push({
+        id: "vigia-parado",
+        tone: "warning",
+        title: "O vigia do Reclame Aqui está parado",
+        detail: `Sem ler o portal há ${descreverMinutosUteis(parado, expediente)} úteis. Ele lê a cada 30 minutos com o Chrome aberto e a extensão conectada. Se o portal pediu verificação, abra uma página da Cardápio Web no Reclame Aqui e use Enviar ao CW.`,
+        href: "/reclame-aqui",
+        frente: "reclame-aqui",
+      });
+    }
+  }
+
   if (fontes.propostasDeCategoria && fontes.propostasDeCategoria > 0) {
     const n = fontes.propostasDeCategoria;
     list.push({

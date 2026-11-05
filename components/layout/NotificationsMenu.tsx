@@ -20,6 +20,7 @@ import { useToast } from "@/lib/context/ToastContext";
 import { useAvaliacoesGoogle } from "@/lib/context/useAvaliacoesGoogle";
 import { useAgora } from "@/lib/hooks/useAgora";
 import { contarPropostasPendentes } from "@/lib/actions/revisaoDeCategorias";
+import { ultimaLeituraDoVigia } from "@/lib/actions/saudeDoVigia";
 
 import {
   assinaturaDoAviso,
@@ -112,11 +113,15 @@ export default function NotificationsMenu() {
   const [open, setOpen] = useState(false);
   const [filtro, setFiltro] = useState<"novas" | "todas">("novas");
 
-  /* Propostas de categoria esperando decisão: lidas ao abrir e a cada 10 min. */
+  /* Propostas de categoria esperando decisão e a última leitura do vigia: lidas ao abrir e a cada 10 min. */
   const [propostas, setPropostas] = useState(0);
+  const [vigiaLeuEm, setVigiaLeuEm] = useState<string | null>(null);
   useEffect(() => {
     let vivo = true;
-    const ler = () => contarPropostasPendentes().then((n) => { if (vivo) setPropostas(n); }).catch(() => {});
+    const ler = () => {
+      contarPropostasPendentes().then((n) => { if (vivo) setPropostas(n); }).catch(() => {});
+      ultimaLeituraDoVigia().then((em) => { if (vivo) setVigiaLeuEm(em); }).catch(() => {});
+    };
     ler();
     const relogio = window.setInterval(ler, 10 * 60_000);
     return () => {
@@ -136,10 +141,10 @@ export default function NotificationsMenu() {
             movements,
             googleEvents,
             expediente,
-            { nps: responses, avaliacoesGoogle: avaliacoes, regras: rules, agora, propostasDeCategoria: propostas }
+            { nps: responses, avaliacoesGoogle: avaliacoes, regras: rules, agora, propostasDeCategoria: propostas, vigiaLeuEm }
           )
         : [],
-    [cases, tasks, prefs, session, movements, googleEvents, expediente, responses, avaliacoes, rules, agora, propostas]
+    [cases, tasks, prefs, session, movements, googleEvents, expediente, responses, avaliacoes, rules, agora, propostas, vigiaLeuEm]
   );
 
   const vistosBrutos = useVistosBrutos();

@@ -46,6 +46,16 @@ export interface Mudanca {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "vigia-parado-no-sino",
+    dia: "2026-11-05",
+    tipo: "novo",
+    frente: "reclame-aqui",
+    titulo: "O sino avisa quando o vigia para",
+    texto:
+      "O vigia lê o Reclame Aqui a cada 30 minutos, mas, se o Chrome ficasse fechado ou o portal pedisse verificação, ninguém percebia. Agora, depois de mais de 2 horas úteis sem leitura, o sino mostra \"O vigia do Reclame Aqui está parado\", com há quanto tempo e o que fazer: abrir uma página da Cardápio Web no portal e usar Enviar ao CW. Noite e fim de semana não contam.",
+    href: "/reclame-aqui",
+  },
+  {
     id: "rotina-nao-cabe",
     dia: "2026-11-05",
     tipo: "melhoria",
