@@ -46,6 +46,16 @@ export interface Mudanca {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "agenda-da-extensao-por-pessoa",
+    dia: "2026-11-06",
+    tipo: "melhoria",
+    frente: "extensao",
+    titulo: "A agenda da extensão também é de cada um",
+    texto:
+      "Com o dia dividido entre duas pessoas, a agenda da extensão ainda mostrava as atividades de todo mundo. Agora ela segue a mesma regra do Meu dia: as suas, a sua metade das que estão sem responsável e as de quem está ausente. As contagens de pendentes, atrasadas, próximas e concluídas acompanham. Com uma pessoa só recebendo, nada muda.",
+    onde: "Extensão → Agenda",
+  },
+  {
     id: "auditor-no-whatsapp",
     dia: "2026-11-06",
     tipo: "novo",

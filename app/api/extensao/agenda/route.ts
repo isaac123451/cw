@@ -15,6 +15,9 @@ import {
 } from "@/lib/services/reputation.service";
 import { proximoDiaUtil } from "@/lib/services/horasUteis";
 import { lerExpediente } from "@/lib/services/operacao.service";
+import { lerDivisao } from "@/lib/services/divisao.service";
+import { divisaoAtiva, ehMeu, type DivisaoDoDia } from "@/lib/models/divisaoDoDia";
+import type { FrenteId } from "@/lib/models/frentes";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -37,6 +40,52 @@ interface Entrada {
   concluida?: boolean;
   /** "proximo-dia-util": passa a atividade para o próximo dia útil (04/11/2026). */
   adiar?: "proximo-dia-util";
+}
+
+/** A agenda de quem está conectado, com as mesmas contagens — tudo pela regra do dia de cada um. */
+async function agendaDividida(prisma: NonNullable<ReturnType<typeof getPrisma>>, divisao: DivisaoDoDia, hoje: string, escopo: string, origem: string) {
+  const fimDeHoje = new Date(`${hoje}T23:59:59Z`);
+  const inicioDeHoje = new Date(`${hoje}T00:00:00Z`);
+  const ate14 = new Date(fimDeHoje.getTime() + 14 * 86400000);
+  const desde7 = new Date(fimDeHoje.getTime() - 7 * 86400000);
+  const todas = await prisma.agendaTask.findMany({
+    where: { OR: [{ done: false, dueDate: { lte: ate14 } }, { done: true, dueDate: { gte: desde7 } }] },
+    include: { owner: { select: { name: true } }, case: { select: { protocol: true, title: true } } },
+    orderBy: { dueDate: "asc" },
+    take: 2000,
+  });
+  const minhas = todas.filter((t) => ehMeu({ chave: t.id, dono: t.owner?.name, frente: (t.frente as FrenteId | null) ?? "reclame-aqui" }, divisao));
+  const pendentes = minhas.filter((t) => !t.done && t.dueDate <= fimDeHoje);
+  const proximas = minhas.filter((t) => !t.done && t.dueDate > fimDeHoje);
+  const concluidas = minhas.filter((t) => t.done);
+  const lista = (escopo === "proximos" ? proximas : escopo === "concluidas" ? concluidas : pendentes).slice(0, 40);
+  return {
+    hoje,
+    escopo,
+    itens: lista.map((item) => {
+      const dia = diaNaOperacao(item.dueDate);
+      return {
+        id: item.id,
+        titulo: item.title,
+        tipo: item.type,
+        prioridade: item.priority,
+        quando: dia,
+        hora: item.time ?? null,
+        atrasada: !item.done && dia < hoje,
+        concluida: item.done,
+        responsavel: item.owner?.name,
+        protocolo: item.case?.protocol,
+        caso: item.case?.title,
+      };
+    }),
+    contagens: {
+      pendentes: pendentes.length,
+      atrasadas: pendentes.filter((t) => t.dueDate < inicioDeHoje).length,
+      proximos: proximas.length,
+      concluidas: concluidas.length,
+    },
+    url: `${origem}/agenda`,
+  };
 }
 
 export async function GET(request: Request) {
@@ -102,6 +151,16 @@ export async function GET(request: Request) {
             },
           }
         : { done: false, dueDate: { lte: fimDeHoje } };
+
+  /*
+    O dia de cada um (06/11/2026): com duas pessoas recebendo atendimentos,
+    a agenda da extensão mostra a de quem está conectado — a mesma regra do
+    Meu dia (`lib/models/divisaoDoDia.ts`). Sem divisão, nada muda.
+  */
+  const divisao = usuario ? await lerDivisao(prisma, usuario.id, hoje).catch(() => null) : null;
+  if (divisaoAtiva(divisao)) {
+    return responder(request, await agendaDividida(prisma, divisao, hoje, escopo, new URL(request.url).origin));
+  }
 
   const linhas = await prisma.agendaTask.findMany({
     where,
