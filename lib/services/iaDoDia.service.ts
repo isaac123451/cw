@@ -27,6 +27,9 @@ import { gravarContato, recalcularResumo } from "@/lib/services/tratativa.servic
 import { pedirEstruturado, temIA } from "@/lib/services/ia.service";
 import { aprenderComAsAvaliacoes, aprenderDasConversas, aprendizadosAtivos } from "@/lib/services/aprendizados.service";
 import { classeDaAvaliacao } from "@/lib/models/classeDaAvaliacao";
+import { criteriosPeloTexto } from "@/lib/models/sugestaoPorTexto";
+import { prioridadePelosCriterios } from "@/lib/models/case";
+import { triar } from "@/lib/services/tratativa.service";
 import { saiuDaNota } from "@/lib/models/case";
 import { sinaisDaConversa, type SinalAchado } from "@/lib/models/falaDoCliente";
 import { pesquisaNaConversa, RESPOSTAS_DE_CONFIANCA } from "@/lib/models/okr";
@@ -1476,6 +1479,51 @@ export async function tratarAvaliacoesNegativas(prisma: PrismaClient, userId: st
   return feitas;
 }
 
+/**
+ * A triagem que ninguém fez (06/11/2026, Fase A). Medido nos 52 casos
+ * abertos do RA: 46 parados no 1º passo da documentação, "Há N dias sem
+ * triagem: classifique a urgência". A IA aplica a mesma regra da tela de
+ * triagem — os critérios lidos no título e no relato decidem Urgente, Alta
+ * ou Normal — e grava como "IA do dia", com desfazer. Dez por rodada: o
+ * acumulado sai ao longo do dia, sem enxurrada de avisos.
+ */
+export const TRIAGENS_POR_RODADA = 10;
+
+export async function triarSozinha(prisma: PrismaClient, userId: string, soCasos?: string[]): Promise<number> {
+  const casos = await prisma.case.findMany({
+    where: {
+      ...(soCasos ? { id: { in: soCasos } } : { channel: "RECLAME_AQUI" }),
+      triadaEm: null,
+      status: { notIn: CLOSED_STATUS },
+      OR: [{ moderacaoResultado: null }, { moderacaoResultado: { notIn: ["aceita", "desativada"] } }],
+    },
+    select: { id: true, protocol: true, externalId: true, title: true, description: true, priority: true, criterios: true },
+    orderBy: { publishedAt: "asc" },
+    take: TRIAGENS_POR_RODADA,
+  });
+  let feitas = 0;
+  for (const c of casos) {
+    const achados = criteriosPeloTexto(`${c.title}
+${c.description ?? ""}`);
+    const ids = [...new Set(achados.map((a) => a.criterio))];
+    const nivel = prioridadePelosCriterios(ids);
+    const chave = `triagem:caso:${c.id}`;
+    const novo = await registrar(prisma, userId, {
+      tipo: "etapa",
+      origem: "caso",
+      chave,
+      titulo: `${c.protocol} triada como ${nivel}`,
+      detalhe: achados.length ? `Pelo texto: ${achados.slice(0, 2).map((a) => a.motivo).join("; ")}.` : "Nenhum critério de urgência no título nem no relato: Normal.",
+      href: `/reclame-aqui/${c.externalId ?? c.protocol}`,
+      desfazer: { triagem: c.id, antes: JSON.stringify({ priority: c.priority, criterios: c.criterios }) },
+    });
+    if (!novo) continue;
+    await triar(prisma, { caseId: c.id, prioridade: nivel, criterios: ids, autorNome: "IA do dia" });
+    feitas += 1;
+  }
+  return feitas;
+}
+
 export async function rodarIaDoDia(prisma: PrismaClient, userId: string, agora = new Date()) {
   const partes = await Promise.allSettled([
     criarLembretesAutomaticos(prisma, userId, agora).then((criados) => registrarLembretes(prisma, userId, criados)),
@@ -1491,6 +1539,8 @@ export async function rodarIaDoDia(prisma: PrismaClient, userId: string, agora =
     classificarAvaliacoes(prisma, { agora }),
     /* A avaliação negativa vira atividade de hoje, para o responsável (22/10/2026). */
     tratarAvaliacoesNegativas(prisma, userId, agora),
+    /* O 1º passo da documentação que ninguém deu (06/11/2026). */
+    triarSozinha(prisma, userId),
     /* O que separa a avaliação boa da ruim — uma leitura por dia (22/10/2026). */
     aprenderComAsAvaliacoes(prisma, { agora }),
   ]);
@@ -1561,6 +1611,14 @@ export async function desfazer(prisma: PrismaClient, userId: string, id: string)
   if (d.tarefa) await prisma.agendaTask.updateMany({ where: { id: d.tarefa }, data: { done: true } });
   /* A pesquisa de confiança lida na conversa (04/11/2026): só sai o que a IA gravou. */
   if (d.confianca) await prisma.confiancaDoNps.deleteMany({ where: { responseId: d.confianca, origem: "ia" } });
+  /* A triagem que a IA fez (06/11/2026): volta a "a triar", com a criticidade de antes. */
+  if (d.triagem) {
+    const antes = JSON.parse(d.antes ?? "{}") as { priority?: string; criterios?: string[] };
+    await prisma.case.updateMany({
+      where: { id: d.triagem, triadaPor: "IA do dia" },
+      data: { triadaEm: null, triadaPor: null, ...(antes.priority ? { priority: antes.priority as never } : {}), criterios: antes.criterios ?? [] },
+    });
+  }
   if (d.reabrir) await prisma.agendaTask.updateMany({ where: { id: d.reabrir }, data: { done: false } });
   /* Só o comentário e a nota que esta ação criou — o id vem da própria linha da ação. */
   if (d.comentario) await prisma.caseComment.deleteMany({ where: { id: d.comentario } });

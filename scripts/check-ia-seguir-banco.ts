@@ -14,7 +14,7 @@ import "dotenv/config";
 
 import { Prisma } from "@prisma/client";
 import { getPrisma } from "../lib/prisma";
-import { anotarConversasDoDia, desfazer, leituraDaResposta, seguirPelasConversas, type ConversaParaLer } from "../lib/services/iaDoDia.service";
+import { anotarConversasDoDia, desfazer, leituraDaResposta, seguirPelasConversas, triarSozinha, type ConversaParaLer } from "../lib/services/iaDoDia.service";
 import { paredeDe } from "../lib/services/horasUteis";
 
 let falhas = 0;
@@ -131,6 +131,7 @@ async function main() {
   await identidade(prisma, eu.id);
   await falaDoCliente(prisma, eu.id);
   await confiancaPelaConversa(prisma, eu.id);
+  await triagemSozinha(prisma, eu.id);
 
   console.log(falhas === 0 ? "\n  A IA completa e segue a conversa, e o desfazer devolve tudo.\n" : `\n  ${falhas} falha(s).\n`);
   process.exitCode = falhas === 0 ? 0 : 1;
@@ -470,5 +471,43 @@ async function confiancaPelaConversa(prisma: NonNullable<ReturnType<typeof getPr
     if (conversas.length) await prisma.conversa.deleteMany({ where: { id: { in: conversas } } });
     if (npss.length) await prisma.npsResponse.deleteMany({ where: { id: { in: npss } } });
     conferir("nada descartável ficou na base (confiança)", await prisma.npsResponse.count({ where: { customer: { startsWith: "ZZ-IA-CONF-" } } }), 0);
+  }
+}
+
+/**
+ * A triagem que ninguém fez (06/11/2026): a IA aplica a regra da tela
+ * (critérios no texto → nível), grava como "IA do dia", não mexe no que
+ * alguém já triou, e o desfazer volta para "a triar".
+ */
+async function triagemSozinha(prisma: NonNullable<ReturnType<typeof getPrisma>>, euId: string) {
+  console.log("\n  IA — TRIAGEM DOS CASOS NUNCA TRIADOS (contra o banco, descartável)\n");
+  const marca = `RA-ZZ-IA-TRIA-${Date.now()}`;
+  const ids: string[] = [];
+  try {
+    const novo = async (sufixo: string, title: string, extra: Record<string, unknown> = {}) => {
+      const c = await prisma.case.create({ data: { protocol: `${marca}-${sufixo}`, companyName: "Loja", customer: "Cliente", title, description: "", status: "Novo", publishedAt: new Date(), ...extra }, select: { id: true } });
+      ids.push(c.id);
+      return c.id;
+    };
+    const parada = await novo("U", "Perdendo vendas porque o cardápio está fora do ar e a operação parada");
+    const comum = await novo("N", "Dúvida sobre como trocar a foto do produto");
+    const jaTriada = await novo("T", "Operação parada de novo", { triadaEm: new Date(), triadaPor: "Thais", priority: "MEDIA" });
+
+    await triarSozinha(prisma, euId, ids);
+    const ler = (id: string) => prisma.case.findUnique({ where: { id }, select: { priority: true, triadaPor: true, triadaEm: true } });
+    const [u, n, t] = [await ler(parada), await ler(comum), await ler(jaTriada)];
+    conferir("operação parada: Urgente, pela IA", [u?.priority, u?.triadaPor], ["CRITICA", "IA do dia"]);
+    conferir("sem critério: Normal, e conta como triada", [n?.priority, Boolean(n?.triadaEm)], ["MEDIA", true]);
+    conferir("a triada por alguém não é tocada", [t?.priority, t?.triadaPor], ["MEDIA", "Thais"]);
+    conferir("rodar de novo não repete", await triarSozinha(prisma, euId, ids), 0);
+
+    const acao = await prisma.acaoDaIA.findFirst({ where: { userId: euId, chave: `triagem:caso:${parada}` }, select: { id: true } });
+    if (acao) await desfazer(prisma, euId, acao.id);
+    const voltou = await ler(parada);
+    conferir("desfazer volta para \"a triar\"", [voltou?.triadaEm, voltou?.triadaPor], [null, null]);
+  } finally {
+    await prisma.acaoDaIA.deleteMany({ where: { userId: euId, OR: (ids.length ? ids : ["nada"]).map((id) => ({ chave: { contains: id } })) } });
+    await prisma.case.deleteMany({ where: { protocol: { startsWith: marca } } });
+    conferir("nada descartável ficou na base (triagem)", await prisma.case.count({ where: { protocol: { startsWith: marca } } }), 0);
   }
 }

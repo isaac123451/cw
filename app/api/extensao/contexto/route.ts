@@ -30,6 +30,8 @@ import {
   semRespostaPublica,
 } from "@/lib/services/case.service";
 import { slaStatus } from "@/lib/services/sla.service";
+import { trilhaDoCaso } from "@/lib/models/trilha";
+import { oQueFazer } from "@/lib/models/oQueFazer";
 import {
   movementStatus,
   openMovementOf,
@@ -102,6 +104,11 @@ interface CasoResumo {
   };
   url: string;
   urlPortal?: string;
+  /**
+   * O auditor da tratativa (06/11/2026, Fase C): os passos da documentação
+   * feitos e o próximo, em uma frase — a mesma trilha da ficha do caso.
+   */
+  auditoria?: { feitos: number; total: number; proximo?: string; porque?: string };
   /** A área da empresa do Reclame Aqui — onde se responde e modera. */
   urlEmpresa?: string;
 }
@@ -961,6 +968,25 @@ function perfil(casos: Case[], origem: string) {
 
 type Workspace = Awaited<ReturnType<typeof loadWorkspace>>;
 
+/**
+ * Os passos da documentação para o cartão do WhatsApp: quantos estão
+ * feitos e o próximo, com o motivo. Opcionais não contam no total — senão
+ * o cartão diria "3 de 8" de um caso que já fez tudo o que precisava.
+ */
+function auditoriaDoCaso(item: Case, area?: { destino: string; vencida?: boolean }): CasoResumo["auditoria"] {
+  if (!isOpen(item)) return undefined;
+  const agora = new Date();
+  const passos = trilhaDoCaso(item, { agora, ...(area ? { areaAberta: { destino: area.destino } } : {}) }).filter((p) => p.estado !== "opcional");
+  const atual = passos.find((p) => p.estado === "atual");
+  const conselho = atual ? oQueFazer(item, atual, { agora, area }) : null;
+  return {
+    feitos: passos.filter((p) => p.estado === "feito").length,
+    total: passos.length,
+    proximo: conselho?.frase ?? atual?.titulo,
+    porque: conselho?.porque,
+  };
+}
+
 function resumir(
   item: Case,
   workspace: Workspace,
@@ -1015,6 +1041,7 @@ function resumir(
 
     url: `${origem}/reclame-aqui/${item.id}`,
     urlPortal: item.raUrl,
+    auditoria: auditoriaDoCaso(item, movimento ? { destino: movimento.destination, vencida: situacaoMovimento?.situation === "estourado" } : undefined),
     urlEmpresa: enderecoNaAreaDaEmpresa(item.protocol) ?? undefined,
   };
 }

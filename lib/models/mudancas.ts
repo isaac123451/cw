@@ -46,6 +46,26 @@ export interface Mudanca {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "auditor-no-whatsapp",
+    dia: "2026-11-06",
+    tipo: "novo",
+    frente: "extensao",
+    titulo: "Auditor da tratativa no cartão do WhatsApp",
+    texto:
+      "O cartão do caso no WhatsApp mostrava a etapa e o prazo. Agora mostra também os passos da documentação, em pontinhos (cheios os feitos), e o próximo passo em uma frase, como \"Resposta publicada: peça a avaliação\". O motivo aparece ao parar o mouse em cima. É a mesma trilha da ficha do caso, levada para onde a conversa acontece.",
+    onde: "Extensão → cartão do caso no WhatsApp",
+  },
+  {
+    id: "ia-tria-sozinha",
+    dia: "2026-11-06",
+    tipo: "novo",
+    frente: "reclame-aqui",
+    titulo: "A IA do dia faz a triagem que ficou para trás",
+    texto:
+      "Nos casos abertos, o passo que mais travava era o primeiro: \"Há N dias sem triagem: classifique a urgência\". Agora a IA do dia aplica a mesma regra da tela de triagem: lê o título e o relato, acha os critérios e grava Urgente, Alta ou Normal como \"IA do dia\". Dez por rodada, sem mexer no que alguém já triou, e com desfazer. Nos 17 do RA que estavam a triar, a regra dá 7 Urgente (operação parada, dinheiro que não chegou, LGPD), 5 Alta e 5 Normal.",
+    href: "/reclame-aqui/triagem",
+  },
+  {
     id: "plural-sem-parenteses-1105",
     dia: "2026-11-05",
     tipo: "correcao",

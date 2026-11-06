@@ -42,6 +42,18 @@
   }
 
   /**
+   * O auditor da tratativa (06/11/2026, Fase C): os passos da documentação
+   * feitos e o próximo, na mesma linha — como a auditoria da resposta
+   * pública, só que para a conversa. O motivo vai no `title`.
+   */
+  function auditoria(c) {
+    const a = c.auditoria;
+    if (!a || !a.total) return "";
+    const pontos = Array.from({ length: a.total }, (_, i) => `<i class="${i < a.feitos ? "feito" : ""}"></i>`).join("");
+    return `<p class="audit" title="${e(a.porque || "")}"><span class="pontos" aria-label="${a.feitos} de ${a.total} passos">${pontos}</span><span class="prox">${a.proximo ? e(a.proximo) : "Passos da documentação em dia"}</span></p>`;
+  }
+
+  /**
    * O HTML do cartão, ou "" quando não há nada em aberto para esta conversa.
    * `dados` é a resposta de `/api/extensao/contexto`.
    */
@@ -58,6 +70,7 @@
         <a class="item" href="${e(c.url)}" target="_blank" rel="noopener" title="Abrir no CW">
           <p class="l1"><span class="nivel ${e(COR_DO_NIVEL[c.prioridade] || "normal")}">${e(c.prioridade || "Sem triagem")}</span> <span class="titulo">${e(c.titulo || c.protocolo)}</span></p>
           <p class="l2">${prazo}${e(c.status)}${c.respondido ? "" : " · sem resposta pública"}</p>
+          ${auditoria(c)}
         </a>`;
     });
     if (abertos.length > 2) itens.push(`<p class="l2 mais-casos">+${abertos.length - 2} em aberto no painel</p>`);
@@ -117,6 +130,14 @@
     .nivel.normal { background: #dcfce7; color: #166534; }
     .prazo { font-weight: 600; }
     .prazo.perigo { color: #be123c; } .prazo.atencao { color: #b45309; } .prazo.ok { color: #15803d; }
+    .audit { display: flex; align-items: center; gap: 6px; margin-top: 3px; min-width: 0; font-size: 11px; color: #5B2A86; }
+    .pontos { display: inline-flex; gap: 2px; flex: none; }
+    .pontos i { width: 6px; height: 6px; border-radius: 50%; background: #e4dcf3; }
+    .pontos i.feito { background: #5B2A86; }
+    .prox { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; font-weight: 600; }
+    .escuro .audit { color: #d9c8f0; }
+    .escuro .pontos i { background: #33424b; }
+    .escuro .pontos i.feito { background: #b38ae8; }
     .risco { margin: 2px 4px 0; padding: 3px 6px; border-radius: 6px; background: #fff1f2; color: #9f1239; font-size: 11px; font-weight: 600; }
     .cartao.escuro { background: #1f2c33; color: #e9edef; border-color: #33424b; }
     .escuro .topo { border-color: #2a3942; }

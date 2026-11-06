@@ -39,5 +39,12 @@ conferir("risco marcado: a linha de retenção", html({ cliente: { nome: "Ana" }
 conferir("texto do cliente não vira HTML", html({ cliente: { nome: "<img src=x>" }, casos: [caso({ titulo: "<b>x</b>" })] }).includes("<img"), false);
 conferir("botões: só Painel e fechar", (um.match(/<button /g) ?? []).length, 2);
 
+/* O auditor da tratativa (06/11/2026): passos feitos e o próximo. */
+const auditado = html({ casos: [caso({ auditoria: { feitos: 3, total: 6, proximo: "Peça a avaliação no portal", porque: "Respondido há 2 dias" } })] });
+conferir("auditor: 6 pontos, 3 cheios", [(auditado.match(/<i class="/g) ?? []).length, (auditado.match(/<i class="feito"/g) ?? []).length], [6, 3]);
+conferir("auditor: o próximo passo na linha e o motivo no title", auditado.includes("Peça a avaliação no portal") && auditado.includes('title="Respondido há 2 dias"'), true);
+conferir("auditor: tudo feito diz que está em dia", html({ casos: [caso({ auditoria: { feitos: 6, total: 6 } })] }).includes("Passos da documentação em dia"), true);
+conferir("auditor: sem trilha, sem linha", html({ casos: [caso()] }).includes('class="audit"'), false);
+
 console.log(falhas ? `\n  ${falhas} ponto(s) a corrigir.\n` : "\n  O cartão do WhatsApp mostra só o que está em aberto, pequeno, e leva ao CW.\n");
 if (falhas) process.exitCode = 1;
