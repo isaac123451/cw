@@ -33,6 +33,7 @@ import { ConfirmDelete } from "@/components/shared/Modal";
 import NpsForm from "@/components/nps/NpsForm";
 import NpsList from "@/components/nps/NpsList";
 import NpsKanban from "@/components/nps/NpsKanban";
+import DiaADiaDoNps from "@/components/nps/DiaADiaDoNps";
 import RootCauseManager from "@/components/nps/RootCauseManager";
 import StageManager from "@/components/nps/StageManager";
 import TriagemNps from "@/components/nps/TriagemNps";
@@ -726,6 +727,9 @@ function NpsPagina({ abrirInicial = null }: { abrirInicial?: "etapas" | "causas"
 
         {/* O 1º contato com os promotores em lote, pelo WhatsApp Web (04/11/2026). */}
         <PromotoresEmLote respostas={responses} />
+
+        {/* O dia a dia do NPS (09/11/2026), no molde do das Redes. */}
+        {responses.length > 0 && <DiaADiaDoNps respostas={responses} />}
 
         <SurfaceCard
           tour="respostas-nps"

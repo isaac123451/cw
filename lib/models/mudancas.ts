@@ -46,6 +46,16 @@ export interface Mudanca {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "dia-a-dia-do-nps",
+    dia: "2026-11-09",
+    tipo: "novidade",
+    frente: "nps",
+    titulo: "Dia a dia do NPS",
+    texto:
+      "Acima do quadro do NPS, uma linha com o dia de hoje: pesquisas que chegaram, contatados, responderam e encerrados. Aberta, mostra os últimos 14 dias, com os detratores de cada dia. O contato e a resposta contam pelo dia em que aconteceram, não pelo dia da pesquisa.",
+    href: "/nps",
+  },
+  {
     id: "quadro-do-nps-pela-data-do-contato",
     dia: "2026-11-09",
     tipo: "melhoria",
