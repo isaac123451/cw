@@ -48,7 +48,7 @@ export const MUDANCAS: Mudanca[] = [
   {
     id: "dia-a-dia-do-nps",
     dia: "2026-11-09",
-    tipo: "novidade",
+    tipo: "novo",
     frente: "nps",
     titulo: "Dia a dia do NPS",
     texto:
