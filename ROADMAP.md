@@ -1198,6 +1198,16 @@ por dia desde 31/10 contra 50–75 antes — ela só roda com a plataforma abert
 - [x] **Fase F, parte 1 (1.1.50):** NPS guardado no IndexedDB por pessoa; Meu
       dia de 45 s para 2,1 s (a lentidão local é a rede até o Supabase,
       ~60 KB/s; na Vercel ~2 s). Incremental por `?desde=`.
+- [x] **06–09/11 (1.1.56–1.1.62):** auditor da tratativa no cartão do
+      WhatsApp; IA tria os casos do RA sem triagem (as Redes não: a triagem
+      delas pede assunto e cliente); agenda da extensão por pessoa; respostas
+      que funcionam (`UsoDeResposta`, nota depois de cada texto, mínimo 3);
+      planilha das Redes finaliza o que fechou lá; dia a dia das Redes e
+      `encerradoEm` carimbado em toda gravação das Redes; receita sem soma
+      enganosa; Jornada "Nota média baixa"; conversas guardadas nos números de
+      trabalho, captura de áudio pelo `createObjectURL`, marcação do áudio não
+      ouvido; taxa de resposta no WhatsApp na Análise do NPS (11% em 30 d).
+      A conferir em uso real: transcrição de áudio no WhatsApp; a taxa subir.
 - [x] **Desativada → excluir (1.1.51):** pedido de 05/11; tabela
       `ReclamacaoExcluida` trava a recriação; precisa de `npm run db:push`.
 
