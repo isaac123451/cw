@@ -46,6 +46,16 @@ export interface Mudanca {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "receita-e-jornada-sem-numero-enganoso",
+    dia: "2026-11-09",
+    tipo: "correcao",
+    frente: "plataforma",
+    titulo: "Estabelecimentos e Jornada sem número que engana",
+    texto:
+      "Em Estabelecimentos, \"Receita recorrente\" e \"Receita em risco\" mostravam os dois R$ 210, porque só 1 das 244 contas tem plano cadastrado, e parecia que toda a receita estava em risco. Agora, com menos da metade das contas com plano, os dois quadros mostram \"—\" e dizem quantas têm plano e onde cadastrar. Na Jornada, o quadro \"Detratores\" (nota média abaixo de 5 somando as frentes) virou \"Nota média baixa\", para não se confundir com o detrator do NPS, que é nota de 0 a 6.",
+    href: "/estabelecimentos",
+  },
+  {
     id: "dia-a-dia-das-redes",
     dia: "2026-11-09",
     tipo: "novo",

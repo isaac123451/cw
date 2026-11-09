@@ -208,6 +208,15 @@ export default function EstabelecimentosPage() {
       semValor: naoCanceladas.filter((item) => !valor(item)).length,
 
       mrrEmRisco: emRisco.reduce((sum, item) => sum + (valor(item)?.reais ?? 0), 0),
+
+      /*
+        Quantas contas têm plano ou mensalidade (09/11/2026). Com 1 de 244, a
+        "receita recorrente" de R$ 210 e a "receita em risco" de R$ 210
+        pareciam dizer que toda a receita estava em risco. Abaixo da metade,
+        a soma não diz a receita, e os dois quadros mostram "—".
+      */
+      comValor: naoCanceladas.filter((item) => valor(item)).length,
+      contas: naoCanceladas.length,
     };
 
   }, [establishments, planos]);
@@ -277,9 +286,11 @@ export default function EstabelecimentosPage() {
             carregando={carregandoBase || carregandoCasos}
             label="Receita recorrente"
             description="Soma da mensalidade das contas não canceladas — a informada na conta ou, sem ela, o preço do plano na tabela de Configurações → Planos."
-            value={money.format(metrics.mrr)}
+            value={metrics.comValor * 2 < metrics.contas ? "—" : money.format(metrics.mrr)}
             hint={
-              metrics.semValor > 0
+              metrics.comValor * 2 < metrics.contas
+                ? `só ${metrics.comValor} de ${metrics.contas} contas com plano: cadastre em Configurações → Planos`
+                : metrics.semValor > 0
                 ? `${metrics.semValor} ${pluralDe(metrics.semValor, "conta", "contas")} sem plano nem mensalidade`
                 : metrics.pelaTabela > 0
                   ? `${metrics.pelaTabela} pela tabela de planos`
@@ -293,8 +304,8 @@ export default function EstabelecimentosPage() {
             carregando={carregandoBase || carregandoCasos}
             label="Receita em risco"
             description="Mensalidade das contas marcadas como em risco."
-            value={money.format(metrics.mrrEmRisco)}
-            hint="pode ser perdida"
+            value={metrics.comValor * 2 < metrics.contas ? "—" : money.format(metrics.mrrEmRisco)}
+            hint={metrics.comValor * 2 < metrics.contas ? "sem o plano das contas, não dá para somar" : "pode ser perdida"}
             icon={MessagesSquare}
             tone="warning"
           />

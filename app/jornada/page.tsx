@@ -218,10 +218,10 @@ export default function JornadaPage() {
 
           <StatTile
             carregando={carregandoCasos}
-            label="Detratores"
-            description="Nota média abaixo de 5, somando as frentes na escala de 0 a 10: a do Reclame Aqui e a do NPS como vêm, a do Google em dobro. Quem ainda não deu nota em frente nenhuma não entra."
+            label="Nota média baixa"
+            description="Não é o detrator do NPS (nota de 0 a 6). Nota média abaixo de 5, somando as frentes na escala de 0 a 10: a do Reclame Aqui e a do NPS como vêm, a do Google em dobro. Quem ainda não deu nota em frente nenhuma não entra."
             value={detractors}
-            hint="nota média abaixo de 5"
+            hint="abaixo de 5, somando as frentes"
             icon={Frown}
             tone="primary"
           />
