@@ -46,6 +46,16 @@ export interface Mudanca {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "dia-a-dia-das-redes",
+    dia: "2026-11-09",
+    tipo: "novo",
+    frente: "redes",
+    titulo: "Dia a dia das Redes, como a tabela da Nota do Reclame Aqui",
+    texto:
+      "Na tela das Redes, abaixo dos números, a linha \"Dia a dia\" mostra o dia de hoje: quantos chegaram, quantos tiveram o 1º contato e quantos fecharam. Num clique abre a tabela dos últimos 14 dias, com os resolvidos, os outros fechamentos (encaminhado, sem contato, sem identificação) e o saldo da fila (chegou menos fechou: positivo, a fila cresceu). Para isso o CW passou a guardar o dia em que cada atendimento fecha, também quando ele é arrastado no quadro; antes só o Encerrar guardava. Os fechamentos de antes de 09/11 aparecem só em parte, e a tabela avisa.",
+    href: "/redes-sociais",
+  },
+  {
     id: "planilha-finaliza-redes",
     dia: "2026-11-09",
     tipo: "correcao",

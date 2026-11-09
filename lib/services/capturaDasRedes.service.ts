@@ -148,7 +148,7 @@ export async function gravarCaptura(
     const etapa = linha.fechar!;
     const mudou = await prisma.case.updateMany({
       where: { id: linha.id, status: { notIn: FINAIS_DAS_REDES } },
-      data: { status: etapa, resolved: etapa === "Resolvido" },
+      data: { status: etapa, resolved: etapa === "Resolvido", encerradoEm: new Date() },
     });
     if (!mudou.count) continue;
     await prisma.caseEvent

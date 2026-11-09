@@ -28,6 +28,7 @@ import { ConfirmDelete } from "@/components/shared/Modal";
 import SocialCaseForm from "@/components/redes-sociais/SocialCaseForm";
 import EncerrarRedesModal from "@/components/redes-sociais/EncerrarRedesModal";
 import SegmentosDasRedes from "@/components/redes-sociais/SegmentosDasRedes";
+import DiaADiaDasRedes from "@/components/redes-sociais/DiaADiaDasRedes";
 
 import { useScopedCases } from "@/lib/context/useScopedCases";
 import { useCases } from "@/lib/context/CaseContext";
@@ -275,6 +276,9 @@ function RedesSociaisConteudo() {
           />
 
         </div>
+
+        {/* O dia a dia (09/11/2026), como a tabela da Nota no Índice do RA: chegou, 1º contato, fechou, saldo. */}
+        {todosOsSociais.length > 0 && <DiaADiaDasRedes casos={todosOsSociais} />}
 
         {/* Os segmentos ficam fora do vazio: um filtro que zerou a tela precisa continuar à mão para ser desfeito. */}
         {todosOsSociais.length > 0 && (

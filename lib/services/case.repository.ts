@@ -6,6 +6,7 @@ import {
 import { semApagarVazios } from "@/lib/services/semApagar";
 import { RESPOSTA_SINTETICA } from "@/lib/services/raMarcadores";
 import { colunaNoFluxo, STATUS_TERMINADO } from "@/lib/services/case.service";
+import { eFinalDasRedes } from "@/lib/models/redes";
 
 /**
  * As tarefas da agenda de um caso que terminou fecham sozinhas (1.91).
@@ -1100,7 +1101,27 @@ export async function persistCase(
 
   if (STATUS_TERMINADO.includes(item.status) || fechadaPelaAvaliacao) await fecharTarefasDoCaso(prisma, item.protocol);
 
+  await carimbarFechamentoDasRedes(prisma, salvo.id);
+
   return salvo.id;
+}
+
+/**
+ * O dia em que o atendimento das Redes fechou (09/11/2026).
+ *
+ * Só o diálogo "Encerrar" gravava `encerradoEm`; arrastar no quadro para
+ * Resolvido, Encaminhado ou Sem contato não — e 111 atendimentos fechados
+ * ficaram sem data, o que impedia contar os fechamentos por dia. Agora toda
+ * gravação confere: etapa final sem data ganha a de agora; etapa aberta com
+ * data perde a data (reabriu). Só nas Redes: no Reclame Aqui o encerramento
+ * tem regra própria.
+ */
+export async function carimbarFechamentoDasRedes(prisma: PrismaClient, id: string) {
+  const c = await prisma.case.findUnique({ where: { id }, select: { channel: true, status: true, encerradoEm: true } });
+  if (!c || c.channel === "RECLAME_AQUI") return;
+  const final = eFinalDasRedes(c.status);
+  if (final && !c.encerradoEm) await prisma.case.update({ where: { id }, data: { encerradoEm: new Date() }, select: { id: true } });
+  else if (!final && c.encerradoEm) await prisma.case.update({ where: { id }, data: { encerradoEm: null }, select: { id: true } });
 }
 
 /**
@@ -1271,6 +1292,8 @@ export async function persistCaseParcial(
   }
 
   if ((comparacao.meus.includes("status") && STATUS_TERMINADO.includes(item.status)) || fechadaPelaAvaliacao) await fecharTarefasDoCaso(prisma, item.protocol);
+
+  if (comparacao.meus.includes("status")) await carimbarFechamentoDasRedes(prisma, linha.id);
 
   return fechadaPelaAvaliacao
     ? { ok: true, alterados: [...new Set([...comparacao.meus, "status"])], colunaPelaAvaliacao: fechadaPelaAvaliacao }
