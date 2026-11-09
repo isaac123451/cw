@@ -862,7 +862,8 @@
      * Sem `await`: quem colou já viu o resultado na tela, e a contagem
      * não pode segurar nada.
      */
-    CW.enviar({ tipo: "usarResposta", id: item.id });
+    /* Com o caso da conversa (09/11/2026): é o que mede a nota que veio depois do texto. */
+    CW.enviar({ tipo: "usarResposta", id: item.id, protocolo: contexto().protocolo || undefined });
 
     const pendencias = [];
 

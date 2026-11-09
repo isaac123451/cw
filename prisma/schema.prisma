@@ -2687,3 +2687,18 @@ model ReclamacaoExcluida {
   por        String?
   excluidaEm DateTime @default(now())
 }
+
+/// Cada vez que uma resposta pronta entrou numa conversa de um caso
+/// (09/11/2026). É o que deixa medir "respostas que funcionam": a nota que
+/// o consumidor deu depois de cada texto. Sem chave estrangeira de propósito:
+/// apagar o texto ou o caso não deve travar nada — a linha só deixa de casar.
+model UsoDeResposta {
+  id       String   @id @default(cuid())
+  macroId  String
+  caseId   String
+  usadoEm  DateTime @default(now())
+  por      String?
+
+  @@index([macroId])
+  @@index([caseId])
+}

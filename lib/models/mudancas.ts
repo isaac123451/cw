@@ -46,6 +46,16 @@ export interface Mudanca {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "respostas-que-funcionam",
+    dia: "2026-11-09",
+    tipo: "novo",
+    frente: "plataforma",
+    titulo: "Respostas que funcionam: a nota que veio depois de cada texto",
+    texto:
+      "Cada vez que uma resposta pronta entra numa conversa pelo atalho do WhatsApp, a plataforma passa a guardar em qual caso foi. Em Respostas prontas, cada texto mostra a nota média que o consumidor deu nos casos avaliados depois dele, com quantas avaliações são. Só conta a avaliação que veio depois do primeiro uso, cada caso uma vez, e o número só aparece com três avaliações ou mais. Começa a juntar dados agora; em algumas semanas dá para ver quais textos ajudam a nota e quais pedem revisão.",
+    href: "/base-conhecimento",
+  },
+  {
     id: "agenda-da-extensao-por-pessoa",
     dia: "2026-11-06",
     tipo: "melhoria",

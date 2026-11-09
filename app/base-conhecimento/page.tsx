@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   BookOpenCheck,
@@ -33,6 +33,8 @@ import {
 } from "@/lib/context/MacrosContext";
 
 import { Macro } from "@/lib/models/macro";
+import { lerEfeitoDasRespostas } from "@/lib/actions/respostasQueFuncionam";
+import type { EfeitoDaResposta } from "@/lib/models/respostasQueFuncionam";
 
 export default function BaseConhecimentoPage() {
 
@@ -52,6 +54,16 @@ export default function BaseConhecimentoPage() {
   const [deleting, setDeleting] = useState<Macro>();
 
   const [copied, setCopied] = useState<string>();
+
+  /* A nota depois de cada texto (09/11/2026): só aparece com 3 avaliações ou mais. */
+  const [efeito, setEfeito] = useState<Record<string, EfeitoDaResposta>>({});
+  useEffect(() => {
+    let vivo = true;
+    lerEfeitoDasRespostas().then((e) => vivo && setEfeito(e)).catch(() => {});
+    return () => {
+      vivo = false;
+    };
+  }, []);
 
   const categorias = useMemo(
     () =>
@@ -348,6 +360,14 @@ export default function BaseConhecimentoPage() {
 
                   <span className="text-[11px] text-zinc-400">
                     {item.owner} · usada {item.uses}x
+                    {efeito[item.id] && (
+                      <span
+                        className="ml-1.5 font-medium text-zinc-600"
+                        title={`Nota média que o consumidor deu nos ${efeito[item.id].avaliacoes} casos avaliados depois deste texto.`}
+                      >
+                        · nota depois {efeito[item.id].media.toLocaleString("pt-BR", { minimumFractionDigits: 1 })} ({efeito[item.id].avaliacoes})
+                      </span>
+                    )}
                   </span>
 
                   <button

@@ -130,10 +130,10 @@ export async function POST(request: Request) {
     return semSessao(request);
   }
 
-  let corpo: { id?: string } = {};
+  let corpo: { id?: string; protocolo?: string } = {};
 
   try {
-    corpo = (await request.json()) as { id?: string };
+    corpo = (await request.json()) as { id?: string; protocolo?: string };
   } catch {
     return responder(
       request,
@@ -165,6 +165,20 @@ export async function POST(request: Request) {
       data: { uses: { increment: 1 } },
       select: { uses: true },
     });
+
+    /*
+      O uso no caso (09/11/2026): a base de "respostas que funcionam". Sem
+      a tabela (antes do db:push) ou sem caso, só não grava — a contagem já foi.
+    */
+    const protocolo = String(corpo.protocolo ?? "").trim().slice(0, 80);
+    if (protocolo) {
+      const caso = await prisma.case.findFirst({ where: { OR: [{ protocol: protocolo }, { externalId: protocolo }] }, select: { id: true } });
+      if (caso) {
+        await prisma.usoDeResposta
+          .create({ data: { macroId: id, caseId: caso.id, por: usuario?.nome ?? null } })
+          .catch(() => undefined);
+      }
+    }
 
     updateTag(WORKSPACE_TAG);
 

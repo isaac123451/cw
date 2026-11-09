@@ -789,7 +789,7 @@ async function tratar(mensagem) {
     const dados = await chamar(
       CAMINHOS.respostas,
       {},
-      { id: mensagem.id }
+      { id: mensagem.id, protocolo: mensagem.protocolo }
     );
 
     return { ok: true, dados };
