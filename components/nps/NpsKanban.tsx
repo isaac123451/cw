@@ -45,6 +45,22 @@ const ENCERRADO = "__encerrado__";
  * encerramento no guia, e uma coluna para cada faria o quadro virar uma
  * planilha rolando na horizontal. Quem quer o rótulo exato abre a ficha.
  */
+/** O último contato do ciclo: a tentativa mais recente, ou o 1º contato registrado. */
+export function ultimoContato(item: Pick<NpsResponseView, "attempts" | "firstContactAt">): string | undefined {
+  const datas = [...(item.attempts ?? []).map((a) => a.createdAt), item.firstContactAt].filter((d): d is string => Boolean(d));
+  return datas.length ? datas.sort()[datas.length - 1] : undefined;
+}
+
+export function ordenarPeloContato<T extends Pick<NpsResponseView, "attempts" | "firstContactAt">>(lista: T[]): T[] {
+  const comContato = lista.filter((i) => ultimoContato(i)).sort((a, b) => ultimoContato(a)!.localeCompare(ultimoContato(b)!));
+  return [...comContato, ...lista.filter((i) => !ultimoContato(i))];
+}
+
+const diaCurto = (iso: string) => {
+  const d = new Date(Date.parse(iso) - 3 * 3_600_000).toISOString();
+  return `${d.slice(8, 10)}/${d.slice(5, 7)}`;
+};
+
 function colunasDe(etapas: NpsStageOption[]) {
 
   const andamento = emAndamento(etapas).map((etapa) => ({
@@ -183,12 +199,22 @@ export default function NpsKanban({
       className={`grid h-[calc(100vh-420px)] min-h-[380px] grid-cols-1 gap-3 sm:grid-cols-2 ${grade}`}
     >
 
-      {colunas.map((coluna) => {
+      {colunas.map((coluna, posicao) => {
 
-        const daColuna = itens.filter(
+        /*
+          Pela data do contato (09/11/2026): "preciso que fique em ordem pela
+          data de contato feito ou pelo menos pela ordem que foi movida". O
+          contato mais antigo em cima — quem espera há mais tempo pelo retorno
+          —, o mais recente embaixo, como a ordem em que foram movidos. Sem
+          contato, depois, na ordem de antes. A primeira coluna (Novo) fica
+          como estava: ali quase ninguém foi contatado, e o raro que foi
+          pularia para o topo.
+        */
+        const naColuna = itens.filter(
           (item) =>
             colunaDe(item, colunas) === coluna.id
         );
+        const daColuna = posicao === 0 ? naColuna : ordenarPeloContato(naColuna);
 
         return (
           <div
@@ -347,6 +373,7 @@ function Cartao({
         {item.attempts.length > 0 && (
           <span className="rounded-md bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-500">
             {item.attempts.length} {pluralDe(item.attempts.length, "tentativa", "tentativas")}
+            {ultimoContato(item) ? ` · ${diaCurto(ultimoContato(item)!)}` : ""}
           </span>
         )}
 

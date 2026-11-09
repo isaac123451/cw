@@ -46,6 +46,16 @@ export interface Mudanca {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "quadro-do-nps-pela-data-do-contato",
+    dia: "2026-11-09",
+    tipo: "melhoria",
+    frente: "nps",
+    titulo: "O quadro do NPS segue a data do contato",
+    texto:
+      "Em Aguardando Resposta e nas outras colunas de andamento, o cartão contatado há mais tempo fica em cima e o mais recente embaixo, na ordem em que foram movidos. Os que ainda não têm contato vêm depois. O cartão mostra o dia do último contato ao lado das tentativas, por exemplo \"1 tentativa · 28/10\". A coluna Novo continua na ordem de antes.",
+    href: "/nps",
+  },
+  {
     id: "frentes-por-telefone-e-conta",
     dia: "2026-11-09",
     tipo: "correcao",
