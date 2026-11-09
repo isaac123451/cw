@@ -110,15 +110,18 @@ export async function POST(request: Request) {
   try {
     if (acao === "previa") {
       const linhas = await previaDaCaptura(prisma, itens);
-      const contagem = { nova: 0, existente: 0, duplicada: 0, "sem-rede": 0 };
-      for (const l of linhas) contagem[l.estado] += 1;
+      const contagem = { nova: 0, existente: 0, duplicada: 0, "sem-rede": 0, fechar: 0 };
+      for (const l of linhas) {
+        contagem[l.estado] += 1;
+        if (l.fechar) contagem.fechar += 1;
+      }
       return responder(request, { ok: true, suficientes: true, cabecalho, colunas, total: linhas.length, contagem, linhas: linhas.slice(0, 300) });
     }
 
     const apenas = Array.isArray(corpo.apenas) ? corpo.apenas.map((c) => texto(c, 120)).filter(Boolean) : undefined;
     const r = await gravarCaptura(prisma, itens, apenas);
     /* Sem isto, a tela das Redes seguiria servindo a lista de antes até o cache vencer. */
-    if (r.criados.length > 0) revalidateTag(CASES_TAG, { expire: 0 });
+    if (r.criados.length > 0 || r.finalizados.length > 0) revalidateTag(CASES_TAG, { expire: 0 });
     return responder(request, { ok: true, ...r });
   } catch (erro) {
     console.error("[extensao/captura-redes]", erro);

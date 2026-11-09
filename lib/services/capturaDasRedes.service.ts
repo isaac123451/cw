@@ -10,6 +10,7 @@ import {
 } from "@/lib/models/capturaDasRedes";
 import { criarSeNova } from "@/lib/services/case.repository";
 import { hojeNaOperacao } from "@/lib/services/reputation.service";
+import { eFinalDasRedes, FINAIS_DAS_REDES } from "@/lib/models/redes";
 
 /**
  * A captura das Redes contra o banco: o que já existe, e gravar o novo.
@@ -30,6 +31,11 @@ export interface LinhaDaPrevia {
   /** O caso que já existe, quando existe. */
   protocolo?: string;
   id?: string;
+  /**
+   * Fechado na planilha e aberto no CW (09/11/2026): a etapa final que o
+   * STATUS diz ("Resolvido", "Encaminhado", "Sem contato"). O Gravar finaliza.
+   */
+  fechar?: string;
 }
 
 async function jaNoCw(prisma: PrismaClient, itens: ItemCapturado[]) {
@@ -37,10 +43,10 @@ async function jaNoCw(prisma: PrismaClient, itens: ItemCapturado[]) {
   const links = [...new Set(itens.map((i) => i.link).filter(Boolean))];
   const achados = await prisma.case.findMany({
     where: { OR: [{ externalId: { in: chaves } }, ...(links.length ? [{ externalUrl: { in: links } }] : [])] },
-    select: { id: true, protocol: true, externalId: true, externalUrl: true },
+    select: { id: true, protocol: true, externalId: true, externalUrl: true, status: true },
   });
-  const porChave = new Map<string, { id: string; protocol: string }>();
-  const porLink = new Map<string, { id: string; protocol: string }>();
+  const porChave = new Map<string, { id: string; protocol: string; status: string }>();
+  const porLink = new Map<string, { id: string; protocol: string; status: string }>();
   for (const a of achados) {
     if (a.externalId) porChave.set(a.externalId, a);
     if (a.externalUrl) porLink.set(a.externalUrl, a);
@@ -62,6 +68,8 @@ export async function previaDaCaptura(prisma: PrismaClient, itens: ItemCapturado
       texto: item.texto.slice(0, 280),
       quando: item.quando,
       ...(estado === "existente" && caso ? { protocolo: caso.protocol, id: caso.id } : {}),
+      /* Só para uma etapa final, e só se o caso ainda está aberto aqui: nunca reabre nem troca um fechamento por outro. */
+      ...(estado === "existente" && caso && eFinalDasRedes(item.status || "") && !eFinalDasRedes(caso.status) ? { fechar: item.status } : {}),
     };
   });
 }
@@ -109,7 +117,7 @@ export async function gravarCaptura(
   prisma: PrismaClient,
   itens: ItemCapturado[],
   apenas?: string[]
-): Promise<{ criados: { protocolo: string; id: string; referencia: string }[]; jaExistiam: number; ignorados: number }> {
+): Promise<{ criados: { protocolo: string; id: string; referencia: string }[]; jaExistiam: number; ignorados: number; finalizados: { protocolo: string; etapa: string }[] }> {
   const previa = await previaDaCaptura(prisma, itens);
   const escolhidas = new Set(apenas ?? previa.filter((p) => p.estado === "nova").map((p) => p.chave));
   const novas = previa.filter((p) => p.estado === "nova" && escolhidas.has(p.chave));
@@ -130,5 +138,24 @@ export async function gravarCaptura(
     else jaExistiam += 1;
   }
 
-  return { criados, jaExistiam, ignorados: previa.length - novas.length };
+  /*
+    Fechados na planilha, abertos no CW (09/11/2026): "finaliza os casos de
+    redes sociais que já foram fechados". A etapa vem do STATUS da planilha,
+    com o registro no histórico. Mesma escolha de linhas do Gravar.
+  */
+  const finalizados: { protocolo: string; etapa: string }[] = [];
+  for (const linha of previa.filter((p) => p.fechar && p.id && (!apenas || escolhidas.has(p.chave)))) {
+    const etapa = linha.fechar!;
+    const mudou = await prisma.case.updateMany({
+      where: { id: linha.id, status: { notIn: FINAIS_DAS_REDES } },
+      data: { status: etapa, resolved: etapa === "Resolvido" },
+    });
+    if (!mudou.count) continue;
+    await prisma.caseEvent
+      .create({ data: { caseId: linha.id!, kind: "etapa", detail: `Fechado na planilha (${linha.referencia}): ${etapa}`, actor: "Leitura da planilha" } })
+      .catch(() => undefined);
+    finalizados.push({ protocolo: linha.protocolo!, etapa });
+  }
+
+  return { criados, jaExistiam, ignorados: previa.length - novas.length, finalizados };
 }

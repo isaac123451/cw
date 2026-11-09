@@ -40,7 +40,7 @@
 
   function numeros(c) {
     const cel = (n, rotulo) => `<div><b>${Number(n) || 0}</b><span>${rotulo}</span></div>`;
-    return `<div class="numeros">${cel(c.nova, "novas")}${cel(c.existente, "já no CW")}${cel(c.duplicada, "repetidas")}${cel(c["sem-rede"], "sem rede")}</div>`;
+    return `<div class="numeros">${cel(c.nova, "novas")}${cel(c.existente, "já no CW")}${cel(c.duplicada, "repetidas")}${cel(c["sem-rede"], "sem rede")}${c.fechar ? cel(c.fechar, "a finalizar") : ""}</div>`;
   }
 
   function colunas(dados) {
@@ -94,6 +94,12 @@
     }
 
     const novas = (dados.linhas ?? []).filter((l) => l.estado === "nova");
+    /* Fechadas na planilha e abertas no CW (09/11/2026): o Gravar finaliza junto. */
+    const fechar = (dados.linhas ?? []).filter((l) => l.fechar);
+    const oQueGrava = [
+      novas.length ? `${novas.length} ${novas.length === 1 ? "nova" : "novas"}` : "",
+      fechar.length ? `finalizar ${fechar.length}` : "",
+    ].filter(Boolean);
     const semRede = (dados.linhas ?? []).filter((l) => l.estado === "sem-rede");
 
     painel.corpo(
@@ -101,6 +107,9 @@
         (novas.length
           ? `<p class="rotulo">Novas${novas.length > 8 ? ` — as 8 primeiras de ${novas.length}` : ""}</p>${CW.linhasDaCaptura(novas.slice(0, 8))}`
           : `<p class="vazio">Nenhuma linha nova nesta aba: o que está aqui já foi registrado.</p>`) +
+        (fechar.length
+          ? `<p class="rotulo" style="margin-top:12px">Fechadas na planilha, abertas no CW — o Gravar finaliza</p>${CW.linhasDaCaptura(fechar.slice(0, 5))}`
+          : "") +
         (semRede.length
           ? `<p class="rotulo" style="margin-top:12px">Sem rede reconhecida — preencha a coluna Rede ou o link</p>${CW.linhasDaCaptura(semRede.slice(0, 3))}`
           : "")
@@ -109,14 +118,14 @@
     painel.rodape([
       { rotulo: "Ler de novo", aoClicar: abrirPainel },
       {
-        rotulo: novas.length ? `Gravar ${novas.length} ${novas.length === 1 ? "nova" : "novas"}` : "Nada para gravar",
+        rotulo: oQueGrava.length ? `Gravar: ${oQueGrava.join(" e ")}` : "Nada para gravar",
         tom: "acao",
         empurra: true,
-        desligado: novas.length === 0,
+        desligado: oQueGrava.length === 0,
         aoClicar: async (e) => {
           e.currentTarget.disabled = true;
           e.currentTarget.textContent = "Gravando…";
-          const r = await CW.enviar({ tipo: "capturaRedes", corpo: { ...corpoBase, acao: "gravar", apenas: novas.map((l) => l.chave) } });
+          const r = await CW.enviar({ tipo: "capturaRedes", corpo: { ...corpoBase, acao: "gravar", apenas: [...novas, ...fechar].map((l) => l.chave) } });
           const g = r?.dados;
           if (!r?.ok || !g || g.erro) {
             painel.corpo(`<div class="recado erro">${CW.escapar(g?.erro ?? r?.erro ?? "Os atendimentos não foram gravados.")}</div>`);
@@ -124,8 +133,11 @@
             return;
           }
           const criados = g.criados ?? [];
+          const finalizados = g.finalizados ?? [];
           painel.corpo(
             `<div class="recado ok">${criados.length} ${criados.length === 1 ? "atendimento criado" : "atendimentos criados"} nas Redes, em Recebido e a triar.${
+              finalizados.length ? ` ${finalizados.length} ${finalizados.length === 1 ? "atendimento finalizado" : "atendimentos finalizados"} como na planilha.` : ""
+            }${
               g.jaExistiam ? ` ${Number(g.jaExistiam)} já tinham sido gravados por outra pessoa.` : ""
             }</div>` +
               (criados.length

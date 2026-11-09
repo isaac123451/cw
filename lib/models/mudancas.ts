@@ -46,6 +46,16 @@ export interface Mudanca {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "planilha-finaliza-redes",
+    dia: "2026-11-09",
+    tipo: "correcao",
+    frente: "redes",
+    titulo: "Fechado na planilha, fechado no CW",
+    texto:
+      "A leitura da planilha das Redes só criava os atendimentos novos. Quando um atendimento que já estava no CW era marcado como Resolvido, Encaminhado ou Sem contato na planilha, ele continuava aberto aqui, e eram 46 abertos, alguns desde junho. Agora a leitura mostra quantos estão \"a finalizar\", e o Gravar fecha esses junto com os novos, na etapa que a planilha diz, com o registro no histórico. Ela nunca reabre um caso nem troca um fechamento por outro.",
+    onde: "Extensão → planilha das Redes → Ler para as Redes",
+  },
+  {
     id: "respostas-que-funcionam",
     dia: "2026-11-09",
     tipo: "novo",
