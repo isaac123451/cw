@@ -673,15 +673,37 @@
     nunca toca áudio sozinha: isso marcaria o áudio como ouvido para o
     cliente.
   */
-  const ICONES_DE_AUDIO = '[data-icon^="audio-"], [data-icon^="ptt-"]';
-  const PAUSA = '[data-icon="audio-pause"], [data-icon="ptt-pause"]';
+  /*
+    Reforçado em 09/11/2026: em 30 dias nenhuma transcrição tinha sido
+    guardada. A linha de áudio passa a ser reconhecida também pela barra de
+    progresso do player e pelo rótulo de acessibilidade — não só pelo nome
+    exato do ícone, que o WhatsApp troca —, e o áudio é ligado à mensagem
+    que está tocando ou à última em que a pessoa clicou para ouvir.
+  */
+  const ICONES_DE_AUDIO =
+    '[data-icon^="audio-"], [data-icon^="ptt-"], [data-icon*="ptt"], [data-icon*="audio-play"], [aria-label*="mensagem de voz" i], [aria-label*="voice message" i], [aria-label*="áudio" i], [role="slider"]';
+  const PAUSA = '[data-icon="audio-pause"], [data-icon="ptt-pause"], [data-icon*="pause"]';
   const ouvidos = new Map();
+  let ultimoClique = { id: "", em: 0 };
+
+  /* A mensagem de áudio em que a pessoa clicou (para ouvir) — o vínculo de reserva do arquivo. */
+  document.addEventListener(
+    "click",
+    (ev) => {
+      const linha = ev.target?.closest?.("#main [data-id]");
+      if (linha && linha.querySelector(ICONES_DE_AUDIO)) ultimoClique = { id: linha.getAttribute("data-id"), em: Date.now() };
+    },
+    true
+  );
 
   window.addEventListener("message", (ev) => {
     if (ev.source !== window || typeof ev.data?.__cwAudio !== "string") return;
     const tocando = document.querySelector(`#main ${PAUSA.split(", ").join(", #main ")}`);
-    const linha = tocando?.closest("[data-id]");
-    if (linha) ouvidos.set(linha.getAttribute("data-id"), ev.data.__cwAudio);
+    const id = tocando?.closest("[data-id]")?.getAttribute("data-id") || (Date.now() - ultimoClique.em < 15_000 ? ultimoClique.id : "");
+    if (!id) return;
+    const arquivo = ev.data.__cwAudioArquivo instanceof Blob ? ev.data.__cwAudioArquivo : null;
+    const anterior = ouvidos.get(id);
+    ouvidos.set(id, { endereco: ev.data.__cwAudio, arquivo: arquivo || anterior?.arquivo || null });
   });
 
   CW.lerAudios = function lerAudios() {
@@ -695,7 +717,8 @@
       if (!id || vistos.has(id)) continue;
       vistos.add(id);
       const duracao = [...linha.querySelectorAll("span, div")].map((el) => (el.children.length ? "" : (el.textContent || "").trim())).find((t) => /^\d{1,2}:\d{2}$/.test(t)) || "";
-      audios.push({ id, de: deQuemE(linha).de, duracao, endereco: ouvidos.get(id) || null });
+      const ouvido = ouvidos.get(id);
+      audios.push({ id, de: deQuemE(linha).de, duracao, endereco: ouvido?.endereco || null, arquivo: ouvido?.arquivo || null });
     }
     return audios;
   };

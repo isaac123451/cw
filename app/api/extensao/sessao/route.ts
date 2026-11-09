@@ -1,3 +1,4 @@
+import { getPrisma } from "@/lib/prisma";
 import {
   autenticar,
   cabecalhos,
@@ -22,7 +23,17 @@ export async function GET(request: Request) {
   const { usuario, demonstracao } =
     await autenticar(request);
 
+  /*
+    Os números de trabalho (09/11/2026): logada num deles, a extensão guarda
+    toda conversa individual, mesmo de quem ainda não tem ficha — "muita
+    conversa nem salva é". Só os dígitos.
+  */
+  const prisma = getPrisma();
+  const operacao = usuario && prisma ? await prisma.operacaoConfig.findUnique({ where: { id: "unico" }, select: { whatsappReclameAqui: true, whatsappNpsRedes: true } }).catch(() => null) : null;
+  const numerosDeTrabalho = [operacao?.whatsappReclameAqui, operacao?.whatsappNpsRedes].map((n) => String(n ?? "").replace(/\D/g, "")).filter((n) => n.length >= 10);
+
   return responder(request, {
+    numerosDeTrabalho,
     conectado: Boolean(usuario) || demonstracao,
     demonstracao,
     usuario: usuario

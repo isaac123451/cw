@@ -1384,6 +1384,9 @@
 
     const dados = sessao.dados;
 
+    /* Os números de trabalho (09/11/2026): ver `P.podeGuardarSozinho`. */
+    P.numerosDeTrabalho = Array.isArray(dados.numerosDeTrabalho) ? dados.numerosDeTrabalho : [];
+
     linhaQuem.title = "";
 
     linhaQuem.textContent = dados.usuario

@@ -46,6 +46,26 @@ export interface Mudanca {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "conversas-guardam-e-audio",
+    dia: "2026-11-09",
+    tipo: "correcao",
+    frente: "extensao",
+    titulo: "Conversas do WhatsApp: guardam mais e o áudio volta a ser transcrito",
+    texto:
+      "Em novembro, a extensão guardou de 22 a 44 mensagens por dia, contra 140 a 225 no fim de outubro, e nenhum áudio foi transcrito em 30 dias. Eram três motivos. A conversa só era guardada se o contato já tivesse ficha. Agora, nos dois WhatsApps de trabalho (o do Reclame Aqui e o do NPS e Redes), toda conversa individual é guardada, e o vínculo vem depois em Conversas. O áudio só era pego por um caminho que o WhatsApp deixou de usar. Agora a extensão pega o arquivo quando ele é aberto para tocar e liga à mensagem em que você clicou. Por fim, o áudio sem texto era descartado; agora entra na conversa como \"Áudio: ouça no WhatsApp para transcrever\", e a transcrição chega depois do play. A transcrição em si foi testada com uma fala de verdade: voltou a frase exata em 4 s.",
+    onde: "Extensão → WhatsApp (guardar sozinho)",
+  },
+  {
+    id: "nps-resposta-no-whatsapp",
+    dia: "2026-11-09",
+    tipo: "novo",
+    frente: "nps",
+    titulo: "Taxa de resposta no WhatsApp, na Análise do NPS",
+    texto:
+      "Na Análise do NPS, o quadro \"Resposta no WhatsApp\" mostra, de quem recebeu mensagem nossa pelo WhatsApp no período, quantos responderam por lá, pela data da tentativa e com os detratores separados. Hoje está em 11% nos últimos 30 dias (13 de 116). Esse número depende de a conversa ser guardada: é lendo a conversa que a IA marca quem respondeu. Com as conversas voltando a ser guardadas, ele tende a subir.",
+    href: "/nps/analise",
+  },
+  {
     id: "receita-e-jornada-sem-numero-enganoso",
     dia: "2026-11-09",
     tipo: "correcao",

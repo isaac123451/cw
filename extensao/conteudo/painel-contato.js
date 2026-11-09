@@ -1213,9 +1213,22 @@
     });
   }
 
+  /*
+    Num número de trabalho (o do Reclame Aqui ou o do NPS e Redes), toda
+    conversa individual é guardada, mesmo de quem ainda não tem ficha
+    (09/11/2026): "muita conversa nem salva é" — a regra antiga só guardava
+    contato já conhecido, e o cliente novo ou o reclamante que escreveu de
+    outro número ficava de fora. Em qualquer outro número, como antes.
+  */
+  function noNumeroDeTrabalho() {
+    const nosso = String(CW.numeroDaConta?.() || "").replace(/\D/g, "").slice(-8);
+    return nosso.length === 8 && (P.numerosDeTrabalho ?? []).some((n) => String(n).slice(-8) === nosso);
+  }
+  P.noNumeroDeTrabalho = noNumeroDeTrabalho;
+
   P.podeGuardarSozinho = function podeGuardarSozinho(dados = P.ultimoDado) {
     if (!P.lerConversa || !telefoneDaConversa() || !dados) return false;
-    return Boolean(dados.cliente || dados.nps || dados.estabelecimento);
+    return Boolean(dados.cliente || dados.nps || dados.estabelecimento) || noNumeroDeTrabalho();
   };
 
   /* O botão da extensão diz, mesmo fechado, que esta conversa está sendo guardada. */
@@ -1268,7 +1281,8 @@
     const saida = [];
     for (const a of audios) {
       try {
-        const blob = await fetch(a.endereco).then((r) => r.blob());
+        /* O arquivo que a ponte já entregou (09/11/2026); sem ele, busca pelo endereço. */
+        const blob = a.arquivo instanceof Blob ? a.arquivo : await fetch(a.endereco).then((r) => r.blob());
         if (!blob.size || blob.size > 3_000_000) continue;
         const r = await CW.enviar({ tipo: "transcrever", corpo: { base64: await emBase64(blob), mime: blob.type || "audio/ogg" } });
         const texto = String(r?.dados?.texto ?? "").trim();
@@ -1302,13 +1316,23 @@
     const ja = guardadasPorConversa.get(tel) ?? new Set();
     const novas = mensagens.filter((m) => !ja.has(m.id));
     /* Áudio que a pessoa ouviu e ainda não foi transcrito — dois por volta, para não segurar a gravação. */
-    const audiosNovos = (CW.lerAudios?.() ?? []).filter((a) => a.endereco && !ja.has(`${a.id}:t`)).slice(0, 2);
-    if (novas.length === 0 && audiosNovos.length === 0) return;
+    const todosOsAudios = CW.lerAudios?.() ?? [];
+    const audiosNovos = todosOsAudios.filter((a) => (a.endereco || a.arquivo) && !ja.has(`${a.id}:t`)).slice(0, 2);
+    /*
+      O áudio que ninguém ouviu ainda entra como marcação (09/11/2026): a
+      conversa guardada mostra que houve um áudio ali, e a transcrição chega
+      quando alguém der play. Antes, o áudio sem texto era descartado e a
+      conversa ficava com um buraco.
+    */
+    const marcacoes = todosOsAudios
+      .filter((a) => !a.endereco && !a.arquivo && !ja.has(`${a.id}:a`) && !ja.has(`${a.id}:t`))
+      .map((a) => ({ id: `${a.id}:a`, de: a.de, texto: `Áudio${a.duracao ? ` (${a.duracao})` : ""}: ouça no WhatsApp para transcrever` }));
+    if (novas.length === 0 && audiosNovos.length === 0 && marcacoes.length === 0) return;
 
     gravandoSozinho = true;
     try {
       const transcritas = await transcreverAudios(audiosNovos);
-      if (novas.length === 0 && transcritas.length === 0) return;
+      if (novas.length === 0 && transcritas.length === 0 && marcacoes.length === 0) return;
       const dados = P.ultimoDado ?? {};
       const casos = dados.casos ?? [];
       /* O caso aberto mais recente liga a conversa à ficha dele; o NPS e a conta, às deles. */
@@ -1323,6 +1347,7 @@
           mensagens: [
             ...novas.map((m) => ({ id: m.id, de: m.de, texto: m.texto, carimbo: m.carimbo, autor: m.autor })),
             ...transcritas,
+            ...marcacoes,
           ],
           protocolo: caso?.protocolo,
           npsId: dados.nps?.id,
@@ -1336,6 +1361,7 @@
       if (resposta?.ok && resposta.dados?.id && !resposta.dados?.erro) {
         for (const m of novas) ja.add(m.id);
         for (const t of transcritas) ja.add(t.id);
+        for (const m of marcacoes) ja.add(m.id);
         /* O aviso sem abrir nada (1.82): quantas entraram e onde. */
         const entraram = Number(resposta.dados.novas) || 0;
         if (entraram > 0) {

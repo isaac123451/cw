@@ -864,3 +864,49 @@ export function filaDeTriagem(
       a.item.score - b.item.score
   );
 }
+
+/* ============================================================
+   RESPOSTA NO WHATSAPP (09/11/2026)
+============================================================ */
+
+export interface RespostaNoWhatsapp {
+  /** Respostas do NPS que receberam mensagem nossa pelo WhatsApp no período. */
+  contatados: number;
+  /** Desses, quantos responderam pelo WhatsApp (tentativa marcada "respondeu"). */
+  responderam: number;
+  percentual: number | null;
+  porSegmento: Record<"Detrator" | "Passivo" | "Promotor", { contatados: number; responderam: number }>;
+}
+
+/**
+ * "Taxa de resposta sobre os que me responderam no WhatsApp" (09/11/2026).
+ *
+ * Só o canal WhatsApp e pela data da tentativa, como o resto dos contatos
+ * do NPS: de quem recebeu mensagem nossa pelo WhatsApp no período, quantos
+ * responderam por lá. Cada resposta de NPS conta uma vez, por mais
+ * tentativas que tenha. A marca "respondeu" vem de quem atende ou da IA,
+ * que lê a conversa guardada — conversa que não é guardada não vira
+ * resposta, por isso esta taxa depende da extensão estar guardando.
+ */
+export function respostaNoWhatsapp(itens: NpsResponseView[], dentro: (iso: string | undefined) => boolean = () => true): RespostaNoWhatsapp {
+  const porSegmento: RespostaNoWhatsapp["porSegmento"] = {
+    Detrator: { contatados: 0, responderam: 0 },
+    Passivo: { contatados: 0, responderam: 0 },
+    Promotor: { contatados: 0, responderam: 0 },
+  };
+  let contatados = 0;
+  let responderam = 0;
+  for (const item of itens) {
+    const doWhatsapp = (item.attempts ?? []).filter((a) => /whats/i.test(a.channel ?? "") && dentro(a.createdAt));
+    if (!doWhatsapp.length) continue;
+    const segmento = segmentOf(item.score).label as keyof RespostaNoWhatsapp["porSegmento"];
+    const respondeu = doWhatsapp.some((a) => a.resultado === "respondeu");
+    contatados += 1;
+    if (respondeu) responderam += 1;
+    if (porSegmento[segmento]) {
+      porSegmento[segmento].contatados += 1;
+      if (respondeu) porSegmento[segmento].responderam += 1;
+    }
+  }
+  return { contatados, responderam, percentual: contatados ? Math.round((responderam / contatados) * 100) : null, porSegmento };
+}

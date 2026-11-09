@@ -47,6 +47,7 @@ import {
   byRootCause,
   bySegment,
   indicadoresDoGuia,
+  respostaNoWhatsapp,
   recuperacao,
   slaState,
   summarize,
@@ -208,7 +209,7 @@ export default function NpsAnalisePage() {
       (personalizado
         ? diaNoIntervalo(diaNaOperacao(iso!), intervalo)
         : meses === 0 || Date.parse(iso!) >= limite.getTime());
-    return indicadoresDoGuia(noPeriodo, { todos: responses, dentro });
+    return { ...indicadoresDoGuia(noPeriodo, { todos: responses, dentro }), whatsapp: respostaNoWhatsapp(responses, dentro) };
   }, [noPeriodo, responses, meses, personalizado, intervalo]);
 
   /**
@@ -382,6 +383,20 @@ export default function NpsAnalisePage() {
                   hint={`${guia.detratoresResponderam} de ${guia.detratoresContatados} ${pluralDe(guia.detratoresContatados, "contatado", "contatados")}`}
                   icon={MessageCircleReply}
                   tone="warning"
+                />
+
+                {/* "Taxa de resposta sobre os que me responderam no WhatsApp" (09/11/2026). */}
+                <StatTile
+                  label="Resposta no WhatsApp"
+                  description="De quem recebeu mensagem nossa pelo WhatsApp no período (qualquer nota), quantos responderam por lá — pela data da tentativa. A marca vem de quem atende ou da IA, que lê a conversa guardada pela extensão."
+                  value={guia.whatsapp.percentual === null ? "—" : `${guia.whatsapp.percentual}%`}
+                  hint={
+                    guia.whatsapp.contatados === 0
+                      ? "ninguém recebeu mensagem pelo WhatsApp no período"
+                      : `${guia.whatsapp.responderam} de ${guia.whatsapp.contatados} · detratores ${guia.whatsapp.porSegmento.Detrator.responderam} de ${guia.whatsapp.porSegmento.Detrator.contatados}`
+                  }
+                  icon={MessageCircleReply}
+                  tone="success"
                 />
 
                 <StatTile

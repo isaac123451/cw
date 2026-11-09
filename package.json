@@ -1,6 +1,6 @@
 {
   "name": "cw-reputacao",
-  "version": "1.1.61",
+  "version": "1.1.62",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -86,6 +86,7 @@
     "check:plural": "tsx scripts/check-plural.ts",
     "check:captura-fecha": "tsx --conditions=react-server scripts/check-captura-fecha.ts",
     "check:dia-a-dia-redes": "tsx scripts/check-dia-a-dia-redes.ts",
+    "check:resposta-whatsapp": "tsx scripts/check-resposta-whatsapp.ts",
     "check:respostas-que-funcionam": "tsx scripts/check-respostas-que-funcionam.ts",
     "check:disparo-atualizacao": "tsx --conditions=react-server scripts/check-disparo-atualizacao.ts",
     "check:distribuicao": "tsx --env-file=.env scripts/check-distribuicao.ts",
