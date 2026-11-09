@@ -46,6 +46,16 @@ export interface Mudanca {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "dia-a-dia-do-nps-sem-contato",
+    dia: "2026-11-09",
+    tipo: "melhoria",
+    frente: "nps",
+    titulo: "Dia a dia do NPS separa os encerrados sem contato",
+    texto:
+      "A rotina da noite encerra como Sem Retorno o ciclo que passa 30 dias sem resposta, como pede o guia, mesmo quando ninguém chegou a contatar. Nos dias 07 a 09/11 foram 88 assim, quase todos promotores. A nova coluna Sem contato mostra quantos dos encerrados de cada dia fecharam desse jeito, para o número de encerrados não parecer trabalho feito.",
+    href: "/nps",
+  },
+  {
     id: "dia-a-dia-do-nps",
     dia: "2026-11-09",
     tipo: "novo",

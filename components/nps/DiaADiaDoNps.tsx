@@ -43,7 +43,8 @@ export default function DiaADiaDoNps({ respostas }: { respostas: NpsResponseView
                   <th className="px-2 py-2 text-right font-semibold" title="Das pesquisas do dia, as com nota de 0 a 6">Detratores</th>
                   <th className="px-2 py-2 text-right font-semibold" title="Ciclos com o primeiro contato feito no dia">Contatados</th>
                   <th className="px-2 py-2 text-right font-semibold" title="Ciclos em que o cliente respondeu ao contato no dia">Responderam</th>
-                  <th className="py-2 pl-2 pr-3 text-right font-semibold" title="Ciclos encerrados no dia">Encerrados</th>
+                  <th className="px-2 py-2 text-right font-semibold" title="Ciclos encerrados no dia">Encerrados</th>
+                  <th className="py-2 pl-2 pr-3 text-right font-semibold" title="Dos encerrados, os que fecharam sem nenhuma tentativa de contato: a rotina da noite fecha como Sem Retorno quem passa 30 dias sem resposta">Sem contato</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-100 tabular-nums">
@@ -59,7 +60,8 @@ export default function DiaADiaDoNps({ respostas }: { respostas: NpsResponseView
                       <td className={cn("px-2 py-1.5 text-right", l.detratores > 0 && "text-rose-700")}>{l.detratores || "—"}</td>
                       <td className="px-2 py-1.5 text-right">{l.contatados || "—"}</td>
                       <td className="px-2 py-1.5 text-right">{l.responderam || "—"}</td>
-                      <td className="py-1.5 pl-2 pr-3 text-right">{l.encerrados || "—"}</td>
+                      <td className="px-2 py-1.5 text-right">{l.encerrados || "—"}</td>
+                      <td className={cn("py-1.5 pl-2 pr-3 text-right", l.encerradosSemContato > 0 && "text-amber-700")}>{l.encerradosSemContato || "—"}</td>
                     </tr>
                   );
                 })}
@@ -67,7 +69,7 @@ export default function DiaADiaDoNps({ respostas }: { respostas: NpsResponseView
             </table>
           </div>
           <p className="mt-2 text-[11px] text-zinc-500">
-            Cada coluna conta pelo dia em que aconteceu: o contato e a resposta pelo dia do contato, não pelo da pesquisa.
+            Cada coluna conta pelo dia em que aconteceu: o contato e a resposta pelo dia do contato, não pelo da pesquisa. A coluna Sem contato traz os encerrados pela rotina da noite depois de 30 dias sem resposta, sem nenhuma tentativa.
           </p>
         </div>
       )}

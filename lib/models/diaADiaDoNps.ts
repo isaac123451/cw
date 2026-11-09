@@ -14,7 +14,11 @@ import { isEncerrado, quandoRespondeu } from "@/lib/models/nps";
  * - **Responderam:** ciclos em que o cliente respondeu ao contato no dia
  *   (`quandoRespondeu`: tentativa "respondeu", "Falei com o cliente" ou
  *   encerramento com retorno).
- * - **Encerrados:** ciclos fechados no dia (`closedAt`).
+ * - **Encerrados:** ciclos fechados no dia (`closedAt`); **sem contato** é a
+ *   parte deles que fechou sem nenhuma tentativa — a rotina da noite encerra
+ *   como Sem Retorno quem passa 30 dias sem resposta, mesmo sem contato
+ *   (regra do guia, mantida por decisão dele em 09/11/2026). Separado para o
+ *   número não parecer trabalho feito.
  */
 
 export interface CicloDoDia {
@@ -34,6 +38,7 @@ export interface LinhaDoNps {
   contatados: number;
   responderam: number;
   encerrados: number;
+  encerradosSemContato: number;
   emCurso: boolean;
 }
 
@@ -49,7 +54,7 @@ export function diaADiaDoNps(ciclos: CicloDoDia[], hoje: string, dias = 14): Lin
   const linhas = new Map<string, LinhaDoNps>();
   for (let i = 0; i < dias; i += 1) {
     const dia = menos(hoje, i);
-    linhas.set(dia, { dia, chegaram: 0, detratores: 0, contatados: 0, responderam: 0, encerrados: 0, emCurso: i === 0 });
+    linhas.set(dia, { dia, chegaram: 0, detratores: 0, contatados: 0, responderam: 0, encerrados: 0, encerradosSemContato: 0, emCurso: i === 0 });
   }
   const somar = (iso: string | null | undefined, campo: Exclude<keyof LinhaDoNps, "dia" | "emCurso">) => {
     const linha = linhas.get(diaDeBrasilia(iso) ?? "");
@@ -60,7 +65,10 @@ export function diaADiaDoNps(ciclos: CicloDoDia[], hoje: string, dias = 14): Lin
     if (c.score <= 6) somar(c.respondedAt, "detratores");
     somar(primeiroContato(c), "contatados");
     somar(quandoRespondeu({ ...c, postContactAt: c.postContactAt ?? undefined, closedAt: c.closedAt ?? undefined }), "responderam");
-    if (isEncerrado(c.status)) somar(c.closedAt, "encerrados");
+    if (isEncerrado(c.status)) {
+      somar(c.closedAt, "encerrados");
+      if (!primeiroContato(c) && !c.postContactAt) somar(c.closedAt, "encerradosSemContato");
+    }
   }
   return [...linhas.values()];
 }
