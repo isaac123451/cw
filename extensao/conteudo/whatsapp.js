@@ -682,7 +682,13 @@
   */
   const ICONES_DE_AUDIO =
     '[data-icon^="audio-"], [data-icon^="ptt-"], [data-icon*="ptt"], [data-icon*="audio-play"], [aria-label*="mensagem de voz" i], [aria-label*="voice message" i], [aria-label*="áudio" i], [role="slider"]';
-  const PAUSA = '[data-icon="audio-pause"], [data-icon="ptt-pause"], [data-icon*="pause"]';
+  /*
+    Conferido no WhatsApp real em 09/11/2026: os ícones `audio-`/`ptt-` não
+    existem mais (o seletor antigo achava 0 áudios numa conversa com 2); o
+    player tem "Reproduzir mensagem de voz" e "Mensagem de voz" como
+    rótulos, a barra `role="slider"`, e a pausa vira "Pausar mensagem de voz".
+  */
+  const PAUSA = '[data-icon="audio-pause"], [data-icon="ptt-pause"], [data-icon*="pause"], [aria-label*="pausar" i], [aria-label*="pause" i]';
   const ouvidos = new Map();
   let ultimoClique = { id: "", em: 0 };
 

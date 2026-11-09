@@ -46,6 +46,16 @@ export interface Mudanca {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "audio-conferido-no-whatsapp",
+    dia: "2026-11-09",
+    tipo: "correcao",
+    frente: "extensao",
+    titulo: "Áudio do WhatsApp: a causa conferida na página de verdade",
+    texto:
+      "Olhando o WhatsApp Web aberto: os ícones que a extensão procurava para achar a mensagem de voz não existem mais. Numa conversa com 2 áudios, a busca antiga achava 0, e a nova (pela barra do player e pelo rótulo \"Mensagem de voz\") acha os 2. A pausa agora também é reconhecida pelo rótulo \"Pausar mensagem de voz\". Vale depois de recarregar a extensão no Chrome.",
+    onde: "Extensão → WhatsApp",
+  },
+  {
     id: "conversas-guardam-e-audio",
     dia: "2026-11-09",
     tipo: "correcao",
