@@ -46,6 +46,16 @@ export interface Mudanca {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "frentes-por-telefone-e-conta",
+    dia: "2026-11-09",
+    tipo: "correcao",
+    frente: "nps",
+    titulo: "O cliente do NPS aparece com as reclamações dele em outros canais",
+    texto:
+      "A ficha do NPS, em \"Nas quatro frentes\", cruzava com o Reclame Aqui e as Redes só pelo e-mail, pelo estabelecimento ligado à mão e pelo nome. Quase nenhum NPS é ligado à mão, e o e-mail do NPS raramente é o mesmo da reclamação. Agora o cruzamento usa também o telefone (o NPS tem o do portal em quase todas as respostas), comparado pelos 8 últimos dígitos, e a conta do Wootric, que leva ao estabelecimento e às reclamações dele. Medido nas 5.189 respostas: as que mostram outra frente passam de 51 para 76. A ficha do cliente também passou a cruzar pelo telefone.",
+    href: "/nps",
+  },
+  {
     id: "audio-conferido-no-whatsapp",
     dia: "2026-11-09",
     tipo: "correcao",

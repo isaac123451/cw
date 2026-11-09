@@ -10,6 +10,7 @@ import IconeDaFrente from "@/components/shared/IconeDaFrente";
 import { useCases } from "@/lib/context/CaseContext";
 import { useNps } from "@/lib/context/NpsContext";
 import { useAvaliacoesGoogle } from "@/lib/context/useAvaliacoesGoogle";
+import { useEstablishments } from "@/lib/context/EstablishmentsContext";
 
 import { FRENTES_DA_OPERACAO, type FrenteId } from "@/lib/models/frentes";
 import { isEncerrado, nomeDoCliente } from "@/lib/models/nps";
@@ -24,7 +25,15 @@ export interface AlvoNasFrentes {
   contaExterna?: string;
   emails?: string[];
   nomes?: string[];
+  /**
+   * Os telefones (09/11/2026), comparados pelos 8 últimos dígitos — com ou
+   * sem DDI e com ou sem o nono dígito. O NPS tem o telefone do portal em
+   * quase toda resposta, e a reclamação, o do cliente: era a via que faltava.
+   */
+  telefones?: string[];
 }
+
+const oitoDigitos = (v?: string | null) => String(v ?? "").replace(/\D/g, "").slice(-8);
 
 interface Registro {
   id: string;
@@ -67,23 +76,36 @@ export default function NasQuatroFrentes({
   const { cases } = useCases();
   const { responses } = useNps();
   const { avaliacoes } = useAvaliacoesGoogle();
+  const { establishments } = useEstablishments();
 
   const porFrente = useMemo(() => {
 
     const emails = new Set((alvo.emails ?? []).map(limpar).filter(Boolean));
     const nomes = new Set((alvo.nomes ?? []).map(limpar).filter(Boolean));
+    const telefones = new Set((alvo.telefones ?? []).map(oitoDigitos).filter((t) => t.length === 8));
+
+    /*
+      A conta do Wootric leva ao estabelecimento (09/11/2026): o NPS quase
+      nunca é ligado à mão, mas a conta dele é o `externalId` do cadastro — e
+      é por esse estabelecimento que as reclamações dele aparecem. Medido:
+      51 respostas do NPS cruzavam com outra frente; com conta e telefone, 76.
+    */
+    const daConta = !alvo.establishmentId && alvo.contaExterna ? establishments.find((e) => e.externalId === alvo.contaExterna)?.id : undefined;
+    const estabelecimento = alvo.establishmentId ?? daConta;
 
     const casos = cases.filter(
       (c) =>
-        (alvo.establishmentId && c.establishmentId === alvo.establishmentId) ||
+        (estabelecimento && c.establishmentId === estabelecimento) ||
         (c.email && emails.has(limpar(c.email))) ||
+        (telefones.size > 0 && telefones.has(oitoDigitos(c.phone))) ||
         nomes.has(limpar(c.company)) ||
         nomes.has(limpar(c.customer))
     );
 
     const nps = responses.filter(
       (r) =>
-        (alvo.establishmentId && r.establishmentId === alvo.establishmentId) ||
+        (estabelecimento && r.establishmentId === estabelecimento) ||
+        (telefones.size > 0 && telefones.has(oitoDigitos(r.phone))) ||
         (alvo.contaExterna && r.externalCompanyId === alvo.contaExterna) ||
         (r.email && emails.has(limpar(r.email))) ||
         (r.customerName && nomes.has(limpar(r.customerName)))
@@ -140,7 +162,7 @@ export default function NasQuatroFrentes({
     }
 
     return { mapa, soEste };
-  }, [alvo, cases, responses, avaliacoes, atual]);
+  }, [alvo, cases, responses, avaliacoes, atual, establishments]);
 
   return (
     <SurfaceCard title="Nas quatro frentes" description={descricao}>

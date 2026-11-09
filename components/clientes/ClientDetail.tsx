@@ -425,7 +425,7 @@ export default function ClientDetail({
 
       {/* O que esta pessoa tem em cada frente — pelo e-mail e pelo nome. */}
       <NasQuatroFrentes
-        alvo={{ emails: client.email ? [client.email] : [], nomes: [client.name] }}
+        alvo={{ emails: client.email ? [client.email] : [], nomes: [client.name], telefones: client.phone ? [client.phone] : [] }}
         descricao="Pelo e-mail e pelo nome: o NPS só cruza pelo e-mail, e o Google pelo nome de quem avaliou ou pelo vínculo feito à mão."
       />
 

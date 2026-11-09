@@ -347,7 +347,7 @@ export default function FichaDoNps({ id, naJanela = false }: { id: string; naJan
           </SurfaceCard>
 
           <NasQuatroFrentes
-            alvo={{ establishmentId: ciclo.establishmentId, contaExterna: ciclo.externalCompanyId, emails: ciclo.email ? [ciclo.email] : [] }}
+            alvo={{ establishmentId: ciclo.establishmentId, contaExterna: ciclo.externalCompanyId, emails: ciclo.email ? [ciclo.email] : [], telefones: ciclo.phone ? [ciclo.phone] : [] }}
             descricao="O mesmo cliente nas outras frentes — antes de ligar, veja se ele também reclamou ou avaliou."
             atual={ciclo.id}
           />
