@@ -58,6 +58,12 @@ async function main() {
   const s2 = d.sortearIntervalo([35, 50], 0.999) as number;
   conferir("o intervalo fica entre 35 e 50 s", [s1, s2], [35, 50]);
 
+  /* ---- o painel aparece (10/11/2026: "o disparo não funciona" — não aparecia) ---- */
+  conferir("a fila é procurada de novo, não só ao abrir o WhatsApp", /setInterval\(\(\) => \{\s*if \(!lote\) void procurarLote\(\);/.test(codigo), true);
+  conferir("e ao voltar para a aba", codigo.includes('addEventListener("visibilitychange"'), true);
+  conferir("a espera pelo WhatsApp tem limite de 20 s", codigo.includes("Date.now() - comecouEm > 20_000"), true);
+  conferir("o envio é percebido pela mesma leitura de lado da gravação", codigo.includes("CW.deQuemE"), true);
+
   /* ---- a garantia: o script nunca envia sozinho ---- */
   conferir("nenhum clique no botão de enviar", /data-icon="send"|\bsend\b.*click|\.click\(\)/.test(codigo), false);
   conferir("nenhuma tecla simulada", /KeyboardEvent|dispatchEvent\(\s*new\s+Keyboard/.test(codigo), false);

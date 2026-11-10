@@ -399,6 +399,10 @@
 
     return { de: "cliente", certeza: false };
   }
+  /* O disparo usa a mesma leitura de lado (10/11/2026): os tiques e a classe mudam, o id "true_" fica. */
+  CW.deQuemE = function deQuemEExposto(linha) {
+    return deQuemE(linha);
+  };
 
   const digitos = (v) => String(v ?? "").replace(/\D/g, "");
 

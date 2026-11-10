@@ -46,6 +46,16 @@ export interface Mudanca {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "disparo-aparece-no-whatsapp",
+    dia: "2026-11-10",
+    tipo: "correcao",
+    frente: "extensao",
+    titulo: "O painel do disparo aparece no WhatsApp",
+    texto:
+      "A lista de disparo criada na plataforma não aparecia no WhatsApp Web: a extensão só procurava a lista no momento em que o WhatsApp terminava de carregar, então quem já estava com ele aberto nunca via o painel. Agora ela procura ao abrir, a cada 15 segundos e sempre que você volta para a aba do WhatsApp. A espera pelo WhatsApp não depende mais de um pedaço da página que ele muda, e o envio de cada mensagem é percebido pela mesma leitura que guarda as conversas. A extensão continua sem enviar nada sozinha: você aperta Enter em cada uma.",
+    href: "/nps",
+  },
+  {
     id: "conversas-em-ordem-e-mais-rapidas",
     dia: "2026-11-10",
     tipo: "correcao",

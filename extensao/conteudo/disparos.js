@@ -87,7 +87,15 @@
 
   const CHAVE = "cw-disparo";
   const CHAVE_POSICAO = "cw-disparo-posicao";
-  const CAMPOS = ['footer [contenteditable="true"][role="textbox"]', '#main footer [contenteditable="true"]', 'footer [contenteditable="true"]'];
+  const CAMPOS = [
+    'footer [contenteditable="true"][role="textbox"]',
+    '#main footer [contenteditable="true"]',
+    'footer [contenteditable="true"]',
+    /* 10/11/2026: o campo sem o footer, como o WhatsApp tem desenhado. */
+    '#main [contenteditable="true"][data-tab="10"]',
+    '#main [contenteditable="true"][aria-label*="mensagem" i]',
+    '#main [contenteditable="true"][aria-label*="message" i]',
+  ];
   const NOSSAS = '[data-icon="msg-check"], [data-icon="msg-dblcheck"], [data-icon="msg-dblcheck-ack"], [data-icon="msg-time"], .message-out';
 
   let lote = null;
@@ -118,14 +126,17 @@
 
   const campo = () => CAMPOS.map((s) => document.querySelector(s)).find(Boolean) || null;
   const textoDoCampo = () => (campo()?.innerText || "").trim();
-  const saidas = () => document.querySelectorAll(`#main ${NOSSAS.split(", ").join(", #main ")}`).length;
+  /* As nossas na conversa: pela mesma leitura de lado da gravação (o id "true_"), e pelos tiques se ela faltar. */
+  const linhasDaConversa = () => [...document.querySelectorAll("#main [data-id]")].filter((l) => !l.parentElement?.closest?.("#main [data-id]"));
+  const ehNossa = (l) => (CW.deQuemE ? CW.deQuemE(l).de === "nos" && CW.deQuemE(l).certeza : Boolean(l.matches?.(".message-out") || l.querySelector?.(NOSSAS)));
+  const saidas = () => linhasDaConversa().filter(ehNossa).length;
   const normal = (t) => String(t || "").replace(/\s+/g, " ").trim().toLowerCase();
   /** A última mensagem da conversa começa como a nossa? É a outra prova de que saiu. */
   function ultimaEhANossa(mensagem) {
-    const linhas = document.querySelectorAll("#main [data-id], #main [role=\"row\"]");
+    const linhas = linhasDaConversa();
     const ultima = linhas[linhas.length - 1];
     const trecho = normal(mensagem).slice(0, 24);
-    return Boolean(ultima && trecho && normal(ultima.innerText).includes(trecho) && ultima.querySelector(NOSSAS));
+    return Boolean(ultima && trecho && normal(ultima.innerText).includes(trecho) && ehNossa(ultima));
   }
 
   async function servidor(acao, extra = {}) {
@@ -316,21 +327,47 @@
     desenhar();
   }
 
-  async function iniciar() {
+  /*
+    10/11/2026 — "o disparo não funciona": o painel não aparecia. Dois
+    defeitos: (1) a fila era lida uma vez só, quando o WhatsApp acabava de
+    carregar — a lista criada na plataforma com o WhatsApp já aberto (o
+    caso normal) nunca aparecia sem recarregar a página; (2) a espera pelo
+    WhatsApp dependia de seletores da lista de conversas que o WhatsApp
+    muda. Agora a fila é procurada ao abrir, a cada 15 s e sempre que a
+    aba volta a ficar visível; e a espera aceita qualquer sinal de que o
+    WhatsApp carregou, com um limite de 20 s.
+  */
+  let relogio = null;
+  async function procurarLote() {
+    if (document.hidden && lote === null && relogio) return;
+    const antes = lote?.id ?? null;
     await servidor("ler");
     if (!lote) {
-      limpar();
+      if (antes) limpar();
+      desenhar();
       return;
     }
+    if (lote.id !== antes && ler().loteId && ler().loteId !== lote.id) limpar();
     desenhar();
-    setInterval(() => void volta(), 500);
+    if (!relogio) relogio = setInterval(() => void volta(), 500);
   }
 
-  /* Espera o WhatsApp Web carregar a lista de conversas antes de ler a fila. */
+  function iniciar() {
+    void procurarLote();
+    setInterval(() => {
+      if (!lote) void procurarLote();
+    }, 15_000);
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) void procurarLote();
+    });
+  }
+
+  const PRONTO = "#pane-side, #side, [data-testid='chat-list'], #main, #app [role='grid'], [aria-label*='conversas' i], [aria-label*='chat list' i]";
+  const comecouEm = Date.now();
   const espera = setInterval(() => {
-    if (document.querySelector("#pane-side, #side, [data-testid='chat-list']")) {
+    if (document.querySelector(PRONTO) || Date.now() - comecouEm > 20_000) {
       clearInterval(espera);
-      void iniciar();
+      iniciar();
     }
   }, 1000);
 })();
