@@ -29,6 +29,8 @@ const AVISOS_DO_WHATSAPP = [
   /end-to-end encrypted/i,
   /cifrad[oa]s? de extremo a extremo/i,
   /^aguardando (esta )?mensagem/i,
+  /* O aviso das mensagens temporárias (10/11/2026) era gravado como fala do cliente. */
+  /mensagens tempor[aá]rias|disappearing messages|mensajes temporales/i,
   /^waiting for this message/i,
   /^esperando (el|este) mensaje/i,
   /^\d[.,]\d\s*[×x]$/,

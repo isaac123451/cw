@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 
 import { nomeDoCliente } from "@/lib/models/nps";
+import { contatoDoCiclo } from "@/lib/models/contatoDoNps";
 
 import {
   ArrowDown,
@@ -171,6 +172,7 @@ export default function NpsList({
               "Causa raiz",
               "Respondido",
               "Prazo",
+              "Contato",
               "Status",
             ].map((h) => (
               <th
@@ -291,6 +293,15 @@ export default function NpsList({
 
                 <td className="whitespace-nowrap px-5 py-3 text-sm tabular-nums text-zinc-500">
                   {dataCurta(item.firstContactDueAt)}
+                </td>
+
+                {/* O contato (10/11/2026): "Respondeu · 29/10" em verde, ou as tentativas e o dia da última. */}
+                <td className="whitespace-nowrap px-5 py-3 text-xs tabular-nums">
+                  {(() => {
+                    const contato = contatoDoCiclo(item);
+                    if (!contato) return <span className="text-zinc-300">—</span>;
+                    return <span className={contato.respondeu ? "font-medium text-emerald-700" : "text-zinc-500"}>{contato.texto}</span>;
+                  })()}
                 </td>
 
                 <td className="whitespace-nowrap px-5 py-3">

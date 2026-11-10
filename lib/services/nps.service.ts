@@ -113,7 +113,9 @@ export function tentativasNaJanela(
   item: Pick<NpsResponseView, "attempts" | "postContactAt">,
   agora = new Date()
 ) {
-  const desde = item.postContactAt ? Date.parse(item.postContactAt) : 0;
+  /* A tentativa que o cliente respondeu também zera a conta (10/11/2026). */
+  const respondidas = item.attempts.filter((a) => a.resultado === "respondeu").map((a) => Date.parse(a.createdAt));
+  const desde = Math.max(item.postContactAt ? Date.parse(item.postContactAt) : 0, ...respondidas);
   /*
     Toda tentativa conta (1.110): "conta como tentativa feita, para aquele
     negócio de 3 contatos". Antes, a que ficava "aguardando retorno" só
@@ -123,7 +125,7 @@ export function tentativasNaJanela(
   */
   return item.attempts.filter((a) => {
     const t = Date.parse(a.createdAt);
-    return t > desde && (agora.getTime() - t) / 86400000 <= JANELA_TENTATIVAS_DIAS;
+    return t > desde && a.resultado !== "respondeu" && (agora.getTime() - t) / 86400000 <= JANELA_TENTATIVAS_DIAS;
   });
 }
 
@@ -166,7 +168,12 @@ export function deveEncerrarSemRetorno(
     };
   }
 
-  if (dias(item.postContactAt ?? item.respondedAt) >= ABANDONO_DIAS) {
+  /* Os 30 dias contam da última fala do cliente: a pesquisa, o "Falei com o cliente" ou a tentativa que ele respondeu. */
+  const ultimaFala = [item.respondedAt, item.postContactAt, ...item.attempts.filter((a) => a.resultado === "respondeu").map((a) => a.createdAt)]
+    .filter((d): d is string => Boolean(d))
+    .sort()
+    .pop()!;
+  if (dias(ultimaFala) >= ABANDONO_DIAS) {
     return {
       deve: true,
       motivo: `${ABANDONO_DIAS} dias sem qualquer resposta.`,

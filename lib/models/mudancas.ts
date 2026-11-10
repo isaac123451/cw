@@ -46,6 +46,16 @@ export interface Mudanca {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "nps-respondeu-registrado",
+    dia: "2026-11-10",
+    tipo: "melhoria",
+    frente: "nps",
+    titulo: "O NPS mostra quem respondeu e registra sozinho",
+    texto:
+      "O cartão do quadro e a lista do NPS mostram \"Respondeu · 29/10\" em verde quando o cliente respondeu, ou as tentativas e o dia da última. Quando o cliente escreve na conversa do WhatsApp ligada ao NPS depois do nosso contato, a tentativa vira \"respondeu\" sozinha, sem precisar marcar. A rotina da noite não encerra mais como Sem Retorno quem respondeu: as tentativas e os 30 dias passam a contar da última resposta do cliente. O aviso de mensagens temporárias do WhatsApp deixou de ser guardado como fala do cliente.",
+    href: "/nps",
+  },
+  {
     id: "dia-a-dia-do-nps-sem-contato",
     dia: "2026-11-09",
     tipo: "melhoria",

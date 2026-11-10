@@ -1,5 +1,7 @@
 import "server-only";
 
+import { tentativaRespondida } from "@/lib/models/contatoDoNps";
+
 import type { PrismaClient } from "@prisma/client";
 
 import {
@@ -64,6 +66,19 @@ export interface ResultadoDaGravacao {
   novas: number;
   repetidas: number;
   omitidos: number;
+}
+
+/** Marca "respondeu" na tentativa que o cliente respondeu pelas conversas ligadas ao ciclo. Devolve o id marcado. */
+export async function registrarRespostaNoNps(db: Pick<Db, "npsAttempt" | "mensagemDaConversa">, npsResponseId: string): Promise<string | null> {
+  const tentativas = await db.npsAttempt.findMany({ where: { responseId: npsResponseId }, select: { id: true, createdAt: true, resultado: true } });
+  if (!tentativas.length) return null;
+  const falas = await db.mensagemDaConversa.findMany({ where: { conversa: { npsResponseId }, de: "cliente", em: { not: null } }, select: { em: true, texto: true } });
+  const alvo = tentativaRespondida(
+    tentativas.map((t) => ({ ...t, createdAt: t.createdAt.toISOString() })),
+    falas.filter((f) => !ehAvisoDoWhatsApp(f.texto)).map((f) => f.em!.toISOString())
+  );
+  if (alvo) await db.npsAttempt.update({ where: { id: alvo }, data: { resultado: "respondeu" } });
+  return alvo;
 }
 
 export async function gravarMensagens(
@@ -157,6 +172,18 @@ export async function gravarMensagens(
         skipDuplicates: true,
       });
       await tx.conversa.update({ where: { id }, data: { atualizadoEm: new Date() } });
+
+      /*
+        O cliente escreveu na conversa ligada ao NPS (10/11/2026): a
+        tentativa que ele respondeu vira "respondeu" sozinha — "quero tudo
+        registrado". Antes dependia de alguém marcar ou da IA do dia; em 5
+        ciclos o cliente tinha escrito e nada ficou, e 3 foram encerrados
+        como Sem Retorno.
+      */
+      if (novas.some((m) => m.de === "cliente" && !ehAvisoDoWhatsApp(m.texto))) {
+        const ligada = await tx.conversa.findUnique({ where: { id }, select: { npsResponseId: true } });
+        if (ligada?.npsResponseId) await registrarRespostaNoNps(tx, ligada.npsResponseId);
+      }
     }
 
     /* Só conta o que de fato entrou: a repetida não foi gravada, nem o dado dela. */

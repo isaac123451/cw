@@ -19,7 +19,8 @@ import {
 import { slaState } from "@/lib/services/nps.service";
 import BotaoAbrirEmJanela from "@/components/janelas/BotaoAbrirEmJanela";
 import { imagemDeArrasto } from "@/lib/ui/imagemDeArrasto";
-import { mostrarMais, pluralDe } from "@/lib/plural";
+import { mostrarMais } from "@/lib/plural";
+import { contatoDoCiclo } from "@/lib/models/contatoDoNps";
 
 interface Props {
   itens: NpsResponseView[];
@@ -55,11 +56,6 @@ export function ordenarPeloContato<T extends Pick<NpsResponseView, "attempts" | 
   const comContato = lista.filter((i) => ultimoContato(i)).sort((a, b) => ultimoContato(a)!.localeCompare(ultimoContato(b)!));
   return [...comContato, ...lista.filter((i) => !ultimoContato(i))];
 }
-
-const diaCurto = (iso: string) => {
-  const d = new Date(Date.parse(iso) - 3 * 3_600_000).toISOString();
-  return `${d.slice(8, 10)}/${d.slice(5, 7)}`;
-};
 
 function colunasDe(etapas: NpsStageOption[]) {
 
@@ -294,6 +290,7 @@ function Cartao({
   const regra = tipoPorNome(tipos, item.kind);
 
   const atrasado = slaState(item) === "estourado";
+  const contato = contatoDoCiclo(item);
 
   return (
     <article
@@ -370,10 +367,10 @@ function Cartao({
           </span>
         )}
 
-        {item.attempts.length > 0 && (
-          <span className="rounded-md bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-500">
-            {item.attempts.length} {pluralDe(item.attempts.length, "tentativa", "tentativas")}
-            {ultimoContato(item) ? ` · ${diaCurto(ultimoContato(item)!)}` : ""}
+        {/* O contato numa linha (10/11/2026): "Respondeu · 29/10" em verde, ou as tentativas e o dia da última. */}
+        {contato && (
+          <span className={`rounded-md px-1.5 py-0.5 text-[10px] font-medium ${contato.respondeu ? "bg-emerald-50 text-emerald-700" : "bg-zinc-100 text-zinc-500"}`}>
+            {contato.texto}
           </span>
         )}
 
