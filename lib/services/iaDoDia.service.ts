@@ -323,7 +323,7 @@ export async function anotarConversasDoDia(
       npsResponse: { select: { score: true, comment: true, customerName: true, rootCause: true, churnRisk: true, status: true, resolvedAfter: true, confirmedAt: true, reviewAsked: true } },
       mensagens: {
         where: { em: { gte: inicioDoDia } },
-        orderBy: { em: "asc" },
+        orderBy: [{ em: "asc" }, { id: "asc" }],
         select: { id: true, de: true, texto: true, em: true, autor: true, chave: true, criadoEm: true },
         take: 120,
       },
@@ -373,7 +373,7 @@ export async function anotarConversasDoDia(
       await prisma.mensagemDaConversa
         .findMany({
           where: { conversaId: c.id, em: { lt: inicioDoDia, gte: new Date(inicioDoDia.getTime() - DIAS_DE_CONTEXTO * 86_400_000) } },
-          orderBy: { em: "desc" },
+          orderBy: [{ em: "desc" }, { id: "desc" }],
           select: { id: true, de: true, texto: true, em: true, autor: true, chave: true, criadoEm: true },
           take: MENSAGENS_DE_CONTEXTO,
         })
@@ -990,7 +990,7 @@ export async function seguirPelasConversas(
         },
       },
       npsResponse: { select: { id: true, firstContactAt: true, respondedAt: true, status: true, customerName: true, ownerId: true, score: true, confirmedAt: true } },
-      mensagens: { orderBy: { em: "asc" }, select: { de: true, texto: true, em: true, autor: true, chave: true, criadoEm: true }, take: 300 },
+      mensagens: { orderBy: [{ em: "asc" }, { id: "asc" }], select: { de: true, texto: true, em: true, autor: true, chave: true, criadoEm: true }, take: 300 },
     },
     orderBy: { atualizadoEm: "desc" },
     take: 40,

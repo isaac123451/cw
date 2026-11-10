@@ -43,7 +43,7 @@ export async function aprenderDasConversas(prisma: PrismaClient, userId: string,
   /* A pergunta do cliente que veio antes de cada resposta nossa. */
   const perguntas = await prisma.mensagemDaConversa.findMany({
     where: { de: "cliente", conversaId: { in: [...new Set(nossas.map((m) => m.conversaId))] }, criadoEm: { gt: new Date(desde.getTime() - 24 * 60 * 60_000) } },
-    orderBy: { em: "asc" },
+    orderBy: [{ em: "asc" }, { id: "asc" }],
     select: { texto: true, em: true, conversaId: true },
   });
 

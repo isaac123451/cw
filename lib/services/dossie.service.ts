@@ -215,7 +215,7 @@ export async function montarDossie(
           id: true,
           canal: true,
           contatoNome: true,
-          mensagens: { orderBy: { em: "asc" }, select: { de: true, autor: true, texto: true, em: true } },
+          mensagens: { orderBy: [{ em: "asc" }, { id: "asc" }], select: { de: true, autor: true, texto: true, em: true } },
         },
       },
     },

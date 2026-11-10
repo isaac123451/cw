@@ -1169,7 +1169,8 @@
    * botão. Quem não é conhecido continua no botão, com confirmação.
    * Nunca mais de uma gravação ao mesmo tempo.
    */
-  const INTERVALO_DE_GUARDAR_MS = 20_000;
+  /* 20 s → 8 s (10/11/2026): "demora muito pra salvar". Cada volta só manda o que é novo. */
+  const INTERVALO_DE_GUARDAR_MS = 8_000;
   const MAXIMO_DE_PAUSADAS = 100;
   const guardadasPorConversa = new Map();
   const totalPorConversa = new Map();
@@ -1287,7 +1288,7 @@
         const r = await CW.enviar({ tipo: "transcrever", corpo: { base64: await emBase64(blob), mime: blob.type || "audio/ogg" } });
         const texto = String(r?.dados?.texto ?? "").trim();
         if (texto) {
-          saida.push({ id: `${a.id}:t`, de: a.de, texto: `Transcrição do áudio${a.duracao ? ` (${a.duracao})` : ""}: ${texto}`, transcricao: true });
+          saida.push({ id: `${a.id}:t`, de: a.de, carimbo: a.carimbo || undefined, texto: `Transcrição do áudio${a.duracao ? ` (${a.duracao})` : ""}: ${texto}`, transcricao: true });
         }
       } catch {
         /* o áudio fica para a próxima volta */
@@ -1326,12 +1327,18 @@
     */
     const marcacoes = todosOsAudios
       .filter((a) => !a.endereco && !a.arquivo && !ja.has(`${a.id}:a`) && !ja.has(`${a.id}:t`))
-      .map((a) => ({ id: `${a.id}:a`, de: a.de, texto: `Áudio${a.duracao ? ` (${a.duracao})` : ""}: ouça no WhatsApp para transcrever` }));
+      .map((a) => ({ id: `${a.id}:a`, de: a.de, carimbo: a.carimbo || undefined, texto: `Áudio${a.duracao ? ` (${a.duracao})` : ""}: ouça no WhatsApp para transcrever` }));
     if (novas.length === 0 && audiosNovos.length === 0 && marcacoes.length === 0) return;
 
     gravandoSozinho = true;
     try {
-      const transcritas = await transcreverAudios(audiosNovos);
+      /*
+        O texto primeiro, a transcrição depois (10/11/2026): "demora muito pra
+        salvar". A volta esperava o Gemini transcrever até dois áudios antes
+        de gravar qualquer coisa — um áudio novo segurava a conversa inteira.
+        Agora o texto vai na hora; a transcrição entra na volta seguinte.
+      */
+      const transcritas = novas.length || marcacoes.length ? [] : await transcreverAudios(audiosNovos);
       if (novas.length === 0 && transcritas.length === 0 && marcacoes.length === 0) return;
       const dados = P.ultimoDado ?? {};
       const casos = dados.casos ?? [];

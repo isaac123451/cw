@@ -31,6 +31,7 @@ const AVISOS_DO_WHATSAPP = [
   /^aguardando (esta )?mensagem/i,
   /* O aviso das mensagens temporárias (10/11/2026) era gravado como fala do cliente. */
   /mensagens tempor[aá]rias|disappearing messages|mensajes temporales/i,
+  /^a ia da meta recebe/i,
   /^waiting for this message/i,
   /^esperando (el|este) mensaje/i,
   /^\d[.,]\d\s*[×x]$/,
@@ -656,4 +657,28 @@ function luhn(digitos: string) {
     dobra = !dobra;
   }
   return soma % 10 === 0;
+}
+
+/**
+ * A conversa na ordem em que aconteceu, inclusive a mensagem antiga sem
+ * hora: ela fica junto da vizinha gravada com ela (o id é sequencial na
+ * gravação), em vez de ir para o topo. Ordena por hora, depois pelo id.
+ */
+export function emOrdemDeConversa<T extends { id: string; em: Date | null }>(mensagens: T[]): T[] {
+  const porId = [...mensagens].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  const hora = new Map<string, number>();
+  let anterior: number | null = null;
+  for (const m of porId) {
+    if (m.em) anterior = m.em.getTime();
+    if (anterior !== null) hora.set(m.id, m.em ? m.em.getTime() : anterior);
+  }
+  let seguinte: number | null = null;
+  for (const m of [...porId].reverse()) {
+    if (m.em) seguinte = m.em.getTime();
+    if (!hora.has(m.id) && seguinte !== null) hora.set(m.id, seguinte);
+  }
+  return porId
+    .map((m, i) => ({ m, h: hora.get(m.id) ?? 0, i }))
+    .sort((a, b) => a.h - b.h || a.i - b.i)
+    .map((x) => x.m);
 }

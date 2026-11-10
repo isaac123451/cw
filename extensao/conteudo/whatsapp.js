@@ -236,6 +236,9 @@
     /cifrad[oa]s? de extremo a extremo/i,
     /^aguardando (esta )?mensagem/i,
     /^waiting for this message/i,
+    /* 10/11/2026: as mensagens temporárias e o aviso da IA da Meta também entravam como fala do cliente. */
+    /mensagens tempor[aá]rias|disappearing messages|mensajes temporales/i,
+    /^a ia da meta recebe/i,
     /^esperando (el|este) mensaje/i,
     /^\d[.,]\d\s*[×x]$/,
     /^(hoje|ontem|today|yesterday|hoy|ayer)$/i,
@@ -712,9 +715,22 @@
     ouvidos.set(id, { endereco: ev.data.__cwAudio, arquivo: arquivo || anterior?.arquivo || null });
   });
 
+  /*
+    A hora do áudio (10/11/2026): a linha de áudio não tem carimbo; vale o da
+    mensagem de texto mais perto (a anterior, ou a seguinte). Sem hora, a
+    transcrição ia para o topo ou para o fim da conversa guardada.
+  */
+  function carimboPerto(linhas, i) {
+    const de = (l) => (l.querySelector("[data-pre-plain-text]")?.getAttribute("data-pre-plain-text")?.match(/\[([^\]]+)\]/)?.[1] ?? "").trim();
+    for (let j = i - 1; j >= 0; j -= 1) { const c = de(linhas[j]); if (c) return c; }
+    for (let j = i + 1; j < linhas.length; j += 1) { const c = de(linhas[j]); if (c) return c; }
+    return "";
+  }
+
   CW.lerAudios = function lerAudios() {
     const principal = document.querySelector("#main");
     if (!principal) return [];
+    const todasAsLinhas = [...principal.querySelectorAll("[data-id]")];
     const vistos = new Set();
     const audios = [];
     for (const icone of principal.querySelectorAll(ICONES_DE_AUDIO)) {
@@ -724,7 +740,7 @@
       vistos.add(id);
       const duracao = [...linha.querySelectorAll("span, div")].map((el) => (el.children.length ? "" : (el.textContent || "").trim())).find((t) => /^\d{1,2}:\d{2}$/.test(t)) || "";
       const ouvido = ouvidos.get(id);
-      audios.push({ id, de: deQuemE(linha).de, duracao, endereco: ouvido?.endereco || null, arquivo: ouvido?.arquivo || null });
+      audios.push({ id, de: deQuemE(linha).de, duracao, carimbo: carimboPerto(todasAsLinhas, todasAsLinhas.indexOf(linha)), endereco: ouvido?.endereco || null, arquivo: ouvido?.arquivo || null });
     }
     return audios;
   };

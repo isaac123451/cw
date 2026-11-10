@@ -46,6 +46,16 @@ export interface Mudanca {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "conversas-em-ordem-e-mais-rapidas",
+    dia: "2026-11-10",
+    tipo: "correcao",
+    frente: "extensao",
+    titulo: "Conversas do WhatsApp na ordem certa e guardadas mais rápido",
+    texto:
+      "O WhatsApp dá a hora só até o minuto, e duas em cada três mensagens guardadas dividiam o minuto com outra; dentro do minuto a ordem saía ao acaso, e a conversa aparecia de cabeça para baixo. Agora a ordem segue a da tela no momento em que a conversa foi guardada, inclusive nas conversas que já estavam guardadas, e é a mesma que a IA do dia e o assistente leem. Os avisos do WhatsApp (criptografia, mensagens temporárias, \"Aguardando mensagem\") não entram mais como fala do cliente, e o \"Aguardando mensagem\" já guardado vira a mensagem de verdade quando ela chega. Mensagem e áudio sem hora ficam junto da mensagem vizinha, não no topo. Na extensão, o texto é guardado na hora e a transcrição do áudio vem na volta seguinte, e a volta passou de 20 para 8 segundos.",
+    href: "/conversas",
+  },
+  {
     id: "nps-respondeu-registrado",
     dia: "2026-11-10",
     tipo: "melhoria",

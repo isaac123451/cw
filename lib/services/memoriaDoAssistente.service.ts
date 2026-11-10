@@ -84,7 +84,7 @@ export async function memoriaDoAssistente(prisma: PrismaClient, pedido: PedidoDe
         case: { select: { id: true, protocol: true, title: true, status: true, customer: true, channel: true } },
         npsResponse: { select: { id: true, score: true, customerName: true, status: true, comment: true } },
         mensagens: {
-          orderBy: { em: "desc" },
+          orderBy: [{ em: "desc" }, { id: "desc" }],
           take: 60,
           select: { de: true, texto: true, em: true, autor: true, chave: true, criadoEm: true },
         },

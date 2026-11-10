@@ -184,7 +184,7 @@ export async function medirTermometro(
   const conversa = await prisma.conversa.findFirst({
     where: caso ? { caseId: caso.id } : { npsResponseId: nps!.id },
     orderBy: { atualizadoEm: "desc" },
-    select: { id: true, telefone: true, contatoNome: true, mensagens: { orderBy: { em: "desc" }, take: 80, select: { de: true, texto: true, em: true, autor: true, chave: true, criadoEm: true } } },
+    select: { id: true, telefone: true, contatoNome: true, mensagens: { orderBy: [{ em: "desc" }, { id: "desc" }], take: 80, select: { de: true, texto: true, em: true, autor: true, chave: true, criadoEm: true } } },
   });
   const mensagens = conversa
     ? semMensagensDeOutraConversa({ telefone: conversa.telefone, nome: conversa.contatoNome }, [...conversa.mensagens].reverse()).filter(

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { tentativaRespondida } from "@/lib/models/contatoDoNps";
+import { emOrdemDeConversa } from "@/lib/models/conversa";
 
 import type { PrismaClient } from "@prisma/client";
 
@@ -35,6 +36,17 @@ export const MAXIMO_DE_MENSAGENS = 5000;
 const MAXIMO_POR_MENSAGEM = 4000;
 
 type Db = PrismaClient;
+
+/*
+  A ordem das mensagens (10/11/2026): "as conversas do whatsapp na
+  plataforma estão ficando de cabeça pra baixo ou sem nexo". O WhatsApp dá
+  a hora só até o minuto, e 1.664 das 2.679 mensagens guardadas dividiam o
+  minuto com outra; dentro do minuto a ordem saía ao acaso. O id é gerado
+  em sequência na gravação, na ordem em que a extensão leu a tela — é o
+  desempate certo, e conserta também o que já estava guardado.
+*/
+export const ORDEM_DA_CONVERSA = [{ em: { sort: "asc", nulls: "first" } }, { criadoEm: "asc" }, { id: "asc" }] as const satisfies object[];
+export const ORDEM_DA_MAIS_NOVA = [{ em: { sort: "desc", nulls: "last" } }, { criadoEm: "desc" }, { id: "desc" }] as const satisfies object[];
 
 export function somenteDigitosDoTelefone(valor?: string | null) {
   const d = String(valor ?? "").replace(/\D/g, "");
@@ -98,9 +110,25 @@ export async function gravarMensagens(
   const telefone = somenteDigitosDoTelefone(entrada.telefone);
   const lados: Lado[] = ["cliente", "nos", "sistema"];
 
-  const limpas = entrada.mensagens
+  /*
+    O aviso do WhatsApp não é conversa (10/11/2026): "Aguardando mensagem",
+    a criptografia, as mensagens temporárias. Gravado, ia para o topo da
+    conversa (sem hora) e, no caso do "Aguardando", ocupava a chave da
+    mensagem de verdade, que nunca mais entrava.
+  */
+  const recebidas = entrada.mensagens
     .slice(-MAXIMO_DE_MENSAGENS)
-    .filter((m) => lados.includes(m.de) && typeof m.texto === "string" && m.texto.trim())
+    .filter((m) => lados.includes(m.de) && typeof m.texto === "string" && m.texto.trim() && !ehAvisoDoWhatsApp(m.texto));
+  /*
+    A mensagem sem hora (mídia, áudio, a que o WhatsApp não carimbou) fica
+    no lugar em que estava na tela: herda a hora da anterior no lote, ou da
+    seguinte se for a primeira. Sem isso ia para o topo da conversa.
+  */
+  const horas = recebidas.map((m) => (m.em && !Number.isNaN(Date.parse(m.em)) ? new Date(m.em).toISOString() : null));
+  for (let i = 0; i < horas.length; i += 1) if (!horas[i]) horas[i] = horas.slice(0, i).reverse().find(Boolean) ?? horas.slice(i + 1).find(Boolean) ?? null;
+
+  const limpas = recebidas
+    .map((m, i) => ({ ...m, em: m.em && !Number.isNaN(Date.parse(m.em)) ? m.em : horas[i] ?? undefined }))
     .map((m) => {
       const r = omitirDadosBancarios(m.texto.slice(0, MAXIMO_POR_MENSAGEM));
       const em = m.em && !Number.isNaN(Date.parse(m.em)) ? new Date(m.em).toISOString() : null;
@@ -151,7 +179,19 @@ export async function gravarMensagens(
       });
     }
 
-    const existentes = await tx.mensagemDaConversa.findMany({ where: { conversaId: id }, select: { chave: true, de: true, em: true, texto: true } });
+    const existentes = await tx.mensagemDaConversa.findMany({ where: { conversaId: id }, select: { id: true, chave: true, de: true, em: true, texto: true } });
+
+    /* O "Aguardando mensagem" guardado antes vira a mensagem de verdade quando ela chega com a mesma chave. */
+    const porChave = new Map(limpas.map((m) => [m.chave, m]));
+    for (const e of existentes) {
+      const real = porChave.get(e.chave);
+      if (!real || !ehAvisoDoWhatsApp(e.texto)) continue;
+      await tx.mensagemDaConversa.update({ where: { id: e.id }, data: { de: real.de, texto: real.texto, autor: real.autor, ...(real.em ? { em: new Date(real.em) } : {}) } });
+      e.texto = real.texto;
+      e.de = real.de;
+      e.em = real.em ? new Date(real.em) : e.em;
+    }
+
     const chaves = new Set(existentes.map((e) => e.chave));
     const assinaturas = new Set(existentes.map((e) => assinatura({ de: e.de, em: e.em?.toISOString(), texto: e.texto })));
 
@@ -222,7 +262,7 @@ export async function conversasDoRegistro(prisma: Db, alvo: { caseId?: string | 
       telefone: true,
       resumo: true,
       _count: { select: { mensagens: true } },
-      mensagens: { orderBy: [{ em: { sort: "desc", nulls: "last" } }, { criadoEm: "desc" }], take: 30, select: { de: true, texto: true, em: true } },
+      mensagens: { orderBy: ORDEM_DA_MAIS_NOVA, take: 30, select: { de: true, texto: true, em: true } },
     },
   });
   return linhas.map((c) => {
@@ -260,7 +300,7 @@ export async function conversasParaODossie(prisma: Db, alvo: { caseId?: string |
       resumo: true,
       guardadaPor: true,
       _count: { select: { mensagens: true } },
-      mensagens: { orderBy: [{ em: { sort: "desc", nulls: "last" } }, { criadoEm: "desc" }], take: 120, select: { de: true, texto: true, em: true } },
+      mensagens: { orderBy: ORDEM_DA_MAIS_NOVA, take: 120, select: { de: true, texto: true, em: true } },
     },
   });
   /*
@@ -357,7 +397,7 @@ export async function listar(prisma: Db, termo: string) {
       _count: { select: { mensagens: true } },
       /* Seis bastam para achar quem falou por último sem contar os avisos do sistema. */
       /* Sem hora vai por último: o Postgres põe NULL primeiro no "desc", e o aviso sem hora virava a última mensagem. */
-      mensagens: { orderBy: [{ em: { sort: "desc", nulls: "last" } }, { criadoEm: "desc" }], take: 6, select: { em: true, texto: true, de: true } },
+      mensagens: { orderBy: ORDEM_DA_MAIS_NOVA, take: 6, select: { em: true, texto: true, de: true } },
     },
   });
   return linhas.map((c) =>
@@ -368,10 +408,10 @@ export async function listar(prisma: Db, termo: string) {
 export async function ler(prisma: Db, id: string): Promise<ConversaView | null> {
   const c = await prisma.conversa.findUnique({
     where: { id },
-    include: { ...VINCULOS, mensagens: { orderBy: [{ em: { sort: "asc", nulls: "first" } }, { criadoEm: "asc" }] } },
+    include: { ...VINCULOS, mensagens: { orderBy: ORDEM_DA_CONVERSA } },
   });
   if (!c) return null;
-  const lista = c.mensagens.map((m) => ({
+  const lista = emOrdemDeConversa(c.mensagens.filter((m) => !ehAvisoDoWhatsApp(m.texto))).map((m) => ({
     id: m.id,
     de: ladoDe(m.de, m.texto),
     autor: m.autor ?? undefined,
