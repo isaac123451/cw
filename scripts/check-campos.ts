@@ -319,6 +319,18 @@ const INTERNAS: Record<string, string[]> = {
 
   /** Os erros da extensão (21/10/2026): carga própria (`lib/actions/errosDaExtensao.ts`), em Configurações → Integrações. */
   ErroDaExtensao: ["*"],
+
+  /** A pesquisa de confiança do NPS (04/11/2026): carga própria (`lib/services/okr.service.ts`), no KR1 da tela /okr; a IA do dia grava a resposta. */
+  ConfiancaDoNps: ["*"],
+
+  /** O OKR do trimestre (04/11/2026): carga própria (`lib/actions/okr.ts`), na tela /okr. */
+  Okr: ["*"],
+
+  /** A trava das reclamações desativadas (06/11/2026): só impede o vigia e a importação de recriar (`lib/services/raPortal.service.ts`); não tem tela. */
+  ReclamacaoExcluida: ["*"],
+
+  /** O uso de cada resposta pronta (08/11/2026): carga própria (`lib/actions/respostasQueFuncionam.ts`), no chip "nota depois" da Base de conhecimento. */
+  UsoDeResposta: ["*"],
 };
 
 

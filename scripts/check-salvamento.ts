@@ -28,7 +28,7 @@ const entrada = manifesto.content_scripts.find((c) => c.js.includes("conteudo/au
 conferir("a ponte roda no mundo da página, no início", [entrada?.world, entrada?.run_at], ["MAIN", "document_start"]);
 
 const painel = ler("extensao/conteudo/painel-contato.js");
-conferir("a gravação sozinha transcreve só o áudio já ouvido", painel.includes("a.endereco && !ja.has(`${a.id}:t`)"), true);
+conferir("a gravação sozinha transcreve só o áudio já ouvido", painel.includes("(a.endereco || a.arquivo) && !ja.has(`${a.id}:t`)"), true);
 conferir("a transcrição vai marcada", painel.includes("transcricao: true"), true);
 conferir("avisa fora do painel ao guardar e ao falhar (uma vez por motivo)", [painel.includes("CW.notificar?.(\n            `Conversa guardada"), painel.includes("ultimoAvisoDeFalha.get(tel) !== erro")], [true, true]);
 

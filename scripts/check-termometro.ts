@@ -51,7 +51,7 @@ const historicoRuim: HistoricoDeAvaliacoes = { avaliacoes: 3, notaMedia: 2, reso
 const comHistorico = calibrar(base, historicoRuim, OPERACAO, { satisfacao: 7, notaPrevista: 7 });
 const semHistorico = calibrar(base, NENHUM, OPERACAO, { satisfacao: 7, notaPrevista: 7 });
 conferir("cliente que sempre avaliou mal: nota prevista menor que a de quem não tem histórico", comHistorico.notaPrevista < semHistorico.notaPrevista, true);
-conferir("e o histórico aparece nos sinais", comHistorico.sinais.some((s) => s.includes("avaliação(ões) anterior(es)")), true);
+conferir("e o histórico aparece nos sinais", comHistorico.sinais.some((s) => s.includes("avaliações anteriores")), true);
 const semIa = calibrar(base, NENHUM, OPERACAO, null);
 conferir("sem IA: sai pelos sinais e pelo histórico, com o porquê no motivo", [semIa.satisfacao, semIa.motivo.length > 0], [8, true]);
 conferir("tudo dentro das réguas (0–10 e 0–100)", [bravo, feliz, otimista].every((t) => t.notaPrevista >= 0 && t.notaPrevista <= 10 && t.chanceResolvido >= 0 && t.chanceResolvido <= 100), true);
