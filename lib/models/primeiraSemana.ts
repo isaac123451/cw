@@ -1,4 +1,6 @@
+import { itemDeConfiguracoes, menuItems } from "@/core/navigation/menu";
 import type { TourDaNovidade } from "@/lib/models/novidades";
+import { MAPA } from "@/lib/models/ondeFica";
 
 /**
  * A primeira semana guiada (roadmap 2.0, Fase 19).
@@ -17,7 +19,7 @@ import type { TourDaNovidade } from "@/lib/models/novidades";
 
 export const DIAS_DA_PRIMEIRA_SEMANA = 7;
 
-export const TOURS_DAS_TELAS: Record<string, TourDaNovidade> = {
+const TOURS_FEITOS_A_MAO: Record<string, TourDaNovidade> = {
   "/meu-dia": {
     id: "tela-meu-dia",
     rota: "/meu-dia",
@@ -62,6 +64,39 @@ export const TOURS_DAS_TELAS: Record<string, TourDaNovidade> = {
     ],
   },
 };
+
+/** O link do menu que leva à tela: o dela, ou o do grupo que a contém (Configurações › Permissões). */
+export function hrefNoMenu(href: string): string | null {
+  const todos = [...menuItems, itemDeConfiguracoes].flatMap((m) => [m.href, ...(m.children ?? []).map((c) => c.href)]);
+  return todos.filter((h) => href === h || href.startsWith(`${h}/`)).sort((a, b) => b.length - a.length)[0] ?? null;
+}
+
+/**
+ * O tour de toda tela do menu (12/11/2026): as que não têm tour feito à mão
+ * ganham dois balões tirados do mapa "Onde fica?" — o que a tela faz, no
+ * cabeçalho, e onde ela fica, no link do menu. É o que o pedido do
+ * primeiro acesso pede: o que cada coisa faz e como encontrar.
+ */
+function tourDoMapa(): Record<string, TourDaNovidade> {
+  const saida: Record<string, TourDaNovidade> = {};
+  for (const funcao of MAPA) {
+    if (!funcao.href || funcao.href.includes("?") || TOURS_FEITOS_A_MAO[funcao.href] || saida[funcao.href]) continue;
+    const doMenu = hrefNoMenu(funcao.href);
+    saida[funcao.href] = {
+      id: `tela-${funcao.id}`,
+      rota: funcao.href,
+      passos: [
+        { alvo: '[data-tour="cabecalho"]', titulo: funcao.nome, texto: funcao.faz },
+        ...(doMenu
+          ? [{ alvo: `nav[data-tour="menu"] a[href="${doMenu}"]`, titulo: "Onde ela fica", texto: `${funcao.caminho.join(" › ")}. Se usar todo dia, fixe no alfinete ao lado do nome.` }]
+          : []),
+      ],
+    };
+  }
+  return saida;
+}
+
+export const TOURS_DAS_TELAS: Record<string, TourDaNovidade> = { ...tourDoMapa(), ...TOURS_FEITOS_A_MAO };
 
 export function tourDaTela(id: string | null | undefined): TourDaNovidade | null {
   if (!id) return null;

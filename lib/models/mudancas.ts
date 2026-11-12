@@ -46,6 +46,16 @@ export interface Mudanca {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "tour-em-todas-as-telas",
+    dia: "2026-11-12",
+    tipo: "melhoria",
+    frente: "plataforma",
+    titulo: "\"Primeira vez aqui?\" em todas as telas do menu",
+    texto:
+      "O convite do tour, no rodapé, ia a 5 telas; agora vai a todas as 34 telas do menu, durante a primeira semana de quem está no roteiro. Nas telas que não tinham tour, dois balões: o que a tela faz, no cabeçalho, e onde ela fica no menu, com a dica de fixar no alfinete. Os tours do Meu dia, Reclame Aqui, NPS, Redes e Agenda continuam como eram. Nada abre sozinho: só depois de aceitar o convite.",
+    href: "/primeiro-acesso",
+  },
+  {
     id: "primeiro-acesso-em-5-dias",
     dia: "2026-11-12",
     tipo: "melhoria",

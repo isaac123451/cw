@@ -14,7 +14,8 @@ export default function PageHeading({
   children,
 }: Props) {
   return (
-    <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
+    /* O alvo do tour de cada tela (12/11/2026): o "para que serve" aponta para o cabeçalho. */
+    <div data-tour="cabecalho" className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
 
       <div>
 
