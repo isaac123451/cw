@@ -204,7 +204,7 @@ confere("5 dias, cada um com ao menos 2 passos", DIAS.map((d) => ROTEIRO.filter(
 confere(
   "os passos de fazer se marcam sozinhos",
   ROTEIRO.filter((p) => p.automatico).map((p) => p.id),
-  ["recebe-atendimentos", "primeiro-caso", "tentativa-nps", "conversa-guardada", "contato-redes", "resposta-pronta"]
+  ["extensao", "recebe-atendimentos", "primeiro-caso", "tentativa-nps", "conversa-guardada", "contato-redes", "resposta-pronta"]
 );
 confere(
   "o gravado estranho não quebra: passo desconhecido e o automático são ignorados",
@@ -216,17 +216,17 @@ const vazio = progressoDoGuia({ passos: {}, primeiroCaso: null });
 confere("quem chega começa no Dia 1, pelo primeiro passo", [vazio.diaAtual, vazio.proximo?.id], [1, "reputacao"]);
 const todosMarcados = Object.fromEntries(ROTEIRO.filter((p) => !p.automatico).map((p) => [p.id, "2026-09-14T12:00:00Z"]));
 confere(
-  "tudo marcado à mão, sem registro nenhum: fica no Dia 1, esperando a marca de atendimento",
+  "tudo marcado à mão, sem registro nenhum: fica no Dia 1, esperando a extensão",
   [progressoDoGuia({ passos: todosMarcados, primeiroCaso: null }).diaAtual, progressoDoGuia({ passos: todosMarcados, primeiroCaso: null }).proximo?.id],
-  [1, "recebe-atendimentos"]
+  [1, "extensao"]
 );
 const dia1 = Object.fromEntries(ROTEIRO.filter((p) => p.dia === 1 && !p.automatico).map((p) => [p.id, "2026-09-14T12:00:00Z"]));
 confere(
   "Dia 1 feito, com a marca: vai para o Dia 2",
-  progressoDoGuia({ passos: dia1, primeiroCaso: null, automaticos: { "recebe-atendimentos": { onde: "Permissões" } } }).diaAtual,
+  progressoDoGuia({ passos: dia1, primeiroCaso: null, automaticos: { extensao: { onde: "versão 1.1.74" }, "recebe-atendimentos": { onde: "Permissões" } } }).diaAtual,
   2
 );
-const tudo = { "recebe-atendimentos": {}, "tentativa-nps": {}, "conversa-guardada": {}, "contato-redes": {}, "resposta-pronta": {} };
+const tudo = { extensao: {}, "recebe-atendimentos": {}, "tentativa-nps": {}, "conversa-guardada": {}, "contato-redes": {}, "resposta-pronta": {} };
 confere(
   "com tudo marcado e registrado, termina",
   progressoDoGuia({ passos: todosMarcados, primeiroCaso: { quando: "2026-09-14T13:00:00Z", onde: "NPS", link: "/nps/x" }, automaticos: tudo }).concluido,

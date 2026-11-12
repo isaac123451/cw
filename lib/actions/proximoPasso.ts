@@ -23,6 +23,7 @@ export async function guardarProximoPasso(retrato: ProximoPassoGuardado | null):
     where: { userId: ctx.userId },
     update: { proximoPasso: valor ? json : Prisma.DbNull },
     create: { userId: ctx.userId, notifications: {}, ...(valor ? { proximoPasso: json } : {}) },
+    select: { id: true },
   });
   return {};
 }

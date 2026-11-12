@@ -92,6 +92,9 @@ model UserPreference {
   /// pelo navegador quando o primeiro da fila muda.
   proximoPasso Json?
 
+  /// A última versão da extensão vista para a pessoa: { versao, vistaEm } (1.1.74).
+  extensao Json?
+
   updatedAt DateTime @updatedAt
 }
 

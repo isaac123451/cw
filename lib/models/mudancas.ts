@@ -46,6 +46,16 @@ export interface Mudanca {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "extensao-desatualizada-no-sino",
+    dia: "2026-11-12",
+    tipo: "novo",
+    frente: "extensao",
+    titulo: "A plataforma avisa quando a sua extensão ficou para trás",
+    texto:
+      "A extensão passou a dizer a versão dela a cada vez que fala com a plataforma. Quando ela está atrás da versão da plataforma, o sino avisa, com as duas versões e o que fazer: recarregar a extensão em chrome://extensions, em cada perfil do Chrome em que ela estiver. Foi uma extensão sem recarregar que segurou o salvamento das conversas de 06 a 10/11. No Primeiro acesso, o passo da extensão se marca sozinho quando ela aparece.",
+    href: "/primeiro-acesso?aba=onde-fica#ext-whatsapp",
+  },
+  {
     id: "tour-em-todas-as-telas",
     dia: "2026-11-12",
     tipo: "melhoria",

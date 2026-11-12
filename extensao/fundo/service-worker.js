@@ -258,7 +258,8 @@ async function chamar(caminho, parametros = {}, corpo) {
     }
   }
 
-  const cabecalhos = { Accept: "application/json" };
+  /* A versão vai junto (12/11/2026): a plataforma avisa quando a extensão ficou para trás. */
+  const cabecalhos = { Accept: "application/json", "X-CW-Versao": chrome.runtime.getManifest().version };
 
   if (cookie?.value) {
     cabecalhos["X-CW-Sessao"] = cookie.value;

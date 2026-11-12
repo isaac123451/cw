@@ -34,6 +34,7 @@ export async function salvarAjusteDaRecuperacao(entrada: AjusteDaRecuperacao): P
     where: { userId: ctx.userId },
     update: { recuperacao: valor },
     create: { userId: ctx.userId, notifications: {}, recuperacao: valor },
+    select: { id: true },
   });
   return { ajuste };
 }

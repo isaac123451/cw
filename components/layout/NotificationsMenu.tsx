@@ -21,6 +21,8 @@ import { useAvaliacoesGoogle } from "@/lib/context/useAvaliacoesGoogle";
 import { useAgora } from "@/lib/hooks/useAgora";
 import { contarPropostasPendentes } from "@/lib/actions/revisaoDeCategorias";
 import { ultimaLeituraDoVigia } from "@/lib/actions/saudeDoVigia";
+import { minhaExtensao } from "@/lib/actions/minhaExtensao";
+import type { ExtensaoVista } from "@/lib/models/versaoDaExtensao";
 
 import {
   assinaturaDoAviso,
@@ -116,11 +118,13 @@ export default function NotificationsMenu() {
   /* Propostas de categoria esperando decisão e a última leitura do vigia: lidas ao abrir e a cada 10 min. */
   const [propostas, setPropostas] = useState(0);
   const [vigiaLeuEm, setVigiaLeuEm] = useState<string | null>(null);
+  const [extensaoVista, setExtensaoVista] = useState<ExtensaoVista | null>(null);
   useEffect(() => {
     let vivo = true;
     const ler = () => {
       contarPropostasPendentes().then((n) => { if (vivo) setPropostas(n); }).catch(() => {});
       ultimaLeituraDoVigia().then((em) => { if (vivo) setVigiaLeuEm(em); }).catch(() => {});
+      minhaExtensao().then((v) => { if (vivo) setExtensaoVista(v); }).catch(() => {});
     };
     ler();
     const relogio = window.setInterval(ler, 10 * 60_000);
@@ -141,10 +145,10 @@ export default function NotificationsMenu() {
             movements,
             googleEvents,
             expediente,
-            { nps: responses, avaliacoesGoogle: avaliacoes, regras: rules, agora, propostasDeCategoria: propostas, vigiaLeuEm }
+            { nps: responses, avaliacoesGoogle: avaliacoes, regras: rules, agora, propostasDeCategoria: propostas, vigiaLeuEm, extensao: { vista: extensaoVista, plataforma: process.env.NEXT_PUBLIC_VERSAO ?? "" } }
           )
         : [],
-    [cases, tasks, prefs, session, movements, googleEvents, expediente, responses, avaliacoes, rules, agora, propostas, vigiaLeuEm]
+    [cases, tasks, prefs, session, movements, googleEvents, expediente, responses, avaliacoes, rules, agora, propostas, vigiaLeuEm, extensaoVista]
   );
 
   const vistosBrutos = useVistosBrutos();

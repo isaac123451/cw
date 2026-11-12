@@ -4,6 +4,7 @@ import { jwtVerify } from "jose";
 
 import { getPrisma } from "@/lib/prisma";
 import type { Role } from "@/lib/auth/guard";
+import { lerExtensaoVista, precisaGravar, type ExtensaoVista } from "@/lib/models/versaoDaExtensao";
 
 /**
  * Autenticação das rotas que a extensão de navegador consome.
@@ -87,6 +88,32 @@ function tokenDaRequisicao(request: Request) {
   return achado ? decodeURIComponent(achado[1]) : "";
 }
 
+/*
+  A versão da extensão de cada pessoa (12/11/2026, 1.1.74): vem no
+  cabeçalho X-CW-Versao e fica em UserPreference.extensao. A memória do
+  servidor evita gravar a cada chamada (a extensão chama a cada 8 s); antes
+  do db:push da coluna, a gravação falha calada e nada muda.
+*/
+const versaoVista = new Map<string, ExtensaoVista>();
+
+function registrarVersao(prisma: NonNullable<ReturnType<typeof getPrisma>>, userId: string, cabecalho: string | null) {
+  const versao = String(cabecalho ?? "").trim();
+  if (!/^\d+(\.\d+){0,3}$/.test(versao)) return;
+  const agora = new Date();
+  if (!precisaGravar(versaoVista.get(userId) ?? null, versao, agora)) return;
+  const valor = { versao, vistaEm: agora.toISOString() };
+  versaoVista.set(userId, valor);
+  void prisma.userPreference
+    .upsert({ where: { userId }, update: { extensao: valor }, create: { userId, notifications: {}, extensao: valor }, select: { id: true } })
+    .catch(() => undefined);
+}
+
+/** A última versão da extensão vista para a pessoa, ou null. */
+export async function extensaoDaPessoa(prisma: NonNullable<ReturnType<typeof getPrisma>>, userId: string): Promise<ExtensaoVista | null> {
+  const linha = await prisma.userPreference.findUnique({ where: { userId }, select: { extensao: true } }).catch(() => null);
+  return lerExtensaoVista(linha?.extensao) ?? versaoVista.get(userId) ?? null;
+}
+
 export async function autenticar(
   request: Request
 ): Promise<Acesso> {
@@ -133,6 +160,8 @@ export async function autenticar(
     return { usuario: null, demonstracao: false };
   }
 
+  registrarVersao(prisma, user.id, request.headers.get("x-cw-versao"));
+
   return {
     usuario: {
       id: user.id,
@@ -177,7 +206,7 @@ export function cabecalhos(request: Request) {
     "Access-Control-Allow-Origin": origem,
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers":
-      "X-CW-Sessao, Content-Type",
+      "X-CW-Sessao, X-CW-Versao, Content-Type",
     "Access-Control-Max-Age": "600",
   };
 }

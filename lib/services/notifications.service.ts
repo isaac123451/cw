@@ -24,6 +24,7 @@ import { summarize } from "@/lib/services/nps.service";
 import { slaStatus } from "@/lib/services/sla.service";
 import { diaNaOperacao } from "@/lib/services/reputation.service";
 import { pluralDe } from "@/lib/plural";
+import { situacaoDaExtensao, type ExtensaoVista } from "@/lib/models/versaoDaExtensao";
 
 export type NotificationTone =
   | "danger"
@@ -73,6 +74,8 @@ export interface FontesDoSino {
   propostasDeCategoria?: number;
   /** A última leitura do vigia (o painel do portal), em ISO (05/11/2026). */
   vigiaLeuEm?: string | null;
+  /** A última versão da extensão vista para a pessoa e a da plataforma (12/11/2026). */
+  extensao?: { vista: ExtensaoVista | null; plataforma: string };
 }
 
 export interface NotificationPrefs {
@@ -468,6 +471,21 @@ export function buildNotifications(
         frente: "reclame-aqui",
       });
     }
+  }
+
+  /*
+    A extensão atrás da plataforma (12/11/2026, 1.1.74): é a que ninguém
+    recarregou no Chrome. O título fica igual entre versões, para o aviso
+    não voltar como novo a cada entrega; as versões vão no detalhe.
+  */
+  if (fontes.extensao && situacaoDaExtensao(fontes.extensao.vista, fontes.extensao.plataforma) === "desatualizada") {
+    list.push({
+      id: "extensao-desatualizada",
+      tone: "warning",
+      title: "A sua extensão está desatualizada",
+      detail: `Está na ${fontes.extensao.vista!.versao}; a plataforma está na ${fontes.extensao.plataforma}. Em chrome://extensions, clique em recarregar na extensão do CW, em cada perfil do Chrome em que ela estiver.`,
+      href: "/primeiro-acesso?aba=onde-fica#ext-whatsapp",
+    });
   }
 
   if (fontes.propostasDeCategoria && fontes.propostasDeCategoria > 0) {

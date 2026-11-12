@@ -66,9 +66,10 @@ export const ROTEIRO: PassoDoGuia[] = [
     id: "extensao",
     dia: 1,
     titulo: "A extensão no Chrome",
-    texto: "Instale a extensão do CW no Chrome e entre com o seu usuário. É ela que mostra o cliente ao lado do WhatsApp e do Reclame Aqui e guarda as conversas.",
+    texto: "Instale a extensão do CW no Chrome e entre com o seu usuário. É ela que mostra o cliente ao lado do WhatsApp e do Reclame Aqui e guarda as conversas. Este passo se marca sozinho quando a extensão falar com a plataforma.",
     link: "/primeiro-acesso?aba=onde-fica#ext-whatsapp",
     rotulo: "Ver o que ela faz",
+    automatico: true,
   },
   {
     id: "recebe-atendimentos",

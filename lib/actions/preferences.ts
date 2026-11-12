@@ -47,6 +47,7 @@ export async function getPreferences(): Promise<StoredPreferences | null> {
   const linha =
     await ctx.prisma.userPreference.findUnique({
       where: { userId: ctx.userId },
+      select: { notifications: true, somenteMinhas: true },
     });
 
   if (!linha) return null;
@@ -81,6 +82,7 @@ export async function savePreferences(
       where: { userId: ctx.userId },
       update: dados,
       create: { userId: ctx.userId, ...dados },
+      select: { id: true },
     });
   });
 }

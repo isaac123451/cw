@@ -3,6 +3,7 @@
 import { requireRole, tryRole } from "@/lib/auth/guard";
 
 import { MARCA_DE_ATENDIMENTO } from "@/lib/auth/modules";
+import { extensaoDaPessoa } from "@/lib/api/extensao";
 import { lerEstadoGravado, ROTEIRO, type EstadoDoGuia, type MarcaAutomatica } from "@/lib/models/primeiroAcesso";
 
 /**
@@ -56,7 +57,8 @@ async function primeiroCasoDe(prisma: NonNullable<Awaited<ReturnType<typeof tryR
  * O nome entra onde o registro guarda nome, não id.
  */
 async function marcasAutomaticas(prisma: NonNullable<Awaited<ReturnType<typeof tryRole>>>["prisma"], userId: string, nome: string | null): Promise<Record<string, MarcaAutomatica>> {
-  const [atendimento, tentativa, conversa, redes, resposta] = await Promise.all([
+  const [extensao, atendimento, tentativa, conversa, redes, resposta] = await Promise.all([
+    extensaoDaPessoa(prisma, userId).catch(() => null),
     prisma.userModuleRole.findFirst({ where: { userId, module: MARCA_DE_ATENDIMENTO }, select: { userId: true } }),
     nome ? prisma.npsAttempt.findFirst({ where: { actor: nome }, orderBy: { createdAt: "asc" }, select: { createdAt: true, responseId: true } }) : null,
     nome ? prisma.conversa.findFirst({ where: { guardadaPor: nome }, orderBy: { criadoEm: "asc" }, select: { id: true, criadoEm: true, contatoNome: true } }) : null,
@@ -68,6 +70,7 @@ async function marcasAutomaticas(prisma: NonNullable<Awaited<ReturnType<typeof t
     nome ? prisma.usoDeResposta.findFirst({ where: { por: nome }, orderBy: { usadoEm: "asc" }, select: { usadoEm: true } }) : null,
   ]);
   const marcas: Record<string, MarcaAutomatica> = {};
+  if (extensao) marcas.extensao = { quando: extensao.vistaEm, onde: `versão ${extensao.versao}` };
   if (atendimento) marcas["recebe-atendimentos"] = { onde: "Permissões" };
   if (tentativa) marcas["tentativa-nps"] = { quando: tentativa.createdAt.toISOString(), onde: "NPS", link: `/nps/${tentativa.responseId}` };
   if (conversa) marcas["conversa-guardada"] = { quando: conversa.criadoEm.toISOString(), onde: conversa.contatoNome || "Conversas do WhatsApp", link: `/conversas?id=${conversa.id}` };
@@ -102,6 +105,7 @@ async function gravar(mudar: (atual: ReturnType<typeof lerEstadoGravado>) => Ret
       update: { primeiroAcesso: valor },
       /* Quem nunca mexeu nos avisos ainda não tem linha: nasce com os avisos vazios (vale o padrão). */
       create: { userId: ctx.userId, notifications: {}, primeiroAcesso: valor },
+      select: { id: true },
     });
     return { ok: true, estado: await estadoCompleto(ctx.prisma, ctx.userId, novo) };
   } catch (erro) {
