@@ -24,19 +24,35 @@ export async function POST(request: Request) {
   const corpo = (await request.json().catch(() => ({}))) as { pedidos?: { nome?: string; args?: unknown[] }[] };
   const pedidos = Array.isArray(corpo.pedidos) ? corpo.pedidos.slice(0, 30) : [];
 
+  /*
+    Quanto cada leitura levou (12/11/2026): vai no cabeçalho Server-Timing,
+    que o navegador mostra na aba Rede. "Está lento" passa a ter nome: o
+    lote demora o tanto da leitura mais lenta.
+  */
+  const tempos: string[] = [];
   const respostas = await Promise.all(
-    pedidos.map(async (p) => {
+    pedidos.map(async (p, i) => {
       const nome = String(p?.nome ?? "") as NomeDaLeitura;
-      const ler = Object.prototype.hasOwnProperty.call(LEITURAS, nome) ? (LEITURAS[nome] as (...args: unknown[]) => Promise<unknown>) : null;
-      if (!ler) return { ok: false, erro: "Leitura desconhecida." };
+      const inicio = performance.now();
       try {
-        return { ok: true, valor: await ler(...(Array.isArray(p.args) ? p.args : [])) };
-      } catch (erro) {
-        console.error(`[leitura/lote] ${nome}`, erro);
-        return { ok: false, erro: "A leitura falhou." };
+        return await lerUma(nome, p);
+      } finally {
+        tempos.push(`${/^[a-zA-Z]+$/.test(nome) ? nome : "x"}-${i};dur=${Math.round(performance.now() - inicio)}`);
       }
     })
   );
 
-  return jsonComprimido(request, { respostas }, { headers: { "Cache-Control": "no-store" } });
+  return jsonComprimido(request, { respostas }, { headers: { "Cache-Control": "no-store", "Server-Timing": tempos.join(", ") } });
+}
+
+/** Uma leitura do registro; a que falha volta como erro, sem derrubar as outras. */
+async function lerUma(nome: NomeDaLeitura, p: { args?: unknown[] }) {
+  const ler = Object.prototype.hasOwnProperty.call(LEITURAS, nome) ? (LEITURAS[nome] as (...args: unknown[]) => Promise<unknown>) : null;
+  if (!ler) return { ok: false, erro: "Leitura desconhecida." };
+  try {
+    return { ok: true, valor: await ler(...(Array.isArray(p.args) ? p.args : [])) };
+  } catch (erro) {
+    console.error(`[leitura/lote] ${nome}`, erro);
+    return { ok: false, erro: "A leitura falhou." };
+  }
 }

@@ -108,6 +108,19 @@ export async function disconnectGoogle() {
   await ctx.prisma.googleAccount.deleteMany({
     where: { userId: ctx.userId },
   });
+  esquecerAgenda(ctx.userId);
+}
+
+/*
+  A agenda do Google por 5 minutos (12/11/2026): o Meu dia pedia os eventos
+  ao Google a cada abertura — duas idas à API (o token e a lista). Guardado
+  por pessoa e por janela; criar, mudar ou apagar um evento pela plataforma
+  limpa o guardado da pessoa.
+*/
+const AGENDA_GUARDADA_MS = 5 * 60_000;
+const agendaGuardada = new Map<string, { em: number; events: GoogleEvent[] }>();
+function esquecerAgenda(userId: string) {
+  for (const chave of agendaGuardada.keys()) if (chave.startsWith(`${userId}|`)) agendaGuardada.delete(chave);
 }
 
 export async function getUpcomingEvents(janela?: {
@@ -125,6 +138,10 @@ export async function getUpcomingEvents(janela?: {
 
   try {
 
+    const chave = `${ctx.userId}|${JSON.stringify(janela ?? {})}`;
+    const guardada = agendaGuardada.get(chave);
+    if (guardada && Date.now() - guardada.em < AGENDA_GUARDADA_MS) return { events: guardada.events };
+
     const token = await validAccessToken(
       ctx.prisma,
       ctx.userId
@@ -132,9 +149,9 @@ export async function getUpcomingEvents(janela?: {
 
     if (!token) return { events: [] };
 
-    return {
-      events: await listUpcomingEvents(token, janela),
-    };
+    const events = await listUpcomingEvents(token, janela);
+    agendaGuardada.set(chave, { em: Date.now(), events });
+    return { events };
 
   } catch (error) {
     return {
@@ -179,7 +196,9 @@ async function comToken<T>(
       };
     }
 
-    return { ok: true, dados: await acao(token) };
+    const dados = await acao(token);
+    esquecerAgenda(ctx.userId);
+    return { ok: true, dados };
 
   } catch (error) {
     return {

@@ -19,9 +19,7 @@ import { useSla } from "@/lib/context/SlaContext";
 import { useToast } from "@/lib/context/ToastContext";
 import { useAvaliacoesGoogle } from "@/lib/context/useAvaliacoesGoogle";
 import { useAgora } from "@/lib/hooks/useAgora";
-import { contarPropostasPendentes } from "@/lib/actions/revisaoDeCategorias";
-import { ultimaLeituraDoVigia } from "@/lib/actions/saudeDoVigia";
-import { minhaExtensao } from "@/lib/actions/minhaExtensao";
+import { lerSinaisDoSino } from "@/lib/actions/sinaisDoSino";
 import type { ExtensaoVista } from "@/lib/models/versaoDaExtensao";
 
 import {
@@ -122,9 +120,15 @@ export default function NotificationsMenu() {
   useEffect(() => {
     let vivo = true;
     const ler = () => {
-      contarPropostasPendentes().then((n) => { if (vivo) setPropostas(n); }).catch(() => {});
-      ultimaLeituraDoVigia().then((em) => { if (vivo) setVigiaLeuEm(em); }).catch(() => {});
-      minhaExtensao().then((v) => { if (vivo) setExtensaoVista(v); }).catch(() => {});
+      /* As três leituras numa ida só: as server actions da aba andam em fila (12/11/2026). */
+      lerSinaisDoSino()
+        .then((s) => {
+          if (!vivo) return;
+          setPropostas(s.propostas);
+          setVigiaLeuEm(s.vigiaLeuEm);
+          setExtensaoVista(s.extensao);
+        })
+        .catch(() => {});
     };
     ler();
     const relogio = window.setInterval(ler, 10 * 60_000);

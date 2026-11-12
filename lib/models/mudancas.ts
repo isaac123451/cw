@@ -46,6 +46,16 @@ export interface Mudanca {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "menos-espera-ao-abrir",
+    dia: "2026-11-12",
+    tipo: "melhoria",
+    frente: "plataforma",
+    titulo: "Menos espera ao abrir as telas",
+    texto:
+      "O sino fazia três pedidos ao servidor em toda tela, e eles andavam em fila; agora é um só. A agenda do Google, que o Meu dia pedia ao Google a cada abertura, fica guardada por 5 minutos e é renovada quando você cria, muda ou apaga um evento pela plataforma. E a leitura do Meu dia passou a dizer quanto cada parte levou, para a próxima melhora atacar a parte certa.",
+    href: "/meu-dia",
+  },
+  {
     id: "supabase-revisado",
     dia: "2026-11-12",
     tipo: "correcao",
