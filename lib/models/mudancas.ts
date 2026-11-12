@@ -46,6 +46,16 @@ export interface Mudanca {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "primeiro-acesso-em-5-dias",
+    dia: "2026-11-12",
+    tipo: "melhoria",
+    frente: "plataforma",
+    titulo: "Primeiro acesso em uma semana guiada",
+    texto:
+      "O roteiro do primeiro acesso virou uma semana em 5 dias: entrar, Reclame Aqui, NPS e WhatsApp, Redes e Google, números. A tela abre só o dia de agora, com o próximo passo em destaque; os outros dias ficam recolhidos. Os passos de fazer se marcam sozinhos pelo que a plataforma registra: a marca de Recebe atendimentos, o primeiro caso, a primeira tentativa no NPS, a primeira conversa guardada, o primeiro contato nas Redes e a primeira resposta pronta usada. O cartão do Meu dia mostra o dia (Dia 2 de 5), não a contagem de passos.",
+    href: "/primeiro-acesso",
+  },
+  {
     id: "onde-fica",
     dia: "2026-11-12",
     tipo: "novo",

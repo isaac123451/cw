@@ -6,7 +6,7 @@ import { ArrowRight, Sparkles, X } from "lucide-react";
 
 import { usePrimeiroAcesso } from "@/components/primeiroAcesso/usePrimeiroAcesso";
 
-import { progressoDoGuia } from "@/lib/models/primeiroAcesso";
+import { DIAS, progressoDoGuia } from "@/lib/models/primeiroAcesso";
 
 /**
  * O roteiro do primeiro acesso no alto do Meu dia, enquanto não termina.
@@ -19,7 +19,7 @@ export default function CartaoDoPrimeiroAcesso() {
   const { estado, gravando, dispensar } = usePrimeiroAcesso();
   if (!estado || estado.dispensadoEm) return null;
 
-  const { feitos, total, proximo, concluido } = progressoDoGuia(estado);
+  const { feitos, total, proximo, diaAtual, concluido } = progressoDoGuia(estado);
   if (concluido || !proximo) return null;
 
   return (
@@ -29,7 +29,7 @@ export default function CartaoDoPrimeiroAcesso() {
       </span>
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold text-violet-950">
-          Primeiro acesso · {feitos} de {total}
+          Primeiro acesso · Dia {diaAtual} de {DIAS.length}
         </p>
         <p className="truncate text-xs text-zinc-600">Próximo: {proximo.titulo}</p>
       </div>

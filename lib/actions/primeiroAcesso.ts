@@ -2,7 +2,8 @@
 
 import { requireRole, tryRole } from "@/lib/auth/guard";
 
-import { lerEstadoGravado, ROTEIRO, type EstadoDoGuia } from "@/lib/models/primeiroAcesso";
+import { MARCA_DE_ATENDIMENTO } from "@/lib/auth/modules";
+import { lerEstadoGravado, ROTEIRO, type EstadoDoGuia, type MarcaAutomatica } from "@/lib/models/primeiroAcesso";
 
 /**
  * O roteiro do primeiro acesso de quem está na sessão.
@@ -48,6 +49,41 @@ async function primeiroCasoDe(prisma: NonNullable<Awaited<ReturnType<typeof tryR
   return primeiro ? { quando: primeiro.quando.toISOString(), onde: primeiro.onde, link: primeiro.link } : null;
 }
 
+/**
+ * Os passos que se marcam sozinhos (12/11/2026), pelo que o banco registra
+ * da própria pessoa: a marca de atendimento, a tentativa no NPS, a conversa
+ * guardada pela extensão, o contato nas Redes e a resposta pronta usada.
+ * O nome entra onde o registro guarda nome, não id.
+ */
+async function marcasAutomaticas(prisma: NonNullable<Awaited<ReturnType<typeof tryRole>>>["prisma"], userId: string, nome: string | null): Promise<Record<string, MarcaAutomatica>> {
+  const [atendimento, tentativa, conversa, redes, resposta] = await Promise.all([
+    prisma.userModuleRole.findFirst({ where: { userId, module: MARCA_DE_ATENDIMENTO }, select: { userId: true } }),
+    nome ? prisma.npsAttempt.findFirst({ where: { actor: nome }, orderBy: { createdAt: "asc" }, select: { createdAt: true, responseId: true } }) : null,
+    nome ? prisma.conversa.findFirst({ where: { guardadaPor: nome }, orderBy: { criadoEm: "asc" }, select: { id: true, criadoEm: true, contatoNome: true } }) : null,
+    prisma.caseContato.findFirst({
+      where: { autorId: userId, case: { channel: { not: "RECLAME_AQUI" } } },
+      orderBy: { em: "asc" },
+      select: { em: true, case: { select: { protocol: true } } },
+    }),
+    nome ? prisma.usoDeResposta.findFirst({ where: { por: nome }, orderBy: { usadoEm: "asc" }, select: { usadoEm: true } }) : null,
+  ]);
+  const marcas: Record<string, MarcaAutomatica> = {};
+  if (atendimento) marcas["recebe-atendimentos"] = { onde: "Permissões" };
+  if (tentativa) marcas["tentativa-nps"] = { quando: tentativa.createdAt.toISOString(), onde: "NPS", link: `/nps/${tentativa.responseId}` };
+  if (conversa) marcas["conversa-guardada"] = { quando: conversa.criadoEm.toISOString(), onde: conversa.contatoNome || "Conversas do WhatsApp", link: `/conversas?id=${conversa.id}` };
+  if (redes) marcas["contato-redes"] = { quando: redes.em.toISOString(), onde: `Redes Sociais · ${redes.case.protocol}`, link: `/redes-sociais/${encodeURIComponent(redes.case.protocol)}` };
+  if (resposta) marcas["resposta-pronta"] = { quando: resposta.usadoEm.toISOString(), onde: "Respostas prontas", link: "/base-conhecimento" };
+  return marcas;
+}
+
+/** O estado inteiro: o gravado, o primeiro caso e os passos automáticos. */
+async function estadoCompleto(prisma: NonNullable<Awaited<ReturnType<typeof tryRole>>>["prisma"], userId: string, gravado: ReturnType<typeof lerEstadoGravado>): Promise<EstadoDoGuia> {
+  const usuario = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
+  const nome = usuario?.name ?? null;
+  const [primeiroCaso, automaticos] = await Promise.all([primeiroCasoDe(prisma, userId, nome), marcasAutomaticas(prisma, userId, nome)]);
+  return { ...gravado, primeiroCaso, automaticos };
+}
+
 async function gravar(mudar: (atual: ReturnType<typeof lerEstadoGravado>) => ReturnType<typeof lerEstadoGravado>): Promise<{ ok: true; estado: EstadoDoGuia } | Falha> {
   let ctx;
   try {
@@ -67,8 +103,7 @@ async function gravar(mudar: (atual: ReturnType<typeof lerEstadoGravado>) => Ret
       /* Quem nunca mexeu nos avisos ainda não tem linha: nasce com os avisos vazios (vale o padrão). */
       create: { userId: ctx.userId, notifications: {}, primeiroAcesso: valor },
     });
-    const usuario = await ctx.prisma.user.findUnique({ where: { id: ctx.userId }, select: { name: true } });
-    return { ok: true, estado: { ...novo, primeiroCaso: await primeiroCasoDe(ctx.prisma, ctx.userId, usuario?.name ?? null) } };
+    return { ok: true, estado: await estadoCompleto(ctx.prisma, ctx.userId, novo) };
   } catch (erro) {
     console.error("[primeiro-acesso] gravar", erro);
     return { ok: false, erro: "O banco não aceitou agora. Tente de novo em instantes." };
@@ -79,12 +114,8 @@ export async function lerPrimeiroAcesso(): Promise<{ ok: true; estado: EstadoDoG
   const ctx = await tryRole("LEITURA");
   if (!ctx) return { ok: false, erro: "Sem sessão." };
   try {
-    const [pref, usuario] = await Promise.all([
-      ctx.prisma.userPreference.findUnique({ where: { userId: ctx.userId }, select: { primeiroAcesso: true } }),
-      ctx.prisma.user.findUnique({ where: { id: ctx.userId }, select: { name: true } }),
-    ]);
-    const gravado = lerEstadoGravado(pref?.primeiroAcesso);
-    return { ok: true, estado: { ...gravado, primeiroCaso: await primeiroCasoDe(ctx.prisma, ctx.userId, usuario?.name ?? null) } };
+    const pref = await ctx.prisma.userPreference.findUnique({ where: { userId: ctx.userId }, select: { primeiroAcesso: true } });
+    return { ok: true, estado: await estadoCompleto(ctx.prisma, ctx.userId, lerEstadoGravado(pref?.primeiroAcesso)) };
   } catch (erro) {
     console.error("[primeiro-acesso] ler", erro);
     return { ok: false, erro: "Não foi possível ler o seu roteiro agora." };
@@ -95,7 +126,7 @@ export async function lerPrimeiroAcesso(): Promise<{ ok: true; estado: EstadoDoG
 export async function marcarPassoDoGuia(id: string, feito: boolean) {
   const passo = ROTEIRO.find((p) => p.id === id);
   if (!passo) return { ok: false, erro: "Passo desconhecido." } as Falha;
-  if (passo.automatico) return { ok: false, erro: "Este passo se marca sozinho, quando o seu primeiro contato for registrado." } as Falha;
+  if (passo.automatico) return { ok: false, erro: "Este passo se marca sozinho, quando o registro dele existir." } as Falha;
   return gravar((atual) => {
     const passos = { ...atual.passos };
     if (feito) passos[id] = new Date().toISOString();

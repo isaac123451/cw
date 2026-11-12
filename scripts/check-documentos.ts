@@ -27,7 +27,7 @@ import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { ATALHOS_DO_DOCUMENTO } from "../lib/documentos/atalhosDoDocumento";
-import { lerEstadoGravado, progressoDoGuia, ROTEIRO } from "../lib/models/primeiroAcesso";
+import { DIAS, lerEstadoGravado, progressoDoGuia, ROTEIRO } from "../lib/models/primeiroAcesso";
 import { enderecoValido, normalizarEndereco } from "../lib/models/atalho";
 import { blocosDoMarkdown, dobrar, marcarTermo, textoPuro, trechosDaLinha, type Bloco } from "../lib/models/markdown";
 import { markdownDosPassos, secoesDoDocumento } from "../lib/models/playbook";
@@ -199,22 +199,37 @@ const semTela = ROTEIRO.flatMap((p) => [p.link, p.link2?.href].filter(Boolean) a
   .map((href) => href.split(/[?#]/)[0])
   .filter((rota) => !existsSync(resolve(__dirname, "..", "app", `.${rota}`, "page.tsx")));
 confere("todo passo leva a uma tela que existe", semTela, []);
-confere("só o último passo se marca sozinho", ROTEIRO.filter((p) => p.automatico).map((p) => p.id), ["primeiro-caso"]);
+/* A semana guiada (12/11/2026): 5 dias, o dia de agora é o primeiro com passo por fazer. */
+confere("5 dias, cada um com ao menos 2 passos", DIAS.map((d) => ROTEIRO.filter((p) => p.dia === d.dia).length >= 2), [true, true, true, true, true]);
+confere(
+  "os passos de fazer se marcam sozinhos",
+  ROTEIRO.filter((p) => p.automatico).map((p) => p.id),
+  ["recebe-atendimentos", "primeiro-caso", "tentativa-nps", "conversa-guardada", "contato-redes", "resposta-pronta"]
+);
 confere(
   "o gravado estranho não quebra: passo desconhecido e o automático são ignorados",
   lerEstadoGravado({ passos: { reputacao: "2026-09-14T12:00:00Z", inventado: "x", "primeiro-caso": "x", rotina: 3 }, dispensadoEm: 5 }),
   { passos: { reputacao: "2026-09-14T12:00:00Z" }, dispensadoEm: undefined }
 );
 confere("JSON nulo vira roteiro vazio", lerEstadoGravado(null), { passos: {}, dispensadoEm: undefined });
+const vazio = progressoDoGuia({ passos: {}, primeiroCaso: null });
+confere("quem chega começa no Dia 1, pelo primeiro passo", [vazio.diaAtual, vazio.proximo?.id], [1, "reputacao"]);
 const todosMarcados = Object.fromEntries(ROTEIRO.filter((p) => !p.automatico).map((p) => [p.id, "2026-09-14T12:00:00Z"]));
 confere(
-  "tudo marcado sem o primeiro caso ainda não termina",
-  progressoDoGuia({ passos: todosMarcados, primeiroCaso: null }).proximo?.id,
-  "primeiro-caso"
+  "tudo marcado à mão, sem registro nenhum: fica no Dia 1, esperando a marca de atendimento",
+  [progressoDoGuia({ passos: todosMarcados, primeiroCaso: null }).diaAtual, progressoDoGuia({ passos: todosMarcados, primeiroCaso: null }).proximo?.id],
+  [1, "recebe-atendimentos"]
 );
+const dia1 = Object.fromEntries(ROTEIRO.filter((p) => p.dia === 1 && !p.automatico).map((p) => [p.id, "2026-09-14T12:00:00Z"]));
 confere(
-  "com o primeiro contato registrado, termina",
-  progressoDoGuia({ passos: todosMarcados, primeiroCaso: { quando: "2026-09-14T13:00:00Z", onde: "NPS", link: "/nps/x" } }).concluido,
+  "Dia 1 feito, com a marca: vai para o Dia 2",
+  progressoDoGuia({ passos: dia1, primeiroCaso: null, automaticos: { "recebe-atendimentos": { onde: "Permissões" } } }).diaAtual,
+  2
+);
+const tudo = { "recebe-atendimentos": {}, "tentativa-nps": {}, "conversa-guardada": {}, "contato-redes": {}, "resposta-pronta": {} };
+confere(
+  "com tudo marcado e registrado, termina",
+  progressoDoGuia({ passos: todosMarcados, primeiroCaso: { quando: "2026-09-14T13:00:00Z", onde: "NPS", link: "/nps/x" }, automaticos: tudo }).concluido,
   true
 );
 
