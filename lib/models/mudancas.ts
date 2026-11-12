@@ -46,6 +46,16 @@ export interface Mudanca {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "supabase-revisado",
+    dia: "2026-11-12",
+    tipo: "correcao",
+    frente: "bastidores",
+    titulo: "Banco revisado: menos tráfego, índices e um acesso fechado",
+    texto:
+      "Depois da queda de 12/11 (um incidente do Supabase em São Paulo), o painel do banco foi revisado. O tráfego de saída estava em 268 MB por dia, num plano com 5 GB por mês: a maior parte vinha das etiquetas da lista do WhatsApp, que recarregavam 4.400 respostas do NPS a cada minuto e a cada gravação. Agora o índice das etiquetas dura 10 minutos, e um número confirmado no \"É este\" aparece na hora. As 23 chaves do banco sem índice ganharam índice, e a função que liga a proteção em tabela nova deixou de poder ser chamada de fora. Os avisos de segurança e de saúde do Supabase estão zerados.",
+    href: "/novidades",
+  },
+  {
     id: "extensao-desatualizada-no-sino",
     dia: "2026-11-12",
     tipo: "novo",

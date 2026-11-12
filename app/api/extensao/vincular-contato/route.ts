@@ -1,4 +1,7 @@
 import { autenticar, responder, responderPreVoo, semSessao } from "@/lib/api/extensao";
+import { revalidateTag } from "next/cache";
+
+import { ETIQUETAS_TAG } from "@/lib/actions/tags";
 import { getPrisma } from "@/lib/prisma";
 import { chaveDoContato, formasDaChave, vincularContato, type TipoDeCandidato } from "@/lib/services/contatoConhecido.service";
 
@@ -48,6 +51,8 @@ export async function POST(request: Request) {
       ref: String(entrada.ref).slice(0, 80),
       por: usuario.nome,
     });
+    /* O número confirmado aparece na lista do WhatsApp na hora, sem esperar os 10 minutos do índice. */
+    if (r.ok) revalidateTag(ETIQUETAS_TAG, "max");
     return r.ok ? responder(request, { ok: true }) : responder(request, { erro: r.erro }, 400);
   } catch (erro) {
     console.error("[extensao/vincular-contato]", erro);

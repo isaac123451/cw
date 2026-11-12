@@ -1,7 +1,7 @@
 import { unstable_cache } from "next/cache";
 
 import { autenticar, responder, responderPreVoo, semSessao } from "@/lib/api/extensao";
-import { CASES_TAG, WORKSPACE_TAG } from "@/lib/actions/tags";
+import { ETIQUETAS_TAG } from "@/lib/actions/tags";
 import { chaveDoNome, chaveDoTelefone, DIAS_DO_NPS, etiquetasDasFichas, type FichaDoIndice } from "@/lib/models/etiquetasDaLista";
 import { eFinalDasRedes } from "@/lib/models/redes";
 import { getPrisma } from "@/lib/prisma";
@@ -57,7 +57,14 @@ const indice = unstable_cache(
     return saida;
   },
   ["etiquetas-lista"],
-  { tags: [CASES_TAG, WORKSPACE_TAG], revalidate: 60 }
+  /*
+    10 minutos e tag própria (12/11/2026): o Supabase mostrou 268 MB de saída
+    num dia (o plano gratuito tem 5 GB por mês). Este índice (4.400 respostas
+    do NPS, as reclamações abertas e os números confirmados) era refeito a cada
+    minuto e a cada gravação de qualquer rota da extensão. Etiqueta nova leva
+    até 10 minutos para aparecer; o "É este" confirmado aparece na hora.
+  */
+  { tags: [ETIQUETAS_TAG], revalidate: 600 }
 );
 
 /**
