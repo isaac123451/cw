@@ -46,6 +46,16 @@ export interface Mudanca {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "onde-fica",
+    dia: "2026-11-12",
+    tipo: "novo",
+    frente: "plataforma",
+    titulo: "Onde fica? Cada função, o que faz e o caminho até ela",
+    texto:
+      "Primeiro acesso ganhou a aba Onde fica?: as 44 funções da plataforma e da extensão, cada uma com o que faz, o caminho no menu e o botão Ir até lá, com um filtro no topo. A busca do topo (Ctrl K) passou a achar as funções pelos nomes que a gente usa: \"áudio\" leva a Conversas do WhatsApp, \"nota\" a Nota e metas, \"recebe atendimentos\" a Permissões, e \"disparo\" ou \"sino\" abrem a explicação no Onde fica?.",
+    href: "/primeiro-acesso?aba=onde-fica",
+  },
+  {
     id: "disparo-aparece-no-whatsapp",
     dia: "2026-11-10",
     tipo: "correcao",

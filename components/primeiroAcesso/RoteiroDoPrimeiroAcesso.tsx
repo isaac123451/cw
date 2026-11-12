@@ -4,7 +4,6 @@ import Link from "next/link";
 
 import { ArrowRight, Check, CircleDashed, Loader2, PartyPopper, Sparkles } from "lucide-react";
 
-import PageHeading from "@/components/shared/PageHeading";
 import PorQue from "@/components/shared/PorQue";
 import { ErroDoServidor } from "@/components/shared/Rodape";
 
@@ -26,12 +25,6 @@ export default function RoteiroDoPrimeiroAcesso() {
 
   return (
     <div className="space-y-6">
-      <PageHeading
-        eyebrow="Conhecimento"
-        title="Primeiro acesso"
-        description="Um roteiro curto pela rotina e pelas telas, que termina com o seu primeiro caso tratado de verdade."
-      />
-
       <ErroDoServidor erro={erro} />
 
       {!estado && !erro && (
