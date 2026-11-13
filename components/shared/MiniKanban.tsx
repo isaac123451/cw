@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { Case } from "@/lib/models/case";
-import { caseHref, isSocial } from "@/lib/services/case.service";
+import { caseHref, isSocial, rotuloDoCaso } from "@/lib/services/case.service";
 import BotaoAbrirEmJanela from "@/components/janelas/BotaoAbrirEmJanela";
 
 interface Column {
@@ -140,7 +140,7 @@ export default function MiniKanban({
                         <BotaoAbrirEmJanela
                           frente={isSocial(item) ? "redes" : "reclame-aqui"}
                           referencia={item.id}
-                          titulo={`${item.protocol} · ${item.customer}`}
+                          titulo={`${rotuloDoCaso(item)} · ${item.customer}`}
                           className="-mr-1 -mt-0.5 p-0.5"
                         />
                       </div>

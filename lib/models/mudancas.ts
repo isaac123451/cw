@@ -46,6 +46,16 @@ export interface Mudanca {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "casos-novos-e-dia-de-cada-um",
+    dia: "2026-11-13",
+    tipo: "novo",
+    frente: "plataforma",
+    titulo: "Casos novos para quem recebe, e o Meu dia de cada um",
+    texto:
+      "Em Permissões há uma marca nova, \"Recebe os casos novos\": todo caso do Reclame Aqui e das Redes que nasce sem responsável fica com quem tem a marca (hoje, a Michele). O Meu dia passou a ser de cada pessoa: o caso que tem responsável aparece só no dia dele. Quando um caso cai para você, o sino avisa \"Caso novo para você\", com o ID e um resumo: quem, o quê, a frente, a prioridade e a categoria. E todas as 393 reclamações já estão com o ID do Reclame Aqui, que aparece nas fichas, nas janelas, nos avisos e nos formulários no lugar do código do link.",
+    href: "/meu-dia",
+  },
+  {
     id: "id-do-reclame-aqui",
     dia: "2026-11-13",
     tipo: "novo",

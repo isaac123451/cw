@@ -11,7 +11,7 @@ import {
 } from "@/lib/models/case";
 
 import { useScopedCases } from "@/lib/context/useScopedCases";
-import { isOpen } from "@/lib/services/case.service";
+import { isOpen, rotuloDoCaso } from "@/lib/services/case.service";
 
 import { useCompletar } from "./CompletarProvider";
 
@@ -82,7 +82,7 @@ export default function AvisoIncompletas() {
               title={item.title}
               className="flex max-w-[300px] items-center gap-1.5 rounded-md border border-amber-200 bg-white px-2 py-1 text-xs text-zinc-700 transition-colors hover:border-amber-300"
             >
-              <span className="shrink-0 whitespace-nowrap font-mono text-[10px] text-amber-700">{item.protocol}</span>
+              <span className="shrink-0 whitespace-nowrap font-mono text-[10px] text-amber-700">{rotuloDoCaso(item)}</span>
               <span className="truncate">{item.title}</span>
             </button>
           ))}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { rotuloDoCaso } from "@/lib/services/case.service";
 
 import { Save, Search } from "lucide-react";
 
@@ -386,7 +387,7 @@ export default function TaskForm({
                     </p>
 
                     <p className="mt-0.5 truncate font-mono text-[11px] text-violet-700">
-                      {item.protocol} · {item.customer}
+                      {rotuloDoCaso(item)} · {item.customer}
                     </p>
 
                   </button>

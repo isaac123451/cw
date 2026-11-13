@@ -31,7 +31,7 @@ import {
 } from "@/lib/services/movement.service";
 
 import { toneOfSla } from "@/lib/services/sla.service";
-import { isSocial } from "@/lib/services/case.service";
+import { isSocial, rotuloDoCaso } from "@/lib/services/case.service";
 
 import TagPicker, { TagChips } from "@/components/shared/TagPicker";
 import LinksDoRa from "@/components/shared/LinksDoRa";
@@ -490,7 +490,7 @@ export default function CaseDetail({
             )}
 
             <PerguntarAoAssistente
-              pergunta={`O que fazer agora no caso ${data.protocol}? O que falta para ele fechar?`}
+              pergunta={`O que fazer agora no caso ${rotuloDoCaso(data)}? O que falta para ele fechar?`}
               rotulo="Perguntar"
             />
 

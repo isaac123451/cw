@@ -23,7 +23,7 @@ import SeloRespondida from "@/components/reclame-aqui/tratativa/SeloRespondida";
 
 import { useCases } from "@/lib/context/CaseContext";
 import { useEstablishments } from "@/lib/context/EstablishmentsContext";
-import { idExterno } from "@/lib/services/case.service";
+import { idExterno, rotuloDoCaso } from "@/lib/services/case.service";
 import {
   diaNaOperacao,
   hojeNaOperacao,
@@ -120,7 +120,7 @@ export default function CaseRow({
           <BotaoAbrirEmJanela
             frente="reclame-aqui"
             referencia={data.id}
-            titulo={`${data.protocol} · ${data.customer}`}
+            titulo={`${rotuloDoCaso(data)} · ${data.customer}`}
             className="p-0.5"
           />
           {daExtensao && (

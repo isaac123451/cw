@@ -30,7 +30,7 @@ import { useSession } from "@/lib/context/SessionContext";
 import type { Case } from "@/lib/models/case";
 import { filaDeAvaliacao, type NaFila } from "@/lib/models/cadencia";
 import { descreverRegistro } from "@/lib/services/horasUteis";
-import { caseHref } from "@/lib/services/case.service";
+import { caseHref, rotuloDoCaso } from "@/lib/services/case.service";
 import {
   emptySimulation,
   getRange,
@@ -93,7 +93,7 @@ export default function AvaliacoesPage() {
       );
       notify({
         tone: "success",
-        title: desfazer ? `${item.protocol} voltou para a fila.` : `${item.protocol} saiu da fila de pedir avaliação.`,
+        title: desfazer ? `${rotuloDoCaso(item)} voltou para a fila.` : `${rotuloDoCaso(item)} saiu da fila de pedir avaliação.`,
         detail: desfazer
           ? "A cadência conta de novo a partir do último pedido."
           : "Os pedidos já registrados continuam no histórico do caso.",
@@ -295,7 +295,7 @@ export default function AvaliacoesPage() {
                     <li key={item.id} className="flex flex-wrap items-center gap-2 py-2 first:pt-0 last:pb-0 sm:gap-3">
                       <div className="min-w-0 basis-full sm:basis-0 sm:flex-1">
                         <Link href={caseHref(item)} className="group flex min-w-0 items-baseline gap-2">
-                          <span className="shrink-0 font-mono text-[10px] text-zinc-400">{item.protocol}</span>
+                          <span className="shrink-0 font-mono text-[10px] text-zinc-400">{rotuloDoCaso(item)}</span>
                           <span className="truncate text-sm font-medium text-zinc-700 group-hover:text-violet-700">{item.title}</span>
                         </Link>
                         <p className="mt-0.5 text-xs text-zinc-500">
@@ -381,7 +381,7 @@ function Lista({
 
             <div className="min-w-0 basis-full sm:basis-0 sm:flex-1">
               <Link href={caseHref(item)} className="group flex min-w-0 items-baseline gap-2">
-                <span className="shrink-0 font-mono text-[10px] text-zinc-400">{item.protocol}</span>
+                <span className="shrink-0 font-mono text-[10px] text-zinc-400">{rotuloDoCaso(item)}</span>
                 <span className="truncate text-sm font-medium text-zinc-900 group-hover:text-violet-700">
                   {item.title}
                 </span>

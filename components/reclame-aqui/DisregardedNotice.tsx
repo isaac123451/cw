@@ -6,7 +6,7 @@ import { BadgeAlert } from "lucide-react";
 
 import { Case } from "@/lib/models/case";
 
-import { caseHref } from "@/lib/services/case.service";
+import { caseHref, rotuloDoCaso } from "@/lib/services/case.service";
 
 /**
  * Aviso de avaliações desconsideradas no período.
@@ -59,7 +59,7 @@ export default function DisregardedNotice({
               title={item.title}
               className="rounded-lg bg-white px-2 py-1 font-mono text-[11px] text-amber-800 ring-1 ring-inset ring-amber-200 transition-colors hover:bg-amber-100"
             >
-              {item.protocol} · nota {item.score}
+              {rotuloDoCaso(item)} · nota {item.score}
             </Link>
 
           ))}

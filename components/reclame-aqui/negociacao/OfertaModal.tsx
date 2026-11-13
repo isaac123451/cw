@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { rotuloDoCaso } from "@/lib/services/case.service";
 
 import { Gift, Loader2, TriangleAlert } from "lucide-react";
 
@@ -117,7 +118,7 @@ export default function OfertaModal({ item, onClose, onSalvo }: Props) {
 
       notify({
         tone: "success",
-        title: `Oferta registrada em ${item.protocol}.`,
+        title: `Oferta registrada em ${rotuloDoCaso(item)}.`,
         detail: r.foraDoPadrao
           ? `Fora do padrão, validada por ${r.negociacao.validadoPor}. Quando o cliente responder, registre na lateral — aceita, ela entra em Impacto.`
           : "Quando o cliente responder, registre na lateral — aceita, ela entra em Impacto como custo.",
@@ -136,7 +137,7 @@ export default function OfertaModal({ item, onClose, onSalvo }: Props) {
       open
       porque="ofertas.autonomia"
       size="wide"
-      title={`Oferta — ${item.protocol}`}
+      title={`Oferta — ${rotuloDoCaso(item)}`}
       description="Estratégia de reversão, depois da condução do caso — nunca como primeira abordagem."
       onClose={onClose}
       footer={

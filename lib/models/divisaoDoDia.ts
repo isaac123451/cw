@@ -37,6 +37,13 @@ export interface DivisaoDoDia {
   eu: string;
   /** Quem recebe atendimentos (marcado em Permissões), presente ou não. */
   pessoas: PessoaDaDivisao[];
+  /**
+   * Todas as contas ativas (13/11/2026): o caso com responsável é só do dia
+   * dele, mesmo sem a divisão ligada — "o meu dia precisa ser diferente de
+   * cada usuário". Sem isso, o caso que caiu para a Michele aparecia também
+   * no dia de todo mundo.
+   */
+  usuarios?: { id: string; nome: string }[];
 }
 
 /** FNV-1a de 32 bits: estável entre servidor, navegador e recargas. */
@@ -75,8 +82,35 @@ export function quemFaz(item: { chave: string; dono?: string | null; frente: Fre
   return candidatos[hashDoItem(`${item.frente}:${item.chave}`) % candidatos.length].id;
 }
 
-/** O item é de quem abriu? Com a divisão desligada, tudo é. */
+/** O dono do item é outra conta ativa (e presente)? Então o item é do dia dela. */
+function donoDeOutro(item: { dono?: string | null }, d: DivisaoDoDia) {
+  const dono = item.dono?.trim();
+  if (!dono) return null;
+  const conta = d.usuarios?.find((u) => u.nome === dono);
+  if (!conta) return null;
+  const ausente = d.pessoas.find((p) => p.id === conta.id)?.ausente;
+  if (ausente) return null;
+  return conta.id;
+}
+
+/** O dia está separado por pessoa? Pela divisão, ou só pelo responsável de cada caso (13/11/2026). */
+export function separacaoAtiva(d: DivisaoDoDia | null | undefined): d is DivisaoDoDia {
+  if (!d) return false;
+  const outrasContas = (d.usuarios ?? []).filter((u) => u.id !== d.eu).length;
+  return outrasContas > 0 || divisaoAtiva(d);
+}
+
+/**
+ * O item é de quem abriu?
+ *
+ * 1. Com responsável que é outra conta ativa e presente: só dela.
+ * 2. Com a divisão ligada: a regra de `quemFaz`.
+ * 3. Sem divisão: tudo o que não é de outra pessoa é de quem abriu.
+ */
 export function ehMeu(item: { chave: string; dono?: string | null; frente: FrenteId }, d: DivisaoDoDia | null | undefined) {
+  if (!d) return true;
+  const dono = donoDeOutro(item, d);
+  if (dono) return dono === d.eu;
   if (!divisaoAtiva(d)) return true;
   return quemFaz(item, d) === d.eu;
 }

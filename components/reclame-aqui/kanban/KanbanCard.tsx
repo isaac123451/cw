@@ -18,7 +18,7 @@ import SeloRespondida from "@/components/reclame-aqui/tratativa/SeloRespondida";
 
 import { useCases } from "@/lib/context/CaseContext";
 import { useOwners } from "@/lib/hooks/useOwners";
-import { caseHref, isSocial } from "@/lib/services/case.service";
+import { caseHref, isSocial, rotuloDoCaso } from "@/lib/services/case.service";
 import { hojeNaOperacao } from "@/lib/services/reputation.service";
 import BotaoAbrirEmJanela from "@/components/janelas/BotaoAbrirEmJanela";
 import { imagemDeArrasto } from "@/lib/ui/imagemDeArrasto";
@@ -115,7 +115,7 @@ export default function KanbanCard({
       >
         <div className="flex items-center gap-1.5">
           <ChipPrioridade item={item} ocultarNormal />
-          <span className="min-w-0 truncate font-mono text-[10.5px] text-zinc-400" title={item.idRa ? `ID ${item.idRa} · ${item.protocol}` : item.protocol}>{item.idRa ? `ID ${item.idRa}` : item.protocol}</span>
+          <span className="min-w-0 truncate font-mono text-[10.5px] text-zinc-400" title={item.idRa ? `ID ${item.idRa} · ${rotuloDoCaso(item)}` : item.protocol}>{item.idRa ? `ID ${item.idRa}` : item.protocol}</span>
           <span
             className="ml-auto shrink-0 text-[11px] tabular-nums text-zinc-400"
             title={`Publicada em ${String(item.createdAt).slice(0, 10).split("-").reverse().join("/")}`}
@@ -132,7 +132,7 @@ export default function KanbanCard({
           <BotaoAbrirEmJanela
             frente={isSocial(item) ? "redes" : "reclame-aqui"}
             referencia={item.id}
-            titulo={`${item.protocol} · ${item.customer}`}
+            titulo={`${rotuloDoCaso(item)} · ${item.customer}`}
             className="p-1"
           />
           {!isSocial(item) && <LinksDoRa caso={item} dentroDeLink className="[&>button]:rounded [&>button]:p-1" />}
@@ -145,7 +145,7 @@ export default function KanbanCard({
               setConfirmando(true);
             }}
             title="Excluir esta reclamação"
-            aria-label={`Excluir ${item.protocol}`}
+            aria-label={`Excluir ${rotuloDoCaso(item)}`}
             className="rounded p-1 text-zinc-400 hover:bg-rose-50 hover:text-rose-600"
           >
             <Trash2 size={13} />
@@ -198,7 +198,7 @@ export default function KanbanCard({
             </span>
             <select
               value={item.owner ?? ""}
-              aria-label={`Responsável por ${item.protocol}`}
+              aria-label={`Responsável por ${rotuloDoCaso(item)}`}
               title="Atribuir responsável"
               draggable={false}
               onDragStart={(event) => event.preventDefault()}
@@ -241,7 +241,7 @@ export default function KanbanCard({
 
       <ConfirmDelete
         open={confirmando}
-        label={`${item.protocol} — ${item.title}`}
+        label={`${rotuloDoCaso(item)} — ${item.title}`}
         onCancel={() => setConfirmando(false)}
         onConfirm={() => {
           deleteCase(item.id);

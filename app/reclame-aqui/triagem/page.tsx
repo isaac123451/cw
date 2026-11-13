@@ -16,7 +16,7 @@ import { useTratativa } from "@/components/reclame-aqui/tratativa/TratativaProvi
 import { idadeCurta } from "@/components/reclame-aqui/kanban/KanbanCard";
 
 import { useScopedCases } from "@/lib/context/useScopedCases";
-import { caseHref, isOpen } from "@/lib/services/case.service";
+import { caseHref, isOpen, rotuloDoCaso } from "@/lib/services/case.service";
 import type { Case } from "@/lib/models/case";
 
 const ORDEM: Record<string, number> = { Urgente: 0, Alta: 1, Normal: 2 };
@@ -103,7 +103,7 @@ export default function TriagemPage() {
                   <Link href={caseHref(c)} className="min-w-0 flex-1 basis-64 hover:text-violet-700">
                     <span className="block truncate text-sm font-medium text-zinc-800">{c.title}</span>
                     <span className="block truncate text-xs text-zinc-500">
-                      {c.protocol} · {c.customer} · {idadeCurta(c.createdAt)}
+                      {rotuloDoCaso(c)} · {c.customer} · {idadeCurta(c.createdAt)}
                       {c.category ? ` · ${c.category}` : " · sem categoria"}
                       {c.causaRaiz ? ` · ${c.causaRaiz}` : ""}
                     </span>

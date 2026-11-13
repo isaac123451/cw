@@ -1,4 +1,5 @@
 "use client";
+import { rotuloDoCaso } from "@/lib/services/case.service";
 
 import { useState } from "react";
 
@@ -170,7 +171,7 @@ export default function LembretesCard({
 
             <span className="text-[11px] text-zinc-500">
               Entra na agenda já vinculado a{" "}
-              {data.protocol}.
+              {rotuloDoCaso(data)}.
             </span>
 
             <button

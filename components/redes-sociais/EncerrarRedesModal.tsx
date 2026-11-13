@@ -1,4 +1,5 @@
 "use client";
+import { rotuloDoCaso } from "@/lib/services/case.service";
 
 import { useState } from "react";
 
@@ -103,7 +104,7 @@ export default function EncerrarRedesModal({ item, resultadoInicial, onClose, on
     <Modal
       open
       porque="redes.registro"
-      title={`Encerrar atendimento — ${item.protocol}`}
+      title={`Encerrar atendimento — ${rotuloDoCaso(item)}`}
       description="O registro do documento: resultado final, solução aplicada e causa raiz."
       onClose={onClose}
       footer={

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { rotuloDoCaso } from "@/lib/services/case.service";
 
 import { useEffect, useState } from "react";
 
@@ -108,7 +109,7 @@ export default function ImersaoModal({ item, onClose, onSalvo }: Props) {
 
       notify({
         tone: "success",
-        title: desfazer ? "Imersão desmarcada." : `Imersão feita em ${item.protocol}.`,
+        title: desfazer ? "Imersão desmarcada." : `Imersão feita em ${rotuloDoCaso(item)}.`,
         detail: desfazer ? undefined : "Próximo passo da documentação: o 1º contato humanizado, de preferência por WhatsApp ou telefone.",
       });
 
@@ -128,7 +129,7 @@ export default function ImersaoModal({ item, onClose, onSalvo }: Props) {
       open
       porque={item.source === "Reclame Aqui" ? "ra.imersao" : "redes.analise"}
       size="wide"
-      title={`Quem é este cliente — ${item.protocol}`}
+      title={`Quem é este cliente — ${rotuloDoCaso(item)}`}
       description="Passo 2: conta, fase e jornada de atendimento, antes de qualquer mensagem."
       onClose={onClose}
       footer={
@@ -270,7 +271,7 @@ export default function ImersaoModal({ item, onClose, onSalvo }: Props) {
                 item={item}
                 onVinculado={(id) => {
                   onSalvo({ establishmentId: id, establishmentManual: true });
-                  notify({ tone: "success", title: `Conta vinculada a ${item.protocol}.`, detail: "O retrato foi montado de novo, com a conta." });
+                  notify({ tone: "success", title: `Conta vinculada a ${rotuloDoCaso(item)}.`, detail: "O retrato foi montado de novo, com a conta." });
                   setRetrato(undefined);
                   setVersao((v) => v + 1);
                 }}

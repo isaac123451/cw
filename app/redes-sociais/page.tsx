@@ -33,7 +33,7 @@ import DiaADiaDasRedes from "@/components/redes-sociais/DiaADiaDasRedes";
 import { useScopedCases } from "@/lib/context/useScopedCases";
 import { useCases } from "@/lib/context/CaseContext";
 import { ETAPAS_DAS_REDES, eFinalDasRedes, etapaDasRedes } from "@/lib/models/redes";
-import { isOpen } from "@/lib/services/case.service";
+import { isOpen, rotuloDoCaso } from "@/lib/services/case.service";
 import { useEstablishments } from "@/lib/context/EstablishmentsContext";
 import {
   alternarFiltro,
@@ -148,7 +148,7 @@ function RedesSociaisConteudo() {
     const c = aTriar[0];
     if (!c) return;
     const id = idDaJanela("redes", c.id);
-    abrir({ frente: "redes", ref: c.id, titulo: `${c.protocol} · ${c.customer}` });
+    abrir({ frente: "redes", ref: c.id, titulo: `${rotuloDoCaso(c)} · ${c.customer}` });
     if (!janelas.find((j) => j.id === id)?.completa) alternarCompleta(id);
   }
 
@@ -405,7 +405,7 @@ function RedesSociaisConteudo() {
                     <BotaoAbrirEmJanela
                       frente="redes"
                       referencia={item.id}
-                      titulo={`${item.protocol} · ${item.customer}`}
+                      titulo={`${rotuloDoCaso(item)} · ${item.customer}`}
                     />
 
                     <span className="hidden shrink-0 rounded-full bg-zinc-100 px-2.5 py-1 text-[11px] font-medium text-zinc-600 sm:inline">

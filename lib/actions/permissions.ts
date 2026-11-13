@@ -8,6 +8,8 @@ import { WORKSPACE_TAG } from "@/lib/actions/tags";
 import {
   ehModulo,
   MARCA_DE_ATENDIMENTO,
+  MARCA_DE_NOVOS_CASOS,
+  MARCAS_SEM_MODULO,
   Modulo,
 } from "@/lib/auth/modules";
 
@@ -32,6 +34,8 @@ export interface PessoaComAcesso {
   active: boolean;
   /** Só as exceções: módulo → papel. */
   overrides: Record<string, Role>;
+  /** Recebe os casos novos — ver `MARCA_DE_NOVOS_CASOS`. */
+  recebeNovosCasos: boolean;
   /** Marcada para receber atendimentos — ver `MARCA_DE_ATENDIMENTO`. */
   recebeAtendimento: boolean;
 }
@@ -69,13 +73,14 @@ export async function listAccess(): Promise<{
       active: u.active,
       overrides: Object.fromEntries(
         u.moduleRoles
-          .filter((m) => m.module !== MARCA_DE_ATENDIMENTO)
+          .filter((m) => !MARCAS_SEM_MODULO.includes(m.module))
           .map((m) => [
             m.module,
             m.role as Role,
           ])
       ),
       recebeAtendimento: u.moduleRoles.some((m) => m.module === MARCA_DE_ATENDIMENTO),
+      recebeNovosCasos: u.moduleRoles.some((m) => m.module === MARCA_DE_NOVOS_CASOS),
     })),
   };
 }
@@ -161,6 +166,28 @@ export async function setModuleRole(input: {
   });
 
   return {};
+}
+
+/**
+ * Liga ou desliga a marca "recebe os casos novos" (13/11/2026). Mesmas
+ * regras da de atendimento: só administrador, e só conta ativa com acesso.
+ */
+export async function setRecebeNovosCasos(input: { userId: string; recebe: boolean }): Promise<{ ok: true } | { ok: false; erro: string }> {
+  const ctx = await requireRole("ADMIN", MODULO);
+  if (!ctx) return { ok: false, erro: "Sem banco configurado — não há onde gravar." };
+  const pessoa = await ctx.prisma.user.findUnique({ where: { id: input.userId }, select: { id: true, active: true, email: true } });
+  if (!pessoa) return { ok: false, erro: "Essa conta não existe mais." };
+  const chave = { userId_module: { userId: input.userId, module: MARCA_DE_NOVOS_CASOS } };
+  if (!input.recebe) {
+    await ctx.prisma.userModuleRole.delete({ where: chave }).catch(() => {});
+  } else {
+    if (!pessoa.active || pessoa.email.endsWith("@sem-acesso.local")) {
+      return { ok: false, erro: "Conta inativa ou sem acesso não recebe casos." };
+    }
+    await ctx.prisma.userModuleRole.upsert({ where: chave, update: { role: "AGENTE" }, create: { userId: input.userId, module: MARCA_DE_NOVOS_CASOS, role: "AGENTE" } });
+  }
+  updateTag(WORKSPACE_TAG);
+  return { ok: true };
 }
 
 /**

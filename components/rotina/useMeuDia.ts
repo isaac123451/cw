@@ -26,7 +26,7 @@ import { paredeDe } from "@/lib/services/horasUteis";
 import { useToast } from "@/lib/context/ToastContext";
 import { leitura } from "@/lib/lote";
 import { gravarLocal, usePreferenciaLocal } from "@/lib/hooks/usePreferenciaLocal";
-import { divisaoAtiva, ehMeu, primeiroNome } from "@/lib/models/divisaoDoDia";
+import { separacaoAtiva, ehMeu, primeiroNome } from "@/lib/models/divisaoDoDia";
 import { isSocial } from "@/lib/services/case.service";
 
 /** Ver o dia da equipe inteira em vez do seu (05/11/2026): escolha de quem olha, neste navegador. */
@@ -117,7 +117,7 @@ export function useMeuDia() {
   */
   const verEquipe = usePreferenciaLocal(CHAVE_VER_EQUIPE) === "1";
   const divisao = carga?.divisao ?? null;
-  const separado = divisaoAtiva(divisao) && !verEquipe;
+  const separado = separacaoAtiva(divisao) && !verEquipe;
   const meus = useMemo(() => {
     if (!separado) return { casos: cases, nps: responses, google: avaliacoes, movimentos: movements, tarefas: tasks, ids: null as Set<string> | null };
     const casos = cases.filter((c) => ehMeu({ chave: c.id, dono: c.owner, frente: isSocial(c) ? "redes" : "reclame-aqui" }, divisao));
@@ -284,10 +284,10 @@ export function useMeuDia() {
     desfazerMarcas,
     recarregar,
     /** O dia separado por pessoa: de quem é, quem mais divide e o botão de ver a equipe. */
-    divisao: divisaoAtiva(divisao)
+    divisao: separacaoAtiva(divisao)
       ? {
           separado,
-          eu: primeiroNome(divisao.pessoas.find((p) => p.id === divisao.eu)?.nome ?? ""),
+          eu: primeiroNome(divisao.pessoas.find((p) => p.id === divisao.eu)?.nome ?? divisao.usuarios?.find((u) => u.id === divisao.eu)?.nome ?? ""),
           outros: divisao.pessoas.filter((p) => p.id !== divisao.eu && !p.ausente).map((p) => primeiroNome(p.nome)),
           ausentes: divisao.pessoas.filter((p) => p.ausente).map((p) => primeiroNome(p.nome)),
           alternar: () => gravarLocal(CHAVE_VER_EQUIPE, verEquipe ? "0" : "1"),

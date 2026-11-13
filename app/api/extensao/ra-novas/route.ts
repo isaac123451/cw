@@ -8,6 +8,7 @@ import {
 import { getPrisma } from "@/lib/prisma";
 
 import {
+  guardarIdsDaLista,
   situacaoNaLista,
   type ItemDaLista,
 } from "@/lib/services/raPortal.service";
@@ -74,6 +75,7 @@ export async function POST(request: Request) {
         codigo: String(item.codigo ?? "").trim(),
         status: String(item.status ?? "").slice(0, 30),
         avaliada: item.avaliada === true,
+        numero: Number.isInteger(Number(item.numero)) && Number(item.numero) > 0 ? Number(item.numero) : undefined,
       };
     })
     .filter((i) => CODIGO.test(i.codigo));
@@ -163,6 +165,9 @@ export async function POST(request: Request) {
   }
 
   const novos = codigos.filter((c) => !conhecidos.has(c));
+
+  /* O ID da página das já conhecidas, que a lista traz (13/11/2026). */
+  if (itens.length > 0) await guardarIdsDaLista(prisma, itens);
 
   /* As em andamento vão junto: o vigia as reabre de tempos em tempos atrás da réplica. */
   const { atrasadas, emAndamento } =

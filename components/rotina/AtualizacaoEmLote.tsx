@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { rotuloDoCaso } from "@/lib/services/case.service";
 
 import DispararEmLote from "@/components/disparos/DispararEmLote";
 
@@ -34,7 +35,7 @@ export default function AtualizacaoEmLote({ itens }: { itens: ItemDaRotina[] }) 
         nome: c.customer,
         telefone: telefoneDoDisparo(c.phone ?? "")!,
         mensagem: mensagemDeAtualizacao({ nome: c.customer }),
-        ref: `caso:${c.protocol}`,
+        ref: `caso:${rotuloDoCaso(c)}`,
         motivo: c.protocol,
       }));
   }, [cases, itens]);

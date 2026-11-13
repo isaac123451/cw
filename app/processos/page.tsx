@@ -52,8 +52,7 @@ import {
 } from "@/lib/services/movement.service";
 
 import { isOpen,
-  caseHref,
-} from "@/lib/services/case.service";
+  caseHref, rotuloDoCaso } from "@/lib/services/case.service";
 
 import {
   ANY_CATEGORY,
@@ -844,7 +843,7 @@ export default function ProcessosPage() {
                       <span className="mt-0.5 block truncate text-[11px] text-zinc-500">
 
                         <span className="font-mono text-violet-700">
-                          {item.protocol}
+                          {rotuloDoCaso(item)}
                         </span>
 
                         {" · "}

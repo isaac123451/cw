@@ -149,7 +149,7 @@ export default function NotificationsMenu() {
             movements,
             googleEvents,
             expediente,
-            { nps: responses, avaliacoesGoogle: avaliacoes, regras: rules, agora, propostasDeCategoria: propostas, vigiaLeuEm, extensao: { vista: extensaoVista, plataforma: process.env.NEXT_PUBLIC_VERSAO ?? "" } }
+            { nps: responses, avaliacoesGoogle: avaliacoes, regras: rules, agora, propostasDeCategoria: propostas, vigiaLeuEm, extensao: { vista: extensaoVista, plataforma: process.env.NEXT_PUBLIC_VERSAO ?? "" }, eu: session?.name ?? undefined }
           )
         : [],
     [cases, tasks, prefs, session, movements, googleEvents, expediente, responses, avaliacoes, rules, agora, propostas, vigiaLeuEm, extensaoVista]

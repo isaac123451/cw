@@ -64,6 +64,17 @@ export type Modulo = (typeof MODULES)[number];
  */
 export const MARCA_DE_ATENDIMENTO = "atendimento";
 
+/**
+ * Quem recebe os casos novos (13/11/2026): "hoje os novos casos devem cair
+ * para a michele". Todo caso que nasce sem responsável ganha como
+ * responsável quem tem esta marca; com mais de uma pessoa, elas se revezam
+ * por um hash fixo do protocolo. Também não é permissão nem coluna nova.
+ */
+export const MARCA_DE_NOVOS_CASOS = "novos-casos";
+
+/** As marcas que moram em UserModuleRole sem serem módulo. */
+export const MARCAS_SEM_MODULO = [MARCA_DE_ATENDIMENTO, MARCA_DE_NOVOS_CASOS];
+
 export const MODULE_LABELS: Record<Modulo, string> = {
   "reclame-aqui": "Reclame Aqui",
   nps: "NPS",

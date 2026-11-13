@@ -23,7 +23,7 @@ import { addCaseNote } from "@/lib/actions/notes";
 
 import { PRIORIDADES, type Case, type Prioridade } from "@/lib/models/case";
 import { ETAPAS_DAS_REDES, eFinalDasRedes } from "@/lib/models/redes";
-import { moverPara } from "@/lib/services/case.service";
+import { moverPara, rotuloDoCaso } from "@/lib/services/case.service";
 import { hojeNaOperacao } from "@/lib/services/reputation.service";
 import { pluralDe } from "@/lib/plural";
 
@@ -142,7 +142,7 @@ export default function JanelaDoCaso({
     }
 
     setRascunho({});
-    notify({ tone: "success", title: `${caso.protocol} salvo.`, detail: `${mudou.length} ${pluralDe(mudou.length, "campo", "campos")} ${pluralDe(mudou.length, "gravado", "gravados")}.` });
+    notify({ tone: "success", title: `${rotuloDoCaso(caso)} salvo.`, detail: `${mudou.length} ${pluralDe(mudou.length, "campo", "campos")} ${pluralDe(mudou.length, "gravado", "gravados")}.` });
   }
 
   async function anotar() {
@@ -173,7 +173,7 @@ export default function JanelaDoCaso({
 
       <div>
         <p className="text-[11px] text-zinc-400">
-          {caso.protocol} · {caso.customer}
+          {rotuloDoCaso(caso)} · {caso.customer}
           {caso.company && caso.company !== caso.customer ? ` · ${caso.company}` : ""}
         </p>
         <p className="mt-0.5 line-clamp-2 text-[13px] font-medium leading-snug text-zinc-800">{caso.title}</p>

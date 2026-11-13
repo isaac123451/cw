@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { rotuloDoCaso } from "@/lib/services/case.service";
 
 import { Check, Loader2, Sparkles, TriangleAlert } from "lucide-react";
 
@@ -164,7 +165,7 @@ export default function TriagemModal({ item, onClose, onSalvo }: Props) {
 
       notify({
         tone: "success",
-        title: `Triagem salva: ${item.protocol} é ${r.priority}.`,
+        title: `Triagem salva: ${rotuloDoCaso(item)} é ${r.priority}.`,
         detail: regra
           ? `1º contato em até ${descreverPrazo(regra.responseHours)}${regra.solutionHours > 0 ? ` · solução em até ${descreverPrazo(regra.solutionHours)}` : ""}.`
           : "Sem regra de prazo para este nível — cadastre em Processos e SLA.",
@@ -185,7 +186,7 @@ export default function TriagemModal({ item, onClose, onSalvo }: Props) {
       open
       porque="ra.criticidade"
       size="xl"
-      title={`Triar ${item.protocol}`}
+      title={`Triar ${rotuloDoCaso(item)}`}
       description="Passo 1 da documentação: classificar a criticidade antes do 1º contato. Os critérios sugerem o nível; você decide."
       onClose={onClose}
       footer={

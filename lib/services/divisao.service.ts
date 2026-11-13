@@ -11,6 +11,10 @@ import type { FrenteId } from "@/lib/models/frentes";
  * pela agenda da extensão, para as duas dividirem igual.
  */
 export async function lerDivisao(prisma: PrismaClient, eu: string, hoje: string): Promise<DivisaoDoDia> {
+  const contas = await prisma.user.findMany({
+    where: { active: true, NOT: { email: { endsWith: "@sem-acesso.local" } } },
+    select: { id: true, name: true },
+  });
   const usuarios = await prisma.user.findMany({
     where: { active: true, moduleRoles: { some: { module: MARCA_DE_ATENDIMENTO } } },
     select: { id: true, name: true, role: true, ausenteAte: true, moduleRoles: { select: { module: true, role: true } } },
@@ -24,5 +28,6 @@ export async function lerDivisao(prisma: PrismaClient, eu: string, hoje: string)
       const ate = u.ausenteAte ? u.ausenteAte.toISOString().slice(0, 10) : null;
       return { id: u.id, nome: u.name, frentes, ausente: Boolean(ate && ate >= hoje) };
     }),
+    usuarios: contas.map((u) => ({ id: u.id, nome: u.name })),
   };
 }

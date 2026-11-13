@@ -68,7 +68,7 @@ import { usePlans } from "@/lib/hooks/usePlans";
 
 import { kindTone } from "@/lib/models/client";
 
-import { caseHref, isSocial } from "@/lib/services/case.service";
+import { caseHref, isSocial, rotuloDoCaso } from "@/lib/services/case.service";
 import BotaoAbrirEmJanela from "@/components/janelas/BotaoAbrirEmJanela";
 import { pluralDe } from "@/lib/plural";
 import { telefoneLegivel } from "@/lib/models/telefone";
@@ -573,7 +573,7 @@ export default function EstablishmentDetail({
 
                         confirmar(
                           "Reclamação vinculada.",
-                          `${item.protocol} — ${establishment.name}`
+                          `${rotuloDoCaso(item)} — ${establishment.name}`
                         );
 
                         setCaseSearch("");
@@ -588,7 +588,7 @@ export default function EstablishmentDetail({
                         </span>
 
                         <span className="mt-0.5 block truncate font-mono text-[11px] text-violet-700">
-                          {item.protocol} · {item.customer}
+                          {rotuloDoCaso(item)} · {item.customer}
                         </span>
 
                       </span>
@@ -641,7 +641,7 @@ export default function EstablishmentDetail({
                         <p className="mt-0.5 truncate text-[11px] text-zinc-500">
 
                           <span className="font-mono text-violet-700">
-                            {item.protocol}
+                            {rotuloDoCaso(item)}
                           </span>
 
                           {" · "}
@@ -654,7 +654,7 @@ export default function EstablishmentDetail({
                       <BotaoAbrirEmJanela
                         frente={isSocial(item) ? "redes" : "reclame-aqui"}
                         referencia={item.id}
-                        titulo={`${item.protocol} · ${item.customer}`}
+                        titulo={`${rotuloDoCaso(item)} · ${item.customer}`}
                       />
 
                       <span

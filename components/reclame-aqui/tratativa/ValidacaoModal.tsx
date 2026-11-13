@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { rotuloDoCaso } from "@/lib/services/case.service";
 
 import { Check, Loader2, MessageCircle, Send, TriangleAlert } from "lucide-react";
 
@@ -138,12 +139,12 @@ export default function ValidacaoModal({ item, onClose, onSalvo }: Props) {
 
       notify(
         tipo === "pergunta"
-          ? { tone: "success", title: `Pergunta de validação registrada em ${item.protocol}.`, detail: "A trilha mostra que o caso aguarda o cliente. Quando ele responder, registre aqui mesmo." }
+          ? { tone: "success", title: `Pergunta de validação registrada em ${rotuloDoCaso(item)}.`, detail: "A trilha mostra que o caso aguarda o cliente. Quando ele responder, registre aqui mesmo." }
           : resultado === "pendencia"
-            ? { tone: "info", title: `Pendência registrada em ${item.protocol}.`, detail: "O caso ainda não está validado. Resolva — com a área, se precisar — e pergunte de novo." }
+            ? { tone: "info", title: `Pendência registrada em ${rotuloDoCaso(item)}.`, detail: "O caso ainda não está validado. Resolva — com a área, se precisar — e pergunte de novo." }
             : {
                 tone: "success",
-                title: `Solução validada em ${item.protocol}.`,
+                title: `Solução validada em ${rotuloDoCaso(item)}.`,
                 detail: ra
                   ? "Próximo: a resposta pública — agradecer o diálogo e confirmar a resolução, sem dado pessoal. Depois de publicar, avise o cliente com o link para avaliar."
                   : "Próximo: encerrar o caso com a solução aplicada.",
@@ -164,7 +165,7 @@ export default function ValidacaoModal({ item, onClose, onSalvo }: Props) {
     <Modal
       open
       porque={ra ? "ra.validacao" : "redes.validacao"}
-      title={`Validar a solução — ${item.protocol}`}
+      title={`Validar a solução — ${rotuloDoCaso(item)}`}
       description={
         ra
           ? "Passo 6: confirmar com o cliente que tudo voltou a funcionar antes da resposta pública."

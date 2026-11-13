@@ -16,6 +16,7 @@ import {
   listAccess,
   setModuleRole,
   setRecebeAtendimento,
+  setRecebeNovosCasos,
   type PessoaComAcesso,
 } from "@/lib/actions/permissions";
 
@@ -142,6 +143,18 @@ export default function PermissoesPage() {
     });
   }
 
+  /* A marca "recebe os casos novos" (13/11/2026): como a de atendimento. */
+  function alternarNovosCasos(pessoa: PessoaComAcesso) {
+    const recebe = !pessoa.recebeNovosCasos;
+    setPessoas((atual) => atual.map((p) => (p.id === pessoa.id ? { ...p, recebeNovosCasos: recebe } : p)));
+    startSalvar(async () => {
+      const saida = await setRecebeNovosCasos({ userId: pessoa.id, recebe });
+      if (!saida.ok) notify({ tone: "error", title: "Não foi possível gravar.", detail: saida.erro });
+      else notify({ tone: "success", title: recebe ? `Os casos novos caem para ${pessoa.name}.` : `${pessoa.name} deixou de receber os casos novos.`, detail: recebe ? "Todo caso que nasce sem responsável fica com esta pessoa e aparece no Meu dia dela." : "Os casos que já estão com a pessoa continuam com ela." });
+      await carregar();
+    });
+  }
+
   /* A marca "recebe atendimentos" (07/10/2026): também muda a tela antes do servidor, e a recarga devolve o real. */
   function alternarAtendimento(pessoa: PessoaComAcesso) {
     const recebe = !pessoa.recebeAtendimento;
@@ -236,6 +249,26 @@ export default function PermissoesPage() {
                       className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-50 ${pessoa.recebeAtendimento ? "bg-emerald-600" : "bg-zinc-300"}`}
                     >
                       <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-[left] ${pessoa.recebeAtendimento ? "left-[22px]" : "left-0.5"}`} />
+                    </button>
+                  </li>
+
+                  <li className={`flex flex-wrap items-center gap-3 px-5 py-3 ${pessoa.recebeNovosCasos ? "bg-emerald-50/50" : ""}`}>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-semibold text-zinc-900">Recebe os casos novos</span>
+                      <span className="mt-0.5 block text-[11px] leading-snug text-zinc-500">
+                        Todo caso novo do Reclame Aqui e das Redes que nasce sem responsável fica com esta pessoa, aparece no Meu dia dela e chega com o aviso &ldquo;Caso novo para você&rdquo;. Com mais de uma pessoa marcada, elas se revezam.
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={pessoa.recebeNovosCasos}
+                      aria-label={`${pessoa.name} recebe os casos novos`}
+                      disabled={salvando || (!pessoa.active && !pessoa.recebeNovosCasos)}
+                      onClick={() => alternarNovosCasos(pessoa)}
+                      className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-50 ${pessoa.recebeNovosCasos ? "bg-emerald-600" : "bg-zinc-300"}`}
+                    >
+                      <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-[left] ${pessoa.recebeNovosCasos ? "left-[22px]" : "left-0.5"}`} />
                     </button>
                   </li>
 

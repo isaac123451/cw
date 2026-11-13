@@ -11,7 +11,7 @@ import { useSla } from "@/lib/context/SlaContext";
 import { useAgora } from "@/lib/hooks/useAgora";
 
 import { adiarLembrete, chaveDoAviso, lembretesNaHora, type AdiamentoDoLembrete } from "@/lib/models/lembretes";
-import { isSocial } from "@/lib/services/case.service";
+import { isSocial, rotuloDoCaso } from "@/lib/services/case.service";
 import { pluralDe } from "@/lib/plural";
 
 /*
@@ -123,7 +123,7 @@ export default function AvisosDeLembrete() {
               {caso && (
                 <button
                   type="button"
-                  onClick={() => abrir({ frente: isSocial(caso) ? "redes" : "reclame-aqui", ref: caso.id, titulo: `${caso.protocol} · ${caso.customer}` })}
+                  onClick={() => abrir({ frente: isSocial(caso) ? "redes" : "reclame-aqui", ref: caso.id, titulo: `${rotuloDoCaso(caso)} · ${caso.customer}` })}
                   className="flex items-center gap-1 rounded-md bg-zinc-900 px-2 py-1 font-semibold text-white hover:bg-zinc-800"
                 >
                   <AppWindow size={12} /> Abrir o caso

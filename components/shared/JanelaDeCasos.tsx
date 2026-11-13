@@ -8,7 +8,7 @@ import { marcarAvaliacao } from "@/lib/actions/tratativa";
 import { ajustarCasoNaTela } from "@/lib/context/ajusteDoCaso";
 import type { Case } from "@/lib/models/case";
 import { classeDaAvaliacao, ROTULO_DA_ORIGEM } from "@/lib/models/classeDaAvaliacao";
-import { caseHref } from "@/lib/services/case.service";
+import { caseHref, rotuloDoCaso } from "@/lib/services/case.service";
 
 /**
  * A mini janela do gráfico (21/10/2026).
@@ -159,7 +159,7 @@ export default function JanelaDeCasos() {
               </p>
               <p className="truncate text-xs text-zinc-500">{c.title}</p>
               <p className="mt-0.5 flex flex-wrap gap-x-2 text-[11px] text-zinc-400">
-                <span className="font-mono text-violet-700">{c.protocol}</span>
+                <span className="font-mono text-violet-700">{rotuloDoCaso(c)}</span>
                 <span>{c.status}</span>
                 {c.evaluated && (
                   <span className="text-zinc-600">

@@ -3,6 +3,8 @@ import {
   mudancasDoPortal,
   SELECAO_DO_PORTAL,
 } from "@/lib/services/atualizacaoDoPortal";
+import { MARCA_DE_NOVOS_CASOS } from "@/lib/auth/modules";
+import { hashDoItem } from "@/lib/models/divisaoDoDia";
 import { semApagarVazios } from "@/lib/services/semApagar";
 import { RESPOSTA_SINTETICA } from "@/lib/services/raMarcadores";
 import { colunaNoFluxo, STATUS_TERMINADO } from "@/lib/services/case.service";
@@ -1028,6 +1030,14 @@ export async function etapasDoFluxo(prisma: PrismaClient, fresco = false): Promi
   return fluxoEmCache.nomes;
 }
 
+/** Só na criação: o upsert não pode trocar o responsável de um caso que já existe. */
+async function donoParaCriar(prisma: PrismaClient, protocolo: string) {
+  const jaExiste = await prisma.case.findUnique({ where: { protocol: protocolo }, select: { id: true } });
+  if (jaExiste) return {};
+  const dono = await donoDoCasoNovo(prisma, protocolo);
+  return dono ? { ownerId: dono } : {};
+}
+
 export async function persistCase(
   prisma: PrismaClient,
   item: Case,
@@ -1088,7 +1098,8 @@ export async function persistCase(
     */
     update: semApagarVazios(dados, ["description", "publicResponse"]),
 
-    create: { protocol: item.protocol, ...dados },
+    /* O caso que nasce sem responsável fica com quem recebe os casos novos (13/11/2026). */
+    create: { protocol: item.protocol, ...dados, ...(dados.ownerId ? {} : await donoParaCriar(prisma, item.protocol)) },
     select: { id: true },
   });
 
@@ -1311,6 +1322,20 @@ export async function persistCaseParcial(
  * no intervalo — responsável, etiqueta, coluna. Aqui a segunda esbarra
  * no protocolo único e volta `null`, sem tocar em nada.
  */
+/**
+ * Quem fica com um caso novo que nasceu sem responsável (13/11/2026): quem
+ * tem a marca "recebe os casos novos". Com mais de uma pessoa, a escolha é
+ * fixa pelo protocolo (o mesmo hash do Meu dia), para o mesmo caso nunca
+ * trocar de mão. Sem ninguém marcado, nada muda.
+ */
+export async function donoDoCasoNovo(prisma: PrismaClient, protocolo: string): Promise<string | null> {
+  const pessoas = await prisma.user
+    .findMany({ where: { active: true, moduleRoles: { some: { module: MARCA_DE_NOVOS_CASOS } } }, select: { id: true }, orderBy: { id: "asc" } })
+    .catch(() => [] as { id: string }[]);
+  if (!pessoas.length) return null;
+  return pessoas[hashDoItem(`novo:${protocolo}`) % pessoas.length].id;
+}
+
 export async function criarSeNova(
   prisma: PrismaClient,
   item: Case
@@ -1319,11 +1344,14 @@ export async function criarSeNova(
   const relacoes = await resolverRelacoes(prisma, item);
 
   try {
+    const colunas = { ...toCaseColumns(item), ...relacoes } as Record<string, unknown>;
+    const dono = colunas.ownerId ? null : await donoDoCasoNovo(prisma, item.protocol);
     const salvo = await prisma.case.create({
       data: {
         protocol: item.protocol,
         ...toCaseColumns(item),
         ...relacoes,
+        ...(dono ? { ownerId: dono } : {}),
       },
       select: { id: true },
     });

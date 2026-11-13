@@ -1,4 +1,5 @@
 "use client";
+import { rotuloDoCaso } from "@/lib/services/case.service";
 
 import { useMemo, useState } from "react";
 
@@ -128,7 +129,7 @@ export default function AcionarAreaModal({ item, areaInicial, causa, onClose, on
 
       notify({
         tone: "success",
-        title: `${area} acionada em ${item.protocol}.`,
+        title: `${area} acionada em ${rotuloDoCaso(item)}.`,
         detail: `Retorno ${prazoTexto}. A mensagem foi copiada — cole em ${CANAL_DE_INCIDENTES}.`,
       });
 
@@ -145,7 +146,7 @@ export default function AcionarAreaModal({ item, areaInicial, causa, onClose, on
       open
       porque="areas.prazos"
       size="wide"
-      title={`Acionar área — ${item.protocol}`}
+      title={`Acionar área — ${rotuloDoCaso(item)}`}
       description={`O modelo da documentação, pronto para ${CANAL_DE_INCIDENTES}. O relógio da área começa agora, com o prazo da criticidade do caso.`}
       onClose={onClose}
       footer={

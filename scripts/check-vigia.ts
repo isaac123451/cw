@@ -482,7 +482,8 @@ async function travas(prisma: PrismaClient) {
     true
   );
 
-  const completada = await gravarDoPortal(prisma, [respondida(TRABALHADA)]);
+  /* Com o ID da página, como as reais (13/11/2026): sem ele, a reclamação continua pedida ao vigia pela falta do número. */
+  const completada = await gravarDoPortal(prisma, [{ ...respondida(TRABALHADA), numero: 900000001 }]);
 
   conferir("a existente é completada, não recriada", completada.completadas.length, 1);
 
@@ -510,6 +511,11 @@ async function travas(prisma: PrismaClient) {
   conferir("a resposta vazia recebe o texto do portal", depois?.publicResponse, "Resposta do portal.\nCom duas linhas.");
   conferir("o relato vazio recebe o do portal", depois?.description, "Relato do portal.\nSegunda linha.");
   conferir("a avaliação do portal entra", [papelDaEtapa(depois?.status), depois?.evaluated, depois?.score], ["Resolvido", true, 9]);
+  conferir(
+    "o vigia grava o ID da página",
+    (await prisma.case.findUnique({ where: { protocol: `RA-${TRABALHADA}` }, select: { idRa: true } }))?.idRa,
+    "900000001"
+  );
   conferir(
     "completada deixa de ser pendente",
     (await pendentesDoPortal(prisma, 1000)).includes(TRABALHADA),

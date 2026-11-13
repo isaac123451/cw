@@ -559,6 +559,15 @@ export function idLabel(item: Case) {
  * frentes dentro do banco. No portal, o id é o que vem depois — e é ele
  * que a pessoa cola na busca do Reclame Aqui.
  */
+/**
+ * Como a tela chama um caso (13/11/2026): "ID 256873207" quando a
+ * reclamação do Reclame Aqui já tem o ID da página; senão, o protocolo.
+ * Aceita qualquer objeto com protocolo — avisos, janelas, títulos.
+ */
+export function rotuloDoCaso(item: { protocol: string; idRa?: string | null }) {
+  return item.idRa && item.protocol.startsWith("RA-") ? `ID ${item.idRa}` : item.protocol;
+}
+
 export function idExterno(item: Case) {
   /*
     O ID numérico da página, quando já está guardado (13/11/2026): "preciso

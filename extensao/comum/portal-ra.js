@@ -173,6 +173,8 @@ function lerListaDoAstro(html) {
         avaliada: item?.evaluated === true,
         criadaEm: String(item?.created ?? ""),
         titulo: String(item?.title ?? item?.titleMasked ?? ""),
+        /* O ID da página, que a lista também traz (13/11/2026). */
+        numero: Number(item?.legacyId) || undefined,
       }))
       .filter((item) => CODIGO.test(item.codigo)),
   };
@@ -227,6 +229,7 @@ export function lerLista(html) {
       avaliada: item?.evaluated === true,
       criadaEm: String(item?.created ?? ""),
       titulo: String(item?.title ?? ""),
+      numero: Number(item?.legacyId) || undefined,
     })).filter((item) => CODIGO.test(item.codigo)),
   };
 }

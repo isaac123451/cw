@@ -46,8 +46,7 @@ import { useToast } from "@/lib/context/ToastContext";
 import { ptBR } from "@/lib/services/reputation.service";
 import { isOpen,
   isSocial,
-  caseHref,
-} from "@/lib/services/case.service";
+  caseHref, rotuloDoCaso } from "@/lib/services/case.service";
 import BotaoAbrirEmJanela from "@/components/janelas/BotaoAbrirEmJanela";
 
 import { kindTone } from "@/lib/models/client";
@@ -722,7 +721,7 @@ export default function ClientDetail({
                       <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px] text-zinc-500">
 
                         <span className="font-mono text-violet-700">
-                          {item.protocol}
+                          {rotuloDoCaso(item)}
                         </span>
 
                         <span>·</span>

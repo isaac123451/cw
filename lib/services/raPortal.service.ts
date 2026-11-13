@@ -982,6 +982,29 @@ export interface ItemDaLista {
   codigo: string;
   status: string;
   avaliada: boolean;
+  /** O ID da página ("legacyId"), que a lista também traz (13/11/2026). */
+  numero?: number;
+}
+
+/**
+ * Guarda o ID da página das reclamações conhecidas que ainda não o têm
+ * (13/11/2026). A lista do portal traz o `legacyId` de cada reclamação:
+ * com isso, toda leitura da lista completa o número sem abrir página.
+ */
+export async function guardarIdsDaLista(prisma: PrismaClient, itens: ItemDaLista[]) {
+  const comNumero = itens.filter((i) => i.numero && Number.isInteger(i.numero) && i.numero > 0);
+  if (!comNumero.length) return 0;
+  const semId = await prisma.case
+    .findMany({ where: { protocol: { in: comNumero.map((i) => `RA-${i.codigo}`) }, idRa: null }, select: { protocol: true } })
+    .catch(() => [] as { protocol: string }[]);
+  let gravados = 0;
+  for (const linha of semId) {
+    const item = comNumero.find((i) => `RA-${i.codigo}` === linha.protocol);
+    if (!item) continue;
+    await prisma.case.updateMany({ where: { protocol: linha.protocol, idRa: null }, data: { idRa: String(item.numero) } }).catch(() => undefined);
+    gravados += 1;
+  }
+  return gravados;
 }
 
 /**

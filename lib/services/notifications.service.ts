@@ -15,7 +15,7 @@ import { descreverMinutosUteis, minutosUteisEntre, type Expediente } from "@/lib
 
 /** Quantos minutos úteis sem leitura fazem o vigia "parado". */
 export const VIGIA_PARADO_MIN = 120;
-import { isOpen, isReclameAqui, isSocial, semRespostaPublica } from "@/lib/services/case.service";
+import { caseHref, isOpen, isReclameAqui, isSocial, rotuloDoCaso, semRespostaPublica } from "@/lib/services/case.service";
 import type { FrenteDaJanela } from "@/lib/models/janelas";
 import type { NpsResponseView } from "@/lib/models/nps";
 import type { SlaRule } from "@/lib/models/sla";
@@ -76,6 +76,8 @@ export interface FontesDoSino {
   vigiaLeuEm?: string | null;
   /** A última versão da extensão vista para a pessoa e a da plataforma (12/11/2026). */
   extensao?: { vista: ExtensaoVista | null; plataforma: string };
+  /** Quem está na sessão (o nome), para "Caso novo para você" (13/11/2026). */
+  eu?: string;
 }
 
 export interface NotificationPrefs {
@@ -486,6 +488,35 @@ export function buildNotifications(
       detail: `Está na ${fontes.extensao.vista!.versao}; a plataforma está na ${fontes.extensao.plataforma}. Em chrome://extensions, clique em recarregar na extensão do CW, em cada perfil do Chrome em que ela estiver.`,
       href: "/primeiro-acesso?aba=onde-fica#ext-whatsapp",
     });
+  }
+
+  /*
+    "Caso novo para você" (13/11/2026): "uma notificação diferente de que um
+    caso caiu também é importante", com "um breve resumo". Cada caso que
+    chegou nas últimas 48 horas com você de responsável, ainda sem o 1º
+    contato, vira um aviso próprio — um por caso, para abrir pop-up quando
+    chega. O resumo: quem, o quê, a prioridade e quando chegou.
+  */
+  if (fontes.eu) {
+    const limite = agora.getTime() - 48 * 3_600_000;
+    const novosParaMim = cases.filter(
+      (c) => c.owner === fontes.eu && isOpen(c) && !c.primeiroContatoEm && Date.parse(c.recebidaEm ?? c.createdAt) >= limite
+    );
+    for (const c of novosParaMim.slice(0, 5)) {
+      const social = isSocial(c);
+      list.push({
+        id: `caso-novo-${c.protocol}`,
+        tone: c.priority === "Urgente" || c.priority === "Alta" ? "warning" : "info",
+        title: `Caso novo para você · ${rotuloDoCaso(c)}`,
+        detail: [
+          `${c.customer || "Cliente"}: ${c.title}`,
+          [social ? "Redes" : "Reclame Aqui", c.priority ? `prioridade ${c.priority.toLowerCase()}` : "", c.category && c.category !== "—" ? c.category : ""].filter(Boolean).join(" · "),
+        ].join(" — "),
+        href: caseHref(c),
+        frente: social ? "redes" : "reclame-aqui",
+        janela: { frente: social ? "redes" : "reclame-aqui", ref: c.id, titulo: `${rotuloDoCaso(c)} · ${c.customer}` },
+      });
+    }
   }
 
   if (fontes.propostasDeCategoria && fontes.propostasDeCategoria > 0) {

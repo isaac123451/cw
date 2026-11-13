@@ -1,4 +1,5 @@
 "use client";
+import { rotuloDoCaso } from "@/lib/services/case.service";
 
 import { useEffect, useRef, useState } from "react";
 
@@ -84,7 +85,7 @@ export default function CompletarDrawer({ caseId, onClose, posicao, onProximo }:
 
       <aside
         role="dialog"
-        aria-label={`Completar ${data.protocol}`}
+        aria-label={`Completar ${rotuloDoCaso(data)}`}
         className="fixed right-0 top-0 z-[86] flex h-screen w-[460px] max-w-full flex-col bg-white shadow-2xl"
       >
         <Conteudo data={data} onClose={onClose} posicao={posicao} onProximo={onProximo} />
@@ -264,7 +265,7 @@ function Conteudo({
       setEditados({});
       notify({
         tone: "success",
-        title: `Dados do consumidor gravados em ${data.protocol}.`,
+        title: `Dados do consumidor gravados em ${rotuloDoCaso(data)}.`,
         detail: onProximo && posicao && posicao.atual < posicao.total ? "Indo para a próxima." : undefined,
       });
       /* Em sequência, gravou: segue para a próxima sem clique a mais. */
@@ -291,7 +292,7 @@ function Conteudo({
           </p>
 
           <p className="mt-1 font-mono text-xs text-violet-700">
-            {data.protocol}
+            {rotuloDoCaso(data)}
           </p>
 
           <p className="mt-0.5 line-clamp-2 text-sm font-medium text-zinc-800">
@@ -483,7 +484,7 @@ function Conteudo({
       <Modal
         open={confirmando}
         title="Gravar os dados do consumidor?"
-        description={`Em ${data.protocol}. O que muda:`}
+        description={`Em ${rotuloDoCaso(data)}. O que muda:`}
         onClose={() => setConfirmando(false)}
         footer={
           <>

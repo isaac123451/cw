@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { rotuloDoCaso } from "@/lib/services/case.service";
 
 import { Check, Loader2, TriangleAlert } from "lucide-react";
 
@@ -155,7 +156,7 @@ export default function ContatoModal({ item, tipoInicial, canalInicial, onClose,
 
       notify({
         tone: "success",
-        title: `Contato registrado em ${item.protocol}.`,
+        title: `Contato registrado em ${rotuloDoCaso(item)}.`,
         detail: detalhe,
       });
 
@@ -171,7 +172,7 @@ export default function ContatoModal({ item, tipoInicial, canalInicial, onClose,
     <Modal
       open
       porque={porqueDoContato(tipo, item.source === "Reclame Aqui" ? "ra" : "redes")}
-      title={primeiro ? `Registrar o 1º contato — ${item.protocol}` : `Registrar contato — ${item.protocol}`}
+      title={primeiro ? `Registrar o 1º contato — ${rotuloDoCaso(item)}` : `Registrar contato — ${rotuloDoCaso(item)}`}
       description={
         primeiro
           ? "O primeiro contato cumpre a meta da criticidade. Tentativa sem resposta também conta como contato feito."

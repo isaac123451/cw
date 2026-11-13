@@ -1,4 +1,5 @@
 "use client";
+import { rotuloDoCaso } from "@/lib/services/case.service";
 
 import { useEffect, useState } from "react";
 
@@ -155,7 +156,7 @@ export default function RenegociacaoModal({ item, onClose, onSalvo }: Props) {
       open
       porque="ofertas.calculo"
       size="wide"
-      title={`Renegociação — ${item.protocol}`}
+      title={`Renegociação — ${rotuloDoCaso(item)}`}
       description="Exceção máxima, sempre com autorização expressa da gestão. Trate como se esta opção não existisse na rotina."
       onClose={onClose}
       footer={

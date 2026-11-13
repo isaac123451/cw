@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { rotuloDoCaso } from "@/lib/services/case.service";
 
 import { Loader2, Save, TriangleAlert } from "lucide-react";
 
@@ -71,7 +72,7 @@ export default function ModeracaoModal({ item, onClose, onSalvo }: Props) {
         title: limpar
           ? "Registro de moderação removido."
           : !pedida
-            ? `Pedido de moderação registrado em ${item.protocol}.`
+            ? `Pedido de moderação registrado em ${rotuloDoCaso(item)}.`
             : `Moderação: ${RESULTADOS.find((x) => x.id === resultado)?.rotulo.toLowerCase()}.`,
         detail: !limpar && !pedida ? "Fica marcado na lateral do caso e no histórico até você registrar a decisão do Reclame Aqui." : undefined,
       });
@@ -87,7 +88,7 @@ export default function ModeracaoModal({ item, onClose, onSalvo }: Props) {
   return (
     <Modal
       open
-      title={pedida ? `Moderação — ${item.protocol}` : `Registrar pedido de moderação — ${item.protocol}`}
+      title={pedida ? `Moderação — ${rotuloDoCaso(item)}` : `Registrar pedido de moderação — ${rotuloDoCaso(item)}`}
       description="O pedido é feito na área da empresa do Reclame Aqui. Aqui fica o motivo e o acompanhamento."
       onClose={onClose}
       footer={

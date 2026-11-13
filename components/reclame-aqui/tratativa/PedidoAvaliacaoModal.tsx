@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { rotuloDoCaso } from "@/lib/services/case.service";
 
 import { BellOff, Loader2, MessageCircle, Send, TriangleAlert } from "lucide-react";
 
@@ -103,7 +104,7 @@ export default function PedidoAvaliacaoModal({ item, onClose, onSalvo }: Props) 
 
       notify({
         tone: "success",
-        title: `${r.resumo.pedidosDeAvaliacao}º pedido de avaliação registrado em ${item.protocol}.`,
+        title: `${r.resumo.pedidosDeAvaliacao}º pedido de avaliação registrado em ${rotuloDoCaso(item)}.`,
         detail: proximo.ativo && proximo.proximoDia
           ? `Próximo lembrete em ${proximo.proximoDia.split("-").reverse().slice(0, 2).join("/")}.`
           : undefined,
@@ -145,7 +146,7 @@ export default function PedidoAvaliacaoModal({ item, onClose, onSalvo }: Props) 
 
       notify({
         tone: "success",
-        title: `${item.protocol} saiu da fila de pedir avaliação.`,
+        title: `${rotuloDoCaso(item)} saiu da fila de pedir avaliação.`,
         detail: "Some da fila de hoje. Para devolver, o botão está na lista de dispensados, em Pedir avaliação.",
       });
 
@@ -161,7 +162,7 @@ export default function PedidoAvaliacaoModal({ item, onClose, onSalvo }: Props) 
     <Modal
       open
       porque="ra.follow-up"
-      title={`Pedir a avaliação — ${item.protocol}`}
+      title={`Pedir a avaliação — ${rotuloDoCaso(item)}`}
       description={cadencia.ativo ? `${cadencia.resumo} Tom gentil, perguntando se o sistema continua rodando bem.` : cadencia.resumo}
       onClose={onClose}
       footer={
