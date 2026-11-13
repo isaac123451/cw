@@ -115,7 +115,7 @@ export default function KanbanCard({
       >
         <div className="flex items-center gap-1.5">
           <ChipPrioridade item={item} ocultarNormal />
-          <span className="min-w-0 truncate font-mono text-[10.5px] text-zinc-400">{item.protocol}</span>
+          <span className="min-w-0 truncate font-mono text-[10.5px] text-zinc-400" title={item.idRa ? `ID ${item.idRa} · ${item.protocol}` : item.protocol}>{item.idRa ? `ID ${item.idRa}` : item.protocol}</span>
           <span
             className="ml-auto shrink-0 text-[11px] tabular-nums text-zinc-400"
             title={`Publicada em ${String(item.createdAt).slice(0, 10).split("-").reverse().join("/")}`}

@@ -162,6 +162,8 @@ export function buscarNaPlataforma(entrada: EntradaDaBusca): ResultadoDaBusca[] 
       const protocolo = normalizar(c.protocol);
       const pontos = Math.max(
         protocolo === termo ? 200 : protocolo.includes(termo) && termo.length >= 4 ? 120 : 0,
+        /* O ID da página do Reclame Aqui (13/11/2026): o número inteiro acha na hora; um pedaço de 5+ dígitos também. */
+        c.idRa && numeros ? (c.idRa === numeros ? 200 : numeros.length >= 5 && c.idRa.includes(numeros) ? 110 : 0) : 0,
         pontuarCampos([c.customer, c.company, c.title, c.email, c.category], termo),
         pontuarDigitos(c.document, numeros, 1.1),
         pontuarDigitos(c.phone, numeros)
@@ -173,7 +175,7 @@ export function buscarNaPlataforma(entrada: EntradaDaBusca): ResultadoDaBusca[] 
         id: c.id,
         titulo: c.customer || c.protocol,
         subtitulo: [social ? "Redes" : "Reclame Aqui", c.status, c.title].filter(Boolean).join(" · "),
-        marca: c.protocol,
+        marca: c.idRa && !social ? `ID ${c.idRa}` : c.protocol,
         etiqueta: c.status,
         detalhe: c.title,
         href: social ? `/redes-sociais/${c.id}` : `/reclame-aqui/${c.id}`,

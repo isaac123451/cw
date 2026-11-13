@@ -438,6 +438,9 @@ model Case {
   externalUrl String?
   externalId  String?
 
+  /// O ID numérico que a página da reclamação mostra ("ID: 256873207", o `legacyId` do portal). É por ele que a equipe fala do caso (13/11/2026).
+  idRa String?
+
   /// Data de publicação no portal — base de todo cálculo por período.
   publishedAt DateTime
   updatedAt   DateTime @updatedAt
@@ -568,6 +571,7 @@ model Case {
   @@index([subcategoryId])
   @@index([categoryId])
   @@index([companyId])
+  @@index([idRa])
 }
 
 model CaseTag {

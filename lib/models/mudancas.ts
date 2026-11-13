@@ -46,6 +46,16 @@ export interface Mudanca {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "id-do-reclame-aqui",
+    dia: "2026-11-13",
+    tipo: "novo",
+    frente: "reclame-aqui",
+    titulo: "O ID do Reclame Aqui em cada reclamação",
+    texto:
+      "A plataforma passou a guardar o número que a página da reclamação mostra (\"ID: 256873207\") e a usar ele: no cabeçalho da ficha, na lista, no cartão do quadro e no painel da extensão. A busca do topo acha a reclamação pelo número inteiro ou por um pedaço dele. O vigia guarda o número sempre que lê a página, e completa as reclamações antigas aos poucos, seis por volta, sem atrasar as novas. Enquanto uma reclamação ainda não tem o número, aparece o código do endereço, como antes.",
+    href: "/reclame-aqui",
+  },
+  {
     id: "menos-espera-ao-abrir",
     dia: "2026-11-12",
     tipo: "melhoria",

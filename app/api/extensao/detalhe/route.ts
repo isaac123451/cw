@@ -137,6 +137,7 @@ export async function GET(request: Request) {
 
   return responder(request, {
     protocolo: caso.protocol,
+    idRa: caso.idRa ?? null,
     id: caso.id,
 
     titulo: caso.title,

@@ -206,6 +206,7 @@ export async function GET(request: Request) {
     itens: comSla.slice(0, TETO).map(({ item, sla }) => ({
       id: item.id,
       protocolo: item.protocol,
+      idRa: item.idRa ?? null,
       titulo: item.title,
       cliente: item.customer,
       status: item.status,

@@ -560,6 +560,12 @@ export function idLabel(item: Case) {
  * que a pessoa cola na busca do Reclame Aqui.
  */
 export function idExterno(item: Case) {
+  /*
+    O ID numérico da página, quando já está guardado (13/11/2026): "preciso
+    que você trabalhe com o ID do reclame aqui". É o número que a equipe vê
+    no portal ("ID: 256873207"); sem ele, o código do endereço, como antes.
+  */
+  if (item.idRa && !isSocial(item)) return item.idRa;
   return item.protocol.replace(/^RA-/, "");
 }
 

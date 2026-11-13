@@ -280,7 +280,8 @@
       `  </div>`,
       '  <div class="cartao">',
       '    <div class="linha">',
-      `      <span class="sub">${CW.escapar(d.protocolo)}</span>`,
+      /* O ID da página do Reclame Aqui, quando já guardado (13/11/2026); senão, o protocolo. */
+      `      <span class="sub" title="${CW.escapar(d.protocolo)}">${CW.escapar(d.idRa ? `ID ${d.idRa}` : d.protocolo)}</span>`,
       `      <span class="tag ${
         d.sla.situacao === "estourado"
           ? "perigo"
@@ -1258,7 +1259,7 @@
       <div class="caso ${grave ? "grave" : ""}" data-acao="ver"
            data-protocolo="${CW.escapar(caso.protocolo)}">
         <div class="linha">
-          <span class="sub">${CW.escapar(caso.protocolo)}</span>
+          <span class="sub" title="${CW.escapar(caso.protocolo)}">${CW.escapar(caso.idRa ? `ID ${caso.idRa}` : caso.protocolo)}</span>
           <span class="tag ${
             grave
               ? "perigo"

@@ -107,6 +107,7 @@ export function fromIsoDay(value?: string | null) {
 export function toCaseModel(row: {
   id: string;
   externalId: string | null;
+  idRa?: string | null;
   protocol: string;
   companyName: string;
   document: string | null;
@@ -211,6 +212,7 @@ export function toCaseModel(row: {
     // O id do portal é o que as URLs usam; o cuid só existe no banco.
     id: row.externalId ?? row.id,
     ...(row.externalId ? { dbId: row.id } : {}),
+    ...(row.idRa ? { idRa: row.idRa } : {}),
     protocol: row.protocol,
     /**
      * A empresa é o **estabelecimento**, não o consumidor.

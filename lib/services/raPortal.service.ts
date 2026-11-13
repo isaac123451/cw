@@ -395,6 +395,7 @@ function carregar(
       ...SELECAO_DO_PORTAL,
       description: true,
       externalUrl: true,
+      idRa: true,
       title: true,
       publishedAt: true,
       updatedAt: true,
@@ -435,6 +436,7 @@ export async function jaNoBanco(
         ? [
             { protocol: { in: numeros.map((n) => `RA-${n}`) } },
             { externalId: { in: numeros.map(String) } },
+            { idRa: { in: numeros.map(String) } },
           ]
         : []),
     ],
@@ -543,6 +545,11 @@ export async function gravarDoPortal(
     if (!atual) {
       const id = await criarSeNova(prisma, doPortal);
 
+      /* O ID da página (13/11/2026): é por ele que a equipe fala do caso. */
+      if (id && r.numero) {
+        await prisma.case.updateMany({ where: { protocol: doPortal.protocol, idRa: null }, data: { idRa: String(r.numero) } }).catch(() => undefined);
+      }
+
       if (id) {
         resultado.criadas.push({
           protocolo: doPortal.protocol,
@@ -631,6 +638,11 @@ export async function gravarDoPortal(
         consideracaoFinal: null,
         status: colunaNoFluxo(voltaPara, await etapasDoFluxo(prisma)),
       });
+    }
+
+    /* O ID da página, quando ainda não está guardado ou mudou (13/11/2026). */
+    if (r.numero && atual.idRa !== String(r.numero)) {
+      mudancas.idRa = String(r.numero);
     }
 
     /* Endereço vazio ou de outra reclamação (dois casos assim em 03/11/2026): o do portal. */
@@ -896,10 +908,25 @@ export async function pendentesDoPortal(
     take: teto,
   });
 
-  return linhas
-    .map((l) => l.protocol.slice(3))
-    .filter((c) => CODIGO_DO_PORTAL.test(c));
+  /*
+    As que ainda não têm o ID da página (13/11/2026): até seis por volta, no
+    fim da fila do vigia — as novas, as atrasadas e as da réplica seguem na
+    frente, e as antigas ganham o número aos poucos, ao serem reabertas.
+  */
+  const semId = await prisma.case
+    .findMany({
+      where: { protocol: { startsWith: "RA-" }, idRa: null },
+      orderBy: { publishedAt: "desc" },
+      select: { protocol: true },
+      take: SEM_ID_POR_VOLTA,
+    })
+    .catch(() => [] as { protocol: string }[]);
+
+  return [...new Set([...linhas, ...semId].map((l) => l.protocol.slice(3)))].filter((c) => CODIGO_DO_PORTAL.test(c));
 }
+
+/** Quantas reclamações sem o ID da página o vigia reabre por volta. */
+export const SEM_ID_POR_VOLTA = 6;
 
 /**
  * As reclamações respondidas que esperam a avaliação, para o vigia reabrir

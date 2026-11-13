@@ -84,6 +84,7 @@ const INCLUDE = {
 interface CaseRowCru {
   id: string;
   externalId: string | null;
+  idRa?: string | null;
   protocol: string;
   companyName: string;
   document: string | null;
@@ -201,7 +202,7 @@ export async function fetchCases(
    * campo com o caminho antigo.
    */
   const rows = await prisma.$queryRawUnsafe<CaseRowCru[]>(`
-    SELECT c."id", c."externalId", c."protocol", c."companyName",
+    SELECT c."id", c."externalId", c."idRa", c."protocol", c."companyName",
            c."document", c."establishmentId", c."establishmentManual",
            c."customer", c."email", c."phone", c."city", c."state",
            c."channel", c."status", c."priority", c."title",

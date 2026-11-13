@@ -99,6 +99,9 @@ export interface Case {
    */
   dbId?: string;
 
+  /** O ID numérico da página do Reclame Aqui ("ID: 256873207"). É por ele que a equipe fala do caso (13/11/2026). */
+  idRa?: string;
+
   protocol: string;
 
   company: string;

@@ -77,6 +77,8 @@ const MAXIMO_CASOS = 12;
 interface CasoResumo {
   id: string;
   protocolo: string;
+  /** O ID da página do Reclame Aqui, quando guardado (13/11/2026). */
+  idRa: string | null;
   titulo: string;
   status: string;
   categoria: string;
@@ -1007,6 +1009,7 @@ function resumir(
   return {
     id: item.id,
     protocolo: item.protocol,
+    idRa: item.idRa ?? null,
     titulo: item.title,
     status: item.status,
     categoria: item.category,
