@@ -7,6 +7,8 @@ import {
 
 import { decidirAvisosDePrazo, dentroDoHorario, horaDeBrasilia } from "../comum/prazos.js";
 
+import { ALARME_ATUALIZACAO, agendarAtualizacao, avisarSePlataformaMaisNova, conferirAtualizacao, voltarAsAbasAbertas } from "./atualizacao.js";
+
 import {
   ehDesafio,
   enderecoDaEmpresa,
@@ -716,6 +718,11 @@ async function tratar(mensagem) {
    * vira várias leituras: dentro do intervalo mínimo devolve a última.
    * O botão sempre lê.
    */
+  /* "Atualizar agora", pela página Extensão da plataforma (13/11/2026). */
+  if (mensagem?.tipo === "atualizarAgora") {
+    return conferirAtualizacao({ motivo: "plataforma" });
+  }
+
   if (mensagem?.tipo === "vigiaAgora") {
 
     const { estado } = await lerEstadoDoVigia();
@@ -2316,16 +2323,46 @@ async function registrarPonte() {
   }
 }
 
-chrome.runtime.onInstalled.addListener(() => {
+chrome.runtime.onInstalled.addListener((detalhe) => {
   agendar();
+  agendarAtualizacao();
   atualizarEmSilencio();
   registrarPonte();
+  /* Recarregada com versão nova (13/11/2026): volta às abas abertas e avisa uma vez. */
+  if (detalhe?.reason === "update") {
+    voltarAsAbasAbertas().catch(() => {});
+    const versao = chrome.runtime.getManifest().version;
+    if (detalhe.previousVersion && detalhe.previousVersion !== versao) {
+      chrome.notifications.create(`cw-atualizada-${versao}`, {
+        type: "basic",
+        iconUrl: chrome.runtime.getURL("icones/icone-128.png"),
+        title: `Extensão atualizada para a ${versao}`,
+        message: "Os painéis abertos já estão na versão nova. Não precisa recarregar nada.",
+        priority: 0,
+      });
+    }
+  }
 });
 
 chrome.runtime.onStartup.addListener(() => {
   agendar();
+  agendarAtualizacao();
   registrarPonte();
+  conferirAtualizacao({ motivo: "inicio" }).catch(() => {});
 });
+
+/* A cada 5 minutos: a pasta mudou? a plataforma está mais nova? (13/11/2026) */
+async function rodadaDeAtualizacao() {
+  const r = await conferirAtualizacao({ motivo: "relogio" });
+  if (r?.dados?.atualizando) return;
+  try {
+    const dados = await chamar(CAMINHOS.sessao);
+    const config = await lerConfig();
+    await avisarSePlataformaMaisNova(dados?.versaoDaPlataforma, normalizarBase(config.base));
+  } catch {
+    /* sem sessão ou fora do ar: a próxima rodada confere */
+  }
+}
 
 /* Trocar o endereço nas Opções move a ponte junto. */
 chrome.storage.onChanged.addListener((mudancas, area) => {
@@ -2389,6 +2426,7 @@ chrome.commands?.onCommand?.addListener(async (comando) => {
 });
 
 chrome.alarms.onAlarm.addListener((alarme) => {
+  if (alarme.name === ALARME_ATUALIZACAO) rodadaDeAtualizacao().catch(() => {});
   if (alarme.name === ALARME) atualizarEmSilencio();
   if (alarme.name === ALARME_VIGIA_RELOGIO) {
     /* O vigia primeiro: o que ele grava (réplica, avaliação) é o que a IA lê. */
@@ -2406,6 +2444,12 @@ chrome.notifications.onClicked.addListener(async (id) => {
   const base = normalizarBase(config.base);
 
   if (!base) return;
+
+  /* Versão nova da extensão: a página Extensão, com o zip (13/11/2026). */
+  if (id.startsWith("cw-atualizar:")) {
+    chrome.tabs.create({ url: `${base}/extensao` });
+    return;
+  }
 
   /* Aviso de prazo: abre o caso (ou o quadro, no aviso agrupado). */
   if (id.startsWith("cw-prazo-")) {

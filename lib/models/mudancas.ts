@@ -46,6 +46,16 @@ export interface Mudanca {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "extensao-na-plataforma-e-atualizacao",
+    dia: "2026-11-13",
+    tipo: "novo",
+    frente: "extensao",
+    titulo: "A extensão na plataforma, e se atualizando sozinha",
+    texto:
+      "Em Conhecimento › Extensão do Chrome dá para baixar a extensão, seguir o passo a passo de instalação e ver o estado dela neste navegador: em dia, desatualizada (com o botão Atualizar agora) ou sem resposta. A extensão confere a própria pasta a cada 5 minutos e, quando os arquivos mudam, se recarrega sozinha e volta às abas abertas do WhatsApp e do Reclame Aqui, sem F5. Quando sai uma versão nova da plataforma, ela avisa com uma notificação que leva ao zip novo: é só descompactar por cima da mesma pasta.",
+    href: "/extensao",
+  },
+  {
     id: "casos-novos-e-dia-de-cada-um",
     dia: "2026-11-13",
     tipo: "novo",

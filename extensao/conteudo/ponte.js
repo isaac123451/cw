@@ -24,7 +24,7 @@
 
   const VERSAO = chrome.runtime.getManifest().version;
 
-  const REPASSADOS = new Set(["vigiaAgora", "vigiaEstado"]);
+  const REPASSADOS = new Set(["vigiaAgora", "vigiaEstado", "atualizarAgora"]);
 
   function responder(id, resposta) {
     window.postMessage(

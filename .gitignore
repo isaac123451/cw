@@ -57,3 +57,6 @@ scripts/_*.ts
 # a pasta de build do segundo servidor de conferência (ver next.config.ts)
 /.next-*/
 .bancada/
+
+# O zip da extensão para baixar pela plataforma: gerado no build (scripts/zip-da-extensao.js).
+public/extensao/

@@ -14,6 +14,7 @@ import {
   Crosshair,
   FileBarChart,
   KeyRound,
+  Puzzle,
   LibraryBig,
   MessageSquareWarning,
   MessageCircle,
@@ -110,6 +111,7 @@ export const menuItems: MenuItem[] = [
   { title: "Processos e SLA", href: "/processos", icon: Workflow, group: "Conhecimento" },
   { title: "Projetos e Melhorias", href: "/projetos", icon: FolderKanban, group: "Conhecimento" },
   { title: "Ferramentas e acessos", href: "/ferramentas", icon: KeyRound, group: "Conhecimento" },
+  { title: "Extensão do Chrome", href: "/extensao", icon: Puzzle, group: "Conhecimento" },
   { title: "Primeiro acesso", href: "/primeiro-acesso", icon: GraduationCap, group: "Conhecimento" },
   { title: "Novidades", href: "/novidades", icon: Sparkles, group: "Conhecimento" },
 ];

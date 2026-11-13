@@ -33,6 +33,8 @@ export async function GET(request: Request) {
   const numerosDeTrabalho = [operacao?.whatsappReclameAqui, operacao?.whatsappNpsRedes].map((n) => String(n ?? "").replace(/\D/g, "")).filter((n) => n.length >= 10);
 
   return responder(request, {
+    /* A versão da plataforma (13/11/2026): a extensão avisa quando ficou para trás. */
+    versaoDaPlataforma: process.env.NEXT_PUBLIC_VERSAO ?? null,
     numerosDeTrabalho,
     conectado: Boolean(usuario) || demonstracao,
     demonstracao,

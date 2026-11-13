@@ -1,10 +1,10 @@
 {
   "name": "cw-reputacao",
-  "version": "1.1.78",
+  "version": "1.1.79",
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "prisma generate && node scripts/zip-da-extensao.js && next build",
     "start": "next start",
     "lint": "eslint",
     "db:check": "node scripts/check-db.js",
@@ -93,6 +93,7 @@
     "check:versao-da-extensao": "tsx scripts/check-versao-da-extensao.ts",
     "check:id-do-ra": "tsx scripts/check-id-do-ra.ts",
     "check:casos-novos": "tsx scripts/check-casos-novos.ts",
+    "check:extensao-atualiza": "tsx scripts/check-extensao-atualiza.ts",
     "check:respostas-que-funcionam": "tsx scripts/check-respostas-que-funcionam.ts",
     "check:disparo-atualizacao": "tsx --conditions=react-server scripts/check-disparo-atualizacao.ts",
     "check:distribuicao": "tsx --env-file=.env scripts/check-distribuicao.ts",

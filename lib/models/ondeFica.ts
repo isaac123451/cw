@@ -83,6 +83,7 @@ export const MAPA: FuncaoDoMapa[] = [
   f("permissoes", "Ajustes", "Permissões", "Quem vê cada frente e quem recebe atendimentos no Meu dia.", ["Menu", "Configurações", "Permissões"], "/configuracoes/permissoes", ["recebe atendimentos", "acesso", "divisao do dia", "usuarios"]),
   f("integracoes", "Ajustes", "Integrações", "Wootric, IA, e-mail e os erros que a extensão registrou.", ["Menu", "Configurações", "Integrações"], "/configuracoes/integracoes", ["wootric", "gemini", "erros da extensao", "email"]),
 
+  f("ext-pagina", "Extensão do Chrome", "Baixar e instalar a extensão", "O zip da extensão, o passo a passo, o estado dela neste navegador e o botão de atualizar.", ["Menu", "Conhecimento", "Extensão do Chrome"], "/extensao", ["instalar extensao", "baixar extensao", "atualizar extensao", "versao da extensao", "zip"]),
   f("ext-whatsapp", "Extensão do Chrome", "Painel no WhatsApp", "O cartão do cliente ao lado da conversa, as respostas e o salvamento automático.", ["WhatsApp Web", "Painel roxo à direita"], undefined, ["extensao", "cartao do cliente", "guardar conversa"]),
   f("ext-vigia", "Extensão do Chrome", "Vigia do Reclame Aqui", "Lê o portal a cada 30 min e traz as reclamações novas.", ["Portal do Reclame Aqui", "Selo CW na lista"], undefined, ["vigia", "portal", "enviar ao cw", "selo"]),
   f("ext-caso-rapido", "Extensão do Chrome", "Caso rápido", "Abre um caso novo de onde você estiver.", ["Qualquer aba", "Alt + Shift + K"], undefined, ["novo caso", "atalho", "alt shift k"]),

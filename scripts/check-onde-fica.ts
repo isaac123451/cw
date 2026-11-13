@@ -24,7 +24,7 @@ function conferir(titulo: string, obtido: unknown, esperado: unknown) {
 }
 
 console.log("\n  O MAPA\n");
-conferir("44 funções", MAPA.length, 44);
+conferir("45 funções (a página da extensão entrou em 13/11)", MAPA.length, 45);
 conferir("ids únicos", new Set(MAPA.map((m) => m.id)).size, MAPA.length);
 const semPagina = MAPA.filter((m) => m.href && !existsSync(`app${m.href.split("?")[0]}/page.tsx`)).map((m) => m.href);
 conferir("todo 'Ir até lá' abre uma página que existe", semPagina, []);
