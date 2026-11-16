@@ -734,6 +734,7 @@ function casar(base: Case[], alvo: Alvo): Encontro {
         item.protocol === alvo.protocolo ||
         item.protocol === `RA-${limpo}` ||
         item.id === limpo ||
+        (Boolean(item.idRa) && item.idRa === limpo) ||
         (item.raUrl ?? "").includes(limpo)
     );
 

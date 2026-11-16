@@ -836,7 +836,9 @@ export async function fetchCandidateCases(
     if (limpo) {
       ou.push(
         { protocol: { contains: limpo } },
-        { externalId: limpo }
+        { externalId: limpo },
+        /* O ID numérico da página do RA (16/11/2026): é o que o painel lê como "ID:". */
+        ...(/^\d{6,12}$/.test(limpo) ? [{ idRa: limpo }] : [])
       );
     }
   }

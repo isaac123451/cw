@@ -319,6 +319,26 @@
       }
     }
 
+    /*
+      O layout de 16/11/2026: "a extensão não está reconhecendo os clientes
+      do reclame aqui, novamente". O nome veio sozinho numa linha, sem
+      "Nome social", logo acima do "CPF:" (ou do "Contatos do cadastro do
+      consumidor", quando não há CPF), dentro do bloco do consumidor:
+
+        Telefones do consumidor informados na reclamação:
+        17 99123-3611
+        Roberto Gonçalves Damasceno
+        CPF:
+        148.551.038-45
+        Contatos do cadastro do consumidor:
+    */
+    const inicioDoBloco = todas.findIndex((linha) => /^Telefones do consumidor informados/i.test(linha));
+    for (let i = Math.max(1, inicioDoBloco + 1); i < todas.length; i += 1) {
+      if (!/^(CPF|CNPJ)\b|^Contatos do cadastro do consumidor/i.test(todas[i])) continue;
+      if (pareceNome(todas[i - 1])) return todas[i - 1];
+      if (/^Contatos do cadastro/i.test(todas[i])) break;
+    }
+
     const registro = texto.match(
       /Nome de registro\s*:\s*([^\n]{3,80})/i
     );

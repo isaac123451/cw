@@ -638,6 +638,30 @@ conferir(
   "outra"
 );
 
+/* O layout de 16/11/2026: o nome sozinho, logo acima do "CPF:". */
+const LAYOUT_1611 = [
+  "Responder reclamação",
+  "PIOR EMPRESA DO RAMO! NÂO TEM SUPORTE.",
+  "COD: f2MkXHzDK60I-0ar",
+  "ID: 264271711",
+  "Telefones do consumidor informados na reclamação:",
+  "17 99123-3611",
+  "Roberto Gonçalves Damasceno",
+  "CPF:",
+  "148.551.038-45",
+  "Contatos do cadastro do consumidor:",
+  "E-mail:",
+  "roberto@exemplo.com",
+  "Essa reclamação tem informações adicionais coletadas.",
+].join("\n");
+conferir("nome no layout de 16/11 (acima do CPF)", ra.nome(LAYOUT_1611), "Roberto Gonçalves Damasceno");
+conferir(
+  "nome no layout de 16/11 sem CPF (acima dos contatos)",
+  ra.nome(LAYOUT_1611.replace("CPF:\n148.551.038-45\n", "")),
+  "Roberto Gonçalves Damasceno"
+);
+conferir("telefone do bloco não vira nome", ra.nome(LAYOUT_1611.replace("Roberto Gonçalves Damasceno\n", "")), "");
+
 console.log(
   falhas === 0
     ? "\nTodos os campos conferem.\n"
