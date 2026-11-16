@@ -266,6 +266,6 @@ async function extrairDasAvaliacoes(prisma: PrismaClient, blocos: string[]): Pro
 /** Os aprendizados ativos, para a IA usar ao ler uma conversa. */
 export async function aprendizadosAtivos(prisma: PrismaClient): Promise<Aprendizado[]> {
   return prisma.aprendizadoDaIA
-    .findMany({ where: { ativo: true }, orderBy: [{ vezes: "desc" }, { atualizadoEm: "desc" }], take: 300, select: { assunto: true, texto: true, vezes: true } })
+    .findMany({ where: { ativo: true }, orderBy: [{ vezes: "desc" }, { atualizadoEm: "desc" }], take: 300, select: { assunto: true, texto: true, vezes: true, fonte: true } })
     .catch(() => []);
 }

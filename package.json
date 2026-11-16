@@ -1,6 +1,6 @@
 {
   "name": "cw-reputacao",
-  "version": "1.1.80",
+  "version": "1.1.81",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -90,6 +90,7 @@
     "check:respondeu-nps": "tsx scripts/check-respondeu-nps.ts",
     "check:ordem-da-conversa": "tsx scripts/check-ordem-da-conversa.ts",
     "check:onde-fica": "tsx scripts/check-onde-fica.ts",
+    "check:dicas-da-resposta": "tsx scripts/check-dicas-da-resposta.ts",
     "check:versao-da-extensao": "tsx scripts/check-versao-da-extensao.ts",
     "check:id-do-ra": "tsx scripts/check-id-do-ra.ts",
     "check:casos-novos": "tsx scripts/check-casos-novos.ts",

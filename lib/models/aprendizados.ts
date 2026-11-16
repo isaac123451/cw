@@ -59,7 +59,19 @@ export interface Aprendizado {
   assunto: string;
   texto: string;
   vezes: number;
+  /** whatsapp · slack · avaliacoes (o que separa a resposta pública boa da ruim). */
+  fonte?: string;
 }
+
+/*
+  Palavras que todo texto daqui tem (16/11/2026): "plataforma", "quando",
+  "cliente", "sistema". Elas faziam um aprendizado sobre integração com a
+  SAIPOS aparecer numa reclamação de falta de treinamento — as duas
+  diziam "plataforma" e "quando". Não contam como palavra em comum.
+*/
+const COMUNS = new Set(
+  "para mais como esta este essa esse isso pois mesmo pelo pela eles elas nada porem agora ainda depois antes tenho estou estava sobre quero seja sendo assim desde apenas porque tudo todos toda todo aqui alem qualquer sempre nunca quem entao deles disso outro outra ficar fica muito quando onde qual quais seus suas sua seu minha meus minhas nosso nossa voce voces cada pode podem deve devem fazer feito tive teve foram eram sera seria hoje vezes forma caso tambem vamos estao tinha cardapio plataforma sistema cliente clientes empresa problema problemas".split(" ")
+);
 
 /**
  * Os aprendizados que servem para esta conversa: os que dividem palavras
@@ -71,7 +83,7 @@ export function relevantes(aprendizados: Aprendizado[], texto: string, maximo = 
     norma(texto)
       .replace(/[^a-z0-9 ]/g, " ")
       .split(/\s+/)
-      .filter((p) => p.length > 3 && !VAZIAS.has(p))
+      .filter((p) => p.length > 3 && !VAZIAS.has(p) && !COMUNS.has(p))
   );
   return aprendizados
     .map((a) => {
@@ -83,4 +95,84 @@ export function relevantes(aprendizados: Aprendizado[], texto: string, maximo = 
     .sort((x, y) => y.comuns - x.comuns || y.a.vezes - x.a.vezes)
     .slice(0, maximo)
     .map((x) => x.a);
+}
+
+/*
+  As dicas da resposta pública (16/11/2026): "a extensão entregou algumas
+  informações coerentes com a reclamação e outras sem sentido". Na
+  reclamação ID 262352671 (sem treinamento nem suporte), a dica era a
+  integração de pedidos com SAIPOS e Foody — casou por "plataforma" e
+  "quando". Agora a dica casa pelo ASSUNTO: o aprendizado fala de estorno,
+  e a reclamação também; fala de impressão, e a reclamação também. Só os
+  aprendizados tirados das respostas públicas avaliadas (fonte
+  "avaliacoes"): os do WhatsApp ensinam o produto, não a escrever a
+  resposta. Medido nas 394 reclamações: 370 recebem dica, nenhuma por
+  palavra solta.
+*/
+const ASSUNTOS_DA_RECLAMACAO: [string, RegExp][] = [
+  ["estorno", /estorn|reembols|devolu|dinheiro de volta|ressarc|devolv/],
+  ["cobranca", /cobra|indevid|fatura|boleto|debit/],
+  ["pagamento", /pagament|\bpix\b|repasse|boleto|cartao/],
+  ["cancelamento", /cancel|rescis|encerr/],
+  ["bloqueio", /bloque/],
+  ["integracao", /ifood|integracao|integrad|99food|aiqfome|keeta/],
+  ["pixel", /pixel|meta ads|facebook/],
+  ["impressao", /impress|imprim/],
+  ["privacidade", /privacid|lgpd|dados pessoais|expos|vaza/],
+  ["reuniao", /reuni/],
+  ["suporte", /suporte|atendiment|nao respond|sem resposta|sem retorno|ninguem|demora/],
+  ["cashback", /cashback/],
+  ["funcionalidade", /funcionalidade|recurso|sugest|melhoria|nao tem a opcao|gostaria que/],
+  ["falha", /\bbug|falh|erro|trav|instab|nao funciona|fora do ar|parou/],
+  ["pico", /pico|lentid|lento|demora para carregar/],
+  ["entrega", /entreg|motoboy/],
+  ["whatsapp", /whatsapp|robo|chatbot/],
+];
+
+const ASSUNTOS_DO_APRENDIZADO: [string, RegExp][] = [
+  ["estorno", /estorno|devolucao|reembolso|dinheiro/],
+  ["cobranca", /cobranca|indevida/],
+  ["pagamento", /pagamento/],
+  ["cancelamento", /cancelamento|encerrar/],
+  ["bloqueio", /bloqueio|desbloque/],
+  ["integracao", /ifood|integracao/],
+  ["pixel", /pixel/],
+  ["impressao", /impressao/],
+  ["privacidade", /privacidade|dados/],
+  ["reuniao", /reuniao/],
+  ["suporte", /suporte|canal|canais|contato direto|responsavel|consultivo/],
+  ["cashback", /cashback/],
+  ["funcionalidade", /funcionalidade|feature|roadmap|melhorias|nova/],
+  ["falha", /\bbug|falha|erro|correcao|estabilidade|diagnostico/],
+  ["pico", /pico|demanda/],
+  ["entrega", /entrega/],
+  ["whatsapp", /whatsapp|robo/],
+];
+
+/** Os assuntos de que um texto trata. */
+export function assuntosDaReclamacao(texto: string): string[] {
+  const n = norma(texto);
+  return ASSUNTOS_DA_RECLAMACAO.filter(([, re]) => re.test(n)).map(([k]) => k);
+}
+
+export function dicasParaAResposta(aprendizados: Aprendizado[], caso: { titulo: string; descricao?: string | null }, maximo = 3): Aprendizado[] {
+  const tem = new Set(assuntosDaReclamacao(`${caso.titulo} ${caso.descricao ?? ""}`));
+  if (!tem.size) return [];
+  const candidatos = aprendizados
+    .filter((a) => (a.fonte ?? "avaliacoes") === "avaliacoes")
+    .map((a) => {
+      const n = norma(a.assunto);
+      const exige = ASSUNTOS_DO_APRENDIZADO.filter(([, re]) => re.test(n)).map(([k]) => k);
+      const bate = exige.filter((k) => tem.has(k)).length;
+      const so = exige.length === 1 && exige[0] === "suporte";
+      return { a, bate, so, ok: exige.length > 0 && (bate === exige.length || bate >= 2) };
+    })
+    .filter((x) => x.ok)
+    .sort((x, y) => y.bate - x.bate || Number(x.so) - Number(y.so) || y.a.vezes - x.a.vezes);
+
+  /* O que fala do assunto vem antes; "dê o contato direto" entra uma vez só quando há assunto. */
+  const doAssunto = candidatos.filter((x) => !x.so);
+  const deSuporte = candidatos.filter((x) => x.so).slice(0, doAssunto.length ? 1 : maximo);
+  const escolhidos = [...doAssunto.slice(0, doAssunto.length && deSuporte.length ? maximo - 1 : maximo), ...deSuporte].slice(0, maximo);
+  return escolhidos.map((x) => x.a);
 }

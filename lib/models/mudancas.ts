@@ -46,6 +46,16 @@ export interface Mudanca {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "dicas-da-resposta-pelo-assunto",
+    dia: "2026-11-16",
+    tipo: "correcao",
+    frente: "extensao",
+    titulo: "Dicas da resposta no Reclame Aqui casam pelo assunto",
+    texto:
+      "O \"O que costuma funcionar aqui\", que aparece quando você escreve a resposta no Reclame Aqui, juntava aprendizados por palavra solta: numa reclamação de falta de treinamento e suporte (ID 262352671) aparecia a integração de pedidos com SAIPOS e Foody, porque as duas diziam \"plataforma\" e \"quando\". Agora a dica casa pelo assunto (estorno com estorno, impressão com impressão, suporte com suporte) e vem só do que se aprendeu com as respostas públicas avaliadas, não das conversas do WhatsApp. O analista também ficou mais justo: \"entendemos\" e \"sentimos muito\" contam como reconhecer o transtorno, e \"não foi resolvido\" deixou de ser lido como dizer que resolveu.",
+    href: "/reclame-aqui",
+  },
+  {
     id: "humor-pela-conversa",
     dia: "2026-11-16",
     tipo: "correcao",

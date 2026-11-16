@@ -13,7 +13,7 @@ import { dadosSensiveis, resumoDosAchados, semelhanca } from "@/lib/services/lgp
 import { slaStatus } from "@/lib/services/sla.service";
 import { INICIO_DA_TRILHA, trilhaDoCaso } from "@/lib/models/trilha";
 import { analisarResposta } from "@/lib/models/analistaDeRespostas";
-import { relevantes } from "@/lib/models/aprendizados";
+import { dicasParaAResposta } from "@/lib/models/aprendizados";
 import { aprendizadosAtivos } from "@/lib/services/aprendizados.service";
 
 export const runtime = "nodejs";
@@ -130,7 +130,7 @@ export async function POST(request: Request) {
     com a reclamação. Até três, como dica; não contam como problema.
   */
   const dicas = caso
-    ? relevantes(await aprendizadosAtivos(prisma), `${caso.title} ${caso.category ?? ""} ${caso.description ?? ""}`, 3).map((a) => ({ assunto: a.assunto, texto: a.texto }))
+    ? dicasParaAResposta(await aprendizadosAtivos(prisma), { titulo: caso.title, descricao: caso.description }, 3).map((a) => ({ assunto: a.assunto, texto: a.texto }))
     : [];
 
   return responder(request, {

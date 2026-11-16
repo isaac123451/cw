@@ -63,7 +63,7 @@ const DEFENSIVA =
   /(conforme (j[aá] )?(informad|mencionad|explicad)|como (j[aá] )?(dito|informado|explicado)|o (sr\.?|senhor|sra\.?|senhora|cliente) (n[aã]o|deveria)|voc[eê] (n[aã]o (seguiu|leu|fez|configurou)|deveria)|por falta de aten[çc][ãa]o)/i;
 
 /** A resposta afirma que já resolveu. */
-const DIZ_RESOLVIDO = /\b(foi|est[aá]|j[aá] (foi|est[aá])|ficou)\s+(resolvid|solucionad|corrigid|normalizad)/i;
+const DIZ_RESOLVIDO = /(?<!n[aã]o\s)(?<!ainda\s)\b(foi|est[aá]|j[aá] (foi|est[aá])|ficou)\s+(resolvid|solucionad|corrigid|normalizad)/i;
 
 const TAMANHO_MINIMO = 200;
 const TAMANHO_MAXIMO = 1600;
