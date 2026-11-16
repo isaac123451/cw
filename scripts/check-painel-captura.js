@@ -57,6 +57,28 @@ conferir("sem vínculo, a lista vem aberta", Q.blocoQualReclamacao({ casos: [CAS
 conferir("uma reclamação só: nada a perguntar", Q.blocoQualReclamacao({ casos: [CASO_TT], outrosDoContato: [] }), "");
 conferir("a mesma não aparece duas vezes", Q.blocoQualReclamacao({ casos: [CASO_TT], outrosDoContato: [CASO_TT] }), "");
 
+/*
+  O ID em todos os lugares da extensão (16/11/2026): a lista "quem é" ainda
+  mostrava "RA-yep1kcHjlWzmgyDa · Avaliado como resolvido".
+*/
+console.log("\n  O ID DO RECLAME AQUI NA EXTENSÃO\n");
+const nucleo = {};
+vm.runInNewContext(fs.readFileSync(path.join(__dirname, "../extensao/conteudo/nucleo.js"), "utf8"), {
+  window: Object.assign(nucleo, { addEventListener() {} }), document: { addEventListener() {} }, chrome: { runtime: {} }, location: { hostname: "x" }, console, setTimeout,
+});
+const rotulo = nucleo.CWReputacao.rotuloDoCaso;
+conferir("caso do RA com ID → 'ID <número>'", rotulo({ protocolo: "RA-yep1kcHjlWzmgyDa", idRa: "256873207" }), "ID 256873207");
+conferir("caso do RA ainda sem ID → o protocolo", rotulo({ protocolo: "RA-yep1kcHjlWzmgyDa", idRa: null }), "RA-yep1kcHjlWzmgyDa");
+conferir("caso das Redes → o protocolo", rotulo({ protocolo: "RS-123", idRa: "999999" }), "RS-123");
+const ler = (p) => fs.readFileSync(path.join(__dirname, "..", p), "utf8");
+const servico = ler("lib/services/contatoConhecido.service.ts");
+conferir("'quem é' mostra o ID nos candidatos", (servico.match(/detalhe: `\$\{c\.idRa \? `ID \$\{c\.idRa\}` : c\.protocol\}/g) ?? []).length, 3);
+conferir("'quem é' lê o idRa nas três buscas", (servico.match(/protocol: true, idRa: true/g) ?? []).length, 3);
+const contato = ler("extensao/conteudo/painel-contato.js");
+conferir("prazo estourado diz o ID", contato.includes("Prazo estourado em ${CW.rotuloDoCaso(caso)}"), true);
+conferir("popup e caso rápido usam o ID", ler("extensao/popup/popup.js").includes("escapar(rotuloDoCaso(caso))") && ler("extensao/caso-rapido/caso-rapido.js").includes("escapar(rotuloDoCaso(c))"), true);
+conferir("caso rápido acha pelo ID", ler("app/api/extensao/caso-rapido/route.ts").includes("[{ idRa: q.trim() }]"), true);
+
 console.log("\n  ACESSO RÁPIDO\n");
 const rapido = Q.blocoAcessoRapido({ casos: [CASO_TT] });
 conferir("abrir no CW leva ao caso", rapido.includes('data-url="https://cw/reclame-aqui/a">Abrir no CW'), true);

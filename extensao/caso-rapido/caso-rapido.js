@@ -59,7 +59,7 @@ function desenharLista() {
   resultados.innerHTML = lista
     .map(
       (c, i) => `<li><button type="button" class="resultado" role="option" data-i="${i}" aria-selected="${i === escolhido}">
-        <span class="linha1"><span class="proto">${escapar(c.protocolo)}</span><span class="fraco">${escapar(c.canal)}</span></span>
+        <span class="linha1"><span class="proto">${escapar(rotuloDoCaso(c))}</span><span class="fraco">${escapar(c.canal)}</span></span>
         <span class="fraco">${escapar(nomeDoCaso(c))} · ${escapar(c.status)}${c.encerrado ? " · encerrado" : ""}</span>
       </button></li>`
     )
@@ -142,7 +142,7 @@ function desenharCartao(aviso) {
     .join("");
   cartao.innerHTML = `
     <div class="cartao">
-      <div class="fraco">${escapar(c.protocolo)} · ${escapar(c.canal)}${c.responsavel ? ` · ${escapar(c.responsavel)}` : ""}</div>
+      <div class="fraco">${escapar(rotuloDoCaso(c))} · ${escapar(c.canal)}${c.responsavel ? ` · ${escapar(c.responsavel)}` : ""}</div>
       <h2>${escapar(nomeDoCaso(c))}</h2>
       <div class="fraco">${escapar(c.titulo)}</div>
       <div style="margin-top:8px">
@@ -256,3 +256,8 @@ async function anotar(lembrete) {
   const config = await enviar({ tipo: "config" });
   document.documentElement.dataset.tema = config?.ok && config.dados?.tema ? config.dados.tema : "auto";
 })();
+
+/* "ID 256873207" no Reclame Aqui, o protocolo no resto (16/11/2026). */
+function rotuloDoCaso(caso) {
+  return caso?.idRa && String(caso?.protocolo ?? "").startsWith("RA-") ? `ID ${caso.idRa}` : String(caso?.protocolo ?? "");
+}

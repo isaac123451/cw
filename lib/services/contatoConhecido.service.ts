@@ -105,7 +105,7 @@ export async function candidatosPorNome(prisma: PrismaClient, nome: string, limi
     }),
     prisma.case.findMany({
       where: { OR: [...contem("customer"), ...palavras.map((p) => ({ company: { name: { contains: p, mode: "insensitive" as const } } }))] },
-      select: { protocol: true, customer: true, company: { select: { name: true } }, title: true, status: true },
+      select: { protocol: true, idRa: true, customer: true, company: { select: { name: true } }, title: true, status: true },
       orderBy: { createdAt: "desc" },
       take: 100,
     }),
@@ -138,7 +138,7 @@ export async function candidatosPorNome(prisma: PrismaClient, nome: string, limi
   for (const c of casos) {
     const s = Math.max(semelhancaDeNome(nome, c.customer), semelhancaDeNome(nome, c.company?.name));
     if (s < SEMELHANCA_MINIMA) continue;
-    lista.push({ tipo: "caso", ref: c.protocol, titulo: c.customer, detalhe: `${c.protocol} · ${c.status} · ${c.title.slice(0, 60)}`, semelhanca: s });
+    lista.push({ tipo: "caso", ref: c.protocol, titulo: c.customer, detalhe: `${c.idRa ? `ID ${c.idRa}` : c.protocol} · ${c.status} · ${c.title.slice(0, 60)}`, semelhanca: s });
   }
 
   for (const e of contas) {
@@ -290,13 +290,13 @@ export async function candidatosPelasPistas(prisma: PrismaClient, pistas: Pistas
   const [contasPorDoc, casosPorDoc, npsPorEmail, casosPorEmail, contasPorSlug] = await Promise.all([
     documentos.length ? prisma.establishment.findMany({ where: { document: { in: documentos } }, select: { id: true, name: true, plan: true, status: true, city: true, document: true } }) : [],
     documentos.length
-      ? prisma.case.findMany({ where: { document: { in: documentos } }, select: { protocol: true, customer: true, title: true, status: true }, orderBy: { createdAt: "desc" }, take: 5 })
+      ? prisma.case.findMany({ where: { document: { in: documentos } }, select: { protocol: true, idRa: true, customer: true, title: true, status: true }, orderBy: { createdAt: "desc" }, take: 5 })
       : [],
     emails.length
       ? prisma.npsResponse.findMany({ where: { email: { in: emails, mode: "insensitive" } }, select: { id: true, customer: true, customerName: true, email: true, score: true, respondedAt: true }, orderBy: { respondedAt: "desc" }, take: 5 })
       : [],
     emails.length
-      ? prisma.case.findMany({ where: { email: { in: emails, mode: "insensitive" } }, select: { protocol: true, customer: true, title: true, status: true }, orderBy: { createdAt: "desc" }, take: 5 })
+      ? prisma.case.findMany({ where: { email: { in: emails, mode: "insensitive" } }, select: { protocol: true, idRa: true, customer: true, title: true, status: true }, orderBy: { createdAt: "desc" }, take: 5 })
       : [],
     slugs.length
       ? prisma.establishment.findMany({
@@ -315,14 +315,14 @@ export async function candidatosPelasPistas(prisma: PrismaClient, pistas: Pistas
     semelhanca: 1,
   });
   for (const e of contasPorDoc) pôr(conta(e), "CPF/CNPJ citado");
-  for (const c of casosPorDoc) pôr({ tipo: "caso", ref: c.protocol, titulo: c.customer, detalhe: `${c.protocol} · ${c.status} · ${c.title.slice(0, 60)}`, semelhanca: 1 }, "CPF/CNPJ citado");
+  for (const c of casosPorDoc) pôr({ tipo: "caso", ref: c.protocol, titulo: c.customer, detalhe: `${c.idRa ? `ID ${c.idRa}` : c.protocol} · ${c.status} · ${c.title.slice(0, 60)}`, semelhanca: 1 }, "CPF/CNPJ citado");
   for (const r of npsPorEmail) {
     pôr(
       { tipo: "nps", ref: r.id, titulo: r.customerName || r.customer, detalhe: `NPS nota ${r.score} · ${r.email ?? r.customer}`, semelhanca: 1 },
       "e-mail citado"
     );
   }
-  for (const c of casosPorEmail) pôr({ tipo: "caso", ref: c.protocol, titulo: c.customer, detalhe: `${c.protocol} · ${c.status} · ${c.title.slice(0, 60)}`, semelhanca: 1 }, "e-mail citado");
+  for (const c of casosPorEmail) pôr({ tipo: "caso", ref: c.protocol, titulo: c.customer, detalhe: `${c.idRa ? `ID ${c.idRa}` : c.protocol} · ${c.status} · ${c.title.slice(0, 60)}`, semelhanca: 1 }, "e-mail citado");
   for (const e of contasPorSlug) pôr({ ...conta(e), semelhanca: 0.95 }, "endereço do cardápio citado");
 
   /*

@@ -46,6 +46,16 @@ export interface Mudanca {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "id-do-ra-na-extensao-inteira",
+    dia: "2026-11-16",
+    tipo: "correcao",
+    frente: "extensao",
+    titulo: "O ID do Reclame Aqui também na extensão inteira",
+    texto:
+      "A lista \"quem é este contato\" ainda mostrava o protocolo (RA-yep1kcHjlWzmgyDa) no lugar do ID da página. Agora ela, o aviso de prazo estourado, o caso salvo, o vínculo do NPS, o popup e o caso rápido (Alt+Shift+K) mostram \"ID 256873207\", e o caso rápido também acha a reclamação digitando o ID.",
+    href: "/extensao",
+  },
+  {
     id: "extensao-atualiza-pelo-windows",
     dia: "2026-11-16",
     tipo: "melhoria",

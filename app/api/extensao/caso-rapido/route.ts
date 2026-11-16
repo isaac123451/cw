@@ -51,6 +51,7 @@ export async function GET(request: Request) {
     const base = url.origin;
     return responder(request, {
       protocolo: caso.protocol,
+      idRa: caso.idRa ?? null,
       cliente: caso.customer,
       empresa: caso.company ?? "",
       titulo: caso.title,
@@ -74,13 +75,15 @@ export async function GET(request: Request) {
       OR: [
         { protocol: { contains: q, mode: "insensitive" } },
         { externalId: { contains: q, mode: "insensitive" } },
+        /* O ID do Reclame Aqui, o número da página (16/11/2026). */
+        ...(/^\d{6,12}$/.test(q.trim()) ? [{ idRa: q.trim() }] : []),
         { customer: { contains: q, mode: "insensitive" } },
         { companyName: { contains: q, mode: "insensitive" } },
         { title: { contains: q, mode: "insensitive" } },
         ...(digitos.length >= 6 ? [{ phone: { contains: digitos } }, { document: { contains: digitos } }] : []),
       ],
     },
-    select: { protocol: true, customer: true, companyName: true, status: true, channel: true, updatedAt: true, encerradoEm: true },
+    select: { protocol: true, idRa: true, customer: true, companyName: true, status: true, channel: true, updatedAt: true, encerradoEm: true },
     orderBy: { updatedAt: "desc" },
     take: 30,
   });
@@ -88,7 +91,7 @@ export async function GET(request: Request) {
   const casos = linhas
     .sort((a, b) => Number(Boolean(a.encerradoEm)) - Number(Boolean(b.encerradoEm)))
     .slice(0, 8)
-    .map((c) => ({ protocolo: c.protocol, cliente: c.customer, empresa: c.companyName ?? "", status: c.status, canal: CANAL_PARA_ORIGEM[c.channel] ?? "Outro", encerrado: Boolean(c.encerradoEm) }));
+    .map((c) => ({ protocolo: c.protocol, idRa: c.idRa ?? null, cliente: c.customer, empresa: c.companyName ?? "", status: c.status, canal: CANAL_PARA_ORIGEM[c.channel] ?? "Outro", encerrado: Boolean(c.encerradoEm) }));
   return responder(request, { casos });
 }
 

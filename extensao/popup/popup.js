@@ -657,7 +657,7 @@ async function buscar(termo) {
           (caso) => `
         <div class="caso" data-url="${escapar(caso.url)}">
           <div class="titulo-caso">${escapar(caso.titulo)}</div>
-          <div class="sub">${escapar(caso.protocolo)} · ${escapar(
+          <div class="sub">${escapar(rotuloDoCaso(caso))} · ${escapar(
             caso.status
           )}</div>
         </div>`
@@ -724,3 +724,8 @@ document
 
   carregar();
 })();
+
+/* "ID 256873207" no Reclame Aqui, o protocolo no resto (16/11/2026). */
+function rotuloDoCaso(caso) {
+  return caso?.idRa && String(caso?.protocolo ?? "").startsWith("RA-") ? `ID ${caso.idRa}` : String(caso?.protocolo ?? "");
+}

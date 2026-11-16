@@ -1080,7 +1080,7 @@
   function blocoPerguntar(dados) {
     const casos = dados?.casos ?? [];
     const caso = casos.find((c) => c.aberto) ?? casos[0];
-    const sobre = caso?.protocolo ? `o caso ${caso.protocolo}` : dados?.cliente?.nome || "este cliente";
+    const sobre = caso?.protocolo ? `o caso ${CW.rotuloDoCaso(caso)}` : dados?.cliente?.nome || "este cliente";
     const sugestoes = caso?.protocolo
       ? ["O que fazer agora neste caso?", "O que falta para ele fechar?", "Como responder a última mensagem?"]
       : ["O que já sabemos deste cliente?", "Como abordar este cliente?"];
@@ -1375,7 +1375,7 @@
         const entraram = Number(resposta.dados.novas) || 0;
         if (entraram > 0) {
           CW.notificar?.(
-            `Conversa guardada · ${entraram} ${CW.plural(entraram, "nova", "novas")}${transcritas.length ? ` · ${transcritas.length} ${CW.plural(transcritas.length, "áudio", "áudios")} ${CW.plural(transcritas.length, "transcrito", "transcritos")}` : ""}${caso?.protocolo ? ` · ${caso.protocolo}` : ""}`
+            `Conversa guardada · ${entraram} ${CW.plural(entraram, "nova", "novas")}${transcritas.length ? ` · ${transcritas.length} ${CW.plural(transcritas.length, "áudio", "áudios")} ${CW.plural(transcritas.length, "transcrito", "transcritos")}` : ""}${caso?.protocolo ? ` · ${CW.rotuloDoCaso(caso)}` : ""}`
           );
         }
         ultimoAvisoDeFalha.delete(tel);
@@ -1535,7 +1535,7 @@
     const campo = (rotulo, html, faltando = false) =>
       `<label class="rotulo campo-caso${faltando ? " faltando" : ""}">${CW.escapar(rotulo)}${faltando ? ' <span class="falta-ponto">falta</span>' : ""}${html}</label>`;
     return [
-      `<div class="linha"><span class="rotulo" style="margin:0">Caso ${CW.escapar(c.protocolo)}</span><span class="tag neutro">${CW.escapar(c.status)}</span></div>`,
+      `<div class="linha"><span class="rotulo" style="margin:0">Caso ${CW.escapar(CW.rotuloDoCaso(c))}</span><span class="tag neutro">${CW.escapar(c.status)}</span></div>`,
       edicaoDoCaso.falta.length
         ? `<p class="sub" style="margin:4px 0 0;color:var(--atencao)">Falta no cadastro: ${edicaoDoCaso.falta.map((f) => CW.escapar(f)).join(", ")}.</p>`
         : `<p class="sub feito" style="margin:4px 0 0">${CW.icone("ok", 13)} Cadastro completo.</p>`,
@@ -1629,7 +1629,7 @@
       const quantos = Object.keys(mudancas).length;
       desenharEdicao({ texto: "Salvo no CW Reputação." });
       /* A confirmação depois da resposta do servidor, com o que foi gravado. */
-      CW.notificar?.(`${c.protocolo} salvo · ${quantos} ${CW.plural(quantos, "campo", "campos")}`);
+      CW.notificar?.(`${CW.rotuloDoCaso(c)} salvo · ${quantos} ${CW.plural(quantos, "campo", "campos")}`);
       return;
     }
     botao.disabled = false;
@@ -1661,9 +1661,9 @@
 
     for (const caso of abertos) {
       if (caso.sla?.situacao === "estourado") {
-        avisos.push({ tom: "perigo", texto: `Prazo estourado em ${caso.protocolo}` });
+        avisos.push({ tom: "perigo", texto: `Prazo estourado em ${CW.rotuloDoCaso(caso)}` });
       } else if (caso.sla?.situacao === "atencao") {
-        avisos.push({ tom: "atencao", texto: `${caso.protocolo}: ${caso.sla.rotulo}` });
+        avisos.push({ tom: "atencao", texto: `${CW.rotuloDoCaso(caso)}: ${caso.sla.rotulo}` });
       }
     }
 
@@ -2667,7 +2667,7 @@
       <div class="caso ${classe}" data-acao="ver"
            data-protocolo="${CW.escapar(caso.protocolo)}">
         <div class="linha">
-          <span class="sub">${CW.escapar(caso.protocolo)}</span>
+          <span class="sub" title="${CW.escapar(caso.protocolo)}">${CW.escapar(CW.rotuloDoCaso(caso))}</span>
           <span class="sub">${CW.data(caso.criadoEm)}</span>
         </div>
         <div class="titulo-caso">${CW.escapar(caso.titulo)}</div>
@@ -2813,7 +2813,7 @@
           `${P.ultimoDado.cliente.total} ${CW.plural(P.ultimoDado.cliente.total, "caso", "casos")}, ${P.ultimoDado.cliente.abertos} ${CW.plural(P.ultimoDado.cliente.abertos, "aberto", "abertos")}`,
           ...(P.ultimoDado.casos ?? [])
             .slice(0, 3)
-            .map((c) => `${c.protocolo} \u2014 ${c.status} \u2014 ${c.titulo}`),
+            .map((c) => `${CW.rotuloDoCaso(c)} \u2014 ${c.status} \u2014 ${c.titulo}`),
         ].join("\n")
       : undefined;
 

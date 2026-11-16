@@ -500,7 +500,7 @@
       '    <select class="campo" id="anota-caso" style="margin-top:0">',
       ...casos.map(
         (caso) =>
-          `      <option value="${CW.escapar(caso.protocolo)}">${CW.escapar(caso.protocolo)} — ${CW.escapar(caso.titulo.slice(0, 46))}</option>`
+          `      <option value="${CW.escapar(caso.protocolo)}">${CW.escapar(CW.rotuloDoCaso(caso))} — ${CW.escapar(caso.titulo.slice(0, 46))}</option>`
       ),
       '    </select>',
       '    <textarea class="campo" id="anota-texto" rows="3" placeholder="O que aconteceu neste atendimento"></textarea>',

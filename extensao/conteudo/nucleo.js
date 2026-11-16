@@ -212,6 +212,14 @@
    * A palavra no número certo — no lugar do "reclamação(ões)".
    * Devolve só a palavra: `${n} ${CW.plural(n, "caso", "casos")}`.
    */
+  /*
+    O ID do Reclame Aqui (16/11/2026): "preciso que você corrija em todos a
+    questão do ID". O caso do RA aparece pelo número da página; os outros
+    canais, pelo protocolo.
+  */
+  CW.rotuloDoCaso = (caso) =>
+    caso?.idRa && String(caso?.protocolo ?? "").startsWith("RA-") ? `ID ${caso.idRa}` : String(caso?.protocolo ?? "");
+
   CW.plural = (n, um, varios) => {
     const numero = typeof n === "number" ? n : Number(String(n ?? "").replace(/\./g, "").replace(",", "."));
     return Math.abs(numero) === 1 ? um : varios;
