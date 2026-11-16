@@ -14,6 +14,7 @@ import { sessaoRenovada } from "@/lib/auth/renovacao";
 const SESSION_COOKIE = "cw_session";
 
 const PUBLIC_PATHS = ["/login", "/cadastro"];
+const ARQUIVOS_DA_EXTENSAO = new Set(["/extensao/versao.json", "/extensao/cw-reputacao-extensao.zip", "/extensao/instalar.txt"]);
 
 /**
  * Enquanto não houver banco configurado a aplicação segue aberta, com os
@@ -58,6 +59,15 @@ export async function proxy(request: NextRequest) {
    * um sistema não carrega cookie de sessão de navegador.
    */
   if (pathname.startsWith("/api/")) {
+    return NextResponse.next();
+  }
+
+  /*
+    O pacote da extensão sem login (16/11/2026): o atualizador do Windows
+    roda sozinho, sem sessão. Só estes três arquivos — o código da extensão
+    é o mesmo que já roda no navegador de cada pessoa, sem segredo nenhum.
+  */
+  if (ARQUIVOS_DA_EXTENSAO.has(pathname)) {
     return NextResponse.next();
   }
 

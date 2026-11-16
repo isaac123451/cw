@@ -18,6 +18,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const zlib = require("node:zlib");
+const crypto = require("node:crypto");
 
 const RAIZ = process.cwd();
 const ORIGEM = path.join(RAIZ, "extensao");
@@ -106,5 +107,13 @@ const versao = JSON.parse(fs.readFileSync(path.join(ORIGEM, "manifest.json"), "u
 
 fs.mkdirSync(DESTINO, { recursive: true });
 fs.writeFileSync(path.join(DESTINO, "cw-reputacao-extensao.zip"), zip);
-fs.writeFileSync(path.join(DESTINO, "versao.json"), JSON.stringify({ versao, arquivos: central.length / 2, bytes: zip.length }));
+/*
+  A assinatura do pacote (16/11/2026): o atualizador do Windows compara com
+  a última que aplicou. Pelo conteúdo, e não pela versão — um arquivo que
+  mudou sem subir o número também chega.
+*/
+const assinatura = crypto.createHash("sha256").update(zip).digest("hex").slice(0, 32);
+fs.writeFileSync(path.join(DESTINO, "versao.json"), JSON.stringify({ versao, assinatura, arquivos: central.length / 2, bytes: zip.length }));
+/* O instalador com atualização automática, servido como texto para o "irm | iex". */
+fs.copyFileSync(path.join(RAIZ, "scripts", "instalar-extensao.ps1"), path.join(DESTINO, "instalar.txt"));
 console.log(`  extensão ${versao}: ${central.length / 2} arquivos, ${(zip.length / 1024).toFixed(0)} KB em public/extensao/`);

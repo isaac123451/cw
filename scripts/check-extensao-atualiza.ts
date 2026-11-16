@@ -55,5 +55,28 @@ const pagina = readFileSync("components/extensao/PaginaDaExtensao.tsx", "utf8");
 conferir("tem o botão de baixar o zip", pagina.includes('href="/extensao/cw-reputacao-extensao.zip"'), true);
 conferir("tem o 'atualizar agora'", pagina.includes('pedirAExtensao<') && pagina.includes('"atualizarAgora"'), true);
 
+/*
+  A atualização automática pelo Windows (16/11/2026): "tem que ser algo
+  automático sem ter que ficar baixando nada".
+*/
+console.log("\n  ATUALIZAÇÃO AUTOMÁTICA PELO WINDOWS\n");
+const instalador = readFileSync("scripts/instalar-extensao.ps1", "utf8");
+const zipJs = readFileSync("scripts/zip-da-extensao.js", "utf8");
+const proxy = readFileSync("proxy.ts", "utf8");
+conferir("o pacote leva uma assinatura do conteúdo", zipJs.includes("assinatura") && zipJs.includes('createHash("sha256")'), true);
+conferir("o instalador é publicado como instalar.txt", zipJs.includes('"instalar.txt"'), true);
+conferir(
+  "versao.json, zip e instalador abrem sem login",
+  ["/extensao/versao.json", "/extensao/cw-reputacao-extensao.zip", "/extensao/instalar.txt"].every((a) => proxy.includes(`"${a}"`)) && proxy.includes("ARQUIVOS_DA_EXTENSAO.has(pathname)"),
+  true
+);
+conferir("a tarefa do Windows roda a cada 10 minutos, sem administrador", /schtasks \/Create \/F \/SC MINUTE \/MO 10/.test(instalador) && !/\/RL HIGHEST|\/RU SYSTEM/i.test(instalador), true);
+conferir("o atualizador espelha a pasta (arquivo velho sai)", instalador.includes("robocopy $nova $pasta /MIR"), true);
+conferir("o atualizador compara pela assinatura, não pela versão", instalador.includes("$v.assinatura -eq $atual"), true);
+conferir("roda escondido, pelo lançador .vbs", instalador.includes("atualizar.vbs") && instalador.includes("-WindowStyle Hidden"), true);
+const foraDoAtualizador = instalador.slice(0, instalador.indexOf("@'")) + instalador.slice(instalador.indexOf("'@") + 2);
+conferir("o instalador não usa exit (fecharia o PowerShell de quem colou)", /^\s*exit\b/m.test(foraDoAtualizador), false);
+conferir("a página mostra o comando de instalar", pagina.includes('/extensao/instalar.txt" | iex'), true);
+
 console.log(falhas ? `\n  ${falhas} falha(s).\n` : "\n  Tudo certo.\n");
 process.exit(falhas ? 1 : 0);

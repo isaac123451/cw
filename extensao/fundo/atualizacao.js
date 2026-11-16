@@ -83,7 +83,7 @@ export async function avisarSePlataformaMaisNova(versaoDaPlataforma, enderecoDaP
     type: "basic",
     iconUrl: chrome.runtime.getURL("icones/icone-128.png"),
     title: "Há uma versão nova da extensão",
-    message: `A sua está na ${rodando}; a plataforma, na ${versaoDaPlataforma}. Clique para baixar e trocar a pasta.`,
+    message: `A sua está na ${rodando}; a plataforma, na ${versaoDaPlataforma}. Clique para instalar a atualização automática (uma vez só).`,
     priority: 1,
   });
   return true;

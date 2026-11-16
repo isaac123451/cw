@@ -46,6 +46,16 @@ export interface Mudanca {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "extensao-atualiza-pelo-windows",
+    dia: "2026-11-16",
+    tipo: "melhoria",
+    frente: "extensao",
+    titulo: "A extensão se atualiza sozinha, sem baixar nada",
+    texto:
+      "O Chrome não atualiza sozinho uma extensão carregada de uma pasta, e por isso cada versão nova pedia baixar o zip e trocar a pasta. Agora a instalação é um comando só, colado no PowerShell uma vez por computador (está na página Extensão). Ele põe a extensão numa pasta fixa e deixa o Windows conferindo, escondido, a cada 10 minutos: saiu versão nova, ele troca os arquivos sozinho. A extensão percebe a pasta nova em até 5 minutos e se recarrega, voltando às abas abertas do WhatsApp e do Reclame Aqui. Sem baixar, sem recarregar, sem F5.",
+    href: "/extensao",
+  },
+  {
     id: "qual-reclamacao-e-acesso-rapido",
     dia: "2026-11-16",
     tipo: "melhoria",

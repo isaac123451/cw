@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 
-import { ArrowRight, CheckCircle2, Download, Loader2, RefreshCw, TriangleAlert, Unplug } from "lucide-react";
+import { ArrowRight, Check, CheckCircle2, Copy, Download, Loader2, RefreshCw, TriangleAlert, Unplug } from "lucide-react";
 
 import SurfaceCard from "@/components/shared/SurfaceCard";
 
@@ -30,6 +30,38 @@ type Estado =
   | { tipo: "sem-ponte"; vista: { versao: string; vistaEm: string } | null };
 
 const PLATAFORMA = process.env.NEXT_PUBLIC_VERSAO ?? "";
+
+const semAssinatura = () => () => {};
+
+/**
+ * O comando de instalar (16/11/2026): "tem que ser algo automático sem ter
+ * que ficar baixando nada". Cola no PowerShell uma vez; o instalador põe a
+ * extensão numa pasta fixa e deixa o Windows atualizando essa pasta sozinho.
+ */
+function ComandoDeInstalar() {
+  const origem = useSyncExternalStore(semAssinatura, () => window.location.origin, () => "");
+  const [copiado, setCopiado] = useState(false);
+  const comando = `$CWOrigem='${origem}'; irm "$CWOrigem/extensao/instalar.txt" | iex`;
+  return (
+    <span className="mt-2 flex items-center gap-2">
+      <code className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap rounded-lg bg-zinc-900 px-3 py-2 text-xs text-zinc-100">{origem ? comando : "…"}</code>
+      <button
+        type="button"
+        disabled={!origem}
+        onClick={() => {
+          void navigator.clipboard.writeText(comando).then(() => {
+            setCopiado(true);
+            window.setTimeout(() => setCopiado(false), 2000);
+          });
+        }}
+        className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-violet-700 px-3 py-2 text-xs font-semibold text-white hover:bg-violet-800 disabled:opacity-60"
+      >
+        {copiado ? <Check size={13} /> : <Copy size={13} />}
+        {copiado ? "Copiado" : "Copiar"}
+      </button>
+    </span>
+  );
+}
 
 export default function PaginaDaExtensao() {
   const [estado, setEstado] = useState<Estado>({ tipo: "lendo" });
@@ -126,7 +158,7 @@ export default function PaginaDaExtensao() {
 
         {atualizando === "pasta-velha" && (
           <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-900">
-            A pasta da extensão ainda tem a versão antiga. Baixe o zip, descompacte por cima da mesma pasta e espere até 5 minutos, ou clique em Atualizar agora de novo: ela se recarrega sozinha.
+            A pasta da extensão ainda tem a versão antiga. Com a atualização automática instalada, ela chega em até 10 minutos; sem ela, use o comando de instalar abaixo (uma vez só).
           </p>
         )}
         {atualizando === "recarregando" && (
@@ -137,21 +169,23 @@ export default function PaginaDaExtensao() {
       </SurfaceCard>
 
       <div className="grid gap-5 lg:grid-cols-2">
-        <SurfaceCard title="Instalar pela primeira vez" description="Uns 2 minutos. Uma vez só por computador.">
+        <SurfaceCard title="Instalar com atualização automática" description="Uma vez só por computador. Depois disso, nada para baixar.">
           <ol className="list-decimal space-y-2 pl-5 text-sm text-zinc-700">
-            <li>Clique em <strong>Baixar a extensão</strong>, acima.</li>
-            <li>Descompacte o zip numa pasta que não vai mudar de lugar (por exemplo, em Documentos). Vai aparecer a pasta <code className="rounded bg-zinc-100 px-1">cw-reputacao-extensao</code>.</li>
-            <li>No Chrome, abra <code className="rounded bg-zinc-100 px-1">chrome://extensions</code> e ligue o <strong>Modo do desenvolvedor</strong>, no canto de cima.</li>
-            <li>Clique em <strong>Carregar sem compactação</strong> e escolha a pasta <code className="rounded bg-zinc-100 px-1">cw-reputacao-extensao</code>.</li>
-            <li>Nas <strong>Opções</strong> da extensão, confira o endereço da plataforma e entre com o seu usuário. Volte a esta página: o estado acima fica verde.</li>
+            <li>
+              Abra o <strong>PowerShell</strong> (tecla Windows, digite PowerShell, Enter), cole o comando abaixo e aperte Enter.
+              <ComandoDeInstalar />
+            </li>
+            <li>No Chrome, abra <code className="rounded bg-zinc-100 px-1">chrome://extensions</code> e ligue o <strong>Modo do desenvolvedor</strong>. Se houver um CW Reputação antigo, clique em <strong>Remover</strong>.</li>
+            <li>Clique em <strong>Carregar sem compactação</strong> e cole o caminho que o PowerShell mostrou (ele já fica copiado).</li>
+            <li>Nas <strong>Opções</strong> da extensão, confira o endereço da plataforma. Volte a esta página: o estado acima fica verde.</li>
           </ol>
         </SurfaceCard>
 
-        <SurfaceCard title="Como ela se mantém atualizada" description="Sem precisar lembrar de recarregar.">
+        <SurfaceCard title="Como ela se mantém atualizada" description="Sem baixar, sem recarregar, sem F5.">
           <ul className="space-y-2 text-sm text-zinc-700">
-            <li>A cada 5 minutos a extensão confere a própria pasta. Se os arquivos mudaram, ela se recarrega e volta às abas abertas do WhatsApp e do Reclame Aqui, <strong>sem F5</strong>.</li>
-            <li>Quando sai uma versão nova da plataforma, a extensão avisa com uma notificação. É só baixar o zip e descompactar <strong>por cima da mesma pasta</strong>: o resto ela faz sozinha.</li>
-            <li>Com a extensão desatualizada, o sino da plataforma também avisa, com as duas versões.</li>
+            <li>A cada 10 minutos o Windows confere, escondido, se saiu versão nova na plataforma. Se saiu, troca os arquivos da extensão sozinho.</li>
+            <li>A extensão confere a própria pasta a cada 5 minutos. Quando ela muda, a extensão se recarrega e volta às abas abertas do WhatsApp e do Reclame Aqui.</li>
+            <li>Ou seja: uma versão nova chega em até 15 minutos, sem ninguém fazer nada. O sino da plataforma avisa se alguma ficar para trás.</li>
           </ul>
         </SurfaceCard>
       </div>
