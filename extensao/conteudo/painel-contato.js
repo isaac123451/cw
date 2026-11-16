@@ -1864,10 +1864,12 @@
     */
     const semNome = ["", "não informado", "nao informado"].includes(String(cliente.nome ?? "").trim().toLowerCase());
     /* Sem nome em lugar nenhum, o telefone da conversa é o que identifica — e não "Sem nome". */
-    const doContato = semNome ? P.nomeParaMostrar(cliente.nome) : "";
+    /* O nome lido da reclamação aberta vem antes do contato (16/11/2026): o caso do vigia chega "Não informado". */
+    const daPagina = semNome ? String(P.captura?.cliente ?? "").trim() : "";
+    const doContato = semNome ? daPagina || P.nomeParaMostrar(cliente.nome) : "";
     const telefone = String(P.consulta?.telefone ?? "").trim();
     const nome = semNome ? doContato || telefone || "Sem nome" : String(cliente.nome).trim();
-    const avisoDoNome = !semNome ? "" : doContato ? "nome do contato · a reclamação está sem o nome do consumidor" : "a reclamação está sem o nome do consumidor";
+    const avisoDoNome = !semNome ? "" : daPagina ? "nome lido da reclamação" : doContato ? "nome do contato · a reclamação está sem o nome do consumidor" : "a reclamação está sem o nome do consumidor";
 
     return `
       <div class="cabecalho-cliente">

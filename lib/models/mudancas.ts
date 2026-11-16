@@ -52,7 +52,7 @@ export const MUDANCAS: Mudanca[] = [
     frente: "extensao",
     titulo: "A extensão volta a reconhecer o cliente do Reclame Aqui",
     texto:
-      "O Reclame Aqui mudou a página da reclamação: o nome do consumidor passou a vir sozinho, logo acima do CPF, sem a etiqueta \"Nome social\". O painel dizia \"a reclamação está sem o nome do consumidor\" e oferecia \"Ler reclamação e adicionar ao Kanban\" para casos que já estavam no quadro, porque procurava o número da página (o ID do RA) só no protocolo. Agora ele lê o nome no layout novo e acha o caso pelo ID.",
+      "O Reclame Aqui mudou a página da reclamação: o nome do consumidor passou a vir sozinho, logo acima do CPF, sem a etiqueta \"Nome social\". O painel dizia \"a reclamação está sem o nome do consumidor\" e oferecia \"Ler reclamação e adicionar ao Kanban\" para casos que já estavam no quadro, porque procurava o número da página (o ID do RA) só no protocolo. Agora ele lê o nome no layout novo, acha o caso pelo ID e reconhece que ele já está no quadro. Nos 7 casos que o vigia trouxe como \"Não informado\", o cabeçalho mostra o nome lido da página, e ao abrir a reclamação o nome é completado no caso.",
     href: "/extensao",
   },
   {

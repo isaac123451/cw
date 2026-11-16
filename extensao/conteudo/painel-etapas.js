@@ -414,7 +414,10 @@
     const jaEstaAqui = (dados?.casos ?? []).some(
       (caso) =>
         caso.id === P.captura.id ||
-        caso.protocolo === `RA-${P.captura.id}`
+        caso.protocolo === `RA-${P.captura.id}` ||
+        /* O número da página é o ID do RA; o COD é o protocolo (16/11/2026). */
+        (Boolean(caso.idRa) && caso.idRa === P.captura.id) ||
+        (Boolean(P.captura.cod) && caso.protocolo === `RA-${P.captura.cod}`)
     );
 
     if (jaEstaAqui) {
