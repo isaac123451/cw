@@ -319,6 +319,33 @@ export async function GET(request: Request) {
       resumir(item, workspace, origem)
     );
 
+  /*
+    As outras reclamações do mesmo contato (16/11/2026): "apontando para o
+    caso errado, além disso seria interessante ter como sinalizar o caso
+    correto". Com o número vinculado a um caso, o painel só via aquele — a
+    Pamela tem quatro reclamações no mesmo telefone. Aqui vão as outras do
+    Reclame Aqui achadas pelo telefone, e-mail ou documento, para o painel
+    oferecer "é esta" em cada uma.
+  */
+  const jaListados = new Set(encontro.casos.map((c) => c.protocol));
+  const doMesmoContato = casar(casos, { ...alvo, protocolo: "" });
+  const outrosDoContato =
+    doMesmoContato.confianca === "exata" || doMesmoContato.confianca === "provavel"
+      ? doMesmoContato.casos
+          .filter((c) => !jaListados.has(c.protocol) && isReclameAqui(c))
+          .sort((a, b) => Number(isOpen(b)) - Number(isOpen(a)) || String(b.createdAt).localeCompare(String(a.createdAt)))
+          .slice(0, 6)
+          .map((c) => ({
+            protocolo: c.protocol,
+            idRa: c.idRa ?? null,
+            titulo: c.title,
+            status: c.status,
+            aberto: isOpen(c),
+            url: `${origem}/reclame-aqui/${c.id}`,
+            urlEmpresa: enderecoNaAreaDaEmpresa(c.protocol) ?? undefined,
+          }))
+      : [];
+
   return responder(request, {
     usuario: usuario
       ? { nome: usuario.nome, papel: usuario.papel }
@@ -339,6 +366,7 @@ export async function GET(request: Request) {
     confianca: encontro.confianca,
     porQue: encontro.porQue,
     aviso: encontro.aviso,
+    outrosDoContato,
 
     /* Quem ligou este telefone à ficha, e quando — o painel oferece desfazer. */
     vinculo: conhecido

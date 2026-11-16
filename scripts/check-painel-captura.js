@@ -33,5 +33,35 @@ conferir("pelo COD (o protocolo do caso)", jaEsta([{ id: "cmw1", protocolo: "RA-
 conferir("outro caso do mesmo cliente não conta", jaEsta([{ id: "cmw2", protocolo: "RA-outroCodigo1234", idRa: "263517373" }]), false);
 conferir("sem idRa nem COD iguais, oferece adicionar", jaEsta([]), false);
 
+/*
+  Qual reclamação é esta conversa (16/11/2026): "apontando para o caso
+  errado, além disso seria interessante ter como sinalizar o caso
+  correto" — e o acesso rápido ao CW e à área da empresa.
+*/
+const Q = { telefoneDaConversa: "11999990000" };
+const janela2 = { CWReputacao: { escapar: (t) => String(t), icone: () => "", enviar: async () => ({}) }, __cwPainel: Q };
+vm.runInNewContext(fs.readFileSync(path.join(__dirname, "../extensao/conteudo/painel-contato.js"), "utf8"), {
+  window: janela2, document: { addEventListener() {} }, console, setTimeout, clearTimeout, location: { hostname: "web.whatsapp.com" },
+});
+
+const CASO_TT = { protocolo: "RA-TT_wCjTVg8RIeq_L", idRa: "262662525", titulo: "Perdendo vendas por falha no estoque do combo", aberto: true, canal: "Reclame Aqui", url: "https://cw/reclame-aqui/a", urlEmpresa: "https://ra/area-da-empresa/reclamacoes/TT_wCjTVg8RIeq_L/" };
+const CASO_PIX = { protocolo: "RA-H6G7Dgby4mdOyQ1Y", idRa: "262398585", titulo: "Não recebi o repasse de pagamentos via pix", aberto: true, url: "https://cw/reclame-aqui/b" };
+
+console.log("\n  QUAL RECLAMAÇÃO É ESTA CONVERSA\n");
+const qual = Q.blocoQualReclamacao({ casos: [CASO_TT], outrosDoContato: [CASO_PIX], vinculo: { por: "Michele" } });
+conferir("duas reclamações do contato: o painel pergunta", qual.includes("2 reclamações deste contato"), true);
+conferir("a vinculada fica em foco", /ID 262662525[^<]*<\/span>.*?em foco/s.test(qual), true);
+conferir("a outra ganha 'é esta' com o protocolo dela", qual.includes('data-acao="vincular" data-tipo="caso" data-ref="RA-H6G7Dgby4mdOyQ1Y"'), true);
+conferir("com vínculo, a lista vem recolhida", qual.includes('<details class="qual-reclamacao">'), true);
+conferir("sem vínculo, a lista vem aberta", Q.blocoQualReclamacao({ casos: [CASO_TT, CASO_PIX] }).includes('<details class="qual-reclamacao" open>'), true);
+conferir("uma reclamação só: nada a perguntar", Q.blocoQualReclamacao({ casos: [CASO_TT], outrosDoContato: [] }), "");
+conferir("a mesma não aparece duas vezes", Q.blocoQualReclamacao({ casos: [CASO_TT], outrosDoContato: [CASO_TT] }), "");
+
+console.log("\n  ACESSO RÁPIDO\n");
+const rapido = Q.blocoAcessoRapido({ casos: [CASO_TT] });
+conferir("abrir no CW leva ao caso", rapido.includes('data-url="https://cw/reclame-aqui/a">Abrir no CW'), true);
+conferir("área da empresa leva à reclamação no RA", rapido.includes('area-da-empresa/reclamacoes/TT_wCjTVg8RIeq_L/">Área da empresa'), true);
+conferir("sem caso, sem acesso rápido", Q.blocoAcessoRapido({ casos: [] }), "");
+
 console.log(falhas ? `\n  ${falhas} falha(s).\n` : "\n  Tudo certo.\n");
 process.exit(falhas ? 1 : 0);

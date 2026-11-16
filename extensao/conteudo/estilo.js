@@ -208,6 +208,14 @@ ${CORES}
 .quem-e .candidato b, .quem-e .candidato .sub { overflow: hidden; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .quem-e .candidatos li + li { border-top: 1px solid var(--borda, rgba(127,127,127,.18)); padding-top: 6px; }
 .vinculo-contato { margin: 4px 0 8px; }
+.acesso-rapido { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 6px 0 4px; }
+.acesso-rapido .copiar { padding: 3px 8px; }
+.qual-reclamacao { margin: 4px 0 8px; font-size: 12px; }
+.qual-reclamacao summary { cursor: pointer; font-weight: 600; }
+.qual-reclamacao ul { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 5px; }
+.qual-reclamacao li { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.qual-reclamacao li > span:first-child { flex: 1 1 160px; min-width: 0; }
+.qual-reclamacao .copiar { padding: 2px 8px; }
 .vinculo-contato a { cursor: pointer; text-decoration: underline; }
 /* Guardando esta conversa: um ponto verde discreto no canto do botão. */
 .gatilho.guardando::after {

@@ -46,6 +46,16 @@ export interface Mudanca {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "qual-reclamacao-e-acesso-rapido",
+    dia: "2026-11-16",
+    tipo: "melhoria",
+    frente: "extensao",
+    titulo: "Escolher a reclamação certa da conversa, e atalhos para o CW e o Reclame Aqui",
+    texto:
+      "Quando o mesmo contato tem mais de uma reclamação, o painel do WhatsApp lista todas, com o ID e o título, e marca a que está em foco. Um clique em \"é esta\" liga o número à reclamação certa, e o painel passa a abrir nela. Antes, o número vinculado a uma reclamação escondia as outras: a Pamela tem quatro no mesmo telefone, e o painel mostrava uma só, a errada. Logo abaixo do nome também ficam dois atalhos para a reclamação em foco: Abrir no CW e Área da empresa, no Reclame Aqui.",
+    href: "/extensao",
+  },
+  {
     id: "ra-reconhece-de-novo",
     dia: "2026-11-16",
     tipo: "correcao",

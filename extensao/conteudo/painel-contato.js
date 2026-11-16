@@ -736,7 +736,9 @@
     // Antes de tudo, o que pede cuidado com esta pessoa, em uma linha cada.
     // (A lista existe mesmo vazia: os sinais da conversa chegam depois.)
     partes.push(blocoCabecalho(dados, tom, rotuloConfianca));
+    partes.push(blocoAcessoRapido(dados));
     partes.push(blocoVinculo(dados));
+    partes.push(blocoQualReclamacao(dados));
     partes.push(blocoAvisos(P.avisosDoContato(dados), true));
 
     // O resumo vem primeiro: responde "o que está havendo aqui".
@@ -2015,6 +2017,60 @@
       </div>
       ${blocoAcoesRapidas(dados)}`;
   }
+
+  /*
+    Acesso rápido (16/11/2026): "preciso de um acesso rápido do lado da
+    conversa para o cw reputação e área da empresa no reclame aqui". Os
+    dois links do caso em foco, logo abaixo do nome.
+  */
+  function blocoAcessoRapido(dados) {
+    const caso = (dados?.casos ?? []).find((c) => c.aberto) ?? (dados?.casos ?? [])[0];
+    if (!caso) return "";
+    const rotulo = caso.idRa ? `ID ${caso.idRa}` : caso.protocolo;
+    const links = [
+      caso.url ? `<button type="button" class="copiar" data-acao="abrir" data-url="${CW.escapar(caso.url)}">Abrir no CW</button>` : "",
+      caso.urlEmpresa ? `<button type="button" class="copiar" data-acao="abrir" data-url="${CW.escapar(caso.urlEmpresa)}">Área da empresa</button>` : "",
+    ].filter(Boolean);
+    if (!links.length) return "";
+    return `<div class="acesso-rapido"><span class="sub">${CW.escapar(rotulo)}</span>${links.join("")}</div>`;
+  }
+
+  /*
+    Qual reclamação é esta conversa (16/11/2026): "apontando para o caso
+    errado, além disso seria interessante ter como sinalizar o caso
+    correto". Quando o mesmo contato tem duas ou mais reclamações, o painel
+    lista todas, a que está em foco marcada, e "é esta" em cada outra: um
+    clique liga o número à reclamação certa, e o painel recarrega nela.
+  */
+  function blocoQualReclamacao(dados) {
+    if (!telefoneParaLembrar()) return "";
+    const doRA = (c) => (c.canal ?? "Reclame Aqui") === "Reclame Aqui";
+    const vistos = new Set();
+    const todas = [...(dados?.casos ?? []).filter(doRA), ...(dados?.outrosDoContato ?? [])].filter((c) => {
+      if (!c?.protocolo || vistos.has(c.protocolo)) return false;
+      vistos.add(c.protocolo);
+      return true;
+    });
+    if (todas.length < 2) return "";
+    const emFoco = ((dados?.casos ?? []).find((c) => c.aberto && doRA(c)) ?? (dados?.casos ?? []).find(doRA))?.protocolo;
+    const linhas = todas.map((c) => {
+      const rotulo = `${c.idRa ? `ID ${c.idRa}` : c.protocolo} · ${String(c.titulo ?? "").slice(0, 48)}`;
+      const situacao = c.aberto ? "aberta" : String(c.status ?? "").toLowerCase();
+      const acao =
+        c.protocolo === emFoco
+          ? `<span class="tag ok">em foco</span>`
+          : `<button type="button" class="copiar" data-acao="vincular" data-tipo="caso" data-ref="${CW.escapar(c.protocolo)}">é esta</button>`;
+      return `<li><span title="${CW.escapar(String(c.titulo ?? ""))}">${CW.escapar(rotulo)}</span> <span class="sub">${CW.escapar(situacao)}</span> ${acao}</li>`;
+    });
+    return `<details class="qual-reclamacao"${dados?.vinculo ? "" : " open"}>
+      <summary>${todas.length} reclamações deste contato — qual é esta conversa?</summary>
+      <ul>${linhas.join("")}</ul>
+      <p class="sub falha" data-quem-e-erro></p>
+    </details>`;
+  }
+
+  P.blocoAcessoRapido = blocoAcessoRapido;
+  P.blocoQualReclamacao = blocoQualReclamacao;
 
   /** Quem ligou este número à ficha — e o "não é este" para desfazer. Numa busca manual, o "É este" do número da conversa. */
   function blocoVinculo(dados) {
