@@ -1,7 +1,7 @@
 import "server-only";
 
 import { tentativaRespondida } from "@/lib/models/contatoDoNps";
-import { emOrdemDeConversa } from "@/lib/models/conversa";
+import { emOrdemDeConversa, ehFalaDoCliente } from "@/lib/models/conversa";
 
 import type { PrismaClient } from "@prisma/client";
 
@@ -87,7 +87,7 @@ export async function registrarRespostaNoNps(db: Pick<Db, "npsAttempt" | "mensag
   const falas = await db.mensagemDaConversa.findMany({ where: { conversa: { npsResponseId }, de: "cliente", em: { not: null } }, select: { em: true, texto: true } });
   const alvo = tentativaRespondida(
     tentativas.map((t) => ({ ...t, createdAt: t.createdAt.toISOString() })),
-    falas.filter((f) => !ehAvisoDoWhatsApp(f.texto)).map((f) => f.em!.toISOString())
+    falas.filter((f) => ehFalaDoCliente({ de: "cliente", texto: f.texto })).map((f) => f.em!.toISOString())
   );
   if (alvo) await db.npsAttempt.update({ where: { id: alvo }, data: { resultado: "respondeu" } });
   return alvo;

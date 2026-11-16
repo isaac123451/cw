@@ -682,3 +682,35 @@ export function emOrdemDeConversa<T extends { id: string; em: Date | null }>(men
     .sort((a, b) => a.h - b.h || a.i - b.i)
     .map((x) => x.m);
 }
+
+/**
+ * A resposta automática do WhatsApp do cliente (16/11/2026): o robô de
+ * atendimento, a mensagem de fora do horário, a saudação da empresa. Fica
+ * guardada como fala do cliente — é o que veio do número dele —, mas não é
+ * resposta dele: não marca "respondeu" e não entra no humor. Medido em
+ * 16/11: 11 de 1.530 falas, 3 dos 22 detratores dados como "respondeu" só
+ * tinham robô respondendo.
+ */
+const RESPOSTAS_AUTOMATICAS = [
+  /\bsou (apenas )?(um|uma) (bot|rob[oô]|assistente virtual)\b/i,
+  /\b(mensagem|resposta) autom[aá]tica\b/i,
+  /\bagrade(ce|cemos) (o |o seu |seu |pelo )?contato\b/i,
+  /\bobrigad[oa] por (entrar em )?contato\b/i,
+  /\bfora (do|de) (nosso )?hor[aá]rio\b/i,
+  /\bn[aã]o posso responder a isso\b/i,
+  /\bseja (muito )?bem[- ]?vind[oa]/i,
+  /\bboas[- ]vindas\b/i,
+  /\bdigite (o n[uú]mero|uma op[cç][aã]o)\b|\bescolha uma (das )?op[cç][oõ]es\b/i,
+  /\bem breve (retornaremos|responderemos|entraremos em contato)\b/i,
+  /\bn[aã]o entendi (a )?sua mensagem\b/i,
+];
+
+export function ehRespostaAutomatica(texto: string | null | undefined) {
+  const t = (texto ?? "").trim();
+  return RESPOSTAS_AUTOMATICAS.some((r) => r.test(t));
+}
+
+/** Fala de verdade do cliente: nem aviso do WhatsApp nem resposta automática. */
+export function ehFalaDoCliente(m: { de: string; texto: string | null | undefined }) {
+  return m.de === "cliente" && !ehAvisoDoWhatsApp(m.texto) && !ehRespostaAutomatica(m.texto);
+}

@@ -262,6 +262,8 @@ export interface LeituraDoDia {
   pedimosAvaliacao: boolean;
   solucao: "confirmou" | "nao-resolveu" | "nao";
   causa: string;
+  /** Como o cliente terminou a conversa depois do contato, de 1 a 5; null se não falou (16/11/2026). */
+  humor: 1 | 2 | 3 | 4 | 5 | null;
 }
 
 /** A resposta da IA, conferida: campo torto vira o lado conservador (não anotar, não lembrar). */
@@ -324,7 +326,11 @@ export function leituraDaResposta(d: Record<string, unknown>, segmentos: string[
   const causa = causas.find((c) => c.toLowerCase() === limpo(d.causa).toLowerCase()) ?? "";
   const vinculado = sobreEle && segmento !== "outro";
 
+  const nota = Math.round(Number(d.humor));
+  const humor = (vinculado && nota >= 1 && nota <= 5 ? nota : null) as LeituraDoDia["humor"];
+
   return {
+    humor,
     cancelamento,
     sobreEle,
     pedimosAvaliacao: vinculado && d.pedimos_avaliacao === true,

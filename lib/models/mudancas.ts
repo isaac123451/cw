@@ -46,6 +46,16 @@ export interface Mudanca {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "humor-pela-conversa",
+    dia: "2026-11-16",
+    tipo: "correcao",
+    frente: "nps",
+    titulo: "Humor do detrator lido das conversas, e robô não conta como resposta",
+    texto:
+      "O \"Humor do detrator depois\", na Análise do NPS, contava só quem marcava o humor à mão: 6 dos 31 detratores que responderam. Agora a IA do dia lê, na conversa do WhatsApp ligada ao NPS, como o cliente terminou depois do nosso contato (de irritado a encantado) e grava o humor quando ninguém marcou, com uma nota na ficha e o desfazer de sempre. O marcado à mão continua valendo. E a resposta automática do WhatsApp do cliente (robô de atendimento, mensagem de fora do horário, saudação da empresa) deixou de contar como o cliente respondendo: ela marcava \"respondeu\" em 3 detratores que nunca falaram.",
+    href: "/nps/analise",
+  },
+  {
     id: "extensao-na-plataforma-e-atualizacao",
     dia: "2026-11-13",
     tipo: "novo",

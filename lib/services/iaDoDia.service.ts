@@ -1,3 +1,4 @@
+import { ehFalaDoCliente } from "@/lib/models/conversa";
 import type { Prisma, PrismaClient } from "@prisma/client";
 
 import type { AgendaTask } from "@/lib/models/agenda";
@@ -16,7 +17,7 @@ import {
 } from "@/lib/models/iaDoDia";
 import { nomeDaConversa, nomeDePessoa, nomeDoCliente, semMensagensDeOutraConversa } from "@/lib/models/identidadeNaConversa";
 import { idDoLembrete } from "@/lib/models/lembretesAutomaticos";
-import { isEncerrado, ROOT_CAUSES, tentativasRespondidas } from "@/lib/models/nps";
+import { isEncerrado, ROOT_CAUSES, tentativasRespondidas, moodOf } from "@/lib/models/nps";
 import { CLOSED_STATUS } from "@/lib/services/case.service";
 import { descreverRegistro, paredeDe, prazoUtil } from "@/lib/services/horasUteis";
 import { lerExpediente } from "@/lib/services/operacao.service";
@@ -320,7 +321,7 @@ export async function anotarConversasDoDia(
       caseId: true,
       npsResponseId: true,
       case: { select: { externalId: true, protocol: true, channel: true, customer: true, title: true, description: true, causaRaiz: true, churnRisk: true, evaluated: true, status: true } },
-      npsResponse: { select: { score: true, comment: true, customerName: true, rootCause: true, churnRisk: true, status: true, resolvedAfter: true, confirmedAt: true, reviewAsked: true } },
+      npsResponse: { select: { score: true, comment: true, customerName: true, rootCause: true, churnRisk: true, status: true, resolvedAfter: true, confirmedAt: true, reviewAsked: true, moodAfter: true } },
       mensagens: {
         where: { em: { gte: inicioDoDia } },
         orderBy: [{ em: "asc" }, { id: "asc" }],
@@ -515,7 +516,7 @@ interface ConversaDaFicha {
   caseId: string | null;
   npsResponseId: string | null;
   case: { protocol: string; externalId: string | null; channel: string; causaRaiz: string | null; churnRisk: boolean; evaluated: boolean } | null;
-  npsResponse: { rootCause: string | null; churnRisk: boolean; status: string; resolvedAfter: boolean | null; confirmedAt: Date | null; reviewAsked: boolean } | null;
+  npsResponse: { rootCause: string | null; churnRisk: boolean; status: string; resolvedAfter: boolean | null; confirmedAt: Date | null; reviewAsked: boolean; moodAfter?: number | null } | null;
   mensagens: { de: string; texto: string; em: Date }[];
 }
 
@@ -526,7 +527,8 @@ async function atualizarFicha(
 ): Promise<number> {
   const inicioDoDia = new Date(Date.parse(`${hoje}T03:00:00Z`));
   const nossas = c.mensagens.filter((m) => m.de === "nos");
-  const dele = c.mensagens.filter((m) => m.de === "cliente");
+  /* A resposta automática do WhatsApp do cliente não é ele falando (16/11/2026). */
+  const dele = c.mensagens.filter((m) => ehFalaDoCliente(m));
   const falou = nossas.length > 0 && dele.length > 0;
   const pediuAvaliacao = leitura.pedimosAvaliacao || nossas.some((m) => PEDIDO_DE_AVALIACAO.test(m.texto) && DO_RECLAME_AQUI.test(m.texto));
   let feitas = 0;
@@ -612,7 +614,7 @@ async function atualizarFicha(
   if (!paraCaso && c.npsResponseId && c.npsResponse) {
     const nps = c.npsResponse;
     const npsId = c.npsResponseId;
-    const dados: { status?: string; churnRisk?: boolean; rootCause?: string; resolvedAfter?: boolean; confirmedAt?: Date | null; reviewAsked?: boolean } = {};
+    const dados: { status?: string; churnRisk?: boolean; rootCause?: string; resolvedAfter?: boolean; confirmedAt?: Date | null; reviewAsked?: boolean; moodAfter?: number } = {};
     const motivos: string[] = [];
     if (!isEncerrado(nps.status)) {
       if (nps.status === "Novo" && falou) {
@@ -641,6 +643,17 @@ async function atualizarFicha(
     if (pediuAvaliacao && !nps.reviewAsked) {
       dados.reviewAsked = true;
       motivos.push("avaliação pedida");
+    }
+    /*
+      O humor depois do contato, lido da conversa (16/11/2026): "essa
+      métrica não está sendo calculada corretamente". O "Humor do detrator
+      depois" contava só quem marcava à mão — 6 de 31 detratores que
+      responderam. A IA lê como o cliente terminou a conversa; o registrado
+      à mão nunca é trocado.
+    */
+    if (falou && leitura.humor && (nps.moodAfter ?? null) === null) {
+      dados.moodAfter = leitura.humor;
+      motivos.push(`humor depois do contato: ${moodOf(leitura.humor)?.label ?? leitura.humor} (${leitura.humor} de 5)`);
     }
     const campos = Object.keys(dados) as (keyof typeof dados)[];
     if (campos.length) {
@@ -737,6 +750,7 @@ export async function lerConversaDoDia(entrada: ConversaParaLer): Promise<Leitur
         ...(entrada.causas?.length
           ? [`12. causa: a causa raiz do problema do cliente, escolhida EXATAMENTE desta lista — ${entrada.causas.map((c) => `"${c}"`).join(", ")} — ou vazio se a conversa não deixa claro.`]
           : ['12. causa: vazio.']),
+        "13. humor: como o cliente terminou a conversa de hoje, depois do nosso contato, de 1 a 5 — 1 irritado, 2 insatisfeito, 3 neutro, 4 satisfeito, 5 encantado. Pelo que ELE escreveu (tom, agradecimento, reclamação, pressa), não pelo que nós dissemos. Resposta automática (robô, mensagem de fora do horário, saudação da empresa) não é ele: ignore. 0 se ele não escreveu nada hoje, se só respondeu o robô ou se não dá para saber.",
         "",
         ...(contexto.length ? ["Antes de hoje (só para entender — não resuma nem anote isto):", contexto.join("\n").slice(-2500), ""] : []),
         "Conversa de hoje:",
@@ -756,6 +770,7 @@ export async function lerConversaDoDia(entrada: ConversaParaLer): Promise<Leitur
           pedimos_avaliacao: { type: "boolean" },
           solucao: { type: "string", enum: ["nao", "confirmou", "nao-resolveu"] },
           causa: { type: "string" },
+          humor: { type: "integer" },
           retorno: {
             type: "object",
             properties: {
@@ -767,7 +782,7 @@ export async function lerConversaDoDia(entrada: ConversaParaLer): Promise<Leitur
             required: ["precisa", "quem", "oque", "dia"],
           },
         },
-        required: ["sobre_este_cliente", "segmento", "vale_anotar", "motivo", "resumo", "pendente", "importantes", "retorno", "cancelamento", "pedimos_avaliacao", "solucao", "causa"],
+        required: ["sobre_este_cliente", "segmento", "vale_anotar", "motivo", "resumo", "pendente", "importantes", "retorno", "cancelamento", "pedimos_avaliacao", "solucao", "causa", "humor"],
       },
     });
   } catch {
@@ -1074,7 +1089,7 @@ export async function seguirPelasConversas(
       const primeira = msgs.find((m) => m.de === "nos" && m.em >= chegou && m.em <= agora);
       if (semPrimeiro && primeira) {
         const chave = `etapa:caso:${caso.id}:primeiro-contato`;
-        const respondeu = msgs.some((m) => m.de === "cliente" && m.em > primeira.em);
+        const respondeu = msgs.some((m) => ehFalaDoCliente(m) && m.em > primeira.em);
         const novo = await registrar(prisma, userId, {
           tipo: "etapa",
           origem: "whatsapp",
