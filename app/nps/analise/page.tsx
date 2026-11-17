@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   ArrowLeft,
   CircleAlert,
   Gauge,
   HeartHandshake,
+  ShieldCheck,
   MessageSquareText,
   MessageCircleReply,
   PhoneCall,
@@ -58,6 +59,8 @@ import PorQue from "@/components/shared/PorQue";
 import { diaNoIntervalo, intervaloDoAtalho, type Intervalo } from "@/lib/models/periodo";
 import { diaNaOperacao, hojeNaOperacao } from "@/lib/services/reputation.service";
 import { pluralDe } from "@/lib/plural";
+import { lerConfiancaDoPeriodo } from "@/lib/actions/confiancaDoNps";
+import type { ConfiancaDoPeriodo } from "@/lib/models/okr";
 
 /** Janelas que a tela oferece, em meses. */
 const JANELAS = [
@@ -211,6 +214,32 @@ export default function NpsAnalisePage() {
         : meses === 0 || Date.parse(iso!) >= limite.getTime());
     return { ...indicadoresDoGuia(noPeriodo, { todos: responses, dentro }), whatsapp: respostaNoWhatsapp(responses, dentro) };
   }, [noPeriodo, responses, meses, personalizado, intervalo]);
+
+  /*
+    A confiança recuperada (17/11/2026): "a parte do nps não mostra quantos
+    casos teve recuperação de confiança". Vem do servidor, com a conta do
+    KR1, sobre os detratores que responderam a pesquisa no período da tela.
+  */
+  const periodoDaConfianca = useMemo(() => {
+    const hoje = hojeNaOperacao();
+    if (personalizado) return { inicio: intervalo.de ?? "2000-01-01", fim: intervalo.ate ?? hoje };
+    if (meses === 0) return { inicio: "2000-01-01", fim: hoje };
+    const d = new Date(`${hoje}T12:00:00Z`);
+    d.setUTCMonth(d.getUTCMonth() - meses);
+    return { inicio: d.toISOString().slice(0, 10), fim: hoje };
+  }, [personalizado, intervalo, meses]);
+  const [confianca, setConfianca] = useState<{ chave: string; dados: ConfiancaDoPeriodo | null } | null>(null);
+  const chaveDaConfianca = `${periodoDaConfianca.inicio}|${periodoDaConfianca.fim}`;
+  useEffect(() => {
+    let vivo = true;
+    lerConfiancaDoPeriodo(periodoDaConfianca.inicio, periodoDaConfianca.fim)
+      .then((r) => vivo && setConfianca({ chave: chaveDaConfianca, dados: r.ok ? r.confianca : null }))
+      .catch(() => vivo && setConfianca({ chave: chaveDaConfianca, dados: null }));
+    return () => {
+      vivo = false;
+    };
+  }, [periodoDaConfianca, chaveDaConfianca]);
+  const confiancaAtual = confianca?.chave === chaveDaConfianca ? confianca.dados : undefined;
 
   /**
    * Quantas trouxeram texto.
@@ -409,6 +438,27 @@ export default function NpsAnalisePage() {
                       : `${guia.detratoresRecuperados} de ${guia.detratoresComHumor} saíram satisfeitos`
                   }
                   icon={Smile}
+                  tone="success"
+                />
+
+                <StatTile
+                  label="Confiança recuperada"
+                  description="Detratores (por conta) com a solução confirmada que responderam &quot;Sim&quot; à pesquisa de confiança — a mesma conta do KR1 do OKR. Embaixo, o que respondeu Parcialmente ou Não, e quantos ainda esperam a pergunta. Sempre pela nota do período, sem o filtro de segmento."
+                  value={confiancaAtual === undefined ? "…" : confiancaAtual === null ? "—" : confiancaAtual.sucesso}
+                  hint={
+                    !confiancaAtual
+                      ? confiancaAtual === null ? "não deu para ler agora" : "lendo…"
+                      : confiancaAtual.elegiveis === 0
+                        ? "nenhum detrator no período"
+                        : [
+                            `de ${confiancaAtual.elegiveis} ${pluralDe(confiancaAtual.elegiveis, "detrator", "detratores")}`,
+                            confiancaAtual.parcialmente ? `${confiancaAtual.parcialmente} parcialmente` : "",
+                            confiancaAtual.nao ? `${confiancaAtual.nao} não` : "",
+                            confiancaAtual.confirmadosSemPesquisa ? `${confiancaAtual.confirmadosSemPesquisa} ${pluralDe(confiancaAtual.confirmadosSemPesquisa, "espera", "esperam")} a pergunta` : "",
+                            confiancaAtual.semResposta ? `${confiancaAtual.semResposta} sem resposta` : "",
+                          ].filter(Boolean).join(" · ")
+                  }
+                  icon={ShieldCheck}
                   tone="success"
                 />
 

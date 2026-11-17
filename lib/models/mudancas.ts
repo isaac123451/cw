@@ -46,6 +46,16 @@ export interface Mudanca {
 export const MUDANCAS: Mudanca[] = [
   /* ---------------- revisão de novembro (03/11) ---------------- */
   {
+    id: "confianca-recuperada-na-analise",
+    dia: "2026-11-17",
+    tipo: "novo",
+    frente: "nps",
+    titulo: "Confiança recuperada na Análise do NPS",
+    texto:
+      "A Análise do NPS ganhou o indicador \"Confiança recuperada\": quantos detratores (por conta) tiveram a solução confirmada e responderam \"Sim\" à pesquisa de confiança, com a mesma conta do KR1 do OKR, no período escolhido na tela. Embaixo, quantos responderam Parcialmente ou Não e quantos já têm a solução confirmada e ainda esperam a pergunta. Hoje o número é baixo porque a pesquisa quase não foi registrada: em 12 meses, uma resposta \"Sim\" e dois detratores esperando a pergunta.",
+    href: "/nps/analise",
+  },
+  {
     id: "id-do-ra-na-extensao-inteira",
     dia: "2026-11-16",
     tipo: "correcao",
